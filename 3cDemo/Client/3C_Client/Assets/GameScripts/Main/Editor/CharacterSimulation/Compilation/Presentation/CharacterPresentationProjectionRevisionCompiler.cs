@@ -15,15 +15,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             UnityEngine.Object equipmentPresentationProfile,
             StableHash contractHash,
             IReadOnlyList<string> footAnalysisTokens,
-            MotionMatchingProjectionPayload motionMatching)
+            MotionMatchingProjectionPayload motionMatching,
+            IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> animationResources)
         {
             var values = new List<string>
             {
                 CharacterPresentationProjection.CurrentAbiVersion,
-                contractHash.ToString()
+                contractHash.ToString(),
+                CharacterAnimationCompiledResourceRevision.Compute(animationResources)
             };
             AddAssetRevision(animationProfile, values);
             AddAssetRevision(equipmentPresentationProfile, values);
+            if (animationProfile != null)
+            {
+                for (int i = 0; i < animationProfile.SourceResourceBindings.Count; i++)
+                {
+                    CharacterAnimationSourceResourceBinding binding = animationProfile.SourceResourceBindings[i];
+                    values.Add($"source-resource:{binding?.AuthoringClip?.name}:{binding?.Backend}");
+                }
+                for (int i = 0; i < animationProfile.AnimationPropertyBindings.Count; i++)
+                {
+                    CharacterAnimationPropertyAuthoringBinding binding = animationProfile.AnimationPropertyBindings[i];
+                    values.Add($"animation-property:{binding?.ParameterId}:{binding?.RendererBindingId}:{binding?.AnimationCurvePath}:{binding?.BlendShapeName}:{binding?.BlendShapeIndex}:{binding?.MeshContentHash}");
+                }
+            }
             CharacterPresentationMotionMatchingCompiler.AppendRevisionValues(
                 motionMatching,
                 values);

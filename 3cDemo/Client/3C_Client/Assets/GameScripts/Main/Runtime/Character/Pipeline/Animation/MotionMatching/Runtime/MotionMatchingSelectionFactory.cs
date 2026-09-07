@@ -47,16 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
 
             MotionMatchingClipSamplePlan sourceClip = output.ClipSamplePlan;
-            float clipLength = sourceClip.Clip ? sourceClip.Clip.length : 0f;
-            if (!sourceClip.SourceClipId.IsValid || sourceClip.ClipBindingIndex < 0 || !sourceClip.Clip ||
-                !float.IsFinite(clipLength) || clipLength <= 0f || !sourceClip.Time.IsValid ||
-                !float.IsFinite(sourceClip.ClipTime) || sourceClip.ClipTime < 0f || sourceClip.ClipTime > clipLength ||
-                double.IsNaN(sourceClip.ContinuousVisualTime) || double.IsInfinity(sourceClip.ContinuousVisualTime) ||
-                sourceClip.ContinuousVisualTime < sourceClip.ClipTime || sourceClip.Cycle < 0 ||
-                !float.IsFinite(sourceClip.VisualTimeScale) || sourceClip.VisualTimeScale < 0f ||
-                !float.IsFinite(sourceClip.NormalizedTime) || sourceClip.NormalizedTime < 0f || sourceClip.NormalizedTime > 1f ||
-                sourceClip.AnimatorStateSpeed != 0f || !sourceClip.RootLocked)
-                throw new ArgumentException("Motion Matching source Clip plan is invalid.", nameof(output));
+            sourceClip.RequireValid();
             if ((uint)sourceClip.ClipBindingIndex >=
                 (uint)database.ClipBindingCount)
             {
@@ -67,13 +58,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingClipBindingPayload clipBinding =
                 database.GetClipBinding(
                     sourceClip.ClipBindingIndex);
-            if (clipBinding == null ||
-                !clipBinding.SourceClipId.Equals(
+            if (clipBinding == null)
+                throw new ArgumentException(
+                    "Motion Matching source Clip binding does not match the Projection Database.",
+                    nameof(output));
+            clipBinding.RequireValid();
+            if (!clipBinding.SourceClipId.Equals(
                     sourceClip.SourceClipId) ||
-                clipBinding.Clip != sourceClip.Clip)
+                clipBinding.Backend != sourceClip.Backend ||
+                clipBinding.DurationSeconds != sourceClip.DurationSeconds ||
+                clipBinding.IsLooping != sourceClip.SourceIsLooping ||
+                clipBinding.RootLocked != sourceClip.RootLocked ||
+                clipBinding.ResourceCatalogIndex != sourceClip.ResourceCatalogIndex ||
+                clipBinding.GroupClipIndex != sourceClip.GroupClipIndex ||
+                clipBinding.IsAcl != sourceClip.IsAcl)
             {
                 throw new ArgumentException(
                     "Motion Matching source Clip binding does not match the Projection Database.",
+                    nameof(output));
+            }
+            if (clipBinding.IsAcl)
+            {
+                if (clipBinding.Clip != null || sourceClip.Clip != null)
+                    throw new ArgumentException(
+                        "Motion Matching source ACL binding contains a Native Clip.",
+                        nameof(output));
+            }
+            else if (!clipBinding.Clip || clipBinding.Clip != sourceClip.Clip)
+            {
+                throw new ArgumentException(
+                    "Motion Matching source Native Clip binding does not match the Projection Database.",
                     nameof(output));
             }
             if (!output.FootPlacementWeight.IsValid ||
@@ -91,18 +105,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             workspace.RequireCurrent(row);
             if (row.ClipCapacity < 1 || row.ParameterCount != parameterCount)
                 throw new InvalidOperationException("Motion Matching Selection workspace does not match the Pose Plan.");
-            row.Clips[row.ClipOffset] = new ClipSamplePlan(
-                sourceClip.ClipBindingIndex,
-                sourceClip.Clip,
-                sourceClip.ClipTime,
-                sourceClip.ContinuousVisualTime,
-                sourceClip.NormalizedTime,
-                1f,
-                sourceClip.IsLooping);
+            row.Clips[row.ClipOffset] = sourceClip.IsAcl
+                ? new ClipSamplePlan(
+                    sourceClip.ClipBindingIndex,
+                    sourceClip.ResourceCatalogIndex,
+                    sourceClip.GroupClipIndex,
+                    sourceClip.DurationSeconds,
+                    sourceClip.ClipTime,
+                    sourceClip.ContinuousVisualTime,
+                    sourceClip.NormalizedTime,
+                    1f,
+                    sourceClip.IsLooping)
+                : new ClipSamplePlan(
+                    sourceClip.ClipBindingIndex,
+                    sourceClip.Clip,
+                    sourceClip.ClipTime,
+                    sourceClip.ContinuousVisualTime,
+                    sourceClip.NormalizedTime,
+                    1f,
+                    sourceClip.IsLooping);
             for (int i = 0; i < parameterCount; i++)
             {
                 row.PoseParameters[row.ParameterOffset + i] = plan.Parameters[i].DefaultValue;
                 row.PoseParameterAvailability[row.ParameterOffset + i] = 1;
+            }
+            if (!sourceClip.IsAcl && clipBinding.NativeScalarPage != null)
+            {
+                CharacterAnimationScalarCurvePage scalarPage =
+                    clipBinding.NativeScalarPage;
+                scalarPage.RequireValid();
+                if (scalarPage.ParameterCount != parameterCount)
+                    throw new InvalidOperationException(
+                        "Motion Matching Native Clip scalar page does not match the Pose Plan.");
+                for (int i = 0; i < scalarPage.Tracks.Count; i++)
+                {
+                    CharacterAnimationScalarCurveTrack track =
+                        scalarPage.Tracks[i];
+                    if (track.ParameterIndex < 0 ||
+                        track.ParameterIndex >= parameterCount)
+                        throw new InvalidOperationException(
+                            "Motion Matching Native Clip scalar page parameter index is outside the Pose Plan.");
+                    row.PoseParameters[row.ParameterOffset + track.ParameterIndex] =
+                        track.Sample(sourceClip.NormalizedTime);
+                    row.PoseParameterAvailability[
+                        row.ParameterOffset + track.ParameterIndex] = 1;
+                }
             }
             row.PoseParameters[row.ParameterOffset + footPlacementWeightIndex] = output.FootPlacementWeight.Value;
             workspace.RequireCurrent(row);

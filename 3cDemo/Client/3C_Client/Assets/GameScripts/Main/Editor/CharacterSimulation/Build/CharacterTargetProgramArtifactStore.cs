@@ -184,6 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
+            if (!string.Equals(definitionGuid, program.Manifest.Root.RootIdentity, StringComparison.Ordinal))
+                throw new ArgumentException("Target Program cache key does not match the Program root identity.", nameof(definitionGuid));
             string path = GetPath(
                 definitionGuid,
                 program.Manifest.NumericProfile.Id,
@@ -295,7 +297,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 program.Manifest.NumericProfile,
                 program.ProgramHash,
                 program.LayoutHash,
-                program.Manifest.Capabilities.RequiredWorldCapabilities);
+                program.Manifest.Capabilities.RequiredWorldCapabilities,
+                program.Manifest.Root);
         }
 
         static bool Matches(
@@ -313,6 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    descriptor.TargetAbiVersion.Equals(program.NumericProfile.AbiVersion) &&
                    descriptor.ProgramHash.Equals(expectation.ProgramHash) &&
                    descriptor.LayoutHash.Equals(expectation.LayoutHash) &&
+                   descriptor.Root.Equals(expectation.Root) &&
                    descriptor.RequiredWorldCapabilities == expectation.RequiredWorldCapabilities;
         }
 

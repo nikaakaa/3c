@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             try
             {
                 MotionMatchingClipBindingPayload clip = m_Database.GetClipBinding(candidate.ClipBindingIndex);
-                if (clip == null || !clip.RootLocked || !clip.Clip)
+                if (clip == null || !clip.IsValid)
                     return Reject(MotionMatchingCandidateRejectReason.MissingClipBinding, 0f, 1f, out rejectDetail);
             }
             catch (ArgumentOutOfRangeException)

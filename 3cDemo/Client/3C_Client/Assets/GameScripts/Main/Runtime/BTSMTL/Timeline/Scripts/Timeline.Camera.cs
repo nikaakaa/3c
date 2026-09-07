@@ -147,6 +147,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(4), Color(180, 160, 255)]
     public sealed class CameraStateTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.CameraStateTrack;
+
         public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraStateSample> states)
         {
             if (m_PersistentMuted || states == null)
@@ -196,6 +198,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
     public sealed class CameraStateClip : Clip
     {
+        public override string ContractKind => TimelineContractKinds.CameraStateClip;
+
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineCameraMode Mode = TimelineCameraMode.SkillCloseup;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -227,6 +231,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(5), Color(255, 168, 214)]
     public sealed class CameraCueTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.CameraCueTrack;
+
         public void Sample(float previousTime, float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraCueSample> cues)
         {
             if (m_PersistentMuted || cues == null)
@@ -261,6 +267,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(255, 168, 214)]
     public sealed class CameraCueClip : SignalClip
     {
+        public override string ContractKind => TimelineContractKinds.CameraCueClip;
+
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CueId = "CameraCue";
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -284,6 +292,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(6), Color(170, 225, 255)]
     public sealed class CameraResponseTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.CameraResponseTrack;
+
         public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraResponseSample> responses)
         {
             if (m_PersistentMuted || responses == null)
@@ -332,6 +342,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(170, 225, 255)]
     public sealed class CameraResponseClip : Clip
     {
+        public override string ContractKind => TimelineContractKinds.CameraResponseClip;
+
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineCameraLookResponseMode LookResponse = TimelineCameraLookResponseMode.Suppressed;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -356,6 +368,53 @@ namespace BTSMTL.Timeline
         {
         }
 #endif
+    }
+
+    public static class CameraTimelineContracts
+    {
+        public static readonly ITimelineContractProvider Provider = new TimelineContractProvider(
+            new[]
+            {
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraStateTrack,
+                    TimelineTrackOverlapPolicy.Blend,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraStateClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraCueTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraCueClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraResponseTrack,
+                    TimelineTrackOverlapPolicy.Blend,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraResponseClip)
+            },
+            new[]
+            {
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraStateClip,
+                    TimelineContractKinds.CameraStateTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraCueClip,
+                    TimelineContractKinds.CameraCueTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    false,
+                    false),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraResponseClip,
+                    TimelineContractKinds.CameraResponseTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true)
+            });
     }
 
     static class CameraTimelineSampling

@@ -29,7 +29,8 @@ namespace ThirdPersonSimulation
             "StateMachine",
             "Timeline",
             "TimelineMotionCurve",
-            "TimelineMotionWarp"
+            "TimelineMotionWarp",
+            "TimelineScenePresentationParameter"
         };
 
         public static Float32ProgramLoweringResult Compile(ValidatedSemanticIrArtifact artifact)
@@ -147,21 +148,24 @@ namespace ThirdPersonSimulation
                 semanticIr.Manifest.SourceRevision,
                 semanticIr.SemanticHash,
                 target.Profile,
-                semanticIr.Manifest.Capabilities);
-            var bodyMotion = new ProgramBodyMotionDescriptor(
-                semanticIr.BodyMotion.SourceIdentity,
-                semanticIr.BodyMotion.ContentRevision,
-                semanticIr.BodyMotion.SemanticVersion,
-                LowerNumber(
-                    semanticIr.BodyMotion.GravityAcceleration,
-                    $"{semanticIr.BodyMotion.SourceIdentity}/gravity-acceleration",
-                    SemanticNumericPrecision.TargetRounded,
-                    conversions),
-                LowerNumber(
-                    semanticIr.BodyMotion.MaximumFallSpeed,
-                    $"{semanticIr.BodyMotion.SourceIdentity}/maximum-fall-speed",
-                    SemanticNumericPrecision.TargetRounded,
-                    conversions));
+                semanticIr.Manifest.Capabilities,
+                semanticIr.Manifest.Root);
+            ProgramBodyMotionDescriptor bodyMotion = semanticIr.BodyMotion == null
+                ? null
+                : new ProgramBodyMotionDescriptor(
+                    semanticIr.BodyMotion.SourceIdentity,
+                    semanticIr.BodyMotion.ContentRevision,
+                    semanticIr.BodyMotion.SemanticVersion,
+                    LowerNumber(
+                        semanticIr.BodyMotion.GravityAcceleration,
+                        $"{semanticIr.BodyMotion.SourceIdentity}/gravity-acceleration",
+                        SemanticNumericPrecision.TargetRounded,
+                        conversions),
+                    LowerNumber(
+                        semanticIr.BodyMotion.MaximumFallSpeed,
+                        $"{semanticIr.BodyMotion.SourceIdentity}/maximum-fall-speed",
+                        SemanticNumericPrecision.TargetRounded,
+                        conversions));
             var constantInputs = new ProgramConstantInputBinding[semanticIr.ConstantInputBindings.Count];
             for (int i = 0; i < constantInputs.Length; i++)
             {
@@ -188,7 +192,8 @@ namespace ThirdPersonSimulation
                 semanticIr.CatalogEntries,
                 ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
-                semanticIr.Producers);
+                semanticIr.Producers,
+                semanticIr.GraphCallFrames);
             return new Float32ProgramLoweringResult(program, conversions);
         }
 

@@ -581,7 +581,8 @@ namespace ThirdPersonSimulation.Fixed
         Camera = 5,
         Cue = 6,
         Vfx = 7,
-        Ui = 8
+        Ui = 8,
+        ForceProducer = 9
     }
 
     public readonly struct PresentationCommand
@@ -606,8 +607,12 @@ namespace ThirdPersonSimulation.Fixed
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
-            if (IsPlaybackCommand(kind) && producerGeneration == 0)
+            if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
+            if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
+                throw new ArgumentException("Presentation producer generation does not match the event activation.", nameof(producerGeneration));
+            if (IsPlaybackCommand(kind) && sourceActionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (IsPlaybackSample(kind) && visualTimeScale < FixedScalar.Zero)
@@ -631,6 +636,12 @@ namespace ThirdPersonSimulation.Fixed
                    kind == PresentationCommandKind.ReleaseProducer;
         }
 
+        static bool RequiresProducerGeneration(PresentationCommandKind kind) =>
+            IsPlaybackCommand(kind) ||
+            kind == PresentationCommandKind.Camera ||
+            kind == PresentationCommandKind.Cue ||
+            kind == PresentationCommandKind.ForceProducer;
+
         static bool IsPlaybackSample(PresentationCommandKind kind) =>
             kind == PresentationCommandKind.SampleProducer;
     }
@@ -645,19 +656,30 @@ namespace ThirdPersonSimulation.Fixed
 
     public readonly struct SimulationTraceRecord
     {
-        public SimulationTraceRecord(SimulationEventHeader header, SimulationTraceSeverity severity, string boundary, string code, string detail)
+        public SimulationTraceRecord(
+            SimulationEventHeader header,
+            SimulationTraceSeverity severity,
+            string boundary,
+            string code,
+            string detail,
+            ulong actionInstanceId = 0,
+            string skillId = "")
         {
             Header = header;
             Severity = severity;
             Boundary = SimulationIdentity.Require(boundary, nameof(boundary));
             Code = SimulationIdentity.Require(code, nameof(code));
             Detail = detail ?? string.Empty;
+            ActionInstanceId = actionInstanceId;
+            SkillId = skillId ?? string.Empty;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
         public string Boundary { get; }
         public string Code { get; }
         public string Detail { get; }
+        public ulong ActionInstanceId { get; }
+        public string SkillId { get; }
     }
 }
 

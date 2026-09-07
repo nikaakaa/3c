@@ -8,21 +8,35 @@
 
 ### Requirement: Foot Placement必须是唯一Goal事务
 
-唯一`CharacterPoseConstraintRuntime` MUST为每个Actor和表现帧建立匹配Frame、Completion与Rig lineage的Pending根Bank。根Runtime MUST只管理阶段顺序、lineage、页所有权、Seal、Discard、Invalidate和失败传播，不得实现Foot、Pelvis、Goal或Solver数学。
+唯一`CharacterPoseConstraintRuntime` MUST继续为每个Actor和表现帧建立匹配Frame、Completion、Program、Projection、Rig与Tuning Generation lineage的Pending Constraint Bank，并唯一拥有Foot Context、Resolved Foot Pair、Primary Support/Pelvis、Goal Contribution、唯一Goal Assembler、唯一Goal Set、FBBIK BendHistory与Solver Result。它 MUST不再拥有Final Pose物理页、Physical Writer或Physical Result；这些真相只属于`CharacterFinalPosePublication`。Foot Placement与FBBIK在线调参 MUST只进入actor-local Constraint Tuning Snapshot，不得修改Program Image、actor-local Execution View或其它Actor。
 
-Foot Placement MUST作为一个深模块接收同帧不可变Frame Input并发布一个`CharacterFootPlacementResult`。调用方 MUST不编排Landing Observation、Ground Path、Foot Lifecycle、Support、Pelvis或Goal编码，也不得取得它们的可变状态。模块内部 MAY按职责拆分实现，但全部职责 MUST共享同一根事务、只发布一个Resolved Foot Pair和一组三个typed Goal Contribution。
+`CharacterPoseProgramRuntime` MUST在Program Image中Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK各自Operation的位置，通过对应typed编译Handle恰好调用一次Constraint Runtime入口并写入唯一per-operation completion。Constraint Module MUST不扫描Program、不维护第二份Stage Schedule、不接收NativeSlice、Goal offset/count、Operation index或call-site index，也 MUST不重新执行已经完成的Operation。Constraint `Complete`只能验证完整闭包并发布一个`CharacterPoseConstraintResult`。
+
+Foot Placement MUST继续由当前保留的深`CharacterFootPlacementModule`接收同帧不可变Frame Input并发布一个`CharacterFootPlacementResult`。调用方 MUST不知道或编排Landing Prediction、Ground Path、左右脚状态、Support、Pelvis与Goal编码顺序。本change MUST整体保留当前Lifecycle、Transition、State Target、Interpolation、Pelvis及Landing收口的算法、配置和执行顺序，不固定或恢复旧中央状态机类名，不引入新的Foot请求／最终结果流程。输入保持相同Pose、Foot Motion、Body／World、Rig与Profile时，Foot、Pelvis和三个Goal Contribution MUST保持指定提交ad3527e103cc3235a63e8a1c1dbd26df5155e0ba的结果；不得发布第二Goal Set、第二Pelvis、第二FBBIK、第二Final Pose页或第二Physical Writer。
 
 #### Scenario: 正常生成Foot Placement结果
 
-- **WHEN** 同一表现帧具有合法Component Pose、Foot输入、Body、World Query、Profile和根Pending Bank
-- **THEN** Foot Placement MUST生成同Frame、Completion与Rig lineage的Resolved Foot Pair、Pelvis Result和三个Goal Contribution
-- **AND** 调用方 MUST不取得或逐个提交Foot内部状态、Ground Path、Pelvis或Solver状态
+- **WHEN** 同一表现帧具有合法Component Pose、Step、Body、World Query、Profile、Program Operation与Pending Constraint Bank
+- **THEN** Foot Placement Operation MUST生成同lineage的Resolved Foot Pair、Pelvis Result、三个Goal Contribution和唯一operation completion
+- **AND** 后续Assembler与FBBIK MUST在各自Program Operation位置消费同一Bank结果，调用方不得取得或逐个提交Foot Context、Ground Path、Pelvis、Goal workspace或Solver状态
 
 #### Scenario: 重复执行Foot Placement
 
-- **WHEN** 同一Frame与Completion第二次请求Foot Placement Prepare
-- **THEN** 根Runtime MUST报告非法调用顺序并阻止整帧发布
-- **AND** MUST不建立第二Foot Placement事务
+- **WHEN** 同一Frame与Completion第二次请求执行同一个Foot Placement Operation
+- **THEN** Program Runtime MUST使该Operation completion与整帧Invalid并阻止Final Publication
+- **AND** Constraint Module MUST不覆盖第一次结果或建立第二Foot Placement事务
+
+#### Scenario: Constraint完成后发布Final Pose
+
+- **WHEN** Foot、Goal Assembler与FBBIK已经形成合法Constraint Result
+- **THEN** Program Output MUST只通过actor-local Publication binding解析Program Image中的稳定layout handle并写入Final Publication唯一Pending Pose物理页
+- **AND** Constraint Bank MUST不保存Physical Writer、Physical Result或第二Final Pose副本
+
+#### Scenario: 当前IK仍有未完成改进
+
+- **WHEN** Foot／IK其它change仍有未完成任务或尚未归档，但用户已确认当前保留实现作为重构基线
+- **THEN** 本change MUST只迁移Constraint外部调用、存储归属与发布边界，不等待或实施那些剩余行为任务
+- **AND** 已撤除的骨盆Reach硬夹紧、末端夹脚与已撤销SmoothKnee MUST不恢复；已知问题不得通过调整IK或评分隐藏
 
 ### Requirement: Landing Prediction必须形成独立世界事实
 
@@ -84,13 +98,21 @@ Landing、Goal、查询命中和diagnostics只属于Presentation。它们 MUST�
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
 
-Runtime Result MUST与Diagnostics严格分型。Diagnostics MUST从同一Frame、Completion、Rig和Bank lineage的Committed Observation、Foot状态、Resolved Result和后续阶段Result单向深冻结正式事实。Gizmo、CSV、Trace与Pose Watch MUST只读取这些Committed页，不得查询世界、修改Foot状态、选择Support、生成Goal或执行FBBIK。
+Runtime Result MUST与Diagnostics严格分型。Constraint Module MAY按Frame开始冻结的interest，从Pending Context、Observation、Resolved Result和Constraint阶段Result单向深冻结Phase Progress、Baseline、Envelope、Swing Correction、Residual、Anchor、Contact Progress、Ownership、Support Eligibility、Support、Pelvis、Goal与Solved结果；这些事实只能进入`CharacterPoseConstraintCommittedResult`。Physical Write与最终Physical Bone结果 MUST只由Final Publication冻结进`CharacterFinalPosePublicationCommittedResult`。
+
+Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页。Foot采样 MUST在成功Seal后的同步Commit调用栈内，从相同Frame、Completion、Program、Projection、Rig和Actor lineage的Constraint、Final Publication与当前Source已提交状态直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用；MUST不先组合或消费`CharacterFootIkCommittedCaptureViewLease`、Runtime Snapshot、Dimension View、Consumer／Binding或第二事实页。帧开始的可选partial Query只在匹配target订阅时要求Physical Writer冻结真实Physical Ankle事实；未订阅和Disabled构建不得执行该读取。`character-foot-ik-diagnostic-sampling`只提供字段／Sampler／Program Definitions与Editor workflow；`generated-diagnostic-sampling-framework`只拥有生成程序、typed packet、Capability Session与Writer／Reader。PoseGraph与Constraint不得拥有任一下游编译器、Schema、packet或Host知识。旧Foot单体Analyzer／Publisher、Diagnosis Store、旧CSV与历史兼容Reader直接删除；独立Foot Analysis只在Completed Artifact之后执行当前Plan、Operator、评分和报告。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取未冻结Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
 
 #### Scenario: 捕获正式Foot事实
 
-- **WHEN** Foot、Pelvis、Goal、FBBIK和Pending Pose完成验证并Seal
-- **THEN** Diagnostics MUST发布同lineage的输入、Transition、Target、连续Correction、Hard Constraint、Resolved、Solved和Physical事实
-- **AND** Diagnostics命名或布局变化 MUST不改变Runtime Result
+- **WHEN** Foot、Pelvis、Goal、FBBIK、Pending Pose与Physical Writer均成功提交
+- **THEN** Foot采样 MUST从同一lineage的Constraint、Final Publication与当前Source已提交状态直接传入可对账冻结基线的正式事实；Live／Trace Projector MAY独立发布只读View
+- **AND** Diagnostics页归属变化 MUST不改变Runtime Result、Final Pose或Physical Writer输入
+
+#### Scenario: Writer失败
+
+- **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
+- **THEN** Diagnostics MUST不发布本帧Pending Constraint或Physical结果
+- **AND** Projector MUST不为Foot Capture借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault
 
 #### Scenario: 增加响应解释字段
 

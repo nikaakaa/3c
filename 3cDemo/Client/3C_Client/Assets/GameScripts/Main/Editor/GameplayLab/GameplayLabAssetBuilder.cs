@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Animancer;
+using BTSMTL.Timeline;
 using Cinemachine;
+using ThirdPerson.ProductStartup;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
@@ -29,6 +32,7 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabAssetBuilder
     {
         const string ConfigDirectory = "Assets/Configs/Simulation/GameplayLab";
+        const string ResourceProfilePath = "Assets/Configs/ProductStartup/ProductStartupProfile.asset";
         const string CompositionDirectory = ConfigDirectory + "/Compositions";
         const string PipelineDirectory = ConfigDirectory + "/Pipelines";
         const string SourceDirectory = ConfigDirectory + "/Sources";
@@ -60,7 +64,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string FixedVariantPath = VariantDirectory + "/GameplayLabLocalFixedVariant.asset";
         const string RollbackVariantPath = VariantDirectory + "/GameplayLabDeterministicRollbackVariant.asset";
         const string PlayerActorId = "gameplay-lab-player";
-        const string FixedTargetActorId = "gameplay-lab-target";
+        const string TargetActorId = "gameplay-lab-target";
         const string ActionTargetInputId = "ActionTarget";
         const string CameraLookInputId = "LookAxis";
         const string RollbackSessionId = "corin-deterministic-rollback-demo";
@@ -84,10 +88,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
             EnsureFolders();
-            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
-            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
-            FixedCharacterSimulationProgramAsset fixedProgram =
-                FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
+            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            FixedCharacterSimulationProgramAsset fixedProgram = BuildCharacterSimulationPrograms(definition);
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection
                 ? definition.PresentationProjection
                 : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
@@ -142,7 +144,78 @@ namespace ThirdPersonGameplay.Editor.Lab
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
-            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 and Deterministic Rollback.");
+            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 AI and Deterministic Rollback.");
+        }
+
+        static FixedCharacterSimulationProgramAsset BuildCharacterSimulationPrograms(
+            CharacterPipelineDefinition definition)
+        {
+            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                new CharacterSimulationBuildRequest(
+                    definition,
+                    CharacterSimulationBuildPublicationMode.Publish,
+                    new ICharacterSimulationTargetBuildAdapter[]
+                    {
+                        CharacterSimulationTargetCatalog.Float32(definition),
+                        new FixedCharacterSimulationTargetBuildAdapter(FixedProgramPath)
+                    }));
+            if (!result.IsValid)
+            {
+                string details = string.Join(
+                    Environment.NewLine,
+                    result.Report.Messages.Select(message => message.ToString()));
+                throw new InvalidOperationException(
+                    $"Gameplay Lab Character Simulation build failed.{Environment.NewLine}{details}");
+            }
+            return LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+        }
+
+        static void EnsureVariantProgram(
+            GameplayLabSessionVariantDefinition variant,
+            ScriptableObject program)
+        {
+            var serialized = new SerializedObject(variant);
+            SerializedProperty property = serialized.FindProperty("m_Program");
+            if (property.objectReferenceValue)
+                return;
+            property.objectReferenceValue = program;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(variant);
+        }
+
+        static void SyncSceneVariants(params GameplayLabSessionVariantDefinition[] variants)
+        {
+            Scene previous = SceneManager.GetActiveScene();
+            Scene scene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
+            bool openedHere = !scene.IsValid() || !scene.isLoaded;
+            if (openedHere)
+                scene = EditorSceneManager.OpenScene(GameplayLabEditorLauncher.ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                GameplayLabBootstrap[] bootstraps = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<GameplayLabBootstrap>(true))
+                    .ToArray();
+                if (bootstraps.Length != 1)
+                    throw new InvalidOperationException($"Gameplay Lab scene requires exactly one Bootstrap, found {bootstraps.Length}.");
+                GameplayLabBootstrap bootstrap = bootstraps[0];
+                string selectedId = bootstrap.Variants[bootstrap.StartupVariantIndex].VariantId;
+                int selectedIndex = Array.FindIndex(
+                    variants,
+                    variant => string.Equals(variant.VariantId, selectedId, StringComparison.Ordinal));
+                bootstrap.SetVariants(selectedIndex >= 0 ? selectedIndex : 0, variants);
+                bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
+                EditorUtility.SetDirty(bootstrap);
+                EditorSceneManager.MarkSceneDirty(scene);
+                if (!EditorSceneManager.SaveScene(scene))
+                    throw new InvalidOperationException("Gameplay Lab scene could not save its synchronized Variant list.");
+            }
+            finally
+            {
+                if (openedHere && scene.IsValid() && scene.isLoaded)
+                    EditorSceneManager.CloseScene(scene, true);
+                if (previous.IsValid() && previous.isLoaded)
+                    SceneManager.SetActiveScene(previous);
+            }
         }
 
         static void ValidatePublishedProducts(
@@ -256,10 +329,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void ConfigureRollbackEndpoint(RollbackEndpointAuthoringDefinition endpoint)
         {
             var serialized = new SerializedObject(endpoint);
-            serialized.FindProperty("m_RelayServerAddress").stringValue = "127.0.0.1";
-            serialized.FindProperty("m_RelayServerPort").intValue = 24100;
             serialized.FindProperty("m_RelayServerPeerId").stringValue = "rollback-input-relay";
-            serialized.FindProperty("m_SessionId").stringValue = RollbackSessionId;
             serialized.FindProperty("m_MaximumDatagramBytes").intValue = 1200;
             serialized.FindProperty("m_MaximumQueuedMessages").intValue = 512;
             serialized.FindProperty("m_MaximumFragmentsPerMessage").intValue = 512;
@@ -273,18 +343,15 @@ namespace ThirdPersonGameplay.Editor.Lab
                 "peer-a",
                 "rollback-peer-a",
                 "rollback-player-a",
-                "rollback-actor-a",
-                24101);
+                "rollback-actor-a");
             ConfigureRollbackProfile(
                 profiles.GetArrayElementAtIndex(1),
                 "peer-b",
                 "rollback-peer-b",
                 "rollback-player-b",
-                "rollback-actor-b",
-                24102);
+                "rollback-actor-b");
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(endpoint);
-            endpoint.Build();
             endpoint.BuildRoster();
         }
 
@@ -293,15 +360,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             string profileId,
             string peerId,
             string playerId,
-            string actorId,
-            int port)
+            string actorId)
         {
             profile.FindPropertyRelative("m_ProfileId").stringValue = profileId;
             profile.FindPropertyRelative("m_PeerId").stringValue = peerId;
             profile.FindPropertyRelative("m_PlayerId").stringValue = playerId;
             profile.FindPropertyRelative("m_ActorId").stringValue = actorId;
-            profile.FindPropertyRelative("m_LocalAddress").stringValue = "127.0.0.1";
-            profile.FindPropertyRelative("m_LocalPort").intValue = port;
         }
 
         static void ConfigureRollbackSource(
@@ -392,6 +456,29 @@ namespace ThirdPersonGameplay.Editor.Lab
                     sessionHost,
                     CharacterPresentationRole.LocalOwner,
                     cameraRig);
+                CharacterPipelineHost target = InstantiateFloatActor(
+                    PlayerPrefabPath,
+                    root.transform,
+                    "Gameplay Lab Float Target",
+                    TargetActorId,
+                    s_TargetPosition,
+                    Quaternion.Euler(0f, 180f, 0f),
+                    sessionHost,
+                    CharacterPresentationRole.SimulatedActor,
+                    null);
+                Object.DestroyImmediate(target.ControlSource);
+                NeutralCharacterControlSource targetControlSource =
+                    target.gameObject.AddComponent<NeutralCharacterControlSource>();
+                target.SetRuntimeAuthoring(
+                    targetControlSource,
+                    CharacterPresentationRole.SimulatedActor,
+                    null);
+                Object.DestroyImmediate(target.GetComponent<SessionActorActionTargetInputProvider>());
+                SessionActorActionTargetInputProvider provider =
+                    player.GetComponent<SessionActorActionTargetInputProvider>();
+                if (!provider)
+                    throw new InvalidOperationException("Gameplay Lab Float player requires the formal Session Actor target provider.");
+                provider.SetAuthoring(target);
                 GameObject saved = SavePrefab(root, FloatRootPath);
                 Object.DestroyImmediate(root);
                 return saved;
@@ -583,7 +670,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     fixedProgram,
                     FixedTargetProfilePrefabPath,
                     "CorinGameplayLabFixedTarget",
-                    new ActorId(FixedTargetActorId),
+                    new ActorId(TargetActorId),
                     CharacterPresentationRole.SimulatedActor,
                     false);
             }
@@ -840,6 +927,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
                     GameplayLabBootstrap bootstrap = bootstrapObject.AddComponent<GameplayLabBootstrap>();
                     bootstrap.SetVariants(0, variants);
+                    bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
                 }
                 Scene loadedScene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
                 bool targetIsOpen = loadedScene.IsValid() && loadedScene.isLoaded;

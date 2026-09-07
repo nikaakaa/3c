@@ -47,14 +47,24 @@ namespace TreeDesigner
         {
             m_InlineGraph = graph;
             m_SharedGraphAsset = null;
+            EnsureScopeId(Owner?.GUID);
             BindInlineGraph();
         }
 
         public void SetSharedGraphAsset(BaseTreeAsset graphAsset)
         {
+            if (graphAsset != null && !(graphAsset.Tree is StateMachineGraph))
+                throw new ArgumentException("Shared graph asset must contain a StateMachineGraph.", nameof(graphAsset));
             m_SharedGraphAsset = graphAsset;
             if (m_SharedGraphAsset)
                 m_InlineGraph = null;
+            EnsureScopeId(Owner?.GUID);
+        }
+
+        public void EnsureScopeId(string ownerAuthoringId)
+        {
+            if (string.IsNullOrEmpty(m_ScopeId))
+                m_ScopeId = string.IsNullOrEmpty(ownerAuthoringId) ? ModuleId : ownerAuthoringId;
         }
 
 #if UNITY_EDITOR
@@ -131,14 +141,24 @@ namespace TreeDesigner
         {
             m_InlineSubTree = subTree;
             m_SharedSubTreeAsset = null;
+            EnsureScopeId(Owner?.GUID);
             BindInlineSubTree();
         }
 
         public void SetSharedSubTreeAsset(BaseTreeAsset subTreeAsset)
         {
+            if (subTreeAsset != null && !CanReferenceTree(subTreeAsset.Tree))
+                throw new ArgumentException("Shared subtree asset must contain a SubTree.", nameof(subTreeAsset));
             m_SharedSubTreeAsset = subTreeAsset;
             if (m_SharedSubTreeAsset)
                 m_InlineSubTree = null;
+            EnsureScopeId(Owner?.GUID);
+        }
+
+        public void EnsureScopeId(string ownerAuthoringId)
+        {
+            if (string.IsNullOrEmpty(m_ScopeId))
+                m_ScopeId = string.IsNullOrEmpty(ownerAuthoringId) ? ModuleId : ownerAuthoringId;
         }
 
 #if UNITY_EDITOR

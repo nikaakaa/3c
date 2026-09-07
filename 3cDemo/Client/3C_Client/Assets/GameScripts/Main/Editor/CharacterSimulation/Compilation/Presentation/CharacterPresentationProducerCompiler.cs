@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -52,7 +53,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationPresentationProfile profile,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
-            IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites)
+            IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
+            CharacterAnimationBuildInput animationBuildInput,
+            List<string> errors)
         {
             var diagnostics = new List<string>();
             CharacterPresentationProducerEntry entry = BuildProducer(
@@ -62,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 footAnalysisCompilation,
                 timelines,
                 timelineCallSites,
+                animationBuildInput,
                 diagnostics);
             return new CharacterPresentationProducerCompilationResult(
                 entry,
@@ -88,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
+            CharacterAnimationBuildInput animationBuildInput,
             List<string> errors)
         {
             AnimationFootAnalysisProjectionBuildData footAnalysis =
@@ -211,6 +216,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 CharacterAnimationClipContentIdentity clipIdentity =
                     CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sourceClip);
+                CharacterAnimationSourceResourceBinding resourceBinding =
+                    profile.FindSourceResourceBinding(sourceClip);
+                CharacterAnimationSamplingBackendKind backend =
+                    resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
+                resourceBinding?.RequireValid();
                 CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(sourceClip);
                 AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                     sourceClip,
@@ -221,6 +231,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             producerId.TimelineAuthoringId,
                             producerId.TrackAuthoringId,
                             clip.AuthoringId));
+                CharacterAnimationScalarCurvePage producerScalarPage =
+                    backend == CharacterAnimationSamplingBackendKind.Acl
+                        ? null
+                        : animationBuildInput.AnimationCatalog.BuildNativeScalarPage(
+                            sourceClip,
+                            errors);
+                CharacterAnimationBuildCatalogEntry catalogEntry =
+                    animationBuildInput.AnimationCatalog.RegisterReference(
+                    sourceClip,
+                    backend,
+                    producerScalarPage,
+                    $"producer:{producerId}:{clip.AuthoringId}");
                 clips.Add(new CharacterPresentationAnimationClipBinding(
                     clip.AuthoringId,
                     $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",

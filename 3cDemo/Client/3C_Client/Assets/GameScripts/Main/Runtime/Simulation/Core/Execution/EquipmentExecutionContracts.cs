@@ -2,6 +2,8 @@ namespace ThirdPersonSimulation
 {
     internal interface IEquipmentActionContextProvider
     {
-        EquipmentActionContext Current { get; }
+        bool TryReadActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context);
+        bool IsSkillBinding(EquipmentActionContext context, CharacterSkillId skillId);
+        bool IsCurrentActionContext(EquipmentActionContext context);
     }
 }

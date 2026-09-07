@@ -7,9 +7,11 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 - **BREAKING**：Character 的 Gameplay Locomotion 控制改由 C# 显式 StateMachine／State／Transition 承担；输入消费、技能选择与装备路由由控制代码组织，经唯一准入与动作事务处理。控制状态转换与技能激活是独立操作，不新增统管 Locomotion 与技能的角色总状态机，不在 C# 中镜像技能阶段。删除对应 RootTree／角色 StateMachine／Equipment Host 作者图编排和旧调用者；AI 继续只产生正式 Character 输入，Pose Graph 继续只负责表现。
 - **BREAKING**：建立技能定义、只读 Skill Program 与实例执行状态的分工。技能定义拥有执行图并引用唯一 ActionProfile；Tree、Timeline、TreeClip、局部状态机、参数化子图保持一等作者能力。ActionInstance 继续是一次释放的唯一身份与生命周期，技能执行状态归属该实例，不新增第二个 Ability／Skill 生命周期。
 - 保留“作者数据 → numeric-neutral Semantic IR → Numeric Target Program → C# 解释器”的正式链。角色运行包继续锁定 C# 控制模块合同、技能目录、策略与状态布局；技能节点不调用 Unity 对象解释器，不运行原始作者图，不新增第二条解释路径。
+- Float32 与 Fixed 共用一份与数值无关的 Action 业务流程：准入、来源检查、显式 replacement、输入消费、请求暂存、最终提交与生命周期转换。Target 只提供实际需要区分的数值运算、typed 状态访问、布局和 codec；不能各自维护一份相同流程，再要求修改时同步两处。
 - **BREAKING**：将完整角色状态明确分为控制状态、ActionInstance／技能执行状态以及既有 GE／Equipment 聚合；补齐子图调用、并发释放、重复激活和停止中的状态隔离，并同步 Float32／Fixed codec、hash、checkpoint、snapshot 和发布身份。旧 Program／State ABI 不继续读取。
 - 保留 Session Source、Ingress／Schedule／Step／Egress Pass、Evaluate／WorldResolve／Finalize 和唯一 Commit 边界；角色代码与技能解释器共同进入既有 Step，不创建控制器私有 Update、网络 Tick、物理写入或状态恢复链。
 - 按技能业务拆分作者规则、编译发射、运行叶子与编辑命令，继续使用共享 Graph Authoring Framework、唯一 Capability／Port Shape、整包 Document 事务和领域 Mutation。技能工作区提供定义、Tree／Timeline／子图导航及精确实例观察；保留原提案中窗口重载恢复和不打断字段编辑的行为改进。
+- 将中央类拆分列为独立的结构完成条件：Action Runtime、Semantic Emitter、Program Builder、技能控制解释器和 Document Codec／Mapper／Reconciler 必须按 `design.md` 的职责迁移表收口。每项交付真实调用链、模块输入输出和已删除的旧分支；新增 helper、拆 partial、转发壳或编译通过不能代替业务职责迁移。
 - **BREAKING**：Document 升级为唯一 v5，增加技能定义与 C# 控制配置的正式作者闭包，删除 Character 角色图正文入口；沿用 CharacterController／AIController 两个整包 domain 和五个生命周期工具，保留 Presentation 分片原有所有权，不提供 v4 兼容读写。
 - 明确数据更新与代码更新：技能数据经正式 Build／资源发布采用；可更新的角色规则与技能叶子通过版本化规则程序集接入现有启动加载和服务端发布。Session 锁定模块和产物版本，不新增对局中无损换代码／换状态能力。
 - 子图嵌套和 Tree 是本次范围。弹道、命中／伤害闭环、新 VFX／Audio consumer、通用蓝图与插件替换不在本次实施范围；以后新增能力必须进入现有模拟请求与状态所有权边界，不建立占位弹道 Pass。
@@ -60,7 +62,8 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 
 - 运行与构建：`Main/Runtime/Simulation/Core` 的 Program、Kernel、状态及共享控制执行模块；Numeric Target、Character Definition／Composition、编译 Frontend／Target Build、产品发布与现有网络 checkpoint 接入。
 - 作者与工具：BTSMTL Tree／Timeline、共享 Graph Framework、Action Workspace、Agent Document、Capability、Exporter／Reconciler／Mutation／Validator 及 `btsmtl-agent-authoring` 合同。
+- 实施分工：本change的Agent Document、Agent工具窗口、五个MCP工具及对应作者技能由独立Agent作者工具任务承接，包括任务10.1–10.6及相关旧路径删除、结构说明和Document验证。原BTSMTL实现继续普通编译／运行／作者模块重构、共享合同、最终产物发布与全链Replay；完整change仍需两侧交付及统一集成验收，具体文件和交付归属见design第10节。
 - 数据迁移：正式可发布 Character composition 可达的角色控制图、技能图、装备入口和产物引用需要一次性迁移。保留业务稳定身份与作者引用；生成索引、ProgramHash、LayoutHash、EventId 来源映射及 ABI 可以随新结构变化，不要求跨 ABI 字节相同。
 - 保护范围：不改动已正确的 KCC、MotionWarp 数学、Pose／IK／Camera／渲染算法，不顺带修复 TrainingEnemy 的现有资产阻塞，也不实现尚缺的装备样例、网络装备业务或战斗 consumer。已存在的能力保留正式迁移接口；无效资产继续明确报错。
 - 规范对账：当前“技能资产不得拥有执行图”“角色动作只能由图 operation 激活”“角色／装备流程必须编译为图 root”“Document 固定 v4”等约束需要本 change 的 delta 替换。现行 Pipeline、世界求解和表现所有权继续保留。详细对账及独立预览／其它 active change 的重叠项见 `design.md`。
-- 本次只重写现有 change 的规划文件和 delta specs，不修改 current specs、其它 active change、项目代码或 Unity 资产，不开始 apply。验收复用已有构建、Validator 和 Replay／Proof；不新增测试代码，不把手动操作列为实施任务。
+- 实施按完整迁移单元形成中文小步提交，结构验收与行为验收分别提供证据；current specs 安装与项目口径更新由任务 13.3 收口。验收复用已有构建、Validator 和 Replay／Proof；不新增测试代码，不把手动操作列为实施任务。代码已接通但仍保留重复业务流程或中央业务分支时，对应重构任务不得标为完成。

@@ -150,6 +150,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        public AnimationReadOnlyBuffer<byte> PoseParameterAvailability
+        {
+            get
+            {
+                RequireLease();
+                return m_PoseParameterAvailability;
+            }
+        }
+
         public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions
         {
             get
@@ -258,14 +267,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public AnimationReadOnlyBuffer<byte> PoseParameterAvailability
-        {
-            get
-            {
-                RequireLease();
-                return m_PoseParameterAvailability;
-            }
-        }
     }
 
     public readonly struct FinalAnimationPoseFrame

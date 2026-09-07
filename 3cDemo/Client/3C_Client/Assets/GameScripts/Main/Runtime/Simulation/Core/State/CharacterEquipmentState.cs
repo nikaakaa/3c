@@ -32,27 +32,27 @@ namespace ThirdPersonSimulation
         public EquipmentProgramFeature(
             EquipmentFeatureId featureId,
             EquipmentFeatureRevision revision,
+            string codeBindingId,
             IEnumerable<string> grantedTags,
             IEnumerable<string> passiveEffects,
-            WorldCapability requiredWorldCapabilities,
-            OperationHandle persistentEntry)
+            WorldCapability requiredWorldCapabilities)
         {
-            if (!featureId.IsValid || !revision.IsValid)
+            if (!featureId.IsValid || !revision.IsValid || string.IsNullOrEmpty(codeBindingId))
                 throw new ArgumentException("Equipment Program Feature identity is invalid.");
             FeatureId = featureId;
             Revision = revision;
+            CodeBindingId = SimulationIdentity.Require(codeBindingId, nameof(codeBindingId));
             m_GrantedTags = StableIdentities(grantedTags, "Equipment granted Tag");
             m_PassiveEffects = StableIdentities(passiveEffects, "Equipment passive Effect");
             RequiredWorldCapabilities = requiredWorldCapabilities;
-            PersistentEntry = persistentEntry;
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentFeatureRevision Revision { get; }
+        public string CodeBindingId { get; }
         public IReadOnlyList<string> GrantedTags => m_GrantedTags;
         public IReadOnlyList<string> PassiveEffects => m_PassiveEffects;
         public WorldCapability RequiredWorldCapabilities { get; }
-        public OperationHandle PersistentEntry { get; }
 
         static ReadOnlyCollection<string> StableIdentities(IEnumerable<string> source, string label)
         {
@@ -120,24 +120,50 @@ namespace ThirdPersonSimulation
 
     public sealed class EquipmentProgramRouteImplementation
     {
+        readonly ReadOnlyCollection<EquipmentParameterId> m_RequiredParameterIds;
+        readonly ReadOnlyCollection<string> m_RequiredProducerIds;
+
         public EquipmentProgramRouteImplementation(
             EquipmentFeatureId featureId,
             EquipmentActionRouteId routeId,
-            string actionId,
-            OperationHandle entryOperation)
+            CharacterSkillId skillId,
+            IEnumerable<EquipmentParameterId> requiredParameterIds = null,
+            IEnumerable<string> requiredProducerIds = null)
         {
-            if (!featureId.IsValid || !routeId.IsValid || string.IsNullOrEmpty(actionId) || !entryOperation.IsValid)
+            if (!featureId.IsValid || !routeId.IsValid || !skillId.IsValid)
                 throw new ArgumentException("Equipment Route implementation is invalid.");
             FeatureId = featureId;
             RouteId = routeId;
-            ActionId = actionId;
-            EntryOperation = entryOperation;
+            SkillId = skillId;
+            m_RequiredParameterIds = StableParameters(requiredParameterIds);
+            m_RequiredProducerIds = StableIdentities(requiredProducerIds, "Equipment required Producer");
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentActionRouteId RouteId { get; }
-        public string ActionId { get; }
-        public OperationHandle EntryOperation { get; }
+        public CharacterSkillId SkillId { get; }
+        public IReadOnlyList<EquipmentParameterId> RequiredParameterIds => m_RequiredParameterIds;
+        public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds;
+
+        static ReadOnlyCollection<EquipmentParameterId> StableParameters(IEnumerable<EquipmentParameterId> source)
+        {
+            EquipmentParameterId[] values = (source ?? Array.Empty<EquipmentParameterId>()).OrderBy(value => value.Value, StringComparer.Ordinal).ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!values[i].IsValid || i > 0 && values[i - 1] == values[i])
+                    throw new InvalidDataException("Equipment required Parameter identities are invalid or duplicated.");
+            }
+            return Array.AsReadOnly(values);
+        }
+
+        static ReadOnlyCollection<string> StableIdentities(IEnumerable<string> source, string label)
+        {
+            string[] values = (source ?? Array.Empty<string>()).Select(value => SimulationIdentity.Require(value, label)).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            for (int i = 1; i < values.Length; i++)
+                if (string.Equals(values[i - 1], values[i], StringComparison.Ordinal))
+                    throw new InvalidDataException($"{label} '{values[i]}' is duplicated.");
+            return Array.AsReadOnly(values);
+        }
     }
 
     public sealed class EquipmentProgramParameter
@@ -221,6 +247,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<EquipmentProgramOperationBinding> m_OperationBindings;
         readonly Dictionary<EquipmentSlotId, EquipmentProgramSlot> m_SlotById;
         readonly Dictionary<EquipmentFeatureId, EquipmentProgramFeature> m_FeatureById;
+        readonly Dictionary<string, EquipmentProgramFeature> m_FeatureByCodeBinding;
         readonly Dictionary<EquipmentId, EquipmentProgramItem> m_ItemById;
         readonly Dictionary<EquipmentActionRouteId, EquipmentProgramRoute> m_RouteById;
         readonly Dictionary<(EquipmentFeatureId, EquipmentActionRouteId), EquipmentProgramRouteImplementation> m_RouteImplementationByKey;
@@ -253,6 +280,13 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Equipment capability has no Slot catalog.");
             m_SlotById = m_Slots.ToDictionary(value => value.SlotId);
             m_FeatureById = m_Features.ToDictionary(value => value.FeatureId);
+            m_FeatureByCodeBinding = new Dictionary<string, EquipmentProgramFeature>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Features.Count; i++)
+            {
+                EquipmentProgramFeature feature = m_Features[i];
+                if (!m_FeatureByCodeBinding.TryAdd(feature.CodeBindingId, feature))
+                    throw new InvalidDataException($"Equipment Feature code binding '{feature.CodeBindingId}' is duplicated.");
+            }
             m_ItemById = m_Items.ToDictionary(value => value.EquipmentId);
             m_RouteById = m_Routes.ToDictionary(value => value.RouteId);
             m_RouteImplementationByKey = m_RouteImplementations.ToDictionary(value => (value.FeatureId, value.RouteId));
@@ -277,6 +311,10 @@ namespace ThirdPersonSimulation
             m_SlotById.TryGetValue(slotId, out EquipmentProgramSlot value) ? value : throw new InvalidOperationException($"Equipment Slot '{slotId}' is absent from Program.");
         public EquipmentProgramFeature RequireFeature(EquipmentFeatureId featureId) =>
             m_FeatureById.TryGetValue(featureId, out EquipmentProgramFeature value) ? value : throw new InvalidOperationException($"Equipment Feature '{featureId}' is absent from Program.");
+        public EquipmentProgramFeature RequireFeatureByCodeBinding(string codeBindingId) =>
+            m_FeatureByCodeBinding.TryGetValue(SimulationIdentity.Require(codeBindingId, nameof(codeBindingId)), out EquipmentProgramFeature value)
+                ? value
+                : throw new InvalidOperationException($"Equipment Feature code binding '{codeBindingId}' is absent from Program.");
         public EquipmentProgramItem RequireItem(EquipmentId equipmentId) =>
             m_ItemById.TryGetValue(equipmentId, out EquipmentProgramItem value) ? value : throw new InvalidOperationException($"Equipment '{equipmentId}' is absent from Program.");
         public EquipmentProgramRoute RequireRoute(EquipmentActionRouteId routeId) =>
@@ -338,12 +376,44 @@ namespace ThirdPersonSimulation
                 if (!m_SlotById.ContainsKey(m_Routes[i].OwnerSlotId))
                     throw new InvalidDataException($"Equipment Route '{m_Routes[i].RouteId}' owner Slot is absent.");
             }
+            for (int i = 0; i < m_RouteImplementations.Count; i++)
+            {
+                EquipmentProgramRouteImplementation implementation = m_RouteImplementations[i];
+                if (!m_FeatureById.ContainsKey(implementation.FeatureId) || !m_RouteById.ContainsKey(implementation.RouteId))
+                    throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling Feature or Route.");
+                if (m_RouteById[implementation.RouteId].OwnerSlotId.IsValid &&
+                    !m_SlotById.ContainsKey(m_RouteById[implementation.RouteId].OwnerSlotId))
+                    throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling owner Slot.");
+                for (int parameterIndex = 0; parameterIndex < implementation.RequiredParameterIds.Count; parameterIndex++)
+                {
+                    EquipmentParameterId parameterId = implementation.RequiredParameterIds[parameterIndex];
+                    if (!m_Parameters.Any(value => value.FeatureId == implementation.FeatureId && value.ParameterId == parameterId))
+                        throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' requires unknown Parameter '{parameterId}'.");
+                    for (int itemIndex = 0; itemIndex < m_Items.Count; itemIndex++)
+                    {
+                        EquipmentProgramItem item = m_Items[itemIndex];
+                        if (item.FeatureId == implementation.FeatureId && !m_ParameterByKey.ContainsKey((item.EquipmentId, parameterId)))
+                            throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' requires Parameter '{parameterId}' on Equipment '{item.EquipmentId}'.");
+                    }
+                }
+            }
+        }
+
+        internal void ValidateProducerBindings(IReadOnlyList<ProgramProducer> producers)
+        {
+            if (producers == null)
+                throw new ArgumentNullException(nameof(producers));
+            var identities = new HashSet<string>(producers.Select(value => value.Identity), StringComparer.Ordinal);
+            for (int i = 0; i < m_RouteImplementations.Count; i++)
+                for (int producerIndex = 0; producerIndex < m_RouteImplementations[i].RequiredProducerIds.Count; producerIndex++)
+                    if (!identities.Contains(m_RouteImplementations[i].RequiredProducerIds[producerIndex]))
+                        throw new InvalidDataException($"Equipment Route implementation '{m_RouteImplementations[i].FeatureId}/{m_RouteImplementations[i].RouteId}' requires unknown Producer '{m_RouteImplementations[i].RequiredProducerIds[producerIndex]}'.");
         }
 
         StableHash ComputeHash()
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("equipment-program-layout/v1");
+            writer.WriteString("equipment-program-layout/v2");
             writer.WriteBoolean(CapabilityEnabled);
             writer.WriteInt32(m_Slots.Count);
             for (int i = 0; i < m_Slots.Count; i++)
@@ -358,8 +428,8 @@ namespace ThirdPersonSimulation
                 EquipmentProgramFeature feature = m_Features[i];
                 writer.WriteString(feature.FeatureId.Value);
                 writer.WriteUInt64(feature.Revision.Value);
+                writer.WriteString(feature.CodeBindingId);
                 writer.WriteUInt64((ulong)feature.RequiredWorldCapabilities);
-                writer.WriteInt32(feature.PersistentEntry.IsValid ? feature.PersistentEntry.Value : -1);
                 writer.WriteInt32(feature.GrantedTags.Count);
                 for (int tag = 0; tag < feature.GrantedTags.Count; tag++) writer.WriteString(feature.GrantedTags[tag]);
                 writer.WriteInt32(feature.PassiveEffects.Count);
@@ -387,8 +457,13 @@ namespace ThirdPersonSimulation
             {
                 writer.WriteString(m_RouteImplementations[i].FeatureId.Value);
                 writer.WriteString(m_RouteImplementations[i].RouteId.Value);
-                writer.WriteString(m_RouteImplementations[i].ActionId);
-                writer.WriteInt32(m_RouteImplementations[i].EntryOperation.Value);
+                writer.WriteString(m_RouteImplementations[i].SkillId.Value);
+                writer.WriteInt32(m_RouteImplementations[i].RequiredParameterIds.Count);
+                for (int parameter = 0; parameter < m_RouteImplementations[i].RequiredParameterIds.Count; parameter++)
+                    writer.WriteString(m_RouteImplementations[i].RequiredParameterIds[parameter].Value);
+                writer.WriteInt32(m_RouteImplementations[i].RequiredProducerIds.Count);
+                for (int producer = 0; producer < m_RouteImplementations[i].RequiredProducerIds.Count; producer++)
+                    writer.WriteString(m_RouteImplementations[i].RequiredProducerIds[producer]);
             }
             writer.WriteInt32(m_Parameters.Count);
             for (int i = 0; i < m_Parameters.Count; i++)
@@ -507,12 +582,12 @@ namespace ThirdPersonSimulation
             EquipmentFeatureRevision featureRevision,
             EquipmentVisualBindingId visualBindingId,
             ulong revision,
-            ulong hostGeneration,
+            ulong generation,
             bool contributionsInstalled,
             string tagSource,
             IEnumerable<ulong> passiveEffectHandles)
         {
-            if (!slotId.IsValid || revision == 0 || hostGeneration == 0)
+            if (!slotId.IsValid || revision == 0 || generation == 0)
                 throw new ArgumentException("Equipment Slot state is invalid.");
             bool empty = !equipmentId.IsValid;
             bool hasAnyContributionIdentity = featureId.IsValid || featureRevision.IsValid || visualBindingId.IsValid;
@@ -527,7 +602,7 @@ namespace ThirdPersonSimulation
             FeatureRevision = featureRevision;
             VisualBindingId = visualBindingId;
             Revision = revision;
-            HostGeneration = hostGeneration;
+            Generation = generation;
             ContributionsInstalled = contributionsInstalled;
             TagSource = tagSource ?? string.Empty;
             m_PassiveEffectHandles = (passiveEffectHandles ?? Array.Empty<ulong>()).ToArray();
@@ -543,7 +618,7 @@ namespace ThirdPersonSimulation
         public EquipmentFeatureRevision FeatureRevision { get; }
         public EquipmentVisualBindingId VisualBindingId { get; }
         public ulong Revision { get; }
-        public ulong HostGeneration { get; }
+        public ulong Generation { get; }
         public bool ContributionsInstalled { get; }
         public string TagSource { get; }
         public IReadOnlyList<ulong> PassiveEffectHandles => m_PassiveEffectHandles ?? Array.Empty<ulong>();
@@ -663,7 +738,7 @@ namespace ThirdPersonSimulation
                 writer.WriteUInt64(slot.FeatureRevision.Value);
                 writer.WriteString(slot.VisualBindingId.Value);
                 writer.WriteUInt64(slot.Revision);
-                writer.WriteUInt64(slot.HostGeneration);
+                writer.WriteUInt64(slot.Generation);
                 writer.WriteBoolean(slot.ContributionsInstalled);
                 writer.WriteString(slot.TagSource);
                 writer.WriteInt32(slot.PassiveEffectHandles.Count);
@@ -792,6 +867,8 @@ namespace ThirdPersonSimulation
             EquipmentProgramItem item = layout.RequireItem(context.EquipmentId);
             EquipmentProgramFeature feature = layout.RequireFeature(context.FeatureId);
             EquipmentProgramRoute route = layout.RequireRoute(context.RouteId);
+            if (!layout.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
+                throw new InvalidDataException($"Equipment Action Context '{context}' has no Feature route implementation.");
             if (item.SlotId != context.SlotId || item.FeatureId != context.FeatureId ||
                 route.OwnerSlotId != context.SlotId || feature.FeatureId != context.FeatureId)
             {

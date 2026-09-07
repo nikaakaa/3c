@@ -812,6 +812,7 @@ namespace ThirdPersonSimulation
         }
 
         public void PrepareActivation(OperationExecutionDescriptor operation) { }
+        public void PrepareSubGraph(OperationControlCursor<AIIntentOperationTarget> cursor, OperationExecutionDescriptor operation) { }
         public void ActivateScopes(OperationControlCursor<AIIntentOperationTarget> cursor, OperationExecutionDescriptor operation, ulong generation) { }
         public void CompleteScopes(OperationExecutionDescriptor operation) { }
         public void ClearStateScope(OperationExecutionDescriptor state) { }

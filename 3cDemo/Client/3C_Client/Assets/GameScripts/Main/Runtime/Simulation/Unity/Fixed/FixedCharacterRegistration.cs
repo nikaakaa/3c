@@ -224,8 +224,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 ActorId,
                 result.Tick,
                 sample.FinalBody);
-            if (FixedCharacterInputTraceModule.Status.Mode ==
-                FixedCharacterInputTraceMode.Completed)
+            FixedCharacterInputTraceMode traceMode = FixedCharacterInputTraceModule.Status.Mode;
+            if (traceMode == FixedCharacterInputTraceMode.ReplayPaused ||
+                traceMode == FixedCharacterInputTraceMode.Completed)
             {
                 GameplayTickSystem.RequestCurrentFrameLogicStop();
             }

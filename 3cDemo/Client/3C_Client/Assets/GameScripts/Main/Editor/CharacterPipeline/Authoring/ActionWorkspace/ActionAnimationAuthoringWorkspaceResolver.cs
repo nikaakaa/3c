@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
 using UnityEditor;
@@ -24,8 +25,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ResolveTopology(definition, failures);
             ActionAnimationCallSiteContext callSite =
                 ResolveCallSite(topology, action, failures);
+            IReadOnlyList<ActionAnimationTimelineCandidate> timelineCandidates =
+                ResolveTimelineCandidates(topology, callSite, failures);
             ActionAnimationTimelineContext timeline =
-                ResolveTimeline(request, topology, callSite, failures);
+                ResolveTimeline(request, timelineCandidates, failures);
+            ActionAnimationTimelineCandidate selectedTimeline = timeline == null
+                ? null
+                : timelineCandidates
+                    .FirstOrDefault(value =>
+                        string.Equals(
+                            value.AuthoringId,
+                            timeline.Timeline.AuthoringId,
+                            StringComparison.Ordinal) &&
+                        string.Equals(
+                            value.RouteIdentity,
+                            timeline.RouteIdentity,
+                            StringComparison.Ordinal));
+            var pageState = new ActionAnimationWorkspacePageState(
+                timelineCandidates,
+                selectedTimeline);
             ActionAnimationProducerContext producer =
                 ResolveProducer(request, timeline, failures);
             ActionAnimationPresentationBindingContext presentation =
@@ -33,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionAnimationSlotConsumerContext slot =
                 ResolveSlot(request, definition, producer, failures);
             ActionAnimationPreviewTargetContext previewTarget =
-                ResolvePreviewTarget(definition, failures);
+                ResolvePreviewTarget(definition, producer != null, failures);
             ActionAnimationRuntimeDebugBinding runtimeDebug =
                 ResolveRuntimeDebug(definition, timeline);
 
@@ -43,8 +61,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var workspaceId = new ActionAnimationWorkspaceId(
                     definition.AssetGuid,
                     action.ActionId,
-                    producer.ProducerId,
-                    slot.SlotId);
+                    producer != null ? producer.ProducerId : default,
+                    slot != null ? slot.SlotId : default,
+                    action.SkillId,
+                    timeline?.RouteIdentity ?? string.Empty);
                 session = new ActionAnimationWorkspaceSession(
                     workspaceId,
                     definition,
@@ -55,7 +75,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     presentation,
                     slot,
                     runtimeDebug,
-                    previewTarget);
+                    previewTarget,
+                    pageState);
             }
 
             return new ActionAnimationWorkspaceResolution(
@@ -69,7 +90,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 presentation,
                 slot,
                 runtimeDebug,
-                previewTarget);
+                previewTarget,
+                pageState);
         }
 
         static ActionAnimationDefinitionContext ResolveDefinition(
@@ -155,7 +177,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     matches[0]);
                 return null;
             }
-            return new ActionAnimationProfileContext(matches[0]);
+            CharacterSkillAuthoringDefinition[] skills = definition.SkillDefinitions
+                .Where(value =>
+                    value != null &&
+                    value.ActionProfile &&
+                    ReferenceEquals(value.ActionProfile, matches[0]))
+                .Where(value =>
+                    string.IsNullOrEmpty(request.SkillId) ||
+                    string.Equals(value.SkillId, request.SkillId, StringComparison.Ordinal))
+                .ToArray();
+            if (!string.IsNullOrEmpty(request.SkillId) && skills.Length == 0)
+            {
+                Add(
+                    failures,
+                    ActionAnimationWorkspaceFailureCode.SkillDefinitionMissing,
+                    $"Definition does not own SkillDefinition '{request.SkillId}' for ActionProfile '{request.ActionId}'.",
+                    definition);
+                return null;
+            }
+            if (skills.Length > 1)
+            {
+                Add(
+                    failures,
+                    ActionAnimationWorkspaceFailureCode.SkillDefinitionAmbiguous,
+                    $"ActionProfile '{request.ActionId}' resolves {skills.Length} SkillDefinitions; an exact SkillId is required.",
+                    matches[0]);
+                return null;
+            }
+            return new ActionAnimationProfileContext(
+                matches[0],
+                skills.Length == 1 ? skills[0] : null);
         }
 
         static CharacterAuthoringTopologyProjection ResolveTopology(
@@ -191,6 +242,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (topology == null || action == null)
                 return null;
+            if (action.Skill != null)
+            {
+                CharacterAuthoringGraphEntry[] entryMatches = topology.Graphs
+                    .Where(value =>
+                        value.FirstOccurrence &&
+                        value.Graph != null &&
+                        string.Equals(
+                            value.Graph.GraphAuthoringId,
+                            action.EntryGraphAuthoringId,
+                            StringComparison.Ordinal))
+                    .ToArray();
+                if (entryMatches.Length == 0)
+                {
+                    Add(
+                        failures,
+                        ActionAnimationWorkspaceFailureCode.SkillEntryGraphMissing,
+                        $"Skill '{action.SkillId}' entry graph '{action.EntryGraphAuthoringId}' is not reachable from the Definition root.",
+                        action.Profile,
+                        action.EntryGraphAuthoringId);
+                    return null;
+                }
+                if (entryMatches.Length > 1)
+                {
+                    Add(
+                        failures,
+                        ActionAnimationWorkspaceFailureCode.SkillEntryGraphMissing,
+                        $"Skill '{action.SkillId}' entry graph '{action.EntryGraphAuthoringId}' resolves to multiple graph occurrences.",
+                        action.Profile,
+                        action.EntryGraphAuthoringId);
+                    return null;
+                }
+                return new ActionAnimationCallSiteContext(
+                    entryMatches[0],
+                    null,
+                    action.Skill.ActionContext);
+            }
             var matches =
                 new List<(CharacterAuthoringGraphEntry graph, ActivateActionInstanceNode node)>();
             for (int graphIndex = 0; graphIndex < topology.Graphs.Count; graphIndex++)
@@ -239,47 +326,89 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 matches[0].node);
         }
 
-        static ActionAnimationTimelineContext ResolveTimeline(
-            ActionAnimationWorkspaceOpenRequest request,
+        static IReadOnlyList<ActionAnimationTimelineCandidate> ResolveTimelineCandidates(
             CharacterAuthoringTopologyProjection topology,
             ActionAnimationCallSiteContext callSite,
             List<ActionAnimationWorkspaceFailure> failures)
         {
             if (topology == null || callSite == null)
+                return Array.Empty<ActionAnimationTimelineCandidate>();
+            var candidates = new List<ActionAnimationTimelineCandidate>();
+            for (int i = 0; i < topology.Timelines.Count; i++)
+            {
+                CharacterAuthoringTimelineEntry entry = topology.Timelines[i];
+                if (entry.Node == null ||
+                    !ReferenceEquals(entry.Node.ActionContext, callSite.ActionContext) ||
+                    entry.Node.PlaybackMode != TimelinePlaybackMode.Once ||
+                    entry.Timeline == null ||
+                    entry.Timeline.MaxFrame <= 0)
+                    continue;
+                var candidate = new ActionAnimationTimelineCandidate(entry);
+                candidates.Add(candidate);
+                if (string.IsNullOrEmpty(candidate.AuthoringId))
+                {
+                    Add(
+                        failures,
+                        ActionAnimationWorkspaceFailureCode.TimelineIdentityInvalid,
+                        "Finite Action Timeline has no stable AuthoringId.",
+                        entry.Graph.SerializedOwner,
+                        entry.Graph.GraphAuthoringId,
+                        entry.Node.GUID);
+                }
+                if (!entry.Timeline.SerializedOwner ||
+                    string.IsNullOrWhiteSpace(entry.Timeline.SerializedPropertyPath))
+                {
+                    Add(
+                        failures,
+                        ActionAnimationWorkspaceFailureCode.TimelineOwnerMissing,
+                        $"Timeline '{candidate.AuthoringId}' has no serialized owner/path.",
+                        entry.Graph.SerializedOwner,
+                        entry.Graph.GraphAuthoringId,
+                        entry.Node.GUID);
+                }
+            }
+            return candidates.AsReadOnly();
+        }
+
+        static ActionAnimationTimelineContext ResolveTimeline(
+            ActionAnimationWorkspaceOpenRequest request,
+            IReadOnlyList<ActionAnimationTimelineCandidate> candidates,
+            List<ActionAnimationWorkspaceFailure> failures)
+        {
+            if (candidates == null || candidates.Count == 0)
+            {
+                if (!string.IsNullOrEmpty(request.TimelineAuthoringId))
+                    Add(
+                        failures,
+                        ActionAnimationWorkspaceFailureCode.TimelineIdentityMismatch,
+                        $"Action does not own finite Timeline '{request.TimelineAuthoringId}'.");
                 return null;
-            CharacterAuthoringTimelineEntry[] candidates = topology.Timelines
+            }
+
+            ActionAnimationTimelineCandidate[] matches = candidates
                 .Where(value =>
-                    value.Node != null &&
-                    ReferenceEquals(
-                        value.Node.ActionContext,
-                        callSite.ActionContext) &&
-                    value.Node.PlaybackMode == TimelinePlaybackMode.Once &&
-                    value.Timeline != null &&
-                    value.Timeline.MaxFrame > 0)
+                    string.IsNullOrEmpty(request.TimelineAuthoringId) ||
+                    string.Equals(
+                        value.AuthoringId,
+                        request.TimelineAuthoringId,
+                        StringComparison.Ordinal))
+                .Where(value =>
+                    string.IsNullOrEmpty(request.TimelineRouteId) ||
+                    string.Equals(
+                        value.RouteIdentity,
+                        request.TimelineRouteId,
+                        StringComparison.Ordinal))
                 .ToArray();
-            CharacterAuthoringTimelineEntry[] matches =
-                string.IsNullOrEmpty(request.TimelineAuthoringId)
-                    ? candidates
-                    : candidates
-                        .Where(value =>
-                            string.Equals(
-                                value.Timeline.AuthoringId,
-                                request.TimelineAuthoringId,
-                                StringComparison.Ordinal))
-                        .ToArray();
+            if (string.IsNullOrEmpty(request.TimelineAuthoringId))
+                return matches.Length == 1
+                    ? CreateTimelineContext(matches[0], failures)
+                    : null;
             if (matches.Length == 0)
             {
                 Add(
                     failures,
-                    string.IsNullOrEmpty(request.TimelineAuthoringId)
-                        ? ActionAnimationWorkspaceFailureCode.FiniteTimelineMissing
-                        : ActionAnimationWorkspaceFailureCode.TimelineIdentityMismatch,
-                    string.IsNullOrEmpty(request.TimelineAuthoringId)
-                        ? $"Action call site '{callSite.Node.GUID}' has no finite Timeline."
-                        : $"Action call site '{callSite.Node.GUID}' does not own finite Timeline '{request.TimelineAuthoringId}'.",
-                    callSite.Graph.SerializedOwner,
-                    callSite.Graph.GraphAuthoringId,
-                    callSite.Node.GUID);
+                    ActionAnimationWorkspaceFailureCode.TimelineIdentityMismatch,
+                    $"Action does not own finite Timeline '{request.TimelineAuthoringId}'.");
                 return null;
             }
             if (matches.Length > 1)
@@ -287,36 +416,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Add(
                     failures,
                     ActionAnimationWorkspaceFailureCode.FiniteTimelineAmbiguous,
-                    $"Action call site '{callSite.Node.GUID}' resolves {matches.Length} finite Timelines.",
-                    callSite.Graph.SerializedOwner,
-                    callSite.Graph.GraphAuthoringId,
-                    callSite.Node.GUID);
+                    $"Timeline '{request.TimelineAuthoringId}' requires an exact route identity.");
                 return null;
             }
-            if (string.IsNullOrWhiteSpace(matches[0].Timeline.AuthoringId))
+            return CreateTimelineContext(matches[0], failures);
+        }
+
+        static ActionAnimationTimelineContext CreateTimelineContext(
+            ActionAnimationTimelineCandidate candidate,
+            List<ActionAnimationWorkspaceFailure> failures)
+        {
+            try
+            {
+                return new ActionAnimationTimelineContext(candidate.Entry);
+            }
+            catch (ArgumentException exception)
             {
                 Add(
                     failures,
-                    ActionAnimationWorkspaceFailureCode.TimelineIdentityInvalid,
-                    "Finite Action Timeline has no stable AuthoringId.",
-                    matches[0].Graph.SerializedOwner,
-                    matches[0].Graph.GraphAuthoringId,
-                    matches[0].Node.GUID);
+                    ActionAnimationWorkspaceFailureCode.FiniteTimelineMissing,
+                    exception.Message,
+                    candidate.Entry.Graph.SerializedOwner,
+                    candidate.GraphAuthoringId,
+                    candidate.Entry.Node?.GUID ?? string.Empty);
                 return null;
             }
-            if (!matches[0].Timeline.SerializedOwner ||
-                string.IsNullOrWhiteSpace(matches[0].Timeline.SerializedPropertyPath))
-            {
-                Add(
-                    failures,
-                    ActionAnimationWorkspaceFailureCode.TimelineOwnerMissing,
-                    $"Timeline '{matches[0].Timeline.AuthoringId}' has no serialized owner/path.",
-                    matches[0].Graph.SerializedOwner,
-                    matches[0].Graph.GraphAuthoringId,
-                    matches[0].Node.GUID);
-                return null;
-            }
-            return new ActionAnimationTimelineContext(matches[0]);
         }
 
         static ActionAnimationProducerContext ResolveProducer(
@@ -341,14 +465,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToArray();
             if (matches.Length == 0)
             {
+                if (string.IsNullOrEmpty(request.TrackAuthoringId))
+                    return null;
                 Add(
                     failures,
-                    string.IsNullOrEmpty(request.TrackAuthoringId)
-                        ? ActionAnimationWorkspaceFailureCode.AnimationProducerMissing
-                        : ActionAnimationWorkspaceFailureCode.AnimationProducerIdentityMismatch,
-                    string.IsNullOrEmpty(request.TrackAuthoringId)
-                        ? $"Timeline '{timeline.Timeline.AuthoringId}' has no Animation producer track."
-                        : $"Timeline '{timeline.Timeline.AuthoringId}' does not own Animation producer '{request.TrackAuthoringId}'.",
+                    ActionAnimationWorkspaceFailureCode.AnimationProducerIdentityMismatch,
+                    $"Timeline '{timeline.Timeline.AuthoringId}' does not own Animation producer '{request.TrackAuthoringId}'.",
                     timeline.SerializedOwner,
                     timeline.Graph.GraphAuthoringId,
                     timeline.Node.GUID);
@@ -356,6 +478,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (matches.Length > 1)
             {
+                if (string.IsNullOrEmpty(request.TrackAuthoringId))
+                    return null;
                 Add(
                     failures,
                     ActionAnimationWorkspaceFailureCode.AnimationProducerAmbiguous,
@@ -389,6 +513,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (definition == null)
                 return null;
+            if (producer == null)
+                return null;
             CharacterAnimationPresentationProfile profile =
                 definition.Definition.AnimationPresentationProfile;
             if (!profile)
@@ -400,8 +526,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     definition.Definition);
                 return null;
             }
-            if (producer == null)
-                return null;
             AnimationProducerPresentationBinding[] matches =
                 profile.ProducerBindings
                     .Where(value =>
@@ -439,6 +563,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (definition == null)
                 return null;
+            if (producer == null)
+                return null;
             CharacterAnimationPresentationProfile profile =
                 definition.Definition.AnimationPresentationProfile;
             CharacterPresentationPoseGraphAsset poseGraph =
@@ -452,8 +578,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     profile ? profile : definition.Definition);
                 return null;
             }
-            if (producer == null)
-                return null;
             var candidates =
                 new List<(CharacterPoseCanvasGraph graph, CharacterPoseCanvasNode node, CharacterAnimationSlotPosePayload payload)>();
             foreach (CharacterPoseCanvasGraph graph in poseGraph.EnumerateGraphs())
@@ -508,6 +632,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static ActionAnimationPreviewTargetContext ResolvePreviewTarget(
             ActionAnimationDefinitionContext definition,
+            bool required,
             List<ActionAnimationWorkspaceFailure> failures)
         {
             if (definition == null)
@@ -519,6 +644,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 value.PresentationProjection,
                 profile ? profile.RigDefinition : null,
                 profile ? profile.PoseGraph : null);
+            if (!required)
+                return context;
             if (!context.Projection)
             {
                 Add(

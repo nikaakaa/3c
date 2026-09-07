@@ -208,11 +208,11 @@ namespace BTSMTL.Timeline.Editor
             TreeTrack track = timeline.Tracks.OfType<TreeTrack>().FirstOrDefault();
             if (track == null)
             {
-                timeline.AddTrack(typeof(TreeTrack));
+                timeline.AddTrack(typeof(TreeTrack), TimelineTreeContractComposition.Create());
                 track = timeline.Tracks.OfType<TreeTrack>().First();
             }
 
-            TreeClip clip = timeline.AddClip(track, startFrame) as TreeClip;
+            TreeClip clip = timeline.AddClip(TimelineTreeContractComposition.Create(), track, startFrame) as TreeClip;
             clip.StartFrame = startFrame;
             clip.EndFrame = System.Math.Max(startFrame + 1, endFrame);
             clip.SetExecutionPhase(TimelineTreeExecutionPhase.Decision);

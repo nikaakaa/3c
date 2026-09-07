@@ -87,18 +87,24 @@ namespace TreeDesigner.Editor
         public bool CanConnect(IGraphAuthoringDocument document, Port startPort, Port endPort)
         {
             if (!(startPort is BasePortView start) || !(endPort is BasePortView end) ||
-                start.NodeView == end.NodeView || end.direction == start.direction ||
-                start.portType == null || end.portType == null || start.portType == typeof(object))
+                start.NodeView == end.NodeView || end.direction == start.direction)
                 return false;
             if (!IsCompatibleStateMachineFlowPort(start, end))
                 return false;
-            if (end is VariablePropertyPortView variable && variable.PropertyPort.ValueType == null)
-                return variable.AcceptableTypes.Any(type => start.portType.IsSubClassOfRawGeneric(type));
-            if (start.portType == end.portType || start.portType.IsSubclassOf(end.portType))
-                return true;
-            return end is PropertyPortView property &&
-                   property.PropertyPort.GetAttribute<CompatiblePortsAttribute>() is CompatiblePortsAttribute compatibility &&
-                   compatibility.CompatibleTypes.Contains(start.portType);
+            if (IsPropertyPort(start) || IsPropertyPort(end))
+            {
+                if (!(start is PropertyPortView first) || !(end is PropertyPortView second))
+                    return false;
+                PropertyPortView output = first.direction == Direction.Output ? first : second;
+                PropertyPortView input = first.direction == Direction.Input ? first : second;
+                return PropertyPortAuthoringService.CanConnect(
+                    output.NodeView.Node,
+                    output.PropertyPort,
+                    input.NodeView.Node,
+                    input.PropertyPort);
+            }
+            return start.portType != null && end.portType != null &&
+                   (start.portType == end.portType || start.portType.IsSubclassOf(end.portType));
         }
 
         bool IsCompatibleStateMachineFlowPort(BasePortView start, BasePortView end)

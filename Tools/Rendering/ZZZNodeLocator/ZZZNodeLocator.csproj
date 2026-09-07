@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ZZZDumpRoot Condition="'$(ZZZDumpRoot)' == ''">D:/ZZZ_Dump</ZZZDumpRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ZZZDumpRoot)/tools_dl/AnimeStudio/AnimeStudio/AnimeStudio.csproj" />
+  </ItemGroup>
+</Project>

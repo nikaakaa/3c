@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
 
@@ -9,6 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
 
         public CharacterSimulationDiagnosticsAdapter(
             RuntimeDiagnosticsContext context,
@@ -19,6 +23,25 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            for (int i = 0; i < program.SourceMap.Count; i++)
+            {
+                ProgramSourceMapEntry entry = program.SourceMap[i];
+                RuntimeSourceTarget target = entry.TargetKind switch
+                {
+                    ProgramSourceTargetKind.ControlModule => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlModule, entry.TargetIndex),
+                    ProgramSourceTargetKind.ControlState => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlState, entry.TargetIndex),
+                    ProgramSourceTargetKind.ControlTransition => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlTransition, entry.TargetIndex),
+                    _ => default
+                };
+                if (!target.IsProgramTarget || !m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle handle))
+                    continue;
+                if (entry.TargetKind == ProgramSourceTargetKind.ControlModule)
+                    m_ControlModules[entry.GraphId] = handle;
+                else if (entry.TargetKind == ProgramSourceTargetKind.ControlState)
+                    m_ControlStates[entry.NodeId] = handle;
+                else
+                    m_ControlTransitions[entry.EdgeId] = handle;
+            }
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 if (!m_SourceMap.TryGetProgramTarget(
@@ -28,10 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             }
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
-                if (!m_SourceMap.TryGetProgramTarget(
-                        new RuntimeSourceTarget(RuntimeSourceTargetKind.StateSlot, i),
-                        out _))
-                    throw new InvalidOperationException($"Program state slot '{i}' is absent from the Debug Source Map.");
+                RuntimeSourceTarget target = CharacterRuntimeDebugTargetResolver.ForStateSlot(program.StateSlots[i]);
+                if (!m_SourceMap.TryGetProgramTarget(target, out _))
+                    throw new InvalidOperationException($"Program state target '{target}' for slot '{i}' is absent from the Debug Source Map.");
             }
         }
 
@@ -71,24 +93,38 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.Header.Activation.Source.IsCharacterControl)
+            {
+                PublishControl(record);
+                return;
+            }
             if (!record.Header.Activation.Source.IsSkillOperation)
-                throw new InvalidOperationException("Operation trace requires a Skill operation execution source.");
+                throw new InvalidOperationException("Operation trace requires a Skill operation or Character control execution source.");
             var target = new RuntimeSourceTarget(
                 RuntimeSourceTargetKind.Operation,
                 record.Header.Activation.Source.Operation.Value);
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
+            RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
+                ? RuntimeInstanceKey.SkillExecution(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.SkillId,
+                    record.ActionInstanceId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation)
+                : RuntimeInstanceKey.Runnable(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation);
             m_Context.Publish(
                 ResolveOperationChannel(kind, record.Code),
                 RuntimeTraceDomain.Logic,
                 kind,
                 source,
-                RuntimeInstanceKey.Runnable(
-                    m_Context.CharacterRuntimeId,
-                    m_ExecutionId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation),
+                runtimeInstance,
                 new RuntimeTracePayload
                 {
                     Status = record.Severity.ToString(),
@@ -96,9 +132,71 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     Detail = record.Detail,
                     Cause = record.Boundary,
                     OwnerId = record.Header.ActorId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
+                    ActivationGeneration = record.Header.Activation.Generation,
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
+        }
+
+        void PublishControl(SimulationTraceRecord record)
+        {
+            SimulationExecutionSource source = record.Header.Activation.Source;
+            RuntimeSourceElementHandle sourceHandle = ResolveControlSource(source);
+            RuntimeInstanceKey instance = record.ActionInstanceId != 0
+                ? RuntimeInstanceKey.ActionInstance(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.SkillId,
+                    record.ActionInstanceId,
+                    record.Header.Activation.Generation)
+                : source.TransitionId.IsValid
+                ? RuntimeInstanceKey.ControlTransition(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    source.TransitionId.Value,
+                    record.Header.Activation.Generation)
+                : source.StateId.IsValid
+                    ? RuntimeInstanceKey.ControlState(
+                        m_Context.CharacterRuntimeId,
+                        m_ExecutionId,
+                        source.StateId.Value,
+                        record.Header.Activation.Generation)
+                    : RuntimeInstanceKey.ControlModule(m_Context.CharacterRuntimeId, m_ExecutionId);
+            m_Context.Publish(
+                RuntimeTraceChannel.StateMachine,
+                RuntimeTraceDomain.Logic,
+                ResolveControlKind(record.Code),
+                sourceHandle,
+                instance,
+                new RuntimeTracePayload
+                {
+                    Status = record.Severity.ToString(),
+                    Name = record.Code,
+                    Detail = $"{record.Detail} | Source={source.Identity}",
+                    OwnerId = source.ModuleId.Value,
+                    RelatedElementId = source.TransitionId.IsValid
+                        ? source.TransitionId.Value
+                        : source.StateId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    ActivationGeneration = record.Header.Activation.Generation,
+                    Flag = record.Severity != SimulationTraceSeverity.Error,
+                    Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
+                });
+        }
+
+        RuntimeSourceElementHandle ResolveControlSource(SimulationExecutionSource source)
+        {
+            if (source.TransitionId.IsValid && m_ControlTransitions.TryGetValue(source.TransitionId.Value, out RuntimeSourceElementHandle transition))
+                return transition;
+            if (source.StateId.IsValid && m_ControlStates.TryGetValue(source.StateId.Value, out RuntimeSourceElementHandle state))
+                return state;
+            return m_ControlModules.TryGetValue(source.ModuleId.Value, out RuntimeSourceElementHandle module)
+                ? module
+                : throw new InvalidOperationException($"Control source '{source.Identity}' is absent from the Debug Source Map.");
         }
 
         public void PublishPipeline(SimulationPipelineTraceRecord record)
@@ -235,7 +333,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 "action_lifecycle" => RuntimeTraceEventKind.ActionLifecycleTransitioned,
                 "equipment_snapshot" => RuntimeTraceEventKind.EquipmentSnapshot,
                 "equipment_change" => RuntimeTraceEventKind.EquipmentChange,
-                "equipment_host" => RuntimeTraceEventKind.EquipmentHost,
                 "motion_contribution" => RuntimeTraceEventKind.MotionContribution,
                 "motion_channel_resolved" or
                 "resolved_gameplay_motion" or
@@ -243,6 +340,18 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 "world_result_applied" => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("motion_warp_", StringComparison.Ordinal) => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("gameplay_effect", StringComparison.Ordinal) => RuntimeTraceEventKind.GameplayEffectLifecycle,
+                _ => RuntimeTraceEventKind.NodeStatus
+            };
+        }
+
+        static RuntimeTraceEventKind ResolveControlKind(string code)
+        {
+            return code switch
+            {
+                "control_state_entered" => RuntimeTraceEventKind.StateScopeEntered,
+                "control_state_exited" => RuntimeTraceEventKind.StateScopeExited,
+                "control_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
+                "control_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
                 _ => RuntimeTraceEventKind.NodeStatus
             };
         }
@@ -292,8 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 code.StartsWith("gameplay_", StringComparison.Ordinal))
                 return RuntimeTraceChannel.GameplayEffect;
             if (kind == RuntimeTraceEventKind.EquipmentSnapshot ||
-                kind == RuntimeTraceEventKind.EquipmentChange ||
-                kind == RuntimeTraceEventKind.EquipmentHost)
+                kind == RuntimeTraceEventKind.EquipmentChange)
                 return RuntimeTraceChannel.Equipment;
             return RuntimeTraceChannel.Graph;
         }

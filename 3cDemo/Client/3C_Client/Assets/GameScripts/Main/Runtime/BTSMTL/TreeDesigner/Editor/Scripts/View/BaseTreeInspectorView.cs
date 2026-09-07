@@ -236,9 +236,9 @@ namespace TreeDesigner.Editor
                         node.ApplyModify("Set State Machine Graph Reference", () =>
                         {
                             if (asset)
-                                module.SetSharedGraphAsset(asset);
+                                TreeGraphReferenceAuthoring.SetShared(node, "scopedGraph.m_InlineGraph", asset);
                             else
-                                module.SetInlineGraph(StateMachineNode.CreateDefaultGraph());
+                                TreeGraphReferenceAuthoring.SetInline(node, "scopedGraph.m_InlineGraph", StateMachineNode.CreateDefaultGraph());
                         });
                         nodeView.Refresh();
                         Populate(new GraphSelectable[] { nodeView });
@@ -257,7 +257,7 @@ namespace TreeDesigner.Editor
 
                     node.ApplyModify("Extract Shared State Machine Graph", () =>
                     {
-                        module.SetSharedGraphAsset(sharedAsset);
+                        TreeGraphReferenceAuthoring.SetShared(node, "scopedGraph.m_InlineGraph", sharedAsset);
                     });
                     nodeView.Refresh();
                     Populate(new GraphSelectable[] { nodeView });
@@ -266,7 +266,7 @@ namespace TreeDesigner.Editor
                 {
                     node.ApplyModify("Use Local State Machine Graph", () =>
                     {
-                        module.SetInlineGraph(StateMachineNode.CreateDefaultGraph());
+                        TreeGraphReferenceAuthoring.SetInline(node, "scopedGraph.m_InlineGraph", StateMachineNode.CreateDefaultGraph());
                     });
                     nodeView.Refresh();
                     Populate(new GraphSelectable[] { nodeView });
@@ -291,9 +291,9 @@ namespace TreeDesigner.Editor
                         node.ApplyModify("Set State Behavior Graph Reference", () =>
                         {
                             if (asset)
-                                module.SetSharedSubTreeAsset(asset);
+                                TreeGraphReferenceAuthoring.SetShared(node, "stateBehaviorGraph.m_InlineSubTree", asset);
                             else
-                                module.SetInlineSubTree(StateNode.CreateDefaultStateBehaviorGraph());
+                                TreeGraphReferenceAuthoring.SetInline(node, "stateBehaviorGraph.m_InlineSubTree", StateNode.CreateDefaultStateBehaviorGraph());
                         });
                         nodeView.Refresh();
                         Populate(new GraphSelectable[] { nodeView });
@@ -312,7 +312,7 @@ namespace TreeDesigner.Editor
 
                     node.ApplyModify("Extract Shared State Behavior Graph", () =>
                     {
-                        module.SetSharedSubTreeAsset(sharedAsset);
+                        TreeGraphReferenceAuthoring.SetShared(node, "stateBehaviorGraph.m_InlineSubTree", sharedAsset);
                     });
                     nodeView.Refresh();
                     Populate(new GraphSelectable[] { nodeView });
@@ -321,7 +321,7 @@ namespace TreeDesigner.Editor
                 {
                     node.ApplyModify("Use Local State Behavior Graph", () =>
                     {
-                        module.SetInlineSubTree(StateNode.CreateDefaultStateBehaviorGraph());
+                        TreeGraphReferenceAuthoring.SetInline(node, "stateBehaviorGraph.m_InlineSubTree", StateNode.CreateDefaultStateBehaviorGraph());
                     });
                     nodeView.Refresh();
                     Populate(new GraphSelectable[] { nodeView });

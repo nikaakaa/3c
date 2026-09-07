@@ -60,6 +60,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionProfileCancelQuery,
         SetActionProfileTargetRequirement,
         SetActionRequestTimingClass,
+        ConfigureControlConfiguration,
+        SetSkillDefinition,
+        DeleteSkillDefinition,
         EnsureAIControllerDefinition,
         EnsureAIControllerTree,
         BindAIControllerAssets,
@@ -77,7 +80,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         DeleteFlowEdge,
         DeletePropertyEdge,
         LinkFlow,
-        LinkProperty
+        LinkProperty,
+        EnsureGraph,
+        ConfigureGraphReference
     }
 
     public enum AgentMutationOutputKind
@@ -93,7 +98,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         TimelineTrack,
         TimelineClip,
         FlowEdge,
-        PropertyEdge
+        PropertyEdge,
+        SkillDefinition,
+        Graph
     }
 
     public enum AgentAIObservationNodeKind
@@ -1342,7 +1349,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string id,
             string path,
             AgentTimelineTargetReference target,
-            AgentPackageAssetReferenceV4 clip,
+            AgentPackageObjectReference clip,
             int startFrame,
             int endFrame,
             int clipInFrame,
@@ -1356,7 +1363,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ExtraPolationMode = extraPolationMode;
         }
 
-        public AgentPackageAssetReferenceV4 Clip { get; }
+        public AgentPackageObjectReference Clip { get; }
         public int StartFrame { get; }
         public int EndFrame { get; }
         public int ClipInFrame { get; }
@@ -1486,6 +1493,69 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public CharacterActionRequestTimingClass TimingClass { get; }
     }
 
+    public sealed class AgentSetSkillDefinitionMutation : AgentMutation
+    {
+        public AgentSetSkillDefinitionMutation(
+            string id,
+            string path,
+            AgentSnapshotSkillDefinition definition,
+            AgentGraphTargetReference entryGraph)
+            : base(
+                id,
+                AgentMutationKind.SetSkillDefinition,
+                "set_skill_definition",
+                AgentMutationOutputKind.SkillDefinition,
+                path,
+                "CharacterSkillDefinitions",
+                Vector2.zero)
+        {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            EntryGraph = entryGraph;
+        }
+
+        public AgentSnapshotSkillDefinition Definition { get; }
+        public AgentGraphTargetReference EntryGraph { get; }
+    }
+
+    public sealed class AgentConfigureControlConfigurationMutation : AgentMutation
+    {
+        public AgentConfigureControlConfigurationMutation(
+            string id,
+            string path,
+            AgentDocumentControlConfiguration configuration)
+            : base(
+                id,
+                AgentMutationKind.ConfigureControlConfiguration,
+                "configure_control_configuration",
+                AgentMutationOutputKind.None,
+                path,
+                "CharacterControlConfiguration",
+                Vector2.zero)
+        {
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        }
+
+        public AgentDocumentControlConfiguration Configuration { get; }
+    }
+
+    public sealed class AgentDeleteSkillDefinitionMutation : AgentMutation
+    {
+        public AgentDeleteSkillDefinitionMutation(string id, string path, string skillId)
+            : base(
+                id,
+                AgentMutationKind.DeleteSkillDefinition,
+                "delete_skill_definition",
+                AgentMutationOutputKind.None,
+                path,
+                "CharacterSkillDefinitions",
+                Vector2.zero)
+        {
+            SkillId = skillId ?? string.Empty;
+        }
+
+        public string SkillId { get; }
+    }
+
     public abstract class AgentGraphLinkMutation : AgentMutation
     {
         protected AgentGraphLinkMutation(
@@ -1554,6 +1624,78 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string DisplayName { get; }
         public LoopNode.StopType LoopStopType { get; }
         public CompareNode.CompareType CompareType { get; }
+    }
+
+    public sealed class AgentEnsureGraphMutation : AgentMutation
+    {
+        public AgentEnsureGraphMutation(
+            string id,
+            string path,
+            AgentGraphTargetReference parentGraph,
+            AgentElementTargetReference ownerNode,
+            AgentGraphKind graphKind,
+            AgentGraphOwnership ownership,
+            string referenceKey,
+            string displayName,
+            string sharedAssetPath)
+            : base(id, AgentMutationKind.EnsureGraph, "ensure_graph", AgentMutationOutputKind.Graph, path, parentGraph.Identity, Vector2.zero)
+        {
+            ParentGraph = parentGraph;
+            OwnerNode = ownerNode;
+            GraphKind = graphKind;
+            Ownership = ownership;
+            ReferenceKey = referenceKey ?? string.Empty;
+            DisplayName = displayName ?? string.Empty;
+            SharedAssetPath = sharedAssetPath ?? string.Empty;
+        }
+
+        public AgentGraphTargetReference ParentGraph { get; }
+        public AgentElementTargetReference OwnerNode { get; }
+        public AgentGraphKind GraphKind { get; }
+        public AgentGraphOwnership Ownership { get; }
+        public string ReferenceKey { get; }
+        public string DisplayName { get; }
+        public string SharedAssetPath { get; }
+    }
+
+    public sealed class AgentConfigureGraphReferenceMutation : AgentMutation
+    {
+        readonly ReadOnlyCollection<AgentSnapshotGraphParameterBinding> m_InputBindings;
+        readonly ReadOnlyCollection<AgentSnapshotGraphParameterBinding> m_OutputBindings;
+
+        public AgentConfigureGraphReferenceMutation(
+            string id,
+            string path,
+            AgentGraphTargetReference ownerGraph,
+            AgentElementTargetReference ownerNode,
+            AgentGraphTargetReference childGraph,
+            AgentGraphOwnership ownership,
+            string referenceKey,
+            string sharedAssetPath,
+            IList<AgentSnapshotGraphParameterBinding> inputBindings,
+            IList<AgentSnapshotGraphParameterBinding> outputBindings)
+            : base(id, AgentMutationKind.ConfigureGraphReference, "configure_graph_reference", AgentMutationOutputKind.None, path, ownerGraph.Identity, Vector2.zero)
+        {
+            OwnerGraph = ownerGraph;
+            OwnerNode = ownerNode;
+            ChildGraph = childGraph;
+            Ownership = ownership;
+            ReferenceKey = referenceKey ?? string.Empty;
+            SharedAssetPath = sharedAssetPath ?? string.Empty;
+            m_InputBindings = new ReadOnlyCollection<AgentSnapshotGraphParameterBinding>(
+                new List<AgentSnapshotGraphParameterBinding>(inputBindings ?? Array.Empty<AgentSnapshotGraphParameterBinding>()));
+            m_OutputBindings = new ReadOnlyCollection<AgentSnapshotGraphParameterBinding>(
+                new List<AgentSnapshotGraphParameterBinding>(outputBindings ?? Array.Empty<AgentSnapshotGraphParameterBinding>()));
+        }
+
+        public AgentGraphTargetReference OwnerGraph { get; }
+        public AgentElementTargetReference OwnerNode { get; }
+        public AgentGraphTargetReference ChildGraph { get; }
+        public AgentGraphOwnership Ownership { get; }
+        public string ReferenceKey { get; }
+        public string SharedAssetPath { get; }
+        public IReadOnlyList<AgentSnapshotGraphParameterBinding> InputBindings => m_InputBindings;
+        public IReadOnlyList<AgentSnapshotGraphParameterBinding> OutputBindings => m_OutputBindings;
     }
 
     public sealed class AgentDeleteGraphNodeMutation : AgentMutation

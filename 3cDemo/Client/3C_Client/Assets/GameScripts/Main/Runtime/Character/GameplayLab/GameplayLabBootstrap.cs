@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using TEngine;
+using ThirdPerson.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -10,10 +13,16 @@ namespace ThirdPersonGameplay.Lab
     [DisallowMultipleComponent]
     public sealed class GameplayLabBootstrap : MonoBehaviour
     {
+        const string PerformanceVariantArgument = "--third-person-performance-variant=";
+
+        public static GameplayLabBootstrap Current { get; private set; }
+
         [SerializeField] GameplayLabSessionVariantDefinition[] m_Variants =
             Array.Empty<GameplayLabSessionVariantDefinition>();
         [SerializeField, Min(0)] int m_StartupVariantIndex;
+        [SerializeField] ProductStartupProfile m_ResourceProfile;
 
+        readonly CancellationTokenSource m_StartupCancellation = new CancellationTokenSource();
         GameObject m_RuntimeRoot;
         SimulationSessionHost m_SessionHost;
         bool m_VariantLocked;
@@ -24,8 +33,16 @@ namespace ThirdPersonGameplay.Lab
         public GameplayLabSessionVariantDefinition Variant => RequireVariant();
         public SimulationSessionHost SessionHost => m_SessionHost;
         public bool VariantLocked => m_VariantLocked;
+        public string StartupFailure { get; private set; } = string.Empty;
 
 #if UNITY_EDITOR
+        public void SetResourceProfile(ProductStartupProfile profile)
+        {
+            if (m_VariantLocked)
+                throw new InvalidOperationException("Gameplay Lab resources are locked after startup.");
+            m_ResourceProfile = profile ? profile : throw new ArgumentNullException(nameof(profile));
+        }
+
         public void SetVariants(
             int startupVariantIndex,
             params GameplayLabSessionVariantDefinition[] variants)
@@ -48,6 +65,35 @@ namespace ThirdPersonGameplay.Lab
 
         void Awake()
         {
+            if (Current && Current != this)
+                throw new InvalidOperationException("Gameplay Lab contains more than one active Bootstrap.");
+            Current = this;
+        }
+
+        async void Start()
+        {
+            CancellationToken cancellationToken = m_StartupCancellation.Token;
+            try
+            {
+                _ = RequireVariant();
+                m_VariantLocked = true;
+                await ProjectSceneResourcePreparation.PrepareAsync(
+                    ModuleSystem.GetModule<IResourceModule>(), m_ResourceProfile, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                CreateSession();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                StartupFailure = exception.Message;
+                Debug.LogException(exception, this);
+            }
+        }
+
+        void CreateSession()
+        {
             GameplayLabSessionVariantDefinition variant = RequireVariant();
             SimulationSessionHost[] existing = FindObjectsOfType<SimulationSessionHost>(true);
             if (existing.Length != 0)
@@ -64,21 +110,16 @@ namespace ThirdPersonGameplay.Lab
                 throw new InvalidOperationException("Gameplay Lab runtime root created more than one Session Host.");
         }
 
-        void Update()
-        {
-            if (!m_VariantLocked && m_SessionHost &&
-                m_SessionHost.LifecycleState != SimulationSessionLifecycleState.Uninitialized)
-            {
-                m_VariantLocked = true;
-            }
-        }
-
         void OnDestroy()
         {
+            m_StartupCancellation.Cancel();
+            m_StartupCancellation.Dispose();
             if (m_RuntimeRoot)
                 Destroy(m_RuntimeRoot);
             m_RuntimeRoot = null;
             m_SessionHost = null;
+            if (Current == this)
+                Current = null;
         }
 
         GameplayLabSessionVariantDefinition RequireVariant()
@@ -90,6 +131,24 @@ namespace ThirdPersonGameplay.Lab
         int ResolveVariantIndex()
         {
             string[] arguments = Environment.GetCommandLineArgs();
+            string performanceVariant = string.Empty;
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                if (!arguments[i].StartsWith(PerformanceVariantArgument, StringComparison.Ordinal))
+                    continue;
+                if (!string.IsNullOrEmpty(performanceVariant))
+                    throw new InvalidOperationException("Gameplay Lab Performance Variant argument is duplicated.");
+                performanceVariant = arguments[i].Substring(PerformanceVariantArgument.Length).Trim('"');
+            }
+            if (!string.IsNullOrEmpty(performanceVariant))
+            {
+                for (int i = 0; i < m_Variants.Length; i++)
+                {
+                    if (string.Equals(m_Variants[i].VariantId, performanceVariant, StringComparison.Ordinal))
+                        return i;
+                }
+                throw new InvalidOperationException($"Gameplay Lab Performance Variant '{performanceVariant}' is unknown.");
+            }
             int matchedIndex = -1;
             for (int i = 0; i < m_Variants.Length; i++)
             {

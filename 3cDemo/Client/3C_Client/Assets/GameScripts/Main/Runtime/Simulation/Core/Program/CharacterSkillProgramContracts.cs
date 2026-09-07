@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -138,7 +139,9 @@ namespace ThirdPersonSimulation
             string sourceInputRequestId,
             bool consumeSourceInputRequest,
             string targetInputValueId,
-            string targetKey)
+            string targetKey,
+            IEnumerable<CharacterSkillDependency> dependencies,
+            IEnumerable<CharacterSkillId> allowedFollowUps)
         {
             if (!skillId.IsValid || !entryOperation.IsValid)
                 throw new ArgumentException("Character SkillProgram binding is incomplete.");
@@ -151,7 +154,12 @@ namespace ThirdPersonSimulation
             ConsumeSourceInputRequest = consumeSourceInputRequest;
             TargetInputValueId = targetInputValueId ?? string.Empty;
             TargetKey = targetKey ?? string.Empty;
+            m_Dependencies = FreezeDependencies(dependencies);
+            m_AllowedFollowUps = FreezeFollowUps(skillId, allowedFollowUps);
         }
+
+        readonly ReadOnlyCollection<CharacterSkillDependency> m_Dependencies;
+        readonly ReadOnlyCollection<CharacterSkillId> m_AllowedFollowUps;
 
         public CharacterSkillId SkillId { get; }
         public string ActionProfileId { get; }
@@ -162,6 +170,47 @@ namespace ThirdPersonSimulation
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
         public string TargetKey { get; }
+        public IReadOnlyList<CharacterSkillDependency> Dependencies => m_Dependencies;
+        public IReadOnlyList<CharacterSkillId> AllowedFollowUps => m_AllowedFollowUps;
+
+        static ReadOnlyCollection<CharacterSkillDependency> FreezeDependencies(
+            IEnumerable<CharacterSkillDependency> dependencies)
+        {
+            var values = dependencies == null
+                ? new List<CharacterSkillDependency>()
+                : new List<CharacterSkillDependency>(dependencies);
+            var seen = new HashSet<CharacterSkillDependency>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!values[i].IsValid || !seen.Add(values[i]))
+                    throw new ArgumentException("Character SkillProgram dependencies are invalid or duplicated.", nameof(dependencies));
+            }
+            values.Sort((left, right) =>
+            {
+                int bySubgraph = string.CompareOrdinal(left.SubgraphIdentity, right.SubgraphIdentity);
+                return bySubgraph != 0
+                    ? bySubgraph
+                    : string.CompareOrdinal(left.CallSiteIdentity, right.CallSiteIdentity);
+            });
+            return values.AsReadOnly();
+        }
+
+        static ReadOnlyCollection<CharacterSkillId> FreezeFollowUps(
+            CharacterSkillId owner,
+            IEnumerable<CharacterSkillId> allowedFollowUps)
+        {
+            var values = allowedFollowUps == null
+                ? new List<CharacterSkillId>()
+                : new List<CharacterSkillId>(allowedFollowUps);
+            var seen = new HashSet<CharacterSkillId>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!values[i].IsValid || values[i] == owner || !seen.Add(values[i]))
+                    throw new ArgumentException("Character SkillProgram follow-up candidates are invalid, recursive, or duplicated.", nameof(allowedFollowUps));
+            }
+            values.Sort();
+            return values.AsReadOnly();
+        }
     }
 
     public sealed class CharacterSkillProgramCatalog
@@ -196,16 +245,22 @@ namespace ThirdPersonSimulation
                 if (!operation.IsValid)
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no entry operation reference.");
                 string skillValue = RequirePrefix(entry.Identity, "skill:");
+                string actionProfileIdentity = RequireIdentity(entry, "ActionProfile", "action:");
+                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, $"action:{actionProfileIdentity}"))
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' references missing Action profile '{actionProfileIdentity}'.");
+                ReadRelations(entry, out List<CharacterSkillDependency> dependencies, out List<CharacterSkillId> allowedFollowUps);
                 values.Add(new CharacterSkillProgramBinding(
                     new CharacterSkillId(skillValue),
-                    RequireIdentity(entry, "ActionProfile", "action:"),
+                    actionProfileIdentity,
                     RequireIdentity(entry, "EntryIdentity", null),
                     operation,
                     RequireIdentity(entry, "ActionContext", null),
                     OptionalIdentity(entry, "SourceInputRequest", null),
                     OptionalBoolean(entry, "ConsumeSourceInputRequest", true),
                     OptionalIdentity(entry, "TargetInputValue", null),
-                    OptionalIdentity(entry, "TargetKey", null)));
+                    OptionalIdentity(entry, "TargetKey", null),
+                    dependencies,
+                    allowedFollowUps));
             }
             values.Sort((left, right) => left.SkillId.CompareTo(right.SkillId));
             for (int i = 1; i < values.Count; i++)
@@ -233,6 +288,19 @@ namespace ThirdPersonSimulation
             if (value == null || !value.StartsWith(prefix, StringComparison.Ordinal))
                 throw new InvalidDataException($"SkillProgram identity '{value}' has no '{prefix}' prefix.");
             return SimulationIdentity.Require(value.Substring(prefix.Length), nameof(value));
+        }
+
+        static bool ContainsEntry(
+            IReadOnlyList<ProgramCatalogEntry> entries,
+            ProgramCatalogEntryKind kind,
+            string identity)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].Kind == kind && string.Equals(entries[i].Identity, identity, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         static string RequireIdentity(ProgramCatalogEntry entry, string name, string prefix)
@@ -274,6 +342,81 @@ namespace ThirdPersonSimulation
                 return value;
             }
             return defaultValue;
+        }
+
+        static void ReadRelations(
+            ProgramCatalogEntry entry,
+            out List<CharacterSkillDependency> dependencies,
+            out List<CharacterSkillId> allowedFollowUps)
+        {
+            var subgraphs = new Dictionary<int, string>();
+            var callSites = new Dictionary<int, string>();
+            var followUps = new Dictionary<int, CharacterSkillId>();
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                ProgramCatalogField field = entry.Fields[i];
+                if (field.Name.StartsWith("Dependency:", StringComparison.Ordinal))
+                {
+                    if (field.Kind != ProgramCatalogFieldKind.Identity)
+                        throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency field '{field.Name}' is not an identity.");
+                    ReadDependencyField(entry, field, out int index, out bool subgraph);
+                    var destination = subgraph ? subgraphs : callSites;
+                    if (!destination.TryAdd(index, field.Identity))
+                        throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency index '{index}' is duplicated.");
+                    continue;
+                }
+                if (!field.Name.StartsWith("FollowUp:", StringComparison.Ordinal))
+                    continue;
+                if (field.Kind != ProgramCatalogFieldKind.Identity)
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' follow-up field '{field.Name}' is not an identity.");
+                int followUpIndex = ReadIndexedField(entry, field.Name, "FollowUp:");
+                CharacterSkillId followUp = new CharacterSkillId(RequirePrefix(field.Identity, "skill:"));
+                if (!followUps.TryAdd(followUpIndex, followUp))
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' follow-up index '{followUpIndex}' is duplicated.");
+            }
+
+            dependencies = new List<CharacterSkillDependency>();
+            var dependencyIndexes = new HashSet<int>(subgraphs.Keys);
+            dependencyIndexes.UnionWith(callSites.Keys);
+            foreach (int index in dependencyIndexes.OrderBy(value => value))
+            {
+                if (!subgraphs.TryGetValue(index, out string subgraph) || !callSites.TryGetValue(index, out string callSite))
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency index '{index}' is incomplete.");
+                dependencies.Add(new CharacterSkillDependency(subgraph, callSite));
+            }
+            allowedFollowUps = followUps
+                .OrderBy(value => value.Key)
+                .Select(value => value.Value)
+                .ToList();
+        }
+
+        static void ReadDependencyField(
+            ProgramCatalogEntry entry,
+            ProgramCatalogField field,
+            out int index,
+            out bool subgraph)
+        {
+            string suffix = field.Name.Substring("Dependency:".Length);
+            int separator = suffix.IndexOf(':');
+            if (separator <= 0)
+                throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency field '{field.Name}' is malformed.");
+            if (!int.TryParse(suffix.Substring(0, separator), out index) || index < 0)
+                throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency field '{field.Name}' has an invalid index.");
+            string component = suffix.Substring(separator + 1);
+            if (string.Equals(component, "Subgraph", StringComparison.Ordinal))
+                subgraph = true;
+            else if (string.Equals(component, "CallSite", StringComparison.Ordinal))
+                subgraph = false;
+            else
+                throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency field '{field.Name}' has an unknown component.");
+        }
+
+        static int ReadIndexedField(ProgramCatalogEntry entry, string fieldName, string prefix)
+        {
+            string value = fieldName.Substring(prefix.Length);
+            if (!int.TryParse(value, out int index) || index < 0)
+                throw new InvalidDataException($"SkillProgram '{entry.Identity}' field '{fieldName}' has an invalid index.");
+            return index;
         }
     }
 

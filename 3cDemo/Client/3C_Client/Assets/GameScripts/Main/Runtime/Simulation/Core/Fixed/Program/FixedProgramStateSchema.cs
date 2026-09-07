@@ -25,6 +25,7 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateValueKind.ActionInstanceReference => "state.fixed-q32.32-action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.fixed-q32.32-action-target-snapshot/v1",
                 ProgramStateValueKind.GameplayEffectAggregate => "state.fixed-q32.32-gameplay-effect-aggregate/v1",
+                ProgramStateValueKind.SkillExecutionState => "state.fixed-q32.32-skill-execution/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
         }

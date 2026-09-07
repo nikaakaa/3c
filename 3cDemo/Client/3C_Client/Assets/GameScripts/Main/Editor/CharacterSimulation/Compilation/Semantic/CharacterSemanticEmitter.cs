@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using BTSMTL.Diagnostics;
-using BTSMTL.Timeline;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -10,22 +7,20 @@ using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEngine;
-using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.CharacterAuthoringBlackboardDeclaration;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public sealed class CharacterSemanticEmitter
     {
-        readonly CharacterAuthoringCompilationModel m_Model;
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationNodeEmitterRegistry m_NodeEmitters;
-        readonly CharacterSimulationTimelineEmitterRegistry m_TimelineEmitters;
-        readonly CharacterSimulationCatalogIndex m_CatalogIndex;
-        readonly Dictionary<string, int> m_BlackboardValueSlots = new Dictionary<string, int>(StringComparer.Ordinal);
-        readonly Dictionary<string, ScopeRecord> m_Scopes = new Dictionary<string, ScopeRecord>(StringComparer.Ordinal);
+        readonly CharacterSemanticTimelineEmitter m_Timelines;
+        readonly CharacterSemanticBlackboardEmitter m_Blackboard;
+        readonly CharacterSemanticDomainBindingEmitter m_DomainBindings;
+        readonly CharacterSemanticSkillProgramEmitter m_SkillPrograms;
+        readonly CharacterSemanticGraphFlowEmitter m_Flow;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_CompiledGraphOperations = new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
-        readonly List<GraphRoute> m_CompileStack = new List<GraphRoute>();
         int m_SkillCompilationDepth;
 
         public CharacterSemanticEmitter(
@@ -34,23 +29,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationCompileReport report,
             CharacterSimulationCatalogIndex catalogIndex)
         {
-            m_Model = model ?? throw new ArgumentNullException(nameof(model));
+            model = model ?? throw new ArgumentNullException(nameof(model));
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
-            m_CatalogIndex = catalogIndex ?? throw new ArgumentNullException(nameof(catalogIndex));
+            m_Blackboard = new CharacterSemanticBlackboardEmitter(model.Declarations, builder, report);
+            m_DomainBindings = new CharacterSemanticDomainBindingEmitter(catalogIndex, builder, report, m_Blackboard);
+            m_SkillPrograms = new CharacterSemanticSkillProgramEmitter(model.SkillRecords, builder, report);
             m_NodeEmitters = model.NodeEmitters;
-            m_TimelineEmitters = model.TimelineEmitters;
+            m_Timelines = new CharacterSemanticTimelineEmitter(
+                model.TimelineEmitters,
+                builder,
+                report,
+                CompileGraph,
+                TryGetCompiledOperation);
+            m_Flow = new CharacterSemanticGraphFlowEmitter(builder, report, CompileGraph, TryGetCompiledOperation);
         }
 
         public OperationHandle EmitControlSkillPrograms(
             CharacterControlModuleContract contract,
+            CharacterSimulationSourceLocation controlSource,
             IReadOnlyList<CharacterControlMotionCompilationRecord> motions)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
             if (motions == null)
                 throw new ArgumentNullException(nameof(motions));
-            CompileDeclarationCatalogs();
+            m_SkillPrograms.DeclareExecutionState();
+            m_Blackboard.CompileDeclarations();
             for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
             {
                 m_SkillCompilationDepth++;
@@ -63,77 +68,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_SkillCompilationDepth--;
                 }
             }
-            var emittedSkills = new HashSet<CharacterSkillId>();
-            for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
-            {
-                CharacterSkillId skillId = contract.Skills[skillIndex];
-                CharacterSkillCompilationRecord record = m_Model.SkillRecords
-                    .SingleOrDefault(value => value.SkillId == skillId);
-                if (record == null)
-                {
-                    m_Report.Error("control_skill_definition_missing", skillId.Value, $"Control module skill '{skillId}' has no formal Skill definition.");
-                    continue;
-                }
-                if (!emittedSkills.Add(skillId))
-                {
-                    m_Report.Error("control_skill_duplicate", skillId.Value, $"Control module skill '{skillId}' is emitted more than once.");
-                    continue;
-                }
-                OperationHandle entry;
-                m_SkillCompilationDepth++;
-                try
-                {
-                    entry = CompileGraph(record.EntryGraph, OperationHandle.Invalid);
-                }
-                finally
-                {
-                    m_SkillCompilationDepth--;
-                }
-                if (!entry.IsValid)
-                    continue;
-                CharacterSkillAuthoringDefinition definition = record.Definition;
-                CharacterSimulationSourceLocation source = new CharacterSimulationSourceLocation(
-                    typeof(CharacterSkillAuthoringDefinition).FullName,
-                    record.EntryGraph.Graph.GraphAuthoringId,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    $"{record.EntryGraph.Route}/skill:{skillId.Value}",
-                    contentHash: GraphAuthoringFingerprint.Compute(record.EntryGraph.Graph));
-                var fields = new List<ProgramCatalogField>
-                {
-                    m_Builder.IdentityField("ActionProfile", $"action:{definition.ActionProfile.ActionId}"),
-                    m_Builder.IdentityField("EntryIdentity", definition.EntryGraphAuthoringId),
-                    m_Builder.IdentityField("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(definition.ActionContext)),
-                    m_Builder.IdentityField("SourceInputRequest", definition.SourceInputRequestId),
-                    m_Builder.IdentityField("ConsumeSourceInputRequest", definition.ConsumeSourceInputRequest ? "true" : "false")
-                };
-                if (!string.IsNullOrEmpty(definition.TargetInputValueId))
-                    fields.Add(m_Builder.IdentityField("TargetInputValue", definition.TargetInputValueId));
-                if (!string.IsNullOrEmpty(definition.TargetKey))
-                    fields.Add(m_Builder.IdentityField("TargetKey", definition.TargetKey));
-                int catalog = m_Builder.DeclareCatalogEntry(
-                    ProgramCatalogEntryKind.SkillProgram,
-                    $"skill:{skillId.Value}",
-                    1,
-                    Fields(fields.ToArray()),
-                    source);
-                if (catalog >= 0)
-                {
-                    m_Builder.DeclareReference(
-                        $"skill:{skillId.Value}/entry",
-                        entry,
-                        ProgramReferenceKind.CatalogEntry,
-                        catalog,
-                        $"skill:{skillId.Value}",
-                        source);
-                }
-            }
-            if (emittedSkills.Count != contract.Skills.Count)
+            if (!m_SkillPrograms.Emit(contract, CompileSkillEntry))
                 return OperationHandle.Invalid;
-            foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))
-                m_Builder.DeclareScope(scope.Identity, scope.Kind, scope.OwnerIdentity, scope.OwnerOperation, scope.StateSlots, scope.Source);
+            m_Blackboard.DeclareScopes();
             CharacterSimulationSourceLocation rootSource = new CharacterSimulationSourceLocation(
                 typeof(ICharacterControlModule).FullName,
                 $"control:{contract.ModuleId.Value}",
@@ -142,58 +79,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 $"control:{contract.ModuleId.Value}/root",
-                contentHash: contract.SemanticVersion.ToString());
+                contentHash: controlSource.ContentHash);
             return m_Builder.DeclareOperation(rootSource, SimulationOperationCode.Root, Array.Empty<int>());
         }
 
-        void CompileDeclarationCatalogs()
+        OperationHandle CompileSkillEntry(CharacterSkillCompilationRecord record)
         {
-            foreach (BlackboardDeclaration item in m_Model.Declarations.Values)
+            m_SkillCompilationDepth++;
+            try
             {
-                BaseExposedProperty declaration = item.Declaration;
-                CharacterSimulationSourceLocation source = DeclarationSource(item);
-                string identity = DeclarationIdentity(item.Graph.GraphAuthoringId, declaration.DeclarationId);
-                var fields = new List<ProgramCatalogField>
-                {
-                    m_Builder.ConstantField(source, "Key", declaration.BlackboardKey),
-                    m_Builder.ConstantField(source, "ValueType", declaration.ValueType?.FullName),
-                    m_Builder.ConstantField(source, "Scope", declaration.BlackboardScope),
-                    m_Builder.ConstantField(source, "Lifetime", declaration.BlackboardLifetime),
-                    m_Builder.ConstantField(source, "Category", declaration.BlackboardCategoryPath),
-                    m_Builder.ConstantField(source, "Default", CompileBlackboardDefault(declaration.GetValue(), source))
-                };
-                if (declaration.InputBinding != null)
-                    fields.Add(m_Builder.ConstantField(source, "InputValueId", declaration.InputBinding.InputValueId));
-                if (declaration.FactProjection != null)
-                {
-                    fields.Add(m_Builder.ConstantField(
-                        source,
-                        "Projection",
-                        CompileBlackboardFactProjection(declaration.FactProjection.Kind)));
-                    fields.Add(m_Builder.ConstantField(source, "ActionWindowType", declaration.FactProjection.ActionWindowType));
-                    fields.Add(m_Builder.ConstantField(source, "ActionWindowId", declaration.FactProjection.ActionWindowId));
-                    fields.Add(m_Builder.ConstantField(source, "ActionWindowDigest", declaration.FactProjection.ActionWindowDigest));
-                }
-                m_Builder.DeclareCatalogEntry(
-                    ProgramCatalogEntryKind.BlackboardDeclaration,
-                    identity,
-                    2,
-                    fields.ToArray(),
-                    source);
-                if (declaration.BlackboardScope == PipelineBlackboardVariableScope.Character ||
-                    declaration.BlackboardScope == PipelineBlackboardVariableScope.Frame)
-                    EnsureDeclarationState(item, item.Route);
+                return CompileGraph(record.EntryGraph, OperationHandle.Invalid);
             }
-        }
-
-        static ProgramBlackboardFactProjectionKind CompileBlackboardFactProjection(
-            PipelineBlackboardFactProjectionKind projection)
-        {
-            return projection switch
+            finally
             {
-                PipelineBlackboardFactProjectionKind.ActionWindow => ProgramBlackboardFactProjectionKind.ActionWindow,
-                _ => throw new ArgumentOutOfRangeException(nameof(projection), projection, "Unsupported Blackboard Fact Projection.")
-            };
+                m_SkillCompilationDepth--;
+            }
         }
 
         OperationHandle CompileGraph(CharacterAuthoringGraphOccurrence occurrence, OperationHandle stateScopeOwner)
@@ -202,15 +102,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(occurrence));
             BaseTree graph = occurrence.Graph;
             string route = occurrence.Route;
-            m_CompileStack.Add(new GraphRoute(graph.GraphAuthoringId, route, stateScopeOwner));
             try
             {
-                foreach (BaseExposedProperty declaration in occurrence.Declarations)
-                {
-                    BlackboardDeclaration item = m_Model.Declarations[DeclarationIdentity(graph.GraphAuthoringId, declaration.DeclarationId)];
-                    EnsureDeclarationState(item, route);
-                }
-
+                m_Blackboard.BeginGraph(graph, route, occurrence.Declarations, stateScopeOwner);
                 var operations = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
                 foreach (BaseNode node in occurrence.Nodes)
                 {
@@ -230,20 +124,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         continue;
                     }
                     operations.Add(node.GUID, operation);
-                    BindNodeCatalogs(node, operation, route);
+                    m_DomainBindings.Bind(node, operation, route, context.Source(node));
                 }
                 m_CompiledGraphOperations[route] = operations;
 
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.Edges)
-                    CompileEdge(occurrence, edge, operations, stateScopeOwner);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.PropertyEdges)
-                    CompileEdge(occurrence, edge, operations, stateScopeOwner);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
 
                 foreach (CharacterAuthoringTimelineRecord timeline in occurrence.Timelines)
                 {
                     if (!operations.TryGetValue(timeline.Node.GUID, out OperationHandle owner))
                         throw new InvalidOperationException($"Discovered Timeline Node '{timeline.Node.GUID}' has no emitted operation.");
-                    CompileTimeline(timeline, owner, stateScopeOwner);
+                    m_Timelines.Emit(timeline, owner, stateScopeOwner);
                 }
                 foreach (CharacterAuthoringGraphReferenceRecord reference in occurrence.GraphReferences)
                 {
@@ -255,9 +149,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle entry = CompileGraph(reference.Child, childStateOwner);
                     if (!entry.IsValid)
                         continue;
+                    if (reference.Owner is SubTreeNode)
+                        EmitGraphCallFrame(reference, owner, entry);
                     if (reference.Owner is StateNode && reference.Child.Graph is StateBehaviorSubTree stateBehavior)
                     {
-                        DeclareStateBehaviorControlFlow(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);
+                        m_Flow.EmitStateBehavior(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);
                         continue;
                     }
                     m_Builder.DeclareControlFlow(
@@ -272,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         ProgramAbortPolicy.None,
                         false,
                         OperationHandle.Invalid,
-                        NodeSource(graph, reference.Owner, route));
+                        CharacterSemanticSourceFactory.Node(graph, reference.Owner, route));
                     if (reference.Owner is StateMachineNode && reference.Child.Graph is StateMachineGraph stateMachine &&
                         stateMachine.AnyStateNode != null &&
                         TryGetCompiledOperation(reference.Route, stateMachine.AnyStateNode.GUID, out OperationHandle anyState))
@@ -289,77 +185,149 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             ProgramAbortPolicy.None,
                             false,
                             OperationHandle.Invalid,
-                            NodeSource(graph, reference.Owner, route));
+                            CharacterSemanticSourceFactory.Node(graph, reference.Owner, route));
                     }
                 }
                 OperationHandle graphEntry = FindEntry(occurrence, operations);
-                foreach (ScopeRecord scope in m_Scopes.Values)
-                {
-                    if (scope.Kind == ProgramScopeKind.Graph && string.Equals(scope.OwnerIdentity, route, StringComparison.Ordinal))
-                        scope.SetOwnerOperation(graphEntry);
-                }
+                m_Blackboard.CompleteGraph(route, graphEntry);
                 return graphEntry;
             }
             finally
             {
-                m_CompileStack.RemoveAt(m_CompileStack.Count - 1);
+                m_Blackboard.EndGraph();
             }
         }
 
-        void DeclareStateBehaviorControlFlow(
-            BaseTree graph,
-            BaseNode node,
+        void EmitGraphCallFrame(
+            CharacterAuthoringGraphReferenceRecord reference,
             OperationHandle owner,
-            StateBehaviorSubTree stateBehavior,
-            string childRoute,
-            OperationHandle root)
+            OperationHandle entry)
         {
-            CharacterSimulationSourceLocation source = NodeSource(graph, node, childRoute);
-            if (!TryGetCompiledOperation(childRoute, stateBehavior.OnEnterGUID, out OperationHandle onEnter) ||
-                !TryGetCompiledOperation(childRoute, stateBehavior.OnExitGUID, out OperationHandle onExit))
-            {
-                m_Report.Error("state_lifecycle_operation_missing", childRoute, "State behavior requires compiled OnEnter and OnExit operations.");
+            var inputs = new List<ProgramGraphParameterBinding>();
+            var outputs = new List<ProgramGraphParameterBinding>();
+            BindGraphParameters(reference, reference.CallFrame.Inputs, inputs);
+            BindGraphParameters(reference, reference.CallFrame.Outputs, outputs);
+            EmitGraphCallInputDefaults(reference, owner);
+            m_Builder.DeclareGraphCallFrame(
+                reference.CallFrame.Identity,
+                owner,
+                entry,
+                reference.Child.Graph.GraphAuthoringId,
+                inputs,
+                outputs,
+                CharacterSemanticSourceFactory.Node(reference.Owner.Owner as BaseTree, reference.Owner, reference.Route));
+        }
+
+        void EmitGraphCallInputDefaults(
+            CharacterAuthoringGraphReferenceRecord reference,
+            OperationHandle owner)
+        {
+            if (reference.Owner is not SubTreeNode subTreeNode)
                 return;
+            BaseGraph graph = reference.Owner.Owner;
+            for (int i = 0; i < reference.CallFrame.Inputs.Count; i++)
+            {
+                CharacterAuthoringGraphParameterBinding binding = reference.CallFrame.Inputs[i];
+                PropertyPort port = null;
+                for (int portIndex = 0; portIndex < subTreeNode.InputPropertyPorts.Count; portIndex++)
+                {
+                    PropertyPort candidate = subTreeNode.InputPropertyPorts[portIndex];
+                    if (candidate != null && string.Equals(candidate.PortId, binding.PortId, StringComparison.Ordinal))
+                    {
+                        port = candidate;
+                        break;
+                    }
+                }
+                if (port == null || IsGraphCallInputLinked(graph, subTreeNode, binding.PortId))
+                    continue;
+                if (!TryMapValueKind(binding.ValueType, out SemanticValueKind kind))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_default_type_unsupported",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' default uses unsupported type '{binding.ValueType?.FullName}'.");
+                    continue;
+                }
+                CharacterSimulationSourceLocation source = CharacterSemanticSourceFactory.Node(
+                    graph as BaseTree,
+                    subTreeNode,
+                    reference.Route + "/input:" + binding.PortId);
+                int constant = m_Builder.DeclareConstant(source, "default-value", port.GetValue());
+                if (constant >= 0)
+                    m_Builder.DeclareConstantInputBinding(owner, binding.PortId, constant, kind, source);
             }
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-on-enter",
-                owner,
-                onEnter,
-                "OnEnter",
-                "Entry",
-                ProgramControlFlowKind.Enter,
-                0,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-root",
-                owner,
-                root,
-                "Root",
-                "Entry",
-                ProgramControlFlowKind.Enter,
-                1,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-on-exit",
-                owner,
-                onExit,
-                "OnExit",
-                "Entry",
-                ProgramControlFlowKind.Exit,
-                2,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
+        }
+
+        static bool IsGraphCallInputLinked(BaseGraph graph, SubTreeNode node, string portId)
+        {
+            if (graph == null)
+                return false;
+            for (int i = 0; i < graph.PropertyEdges.Count; i++)
+            {
+                PropertyEdge edge = graph.PropertyEdges[i];
+                if (edge != null &&
+                    string.Equals(edge.EndNodeGUID, node.GUID, StringComparison.Ordinal) &&
+                    string.Equals(edge.EndPortName, portId, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
+        }
+
+        void BindGraphParameters(
+            CharacterAuthoringGraphReferenceRecord reference,
+            IReadOnlyList<CharacterAuthoringGraphParameterBinding> source,
+            List<ProgramGraphParameterBinding> destination)
+        {
+            for (int i = 0; i < source.Count; i++)
+            {
+                CharacterAuthoringGraphParameterBinding binding = source[i];
+                if (!m_Blackboard.TryGetValueSlot(
+                        reference.Child.Graph,
+                        reference.Child.Route,
+                        binding.DeclarationId,
+                        out int stateSlot))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_state_missing",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' has no compiled child state address.");
+                    continue;
+                }
+                if (!TryMapValueKind(binding.ValueType, out SemanticValueKind valueKind))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_type_unsupported",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' uses unsupported type '{binding.ValueType?.FullName}'.");
+                    continue;
+                }
+                destination.Add(new ProgramGraphParameterBinding(
+                    binding.Direction == CharacterAuthoringGraphParameterDirection.Input
+                        ? ProgramGraphParameterDirection.Input
+                        : ProgramGraphParameterDirection.Output,
+                    binding.ParameterName,
+                    $"blackboard:{reference.Child.Graph.GraphAuthoringId}:{binding.DeclarationId}",
+                    stateSlot,
+                    binding.PortId,
+                    valueKind));
+            }
+        }
+
+        static bool TryMapValueKind(Type type, out SemanticValueKind kind)
+        {
+            if (type == typeof(bool)) kind = SemanticValueKind.Boolean;
+            else if (type == typeof(int)) kind = SemanticValueKind.Int32;
+            else if (type == typeof(uint) || type == typeof(ulong)) kind = SemanticValueKind.UInt64;
+            else if (type == typeof(float) || type == typeof(double)) kind = SemanticValueKind.Number;
+            else if (type == typeof(UnityEngine.Vector2)) kind = SemanticValueKind.Vector2;
+            else if (type == typeof(UnityEngine.Vector3)) kind = SemanticValueKind.Vector3;
+            else if (type == typeof(string)) kind = SemanticValueKind.Identity;
+            else
+            {
+                kind = default;
+                return false;
+            }
+            return true;
         }
 
         bool TryGetCompiledOperation(string route, string nodeId, out OperationHandle operation)
@@ -370,615 +338,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    operations.TryGetValue(nodeId, out operation);
         }
 
-        void CompileEdge(
-            CharacterAuthoringGraphOccurrence occurrence,
-            CharacterAuthoringEdgeRecord record,
-            Dictionary<string, OperationHandle> operations,
-            OperationHandle stateScopeOwner)
-        {
-            BaseTree graph = occurrence.Graph;
-            BaseEdge edge = record.Edge;
-            string edgeRoute = record.Route;
-            if (!operations.TryGetValue(edge.StartNodeGUID, out OperationHandle source) || !operations.TryGetValue(edge.EndNodeGUID, out OperationHandle target))
-            {
-                if (m_SkillCompilationDepth != 0)
-                    return;
-                throw new InvalidOperationException($"Discovered Edge '{edge.GUID}' has an operation endpoint mismatch.");
-            }
-            bool hasCondition = false;
-            OperationHandle condition = OperationHandle.Invalid;
-            if (record.ConditionGraph != null)
-            {
-                OperationHandle conditionStateOwner = occurrence.Nodes.Any(value => value is StateNode && value.GUID == edge.StartNodeGUID)
-                    ? source
-                    : stateScopeOwner;
-                condition = CompileGraph(record.ConditionGraph, conditionStateOwner);
-                hasCondition = condition.IsValid;
-            }
-            ProgramControlFlowKind kind = edge is PropertyEdge
-                ? ProgramControlFlowKind.Value
-                : graph is StateMachineGraph stateMachine && stateMachine.IsTransitionEdge(edge)
-                    ? ProgramControlFlowKind.Transition
-                    : ProgramControlFlowKind.Child;
-            m_Builder.DeclareControlFlow(
-                edgeRoute,
-                source,
-                target,
-                edge.StartPortName,
-                edge.EndPortName,
-                kind,
-                edge.FlowOrder,
-                edge.TransitionPriority,
-                (ProgramAbortPolicy)(int)edge.AbortPolicy,
-                hasCondition,
-                condition,
-                new CharacterSimulationSourceLocation(
-                    edge.GetType().FullName,
-                    graph.GraphAuthoringId,
-                    string.Empty,
-                    edge.GUID,
-                    string.Empty,
-                    string.Empty,
-                    edgeRoute,
-                    contentHash: GraphAuthoringFingerprint.Compute(graph)));
-        }
-
-        void CompileTimeline(CharacterAuthoringTimelineRecord record, OperationHandle owner, OperationHandle stateScopeOwner)
-        {
-            TimelineNode node = record.Node;
-            TimelineData timeline = record.Timeline;
-            string route = record.Route;
-            string ownerGraphId = node.Owner?.GraphAuthoringId ?? string.Empty;
-            CharacterSimulationSourceLocation timelineSource = new CharacterSimulationSourceLocation(
-                timeline.GetType().FullName,
-                ownerGraphId,
-                node.GUID,
-                string.Empty,
-                timeline.AuthoringId,
-                string.Empty,
-                route,
-                contentHash: TimelineAuthoringFingerprint.Compute(timeline));
-            int timelineCatalog = m_Builder.DeclareCatalogEntry(
-                ProgramCatalogEntryKind.Timeline,
-                $"timeline:{timeline.AuthoringId}",
-                1,
-                Fields(
-                    m_Builder.ConstantField(timelineSource, "Name", timeline.Name),
-                    m_Builder.ConstantField(timelineSource, "Scale", timeline.Scale),
-                    m_Builder.ConstantField(timelineSource, "MaxFrame", timeline.MaxFrame),
-                    m_Builder.ConstantField(timelineSource, "FrameRate", TimelineUtility.FrameRate)),
-                timelineSource);
-            if (timelineCatalog >= 0)
-            {
-                m_Builder.DeclareReference(
-                    $"{record.GraphRoute}/node:{node.GUID}/timeline-catalog",
-                    owner,
-                    ProgramReferenceKind.CatalogEntry,
-                    timelineCatalog,
-                    $"timeline:{timeline.AuthoringId}",
-                    NodeSource(node.Owner as BaseTree, node, record.GraphRoute));
-            }
-
-            var timelineEmission = new CharacterSimulationTimelineEmissionSession(timeline, m_Builder);
-
-            foreach (CharacterAuthoringTrackRecord trackRecord in record.Tracks)
-            {
-                Track track = trackRecord.Track;
-                var context = new CharacterSimulationTimelineEmitterContext(
-                    timeline,
-                    track,
-                    trackRecord.AuthoringIndex,
-                    ownerGraphId,
-                    node.GUID,
-                    route,
-                    m_Builder,
-                    owner,
-                    CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext),
-                    timelineEmission);
-                if (m_TimelineEmitters.TryGetTrack(track.GetType(), out ICharacterSimulationTimelineTrackEmitter trackEmitter))
-                    trackEmitter.Emit(track, context);
-                else
-                    throw new InvalidOperationException($"Discovered Track '{track.AuthoringId}' has no emitter.");
-                foreach (CharacterAuthoringClipRecord clipRecord in trackRecord.Clips)
-                {
-                    Clip clip = clipRecord.Clip;
-                    if (!m_TimelineEmitters.TryGetClip(clip.GetType(), out ICharacterSimulationTimelineClipEmitter clipEmitter))
-                        throw new InvalidOperationException($"Discovered Clip '{clip.AuthoringId}' has no emitter.");
-                    OperationHandle clipOperation;
-                    try
-                    {
-                        clipOperation = clipEmitter.Emit(clip, context);
-                    }
-                    catch (Exception exception)
-                    {
-                        m_Report.EmissionError("timeline_clip_emit_failed", context.ClipSource(clip).Identity, exception.Message);
-                        continue;
-                    }
-                    m_Builder.DeclareControlFlow(
-                        $"{context.ClipSource(clip).Identity}/segment",
-                        owner,
-                        clipOperation,
-                        track.AuthoringId,
-                        clip.AuthoringId,
-                        ProgramControlFlowKind.Child,
-                        clipRecord.AuthoringIndex,
-                        0,
-                        ProgramAbortPolicy.None,
-                        false,
-                        OperationHandle.Invalid,
-                        context.ClipSource(clip));
-                    if (clip is not TreeClip || clipRecord.TreeGraph == null)
-                        continue;
-                    string treeRoute = clipRecord.TreeGraph.Route;
-                    OperationHandle treeEntry = CompileGraph(clipRecord.TreeGraph, stateScopeOwner);
-                    if (!treeEntry.IsValid)
-                        continue;
-                    m_Builder.DeclareControlFlow(
-                        $"{treeRoute}/entry",
-                        clipOperation,
-                        treeEntry,
-                        "TreeClip",
-                        "Entry",
-                        ProgramControlFlowKind.Enter,
-                        0,
-                        0,
-                        ProgramAbortPolicy.None,
-                        false,
-                        OperationHandle.Invalid,
-                        context.ClipSource(clip));
-                    DeclareTreeClipLifecycle((TimelineRunningTree)clipRecord.TreeGraph.Graph, clipOperation, treeRoute, context.ClipSource(clip));
-                }
-            }
-            timelineEmission.Complete();
-        }
-
-        void DeclareTreeClipLifecycle(
-            TimelineRunningTree tree,
-            OperationHandle clipOperation,
-            string treeRoute,
-            CharacterSimulationSourceLocation source)
-        {
-            DeclareTreeClipLifecycleEdge(tree.OnEnableGUID, "OnEnable", ProgramControlFlowKind.Enter, 1);
-            DeclareTreeClipLifecycleEdge(tree.OnDisableGUID, "OnDisable", ProgramControlFlowKind.Exit, 0);
-            DeclareTreeClipLifecycleEdge(tree.OnDestroyGUID, "OnDestroy", ProgramControlFlowKind.Exit, 1);
-
-            void DeclareTreeClipLifecycleEdge(string nodeId, string port, ProgramControlFlowKind kind, int order)
-            {
-                if (!TryGetCompiledOperation(treeRoute, nodeId, out OperationHandle target))
-                {
-                    m_Report.Error("tree_clip_lifecycle_missing", treeRoute, $"TreeClip graph is missing compiled '{port}' lifecycle operation.");
-                    return;
-                }
-                m_Builder.DeclareControlFlow(
-                    $"{treeRoute}/{port}",
-                    clipOperation,
-                    target,
-                    port,
-                    "Entry",
-                    kind,
-                    order,
-                    0,
-                    ProgramAbortPolicy.None,
-                    false,
-                    OperationHandle.Invalid,
-                    source);
-            }
-        }
-
-        void BindNodeCatalogs(BaseNode node, OperationHandle operation, string route)
-        {
-            if (TryGetBlackboardReference(node, out PipelineBlackboardVariableReference blackboard))
-            {
-                BindBlackboard(node, operation, route, blackboard);
-                return;
-            }
-            if (node is CharacterInputValueInfoNode input)
-            {
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.InputValue, $"input:value:{input.InputValueId}", m_CatalogIndex.InputValues.Contains(input.InputValueId));
-                return;
-            }
-            if (node is CharacterActionRequestInfoNode request)
-            {
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.InputRequest, $"input:request:{request.RequestId}", m_CatalogIndex.InputRequests.Contains(request.RequestId));
-                return;
-            }
-            if (node is ReadEquipmentIdentityNode equipmentIdentity)
-            {
-                BindEquipmentSlot(node, operation, route, equipmentIdentity.SlotId);
-                return;
-            }
-            if (node is ReadEquipmentParameterNode equipmentParameter)
-            {
-                BindEquipmentSlot(node, operation, route, equipmentParameter.SlotId);
-                string key = $"{equipmentParameter.FeatureId}:{equipmentParameter.ParameterId}";
-                BindCatalog(
-                    node,
-                    operation,
-                    route,
-                    ProgramCatalogEntryKind.EquipmentFeatureParameter,
-                    $"equipment:feature:{equipmentParameter.FeatureId}:parameter:{equipmentParameter.ParameterId}",
-                    m_CatalogIndex.EquipmentParameters.Contains(key),
-                    "equipment-parameter");
-                return;
-            }
-            if (node is EquipmentChangeOperationNode equipmentChange)
-            {
-                BindEquipmentSlot(node, operation, route, equipmentChange.SlotId);
-                if (!string.IsNullOrEmpty(equipmentChange.EquipmentId))
-                {
-                    BindCatalog(
-                        node,
-                        operation,
-                        route,
-                        ProgramCatalogEntryKind.EquipmentDefinition,
-                        $"equipment:item:{equipmentChange.EquipmentId}",
-                        m_CatalogIndex.EquipmentItems.Contains(equipmentChange.EquipmentId),
-                        "equipment-item");
-                }
-                return;
-            }
-            if (node is EquipmentSlotHostNode equipmentHost)
-            {
-                BindEquipmentSlot(node, operation, route, equipmentHost.SlotId);
-                return;
-            }
-            if (node is ResolveEquipmentActionRouteNode equipmentRoute)
-            {
-                BindCatalog(
-                    node,
-                    operation,
-                    route,
-                    ProgramCatalogEntryKind.EquipmentRoute,
-                    $"equipment:route:{equipmentRoute.RouteId}",
-                    m_CatalogIndex.EquipmentRoutes.Contains(equipmentRoute.RouteId),
-                    "equipment-route");
-                return;
-            }
-            if (node is ActivateActionInstanceNode activate)
-            {
-                string actionId = activate.ActionProfile ? activate.ActionProfile.ActionId : string.Empty;
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.Action, $"action:{actionId}", m_CatalogIndex.Actions.Contains(actionId));
-                if (!string.IsNullOrEmpty(activate.SourceInputRequestId))
-                    BindCatalog(node, operation, route, ProgramCatalogEntryKind.InputRequest, $"input:request:{activate.SourceInputRequestId}", m_CatalogIndex.InputRequests.Contains(activate.SourceInputRequestId), "source-request");
-                if (!activate.ActionContext)
-                    m_Report.Error("action_context_missing", $"{route}/node:{node.GUID}", "Action activation requires a formal Action Context asset.");
-                if (activate.TargetSnapshotVariable.IsValid)
-                    BindBlackboard(node, operation, route, activate.TargetSnapshotVariable);
-                return;
-            }
-            if (node is CanActivateActionInfoNode admission)
-            {
-                string actionId = admission.ActionProfile ? admission.ActionProfile.ActionId : string.Empty;
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.Action, $"action:{actionId}", m_CatalogIndex.Actions.Contains(actionId));
-                if (admission.TargetSnapshotVariable.IsValid)
-                    BindBlackboard(node, operation, route, admission.TargetSnapshotVariable);
-                return;
-            }
-            if (node is HasGameplayTagNode hasTag)
-            {
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.GameplayTag, $"tag:{hasTag.Tag.Value}", m_CatalogIndex.GameplayTags.Contains(hasTag.Tag.Value));
-                return;
-            }
-            if (node is MatchGameplayTagQueryNode matchTags)
-            {
-                BindTagQuery(node, operation, route, matchTags.Query);
-                return;
-            }
-            if (node is ReadGameplayAttributeNode readAttribute)
-            {
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.Attribute, $"attribute:{readAttribute.Attribute.Value}", m_CatalogIndex.Attributes.Contains(readAttribute.Attribute.Value));
-                return;
-            }
-            if (node is ApplyGameplayEffectNode applyEffect)
-            {
-                string effectId = applyEffect.Effect ? applyEffect.Effect.EffectId.Value : string.Empty;
-                BindCatalog(node, operation, route, ProgramCatalogEntryKind.GameplayEffect, $"effect:{effectId}", m_CatalogIndex.GameplayEffects.Contains(effectId));
-                if (applyEffect.Predicted && !applyEffect.ActionContext)
-                    m_Report.Error("gameplay_effect_prediction_context_missing", $"{route}/node:{node.GUID}", "Predicted Gameplay Effect application requires a formal Action Context.");
-                return;
-            }
-            if (node is RemoveGameplayEffectNode removeEffect)
-            {
-                if (removeEffect.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
-                {
-                    string effectId = removeEffect.Effect ? removeEffect.Effect.EffectId.Value : string.Empty;
-                    BindCatalog(node, operation, route, ProgramCatalogEntryKind.GameplayEffect, $"effect:{effectId}", m_CatalogIndex.GameplayEffects.Contains(effectId));
-                }
-                else if (removeEffect.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectTagQuery)
-                {
-                    BindTagQuery(node, operation, route, removeEffect.EffectTagQuery);
-                }
-            }
-        }
-
-        void BindTagQuery(BaseNode node, OperationHandle operation, string route, ThirdPersonGameplay.Tags.GameplayTagQuery query)
-        {
-            if (query == null)
-            {
-                m_Report.Error("gameplay_tag_query_missing", $"{route}/node:{node.GUID}", "Gameplay Tag query is missing.");
-                return;
-            }
-            int suffix = 0;
-            Bind(query.All);
-            Bind(query.Any);
-            Bind(query.None);
-
-            void Bind(IReadOnlyList<ThirdPersonGameplay.Tags.GameplayTagId> values)
-            {
-                for (int i = 0; i < values.Count; i++)
-                {
-                    string tagId = values[i].Value;
-                    BindCatalog(node, operation, route, ProgramCatalogEntryKind.GameplayTag, $"tag:{tagId}", m_CatalogIndex.GameplayTags.Contains(tagId), $"tag-{suffix++:D4}");
-                }
-            }
-        }
-
-        void BindEquipmentSlot(BaseNode node, OperationHandle operation, string route, string slotId)
-        {
-            BindCatalog(
-                node,
-                operation,
-                route,
-                ProgramCatalogEntryKind.EquipmentSlot,
-                $"equipment:slot:{slotId}",
-                m_CatalogIndex.EquipmentSlots.Contains(slotId),
-                "equipment-slot");
-        }
-
-        void BindBlackboard(BaseNode node, OperationHandle operation, string route, PipelineBlackboardVariableReference reference)
-        {
-            string declarationIdentity = DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId);
-            if (!reference.IsValid || !m_Model.Declarations.TryGetValue(declarationIdentity, out BlackboardDeclaration declaration))
-            {
-                m_Report.Error("blackboard_reference_invalid", $"{route}/node:{node.GUID}", $"Blackboard reference '{declarationIdentity}' does not resolve.");
-                return;
-            }
-            string stateKey = ResolveDeclarationStateKey(declaration, route);
-            if (!m_BlackboardValueSlots.TryGetValue(stateKey, out int stateSlot))
-            {
-                m_Report.Error("blackboard_state_address_missing", $"{route}/node:{node.GUID}", $"Blackboard state address '{stateKey}' was not declared.");
-                return;
-            }
-            CharacterSimulationSourceLocation source = NodeSource(node.Owner as BaseTree, node, route);
-            m_Builder.DeclareReference(
-                $"{route}/node:{node.GUID}/blackboard-state",
-                operation,
-                ProgramReferenceKind.StateSlot,
-                stateSlot,
-                declarationIdentity,
-                source);
-            if (m_Builder.TryGetCatalogEntry(ProgramCatalogEntryKind.BlackboardDeclaration, declarationIdentity, out int catalog))
-            {
-                m_Builder.DeclareReference(
-                    $"{route}/node:{node.GUID}/blackboard-catalog",
-                    operation,
-                    ProgramReferenceKind.CatalogEntry,
-                    catalog,
-                    declarationIdentity,
-                    source);
-            }
-        }
-
-        void BindCatalog(BaseNode node, OperationHandle operation, string route, ProgramCatalogEntryKind kind, string identity, bool known, string suffix = "catalog")
-        {
-            CharacterSimulationSourceLocation source = NodeSource(node.Owner as BaseTree, node, route);
-            if (!known || !m_Builder.TryGetCatalogEntry(kind, identity, out int catalog))
-            {
-                m_Report.Error("catalog_reference_invalid", source.Identity, $"Node references unknown catalog entry '{identity}'.");
-                return;
-            }
-            m_Builder.DeclareReference($"{route}/node:{node.GUID}/{suffix}", operation, ProgramReferenceKind.CatalogEntry, catalog, identity, source);
-        }
-
-        int EnsureDeclarationState(BlackboardDeclaration item, string route)
-        {
-            string stateKey = item.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Character
-                ? DeclarationIdentity(item.Graph.GraphAuthoringId, item.Declaration.DeclarationId)
-                : $"{route}/declaration:{item.Declaration.DeclarationId}";
-            if (m_BlackboardValueSlots.TryGetValue(stateKey, out int existing))
-                return existing;
-            if (!TryMapValueKind(item.Declaration.ValueType, out ProgramStateValueKind valueKind))
-                return -1;
-            CharacterSimulationSourceLocation source = new CharacterSimulationSourceLocation(
-                item.Declaration.GetType().FullName,
-                item.Graph.GraphAuthoringId,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"{route}/blackboard:{item.Declaration.DeclarationId}",
-                declarationId: item.Declaration.DeclarationId,
-                contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
-            int value = m_Builder.DeclareStandaloneStateSlot(
-                source,
-                valueKind,
-                ProgramStateOwnerKind.Blackboard,
-                ProgramStateSemantic.BlackboardValue,
-                stateKey,
-                CompileBlackboardDefault(item.Declaration.GetValue(), source));
-            int owner = m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.BlackboardOwnerToken, ProgramStateOwnerKind.Blackboard, ProgramStateSemantic.BlackboardOwnerToken, stateKey);
-            int lifetime = m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Blackboard, ProgramStateSemantic.BlackboardLifetime, stateKey, (int)item.Declaration.BlackboardLifetime);
-            int provenance = m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.BlackboardWriteStamp, ProgramStateOwnerKind.Blackboard, ProgramStateSemantic.BlackboardWriteStamp, stateKey);
-            m_BlackboardValueSlots.Add(stateKey, value);
-            string scopeIdentity = ScopeIdentity(item.Declaration.BlackboardScope, route);
-            if (!m_Scopes.TryGetValue(scopeIdentity, out ScopeRecord scope))
-            {
-                ProgramScopeKind kind = MapScope(item.Declaration.BlackboardScope);
-                OperationHandle ownerOperation = kind == ProgramScopeKind.State && m_CompileStack.Count > 0
-                    ? m_CompileStack[m_CompileStack.Count - 1].StateScopeOwner
-                    : OperationHandle.Invalid;
-                if (kind == ProgramScopeKind.State && !ownerOperation.IsValid)
-                    m_Report.Error("blackboard_state_owner_missing", source.Identity, "State Blackboard declaration is not inside a compiled State activation owner.");
-                scope = new ScopeRecord(scopeIdentity, kind, route, ownerOperation, source);
-                m_Scopes.Add(scopeIdentity, scope);
-            }
-            scope.StateSlots.Add(value);
-            scope.StateSlots.Add(owner);
-            scope.StateSlots.Add(lifetime);
-            scope.StateSlots.Add(provenance);
-            return value;
-        }
-
-        string ResolveDeclarationStateKey(BlackboardDeclaration declaration, string accessRoute)
-        {
-            if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Character)
-                return DeclarationIdentity(declaration.Graph.GraphAuthoringId, declaration.Declaration.DeclarationId);
-            if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Frame)
-                return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
-            for (int i = m_CompileStack.Count - 1; i >= 0; i--)
-            {
-                if (string.Equals(m_CompileStack[i].GraphId, declaration.Graph.GraphAuthoringId, StringComparison.Ordinal))
-                    return $"{m_CompileStack[i].Route}/declaration:{declaration.Declaration.DeclarationId}";
-            }
-            return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
-        }
-
         OperationHandle FindEntry(CharacterAuthoringGraphOccurrence occurrence, Dictionary<string, OperationHandle> operations)
         {
             if (!string.IsNullOrEmpty(occurrence.EntryNodeId) && operations.TryGetValue(occurrence.EntryNodeId, out OperationHandle operation))
                 return operation;
             m_Report.EmissionError("graph_entry_missing", occurrence.Route, $"Discovered entry Node '{occurrence.EntryNodeId}' was not emitted.");
             return OperationHandle.Invalid;
-        }
-
-        static bool TryGetBlackboardReference(BaseNode node, out PipelineBlackboardVariableReference reference)
-        {
-            if (node is ExposedPropertyNode exposed)
-            {
-                reference = exposed.BlackboardVariable;
-                return true;
-            }
-            if (node is PipelineBlackboardValueInfoNode value)
-            {
-                reference = value.BlackboardVariable;
-                return true;
-            }
-            reference = default;
-            return false;
-        }
-
-        static bool TryMapValueKind(Type type, out ProgramStateValueKind kind)
-        {
-            if (type == typeof(bool)) kind = ProgramStateValueKind.Boolean;
-            else if (type == typeof(int)) kind = ProgramStateValueKind.Int32;
-            else if (type == typeof(float)) kind = ProgramStateValueKind.Scalar;
-            else if (type == typeof(string)) kind = ProgramStateValueKind.Identity;
-            else if (type == typeof(Vector2)) kind = ProgramStateValueKind.Vector2;
-            else if (type == typeof(Vector3)) kind = ProgramStateValueKind.Vector3;
-            else if (type == typeof(ActionTargetSnapshot)) kind = ProgramStateValueKind.ActionTargetSnapshot;
-            else
-            {
-                kind = default;
-                return false;
-            }
-            return true;
-        }
-
-        object CompileBlackboardDefault(object value, CharacterSimulationSourceLocation source)
-        {
-            if (value is not ActionTargetSnapshot snapshot)
-                return value;
-            float yaw = snapshot.Rotation.eulerAngles.y;
-            if (yaw >= 180f)
-                yaw -= 360f;
-            var writer = new SemanticDataWriter();
-            writer.WriteUInt32(0x504E5354);
-            writer.WriteInt32(1);
-            writer.WriteString(snapshot.TargetId);
-            writer.WriteNumber(snapshot.Position.x, $"{source.Identity}/TargetSnapshot.Position.x");
-            writer.WriteNumber(snapshot.Position.y, $"{source.Identity}/TargetSnapshot.Position.y");
-            writer.WriteNumber(snapshot.Position.z, $"{source.Identity}/TargetSnapshot.Position.z");
-            writer.WriteNumber(yaw, $"{source.Identity}/TargetSnapshot.Yaw");
-            return writer.Build();
-        }
-
-        static ProgramScopeKind MapScope(PipelineBlackboardVariableScope scope)
-        {
-            return scope switch
-            {
-                PipelineBlackboardVariableScope.Character => ProgramScopeKind.Character,
-                PipelineBlackboardVariableScope.Graph => ProgramScopeKind.Graph,
-                PipelineBlackboardVariableScope.State => ProgramScopeKind.State,
-                PipelineBlackboardVariableScope.ActionInstance => ProgramScopeKind.ActionInstance,
-                PipelineBlackboardVariableScope.Frame => ProgramScopeKind.Frame,
-                _ => throw new ArgumentOutOfRangeException(nameof(scope))
-            };
-        }
-
-        static string ScopeIdentity(PipelineBlackboardVariableScope scope, string route) => scope == PipelineBlackboardVariableScope.Character ? "scope:character" : $"scope:{scope}:{route}";
-        static string DeclarationIdentity(string ownerId, string declarationId) => $"blackboard:{ownerId}:{declarationId}";
-        static CharacterSimulationSourceLocation NodeSource(BaseTree graph, BaseNode node, string route)
-        {
-            return new CharacterSimulationSourceLocation(
-                node.GetType().FullName,
-                graph?.GraphAuthoringId ?? node.Owner?.GraphAuthoringId ?? string.Empty,
-                node.GUID,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"{route}/node:{node.GUID}",
-                contentHash: GraphAuthoringFingerprint.Compute(graph ?? node.Owner));
-        }
-
-        static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item)
-        {
-            return new CharacterSimulationSourceLocation(
-                item.Declaration.GetType().FullName,
-                item.Graph.GraphAuthoringId,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"{item.Route}/blackboard:{item.Declaration.DeclarationId}",
-                declarationId: item.Declaration.DeclarationId,
-                contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
-        }
-
-        static ProgramCatalogField[] Fields(params ProgramCatalogField[] values) => values.Where(value => value != null).ToArray();
-
-        sealed class ScopeRecord
-        {
-            public ScopeRecord(
-                string identity,
-                ProgramScopeKind kind,
-                string ownerIdentity,
-                OperationHandle ownerOperation,
-                CharacterSimulationSourceLocation source)
-            {
-                Identity = identity;
-                Kind = kind;
-                OwnerIdentity = ownerIdentity;
-                OwnerOperation = ownerOperation;
-                Source = source;
-            }
-            public string Identity { get; }
-            public ProgramScopeKind Kind { get; }
-            public string OwnerIdentity { get; }
-            public OperationHandle OwnerOperation { get; private set; }
-            public CharacterSimulationSourceLocation Source { get; }
-            public List<int> StateSlots { get; } = new List<int>();
-
-            public void SetOwnerOperation(OperationHandle ownerOperation)
-            {
-                if (!ownerOperation.IsValid)
-                    throw new ArgumentException("Scope owner operation is invalid.", nameof(ownerOperation));
-                if (OwnerOperation.IsValid && !OwnerOperation.Equals(ownerOperation))
-                    throw new InvalidOperationException($"Scope '{Identity}' has multiple owner operations.");
-                OwnerOperation = ownerOperation;
-            }
-        }
-
-        readonly struct GraphRoute
-        {
-            public GraphRoute(string graphId, string route, OperationHandle stateScopeOwner)
-            {
-                GraphId = graphId;
-                Route = route;
-                StateScopeOwner = stateScopeOwner;
-            }
-            public string GraphId { get; }
-            public string Route { get; }
-            public OperationHandle StateScopeOwner { get; }
         }
     }
 }

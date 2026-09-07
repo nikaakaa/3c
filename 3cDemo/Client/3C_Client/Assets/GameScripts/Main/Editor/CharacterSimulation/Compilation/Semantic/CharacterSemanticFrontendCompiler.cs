@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/24";
+        public const string CompilerVersion = "character-simulation-compiler/25";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
@@ -83,13 +83,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             try
             {
+                var root = new SimulationProgramRootDescriptor(
+                    SimulationProgramRootKind.Character,
+                    model.DefinitionGuid,
+                    $"control:{model.Definition.ControlModuleId}",
+                    model.SourceRevision.Value);
                 var builder = new CharacterSimulationProgramBuilder(
                     model.ProgramId,
                     CompilerVersion,
                     OperationSetVersion,
                     model.TickRate,
                     model.SourceRevision,
-                    report);
+                    report,
+                    root);
                 builder.SetBodyMotion(
                     new CharacterBodyMotionSemanticDescriptor(
                         model.BodyMotionSourceIdentity,
@@ -117,6 +123,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ICharacterControlModule controlModule = ResolveControlModule(model.Definition.ControlModuleId, report, model.DefinitionPath);
                 if (controlModule == null)
                     return null;
+                if (!string.Equals(controlModule.Contract.ModuleId.Value, model.Definition.ControlModuleId, StringComparison.Ordinal))
+                {
+                    report.Error(
+                        "control_module_identity_mismatch",
+                        model.DefinitionPath,
+                        $"Resolved control module '{controlModule.Contract.ModuleId.Value}' does not match Definition entry '{model.Definition.ControlModuleId}'.");
+                    return null;
+                }
                 CharacterSimulationSourceLocation controlSource = new CharacterSimulationSourceLocation(
                     typeof(ICharacterControlModule).FullName,
                     $"control:{controlModule.Contract.ModuleId.Value}",
@@ -126,14 +140,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.Empty,
                     $"control:{controlModule.Contract.ModuleId.Value}",
                     contentHash: controlModule.Contract.SemanticVersion.ToString());
-                builder.DeclareControlModule(controlModule.Contract, controlSource);
+                if (!TryResolveControlParameters(model.Definition.ControlParameters, controlModule.Contract, report, model.DefinitionPath, out CharacterControlParameterSet controlParameters))
+                    return null;
+                controlSource = new CharacterSimulationSourceLocation(
+                    controlSource.SourceType,
+                    controlSource.GraphId,
+                    controlSource.NodeId,
+                    controlSource.EdgeId,
+                    controlSource.TimelineId,
+                    controlSource.ClipId,
+                    controlSource.DisplayPath,
+                    trackId: controlSource.TrackId,
+                    declarationId: controlSource.DeclarationId,
+                    portId: controlSource.PortId,
+                    contentHash: controlParameters.ContentHash.ToString());
+                new CharacterSemanticControlModuleEmitter(builder).Emit(controlModule.Contract, controlParameters, controlSource);
                 IReadOnlyList<CharacterControlMotionCompilationRecord> motions = CharacterControlMotionCompilationDiscovery.Discover(
                     controlModule.Contract.Motions,
                     model.Roots,
                     report);
                 if (!report.IsValid)
                     return null;
-                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, motions);
+                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, controlSource, motions);
                 if (!controlRoot.IsValid)
                     return null;
                 builder.DeclareReference(
@@ -141,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     controlRoot.Value,
-                    controlModule.Contract.ModuleId.Value,
+                    root.EntryIdentity,
                     controlSource);
                 return builder.Build();
             }
@@ -170,7 +198,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         semanticIr.Manifest.OperationSetVersion,
                         semanticIr.Manifest.TickRate,
                         semanticIr.Manifest.SourceRevision,
-                        semanticIr.SemanticHash));
+                        semanticIr.SemanticHash,
+                        semanticIr.Manifest.Root));
             }
             catch (Exception exception)
             {
@@ -245,10 +274,58 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationCompileReport report,
             string source)
         {
-            if (string.Equals(moduleId, CorinCharacterControlModule.ModuleId.Value, StringComparison.Ordinal))
-                return new CorinCharacterControlModule();
-            report.Error("control_module_uninstalled", source, $"Character control module '{moduleId}' is not installed.");
-            return null;
+            try
+            {
+                return CorinCharacterControlModuleCatalog.Create().Require(new CharacterControlModuleId(moduleId));
+            }
+            catch (Exception exception)
+            {
+                report.Error("control_module_uninstalled", source, exception.Message);
+                return null;
+            }
+        }
+
+        static bool TryResolveControlParameters(
+            IReadOnlyList<CharacterControlParameterConfiguration> configurations,
+            CharacterControlModuleContract contract,
+            CharacterSimulationCompileReport report,
+            string source,
+            out CharacterControlParameterSet parameters)
+        {
+            var values = new List<CharacterControlParameterValue>();
+            for (int i = 0; i < configurations.Count; i++)
+            {
+                CharacterControlParameterConfiguration configuration = configurations[i];
+                if (configuration == null || string.IsNullOrWhiteSpace(configuration.ParameterId))
+                {
+                    report.Error("control_parameter_configuration_invalid", source, $"Control parameter configuration #{i} has no identity.");
+                    continue;
+                }
+                try
+                {
+                    values.Add(new CharacterControlParameterValue(
+                        new CharacterControlParameterId(configuration.ParameterId.Trim()),
+                        configuration.ValueKind,
+                        configuration.NumericValue));
+                }
+                catch (Exception exception)
+                {
+                    report.Error("control_parameter_configuration_invalid", source, exception.Message);
+                }
+            }
+            if (!report.IsValid)
+            {
+                parameters = null;
+                return false;
+            }
+            if (!contract.TryResolveParameterSet(values, out parameters, out IReadOnlyList<string> errors))
+            {
+                for (int i = 0; i < errors.Count; i++)
+                    report.Error("control_parameter_configuration_invalid", source, errors[i]);
+                parameters = null;
+                return false;
+            }
+            return true;
         }
 
         static bool TryResolveRoot(

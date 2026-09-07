@@ -36,6 +36,7 @@ namespace ThirdPersonSimulation
     internal interface IFloat32ActionContextReader
     {
         bool IsContextActive(string contextId);
+        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
         int FindActive(string contextId, out Float32ActionInstanceState state);
         int FindActive(CharacterSkillId skillId, out Float32ActionInstanceState state);
         Float32ActionInstanceState FindOnlyActive();
@@ -56,6 +57,10 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32BlackboardPort
     {
+        void WriteGraphCallParameter(int valueSlot, CharacterStateValue value);
+        void ResetGraphCallParameter(int valueSlot);
+        CharacterStateValue ReadGraphCallParameter(int valueSlot);
+
         CharacterStateValue Read<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

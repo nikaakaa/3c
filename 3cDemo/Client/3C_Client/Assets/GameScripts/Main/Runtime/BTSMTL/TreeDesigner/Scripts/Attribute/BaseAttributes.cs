@@ -223,6 +223,19 @@ namespace TreeDesigner
         }
     }
 
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    public sealed class PropertyPortCollectionAttribute : Attribute
+    {
+        public PortDirection Direction { get; }
+        public PortCapacity Capacity { get; }
+
+        public PropertyPortCollectionAttribute(PortDirection direction, PortCapacity capacity)
+        {
+            Direction = direction;
+            Capacity = capacity;
+        }
+    }
+
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
     public class CompatiblePortsAttribute : Attribute
     {

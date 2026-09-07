@@ -71,6 +71,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         footPlacement.Mode,
                         footPlacement.SourceAssetGuid);
                     break;
+                case SetProfileSourceResourceBindingsMutation resources:
+                    m_Profile.SetSourceResourceBindings(resources.Bindings.ToArray());
+                    break;
+                case SetProfileAnimationCompressionMutation compression:
+                    m_Profile.SetAnimationCompression(compression.Compression);
+                    break;
+                case SetProfileAnimationPropertyBindingsMutation properties:
+                    m_Profile.SetAnimationPropertyBindings(properties.Bindings.ToArray());
+                    break;
                 case CreateProfileSourceBindingMutation source:
                     SetSourceBinding(source.Binding, false);
                     break;

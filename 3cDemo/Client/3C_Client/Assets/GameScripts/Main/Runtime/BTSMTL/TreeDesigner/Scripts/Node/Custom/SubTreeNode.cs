@@ -26,10 +26,12 @@ namespace TreeDesigner
         public string OutputGUID => m_OutputEdgeGUID;
 
         [SerializeReference]
+        [PropertyPortCollection(PortDirection.Input, PortCapacity.Single)]
         List<PropertyPort> m_InputPropertyPorts = new List<PropertyPort>();
         public List<PropertyPort> InputPropertyPorts => m_InputPropertyPorts;
 
         [SerializeReference]
+        [PropertyPortCollection(PortDirection.Output, PortCapacity.Multi)]
         List<PropertyPort> m_OutputPropertyPorts = new List<PropertyPort>();
         public List<PropertyPort> OutputPropertyPorts => m_OutputPropertyPorts;
 
@@ -54,6 +56,12 @@ namespace TreeDesigner
             }
 
             yield return new NodeGraphReference(this, "m_SubTree", "SubTree", m_SubTree, GUID, false);
+        }
+
+        public override void BeforeInit()
+        {
+            base.BeforeInit();
+            MigratePropertyPortDeclarations();
         }
 
         public override void Init(BaseGraph tree)
@@ -124,6 +132,50 @@ namespace TreeDesigner
             m_Child = null;
             m_InputPropertyPorts.ForEach(i => i.OnAfterDeserialize());
             m_OutputPropertyPorts.ForEach(i => i.OnAfterDeserialize());
+        }
+
+#if UNITY_EDITOR
+        public void SetSubTree(SubTree subTree)
+        {
+            m_SubTree = subTree;
+            if (m_SubTree != null && Owner != null)
+            {
+                m_SubTree.BindSerializedOwner(
+                    Owner.SerializedOwner,
+                    $"{Owner.GetNodeSerializedPropertyPath(this)}.m_SubTree");
+            }
+        }
+
+#endif
+
+        public void MigratePropertyPortDeclarations()
+        {
+            if (m_SubTree == null)
+                return;
+
+            MigratePropertyPortDeclarations(m_InputPropertyPorts, PortDirection.Input, "_Input");
+            MigratePropertyPortDeclarations(m_OutputPropertyPorts, PortDirection.Output, "_Output");
+        }
+
+        void MigratePropertyPortDeclarations(
+            List<PropertyPort> ports,
+            PortDirection direction,
+            string suffix)
+        {
+            foreach (BaseExposedProperty declaration in m_SubTree.ExposedProperties)
+            {
+                PropertyPort port = ports.Find(value =>
+                    value != null &&
+                    value.Direction == direction &&
+                    value.DeclarationId == declaration.DeclarationId);
+                if (port != null || string.IsNullOrEmpty(declaration.DeclarationId))
+                    continue;
+
+                port = ports.Find(value =>
+                    value != null &&
+                    string.Equals(value.Name, declaration.Name + suffix, StringComparison.Ordinal));
+                port?.ConfigureDeclaration(declaration.DeclarationId);
+            }
         }
 
         protected override void OnStart()

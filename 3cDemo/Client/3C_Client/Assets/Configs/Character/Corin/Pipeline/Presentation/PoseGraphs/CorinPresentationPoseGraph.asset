@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Idle
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &-4893639115726007882
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23,7 +23,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Walk Start
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &-3925997148202382411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -35,7 +35,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Moving Turn
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -47,19 +47,226 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
   m_Name: CorinPresentationPoseGraph
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_TypedGraph:
     m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-    m_ContentRevision: 6fd7c97a2d6d44889dd6b51efa834448
+    m_ContentRevision: 7419e9f658024984a9fd716078b7fdb8
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.pose-state-machine
       m_DisplayName: Locomotion Pose State Machine
@@ -79,7 +286,7 @@ MonoBehaviour:
     - m_NodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
       m_DisplayName: Resolve Pose Parameters
       m_Payload:
-        rid: 665191900899704836
+        rid: 207050283515904003
       m_DynamicPorts: []
     - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
       m_DisplayName: Foot Placement Weight
@@ -122,7 +329,7 @@ MonoBehaviour:
         m_Direction: 1
         m_Required: 1
         m_Order: 0
-        m_InterfacePortId:
+        m_InterfacePortId: 
     m_Edges:
     - m_EdgeId: corin.full-body-action.playback-input-slot
       m_SourceNodeId: corin.full-body-action.playback-input
@@ -209,16 +416,223 @@ MonoBehaviour:
       m_Position: {x: 860, y: 416}
   m_TypedGraphCatalog:
   - m_GraphId: corin.locomotion.idle.graph
-    m_ContentRevision: de638fc3d48e490285a15d8fd7e61513
+    m_ContentRevision: 975ade12100a4272a47e68aaef53c384
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.idle.sequence
       m_DisplayName: Idle Sequence
@@ -242,16 +656,223 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.idle.sequence
       m_Position: {x: -220.66667, y: 0}
   - m_GraphId: corin.locomotion.start.graph
-    m_ContentRevision: 4b4358b357f54e7e80136bc509a4a658
+    m_ContentRevision: 7d154f95040f430388c5c4f7284b825f
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.start.sequence
       m_DisplayName: Run Start Sequence
@@ -275,16 +896,223 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.start.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.locomotion.graph
-    m_ContentRevision: 3f5cf958d86c4e10a29329f795dea3fb
+    m_ContentRevision: 8ec068c7cc9f44f390ae1f1fd434acc9
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.locomotion.sequence
       m_DisplayName: Run Loop Sequence
@@ -308,16 +1136,223 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.locomotion.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.stop.graph
-    m_ContentRevision: a35f5646be204862811a9151b1483fd9
+    m_ContentRevision: 0531f9a1efcc4426b76de6b6071a061e
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.stop.sequence
       m_DisplayName: Run End Sequence
@@ -341,16 +1376,223 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.stop.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.turn.graph
-    m_ContentRevision: 3aed7de9a20f429d8366553a1274dd06
+    m_ContentRevision: 211ddf4e47eb4fce8a5d406d92a60723
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: corin.locomotion.turn.sequence
       m_DisplayName: Moving Turn Sequence
@@ -374,16 +1616,223 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.turn.sequence
       m_Position: {x: -300, y: 0}
   - m_GraphId: 239fb85af79509b36208db12ad91354f
-    m_ContentRevision: a9b75d2f628b4032b03035db896f93a2
+    m_ContentRevision: b42257082b574de287c54a73a008376a
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: 392890fbd759c4cba656c9607b0ba5b8
       m_DisplayName: Output Pose
@@ -407,16 +1856,223 @@ MonoBehaviour:
     - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
       m_Position: {x: -220, y: 0}
   - m_GraphId: 658ab38fd39b80592ae222925f31e25c
-    m_ContentRevision: ba33de827fa44015928393c4fffbbf4e
+    m_ContentRevision: 97817b55718e4292a7aabfcc7f43e880
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
     - m_ParameterId: animation.foot-placement-weight
       m_ValueType: 1
-      m_Unit:
+      m_Usage: 1
+      m_Unit: 
       m_DefaultValue: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_ValueType: 1
+      m_Usage: 2
+      m_Unit: percent
+      m_DefaultValue: 0
     m_Nodes:
     - m_NodeId: 8d4b1b80835e97d02b73d6e166a01be7
       m_DisplayName: Output Pose
@@ -465,6 +2121,97 @@ MonoBehaviour:
   references:
     version: 2
     RefIds:
+    - rid: 207050283515904003
+      type: {class: CharacterPoseParameterResolvePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Policies:
+        - m_ParameterId: animation.action-weight
+          m_Policy: 3
+        - m_ParameterId: animation.foot-placement-weight
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EB_Angry_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EB_Relax_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EB_u2191_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EB_u2193_Corin
+          m_Policy: 3
+        - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Eye_Close_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+          m_Policy: 3
+        - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+          m_Policy: 3
+        - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+          m_Policy: 3
+        - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+          m_Policy: 3
+        - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+          m_Policy: 3
+        - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+          m_Policy: 3
     - rid: 665191900899704832
       type: {class: CharacterPoseStateMachineNodePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -516,7 +2263,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.locomotion
             m_Priority: 0
             m_Rule:
@@ -527,32 +2274,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -564,7 +2311,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.idle
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.start
             m_Priority: 0
             m_Rule:
@@ -575,26 +2322,6 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: run-loop-mode
-                m_FactId:
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId:
-                m_EnumLiteral: 0
-                m_IdentityLiteral:
-              - m_OperationId: matches-run-start-mode
-                m_Kind: 8
-                m_InputA: movement-mode
-                m_InputB: run-start-mode
-                m_FactId:
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId:
-                m_EnumLiteral: 0
-                m_IdentityLiteral:
-              - m_OperationId: matches-run-start-or-loop-mode
-                m_Kind: 7
-                m_InputA: matches-run-start-mode
-                m_InputB: matches-run-loop-mode
                 m_FactId:
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
@@ -620,18 +2347,8 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId:
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
-              - m_OperationId: run-start-mode
-                m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId:
-                m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/54223f0b-f2e9-5178-ab79-bc4269701214
-              m_OutputOperationId: matches-run-start-or-loop-mode
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
+              m_OutputOperationId: matches-run-loop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1
@@ -642,7 +2359,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.start
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.locomotion
             m_Priority: 0
             m_Rule:
@@ -651,74 +2368,74 @@ MonoBehaviour:
               m_Operations:
               - m_OperationId: gait-handoff-lead
                 m_Kind: 3
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0.25
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-target-mode
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: ready-to-transition
                 m_Kind: 6
                 m_InputA: matches-target-mode
                 m_InputB: state-pose-ready
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-ready
                 m_Kind: 13
                 m_InputA: state-pose-remaining-time
                 m_InputB: gait-handoff-lead
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-remaining-time
                 m_Kind: 15
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: ready-to-transition
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -730,7 +2447,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.locomotion
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.turn
             m_Priority: 0
             m_Rule:
@@ -741,32 +2458,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -778,7 +2495,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.turn
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.idle
             m_Priority: 0
             m_Rule:
@@ -789,30 +2506,30 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
@@ -826,7 +2543,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 12a31544976ddf152639d62c6d19142c
             m_Priority: 1
             m_Rule:
@@ -835,74 +2552,74 @@ MonoBehaviour:
               m_Operations:
               - m_OperationId: gait-handoff-lead
                 m_Kind: 3
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0.3
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-target-mode
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: ready-to-transition
                 m_Kind: 6
                 m_InputA: matches-target-mode
                 m_InputB: state-pose-ready
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-ready
                 m_Kind: 13
                 m_InputA: state-pose-remaining-time
                 m_InputB: gait-handoff-lead
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-remaining-time
                 m_Kind: 15
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: ready-to-transition
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -914,7 +2631,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.turn
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.locomotion
             m_Priority: 1
             m_Rule:
@@ -925,32 +2642,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.3
@@ -962,7 +2679,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.locomotion
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.stop
             m_Priority: 1
             m_Rule:
@@ -973,62 +2690,62 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: stationary-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-stop-mode
                 m_Kind: 7
                 m_InputA: matches-target-mode
                 m_InputB: matches-stationary-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-target-mode
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: stationary-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/84c12f85-34ab-5f09-8b1f-c73166c3deb9
+                m_IdentityLiteral: presentation.movement-mode.state/RunStopping
               m_OutputOperationId: matches-stop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -1040,7 +2757,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.stop
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.locomotion
             m_Priority: 1
             m_Rule:
@@ -1051,32 +2768,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.1
@@ -1088,7 +2805,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: 12a31544976ddf152639d62c6d19142c
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.idle
             m_Priority: 1
             m_Rule:
@@ -1099,30 +2816,30 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
@@ -1136,7 +2853,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.idle
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 89eeedab7b97adb04b02ef9abd06f8bc
             m_Priority: 1
             m_Rule:
@@ -1147,62 +2864,62 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: walk-loop-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-walk-start-mode
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: walk-start-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-walk-start-or-loop-mode
                 m_Kind: 7
                 m_InputA: matches-walk-start-mode
                 m_InputB: matches-walk-loop-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: walk-loop-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               - m_OperationId: walk-start-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/01fa46e2-ef80-5ac4-9acb-d874fd5b5f6b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkStart
               m_OutputOperationId: matches-walk-start-or-loop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -1214,7 +2931,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.start
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 12a31544976ddf152639d62c6d19142c
             m_Priority: 1
             m_Rule:
@@ -1225,32 +2942,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -1262,7 +2979,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: 12a31544976ddf152639d62c6d19142c
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.locomotion
             m_Priority: 2
             m_Rule:
@@ -1273,32 +2990,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -1310,7 +3027,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.stop
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 12a31544976ddf152639d62c6d19142c
             m_Priority: 2
             m_Rule:
@@ -1321,32 +3038,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.1
@@ -1358,7 +3075,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.locomotion
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 12a31544976ddf152639d62c6d19142c
             m_Priority: 2
             m_Rule:
@@ -1369,32 +3086,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -1406,7 +3123,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.start
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.stop
             m_Priority: 2
             m_Rule:
@@ -1417,30 +3134,30 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
@@ -1454,7 +3171,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.turn
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: 12a31544976ddf152639d62c6d19142c
             m_Priority: 2
             m_Rule:
@@ -1465,32 +3182,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.3
@@ -1502,7 +3219,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.stop
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.idle
             m_Priority: 3
             m_Rule:
@@ -1511,72 +3228,72 @@ MonoBehaviour:
               m_Operations:
               - m_OperationId: blend-duration
                 m_Kind: 3
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0.15
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: matches-target-mode
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: ready-to-transition
                 m_Kind: 6
                 m_InputA: matches-target-mode
                 m_InputB: state-pose-ready
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-ready
                 m_Kind: 13
                 m_InputA: state-pose-remaining-time
                 m_InputB: blend-duration
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: state-pose-remaining-time
                 m_Kind: 15
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: ready-to-transition
@@ -1590,7 +3307,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.idle
             m_Priority: 3
             m_Rule:
@@ -1601,30 +3318,30 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.stationary
               m_OutputOperationId: matches-target-mode
@@ -1638,7 +3355,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.start
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.turn
             m_Priority: 4
             m_Rule:
@@ -1649,32 +3366,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -1686,7 +3403,7 @@ MonoBehaviour:
             m_Source:
               m_Kind: 1
               m_StateId: corin.locomotion.stop
-              m_AliasId:
+              m_AliasId: 
             m_TargetStateId: corin.locomotion.turn
             m_Priority: 4
             m_Rule:
@@ -1697,32 +3414,32 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: target-mode
-                m_FactId:
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA:
-                m_InputB:
+                m_InputA: 
+                m_InputB: 
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral:
+                m_IdentityLiteral: 
               - m_OperationId: target-mode
                 m_Kind: 16
-                m_InputA:
-                m_InputB:
-                m_FactId:
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId:
+                m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -1746,15 +3463,6 @@ MonoBehaviour:
         m_SelectionAvailability: 2
         m_BlendPolicy: {fileID: 11400000, guid: 0c091f82b87df624b9df65e821e52c38,
           type: 2}
-    - rid: 665191900899704836
-      type: {class: CharacterPoseParameterResolvePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_Policies:
-        - m_ParameterId: animation.action-weight
-          m_Policy: 3
-        - m_ParameterId: animation.foot-placement-weight
-          m_Policy: 3
     - rid: 665191900899704837
       type: {class: CharacterProgramParameterInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1770,47 +3478,47 @@ MonoBehaviour:
     - rid: 665191900899704841
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665191900899704843
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665191900899704845
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665191900899704847
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665191900899704849
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665191900899704851
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665192033737244679
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665192033737244681
       type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665192033737244900
       type: {class: CharacterLocalToComponentPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 665192033737244901
       type: {class: CharacterComponentToLocalPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 3396202377909895169
       type: {class: CharacterFullBodyIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
     - rid: 3396202774835757062
       type: {class: CharacterClipPlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1870,7 +3578,7 @@ MonoBehaviour:
     - rid: 3396202840384602112
       type: {class: CharacterFullBodyIkGoalAssemblerPayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
-      data:
+      data: 
 --- !u!114 &4798961889804782150
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1882,7 +3590,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Run End
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &6895642438991261946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1894,7 +3602,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Run Start
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &7095868976490676571
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1906,7 +3614,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Walk Loop
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
 --- !u!114 &8131560739780795392
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1918,4 +3626,4 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Run Loop
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 

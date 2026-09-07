@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -233,6 +234,7 @@ namespace ThirdPersonSimulation
         Sequence = 4,
         Selector = 5,
         Succeed = 6,
+        SubGraph = 7,
         StateMachine = 20,
         State = 21,
         StateEnter = 22,
@@ -252,6 +254,7 @@ namespace ThirdPersonSimulation
         TimelineCameraCue = 47,
         TimelineCameraResponse = 48,
         TimelineMotionWarp = 49,
+        TimelineScenePresentationParameter = 50,
         BlackboardGet = 60,
         BlackboardSet = 61,
         InputBoolean = 70,
@@ -288,9 +291,6 @@ namespace ThirdPersonSimulation
         BeginEquipmentChange = 133,
         CommitEquipmentChange = 134,
         CancelEquipmentChange = 135,
-        EnterEquipmentFeatureHost = 136,
-        ExitEquipmentFeatureHost = 137,
-        ResolveEquipmentActionRoute = 138,
         AIReadSelfObservation = 200,
         AIEnumerateConfiguredCandidates = 201,
         AISelectNearestCandidate = 202,
@@ -354,7 +354,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/12");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/14");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -365,6 +365,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.Sequence,
                 SimulationOperationCode.Selector,
                 SimulationOperationCode.Succeed,
+                SimulationOperationCode.SubGraph,
                 SimulationOperationCode.StateMachine,
                 SimulationOperationCode.State,
                 SimulationOperationCode.StateEnter,
@@ -419,10 +420,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.RequestEquipmentChange,
                 SimulationOperationCode.BeginEquipmentChange,
                 SimulationOperationCode.CommitEquipmentChange,
-                SimulationOperationCode.CancelEquipmentChange,
-                SimulationOperationCode.EnterEquipmentFeatureHost,
-                SimulationOperationCode.ExitEquipmentFeatureHost,
-                SimulationOperationCode.ResolveEquipmentActionRoute
+                SimulationOperationCode.CancelEquipmentChange
             });
 
         public static IReadOnlyList<SimulationOperationCode> Operations => s_Operations;
@@ -816,6 +814,151 @@ namespace ThirdPersonSimulation
         public string ExternalIdentity { get; }
     }
 
+    public enum ProgramGraphParameterDirection : byte
+    {
+        Input = 1,
+        Output = 2
+    }
+
+    public sealed class ProgramGraphParameterBinding
+    {
+        public ProgramGraphParameterBinding(
+            ProgramGraphParameterDirection direction,
+            string parameterName,
+            string declarationIdentity,
+            int stateSlot,
+            string portId,
+            SemanticValueKind valueKind)
+        {
+            if (!Enum.IsDefined(typeof(ProgramGraphParameterDirection), direction) ||
+                stateSlot < 0 ||
+                !Enum.IsDefined(typeof(SemanticValueKind), valueKind))
+            {
+                throw new ArgumentException("Program graph parameter binding is incomplete.");
+            }
+            Direction = direction;
+            ParameterName = SimulationIdentity.Require(parameterName, nameof(parameterName));
+            DeclarationIdentity = SimulationIdentity.Require(declarationIdentity, nameof(declarationIdentity));
+            StateSlot = stateSlot;
+            PortId = SimulationIdentity.Require(portId, nameof(portId));
+            ValueKind = valueKind;
+        }
+
+        public ProgramGraphParameterDirection Direction { get; }
+        public string ParameterName { get; }
+        public string DeclarationIdentity { get; }
+        public int StateSlot { get; }
+        public string PortId { get; }
+        public SemanticValueKind ValueKind { get; }
+    }
+
+    public sealed class ProgramGraphCallFrame
+    {
+        readonly ReadOnlyCollection<ProgramGraphParameterBinding> m_Inputs;
+        readonly ReadOnlyCollection<ProgramGraphParameterBinding> m_Outputs;
+
+        public ProgramGraphCallFrame(
+            int index,
+            string identity,
+            OperationHandle ownerOperation,
+            OperationHandle entryOperation,
+            string childGraphIdentity,
+            IEnumerable<ProgramGraphParameterBinding> inputs,
+            IEnumerable<ProgramGraphParameterBinding> outputs)
+        {
+            if (index < 0 || !ownerOperation.IsValid || !entryOperation.IsValid)
+                throw new ArgumentException("Program graph call frame identity is incomplete.");
+            Index = index;
+            Identity = SimulationIdentity.Require(identity, nameof(identity));
+            OwnerOperation = ownerOperation;
+            EntryOperation = entryOperation;
+            ChildGraphIdentity = SimulationIdentity.Require(childGraphIdentity, nameof(childGraphIdentity));
+            m_Inputs = Freeze(inputs, ProgramGraphParameterDirection.Input, "input");
+            m_Outputs = Freeze(outputs, ProgramGraphParameterDirection.Output, "output");
+        }
+
+        public int Index { get; }
+        public string Identity { get; }
+        public OperationHandle OwnerOperation { get; }
+        public OperationHandle EntryOperation { get; }
+        public string ChildGraphIdentity { get; }
+        public IReadOnlyList<ProgramGraphParameterBinding> Inputs => m_Inputs;
+        public IReadOnlyList<ProgramGraphParameterBinding> Outputs => m_Outputs;
+
+        static ReadOnlyCollection<ProgramGraphParameterBinding> Freeze(
+            IEnumerable<ProgramGraphParameterBinding> source,
+            ProgramGraphParameterDirection direction,
+            string label)
+        {
+            var values = new List<ProgramGraphParameterBinding>(source ?? Array.Empty<ProgramGraphParameterBinding>());
+            values.Sort((left, right) =>
+            {
+                int byParameter = string.CompareOrdinal(left.ParameterName, right.ParameterName);
+                return byParameter != 0 ? byParameter : string.CompareOrdinal(left.PortId, right.PortId);
+            });
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            var ports = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < values.Count; i++)
+            {
+                ProgramGraphParameterBinding value = values[i]
+                    ?? throw new ArgumentException($"Program graph call frame {label} binding is missing.", nameof(source));
+                if (value.Direction != direction || !names.Add(value.ParameterName) || !ports.Add(value.PortId))
+                    throw new ArgumentException($"Program graph call frame {label} bindings are duplicated or use the wrong direction.", nameof(source));
+            }
+            return values.AsReadOnly();
+        }
+    }
+
+    public static class ProgramGraphCallFrameContract
+    {
+        public static void ValidateCoverage(
+            IReadOnlyList<SimulationOperationCode> operationCodes,
+            IReadOnlyList<ProgramGraphCallFrame> frames)
+        {
+            if (operationCodes == null)
+                throw new ArgumentNullException(nameof(operationCodes));
+            if (frames == null)
+                throw new ArgumentNullException(nameof(frames));
+            var counts = new int[operationCodes.Count];
+            for (int i = 0; i < frames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = frames[i]
+                    ?? throw new ArgumentException("Graph call frame collection contains a missing frame.", nameof(frames));
+                if (frame.OwnerOperation.Value < 0 || frame.OwnerOperation.Value >= operationCodes.Count ||
+                    frame.EntryOperation.Value < 0 || frame.EntryOperation.Value >= operationCodes.Count)
+                {
+                    throw new InvalidDataException($"Graph call frame '{frame.Identity}' references an operation outside the table.");
+                }
+                Validate(
+                    frame,
+                    operationCodes[frame.OwnerOperation.Value],
+                    operationCodes[frame.EntryOperation.Value]);
+                counts[frame.OwnerOperation.Value]++;
+            }
+            for (int i = 0; i < operationCodes.Count; i++)
+            {
+                bool isSubGraph = operationCodes[i] == SimulationOperationCode.SubGraph;
+                if (isSubGraph && counts[i] != 1)
+                    throw new InvalidDataException($"SubGraph operation '{i}' requires exactly one graph call frame, received '{counts[i]}'.");
+                if (!isSubGraph && counts[i] != 0)
+                    throw new InvalidDataException($"Operation '{i}' is not a SubGraph but owns a graph call frame.");
+            }
+        }
+
+        public static void Validate(
+            ProgramGraphCallFrame frame,
+            SimulationOperationCode ownerCode,
+            SimulationOperationCode entryCode)
+        {
+            if (frame == null)
+                throw new ArgumentNullException(nameof(frame));
+            if (ownerCode != SimulationOperationCode.SubGraph)
+                throw new InvalidDataException($"Graph call frame '{frame.Identity}' owner operation must be SubGraph, received '{ownerCode}'.");
+            if (entryCode != SimulationOperationCode.Root)
+                throw new InvalidDataException($"Graph call frame '{frame.Identity}' entry operation must be Root, received '{entryCode}'.");
+        }
+    }
+
     public enum ProgramStateValueKind : byte
     {
         Boolean = 1,
@@ -834,7 +977,8 @@ namespace ThirdPersonSimulation
         ActionInstanceReference = 23,
         ActionTargetSnapshot = 24,
         GameplayEffectAggregate = 25,
-        EquipmentAggregate = 26
+        EquipmentAggregate = 26,
+        SkillExecutionState = 27
     }
 
     public enum ProgramStateOwnerKind : byte
@@ -894,6 +1038,7 @@ namespace ThirdPersonSimulation
         InputRequestBuffer = 70,
         ActionInstance = 80,
         ActionRequestBuffer = 81,
+        SkillExecutionState = 82,
         ActionEventSequence = 84,
         GameplayEffectAggregate = 100,
         EquipmentAggregate = 110,
@@ -972,6 +1117,7 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
                 ProgramStateValueKind.GameplayEffectAggregate => "state.gameplay-effect-aggregate/v1",
+                ProgramStateValueKind.SkillExecutionState => "state.skill-execution/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
         }
@@ -1027,6 +1173,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.InputRequestBuffer => kind == ProgramStateValueKind.InputRequest && owner == ProgramStateOwnerKind.Input,
                 ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
+                ProgramStateSemantic.SkillExecutionState => kind == ProgramStateValueKind.SkillExecutionState && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionEventSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.GameplayEffectAggregate => kind == ProgramStateValueKind.GameplayEffectAggregate && owner == ProgramStateOwnerKind.GameplayEffect,
                 ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
@@ -1295,6 +1442,62 @@ namespace ThirdPersonSimulation
 		public string ContentHash { get; }
 	}
 
+    public static class ProgramSourceMapCoverage
+    {
+        public static void Require(
+            IReadOnlyList<ProgramSourceMapEntry> entries,
+            int operationCount,
+            int stateSlotCount)
+        {
+            if (entries == null)
+                throw new ArgumentNullException(nameof(entries));
+            if (operationCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationCount));
+            if (stateSlotCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(stateSlotCount));
+
+            var operations = new bool[operationCount];
+            var stateSlots = new bool[stateSlotCount];
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ProgramSourceMapEntry entry = entries[i] ??
+                    throw new InvalidDataException("Program source map contains a missing entry.");
+                switch (entry.TargetKind)
+                {
+                    case ProgramSourceTargetKind.Operation:
+                        RequireTarget(entry.TargetIndex, operations, "operation");
+                        break;
+                    case ProgramSourceTargetKind.StateSlot:
+                        RequireTarget(entry.TargetIndex, stateSlots, "state slot");
+                        break;
+                    case ProgramSourceTargetKind.ControlState:
+                        RequireTarget(entry.TargetIndex, stateSlots, "control state");
+                        break;
+                }
+            }
+
+            for (int i = 0; i < operations.Length; i++)
+            {
+                if (!operations[i])
+                    throw new InvalidDataException($"Program operation '{i}' is absent from the source map.");
+            }
+            for (int i = 0; i < stateSlots.Length; i++)
+            {
+                if (!stateSlots[i])
+                    throw new InvalidDataException($"Program state slot '{i}' is absent from the source map.");
+            }
+        }
+
+        static void RequireTarget(int index, bool[] targets, string kind)
+        {
+            if ((uint)index >= (uint)targets.Length)
+                throw new InvalidDataException($"Program source map {kind} target '{index}' is outside the Program.");
+            if (targets[index])
+                throw new InvalidDataException($"Program source map {kind} target '{index}' is duplicated.");
+            targets[index] = true;
+        }
+    }
+
     public sealed class ProgramProducer
     {
         public ProgramProducer(
@@ -1347,7 +1550,8 @@ namespace ThirdPersonSimulation
         EquipmentInitialLoadout = 29,
         EquipmentVisualBinding = 30,
         ControlModule = 31,
-        SkillProgram = 32
+        SkillProgram = 32,
+        TimelineBinding = 33
     }
 
     public enum ProgramCatalogFieldKind : byte

@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CharacterAuthoringTimelineRecord timeline = occurrence.Timelines[timelineIndex];
                     for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                     {
-                        CharacterAuthoringTrackRecord track = timeline.Tracks[trackIndex];
+                        TimelineSemanticTrackRecord track = timeline.Tracks[trackIndex];
                         for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                         {
                             if (track.Clips[clipIndex].Clip is not MotionCurveClip clip)
@@ -97,11 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     Collect(occurrence.PropertyEdges[edgeIndex].ConditionGraph);
                 for (int timelineIndex = 0; timelineIndex < occurrence.Timelines.Count; timelineIndex++)
                 {
-                    IReadOnlyList<CharacterAuthoringClipRecord> treeClips = occurrence.Timelines[timelineIndex].Tracks
-                        .SelectMany(value => value.Clips)
-                        .ToArray();
-                    for (int clipIndex = 0; clipIndex < treeClips.Count; clipIndex++)
-                        Collect(treeClips[clipIndex].TreeGraph);
+                    foreach (CharacterAuthoringGraphOccurrence tree in occurrence.Timelines[timelineIndex].TreeGraphs.Values)
+                        Collect(tree);
                 }
             }
         }

@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_Index;
         [SerializeField] string m_ParameterId = string.Empty;
         [SerializeField] PoseParameterValueType m_ValueType;
+        [SerializeField] CharacterPoseParameterUsage m_Usage;
         [SerializeField] string m_Unit = string.Empty;
         [SerializeField] float m_DefaultValue;
 
@@ -144,14 +145,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseParameterId parameterId,
             PoseParameterValueType valueType,
             float defaultValue,
-            string unit)
+            string unit,
+            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control)
         {
             if (index < 0 || !parameterId.IsValid || !Enum.IsDefined(typeof(PoseParameterValueType), valueType) ||
+                !Enum.IsDefined(typeof(CharacterPoseParameterUsage), usage) ||
                 !float.IsFinite(defaultValue))
                 throw new ArgumentException("Compiled Pose Parameter entry is invalid.");
             m_Index = index;
             m_ParameterId = parameterId.Value;
             m_ValueType = valueType;
+            m_Usage = usage;
             m_Unit = unit?.Trim() ?? string.Empty;
             m_DefaultValue = defaultValue;
         }
@@ -159,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int Index => m_Index;
         public PoseParameterId ParameterId => new PoseParameterId(m_ParameterId);
         public PoseParameterValueType ValueType => m_ValueType;
+        public CharacterPoseParameterUsage Usage => m_Usage;
         public string Unit => m_Unit ?? string.Empty;
         public float DefaultValue => m_DefaultValue;
     }
@@ -592,8 +597,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPoseProgramImage
     {
-        public const string SchemaVersion = "character-presentation-pose-plan/v24";
-        public const string RuntimeAbi = "character-presentation-pose-runtime/v27";
+        public const string SchemaVersion = "character-presentation-pose-plan/v25";
+        public const string RuntimeAbi = "character-presentation-pose-runtime/v28";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_RuntimeAbi = RuntimeAbi;
@@ -954,6 +959,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (WorkerPlan == null)
                 throw new InvalidOperationException(
                     "Character Presentation Pose Plan has no Worker Batch Plan.");
+            for (int i = 0; i < Parameters.Count; i++)
+            {
+                CharacterPresentationPoseParameterEntry parameter = Parameters[i];
+                if (parameter == null || parameter.Index != i || !parameter.ParameterId.IsValid ||
+                    !Enum.IsDefined(typeof(PoseParameterValueType), parameter.ValueType) ||
+                    !Enum.IsDefined(typeof(CharacterPoseParameterUsage), parameter.Usage) ||
+                    !float.IsFinite(parameter.DefaultValue))
+                    throw new InvalidOperationException($"Character Presentation Pose Plan Parameter #{i} is invalid.");
+            }
             for (int i = 0; i < OperationPages.ValueReferences.Count; i++)
             {
                 CharacterPoseValueReference reference =

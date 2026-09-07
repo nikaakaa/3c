@@ -68,11 +68,25 @@ replacement MUST显式指明被替换source，并先完成该source的stop barri
 
 唯一Action事务服务 MUST只负责 catalog/profile 查询、准入、ActionInstance 创建和 lifecycle 状态流转。技能解释、Timeline、Motion、Cue、命中与世界求解 MUST 由各自正式模块处理。
 
+Float32与Fixed MUST通过共享实现执行与数值无关的准入、来源检查、replacement／stop barrier、输入消费、请求暂存、最终提交及生命周期转换。Target adapter MUST只承担需要区分的数值操作、typed状态访问、布局或codec；MUST NOT分别维护相同Action业务流程。提取共享模块 MUST保持已有同Tick顺序、精确技能／实例／generation身份和唯一ActionInstance状态所有权，MUST NOT新增第二事务入口、状态镜像或巨型业务基类。
+
 #### Scenario: 动作校正
 
 - **WHEN** typed correction ingress 到达
 - **THEN** Action operation MUST 只更新实例状态与原因
 - **AND** world restore 与 visual recovery MUST 留在各自模块
+
+#### Scenario: 两个Target执行同一激活流程
+
+- **WHEN** Float32或Fixed收到具有相同业务含义的技能请求
+- **THEN** 两端 MUST调用同一Action业务实现决定来源检查、replacement、输入消费和最终提交顺序
+- **AND** 数值计算与状态读写 MUST通过各自正式typed端口执行，不能在Target类内另写同义分支
+
+#### Scenario: 修改取消规则
+
+- **WHEN** 开发者调整与数值无关的Action取消或提交规则
+- **THEN** MUST只在所属共享业务模块修改该规则，两端继续消费同一实现
+- **AND** 已被替代的Target业务分支 MUST删除，不能以两个文件同步修改作为完成结果
 
 
 ### Requirement: Equipment Route选择不得进入Action runtime

@@ -101,8 +101,6 @@ def signature_records(assembly, label):
         if not match:
             break
         name, index, mask, register, system, kind, used = match.groups()
-        if mask != LANES[:len(mask)]:
-            raise ValueError("Non-contiguous interface signature needs separate recovery")
         records.append({"name": name, "index": int(index), "mask": mask, "register": int(register),
                         "system": system, "kind": "int" if kind == "sint" else kind, "used": used.replace(" ", "")})
     return records
@@ -195,12 +193,12 @@ def translate(assembly):
             indent += 1
         elif op in ("ret", "continue"):
             if op == "ret" and not compute:
-                for output in outputs:
+                for index, output in enumerate(outputs):
                     name = f"o{output['register']}"
                     value = name + "." + output["mask"]
                     if output["kind"] != "uint":
                         value = f"as{output['kind']}({value})"
-                    emit(f"result.{name} = {value};")
+                    emit(f"result.output{index} = {value};")
                 emit("return result;")
             else:
                 emit("return;" if op == "ret" else "continue;")
@@ -273,8 +271,9 @@ def translate(assembly):
                 expression, kind = f"({floats[0]} {symbol} {floats[1]})", "float"
             elif op == "mad":
                 expression, kind = f"mad({', '.join(floats)})", "float"
-            elif op in ("min", "max", "sqrt", "rsq", "rcp", "frc", "exp", "log", "round_ni"):
-                function = {"rsq": "rsqrt", "frc": "frac", "exp": "exp2", "log": "log2", "round_ni": "floor"}.get(op, op)
+            elif op in ("min", "max", "sqrt", "rsq", "rcp", "frc", "exp", "log", "round_ni", "round_z"):
+                function = {"rsq": "rsqrt", "frc": "frac", "exp": "exp2", "log": "log2",
+                            "round_ni": "floor", "round_z": "trunc"}.get(op, op)
                 expression, kind = f"{function}({', '.join(floats)})", "float"
             elif op in ("dp2", "dp3", "dp4"):
                 values = [typed_source(value, LANES[:int(op[-1])], "float") for value in inputs]
@@ -287,6 +286,8 @@ def translate(assembly):
                 expression = f"({unsigned[0]} * {unsigned[1]} + {unsigned[2]})"
             elif op == "ishr":
                 expression, kind = f"({signed[0]} >> ({unsigned[1]} & 31u))", "int"
+            elif op == "ushr":
+                expression = f"({unsigned[0]} >> ({unsigned[1]} & 31u))"
             elif op in ("imin", "imax"):
                 expression, kind = f"{op[1:]}({', '.join(signed)})", "int"
             elif op in ("lt", "ge", "eq", "ne", "ilt", "ige", "ieq", "ult"):
@@ -326,25 +327,28 @@ def translate(assembly):
         signature = f"[numthreads({', '.join(map(str, threads))})]\nvoid main(uint3 vThreadID : SV_DispatchThreadID)\n{{"
     else:
         declarations.append("struct ShaderOutput {")
-        for output in outputs:
+        for index, output in enumerate(outputs):
             dimension = str(len(output["mask"])) if len(output["mask"]) > 1 else ""
-            declarations.append(f"    {output['kind']}{dimension} o{output['register']} : {output['name']}{output['index']};")
-            names.append(f"o{output['register']}")
+            declarations.append(f"    {output['kind']}{dimension} output{index} : {output['name']}{output['index']};")
+            name = f"o{output['register']}"
+            if name not in names:
+                names.append(name)
         declarations.append("};")
         parameters = []
-        for item in input_signature:
+        for index, item in enumerate(input_signature):
             dimension = str(len(item["mask"])) if len(item["mask"]) > 1 else ""
             front_face = item["name"].lower() == "sv_isfrontface"
             kind = "bool" if front_face else item["kind"] + dimension
             name = f"v{item['register']}"
-            parameters.append(f"{kind} input{item['register']} : {item['name']}{item['index']}")
-            value = f"input{item['register']}"
+            parameters.append(f"{kind} input{index} : {item['name']}{item['index']}")
+            value = f"input{index}"
             if front_face:
                 value = f"({value} ? 0xffffffffu : 0u)"
             elif item["kind"] != "uint":
                 value = f"asuint({value})"
             initializers.append(f"    {name}.{item['mask']} = {value};")
-            names.append(name)
+            if name not in names:
+                names.append(name)
         signature = "ShaderOutput main(" + ", ".join(parameters) + ")\n{"
         initializers.insert(0, "    ShaderOutput result;")
     registers = "    uint4 " + ", ".join(names) + ";"

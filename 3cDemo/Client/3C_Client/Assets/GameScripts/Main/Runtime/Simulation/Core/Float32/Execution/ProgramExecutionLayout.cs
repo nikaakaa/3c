@@ -107,11 +107,15 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
         readonly IReadOnlyDictionary<string, TypedStateAddress> m_InputRequests;
         readonly IReadOnlyDictionary<string, TypedActionStateAddresses> m_Actions;
+        readonly IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> m_ActionSlots;
+        readonly IReadOnlyList<TypedActionStateAddresses> m_AllActionSlots;
         readonly IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> m_ActionContexts;
         readonly IReadOnlyDictionary<int, TypedStateAddress> m_TimelineRetention;
+        readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly TypedStateAddress m_GameplayEffectAggregate;
+        readonly TypedStateAddress m_SkillExecutionState;
         readonly TypedStateAddress m_EquipmentAggregate;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
@@ -136,12 +140,26 @@ namespace ThirdPersonSimulation
             m_NamedConstantIndexes = BuildNamedConstantIndexes(program);
             BuildGlobalStateSlots(program, stateSemanticCount, out m_FirstStateSlots, out m_StateSlotsByOwner);
             BuildTypedStateLayout(program, out m_TypedAddresses, out m_Partitions);
+            int skillExecutionStateSlot = FindStateSlot(ProgramStateSemantic.SkillExecutionState, "action:skill-execution");
+            if (skillExecutionStateSlot < 0)
+                throw new InvalidDataException("Program has no Skill execution state aggregate.");
+            m_SkillExecutionState = m_TypedAddresses[skillExecutionStateSlot];
+            m_SkillExecutionStateSlots = ActionSkillExecutionSlotMap.Build(
+                program.Operations.Count,
+                program.ControlFlow,
+                program.Scopes,
+                program.SkillPrograms,
+                program.References,
+                program.StateSlots,
+                operationIndex => program.Operations[operationIndex].StateSlots);
             m_BlackboardInputBindings = BuildBlackboardInputBindings(program, m_CatalogIndex, m_TypedAddresses);
             BuildDomainIndexes(
                 program,
                 m_TypedAddresses,
                 out m_InputRequests,
                 out m_Actions,
+                out m_ActionSlots,
+                out m_AllActionSlots,
                 out m_ActionContexts,
                 out m_TimelineRetention,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
@@ -158,7 +176,8 @@ namespace ThirdPersonSimulation
                 program.References,
                 program.StateSlots,
                 program.SourceMap,
-                RootOperation);
+                RootOperation,
+                program.GraphCallFrames);
             m_TimelineAnimationProducers = new TimelineAnimationProducerIndex(
                 topology,
                 operation => IsTimelineAnimationTrackMuted(program, m_CatalogIndex, operation),
@@ -180,6 +199,8 @@ namespace ThirdPersonSimulation
         internal Float32ProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
+        public TypedStateAddress SkillExecutionStateAddress => m_SkillExecutionState;
+        internal bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
         public EquipmentProgramLayout Equipment { get; }
         public TypedStateAddress EquipmentAggregateAddress => Equipment.CapabilityEnabled
             ? m_EquipmentAggregate
@@ -293,7 +314,9 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Constant Value input has no source output port.");
             RequireOperation(binding.SourceOperation);
             IReadOnlyList<OperationValuePortDefinition> outputs = CharacterGameplayValuePortContracts.Require(
-                m_Program.Operations[binding.SourceOperation.Value].Code).Outputs;
+                m_Program.Operations[binding.SourceOperation.Value].Code,
+                binding.SourceOperation,
+                m_Program.GraphCallFrames).Outputs;
             if (binding.SourceOutputPortIndex < 0 || binding.SourceOutputPortIndex >= outputs.Count)
                 throw new InvalidOperationException("Compiled Value source output port index is invalid.");
             return outputs[binding.SourceOutputPortIndex].Identity;
@@ -374,6 +397,14 @@ namespace ThirdPersonSimulation
 
         internal IReadOnlyDictionary<string, TypedStateAddress> InputRequestIndex => m_InputRequests;
         internal IReadOnlyDictionary<string, TypedActionStateAddresses> ActionStateIndex => m_Actions;
+        internal IReadOnlyList<TypedActionStateAddresses> AllActionStateAddresses => m_AllActionSlots;
+
+        internal IReadOnlyList<TypedActionStateAddresses> ActionStateSlots(string actionId)
+        {
+            return m_ActionSlots.TryGetValue(actionId ?? string.Empty, out IReadOnlyList<TypedActionStateAddresses> values)
+                ? values
+                : Array.Empty<TypedActionStateAddresses>();
+        }
 
         public TypedStateAddress RequireTimelineRetention(OperationHandle timeline)
         {
@@ -559,13 +590,15 @@ namespace ThirdPersonSimulation
             TypedStateAddress[] addresses,
             out IReadOnlyDictionary<string, TypedStateAddress> inputRequests,
             out IReadOnlyDictionary<string, TypedActionStateAddresses> actions,
+            out IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> actionSlots,
+            out IReadOnlyList<TypedActionStateAddresses> allActionSlots,
             out IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> actionContexts,
             out IReadOnlyDictionary<int, TypedStateAddress> timelineRetention,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
             out TypedStateAddress gameplayEffectAggregate)
         {
             var inputs = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
-            var actionBuilders = new Dictionary<string, ActionAddressBuilder>(StringComparer.Ordinal);
+            var actionBuilders = new Dictionary<string, Dictionary<int, ActionAddressBuilder>>(StringComparer.Ordinal);
             var timeline = new Dictionary<int, TypedStateAddress>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             gameplayEffectAggregate = default;
@@ -612,11 +645,30 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Program has no Gameplay Effect aggregate state.");
 
             var actionValues = new Dictionary<string, TypedActionStateAddresses>(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, ActionAddressBuilder> pair in actionBuilders.OrderBy(value => value.Key, StringComparer.Ordinal))
+            var actionSlotValues = new Dictionary<string, IReadOnlyList<TypedActionStateAddresses>>(StringComparer.Ordinal);
+            var allActionValues = new List<TypedActionStateAddresses>();
+            foreach (KeyValuePair<string, Dictionary<int, ActionAddressBuilder>> pair in actionBuilders.OrderBy(value => value.Key, StringComparer.Ordinal))
             {
-                if (!pair.Value.Request.IsValid || !pair.Value.Instance.IsValid)
-                    throw new InvalidDataException($"Action '{pair.Key}' typed state is incomplete.");
-                actionValues.Add(pair.Key, new TypedActionStateAddresses(pair.Key, pair.Value.Request, pair.Value.Instance, eventSequence));
+                var values = new List<TypedActionStateAddresses>(pair.Value.Count);
+                int expectedSlotIndex = 0;
+                foreach (KeyValuePair<int, ActionAddressBuilder> slot in pair.Value.OrderBy(value => value.Key))
+                {
+                    if (slot.Key != expectedSlotIndex++)
+                        throw new InvalidDataException($"Action '{pair.Key}' has a non-contiguous instance slot layout.");
+                    if (!slot.Value.Request.IsValid || !slot.Value.Instance.IsValid)
+                        throw new InvalidDataException($"Action '{pair.Key}' slot '{slot.Key}' typed state is incomplete.");
+                    TypedActionStateAddresses typedAction = new TypedActionStateAddresses(
+                        pair.Key,
+                        slot.Value.Request,
+                        slot.Value.Instance,
+                        eventSequence);
+                    values.Add(typedAction);
+                    allActionValues.Add(typedAction);
+                }
+                if (values.Count == 0)
+                    throw new InvalidDataException($"Action '{pair.Key}' has no typed state slot.");
+                actionValues.Add(pair.Key, values[0]);
+                actionSlotValues.Add(pair.Key, values.AsReadOnly());
             }
 
             var contexts = new Dictionary<string, List<TypedStateAddress>>(StringComparer.Ordinal);
@@ -627,15 +679,19 @@ namespace ThirdPersonSimulation
                     continue;
                 string contextId = FindStringConstant(program, operation, "ActionContext");
                 string actionId = FindActionId(program, operation);
-                if (string.IsNullOrEmpty(contextId) || !actionValues.TryGetValue(actionId, out TypedActionStateAddresses action))
+                if (string.IsNullOrEmpty(contextId) || !actionSlotValues.TryGetValue(actionId, out IReadOnlyList<TypedActionStateAddresses> actionValuesForContext))
                     throw new InvalidDataException($"Action activation operation '{operation.Handle}' has incomplete typed state binding.");
                 if (!contexts.TryGetValue(contextId, out List<TypedStateAddress> values))
                 {
                     values = new List<TypedStateAddress>();
                     contexts.Add(contextId, values);
                 }
-                if (!values.Contains(action.Instance))
-                    values.Add(action.Instance);
+                for (int actionIndex = 0; actionIndex < actionValuesForContext.Count; actionIndex++)
+                {
+                    TypedStateAddress actionInstance = actionValuesForContext[actionIndex].Instance;
+                    if (!values.Contains(actionInstance))
+                        values.Add(actionInstance);
+                }
             }
 
             var frozenContexts = new Dictionary<string, IReadOnlyList<TypedStateAddress>>(StringComparer.Ordinal);
@@ -647,22 +703,50 @@ namespace ThirdPersonSimulation
 
             inputRequests = inputs;
             actions = actionValues;
+            actionSlots = actionSlotValues;
+            allActionSlots = allActionValues.AsReadOnly();
             actionContexts = frozenContexts;
             timelineRetention = timeline;
             actionTargetSnapshots = targets;
         }
 
         static ActionAddressBuilder RequireActionBuilder(
-            IDictionary<string, ActionAddressBuilder> builders,
+            IDictionary<string, Dictionary<int, ActionAddressBuilder>> builders,
             string ownerIdentity)
         {
-            string actionId = TrimPrefix(ownerIdentity, "action:");
-            if (!builders.TryGetValue(actionId, out ActionAddressBuilder builder))
+            ParseActionOwnerIdentity(ownerIdentity, out string actionId, out int slotIndex);
+            if (!builders.TryGetValue(actionId, out Dictionary<int, ActionAddressBuilder> slots))
             {
-                builder = new ActionAddressBuilder();
-                builders.Add(actionId, builder);
+                slots = new Dictionary<int, ActionAddressBuilder>();
+                builders.Add(actionId, slots);
+            }
+            if (!slots.TryGetValue(slotIndex, out ActionAddressBuilder builder))
+            {
+                builder = new ActionAddressBuilder(slotIndex);
+                slots.Add(slotIndex, builder);
             }
             return builder;
+        }
+
+        static void ParseActionOwnerIdentity(string ownerIdentity, out string actionId, out int slotIndex)
+        {
+            string value = TrimPrefix(ownerIdentity, "action:");
+            const string slotMarker = ":slot:";
+            int marker = value.LastIndexOf(slotMarker, StringComparison.Ordinal);
+            if (marker < 0)
+            {
+                actionId = value;
+                slotIndex = 0;
+                return;
+            }
+            if (marker == 0 ||
+                !int.TryParse(value.Substring(marker + slotMarker.Length), out slotIndex) ||
+                slotIndex <= 0)
+            {
+                throw new InvalidDataException($"Action state owner '{ownerIdentity}' has an invalid slot identity.");
+            }
+            actionId = value.Substring(0, marker);
+            SimulationIdentity.Require(actionId, nameof(ownerIdentity));
         }
 
         static string FindActionId(CharacterSimulationProgram program, SimulationOperation operation)
@@ -726,6 +810,12 @@ namespace ThirdPersonSimulation
 
         sealed class ActionAddressBuilder
         {
+            public ActionAddressBuilder(int slotIndex)
+            {
+                SlotIndex = slotIndex;
+            }
+
+            public int SlotIndex;
             public TypedStateAddress Request;
             public TypedStateAddress Instance;
         }
@@ -738,7 +828,11 @@ namespace ThirdPersonSimulation
             int operationCount = program.Operations.Count;
             var grouped = new CompiledValueInputBinding?[operationCount][];
             for (int i = 0; i < operationCount; i++)
-                grouped[i] = new CompiledValueInputBinding?[CharacterGameplayValuePortContracts.Require(program.Operations[i].Code).Inputs.Count];
+                grouped[i] = new CompiledValueInputBinding?[
+                    CharacterGameplayValuePortContracts.Require(
+                        program.Operations[i].Code,
+                        program.Operations[i].Handle,
+                        program.GraphCallFrames).Inputs.Count];
             for (int i = 0; i < program.ControlFlow.Count; i++)
             {
                 ProgramControlFlowEdge edge = program.ControlFlow[i];
@@ -746,8 +840,12 @@ namespace ThirdPersonSimulation
                     continue;
                 SimulationOperation source = program.Operations[edge.Source.Value];
                 SimulationOperation target = program.Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireSelection(edge.SourcePort);
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(edge.TargetPort);
+                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+                    .Require(source.Code, source.Handle, program.GraphCallFrames)
+                    .RequireSelection(edge.SourcePort);
+                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, program.GraphCallFrames)
+                    .RequireInput(edge.TargetPort);
                 SemanticValueKind kind = CharacterSimulationProgramValueResolver.ResolveOutputKind(program, source, sourcePort);
                 CharacterSimulationProgramValueResolver.RequireInputKind(program, target, targetPort, kind);
                 Add(grouped[target.Handle.Value], targetPort.Order, new CompiledValueInputBinding(
@@ -762,7 +860,9 @@ namespace ThirdPersonSimulation
             {
                 ProgramConstantInputBinding input = program.ConstantInputBindings[i];
                 SimulationOperation target = program.Operations[input.TargetOperation.Value];
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(input.TargetPort);
+                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, program.GraphCallFrames)
+                    .RequireInput(input.TargetPort);
                 CharacterSimulationProgramValueResolver.RequireInputKind(program, target, targetPort, input.ResolvedValueKind);
                 Add(grouped[target.Handle.Value], targetPort.Order, new CompiledValueInputBinding(
                     targetPort.Order,

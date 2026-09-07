@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -77,7 +78,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
                 CharacterLinkedPoseProjectionPayload linkedPose,
-                CharacterFootPlacementAnalysisCompilation footAnalysis)
+                CharacterFootPlacementAnalysisCompilation footAnalysis,
+                IReadOnlyList<string> movementModeStateIdentities)
             {
                 GraphAsset = graphAsset;
                 GraphClosure = graphClosure ??
@@ -110,6 +112,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
                 LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
                 FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+                MovementModeStateIdentities = movementModeStateIdentities ??
+                    throw new ArgumentNullException(nameof(movementModeStateIdentities));
                 LinkedGroups = profile.LinkedPoseGroups.ToDictionary(value => value.GroupId);
                 LinkedImplementations = profile.LinkedPoseImplementations.ToDictionary(value => value.ImplementationId);
             }
@@ -134,6 +138,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CharacterAnimationPresentationProfile Profile { get; }
             public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
             public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+            public IReadOnlyList<string> MovementModeStateIdentities { get; }
             public Dictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding> LinkedGroups { get; }
             public Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationAsset> LinkedImplementations { get; }
             public List<CharacterLinkedPoseEntryFragmentPlanDescriptor> LinkedFragments { get; } = new List<CharacterLinkedPoseEntryFragmentPlanDescriptor>();
@@ -178,7 +183,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig = request.Rig;
             AnimationBlendNodePayload[] blendNodes = request.BlendNodes;
             CharacterPoseCanvasGraph graph = asset.Graph;
-            CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
+            CharacterAnimationParameterLayout parameterLayout =
+                CharacterAnimationParameterLayoutCompiler.Build(graph);
+            CharacterPoseParameterDeclaration[] authoredParameters = parameterLayout.Declarations;
             var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
             var parameterIndices = new Dictionary<PoseParameterId, int>();
             for (int i = 0; i < authoredParameters.Length; i++)
@@ -189,7 +196,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameter.ParameterId,
                     parameter.ValueType,
                     parameter.DefaultValue,
-                    parameter.Unit);
+                    parameter.Unit,
+                    parameter.Usage);
                 parameterIndices.Add(parameter.ParameterId, i);
             }
             var state = new BindingBuilder(
@@ -210,7 +218,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.ProfileIndicesByIdentity,
                 request.Profile,
                 request.LinkedPose,
-                request.FootAnalysis);
+                request.FootAnalysis,
+                request.MovementModeStateIdentities);
             CompileGraph(
                 state,
                 asset,
@@ -1277,7 +1286,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     sourceStateIndex,
                     targetStateIndex,
                     authored.Priority,
-                    CharacterPoseTransitionRuleCompiler.Compile(authored.Rule),
+                    CharacterPoseTransitionRuleCompiler.Compile(
+                        authored.Rule,
+                        state.MovementModeStateIdentities),
                     authored.BlendLogic,
                     authored.DurationSeconds,
                     completionDurationSeconds,
@@ -1426,6 +1437,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseParameterEntry expected = parameters[i];
                 if (!authored.TryGetValue(expected.ParameterId, out CharacterPoseParameterDeclaration actual) ||
                     actual.ValueType != expected.ValueType ||
+                    actual.Usage != expected.Usage ||
                     !string.Equals(actual.Unit, expected.Unit, StringComparison.Ordinal) ||
                     actual.DefaultValue != expected.DefaultValue)
                 {

@@ -129,7 +129,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float normalizedTime,
             float weight,
             bool isLooping)
-            : this(clipBindingIndex, default, clip, clipTime, continuousClipTime, normalizedTime, weight, isLooping)
+            : this(clipBindingIndex, default, clip, -1, -1, clip ? clip.length : 0f, clipTime, continuousClipTime, normalizedTime, weight, isLooping)
+        {
+        }
+
+        public ClipSamplePlan(
+            int clipBindingIndex,
+            int resourceCatalogIndex,
+            int groupClipIndex,
+            float durationSeconds,
+            float clipTime,
+            double continuousClipTime,
+            float normalizedTime,
+            float weight,
+            bool isLooping)
+            : this(clipBindingIndex, default, null, resourceCatalogIndex, groupClipIndex, durationSeconds, clipTime, continuousClipTime, normalizedTime, weight, isLooping)
         {
         }
 
@@ -142,10 +156,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float normalizedTime,
             float weight,
             bool isLooping)
+            : this(clipBindingIndex, blendSpaceSampleId, clip, -1, -1, clip ? clip.length : 0f, clipTime, continuousClipTime, normalizedTime, weight, isLooping)
+        {
+        }
+
+        public ClipSamplePlan(
+            int clipBindingIndex,
+            CharacterAnimationBlendSpaceSampleId blendSpaceSampleId,
+            int resourceCatalogIndex,
+            int groupClipIndex,
+            float durationSeconds,
+            float clipTime,
+            double continuousClipTime,
+            float normalizedTime,
+            float weight,
+            bool isLooping)
+            : this(clipBindingIndex, blendSpaceSampleId, null, resourceCatalogIndex, groupClipIndex, durationSeconds, clipTime, continuousClipTime, normalizedTime, weight, isLooping)
+        {
+        }
+
+        ClipSamplePlan(
+            int clipBindingIndex,
+            CharacterAnimationBlendSpaceSampleId blendSpaceSampleId,
+            AnimationClip clip,
+            int resourceCatalogIndex,
+            int groupClipIndex,
+            float durationSeconds,
+            float clipTime,
+            double continuousClipTime,
+            float normalizedTime,
+            float weight,
+            bool isLooping)
         {
             ClipBindingIndex = clipBindingIndex;
             BlendSpaceSampleId = blendSpaceSampleId;
             Clip = clip;
+            ResourceCatalogIndex = resourceCatalogIndex;
+            GroupClipIndex = groupClipIndex;
+            DurationSecondsValue = durationSeconds;
             ClipTime = clipTime;
             ContinuousClipTime = continuousClipTime;
             NormalizedTime = normalizedTime;
@@ -158,14 +206,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int ClipBindingIndex { get; }
         public CharacterAnimationBlendSpaceSampleId BlendSpaceSampleId { get; }
         public AnimationClip Clip { get; }
+        public int ResourceCatalogIndex { get; }
+        public int GroupClipIndex { get; }
+        float DurationSecondsValue { get; }
+        public CharacterAnimationSamplingBackendKind Backend => IsAcl
+            ? CharacterAnimationSamplingBackendKind.Acl
+            : CharacterAnimationSamplingBackendKind.NativeClip;
+        public bool IsAcl => ResourceCatalogIndex >= 0;
+        public bool MatchesSource(
+            CharacterAnimationSamplingBackendKind backend,
+            AnimationClip clip,
+            int resourceCatalogIndex,
+            int groupClipIndex) =>
+            Backend == backend && (IsAcl
+                ? ResourceCatalogIndex == resourceCatalogIndex && GroupClipIndex == groupClipIndex
+                : Clip == clip);
+
         public float ClipTime { get; }
         public double ContinuousClipTime { get; }
         public float NormalizedTime { get; }
         public float Weight { get; }
         public bool IsLooping { get; }
-        public bool IsValid => ClipBindingIndex >= 0 && Clip &&
-                               float.IsFinite(Clip.length) && Clip.length > 0f &&
-                               float.IsFinite(ClipTime) && ClipTime >= 0f && ClipTime <= Clip.length &&
+        public float DurationSeconds => Clip ? Clip.length : DurationSecondsValue;
+        public bool IsValid => ClipBindingIndex >= 0 &&
+                               (Clip && float.IsFinite(Clip.length) && Clip.length > 0f ||
+                                ResourceCatalogIndex >= 0 && GroupClipIndex >= 0 &&
+                                float.IsFinite(DurationSecondsValue) && DurationSecondsValue > 0f) &&
+                               float.IsFinite(ClipTime) && ClipTime >= 0f && ClipTime <= DurationSeconds &&
                                !double.IsNaN(ContinuousClipTime) && !double.IsInfinity(ContinuousClipTime) && ContinuousClipTime >= 0d &&
                                float.IsFinite(NormalizedTime) && NormalizedTime >= 0f && NormalizedTime <= 1f &&
                                float.IsFinite(Weight) && Weight > 0f && Weight <= 1f;

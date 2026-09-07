@@ -18,6 +18,10 @@ namespace TreeDesigner
         public bool HasExplicitPortId => !string.IsNullOrEmpty(m_PortId);
 
         [SerializeField]
+        protected string m_DeclarationId;
+        public string DeclarationId => m_DeclarationId ?? string.Empty;
+
+        [SerializeField]
         protected string m_DisplayName;
         public string DisplayName => string.IsNullOrEmpty(m_DisplayName) ? m_Name : m_DisplayName;
 
@@ -78,6 +82,11 @@ namespace TreeDesigner
                 m_DisplayName = displayName;
             if (!string.IsNullOrEmpty(legacyName))
                 m_Name = legacyName;
+        }
+
+        public void ConfigureDeclaration(string declarationId)
+        {
+            m_DeclarationId = declarationId ?? string.Empty;
         }
 
         public virtual void Init(BaseNode node)

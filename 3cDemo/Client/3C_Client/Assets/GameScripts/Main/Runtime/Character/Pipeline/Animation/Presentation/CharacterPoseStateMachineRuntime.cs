@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -74,6 +75,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             PoseStateSourceProviderPlan provider,
             bool relevant,
             PoseSourceProviderDemandKind demandKind);
+        bool TryStageStateTarget(
+            IReadOnlyList<PoseStateSourceProviderPlan> providers);
         void Reset(PoseStateSourceProviderPlan provider);
         PoseSourceProviderStatus GetStatus(PoseStateSourceProviderPlan provider);
         float GetRemainingTime(PoseStateSourceProviderPlan provider);
@@ -154,6 +157,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         Page m_Pending = new Page();
 
         readonly CharacterPoseTransitionRuleValue[] m_RuleValues;
+        readonly PoseTransitionRuleEvaluationSnapshot[] m_RuleEvaluationRows;
+        int m_RuleEvaluationRowCount;
+        PresentationPoseSourceAvailability m_LastTargetProviderAvailability =
+            PresentationPoseSourceAvailability.Pending;
+        PresentationPoseSourceFailureReason m_LastTargetProviderFailureReason =
+            PresentationPoseSourceFailureReason.None;
         readonly int[][] m_TransitionsBySource;
         readonly float[] m_TransitionDurations;
         readonly float[] m_TransitionCompletionDurations;
@@ -340,6 +349,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ? 1
                 : descriptor.Transitions.Max(value => value.Rule.Operations.Count);
             m_RuleValues = new CharacterPoseTransitionRuleValue[ruleCapacity];
+            int maxOutgoingTransitions = descriptor.Transitions.Count == 0
+                ? 0
+                : descriptor.Transitions
+                    .GroupBy(value => value.SourceStateIndex)
+                    .Max(value => value.Count());
+            int ruleEvaluationRowCapacity = Math.Max(
+                checked(maxOutgoingTransitions * ruleCapacity * 2),
+                1);
+            m_RuleEvaluationRows =
+                new PoseTransitionRuleEvaluationSnapshot[
+                    ruleEvaluationRowCapacity];
             m_TransitionDurations = new float[descriptor.Transitions.Count];
             m_TransitionCompletionDurations = new float[descriptor.Transitions.Count];
             m_CandidateTransitionDurations =
@@ -599,7 +619,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ActiveTransition != null ? m_BlendElapsed : 0f,
                 m_ActiveTransition?.CurveIndex ?? -1,
                 m_ActiveTransition?.BlendProfileIndex ?? -1,
-                m_RoutingWorkspace.Snapshot);
+                m_RoutingWorkspace.Snapshot,
+                m_HasPendingTarget,
+                m_PendingTargetTransition?.TransitionId ?? default,
+                m_PendingTargetRuleSatisfied,
+                m_LastTargetProviderAvailability,
+                m_LastTargetProviderFailureReason);
         }
 
         internal void PrepareFrame(
@@ -620,6 +645,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_EvaluatedTransitionId = default;
             m_HasTransitionRuleResult = false;
             m_TransitionRuleResult = false;
+            m_RuleEvaluationRowCount = 0;
             m_CanPublishPose = EvaluateRequiredPose(sources);
             if (!m_CanPublishPose)
                 return;
@@ -928,12 +954,71 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_EvaluatedTransitionId = transition.TransitionId;
                 m_HasTransitionRuleResult = true;
                 m_TransitionRuleResult = result;
+                RecordRuleEvaluation(transition, false, result);
                 if (result)
                 {
                     return transition;
                 }
             }
             return null;
+        }
+
+        void CacheTargetProviderStatus(
+            int targetStateIndex,
+            ICharacterPoseStateSourceRuntime sources)
+        {
+            PoseSourceProviderStatus status =
+                GetStateStatus(targetStateIndex, sources);
+            m_LastTargetProviderAvailability = status.Availability;
+            m_LastTargetProviderFailureReason = status.FailureReason;
+        }
+
+        void RecordRuleEvaluation(
+            CharacterPoseStateTransitionDescriptor transition,
+            bool prospective,
+            bool result)
+        {            int operationCount = transition.Rule.Operations.Count;
+            for (int i = 0; i < operationCount; i++)
+            {
+                if (m_RuleEvaluationRowCount >= m_RuleEvaluationRows.Length)
+                    return;
+                CharacterPoseTransitionRuleValue value = m_RuleValues[i];
+                m_RuleEvaluationRows[m_RuleEvaluationRowCount++] =
+                    new PoseTransitionRuleEvaluationSnapshot(
+                        m_Descriptor.StateMachineId,
+                        transition.TransitionId,
+                        prospective,
+                        result,
+                        i,
+                        transition.Rule.Operations[i].Code,
+                        value.Kind,
+                        value.BoolValue,
+                        value.FloatValue,
+                        value.EnumValue,
+                        value.IdentityValue);
+            }
+        }
+
+        internal int RuleEvaluationRowCount => m_RuleEvaluationRowCount;
+
+        internal void CopyRuleEvaluationRows(
+            PoseTransitionRuleEvaluationSnapshot[] destination,
+            int offset)
+        {
+            if (destination == null ||
+                offset < 0 ||
+                checked(offset + m_RuleEvaluationRowCount) >
+                destination.Length)
+            {
+                throw new ArgumentException(
+                    "Pose StateMachine rule evaluation destination is invalid.");
+            }
+            Array.Copy(
+                m_RuleEvaluationRows,
+                0,
+                destination,
+                offset,
+                m_RuleEvaluationRowCount);
         }
 
         CharacterPoseStateTransitionDescriptor SelectPredictiveTarget(
@@ -970,8 +1055,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         targetMovementMode,
                         m_RuleValues))
                 {
+                    RecordRuleEvaluation(transition, true, true);
                     return transition;
                 }
+                RecordRuleEvaluation(transition, true, false);
             }
             return null;
         }
@@ -994,8 +1081,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseTransitionRuleProgram rule,
             out string movementMode)
         {
-            const string prefix = "presentation.movement-mode.state/";
             movementMode = string.Empty;
+            string prefix = CharacterPresentationTrajectoryIntent.MovementModeStatePrefix;
             for (int i = 0; i < rule.Operations.Count; i++)
             {
                 CharacterPoseTransitionRuleCompiledOperation operation =
@@ -1046,6 +1133,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     true,
                     PoseSourceProviderDemandKind.Active,
                     sources);
+                return;
+            }
+            CacheTargetProviderStatus(selected.TargetStateIndex, sources);
+            if (!sources.TryStageStateTarget(
+                    m_Descriptor.States[selected.TargetStateIndex]
+                        .SourceProviders))
+            {
+                if (m_HasPendingTarget)
+                    ClearPendingTarget(sources);
                 return;
             }
             bool firstDemand =

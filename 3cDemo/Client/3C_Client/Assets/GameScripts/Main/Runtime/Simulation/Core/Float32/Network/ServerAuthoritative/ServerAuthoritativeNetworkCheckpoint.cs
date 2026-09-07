@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     public sealed class NetworkCheckpointLayout
     {
-        const int SchemaVersion = 2;
+        const int SchemaVersion = 3;
         readonly CharacterSimulationProgram m_Program;
         readonly ProgramExecutionLayout m_ExecutionLayout;
 
@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             using var writer = new CanonicalWriter();
             writer.WriteString("server-authoritative-network-checkpoint-layout");
             writer.WriteInt32(SchemaVersion);
+            writer.WriteString(CharacterSimulationStateCodec.CodecIdentity);
             writer.WriteString(program.ProgramHash.ToString());
             writer.WriteString(program.LayoutHash.ToString());
             writer.WriteInt32(program.StateSlots.Count);
@@ -34,6 +35,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         internal ProgramExecutionLayout ExecutionLayout => m_ExecutionLayout;
         public ProgramHash ProgramHash => m_Program.ProgramHash;
         public LayoutHash ProgramLayoutHash => m_Program.LayoutHash;
+        public string StateCodecIdentity => CharacterSimulationStateCodec.CodecIdentity;
         public StableHash LayoutIdentity { get; }
         public int SlotCount => m_Program.StateSlots.Count;
 
@@ -43,6 +45,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(checkpoint));
             if (!checkpoint.Baseline.ProgramHash.Equals(ProgramHash) ||
                 !checkpoint.Baseline.LayoutHash.Equals(ProgramLayoutHash) ||
+                !string.Equals(checkpoint.Baseline.StateCodecIdentity, StateCodecIdentity, StringComparison.Ordinal) ||
                 checkpoint.Values.Count != SlotCount)
             {
                 throw new InvalidDataException("Network checkpoint does not match the locked Program layout.");
@@ -73,9 +76,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static StableHash ComputeHash(AuthoritativeActorBaseline baseline, IReadOnlyList<byte[]> values)
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("server-authoritative-network-checkpoint/1");
+            writer.WriteString("server-authoritative-network-checkpoint/2");
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
+            writer.WriteString(baseline.StateCodecIdentity);
             writer.WriteString(baseline.StateHash.ToString());
             writer.WriteString(baseline.BodyHash.ToString());
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
@@ -91,8 +95,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
-        const int FullVersion = 2;
-        const int DeltaVersion = 5;
+        const int FullVersion = 3;
+        const int DeltaVersion = 6;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)
@@ -101,7 +105,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(layout));
             if (baseline == null)
                 throw new ArgumentNullException(nameof(baseline));
-            if (!baseline.ProgramHash.Equals(layout.ProgramHash) || !baseline.LayoutHash.Equals(layout.ProgramLayoutHash))
+            if (!baseline.ProgramHash.Equals(layout.ProgramHash) ||
+                !baseline.LayoutHash.Equals(layout.ProgramLayoutHash) ||
+                !string.Equals(baseline.StateCodecIdentity, layout.StateCodecIdentity, StringComparison.Ordinal))
                 throw new InvalidDataException("Authority baseline does not match the Network Checkpoint layout.");
             CharacterSimulationState state = CharacterSimulationStateCodec.Read(baseline.CopyCharacterStateBytes(), layout.Program);
             if (state.LastCompletedTick != baseline.AuthorityTick.Value || !CharacterSimulationStateCodec.ComputeHash(state).Equals(baseline.StateHash))
@@ -119,6 +125,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(layout.LayoutIdentity.ToString());
             writer.WriteString(layout.ProgramHash.ToString());
             writer.WriteString(layout.ProgramLayoutHash.ToString());
+            writer.WriteString(baseline.StateCodecIdentity);
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
             writer.WriteString(baseline.StateHash.ToString());
@@ -148,6 +155,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 throw new InvalidDataException("Full Network Checkpoint identity is invalid.");
             }
+            string stateCodecIdentity = reader.ReadString();
+            if (!string.Equals(stateCodecIdentity, layout.StateCodecIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Full Network Checkpoint state codec identity is invalid.");
             var actorId = new ActorId(reader.ReadString());
             var tick = new SimulationTick(reader.ReadUInt64());
             var stateHash = new CharacterStateHash(new StableHash(reader.ReadString()));
@@ -173,7 +183,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 body,
                 inputSequence,
                 horizon,
-                values);
+                values,
+                stateCodecIdentity);
             var checkpoint = new NetworkCheckpoint(baseline, values);
             if (!checkpoint.CheckpointHash.Equals(expectedCheckpointHash))
                 throw new InvalidDataException("Full Network Checkpoint hash is invalid.");
@@ -207,6 +218,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             using var writer = new CanonicalWriter();
             writer.WriteUInt32(DeltaMagic);
             writer.WriteInt32(DeltaVersion);
+            writer.WriteString(layout.StateCodecIdentity);
             WriteHash(writer, target.Baseline.StateHash.Value);
             WriteCompactBody(writer, target.Baseline.Body);
             WriteDeltaHorizon(writer, baseline.Baseline.ConfirmedEventHorizon, target.Baseline.ConfirmedEventHorizon);
@@ -243,6 +255,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var reader = new CanonicalReader(payload ?? throw new ArgumentNullException(nameof(payload)));
             if (reader.ReadUInt32() != DeltaMagic || reader.ReadInt32() != DeltaVersion)
                 throw new InvalidDataException("Network Checkpoint delta schema is invalid.");
+            if (!string.Equals(reader.ReadString(), layout.StateCodecIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Network Checkpoint delta state codec identity is invalid.");
             var stateHash = new CharacterStateHash(ReadHash(reader));
             WorldBodyState body = ReadCompactBody(reader, baseline.Baseline.ActorId);
             ServerAuthoritativeEventHorizon horizon = ReadDeltaHorizon(reader, baseline.Baseline.ConfirmedEventHorizon, confirmedEventHorizon);
@@ -548,7 +562,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WorldBodyState body,
             ulong inputSequence,
             ServerAuthoritativeEventHorizon horizon,
-            IReadOnlyList<byte[]> values)
+            IReadOnlyList<byte[]> values,
+            string stateCodecIdentity)
         {
             CharacterSimulationState state = DecodeState(layout, tick, values);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
@@ -560,7 +575,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 tick,
                 layout.Program.Manifest.NumericProfile,
                 layout.Program.Manifest.NumericProfile.AbiVersion,
-                CharacterSimulationStateCodec.CodecIdentity,
+                stateCodecIdentity,
                 layout.ProgramHash,
                 layout.ProgramLayoutHash,
                 layout.Program.Manifest.OperationSetVersion,

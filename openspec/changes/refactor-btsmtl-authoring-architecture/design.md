@@ -64,6 +64,12 @@ Gameplay 控制状态机、技能内部局部状态机和 Presentation PoseState
 
 控制模块声明不可变合同：ModuleId、语义版本、参数／状态 schema、Input／Request 接口、所需能力与可引用的技能／producer 集合。Build 将 binding、参数和 schema 纳入角色运行包；运行时显式装配匹配实现。算法不伪装为一个万能图节点，也不被重新生成成角色状态机图。
 
+C# 控制状态机的运行时骨架采用项目 fork 的 UnityHFSM（本地嵌入包 `Packages/UnityHFSM`，remote 指向 nikaakaa/UnityHFSM，不再引用上游）。使用约束：时序由仿真 Tick 注入，不使用库的 float 秒与 Unity 时间驱动；数值只通过 typed 观察包进入迁移条件，双 Target 复用同一状态机实现，不按数值类型复制两套。库中 Unity 输入耦合的 Transition（OnKey/OnMouse）、协程 State 与可视化模块不进入控制层。状态身份（如 `presentation.movement-mode.state/WalkStart`）由模块代码常量声明，供姿态图与采样编译期引用，替代手抄字符串。
+
+控制binding与允许作者修改的参数值以CharacterPipelineDefinition中的正式配置为唯一真值；模块代码、参数schema、状态schema及默认定义保持只读。普通作者UI、Agent Mutation和Build必须共用已登记模块查询与同一参数解析／校验入口。Definition提供明确的配置写入API；Build发射实际解析后的配置值，不能仍读取代码默认值而忽略作者修改。未知参数、重复身份、类型不匹配、非法值或切换模块后不适用的配置按正式声明明确失败，不静默丢弃或增加私有回退规则。合法配置修改进入既有来源／Program身份链，运行时仍只消费正式Program。
+
+上述Definition配置、公共解析／校验和Frontend／Emitter消费由原BTSMTL实现负责，关联任务3.5与9.4；Agent任务只负责文档字段、快照、strict映射、有序Mutation及事务接入。现有CharacterControlModuleCatalog.Require和CharacterControlParameterDescriptor可作为共享基础，尚缺的作者API必须由原实现提交后提供真实成员清单，不能把规划中的接口名当作已经可用，也不能让Agent通过反射写字段或自建模块登记。
+
 可变控制状态由模块声明的 typed layout 存放在 CharacterSimulationState 中，覆盖当前 State identity、业务需要的进入 Tick、确实跨 Tick 的转换进度及输入缓存等字段。模块对象不保存影响下一 Tick 的私有游标、计时器或当前动作镜像；已有 Body／Tag／Action 事实直接读取，不再复制一份。恢复只还原这些状态，不重新触发 Enter／Exit 或补发技能请求；后续实际推进与重算才按统一生命周期执行。Float32 与 Fixed 通过已有 Target 数值／状态端口复用业务决策语义，不能各自复制一套角色控制规则。
 
 普通移动无需为了获得身份创建空技能；有明确释放生命周期的攻击、闪避等继续使用 ActionInstance。AI 的 RootTree／AIIntentProgram 保持独立，唯一可写边界仍为 CharacterSimulationInput。
@@ -103,6 +109,10 @@ flowchart TD
 ```
 
 Semantic IR 包含角色控制模块合同和技能语义根；不会包含 C# 代码正文、角色 RootTree 或 Equipment Persistent／Route 图 root。数值字面量、技能 operation、子图参数绑定、变量／状态声明、producer、Motion／GE 请求等继续经过同一 semantic contract。Target 只处理数值、布局与已登记能力。
+
+Float32 与 Fixed 的共同业务流程必须在共享模块中实现。Action 的准入、来源检查、replacement 与 stop barrier、输入消费、请求暂存、最终提交以及 lifecycle 转换不因数值表示不同而复制。两端适配器提供 typed 状态读写及实际需要的数值操作，共享流程决定调用顺序和业务结果；两套 Program、状态布局与 codec 保留各自的 Target 身份。提取时保持现有已正确的同 Tick 顺序、实例／技能／generation 身份及恢复语义，不能借合并流程改变取消或提交行为。
+
+**取舍：** 共用流程使一次准入或取消规则修改只改一个业务实现，减少两个 Target 演化不一致的风险；代价是维护少量明确的状态与数值端口。不同数值精度、布局和编码仍分别实现，不把所有 Target 能力塞进万能 Context，也不通过巨型基类或要求具体角色规则承担 Target 泛型来隐藏重复流程。
 
 SkillProgram 的构建工作明确为：引用和类型校验、子图 occurrence／参数绑定、时间与曲线整理、局部状态布局、操作／常量索引、能力合并、版本与 source map。保留稳定编号和初始化期索引，不追求新增优化器、机器码生成或新的中间语言。
 
@@ -175,6 +185,22 @@ ProgramHash／LayoutHash 除技能布局外必须覆盖控制模块语义版本�
 
 ### 10. 作者模块与 Document 保持一个真相
 
+#### Agent作者工具独立实施归属
+
+按用户确认，现有重构中的Agent工具部分交由规划任务`01a07206-ec83-74e3-866a-7ccb6a158217`及其唯一实现任务`01a0720a-6105-72b1-bf2f-bbfeb6654773`负责。原BTSMTL实现任务`01a06b30-aa8c-7cf3-8e05-cedfbfbbee2f`继续普通重构；双方在`D:/Unity_Project_1/3C`当前目录实施，已移交的正确提交和未提交成果继续保留。
+
+| 现有任务／代码范围 | Agent作者工具任务负责 | 原BTSMTL任务负责 |
+|---|---|---|
+| 10.1–10.6 | v5模型、允许文件族、Exporter、Codec、Mapper、Reconciler／Planner、整包事务、Agent专属窗口、五工具及作者技能全部实施 | 提供控制、技能、Graph等正式共享合同 |
+| 9.1及共享作者规则 | Document侧消费相同Capability、Port Shape和Mutation规则，删除Agent侧重复字段判断 | 普通UI／节点／技能作者模块及其公共规则、签名与能力目录 |
+| 12.4、12.5 | 删除Document旧schema／reader／writer／正文入口和旧命名；交付Agent大类职责迁移、调用者及删除地图 | 清理普通角色／装备图入口、运行与编译旧分支、菜单和其它模块；汇总完整结构地图 |
+| 13.1、13.2、13.4 | 本范围源码构建、既有Document严格校验／往返／有序计划／事务恢复证据、限定diff与中文小步提交 | 其它模块构建、正式产物重建、全链Replay及整体结构审查 |
+| 13.3与最终交付 | 提供Agent规范、工具描述、技能代码地图的一致结果 | 组合两侧交付，统一安装delta和更新项目口径，完成最终集成验收 |
+
+Agent代码范围以`Main/Editor/CharacterPipeline/AgentAuthoring/`及其`Mcp/`、`.codex/skills/btsmtl-agent-authoring/`为主。五个独立工具保持`checkout_document`、`rebase_document`、`dry_run_document`、`apply_document`、`validate`；`status`是已有异步工具的轮询动作。Runtime中的SkillDefinition／CharacterDefinition、Graph签名与调用合同、主编译器和解释器由原BTSMTL任务维护；Agent通过正式接口读写，公共业务合同有冲突时由两个规划任务对账，不复制模型或建立第二Mutation／事务入口。
+
+已移交的v5／SkillDefinition分片、ActionContext身份和唯一SkillDefinition Mutation沿现有成果继续完成。任务10的进度由Agent任务维护；主进度、其它任务和全链Replay由原BTSMTL任务维护。常规实现依文档推进，不逐类发送消息；Agent整体交付经其规划审查后，再进入本change的最终集成。
+
 | 模块 | 正式输入 | 正式输出／所有权 |
 |---|---|---|
 | 技能定义与签名 | ActionProfile、入口图、子图参数、共享资源引用 | 唯一 SkillDefinition 与依赖闭包 |
@@ -208,8 +234,11 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | 现有职责聚集处 | 迁移后的边界 | 必须删除的旧内容 |
 |---|---|---|
 | Character Root／State／Equipment Host 图及相关节点 | Character Control 模块、typed 控制配置与技能 binding | 角色 RootTree entry、角色级图激活节点、Equipment Persistent／Route flow root |
+| FixedActionRuntime／Float32ActionRuntime | 一份共享 Action 事务流程＋各 Target 的窄状态／数值适配器 | 两端重复的准入到请求提交、replacement、输入消费及生命周期转换分支 |
 | CharacterSemanticEmitter 与中央节点发射登记 | 角色组合 Discovery＋技能语义发射模块 | 将 C# 控制重新发射为角色图的分支、重复节点表 |
-| OperationControlRuntime／TimelineControlRuntime | 技能执行控制与局部生命周期；公共算法按真实复用保留 | Character 对作者对象解释器的调用、第二 TreeClip scheduler |
+| CharacterSimulationProgramBuilder | 通用 IR 写入、索引和一致性约束；领域模块提交已确定的语义记录 | Builder 内的角色控制／技能选择／Timeline 特例和重复领域分派 |
+| OperationControlRuntime | 技能组合控制、局部状态机与执行范围生命周期各自成模块，共用同一状态和调度入口 | 角色 RootTree 调度、中央类内混合的业务族实现、重复激活／停止处理 |
+| TimelineControlRuntime 与 Timeline 发射 | 独立 Timeline change 拥有公共 Timeline 执行／发射；本 change 消费正式技能调用接口 | Character 对作者对象解释器的调用、第二 TreeClip scheduler |
 | CharacterSimulationProgram／State／Kernel | 角色静态运行包、声明式控制状态、技能目录与实例执行 | 唯一角色 root handle、控制状态镜像、旧 ABI reader |
 | BtsmtlGraphAuthoringCapabilities 与 Editor 中央回调 | Flow、Skill、Timeline、参数／变量、领域叶子作者模块 | 原中央特例、旧角色图菜单、转发 alias |
 | Agent Package Codec／Reconciler／Planner | v5 分片模块＋唯一整包准备／事务 | v4 分支、角色图正文与局部 apply |
@@ -217,6 +246,26 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | 外层 Projection组装 | 保留现有内容模块，只替换技能producer来源与合同 | 角色State path决定动作producer的旧来源假设 |
 
 仅为技能服务的新增类型使用 Skill 前缀；ActionProfile／ActionInstance保留其策略与释放含义；CharacterSimulationProgram保留角色组合包含义。字段名、目录和文档必须与这些职责一致，不保留 obsolete forwarding type。AI／Pose复用的Graph基础不能按BTSMTL目录整块删除。已明确由独立预览change删除的旧播放器不能被本次重复实现或作为技能运行路径。
+
+#### 结构完成条件
+
+本次重构包含下列实际职责迁移，不能只交付新接口或新增文件。表中的现有类型用于定位待处理代码，最终名称按迁移后的业务含义确定。
+
+| 现有聚集处 | 模块的输入与输出 | 中央入口最后保留什么 |
+|---|---|---|
+| FixedActionRuntime／Float32ActionRuntime | 精确技能请求、catalog／profile、当前 Action 与准入事实 → 准入结果、待提交请求及实例生命周期变化 | 仅 Target 状态／数值适配；ActivateFromControl、TryCommitPendingControl、ApplyActionTransition 及终止流程中与数值无关的分支归共享实现 |
+| CharacterSemanticEmitter | 已发现的控制 binding、技能 Graph、变量与领域依赖 → 同一 IR 的操作、声明、来源及依赖记录 | 角色／技能装配和正式模块调用；Graph 业务族、变量／装备／GE 绑定、Timeline 发射按领域迁出，不保留镜像节点表 |
+| CharacterSimulationProgramBuilder | 发射模块提供的 typed 语义记录及稳定引用 → canonical IR 表、索引和完整性诊断 | 通用写入与一致性约束；不识别 Corin、装备 Route 或具体技能来决定业务流程 |
+| OperationControlRuntime | 已编译 topology、当前实例执行状态、typed 执行端口 → 节点状态、局部状态转换及执行范围启停 | 唯一控制分派与公共遍历骨架；组合节点、局部状态机和范围启停的实现由明确模块承担，不新增 scheduler 或实例状态镜像 |
+| AgentAuthoringPackageMapper、AgentDocumentReconciler 及 Package Codec／Planner | 同一 v5 整包、live projection、Capability 与只读引用索引 → typed 内容、领域差异及完整有序 Mutation 计划 | 整包解析／映射／对账协调和跨分片引用；控制配置、技能、Graph、Timeline、Presentation 的字段规则由各自内容模块处理，仍只有一次 apply／Undo／rollback／reverse export |
+
+每个对应任务完成时必须同时说明：原中央类删掉了什么业务责任；新模块接收什么、产出什么；正式调用者已如何迁入；原实现、废弃字段和旧入口是否删除。类／文件行数变化只作为辅助证据；纯 DTO 集合不因文件长而机械拆分，较短的类也不能混合多个业务所有权。
+
+只把方法搬进 partial、由原中央类继续控制全部细节的转发 helper、吸收所有依赖的 Context、巨型继承树，或两套同义流程同步修改，均不满足完成条件。新增一个已有业务族中的能力应修改所属模块及必要的唯一注册，不应再次在窗口、Codec、Mapper、Reconciler 和 Compiler 中各补一套相同字段／能力判断。
+
+模块化不得分裂已确定的运行和作者链：共享 Action 流程仍写同一 ActionInstance；各发射模块仍写同一 IR；Document 分片仍先形成完整计划，再进入唯一事务。已经分配给独立 Timeline、Pose、IK、Camera 或预览 change 的实现由对应 owner 修改，本 change 只迁移自己拥有的装配与消费接口，不把拆大类扩展为改写其它领域算法。
+
+构建通过证明可编译，Replay 证明指定输入下的行为，二者都不能单独证明上述结构已完成。任务 3.2、3.6、4.1、5.3、9.1、10.2、10.3、12.5 和 13.4 必须附上各自的职责迁移及删除证据；尚未迁出的部分明确保留未完成状态。
 
 ### 13. 现行规范与并行 change 对账
 

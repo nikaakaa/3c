@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
@@ -18,6 +20,10 @@ namespace BTSMTL.Timeline.Editor
             PropertyField field = new PropertyField(data, "Timeline Data");
             field.BindProperty(data);
             root.Add(field);
+            var errors = new List<string>();
+            TimelineAsset asset = (TimelineAsset)target;
+            if (!asset.ValidateContent(TimelineTreeContractComposition.Create(), errors))
+                root.Add(new HelpBox(string.Join("\n", errors), HelpBoxMessageType.Error));
             return root;
         }
     }

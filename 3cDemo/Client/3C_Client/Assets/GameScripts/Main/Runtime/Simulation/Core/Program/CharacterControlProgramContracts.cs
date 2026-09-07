@@ -89,6 +89,70 @@ namespace ThirdPersonSimulation
         public double NumericValue { get; }
     }
 
+    public sealed class CharacterControlParameterValue
+    {
+        public CharacterControlParameterValue(
+            CharacterControlParameterId id,
+            SemanticValueKind valueKind,
+            double numericValue)
+        {
+            if (!id.IsValid ||
+                !Enum.IsDefined(typeof(SemanticValueKind), valueKind) ||
+                double.IsNaN(numericValue) ||
+                double.IsInfinity(numericValue))
+            {
+                throw new ArgumentException("Character control parameter value is incomplete.");
+            }
+            Id = id;
+            ValueKind = valueKind;
+            NumericValue = numericValue;
+        }
+
+        public CharacterControlParameterId Id { get; }
+        public SemanticValueKind ValueKind { get; }
+        public double NumericValue { get; }
+    }
+
+    public sealed class CharacterControlParameterSet
+    {
+        readonly ReadOnlyCollection<CharacterControlParameterValue> m_Values;
+        readonly Dictionary<CharacterControlParameterId, CharacterControlParameterValue> m_ById;
+
+        public CharacterControlParameterSet(IEnumerable<CharacterControlParameterValue> values)
+        {
+            var sorted = new List<CharacterControlParameterValue>(values ?? Array.Empty<CharacterControlParameterValue>());
+            sorted.Sort((left, right) => left.Id.CompareTo(right.Id));
+            m_ById = new Dictionary<CharacterControlParameterId, CharacterControlParameterValue>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                CharacterControlParameterValue value = sorted[i]
+                    ?? throw new ArgumentException("Character control parameter set contains a missing value.", nameof(values));
+                if (!m_ById.TryAdd(value.Id, value))
+                    throw new ArgumentException($"Character control parameter '{value.Id}' is duplicated.", nameof(values));
+            }
+            m_Values = sorted.AsReadOnly();
+            var hashParts = new List<string> { "character-control-parameters/1" };
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                CharacterControlParameterValue value = sorted[i];
+                hashParts.Add(value.Id.Value);
+                hashParts.Add(((int)value.ValueKind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                hashParts.Add(value.NumericValue.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            ContentHash = StableHash.Compute(hashParts.ToArray());
+        }
+
+        public IReadOnlyList<CharacterControlParameterValue> Values => m_Values;
+        public StableHash ContentHash { get; }
+
+        public CharacterControlParameterValue Require(CharacterControlParameterId id) =>
+            m_ById.TryGetValue(id, out CharacterControlParameterValue value)
+                ? value
+                : throw new InvalidOperationException($"Character control parameter '{id}' is not declared.");
+
+        public double ReadNumeric(CharacterControlParameterId id) => Require(id).NumericValue;
+    }
+
     public enum CharacterControlMotionExecutionMode : byte
     {
         Once = 1,
@@ -105,7 +169,8 @@ namespace ThirdPersonSimulation
     public enum CharacterControlMotionSpace : byte
     {
         ActorLocal = 0,
-        World = 1
+        World = 1,
+        CameraRelative = 2
     }
 
     public sealed class CharacterControlMotionDescriptor
@@ -187,12 +252,23 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control module contract is incomplete.");
             ModuleId = moduleId;
             SemanticVersion = semanticVersion;
-            m_States = Freeze(states, value => value.Id, "state");
-            m_Transitions = Freeze(transitions, value => value.Id, "transition");
-            m_StateFields = Freeze(stateFields, value => value.Id, "state field");
-            m_Parameters = Freeze(parameters, value => value.Id, "parameter");
+            m_States = Freeze(
+                states,
+                value => value.Id,
+                "state",
+                (left, right) => Compare(left.EvaluationOrder, right.EvaluationOrder, left.Id.CompareTo(right.Id)));
+            m_Transitions = Freeze(
+                transitions,
+                value => value.Id,
+                "transition",
+                (left, right) => Compare(
+                    left.Priority,
+                    right.Priority,
+                    Compare(left.EvaluationOrder, right.EvaluationOrder, left.Id.CompareTo(right.Id))));
+            m_StateFields = Freeze(stateFields, value => value.Id, "state field", (left, right) => left.Id.CompareTo(right.Id));
+            m_Parameters = Freeze(parameters, value => value.Id, "parameter", (left, right) => left.Id.CompareTo(right.Id));
             m_InputValues = Freeze(inputValues, value => value, "input value");
-            m_Motions = Freeze(motions, value => value.Binding, "motion");
+            m_Motions = Freeze(motions, value => value.Binding, "motion", (left, right) => string.CompareOrdinal(left.Binding, right.Binding));
             m_Skills = Freeze(skills, value => value, "skill");
             InitialState = initialState;
             ValidateStateGraph();
@@ -208,6 +284,52 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationInputValueId> InputValues => m_InputValues;
         public IReadOnlyList<CharacterControlMotionDescriptor> Motions => m_Motions;
         public IReadOnlyList<CharacterSkillId> Skills => m_Skills;
+
+        public bool TryResolveParameterSet(
+            IEnumerable<CharacterControlParameterValue> overrides,
+            out CharacterControlParameterSet resolved,
+            out IReadOnlyList<string> errors)
+        {
+            var messages = new List<string>();
+            var declared = new Dictionary<CharacterControlParameterId, CharacterControlParameterDescriptor>();
+            for (int i = 0; i < m_Parameters.Count; i++)
+                declared.Add(m_Parameters[i].Id, m_Parameters[i]);
+
+            var values = new Dictionary<CharacterControlParameterId, CharacterControlParameterValue>();
+            foreach (CharacterControlParameterValue value in overrides ?? Array.Empty<CharacterControlParameterValue>())
+            {
+                if (value == null)
+                {
+                    messages.Add("Character control parameter configuration contains a missing value.");
+                    continue;
+                }
+                if (!declared.TryGetValue(value.Id, out CharacterControlParameterDescriptor descriptor))
+                {
+                    messages.Add($"Character control parameter '{value.Id}' is not declared by module '{ModuleId}'.");
+                    continue;
+                }
+                if (value.ValueKind != descriptor.ValueKind)
+                {
+                    messages.Add($"Character control parameter '{value.Id}' has kind '{value.ValueKind}', expected '{descriptor.ValueKind}'.");
+                    continue;
+                }
+                if (!values.TryAdd(value.Id, value))
+                    messages.Add($"Character control parameter '{value.Id}' is configured more than once.");
+            }
+
+            var resolvedValues = new List<CharacterControlParameterValue>(m_Parameters.Count);
+            for (int i = 0; i < m_Parameters.Count; i++)
+            {
+                CharacterControlParameterDescriptor descriptor = m_Parameters[i];
+                resolvedValues.Add(values.TryGetValue(descriptor.Id, out CharacterControlParameterValue value)
+                    ? value
+                    : new CharacterControlParameterValue(descriptor.Id, descriptor.ValueKind, descriptor.NumericValue));
+            }
+
+            errors = messages.AsReadOnly();
+            resolved = messages.Count == 0 ? new CharacterControlParameterSet(resolvedValues) : null;
+            return messages.Count == 0;
+        }
 
         public CharacterControlStateFieldDescriptor FindStateField(ProgramStateSemantic semantic)
         {
@@ -245,7 +367,11 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static ReadOnlyCollection<T> Freeze<T, TKey>(IEnumerable<T> source, Func<T, TKey> key, string label)
+        static ReadOnlyCollection<T> Freeze<T, TKey>(
+            IEnumerable<T> source,
+            Func<T, TKey> key,
+            string label,
+            Comparison<T> comparison = null)
             where T : class
         {
             var values = source == null ? new List<T>() : new List<T>(source);
@@ -255,8 +381,12 @@ namespace ThirdPersonSimulation
                 if (values[i] == null || !keys.Add(key(values[i])))
                     throw new ArgumentException($"Character control {label} identity is invalid or duplicated.", nameof(source));
             }
+            if (comparison != null)
+                values.Sort(comparison);
             return values.AsReadOnly();
         }
+
+        static int Compare(int left, int right, int tieBreaker) => left != right ? left.CompareTo(right) : tieBreaker;
 
         static ReadOnlyCollection<T> Freeze<T>(IEnumerable<T> source, Func<T, T> key, string label)
             where T : struct
@@ -321,6 +451,15 @@ namespace ThirdPersonSimulation
                     $"Character control module '{binding.ModuleId}' version '{module.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
             return module;
         }
+
+        public ICharacterControlModule Require(CharacterControlModuleId moduleId)
+        {
+            if (!moduleId.IsValid)
+                throw new ArgumentException("Character control module identity is invalid.", nameof(moduleId));
+            if (!m_Modules.TryGetValue(moduleId, out ICharacterControlModule module))
+                throw new InvalidOperationException($"Character control module '{moduleId}' is not installed.");
+            return module;
+        }
     }
 
     public static class CharacterControlProgramCatalogValidator
@@ -361,17 +500,21 @@ namespace ThirdPersonSimulation
 
         public static void ValidateSkillPrograms(
             CharacterControlModuleContract contract,
-            CharacterSkillProgramCatalog skills)
+            CharacterSkillProgramCatalog skills,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
             if (skills == null)
                 throw new ArgumentNullException(nameof(skills));
+            if (graphCallFrames == null)
+                throw new ArgumentNullException(nameof(graphCallFrames));
             for (int i = 0; i < contract.Skills.Count; i++)
                 skills.Require(contract.Skills[i]);
             for (int i = 0; i < skills.Bindings.Count; i++)
             {
-                CharacterSkillId skill = skills.Bindings[i].SkillId;
+                CharacterSkillProgramBinding binding = skills.Bindings[i];
+                CharacterSkillId skill = binding.SkillId;
                 bool declared = false;
                 for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
                 {
@@ -383,6 +526,39 @@ namespace ThirdPersonSimulation
                 }
                 if (!declared)
                     throw new InvalidDataException($"SkillProgram '{skill}' is not declared by control module '{contract.ModuleId}'.");
+                for (int followUpIndex = 0; followUpIndex < binding.AllowedFollowUps.Count; followUpIndex++)
+                {
+                    CharacterSkillId followUp = binding.AllowedFollowUps[followUpIndex];
+                    bool followUpDeclared = false;
+                    for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+                    {
+                        if (contract.Skills[skillIndex] == followUp)
+                        {
+                            followUpDeclared = true;
+                            break;
+                        }
+                    }
+                    if (!followUpDeclared)
+                        throw new InvalidDataException($"SkillProgram '{skill}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
+                }
+                for (int dependencyIndex = 0; dependencyIndex < binding.Dependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillDependency dependency = binding.Dependencies[dependencyIndex];
+                    ProgramGraphCallFrame match = null;
+                    for (int frameIndex = 0; frameIndex < graphCallFrames.Count; frameIndex++)
+                    {
+                        ProgramGraphCallFrame frame = graphCallFrames[frameIndex];
+                        if (!string.Equals(frame.Identity, dependency.CallSiteIdentity, StringComparison.Ordinal))
+                            continue;
+                        if (match != null)
+                            throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is duplicated.");
+                        match = frame;
+                    }
+                    if (match == null)
+                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is missing from the Program.");
+                    if (!string.Equals(match.ChildGraphIdentity, dependency.SubgraphIdentity, StringComparison.Ordinal))
+                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' targets '{match.ChildGraphIdentity}', expected '{dependency.SubgraphIdentity}'.");
+                }
             }
         }
     }

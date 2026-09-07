@@ -96,6 +96,7 @@ namespace ThirdPersonSimulation
             ActionPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance,
+                ProgramStateSemantic.SkillExecutionState,
                 ProgramStateSemantic.ActionEventSequence);
             InputPolicy = new Float32StateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
             HandleAllocatorPolicy = new Float32StateAccessPolicy(ProgramStateSemantic.HandleAllocator);
@@ -298,6 +299,8 @@ namespace ThirdPersonSimulation
                     constantIndex => ReadActionTargetRequirement(program, constantIndex));
                 if (!profiles.TryAdd(profile.ActionId, profile))
                     throw new InvalidDataException($"Action profile '{profile.ActionId}' is duplicated.");
+                if (layout.ActionStateSlots(profile.ActionId).Count != profile.MaxConcurrentInstances)
+                    throw new InvalidDataException($"Action profile '{profile.ActionId}' declares capacity '{profile.MaxConcurrentInstances}', but Program layout provides '{layout.ActionStateSlots(profile.ActionId).Count}' slots.");
             }
             byOperation = new ActionAdmissionProfile[program.Operations.Count];
             for (int operationIndex = 0; operationIndex < byOperation.Length; operationIndex++)

@@ -15,6 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentActionEligibilityMutationHandler : IAgentMutationHandler
     {
+        static readonly TimelineContractCatalog s_TimelineContractCatalog =
+            TimelineTreeContractComposition.Create();
+
         public bool Preflight(AgentMutationSession session, AgentMutation command)
         {
             switch (command)
@@ -540,10 +543,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             TreeTrack track = clip?.Track as TreeTrack ?? ResolveTreeTrack(timeline, command.Target.TrackAuthoringId);
             if (clip == null && track == null)
             {
-                timeline.AddTrack(typeof(TreeTrack));
+                timeline.AddTrack(typeof(TreeTrack), s_TimelineContractCatalog);
                 track = timeline.Tracks.OfType<TreeTrack>().Last();
             }
-            clip ??= timeline.AddClip(track, command.StartFrame) as TreeClip;
+            clip ??= timeline.AddClip(s_TimelineContractCatalog, track, command.StartFrame) as TreeClip;
             clip.StartFrame = command.StartFrame;
             clip.EndFrame = command.EndFrame;
             if (!Enum.TryParse(command.Phase, true, out TimelineTreeExecutionPhase phase))
@@ -652,7 +655,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ? null
                 : track.Clips.OfType<BTSMTL.Timeline.AnimationClip>().SingleOrDefault(value =>
                     string.Equals(value.AuthoringId, command.Target.ClipAuthoringId, StringComparison.Ordinal));
-            clip ??= timeline.AddClip(sourceClip, track, command.StartFrame) as BTSMTL.Timeline.AnimationClip;
+            clip ??= timeline.AddClip(s_TimelineContractCatalog, sourceClip, track, command.StartFrame) as BTSMTL.Timeline.AnimationClip;
             clip.Clip = sourceClip;
             clip.StartFrame = command.StartFrame;
             clip.EndFrame = command.EndFrame;
@@ -693,7 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool TryResolveAnimationClip(
             AgentMutationSession session,
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             string path,
             out UnityEngine.AnimationClip clip)
         {
@@ -745,7 +748,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : timeline.Tracks.OfType<MotionCurveTrack>().SingleOrDefault(value => value.AuthoringId == command.Target.TrackAuthoringId);
             if (track == null)
             {
-                timeline.AddTrack(typeof(MotionCurveTrack));
+                timeline.AddTrack(typeof(MotionCurveTrack), s_TimelineContractCatalog);
                 track = timeline.Tracks.OfType<MotionCurveTrack>().Last();
             }
             track.Name = command.DisplayName;
@@ -760,7 +763,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             MotionCurveClip clip = string.IsNullOrEmpty(command.Target.ClipAuthoringId)
                 ? null
                 : track.Clips.OfType<MotionCurveClip>().SingleOrDefault(value => value.AuthoringId == command.Target.ClipAuthoringId);
-            clip ??= timeline.AddClip(track, command.StartFrame) as MotionCurveClip;
+            clip ??= timeline.AddClip(s_TimelineContractCatalog, track, command.StartFrame) as MotionCurveClip;
             clip.StartFrame = command.StartFrame;
             clip.EndFrame = command.EndFrame;
             clip.CurveEndFrame = command.EndFrame;
@@ -792,7 +795,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : timeline.Tracks.OfType<MotionWarpTrack>().SingleOrDefault(value => value.AuthoringId == command.TrackAuthoringId);
             if (track == null)
             {
-                timeline.AddTrack(typeof(MotionWarpTrack));
+                timeline.AddTrack(typeof(MotionWarpTrack), s_TimelineContractCatalog);
                 track = timeline.Tracks.OfType<MotionWarpTrack>().Last();
             }
             track.Name = command.DisplayName;
@@ -808,7 +811,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             MotionWarpClip clip = null;
             if (!string.IsNullOrEmpty(command.Target.ClipAuthoringId))
                 clip = track.Clips.OfType<MotionWarpClip>().SingleOrDefault(value => value.AuthoringId == command.Target.ClipAuthoringId);
-            clip ??= timeline.AddClip(track, command.StartFrame) as MotionWarpClip;
+            clip ??= timeline.AddClip(s_TimelineContractCatalog, track, command.StartFrame) as MotionWarpClip;
             clip.StartFrame = command.StartFrame;
             clip.EndFrame = command.EndFrame;
             timeline.Init();

@@ -2,7 +2,8 @@
     "name": "ThirdPersonCharacter.Control.Rules",
     "rootNamespace": "ThirdPersonCharacter.Control.Rules",
     "references": [
-        "ThirdPersonSimulation.Core"
+        "ThirdPersonSimulation.Core",
+        "UnityHFSM"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

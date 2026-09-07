@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
@@ -31,8 +32,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         internal static CharacterPresentationPoseSourcePlanCompilationResult Compile(
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
+            CharacterAnimationPresentationProfile profile,
             CharacterAnimationRigDefinition rig,
-            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation)
+            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            CharacterAnimationBuildInput animationBuildInput)
         {
             var diagnostics = new List<string>();
             var blendSpaces = new List<CharacterAnimationBlendSpacePlan>();
@@ -40,8 +43,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Dictionary<PresentationPoseSourceIndex, int> blendSpacePlanBySource =
                 CompileBlendSpacePoseSources(
                     sourceCatalog,
+                    profile,
                     rig,
                     footAnalysisCompilation,
+                    animationBuildInput,
                     blendSpaces,
                     blendSpaceIndices,
                     diagnostics);
@@ -59,8 +64,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static Dictionary<PresentationPoseSourceIndex, int> CompileBlendSpacePoseSources(
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
+            CharacterAnimationPresentationProfile profile,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            CharacterAnimationBuildInput animationBuildInput,
             List<CharacterAnimationBlendSpacePlan> blendSpaces,
             Dictionary<CharacterAnimationBlendSpaceAsset, int> blendSpaceIndices,
             List<string> errors)
@@ -96,6 +103,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             }
                             CharacterAnimationClipContentIdentity clipIdentity =
                                 CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sample.Clip);
+                            CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip;
+                            CharacterAnimationScalarCurvePage scalarPage = null;
+                            CharacterAnimationSourceResourceBinding resourceBinding =
+                                profile.FindSourceResourceBinding(sample.Clip);
+                            if (resourceBinding != null)
+                            {
+                                resourceBinding.RequireValid();
+                                backend = resourceBinding.Backend;
+                                if (backend == CharacterAnimationSamplingBackendKind.NativeClip)
+                                    scalarPage = animationBuildInput.AnimationCatalog.BuildNativeScalarPage(
+                                        sample.Clip,
+                                        errors);
+                            }
+                            else
+                            {
+                                scalarPage = animationBuildInput.AnimationCatalog.BuildNativeScalarPage(
+                                    sample.Clip,
+                                    errors);
+                            }
+                            CharacterAnimationBuildCatalogEntry catalogEntry =
+                                animationBuildInput.AnimationCatalog.RegisterReference(
+                                sample.Clip,
+                                backend,
+                                scalarPage,
+                                $"blend-space:{blendSpace.BlendSpaceId}:{sample.SampleId}");
                             CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(sample.Clip);
                             AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                                 sample.Clip,
@@ -108,7 +140,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 clipIdentity.RegisteredCurveHash,
                                 clipIdentity.SourceDurationSeconds,
                                 CharacterPresentationFootEventCompiler.NormalizeRegisteredCurve(footWeight, clipIdentity.SourceDurationSeconds),
-                                features);
+                                features,
+                                backend,
+                                scalarPage,
+                                catalogEntry.ResourceCatalogIndex,
+                                catalogEntry.GroupClipIndex);
                         }
                         var plan = new CharacterAnimationBlendSpacePlan(
                             blendSpace,

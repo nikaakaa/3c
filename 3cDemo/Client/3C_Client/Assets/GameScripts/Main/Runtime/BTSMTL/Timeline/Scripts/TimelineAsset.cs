@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -9,6 +10,18 @@ namespace BTSMTL.Timeline
         TimelineData m_Data = new TimelineData();
 
         public TimelineData Data => m_Data;
+
+        public bool ValidateContent(TimelineContractCatalog catalog, List<string> errors)
+        {
+            if (catalog == null)
+                throw new System.ArgumentNullException(nameof(catalog));
+            if (m_Data == null)
+            {
+                errors?.Add($"Timeline asset '{name}' has no TimelineData.");
+                return false;
+            }
+            return m_Data.ValidateContent(catalog, errors);
+        }
 
         public void SetData(TimelineData data)
         {

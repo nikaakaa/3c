@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
@@ -62,6 +63,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             for (int i = 0; i < drafts.mutations.Count; i++)
             {
                 AgentMutationDraft operation = drafts.mutations[i];
+                if (operation == null || string.IsNullOrWhiteSpace(operation.id) ||
+                    !operation.id.StartsWith("local:", StringComparison.Ordinal) ||
+                    !AgentTypedMutationLoweringCatalog.TryGet(operation.kind, out AgentMutationDraftDescriptor descriptor) ||
+                    descriptor.OutputKind == AgentMutationOutputKind.None ||
+                    plannedIdentities.ContainsKey(operation.id))
+                    continue;
+                plannedIdentities.Add(
+                    operation.id,
+                    new AgentPlannedIdentitySymbol(operation.id, descriptor.OutputKind, DraftOwnerScope(operation)));
+            }
+            for (int i = 0; i < drafts.mutations.Count; i++)
+            {
+                AgentMutationDraft operation = drafts.mutations[i];
                 string path = string.IsNullOrEmpty(operation?.sourcePath)
                     ? $"document.mutations[{i}]"
                     : operation.sourcePath;
@@ -111,15 +125,387 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
 
                 commands.Add(command);
-                plannedIdentities.Add(operation.id, new AgentPlannedIdentitySymbol(operation.id, descriptor.OutputKind, command.OwnerScope));
+                plannedIdentities[operation.id] = new AgentPlannedIdentitySymbol(operation.id, descriptor.OutputKind, command.OwnerScope);
                 report.metrics.schemaValidCount++;
             }
 
             if (report.HasErrors())
                 return false;
 
-            plan = new AgentMutationPlan(commands, drafts.domain, drafts.rootIdentity, drafts.sourceRevision);
+            if (!TryOrderCommands(commands, report, out IReadOnlyList<AgentMutation> orderedCommands))
+                return false;
+            plan = new AgentMutationPlan(orderedCommands.ToList(), drafts.domain, drafts.rootIdentity, drafts.sourceRevision);
             return true;
+        }
+
+        static string DraftOwnerScope(AgentMutationDraft operation)
+        {
+            return FirstIdentity(
+                operation.graphPlannedIdentity,
+                operation.graphAuthoringId,
+                operation.targetGraphPlannedIdentity,
+                operation.targetGraphAuthoringId,
+                operation.stateMachinePlannedIdentity,
+                operation.stateMachineGraphAuthoringId);
+        }
+
+        static string FirstIdentity(params string[] values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!string.IsNullOrEmpty(values[i]))
+                    return AgentPlannedIdentityReference.Parse(values[i]).Identity;
+            }
+            return string.Empty;
+        }
+
+        static bool TryOrderCommands(
+            IReadOnlyList<AgentMutation> commands,
+            AgentCompileReport report,
+            out IReadOnlyList<AgentMutation> ordered)
+        {
+            var producers = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < commands.Count; i++)
+            {
+                if (commands[i].Id.StartsWith("local:", StringComparison.Ordinal))
+                    producers[commands[i].Id] = i;
+            }
+            var dependencies = new List<HashSet<int>>(commands.Count);
+            var outgoing = new List<List<int>>(commands.Count);
+            var indegree = new int[commands.Count];
+            for (int i = 0; i < commands.Count; i++)
+            {
+                dependencies.Add(new HashSet<int>());
+                outgoing.Add(new List<int>());
+            }
+            bool hasMissingDependency = false;
+            for (int i = 0; i < commands.Count; i++)
+            {
+                foreach (string dependency in CommandDependencies(commands[i]))
+                {
+                    if (!producers.TryGetValue(dependency, out int producer))
+                    {
+                        report.Error(
+                            commands[i].Path,
+                            "mutation_planned_dependency_unresolved",
+                            $"Mutation planned identity没有对应的producer：{dependency}");
+                        hasMissingDependency = true;
+                        continue;
+                    }
+                    if (!dependencies[i].Add(producer))
+                        continue;
+                    outgoing[producer].Add(i);
+                    indegree[i]++;
+                }
+            }
+            if (hasMissingDependency)
+            {
+                ordered = commands;
+                return false;
+            }
+            var ready = new SortedSet<int>();
+            for (int i = 0; i < indegree.Length; i++)
+            {
+                if (indegree[i] == 0)
+                    ready.Add(i);
+            }
+            var result = new List<AgentMutation>(commands.Count);
+            while (ready.Count > 0)
+            {
+                int index = ready.Min;
+                ready.Remove(index);
+                result.Add(commands[index]);
+                foreach (int dependent in outgoing[index])
+                {
+                    indegree[dependent]--;
+                    if (indegree[dependent] == 0)
+                        ready.Add(dependent);
+                }
+            }
+            if (result.Count == commands.Count)
+            {
+                ordered = result;
+                return true;
+            }
+            report.Error("document.mutations", "mutation_dependency_cycle", "Mutation planned identity依赖存在循环，无法形成有序事务计划。");
+            ordered = commands;
+            return false;
+        }
+
+        static IEnumerable<string> CommandDependencies(AgentMutation command)
+        {
+            switch (command)
+            {
+                case AgentEnsureGraphMutation graph:
+                    foreach (string dependency in Planned(graph.ParentGraph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(graph.OwnerNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentConfigureGraphReferenceMutation reference:
+                    foreach (string dependency in Planned(reference.OwnerGraph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(reference.OwnerNode.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(reference.ChildGraph.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureGraphNodeMutation node:
+                    foreach (string dependency in Planned(node.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(node.Existing.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureInputNodeMutation input:
+                    foreach (string dependency in Planned(input.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(input.ExistingElement.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureConditionValueNodeMutation condition:
+                    foreach (string dependency in Planned(condition.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(condition.ExistingElement.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(condition.BlackboardDeclaration))
+                        yield return dependency;
+                    foreach (string dependency in Planned(condition.TargetSnapshotDeclaration))
+                        yield return dependency;
+                    break;
+                case AgentGraphLinkMutation link:
+                    foreach (string dependency in Planned(link.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(link.Source.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(link.Target.Value))
+                        yield return dependency;
+                    break;
+                case AgentDeleteGraphNodeMutation deleteNode:
+                    foreach (string dependency in Planned(deleteNode.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(deleteNode.Element.Value))
+                        yield return dependency;
+                    break;
+                case AgentDeleteFlowEdgeMutation deleteFlow:
+                    foreach (string dependency in Planned(deleteFlow.Graph.Value))
+                        yield return dependency;
+                    break;
+                case AgentDeletePropertyEdgeMutation deleteProperty:
+                    foreach (string dependency in Planned(deleteProperty.Graph.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureBlackboardDeclarationMutation declaration:
+                    foreach (string dependency in Planned(declaration.Graph.Value))
+                        yield return dependency;
+                    break;
+                case AgentDeleteBlackboardDeclarationMutation deleteDeclaration:
+                    foreach (string dependency in Planned(deleteDeclaration.Graph.Value))
+                        yield return dependency;
+                    break;
+                case AgentSetBlackboardSchemaRevisionMutation revision:
+                    foreach (string dependency in Planned(revision.Graph.Value))
+                        yield return dependency;
+                    break;
+                case AgentMoveBlackboardDeclarationMutation moveDeclaration:
+                    foreach (string dependency in Planned(moveDeclaration.SourceGraph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(moveDeclaration.TargetGraph.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureExposedPropertyNodeMutation exposed:
+                    foreach (string dependency in Planned(exposed.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(exposed.Declaration))
+                        yield return dependency;
+                    break;
+                case AgentEnsureStateMachineMutation stateMachine:
+                    foreach (string dependency in Planned(stateMachine.ParentGraph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(stateMachine.ExistingOwner.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureStateMutation state:
+                    foreach (string dependency in Planned(state.StateMachine.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(state.ExistingState.Value))
+                        yield return dependency;
+                    break;
+                case AgentDeleteStateMutation deleteState:
+                    foreach (string dependency in Planned(deleteState.StateMachine.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(deleteState.State.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureTransitionMutation transition:
+                    foreach (string dependency in Planned(transition.StateMachine.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(transition.From.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(transition.To.Value))
+                        yield return dependency;
+                    break;
+                case AgentRewireTransitionMutation rewire:
+                    foreach (string dependency in Planned(rewire.StateMachine.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(rewire.From.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(rewire.To.Value))
+                        yield return dependency;
+                    break;
+                case AgentConfigureActionAdmissionMutation admission:
+                    foreach (string dependency in Planned(admission.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(admission.Element.Value))
+                        yield return dependency;
+                    break;
+                case AgentSetSkillDefinitionMutation skill:
+                    foreach (string dependency in Planned(skill.EntryGraph.Value))
+                        yield return dependency;
+                    break;
+                case AgentStateBehaviorMutation behavior:
+                    foreach (string dependency in Planned(behavior.Target.DirectGraph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(behavior.Target.StateMachine.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(behavior.Target.State.Value))
+                        yield return dependency;
+                    switch (behavior)
+                    {
+                        case AgentEnsureActionExitLifecycleMutation exit:
+                            foreach (string dependency in Planned(exit.Source.Value))
+                                yield return dependency;
+                            foreach (string dependency in Planned(exit.ExistingElement.Value))
+                                yield return dependency;
+                            break;
+                        case AgentDeleteStateBehaviorNodeMutation delete:
+                            foreach (string dependency in Planned(delete.Element.Value))
+                                yield return dependency;
+                            break;
+                        case AgentEnsureStateBehaviorNodeMutation node:
+                            foreach (string dependency in Planned(node.ExistingElement.Value))
+                                yield return dependency;
+                            break;
+                        case AgentEnsureTimelineNodeMutation timelineNode:
+                            foreach (string dependency in Planned(timelineNode.ExistingElement.Value))
+                                yield return dependency;
+                            break;
+                        case AgentEnsureActionActivationMutation activation:
+                            foreach (string dependency in Planned(activation.ExistingElement.Value))
+                                yield return dependency;
+                            break;
+                        case AgentEnsureActionLifecycleTransitionMutation lifecycle:
+                            foreach (string dependency in Planned(lifecycle.ExistingElement.Value))
+                                yield return dependency;
+                            break;
+                    }
+                    break;
+                case AgentEnsureInlineTimelineMutation inlineTimeline:
+                    foreach (string dependency in Planned(inlineTimeline.TimelineNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureTimelineTreeClipMutation treeClip:
+                    foreach (string dependency in Planned(treeClip.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(treeClip.Target.TrackPlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(treeClip.Target.ClipPlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentEnsureMotionCurveTrackMutation curveTrack:
+                    foreach (string dependency in Planned(curveTrack.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(curveTrack.Target.TrackPlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentTimelineClipMutation timelineClip:
+                    foreach (string dependency in Planned(timelineClip.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(timelineClip.Target.TrackPlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(timelineClip.Target.ClipPlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentAnimationTrackMutation animationTrack:
+                    foreach (string dependency in Planned(animationTrack.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    foreach (string dependency in Planned(animationTrack.Target.TrackPlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentEnsureTimelineSectionMutation section:
+                    foreach (string dependency in Planned(section.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentDeleteTimelineSectionMutation deleteSection:
+                    foreach (string dependency in Planned(deleteSection.Target.TimelinePlannedIdentity))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIObservationNodeMutation aiObservation:
+                    foreach (string dependency in Planned(aiObservation.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiObservation.ExistingNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAISharedNodeMutation aiShared:
+                    foreach (string dependency in Planned(aiShared.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiShared.ExistingNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIMemoryNodeMutation aiMemory:
+                    foreach (string dependency in Planned(aiMemory.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiMemory.ExistingNode.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiMemory.Declaration))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIContinuousInputMutation aiInput:
+                    foreach (string dependency in Planned(aiInput.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiInput.ExistingNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIActionTargetMutation aiTarget:
+                    foreach (string dependency in Planned(aiTarget.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiTarget.ExistingNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIActionRequestMutation aiRequest:
+                    foreach (string dependency in Planned(aiRequest.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiRequest.ExistingNode.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureAIBlackboardDeclarationMutation aiDeclaration:
+                    foreach (string dependency in Planned(aiDeclaration.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(aiDeclaration.ExistingDeclaration.Value))
+                        yield return dependency;
+                    break;
+                case AgentEnsureBTConditionRuleMutation btCondition:
+                    foreach (string dependency in Planned(btCondition.Graph.Value))
+                        yield return dependency;
+                    foreach (string dependency in Planned(btCondition.Edge.Value))
+                        yield return dependency;
+                    break;
+            }
+        }
+
+        static IEnumerable<string> Planned(AgentAuthoringReference reference)
+        {
+            if (reference.PlannedIdentity.IsValid)
+                yield return reference.PlannedIdentity.Identity;
+        }
+
+        static IEnumerable<string> Planned(AgentGraphTargetReference reference) => Planned(reference.Value);
+        static IEnumerable<string> Planned(AgentStateMachineTargetReference reference) => Planned(reference.Value);
+        static IEnumerable<string> Planned(AgentStateTargetReference reference) => Planned(reference.Value);
+        static IEnumerable<string> Planned(AgentElementTargetReference reference) => Planned(reference.Value);
+        static IEnumerable<string> Planned(AgentPlannedIdentityReference reference)
+        {
+            if (reference.IsValid)
+                yield return reference.Identity;
         }
     }
 
@@ -128,69 +514,74 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static readonly Dictionary<AgentMutationKind, AgentMutationDraftDescriptor> s_Descriptors =
             new Dictionary<AgentMutationKind, AgentMutationDraftDescriptor>()
             {
-                [AgentMutationKind.EnsureStateMachine] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureStateMachine, AgentMutationOutputKind.StateMachine, LowerEnsureStateMachine),
-                [AgentMutationKind.EnsureState] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureState, AgentMutationOutputKind.State, LowerEnsureState),
-                [AgentMutationKind.DeleteState] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteState, AgentMutationOutputKind.None, LowerDeleteState),
-                [AgentMutationKind.EnsureTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTransition, AgentMutationOutputKind.Transition, LowerEnsureTransition),
-                [AgentMutationKind.RewireTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.RewireTransition, AgentMutationOutputKind.None, LowerRewireTransition),
-                [AgentMutationKind.EnsureConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureConditionRule, AgentMutationOutputKind.Transition, LowerEnsureConditionRule),
-                [AgentMutationKind.EnsureActionExitLifecycle] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionExitLifecycle, AgentMutationOutputKind.Node, LowerEnsureActionExitLifecycle),
-                [AgentMutationKind.DeleteStateBehaviorNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteStateBehaviorNode, AgentMutationOutputKind.None, LowerDeleteStateBehaviorNode),
-                [AgentMutationKind.EnsureStateBehaviorNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureStateBehaviorNode, AgentMutationOutputKind.Node, LowerEnsureStateBehaviorNode),
-                [AgentMutationKind.EnsureTimelineNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineNode, AgentMutationOutputKind.Node, LowerEnsureTimelineNode),
-                [AgentMutationKind.EnsureInlineTimeline] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureInlineTimeline, AgentMutationOutputKind.Timeline, LowerEnsureInlineTimeline),
-                [AgentMutationKind.EnsureActionActivation] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionActivation, AgentMutationOutputKind.Node, LowerEnsureActionActivation),
-                [AgentMutationKind.EnsureActionLifecycleTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionLifecycleTransition, AgentMutationOutputKind.Node, LowerEnsureActionLifecycleTransition),
-                [AgentMutationKind.EnsureInputNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureInputNode, AgentMutationOutputKind.Node, LowerEnsureInputNode),
-                [AgentMutationKind.EnsureConditionValueNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureConditionValueNode, AgentMutationOutputKind.Node, LowerEnsureConditionValueNode),
-                [AgentMutationKind.ConfigureActionAdmission] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureActionAdmission, AgentMutationOutputKind.None, LowerConfigureActionAdmission),
-                [AgentMutationKind.EnsureBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, LowerEnsureBlackboardDeclaration),
-                [AgentMutationKind.MoveBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, LowerMoveBlackboardDeclaration),
-                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.Both),
-                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.Both),
-                [AgentMutationKind.EnsureExposedPropertyNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureExposedPropertyNode, AgentMutationOutputKind.Node, LowerEnsureExposedPropertyNode),
-                [AgentMutationKind.EnsureTimelineTreeClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineTreeClip, AgentMutationOutputKind.TimelineClip, LowerEnsureTimelineTreeClip),
-                [AgentMutationKind.EnsureMotionCurveTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveTrack, AgentMutationOutputKind.TimelineTrack, LowerEnsureMotionCurveTrack),
-                [AgentMutationKind.EnsureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveClip, AgentMutationOutputKind.TimelineClip, LowerEnsureMotionCurveClip),
-                [AgentMutationKind.ConfigureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionCurveClip, AgentMutationOutputKind.None, LowerConfigureMotionCurveClip),
-                [AgentMutationKind.EnsureMotionWarpTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpTrack, AgentMutationOutputKind.TimelineTrack, LowerEnsureMotionWarpTrack),
-                [AgentMutationKind.DeleteTimelineTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineTrack, AgentMutationOutputKind.None, LowerDeleteTimelineTrack),
-                [AgentMutationKind.EnsureTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineSection, AgentMutationOutputKind.TimelineSection, LowerEnsureTimelineSection),
-                [AgentMutationKind.DeleteTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineSection, AgentMutationOutputKind.None, LowerDeleteTimelineSection),
-                [AgentMutationKind.EnsureMotionWarpClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpClip, AgentMutationOutputKind.TimelineClip, LowerEnsureMotionWarpClip),
-                [AgentMutationKind.ConfigureMotionWarpSource] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpSource, AgentMutationOutputKind.None, LowerConfigureMotionWarpSource),
-                [AgentMutationKind.ConfigureMotionWarpParameters] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpParameters, AgentMutationOutputKind.None, LowerConfigureMotionWarpParameters),
-                [AgentMutationKind.MoveTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveTimelineClip, AgentMutationOutputKind.None, LowerMoveTimelineClip),
-                [AgentMutationKind.ConfigureTimelineClipEase] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineClipEase, AgentMutationOutputKind.None, LowerConfigureTimelineClipEase),
-                [AgentMutationKind.ConfigureTimelineCurveChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineCurveChannel, AgentMutationOutputKind.None, LowerConfigureTimelineCurveChannel),
-                [AgentMutationKind.ConfigureAnimationTrackChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackChannel, AgentMutationOutputKind.None, LowerConfigureAnimationTrackChannel),
-                [AgentMutationKind.EnsureAnimationClipSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationClipSegment, AgentMutationOutputKind.TimelineClip, LowerEnsureAnimationClipSegment),
-                [AgentMutationKind.DeleteTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineClip, AgentMutationOutputKind.None, LowerDeleteTimelineClip),
-                [AgentMutationKind.EnsureTreeClipBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTreeClipBlackboardWrite, AgentMutationOutputKind.None, LowerEnsureTreeClipBlackboardWrite),
-                [AgentMutationKind.DeleteTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTransition, AgentMutationOutputKind.None, LowerDeleteTransition),
-                [AgentMutationKind.EnsureGameplayTag] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGameplayTag, AgentMutationOutputKind.None, LowerEnsureGameplayTag),
-                [AgentMutationKind.SetActionProfileGrantedTags] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileGrantedTags, AgentMutationOutputKind.None, LowerSetActionProfileGrantedTags),
-                [AgentMutationKind.SetActionProfileCancelQuery] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileCancelQuery, AgentMutationOutputKind.None, LowerSetActionProfileCancelQuery),
-                [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, LowerSetActionProfileTargetRequirement),
-                [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, LowerSetActionRequestTimingClass),
-                [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.BindAIControllerAssets] = new AgentMutationDraftDescriptor(AgentMutationKind.BindAIControllerAssets, AgentMutationOutputKind.None, LowerBindAIControllerAssets, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.ConfigureAICandidates] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAICandidates, AgentMutationOutputKind.None, LowerConfigureAICandidates, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, LowerEnsureAIBlackboardDeclaration, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAISharedNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAISharedNode, AgentMutationOutputKind.Node, LowerEnsureAISharedNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIObservationNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIObservationNode, AgentMutationOutputKind.Node, LowerEnsureAIObservationNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIMemoryNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIMemoryNode, AgentMutationOutputKind.Node, LowerEnsureAIMemoryNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIContinuousInput] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIContinuousInput, AgentMutationOutputKind.Node, LowerEnsureAIContinuousInput, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIActionTarget] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionTarget, AgentMutationOutputKind.Node, LowerEnsureAIActionTarget, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIActionRequest] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionRequest, AgentMutationOutputKind.Node, LowerEnsureAIActionRequest, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureBTConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBTConditionRule, AgentMutationOutputKind.FlowEdge, LowerEnsureBTConditionRule, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraphNode, AgentMutationOutputKind.Node, LowerEnsureGraphNode, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeleteGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteGraphNode, AgentMutationOutputKind.None, LowerDeleteGraphNode, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeleteFlowEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteFlowEdge, AgentMutationOutputKind.None, LowerDeleteFlowEdge, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeletePropertyEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeletePropertyEdge, AgentMutationOutputKind.None, LowerDeletePropertyEdge, AgentMutationDomainMask.Both),
-                [AgentMutationKind.LinkFlow] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkFlow, AgentMutationOutputKind.FlowEdge, LowerLinkFlow, AgentMutationDomainMask.Both),
-                [AgentMutationKind.LinkProperty] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkProperty, AgentMutationOutputKind.PropertyEdge, LowerLinkProperty, AgentMutationDomainMask.Both)
+                [AgentMutationKind.EnsureStateMachine] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureStateMachine, AgentMutationOutputKind.StateMachine, AgentStateMachineMutationLowering.LowerEnsureStateMachine),
+                [AgentMutationKind.EnsureState] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureState, AgentMutationOutputKind.State, AgentStateMachineMutationLowering.LowerEnsureState),
+                [AgentMutationKind.DeleteState] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteState, AgentMutationOutputKind.None, AgentStateMachineMutationLowering.LowerDeleteState),
+                [AgentMutationKind.EnsureTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTransition, AgentMutationOutputKind.Transition, AgentStateMachineMutationLowering.LowerEnsureTransition),
+                [AgentMutationKind.RewireTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.RewireTransition, AgentMutationOutputKind.None, AgentStateMachineMutationLowering.LowerRewireTransition),
+                [AgentMutationKind.EnsureConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureConditionRule, AgentMutationOutputKind.Transition, AgentStateMachineMutationLowering.LowerEnsureConditionRule),
+                [AgentMutationKind.EnsureActionExitLifecycle] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionExitLifecycle, AgentMutationOutputKind.Node, AgentStateBehaviorMutationLowering.LowerEnsureActionExitLifecycle),
+                [AgentMutationKind.DeleteStateBehaviorNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteStateBehaviorNode, AgentMutationOutputKind.None, AgentStateBehaviorMutationLowering.LowerDeleteStateBehaviorNode),
+                [AgentMutationKind.EnsureStateBehaviorNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureStateBehaviorNode, AgentMutationOutputKind.Node, AgentStateBehaviorMutationLowering.LowerEnsureStateBehaviorNode),
+                [AgentMutationKind.EnsureTimelineNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineNode, AgentMutationOutputKind.Node, AgentTimelineMutationLowering.LowerEnsureTimelineNode),
+                [AgentMutationKind.EnsureInlineTimeline] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureInlineTimeline, AgentMutationOutputKind.Timeline, AgentTimelineMutationLowering.LowerEnsureInlineTimeline),
+                [AgentMutationKind.EnsureActionActivation] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionActivation, AgentMutationOutputKind.Node, AgentStateBehaviorMutationLowering.LowerEnsureActionActivation),
+                [AgentMutationKind.EnsureActionLifecycleTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureActionLifecycleTransition, AgentMutationOutputKind.Node, AgentStateBehaviorMutationLowering.LowerEnsureActionLifecycleTransition),
+                [AgentMutationKind.EnsureInputNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureInputNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureInputNode),
+                [AgentMutationKind.EnsureConditionValueNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureConditionValueNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureConditionValueNode),
+                [AgentMutationKind.ConfigureActionAdmission] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureActionAdmission, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerConfigureActionAdmission),
+                [AgentMutationKind.EnsureBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerEnsureBlackboardDeclaration),
+                [AgentMutationKind.MoveBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerMoveBlackboardDeclaration),
+                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.Both),
+                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.Both),
+                [AgentMutationKind.EnsureExposedPropertyNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureExposedPropertyNode, AgentMutationOutputKind.Node, AgentBlackboardMutationLowering.LowerEnsureExposedPropertyNode),
+                [AgentMutationKind.EnsureTimelineTreeClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineTreeClip, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureTimelineTreeClip),
+                [AgentMutationKind.EnsureMotionCurveTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveTrack, AgentMutationOutputKind.TimelineTrack, AgentTimelineMutationLowering.LowerEnsureMotionCurveTrack),
+                [AgentMutationKind.EnsureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveClip, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureMotionCurveClip),
+                [AgentMutationKind.ConfigureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionCurveClip, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureMotionCurveClip),
+                [AgentMutationKind.EnsureMotionWarpTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpTrack, AgentMutationOutputKind.TimelineTrack, AgentTimelineMutationLowering.LowerEnsureMotionWarpTrack),
+                [AgentMutationKind.DeleteTimelineTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineTrack, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerDeleteTimelineTrack),
+                [AgentMutationKind.EnsureTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineSection, AgentMutationOutputKind.TimelineSection, AgentTimelineMutationLowering.LowerEnsureTimelineSection),
+                [AgentMutationKind.DeleteTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineSection, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerDeleteTimelineSection),
+                [AgentMutationKind.EnsureMotionWarpClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpClip, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureMotionWarpClip),
+                [AgentMutationKind.ConfigureMotionWarpSource] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpSource, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureMotionWarpSource),
+                [AgentMutationKind.ConfigureMotionWarpParameters] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpParameters, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureMotionWarpParameters),
+                [AgentMutationKind.MoveTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveTimelineClip, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerMoveTimelineClip),
+                [AgentMutationKind.ConfigureTimelineClipEase] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineClipEase, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureTimelineClipEase),
+                [AgentMutationKind.ConfigureTimelineCurveChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineCurveChannel, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureTimelineCurveChannel),
+                [AgentMutationKind.ConfigureAnimationTrackChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackChannel, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureAnimationTrackChannel),
+                [AgentMutationKind.EnsureAnimationClipSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationClipSegment, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureAnimationClipSegment),
+                [AgentMutationKind.DeleteTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineClip, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerDeleteTimelineClip),
+                [AgentMutationKind.EnsureTreeClipBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTreeClipBlackboardWrite, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerEnsureTreeClipBlackboardWrite),
+                [AgentMutationKind.DeleteTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTransition, AgentMutationOutputKind.None, AgentStateMachineMutationLowering.LowerDeleteTransition),
+                [AgentMutationKind.EnsureGameplayTag] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGameplayTag, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerEnsureGameplayTag),
+                [AgentMutationKind.SetActionProfileGrantedTags] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileGrantedTags, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileGrantedTags),
+                [AgentMutationKind.SetActionProfileCancelQuery] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileCancelQuery, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileCancelQuery),
+                [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileTargetRequirement),
+                [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionRequestTimingClass),
+                [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerConfigureControlConfiguration),
+                [AgentMutationKind.SetSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillDefinition, AgentMutationOutputKind.SkillDefinition, AgentControlMutationLowering.LowerSetSkillDefinition),
+                [AgentMutationKind.DeleteSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteSkillDefinition, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerDeleteSkillDefinition),
+                [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.BindAIControllerAssets] = new AgentMutationDraftDescriptor(AgentMutationKind.BindAIControllerAssets, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerBindAIControllerAssets, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.ConfigureAICandidates] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAICandidates, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerConfigureAICandidates, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentAIMutationLowering.LowerEnsureAIBlackboardDeclaration, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAISharedNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAISharedNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAISharedNode, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIObservationNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIObservationNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIObservationNode, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIMemoryNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIMemoryNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIMemoryNode, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIContinuousInput] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIContinuousInput, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIContinuousInput, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIActionTarget] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionTarget, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionTarget, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureAIActionRequest] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionRequest, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionRequest, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureBTConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBTConditionRule, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerEnsureBTConditionRule, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraphNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureGraphNode, AgentMutationDomainMask.Both),
+                [AgentMutationKind.DeleteGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteGraphNode, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteGraphNode, AgentMutationDomainMask.Both),
+                [AgentMutationKind.DeleteFlowEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteFlowEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteFlowEdge, AgentMutationDomainMask.Both),
+                [AgentMutationKind.DeletePropertyEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeletePropertyEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeletePropertyEdge, AgentMutationDomainMask.Both),
+                [AgentMutationKind.LinkFlow] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkFlow, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerLinkFlow, AgentMutationDomainMask.Both),
+                [AgentMutationKind.LinkProperty] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkProperty, AgentMutationOutputKind.PropertyEdge, AgentGraphMutationLowering.LowerLinkProperty, AgentMutationDomainMask.Both),
+                [AgentMutationKind.EnsureGraph] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraph, AgentMutationOutputKind.Graph, AgentGraphMutationLowering.LowerEnsureGraph, AgentMutationDomainMask.Both),
+                [AgentMutationKind.ConfigureGraphReference] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureGraphReference, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerConfigureGraphReference, AgentMutationDomainMask.Both)
             };
 
         public static bool TryGet(AgentMutationKind kind, out AgentMutationDraftDescriptor descriptor)
@@ -201,1279 +592,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static IReadOnlyCollection<AgentMutationKind> Kinds => s_Descriptors.Keys;
 
-        static AgentMutation LowerEnsureStateMachine(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference parent = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existingOwner = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string existingGraphId = context.OptionalAuthoringId(operation.stateMachineGraphAuthoringId, "stateMachineGraphAuthoringId");
-            string displayName = context.RequiredText(operation.displayName, operation.stateMachine, "displayName", "ensure_state_machine 缺少 displayName/stateMachine。");
-            return context.IsValid
-                ? new AgentEnsureStateMachineMutation(operation.id, context.Path, parent, existingOwner, existingGraphId, displayName, operation.lifecycleSlot, operation.position)
-                : null;
-        }
 
-        static AgentMutation LowerEnsureState(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateMachineTargetReference stateMachine = context.RequiredStateMachine(operation.stateMachineGraphAuthoringId, operation.stateMachinePlannedIdentity, "stateMachine", true);
-            AgentStateTargetReference existingState = context.OptionalState(operation.stateAuthoringId, operation.statePlannedIdentity, "state", true);
-            string stateName = context.RequiredText(operation.state, operation.displayName, "state", "ensure_state 缺少 state/displayName。");
-            return context.IsValid
-                ? new AgentEnsureStateMutation(operation.id, context.Path, stateMachine, existingState, stateName, operation.position)
-                : null;
-        }
 
-        static AgentMutation LowerDeleteState(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateMachineTargetReference stateMachine = context.RequiredStateMachine(operation.stateMachineGraphAuthoringId, operation.stateMachinePlannedIdentity, "stateMachine");
-            AgentStateTargetReference state = context.RequiredState(operation.stateAuthoringId, operation.statePlannedIdentity, "state");
-            return context.IsValid
-                ? new AgentDeleteStateMutation(operation.id, context.Path, stateMachine, state)
-                : null;
-        }
 
-        static AgentMutation LowerEnsureTransition(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            context.ReadTransition(operation, out AgentStateMachineTargetReference stateMachine, out AgentElementTargetReference from, out AgentElementTargetReference to);
-            string edge = ReadEnsureTransitionIdentity(context, operation, "ensure_transition 缺少 stable edge identity。");
-            return context.IsValid
-                ? new AgentEnsureTransitionMutation(operation.id, AgentMutationKind.EnsureTransition, "ensure_transition", context.Path, stateMachine, from, to, edge, operation.transitionPriority, operation.position)
-                : null;
-        }
 
-        static AgentMutation LowerRewireTransition(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            context.ReadTransition(
-                operation,
-                out AgentStateMachineTargetReference stateMachine,
-                out AgentElementTargetReference from,
-                out AgentElementTargetReference to);
-            string edge = context.OptionalAuthoringId(
-                context.RequiredText(
-                    operation.targetElementAuthoringId,
-                    string.Empty,
-                    "targetElementAuthoringId",
-                    "rewire_transition 缺少 stable edge identity。"),
-                "targetElementAuthoringId");
-            return context.IsValid
-                ? new AgentRewireTransitionMutation(
-                    operation.id,
-                    context.Path,
-                    stateMachine,
-                    from,
-                    to,
-                    edge,
-                    operation.transitionPriority)
-                : null;
-        }
 
-        static AgentMutation LowerEnsureConditionRule(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            context.ReadTransition(operation, out AgentStateMachineTargetReference stateMachine, out AgentElementTargetReference from, out AgentElementTargetReference to);
-            string edge = ReadEnsureTransitionIdentity(context, operation, "ensure_condition_rule 缺少 stable edge identity。");
-            List<AgentConditionGroupMutation> groups = context.RequiredConditionGroups(operation.conditionGroups, operation);
-            return context.IsValid
-                ? new AgentEnsureConditionRuleMutation(operation.id, context.Path, stateMachine, from, to, edge, operation.transitionPriority, groups, operation.position)
-                : null;
-        }
 
-        static string ReadEnsureTransitionIdentity(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation,
-            string missingMessage)
-        {
-            string identity = context.RequiredText(
-                operation.targetElementAuthoringId,
-                string.Empty,
-                "targetElementAuthoringId",
-                missingMessage);
-            return identity.StartsWith("local:", StringComparison.Ordinal)
-                ? identity
-                : context.OptionalAuthoringId(identity, "targetElementAuthoringId");
-        }
 
-        static AgentMutation LowerEnsureActionExitLifecycle(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference source = context.OptionalElement(operation.sourceElementAuthoringId, operation.sourcePlannedIdentity, "sourceElement");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            AgentAssetReference actionContext = ReadActionContext(operation);
-            List<AgentConditionGroupMutation> cancelConditionGroups = context.RequiredConditionGroups(operation.cancelConditionGroups, operation, "cancelConditionGroups");
-            string cancelReason = context.RequiredText(operation.reason, string.Empty, "reason", "ensure_action_exit_lifecycle 必须显式提供 cancel reason。");
-            string interruptReason = context.RequiredText(operation.interruptReason, string.Empty, "interruptReason", "ensure_action_exit_lifecycle 必须显式提供 interrupt reason。");
-            string abortReason = context.RequiredText(operation.abortReason, string.Empty, "abortReason", "ensure_action_exit_lifecycle 必须显式提供 abort reason。");
-            string completeReason = context.RequiredText(operation.completeReason, string.Empty, "completeReason", "ensure_action_exit_lifecycle 必须显式提供 complete reason。");
-            return context.IsValid
-                ? new AgentEnsureActionExitLifecycleMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    source,
-                    existing,
-                    actionContext,
-                    cancelReason,
-                    interruptReason,
-                    abortReason,
-                    completeReason,
-                    cancelConditionGroups,
-                    operation.position)
-                : null;
-        }
 
-        static AgentMutation LowerDeleteStateBehaviorNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference element = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            return context.IsValid
-                ? new AgentDeleteStateBehaviorNodeMutation(operation.id, context.Path, target, element)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureStateBehaviorNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string nodeType = First(operation.nodeType, "SequenceNode");
-            string displayName = First(operation.displayName, nodeType);
-            LoopNode.StopType loopStopType = LoopNode.StopType.None;
-            CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
-            if (!string.IsNullOrEmpty(operation.loopStopType))
-                TryParseEnum(context, operation.loopStopType, "loopStopType", out loopStopType);
-            if (!string.IsNullOrEmpty(operation.compareType))
-                TryParseEnum(context, operation.compareType, "compareType", out compareType);
-            if (string.Equals(nodeType, typeof(LocomotionInputMotionNode).FullName, StringComparison.Ordinal))
-            {
-                if (!Enum.TryParse(operation.displacementMode, false, out LocomotionInputMotionDisplacementMode displacementMode) ||
-                    !Enum.IsDefined(typeof(LocomotionInputMotionDisplacementMode), displacementMode))
-                {
-                    context.Error("displacementMode", "displacement_mode_invalid", $"locomotion-input-motion 的 displacementMode 无效：{operation.displacementMode}");
-                    displacementMode = LocomotionInputMotionDisplacementMode.ConstantSpeed;
-                }
-                if (float.IsNaN(operation.moveSpeed) || float.IsInfinity(operation.moveSpeed) || operation.moveSpeed < 0f)
-                    context.Error("moveSpeed", "move_speed_invalid", "locomotion-input-motion 的 moveSpeed 必须大于等于0且为有限值。");
-                bool hasActionMotionCurve = !string.IsNullOrEmpty(operation.actionMotionCurveAssetPath) || !string.IsNullOrEmpty(operation.actionMotionCurveAssetGuid);
-                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve && operation.moveSpeed != 0f)
-                    context.Error("moveSpeed", "curve_move_speed_invalid", "ActionMotionCurve locomotion 的 moveSpeed 必须为0。");
-                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve && !hasActionMotionCurve)
-                    context.Error("actionMotionCurve", "action_motion_curve_required", "ActionMotionCurve locomotion 必须声明正式曲线资产。");
-                if (displacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed && hasActionMotionCurve)
-                    context.Error("actionMotionCurve", "constant_speed_curve_forbidden", "ConstantSpeed locomotion 不能声明Action Motion Curve。");
-                if (float.IsNaN(operation.turnSpeedDegrees) || float.IsInfinity(operation.turnSpeedDegrees) || operation.turnSpeedDegrees <= 0f)
-                    context.Error("turnSpeedDegrees", "turn_speed_invalid", "locomotion-input-motion 的 turnSpeedDegrees 必须大于0且为有限值。");
-                if (!Enum.TryParse(operation.executionMode, false, out LocomotionInputMotionExecutionMode executionMode) ||
-                    !Enum.IsDefined(typeof(LocomotionInputMotionExecutionMode), executionMode))
-                {
-                    context.Error("executionMode", "execution_mode_invalid", $"locomotion-input-motion 的 executionMode 无效：{operation.executionMode}");
-                    executionMode = LocomotionInputMotionExecutionMode.Once;
-                }
-                if (float.IsNaN(operation.durationSeconds) || float.IsInfinity(operation.durationSeconds) || operation.durationSeconds < 0f)
-                    context.Error("durationSeconds", "duration_invalid", "locomotion-input-motion 的 durationSeconds 必须大于等于0且为有限值。");
-                else if (executionMode == LocomotionInputMotionExecutionMode.Timed && operation.durationSeconds <= 0f)
-                    context.Error("durationSeconds", "timed_duration_invalid", "Timed locomotion-input-motion 的 durationSeconds 必须大于0。");
-                else if (executionMode != LocomotionInputMotionExecutionMode.Timed && operation.durationSeconds != 0f)
-                    context.Error("durationSeconds", "unused_duration_invalid", "非Timed locomotion-input-motion 的 durationSeconds 必须为0。");
-            }
-            Enum.TryParse(operation.displacementMode, false, out LocomotionInputMotionDisplacementMode resolvedDisplacementMode);
-            Enum.TryParse(operation.executionMode, false, out LocomotionInputMotionExecutionMode resolvedExecutionMode);
-            var actionMotionCurve = new AgentAssetReference(
-                operation.actionMotionCurve,
-                operation.actionMotionCurveAssetPath,
-                operation.actionMotionCurveAssetGuid);
-            return context.IsValid
-                ? new AgentEnsureStateBehaviorNodeMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    existing,
-                    nodeType,
-                    displayName,
-                    operation.lifecycleSlot,
-                    loopStopType,
-                    compareType,
-                    operation.moveSpeed,
-                    resolvedDisplacementMode,
-                    actionMotionCurve,
-                    operation.turnSpeedDegrees,
-                    operation.cameraRelative,
-                    resolvedExecutionMode,
-                    operation.durationSeconds,
-                    operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureTimelineNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            if (!Enum.TryParse(operation.timelineOwnership, true, out AgentTimelineOwnership ownership) || !Enum.IsDefined(typeof(AgentTimelineOwnership), ownership))
-            {
-                context.Error("timelineOwnership", "timeline_ownership_invalid", $"Timeline ownership 无效：{operation.timelineOwnership}", "使用 Inline 或 Shared。");
-                ownership = AgentTimelineOwnership.Inline;
-            }
-            string displayName = First(operation.displayName, First(operation.timeline, "Timeline"));
-            var timelineAsset = new AgentAssetReference(operation.timeline, operation.timelineAssetPath, operation.timelineAssetGuid);
-            var timelineTarget = new AgentTimelineTargetReference(operation.timelineAuthoringId, operation.trackAuthoringId, operation.clipAuthoringId);
-            return context.IsValid
-                ? new AgentEnsureTimelineNodeMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    existing,
-                    displayName,
-                    First(operation.lifecycleSlot, "Root"),
-                    ownership,
-                    timelineAsset,
-                    ReadActionContext(operation),
-                    timelineTarget,
-                    operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureInlineTimeline(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentElementTargetReference timelineNode = context.RequiredElement(
-                operation.targetElementAuthoringId,
-                operation.targetPlannedIdentity,
-                "timelineNode");
-            string displayName = context.RequiredText(
-                operation.displayName,
-                operation.timeline,
-                "displayName",
-                "ensure_inline_timeline 缺少 Timeline 名称。");
-            return context.IsValid
-                ? new AgentEnsureInlineTimelineMutation(operation.id, context.Path, timelineNode, displayName)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureActionActivation(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string actionProfile = context.RequiredText(operation.actionProfile, string.Empty, "actionProfile", "ensure_action_activation 缺少 ActionProfile 引用。");
-            string sourceRequest = First(operation.sourceInputRequestId, First(operation.inputId, operation.request));
-            return context.IsValid
-                ? new AgentEnsureActionActivationMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    existing,
-                    First(operation.displayName, $"Activate {actionProfile}"),
-                    First(operation.lifecycleSlot, "OnEnter"),
-                    new AgentAssetReference(actionProfile, string.Empty, string.Empty),
-                    ReadActionContext(operation),
-                    sourceRequest,
-                    operation.consumeSourceInputRequest,
-                    operation.targetKey,
-                    operation.targetSnapshotBlackboardKey,
-                    operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureActionLifecycleTransition(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateBehaviorTargetReference target = context.RequiredStateBehaviorTarget(operation);
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            if (!Enum.TryParse(operation.lifecycleType, true, out ActionLifecycleTransitionType transitionType) ||
-                !Enum.IsDefined(typeof(ActionLifecycleTransitionType), transitionType))
-            {
-                context.Error("lifecycleType", "lifecycle_type_invalid", $"未知的 lifecycleType：{operation.lifecycleType}");
-                transitionType = default;
-            }
-            return context.IsValid
-                ? new AgentEnsureActionLifecycleTransitionMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    existing,
-                    First(operation.displayName, $"Lifecycle {operation.lifecycleType}"),
-                    First(operation.lifecycleSlot, "OnExit"),
-                    transitionType,
-                    operation.reason,
-                    ReadActionContext(operation),
-                    operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerConfigureActionAdmission(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference element = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            AgentAssetReference actionProfile = ReadActionProfile(context, operation);
-            return context.IsValid
-                ? new AgentConfigureActionAdmissionMutation(operation.id, context.Path, graph, element, actionProfile)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureInputNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string inputId = context.RequiredText(operation.inputId, operation.request, "inputId", "ensure_input_node 缺少 inputId。");
-            return context.IsValid
-                ? new AgentEnsureInputNodeMutation(
-                    operation.id,
-                    context.Path,
-                    graph,
-                    existing,
-                    operation.nodeType,
-                    First(operation.displayName, First(inputId, operation.nodeType)),
-                    inputId,
-                    operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureBlackboardDeclaration(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            string declarationAuthoringId = context.OptionalAuthoringId(operation.declarationAuthoringId, "declarationAuthoringId");
-            string key = context.RequiredText(operation.blackboardKey, string.Empty, "blackboardKey", "ensure_blackboard_declaration 缺少 blackboardKey。");
-            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
-            object defaultValue = ReadBlackboardDefault(context, operation.blackboardDefaultValue, valueType);
-            bool valid = TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope) &
-                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime);
-            ValidateBlackboardPayloads(context, operation.inputBinding, operation.factProjection);
-            return context.IsValid && valid && valueType != null
-                ? new AgentEnsureBlackboardDeclarationMutation(operation.id, context.Path, graph, declarationAuthoringId, key, valueType, defaultValue, scope, lifetime, operation.inputBinding, operation.factProjection, operation.categoryPath)
-                : null;
-        }
-
-        static AgentMutation LowerDeleteBlackboardDeclaration(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            string declaration = context.OptionalAuthoringId(context.RequiredText(operation.declarationAuthoringId, string.Empty, "declarationAuthoringId", "delete_blackboard_declaration 缺少 declaration identity。"), "declarationAuthoringId");
-            return context.IsValid ? new AgentDeleteBlackboardDeclarationMutation(operation.id, context.Path, graph, declaration) : null;
-        }
-
-        static AgentMutation LowerSetBlackboardSchemaRevision(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            if (operation.blackboardSchemaRevision != PipelineBlackboardAuthoringSchema.CurrentRevision)
-                context.Error("blackboardSchemaRevision", "blackboard_schema_revision_invalid", $"Blackboard schema revision 必须是 {PipelineBlackboardAuthoringSchema.CurrentRevision}。");
-            return context.IsValid
-                ? new AgentSetBlackboardSchemaRevisionMutation(operation.id, context.Path, graph, operation.blackboardSchemaRevision)
-                : null;
-        }
-
-        static AgentMutation LowerMoveBlackboardDeclaration(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference sourceGraph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentGraphTargetReference targetGraph = context.RequiredGraph(operation.targetGraphAuthoringId, operation.targetGraphPlannedIdentity, "targetGraph");
-            string declaration = context.OptionalAuthoringId(context.RequiredText(operation.declarationAuthoringId, string.Empty, "declarationAuthoringId", "move_blackboard_declaration 缺少 declaration identity。"), "declarationAuthoringId");
-            string key = context.RequiredText(operation.blackboardKey, string.Empty, "blackboardKey", "move_blackboard_declaration 缺少 blackboardKey。");
-            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
-            bool valid = TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope) &
-                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime);
-            ValidateBlackboardPayloads(context, operation.inputBinding, operation.factProjection);
-            return context.IsValid && valid && valueType != null
-                ? new AgentMoveBlackboardDeclarationMutation(operation.id, context.Path, sourceGraph, targetGraph, declaration, key, valueType, scope, lifetime, operation.inputBinding, operation.factProjection, operation.categoryPath)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureExposedPropertyNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.targetGraphAuthoringId, operation.targetGraphPlannedIdentity, "targetGraph");
-            AgentAuthoringReference declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "declaration");
-            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
-            bool valid = TryParseEnum(context, operation.exposedPropertyMode, "exposedPropertyMode", out ExposedPropertyNodeType mode);
-            object value = null;
-            if (mode == ExposedPropertyNodeType.Set)
-                value = ReadBlackboardDefault(context, operation.blackboardDefaultValue, valueType);
-            else if (operation.blackboardDefaultValue != null && operation.blackboardDefaultValue.Type != Newtonsoft.Json.Linq.JTokenType.Null)
-                context.Error("blackboardDefaultValue", "exposed_property_get_value_forbidden", "Get ExposedProperty 节点不能保存 value。");
-            string displayName = First(operation.displayName, mode + " Blackboard");
-            return context.IsValid && valid && valueType != null
-                ? new AgentEnsureExposedPropertyNodeMutation(operation.id, context.Path, graph, operation.targetElementAuthoringId, declaration, mode, valueType, value, displayName, operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureTimelineTreeClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "ensure_timeline_tree_clip 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            if (operation.endFrame <= operation.startFrame)
-                context.Error("endFrame", "timeline_clip_range_invalid", "TreeClip endFrame 必须大于 startFrame。");
-            AgentPlannedIdentityReference output = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            var target = new AgentTimelineTargetReference(timeline, track, clip, output);
-            return context.IsValid ? new AgentEnsureTimelineTreeClipMutation(operation.id, context.Path, target, operation.startFrame, operation.endFrame, First(operation.timelinePhase, "Decision")) : null;
-        }
-
-        static AgentMutation LowerEnsureMotionCurveTrack(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "ensure_motion_curve_track", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            var target = new AgentTimelineTargetReference(timeline, timelineOutput, track, default, string.Empty, default);
-            return context.IsValid
-                ? new AgentEnsureMotionCurveTrackMutation(operation.id, context.Path, target, First(operation.displayName, "Motion Curve"))
-                : null;
-        }
-
-        static AgentMutation LowerEnsureMotionCurveClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "ensure_motion_curve_clip", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            AgentPlannedIdentityReference trackOutput = context.OptionalPlannedIdentity(operation.trackPlannedIdentity, "trackPlannedIdentity", AgentMutationOutputKind.TimelineTrack);
-            if (string.IsNullOrEmpty(track) == !trackOutput.IsValid)
-                context.Error("track", "motion_curve_track_reference_invalid", "ensure_motion_curve_clip 必须且只能提供 trackAuthoringId 或 trackPlannedIdentity。");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            if (operation.endFrame <= operation.startFrame)
-                context.Error("endFrame", "motion_curve_clip_range_invalid", "MotionCurveClip endFrame 必须大于 startFrame。");
-            var target = new AgentTimelineTargetReference(timeline, timelineOutput, track, trackOutput, clip, default);
-            return context.IsValid
-                ? new AgentEnsureMotionCurveClipMutation(operation.id, context.Path, target, operation.startFrame, operation.endFrame)
-                : null;
-        }
-
-        static AgentMutation LowerConfigureMotionCurveClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "configure_motion_curve_clip", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "motion_curve_clip_reference_invalid", "configure_motion_curve_clip 必须且只能提供 clipAuthoringId 或 clipPlannedIdentity。");
-            string curveId = context.RequiredText(operation.curveId, string.Empty, "curveId", "configure_motion_curve_clip 缺少 curveId。");
-            if (operation.curveEndFrame <= operation.startFrame || operation.curveEndFrame > operation.endFrame)
-                context.Error("curveEndFrame", "motion_curve_end_frame_invalid", "MotionCurveClip 必须满足 startFrame < curveEndFrame <= endFrame。");
-            if (!Enum.TryParse(operation.motionSpace, true, out TimelineMotionContributionSpace space) || !Enum.IsDefined(typeof(TimelineMotionContributionSpace), space))
-                context.Error("motionSpace", "motion_curve_space_invalid", $"MotionCurve space 无效：{operation.motionSpace}");
-            if (!Enum.TryParse(operation.motionChannel, true, out TimelineMotionChannel channel) || !Enum.IsDefined(typeof(TimelineMotionChannel), channel))
-                context.Error("motionChannel", "motion_curve_channel_invalid", $"MotionCurve channel 无效：{operation.motionChannel}");
-            if (!Enum.TryParse(operation.motionBlendMode, true, out TimelineMotionBlendMode blendMode) || !Enum.IsDefined(typeof(TimelineMotionBlendMode), blendMode))
-                context.Error("motionBlendMode", "motion_curve_blend_mode_invalid", $"MotionCurve blend mode 无效：{operation.motionBlendMode}");
-            var target = new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput);
-            return context.IsValid
-                ? new AgentConfigureMotionCurveClipMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    curveId,
-                    operation.curveEndFrame,
-                    space,
-                    channel,
-                    blendMode,
-                    operation.motionPriority,
-                    operation.consumeLowerChannels)
-                : null;
-        }
-
-        static void ReadTimelineReference(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation,
-            string operationName,
-            out string timeline,
-            out AgentPlannedIdentityReference timelineOutput)
-        {
-            timeline = context.OptionalAuthoringId(operation.timelineAuthoringId, "timelineAuthoringId");
-            timelineOutput = context.OptionalPlannedIdentity(operation.timelinePlannedIdentity, "timelinePlannedIdentity", AgentMutationOutputKind.Timeline);
-            if (string.IsNullOrEmpty(timeline) == !timelineOutput.IsValid)
-                context.Error("timeline", "timeline_reference_invalid", $"{operationName} 必须且只能提供 timelineAuthoringId 或 timelinePlannedIdentity。");
-        }
-
-        static AgentMutation LowerEnsureMotionWarpTrack(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "ensure_motion_warp_track 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            return context.IsValid
-                ? new AgentEnsureMotionWarpTrackMutation(operation.id, context.Path, timeline, track, First(operation.displayName, "Motion Warp"))
-                : null;
-        }
-
-        static AgentMutation LowerEnsureMotionWarpClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "ensure_motion_warp_clip 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            AgentPlannedIdentityReference trackOutput = context.OptionalPlannedIdentity(operation.trackPlannedIdentity, "trackPlannedIdentity", AgentMutationOutputKind.TimelineTrack);
-            if (string.IsNullOrEmpty(track) == !trackOutput.IsValid)
-                context.Error("track", "motion_warp_track_reference_invalid", "ensure_motion_warp_clip 必须且只能提供 trackAuthoringId 或 trackPlannedIdentity。", "引用已有 MotionWarpTrack 或前序 ensure_motion_warp_track output。");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            var target = new AgentTimelineTargetReference(timeline, track, trackOutput, clip, default);
-            return context.IsValid ? new AgentEnsureMotionWarpClipMutation(operation.id, context.Path, target, operation.startFrame, operation.endFrame) : null;
-        }
-
-        static AgentMutation LowerConfigureMotionWarpSource(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerMotionWarpClipTarget(context, operation);
-            string source = context.OptionalAuthoringId(
-                context.RequiredText(operation.sourceMotionClipAuthoringId, string.Empty, "sourceMotionClipAuthoringId", "configure_motion_warp_source 缺少 source MotionCurve identity。"),
-                "sourceMotionClipAuthoringId");
-            return context.IsValid ? new AgentConfigureMotionWarpSourceMutation(operation.id, context.Path, target, source) : null;
-        }
-
-        static AgentMutation LowerConfigureMotionWarpParameters(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerMotionWarpClipTarget(context, operation);
-            if (!Enum.TryParse(operation.translationMode, true, out MotionWarpTranslationMode translationMode) || !Enum.IsDefined(typeof(MotionWarpTranslationMode), translationMode))
-                context.Error("translationMode", "motion_warp_translation_mode_invalid", $"MotionWarp translation mode 无效：{operation.translationMode}");
-            if (!Enum.TryParse(operation.targetOffsetSpace, true, out MotionWarpTargetOffsetSpace targetOffsetSpace) || !Enum.IsDefined(typeof(MotionWarpTargetOffsetSpace), targetOffsetSpace))
-                context.Error("targetOffsetSpace", "motion_warp_target_offset_space_invalid", $"MotionWarp target offset space 无效：{operation.targetOffsetSpace}");
-            if (!Enum.TryParse(operation.rotationMode, true, out MotionWarpRotationMode rotationMode) || !Enum.IsDefined(typeof(MotionWarpRotationMode), rotationMode))
-                context.Error("rotationMode", "motion_warp_rotation_mode_invalid", $"MotionWarp rotation mode 无效：{operation.rotationMode}");
-            if (!Enum.TryParse(operation.rotationMethod, true, out MotionWarpRotationMethod rotationMethod) || !Enum.IsDefined(typeof(MotionWarpRotationMethod), rotationMethod))
-                context.Error("rotationMethod", "motion_warp_rotation_method_invalid", $"MotionWarp rotation method 无效：{operation.rotationMethod}");
-            if (!Enum.TryParse(operation.limitPolicy, true, out MotionWarpLimitPolicy limitPolicy) || !Enum.IsDefined(typeof(MotionWarpLimitPolicy), limitPolicy))
-                context.Error("limitPolicy", "motion_warp_limit_policy_invalid", $"MotionWarp limit policy 无效：{operation.limitPolicy}");
-            AnimationCurve positionCurve = LowerAnimationCurve(context, operation.positionProgressCurve, "positionProgressCurve", 2, false);
-            AnimationCurve yawCurve = LowerAnimationCurve(context, operation.yawProgressCurve, "yawProgressCurve", 2, false);
-            return context.IsValid
-                ? new AgentConfigureMotionWarpParametersMutation(
-                    operation.id,
-                    context.Path,
-                    target,
-                    translationMode,
-                    targetOffsetSpace,
-                    rotationMode,
-                    rotationMethod,
-                    operation.targetPlanarOffset,
-                    operation.targetYawOffsetDegrees,
-                    operation.maxTotalPositionCorrection,
-                    operation.maxTotalYawCorrectionDegrees,
-                    operation.maximumYawRateDegreesPerSecond,
-                    limitPolicy,
-                    positionCurve,
-                    yawCurve)
-                : null;
-        }
-
-        static AgentTimelineTargetReference LowerMotionWarpClipTarget(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", $"{operation.kind} 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "motion_warp_clip_reference_invalid", $"{operation.kind} 必须且只能提供 clipAuthoringId 或 clipPlannedIdentity。");
-            return new AgentTimelineTargetReference(timeline, track, default, clip, clipOutput);
-        }
-
-        static AnimationCurve LowerAnimationCurve(
-            AgentMutationPlanningContext context,
-            List<AgentAnimationCurveKey> source,
-            string field,
-            int minimumKeyCount,
-            bool requireNormalized)
-        {
-            if (source == null || source.Count < minimumKeyCount)
-            {
-                context.Error(field, "animation_curve_missing", $"{field} 至少需要 {minimumKeyCount} 个 key。");
-                return null;
-            }
-            var keys = new Keyframe[source.Count];
-            float previousTime = -1f;
-            for (int i = 0; i < source.Count; i++)
-            {
-                AgentAnimationCurveKey value = source[i];
-                if (value == null || !Enum.TryParse(value.weightedMode, true, out WeightedMode weightedMode) || !Enum.IsDefined(typeof(WeightedMode), weightedMode))
-                {
-                    context.Error($"{field}[{i}]", "animation_curve_key_invalid", $"{field}[{i}] 缺失或 weightedMode 无效。");
-                    continue;
-                }
-                if (requireNormalized && (!IsNormalized(value.time) || !IsNormalized(value.value) ||
-                                          value.time < previousTime))
-                {
-                    context.Error($"{field}[{i}]", "animation_curve_not_normalized", $"{field}[{i}] 必须按时间有序，且time/value位于[0,1]。");
-                    continue;
-                }
-                previousTime = value.time;
-                keys[i] = new Keyframe(value.time, value.value, value.inTangent, value.outTangent, value.inWeight, value.outWeight)
-                {
-                    weightedMode = weightedMode
-                };
-            }
-            return context.IsValid ? new AnimationCurve(keys) : null;
-        }
-
-        static bool IsNormalized(float value) =>
-            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f && value <= 1f;
-
-        static AgentMutation LowerDeleteTimelineClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "delete_timeline_clip 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(context.RequiredText(operation.clipAuthoringId, string.Empty, "clipAuthoringId", "delete_timeline_clip 缺少 Clip identity。"), "clipAuthoringId");
-            return context.IsValid ? new AgentDeleteTimelineClipMutation(operation.id, context.Path, new AgentTimelineTargetReference(timeline, track, clip)) : null;
-        }
-
-        static AgentMutation LowerDeleteTimelineTrack(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "delete_timeline_track 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(context.RequiredText(operation.trackAuthoringId, string.Empty, "trackAuthoringId", "delete_timeline_track 缺少 Track identity。"), "trackAuthoringId");
-            return context.IsValid ? new AgentDeleteTimelineTrackMutation(operation.id, context.Path, timeline, track) : null;
-        }
-
-        static AgentMutation LowerEnsureTimelineSection(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "ensure_timeline_section", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string section = context.OptionalAuthoringId(operation.sectionAuthoringId, "sectionAuthoringId");
-            string displayName = context.RequiredText(operation.displayName, string.Empty, "displayName", "ensure_timeline_section 缺少Section名称。");
-            if (!string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal))
-                context.Error("displayName", "timeline_section_name_invalid", "Timeline Section名称不能包含首尾空白。");
-            if (operation.startFrame < 0)
-                context.Error("startFrame", "timeline_section_frame_invalid", "Timeline Section frame不能小于0。");
-            var target = new AgentTimelineTargetReference(timeline, timelineOutput, string.Empty, default, string.Empty, default);
-            return context.IsValid
-                ? new AgentEnsureTimelineSectionMutation(operation.id, context.Path, target, section, displayName, operation.startFrame)
-                : null;
-        }
-
-        static AgentMutation LowerDeleteTimelineSection(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "delete_timeline_section", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string section = context.OptionalAuthoringId(
-                context.RequiredText(operation.sectionAuthoringId, string.Empty, "sectionAuthoringId", "delete_timeline_section 缺少Section identity。"),
-                "sectionAuthoringId");
-            var target = new AgentTimelineTargetReference(timeline, timelineOutput, string.Empty, default, string.Empty, default);
-            return context.IsValid
-                ? new AgentDeleteTimelineSectionMutation(operation.id, context.Path, target, section)
-                : null;
-        }
-
-        static AgentMutation LowerMoveTimelineClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "move_timeline_clip 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(context.RequiredText(operation.trackAuthoringId, string.Empty, "trackAuthoringId", "move_timeline_clip 缺少 Track identity。"), "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(context.RequiredText(operation.clipAuthoringId, string.Empty, "clipAuthoringId", "move_timeline_clip 缺少 Clip identity。"), "clipAuthoringId");
-            if (operation.frameOffset == 0)
-                context.Error("frameOffset", "timeline_clip_offset_zero", "move_timeline_clip 的 frameOffset 不能为 0。");
-            return context.IsValid
-                ? new AgentMoveTimelineClipMutation(operation.id, context.Path, new AgentTimelineTargetReference(timeline, track, clip), operation.frameOffset)
-                : null;
-        }
-
-        static AgentMutation LowerConfigureTimelineClipEase(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "configure_timeline_clip_ease", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "timeline_clip_reference_invalid", "configure_timeline_clip_ease 必须且只能提供 clipAuthoringId 或 clipPlannedIdentity。");
-            if (operation.selfEaseInFrame < 0)
-                context.Error("selfEaseInFrame", "timeline_clip_ease_negative", "selfEaseInFrame 不能小于 0。");
-            if (operation.selfEaseOutFrame < 0)
-                context.Error("selfEaseOutFrame", "timeline_clip_ease_negative", "selfEaseOutFrame 不能小于 0。");
-            return context.IsValid
-                ? new AgentConfigureTimelineClipEaseMutation(
-                    operation.id,
-                    context.Path,
-                    new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput),
-                    operation.selfEaseInFrame,
-                    operation.selfEaseOutFrame)
-                : null;
-        }
-
-        static AgentMutation LowerConfigureTimelineCurveChannel(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "configure_timeline_curve_channel", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "timeline_clip_reference_invalid", "configure_timeline_curve_channel 必须且只能提供 clipAuthoringId 或 clipPlannedIdentity。");
-            string channelId = context.RequiredText(operation.curveChannelId, string.Empty, "curveChannelId", "configure_timeline_curve_channel 缺少registered ChannelId。");
-            if (!TimelineCurveChannelCatalog.TryGet(channelId, out TimelineCurveChannelDescriptor descriptor))
-                context.Error("curveChannelId", "timeline_curve_channel_unknown", $"未知 Timeline Curve ChannelId：{channelId}");
-            AnimationCurve curve = LowerTimelineCurvePayload(context, operation.curve, "curve");
-            return context.IsValid
-                ? new AgentConfigureTimelineCurveChannelMutation(
-                    operation.id,
-                    context.Path,
-                    new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput),
-                    descriptor.ChannelId,
-                    curve)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureConditionValueNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string nodeType = context.RequiredText(operation.nodeType, string.Empty, "nodeType", "ensure_condition_value_node缺少nodeType。");
-            bool configurationValid = TryParseEnum(
-                context,
-                operation.conditionValueConfiguration,
-                "conditionValueConfiguration",
-                out AgentConditionValueNodeConfigurationKind configuration);
-            AgentAuthoringReference declaration = default;
-            StateExitCause exitCause = default;
-            AgentAssetReference actionContext = default;
-            string windowType = string.Empty;
-            AgentAssetReference actionProfile = default;
-            AgentAuthoringReference targetSnapshotDeclaration = default;
-            if (configurationValid)
-            {
-                switch (configuration)
-                {
-                    case AgentConditionValueNodeConfigurationKind.None:
-                        break;
-                    case AgentConditionValueNodeConfigurationKind.BlackboardDeclaration:
-                        declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "blackboardDeclaration");
-                        break;
-                    case AgentConditionValueNodeConfigurationKind.StateExitCause:
-                        configurationValid = TryParseEnum(context, operation.stateExitCause, "stateExitCause", out exitCause);
-                        break;
-                    case AgentConditionValueNodeConfigurationKind.ActionContext:
-                        actionContext = ReadActionContext(operation);
-                        if (string.IsNullOrEmpty(actionContext.LogicalId) &&
-                            string.IsNullOrEmpty(actionContext.AssetPath) &&
-                            string.IsNullOrEmpty(actionContext.AssetGuid))
-                            context.Error("actionContext", "action_context_required", "Action Context identity缺失。");
-                        break;
-                    case AgentConditionValueNodeConfigurationKind.ActionWindow:
-                        windowType = context.RequiredText(operation.windowType, string.Empty, "windowType", "Action Window type缺失。");
-                        break;
-                    case AgentConditionValueNodeConfigurationKind.ActionAdmission:
-                        actionProfile = ReadActionProfile(context, operation);
-                        if (!string.IsNullOrEmpty(operation.targetSnapshotBlackboardDeclarationId) ||
-                            !string.IsNullOrEmpty(operation.targetSnapshotBlackboardDeclarationPlannedIdentity))
-                        {
-                            targetSnapshotDeclaration = context.RequiredDeclaration(
-                                operation.targetSnapshotBlackboardDeclarationId,
-                                operation.targetSnapshotBlackboardDeclarationPlannedIdentity,
-                                "targetSnapshotBlackboardDeclaration");
-                        }
-                        break;
-                    default:
-                        context.Error("conditionValueConfiguration", "condition_value_configuration_invalid", "未知Condition Value配置类型。");
-                        break;
-                }
-            }
-            return context.IsValid && configurationValid
-                ? new AgentEnsureConditionValueNodeMutation(
-                    operation.id,
-                    context.Path,
-                    graph,
-                    existing,
-                    nodeType,
-                    First(operation.displayName, nodeType),
-                    operation.position,
-                    configuration,
-                    declaration,
-                    exitCause,
-                    actionContext,
-                    windowType,
-                    actionProfile,
-                    targetSnapshotDeclaration)
-                : null;
-        }
-
-        static AnimationCurve LowerTimelineCurvePayload(
-            AgentMutationPlanningContext context,
-            AgentAnimationCurvePayload payload,
-            string field)
-        {
-            if (payload == null)
-            {
-                context.Error(field, "timeline_curve_payload_missing", "Timeline curve payload不能为空。");
-                return null;
-            }
-            if (!Enum.TryParse(payload.preWrapMode, true, out WrapMode preWrapMode) ||
-                !Enum.IsDefined(typeof(WrapMode), preWrapMode))
-                context.Error($"{field}.preWrapMode", "timeline_curve_wrap_mode_invalid", $"无效preWrapMode：{payload.preWrapMode}");
-            if (!Enum.TryParse(payload.postWrapMode, true, out WrapMode postWrapMode) ||
-                !Enum.IsDefined(typeof(WrapMode), postWrapMode))
-                context.Error($"{field}.postWrapMode", "timeline_curve_wrap_mode_invalid", $"无效postWrapMode：{payload.postWrapMode}");
-            if (payload.keys == null || payload.keys.Count == 0)
-            {
-                context.Error($"{field}.keys", "timeline_curve_keys_missing", "Timeline curve至少需要一个key。");
-                return null;
-            }
-            var keys = new Keyframe[payload.keys.Count];
-            float previousTime = -1f;
-            for (int i = 0; i < payload.keys.Count; i++)
-            {
-                AgentAnimationCurveKey value = payload.keys[i];
-                if (value == null ||
-                    !Enum.TryParse(value.weightedMode, true, out WeightedMode weightedMode) ||
-                    !Enum.IsDefined(typeof(WeightedMode), weightedMode))
-                {
-                    context.Error($"{field}.keys[{i}]", "timeline_curve_key_invalid", "Curve key缺失或weightedMode无效。");
-                    continue;
-                }
-                if (!IsNormalized(value.time) || value.time <= previousTime ||
-                    float.IsNaN(value.value) || float.IsInfinity(value.value) ||
-                    float.IsNaN(value.inWeight) || float.IsInfinity(value.inWeight) ||
-                    float.IsNaN(value.outWeight) || float.IsInfinity(value.outWeight))
-                {
-                    context.Error($"{field}.keys[{i}]", "timeline_curve_key_payload_invalid", "Curve key必须按normalized time严格递增，value与weight必须是有限数值。");
-                    continue;
-                }
-                previousTime = value.time;
-                keys[i] = new Keyframe(value.time, value.value, value.inTangent, value.outTangent, value.inWeight, value.outWeight)
-                {
-                    weightedMode = weightedMode
-                };
-            }
-            if (!context.IsValid)
-                return null;
-            return new AnimationCurve(keys) { preWrapMode = preWrapMode, postWrapMode = postWrapMode };
-        }
-
-        static AgentMutation LowerConfigureAnimationTrackChannel(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
-            string value = context.RequiredText(
-                operation.animationChannelId,
-                string.Empty,
-                "animationChannelId",
-                "configure_animation_track_channel 缺少 AnimationChannelId。");
-            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
-                context.Error("animationChannelId", "animation_channel_id_invalid", "AnimationChannelId 不能包含首尾空白。");
-            var animationChannelId = new AnimationChannelId(value);
-            if (!animationChannelId.IsValid)
-                context.Error("animationChannelId", "animation_channel_id_invalid", "AnimationChannelId 必须是非空稳定 identity。");
-            return context.IsValid
-                ? new AgentConfigureAnimationTrackChannelMutation(operation.id, context.Path, target, animationChannelId)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureAnimationClipSegment(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            ReadTimelineReference(context, operation, "ensure_animation_clip_segment", out string timeline, out AgentPlannedIdentityReference timelineOutput);
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
-                context.Error("clip", "animation_clip_segment_reference_invalid", "AnimationClip Segment必须且只能提供clipAuthoringId或clipPlannedIdentity。");
-            AgentPackageAssetReferenceV4 clipReference = operation.animationClip;
-            bool externalClip = clipReference != null &&
-                                string.IsNullOrWhiteSpace(clipReference.localId) &&
-                                !string.IsNullOrWhiteSpace(clipReference.assetPath) &&
-                                !string.IsNullOrWhiteSpace(clipReference.assetGuid) &&
-                                clipReference.localFileId != 0;
-            if (!externalClip)
-                context.Error("animationClip", "animation_clip_reference_invalid", "AnimationClip Segment必须提供现有原生Clip的结构化引用。");
-            if (operation.startFrame < 0 || operation.endFrame <= operation.startFrame || operation.clipInFrame < 0)
-                context.Error("frames", "animation_clip_segment_frames_invalid", "AnimationClip Segment必须满足0 <= Start < End且ClipIn >= 0。");
-            if (!Enum.TryParse(operation.extraPolationMode, false, out ExtraPolationMode extraPolationMode))
-                context.Error("extraPolationMode", "animation_clip_segment_extrapolation_invalid", $"AnimationClip Segment Extrapolation无效：{operation.extraPolationMode}");
-            return context.IsValid
-                ? new AgentEnsureAnimationClipSegmentMutation(
-                    operation.id,
-                    context.Path,
-                    new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput),
-                    clipReference,
-                    operation.startFrame,
-                    operation.endFrame,
-                    operation.clipInFrame,
-                    extraPolationMode)
-                : null;
-        }
-
-        static AgentTimelineTargetReference LowerAnimationTrackTarget(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(
-                context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", $"{operation.kind} 缺少 Timeline identity。"),
-                "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            AgentPlannedIdentityReference trackOutput = context.OptionalPlannedIdentity(operation.trackPlannedIdentity, "trackPlannedIdentity", AgentMutationOutputKind.TimelineTrack);
-            if (string.IsNullOrEmpty(track) == !trackOutput.IsValid)
-                context.Error("track", "animation_track_reference_invalid", $"{operation.kind} 必须且只能提供 trackAuthoringId 或 trackPlannedIdentity。");
-            return new AgentTimelineTargetReference(timeline, track, trackOutput, string.Empty, default);
-        }
-
-        static AgentMutation LowerEnsureTreeClipBlackboardWrite(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "ensure_tree_clip_blackboard_write 缺少 Timeline identity。"), "timelineAuthoringId");
-            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
-            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
-            AgentAuthoringReference declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "declaration");
-            AgentPlannedIdentityReference output = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
-            if (string.IsNullOrEmpty(operation.clipAuthoringId) && !output.IsValid)
-                context.Error("clipAuthoringId", "clip_identity_missing", "ensure_tree_clip_blackboard_write 必须使用 stable Clip identity 或前序 TimelineClip output。");
-            var target = new AgentTimelineTargetReference(timeline, track, clip, output);
-            return context.IsValid ? new AgentEnsureTreeClipBlackboardWriteMutation(operation.id, context.Path, target, declaration) : null;
-        }
-
-        static AgentMutation LowerDeleteTransition(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentStateMachineTargetReference stateMachine = context.RequiredStateMachine(operation.stateMachineGraphAuthoringId, operation.stateMachinePlannedIdentity, "stateMachine");
-            string edge = context.OptionalAuthoringId(context.RequiredText(operation.targetElementAuthoringId, string.Empty, "targetElementAuthoringId", "delete_transition 缺少 edge identity。"), "targetElementAuthoringId");
-            return context.IsValid ? new AgentDeleteTransitionMutation(operation.id, context.Path, stateMachine, edge) : null;
-        }
-
-        static AgentMutation LowerEnsureGameplayTag(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string tag = context.RequiredText(operation.gameplayTag, string.Empty, "gameplayTag", "ensure_gameplay_tag 缺少 tag id。");
-            return context.IsValid ? new AgentEnsureGameplayTagMutation(operation.id, context.Path, tag, operation.parentGameplayTag, First(operation.displayName, tag), operation.debugCategory) : null;
-        }
-
-        static AgentMutation LowerSetActionProfileGrantedTags(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentAssetReference profile = ReadActionProfile(context, operation);
-            return context.IsValid ? new AgentSetActionProfileGrantedTagsMutation(operation.id, context.Path, profile, ReadTags(context, operation.grantedTags, "grantedTags")) : null;
-        }
-
-        static AgentMutation LowerSetActionProfileCancelQuery(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentAssetReference profile = ReadActionProfile(context, operation);
-            List<GameplayTagId> all = ReadTags(context, operation.queryAll, "queryAll");
-            List<GameplayTagId> any = ReadTags(context, operation.queryAny, "queryAny");
-            List<GameplayTagId> none = ReadTags(context, operation.queryNone, "queryNone");
-            return context.IsValid ? new AgentSetActionProfileCancelQueryMutation(operation.id, context.Path, profile, all, any, none) : null;
-        }
-
-        static AgentMutation LowerSetActionProfileTargetRequirement(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentAssetReference profile = ReadActionProfile(context, operation);
-            TryParseEnum(context, operation.targetRequirement, "targetRequirement", out ActionTargetRequirement requirement);
-            return context.IsValid
-                ? new AgentSetActionProfileTargetRequirementMutation(operation.id, context.Path, profile, requirement)
-                : null;
-        }
-
-        static AgentMutation LowerSetActionRequestTimingClass(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            string requestId = context.RequiredText(
-                operation.request,
-                string.Empty,
-                "request",
-                "set_action_request_timing_class 缺少 request id。");
-            TryParseEnum(
-                context,
-                operation.requestTimingClass,
-                "requestTimingClass",
-                out CharacterActionRequestTimingClass timingClass);
-            return context.IsValid
-                ? new AgentSetActionRequestTimingClassMutation(operation.id, context.Path, requestId, timingClass)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureAIControllerDefinition(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string controllerId = context.RequiredText(operation.controllerId, string.Empty, "controllerId", "ensure_ai_controller_definition 缺少 ControllerId。");
-            if (!string.Equals(controllerId, controllerId.Trim(), StringComparison.Ordinal))
-                context.Error("controllerId", "ai_controller_id_invalid", "ControllerId 不能包含首尾空白。");
-            return context.IsValid ? new AgentEnsureAIControllerDefinitionMutation(operation.id, context.Path, controllerId) : null;
-        }
-
-        static AgentMutation LowerEnsureAIControllerTree(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string path = context.RequiredText(operation.rootTreeAssetPath, string.Empty, "rootTreeAssetPath", "ensure_ai_controller_tree 缺少精确的 RootTree 资产路径。");
-            return context.IsValid ? new AgentEnsureAIControllerTreeMutation(operation.id, context.Path, path) : null;
-        }
-
-        static AgentMutation LowerBindAIControllerAssets(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            if (string.IsNullOrEmpty(operation.controlledCharacterAssetPath) && string.IsNullOrEmpty(operation.controlledCharacterAssetGuid))
-                context.Error("controlledCharacter", "controlled_character_reference_missing", "bind_ai_controller_assets 缺少 Character Definition 资产引用。");
-            if (string.IsNullOrEmpty(operation.perceptionProfileAssetPath) && string.IsNullOrEmpty(operation.perceptionProfileAssetGuid))
-                context.Error("perceptionProfile", "perception_profile_reference_missing", "bind_ai_controller_assets 缺少 Perception Profile 资产引用。");
-            return context.IsValid
-                ? new AgentBindAIControllerAssetsMutation(
-                    operation.id,
-                    context.Path,
-                    new AgentAssetReference(string.Empty, operation.controlledCharacterAssetPath, operation.controlledCharacterAssetGuid),
-                    new AgentAssetReference(string.Empty, operation.perceptionProfileAssetPath, operation.perceptionProfileAssetGuid))
-                : null;
-        }
-
-        static AgentMutation LowerConfigureAICandidates(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            TryParseEnum(context, operation.candidateOrdering, "candidateOrdering", out AICandidateOrdering ordering);
-            var values = new List<string>();
-            var unique = new HashSet<string>(StringComparer.Ordinal);
-            if (operation.candidateActorIds == null)
-            {
-                context.Error("candidateActorIds", "candidate_actor_ids_missing", "configure_ai_candidates 缺少显式候选 ActorId 列表。");
-            }
-            else
-            {
-                for (int i = 0; i < operation.candidateActorIds.Count; i++)
-                {
-                    string actorId = operation.candidateActorIds[i];
-                    if (string.IsNullOrWhiteSpace(actorId) || !string.Equals(actorId, actorId.Trim(), StringComparison.Ordinal) || !unique.Add(actorId))
-                        context.Error($"candidateActorIds[{i}]", "candidate_actor_id_invalid", $"候选 ActorId 缺失、重复或包含首尾空白：{actorId}");
-                    else
-                        values.Add(actorId);
-                }
-            }
-            return context.IsValid ? new AgentConfigureAICandidatesMutation(operation.id, context.Path, ordering, values) : null;
-        }
-
-        static AgentMutation LowerEnsureAIBlackboardDeclaration(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "declaration", true);
-            string key = context.RequiredText(operation.blackboardKey, operation.displayName, "blackboardKey", "ensure_ai_blackboard_declaration 缺少 Blackboard key。");
-            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
-            TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope);
-            if (scope != PipelineBlackboardVariableScope.AIController && scope != PipelineBlackboardVariableScope.AITick && scope != PipelineBlackboardVariableScope.Graph)
-                context.Error("blackboardScope", "ai_blackboard_scope_invalid", $"AI Blackboard 不允许 scope：{scope}");
-            return context.IsValid
-                ? new AgentEnsureAIBlackboardDeclarationMutation(operation.id, context.Path, graph, existing, key, valueType, scope, AIBlackboardDefault(operation, valueType))
-                : null;
-        }
-
-        static AgentMutation LowerEnsureAISharedNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAISharedNodeKind nodeKind);
-            LoopNode.StopType loopStopType = LoopNode.StopType.None;
-            CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
-            if (nodeKind == AgentAISharedNodeKind.Loop)
-                TryParseEnum(context, operation.loopStopType, "loopStopType", out loopStopType);
-            if (nodeKind == AgentAISharedNodeKind.Compare)
-                TryParseEnum(context, operation.compareType, "compareType", out compareType);
-            return context.IsValid
-                ? new AgentEnsureAISharedNodeMutation(operation.id, context.Path, graph, existing, nodeKind, loopStopType, compareType, operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureAIObservationNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAIObservationNodeKind kind);
-            return context.IsValid ? new AgentEnsureAIObservationNodeMutation(operation.id, context.Path, graph, existing, kind, operation.position) : null;
-        }
-
-        static AgentMutation LowerEnsureAIMemoryNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            AgentAuthoringReference declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "declaration");
-            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAIMemoryNodeKind nodeKind);
-            TryParseEnum(context, operation.aiMemoryValueKind, "aiMemoryValueKind", out AIMemoryValueKind valueKind);
-            return context.IsValid ? new AgentEnsureAIMemoryNodeMutation(operation.id, context.Path, graph, existing, declaration, nodeKind, valueKind, operation.position) : null;
-        }
-
-        static AgentMutation LowerEnsureAIContinuousInput(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string inputId = context.RequiredText(operation.inputId, string.Empty, "inputId", "ensure_ai_continuous_input 缺少 InputId。");
-            return context.IsValid ? new AgentEnsureAIContinuousInputMutation(operation.id, context.Path, graph, existing, inputId, operation.position) : null;
-        }
-
-        static AgentMutation LowerEnsureAIActionTarget(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string inputId = context.RequiredText(operation.inputId, string.Empty, "inputId", "ensure_ai_action_target 缺少 InputId。");
-            return context.IsValid ? new AgentEnsureAIActionTargetMutation(operation.id, context.Path, graph, existing, inputId, operation.position) : null;
-        }
-
-        static AgentMutation LowerEnsureAIActionRequest(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string requestId = context.RequiredText(operation.request, string.Empty, "request", "ensure_ai_action_request 缺少 RequestId。");
-            TryParseEnum(context, operation.aiRequestRepeatPolicy, "aiRequestRepeatPolicy", out AIRequestRepeatPolicy repeatPolicy);
-            if (operation.requestBufferSeconds < 0f)
-                context.Error("requestBufferSeconds", "ai_request_buffer_invalid", "Action Request buffer seconds 不能小于 0。");
-            return context.IsValid
-                ? new AgentEnsureAIActionRequestMutation(operation.id, context.Path, graph, existing, requestId, operation.requestBufferSeconds, operation.requestPriority, repeatPolicy, operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerDeleteFlowEdge(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            string edge = context.OptionalAuthoringId(context.RequiredText(operation.targetElementAuthoringId, string.Empty, "targetElementAuthoringId", "delete_flow_edge 缺少 edge identity。"), "targetElementAuthoringId");
-            return context.IsValid ? new AgentDeleteFlowEdgeMutation(operation.id, context.Path, graph, edge) : null;
-        }
-
-        static AgentMutation LowerEnsureGraphNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement", true);
-            string nodeType = context.RequiredText(operation.nodeType, string.Empty, "nodeType", "ensure_graph_node缺少Node类型。");
-            LoopNode.StopType loopStopType = LoopNode.StopType.None;
-            CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
-            if (!string.IsNullOrEmpty(operation.loopStopType))
-                TryParseEnum(context, operation.loopStopType, "loopStopType", out loopStopType);
-            if (!string.IsNullOrEmpty(operation.compareType))
-                TryParseEnum(context, operation.compareType, "compareType", out compareType);
-            return context.IsValid
-                ? new AgentEnsureGraphNodeMutation(operation.id, context.Path, graph, existing, nodeType, operation.displayName, loopStopType, compareType, operation.position)
-                : null;
-        }
-
-        static AgentMutation LowerDeleteGraphNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference element = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            return context.IsValid ? new AgentDeleteGraphNodeMutation(operation.id, context.Path, graph, element) : null;
-        }
-
-        static AgentMutation LowerDeletePropertyEdge(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            string edge = context.OptionalAuthoringId(context.RequiredText(operation.targetElementAuthoringId, string.Empty, "targetElementAuthoringId", "delete_property_edge 缺少 edge identity。"), "targetElementAuthoringId");
-            return context.IsValid ? new AgentDeletePropertyEdgeMutation(operation.id, context.Path, graph, edge) : null;
-        }
-
-        static AgentMutation LowerLinkFlow(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference source = context.RequiredElement(operation.sourceElementAuthoringId, operation.sourcePlannedIdentity, "sourceElement");
-            AgentElementTargetReference target = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            return context.IsValid
-                ? new AgentLinkFlowMutation(operation.id, context.Path, graph, source, target, First(operation.startPort, "Output"), First(operation.endPort, "Input"), operation.flowEdgeAuthoringId)
-                : null;
-        }
-
-        static AgentMutation LowerLinkProperty(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference source = context.RequiredElement(operation.sourceElementAuthoringId, operation.sourcePlannedIdentity, "sourceElement");
-            AgentElementTargetReference target = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            string startPort = context.RequiredText(operation.startPropertyPort, string.Empty, "startPropertyPort", "link_property 缺少 startPropertyPort。");
-            string endPort = context.RequiredText(operation.endPropertyPort, string.Empty, "endPropertyPort", "link_property 缺少 endPropertyPort。");
-            return context.IsValid
-                ? new AgentLinkPropertyMutation(operation.id, context.Path, graph, source, target, startPort, endPort, operation.flowEdgeAuthoringId)
-                : null;
-        }
-
-        static AgentMutation LowerEnsureBTConditionRule(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentFlowEdgeTargetReference edge = context.RequiredFlowEdge(operation.flowEdgeAuthoringId, operation.flowEdgePlannedIdentity, "flowEdge");
-            TryParseEnum(context, operation.abortPolicy, "abortPolicy", out BTAbortPolicy abortPolicy);
-            List<AgentConditionGroupMutation> groups = context.RequiredConditionGroups(operation.conditionGroups, operation);
-            return context.IsValid
-                ? new AgentEnsureBTConditionRuleMutation(operation.id, context.Path, graph, edge, abortPolicy, groups)
-                : null;
-        }
-
-        static AgentAssetReference ReadActionContext(AgentMutationDraft operation)
-        {
-            return new AgentAssetReference(operation.actionContext, operation.actionContextAssetPath, operation.actionContextAssetGuid);
-        }
-
-        static AgentAssetReference ReadActionProfile(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            string actionProfile = context.RequiredText(operation.actionProfile, string.Empty, "actionProfile", "ActionProfile identity 缺失。");
-            return new AgentAssetReference(actionProfile, string.Empty, string.Empty);
-        }
-
-        static List<GameplayTagId> ReadTags(AgentMutationPlanningContext context, List<string> values, string field)
-        {
-            var result = new List<GameplayTagId>();
-            var unique = new HashSet<GameplayTagId>();
-            if (values == null)
-                return result;
-            for (int i = 0; i < values.Count; i++)
-            {
-                var tag = new GameplayTagId(values[i]);
-                if (!tag.IsValid || !unique.Add(tag))
-                {
-                    context.Error($"{field}[{i}]", "gameplay_tag_invalid", $"GameplayTag 缺失或重复：{values[i]}");
-                    continue;
-                }
-                result.Add(tag);
-            }
-            return result;
-        }
-
-        static Type ParseBlackboardValueType(AgentMutationPlanningContext context, string value)
-        {
-            switch (value?.Trim().ToLowerInvariant())
-            {
-                case "bool": case "boolean": case "system.boolean": return typeof(bool);
-                case "int": case "int32": case "system.int32": return typeof(int);
-                case "float": case "single": case "system.single": return typeof(float);
-                case "string": case "system.string": return typeof(string);
-                case "vector2": case "unityengine.vector2": return typeof(Vector2);
-                case "vector3": case "unityengine.vector3": return typeof(Vector3);
-                case "actiontargetsnapshot": case "action_target_snapshot": case "thirdpersoncharacter.actionsystem.actiontargetsnapshot": return typeof(ActionTargetSnapshot);
-                case "aiactorid": case "ai_actor_id": case "thirdpersoncharacter.ai.aiactoridvalue": return typeof(AIActorIdValue);
-                case "aiactiontargetsnapshot": case "ai_action_target_snapshot": case "thirdpersoncharacter.ai.aiactiontargetsnapshotvalue": return typeof(AIActionTargetSnapshotValue);
-                default:
-                    context.Error("blackboardValueType", "blackboard_value_type_invalid", $"不支持的 Blackboard value type：{value}");
-                    return null;
-            }
-        }
-
-        static object AIBlackboardDefault(AgentMutationDraft operation, Type valueType)
-        {
-            if (valueType == typeof(bool)) return operation.blackboardBoolValue;
-            if (valueType == typeof(int)) return operation.blackboardIntValue;
-            if (valueType == typeof(float)) return operation.blackboardFloatValue;
-            if (valueType == typeof(Vector2)) return operation.blackboardVector2Value;
-            if (valueType == typeof(Vector3)) return operation.blackboardVector3Value;
-            if (valueType == typeof(AIActorIdValue)) return new AIActorIdValue(operation.blackboardActorIdValue);
-            if (valueType == typeof(AIActionTargetSnapshotValue))
-            {
-                return new AIActionTargetSnapshotValue(
-                    new AIActorIdValue(operation.blackboardTargetActorIdValue),
-                    operation.blackboardTargetPositionValue,
-                    operation.blackboardTargetYawValue);
-            }
-            throw new InvalidOperationException($"Unsupported AI Blackboard value type: {valueType?.FullName}");
-        }
-
-        static object ReadBlackboardDefault(
-            AgentMutationPlanningContext context,
-            Newtonsoft.Json.Linq.JToken token,
-            Type valueType)
-        {
-            if (valueType == null)
-                return null;
-            if (token == null ||
-                token.Type == Newtonsoft.Json.Linq.JTokenType.Null && valueType.IsValueType)
-            {
-                context.Error("blackboardDefaultValue", "blackboard_default_missing", "Blackboard declaration 必须显式声明与ValueType一致的defaultValue。");
-                return null;
-            }
-            try
-            {
-                return token.Type == Newtonsoft.Json.Linq.JTokenType.Null
-                    ? null
-                    : token.ToObject(valueType);
-            }
-            catch (Exception exception)
-            {
-                context.Error("blackboardDefaultValue", "blackboard_default_invalid", $"Blackboard defaultValue无效：{exception.Message}");
-                return null;
-            }
-        }
-
-        static void ValidateBlackboardPayloads(
-            AgentMutationPlanningContext context,
-            AgentSnapshotBlackboardInputBinding inputBinding,
-            AgentSnapshotBlackboardFactProjection factProjection)
-        {
-            if (inputBinding != null && string.IsNullOrWhiteSpace(inputBinding.inputValueId))
-                context.Error("inputBinding.inputValueId", "input_value_id_missing", "Blackboard Input Binding 必须显式提供 inputValueId。");
-            if (factProjection == null)
-                return;
-            if (!TryParseEnum(context, factProjection.kind, "factProjection.kind", out PipelineBlackboardFactProjectionKind projection))
-                return;
-            if (projection == PipelineBlackboardFactProjectionKind.ActionWindow)
-            {
-                if (string.IsNullOrWhiteSpace(factProjection.windowType))
-                    context.Error("factProjection.windowType", "window_type_missing", "ActionWindow Fact Projection 必须显式提供 windowType。");
-                if (string.IsNullOrWhiteSpace(factProjection.windowId))
-                    context.Error("factProjection.windowId", "window_id_missing", "ActionWindow Fact Projection 必须显式提供 windowId。");
-            }
-        }
-
-        static bool TryParseEnum<T>(AgentMutationPlanningContext context, string value, string field, out T result) where T : struct
-        {
-            if (Enum.TryParse(value, true, out result) && Enum.IsDefined(typeof(T), result))
-                return true;
-            context.Error(field, $"{field}_invalid", $"{field} 无效：{value}");
-            return false;
-        }
-
-        static string First(string value, string fallback)
-        {
-            return !string.IsNullOrEmpty(value) ? value : fallback ?? string.Empty;
-        }
     }
 
     [Flags]
@@ -1588,7 +714,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentGraphTargetReference RequiredGraph(string authoringId, string plannedIdentity, string label)
         {
-            return new AgentGraphTargetReference(RequiredReference(authoringId, plannedIdentity, label, AgentMutationOutputKind.StateMachine, AgentMutationOutputKind.State));
+            return new AgentGraphTargetReference(RequiredReference(authoringId, plannedIdentity, label, AgentMutationOutputKind.StateMachine, AgentMutationOutputKind.State, AgentMutationOutputKind.Graph));
+        }
+
+        public AgentGraphTargetReference OptionalGraph(string authoringId, string plannedIdentity, string label)
+        {
+            return new AgentGraphTargetReference(OptionalReference(authoringId, plannedIdentity, label, false, AgentMutationOutputKind.StateMachine, AgentMutationOutputKind.State, AgentMutationOutputKind.Graph));
         }
 
         public AgentStateMachineTargetReference RequiredStateMachine(string authoringId, string plannedIdentity, string label, bool allowSelf = false)
@@ -1768,6 +899,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentEnsureStateMachineMutation stateMachine:
                     ValidateOwnedReference(stateMachine.ExistingOwner.Value, command.OwnerScope, "targetElement");
                     break;
+                case AgentEnsureGraphMutation graph:
+                    ValidateOwnedReference(graph.OwnerNode.Value, command.OwnerScope, "ownerNode");
+                    break;
+                case AgentConfigureGraphReferenceMutation reference:
+                    ValidateOwnedReference(reference.OwnerNode.Value, command.OwnerScope, "ownerNode");
+                    break;
                 case AgentEnsureStateMutation state:
                     ValidateOwnedReference(state.ExistingState.Value, command.OwnerScope, "state");
                     break;
@@ -1805,6 +942,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentGraphLinkMutation link:
                     ValidateOwnedReference(link.Source.Value, command.OwnerScope, "sourceElement");
                     ValidateOwnedReference(link.Target.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentConfigureActionAdmissionMutation admission:
+                    ValidateOwnedReference(admission.Element.Value, command.OwnerScope, "targetElement");
                     break;
                 case AgentEnsureAIBlackboardDeclarationMutation declaration:
                     ValidateOwnedReference(declaration.Graph.Value, command.OwnerScope, "graph");

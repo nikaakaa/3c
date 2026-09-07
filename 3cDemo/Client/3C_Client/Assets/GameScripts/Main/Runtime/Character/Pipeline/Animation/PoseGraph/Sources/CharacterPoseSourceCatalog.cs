@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Sources
@@ -10,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly AnimationPoseSourceClipBinding[][] m_Clip;
         readonly AnimationPoseSourceClipBinding[][] m_BlendSpace;
         readonly AnimationPoseSourceClipBinding[][] m_MotionMatching;
+        readonly CharacterAnimationCompiledResourceDescriptor[] m_Resources;
 
         internal CharacterPoseSourceCatalog(
             CharacterPresentationProjection projection,
@@ -19,6 +21,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new ArgumentNullException(nameof(projection));
             if (clipCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(clipCapacity));
+            m_Resources = new CharacterAnimationCompiledResourceDescriptor[
+                projection.AnimationResources.Count];
+            for (int i = 0; i < m_Resources.Length; i++)
+                m_Resources[i] = projection.AnimationResources[i] ??
+                    throw new InvalidOperationException(
+                        $"Animation resource descriptor #{i} is missing.");
 
             m_Action = new AnimationPoseSourceClipBinding[
                 projection.Producers.Count][];
@@ -44,10 +52,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                         animation.Clips[i] ??
                         throw new InvalidOperationException(
                             $"Animation producer #{producerIndex} clip binding #{i} is missing.");
-                    bindings[i] =
-                        new AnimationPoseSourceClipBinding(
+                    bindings[i] = binding.IsAcl
+                        ? new AnimationPoseSourceClipBinding(
                             i,
-                            binding.Clip);
+                            binding.ResourceCatalogIndex,
+                            binding.GroupClipIndex)
+                        : new AnimationPoseSourceClipBinding(i, binding.Clip);
                 }
                 m_Action[producerIndex] = bindings;
             }
@@ -73,12 +83,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 CharacterPresentationPoseSourcePlan source =
                     projection.PoseSources[i];
                 m_Clip[source.SourceIndex.Value] =
-                    new[]
-                    {
-                        new AnimationPoseSourceClipBinding(
-                            0,
-                            source.Clip)
-                    };
+                    source.IsAcl
+                        ? new[]
+                        {
+                            new AnimationPoseSourceClipBinding(
+                                0,
+                                source.ResourceCatalogIndex,
+                                source.GroupClipIndex)
+                        }
+                        : new[] { new AnimationPoseSourceClipBinding(0, source.Clip) };
             }
 
             m_BlendSpace = new AnimationPoseSourceClipBinding[
@@ -106,10 +119,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                         plan.Samples[i] ??
                         throw new InvalidOperationException(
                             $"Blend Space Player '{player.NodeId}' sample #{i} is missing.");
-                    bindings[i] =
-                        new AnimationPoseSourceClipBinding(
+                    bindings[i] = sample.IsAcl
+                        ? new AnimationPoseSourceClipBinding(
                             i,
-                            sample.Clip);
+                            sample.ResourceCatalogIndex,
+                            sample.GroupClipIndex)
+                        : new AnimationPoseSourceClipBinding(i, sample.Clip);
                 }
                 m_BlendSpace[playerIndex] = bindings;
             }
@@ -139,10 +154,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                         database.GetClipBinding(i) ??
                         throw new InvalidOperationException(
                             $"Motion Matching Database #{databaseIndex} clip binding #{i} is missing.");
-                    bindings[i] =
-                        new AnimationPoseSourceClipBinding(
+                    if (!binding.IsValid)
+                        throw new InvalidOperationException(
+                            $"Motion Matching Database #{databaseIndex} clip binding #{i} is invalid.");
+                    bindings[i] = binding.IsAcl
+                        ? new AnimationPoseSourceClipBinding(
                             i,
-                            binding.Clip);
+                            binding.ResourceCatalogIndex,
+                            binding.GroupClipIndex)
+                        : new AnimationPoseSourceClipBinding(i, binding.Clip);
                 }
                 m_MotionMatching[databaseIndex] = bindings;
             }
@@ -158,6 +178,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     $"Animation producer #{producerIndex} has no clip catalog.");
             }
             return Buffer(m_Action[producerIndex]);
+        }
+
+        internal bool HasAclResources
+        {
+            get
+            {
+                return ContainsAcl(m_Action) ||
+                       ContainsAcl(m_Clip) ||
+                       ContainsAcl(m_BlendSpace) ||
+                       ContainsAcl(m_MotionMatching);
+            }
         }
 
         internal AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
@@ -201,6 +232,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     $"Motion Matching source '{sample?.SourceIndex}' has no exact Database catalog.");
             }
             return Buffer(m_MotionMatching[databaseIndex]);
+        }
+
+        internal void RegisterAclResources(CharacterAclResourceStore store)
+        {
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
+            RegisterAclResources(m_Action, store);
+            RegisterAclResources(m_Clip, store);
+            RegisterAclResources(m_BlendSpace, store);
+            RegisterAclResources(m_MotionMatching, store);
+        }
+
+        void RegisterAclResources(
+            AnimationPoseSourceClipBinding[][] catalogs,
+            CharacterAclResourceStore store)
+        {
+            for (int i = 0; i < catalogs.Length; i++)
+            {
+                AnimationPoseSourceClipBinding[] catalog = catalogs[i];
+                if (catalog == null)
+                    continue;
+                for (int j = 0; j < catalog.Length; j++)
+                {
+                    if (catalog[j].IsAcl)
+                    {
+                        if ((uint)catalog[j].ResourceCatalogIndex >= (uint)m_Resources.Length)
+                            throw new InvalidOperationException("ACL animation source references an invalid resource catalog index.");
+                        int resourceIndex = store.Register(m_Resources[catalog[j].ResourceCatalogIndex]);
+                        store.Request(resourceIndex);
+                    }
+                }
+            }
+        }
+
+        static bool ContainsAcl(AnimationPoseSourceClipBinding[][] catalogs)
+        {
+            for (int i = 0; i < catalogs.Length; i++)
+            {
+                AnimationPoseSourceClipBinding[] catalog = catalogs[i];
+                if (catalog == null)
+                    continue;
+                for (int j = 0; j < catalog.Length; j++)
+                {
+                    if (catalog[j].IsAcl)
+                        return true;
+                }
+            }
+            return false;
         }
 
         static AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>

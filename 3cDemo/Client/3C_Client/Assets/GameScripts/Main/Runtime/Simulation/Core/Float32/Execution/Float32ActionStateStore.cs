@@ -16,7 +16,8 @@ namespace ThirdPersonSimulation
             string targetKey,
             SimulationActionTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext = default)
+            EquipmentActionContext equipmentContext = default,
+            ulong replacementActionInstanceId = 0)
         {
 			ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
 			SkillId = skillId;
@@ -31,6 +32,7 @@ namespace ThirdPersonSimulation
             TargetSnapshot = targetSnapshot;
             Source = source;
             EquipmentContext = equipmentContext;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
 		public string ActionId { get; }
@@ -44,6 +46,7 @@ namespace ThirdPersonSimulation
         public SimulationActionTargetSnapshot TargetSnapshot { get; }
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
+        public ulong ReplacementActionInstanceId { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
 			!string.IsNullOrEmpty(ContextId) &&
@@ -195,60 +198,180 @@ namespace ThirdPersonSimulation
 
     internal readonly struct Float32ActionInstanceReference
     {
-        public Float32ActionInstanceReference(string actionId, string contextId, ulong instanceId, ulong predictionKey)
+        public Float32ActionInstanceReference(
+            string actionId,
+            string contextId,
+            ulong instanceId,
+            ulong predictionKey,
+            CharacterSkillId skillId = default,
+            OperationHandle skillEntryOperation = default,
+            ulong skillExecutionGeneration = 0)
         {
+            if (skillId.IsValid != skillEntryOperation.IsValid || !skillId.IsValid && skillExecutionGeneration != 0)
+                throw new ArgumentException("Action instance skill execution identity is incomplete.");
             ActionId = actionId ?? string.Empty;
             ContextId = contextId ?? string.Empty;
             InstanceId = instanceId;
             PredictionKey = predictionKey;
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
 
         public string ActionId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
-        public bool IsValid =>
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public ulong SkillExecutionGeneration { get; }
+        public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
+        public bool HasAnyIdentity =>
+            !string.IsNullOrEmpty(ActionId) ||
+            !string.IsNullOrEmpty(ContextId) ||
+            InstanceId != 0 ||
+            PredictionKey != 0 ||
+            SkillId.IsValid ||
+            SkillEntryOperation.IsValid ||
+            SkillExecutionGeneration != 0;
+        public bool IsTransientValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
             InstanceId != 0 &&
-            PredictionKey != 0;
+            PredictionKey != 0 &&
+            (!HasSkillExecution && SkillExecutionGeneration == 0 || HasSkillExecution);
+        public bool IsValid =>
+            IsTransientValid &&
+            (!HasSkillExecution || SkillExecutionGeneration != 0);
+
+        public bool MatchesSkillExecution(Float32ActionInstanceState state) =>
+            IsValid &&
+            state.IsValid &&
+            state.SkillId == SkillId &&
+            state.SkillEntryOperation.Equals(SkillEntryOperation) &&
+            (!HasSkillExecution || state.SkillExecutionGeneration == SkillExecutionGeneration);
+
+        public bool MatchesTransientSkillExecution(Float32ActionInstanceState state) =>
+            IsTransientValid &&
+            state.IsValid &&
+            state.SkillId == SkillId &&
+            state.SkillEntryOperation.Equals(SkillEntryOperation) &&
+            (SkillExecutionGeneration == 0 || state.SkillExecutionGeneration == SkillExecutionGeneration);
 
         public static Float32ActionInstanceReference FromInstance(Float32ActionInstanceState state)
         {
             return state.IsValid
-                ? new Float32ActionInstanceReference(state.ActionId, state.ContextId, state.InstanceId, state.PredictionKey)
+                ? new Float32ActionInstanceReference(
+                    state.ActionId,
+                    state.ContextId,
+                    state.InstanceId,
+                    state.PredictionKey,
+                    state.SkillId,
+                    state.SkillEntryOperation,
+                    state.SkillExecutionGeneration)
                 : default;
         }
     }
 
-	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader
+	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IActionSkillExecutionStorage<CharacterStateValue>
 	{
+		readonly Float32EvaluationFrame m_Frame;
 		readonly Float32StatePort m_State;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
+		readonly ActionSkillExecutionManager<CharacterStateValue> m_SkillExecution;
 
-        public Float32ActionStateStore(Float32ProgramAccess access, Float32StatePort state)
+        public Float32ActionStateStore(
+            Float32ProgramAccess access,
+            Float32StatePort state,
+            Float32EvaluationFrame frame)
             : base(access)
-        {
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
-        }
+		{
+			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+			m_State = state ?? throw new ArgumentNullException(nameof(state));
+			m_SkillExecution = new ActionSkillExecutionManager<CharacterStateValue>(this);
+			m_Frame.BindSkillExecutionStateAccess(this);
+		}
 
-		public bool IsContextActive(string contextId) => FindActive(contextId, out _) >= 0;
+		public void BeginEvaluation()
+		{
+			if (m_SkillExecutionStack.Count != 0)
+				throw new InvalidOperationException("Skill execution stack retained transient state across evaluations.");
+			m_SkillExecution.BeginEvaluation();
+		}
 
-		public bool IsSkillActive(CharacterSkillId skillId) => FindActive(skillId, out _) >= 0;
+		public void EndEvaluation()
+		{
+			if (m_SkillExecutionStack.Count != 0)
+				throw new InvalidOperationException("Skill execution stack has an unclosed runtime scope.");
+			m_SkillExecution.EndEvaluation();
+		}
+
+		public IDisposable EnterSkillExecution(Float32ActionInstanceState action)
+		{
+			if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
+				throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
+			IDisposable execution = m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
+				action.SkillId,
+				action.SkillEntryOperation,
+				action.InstanceId,
+				action.PredictionKey,
+				action.SkillExecutionGeneration));
+			return new TraceExecutionScope(
+				execution,
+				m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
+		}
+
+		public bool RemoveSkillExecution(ulong actionInstanceId)
+		{
+			return m_SkillExecution.Remove(actionInstanceId);
+		}
+
+		public bool IsContextActive(string contextId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive && string.Equals(action.ContextId, contextId ?? string.Empty, StringComparison.Ordinal))
+					return true;
+			}
+			return false;
+		}
+
+		public bool IsSkillActive(CharacterSkillId skillId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive && action.SkillId == skillId)
+					return true;
+			}
+			return false;
+		}
+
+		public bool IsSkillExecutionActive(ulong actionInstanceId) =>
+			m_SkillExecution.IsActive(actionInstanceId);
+
+		public bool HasSkillExecutionFrame(ulong actionInstanceId) =>
+			m_SkillExecution.HasFrame(actionInstanceId);
 
 		public bool IsSkillCompleted(CharacterSkillId skillId) => CompletedSkillInstanceId(skillId) != 0;
 
 		public ulong CompletedSkillInstanceId(CharacterSkillId skillId)
 		{
 			ulong result = 0;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			ulong resultTick = 0;
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
 				if (action.SkillId != skillId || action.State != SimulationActionState.Ended)
 					continue;
-				if (result != 0)
-					throw new InvalidOperationException($"Skill '{skillId}' resolves multiple completed Action instances.");
-				result = action.InstanceId;
+				if (result == 0 ||
+					action.LastTransitionTick > resultTick ||
+					action.LastTransitionTick == resultTick && action.InstanceId > result)
+				{
+					result = action.InstanceId;
+					resultTick = action.LastTransitionTick;
+				}
 			}
 			return result;
 		}
@@ -257,9 +380,68 @@ namespace ThirdPersonSimulation
 		{
 			int found = -1;
 			state = default;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 				MatchActive(addresses.Instance, skillId, ref found, ref state);
 			return found;
+		}
+
+		public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
+		{
+			ulong found = 0;
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState state = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (!state.IsActive || state.SkillId != skillId)
+					continue;
+				if (found != 0)
+				{
+					instanceId = 0;
+					return false;
+				}
+				found = state.InstanceId;
+			}
+			instanceId = found;
+			return found != 0;
+		}
+
+		public int FindCurrent(CharacterSkillId skillId, out Float32ActionInstanceState state)
+		{
+			int found = -1;
+			state = default;
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState candidate = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (!candidate.IsValid || candidate.SkillId != skillId)
+					continue;
+				if (found >= 0)
+					throw new InvalidOperationException($"Skill '{skillId}' resolves multiple Action instances.");
+				found = addresses.Instance.SlotIndex;
+				state = candidate;
+			}
+			return found;
+		}
+
+		public IReadOnlyList<Float32ActionInstanceState> CurrentActions(CharacterSkillId skillId)
+		{
+			var result = new List<Float32ActionInstanceState>();
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState candidate = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (candidate.IsValid && candidate.SkillId == skillId)
+					result.Add(candidate);
+			}
+			result.Sort((left, right) => left.InstanceId.CompareTo(right.InstanceId));
+			return result.AsReadOnly();
+		}
+
+		public IEnumerable<Float32ActionInstanceState> EnumerateActiveActions()
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive)
+					yield return action;
+			}
 		}
 
 		public Float32ActionInstanceState BindSkillExecution(
@@ -273,6 +455,7 @@ namespace ThirdPersonSimulation
 				throw new InvalidOperationException($"Skill '{action.SkillId}' changed EntryOperation for Action instance '{action.InstanceId}'.");
 			if (action.SkillExecutionGeneration != 0 && action.SkillExecutionGeneration != generation)
 				throw new InvalidOperationException($"Skill '{action.SkillId}' changed execution generation for Action instance '{action.InstanceId}'.");
+			m_SkillExecution.BindGeneration(action.InstanceId, generation);
 			Float32ActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
 			WriteState(next);
 			return next;
@@ -284,7 +467,10 @@ namespace ThirdPersonSimulation
 				throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
 			Float32ActionInstanceReference reference = Float32ActionInstanceReference.FromInstance(action);
 			m_SkillExecutionStack.Push(reference);
-			return new SkillExecutionScope(this, reference);
+		return new SkillExecutionScope(
+			this,
+			reference,
+			m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
 		}
 
 		public bool TryGetCurrentSkillExecution(out Float32ActionInstanceState action)
@@ -294,9 +480,9 @@ namespace ThirdPersonSimulation
 				action = default;
 				return false;
 			}
-			action = RequireActive(m_SkillExecutionStack.Peek());
-			return action.IsActive;
-		}
+            action = RequireActiveTransient(m_SkillExecutionStack.Peek());
+            return action.IsActive;
+        }
 
         public int FindActive(string contextId, out Float32ActionInstanceState state)
         {
@@ -304,13 +490,12 @@ namespace ThirdPersonSimulation
             state = default;
             if (!string.IsNullOrEmpty(contextId))
             {
-                IReadOnlyList<TypedStateAddress> addresses = m_Layout.ActionInstances(contextId);
-                for (int i = 0; i < addresses.Count; i++)
-                    MatchActive(addresses[i], contextId, ref found, ref state);
+                foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+                    MatchActive(addresses.Instance, contextId, ref found, ref state);
             }
             else
             {
-                foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+                foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
                     MatchActive(addresses.Instance, string.Empty, ref found, ref state);
             }
             return found;
@@ -319,7 +504,7 @@ namespace ThirdPersonSimulation
         public Float32ActionInstanceState FindOnlyActive()
         {
             Float32ActionInstanceState result = default;
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
             {
                 Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
                 if (!current.IsActive)
@@ -339,23 +524,54 @@ namespace ThirdPersonSimulation
             return slot >= 0 && current.InstanceId == expected.InstanceId ? current : default;
         }
 
-        public Float32ActionInstanceState RequireActive(Float32ActionInstanceReference reference)
+		public Float32ActionInstanceState RequireActive(Float32ActionInstanceReference reference)
         {
             if (!reference.IsValid)
                 return default;
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(reference.ActionId);
-            Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
-            return current.IsActive &&
+			if (!TryGetInstance(reference.InstanceId, out Float32ActionInstanceState current))
+				return default;
+			return current.IsActive &&
+				   string.Equals(current.ActionId, reference.ActionId, StringComparison.Ordinal) &&
                    string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
-                   current.InstanceId == reference.InstanceId &&
-                   current.PredictionKey == reference.PredictionKey
+                   current.PredictionKey == reference.PredictionKey &&
+                   reference.MatchesSkillExecution(current)
+				? current
+				: default;
+		}
+
+		bool IFloat32SkillExecutionStateAccess.TryGet(int slotIndex, out CharacterStateValue value)
+		{
+			return m_SkillExecution.TryGet(slotIndex, out value);
+		}
+
+		bool IFloat32SkillExecutionStateAccess.TrySet(int slotIndex, CharacterStateValue value)
+		{
+			return m_SkillExecution.TrySet(slotIndex, value);
+		}
+
+		bool IFloat32SkillExecutionStateAccess.TryReset(int slotIndex)
+		{
+			return m_SkillExecution.TryReset(slotIndex);
+		}
+
+        public Float32ActionInstanceState RequireActiveTransient(Float32ActionInstanceReference reference)
+        {
+            if (!reference.IsTransientValid)
+                return default;
+			if (!TryGetInstance(reference.InstanceId, out Float32ActionInstanceState current))
+				return default;
+            return current.IsActive &&
+                   string.Equals(current.ActionId, reference.ActionId, StringComparison.Ordinal) &&
+                   string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
+                   current.PredictionKey == reference.PredictionKey &&
+                   reference.MatchesTransientSkillExecution(current)
                 ? current
                 : default;
         }
 
         public bool ContainsInstance(ulong instanceId)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
             {
                 Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
                 if (current.InstanceId == instanceId)
@@ -364,11 +580,64 @@ namespace ThirdPersonSimulation
             return false;
         }
 
+        public bool TryGetInstance(ulong instanceId, out Float32ActionInstanceState state)
+        {
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+            {
+                Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+                if (current.InstanceId != instanceId)
+                    continue;
+                state = current;
+                return true;
+            }
+            state = default;
+            return false;
+        }
+
         public void WriteState(Float32ActionInstanceState action)
         {
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(action.ActionId);
-            m_State.Set(addresses.Instance.SlotIndex, CharacterStateValue.FromActionInstance(action));
+            if (TryFindInstanceSlot(action.InstanceId, out int existingSlot))
+            {
+                m_State.Set(existingSlot, CharacterStateValue.FromActionInstance(action));
+                return;
+            }
+			int slot = FindPendingRequestInstanceSlot(
+				action.ActionId,
+				action.SkillId,
+				action.SkillEntryOperation,
+				action.ContextId,
+				action.InputSequence,
+				action.StartTick,
+				ulong.MaxValue);
+			if (slot < 0)
+				slot = FindEmptyInstanceSlot(action.ActionId);
+			if (slot < 0)
+				throw new InvalidOperationException($"Action '{action.ActionId}' has no free instance state slot.");
+			Float32ActionInstanceState previous = m_State.Get(slot).ActionInstance;
+			if (previous.IsValid && previous.IsTerminal)
+				m_SkillExecution.Remove(previous.InstanceId);
+			m_State.Set(slot, CharacterStateValue.FromActionInstance(action));
         }
+
+		public int RequireRequestSlot(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				if (!m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
+					return addresses.Request.SlotIndex;
+			}
+			throw new InvalidOperationException($"Action '{actionId}' has no free activation request slot.");
+		}
+
+		public bool HasPendingRequest(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				if (m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
+					return true;
+			}
+			return false;
+		}
 
         public int RequireSlot(string actionId, ProgramStateSemantic semantic)
         {
@@ -394,7 +663,7 @@ namespace ThirdPersonSimulation
 		{
 			int found = -1;
 			request = default;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
 				if (!candidate.IsValid || !candidate.Source.IsCharacterControl || candidate.SkillId != skillId)
@@ -407,19 +676,119 @@ namespace ThirdPersonSimulation
 			return found;
 		}
 
+		public int FindPendingRequest(
+			string actionId,
+			CharacterSkillId skillId,
+			OperationHandle entryOperation,
+			string contextId,
+			ulong inputSequence,
+			ulong startTick,
+			ulong replacementActionInstanceId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+				if (candidate.IsValid && candidate.SkillId == skillId &&
+					candidate.SkillEntryOperation.Equals(entryOperation) &&
+					string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
+					candidate.InputSequence == inputSequence &&
+					candidate.StartTick == startTick &&
+					(replacementActionInstanceId == ulong.MaxValue ||
+					 candidate.ReplacementActionInstanceId == replacementActionInstanceId))
+					return addresses.Request.SlotIndex;
+			}
+			return -1;
+		}
+
+		int FindPendingRequestInstanceSlot(
+			string actionId,
+			CharacterSkillId skillId,
+			OperationHandle entryOperation,
+			string contextId,
+			ulong inputSequence,
+			ulong startTick,
+			ulong replacementActionInstanceId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+				if (candidate.IsValid && candidate.SkillId == skillId &&
+					candidate.SkillEntryOperation.Equals(entryOperation) &&
+					string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
+					candidate.InputSequence == inputSequence &&
+					candidate.StartTick == startTick &&
+					(replacementActionInstanceId == ulong.MaxValue ||
+					 candidate.ReplacementActionInstanceId == replacementActionInstanceId))
+					return addresses.Instance.SlotIndex;
+			}
+			return -1;
+		}
+
 		public void ClearRequest(int slot) => m_State.Set(slot, CharacterStateValue.FromActionActivationRequest(default));
 
         public Float32ActionInstanceState ReadSlot(int slot) => m_State.Get(slot).ActionInstance;
 
-        public ulong NextSequence()
-        {
-            int slot = m_Layout.RequireStateSlot(ProgramStateSemantic.ActionEventSequence);
-            ulong value = checked(m_State.Get(slot).UInt64 + 1);
+		bool TryFindInstanceSlot(ulong instanceId, out int slot)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				if (m_State.Get(addresses.Instance.SlotIndex).ActionInstance.InstanceId == instanceId)
+				{
+					slot = addresses.Instance.SlotIndex;
+					return true;
+				}
+			}
+			slot = -1;
+			return false;
+		}
+
+		int FindEmptyInstanceSlot(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (!action.IsValid || action.IsTerminal)
+					return addresses.Instance.SlotIndex;
+			}
+			return -1;
+		}
+
+		public ulong NextSequence()
+		{
+			int slot = m_Layout.RequireStateSlot(ProgramStateSemantic.ActionEventSequence);
+			ulong value = checked(m_State.Get(slot).UInt64 + 1);
             if (value == 0)
                 throw new OverflowException("Action sequence overflowed.");
             m_State.Set(slot, CharacterStateValue.FromUInt64(value));
-            return value;
-        }
+			return value;
+		}
+
+		bool IActionSkillExecutionStorage<CharacterStateValue>.IsSkillStateSlot(int slotIndex) =>
+			m_Layout.IsSkillExecutionStateSlot(slotIndex);
+
+		bool IActionSkillExecutionStorage<CharacterStateValue>.IsValueValid(
+			int slotIndex,
+			CharacterStateValue value) =>
+			value.Kind == m_Program.StateSlots[slotIndex].ValueKind;
+
+		CharacterStateValue IActionSkillExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
+		{
+			ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
+			return slot.DefaultConstantIndex >= 0
+				? CharacterStateValue.FromConstant(
+					m_Program.Constants[slot.DefaultConstantIndex],
+					slot.ValueKind)
+				: CharacterStateValue.Default(slot.ValueKind);
+		}
+
+		ActionSkillExecutionAggregate<CharacterStateValue> IActionSkillExecutionStorage<CharacterStateValue>.ReadAggregate() =>
+			m_State.Get(m_Layout.SkillExecutionStateAddress.SlotIndex).SkillExecutionState;
+
+		void IActionSkillExecutionStorage<CharacterStateValue>.WriteAggregate(
+			ActionSkillExecutionAggregate<CharacterStateValue> aggregate) =>
+			m_State.Set(
+				m_Layout.SkillExecutionStateAddress.SlotIndex,
+				CharacterStateValue.FromSkillExecutionState(aggregate));
 
 		void MatchActive(
 			TypedStateAddress address,
@@ -462,12 +831,17 @@ namespace ThirdPersonSimulation
 		{
 			readonly Float32ActionStateStore m_Owner;
 			readonly Float32ActionInstanceReference m_Expected;
+			readonly IDisposable m_TraceScope;
 			bool m_Disposed;
 
-			public SkillExecutionScope(Float32ActionStateStore owner, Float32ActionInstanceReference expected)
+			public SkillExecutionScope(
+				Float32ActionStateStore owner,
+				Float32ActionInstanceReference expected,
+				IDisposable traceScope)
 			{
 				m_Owner = owner;
 				m_Expected = expected;
+				m_TraceScope = traceScope;
 			}
 
 			public void Dispose()
@@ -476,7 +850,31 @@ namespace ThirdPersonSimulation
 					return;
 				m_Disposed = true;
 				m_Owner.PopSkillExecution(m_Expected);
+				m_TraceScope.Dispose();
 			}
 		}
+
+		sealed class TraceExecutionScope : IDisposable
+		{
+			readonly IDisposable m_Execution;
+			readonly IDisposable m_Trace;
+			bool m_Disposed;
+
+			public TraceExecutionScope(IDisposable execution, IDisposable trace)
+			{
+				m_Execution = execution;
+				m_Trace = trace;
+			}
+
+			public void Dispose()
+			{
+				if (m_Disposed)
+					return;
+				m_Disposed = true;
+				m_Execution.Dispose();
+				m_Trace.Dispose();
+			}
+		}
+
 	}
 }

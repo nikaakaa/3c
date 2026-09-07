@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Unity.Resources;
 using ThirdPersonGameplay.Tick;
+using TEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
@@ -108,16 +111,50 @@ namespace ThirdPersonCharacter.Pipeline
             new List<CharacterPresentationFrameTarget>();
         readonly List<Exception> m_FrameFailures =
             new List<Exception>();
-        readonly CharacterPoseWorkerScheduler m_WorkerScheduler =
-            new CharacterPoseWorkerScheduler();
+        readonly CharacterPoseWorkerScheduler m_WorkerScheduler;
+        readonly CharacterAnimationResourceScope m_AnimationResources;
+        readonly IResourceModule m_ResourceModule;
+        readonly string m_PackageName;
         bool m_Disposed;
 
-        CharacterPoseWorkerPresentationSession()
+        CharacterPoseWorkerPresentationSession(
+            IResourceModule resourceModule,
+            string packageName)
         {
+            m_ResourceModule = resourceModule ??
+                throw new ArgumentNullException(nameof(resourceModule));
+            m_PackageName = string.IsNullOrWhiteSpace(packageName)
+                ? throw new ArgumentException(
+                    "Animation resource package name is required.",
+                    nameof(packageName))
+                : packageName.Trim();
+            m_WorkerScheduler = new CharacterPoseWorkerScheduler();
+            try
+            {
+                m_AnimationResources = new CharacterAnimationResourceScope(
+                    new YooAssetCharacterAnimationAssetLoader(
+                        m_ResourceModule,
+                        m_PackageName),
+                    CharacterAnimationResourceSettings.CorinInitial);
+            }
+            catch
+            {
+                m_WorkerScheduler.Dispose();
+                throw;
+            }
         }
 
-        internal static CharacterPoseWorkerPresentationSession RequireCurrent()
+        internal static CharacterPoseWorkerPresentationSession RequireCurrent(
+            IResourceModule resourceModule,
+            string packageName)
         {
+            resourceModule = resourceModule ??
+                throw new ArgumentNullException(nameof(resourceModule));
+            if (string.IsNullOrWhiteSpace(packageName))
+                throw new ArgumentException(
+                    "Animation resource package name is required.",
+                    nameof(packageName));
+            packageName = packageName.Trim();
             GameplayTickSystem tickSystem = GameplayTickSystem.Current;
             if (s_Current != null &&
                 s_Current.m_TickSystem != null &&
@@ -127,12 +164,27 @@ namespace ThirdPersonCharacter.Pipeline
                 s_Current.Dispose();
                 s_Current = null;
             }
+            if (s_Current != null &&
+                (!ReferenceEquals(s_Current.m_ResourceModule, resourceModule) ||
+                 !string.Equals(
+                     s_Current.m_PackageName,
+                     packageName,
+                     StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "Pose Worker Presentation session resource configuration does not match.");
+            }
             return s_Current ??=
-                new CharacterPoseWorkerPresentationSession();
+                new CharacterPoseWorkerPresentationSession(
+                    resourceModule,
+                    packageName);
         }
 
         internal CharacterPoseWorkerScheduler WorkerScheduler =>
             m_WorkerScheduler;
+
+        internal CharacterAnimationResourceScope AnimationResources =>
+            m_AnimationResources;
 
         internal void Register(CharacterPresentationFrameTarget target)
         {
@@ -156,6 +208,7 @@ namespace ThirdPersonCharacter.Pipeline
         public void PresentationFrame(GameplayPresentationFrameContext context)
         {
             RequireAlive();
+            m_AnimationResources.AdvancePreparation();
             m_ReadyTargets.Clear();
             m_FrameFailures.Clear();
             for (int i = 0; i < m_Targets.Count; i++)
@@ -284,7 +337,14 @@ namespace ThirdPersonCharacter.Pipeline
             m_Targets.Clear();
             m_ReadyTargets.Clear();
             m_FrameFailures.Clear();
-            m_WorkerScheduler.Dispose();
+            try
+            {
+                m_WorkerScheduler.Dispose();
+            }
+            finally
+            {
+                m_AnimationResources.Dispose();
+            }
             m_Disposed = true;
             if (ReferenceEquals(s_Current, this))
                 s_Current = null;

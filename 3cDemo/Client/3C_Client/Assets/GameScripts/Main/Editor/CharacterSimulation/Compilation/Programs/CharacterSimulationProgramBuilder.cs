@@ -76,12 +76,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly OperationSetVersion m_OperationSetVersion;
         readonly int m_TickRate;
         readonly ProgramRevision m_SourceRevision;
+        readonly SimulationProgramRootDescriptor m_Root;
         readonly CharacterSimulationCompileReport m_Report;
         readonly List<SemanticOperation> m_Operations = new List<SemanticOperation>();
         readonly List<SemanticLiteral> m_Literals = new List<SemanticLiteral>();
         readonly List<SemanticConstantInputBinding> m_ConstantInputBindings = new List<SemanticConstantInputBinding>();
         readonly List<ProgramControlFlowEdge> m_ControlFlow = new List<ProgramControlFlowEdge>();
         readonly List<ProgramReference> m_References = new List<ProgramReference>();
+        readonly List<ProgramGraphCallFrame> m_GraphCallFrames = new List<ProgramGraphCallFrame>();
         readonly List<ProgramStateSlot> m_StateSlots = new List<ProgramStateSlot>();
         readonly List<ProgramScopeLayout> m_Scopes = new List<ProgramScopeLayout>();
         readonly List<ProgramWorldRequestLayout> m_WorldRequests = new List<ProgramWorldRequestLayout>();
@@ -105,13 +107,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationSetVersion operationSetVersion,
             int tickRate,
             ProgramRevision sourceRevision,
-            CharacterSimulationCompileReport report)
+            CharacterSimulationCompileReport report,
+            SimulationProgramRootDescriptor root)
         {
             m_ProgramId = programId;
             m_CompilerVersion = compilerVersion;
             m_OperationSetVersion = operationSetVersion;
             m_TickRate = tickRate;
             m_SourceRevision = sourceRevision;
+            if (!root.IsValid)
+                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+            m_Root = root;
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_OutputChannels.Add(new ProgramOutputChannelLayout(0, "Gameplay", ProgramOutputChannelKind.GameplayFact));
             m_OutputChannels.Add(new ProgramOutputChannelLayout(1, "Presentation", ProgramOutputChannelKind.Presentation));
@@ -119,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public CharacterSimulationCompileReport Report => m_Report;
+        public SimulationProgramRootDescriptor Root => m_Root;
 
         public bool TryGetCatalogEntry(ProgramCatalogEntryKind kind, string identity, out int index)
         {
@@ -231,82 +238,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public int DeclareControlModule(
-            CharacterControlModuleContract contract,
+        internal int DeclareStateSlot(
+            string identity,
+            ProgramStateValueKind valueKind,
+            ProgramStateOwnerKind ownerKind,
+            ProgramStateSemantic semantic,
+            string ownerIdentity,
+            ProgramSourceTargetKind sourceTargetKind,
             CharacterSimulationSourceLocation source)
         {
-            if (contract == null)
-                throw new ArgumentNullException(nameof(contract));
-            var fields = new List<ProgramCatalogField>
-            {
-                ConstantField(source, "SemanticVersion", contract.SemanticVersion),
-                IdentityField("InitialState", contract.InitialState.Value)
-            };
-            for (int i = 0; i < contract.Parameters.Count; i++)
-            {
-                CharacterControlParameterDescriptor parameter = contract.Parameters[i];
-                fields.Add(ConstantField(source, $"Parameter:{parameter.Id.Value}:ValueKind", parameter.ValueKind));
-                fields.Add(ConstantField(source, $"Parameter:{parameter.Id.Value}:NumericValue", parameter.NumericValue));
-            }
-            for (int i = 0; i < contract.Motions.Count; i++)
-            {
-                CharacterControlMotionDescriptor motion = contract.Motions[i];
-                fields.Add(IdentityField($"Motion:{motion.Binding}:Input", motion.Input.Value));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:MoveSpeed", motion.MoveSpeed));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:TurnSpeedDegrees", motion.TurnSpeedDegrees));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ExecutionMode", motion.ExecutionMode));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DurationSeconds", motion.DurationSeconds));
-                fields.Add(IdentityField($"Motion:{motion.Binding}:SourceMotion", motion.SourceMotionIdentity));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DisplacementMode", motion.DisplacementMode));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Space", motion.Space));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Priority", motion.Priority));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ConsumeLowerChannels", motion.ConsumeLowerChannels));
-            }
-            int catalog = DeclareCatalogEntry(
-                ProgramCatalogEntryKind.ControlModule,
-                contract.ModuleId.Value,
-                contract.SemanticVersion,
-                fields,
-                source);
-            AddSourceMap(ProgramSourceTargetKind.ControlModule, catalog, source);
-            for (int i = 0; i < contract.StateFields.Count; i++)
-            {
-                CharacterControlStateFieldDescriptor field = contract.StateFields[i];
-                int index = m_StateSlots.Count;
-                m_StateSlots.Add(new ProgramStateSlot(
-                    index,
-                    field.Id.Value,
-                    field.ValueKind,
-                    ProgramStateOwnerKind.Control,
-                    field.Semantic,
-                    contract.ModuleId.Value,
-                    GetDefaultConstant(field.ValueKind)));
-                CharacterSimulationSourceLocation fieldSource = new CharacterSimulationSourceLocation(
-                    source.SourceType,
-                    source.GraphId,
-                    field.Id.Value,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    $"{source.DisplayPath}/state:{field.Id.Value}",
-                    contentHash: source.ContentHash);
-                AddSourceMap(ProgramSourceTargetKind.ControlState, index, fieldSource);
-            }
-            for (int i = 0; i < contract.Transitions.Count; i++)
-            {
-                CharacterControlTransitionDescriptor transition = contract.Transitions[i];
-                CharacterSimulationSourceLocation transitionSource = new CharacterSimulationSourceLocation(
-                    source.SourceType,
-                    source.GraphId,
-                    transition.Id.Value,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    $"{source.DisplayPath}/transition:{transition.Id.Value}",
-                    contentHash: source.ContentHash);
-                AddSourceMap(ProgramSourceTargetKind.ControlTransition, i, transitionSource);
-            }
-            return catalog;
+            int index = m_StateSlots.Count;
+            m_StateSlots.Add(new ProgramStateSlot(
+                index,
+                identity,
+                valueKind,
+                ownerKind,
+                semantic,
+                ownerIdentity,
+                GetDefaultConstant(valueKind)));
+            AddSourceMap(sourceTargetKind, index, source);
+            return index;
+        }
+
+        internal void DeclareSourceMap(
+            ProgramSourceTargetKind targetKind,
+            int targetIndex,
+            CharacterSimulationSourceLocation source)
+        {
+            AddSourceMap(targetKind, targetIndex, source);
         }
 
         public ProgramCatalogField ConstantField(CharacterSimulationSourceLocation source, string name, object value)
@@ -359,6 +318,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             catch (Exception exception)
             {
                 m_Report.Error("reference_invalid", source.Identity, exception.Message);
+            }
+        }
+
+        public void DeclareGraphCallFrame(
+            string identity,
+            OperationHandle ownerOperation,
+            OperationHandle entryOperation,
+            string childGraphIdentity,
+            IEnumerable<ProgramGraphParameterBinding> inputs,
+            IEnumerable<ProgramGraphParameterBinding> outputs,
+            CharacterSimulationSourceLocation source)
+        {
+            try
+            {
+                m_GraphCallFrames.Add(new ProgramGraphCallFrame(
+                    m_GraphCallFrames.Count,
+                    identity,
+                    ownerOperation,
+                    entryOperation,
+                    childGraphIdentity,
+                    inputs,
+                    outputs));
+            }
+            catch (Exception exception)
+            {
+                m_Report.Error("graph_call_frame_invalid", source.Identity, exception.Message);
             }
         }
 
@@ -507,8 +492,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
-            if (m_BodyMotion == null)
+            try
+            {
+                SimulationProgramRootValidation.RequireEntryReference(
+                    m_Root,
+                    m_References,
+                    m_Operations);
+            }
+            catch (Exception exception)
+            {
+                m_Report.Error("program_root_reference_invalid", m_ProgramId.Value, exception.Message);
+            }
+            if (m_Root.IsCharacter && m_BodyMotion == null)
                 m_Report.Error("body_motion_missing", m_ProgramId.Value, "Body Motion descriptor is required.");
+            if (m_Root.IsTimeline && m_BodyMotion != null)
+                m_Report.Error("timeline_body_motion_forbidden", m_ProgramId.Value, "Timeline root cannot declare Character Body Motion.");
             if (!m_Report.IsValid)
                 return null;
             try
@@ -519,7 +517,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OperationSetVersion,
                     m_TickRate,
                     m_SourceRevision,
-                    new ProgramCapabilityManifest(m_GameplayCapabilities, m_RequiredWorldCapabilities));
+                    new ProgramCapabilityManifest(m_GameplayCapabilities, m_RequiredWorldCapabilities),
+                    m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,
                     m_BodyMotion,
@@ -534,7 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OutputChannels,
                     m_CatalogEntries,
                     m_SourceMap,
-                    m_Producers);
+                    m_Producers,
+                    m_GraphCallFrames);
             }
             catch (Exception exception)
             {
@@ -652,7 +652,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 kind == ProgramStateValueKind.BlackboardOwnerToken ||
                 kind == ProgramStateValueKind.BlackboardWriteStamp ||
                 kind == ProgramStateValueKind.GameplayEffectAggregate ||
-                kind == ProgramStateValueKind.EquipmentAggregate)
+                kind == ProgramStateValueKind.EquipmentAggregate ||
+                kind == ProgramStateValueKind.SkillExecutionState)
             {
                 return -1;
             }
@@ -761,10 +762,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    code == SimulationOperationCode.RequestEquipmentChange ||
                    code == SimulationOperationCode.BeginEquipmentChange ||
                    code == SimulationOperationCode.CommitEquipmentChange ||
-                   code == SimulationOperationCode.CancelEquipmentChange ||
-                   code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                   code == SimulationOperationCode.ExitEquipmentFeatureHost ||
-                   code == SimulationOperationCode.ResolveEquipmentActionRoute;
+                   code == SimulationOperationCode.CancelEquipmentChange;
         }
     }
 }

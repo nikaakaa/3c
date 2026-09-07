@@ -4,6 +4,7 @@
     "references": [
         "ThirdPersonClient.Editor",
         "ThirdPersonClient.Runtime",
+        "ThirdPerson.ProductStartup",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",

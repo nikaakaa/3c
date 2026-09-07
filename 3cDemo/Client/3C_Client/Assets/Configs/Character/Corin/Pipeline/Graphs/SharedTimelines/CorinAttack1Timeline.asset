@@ -6815,6 +6815,7 @@ MonoBehaviour:
         m_DeltaTime:
           m_Name: m_DeltaTime
           m_PortId: m_DeltaTime
+          m_DeclarationId: 
           m_DisplayName: DeltaTime
           m_OwnerModuleId: 
           m_FieldKey: m_DeltaTime
@@ -6890,6 +6891,7 @@ MonoBehaviour:
         m_DeltaTime:
           m_Name: m_DeltaTime
           m_PortId: m_DeltaTime
+          m_DeclarationId: 
           m_DisplayName: DeltaTime
           m_OwnerModuleId: 
           m_FieldKey: m_DeltaTime
@@ -6965,6 +6967,7 @@ MonoBehaviour:
         m_DeltaTime:
           m_Name: m_DeltaTime
           m_PortId: m_DeltaTime
+          m_DeclarationId: 
           m_DisplayName: DeltaTime
           m_OwnerModuleId: 
           m_FieldKey: m_DeltaTime
@@ -7040,6 +7043,7 @@ MonoBehaviour:
         m_DeltaTime:
           m_Name: m_DeltaTime
           m_PortId: m_DeltaTime
+          m_DeclarationId: 
           m_DisplayName: DeltaTime
           m_OwnerModuleId: 
           m_FieldKey: m_DeltaTime
@@ -7108,6 +7112,7 @@ MonoBehaviour:
       data:
         m_Name: m_Value
         m_PortId: m_Value
+        m_DeclarationId: 
         m_DisplayName: m_Value
         m_OwnerModuleId: 
         m_FieldKey: m_Value
@@ -7122,6 +7127,7 @@ MonoBehaviour:
       data:
         m_Name: m_Value
         m_PortId: m_Value
+        m_DeclarationId: 
         m_DisplayName: m_Value
         m_OwnerModuleId: 
         m_FieldKey: m_Value
@@ -7136,6 +7142,7 @@ MonoBehaviour:
       data:
         m_Name: m_Value
         m_PortId: m_Value
+        m_DeclarationId: 
         m_DisplayName: m_Value
         m_OwnerModuleId: 
         m_FieldKey: m_Value
@@ -7150,6 +7157,7 @@ MonoBehaviour:
       data:
         m_Name: m_Value
         m_PortId: m_Value
+        m_DeclarationId: 
         m_DisplayName: m_Value
         m_OwnerModuleId: 
         m_FieldKey: m_Value

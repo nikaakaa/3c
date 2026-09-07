@@ -1,0 +1,20 @@
+{
+    "name": "BTSMTL.Timeline.Runtime",
+    "rootNamespace": "BTSMTL.Timeline.Runtime",
+    "references": [
+        "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Tree",
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Fixed"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

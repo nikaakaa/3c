@@ -88,8 +88,8 @@ class SnapshotProperties:
         descriptor = struct.unpack_from("<I", self.descriptors, index * 4)[0]
         offset = descriptor & 0xFFFFF
         stored_count = (descriptor >> 20) & 0x3FF
-        if array_size and kind != 2:
-            raise ValueError("Only the evidenced matrix-array getter is supported")
+        if array_size and kind not in (1, 2):
+            raise ValueError("Only the evidenced vector and matrix array layouts are supported")
         count = stored_count if array_size else 1
         if count < (array_size or 1):
             result.update(status="published_array_too_short", stored_count=stored_count)

@@ -254,7 +254,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("World and Pipeline snapshot Ticks do not match.");
             CompositionIdentity = compositionIdentity;
             SnapshotHash = StableHash.Compute(
-                "fixed-session-snapshot/1",
+                "fixed-session-snapshot/2",
                 compositionIdentity.ToString(),
                 world.WorldHash.ToString(),
                 pipeline.SnapshotHash.ToString());

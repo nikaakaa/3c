@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -24,6 +25,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         readonly List<string> m_ConfigurationErrors = new List<string>();
         SerializedProperty m_RootTreeAsset;
+        SerializedProperty m_ControlModuleId;
+        SerializedProperty m_ControlParameters;
+        SerializedProperty m_SkillDefinitions;
         SerializedProperty m_SimulationTickRate;
         SerializedProperty m_SimulationProgram;
         SerializedProperty m_PresentationProjection;
@@ -51,6 +55,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void OnEnable()
         {
             m_RootTreeAsset = serializedObject.FindProperty("m_RootTreeAsset");
+            m_ControlModuleId = serializedObject.FindProperty("m_ControlModuleId");
+            m_ControlParameters = serializedObject.FindProperty("m_ControlParameters");
+            m_SkillDefinitions = serializedObject.FindProperty("m_SkillDefinitions");
             m_SimulationTickRate = serializedObject.FindProperty("m_SimulationTickRate");
             m_SimulationProgram = serializedObject.FindProperty("m_SimulationProgram");
             m_PresentationProjection = serializedObject.FindProperty("m_PresentationProjection");
@@ -89,6 +96,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Pipeline", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_RootTreeAsset, new GUIContent("Root Tree"));
             EditorGUILayout.PropertyField(m_SimulationTickRate, new GUIContent("Simulation Tick Rate"));
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("Control", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_ControlModuleId, new GUIContent("Control Module"));
+            EditorGUILayout.PropertyField(m_ControlParameters, new GUIContent("Parameters"), true);
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_SkillDefinitions, new GUIContent("Definitions"), true);
             EditorGUILayout.Space(6f);
         }
 
@@ -332,33 +346,60 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (GUILayout.Button("Open Agent Controller"))
                 AgentCharacterControllerSynthesisWindow.Open(definition);
             using (new EditorGUI.DisabledScope(
-                       definition.ActionProfiles.Count == 0))
+                       definition.ActionProfiles.Count == 0 &&
+                       definition.SkillDefinitions.Count == 0))
             {
                 if (GUILayout.Button("Open Action Animation Workspace"))
                 {
                     var menu = new GenericMenu();
-                    for (int i = 0;
-                         i < definition.ActionProfiles.Count;
-                         i++)
+                    if (definition.SkillDefinitions.Count != 0)
                     {
-                        ActionProfile profile =
-                            definition.ActionProfiles[i];
-                        if (!profile ||
-                            string.IsNullOrWhiteSpace(profile.ActionId))
-                            continue;
-                        ActionProfile captured = profile;
-                        menu.AddItem(
-                            new GUIContent(
-                                string.IsNullOrWhiteSpace(
-                                    captured.DisplayName)
-                                    ? captured.ActionId
-                                    : $"{captured.DisplayName} ({captured.ActionId})"),
-                            false,
-                            () =>
-                                ActionAnimationAuthoringWorkspaceWindow.Open(
-                                    new ActionAnimationWorkspaceOpenRequest(
-                                        definition,
-                                        captured.ActionId)));
+                        for (int i = 0; i < definition.SkillDefinitions.Count; i++)
+                        {
+                            CharacterSkillAuthoringDefinition skill =
+                                definition.SkillDefinitions[i];
+                            if (skill == null ||
+                                !skill.ActionProfile ||
+                                string.IsNullOrWhiteSpace(skill.SkillId))
+                                continue;
+                            CharacterSkillAuthoringDefinition capturedSkill = skill;
+                            menu.AddItem(
+                                new GUIContent(
+                                    $"{capturedSkill.SkillId} ({capturedSkill.ActionProfile.ActionId})"),
+                                false,
+                                () =>
+                                    ActionAnimationAuthoringWorkspaceWindow.Open(
+                                        new ActionAnimationWorkspaceOpenRequest(
+                                            definition,
+                                            capturedSkill.ActionProfile.ActionId,
+                                            skillId: capturedSkill.SkillId)));
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0;
+                             i < definition.ActionProfiles.Count;
+                             i++)
+                        {
+                            ActionProfile profile =
+                                definition.ActionProfiles[i];
+                            if (!profile ||
+                                string.IsNullOrWhiteSpace(profile.ActionId))
+                                continue;
+                            ActionProfile captured = profile;
+                            menu.AddItem(
+                                new GUIContent(
+                                    string.IsNullOrWhiteSpace(
+                                        captured.DisplayName)
+                                        ? captured.ActionId
+                                        : $"{captured.DisplayName} ({captured.ActionId})"),
+                                false,
+                                () =>
+                                    ActionAnimationAuthoringWorkspaceWindow.Open(
+                                        new ActionAnimationWorkspaceOpenRequest(
+                                            definition,
+                                            captured.ActionId)));
+                        }
                     }
                     menu.ShowAsContext();
                 }

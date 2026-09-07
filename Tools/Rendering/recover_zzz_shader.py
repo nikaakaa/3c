@@ -350,6 +350,9 @@ def restore_names(source, metadata):
         source = re.sub(rf"\bs{p['bindPoint']}_s\b", f"ZZZSampler_{p['sampler']}", source)
         source = re.sub(rf"(?<!register\()\bs{p['bindPoint']}\b", f"ZZZSampler_{p['sampler']}", source)
     main_position = re.search(r"(?:void|ShaderOutput) main\(", source).start()
+    attribute = list(re.finditer(r"\[numthreads\([^\n]+\)\]\s*", source[:main_position]))
+    if attribute:
+        main_position = attribute[-1].start()
     source = source[:main_position] + "\n".join(helpers.values()) + source[main_position:]
     return "\n".join(declarations) + source, {
         "parameters": parameters, "resources": resources, "samplers": program["m_Samplers"],

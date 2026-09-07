@@ -38,11 +38,12 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramCatalogEntry> catalog,
             IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramReference> references,
+            IReadOnlyList<ProgramProducer> producers,
             Func<int, EquipmentCatalogConstant> constant)
         {
             if (!capabilityEnabled)
                 return new EquipmentProgramLayout(false, null, null, null, null, null, null, null, null);
-            if (catalog == null || stateSlots == null || references == null || constant == null)
+            if (catalog == null || stateSlots == null || references == null || producers == null || constant == null)
                 throw new ArgumentNullException();
             var initial = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentInitialLoadout))
@@ -70,13 +71,10 @@ namespace ThirdPersonSimulation
                 features.Add(new EquipmentProgramFeature(
                     new EquipmentFeatureId(Trim(entry.Identity, "equipment:feature:")),
                     new EquipmentFeatureRevision(UInt64(entry, "FeatureRevision", constant)),
+                    Trim(Identity(entry, "CodeBinding"), "equipment:code:"),
                     Identities(entry, "GrantedTag:").Select(value => Trim(value, "tag:")),
                     Identities(entry, "PassiveEffect:").Select(value => Trim(value, "effect:")),
-                    (WorldCapability)UInt64(entry, "RequiredWorldCapabilities", constant),
-                    ResolvePersistentEntry(
-                        new EquipmentFeatureId(Trim(entry.Identity, "equipment:feature:")),
-                        catalog,
-                        references)));
+                    (WorldCapability)UInt64(entry, "RequiredWorldCapabilities", constant)));
             }
             var items = new List<EquipmentProgramItem>();
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentDefinition))
@@ -102,12 +100,24 @@ namespace ThirdPersonSimulation
             {
                 EquipmentFeatureId featureId = new EquipmentFeatureId(Trim(Identity(entry, "Feature"), "equipment:feature:"));
                 EquipmentActionRouteId routeId = new EquipmentActionRouteId(Trim(Identity(entry, "Route"), "equipment:route:"));
-                OperationHandle root = ResolveRouteEntry(featureId, routeId, catalog, references);
+                CharacterSkillId skillId = new CharacterSkillId(Trim(Identity(entry, "Skill"), "skill:"));
+                if (!catalog.Any(value => value.Kind == ProgramCatalogEntryKind.SkillProgram && string.Equals(value.Identity, $"skill:{skillId.Value}", StringComparison.Ordinal)))
+                    throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references an unknown Skill '{skillId}'.");
+                var requiredParameters = new List<EquipmentParameterId>();
+                foreach (string identity in Identities(entry, "RequiredParameter:"))
+                {
+                    ParseParameterSchema(identity, out EquipmentFeatureId parameterFeatureId, out EquipmentParameterId parameterId);
+                    if (parameterFeatureId != featureId)
+                        throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references Parameter '{identity}' from another Feature.");
+                    requiredParameters.Add(parameterId);
+                }
+                IReadOnlyList<string> requiredProducers = Identities(entry, "RequiredProducer:").ToArray();
                 routeImplementations.Add(new EquipmentProgramRouteImplementation(
                     featureId,
                     routeId,
-                    Trim(Identity(entry, "Action"), "action:"),
-                    root));
+                    skillId,
+                    requiredParameters,
+                    requiredProducers));
             }
             var parameters = new List<EquipmentProgramParameter>();
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentParameterValue))
@@ -143,7 +153,9 @@ namespace ThirdPersonSimulation
                 localStates.Add(new EquipmentProgramLocalState(featureId, stateId, slot));
             }
             IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
-            return new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parameters, localStates, operationBindings);
+            var layout = new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parameters, localStates, operationBindings);
+            layout.ValidateProducerBindings(producers);
+            return layout;
         }
 
         static IReadOnlyList<EquipmentProgramOperationBinding> CompileOperationBindings(
@@ -200,46 +212,6 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException($"Equipment operation '{operation}' has duplicate {kind} bindings.");
         }
 
-        static OperationHandle ResolveRouteEntry(
-            EquipmentFeatureId featureId,
-            EquipmentActionRouteId routeId,
-            IReadOnlyList<ProgramCatalogEntry> catalog,
-            IReadOnlyList<ProgramReference> references)
-        {
-            ProgramCatalogEntry root = catalog.SingleOrDefault(entry =>
-                entry.Kind == ProgramCatalogEntryKind.CompositionRoot &&
-                string.Equals(OptionalIdentity(entry, "Feature"), $"equipment:feature:{featureId.Value}", StringComparison.Ordinal) &&
-                string.Equals(OptionalIdentity(entry, "Route"), $"equipment:route:{routeId.Value}", StringComparison.Ordinal));
-            if (root == null)
-                throw new InvalidDataException($"Equipment Route '{featureId}/{routeId}' has no composition root.");
-            string identity = Trim(root.Identity, "composition-root:");
-            ProgramReference reference = references.SingleOrDefault(value =>
-                !value.HasSourceOperation && value.Kind == ProgramReferenceKind.Operation &&
-                string.Equals(value.ExternalIdentity, identity, StringComparison.Ordinal));
-            return reference == null
-                ? throw new InvalidDataException($"Equipment Route '{featureId}/{routeId}' has no compiled root operation.")
-                : new OperationHandle(reference.TargetIndex);
-        }
-
-        static OperationHandle ResolvePersistentEntry(
-            EquipmentFeatureId featureId,
-            IReadOnlyList<ProgramCatalogEntry> catalog,
-            IReadOnlyList<ProgramReference> references)
-        {
-            ProgramCatalogEntry root = catalog.SingleOrDefault(entry =>
-                entry.Kind == ProgramCatalogEntryKind.CompositionRoot &&
-                string.Equals(OptionalIdentity(entry, "Feature"), $"equipment:feature:{featureId.Value}", StringComparison.Ordinal) &&
-                string.IsNullOrEmpty(OptionalIdentity(entry, "Route")));
-            if (root == null)
-                return default;
-            string identity = Trim(root.Identity, "composition-root:");
-            ProgramReference reference = references.SingleOrDefault(value =>
-                !value.HasSourceOperation && value.Kind == ProgramReferenceKind.Operation &&
-                string.Equals(value.ExternalIdentity, identity, StringComparison.Ordinal));
-            return reference == null
-                ? throw new InvalidDataException($"Equipment Feature '{featureId}' has no compiled persistent root operation.")
-                : new OperationHandle(reference.TargetIndex);
-        }
 
         static void ParseParameterSchema(string identity, out EquipmentFeatureId featureId, out EquipmentParameterId parameterId)
         {
@@ -272,8 +244,6 @@ namespace ThirdPersonSimulation
         }
 
         static string Identity(ProgramCatalogEntry entry, string name) => Field(entry, name, ProgramCatalogFieldKind.Identity).Identity;
-        static string OptionalIdentity(ProgramCatalogEntry entry, string name) =>
-            entry.Fields.FirstOrDefault(value => value.Kind == ProgramCatalogFieldKind.Identity && string.Equals(value.Name, name, StringComparison.Ordinal))?.Identity ?? string.Empty;
         static IEnumerable<string> Identities(ProgramCatalogEntry entry, string prefix) =>
             entry.Fields.Where(value => value.Kind == ProgramCatalogFieldKind.Identity && value.Name.StartsWith(prefix, StringComparison.Ordinal)).OrderBy(value => value.Name, StringComparer.Ordinal).Select(value => value.Identity);
         static bool Boolean(ProgramCatalogEntry entry, string name, Func<int, EquipmentCatalogConstant> constant)

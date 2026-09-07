@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "shader": "miHoYo/Character/NapStencilShadowCaster",
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_corin_hairshadow_source_v3\\622229389.blk_export\\CAB-bb9111c9b7293d6148944a69d88091cf\\miHoYo_Character_NapStencilShadowCaster.json",
+  "sourceSha256": "97bed4e0f419bdcbe8ec0db4c2f639357df8ad2ebc21f67e77f9c3697f3bd714",
+  "recovery": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_corin_hairshadow_shader_typed_v3\\recovery.json",
+  "recoverySha256": "218a6ec3958d3d0ab51f06d5d08694b37552182b4eeecc30cd19d3747ccc6c9b",
+  "entries": [
+    0,
+    6
+  ],
+  "runtimeBound": false
+}

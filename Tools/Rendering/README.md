@@ -1,6 +1,16 @@
 # ZZZ 原始 Shader 离线恢复
 
-当前新增了 [原角色 LUT 的 Unity 绘制与保存验证](ZZZ-LUT恢复合同.md)。主体恢复仍未完成；不要把 LUT 或离线编译成功等同于角色还原完成。旧预编译导入失败链已移至 `Archive/Unity2019Precompiled/`，不再自动注册。
+已闭合的坐标修正：[头部受光轴对账](ZZZ-可琳头部受光轴对账-20260906.md)。原链使用头骨矩阵的本地 Y 轴；已修正项目误用 Z 轴，实际运行验收仍需等待编译通过。
+
+当前进行中：[Scene 深度接口与剩余渲染差异](ZZZ-Scene深度接口与剩余渲染差异-20260906.md)。Shader 接口已补，实际视口验收尚未完成，不将离屏结果冒充 Scene 窗口修复。
+
+2026-09-06 更新：[原描边接入与验收](ZZZ-原描边接入与验收-20260906.md)。原 Pass 已实际绘制，stencil 优先级差异仍明确保留，不宣称整体画面等价。
+
+**统一数据入口：[可琳渲染数据总览](CorinRenderData/README.md)。** 面向阅读的关键表、完整参数明细、原字节与来源索引分层保存；以 dump 和原程序为准，不把项目值或第三方教程混作原始数据。
+
+当前已恢复可琳的完整 LOD0 模型、Face/Eye 双 SubMesh、六份材质、17 张原纹理、MatCap 数组、Body/Face/Eye/Hair/Weapon/HairShadow Shader、角色 LUT、NapEntityPrepare 和 Deferred 合成链。Eye、MatCap 重新加载和全局 Overlay 修复已在 Unity 画面核验；完整描边、角色光照生产条件与缓冲格式仍未全部对齐，不能宣称与 ZZZ 画面等价。最新状态见 [课件对账与剩余差异](ZZZ-课件对账与剩余差异-20260906.md)，资源与接线见 [角色渲染恢复合同](ZZZ-角色渲染静态合同.md)。旧预编译导入失败链已移至 `Archive/Unity2019Precompiled/`，不再自动注册。
+
+原模型的 SeparateMesh 定位、六 Renderer 映射、MatCap Legacy、物理快照 CR3、NapRenderEntityManager 和 208→128 字节实体光照计算见 [角色渲染恢复合同](ZZZ-角色渲染静态合同.md)。
 
 `recover_zzz_shader.py` 负责从现有 ZZZ 导出记录恢复可审查的 D3D11 阶段源码和材质序列化字段。它不访问游戏进程、不调用 Unity、不修改场景或工程材质，不生成替代渲染效果。
 

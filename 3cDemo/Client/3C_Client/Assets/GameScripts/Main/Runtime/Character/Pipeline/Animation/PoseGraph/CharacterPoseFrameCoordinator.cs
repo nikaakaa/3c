@@ -4,6 +4,7 @@ using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Profiling;
@@ -13,27 +14,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseFrameCoordinator
     {
         static readonly ProfilerMarker PrepareMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareName);
         static readonly ProfilerMarker PrepareWorkspaceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Workspace");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareWorkspaceName);
         static readonly ProfilerMarker PrepareStackMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Stack");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareStackName);
         static readonly ProfilerMarker PrepareDirectMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Direct");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareDirectName);
         static readonly ProfilerMarker PrepareClipMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Clip");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareClipName);
         static readonly ProfilerMarker PrepareBlendSpaceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.BlendSpace");
+            new ProfilerMarker(CharacterPerformanceMetrics.PrepareBlendSpaceName);
         static readonly ProfilerMarker ValidateMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Validate");
+            new ProfilerMarker(CharacterPerformanceMetrics.ValidateName);
         static readonly ProfilerMarker GraphEvaluateMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.GraphEvaluate");
+            new ProfilerMarker(CharacterPerformanceMetrics.GraphEvaluateName);
         static readonly ProfilerMarker PoseGraphExecuteMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraphExecute");
+            new ProfilerMarker(CharacterPerformanceMetrics.PoseGraphExecuteName);
         static readonly ProfilerMarker FinalWriteMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.FinalWrite");
+            new ProfilerMarker(CharacterPerformanceMetrics.FinalWriteName);
         static readonly ProfilerMarker SealMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Seal");
+            new ProfilerMarker(CharacterPerformanceMetrics.SealName);
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseProgramRuntime m_Program;
@@ -361,6 +362,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         presentationDeltaSeconds);
                 }
             }
+            CharacterPoseSourceReadinessPageView readinessPage =
+                m_Source.SealReadiness(in sourcePreparations);
+            CharacterPoseSourceReadinessView sourceReadiness =
+                readinessPage.Current;
+            CharacterPoseSourceReadinessView targetReadiness =
+                readinessPage.DeferredTarget;
+            if (sourceReadiness.IsInvalid ||
+                !m_Source.HasPreparedSource &&
+                (targetReadiness.IsPending || targetReadiness.IsInvalid))
+            {
+                if (sourceReadiness.IsInvalid || targetReadiness.IsInvalid)
+                {
+                    CharacterPoseSourceReadinessView failure =
+                        sourceReadiness.IsInvalid
+                            ? sourceReadiness
+                            : targetReadiness;
+                    throw new InvalidOperationException(
+                        $"Character Pose source resource failed with '{failure.ResourceFailureCode}': {failure.Message}");
+                }
+                CharacterPoseSourcePreparedResources pendingResources =
+                    m_Source.RequirePreparedResources(sourceLease);
+                CharacterPoseSourceFrameResult pendingSourceFrame =
+                    m_Source.PrepareFrameResult(
+                        sourceLease,
+                        in pendingResources,
+                        actionSourceSamples,
+                        m_Program.ProviderSourceSamples,
+                        in readinessPage);
+                return new CharacterPoseProgramPrepared(
+                    in pendingSourceFrame);
+            }
             CharacterPoseSourcePreparedResources preparedSources =
                 m_Source.RequirePreparedResources(sourceLease);
             CharacterFinalPosePublicationOutputBinding finalOutput;
@@ -387,7 +419,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     sourceLease,
                     in preparedSources,
                     actionSourceSamples,
-                    m_Program.ProviderSourceSamples);
+                    m_Program.ProviderSourceSamples,
+                    in readinessPage);
             if (!sourceFrame.IsReady)
             {
                 throw new InvalidOperationException(
@@ -651,25 +684,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new AggregateException(
                     "Pose Plan Pending discard failed.",
-                    failure);
-            }
-        }
-
-        internal void DiscardAfterBarrier(
-            CharacterPoseConstraintFrameLease constraintLease,
-            CharacterFinalPosePublicationFrameLease publicationLease)
-        {
-            Exception failure = null;
-            DiscardStep(
-                () => m_Publication.DiscardPending(publicationLease),
-                ref failure);
-            DiscardStep(
-                () => m_Constraints.DiscardFrame(constraintLease),
-                ref failure);
-            if (failure != null)
-            {
-                throw new AggregateException(
-                    "Pose frame post-barrier Pending discard failed.",
                     failure);
             }
         }

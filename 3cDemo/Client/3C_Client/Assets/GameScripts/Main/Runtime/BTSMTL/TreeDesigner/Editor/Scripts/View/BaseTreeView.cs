@@ -377,6 +377,8 @@ namespace TreeDesigner.Editor
             PropertyPort endPort,
             bool resolveVariableTypes)
         {
+            if (!PropertyPortAuthoringService.CanConnect(startNode, startPort, endNode, endPort))
+                throw new InvalidOperationException($"BTSMTL property binding '{startPort?.PortId}' → '{endPort?.PortId}' is not compatible.");
             var existing = new HashSet<string>(
                 Tree.PropertyEdges
                     .Where(value => value != null)

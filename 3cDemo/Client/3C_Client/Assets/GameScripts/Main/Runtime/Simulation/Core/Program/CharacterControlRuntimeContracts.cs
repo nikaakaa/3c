@@ -50,9 +50,11 @@ namespace ThirdPersonSimulation
     {
         bool HasInputRequest(string requestId);
         bool IsSkillActive(CharacterSkillId skillId);
+        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
         bool IsSkillCompleted(CharacterSkillId skillId);
         ulong CompletedSkillInstanceId(CharacterSkillId skillId);
         bool IsActionWindowActive(CharacterSkillId skillId, string windowType);
+        bool TryReadEquipmentActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context);
         bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
@@ -90,7 +92,9 @@ namespace ThirdPersonSimulation
             string sourceInputRequestId,
             bool consumeSourceInputRequest,
             string targetInputValueId = "",
-            string targetKey = "")
+            string targetKey = "",
+            EquipmentActionContext equipmentContext = default,
+            ulong replacementActionInstanceId = 0)
         {
             if (!source.IsCharacterControl || !skillId.IsValid)
                 throw new ArgumentException("Character control skill request identity is incomplete.");
@@ -100,6 +104,8 @@ namespace ThirdPersonSimulation
             ConsumeSourceInputRequest = consumeSourceInputRequest;
             TargetInputValueId = targetInputValueId ?? string.Empty;
             TargetKey = targetKey ?? string.Empty;
+            EquipmentContext = equipmentContext;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public SimulationExecutionSource Source { get; }
@@ -108,6 +114,8 @@ namespace ThirdPersonSimulation
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
         public string TargetKey { get; }
+        public EquipmentActionContext EquipmentContext { get; }
+        public ulong ReplacementActionInstanceId { get; }
     }
 
     public enum CharacterControlSkillStopMode : byte
@@ -122,7 +130,8 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source,
             CharacterSkillId skillId,
             CharacterControlSkillStopMode mode,
-            string reason = "")
+            string reason = "",
+            ulong actionInstanceId = 0)
         {
             if (!source.IsCharacterControl || !skillId.IsValid || !Enum.IsDefined(typeof(CharacterControlSkillStopMode), mode))
                 throw new ArgumentException("Character control skill stop request is incomplete.");
@@ -130,12 +139,14 @@ namespace ThirdPersonSimulation
             SkillId = skillId;
             Mode = mode;
             Reason = reason ?? string.Empty;
+            ActionInstanceId = actionInstanceId;
         }
 
         public SimulationExecutionSource Source { get; }
         public CharacterSkillId SkillId { get; }
         public CharacterControlSkillStopMode Mode { get; }
         public string Reason { get; }
+        public ulong ActionInstanceId { get; }
     }
 
     public readonly struct CharacterControlMotionRequest
@@ -168,5 +179,6 @@ namespace ThirdPersonSimulation
         void SubmitMotion(CharacterControlMotionRequest request);
         bool SubmitSkill(CharacterControlSkillRequest request);
         void SubmitSkillStop(CharacterControlSkillStopRequest request);
+        void Trace(SimulationExecutionSource source, string code, string detail, ulong generation);
     }
 }

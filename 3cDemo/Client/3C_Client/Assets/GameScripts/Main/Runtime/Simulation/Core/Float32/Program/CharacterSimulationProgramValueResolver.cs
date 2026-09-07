@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Value edge '{edge.Identity}' references an operation outside the Program.");
             SimulationOperation source = program.Operations[edge.Source.Value];
             OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
-                .Require(source.Code)
+                .Require(source.Code, source.Handle, program.GraphCallFrames)
                 .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(program, source, sourcePort);
         }

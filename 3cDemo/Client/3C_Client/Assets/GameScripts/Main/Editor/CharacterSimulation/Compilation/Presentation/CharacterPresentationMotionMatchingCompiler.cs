@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ThirdPersonCharacter.Editor.MotionMatching;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEditor;
@@ -25,81 +25,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal static class CharacterPresentationMotionMatchingCompiler
     {
         public static CharacterPresentationMotionMatchingCompilationResult Compile(
-            CharacterAnimationPresentationProfile profile)
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationBuildInput animationBuildInput)
         {
             var diagnostics = new List<string>();
             if (!profile || !profile.PoseGraph)
                 return new CharacterPresentationMotionMatchingCompilationResult(
                     null,
                     diagnostics);
-            CharacterMotionMatchingBinding[] bindings = profile.PoseGraph
-                .EnumerateGraphs()
-                .SelectMany(value => value.Nodes)
-                .Select(value =>
-                    (value?.Payload as CharacterMotionMatchingPosePayload)?.Binding)
-                .Where(value => value)
-                .Distinct()
-                .ToArray();
-            if (bindings.Length == 0)
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    null,
+            MotionMatchingProjectionPayload payload =
+                CharacterMotionMatchingResourceProjectionCompiler.Compile(
+                    profile,
+                    animationBuildInput,
                     diagnostics);
-            CharacterMotionMatchingProfile[] profiles = bindings
-                .Select(value => value.Profile)
-                .Where(value => value)
-                .Distinct()
-                .ToArray();
-            if (profiles.Length != 1)
-            {
-                diagnostics.Add(
-                    "Motion Matching Pose nodes must resolve one exact Motion Matching Profile.");
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    null,
-                    diagnostics);
-            }
-            if (profile.FootPlacementAnalysisMode !=
-                    CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures ||
-                !CharacterFootPlacementAnalysisSource.IsAssetGuid(
-                    profile.FootPlacementAnalysisSourceAssetGuid))
-            {
-                diagnostics.Add(
-                    "Motion Matching Projection requires the Presentation Profile generated Foot Analysis Source.");
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    null,
-                    diagnostics);
-            }
-            string path = AssetDatabase.GUIDToAssetPath(
-                profile.FootPlacementAnalysisSourceAssetGuid);
-            CharacterFootPlacementAnalysisSource analysisSource =
-                AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(path);
-            if (!analysisSource)
-            {
-                diagnostics.Add(
-                    "Motion Matching Projection Foot Analysis Source is missing.");
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    null,
-                    diagnostics);
-            }
-            try
-            {
-                MotionMatchingProjectionPayload payload =
-                    MotionMatchingProjectionPayloadCompiler.Compile(
-                        profiles[0],
-                        profile.PoseGraph,
-                        profile.RigDefinition,
-                        analysisSource,
-                        AnimationClipMotionMatchingParameterCurveResolver.Instance);
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    payload,
-                    diagnostics);
-            }
-            catch (Exception exception)
-            {
-                diagnostics.Add(exception.Message);
-                return new CharacterPresentationMotionMatchingCompilationResult(
-                    null,
-                    diagnostics);
-            }
+            return new CharacterPresentationMotionMatchingCompilationResult(
+                payload,
+                diagnostics);
         }
 
         internal static void AppendRevisionValues(

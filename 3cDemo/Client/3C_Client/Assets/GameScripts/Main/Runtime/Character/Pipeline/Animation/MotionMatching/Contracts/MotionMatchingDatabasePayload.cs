@@ -205,6 +205,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public int GetOrderedSampleIndex(int index) => m_OrderedSampleIndices[index];
         public MotionMatchingCoverageSummaryPayload GetCoverage(int index) => m_Coverage[index];
 
+        internal MotionMatchingDatabasePayload WithClipBindings(
+            MotionMatchingClipBindingPayload[] clipBindings) =>
+            new MotionMatchingDatabasePayload(
+                ArtifactIdentity,
+                SearchDomainId,
+                SampleRate,
+                Capacities,
+                clipBindings,
+                m_Segments,
+                m_Samples,
+                m_NormalizedFeatures,
+                m_NormalizationMedian,
+                m_NormalizationScale,
+                m_ActiveFeatureChannels,
+                m_SearchNodes,
+                m_OrderedSampleIndices,
+                m_Coverage);
+
         void ValidateCanonical(CharacterMotionMatchingSearchDomainId domain, MotionMatchingRuntimeCapacityPayload capacities)
         {
             for (int i = 0; i < m_NormalizedFeatures.Length; i++)
@@ -217,6 +235,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 if (!float.IsFinite(m_NormalizationMedian[i]) || !float.IsFinite(m_NormalizationScale[i]) ||
                     m_NormalizationScale[i] < 0f || m_ActiveFeatureChannels[i] == (m_NormalizationScale[i] == 0f))
                     throw new ArgumentException("Motion Matching Database payload normalization is inconsistent.");
+            }
+            for (int i = 0; i < m_ClipBindings.Length; i++)
+            {
+                MotionMatchingClipBindingPayload binding = m_ClipBindings[i];
+                if (binding == null)
+                    throw new ArgumentException(
+                        $"Motion Matching Database clip binding #{i} is missing.");
+                binding.RequireValid();
             }
             var seen = new bool[m_Samples.Length];
             CharacterMotionMatchingSampleId previous = default;
@@ -258,9 +284,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 {
                     int sampleIndex = segment.FirstSampleIndex + offset;
                     MotionMatchingSamplePayload sample = m_Samples[sampleIndex];
+                    MotionMatchingClipBindingPayload binding =
+                        m_ClipBindings[sample.ClipBindingIndex];
                     if (!sample.SegmentId.Equals(segment.SegmentId) ||
                         sample.SampleTime < segment.StartTime || sample.SampleTime > segment.EndTime ||
-                        !m_ClipBindings[sample.ClipBindingIndex].SourceClipId.Equals(segment.SourceClipId))
+                        segment.EndTime > binding.DurationSeconds + 0.00001f ||
+                        !binding.SourceClipId.Equals(segment.SourceClipId))
                         throw new ArgumentException($"Motion Matching Segment '{segment.SegmentId}' sample #{sampleIndex} is inconsistent.");
                 }
                 if (segment.LoopMode == MotionMatchingSegmentLoopMode.Loop && segment.ContinuationEntrySampleIndex != segment.FirstSampleIndex ||
@@ -442,5 +471,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingDatabasePayload GetDatabase(int index) => m_Databases[index];
         public MotionMatchingNodeBindingPayload GetNodeBinding(
             int index) => m_NodeBindings[index];
+
+        internal MotionMatchingProjectionPayload WithDatabases(
+            MotionMatchingDatabasePayload[] databases) =>
+            new MotionMatchingProjectionPayload(
+                ProfileId,
+                ProfileRevision,
+                FeatureSchema,
+                TrajectoryPolicy,
+                CostProfile,
+                SearchPolicy,
+                databases,
+                (MotionMatchingNodeBindingPayload[])m_NodeBindings.Clone());
     }
 }

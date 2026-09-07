@@ -70,14 +70,28 @@ namespace ThirdPersonSimulation.Fixed
                 .Get(Require(operation, ProgramStateSemantic.TimelineRetentionIdentity))
                 .ActionInstanceReference;
             return value.IsValid
-                ? new TimelineActionContextIdentity(value.ActionId, value.ContextId, value.InstanceId, value.PredictionKey)
+                ? new TimelineActionContextIdentity(
+                    value.ActionId,
+                    value.ContextId,
+                    value.InstanceId,
+                    value.PredictionKey,
+                    value.SkillId,
+                    value.SkillEntryOperation,
+                    value.SkillExecutionGeneration)
                 : default;
         }
 
         public void WriteRetainedActionContext(OperationHandle operation, TimelineActionContextIdentity identity)
         {
             FixedActionInstanceReference value = identity.IsValid
-                ? new FixedActionInstanceReference(identity.ActionId, identity.ContextId, identity.InstanceId, identity.PredictionKey)
+                ? new FixedActionInstanceReference(
+                    identity.ActionId,
+                    identity.ContextId,
+                    identity.InstanceId,
+                    identity.PredictionKey,
+                    identity.SkillId,
+                    identity.SkillEntryOperation,
+                    identity.SkillExecutionGeneration)
                 : default;
             m_State.Set(
                 Require(operation, ProgramStateSemantic.TimelineRetentionIdentity),
@@ -284,11 +298,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (!string.Equals(skillAction.ContextId, contextId, StringComparison.Ordinal))
                     throw new InvalidOperationException(
                         $"Skill Timeline '{SourcePath(operation)}' Action Context does not match its Action instance.");
-                identity = new TimelineActionContextIdentity(
-                    skillAction.ActionId,
-                    skillAction.ContextId,
-                    skillAction.InstanceId,
-                    skillAction.PredictionKey);
+                identity = CreateActionContextIdentity(skillAction);
                 return true;
             }
             if (m_Actions.FindActive(contextId, out FixedActionInstanceState action) < 0)
@@ -296,8 +306,26 @@ namespace ThirdPersonSimulation.Fixed
                 identity = default;
                 return false;
             }
-            identity = new TimelineActionContextIdentity(action.ActionId, action.ContextId, action.InstanceId, action.PredictionKey);
+            identity = CreateActionContextIdentity(action);
             return true;
+        }
+
+        static TimelineActionContextIdentity CreateActionContextIdentity(FixedActionInstanceState action)
+        {
+            return action.SkillExecutionGeneration == 0
+                ? new TimelineActionContextIdentity(
+                    action.ActionId,
+                    action.ContextId,
+                    action.InstanceId,
+                    action.PredictionKey)
+                : new TimelineActionContextIdentity(
+                    action.ActionId,
+                    action.ContextId,
+                    action.InstanceId,
+                    action.PredictionKey,
+                    action.SkillId,
+                    action.SkillEntryOperation,
+                    action.SkillExecutionGeneration);
         }
 
         public bool IsActionContextCurrent(OperationHandle operation, TimelineActionContextIdentity identity)
@@ -319,11 +347,29 @@ namespace ThirdPersonSimulation.Fixed
             int cycle,
             TimelineActionContextIdentity identity)
         {
+            FixedActionInstanceState action = identity.IsValid
+                ? RequireAction(identity)
+                : default;
+            if (!action.IsActive)
+                action = ResolveActionContext(timeline);
             return m_Blackboard.PushTimelineContext(
                 Access.Operation(timeline),
                 Access.Operation(clip),
                 cycle,
-                identity.IsValid ? RequireAction(identity) : default);
+                action);
+        }
+
+        FixedActionInstanceState ResolveActionContext(OperationHandle timeline)
+        {
+            string contextId = Access.GetStringConstant(
+                Access.Operation(timeline),
+                OperationNamedConstant.ActionContext,
+                string.Empty);
+            if (string.IsNullOrEmpty(contextId))
+                return default;
+            return m_Actions.FindActive(contextId, out FixedActionInstanceState action) < 0
+                ? default
+                : action;
         }
 
         public void ResetTreeClipState(OperationHandle operation)
@@ -454,9 +500,18 @@ namespace ThirdPersonSimulation.Fixed
                 action));
         }
 
+        public void SampleTimelineClip(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<FixedScalar> segment) =>
+            throw new InvalidOperationException($"Timeline clip '{SourcePath(operation)}' is not supported by the character simulation target.");
+
+        public void CompleteTimeline(OperationHandle timeline, FixedScalar time) { }
+
+        public void ReleaseTimeline(OperationHandle timeline) { }
+
         public void EmitPresentation(TimelinePresentationOutput<FixedScalar> output)
         {
-            SimulationOperation operation = Access.Operation(output.Operation);
             PresentationCommandKind kind = output.Kind switch
             {
                 TimelinePresentationOutputKind.SelectProducer => PresentationCommandKind.SelectProducer,
@@ -465,9 +520,10 @@ namespace ThirdPersonSimulation.Fixed
                 TimelinePresentationOutputKind.ReleaseProducer => PresentationCommandKind.ReleaseProducer,
                 TimelinePresentationOutputKind.Camera => PresentationCommandKind.Camera,
                 TimelinePresentationOutputKind.Cue => PresentationCommandKind.Cue,
+                TimelinePresentationOutputKind.ForceProducer => PresentationCommandKind.ForceProducer,
                 _ => throw new ArgumentOutOfRangeException(nameof(output))
             };
-            SimulationEventHeader header = m_Presentation.Next(operation);
+            SimulationEventHeader header = m_Presentation.Next(output.Source, output.ProducerGeneration);
             m_Presentation.Add(new PresentationCommand(
                 header,
                 kind,
@@ -486,16 +542,19 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogEntry definition = RequireClipCatalog(operation);
             string cueId = CatalogString(definition, ProgramCatalogFieldId.CueId);
             string cueType = CatalogString(definition, ProgramCatalogFieldId.CueType);
-            SimulationEventHeader factHeader = m_Facts.Next(operation);
+            SimulationEventHeader factHeader = m_Facts.Next(
+                output.Source,
+                output.ProducerGeneration);
             m_Facts.Add(new GameplayFact(factHeader, new GameplayCueFact(cueId, cueType, definition.Identity, 0)));
             EmitPresentation(new TimelinePresentationOutput<FixedScalar>(
                 output.Operation,
+                output.Source,
                 TimelinePresentationOutputKind.Cue,
                 output.SampleTime,
                 FixedScalar.One,
-                0,
+                output.ProducerGeneration,
                 output.Cycle,
-                0,
+                output.SourceActionInstanceId,
                 FixedScalar.Zero));
         }
 
@@ -518,7 +577,10 @@ namespace ThirdPersonSimulation.Fixed
                 identity.ActionId,
                 identity.ContextId,
                 identity.InstanceId,
-                identity.PredictionKey));
+                identity.PredictionKey,
+                identity.SkillId,
+                identity.SkillEntryOperation,
+                identity.SkillExecutionGeneration));
         }
 
         FixedScalar SampleClipWeight(

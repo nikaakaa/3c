@@ -187,7 +187,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId))
                     {
-                        if (IsAnimationPlaybackCommand(current.Command) &&
+                        if (current.Command.Kind == CharacterPresentationCommandKind.ForceProducer)
+                        {
+                            m_Runtime.Publish(current.Command);
+                        }
+                        else if (IsAnimationPlaybackCommand(current.Command) &&
                             IsAnimationPlaybackCommand(applied.Command) &&
                             !SamePlayback(current.Command, applied.Command))
                         {
@@ -328,13 +332,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             return command.Kind == CharacterPresentationCommandKind.SelectProducer ||
                    command.Kind == CharacterPresentationCommandKind.SampleProducer ||
-                   IsTerminal(command);
+                   command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
+                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
         }
 
         static bool IsTerminal(CharacterPresentationCommand command)
         {
             return command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
-                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
+                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer ||
+                   command.Kind == CharacterPresentationCommandKind.ForceProducer;
         }
 
         static bool SamePlayback(
@@ -470,6 +476,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 case CharacterPresentationCommandKind.CompleteProducer:
                 case CharacterPresentationCommandKind.ReleaseProducer:
                     key = new PresentationStateKey("animation-terminal", command.ProducerId, command.ProducerGeneration);
+                    return true;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation command requires a Camera producer.");
+                    key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.Camera:
                     key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);

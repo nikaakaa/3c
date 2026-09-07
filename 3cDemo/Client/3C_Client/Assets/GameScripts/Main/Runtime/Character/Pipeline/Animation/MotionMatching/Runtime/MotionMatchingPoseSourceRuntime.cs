@@ -7,27 +7,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public readonly struct MotionMatchingClipSamplePlan
     {
         public MotionMatchingClipSamplePlan(
-            CharacterMotionMatchingSourceClipId sourceClipId,
+            MotionMatchingClipBindingPayload binding,
             int clipBindingIndex,
-            AnimationClip clip,
-            MotionMatchingPoseTimePlan time,
-            bool rootLocked)
+            MotionMatchingPoseTimePlan time)
         {
-            float clipLength = clip ? clip.length : 0f;
-            bool loopTimeValid = time.Looping
-                ? time.Cycle == 0
-                    ? time.ContinuousVisualTime == time.SampleTime
-                    : time.ContinuousVisualTime > time.SampleTime
-                : time.Cycle == 0 && time.ContinuousVisualTime == time.SampleTime;
-            if (!sourceClipId.IsValid || clipBindingIndex < 0 || !clip ||
-                !float.IsFinite(clipLength) || clipLength <= 0f ||
-                !time.IsValid || time.SampleTime > clipLength || !loopTimeValid || time.AnimatorStateSpeed != 0f || !rootLocked)
+            if (binding == null || clipBindingIndex < 0 || !time.IsValid ||
+                time.SampleTime > binding.DurationSeconds ||
+                !IsLoopTimeValid(time) ||
+                time.AnimatorStateSpeed != 0f)
                 throw new ArgumentException("Motion Matching Clip Sample Plan is invalid.");
-            SourceClipId = sourceClipId;
+            binding.RequireValid();
+            SourceClipId = binding.SourceClipId;
             ClipBindingIndex = clipBindingIndex;
-            Clip = clip;
+            Clip = binding.Clip;
             Time = time;
-            RootLocked = rootLocked;
+            DurationSeconds = binding.DurationSeconds;
+            SourceIsLooping = binding.IsLooping;
+            RootLocked = binding.RootLocked;
+            Backend = binding.Backend;
+            ResourceCatalogIndex = binding.ResourceCatalogIndex;
+            GroupClipIndex = binding.GroupClipIndex;
         }
 
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
@@ -35,15 +34,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public AnimationClip Clip { get; }
         public MotionMatchingPoseTimePlan Time { get; }
         public float ClipTime => Time.SampleTime;
-        public float NormalizedTime => ClipTime / Clip.length;
+        public float DurationSeconds { get; }
+        public float NormalizedTime => ClipTime / DurationSeconds;
         public double ContinuousVisualTime => Time.ContinuousVisualTime;
         public int Cycle => Time.Cycle;
         public float VisualTimeScale => Time.VisualTimeScale;
         public float AnimatorStateSpeed => Time.AnimatorStateSpeed;
         public bool IsLooping => Time.Looping;
+        public bool SourceIsLooping { get; }
         public bool RootLocked { get; }
-        public bool IsValid => SourceClipId.IsValid && ClipBindingIndex >= 0 && Clip &&
-                               Time.IsValid && RootLocked;
+        public CharacterAnimationSamplingBackendKind Backend { get; }
+        public int ResourceCatalogIndex { get; }
+        public int GroupClipIndex { get; }
+        public bool IsAcl => Backend == CharacterAnimationSamplingBackendKind.Acl;
+        public bool IsValid =>
+            SourceClipId.IsValid &&
+            ClipBindingIndex >= 0 &&
+            Time.IsValid &&
+            IsLoopTimeValid(Time) &&
+            RootLocked &&
+            float.IsFinite(DurationSeconds) &&
+            DurationSeconds > 0f &&
+            ClipTime >= 0f &&
+            ClipTime <= DurationSeconds &&
+            AnimatorStateSpeed == 0f &&
+            (Backend == CharacterAnimationSamplingBackendKind.NativeClip
+                ? Clip && ResourceCatalogIndex == -1 && GroupClipIndex == -1 &&
+                  DurationSeconds == Clip.length &&
+                  SourceIsLooping == Clip.isLooping
+                : Backend == CharacterAnimationSamplingBackendKind.Acl &&
+                  !Clip &&
+                  ResourceCatalogIndex >= 0 && GroupClipIndex >= 0);
+
+        public void RequireValid()
+        {
+            if (!IsValid)
+                throw new InvalidOperationException(
+                    "Motion Matching Clip Sample Plan is invalid.");
+        }
+
+        static bool IsLoopTimeValid(MotionMatchingPoseTimePlan time) =>
+            time.Looping
+                ? time.Cycle == 0
+                    ? time.ContinuousVisualTime == time.SampleTime
+                    : time.ContinuousVisualTime > time.SampleTime
+                : time.Cycle == 0 &&
+                  time.ContinuousVisualTime == time.SampleTime;
     }
 
     public readonly struct MotionMatchingPoseParameterSample
@@ -80,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !providerId.IsValid ||
                 !sourceIndex.IsValid || !playerNodeId.IsValid ||
                 !selectionGeneration.IsValid || frameSequence == 0 ||
+                !clipSamplePlan.IsValid ||
                 !footPlacementWeight.IsValid ||
                 !footPlacementWeight.ParameterId.Equals(MotionMatchingPoseSourceRuntime.FootPlacementWeightParameterId) ||
                 !footFeatures.IsValid || !planId.IsValid)
@@ -138,17 +175,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException($"Motion Matching Pose Source cannot lower invalid selection '{selection.InvalidReason}'.");
             MotionMatchingSamplePayload sample = m_Database.GetSample(selection.SampleIndex);
             MotionMatchingClipBindingPayload clip = m_Database.GetClipBinding(sample.ClipBindingIndex);
-            if (clip == null || !clip.RootLocked || !clip.Clip)
-                throw new InvalidOperationException("Motion Matching selected sample has no valid root-locked Clip binding.");
+            if (clip == null || !clip.IsValid)
+                throw new InvalidOperationException("Motion Matching selected sample has no valid Clip binding.");
             if (clip.FootPlacementWeightCurve == null ||
                 !clip.FootPlacementWeightCurve.ParameterId.Equals(FootPlacementWeightParameterId))
                 throw new InvalidOperationException($"Motion Matching Pose Source requires Projection parameter '{FootPlacementWeightParameterName}' for the selected Clip sample.");
             var clipSamplePlan = new MotionMatchingClipSamplePlan(
-                clip.SourceClipId,
+                clip,
                 sample.ClipBindingIndex,
-                clip.Clip,
-                selection.PoseTime,
-                true);
+                selection.PoseTime);
             var footPlacementWeight = new MotionMatchingPoseParameterSample(
                 FootPlacementWeightParameterId,
                 clip.FootPlacementWeightCurve.Sample(clipSamplePlan.NormalizedTime));

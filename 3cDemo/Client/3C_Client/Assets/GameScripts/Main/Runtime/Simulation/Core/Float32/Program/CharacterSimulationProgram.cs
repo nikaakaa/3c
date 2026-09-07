@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -191,7 +192,8 @@ namespace ThirdPersonSimulation
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
-            ProgramCapabilityManifest capabilities)
+            ProgramCapabilityManifest capabilities,
+            SimulationProgramRootDescriptor root)
         {
             if (!programId.IsValid || !operationSetVersion.IsValid || tickRate <= 0 || string.IsNullOrEmpty(sourceRevision.Value) || !semanticHash.IsValid)
                 throw new ArgumentException("Program manifest is incomplete.");
@@ -206,6 +208,9 @@ namespace ThirdPersonSimulation
             SemanticHash = semanticHash;
             NumericProfile = numericProfile;
             Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+            if (!root.IsValid)
+                throw new ArgumentException("Program root descriptor is invalid.", nameof(root));
+            Root = root;
         }
         public ProgramId ProgramId { get; }
         public string CompilerVersion { get; }
@@ -215,6 +220,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public ProgramCapabilityManifest Capabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public sealed class CharacterSimulationProgram
@@ -225,6 +231,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<ProgramConstantInputBinding> m_ConstantInputBindings;
         readonly ReadOnlyCollection<ProgramControlFlowEdge> m_ControlFlow;
         readonly ReadOnlyCollection<ProgramReference> m_References;
+        readonly ReadOnlyCollection<ProgramGraphCallFrame> m_GraphCallFrames;
         readonly ReadOnlyCollection<ProgramStateSlot> m_StateSlots;
         readonly ReadOnlyCollection<ProgramScopeLayout> m_Scopes;
         readonly ReadOnlyCollection<ProgramWorldRequestLayout> m_WorldRequests;
@@ -250,16 +257,23 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
-            IEnumerable<ProgramProducer> producers)
+            IEnumerable<ProgramProducer> producers,
+            IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            BodyMotion = bodyMotion ?? throw new ArgumentNullException(nameof(bodyMotion));
-            if ((Manifest.Capabilities.RequiredWorldCapabilities & WorldCapability.AirborneVerticalMotion) == 0)
+            if (Manifest.Root.IsCharacter && bodyMotion == null)
+                throw new ArgumentNullException(nameof(bodyMotion));
+            if (Manifest.Root.IsTimeline && bodyMotion != null)
+                throw new ArgumentException("Timeline Program cannot contain Character Body Motion.", nameof(bodyMotion));
+            BodyMotion = bodyMotion;
+            if (Manifest.Root.IsCharacter &&
+                (Manifest.Capabilities.RequiredWorldCapabilities & WorldCapability.AirborneVerticalMotion) == 0)
                 throw new ArgumentException("Program Body Motion requires AirborneVerticalMotion capability.", nameof(manifest));
             m_OperationDefinitions = SortIndexed(operationDefinitions, value => value.Index, "operation definition");
             m_Operations = SortIndexed(operations, value => value.Handle.Value, "operation");
             m_Constants = SortIndexed(constants, value => value.Index, "constant");
-            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations);
+            m_GraphCallFrames = SortIndexed(graphCallFrames, value => value.Index, "graph call frame");
+            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations, m_GraphCallFrames);
             m_StateSlots = SortIndexed(stateSlots, value => value.Index, "state slot");
             m_WorldRequests = SortIndexed(worldRequests, value => value.Index, "world request");
             m_OutputChannels = SortIndexed(outputChannels, value => value.Index, "output channel");
@@ -270,7 +284,12 @@ namespace ThirdPersonSimulation
             m_References = SortByIdentity(references, value => value.Identity, "reference");
             m_Scopes = SortByIdentity(scopes, value => value.Identity, "scope");
             m_SourceMap = SortSourceMap(sourceMap);
+            ProgramSourceMapCoverage.Require(
+                m_SourceMap,
+                m_Operations.Count,
+                m_StateSlots.Count);
             ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
+            ValidateRootReference();
             ValidateReferences();
             LayoutHash = CharacterSimulationProgramCodec.ComputeLayoutHash(this);
             ProgramHash = CharacterSimulationProgramCodec.ComputeProgramHash(this);
@@ -285,6 +304,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;
         public IReadOnlyList<ProgramControlFlowEdge> ControlFlow => m_ControlFlow;
         public IReadOnlyList<ProgramReference> References => m_References;
+        public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames => m_GraphCallFrames;
         public IReadOnlyList<ProgramStateSlot> StateSlots => m_StateSlots;
         public IReadOnlyList<ProgramScopeLayout> Scopes => m_Scopes;
         public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests => m_WorldRequests;
@@ -297,6 +317,30 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramProducer> Producers => m_Producers;
         public LayoutHash LayoutHash { get; }
         public ProgramHash ProgramHash { get; }
+
+        void ValidateRootReference()
+        {
+            ProgramReference root = null;
+            for (int i = 0; i < m_References.Count; i++)
+            {
+                ProgramReference reference = m_References[i];
+                if (!reference.HasSourceOperation &&
+                    reference.Kind == ProgramReferenceKind.Operation &&
+                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                {
+                    if (root != null)
+                        throw new InvalidDataException("Program root operation reference is duplicated.");
+                    root = reference;
+                }
+            }
+            if (root == null)
+                throw new InvalidDataException("Program root operation reference is missing.");
+            if (root.TargetIndex < 0 || root.TargetIndex >= m_Operations.Count ||
+                m_Operations[root.TargetIndex].Code != SimulationOperationCode.Root)
+                throw new InvalidDataException("Program root operation reference does not target a Root operation.");
+            if (!string.Equals(root.ExternalIdentity, Manifest.Root.EntryIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Program root operation reference does not match the root entry identity.");
+        }
 
         void ValidateReferences()
         {
@@ -335,15 +379,24 @@ namespace ThirdPersonSimulation
                 string key = edge.Target.Value.ToString() + ":" + edge.TargetPort;
                 if (!valueSources.Add(key))
                     throw new ArgumentException($"Operation '{edge.Target}' input port '{edge.TargetPort}' has multiple linked Value sources.");
-                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Source.Value].Code).RequireSelection(edge.SourcePort);
-                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Target.Value].Code).RequireInput(edge.TargetPort);
+                CharacterGameplayValuePortContracts
+                    .Require(m_Operations[edge.Source.Value].Code, m_Operations[edge.Source.Value].Handle, m_GraphCallFrames)
+                    .RequireSelection(edge.SourcePort);
+                CharacterGameplayValuePortContracts
+                    .Require(m_Operations[edge.Target.Value].Code, m_Operations[edge.Target.Value].Handle, m_GraphCallFrames)
+                    .RequireInput(edge.TargetPort);
             }
             for (int i = 0; i < m_ConstantInputBindings.Count; i++)
             {
                 ProgramConstantInputBinding binding = m_ConstantInputBindings[i];
                 RequireIndex(binding.TargetOperation.Value, m_Operations.Count, "constant input operation");
                 RequireIndex(binding.ConstantIndex, m_Constants.Count, "constant input constant");
-                OperationValuePortDefinition port = CharacterGameplayValuePortContracts.Require(m_Operations[binding.TargetOperation.Value].Code).RequireInput(binding.TargetPort);
+                OperationValuePortDefinition port = CharacterGameplayValuePortContracts
+                    .Require(
+                        m_Operations[binding.TargetOperation.Value].Code,
+                        m_Operations[binding.TargetOperation.Value].Handle,
+                        m_GraphCallFrames)
+                    .RequireInput(binding.TargetPort);
                 if (!port.Accepts(binding.ResolvedValueKind) || ConstantKind(m_Constants[binding.ConstantIndex].Kind) != binding.ResolvedValueKind)
                     throw new ArgumentException($"Constant input '{binding.TargetOperation}/{binding.TargetPort}' has incompatible kind '{binding.ResolvedValueKind}'.");
                 string key = binding.TargetOperation.Value.ToString() + ":" + binding.TargetPort;
@@ -370,6 +423,17 @@ namespace ThirdPersonSimulation
                 };
                 RequireIndex(reference.TargetIndex, count, $"reference '{reference.Identity}' target");
             }
+            var operationCodes = new SimulationOperationCode[m_Operations.Count];
+            for (int i = 0; i < m_Operations.Count; i++)
+                operationCodes[i] = m_Operations[i].Code;
+            for (int i = 0; i < m_GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = m_GraphCallFrames[i];
+                RequireIndex(frame.OwnerOperation.Value, m_Operations.Count, $"graph call frame '{frame.Identity}' owner");
+                RequireIndex(frame.EntryOperation.Value, m_Operations.Count, $"graph call frame '{frame.Identity}' entry");
+                ValidateGraphParameterBindings(frame);
+            }
+            ProgramGraphCallFrameContract.ValidateCoverage(operationCodes, m_GraphCallFrames);
             for (int i = 0; i < m_StateSlots.Count; i++)
             {
                 int defaultIndex = m_StateSlots[i].DefaultConstantIndex;
@@ -389,6 +453,26 @@ namespace ThirdPersonSimulation
                 }
             }
             ValidateMotionModifiers();
+        }
+
+        void ValidateGraphParameterBindings(ProgramGraphCallFrame frame)
+        {
+            ValidateGraphParameterBindings(frame, frame.Inputs);
+            ValidateGraphParameterBindings(frame, frame.Outputs);
+        }
+
+        void ValidateGraphParameterBindings(
+            ProgramGraphCallFrame frame,
+            IReadOnlyList<ProgramGraphParameterBinding> bindings)
+        {
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                ProgramGraphParameterBinding binding = bindings[i];
+                RequireIndex(binding.StateSlot, m_StateSlots.Count, $"graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' state");
+                SemanticValueKind actualKind = CharacterGameplayValuePortContracts.FromState(m_StateSlots[binding.StateSlot].ValueKind);
+                if (actualKind != binding.ValueKind)
+                    throw new ArgumentException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' has incompatible state kind '{actualKind}'.");
+            }
         }
 
         void ValidateMotionModifiers()
@@ -478,7 +562,8 @@ namespace ThirdPersonSimulation
 
         static ReadOnlyCollection<ProgramConstantInputBinding> SortConstantInputs(
             IEnumerable<ProgramConstantInputBinding> source,
-            IReadOnlyList<SimulationOperation> operations)
+            IReadOnlyList<SimulationOperation> operations,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             var values = new List<ProgramConstantInputBinding>(source ?? Array.Empty<ProgramConstantInputBinding>());
             values.Sort((left, right) =>
@@ -489,8 +574,18 @@ namespace ThirdPersonSimulation
                 if (left.TargetOperation.Value < 0 || left.TargetOperation.Value >= operations.Count ||
                     right.TargetOperation.Value < 0 || right.TargetOperation.Value >= operations.Count)
                     return string.CompareOrdinal(left.TargetPort, right.TargetPort);
-                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts.Require(operations[left.TargetOperation.Value].Code).RequireInput(left.TargetPort);
-                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts.Require(operations[right.TargetOperation.Value].Code).RequireInput(right.TargetPort);
+                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts
+                    .Require(
+                        operations[left.TargetOperation.Value].Code,
+                        operations[left.TargetOperation.Value].Handle,
+                        graphCallFrames)
+                    .RequireInput(left.TargetPort);
+                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts
+                    .Require(
+                        operations[right.TargetOperation.Value].Code,
+                        operations[right.TargetOperation.Value].Handle,
+                        graphCallFrames)
+                    .RequireInput(right.TargetPort);
                 int byOrder = leftPort.Order.CompareTo(rightPort.Order);
                 return byOrder != 0 ? byOrder : string.CompareOrdinal(left.TargetPort, right.TargetPort);
             });

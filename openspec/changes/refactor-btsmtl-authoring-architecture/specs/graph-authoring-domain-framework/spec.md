@@ -4,6 +4,8 @@
 
 系统 MUST在BTSMTL作者层提供唯一Graph Authoring Domain Framework，统一承载Graph document、capability catalog、canvas、node view、port view、selection、clipboard、search、Details host、Navigator host、Mutation和diagnostics契约。技能与AI领域 MUST复用既有共享作者基础；它们与Character Presentation Pose领域分别适配该框架。Pose MUST保持独立正式Graph数据、runtime node和compiler operation，不能被迫继承BTSMTL图类型。
 
+技能定义、Flow／局部状态机、Timeline／TreeClip、变量／参数及领域叶子的作者规则 MUST由明确内容模块拥有。中央窗口、Codec／Mapper、Reconciler和编译协调器 MUST消费正式领域合同；MUST NOT分别保存相同字段、节点能力或业务模式分支。模块提取 MUST迁移正式调用者并删除原业务实现，MUST NOT用partial、转发壳或万能Context代替职责迁移。唯一整包Reconciler和Transaction Service可以组合内容模块，MUST继续各自拥有一次完整对账和事务生命周期；“唯一入口”MUST NOT被解释为所有领域细节都写进一个中央类。
+
 #### Scenario: 打开不同领域Graph
 
 - **WHEN** 作者分别打开BTSMTL Graph与Pose Graph
@@ -20,6 +22,19 @@
 - **WHEN** 作者打开角色控制binding
 - **THEN** MUST显示已登记代码模块与允许编辑的参数
 - **AND** MUST不生成角色RootTree页面或把C#控制伪装为万能节点
+
+#### Scenario: 拆分技能作者中央类
+
+- **WHEN** 技能或Graph内容规则从中央类迁入正式模块
+- **THEN** 模块 MUST声明输入输出，UI、Document与Compiler通过既有领域合同消费相同局部语义
+- **AND** 原中央类 MUST删除已迁出的字段／能力判断，只保留其正式协调职责
+- **AND** Document MUST先形成完整Mutation计划再进入唯一事务，不按分片独立apply
+
+#### Scenario: 核对结构迁移完成
+
+- **WHEN** 一个作者模块拆分任务准备标记完成
+- **THEN** MUST能够定位新模块、实际调用者与已删除的旧业务分支
+- **AND** 单独提供编译通过、文件变短或新增helper MUST不能作为完成证据
 
 
 ### Requirement: Navigator与Data Catalog必须复用统一信息架构

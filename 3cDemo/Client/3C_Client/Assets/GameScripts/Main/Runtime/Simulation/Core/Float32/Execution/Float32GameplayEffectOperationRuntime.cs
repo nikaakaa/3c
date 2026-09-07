@@ -269,7 +269,8 @@ namespace ThirdPersonSimulation
 								PresentationCommandKind.Cue,
 								producer.Identity,
 								Float32Scalar.Zero,
-								Float32Scalar.One));
+								Float32Scalar.One,
+								presentationHeader.Activation.Generation));
 							break;
 						}
 						case PortableEffectFailureRuntimeChange failure:

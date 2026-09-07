@@ -197,20 +197,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         if (dependency.GraphId.IsValid)
                             AddOwner(dependency.GraphId);
                     }
-                    if (!handler.Requires(
-                            CharacterPoseNodeRuntimeRequirement.StateMachine))
-                        continue;
-                    CharacterPoseStateMachineDefinition machine =
-                        ((CharacterPoseStateMachineNodePayload)
-                            node.Payload).StateMachine;
-                    if (machine == null)
-                        continue;
-                    foreach (CharacterPoseStateDefinition state in
-                             machine.States)
-                    {
-                        if (state?.PoseGraphId.IsValid == true)
-                            AddOwner(state.PoseGraphId);
-                    }
                 }
             }
             foreach (PoseGraphId graphId in catalogIds)

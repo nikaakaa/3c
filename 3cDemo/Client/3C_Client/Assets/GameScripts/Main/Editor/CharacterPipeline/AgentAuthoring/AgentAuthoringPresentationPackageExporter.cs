@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .Distinct()
                 .SingleOrDefault() ?? throw new InvalidOperationException(
                 $"Linked Pose Implementation '{implementation.ImplementationId}' must have one graph owner.");
-            AgentPackageAssetReferenceV4 asset = Asset(implementation, true);
+            AgentPackageObjectReference asset = Asset(implementation, true);
             var result = new AgentPackageLinkedPoseImplementationFile
             {
                 id = ReferenceIdentity(asset),
@@ -176,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static AgentPackagePresentationProfileFile ExportProfile(
             CharacterAnimationPresentationProfile profile)
         {
-            AgentPackageAssetReferenceV4 owner = Asset(profile, true);
+            AgentPackageObjectReference owner = Asset(profile, true);
             return new AgentPackagePresentationProfileFile
             {
                 id = owner.assetGuid,
@@ -231,8 +231,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (selector is not CharacterEquipmentLinkedPoseSelectionBinding equipment)
                 throw new InvalidOperationException(
-                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v4 codec.");
-            AgentPackageAssetReferenceV4 asset = Asset(equipment, true);
+                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v5 codec.");
+            AgentPackageObjectReference asset = Asset(equipment, true);
             return new AgentPackageLinkedPoseSelectorBinding
             {
                 id = ReferenceIdentity(asset),
@@ -276,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                  string.Empty,
                 databases = motionMatching?.Databases
                     .Select(value => Asset(value, true))
-                    .ToList() ?? new List<AgentPackageAssetReferenceV4>(),
+                    .ToList() ?? new List<AgentPackageObjectReference>(),
                 footAnalysisIdentity = binding.FootAnalysisIdentity,
                 contentRevision = binding.ContentRevision
             };
@@ -320,7 +320,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 CharacterAnimationClipContentIdentity identity =
                     CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
-                AgentPackageAssetReferenceV4 reference = Asset(clip, true);
+                AgentPackageObjectReference reference = Asset(clip, true);
                 var file = new AgentPackageAnimationClipCurvesFile
                 {
                     id = $"{reference.assetGuid}:{reference.localFileId}",
@@ -616,7 +616,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
         }
 
-        static AgentPackageAssetReferenceV4 Asset(
+        static AgentPackageObjectReference Asset(
             UnityEngine.Object asset,
             bool required)
         {
@@ -643,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 throw new InvalidOperationException(
                     $"Presentation asset '{asset.name}' has no persistent object identity.");
             }
-            return new AgentPackageAssetReferenceV4
+            return new AgentPackageObjectReference
             {
                 assetPath = path,
                 assetGuid = guid,
@@ -651,12 +651,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
         }
 
-        internal static AgentPackageAssetReferenceV4 ExportAsset(
+        internal static AgentPackageObjectReference ExportAsset(
             UnityEngine.Object asset,
             bool required) => Asset(asset, required);
 
         internal static string ReferenceIdentity(
-            AgentPackageAssetReferenceV4 reference) =>
+            AgentPackageObjectReference reference) =>
             reference == null
                 ? string.Empty
                 : string.IsNullOrWhiteSpace(reference.localId)

@@ -4,7 +4,9 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -40,16 +42,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterPresentationProjectionCompileRequest(
             ValidatedSemanticIrArtifact artifact,
             CharacterAuthoringCompilationModel model,
-            CharacterFootPlacementAnalysisCompilation footAnalysis)
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
+            CharacterAnimationBuildInput animationBuildInput)
         {
             Artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
             Model = model ?? throw new ArgumentNullException(nameof(model));
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+            AnimationBuildInput = animationBuildInput ?? throw new ArgumentNullException(nameof(animationBuildInput));
         }
 
         public ValidatedSemanticIrArtifact Artifact { get; }
         public CharacterAuthoringCompilationModel Model { get; }
         public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+        public CharacterAnimationBuildInput AnimationBuildInput { get; }
     }
 
     internal sealed class CharacterPresentationProjectionDiagnostic
@@ -72,20 +77,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationProjection projection,
             CharacterPresentationSemanticContract contract,
             string projectionRevision,
-            IReadOnlyList<CharacterPresentationProjectionDiagnostic> diagnostics)
+            IReadOnlyList<CharacterPresentationProjectionDiagnostic> diagnostics,
+            CharacterAnimationBuildCatalog animationCatalog)
         {
             Projection = projection;
             Contract = contract ?? throw new ArgumentNullException(nameof(contract));
-            ProjectionRevision = string.IsNullOrWhiteSpace(projectionRevision)
-                ? throw new ArgumentException("Projection revision is required.", nameof(projectionRevision))
-                : projectionRevision;
+            ProjectionRevision = projectionRevision ?? string.Empty;
             Diagnostics = diagnostics ?? Array.Empty<CharacterPresentationProjectionDiagnostic>();
+            AnimationCatalog = animationCatalog ?? throw new ArgumentNullException(nameof(animationCatalog));
         }
 
         public CharacterPresentationProjection Projection { get; }
         public CharacterPresentationSemanticContract Contract { get; }
         public string ProjectionRevision { get; }
         public IReadOnlyList<CharacterPresentationProjectionDiagnostic> Diagnostics { get; }
+        internal CharacterAnimationBuildCatalog AnimationCatalog { get; }
+        internal IReadOnlyList<CharacterAclAnimationGroupArtifact> AnimationArtifacts =>
+            AnimationCatalog.AnimationArtifacts;
         public bool IsValid => Projection != null && Projection.IsValid && Diagnostics.Count == 0;
     }
 
@@ -98,6 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(request));
             var errors = new List<string>();
             CharacterAuthoringCompilationModel model = request.Model;
+            if (request.AnimationBuildInput.Profile != model.AnimationPresentationProfile)
+                throw new InvalidOperationException("Animation build input Profile does not match the compilation model.");
             var reader = new CharacterPresentationSemanticReader(request.Artifact);
             CharacterPresentationPoseSourceCompilationResult sourceCompilation =
                 CharacterPresentationPoseSourceCompiler.Compile(
@@ -107,28 +117,42 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourceCompilation.Catalog;
             CharacterPresentationMotionMatchingCompilationResult motionMatchingCompilation =
                 CharacterPresentationMotionMatchingCompiler.Compile(
-                    model.AnimationPresentationProfile);
+                    model.AnimationPresentationProfile,
+                    request.AnimationBuildInput);
             errors.AddRange(motionMatchingCompilation.Diagnostics);
             MotionMatchingProjectionPayload motionMatching =
                 motionMatchingCompilation.Payload;
-            string projectionRevision = CharacterPresentationProjectionRevisionCompiler.Compute(
-                model.AnimationPresentationProfile,
-                model.Definition.EquipmentPresentationProfile,
-                reader.Contract.ContractHash,
-                request.FootAnalysis.RevisionTokens,
-                motionMatching);
-            CharacterPresentationProjection projection = CompileCore(
-                reader,
-                model.AnimationPresentationProfile,
-                model.Definition.EquipmentProfile,
-                model.Definition.EquipmentPresentationProfile,
-                projectionRevision,
-                request.FootAnalysis,
-                motionMatching,
-                sourceCatalog,
-                model.Timelines,
-                CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
-                errors);
+            IReadOnlyList<string> movementModeStateIdentities =
+                ResolveMovementModeStateIdentities(model, errors);
+            CharacterAnimationBuildCatalog animationCatalog =
+                request.AnimationBuildInput.AnimationCatalog.Complete(errors);
+            CharacterPresentationProjection projection = null;
+            string projectionRevision = string.Empty;
+            if (errors.Count == 0)
+            {
+                projectionRevision = CharacterPresentationProjectionRevisionCompiler.Compute(
+                    model.AnimationPresentationProfile,
+                    model.Definition.EquipmentPresentationProfile,
+                    reader.Contract.ContractHash,
+                    request.FootAnalysis.RevisionTokens,
+                    motionMatching,
+                    animationCatalog.AnimationResources);
+                projection = CompileCore(
+                    reader,
+                    model.AnimationPresentationProfile,
+                    model.Definition.EquipmentProfile,
+                    model.Definition.EquipmentPresentationProfile,
+                    request.FootAnalysis,
+                    motionMatching,
+                    sourceCatalog,
+                    model.Timelines,
+                    CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
+                    request.AnimationBuildInput,
+                    animationCatalog.AnimationResources,
+                    movementModeStateIdentities,
+                    projectionRevision,
+                    errors);
+            }
             CharacterPresentationProjectionValidationResult validation =
                 CharacterPoseGraphProjectionValidator.Validate(
                     projection,
@@ -157,7 +181,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 projection,
                 reader.Contract,
                 projectionRevision,
-                diagnostics);
+                diagnostics,
+                animationCatalog);
         }
 
         public static bool TryComputePublishedRevision(
@@ -182,24 +207,81 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 definition.EquipmentPresentationProfile,
                 contract.ContractHash,
                 footAnalysisTokens,
-                projection.MotionMatching);
+                projection.MotionMatching,
+                projection.AnimationResources);
             return true;
         }
 
-       static CharacterPresentationProjection CompileCore(
+        static IReadOnlyList<string> ResolveMovementModeStateIdentities(
+            CharacterAuthoringCompilationModel model,
+            List<string> errors)
+        {
+            string moduleId = model.Definition.ControlModuleId;
+            if (string.IsNullOrEmpty(moduleId))
+            {
+                errors?.Add("Presentation Projection requires a Definition Control Module identity for Movement Mode state validation.");
+                return Array.Empty<string>();
+            }
+            ICharacterControlModule controlModule =
+                CorinCharacterControlModuleCatalog.Create().Require(new CharacterControlModuleId(moduleId));
+            return CharacterMovementModeStateIdentities.FromControlContract(controlModule.Contract);
+        }
+
+        static CharacterPresentationAnimationPropertyBinding[] CompileAnimationProperties(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPoseProgramImage poseProgram,
+            List<string> errors)
+        {
+            if (!profile || poseProgram == null)
+                return Array.Empty<CharacterPresentationAnimationPropertyBinding>();
+            var result = new List<CharacterPresentationAnimationPropertyBinding>();
+            for (int i = 0; i < profile.AnimationPropertyBindings.Count; i++)
+            {
+                CharacterAnimationPropertyAuthoringBinding source = profile.AnimationPropertyBindings[i];
+                try
+                {
+                    source.RequireValid(profile.PoseGraph.Graph);
+                    int parameterIndex = poseProgram.RequireParameterIndex(source.ParameterId);
+                    CharacterPresentationPoseParameterEntry parameter = poseProgram.Parameters[parameterIndex];
+                    result.Add(new CharacterPresentationAnimationPropertyBinding(
+                        source.RendererBindingId + ":" + source.BlendShapeName,
+                        source.ParameterId,
+                        parameterIndex,
+                        parameter.Unit,
+                        parameter.DefaultValue,
+                        source.RendererBindingId,
+                        source.ExpectedMesh,
+                        source.MeshContentHash,
+                        source.BlendShapeName,
+                        source.BlendShapeIndex));
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"Animation property binding #{i} failed to compile: {exception.Message}");
+                }
+            }
+            result.Sort((left, right) => string.CompareOrdinal(left.BindingId, right.BindingId));
+            return result.ToArray();
+        }
+
+        static CharacterPresentationProjection CompileCore(
             CharacterPresentationSemanticReader reader,
             CharacterAnimationPresentationProfile profile,
             CharacterEquipmentProfile equipmentProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
-            string projectionRevision,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             MotionMatchingProjectionPayload motionMatching,
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
+            CharacterAnimationBuildInput animationBuildInput,
+            CharacterAnimationCompiledResourceDescriptor[] animationResources,
+            IReadOnlyList<string> movementModeStateIdentities,
+            string projectionRevision,
             List<string> errors)
         {
-            if (reader == null || profile == null || sourceCatalog == null || timelines == null || timelineCallSites == null)
+            if (reader == null || profile == null || sourceCatalog == null || timelines == null ||
+                timelineCallSites == null || animationBuildInput == null)
             {
                 errors?.Add("Character Presentation Projection build input is incomplete.");
                 return null;
@@ -235,7 +317,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     profile,
                     footAnalysisCompilation,
                     timelines,
-                    timelineCallSites);
+                    timelineCallSites,
+                    animationBuildInput,
+                    errors);
                 errors.AddRange(producerCompilation.Diagnostics);
                 CharacterPresentationProducerEntry entry = producerCompilation.Entry;
                 if (entry == null)
@@ -273,8 +357,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationPoseSourcePlanCompilationResult sourcePlanCompilation =
                 CharacterPresentationPoseSourcePlanCompiler.Compile(
                     sourceCatalog,
+                    profile,
                     profile.RigDefinition,
-                    footAnalysisCompilation);
+                    footAnalysisCompilation,
+                    animationBuildInput);
             errors.AddRange(sourcePlanCompilation.Diagnostics);
             IReadOnlyList<CharacterAnimationBlendSpacePlan> blendSpaces =
                 sourcePlanCompilation.BlendSpaces;
@@ -322,7 +408,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile,
                 linkedPose,
                 motionMatching,
-                footAnalysisCompilation);
+                footAnalysisCompilation,
+                movementModeStateIdentities);
             CharacterPoseCompilationResult poseCompilation =
                 CharacterPoseCompilerModule.Compile(poseRequest);
             poseCompilation.CopyMessagesTo(errors);
@@ -337,6 +424,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationRigPayload rig = poseProgram == null
                 ? null
                 : new CharacterAnimationRigPayload(profile.RigDefinition);
+            CharacterPresentationAnimationPropertyBinding[] animationProperties =
+                CompileAnimationProperties(profile, poseProgram, errors);
             CharacterPresentationPoseSourcePlanCompiler.ValidateClipPlayers(
                 poseProgram,
                 poseSources,
@@ -358,6 +447,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blendCatalogs.CurveCatalog,
                 blendCatalogs.ProfileCatalog,
                 rig,
+                animationResources,
                 motionMatching,
                 poseSources,
                 blendSpaces.ToArray(),
@@ -368,7 +458,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 footIdentity,
                 projectionRevision,
                 visualBindings,
-                linkedPose);
+                linkedPose,
+                null,
+                null,
+                string.Empty,
+                animationProperties);
             CharacterPoseTuningCompilationResult tuning =
                 CharacterPoseTuningLayoutCompiler.Compile(
                     reader.Contract.ProgramId.Value,

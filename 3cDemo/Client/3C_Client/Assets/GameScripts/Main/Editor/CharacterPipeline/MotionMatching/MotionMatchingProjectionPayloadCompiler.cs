@@ -253,8 +253,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     throw new InvalidOperationException($"Motion Matching Artifact Clip dependency #{i} does not match the resolved Source Set closure.");
                 MotionMatchingPoseParameterCurvePayload curve = parameterCurveResolver.ResolveRequired(
                     clip.Clip, MotionMatchingPoseSourceParameterContract.FootPlacementWeightId);
-                clipBindings[i] = new MotionMatchingClipBindingPayload(
-                    clip.SourceClipId, clip.AssetGuid, clip.LocalFileId, clip.Clip, true, curve);
+                clipBindings[i] = MotionMatchingClipBindingPayload.CreateNative(
+                    clip.SourceClipId,
+                    clip.AssetGuid,
+                    clip.LocalFileId,
+                    clip.Clip,
+                    true,
+                    curve,
+                    null);
             }
             var segments = new MotionMatchingSegmentPayload[artifact.SegmentCount];
             var samples = new MotionMatchingSamplePayload[artifact.SampleCount];

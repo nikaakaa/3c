@@ -56,6 +56,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AssetDatabase.SaveAssets();
         }
 
+        public static CharacterAnimationRigBinding
+            RequireLocalCorinAnimationRigBinding(
+                CharacterAnimationRigPayload expected)
+        {
+            if (expected == null)
+                throw new ArgumentNullException(nameof(expected));
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                LocalCorinPath);
+            if (!prefab)
+                throw new InvalidOperationException(
+                    $"Local Corin Runtime Profile is missing: {LocalCorinPath}");
+            CharacterPipelineHost host =
+                prefab.GetComponent<CharacterPipelineHost>() ??
+                throw new InvalidOperationException(
+                    $"Character Runtime Profile '{LocalCorinPath}' has no CharacterPipelineHost.");
+            CharacterAnimationRigBinding binding = host.AnimationRigBinding ??
+                throw new InvalidOperationException(
+                    "Local Corin Runtime Profile has no Animation Rig Binding.");
+            binding.RequireValid(expected);
+            return binding;
+        }
+
         static void SynchronizePipelineProfile(
             string path,
             CharacterAnimationRigBinding templateRig)

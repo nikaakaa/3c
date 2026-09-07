@@ -223,6 +223,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_View = new TimelineEditorView();
+            m_View.SetContractCatalog(TimelineTreeContractComposition.Create());
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
             ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
             ownership.style.paddingLeft = 8f;

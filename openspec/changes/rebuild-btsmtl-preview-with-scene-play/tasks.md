@@ -1,19 +1,21 @@
-实施按接口依赖推进：场景启动、恢复和共享UI可独立开展；技能实例、Document v5与新来源接线只等待各自正式合同的精确提交和发布结果，不要求主重构全量完成。本清单只实施预览消费端，控制FSM、SkillProgram/ActionInstance状态、Document升级及来源schema由主重构负责。
+实施按接口依赖推进：场景启动、恢复和共享UI可独立开展；角色实例、独立Timeline调用、Document v5与来源接线只等待各自正式合同的精确提交和发布结果，不要求其它change全量完成。本清单只实施预览消费端：主重构拥有控制FSM、SkillProgram/ActionInstance、v5基础与来源schema；Timeline拥有共用内容编译/执行、独立根构建、非Skill调用/状态/输出与同一v5内domain增量。场景控制层不要求所有目标具有角色，也不代做非Skill运行。
+
+执行与审查按 [design.md“执行协作与当前批次”](D:/Unity_Project_1/3C/openspec/changes/rebuild-btsmtl-preview-with-scene-play/design.md) 的 COMM-20260906-01 / EXEC-SCENEPLAY-20260906-01 进行。实现提交、验证及一次写全的问题写回当前 worktree 的 [implementation-audit.md](D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview/openspec/changes/rebuild-btsmtl-preview-with-scene-play/implementation-audit.md)；任务勾选保留本 worktree 实际进度。消息仅在确需执行、处理阻塞或接收交付时通知绝对文档路径与章节，不逐项回报或要求回执。协调文档由协调窗口独占维护，本任务只读。
 
 ## 1. 固定迁移范围与规范对账
 
 - [ ] 1.1 以主重构规划 d99093011、FSM澄清 3bf66c4ea 和控制基础 cbcd7fa42 为追溯起点，记录每项实际使用接口的后续精确提交、合同版本、发布状态及缺失项；不将基础类型存在当作完整迁移已完成。
-- [ ] 1.2 盘点技能Tree/局部StateMachine/嵌套Timeline、Pose、Blend Space、MM及工作区的预览调用者，交付迁移/删除清单；对齐主重构与Camera的重叠条款，不重复实施角色RootTree删除、v5升级或相机算法。
+- [ ] 1.2 盘点技能Tree/局部StateMachine/嵌套Timeline、Pose、Blend Space、MM及工作区的预览调用者，交付迁移/删除清单；对齐主重构、Timeline与Camera条款及共享窗口逐段所有权，不重复实施角色RootTree删除、v5升级、非Skill执行或相机算法。
 - [ ] 1.3 明确记录脚部分析生成的既有代码/spec 分歧和本次边界，在迁移表中区分完整角色播放器、离线分析/校准、原生素材编辑与独立模块诊断工具，不把后面三类误删或改成预览补充路径。
 
 ## 2. 共享合同与场景上下文
 
-- [ ] 2.1 定义场景预览操作、只读状态、请求 identity 和场景 generation 合同，接口能够表达开始、暂停、继续、重建、结束及每个失败阶段，不持有 Simulation/Presentation 工作区。
-- [ ] 2.2 在已有客户端Unity边界实现场景上下文声明，准确引用Session/Actor及正式角色组合配置；登记结果包含控制binding/模块版本、技能目录和构建目标，场景/roster不匹配有稳定诊断。
-- [ ] 2.3 消费主重构v5共享Capability与实际已发布参数布局，提供控制配置/技能/Pose字段的编辑资格与采用规则；C#代码、控制state schema、SkillProgram和实例状态不作为可写参数。
+- [ ] 2.1 定义场景预览操作、只读状态、请求 identity 和场景 generation 合同，接口能够表达开始、暂停、继续、重建、结束及每个失败阶段，不持有领域执行状态或提供业务Advance。
+- [ ] 2.2 在已有客户端Unity边界实现场景上下文声明，角色准确引用Session/Actor及正式组合配置，非Skill消费Timeline已发布的正式owner/目标绑定；登记各自精确内容根、产物和就绪结果，不伪造角色或猜测目标。
+- [ ] 2.3 消费唯一v5共享Capability、领域增量与实际已发布参数合同，提供控制配置/技能/Pose及独立Timeline字段的编辑资格和采用规则；生成内容、实际对象绑定和实例状态只读，不补造热更新能力。
 - [ ] 2.4 配置 Editor、客户端与公共 Composition 的单向依赖，程序集引用中不出现公共 Simulation 到 Editor、窗口、Animancer 或具体 Network Model 的新增反向依赖。
 
-- [ ] 2.5 实现作者目标和运行目标的独立合同，输出覆盖SkillDefinition/Root/稳定调用路径与场景generation/Session/Actor/ActionInstance/SkillProgram/调用generation，Tree-only及Actor-only目标合法。
+- [ ] 2.5 实现作者目标和运行目标的独立绑定，角色消费SkillDefinition/Root、Session/Actor/ActionInstance/SkillProgram/调用generation，非Skill消费精确Timeline根、业务owner/播放identity/调用点/generation；两者关联场景generation，不强制补齐另一领域字段。
 
 ## 3. 通用场景启动器
 
@@ -28,9 +30,9 @@
 
 - [ ] 4.1 实现检查、等待构建、进入 Play、准备、运行、暂停、重建、停止和失败状态，公开状态能够定位当前等待或失败阶段。
 - [ ] 4.2 加入实例级运行所有权和请求校验，第二次启动及外部 Play 占用返回明确结果，不自动抢占或选择其它场景。
-- [ ] 4.3 从场景上下文核对准确Character Definition、控制实现与技能发布闭包，Active后才开放输入；加载后发现缺失模块/产物时返回明确状态，不猜测roster或使用旧角色图。
+- [ ] 4.3 从场景上下文按领域核对精确正式根、产物/绑定和owner准备结果，角色核对Character/控制/技能闭包，非Skill消费Timeline正式检查；就绪后才开放请求，缺失项可定位，不猜测目标或套用角色要求。
 - [ ] 4.4 将暂停和继续连接到真实 Unity Play 状态，清理旧 Editor 定时推进依赖，公开状态与原生 Pause/Stop 操作一致。
-- [ ] 4.5 实现重建前产物检查、旧目标失效、正式 Quiesce/Dispose 和新场景重新连接；保留重建前的暂停意图并通过正式调度完成准备，产物不匹配时要求明确构建。
+- [ ] 4.5 实现重建前产物检查、旧目标失效及场景重载，角色经Quiesce/Dispose释放，非Skill经其正式owner停止/teardown释放播放与目标占用；保留暂停意图，通过正式调度准备和重新连接，不代做内容退出或Advance。
 - [ ] 4.6 处理窗口全部关闭、Unity Stop、请求丢失和运行 Fault，窗口只撤销本地 interest，预览控制资源只由协调器与正式 owner 释放。
 
 - [ ] 4.7 接通SkillDefinition作者选择与正式激活结果关联，明确绑定ActionInstance/调用generation和Timeline activation；拒绝、并发、替换或实例失效时不取首个同模板实例，绑定状态有准确来源。
@@ -44,53 +46,53 @@
 
 ## 6. 作者窗口与真实运行观察
 
-- [ ] 6.1 在主重构后的共享Graph Shell/技能工作区装配场景操作，角色控制显示配置与代码来源、技能显示Root/子图，既有焦点/草稿、Navigator、Canvas、Details、选择及Undo继续由原组件拥有。
-- [ ] 6.2 将inline/shared Timeline控件改接技能场景操作，按ActionInstance/完整调用路径/generation/playback/cycle观察；编辑游标、实时标记与Capture历史独立，去掉唯一Timeline假设及窗口evaluator。
-- [ ] 6.3 迁移技能Tree/局部StateMachine/参数化子图及TreeClip下钻绑定，保留Tree→Timeline→TreeClip→子树；观察同Tick Decision候选与技能Commit事实，导航不重执行或改变Session，多个调用保持明确Follow/Pin。
+- [ ] 6.1 在共享Graph Shell/技能工作区装配领域提供的场景操作与目标表面，角色控制显示配置与代码来源、技能显示Root/子图，独立内容消费其作者入口；保留现有交互组件，不在外壳新增角色必需检查或恢复已退役领域。
+- [ ] 6.2 将inline/shared Timeline控件改接统一场景操作，技能观察ActionInstance/调用路径/generation/playback/cycle，独立内容消费正式owner/播放identity/调用点/generation与来源；只改生命周期/观察段，内容与独立根入口归Timeline，去掉窗口evaluator。
+- [ ] 6.3 迁移Tree/局部StateMachine/参数化子图及TreeClip下钻绑定；技能保留同Tick Decision候选与技能Commit事实，非Skill消费其正式帧/声明/已提交结果，不伪造ActionWindow；导航不执行业务，多个调用保持明确Follow/Pin。
 - [ ] 6.4 迁移 Pose Graph Bottom Dock、Pose Watch 和目标选择，观察来自真实 Actor 的 committed snapshot，删除私有 Fact Preview 装配。
 - [ ] 6.5 迁移 Blend Space 与 MM 的完整角色预览入口，实际 Fact/Query 来自正式角色；保留采样点、曲线和几何等作者数据绘制。
 - [ ] 6.6 在SkillDefinition工作区显示Tree-only和多个/嵌套Timeline的真实结构，绑定精确ActionInstance/调用generation；仅在实际有动画时显示logic/visual sample与Slot，移除Base Pose/Action fixture。
 - [ ] 6.7 迁移原生 Animation Window 的 typed navigation 签名和显式素材编辑目标，Production Prefab 不安装素材接收器，运行中的物理输出不被素材采样接管。
 
-- [ ] 6.8 消费统一代码/operation来源，在Actor控制观察与技能实例高亮间准确导航；历史记录按其来源版本显示，旧Source Map不能解释新identity，目标失效保持明确结果。
+- [ ] 6.8 消费统一代码/operation来源及Timeline正式调用来源增量，分别导航Actor控制、技能和独立内容实例；历史按记录来源版本显示，旧Source Map不能解释新identity，失效目标不静默换绑。
 - [ ] 6.9 接入Camera的正式Runtime/Projection、Rig/目标/物理及只读诊断，技能请求来自正式Action输出；场景启动/暂停/重建/结束归本协调器，清理独立Camera fixture命令源和seek计划对应消费代码。
 
 ## 7. 直接作者调参与运行采用
 
-- [ ] 7.1 将各页面合法运行参数入口接到v5共享Capability、正式Mutation/Validator/Undo，写入准确控制配置/技能或Presentation作者owner；只开放有正式运行合同的字段，非法值在提交前拒绝。
+- [ ] 7.1 将各页面合法运行参数入口接到唯一v5共享Capability、正式Mutation/Validator/Undo，写入准确控制配置/技能/Presentation或Timeline作者owner；只开放有正式运行合同的字段，非法值在提交前拒绝。
 - [ ] 7.2 复用精确 Actor 的现有参数候选编译和原子提交协议，保留 Program/Projection/布局身份、NextFrame/NextActivation 与 `resetOwnerState` 语义，不修改共享不可变产物。
 - [ ] 7.3 实现作者已修改、运行待生效、已采用、需要 Build 和应用失败的分别显示，以正式运行确认更新状态，不用提交成功代替生效。
 - [ ] 7.4 接通 Undo/Redo 的同一路径候选更新，运行应用失败时保留作者修改、Undo 和上一份运行参数，诊断能够指出两者差异。
 - [ ] 7.5 处理暂停、共享 Profile 与多 Actor 的采用状态，只向明确选中的 Actor 提交，暂停期间不主动执行帧，其它 Actor 不被暗中修改。
-- [ ] 7.6 处理技能Root/子图/Timeline、控制模块合同与参数/状态布局变化，使用既有stale和发布规则；SkillProgram与代码版本由新Session采用，不通过调参修改共享模板或当前SkillExecutionState。
+- [ ] 7.6 处理技能Root/子图/Timeline、独立内容、控制模块合同与参数/状态布局变化，消费领域stale和发布规则；角色新版本由新Session采用，独立内容由新调用环境采用，不通过调参原地换Program或借用Actor端口。
 
 ## 8. 明确构建与阶段耗时
 
-- [ ] 8.1 接通构建并开始／构建并重启，在Edit Mode调用主重构后的精确Character Definition/Target Build，校验控制模块版本、SkillProgram/依赖与角色包/Projection；失败保持编辑状态。
-- [ ] 8.2 在现有报告记录控制binding/配置与技能依赖检查、技能前端/确定性检查、Numeric Target lowering、表现计划及组合发布耗时，已有PipelineCompiler工作在正式准备阶段记录，不重造编译入口。
+- [ ] 8.1 接通构建并开始／构建并重启，在Edit Mode按正式根调用对应Build：角色消费Character Definition/Target和完整角色闭包，独立内容消费Timeline owner的精确shared根/Target/发布目标；不伪造Character/Skill/TimelineNode，失败保持编辑状态。
+- [ ] 8.2 消费各领域正式构建报告，记录实际内容检查、前端/确定性检查、Numeric Target lowering及发布；角色另记录控制/表现计划与已有PipelineCompiler准备工作，独立内容不填未发生的角色阶段，不重造编译入口。
 - [ ] 8.3 为已有明确分析操作记录生成或复用状态，使报告能够区分分析工作与图数据编译；不因预览新增分析生成触发或改变现有产物所有权。
-- [ ] 8.4 在预览请求中记录检查、进入 Play、Session 准备、目标连接和重建耗时，未测量和失败阶段可见，轮询总等待不作为编译耗时。
-- [ ] 8.5 将角色包/控制/技能版本和实际阶段接入共享UI与原构建任务结果，C#编译/重载与技能数据编译分开；不在Inspector绘制、selection或刷新中执行重操作。
+- [ ] 8.4 在预览请求中记录检查、进入Play、对应正式owner准备、目标连接和重建耗时，未测量和失败阶段可见，轮询总等待不作为编译耗时。
+- [ ] 8.5 将角色或独立内容产物版本和实际阶段接入共享UI与原构建任务结果，C#编译/重载与内容数据编译分开；不在Inspector绘制、selection或刷新中执行重操作。
 
 ## 9. 删除被替代的完整角色预览路径
 
 - [ ] 9.1 删除窗口级 `TimelinePreviewSession` 和 `TimelinePreviewTarget` 依赖，迁移 `CharacterPipelineHost` 继承与调用者，保留已有组件资产 identity 及正式运行端口。
-- [ ] 9.2 删除只服务旧完整角色预览的Controller/Runtime、worker adapter、PreviewSession/preview program及Action/Fact/Query adapters，先按主重构精确提交核对已改调用者，不误删技能Root、解释器或ActionInstance服务。
+- [ ] 9.2 删除只服务旧完整角色预览的Controller/Runtime、worker adapter、PreviewSession/preview program及Action/Fact/Query adapters，先按提供提交核对已改调用者，不误删技能Root、ActionInstance服务或Timeline正式共用执行/非Skill接入。
 - [ ] 9.3 删除旧 Pose/动画私有场景 fixture、视觉根接管与恢复、预览动画时钟、独立 MotionCurve 求值以及仅为它们存在的配置和资源引用。
 - [ ] 9.4 清理旧窗口字段、UXML 控件、菜单、目标选择、playback/seek 分支和失效 editor state key，正式入口不保留旧路径开关。
 - [ ] 9.5 删除完整角色预览专用 seek/reset 输入，同时保留正式 Actor reset、Fault、Dispose 和已验证惯性/Foot 初始化，不改算法或建立新恢复分支。
 
 ## 10. Document与规范同步
 
-- [ ] 10.1 消费主重构唯一Document v5及技能/控制配置分片，把预览所需字段资格接入已有只读context与共享Capability；Exporter/Codec/Reconciler/Mutation/Validator一致，不实现v5迁移器或v4兼容分支。
-- [ ] 10.2 保持人工调参后的v5 TreeDirty/Conflict、两个整包domain、五个生命周期与Play Mode门禁；旧包由正式服务拒绝，退出后的导出使用真实作者值，不写实例/来源runtime数据。
+- [ ] 10.1 消费主重构唯一Document v5基础与各领域正式增量，Timeline domain和分片由其owner提供；预览字段资格接入已有只读context/Capability及一致的Exporter/Codec/Reconciler/Mutation/Validator，不复制迁移器或v4分支。
+- [ ] 10.2 保持v5 TreeDirty/Conflict、整包事务、五生命周期与Play Mode门禁，消费已批准并发布的domain集合，不写死数量或恢复已退役领域；shared资产跨包使用同一revision，导出真实作者值，不写场景对象绑定或实例状态。
 - [ ] 10.3 在主重构v5技能/规范基线上合并本change预览说明，清理旧Preview Purpose与项目入口描述；安装时保留共享控制/技能/来源新合同及素材/模块诊断工具，不用旧全文覆盖。
-- [ ] 10.4 核对主重构工作区重叠条款和Camera design第9节/tasks10.1–10.3/Preview delta的owner修订结果，确认唯一场景owner、v5、多Timeline及来源身份一致；不以其它change整份完成作为所有步骤门槛。
+- [ ] 10.4 核对主重构工作区、Timeline独立根/调用、domain增删和Camera预览条款的owner修订结果，确认角色限制不误扩到独立内容、唯一场景owner/v5与来源身份一致；不以其它change整份完成作为所有步骤门槛。
 
 ## 11. 集成门禁与交付
 
 - [ ] 11.1 通过现有编辑器编译与程序集门禁，区分既有错误和本次错误；遵循最新AGENTS的明确项目路径本机CLI/executeMethod规则及CI限制，保留主验收Editor，不新增测试代码。
-- [ ] 11.2 通过已有场景、作者、角色包/技能闭包、Document v5和来源校验器的适用检查，交付有效Corin场景与准确失败诊断；不修补TrainingEnemy、不替换Target，Tree-only与多个调用按合法结构处理。
+- [ ] 11.2 通过已有场景、作者、角色包/技能闭包、Document v5和来源校验器的适用检查，交付有效Corin场景；消费Timeline owner已交付样例的目标/调用校验，记录预览接入与缺失合同，不代建独立执行样例、不修补TrainingEnemy或替换Target。
 - [ ] 11.3 对迁移清单执行定向源码与资源引用检查，完整角色播放入口只剩统一场景运行，原生素材编辑和离线分析入口保持完整。
 - [ ] 11.4 完成OpenSpec严格校验与共享delta组合对账，按模块独立中文提交，交付接口提交/版本、实际完成范围及外部冲突；规划文件齐全不等于共享接口或运行已可用。
 - [ ] 11.5 引用已有Replay/Proof或比较结果时分别核对同版本重复性与跨重构业务差异，明确Program/Layout/Event/source映射，比较语义输入、Body、动作阶段、窗口和输出；不因hash不同直接判回归或忽略差异，不新增录制格式。

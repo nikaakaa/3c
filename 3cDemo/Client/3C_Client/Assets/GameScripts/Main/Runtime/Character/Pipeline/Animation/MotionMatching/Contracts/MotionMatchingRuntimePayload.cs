@@ -267,23 +267,88 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public sealed class MotionMatchingClipBindingPayload
     {
-        public MotionMatchingClipBindingPayload(
+        MotionMatchingClipBindingPayload(
             CharacterMotionMatchingSourceClipId sourceClipId,
             string assetGuid,
             long localFileId,
             AnimationClip clip,
             bool rootLocked,
-            MotionMatchingPoseParameterCurvePayload footPlacementWeightCurve)
+            MotionMatchingPoseParameterCurvePayload footPlacementWeightCurve,
+            float durationSeconds,
+            bool isLooping,
+            CharacterAnimationSamplingBackendKind backend,
+            CharacterAnimationScalarCurvePage nativeScalarPage,
+            int resourceCatalogIndex,
+            int groupClipIndex)
         {
-            if (!sourceClipId.IsValid || !MotionMatchingAuthoringValidation.IsAssetGuid(assetGuid) || localFileId == 0 || !clip || !rootLocked ||
-                footPlacementWeightCurve == null || !footPlacementWeightCurve.ParameterId.Equals(MotionMatchingPoseSourceParameterContract.FootPlacementWeightId))
-                throw new ArgumentException("Motion Matching Clip binding is invalid.");
             SourceClipId = sourceClipId;
             AssetGuid = assetGuid;
             LocalFileId = localFileId;
             Clip = clip;
             RootLocked = rootLocked;
             FootPlacementWeightCurve = footPlacementWeightCurve;
+            DurationSeconds = durationSeconds;
+            IsLooping = isLooping;
+            Backend = backend;
+            NativeScalarPage = nativeScalarPage;
+            ResourceCatalogIndex = resourceCatalogIndex;
+            GroupClipIndex = groupClipIndex;
+        }
+
+        public static MotionMatchingClipBindingPayload CreateNative(
+            CharacterMotionMatchingSourceClipId sourceClipId,
+            string assetGuid,
+            long localFileId,
+            AnimationClip clip,
+            bool rootLocked,
+            MotionMatchingPoseParameterCurvePayload footPlacementWeightCurve,
+            CharacterAnimationScalarCurvePage nativeScalarPage)
+        {
+            if (!clip)
+                throw new ArgumentNullException(nameof(clip));
+            var result = new MotionMatchingClipBindingPayload(
+                sourceClipId,
+                assetGuid,
+                localFileId,
+                clip,
+                rootLocked,
+                footPlacementWeightCurve,
+                clip.length,
+                clip.isLooping,
+                CharacterAnimationSamplingBackendKind.NativeClip,
+                nativeScalarPage,
+                -1,
+                -1);
+            result.RequireValid();
+            return result;
+        }
+
+        public static MotionMatchingClipBindingPayload CreateAcl(
+            CharacterMotionMatchingSourceClipId sourceClipId,
+            string assetGuid,
+            long localFileId,
+            bool rootLocked,
+            MotionMatchingPoseParameterCurvePayload footPlacementWeightCurve,
+            float durationSeconds,
+            bool isLooping,
+            int resourceCatalogIndex,
+            int groupClipIndex)
+        {
+            var result = new MotionMatchingClipBindingPayload(
+                sourceClipId,
+                assetGuid,
+                localFileId,
+                null,
+                rootLocked,
+                footPlacementWeightCurve,
+                durationSeconds,
+                isLooping,
+                CharacterAnimationSamplingBackendKind.Acl,
+                null,
+                resourceCatalogIndex,
+                groupClipIndex);
+            result.RequireValid();
+            return result;
         }
 
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
@@ -292,6 +357,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public AnimationClip Clip { get; }
         public bool RootLocked { get; }
         public MotionMatchingPoseParameterCurvePayload FootPlacementWeightCurve { get; }
+        public float DurationSeconds { get; }
+        public bool IsLooping { get; }
+        public CharacterAnimationSamplingBackendKind Backend { get; }
+        public CharacterAnimationScalarCurvePage NativeScalarPage { get; }
+        public int ResourceCatalogIndex { get; }
+        public int GroupClipIndex { get; }
+        public bool IsAcl => Backend == CharacterAnimationSamplingBackendKind.Acl;
+
+        public bool IsValid =>
+            SourceClipId.IsValid &&
+            MotionMatchingAuthoringValidation.IsAssetGuid(AssetGuid) &&
+            LocalFileId != 0 &&
+            RootLocked &&
+            FootPlacementWeightCurve != null &&
+            FootPlacementWeightCurve.ParameterId.Equals(
+                MotionMatchingPoseSourceParameterContract.FootPlacementWeightId) &&
+            float.IsFinite(DurationSeconds) &&
+            DurationSeconds > 0f &&
+            (Backend == CharacterAnimationSamplingBackendKind.NativeClip
+                ? Clip && ResourceCatalogIndex == -1 && GroupClipIndex == -1 &&
+                  DurationSeconds == Clip.length &&
+                  IsLooping == Clip.isLooping &&
+                  (NativeScalarPage == null ||
+                   NativeScalarPage.ParameterCount > 0 &&
+                   float.IsFinite(NativeScalarPage.SampleRate) &&
+                   NativeScalarPage.SampleRate > 0f &&
+                   float.IsFinite(NativeScalarPage.DurationSeconds) &&
+                   NativeScalarPage.DurationSeconds == DurationSeconds)
+                : Backend == CharacterAnimationSamplingBackendKind.Acl &&
+                  !Clip && NativeScalarPage == null &&
+                  ResourceCatalogIndex >= 0 && GroupClipIndex >= 0);
+
+        public void RequireValid()
+        {
+            if (!IsValid)
+                throw new InvalidOperationException("Motion Matching Clip binding is invalid.");
+            if (Backend == CharacterAnimationSamplingBackendKind.NativeClip &&
+                NativeScalarPage != null)
+            {
+                NativeScalarPage.RequireValid();
+                if (NativeScalarPage.ParameterCount <= 0 ||
+                    NativeScalarPage.DurationSeconds != DurationSeconds)
+                    throw new InvalidOperationException(
+                        "Motion Matching Native Clip scalar page does not match its binding.");
+            }
+        }
     }
 
     public readonly struct MotionMatchingSegmentPayload

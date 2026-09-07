@@ -1,0 +1,5 @@
+miHoYo/Character/NapAvatarStandardFace
+miHoYo/Character/NapAvatarStandardEye
+MAT_Corin_Face
+MAT_Corin_Eye
+MAT_Corin_Weapon

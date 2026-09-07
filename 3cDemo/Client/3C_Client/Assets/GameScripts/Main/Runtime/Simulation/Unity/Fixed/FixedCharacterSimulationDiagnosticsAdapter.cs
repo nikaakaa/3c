@@ -1,5 +1,6 @@
 using System;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using UnityEngine;
 using FixedRuntime = ThirdPersonSimulation.Fixed;
 
@@ -29,10 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
-                if (!m_SourceMap.TryGetProgramTarget(
-                        new RuntimeSourceTarget(RuntimeSourceTargetKind.StateSlot, i),
-                        out _))
-                    throw new InvalidOperationException($"Fixed Program state slot '{i}' is absent from the Debug Source Map.");
+                RuntimeSourceTarget target = CharacterRuntimeDebugTargetResolver.ForStateSlot(program.StateSlots[i]);
+                if (!m_SourceMap.TryGetProgramTarget(target, out _))
+                    throw new InvalidOperationException($"Fixed Program state target '{target}' for slot '{i}' is absent from the Debug Source Map.");
             }
         }
 
@@ -70,24 +70,38 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.Header.Activation.Source.IsCharacterControl)
+            {
+                PublishControl(record);
+                return;
+            }
             if (!record.Header.Activation.Source.IsSkillOperation)
-                throw new InvalidOperationException("Fixed operation trace requires a Skill operation execution source.");
+                throw new InvalidOperationException("Fixed operation trace requires a Skill operation or Character control execution source.");
             var target = new RuntimeSourceTarget(
                 RuntimeSourceTargetKind.Operation,
                 record.Header.Activation.Source.Operation.Value);
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Fixed operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
+            RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
+                ? RuntimeInstanceKey.SkillExecution(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.SkillId,
+                    record.ActionInstanceId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation)
+                : RuntimeInstanceKey.Runnable(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation);
             m_Context.Publish(
                 ResolveOperationChannel(kind, record.Code),
                 RuntimeTraceDomain.Logic,
                 kind,
                 source,
-                RuntimeInstanceKey.Runnable(
-                    m_Context.CharacterRuntimeId,
-                    m_ExecutionId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation),
+                runtimeInstance,
                 new RuntimeTracePayload
                 {
                     Status = record.Severity.ToString(),
@@ -95,10 +109,48 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     Detail = record.Detail,
                     Cause = record.Boundary,
                     OwnerId = record.Header.ActorId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
+                    ActivationGeneration = record.Header.Activation.Generation,
                     Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
             CharacterPipelineTraceCommandLine.LogOperation(record, kind, source, m_SourceMap);
+        }
+
+        void PublishControl(FixedRuntime.SimulationTraceRecord record)
+        {
+            ThirdPersonSimulation.SimulationExecutionSource source =
+                record.Header.Activation.Source;
+            m_Context.Publish(
+                RuntimeTraceChannel.StateMachine,
+                RuntimeTraceDomain.Logic,
+                ResolveControlKind(record.Code),
+                RuntimeSourceElementHandle.Invalid,
+                record.ActionInstanceId != 0
+                    ? RuntimeInstanceKey.ActionInstance(
+                        m_Context.CharacterRuntimeId,
+                        m_ExecutionId,
+                        record.SkillId,
+                        record.ActionInstanceId,
+                        record.Header.Activation.Generation)
+                    : RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = record.Severity.ToString(),
+                    Name = record.Code,
+                    Detail = $"{record.Detail} | Source={source.Identity}",
+                    OwnerId = source.ModuleId.Value,
+                    RelatedElementId = source.TransitionId.IsValid
+                        ? source.TransitionId.Value
+                        : source.StateId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    ActivationGeneration = record.Header.Activation.Generation,
+                    Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
+                    Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
+                });
         }
 
         public void PublishPipeline(FixedRuntime.SimulationPipelineTraceRecord record)
@@ -239,7 +291,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "action_lifecycle" => RuntimeTraceEventKind.ActionLifecycleTransitioned,
                 "equipment_snapshot" => RuntimeTraceEventKind.EquipmentSnapshot,
                 "equipment_change" => RuntimeTraceEventKind.EquipmentChange,
-                "equipment_host" => RuntimeTraceEventKind.EquipmentHost,
                 "motion_contribution" => RuntimeTraceEventKind.MotionContribution,
                 "motion_channel_resolved" or
                 "resolved_gameplay_motion" or
@@ -247,6 +298,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "world_result_applied" => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("motion_warp_", StringComparison.Ordinal) => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("gameplay_effect", StringComparison.Ordinal) => RuntimeTraceEventKind.GameplayEffectLifecycle,
+                _ => RuntimeTraceEventKind.NodeStatus
+            };
+        }
+
+        static RuntimeTraceEventKind ResolveControlKind(string code)
+        {
+            return code switch
+            {
+                "control_state_entered" => RuntimeTraceEventKind.StateScopeEntered,
+                "control_state_exited" => RuntimeTraceEventKind.StateScopeExited,
+                "control_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
+                "control_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
                 _ => RuntimeTraceEventKind.NodeStatus
             };
         }
@@ -292,8 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (kind == RuntimeTraceEventKind.GameplayEffectLifecycle || code.StartsWith("gameplay_", StringComparison.Ordinal))
                 return RuntimeTraceChannel.GameplayEffect;
             if (kind == RuntimeTraceEventKind.EquipmentSnapshot ||
-                kind == RuntimeTraceEventKind.EquipmentChange ||
-                kind == RuntimeTraceEventKind.EquipmentHost)
+                kind == RuntimeTraceEventKind.EquipmentChange)
                 return RuntimeTraceChannel.Equipment;
             return RuntimeTraceChannel.Graph;
         }

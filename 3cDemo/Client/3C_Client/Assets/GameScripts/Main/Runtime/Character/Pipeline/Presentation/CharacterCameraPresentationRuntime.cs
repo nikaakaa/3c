@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraResponsePolicyResolver m_CameraResponseResolver = new CameraResponsePolicyResolver();
         readonly CameraModifierResolver m_CameraModifierResolver = new CameraModifierResolver();
         readonly HashSet<ulong> m_NoTerminalActions = new HashSet<ulong>();
+        CharacterCameraPresentationCaptureFrame m_LastPresentationFrame;
 
         ulong m_LastBodyResetSequence;
         bool m_Disposed;
@@ -63,6 +64,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_AimBindPosition = inverse * (aimAnchor.position - initialBody.Position);
             Apply(initialBody.Position, initialBody.Rotation, Vector2.zero, 0f);
         }
+
+        internal CharacterCameraPresentationCaptureFrame LastPresentationFrame =>
+            m_LastPresentationFrame;
 
         public void Publish(
             CharacterPresentationCommand command,
@@ -173,6 +177,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        public void Force(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer) =>
+            Retire(command, producer);
+
         [PerformanceProbe("presentation.camera")]
         public void Present(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
         {
@@ -205,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CameraStateResolver.Reset();
             m_CameraModifierResolver.Reset();
             m_LastBodyResetSequence = 0;
+            m_LastPresentationFrame = default;
         }
 
         public void Dispose()
@@ -265,6 +275,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CameraRig.ApplyAfterTrackingReset(plan);
             else
                 m_CameraRig.Apply(plan);
+            m_LastPresentationFrame = new CharacterCameraPresentationCaptureFrame(
+                true,
+                0,
+                0,
+                m_LastBodyResetSequence,
+                deltaSeconds,
+                resetTracking,
+                in state,
+                in response,
+                in targetPlan,
+                in plan,
+                m_CameraRig.BasisSnapshot,
+                m_CameraRig.HasFinalOutput,
+                m_CameraRig.FinalPosition,
+                m_CameraRig.FinalOrientation,
+                m_CameraRig.FinalFieldOfView,
+                m_CameraModifierResolver.DebugCues);
         }
 
         static CharacterPresentationCameraBinding RequireCameraBinding(

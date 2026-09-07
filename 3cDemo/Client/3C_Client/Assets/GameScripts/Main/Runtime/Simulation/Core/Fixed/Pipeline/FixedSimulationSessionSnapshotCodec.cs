@@ -27,7 +27,7 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedSimulationSessionSnapshotCodec : IFixedSimulationSessionSnapshotCodec
     {
         const uint Magic = 0x53534643;
-        const int Version = 3;
+        const int Version = 4;
 
         public FixedSimulationSessionSnapshotCodec(SimulationComponentIdentity identity)
         {

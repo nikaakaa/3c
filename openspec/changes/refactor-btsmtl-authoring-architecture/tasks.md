@@ -219,7 +219,7 @@
 
 - [ ] 7.7 按设计第14节接入逻辑到表现的领域事件层：定义 ActionSegmentChanged 事件契约（typed 实例／段／技能身份，复用 SimulationEventHeader 信封），Float32 与 Fixed 的技能状态机运行时在同一转移事务点发布；表现层 ActionAnimationPlaybackLifecycle 消费事件终结旧 playback 条目并推进新段 generation，所有权断言不再依赖命令形状推断技能组织形态；交付两 Target 同输入事件序列一致的对账与技能树化回放通过证明。
 
-  当前状态：**尚未完成**。触发背景：技能连招迁入资产层后（Attack 单技能入口指向连招树），同实例段转移发出的新段 Select 因 producer 变化撞表现层所有权断言，确认语义变化缺少一等通道（详见 design 第14节）。
+  当前状态：**部分完成（上半已交付）**。触发背景：技能连招迁入资产层后（Attack 单技能入口指向连招树），同实例段转移发出的新段 Select 因 producer 变化撞表现层所有权断言，确认语义变化缺少一等通道（详见 design 第14节）。上半：两 Target 契约 DomainEvent kind＋DomainPayload、NotifyStateTransition 转移点发布链（Fixed/Float32/AI/TimelinePlayback 全实现）、表现命令类型同步、delta spec 已建。剩余：表现分发消费事件终结旧 playback 条目、段转移后新段 Select 的 generation 区分（当前 per-op 激活代撞旧条目）、技能树化回放验证。
 
 ## 8. 规则与数据发布
 

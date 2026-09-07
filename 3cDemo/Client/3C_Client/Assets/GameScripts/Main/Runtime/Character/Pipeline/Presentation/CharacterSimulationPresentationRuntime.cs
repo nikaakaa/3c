@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Transform m_PoseRoot;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly Guid m_RuntimeInstanceId;
+        CharacterPresentationFactFrame m_LastProjectedFactFrame;
         readonly CharacterPoseWorkerPresentationSession
             m_WorkerPresentationSession;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
@@ -386,6 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.RenderFrame,
                     animationDeltaSeconds,
                     in m_PendingBodyFrame);
+                m_LastProjectedFactFrame = factFrame;
                 try
                 {
                     CharacterPresentationProgramParameterFrame parameterFrame =
@@ -513,6 +515,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterCameraPresentationCaptureFrame.Empty;
             var commandFacts = new CharacterPresentationCommandCaptureFacts(
                 m_CurrentFrameSignals);
+            var factFacts = new CharacterPresentationFactCaptureFrame(
+                in m_LastProjectedFactFrame);
             var lineage = new DiagnosticLineageKey(
                 CharacterPresentationReplicationDiagnosticEvent.LineageTypeIdentity,
                 m_PendingPresentationContext.RenderFrame,
@@ -524,6 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in lineage,
                 in animationFacts,
                 in cameraFacts,
+                in factFacts,
                 in commandFacts);
         }
 #endif

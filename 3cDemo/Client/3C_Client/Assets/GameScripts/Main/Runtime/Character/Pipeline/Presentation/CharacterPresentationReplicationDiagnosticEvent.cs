@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in DiagnosticLineageKey lineage,
             in CharacterAnimationPresentationCaptureFrame animation,
             in CharacterCameraPresentationCaptureFrame camera,
+            in CharacterPresentationFactCaptureFrame facts,
             in CharacterPresentationCommandCaptureFacts commands);
 
         static partial void QueryPublishCommittedInterest(
@@ -36,12 +37,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in DiagnosticLineageKey lineage,
             in CharacterAnimationPresentationCaptureFrame animation,
             in CharacterCameraPresentationCaptureFrame camera,
+            in CharacterPresentationFactCaptureFrame facts,
             in CharacterPresentationCommandCaptureFacts commands) =>
             PublishCommitted(
                 in target,
                 in lineage,
                 in animation,
                 in camera,
+                in facts,
                 in commands);
     }
 }

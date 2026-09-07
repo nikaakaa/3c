@@ -5,6 +5,7 @@ using ThirdPersonCamera;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -830,5 +831,128 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticKey("visual-time-scale")]
         public float VisualTimeScale { get; }
+    }
+
+    public readonly struct CharacterPresentationFactCaptureFrame
+    {
+        internal CharacterPresentationFactCaptureFrame(
+            in CharacterPresentationFactFrame frame)
+        {
+            HasFactFrame = frame.IsValid;
+            SimulationTick = frame.SimulationTick.Value;
+            Grounded = frame.Grounded;
+            HorizontalSpeed = frame.HorizontalSpeed;
+            HorizontalAcceleration = frame.HorizontalAcceleration;
+            VerticalSpeed = frame.VerticalSpeed;
+            MovementDirection = frame.MovementDirection;
+            LocomotionPlanarBasis = frame.LocomotionPlanarBasis;
+            DesiredPlanarVelocity = frame.DesiredPlanarVelocity;
+            DesiredDirection = frame.DesiredDirection;
+            FacingError = frame.FacingError;
+            MotionPhase = frame.MotionPhase;
+            MovementMode = frame.MovementModeId ?? string.Empty;
+            CommittedMovementPlaybackClock clock = frame.MovementPlaybackClock;
+            MovementPlaybackOwner = clock.IsValid ? clock.OwnerIdentity : string.Empty;
+            MovementPlaybackGeneration = clock.IsValid ? clock.Generation : 0;
+            MovementPlaybackContinuousTicks = clock.IsValid ? clock.ContinuousTicks : 0;
+            CommittedLocomotionPlanarMotionTimeline timeline =
+                frame.LocomotionMotionTimeline;
+            LocomotionTimelineOwner =
+                timeline.IsValid ? timeline.OwnerIdentity : string.Empty;
+            LocomotionTimelineContinuationOwner =
+                timeline.IsValid ? timeline.ContinuationOwnerIdentity : string.Empty;
+        }
+
+        public static CharacterPresentationFactCaptureFrame Empty => default;
+
+        [DiagnosticField]
+        [DiagnosticKey("has-fact-frame")]
+        [DiagnosticGroup("presentation-facts")]
+        public bool HasFactFrame { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("simulation-tick")]
+        [DiagnosticGroup("presentation-facts")]
+        public ulong SimulationTick { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("grounded")]
+        [DiagnosticGroup("presentation-facts")]
+        public bool Grounded { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("horizontal-speed")]
+        [DiagnosticGroup("presentation-facts")]
+        public float HorizontalSpeed { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("horizontal-acceleration")]
+        [DiagnosticGroup("presentation-facts")]
+        public float HorizontalAcceleration { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("vertical-speed")]
+        [DiagnosticGroup("presentation-facts")]
+        public float VerticalSpeed { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("movement-direction")]
+        [DiagnosticGroup("presentation-facts")]
+        public Vector2 MovementDirection { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("locomotion-planar-basis")]
+        [DiagnosticGroup("presentation-facts")]
+        public Vector2 LocomotionPlanarBasis { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("desired-planar-velocity")]
+        [DiagnosticGroup("presentation-facts")]
+        public Vector2 DesiredPlanarVelocity { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("desired-direction")]
+        [DiagnosticGroup("presentation-facts")]
+        public Vector2 DesiredDirection { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("facing-error")]
+        [DiagnosticGroup("presentation-facts")]
+        public float FacingError { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("motion-phase")]
+        [DiagnosticGroup("presentation-facts")]
+        public CharacterPresentationMotionPhase MotionPhase { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("movement-mode")]
+        [DiagnosticGroup("presentation-facts")]
+        public string MovementMode { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("movement-playback-owner")]
+        [DiagnosticGroup("presentation-facts")]
+        public string MovementPlaybackOwner { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("movement-playback-generation")]
+        [DiagnosticGroup("presentation-facts")]
+        public ulong MovementPlaybackGeneration { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("movement-playback-continuous-ticks")]
+        [DiagnosticGroup("presentation-facts")]
+        public int MovementPlaybackContinuousTicks { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("locomotion-timeline-owner")]
+        [DiagnosticGroup("presentation-facts")]
+        public string LocomotionTimelineOwner { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("locomotion-timeline-continuation-owner")]
+        [DiagnosticGroup("presentation-facts")]
+        public string LocomotionTimelineContinuationOwner { get; }
     }
 }

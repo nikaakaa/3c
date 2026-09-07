@@ -10,7 +10,6 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
         const string ProfilePath = "Assets/Configs/Character/Corin/Rendering/CorinShapeProjectionProfile.asset";
         const string ArtifactPath = "Assets/Configs/Character/Corin/Rendering/CorinShapeProjectionArtifact.asset";
         const string LocalPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
-        const string AiPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab";
 
         static readonly string[] FormalPrefabPaths =
         {
@@ -83,11 +82,10 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
             int sourceCount = 0;
             for (int i = 0; i < FormalPrefabPaths.Length; i++)
                 sourceCount += InstallPrefab(FormalPrefabPaths[i], profile, artifact);
-            ValidateInheritedAi(profile, artifact);
             int rendererDataCount = CharacterShapeProjectionRendererInstaller.InstallFormalRenderers();
             AssetDatabase.SaveAssets();
 
-            return $"Corin Shape Projection完成：Renderer {report.RendererCount}，Vertex {report.VertexCount}，Triangle {report.TriangleCount}，Excluded {report.ExcludedTriangleCount}，Region {report.RegionCount}，Chain {report.SharedChainCount}，Source {sourceCount}+AI继承，Renderer Data {rendererDataCount}，Hash {report.ContentHash}";
+            return $"Corin Shape Projection完成：Renderer {report.RendererCount}，Vertex {report.VertexCount}，Triangle {report.TriangleCount}，Excluded {report.ExcludedTriangleCount}，Region {report.RegionCount}，Chain {report.SharedChainCount}，Source {sourceCount}，Renderer Data {rendererDataCount}，Hash {report.ContentHash}";
         }
 
         static int InstallPrefab(string path, CharacterShapeProjectionProfile profile,
@@ -99,28 +97,6 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 int count = CharacterShapeProjectionSourceInstaller.InstallAllCompleteRoots(contents, profile, artifact);
                 PrefabUtility.SaveAsPrefabAsset(contents, path);
                 return count;
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(contents);
-            }
-        }
-
-        static void ValidateInheritedAi(CharacterShapeProjectionProfile profile,
-            CharacterShapeProjectionArtifact artifact)
-        {
-            GameObject contents = PrefabUtility.LoadPrefabContents(AiPrefabPath);
-            try
-            {
-                CharacterShapeProjectionSource[] sources = contents.GetComponentsInChildren<CharacterShapeProjectionSource>(true);
-                int matching = 0;
-                for (int i = 0; i < sources.Length; i++)
-                {
-                    if (sources[i].Profile == profile && sources[i].Artifact == artifact)
-                        matching++;
-                }
-                if (matching != 1)
-                    throw new InvalidOperationException($"AI Prefab必须从Local基座继承唯一Source，当前为{matching}");
             }
             finally
             {

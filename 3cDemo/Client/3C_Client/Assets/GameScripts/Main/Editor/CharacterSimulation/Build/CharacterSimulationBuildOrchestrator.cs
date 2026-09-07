@@ -22,6 +22,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
         }
 
+        public static CharacterSimulationBuildResult Build(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.Publish,
+                targets));
+        }
+
         public static CharacterSimulationBuildResult Build(CharacterSimulationBuildRequest request)
         {
             if (request == null)
@@ -156,6 +166,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 definition,
                 CharacterSimulationBuildPublicationMode.DryRun,
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
+        }
+
+        public static CharacterSimulationBuildResult DryRun(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.DryRun,
+                targets));
         }
 
         public static CharacterSemanticFrontendResult CompileSemanticIr(CharacterPipelineDefinition definition, bool persistCache)
@@ -409,29 +429,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationProjection projection = compileResult.Projection;
             if (!report.IsValid)
                 return projection;
-            if (!string.Equals(projection.ProgramId, artifact.Header.ProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(projection.SourceRevision, artifact.Header.SourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(projection.SemanticHash, artifact.Header.SemanticHash.ToString(), StringComparison.Ordinal) ||
-                !string.Equals(projection.ContractHash, contract.ContractHash.ToString(), StringComparison.Ordinal))
-            {
-                report.PresentationError("presentation_identity_mismatch", artifact.Header.ProgramId.Value, "Projection identity does not match the Semantic IR presentation contract.");
-                return projection;
-            }
-            if (projection.Producers.Count != artifact.SemanticIr.Producers.Count)
-            {
-                report.PresentationError("presentation_producer_set_mismatch", artifact.Header.ProgramId.Value, "Projection producer count does not match the Semantic IR artifact.");
-                return projection;
-            }
-            for (int i = 0; i < projection.Producers.Count; i++)
-            {
-                CharacterPresentationProducerEntry projected = projection.Producers[i];
-                ProgramProducer semantic = artifact.SemanticIr.Producers[i];
-                if (projected.ProgramProducerIndex != i || semantic.Index != i ||
-                    !string.Equals(projected.ProgramProducerIdentity, semantic.Identity, StringComparison.Ordinal))
-                {
-                    report.PresentationError("presentation_producer_identity_mismatch", projected.ProgramProducerIdentity, $"Producer index {i} is not identical across Semantic IR and Projection.");
-                }
-            }
             return projection;
         }
 

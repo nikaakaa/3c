@@ -20,20 +20,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.RootOrientationWarp
         };
 
-        internal static bool IsEntryGraph(CharacterTypedPoseGraph graph) =>
+        internal static bool IsEntryGraph(CharacterPoseCanvasGraph graph) =>
             graph != null && graph.Nodes.Any(value => value?.Kind == CharacterPoseNodeKind.EntryPoseInput);
 
-        internal static void RequireValid(CharacterTypedPoseGraph graph)
+        internal static void RequireValid(CharacterPoseCanvasGraph graph)
         {
             if (graph == null || !graph.GraphId.IsValid)
                 throw new ArgumentException("Motion Matching entry graph is missing.", nameof(graph));
-            CharacterTypedPoseNode input = graph.Nodes.SingleOrDefault(value => value?.Kind == CharacterPoseNodeKind.EntryPoseInput) ??
+            CharacterPoseCanvasNode input = graph.Nodes.SingleOrDefault(value => value?.Kind == CharacterPoseNodeKind.EntryPoseInput) ??
                 throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' requires one Entry Pose Input.");
-            CharacterTypedPoseNode output = graph.Nodes.SingleOrDefault(value => value?.Kind == CharacterPoseNodeKind.GraphOutput) ??
+            CharacterPoseCanvasNode output = graph.Nodes.SingleOrDefault(value => value?.Kind == CharacterPoseNodeKind.GraphOutput) ??
                 throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' requires one Graph Output.");
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i] ??
+                CharacterPoseCanvasNode node = graph.Nodes[i] ??
                     throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' contains a missing node.");
                 if (!s_AllowedKinds.Contains(node.Kind))
                     throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' contains forbidden node '{node.Kind}'.");
@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             var adjacency = graph.Nodes.ToDictionary(value => value.NodeId, _ => new List<PoseNodeId>());
-            foreach (CharacterPoseEdge edge in graph.Edges)
+            foreach (CharacterPoseCanvasConnection edge in graph.Edges)
             {
                 if (edge == null || !adjacency.TryGetValue(edge.SourceNodeId, out List<PoseNodeId> targets) || !adjacency.ContainsKey(edge.TargetNodeId))
                     throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' contains an invalid edge.");

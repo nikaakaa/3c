@@ -422,7 +422,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public static void RequireValid(
             CharacterPoseStateMachineDefinition definition,
-            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver)
+            Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver)
         {
             CharacterPoseStateMachineValidationIssue? issue =
                 FindFirstIssue(definition, graphResolver);
@@ -433,7 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public static CharacterPoseStateMachineValidationIssue?
             FindFirstIssue(
                 CharacterPoseStateMachineDefinition definition,
-                Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver)
+                Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver)
         {
             if (definition == null || !definition.StateMachineId.IsValid ||
                 string.IsNullOrWhiteSpace(definition.ContentRevision) ||
@@ -464,7 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             ? CharacterPoseStateMachineValidationTargetKind.State
                             : CharacterPoseStateMachineValidationTargetKind.StateMachine,
                         state.StateId.Value);
-                CharacterTypedPoseGraph graph;
+                CharacterPoseCanvasGraph graph;
                 try
                 {
                     graph = graphResolver(state.PoseGraphId);
@@ -581,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static CharacterPoseStateMachineValidationIssue?
             FindStatePoseIssue(
             CharacterPoseStateDefinition state,
-            CharacterTypedPoseGraph graph)
+            CharacterPoseCanvasGraph graph)
         {
             if (graph == null || graph.GraphId != state.PoseGraphId ||
                 string.IsNullOrWhiteSpace(graph.ContentRevision) || !state.OutputPoseNodeId.IsValid)
@@ -597,7 +597,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var nodeIds = new HashSet<PoseNodeId>();
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node == null)
                     return Issue(
                         "PoseStateNodeMissing",

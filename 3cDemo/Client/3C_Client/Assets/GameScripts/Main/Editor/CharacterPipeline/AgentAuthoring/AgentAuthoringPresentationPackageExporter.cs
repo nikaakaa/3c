@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .Where(value => value != null && value.PoseGraphId.IsValid)
                 .Select(value => value.PoseGraphId)
                 .ToHashSet();
-            foreach (CharacterTypedPoseGraph graph in poseAsset.EnumerateGraphs())
+            foreach (CharacterPoseCanvasGraph graph in poseAsset.EnumerateGraphs())
             {
                 if (graph == null)
                     throw new InvalidOperationException(
@@ -387,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static AgentPackagePoseGraphFile ExportGraph(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             GraphAuthoringDocumentRoleId role)
         {
             return new AgentPackagePoseGraphFile
@@ -423,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static AgentPackagePoseNode ExportNode(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             GraphAuthoringDocumentRoleId role)
         {
             if (node?.Payload == null)
@@ -462,7 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         id = value.PortId.Value,
                         name = value.DisplayName,
                         valueType =
-                            CharacterTypedPoseGraphDocument.ValueType(value.Kind),
+                            CharacterPoseCanvasGraphDocument.ValueType(value.Kind),
                         direction = value.Direction.ToString(),
                         required = value.Required,
                         order = value.Order,
@@ -474,7 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static AgentPackagePoseGraphLayoutFile ExportLayout(
-            CharacterTypedPoseGraph graph) =>
+            CharacterPoseCanvasGraph graph) =>
             new AgentPackagePoseGraphLayoutFile
             {
                 graphId = graph.GraphId.Value,

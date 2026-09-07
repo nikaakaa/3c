@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Build/CharacterSimulationBuildOrchestrator.cs.meta
+guid: 2640a2b0a7ea4f81ba4192017cc00420
+========
 guid: f258138ed99f84145a2a596f91a728a2
+>>>>>>>> main:3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/AgentAuthoring/AgentSkillDocumentMapper.cs.meta
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2

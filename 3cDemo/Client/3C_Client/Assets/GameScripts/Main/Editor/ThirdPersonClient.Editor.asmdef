@@ -43,6 +43,8 @@
         "BTSMTL.Timeline.Tree.Editor",
         "BTSMTL.TreeDesigner",
         "BTSMTL.TreeDesigner.Editor",
+        "NodeCanvas",
+        "ParadoxNotion",
         "Kybernetik.Animancer",
         "MCPForUnity.Editor",
         "Newtonsoft.Json",

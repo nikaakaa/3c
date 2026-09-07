@@ -31,13 +31,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public UnityEngine.Object SerializedOwner => m_Profile;
 
-        public CharacterTypedPoseGraph RequirePoseGraph(string graphId) =>
+        public CharacterPoseCanvasGraph RequirePoseGraph(string graphId) =>
             m_Profile.PoseGraph
                 ? m_Profile.PoseGraph.RequireGraph(new PoseGraphId(graphId))
                 : throw new InvalidOperationException(
                     $"Presentation Profile '{m_ProfileId}' has no Pose Graph.");
 
-        public void ReplacePoseGraph(CharacterTypedPoseGraph graph) =>
+        public void ReplacePoseGraph(CharacterPoseCanvasGraph graph) =>
             throw new InvalidOperationException(
                 "Presentation Profile owner cannot mutate Pose Graph content.");
 
@@ -217,6 +217,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 graphOwner,
                 "Create Linked Pose Graph Owner");
             AssetDatabase.AddObjectToAsset(graphOwner, m_Profile);
+            foreach (CharacterPoseCanvasGraph graph in graphOwner.EnumerateGraphs())
+            {
+                CharacterPoseCanvasMutationPreflight.RequireValid(graph);
+                AssetDatabase.AddObjectToAsset(graph, m_Profile);
+                EditorUtility.SetDirty(graph);
+            }
             Undo.RegisterCreatedObjectUndo(
                 implementation,
                 "Create Linked Pose Implementation");
@@ -535,8 +541,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public UnityEngine.Object SerializedOwner => m_Asset;
         internal CharacterAnimationPresentationProfile Profile => m_Profile;
-        public CharacterTypedPoseGraph RequirePoseGraph(string graphId) => m_Asset.RequireGraph(new PoseGraphId(graphId));
-        public void ReplacePoseGraph(CharacterTypedPoseGraph graph) => m_Asset.ReplaceGraph(graph);
+        public CharacterPoseCanvasGraph RequirePoseGraph(string graphId) => m_Asset.RequireGraph(new PoseGraphId(graphId));
+        public void ReplacePoseGraph(CharacterPoseCanvasGraph graph)
+        {
+            CharacterPoseCanvasMutationPreflight.RequireValid(graph);
+            CharacterPoseCanvasGraph previous = m_Asset.RequireGraph(graph.GraphId);
+            m_Asset.ReplaceGraph(graph);
+            if (previous != graph && previous)
+                Undo.DestroyObjectImmediate(previous);
+        }
 
         public void ApplyGraphCatalogMutation(
             CharacterPresentationMutation mutation)
@@ -544,13 +557,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             switch (mutation)
             {
                 case CreatePoseGraphMutation create:
+                    CharacterPoseCanvasMutationPreflight.RequireValid(create.Graph);
                     if (m_Asset.Graph == null)
                         m_Asset.SetGraph(create.Graph);
                     else
                         m_Asset.AddGraph(create.Graph);
                     break;
                 case DeletePoseGraphMutation delete:
+                    CharacterPoseCanvasGraph removed = m_Asset.RequireGraph(delete.GraphId);
                     m_Asset.RemoveGraph(delete.GraphId);
+                    Undo.DestroyObjectImmediate(removed);
                     break;
                 case CreatePoseSourceSlotMutation create:
                     CreateSourceSlot(create.Slot);
@@ -622,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Pose Source Slot does not belong to this Pose Graph.");
             }
             slot = owned;
-            CharacterTypedPoseNode consumer = m_Asset.EnumerateGraphs()
+            CharacterPoseCanvasNode consumer = m_Asset.EnumerateGraphs()
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)
                 .FirstOrDefault(value => value?.PresentationPoseSourceSlot == slot);
@@ -784,14 +800,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    public sealed class CharacterTypedPoseGraphDocument : IGraphAuthoringDocumentProjection
+    public sealed class CharacterPoseCanvasGraphDocument : IGraphAuthoringDocumentProjection
     {
         readonly ICharacterPresentationMutationOwner m_Owner;
         readonly string m_GraphId;
         readonly GraphAuthoringDocumentRoleId m_Role;
         readonly string m_DisplayName;
 
-        public CharacterTypedPoseGraphDocument(
+        public CharacterPoseCanvasGraphDocument(
             ICharacterPresentationMutationOwner owner,
             string graphId,
             GraphAuthoringDocumentRoleId role,
@@ -816,31 +832,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public IReadOnlyList<GraphAuthoringPageProjection> Pages => new[] { new GraphAuthoringPageProjection(new GraphAuthoringElementId(m_GraphId), m_DisplayName, m_Role.Value) };
         public IReadOnlyList<GraphAuthoringNodeProjection> Nodes => ProjectNodes();
         public IReadOnlyList<GraphAuthoringEdgeProjection> Edges => ProjectEdges();
-        internal CharacterTypedPoseGraph Graph => m_Owner.RequirePoseGraph(m_GraphId);
+        internal CharacterPoseCanvasGraph Graph => m_Owner.RequirePoseGraph(m_GraphId);
         internal ICharacterPresentationMutationOwner Owner => m_Owner;
 
         IReadOnlyList<GraphAuthoringNodeProjection> ProjectNodes()
         {
-            CharacterTypedPoseGraph graph = Graph;
+            CharacterPoseCanvasGraph graph = Graph;
             Dictionary<PoseNodeId, Vector2> positions = graph.Layout
                 .Where(value => value != null && value.NodeId.IsValid)
                 .GroupBy(value => value.NodeId)
                 .ToDictionary(value => value.Key, value => value.Last().Position);
             CharacterAnimationPresentationProfile profile =
                 (m_Owner as CharacterPoseGraphAssetMutationOwner)?.Profile;
-            return graph.Nodes.Select(node => new GraphAuthoringNodeProjection(
-                new GraphAuthoringElementId(node.NodeId.Value),
-                CharacterPoseGraphAuthoringCapabilities.Get(node.Kind),
-                node.DisplayName,
-                positions.TryGetValue(node.NodeId, out Vector2 position) ? position : Vector2.zero,
-                CharacterPoseNodeDefinitionModule.Shared
-                    .Require(node.Kind)
-                    .ProjectAdditionalPorts(node),
-                SourceSubtitle(node, profile))).ToArray();
+            return graph.Nodes.Select(node =>
+            {
+                CharacterPoseCanvasDefinitionProjection definition =
+                    CharacterPoseCanvasDefinitionProjection.For(node);
+                return definition.ProjectNode(
+                    node.NodeId,
+                    node.DisplayName,
+                    positions.TryGetValue(node.NodeId, out Vector2 position)
+                        ? position
+                        : Vector2.zero,
+                    SourceSubtitle(node, profile));
+            }).ToArray();
         }
 
         static string SourceSubtitle(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterAnimationPresentationProfile profile)
         {
             CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
@@ -866,7 +885,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseAuthoringPortProjection.ValueType(kind);
     }
 
-    public sealed class CharacterTypedPoseGraphMutationAdapter : IGraphAuthoringDomainMutation
+    public sealed class CharacterPoseCanvasMutationAdapter : IGraphAuthoringDomainMutation
     {
         readonly CharacterPresentationMutationService m_Service = new CharacterPresentationMutationService();
         public bool ReadOnly { get; set; }
@@ -877,7 +896,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (ReadOnly)
                 throw new InvalidOperationException("Pose Graph document is read-only.");
-            if (!(document is CharacterTypedPoseGraphDocument poseDocument))
+            if (!(document is CharacterPoseCanvasGraphDocument poseDocument))
                 throw new ArgumentException("Pose mutation requires a typed Pose Graph document.", nameof(document));
             var transaction = new CharacterPresentationMutationTransaction(Guid.NewGuid().ToString("N"), "Edit Pose Graph");
             foreach (GraphAuthoringMutationRequest request in requests ?? throw new ArgumentNullException(nameof(requests)))
@@ -885,12 +904,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Service.Apply(poseDocument.Owner, transaction);
         }
 
-        static CharacterPresentationMutation Convert(CharacterTypedPoseGraphDocument document, GraphAuthoringMutationRequest request)
+        static CharacterPresentationMutation Convert(CharacterPoseCanvasGraphDocument document, GraphAuthoringMutationRequest request)
         {
             string graphId = document.DocumentId;
             return request.Kind switch
             {
-                GraphAuthoringMutationKind.CreateNode => request.Value is CharacterTypedPoseNode node
+                GraphAuthoringMutationKind.CreateNode => request.Value is CharacterPoseCanvasNode node
                     ? new CreatePoseNodeMutation(graphId, node, request.Position)
                     : throw new InvalidOperationException("Create Pose Node requires a complete typed payload."),
                 GraphAuthoringMutationKind.DeleteElement => new DeletePoseNodeMutation(graphId, new PoseNodeId(request.TargetId.Value)),
@@ -917,7 +936,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    public sealed class CharacterTypedPoseConnectionPolicy : IGraphAuthoringConnectionPolicy
+    public sealed class CharacterPoseCanvasConnectionPolicy : IGraphAuthoringConnectionPolicy
     {
         public bool CanConnect(
             IGraphAuthoringDocumentProjection document,
@@ -926,10 +945,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GraphAuthoringNodeProjection targetNode,
             GraphAuthoringPortId targetPortId)
         {
-            if (!(document is CharacterTypedPoseGraphDocument poseDocument) || sourceNode == null || targetNode == null || sourceNode.NodeId.Equals(targetNode.NodeId))
+            if (!(document is CharacterPoseCanvasGraphDocument poseDocument) || sourceNode == null || targetNode == null || sourceNode.NodeId.Equals(targetNode.NodeId))
                 return false;
-            CharacterTypedPoseNode source = poseDocument.Graph.Nodes.Single(value => value.NodeId.Value == sourceNode.NodeId.Value);
-            CharacterTypedPoseNode target = poseDocument.Graph.Nodes.Single(value => value.NodeId.Value == targetNode.NodeId.Value);
+            CharacterPoseCanvasNode source = poseDocument.Graph.Nodes.Single(value => value.NodeId.Value == sourceNode.NodeId.Value);
+            CharacterPoseCanvasNode target = poseDocument.Graph.Nodes.Single(value => value.NodeId.Value == targetNode.NodeId.Value);
             PortInfo output = Resolve(source, sourcePortId.Value);
             PortInfo input = Resolve(target, targetPortId.Value);
             if (output.Direction != CharacterPosePortDirection.Output || input.Direction != CharacterPosePortDirection.Input || output.Kind != input.Kind)
@@ -937,7 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return !poseDocument.Graph.Edges.Any(value => value.TargetNodeId == target.NodeId && value.TargetPortId.Value == targetPortId.Value);
         }
 
-        static PortInfo Resolve(CharacterTypedPoseNode node, string portId)
+        static PortInfo Resolve(CharacterPoseCanvasNode node, string portId)
         {
             foreach (CharacterPosePortDefinition port in
                      CharacterPoseAuthoringPortProjection.Get(node))
@@ -961,7 +980,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    public sealed class CharacterTypedPoseDetailsDataSource :
+    public sealed class CharacterPoseCanvasDetailsDataSource :
         IGraphAuthoringDetailsDataSource,
         IGraphAuthoringAppliedValuesDataSource,
         IGraphAuthoringFieldOptionSource
@@ -971,7 +990,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly CharacterAnimationPresentationProfile m_Profile;
         readonly Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>> m_AppliedValues;
 
-        public CharacterTypedPoseDetailsDataSource(
+        public CharacterPoseCanvasDetailsDataSource(
             IGraphAuthoringDomainDiagnostics diagnostics = null,
             CharacterAnimationRigDefinition rig = null,
             CharacterAnimationPresentationProfile profile = null,
@@ -985,7 +1004,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public object ReadField(IGraphAuthoringDocumentProjection document, GraphAuthoringElementId elementId, GraphAuthoringFieldDescriptor field)
         {
-            CharacterTypedPoseNode node = ((CharacterTypedPoseGraphDocument)document).Graph.Nodes.Single(value => value.NodeId.Value == elementId.Value);
+            CharacterPoseCanvasNode node = ((CharacterPoseCanvasGraphDocument)document).Graph.Nodes.Single(value => value.NodeId.Value == elementId.Value);
             return CharacterPoseAuthoringPayloadCodec.Read(
                 node.Payload,
                 field.FieldId.Value);
@@ -1029,7 +1048,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (selection.Kind != GraphAuthoringSelectionKind.Node)
                 return Array.Empty<GraphAuthoringReadOnlyDetail>();
-            CharacterTypedPoseNode node = ((CharacterTypedPoseGraphDocument)document)
+            CharacterPoseCanvasNode node = ((CharacterPoseCanvasGraphDocument)document)
                 .Graph.Nodes.Single(value => value.NodeId.Value == selection.ElementId.Value);
             CharacterPresentationPoseSourceSlot slot = node.PresentationPoseSourceSlot;
             if (!slot)
@@ -1131,6 +1150,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterPoseGraphCapabilityValidator
     {
+        public static IReadOnlyList<string> Validate(
+            CharacterPoseCanvasAuthoringView view) =>
+            view == null
+                ? new[] { "Pose capability validation requires one Canvas Pose Authoring View." }
+                : Validate(view.OwnerAsset, Array.Empty<PoseGraphId>());
+
         public static IReadOnlyList<string> Validate(CharacterPresentationPoseGraphAsset asset)
         {
             return Validate(asset, Array.Empty<PoseGraphId>());
@@ -1143,7 +1168,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var errors = new List<string>();
             if (!asset || asset.Graph == null)
             {
-                errors.Add("Pose capability validation requires one typed Pose Graph asset.");
+                errors.Add("Pose capability validation requires one Canvas Pose Graph asset.");
                 return errors;
             }
 
@@ -1164,7 +1189,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             HashSet<PoseGraphId> linkedClosure = CollectGraphClosure(
                 asset,
                 linkedEntries);
-            foreach (CharacterTypedPoseGraph graph in asset.EnumerateGraphs())
+            foreach (CharacterPoseCanvasGraph graph in asset.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
@@ -1177,7 +1202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : CharacterPoseGraphAuthoringCapabilities.Subgraph;
                 for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
                 {
-                    CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                    CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                     if (node?.Payload == null)
                     {
                         errors.Add($"Pose Graph '{graph.GraphId}' node #{nodeIndex} has no typed payload.");
@@ -1223,8 +1248,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PoseGraphId graphId = pending.Pop();
                 if (!result.Add(graphId))
                     continue;
-                CharacterTypedPoseGraph graph = asset.RequireGraph(graphId);
-                foreach (CharacterTypedPoseNode node in graph.Nodes.Where(
+                CharacterPoseCanvasGraph graph = asset.RequireGraph(graphId);
+                foreach (CharacterPoseCanvasNode node in graph.Nodes.Where(
                              value => value?.Payload != null))
                 {
                     foreach (CharacterPoseGraphDependency dependency in
@@ -1241,7 +1266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void ValidateFields(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             GraphAuthoringCapabilityDescriptor capability)
         {
             foreach (GraphAuthoringFieldDescriptor field in
@@ -1277,7 +1302,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void ValidatePorts(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPoseNodeDefinition definition)
         {
             IReadOnlyList<GraphAuthoringDynamicPortProjection> ports =

@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
 
-        public override CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
+        public override CharacterPoseIrNode Lower(CharacterPoseCanvasNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
         {
             if (!(node.Payload is TPayload payload) || node.Kind != Kind)
                 throw new InvalidOperationException($"{sourcePath}: payload does not match Node Definition '{Kind}'.");
@@ -1142,18 +1142,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
-            CharacterTypedPoseGraph graph = source.Source;
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes =
+            CharacterPoseCanvasGraph graph = source.Source;
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes =
                 source.AuthoredNodes;
             IReadOnlyDictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseEdge>> incoming =
+                IReadOnlyList<CharacterPoseCanvasConnection>> incoming =
                 source.Incoming;
-            List<CharacterTypedPoseNode> ordered = TopologicalOrder(nodes, incoming);
+            List<CharacterPoseCanvasNode> ordered = TopologicalOrder(nodes, incoming);
             ValidateBoundary(role, ordered);
             var loweredNodes = new List<CharacterPoseIrNode>(ordered.Count);
-            foreach (CharacterTypedPoseNode node in ordered)
+            foreach (CharacterPoseCanvasNode node in ordered)
                 loweredNodes.Add(source.RequireNode(node.NodeId));
-            CharacterTypedPoseNode output =
+            CharacterPoseCanvasNode output =
                 role != CharacterPoseIrGraphRole.Subgraph &&
                 role != CharacterPoseIrGraphRole.LinkedPoseEntry &&
                 role != CharacterPoseIrGraphRole.MotionMatchingEntry
@@ -1162,10 +1162,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, loweredNodes, new CharacterPoseIrNodeId(output.NodeId.Value));
         }
 
-        static List<CharacterTypedPoseNode> TopologicalOrder(
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+        static List<CharacterPoseCanvasNode> TopologicalOrder(
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             IReadOnlyDictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseEdge>> incoming)
+                IReadOnlyList<CharacterPoseCanvasConnection>> incoming)
         {
             var indegree = incoming.ToDictionary(
                 pair => pair.Key,
@@ -1176,12 +1176,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Count());
             var outgoing = nodes.Keys.ToDictionary(value => value, _ => new HashSet<PoseNodeId>());
             foreach (KeyValuePair<PoseNodeId,
-                         IReadOnlyList<CharacterPoseEdge>> pair in incoming)
-                foreach (CharacterPoseEdge edge in pair.Value)
+                         IReadOnlyList<CharacterPoseCanvasConnection>> pair in incoming)
+                foreach (CharacterPoseCanvasConnection edge in pair.Value)
                     if (!IsTemporalHistoryEdge(nodes, edge))
                         outgoing[edge.SourceNodeId].Add(pair.Key);
             var ready = new SortedSet<PoseNodeId>(indegree.Where(pair => pair.Value == 0).Select(pair => pair.Key));
-            var result = new List<CharacterTypedPoseNode>(nodes.Count);
+            var result = new List<CharacterPoseCanvasNode>(nodes.Count);
             while (ready.Count > 0)
             {
                 PoseNodeId id = ready.Min;
@@ -1200,15 +1200,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static bool IsTemporalHistoryEdge(
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
-            CharacterPoseEdge edge) =>
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
+            CharacterPoseCanvasConnection edge) =>
             ResolvePort(
                 nodes[edge.SourceNodeId],
                 edge.SourcePortId.Value,
                 CharacterPosePortDirection.Output).Kind == CharacterPosePortKind.PoseHistory;
 
         static CharacterPosePortDefinition ResolvePort(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             string portId,
             CharacterPosePortDirection direction) =>
             CharacterPoseAuthoringPortProjection.Require(
@@ -1216,7 +1216,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 portId,
                 direction);
 
-        static void ValidateBoundary(CharacterPoseIrGraphRole role, IReadOnlyList<CharacterTypedPoseNode> nodes)
+        static void ValidateBoundary(CharacterPoseIrGraphRole role, IReadOnlyList<CharacterPoseCanvasNode> nodes)
         {
             int rootOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int graphOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);

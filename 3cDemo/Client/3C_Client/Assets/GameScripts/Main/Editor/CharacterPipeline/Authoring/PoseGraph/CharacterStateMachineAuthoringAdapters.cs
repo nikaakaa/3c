@@ -700,7 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public CharacterPoseStateCreation(
             CharacterPoseStateDefinition state,
-            CharacterTypedPoseGraph graph)
+            CharacterPoseCanvasGraph graph)
         {
             State = state ??
                 throw new ArgumentNullException(nameof(state));
@@ -714,7 +714,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public CharacterPoseStateDefinition State { get; }
-        public CharacterTypedPoseGraph Graph { get; }
+        public CharacterPoseCanvasGraph Graph { get; }
     }
 
     public sealed class CharacterPoseStateMachineMutationAdapter :

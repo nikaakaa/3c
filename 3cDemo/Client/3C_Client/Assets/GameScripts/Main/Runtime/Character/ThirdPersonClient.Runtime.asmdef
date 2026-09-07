@@ -20,6 +20,8 @@
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
         "BTSMTL.TreeDesigner",
+        "NodeCanvas",
+        "ParadoxNotion",
         "Kybernetik.Animancer",
         "Cinemachine",
         "Unity.InputSystem",

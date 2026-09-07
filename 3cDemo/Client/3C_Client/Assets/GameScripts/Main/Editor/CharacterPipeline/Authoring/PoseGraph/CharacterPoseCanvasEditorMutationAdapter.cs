@@ -4,16 +4,16 @@ using TreeDesigner.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    sealed class CharacterPoseGraphEditorMutationAdapter :
+    sealed class CharacterPoseCanvasEditorMutationAdapter :
         IGraphAuthoringDomainMutation
     {
-        readonly CharacterTypedPoseGraphMutationAdapter m_Authoring;
+        readonly CharacterPoseCanvasMutationAdapter m_Authoring;
         readonly Func<IGraphAuthoringDocumentProjection,
             GraphAuthoringMutationRequest,
             bool> m_TryApplyTuning;
 
-        public CharacterPoseGraphEditorMutationAdapter(
-            CharacterTypedPoseGraphMutationAdapter authoring,
+        public CharacterPoseCanvasEditorMutationAdapter(
+            CharacterPoseCanvasMutationAdapter authoring,
             Func<IGraphAuthoringDocumentProjection,
                 GraphAuthoringMutationRequest,
                 bool> tryApplyTuning)

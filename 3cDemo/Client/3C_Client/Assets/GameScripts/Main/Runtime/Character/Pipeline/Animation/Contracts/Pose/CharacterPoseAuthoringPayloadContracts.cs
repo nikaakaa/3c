@@ -424,154 +424,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPoseSubgraphPayload(CharacterPoseSubgraphReference subgraph) => m_Subgraph = subgraph ?? throw new ArgumentNullException(nameof(subgraph));
     }
 
-    [Serializable]
-    public sealed class CharacterTypedPoseNode
-    {
-        public const string Schema = "character-pose-node.v1";
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] string m_DisplayName = string.Empty;
-        [SerializeReference] CharacterPoseNodePayload m_Payload;
-        [SerializeField] CharacterPoseDynamicPort[] m_DynamicPorts = Array.Empty<CharacterPoseDynamicPort>();
-
-        public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId) ? default : new PoseNodeId(m_NodeId);
-        public string DisplayName => m_DisplayName ?? string.Empty;
-        public CharacterPoseNodePayload Payload => m_Payload;
-        public CharacterPoseNodeKind Kind =>
-            m_Payload?.Kind ??
-            throw new InvalidOperationException(
-                $"Pose node '{NodeId}' has no typed payload.");
-        public IReadOnlyList<CharacterPoseDynamicPort> DynamicPorts => m_DynamicPorts ?? Array.Empty<CharacterPoseDynamicPort>();
-
-        public T RequirePayload<T>() where T : CharacterPoseNodePayload =>
-            m_Payload as T ?? throw new InvalidOperationException($"Pose node '{NodeId}' does not own payload '{typeof(T).Name}'.");
-
-        public AnimationChannelId AnimationChannelId => m_Payload switch
-        {
-            CharacterActionPlaybackInputPosePayload value => value.AnimationChannelId,
-            CharacterAnimationSlotPosePayload value => value.AnimationChannelId,
-            _ => default
-        };
-        public PoseParameterId ParameterId => (m_Payload as CharacterProgramParameterInputPosePayload)?.ParameterId ?? default;
-        public AnimationSelectionAvailabilityPolicy SelectionAvailability => (m_Payload as CharacterAnimationSlotPosePayload)?.SelectionAvailability ?? AnimationSelectionAvailabilityPolicy.RequireSelection;
-        public CharacterAnimationBlendSpaceInputRangePolicy BlendSpaceInputRangePolicy => (m_Payload as CharacterBlendSpacePlayerPosePayload)?.InputRangePolicy ?? CharacterAnimationBlendSpaceInputRangePolicy.Clamp;
-        public CharacterAnimationBlendPolicy BlendPolicy => m_Payload switch
-        {
-            CharacterAnimationSlotPosePayload value => value.BlendPolicy,
-            CharacterBlendStackPosePayload value => value.BlendPolicy,
-            _ => null
-        };
-        public CharacterPoseInertializationPolicy InertializationPolicy => (m_Payload as CharacterInertializationPosePayload)?.Policy;
-        public CharacterAnimationBoneMaskAsset BoneMask => (m_Payload as CharacterLayeredBoneBlendPosePayload)?.BoneMask;
-        public float Weight => m_Payload switch
-        {
-            CharacterBlendPosePayload value => value.Weight,
-            CharacterLayeredBoneBlendPosePayload value => value.Weight,
-            CharacterAdditivePosePayload value => value.Weight,
-            _ => 1f
-        };
-        public IReadOnlyList<CharacterPoseParameterPolicy> ParameterPolicies => (m_Payload as CharacterPoseParameterResolvePayload)?.Policies ?? Array.Empty<CharacterPoseParameterPolicy>();
-        public string AdditiveReferencePoseId => (m_Payload as CharacterAdditivePosePayload)?.ReferencePoseId ?? string.Empty;
-        public AdditiveReferenceSpace AdditiveReferenceSpace => (m_Payload as CharacterAdditivePosePayload)?.ReferenceSpace ?? global::ThirdPersonCharacter.Pipeline.Animation.AdditiveReferenceSpace.Local;
-        public AdditiveScalePolicy AdditiveScalePolicy => (m_Payload as CharacterAdditivePosePayload)?.ScalePolicy ?? global::ThirdPersonCharacter.Pipeline.Animation.AdditiveScalePolicy.Multiply;
-        public AnimationBoneId BoneId => (m_Payload as CharacterModifyBonePosePayload)?.BoneId ?? default;
-        public ModifyBoneReferenceSpace ModifyBoneReferenceSpace => (m_Payload as CharacterModifyBonePosePayload)?.ReferenceSpace ?? global::ThirdPersonCharacter.Pipeline.Animation.ModifyBoneReferenceSpace.Local;
-        public ModifyBoneOperationMask ModifyBoneOperations => (m_Payload as CharacterModifyBonePosePayload)?.Operations ?? ModifyBoneOperationMask.None;
-        public Vector3 ModifyPosition => (m_Payload as CharacterModifyBonePosePayload)?.Position ?? Vector3.zero;
-        public Quaternion ModifyRotation => (m_Payload as CharacterModifyBonePosePayload)?.Rotation ?? Quaternion.identity;
-        public Vector3 ModifyScale => (m_Payload as CharacterModifyBonePosePayload)?.Scale ?? Vector3.one;
-        public RootMotionCurveAsset RootOrientationYawCurve => (m_Payload as CharacterRootOrientationWarpPosePayload)?.YawCurve;
-        public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
-            (m_Payload as CharacterPoseBoneIkGoalsPayload)?.Bindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
-        public CharacterFootPlacementProfile FootPlacementProfile =>
-            (m_Payload as CharacterFootPlacementPosePayload)?.Profile;
-        public CharacterFootPlacementRigCalibration FootPlacementCalibration =>
-            (m_Payload as CharacterFootPlacementPosePayload)?.Calibration;
-        public LinkedPoseGroupId LinkedPoseGroupId =>
-            (m_Payload as CharacterLinkedPoseCallPayload)?.GroupId ?? default;
-        public LinkedPoseInterfaceId LinkedPoseInterfaceId =>
-            (m_Payload as CharacterLinkedPoseCallPayload)?.InterfaceId ?? default;
-        public LinkedPoseEntryId LinkedPoseEntryId =>
-            (m_Payload as CharacterLinkedPoseCallPayload)?.EntryId ?? default;
-        public CharacterPoseSubgraphReference Subgraph => (m_Payload as CharacterPoseSubgraphPayload)?.Subgraph;
-        public CharacterPresentationPoseSourceSlot PresentationPoseSourceSlot => m_Payload switch
-        {
-            CharacterSelectedPosePlayerPayload value => value.SourceSlot,
-            CharacterBlendSpacePlayerPosePayload value => value.SourceSlot,
-            CharacterClipPlayerPosePayload value => value.SourceSlot,
-            CharacterBlendStackPosePayload value => value.SourceSlot,
-            _ => null
-        };
-        public float ClipPlayRate => (m_Payload as CharacterClipPlayerPosePayload)?.PlayRate ?? 1f;
-        public float ClipInitialTime => (m_Payload as CharacterClipPlayerPosePayload)?.InitialTime ?? 0f;
-        public CharacterClipPlayerClockSource ClipClockSource => (m_Payload as CharacterClipPlayerPosePayload)?.ClockSource ?? CharacterClipPlayerClockSource.PresentationDelta;
-        public CharacterPoseStateMachineDefinition PoseStateMachine => (m_Payload as CharacterPoseStateMachineNodePayload)?.StateMachine;
-        public AnimationSlotId AnimationSlotId => (m_Payload as CharacterAnimationSlotPosePayload)?.SlotId ?? default;
-        public string AnimationSlotRoutingOwnerId => AnimationSlotId.IsValid ? $"animation-slot/{AnimationSlotId}" : string.Empty;
-        public bool AnimationSlotAllowEmpty => m_Payload is CharacterAnimationSlotPosePayload value && value.SelectionAvailability == AnimationSelectionAvailabilityPolicy.AllowEmpty;
-        public int AnimationSlotBlendStackCapacity => m_Payload is CharacterAnimationSlotPosePayload value && value.BlendPolicy ? value.BlendPolicy.StackPolicy.MaxActiveSourceEntries : 0;
-
-        public CharacterTypedPoseNode() { }
-        public CharacterTypedPoseNode(PoseNodeId nodeId, string displayName, CharacterPoseNodePayload payload, CharacterPoseDynamicPort[] dynamicPorts = null)
-        {
-            m_NodeId = nodeId.IsValid ? nodeId.Value : throw new ArgumentException("Pose Node identity is invalid.", nameof(nodeId));
-            m_DisplayName = displayName ?? string.Empty;
-            m_Payload = payload ??
-                        throw new ArgumentNullException(nameof(payload));
-            m_DynamicPorts = dynamicPorts ?? Array.Empty<CharacterPoseDynamicPort>();
-        }
-    }
-
-    [Serializable]
-    public sealed class CharacterPoseGraphLayoutEntry
-    {
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] Vector2 m_Position;
-        public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId) ? default : new PoseNodeId(m_NodeId);
-        public Vector2 Position => m_Position;
-        public CharacterPoseGraphLayoutEntry() { }
-        public CharacterPoseGraphLayoutEntry(PoseNodeId nodeId, Vector2 position)
-        {
-            m_NodeId = nodeId.IsValid ? nodeId.Value : throw new ArgumentException("Pose Node identity is invalid.", nameof(nodeId));
-            m_Position = position;
-        }
-    }
-
-    [Serializable]
-    public sealed class CharacterTypedPoseGraph
-    {
-        [SerializeField] string m_GraphId = string.Empty;
-        [SerializeField] string m_ContentRevision = string.Empty;
-        [SerializeField] CharacterPoseParameterDeclaration[] m_Parameters = Array.Empty<CharacterPoseParameterDeclaration>();
-        [SerializeField] CharacterTypedPoseNode[] m_Nodes = Array.Empty<CharacterTypedPoseNode>();
-        [SerializeField] CharacterPoseEdge[] m_Edges = Array.Empty<CharacterPoseEdge>();
-        [SerializeField] CharacterPoseGraphLayoutEntry[] m_Layout = Array.Empty<CharacterPoseGraphLayoutEntry>();
-
-        public PoseGraphId GraphId => string.IsNullOrWhiteSpace(m_GraphId) ? default : new PoseGraphId(m_GraphId);
-        public string ContentRevision => m_ContentRevision ?? string.Empty;
-        public IReadOnlyList<CharacterPoseParameterDeclaration> Parameters => m_Parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
-        public IReadOnlyList<CharacterTypedPoseNode> Nodes => m_Nodes ?? Array.Empty<CharacterTypedPoseNode>();
-        public IReadOnlyList<CharacterPoseEdge> Edges => m_Edges ?? Array.Empty<CharacterPoseEdge>();
-        public IReadOnlyList<CharacterPoseGraphLayoutEntry> Layout => m_Layout ?? Array.Empty<CharacterPoseGraphLayoutEntry>();
-
-        public CharacterTypedPoseGraph() { }
-
-        public CharacterTypedPoseGraph(
-            PoseGraphId graphId,
-            string contentRevision,
-            CharacterPoseParameterDeclaration[] parameters,
-            CharacterTypedPoseNode[] nodes,
-            CharacterPoseEdge[] edges,
-            CharacterPoseGraphLayoutEntry[] layout)
-        {
-            m_GraphId = graphId.IsValid ? graphId.Value : throw new ArgumentException("Pose Graph identity is invalid.", nameof(graphId));
-            m_ContentRevision = PoseIdentity.Require(contentRevision, nameof(contentRevision));
-            m_Parameters = parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
-            m_Nodes = nodes ?? Array.Empty<CharacterTypedPoseNode>();
-            m_Edges = edges ?? Array.Empty<CharacterPoseEdge>();
-            m_Layout = layout ?? Array.Empty<CharacterPoseGraphLayoutEntry>();
-        }
-    }
-
     public static class CharacterLinkedPosePortProjection
     {
         public static CharacterPoseDynamicPort[] CreateCallPorts(
@@ -611,7 +463,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public static void RequireCallMatch(
-            CharacterTypedPoseNode call,
+            CharacterPoseCanvasNode call,
             CharacterLinkedPoseInterfaceAsset linkedInterface)
         {
             if (call?.Kind != CharacterPoseNodeKind.LinkedPoseCall ||
@@ -633,7 +485,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public static void RequireEntryGraphMatch(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             CharacterLinkedPoseInterfaceAsset linkedInterface,
             LinkedPoseEntryId entryId)
         {
@@ -642,10 +494,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterLinkedPoseInterfaceEntryDescriptor entry = RequireEntry(
                 linkedInterface,
                 entryId);
-            CharacterTypedPoseNode graphInput = RequireSingleNode(
+            CharacterPoseCanvasNode graphInput = RequireSingleNode(
                 graph,
                 CharacterPoseNodeKind.GraphInput);
-            CharacterTypedPoseNode graphOutput = RequireSingleNode(
+            CharacterPoseCanvasNode graphOutput = RequireSingleNode(
                 graph,
                 CharacterPoseNodeKind.GraphOutput);
             RequirePorts(
@@ -736,11 +588,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        static CharacterTypedPoseNode RequireSingleNode(
-            CharacterTypedPoseGraph graph,
+        static CharacterPoseCanvasNode RequireSingleNode(
+            CharacterPoseCanvasGraph graph,
             CharacterPoseNodeKind kind)
         {
-            CharacterTypedPoseNode[] nodes = graph.Nodes
+            CharacterPoseCanvasNode[] nodes = graph.Nodes
                 .Where(value => value?.Kind == kind)
                 .ToArray();
             if (nodes.Length != 1)
@@ -753,8 +605,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public static class CharacterPoseSubgraphSignatureValidator
     {
         public static void RequireMatch(
-            CharacterTypedPoseNode callSite,
-            CharacterTypedPoseGraph child)
+            CharacterPoseCanvasNode callSite,
+            CharacterPoseCanvasGraph child)
         {
             if (callSite?.Kind != CharacterPoseNodeKind.PoseSubgraph ||
                 callSite.Subgraph == null ||
@@ -764,10 +616,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Pose Subgraph call site or child Graph identity is invalid.");
             }
 
-            CharacterTypedPoseNode graphInput = RequireSingleNode(
+            CharacterPoseCanvasNode graphInput = RequireSingleNode(
                 child,
                 CharacterPoseNodeKind.GraphInput);
-            CharacterTypedPoseNode graphOutput = RequireSingleNode(
+            CharacterPoseCanvasNode graphOutput = RequireSingleNode(
                 child,
                 CharacterPoseNodeKind.GraphOutput);
             var expected = new Dictionary<PoseInterfacePortId, SignaturePort>();
@@ -805,11 +657,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        static CharacterTypedPoseNode RequireSingleNode(
-            CharacterTypedPoseGraph graph,
+        static CharacterPoseCanvasNode RequireSingleNode(
+            CharacterPoseCanvasGraph graph,
             CharacterPoseNodeKind kind)
         {
-            CharacterTypedPoseNode[] nodes = graph.Nodes
+            CharacterPoseCanvasNode[] nodes = graph.Nodes
                 .Where(value => value?.Kind == kind)
                 .ToArray();
             if (nodes.Length != 1)
@@ -821,8 +673,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void AddChildPorts(
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode node,
             CharacterPosePortDirection childDirection,
             CharacterPosePortDirection callDirection,
             IDictionary<PoseInterfacePortId, SignaturePort> target)

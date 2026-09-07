@@ -199,7 +199,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath);
 
         public abstract CharacterPoseIrNode Lower(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             IReadOnlyList<CharacterPoseIrInput> inputs,
             string sourcePath);
 
@@ -256,7 +256,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         public IReadOnlyList<GraphAuthoringDynamicPortProjection>
-            ProjectPortShape(CharacterTypedPoseNode node)
+            ProjectPortShape(CharacterPoseCanvasNode node)
         {
             if (node == null || node.Kind != Kind)
                 throw new ArgumentException(
@@ -269,7 +269,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         public IReadOnlyList<GraphAuthoringDynamicPortProjection>
-            ProjectAdditionalPorts(CharacterTypedPoseNode node)
+            ProjectAdditionalPorts(CharacterPoseCanvasNode node)
         {
             if (node == null || node.Kind != Kind)
                 throw new ArgumentException(

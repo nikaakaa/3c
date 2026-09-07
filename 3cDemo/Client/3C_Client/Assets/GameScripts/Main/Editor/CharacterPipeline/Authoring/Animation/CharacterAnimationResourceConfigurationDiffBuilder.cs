@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IReadOnlyList<CharacterAnimationPropertyImportClipTarget> clips,
             IReadOnlyList<CharacterAnimationPropertyImportCurveTarget> curves,
             IReadOnlyDictionary<string, CharacterPoseParameterDeclaration[]> graphParameters,
-            CharacterTypedPoseNode rootResolveNode,
+            CharacterPoseCanvasNode rootResolveNode,
             IReadOnlyList<CharacterPoseParameterPolicy> rootPolicies,
             IReadOnlyList<CharacterAnimationPropertyAuthoringBinding> propertyBindings,
             CharacterAclCompressionSettings compression,
@@ -159,7 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             foreach (KeyValuePair<string, CharacterPoseParameterDeclaration[]> graph in graphParameters)
             {
-                CharacterTypedPoseGraph current = poseGraph.RequireGraph(new PoseGraphId(graph.Key));
+                CharacterPoseCanvasGraph current = poseGraph.RequireGraph(new PoseGraphId(graph.Key));
                 foreach (CharacterPoseParameterDeclaration parameter in graph.Value.Where(value => desiredPropertyIds.Contains(value.ParameterId)))
                 {
                     CharacterPoseParameterDeclaration previous = current.Parameters

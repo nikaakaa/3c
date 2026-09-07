@@ -49,9 +49,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
 
             var categories = new Dictionary<AnimationClip, HashSet<string>>();
-            foreach (CharacterTypedPoseGraph graph in EnumerateReachablePoseGraphs(profile))
+            foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(profile))
             {
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
                     if (!slot)
@@ -142,10 +142,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             values.Add(category);
         }
 
-        static IReadOnlyList<CharacterTypedPoseGraph> EnumerateReachablePoseGraphs(
+        static IReadOnlyList<CharacterPoseCanvasGraph> EnumerateReachablePoseGraphs(
             CharacterAnimationPresentationProfile profile)
         {
-            var result = new List<CharacterTypedPoseGraph>();
+            var result = new List<CharacterPoseCanvasGraph>();
             var visited = new HashSet<string>(StringComparer.Ordinal);
             if (profile.PoseGraph?.Graph != null)
                 CollectReachablePoseGraphs(profile.PoseGraph, profile.PoseGraph.Graph, visited, result);
@@ -170,15 +170,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void CollectReachablePoseGraphs(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             ISet<string> visited,
-            ICollection<CharacterTypedPoseGraph> result)
+            ICollection<CharacterPoseCanvasGraph> result)
         {
             string key = AssetDatabase.GetAssetPath(owner) + "\0" + graph.GraphId.Value;
             if (!visited.Add(key))
                 return;
             result.Add(graph);
-            foreach (CharacterTypedPoseNode node in graph.Nodes)
+            foreach (CharacterPoseCanvasNode node in graph.Nodes)
             {
                 if (node?.Payload is CharacterPoseSubgraphPayload subgraph &&
                     subgraph.Subgraph != null &&

@@ -1,5 +1,100 @@
 # PoseGraph串行实施记录
 
+## 当前执行入口（COMM-20260906-01）
+
+当前规划与审查的唯一执行入口为`D:/Unity_Project_1/3C/openspec/changes/refactor-character-pose-graph-architecture/execution.md`。实现读取其中`COMM-20260906-01`、`POSE-REVIEW-20260906-01`、`POSE-EXEC-20260906-01`和`POSE-DEPENDENCY-20260906-01`四节连续推进；后文历史阶段通过只覆盖原固定提交，不能用来宣称当前Canvas迁移或整体重构已经完成。
+
+- 实现继续在`C:/Users/Lenovo/.codex/worktrees/a323/3C`、分支`codex/posegraph-luna`工作，不新建任务或工作树。详细剩余项继续使用本目录`tasks.md`，当前整体为`CHANGES_REQUESTED`，第21.x项不能因文档已更新而勾选完成。
+- 规划维护主目录execution中的范围、接口选择、完整执行要求、审查结果及协调事件；实现把代码提交与验证证据写回本文件，并按真实结果更新tasks，不维护第二份方案，不从长聊天记录拼接要求。
+- 跨任务决定由规划自行读取`D:/Unity_Project_1/3C/docs/coordination-progress.md`再落实。协调文档仅协调窗口写；实现仍只联系原Pose规划，跨任务不绕过既有配对。
+- 每批工作记录一次写全任务/事件、稳定提交、绝对文件路径、业务输入/处理/输出、状态和资源归属、旧路径删除、验证命令/实例/版本、结果、证据路径、失败及剩余项。源码编译、正式产物发布和端到端验收分别说明，不扩大历史通过结论。
+- `TASK_READY`、`CROSS_TASK_QUESTION`、`COORDINATION_INVALIDATION`作为本文档事件标签；提报问题先集中写全背景、固定源码证据、影响、已尝试处理、需要的决定和方案业务取舍，规划审查后收回主目录执行文档。
+- 普通提交、编译、进度、收到、已读、仍在等、无变化不发消息、不索取回执、不定时轮询。只有需要开始/调整执行、处理真实阻塞或接收已审查交付时，发一次文档绝对路径、章节/事件编号与所需动作的简短通知。同一问题补充先在文档合并，不逐条转发。
+- 已授权工作持续推进，小步中文提交，保护其它任务的未提交改动；只有无法独立解决的实际交叉依赖才形成协调事件，减少消息不等于增加确认或停工。
+
+## 协作切换记录（POSE-COMM-20260906-01）
+
+本次只更新现有执行文档的读取入口与写入分工，业务代码、迁移资产、编译和Build未执行。当前源码审查仍对应`bfe2b8aa27b43c832180794aeab8cc9f1f5ddd0a`；迁移器局部批准和整体质量未通过的边界详见规划文档当前审查节。后续实际执行结果由实现继续写在本文件中，不能把本次规则切换记成第21.x项完成。
+
+## 21.1 Pose Source Compiler分域小步（POSE-EXEC-20260906-02）
+
+状态：提交`203264abdda0c486e97b6c4960eae153bb033337`完成21.1的Pose Source子步；21.1整体仍未完成，其他Projection领域仍由总Compiler掌握。
+
+- 输入：`CharacterAnimationPresentationProfile`，包括root与Linked Pose Graph owners、reachable Pose Graph、Graph-owned Source Slot、Profile Source Binding和Rig。
+- 处理：新增`CharacterPresentationPoseSourceCompiler` Module。该Module集中处理Source Slot资产归属、reachable Graph遍历、Slot唯一性、Binding路径与类型校验、Binding.RequireValid、稳定SourceIndex分配和孤立Binding诊断；输出`CharacterPresentationPoseSourceCompilationResult`，其中包含typed `CharacterPresentationPoseSourceCompilationCatalog`与诊断列表。
+- 输出：`CharacterPresentationProjectionCompiler`只接收Source Compilation Result，把诊断合并到原有Projection诊断链，并继续把Catalog交给Motion Matching、Blend Space、Pose Source和Pose Compilation输入；Projection字段、Source identity、排序、错误文本顺序和发布调用没有改变。
+- 资源/状态归属：Source Compiler只拥有本次编译期的Catalog与诊断，不创建Runtime资源、Playable、缓存、Writer、第二Projection或fallback；总Compiler仍拥有整体Projection组合与唯一发布。
+- 删除旧路径：从总Compiler删除嵌套`PoseSourceCompilationEntry/Catalog`、`CompilePoseSourceCatalog`及其Pose Graph owner/reachability遍历；没有保留兼容别名或反向同步。
+- 修改文件：`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs`、`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationPoseSourceCompiler.cs`及其`.meta`。
+- Center change：`faadf46ee02e41b99c38eca310e7f923`；RunId：`e2a433e9d7144452b6c61c13865768de`。
+- 静态证据：`git diff --check`通过；提交范围只有三个Pose Editor文件。
+- Compile证据：统一RunHost执行后状态为Faulted，日志实际使用`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，不是本worktree，不能作为当前源码通过证据。日志：`D:/Unity_Project_1/3C-Artifacts/3c-gameplay/.staging/58af558e543f45f79855db6d833f8f62/Logs/unity-editor.log`。
+- 直接Unity batchmode也未形成当前worktree编译结果，只记录Licensing Client validation/access token失败。日志：`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。
+- 剩余项：未执行Corin迁移、正式Build或Projection重建；21.1的Foot事件、Producer/Camera/Cue、Blend/State、Motion Matching、Equipment和Revision Compiler尚未分域。外部未提交Runtime改动和Unity生成meta继续保留，不纳入本步。
+
+## 21.1 Animation Blend Compiler分域小步（POSE-EXEC-20260906-03）
+
+状态：提交`494f80280`、`b82e472b9`和`78158c722`完成21.1的Animation Blend子步；21.1整体仍未完成。
+
+- 输入：现有Pose Graph、Animation Blend Policy、Pose StateMachine Transition、Direct Inertialization Policy、Motion Matching Jump Blend Policy、Rig和Semantic Producer entries。
+- 处理：新增`CharacterPresentationAnimationBlendCompiler` Module，整体承接Blend curve/profile catalog、State Transition与Inertialization规则收集、Blend authoring selection拓扑、AnimationSlot/Source producer endpoint解析、BlendStack transition payload与Transition Routing plan生成。
+- 输出：Module提供typed `Compilation`，包含Curve/Profile catalog和稳定index字典；Projection总Compiler只调用`CompileCatalog`与`CompileNodes`，把结果传给既有Blend Space、Pose Source和Pose Program组装链。
+- 资源/状态归属：该Module只处理Editor编译期canonical payload和诊断，不创建Runtime BlendStack、Playable、Writer、第二Projection或fallback；现有Blend曲线、Profile、State Transition、Inertialization和Motion Matching语义保持原实现。
+- 删除旧路径：总Compiler中的Animation Blend catalog类型、Blend authoring selection拓扑、Transition Routing和Node payload编译实现已删除，没有保留转发类或双写路径。
+- 修改文件：`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs`、`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationAnimationBlendCompiler.cs`及其`.meta`。
+- 静态证据：`git diff --check`通过；三个中文小提交只包含上述Pose Editor文件，外部Runtime未提交现场未暂存。
+- Compile证据：本小步未获得当前worktree的有效Unity编译结果；既有RunHost编译记录错误指向其他项目，直接batchmode受Licensing阻断。源码移动未执行Corin迁移、正式Build或产物重建，不能把该小步描述为整体21.1完成。
+- 剩余项：21.1仍剩Producer/Camera/Cue、Foot事件、Motion Matching、Equipment和Projection Revision分域；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9继续未完成。
+
+## 21.1 Projection领域Compiler分域收口候选（POSE-EXEC-20260906-04）
+
+状态：提交`55ccc309c`、`e38a7b523`、`e21ebe0d3`、`8125bcad5`、`c658cf7f7`、`ce82d2169`、`0b0aec097`和`6889c30fa`完成Projection领域Compiler分域候选，任务21.1仍未勾选，因为当前worktree尚未获得有效Unity编译结果。
+
+- 输入：既有`CharacterAnimationPresentationProfile`、Canvas Pose Graph、Semantic Producer、Foot Analysis、Rig、Blend/State、Motion Matching、Equipment和Projection ABI输入。
+- 处理与输出：
+  - `CharacterPresentationAnimationBlendCompiler`输出Blend curve/profile、State Transition、Inertialization、BlendStack routing和typed Blend Node payload。
+  - `CharacterPresentationFootEventCompiler`输出注册曲线归一化、Foot Step observation curves和Landing phase边界。
+  - `CharacterPresentationProducerCompiler`输出Animation/Camera/Cue Producer、Timeline call site和Playback mode typed result。
+  - `CharacterPresentationMotionMatchingCompiler`输出Motion Matching payload、Foot Analysis Source依赖和revision tokens。
+  - `CharacterPresentationEquipmentCompiler`输出Equipment visual binding typed result与未解析引用诊断。
+  - `CharacterPresentationProjectionRevisionCompiler`输出Projection ABI、Profile/Equipment依赖、Motion Matching和Foot Analysis组成的Revision。
+  - `CharacterPresentationPoseSourcePlanCompiler`输出Blend Space plan、Clip source plan、Clip Player一致性和Blend Space parameter contract诊断。
+  - `CharacterPresentationProjectionCompiler`只保留根请求检查、各Module调用、诊断合并、Pose Compiler调用、Projection对象组合与唯一发布。
+- 资源/状态归属：上述Module只拥有Editor编译期typed result和diagnostics；Runtime Source、Program、Constraint、Writer、Playable、缓存、第二Projection和fallback均未新增。Projection根仍是唯一发布Owner。
+- 删除旧路径：总Compiler中的对应Blend、Foot Event、Producer、Motion Matching、Equipment、Revision和Source Plan实现已删除，没有保留转发类型、镜像结果或反向同步。
+- 修改文件：上述提交只涉及Projection Editor源码和对应`.meta`，外部Fixed/Float32未提交Runtime现场未暂存。
+- 静态证据：每个小步提交前执行`git diff --check`；Projection总Compiler已由3051行缩至约379行，剩余内容是组合、诊断合并和唯一发布。
+- Compile证据：既有RunHost compile记录`e2a433e9d7144452b6c61c13865768de`错误使用`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，不能作为当前worktree依据；直接Unity batchmode受Licensing Client validation/access token阻断，日志为`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。本批没有有效当前worktree编译通过证据。
+- 剩余项：21.1需要有效编译闭环；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9作者/Canvas/Scene Play/正式Build和迁移删除继续未完成。没有执行Corin迁移、正式Build或生成Projection/Program产物。
+
+## 21.2–21.4 Family、Projection Validator与根帧协调小步（POSE-EXEC-20260906-05）
+
+状态：提交`1f59e899a`和`2864ff961`完成Family payload按真实Operation Family下沉并保持原descriptor索引顺序的候选；提交`7e4ac5c4b`完成sealed Projection身份、Producer集合和语义合同验证的独立Owner；提交`e171ae5f7`把旧递归图规则Owner明确命名为`CharacterPoseTopologyValidator`，把Projection sealed验证Owner明确命名为`CharacterPoseGraphProjectionValidator`；提交`2a3b413fa`完成Presentation根帧事务的typed Coordinator收口；提交`c972496fa`补齐按显式Numeric Target列表调用正式Character Build的入口。21.2、21.3、21.4仍不能勾选，原因是当前worktree没有有效Unity/Editor编译证据，且21.3的Topology职责仍需继续拆至最终目标边界、21.5–21.9仍未全部完成。
+
+- 21.2输入：`CharacterPoseSymbolicOperation`、Node Definition声明的`CharacterPoseOperationFamily`、当前图节点payload、Graph/StateMachine作用域和已分配的通用Value索引。处理：新增`CharacterPoseFamilyPayloadBindingAdapters`注册表，按Player、StateMachine、AnimationSlot、Inertialization、Composition、ComponentControl、GoalContribution、FullBodyIK分别编译所属typed payload，并返回单一`CharacterPoseFamilyPayloadBindingResult`；主Plan Pass只分配通用句柄、保留Symbolic顺序并汇总结果。StateMachine adapter在消费外层symbolic operation前执行，保持原递归State Graph的Symbolic cursor、Value index和payload排序。
+- 21.2输出：`CharacterPoseBoundOperation`字段来源不变，`CharacterPoseFamilyPayloadPlan`、Worker Plan、Seal和Runtime ABI仍只消费一份绑定结果。Adapter只拥有Editor编译期descriptor数组和索引，不创建Runtime页、Playable、Writer或第二Projection；旧的主遍历内按Requirement直接调用各类payload编译路径已删除，没有兼容转发。
+- 21.3输入：编译后的`CharacterPresentationProjection`与`CharacterPresentationSemanticContract`。处理：新增`CharacterPoseGraphProjectionValidator`，集中验证Projection ABI、非空身份、Projection/Contract hash、Producer数量、稳定index、Producer identity、channel/source合同，并在这些检查通过后调用`RequireContract`完成最终sealed合同验证；`CharacterSimulationBuildOrchestrator`删除同一组字段的第二份解释；旧递归图校验Owner改名为`CharacterPoseTopologyValidator`，避免把Topology规则继续伪装成Projection验证。节点局部规则、Topology规则和Projection sealed验证仍未完全拆成最终目标的三个实现层。
+- 21.4输入：Body、Fact、Animation、Equipment、Linked Pose Session、Camera、Diagnostics和PoseRoot正式模块。处理：新增`CharacterPresentationFrameCoordinator`，整体拥有Frame active、Pending Body/Animation/Camera、sample clock、pose output、Pose Plan diagnostics、performance context和Begin/Advance/Complete/Abort/Reset/Dispose；`CharacterSimulationPresentationRuntime`只保留输入接入、Producer/Camera/Cue命令分发、模块装配和Coordinator转交。所有Root Frame阶段仍沿用原lineage、Result、唯一Complete/Abort和Failure日志边界，没有新增第二事务或fallback。
+- 21.8入口：`CharacterSimulationBuildOrchestrator.Build(definition, targets)`与`DryRun(definition, targets)`显式接收有序Target Adapter列表；正式`Build(request)`继续先编译同一Semantic IR和Presentation Projection，再为全部Target建立Publish Stage，最后由同一事务发布，未复制主目录generated文件。当前没有用该入口重建Corin产物。
+- 资源/状态归属：Family Adapter只拥有编译期payload；Projection Validator只拥有验证诊断；Frame Coordinator只拥有actor-local根帧状态；Formal Build只拥有一次Semantic/Target/Projection原子发布。外部Fixed/Float32未提交Runtime修改、`Runtime/Character/Pipeline/Simulation/`目录和Unity生成meta均未纳入提交。
+- 验证：各代码小步执行`git diff --check`通过；当前worktree不存在Unity生成的`ThirdPersonClient.Editor.csproj`，尝试的dotnet命令因项目文件不存在退出，并已执行`dotnet build-server shutdown`；RunHost旧记录仍指向`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，直接Unity batchmode仍因Licensing Client validation/access token失败。因此本批没有当前worktree编译通过、正式Build、Corin产物或E2E证据。
+- 剩余项：21.2需在有效Editor编译后确认所有Family Adapter调用和ABI未变；21.3需继续删除/收窄Topology与Definition中的重复职责；21.5 Pose窗口与旧`AnimationPreviewRuntime`仍未迁入正式Scene Play；21.8需实际执行一次多Target正式Build；21.9当前没有Pose对ACL共享Source/Projection合同的直接引用，不接入ACL。
+
+## 21.5–21.7作者表面与Preview边界审计（POSE-EXEC-20260906-06）
+
+状态：本次不修改作者资产或Preview运行路径，只固定现有代码事实和决策边界。21.5仍等待`rebuild-btsmtl-preview-with-scene-play`的正式Scene Play协调器，不能把当前Preview Fixture Scene误记为Scene Play完成；21.6选择方案A；21.7接受当前自建GraphView并明确维护成本，不能把它描述成完整CanvasCore编辑器。
+
+- 21.6方案A的现行证据：`CharacterPoseCanvasView`的投影创建、拖线、删除、移动、StateMachine transition和节点创建都把请求交给`CharacterPoseCanvasEditorMutationAdapter`/StateMachine Adapter；Clipboard使用同一`IGraphAuthoringDomainMutation`，Document、Undo和MCP继续通过既有Mutation Owner。CanvasCore GraphView的非virtual物理API仍无法从基类类型层禁止，但当前源码没有第二个Pose Graph对象写入Owner或绕过Mutation的Pose Canvas路径。业务取舍是保留GraphView交互和较低迁移成本，接受以后需要用源码审计守住唯一写入口。
+- 21.7当前实现边界：`CharacterPoseCanvasView.cs`为877行自建GraphView，负责Node/Port/Edge投影和交互事件；它不提供通用Flow执行、反射调用、自动类型转换或第二Graph数据源。选择保留它是因为现有Pose专用端口、StateMachine页面和typed Mutation已经接通；代价是节点渲染、端口交互、GraphView版本变化和交互回归由项目自行维护。未宣称接入ParadoxNotion现成Graph Editor。
+- 21.5当前实现边界：`CharacterPoseAuthoringBottomDock`仍持有`CharacterAnimationPreviewFixtureSession`、播放/暂停/单步/seek和Edit Mode Preview Scene；`AnimationPreviewRuntime`仍存在于`CharacterPipelineAuthoringPreviewController`和相关查询Fixture。它不是正式Scene Play Session，因此不删除这些路径，也不建立第二Preview入口，等待共享Scene Play change的唯一协调器和明确提交。
+
+## Center当前worktree编译闭环（POSE-EXEC-20260906-07）
+
+状态：使用正式 Center change `faadf46ee02e41b99c38eca310e7f923`和正确 worktree `C:/Users/Lenovo/.codex/worktrees/a323/3C`连续执行 compile。Run `f96920fe5295479a8e462e45260a266a`首次实际进入当前工程并暴露`RuntimeDiagnosticsContext`引用；提交`912eddd9e`修复后，Run `a8fc23a8a28f42ad976803473ee292c0`暴露Canvas migration state、Legacy字段访问级别和主角色注册漏传ActorId；提交`66162de95`、`ed60d8f98`后，Run `1748ac596c604b4a8f7b217122932b1a`只剩Fixed注册漏传ActorId；提交`ccdf754b1`后，Run `9c436bdc999b4877b958cc3f79970bf9`只剩并行DeterministicRollback注册与Performance Capture链错误；提交`7a17e03aa`修复Rollback注册后，最终Run `e9c992969065417db8feb5e667427f44`确认Pose/Presentation/Fixed/Rollback相关错误已消失。
+
+- 当前 Center 失败原因只剩`ThirdPersonPerformanceCaptureAgent.cs`引用缺失的并行性能API：`PerformanceCameraInputOverride`、`PrepareReplay`双参数重载、`FixedCharacterInputTraceMode.ReplayPaused`、`GameplayLabBootstrap.Current`和`FixedCharacterInputTraceModule.ResumeReplay`。这些属于性能链现有接口不一致，不属于本Pose改动；没有新增fallback、兼容入口或临时API。
+- 本次编译同时确认：`CharacterPresentationFrameCoordinator`、`CharacterPoseGraphProjectionValidator`、Canvas migration state、`CharacterSimulationActorRegistration`、Fixed和DeterministicRollback注册器均已进入编译，当前没有它们的错误。Center证据目录：`D:/Unity_Project_1/3C-Artifacts/3c-gameplay/Runs/e9c992969065417db8feb5e667427f44/`。
+- 结论：当前 worktree 的 Pose/Presentation 代码已通过“无本域编译错误”的边界，但整个 Unity Runtime/Performance 程序集仍不能宣称编译通过；未执行正式 Corin Build、Scene Play或E2E。
 ## 文档协作与写入分工（COMM-20260906-01）
 
 自2026-09-06起，规划与实现按本节协作。本节及下面的当前执行要求优先于后文历史阶段记录；历史提交、编译与回放通过只覆盖原记录中的固定版本，不代表当前Canvas迁移或整体架构已通过审查。

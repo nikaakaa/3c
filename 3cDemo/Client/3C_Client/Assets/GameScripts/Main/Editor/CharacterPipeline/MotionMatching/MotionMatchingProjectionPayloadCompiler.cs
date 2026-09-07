@@ -171,13 +171,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
         static void ResolveNodeBindings(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             ICollection<MotionMatchingNodeAuthoringBinding> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
@@ -203,7 +203,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                         if (state == null ||
                             !state.PoseGraphId.IsValid)
                             continue;
-                        CharacterTypedPoseGraph stateGraph =
+                        CharacterPoseCanvasGraph stateGraph =
                             owner.RequireGraph(
                                 state.PoseGraphId);
                         ResolveNodeBindings(
@@ -219,7 +219,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     node.Subgraph == null ||
                     !node.Subgraph.PoseGraphId.IsValid)
                     continue;
-                CharacterTypedPoseGraph child =
+                CharacterPoseCanvasGraph child =
                     owner.RequireGraph(node.Subgraph.PoseGraphId);
                 ResolveNodeBindings(
                     owner,

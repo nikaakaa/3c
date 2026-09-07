@@ -1051,7 +1051,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_TuningBlock == null)
                 return false;
             CharacterPoseTuningLayoutEntry entry = null;
-            if (document is CharacterTypedPoseGraphDocument)
+            if (document is CharacterPoseCanvasGraphDocument)
             {
                 string ownerId =
                     $"pose-node:{request.TargetId.Value}";

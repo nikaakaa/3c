@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
 
     internal static class CharacterAnimationParameterLayoutCompiler
     {
-        internal static CharacterAnimationParameterLayout Build(CharacterTypedPoseGraph graph)
+        internal static CharacterAnimationParameterLayout Build(CharacterPoseCanvasGraph graph)
         {
             if (graph == null)
                 throw new ArgumentNullException(nameof(graph));

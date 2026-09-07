@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     public delegate IReadOnlyList<CharacterPosePortDefinition>
         CharacterPosePortContractResolver(
-            CharacterTypedPoseNode node);
+            CharacterPoseCanvasNode node);
 
     public enum CharacterPoseGraphValidationCode : byte
     {
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public static class CharacterPresentationPoseGraphValidator
+    public static class CharacterPoseTopologyValidator
     {
         enum GraphRole : byte
         {
@@ -163,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             var catalogIds = new HashSet<PoseGraphId>();
             var ownerCounts = new Dictionary<PoseGraphId, int>();
-            foreach (CharacterTypedPoseGraph graph in
+            foreach (CharacterPoseCanvasGraph graph in
                      asset.EnumerateGraphs())
             {
                 if (graph == null ||
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         graph?.GraphId.Value ?? string.Empty);
                     continue;
                 }
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     if (node?.Payload == null)
                         continue;
@@ -273,7 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static CharacterPoseGraphValidationReport
             ValidateClosedGraph(
                 CharacterPresentationPoseGraphAsset ownerAsset,
-                CharacterTypedPoseGraph graph,
+                CharacterPoseCanvasGraph graph,
                 CharacterAnimationRigDefinition rig,
                 CharacterPosePortContractResolver portResolver,
                 CharacterPoseGraphClosure closure,
@@ -326,8 +326,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateGraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
-            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
-            CharacterTypedPoseGraph graph,
+            Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver,
+            CharacterPoseCanvasGraph graph,
             CharacterAnimationRigDefinition rig,
             CharacterPosePortContractResolver portResolver,
             IReadOnlyCollection<AnimationChannelId>
@@ -376,7 +376,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HashSet<PoseParameterId> parameters =
                 ValidateParameters(graph, report);
             var nodes =
-                new Dictionary<PoseNodeId, CharacterTypedPoseNode>();
+                new Dictionary<PoseNodeId, CharacterPoseCanvasNode>();
             var ports = new Dictionary<
                 string,
                 CharacterPosePortDefinition>(StringComparer.Ordinal);
@@ -392,7 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  nodeIndex < graph.Nodes.Count;
                  nodeIndex++)
             {
-                CharacterTypedPoseNode node =
+                CharacterPoseCanvasNode node =
                     graph.Nodes[nodeIndex];
                 if (node?.Payload == null ||
                     !node.NodeId.IsValid)
@@ -724,9 +724,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateStateMachine(
             CharacterPresentationPoseGraphAsset ownerAsset,
-            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
-            CharacterTypedPoseGraph ownerGraph,
-            CharacterTypedPoseNode node,
+            Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver,
+            CharacterPoseCanvasGraph ownerGraph,
+            CharacterPoseCanvasNode node,
             CharacterPoseStateMachineNodePayload payload,
             CharacterAnimationRigDefinition rig,
             CharacterPosePortContractResolver portResolver,
@@ -758,7 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             foreach (CharacterPoseStateDefinition state in
                      payload.StateMachine.States)
             {
-                CharacterTypedPoseGraph stateGraph = null;
+                CharacterPoseCanvasGraph stateGraph = null;
                 try
                 {
                     if (state != null)
@@ -861,9 +861,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateSubgraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
-            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
-            CharacterTypedPoseGraph ownerGraph,
-            CharacterTypedPoseNode node,
+            Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver,
+            CharacterPoseCanvasGraph ownerGraph,
+            CharacterPoseCanvasNode node,
             CharacterPoseSubgraphPayload payload,
             CharacterAnimationRigDefinition rig,
             CharacterPosePortContractResolver portResolver,
@@ -874,7 +874,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseGraphValidationReport report,
             bool traverseDependencies)
         {
-            CharacterTypedPoseGraph child = null;
+            CharacterPoseCanvasGraph child = null;
             try
             {
                 if (payload.Subgraph?.PoseGraphId.IsValid == true)
@@ -915,9 +915,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateMotionMatchingEntryGraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
-            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
-            CharacterTypedPoseGraph ownerGraph,
-            CharacterTypedPoseNode node,
+            Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver,
+            CharacterPoseCanvasGraph ownerGraph,
+            CharacterPoseCanvasNode node,
             CharacterMotionMatchingPosePayload payload,
             CharacterAnimationRigDefinition rig,
             CharacterPosePortContractResolver portResolver,
@@ -926,7 +926,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseGraphValidationReport report,
             bool traverseDependencies)
         {
-            CharacterTypedPoseGraph entryGraph = null;
+            CharacterPoseCanvasGraph entryGraph = null;
             try
             {
                 if (payload.EntryGraph?.PoseGraphId.IsValid == true)
@@ -979,22 +979,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateMotionMatchingTopology(
-            CharacterTypedPoseGraph graph,
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             CharacterPoseGraphValidationReport report)
         {
             var collectorOwners = new Dictionary<PoseNodeId, PoseNodeId>();
-            foreach (CharacterTypedPoseNode node in nodes.Values)
+            foreach (CharacterPoseCanvasNode node in nodes.Values)
             {
                 if (node.Kind != CharacterPoseNodeKind.MotionMatchingPose)
                     continue;
-                CharacterPoseEdge[] historyEdges = graph.Edges
+                CharacterPoseCanvasConnection[] historyEdges = graph.Edges
                     .Where(edge => edge != null &&
                                    edge.TargetNodeId == node.NodeId &&
                                    edge.TargetPortId.Equals(CharacterMotionMatchingPosePorts.History))
                     .ToArray();
                 if (historyEdges.Length != 1 ||
-                    !nodes.TryGetValue(historyEdges[0].SourceNodeId, out CharacterTypedPoseNode collector) ||
+                    !nodes.TryGetValue(historyEdges[0].SourceNodeId, out CharacterPoseCanvasNode collector) ||
                     collector.Kind != CharacterPoseNodeKind.PoseHistoryCollector ||
                     !historyEdges[0].SourcePortId.Equals(CharacterMotionMatchingPosePorts.History))
                 {
@@ -1016,7 +1016,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         graph.GraphId,
                         collector.NodeId);
                 }
-                CharacterPoseEdge[] commitEdges = graph.Edges
+                CharacterPoseCanvasConnection[] commitEdges = graph.Edges
                     .Where(edge => edge != null &&
                                    edge.SourceNodeId == node.NodeId &&
                                    edge.SourcePortId.Equals(CharacterMotionMatchingPosePorts.LocalPoseOutput) &&
@@ -1045,7 +1045,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         node.NodeId);
                 }
             }
-            foreach (CharacterTypedPoseNode collector in nodes.Values)
+            foreach (CharacterPoseCanvasNode collector in nodes.Values)
             {
                 if (collector.Kind == CharacterPoseNodeKind.PoseHistoryCollector &&
                     !collectorOwners.ContainsKey(collector.NodeId))
@@ -1061,7 +1061,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static HashSet<PoseParameterId> ValidateParameters(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             CharacterPoseGraphValidationReport report)
         {
             var result = new HashSet<PoseParameterId>();
@@ -1098,8 +1098,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateParameterPolicies(
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode node,
             IReadOnlyList<CharacterPoseParameterPolicy> policies,
             HashSet<PoseParameterId> parameters,
             CharacterPoseGraphValidationReport report)
@@ -1140,8 +1140,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateEdges(
-            CharacterTypedPoseGraph graph,
-            Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseCanvasGraph graph,
+            Dictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             Dictionary<string, CharacterPosePortDefinition> ports,
             CharacterPosePortContractResolver portResolver,
             bool outputGraph,
@@ -1164,7 +1164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var goalConsumerCounts = new Dictionary<PoseNodeId, int>();
             for (int i = 0; i < graph.Edges.Count; i++)
             {
-                CharacterPoseEdge edge = graph.Edges[i];
+                CharacterPoseCanvasConnection edge = graph.Edges[i];
                 if (edge == null ||
                     string.IsNullOrWhiteSpace(edge.EdgeId) ||
                     !edgeIds.Add(edge.EdgeId))
@@ -1183,8 +1183,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string targetKey =
                     edge.TargetNodeId.Value + "\0" +
                     edge.TargetPortId.Value;
-                if (!nodes.TryGetValue(edge.SourceNodeId, out CharacterTypedPoseNode sourceNode) ||
-                    !nodes.TryGetValue(edge.TargetNodeId, out CharacterTypedPoseNode targetNode) ||
+                if (!nodes.TryGetValue(edge.SourceNodeId, out CharacterPoseCanvasNode sourceNode) ||
+                    !nodes.TryGetValue(edge.TargetNodeId, out CharacterPoseCanvasNode targetNode) ||
                     !ports.TryGetValue(
                         sourceKey,
                         out CharacterPosePortDefinition source) ||
@@ -1289,7 +1289,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         edge.SourceNodeId);
                 }
             }
-            foreach (CharacterTypedPoseNode node in nodes.Values)
+            foreach (CharacterPoseCanvasNode node in nodes.Values)
             {
                 foreach (CharacterPosePortDefinition port in
                          portResolver(node))
@@ -1337,8 +1337,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateFullBodyIkTopology(
-            CharacterTypedPoseGraph graph,
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             IReadOnlyDictionary<PoseNodeId, PoseNodeId> componentPoseProducers,
             IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> contributionProducers,
             IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> goalSetProducers,
@@ -1348,7 +1348,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             int solverCount = 0;
             int assemblerCount = 0;
-            foreach (CharacterTypedPoseNode node in nodes.Values)
+            foreach (CharacterPoseCanvasNode node in nodes.Values)
             {
                 if (node.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
                     node.Kind == CharacterPoseNodeKind.FootPlacement)
@@ -1391,7 +1391,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!componentPoseProducers.TryGetValue(node.NodeId, out PoseNodeId poseProducer) ||
                     !goalSetProducers.TryGetValue(node.NodeId, out List<PoseNodeId> assemblers) ||
                     assemblers.Count != 1 ||
-                    !nodes.TryGetValue(assemblers[0], out CharacterTypedPoseNode assembler) ||
+                    !nodes.TryGetValue(assemblers[0], out CharacterPoseCanvasNode assembler) ||
                     assembler.Kind != CharacterPoseNodeKind.FullBodyIkGoalAssembler)
                 {
                     Report(
@@ -1409,7 +1409,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < sources.Count; i++)
                 {
                     PoseNodeId source = sources[i];
-                    if (!nodes.TryGetValue(source, out CharacterTypedPoseNode sourceNode) ||
+                    if (!nodes.TryGetValue(source, out CharacterPoseCanvasNode sourceNode) ||
                         (sourceNode.Kind != CharacterPoseNodeKind.PoseBoneIKGoals &&
                          sourceNode.Kind != CharacterPoseNodeKind.FootPlacement))
                         continue;
@@ -1444,18 +1444,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateRootOrientationWarps(
-            CharacterTypedPoseGraph graph,
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             CharacterPoseGraphValidationReport report)
         {
-            foreach (CharacterTypedPoseNode node in nodes.Values)
+            foreach (CharacterPoseCanvasNode node in nodes.Values)
             {
                 if (node.Kind != CharacterPoseNodeKind.RootOrientationWarp)
                     continue;
-                CharacterPoseEdge input = graph.Edges.FirstOrDefault(edge =>
+                CharacterPoseCanvasConnection input = graph.Edges.FirstOrDefault(edge =>
                     edge != null && edge.TargetNodeId.Equals(node.NodeId));
                 if (input == null ||
-                    !nodes.TryGetValue(input.SourceNodeId, out CharacterTypedPoseNode source) ||
+                    !nodes.TryGetValue(input.SourceNodeId, out CharacterPoseCanvasNode source) ||
                     source.Kind != CharacterPoseNodeKind.ClipPlayer ||
                     source.Payload is not CharacterClipPlayerPosePayload)
                 {
@@ -1470,10 +1470,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void ValidateReachability(
-            Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            Dictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
             Dictionary<PoseNodeId, List<PoseNodeId>> reverse)
         {
-            CharacterTypedPoseNode output =
+            CharacterPoseCanvasNode output =
                 nodes.Values.SingleOrDefault(node =>
                     CharacterPoseNodeDefinitionModule.Shared
                         .Require(node.Kind).NativeRole ==

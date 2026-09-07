@@ -196,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendShapeIndex = blendShapeIndex;
         }
 
-        public void RequireValid(CharacterTypedPoseGraph graph)
+        public void RequireValid(CharacterPoseCanvasGraph graph)
         {
             if (graph == null || !ParameterId.IsValid || string.IsNullOrWhiteSpace(RendererBindingId) ||
                 string.IsNullOrWhiteSpace(AnimationCurvePath) ||

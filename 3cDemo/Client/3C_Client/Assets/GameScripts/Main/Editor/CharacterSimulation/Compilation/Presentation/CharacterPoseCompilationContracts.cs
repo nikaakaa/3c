@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal sealed class CharacterPoseCompilationRequest
     {
         public CharacterPoseCompilationRequest(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterPoseCanvasAuthoringView authoringView,
             CharacterAnimationRigDefinition rig,
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
             AnimationBlendNodePayload[] blendNodes,
@@ -134,7 +134,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterFootPlacementAnalysisCompilation footAnalysis,
             IReadOnlyList<string> movementModeStateIdentities)
         {
-            Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
+            AuthoringView = authoringView ??
+                throw new ArgumentNullException(nameof(authoringView));
             Rig = rig ? rig : throw new ArgumentNullException(nameof(rig));
             ReachableAnimationChannels = reachableAnimationChannels ??
                 Array.Empty<AnimationChannelId>();
@@ -157,7 +158,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(movementModeStateIdentities));
         }
 
-        public CharacterPresentationPoseGraphAsset Asset { get; }
+        public CharacterPoseCanvasAuthoringView AuthoringView { get; }
         public CharacterAnimationRigDefinition Rig { get; }
         public IReadOnlyCollection<AnimationChannelId> ReachableAnimationChannels { get; }
         public AnimationBlendNodePayload[] BlendNodes { get; }

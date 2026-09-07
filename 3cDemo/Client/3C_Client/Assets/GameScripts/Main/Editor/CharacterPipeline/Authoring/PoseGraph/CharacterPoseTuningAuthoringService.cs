@@ -228,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (entry.OwnerId.StartsWith("pose-node:", StringComparison.Ordinal))
             {
                 string nodeId = entry.OwnerId.Substring("pose-node:".Length);
-                CharacterTypedPoseNode node = asset.EnumerateGraphs()
+                CharacterPoseCanvasNode node = asset.EnumerateGraphs()
                     .Where(candidate => candidate != null)
                     .SelectMany(candidate => candidate.Nodes)
                     .Single(candidate => candidate != null &&
@@ -348,7 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseTuningValue value)
         {
             string nodeId = entry.OwnerId.Substring("pose-node:".Length);
-            CharacterTypedPoseGraph graph = asset.EnumerateGraphs()
+            CharacterPoseCanvasGraph graph = asset.EnumerateGraphs()
                 .Where(candidate => candidate != null)
                 .SingleOrDefault(candidate => candidate.Nodes.Any(node =>
                     node != null && node.NodeId.Value == nodeId));
@@ -356,12 +356,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException($"Pose node '{nodeId}' is not in the current Pose Graph asset.");
             string fieldId = entry.FieldId.Substring(entry.OwnerId.Length + 1);
             var owner = new CharacterPoseGraphAssetMutationOwner(asset, profile);
-            var document = new CharacterTypedPoseGraphDocument(
+            var document = new CharacterPoseCanvasGraphDocument(
                 owner,
                 graph.GraphId.Value,
                 ResolveRole(asset, graph),
                 graph.GraphId.Value);
-            var mutation = new CharacterTypedPoseGraphMutationAdapter();
+            var mutation = new CharacterPoseCanvasMutationAdapter();
             mutation.Apply(
                 document,
                 new GraphAuthoringMutationRequest(
@@ -373,7 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static GraphAuthoringDocumentRoleId ResolveRole(
             CharacterPresentationPoseGraphAsset asset,
-            CharacterTypedPoseGraph graph)
+            CharacterPoseCanvasGraph graph)
         {
             if (ReferenceEquals(graph, asset.Graph))
                 return CharacterPoseGraphAuthoringCapabilities.RootGraph;
@@ -532,7 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset asset)
             where T : UnityEngine.Object
         {
-            foreach (CharacterTypedPoseNode node in asset.EnumerateGraphs()
+            foreach (CharacterPoseCanvasNode node in asset.EnumerateGraphs()
                          .Where(graph => graph != null)
                          .SelectMany(graph => graph.Nodes)
                          .Where(node => node?.Payload != null))

@@ -11,13 +11,13 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed class CharacterTypedPoseGraphClipboardCodec :
+    public sealed class CharacterPoseCanvasGraphClipboardCodec :
         IGraphAuthoringClipboardCodec
     {
         const string Schema = "character-pose-clipboard.v1";
         readonly IGraphAuthoringDomainMutation m_Mutation;
 
-        public CharacterTypedPoseGraphClipboardCodec(
+        public CharacterPoseCanvasGraphClipboardCodec(
             IGraphAuthoringDomainMutation mutation)
         {
             m_Mutation = mutation ??
@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IGraphAuthoringDocumentProjection document,
             IReadOnlyList<GraphAuthoringSelection> selection)
         {
-            CharacterTypedPoseGraphDocument pose = RequireDocument(document);
+            CharacterPoseCanvasGraphDocument pose = RequireDocument(document);
             HashSet<string> selected = (selection ??
                                         throw new ArgumentNullException(
                                             nameof(selection)))
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Pose clipboard selection contains no nodes.");
 
             var payload = new ClipboardPayload { schema = Schema };
-            foreach (CharacterTypedPoseNode node in pose.Graph.Nodes
+            foreach (CharacterPoseCanvasNode node in pose.Graph.Nodes
                          .Where(value => selected.Contains(value.NodeId.Value))
                          .OrderBy(value => value.NodeId))
             {
@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             id = value.PortId.Value,
                             name = value.DisplayName,
                             valueType =
-                                CharacterTypedPoseGraphDocument.ValueType(
+                                CharacterPoseCanvasGraphDocument.ValueType(
                                     value.Kind),
                             direction = value.Direction.ToString(),
                             required = value.Required,
@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string payload,
             Vector2 graphPosition)
         {
-            CharacterTypedPoseGraphDocument pose = RequireDocument(document);
+            CharacterPoseCanvasGraphDocument pose = RequireDocument(document);
             ClipboardPayload value = Parse(payload);
             Validate(pose, value);
             Vector2 origin = new Vector2(
@@ -182,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     GraphAuthoringMutationKind.CreateNode,
                     capabilityId: new GraphAuthoringCapabilityId(
                         node.capability),
-                    value: new CharacterTypedPoseNode(
+                    value: new CharacterPoseCanvasNode(
                         new PoseNodeId(nodeIds[node.id]),
                         node.name,
                         typedPayload,
@@ -212,7 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void Validate(
-            CharacterTypedPoseGraphDocument document,
+            CharacterPoseCanvasGraphDocument document,
             ClipboardPayload payload)
         {
             if (payload == null ||
@@ -299,7 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 portShapes.Add(
                     node.id,
                     definition.ProjectPortShape(
-                            new CharacterTypedPoseNode(
+                            new CharacterPoseCanvasNode(
                                 new PoseNodeId(node.id),
                                 node.name,
                                 typedPayload,
@@ -353,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static object DecodeField(
-            CharacterTypedPoseGraphDocument document,
+            CharacterPoseCanvasGraphDocument document,
             ClipboardNode node,
             string fieldId,
             Type expectedType)
@@ -484,9 +484,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static CharacterTypedPoseGraphDocument RequireDocument(
+        static CharacterPoseCanvasGraphDocument RequireDocument(
             IGraphAuthoringDocumentProjection document) =>
-            document as CharacterTypedPoseGraphDocument ??
+            document as CharacterPoseCanvasGraphDocument ??
             throw new ArgumentException(
                 "Pose clipboard requires a typed Pose Graph document.",
                 nameof(document));
@@ -505,7 +505,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return definition.Kind;
         }
 
-        static void RequireCopyable(CharacterTypedPoseNode node) =>
+        static void RequireCopyable(CharacterPoseCanvasNode node) =>
             RequireCopyable(
                 CharacterPoseNodeDefinitionModule.Shared.Require(
                     node.Kind));

@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationSourceResourceBinding[] sourceResourceBindings,
             CharacterAnimationPropertyAuthoringBinding[] propertyBindings,
             CharacterAnimationPropertyImportCompressionTarget compression,
-            CharacterTypedPoseNode rootResolveNode)
+            CharacterPoseCanvasNode rootResolveNode)
         {
             PropertyParameters = propertyParameters;
             GraphParameters = graphParameters;
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterAnimationSourceResourceBinding[] SourceResourceBindings { get; }
         internal CharacterAnimationPropertyAuthoringBinding[] PropertyBindings { get; }
         internal CharacterAnimationPropertyImportCompressionTarget Compression { get; }
-        internal CharacterTypedPoseNode RootResolveNode { get; }
+        internal CharacterPoseCanvasNode RootResolveNode { get; }
     }
 
     internal static class CharacterAnimationPropertyContractFactory
@@ -58,21 +58,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "percent",
                         CharacterPoseParameterUsage.AnimatedProperty))
                     .ToArray();
-            CharacterTypedPoseGraph rootGraph = poseGraph.Graph ??
+            CharacterPoseCanvasGraph rootGraph = poseGraph.Graph ??
                 throw new InvalidOperationException("Presentation Pose Graph has no root Graph.");
-            CharacterTypedPoseNode[] resolveNodes = rootGraph.Nodes
+            CharacterPoseCanvasNode[] resolveNodes = rootGraph.Nodes
                 .Where(value => value?.Payload is CharacterPoseParameterResolvePayload)
                 .ToArray();
             if (resolveNodes.Length != 1)
                 throw new InvalidOperationException(
                     $"Root Pose Graph must contain exactly one Pose Parameter Resolve node; found {resolveNodes.Length}.");
-            CharacterTypedPoseNode rootResolveNode = resolveNodes[0];
+            CharacterPoseCanvasNode rootResolveNode = resolveNodes[0];
             CharacterPoseParameterPolicy[] rootPolicies = BuildRootPolicies(
                 rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>(),
                 propertyParameters);
             var graphParameters = new Dictionary<string, CharacterPoseParameterDeclaration[]>(StringComparer.Ordinal);
             var poseGraphs = new List<CharacterAnimationPropertyImportPoseGraphTarget>();
-            foreach (CharacterTypedPoseGraph graph in poseGraph.EnumerateGraphs()
+            foreach (CharacterPoseCanvasGraph graph in poseGraph.EnumerateGraphs()
                          .Where(value => value != null)
                          .OrderBy(value => value.GraphId.Value, StringComparer.Ordinal))
             {
@@ -126,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static CharacterPoseParameterDeclaration[] BuildGraphParameters(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseParameterDeclaration> propertyParameters)
         {
             var result = new List<CharacterPoseParameterDeclaration>();

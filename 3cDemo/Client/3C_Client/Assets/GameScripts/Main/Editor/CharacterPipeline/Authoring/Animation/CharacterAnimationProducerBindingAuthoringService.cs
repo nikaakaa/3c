@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             context.Profile.CollectConfigurationErrors(profileErrors);
             if (profileErrors.Count > 0)
                 throw new InvalidOperationException(string.Join("\n", profileErrors));
-            CharacterPoseGraphValidationReport graphReport = CharacterPresentationPoseGraphValidator.Validate(
+            CharacterPoseGraphValidationReport graphReport = CharacterPoseTopologyValidator.Validate(
                 context.Profile.PoseGraph,
                 context.Profile.RigDefinition,
                 CharacterPoseAuthoringPortProjection.Get,

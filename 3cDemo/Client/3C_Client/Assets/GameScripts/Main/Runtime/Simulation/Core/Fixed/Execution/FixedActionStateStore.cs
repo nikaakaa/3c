@@ -79,7 +79,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong lastTransitionTick,
             ulong lastTransitionSourceTick,
             string reason,
-            EquipmentActionContext equipmentContext = default)
+            EquipmentActionContext equipmentContext = default,
+            ulong segmentGeneration = 0)
         {
             ActionId = actionId ?? string.Empty;
             SkillId = skillId;
@@ -101,12 +102,14 @@ namespace ThirdPersonSimulation.Fixed
             LastTransitionSourceTick = lastTransitionSourceTick;
             Reason = reason ?? string.Empty;
             EquipmentContext = equipmentContext;
+            SegmentGeneration = segmentGeneration;
         }
 
         public string ActionId { get; }
         public CharacterSkillId SkillId { get; }
         public OperationHandle SkillEntryOperation { get; }
         public ulong SkillExecutionGeneration { get; }
+        public ulong SegmentGeneration { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
@@ -168,7 +171,34 @@ namespace ThirdPersonSimulation.Fixed
                 transitionTick,
                 sourceTick,
                 reason,
-                EquipmentContext);
+                EquipmentContext,
+                SegmentGeneration);
+        }
+
+        public FixedActionInstanceState WithSegmentGeneration(ulong segmentGeneration)
+        {
+            return new FixedActionInstanceState(
+                ActionId,
+                SkillId,
+                SkillEntryOperation,
+                SkillExecutionGeneration,
+                ContextId,
+                InstanceId,
+                PredictionKey,
+                SourceInputRequestId,
+                InputSequence,
+                StartTick,
+                TargetKey,
+                TargetSnapshot,
+                Source,
+                Phase,
+                State,
+                LastTransition,
+                LastTransitionTick,
+                LastTransitionSourceTick,
+                Reason,
+                EquipmentContext,
+                segmentGeneration);
         }
 
         public FixedActionInstanceState WithSkillExecution(OperationHandle entryOperation, ulong generation)
@@ -193,7 +223,8 @@ namespace ThirdPersonSimulation.Fixed
                 LastTransitionTick,
                 LastTransitionSourceTick,
                 Reason,
-                EquipmentContext);
+                EquipmentContext,
+                SegmentGeneration);
         }
     }
 

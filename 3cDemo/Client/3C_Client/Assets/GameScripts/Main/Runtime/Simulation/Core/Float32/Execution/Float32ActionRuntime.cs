@@ -401,6 +401,26 @@ namespace ThirdPersonSimulation
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.WriteAction(
             Float32ActionInstanceState action) => m_Actions.WriteState(action);
 
+        public bool TryReadSegmentGeneration(out ulong segmentGeneration)
+        {
+            if (m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action))
+            {
+                segmentGeneration = action.SegmentGeneration;
+                return true;
+            }
+            segmentGeneration = 0;
+            return false;
+        }
+
+        public ulong AdvanceSegmentGeneration()
+        {
+            if (!m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action))
+                return 0;
+            ulong next = checked(action.SegmentGeneration + 1);
+            m_Actions.WriteState(action.WithSegmentGeneration(next));
+            return next;
+        }
+
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.SetActionTags(
             ulong actionInstanceId,
             IEnumerable<string> tags) => m_GameplayEffectActions.SetActionTags(actionInstanceId, tags);

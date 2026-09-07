@@ -362,6 +362,7 @@ namespace ThirdPersonSimulation
             OperationHandle exitingState,
             OperationHandle targetState)
         {
+            m_Actions.AdvanceSegmentGeneration();
             foreach (ActionAdmissionActiveAction action in ((IActionAdmissionReadPort)m_Actions).ActiveActions)
             {
                 SimulationOperation operation = m_Access.Operation(machine.Handle);

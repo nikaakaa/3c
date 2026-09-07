@@ -78,7 +78,8 @@ namespace ThirdPersonSimulation
             ulong lastTransitionTick,
             ulong lastTransitionSourceTick,
             string reason,
-            EquipmentActionContext equipmentContext = default)
+            EquipmentActionContext equipmentContext = default,
+            ulong segmentGeneration = 0)
         {
 			ActionId = actionId ?? string.Empty;
 			SkillId = skillId;
@@ -100,12 +101,14 @@ namespace ThirdPersonSimulation
             LastTransitionSourceTick = lastTransitionSourceTick;
             Reason = reason ?? string.Empty;
             EquipmentContext = equipmentContext;
+            SegmentGeneration = segmentGeneration;
         }
 
 		public string ActionId { get; }
 		public CharacterSkillId SkillId { get; }
 		public OperationHandle SkillEntryOperation { get; }
 		public ulong SkillExecutionGeneration { get; }
+		public ulong SegmentGeneration { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
@@ -167,7 +170,34 @@ namespace ThirdPersonSimulation
                 transitionTick,
                 sourceTick,
                 reason,
-				EquipmentContext);
+				EquipmentContext,
+            SegmentGeneration);
+		}
+
+		public Float32ActionInstanceState WithSegmentGeneration(ulong segmentGeneration)
+		{
+			return new Float32ActionInstanceState(
+				ActionId,
+				SkillId,
+				SkillEntryOperation,
+				SkillExecutionGeneration,
+				ContextId,
+				InstanceId,
+				PredictionKey,
+				SourceInputRequestId,
+				InputSequence,
+				StartTick,
+				TargetKey,
+				TargetSnapshot,
+				Source,
+				Phase,
+				State,
+				LastTransition,
+				LastTransitionTick,
+				LastTransitionSourceTick,
+				Reason,
+				EquipmentContext,
+				segmentGeneration);
 		}
 
 		public Float32ActionInstanceState WithSkillExecution(OperationHandle entryOperation, ulong generation)
@@ -192,7 +222,8 @@ namespace ThirdPersonSimulation
 				LastTransitionTick,
 				LastTransitionSourceTick,
 				Reason,
-				EquipmentContext);
+				EquipmentContext,
+            SegmentGeneration);
 		}
     }
 

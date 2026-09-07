@@ -310,6 +310,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(value.LastTransitionSourceTick);
             writer.WriteString(value.Reason);
             EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
+            writer.WriteUInt64(value.SegmentGeneration);
         }
 
         static Float32ActionInstanceState ReadActionInstance(
@@ -338,7 +339,8 @@ namespace ThirdPersonSimulation
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
                 reader.ReadString(),
-                EquipmentActionContextCodec.Read(reader, layout.Equipment));
+                EquipmentActionContextCodec.Read(reader, layout.Equipment),
+                reader.ReadUInt64());
             if (!value.IsValid)
                 throw new InvalidDataException("Character state Action instance identity is invalid.");
             return value;

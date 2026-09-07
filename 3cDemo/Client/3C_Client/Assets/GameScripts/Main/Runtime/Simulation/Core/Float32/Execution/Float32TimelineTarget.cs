@@ -505,6 +505,13 @@ namespace ThirdPersonSimulation
 
         public void ReleaseTimeline(OperationHandle timeline) { }
 
+        ulong CurrentSegmentGeneration()
+        {
+            return m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action)
+                ? action.SegmentGeneration
+                : 0ul;
+        }
+
         public void EmitPresentation(TimelinePresentationOutput<Float32Scalar> output)
         {
             PresentationCommandKind kind = output.Kind switch
@@ -518,14 +525,16 @@ namespace ThirdPersonSimulation
                 TimelinePresentationOutputKind.ForceProducer => PresentationCommandKind.ForceProducer,
                 _ => throw new ArgumentOutOfRangeException(nameof(output))
             };
-            SimulationEventHeader header = m_Presentation.Next(output.Source, output.ProducerGeneration);
+            ulong playbackGeneration = output.ProducerGeneration +
+                CurrentSegmentGeneration();
+            SimulationEventHeader header = m_Presentation.Next(output.Source, playbackGeneration);
             m_Presentation.Add(new PresentationCommand(
                 header,
                 kind,
                 ProducerIdentity(output.Operation),
                 output.SampleTime,
                 output.Weight,
-                output.ProducerGeneration,
+                playbackGeneration,
                 output.Cycle,
                 output.SourceActionInstanceId,
                 output.VisualTimeScale));

@@ -84,8 +84,9 @@
 
   当前状态：**部分完成（2026-09-07 收回已完成判定）**。cbcd7fa42、c2d9a203d及规则装配提交已提供自研显式State/Transition、只读条件端口、稳定选择顺序、typed控制状态、版本和唯一CharacterControlModuleCatalog，Runtime编译及正式Frontend构建已有成功证据。但Corin控制状态机（Idle/WalkStart/WalkLoop/WalkEnd/RunStart/RunLoop/RunEnd及迁移）当前仍寄宿在`CorinPlayableRootTree.asset`的图资产里、经Discovery从树发现后发射——即设计明确禁止的“重新生成成角色状态机图”形态；Turn控制状态缺失；姿态图迁移字面量因手抄身份与运行时fact错位（旧GUID）导致locomotion动画恒idle，已修复（c262837fb，采样证实状态机全链路恢复、replay 0帧偏差）。2026-09-07新增实施载体决定（design第2节）：控制状态机运行时骨架改用项目fork的UnityHFSM（嵌入包`Packages/UnityHFSM`，remote=nikaakaa/UnityHFSM），时序由仿真Tick注入。剩余工作：库改造（剥float秒/Unity时间、tick注入、typed观察包、删OnKey/OnMouse/协程/可视化）、现有自研合同映射到库骨架、Corin控制模块含Turn迁到库上、状态身份改为代码常量供姿态图编译期引用。
 
-- [ ] 2.1a 将fork的UnityHFSM改造成确定性控制骨架：计时全部改为注入的仿真Tick（整数），删除/隔离Unity时间与输入耦合成员（TransitionOnKey、TransitionOnMouse、CoState、ParallelStates、Visualization、Samples），迁移条件改为typed观察包谓词，双Target复用同一实现；交付改造清单与两端构建证据。
+- [x] 2.1a 将fork的UnityHFSM改造成确定性控制骨架：计时全部改为注入的仿真Tick（整数），删除/隔离Unity时间与输入耦合成员（TransitionOnKey、TransitionOnMouse、CoState、ParallelStates、Visualization、Samples），迁移条件改为typed观察包谓词，双Target复用同一实现；交付改造清单与两端构建证据。
 
+  当前状态：**已完成(库改造部分)**。fork提交a078f74:新增`TickClock`(拥有方每逻辑tick推进),`Timer`/`ITimer`改为整数`ElapsedTicks`,`TransitionAfter`/`TransitionAfterDynamic`的delay改为tick数;`StateMachine`持有clock并在AddState/AddTransition自动绑定,嵌套机器经`ITickClockHost.AdoptClock`共享父时钟。删除CoState/ParallelStates/TransitionOnKey/OnMouse/Visualization/Samples~/Tests,asmdef设`noEngineReferences:true`(纯C#程序集,Version 2.4.0),Editor编译0错误。typed观察包谓词即库原生`Func<T,bool>`条件,由2.1b的Corin模块提供;双Target同程序集消费证据随2.1b的replay回归交付。
 - [ ] 2.1b 将Corin控制状态机从`CorinPlayableRootTree.asset`迁移到C#控制模块（UnityHFSM骨架）：七状态+Turn、迁移条件、每状态Timeline绑定与Locomotion参数（MoveSpeed/DurationSeconds等）进正式控制合同；状态身份输出为代码常量（`presentation.movement-mode.state/<Name>`），姿态图迁移字面量改为引用该常量并重建产物；交付replay回归（trace基线f169da25）与表现采样对照（motion状态机全链路含Turn）。
 - [ ] 2.2 定义SkillDefinition、入口签名、ActionProfile引用、子图依赖及允许的后续候选，交付相同策略被多个技能引用时仍可精确选中技能的作者／校验结果。
 

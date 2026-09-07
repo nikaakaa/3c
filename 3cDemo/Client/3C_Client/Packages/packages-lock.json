@@ -104,6 +104,22 @@
       "source": "local",
       "dependencies": {}
     },
+    "com.tnd.upscaler.fsr4": {
+      "version": "file:com.tnd.upscaler.fsr4",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.tnd.upscaling": "1.0.7"
+      }
+    },
+    "com.tnd.upscaling": {
+      "version": "file:com.tnd.upscaling",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.tuyoogame.yooasset": {
       "version": "file:YooAsset",
       "depth": 0,

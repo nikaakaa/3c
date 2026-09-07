@@ -2298,6 +2298,12 @@ MonoBehaviour:
   - {fileID: 6365357750341075697}
   - {fileID: 1123604276722342059}
   - {fileID: 1111277127259565486}
+  m_RendererBindings:
+  - m_BindingId: Corin_face
+    m_Renderer: {fileID: 9136480621315033978}
+    m_ExpectedMesh: {fileID: 2248241420830187273, guid: c3a5ce34162b1294e9d35f20534cd050,
+      type: 3}
+    m_MeshContentHash: 629dce717d32291fa754154082c6f03bfba4f47fd87c72861da4efdc459c515c
 --- !u!114 &1203345607023827491
 MonoBehaviour:
   m_ObjectHideFlags: 0

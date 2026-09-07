@@ -23,6 +23,7 @@ namespace ThirdPersonSimulation
         int RequireOperationSlot(OperationExecutionDescriptor operation, ProgramStateSemantic semantic);
         void ClearStateScope(OperationHandle state);
         void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase);
+        void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState);
         void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail);
         string CurrentStateExecutionPath { get; }
         IDisposable PushStateScope(OperationHandle state, int exitCause);
@@ -134,6 +135,7 @@ namespace ThirdPersonSimulation
                 return OperationExecutionResult.Success;
             }
             m_Host.NotifyStateLifecycle(machine, exiting, OperationStateLifecyclePhase.Exited);
+            m_Host.NotifyStateTransition(machine, exiting, target);
             ActivateState(machine, activeSlot, target);
             return OperationExecutionResult.Running;
         }

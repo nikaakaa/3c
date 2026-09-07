@@ -1071,6 +1071,7 @@ namespace BTSMTL.Timeline.Runtime
         public void ClearStateScope(OperationExecutionDescriptor state) { }
         public void ResetOperationState(OperationExecutionDescriptor operation) => m_State.ResetOperationState(operation);
         public void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) { }
+        public void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) { }
         public OperationStopStatus ContinueLeafStop(OperationControlCursor<FixedTimelineOperationTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => operation.Code == SimulationOperationCode.Timeline ? m_Timeline.ContinueTimelineStop(cursor, operation.Handle, context) : OperationStopStatus.Completed;
 
         public void ForceStopLeaf(OperationControlCursor<FixedTimelineOperationTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context)
@@ -1248,6 +1249,7 @@ namespace BTSMTL.Timeline.Runtime
         public void ForceStopLeaf(OperationControlCursor<FixedTimelineOperationTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => m_Target.ForceStopLeaf(cursor, operation, context);
         public void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) => m_Target.EmitTrace(operation, code, severity, detail);
         public void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) => m_Target.NotifyStateLifecycle(machine, state, phase);
+        public void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) => m_Target.NotifyStateTransition(machine, exitingState, targetState);
     }
 
     readonly struct FixedTimelineValue

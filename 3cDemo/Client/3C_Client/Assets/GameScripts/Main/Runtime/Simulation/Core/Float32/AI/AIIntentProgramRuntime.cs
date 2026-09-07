@@ -822,5 +822,6 @@ namespace ThirdPersonSimulation
         public void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) =>
             Context.SetActive(Context.Program.Operation(operation.Handle));
         public void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) { }
+        public void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) { }
     }
 }

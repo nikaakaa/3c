@@ -582,7 +582,8 @@ namespace ThirdPersonSimulation.Fixed
         Cue = 6,
         Vfx = 7,
         Ui = 8,
-        ForceProducer = 9
+        ForceProducer = 9,
+        DomainEvent = 10
     }
 
     public readonly struct PresentationCommand
@@ -596,7 +597,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong producerGeneration = 0,
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
-            FixedScalar visualTimeScale = default)
+            FixedScalar visualTimeScale = default,
+            string domainPayload = null)
         {
             Header = header;
             Kind = kind;
@@ -607,6 +609,7 @@ namespace ThirdPersonSimulation.Fixed
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
+            DomainPayload = domainPayload ?? string.Empty;
             if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
@@ -615,6 +618,11 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (kind == PresentationCommandKind.DomainEvent &&
+                (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(domainPayload)))
+                throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
+            if (kind != PresentationCommandKind.DomainEvent && !string.IsNullOrEmpty(domainPayload))
+                throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
             if (IsPlaybackSample(kind) && visualTimeScale < FixedScalar.Zero)
                 throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
         }
@@ -626,6 +634,7 @@ namespace ThirdPersonSimulation.Fixed
         public ulong ProducerGeneration { get; }
         public int Cycle { get; }
         public ulong SourceActionInstanceId { get; }
+        public string DomainPayload { get; }
         public FixedScalar VisualTimeScale { get; }
 
         static bool IsPlaybackCommand(PresentationCommandKind kind)

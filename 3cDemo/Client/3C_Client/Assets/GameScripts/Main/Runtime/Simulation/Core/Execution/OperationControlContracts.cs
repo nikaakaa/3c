@@ -121,6 +121,10 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor machine,
             OperationHandle state,
             OperationStateLifecyclePhase phase);
+        void NotifyStateTransition(
+            OperationExecutionDescriptor machine,
+            OperationHandle exitingState,
+            OperationHandle targetState);
     }
 
     public readonly struct OperationControlCursor<TTarget>

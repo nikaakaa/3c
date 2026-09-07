@@ -89,6 +89,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
         readonly FixedLocomotionRuntime m_Locomotion;
         readonly FixedFactSink m_Facts;
+        readonly FixedPresentationSink m_Presentation;
         readonly FixedTraceSink m_Trace;
 
         public FixedOperationTarget(
@@ -104,6 +105,7 @@ namespace ThirdPersonSimulation.Fixed
             TimelineControlRuntime<FixedOperationTarget, FixedScalar> timeline,
             FixedLocomotionRuntime locomotion,
             FixedFactSink facts,
+            FixedPresentationSink presentation,
             FixedTraceSink trace)
         {
             m_Access = access;
@@ -118,6 +120,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Timeline = timeline;
             m_Locomotion = locomotion;
             m_Facts = facts;
+            m_Presentation = presentation;
             m_Trace = trace;
         }
 
@@ -358,6 +361,26 @@ namespace ThirdPersonSimulation.Fixed
                 phase.ToString(),
                 FixedScalar.Zero));
         }
+
+        public void NotifyStateTransition(
+            OperationExecutionDescriptor machine,
+            OperationHandle exitingState,
+            OperationHandle targetState)
+        {
+            foreach (ActionAdmissionActiveAction action in ((IActionAdmissionReadPort)m_Actions).ActiveActions)
+            {
+                SimulationOperation operation = m_Access.Operation(machine.Handle);
+                SimulationEventHeader header = m_Presentation.Next(operation);
+                m_Presentation.Add(new PresentationCommand(
+                    header,
+                    PresentationCommandKind.DomainEvent,
+                    "domain/action-segment-changed",
+                    FixedScalar.Zero,
+                    FixedScalar.Zero,
+                    sourceActionInstanceId: action.InstanceId,
+                    domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
+            }
+        }
     }
 
     internal sealed class FixedOperationEvaluator
@@ -526,6 +549,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Timeline,
                 locomotion,
                 m_Frame.Facts,
+                m_Frame.Presentation,
                 m_Frame.Trace);
             m_Control = new OperationControlRuntime<FixedOperationTarget>(
                 access.Topology,

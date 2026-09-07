@@ -88,6 +88,7 @@ namespace ThirdPersonSimulation
         readonly TimelineControlRuntime<Float32OperationTarget, Float32Scalar> m_Timeline;
         readonly Float32LocomotionRuntime m_Locomotion;
         readonly Float32FactSink m_Facts;
+        readonly Float32PresentationSink m_Presentation;
         readonly Float32TraceSink m_Trace;
 
         public Float32OperationTarget(
@@ -103,6 +104,7 @@ namespace ThirdPersonSimulation
             TimelineControlRuntime<Float32OperationTarget, Float32Scalar> timeline,
             Float32LocomotionRuntime locomotion,
             Float32FactSink facts,
+            Float32PresentationSink presentation,
             Float32TraceSink trace)
         {
             m_Access = access;
@@ -117,6 +119,7 @@ namespace ThirdPersonSimulation
             m_Timeline = timeline;
             m_Locomotion = locomotion;
             m_Facts = facts;
+            m_Presentation = presentation;
             m_Trace = trace;
         }
 
@@ -353,6 +356,26 @@ namespace ThirdPersonSimulation
                 phase.ToString(),
                 Float32Scalar.Zero));
         }
+
+        public void NotifyStateTransition(
+            OperationExecutionDescriptor machine,
+            OperationHandle exitingState,
+            OperationHandle targetState)
+        {
+            foreach (ActionAdmissionActiveAction action in ((IActionAdmissionReadPort)m_Actions).ActiveActions)
+            {
+                SimulationOperation operation = m_Access.Operation(machine.Handle);
+                SimulationEventHeader header = m_Presentation.Next(operation);
+                m_Presentation.Add(new PresentationCommand(
+                    header,
+                    PresentationCommandKind.DomainEvent,
+                    "domain/action-segment-changed",
+                    Float32Scalar.Zero,
+                    Float32Scalar.Zero,
+                    sourceActionInstanceId: action.InstanceId,
+                    domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
+            }
+        }
     }
 
     internal sealed class Float32OperationEvaluator
@@ -521,6 +544,7 @@ namespace ThirdPersonSimulation
                 m_Timeline,
                 locomotion,
                 m_Frame.Facts,
+                m_Frame.Presentation,
                 m_Frame.Trace);
             m_Control = new OperationControlRuntime<Float32OperationTarget>(
                 access.Topology,

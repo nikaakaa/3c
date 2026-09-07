@@ -393,7 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Cue = 6,
         Vfx = 7,
         Ui = 8,
-        ForceProducer = 9
+        ForceProducer = 9,
+        DomainEvent = 10
     }
 
     public readonly struct CharacterPresentationCommand
@@ -407,7 +408,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong producerGeneration = 0,
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
-            float visualTimeScale = 0f)
+            float visualTimeScale = 0f,
+            string domainPayload = null)
         {
             if (float.IsNaN(sampleTime) || float.IsInfinity(sampleTime) ||
                 float.IsNaN(weight) || float.IsInfinity(weight))
@@ -433,6 +435,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
+            DomainPayload = domainPayload ?? string.Empty;
+            if (kind == CharacterPresentationCommandKind.DomainEvent &&
+                (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(DomainPayload)))
+                throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
+            if (kind != CharacterPresentationCommandKind.DomainEvent && DomainPayload.Length != 0)
+                throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
         }
 
         public CharacterPresentationEventHeader Header { get; }
@@ -444,6 +452,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int Cycle { get; }
         public ulong SourceActionInstanceId { get; }
         public float VisualTimeScale { get; }
+        public string DomainPayload { get; }
 
         public static CharacterPresentationCommand FromFloat32(PresentationCommand command)
         {
@@ -462,7 +471,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.ProducerGeneration,
                 command.Cycle,
                 command.SourceActionInstanceId,
-                command.VisualTimeScale.ToSingle());
+                command.VisualTimeScale.ToSingle(),
+                command.DomainPayload);
         }
 
         static bool IsPlaybackCommand(CharacterPresentationCommandKind kind)

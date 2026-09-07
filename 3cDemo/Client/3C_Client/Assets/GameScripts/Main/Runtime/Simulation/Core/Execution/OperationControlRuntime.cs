@@ -298,6 +298,7 @@ namespace ThirdPersonSimulation
         int IOperationStateMachineHost<TTarget>.RequireOperationSlot(OperationExecutionDescriptor operation, ProgramStateSemantic semantic) => RequireOperationSlot(operation, semantic);
         void IOperationStateMachineHost<TTarget>.ClearStateScope(OperationHandle state) => m_Target.ClearStateScope(m_Topology.Operation(state));
         void IOperationStateMachineHost<TTarget>.NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) => m_Target.NotifyStateLifecycle(machine, state, phase);
+        void IOperationStateMachineHost<TTarget>.NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) => m_Target.NotifyStateTransition(machine, exitingState, targetState);
         void IOperationStateMachineHost<TTarget>.EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) => m_Target.EmitTrace(operation, code, severity, detail);
         string IOperationStateMachineHost<TTarget>.CurrentStateExecutionPath => m_StateExecution.Count == 0 ? string.Empty : m_StateExecution.Peek().Path;
         IDisposable IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause) => PushStateExecutionScope(state, exitCause);

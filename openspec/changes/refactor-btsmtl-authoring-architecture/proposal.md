@@ -23,6 +23,7 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 
 - `character-control-runtime`：C# 显式控制状态机、State／Transition 合同、独立技能请求、完整状态恢复与版本化规则装配。
 - `btsmtl-skill-program-runtime`：技能定义、纯数据编译与解释执行、嵌套子图参数、实例状态隔离、组合请求及生命周期闭合。
+- `character-simulation-domain-events`：逻辑到表现的领域事件通道，首个事件 ActionSegmentChanged；与 presentation command 同 Step 事务、同 SimulationEventHeader 信封发布，rollback 随 tick 重放；表现层语义推进（段转移终结旧 playback 条目、推进 generation）由事件驱动，不新增进程内事件总线。
 
 ### Modified Capabilities
 

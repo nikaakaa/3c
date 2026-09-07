@@ -293,6 +293,16 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 
 已发现的说明冲突另记：project.md 的作者段落仍有“canonical v3”表述，但现行Document spec、skill和Pending Work明确为v4；本次以v4作为迁移输入，实施安装v5时同步清理这些说明。project.md旧“永远禁止batchmode”与用户最新AGENTS允许指定路径本机CLI的规则冲突，本计划遵循最新用户规则，CI禁令保持。规划不覆盖当前已修改的project.md。
 
+### 14. 逻辑到表现的领域事件层
+
+表现继续由仿真 tick 输出驱动，命令流（Select／Sample／Complete／Release）保持逐 Tick 播放指令语义不变，事实流保持可重复读快照语义不变。在此之外增加第三条输出通道：领域事件。事件表达"本 Tick 发生了一次性语义变化"（段转移、后续的命中与受击等），与 presentation command 在同一 Step 事务内发布，使用同一 SimulationEventHeader 信封（EventId／Actor／Tick／Activation／Sequence／Channel），rollback 时随 Tick 输出重放。事件不独立存储、不走进程内事件总线、不允许表现层或 gameplay 系统向仿真侧反向发事件。
+
+事件与命令的职责边界：命令回答"播放什么"，事件回答"语义上发生了什么"。表现层生命周期（ActionAnimationPlaybackLifecycleRegistry 等）的所有权断言只校验命令不串台（实例／通道／producer／generation 一致），语义推进由事件驱动：ActionSegmentChanged 表示同一 ActionInstance 内技能状态机完成一次段转移，表现层据此终结该实例旧 playback 条目并让新段 Select 走新 generation，不再从命令形状反推技能组织形态。首个事件集合只含 ActionSegmentChanged；AttackLanded、受击类事件属于战斗域，由后续 change 按同一信封扩展。
+
+两 Target（Float32／Fixed）从各自状态机运行时在同一转移事务点发布同一事件集合；事件内容只含 typed 身份（实例、段、技能），不含动画或剪辑引用——剪辑选择仍由命令流表达。EventId 来源、output disposition 与 state publish 的既有衔接（7.6）继续有效，事件是它们之上的一等输出而不是旁路。
+
+**取舍：** 接受多一条必须与 rollback 一致的通道，一致性由"同事务发布、随 Tick 重放"保证，不做独立事件存储与投递框架（那会绕开确定性并产生第二真值）。代价是事件集合的扩展受仿真输出契约约束，新增事件需同步两 Target 与表现层消费者。
+
 ## Risks / Trade-offs
 
 - [旧角色图承载隐含顺序] → 按输入、窗口、准入、停止、Motion、装备和输出逐项迁移；保留同Tick顺序，不能只翻译节点名。

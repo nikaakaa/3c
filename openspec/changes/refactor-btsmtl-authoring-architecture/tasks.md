@@ -9,6 +9,14 @@
 - 提交 `2743a3589`：删除 TrainingEnemy 全链路（definition 既有无效、monster prefab、AI 目录、builder/菜单/Collector 死分支）；float32 变体靶子改为第二个 Corin（`NeutralCharacterControlSource`），launcher float32 校验从 Player+AI 改为 Player+Neutral；AI 重做分支合并后以正式变体回归。
 - 提交 `d0274cb21`：ACL 输入侧缓存。`CharacterAclAnimationResource` 落 `BuildInputIdentity`，`Complete` 编码前计算 acl-group-build-input/v1 哈希并与已发布资源比对，命中即从已发布资源与 quality.json 重建 artifact 跳过整组采样编码；发布层沿用旧文件时补盖身份。验证：重建#3 全量编码并落身份，重建#4 `[ACL] Read/sample` 零增长、重建通过。
 
+### 技能树化与事件层立项（2026-09-07 深夜）
+
+- ZZZ参考包《技能与输入.md》补齐：技能=子状态机树（普攻12态/Branch18态/Rush·Counter·Evade14态）、连招为树内转移、长按／连按／帧窗口／事件条件清单、115类窗口zone、与当前实现的差距表；数据源transitions.json(844条)/states.json(105)/zones.json/actions(45)。
+- 用户决策：连招接续归资产层（技能树内转移），控制层只发单一技能请求；不走"照抄ZZZ技能框架"或"一技能拆N图"路线——BTSMTL现有表达（SkillDefinition入口图+树内状态机+条件图）即为正式形态。
+- 提交 `20067cf12`：Locomotion状态机整体移出RootTree（80820→75159行），MovingTurn源曲线Timeline安置到Action SM的None body；程序普查LocomotionInputMotion=0、StateMachine=0证明删除为纯资产清理；replay两遍matched:1492零偏差（proof 212224/212551）。
+- 技能树化接线落地：控制合同Skills 7→3（Attack1-5合并为Attack），SelectAttackSkill连段硬编码删除，Attack请求直达；Definition入口指向Attack body图（3ae19d5e）；转移边与条件进程序（StateMachine=1、TransitionEdges=20、ops 512→622），正式重建通过（sync#6）。
+- 技能树化回放在表现层失败：同实例段转移的新段Select因producer变化撞ActionAnimationPlaybackLifecycleRegistry所有权断言——确认语义变化缺少一等通道，立项7.7领域事件层（design第14节）：ActionSegmentChanged与presentation command同事务同信封发布，rollback随tick重放，表现层由事件驱动playback语义推进；用户指定先重构完再统一replay。
+
 ### Corin 集成接手记录（2026-09-07）
 
 本批按用户新目标接入 BTSMTL、Timeline、PoseGraph、ACL、相机及相关姿态修正；最终验收对照 `D:/ZZZ_Dump/output/corin_replication/replication-guide/README.md`。下面历史总览不代表本批源码和产物已经验收，暂不批量更新任务勾选。Center 记录为 `9fa880d872184c41a3cc3c42f0bcc1c3`，工作目录为主目录。Timeline 本批接入提交 `0495e6425`，Skill 文件默认值修复提交 `93ad2a768`。
@@ -160,18 +168,18 @@
 - [ ] 5.1 将有效角色的Gameplay Locomotion迁入C#显式State／Transition，保留原输入、数值与同Tick转换顺序；通过既有业务观察比较核对控制状态、Body／Intent时序，不复制Presentation Pose State。
 
   当前状态：**已实现，待验证**。Corin显式Locomotion模块及两Target适配已有提交，控制代码仍在原Evaluate内执行；同输入数值、Body/Intent与同Tick转换顺序尚未完成回放比较。
-- [ ] 5.2 将动作候选、输入消费、连段与取消迁为控制代码中的独立技能请求规则，允许State保持active时请求技能；删除外层动作图及角色级连招状态机，不新增角色总状态机或C#技能阶段镜像，交付输入到精确Skill请求的诊断链。
+- [ ] 5.2 控制层只承载输入消费与单一技能请求（Attack／Dodge请求直达技能树），允许State保持active时请求技能；连段与取消接续由技能树内转移边条件（资产层ConditionRule，含ComboAccept／Recovery窗口）驱动，不在控制代码中复刻连招；删除外层动作图调度与控制层连段选择逻辑，不新增角色总状态机或C#技能阶段镜像，交付输入到精确Skill请求的诊断链。
 
-  当前状态：**部分完成**。C#控制已按SkillId组织输入、连段/取消请求，运行不新增角色总状态机；旧外层动作图、菜单和作者引用尚未完全删除，完整来源诊断仍待验证。
+  当前状态：**已实现，待技能树化回放验证**。控制合同Skills收敛为Attack／DodgeBack／DodgeForward，SelectAttackSkill连段硬编码已删除，Attack入口指向连招树（Attack body图），段转移边与条件进程序（StateMachine=1、TransitionEdges=20），正式构建通过；技能树化回放在表现层ActionAnimationPlayback所有权断言处失败，由7.7事件层承接修复。
 - [ ] 5.3 将FixedActionRuntime／Float32ActionRuntime中的准入、来源检查、replacement／stop barrier、输入消费、请求暂存、最终提交及生命周期转换收敛到一份共享业务实现，Target只保留必要状态／数值适配；复用唯一Required Tag、TargetRequirement及目标快照规则。交付两端调用链、重复分支删除清单，以及纯查询／最终提交、既有同Tick顺序和实例身份的验证结果。
 
   当前状态：**已实现，待验证**。6db20c5f2已共用Activation/Commit/Lifecycle及实例管理，ce72111f2补齐窗口来源发布；两端重复业务分支删除和小步静态审查已有证据。纯查询/最终提交、同Tick顺序与实例身份仍需本轮运行结果闭合。
 - [ ] 5.4 接入显式replacement及source stop barrier，区分独立并发请求；交付来源、退出原因、停止进度和新实例建立顺序的事实。
 
   当前状态：**部分完成**。显式replacement与source stop barrier已有代码，停止scope已修正；独立并发请求、退出原因和新实例建立顺序尚无完整现有运行验证。
-- [ ] 5.5 使当前Decision窗口在同Tick角色决策前可读，迁移原连段／取消规则；通过既有Replay业务事件核对不额外延后一渲染帧。
+- [ ] 5.5 使当前Decision窗口在同Tick角色决策前可读，连段／取消窗口条件由技能树内转移边条件消费；通过既有Replay业务事件核对不额外延后一渲染帧。
 
-  当前状态：**待验证**。Evaluate保持Decision窗口先于C#控制，ce72111f2保存窗口来源至最终发布；尚无当前候选的Replay事件比较，不能据代码顺序直接认定行为一致。
+  当前状态：**待验证**。Evaluate保持Decision窗口先于技能树内条件求值，ce72111f2保存窗口来源至最终发布；尚无当前候选的Replay事件比较，不能据代码顺序直接认定行为一致。
 - [ ] 5.6 保持AIIntentProgram与CharacterSimulationInput边界，更新只读输入合同引用；交付AI不访问控制／技能私有状态的依赖与Validator结果，不修复TrainingEnemy资产。
 
   当前状态：**部分完成**。当前AI仍通过正式Character输入接入，未接管AI运行；AI插件替换由其独立任务负责，本项输入合同、私有状态访问和组合规范仍需最终对账。
@@ -208,6 +216,10 @@
 - [ ] 7.6 更新EventId来源、output disposition与state publish衔接，交付确认／替换／抑制及重复输出的既有诊断，保证代码来源不伪造Graph节点。
 
   当前状态：**部分完成**。代码/技能来源已使用typed Source，ActionWindow最终Fact/Trace发布不再晚读局部帧；确认/替换/抑制、重复输出与所有消费者还需完整运行对账。
+
+- [ ] 7.7 按设计第14节接入逻辑到表现的领域事件层：定义 ActionSegmentChanged 事件契约（typed 实例／段／技能身份，复用 SimulationEventHeader 信封），Float32 与 Fixed 的技能状态机运行时在同一转移事务点发布；表现层 ActionAnimationPlaybackLifecycle 消费事件终结旧 playback 条目并推进新段 generation，所有权断言不再依赖命令形状推断技能组织形态；交付两 Target 同输入事件序列一致的对账与技能树化回放通过证明。
+
+  当前状态：**尚未完成**。触发背景：技能连招迁入资产层后（Attack 单技能入口指向连招树），同实例段转移发出的新段 Select 因 producer 变化撞表现层所有权断言，确认语义变化缺少一等通道（详见 design 第14节）。
 
 ## 8. 规则与数据发布
 

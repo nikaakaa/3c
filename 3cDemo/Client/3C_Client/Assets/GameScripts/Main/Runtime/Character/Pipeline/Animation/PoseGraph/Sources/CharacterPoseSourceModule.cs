@@ -949,7 +949,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             if (!readiness.IsReady)
             {
                 throw new InvalidOperationException(
-                    $"Character Pose source preparation resource is '{readiness.Availability}'.");
+                    $"Character Pose source preparation resource is '{readiness.Availability}' " +
+                    $"with failure '{readiness.ResourceFailureCode}': {readiness.Message}");
             }
             switch (preparation.Kind)
             {

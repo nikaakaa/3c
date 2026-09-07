@@ -372,6 +372,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !m_Source.HasPreparedSource &&
                 (targetReadiness.IsPending || targetReadiness.IsInvalid))
             {
+                if (sourceReadiness.IsInvalid || targetReadiness.IsInvalid)
+                {
+                    CharacterPoseSourceReadinessView failure =
+                        sourceReadiness.IsInvalid
+                            ? sourceReadiness
+                            : targetReadiness;
+                    throw new InvalidOperationException(
+                        $"Character Pose source resource failed with '{failure.ResourceFailureCode}': {failure.Message}");
+                }
                 CharacterPoseSourcePreparedResources pendingResources =
                     m_Source.RequirePreparedResources(sourceLease);
                 CharacterPoseSourceFrameResult pendingSourceFrame =

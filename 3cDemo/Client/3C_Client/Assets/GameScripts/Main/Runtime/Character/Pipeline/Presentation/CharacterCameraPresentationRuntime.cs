@@ -182,20 +182,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationProducerEntry producer) =>
             Retire(command, producer);
 
-        bool m_LookInputMissingReported;
-
-        Vector2 ReportMissingLookInput()
-        {
-            if (!m_LookInputMissingReported)
-            {
-                m_LookInputMissingReported = true;
-                UnityEngine.Debug.LogWarning(
-                    $"Presentation Camera look input '{m_LookInputId}' is not latched by input adapter " +
-                    $"{m_InputAdapter.GetType().Name}; manual camera orbit will not respond.");
-            }
-            return Vector2.zero;
-        }
-
         [PerformanceProbe("presentation.camera")]
         public void Present(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
         {
@@ -204,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Presentation Camera requires a valid Body frame.");
             Vector2 look = m_InputAdapter.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
                 ? value
-                : ReportMissingLookInput();
+                : Vector2.zero;
             bool resetTracking = bodyFrame.ResetSequence != m_LastBodyResetSequence;
             m_LastBodyResetSequence = bodyFrame.ResetSequence;
             Apply(

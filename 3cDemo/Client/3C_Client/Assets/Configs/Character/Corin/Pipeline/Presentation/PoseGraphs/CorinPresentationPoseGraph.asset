@@ -2513,7 +2513,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/Turn
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -2775,7 +2775,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/RunEnd
+                m_IdentityLiteral: presentation.movement-mode.state/RunStopping
               m_OutputOperationId: matches-stop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -3421,7 +3421,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/Turn
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -3469,7 +3469,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/Turn
+                m_IdentityLiteral: presentation.movement-mode.state/MovingTurn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12

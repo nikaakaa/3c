@@ -37,6 +37,14 @@ namespace ThirdPersonCamera
         public Quaternion FinalOrientation => HasFinalOutput ? freeLook.State.FinalOrientation : Quaternion.identity;
         public float FinalFieldOfView => freeLook != null ? freeLook.m_Lens.FieldOfView : 0f;
 
+        internal void ResetHeading(float yawDegrees)
+        {
+            if (freeLook == null)
+                return;
+            freeLook.m_XAxis.Value = yawDegrees;
+            RefreshBasisSnapshot();
+        }
+
         void Awake()
         {
             ReportMissingFreeLook();

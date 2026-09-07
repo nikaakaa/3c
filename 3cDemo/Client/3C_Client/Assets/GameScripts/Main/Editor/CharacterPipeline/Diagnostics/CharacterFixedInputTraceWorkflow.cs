@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
@@ -101,7 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [InitializeOnLoad]
     public static class CharacterFixedInputTraceWorkflow
     {
-        const string Schema = "character-fixed-input-trace/3";
+        const string Schema = "character-fixed-input-trace/4";
+        const string SchemaV3 = "character-fixed-input-trace/3";
         const string ReplayProofSchema = "character-fixed-input-replay-proof/5";
         const string DiagnosticReplayProofSchema =
             "character-fixed-input-diagnostic-replay-proof/1";
@@ -133,6 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool s_ReplayWaitingForSampling;
         static bool s_ReplayFinalizing;
         static bool s_ReplayOwnsTickDrive;
+        static bool s_HasRecordedCameraYaw;
+        static float s_RecordedCameraYaw;
         static int s_ReplayIssuedTickCount;
         static string s_ActiveReplayOperation = StandardReplayOperation;
         static CharacterFixedInputPresentationScheduleRun s_PresentationScheduleRun;
@@ -413,10 +417,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
+            CaptureRecordedCameraHeading();
             FixedCharacterInputTraceModule.StartRecording();
             ClearPending();
             EditorApplication.isPaused = false;
             s_LastStatus = "Recording canonical character input per Fixed simulation Tick. Camera input remains live.";
+        }
+
+        static void CaptureRecordedCameraHeading()
+        {
+            ThirdPersonCameraController controller =
+                UnityEngine.Object.FindObjectOfType<ThirdPersonCameraController>();
+            CameraBasisSnapshot basis = controller != null
+                ? controller.BasisSnapshot
+                : default;
+            s_HasRecordedCameraYaw = basis.Valid;
+            s_RecordedCameraYaw = basis.Valid ? basis.Yaw : 0f;
+        }
+
+        static void ApplyRecordedCameraHeading(TraceDocument document)
+        {
+            if (document == null || !document.has_camera_basis_yaw)
+                return;
+            ThirdPersonCameraController controller =
+                UnityEngine.Object.FindObjectOfType<ThirdPersonCameraController>();
+            if (controller == null)
+                return;
+            controller.ResetHeading(document.camera_basis_yaw_degrees);
         }
 
         static void BeginReplay(TraceDocument document)
@@ -439,6 +466,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RequirePoseMatchesBody(current, initialBody);
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
+                ApplyRecordedCameraHeading(document);
                 ResetPendingDeadline();
                 if (captureFoot)
                 {
@@ -1509,6 +1537,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 tick_rate = trace.TickRate,
                 first_tick = trace.Frames[0].Tick.Value,
                 frame_count = trace.Frames.Count,
+                has_camera_basis_yaw = s_HasRecordedCameraYaw,
+                camera_basis_yaw_degrees = s_HasRecordedCameraYaw
+                    ? s_RecordedCameraYaw
+                    : 0f,
                 frames = new TraceFrameDocument[trace.Frames.Count]
             };
             for (int i = 0; i < trace.Frames.Count; i++)
@@ -1572,7 +1604,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 throw new FileNotFoundException("Canonical Fixed input trace file is unavailable.", path);
             TraceDocument document = JsonConvert.DeserializeObject<TraceDocument>(File.ReadAllText(path, Encoding.UTF8));
-            if (document == null || !string.Equals(document.schema, Schema, StringComparison.Ordinal) ||
+            if (document == null ||
+                document.schema != Schema && document.schema != SchemaV3 ||
                 string.IsNullOrWhiteSpace(document.trace_id) || string.IsNullOrWhiteSpace(document.actor_id) ||
                 document.tick_rate <= 0 || document.first_tick == 0 ||
                 document.frame_count <= 0 || document.frames == null ||
@@ -1612,6 +1645,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, document.tick_rate.ToString(CultureInfo.InvariantCulture));
             AppendHash(hash, document.first_tick.ToString(CultureInfo.InvariantCulture));
             AppendHash(hash, document.frame_count.ToString(CultureInfo.InvariantCulture));
+            if (document.schema == Schema)
+            {
+                AppendHash(hash, document.has_camera_basis_yaw ? "1" : "0");
+                AppendHash(
+                    hash,
+                    document.has_camera_basis_yaw
+                        ? document.camera_basis_yaw_degrees.ToString(
+                            "R", CultureInfo.InvariantCulture)
+                        : string.Empty);
+            }
             for (int i = 0; i < document.frames.Length; i++)
             {
                 AppendHash(
@@ -1975,6 +2018,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int tick_rate;
             public ulong first_tick;
             public int frame_count;
+            public bool has_camera_basis_yaw;
+            public float camera_basis_yaw_degrees;
             public TraceFrameDocument[] frames;
             public string content_hash;
         }

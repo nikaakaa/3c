@@ -492,6 +492,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
+            int locomotionOps = 0;
+            var flagCounts = new System.Collections.Generic.Dictionary<uint, int>();
+            for (int i = 0; i < m_Operations.Count; i++)
+            {
+                if (m_Operations[i].Code != SimulationOperationCode.LocomotionInputMotion)
+                    continue;
+                locomotionOps++;
+                flagCounts.TryGetValue(m_Operations[i].Flags, out int count);
+                flagCounts[m_Operations[i].Flags] = count + 1;
+            }
+            if (locomotionOps > 0)
+            {
+                var pairTexts = new System.Collections.Generic.List<string>();
+                foreach (var kv in flagCounts)
+                    pairTexts.Add($"0x{kv.Key:X}={kv.Value}");
+                var pairs = string.Join(",", pairTexts);
+                UnityEngine.Debug.Log($"[InputDirection] program '{m_ProgramId.Value}' LocomotionInputMotion ops={locomotionOps} flags: {pairs}");
+            }
             try
             {
                 SimulationProgramRootValidation.RequireEntryReference(

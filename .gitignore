@@ -125,6 +125,7 @@ ExternalDownloads/ZZZ_Studio/
 # Third-party TND upscaling packages, local reference only
 /3cDemo/Client/3C_Client/Packages/com.tnd.upscaler.fsr4/
 /3cDemo/Client/3C_Client/Packages/com.tnd.upscaling/
+/3cDemo/Client/3C_Client/Packages/UnityHFSM/
 
 # Third-party Anime Shading Plus commercial asset, local reference only
 /3cDemo/Client/3C_Client/Assets/ASP/

@@ -2322,63 +2322,33 @@ MonoBehaviour:
                 m_Kind: 8
                 m_InputA: movement-mode
                 m_InputB: run-loop-mode
-                m_FactId: 
+                m_FactId:
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId: 
+                m_EnumTypeId:
                 m_EnumLiteral: 0
-                m_IdentityLiteral: 
-              - m_OperationId: matches-run-start-mode
-                m_Kind: 8
-                m_InputA: movement-mode
-                m_InputB: run-start-mode
-                m_FactId: 
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId: 
-                m_EnumLiteral: 0
-                m_IdentityLiteral: 
-              - m_OperationId: matches-run-start-or-loop-mode
-                m_Kind: 7
-                m_InputA: matches-run-start-mode
-                m_InputB: matches-run-loop-mode
-                m_FactId: 
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId: 
-                m_EnumLiteral: 0
-                m_IdentityLiteral: 
+                m_IdentityLiteral:
               - m_OperationId: movement-mode
                 m_Kind: 1
-                m_InputA: 
-                m_InputB: 
+                m_InputA:
+                m_InputB:
                 m_FactId: presentation.movement-mode
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId: 
+                m_EnumTypeId:
                 m_EnumLiteral: 0
-                m_IdentityLiteral: 
+                m_IdentityLiteral:
               - m_OperationId: run-loop-mode
                 m_Kind: 16
-                m_InputA: 
-                m_InputB: 
-                m_FactId: 
+                m_InputA:
+                m_InputB:
+                m_FactId:
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
-                m_EnumTypeId: 
+                m_EnumTypeId:
                 m_EnumLiteral: 0
                 m_IdentityLiteral: presentation.movement-mode.state/RunLoop
-              - m_OperationId: run-start-mode
-                m_Kind: 16
-                m_InputA: 
-                m_InputB: 
-                m_FactId: 
-                m_BoolLiteral: 0
-                m_FloatLiteral: 0
-                m_EnumTypeId: 
-                m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/RunStart
-              m_OutputOperationId: matches-run-start-or-loop-mode
+              m_OutputOperationId: matches-run-loop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
             m_BlendMode: 1

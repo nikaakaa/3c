@@ -18,7 +18,9 @@ MonoBehaviour:
     m_Tracks:
     - rid: 3396202407018103044
     m_Sections: []
+    m_ExternalBindings: []
     m_Scale: 1
+    m_Loop: 0
   references:
     version: 2
     RefIds:

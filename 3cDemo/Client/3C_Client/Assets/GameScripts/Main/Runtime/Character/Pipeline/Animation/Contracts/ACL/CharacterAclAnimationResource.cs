@@ -63,7 +63,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_GroupManifests[groupClipIndex];
         }
 
+        CharacterAclResourceReadinessResult m_CachedRuntimeValidation;
+
         public CharacterAclResourceReadinessResult ValidateRuntime()
+        {
+            CharacterAclResourceReadinessResult result = ValidateRuntimeOnce();
+            if (!result.IsPending)
+                m_CachedRuntimeValidation = result;
+            return result;
+        }
+
+        CharacterAclResourceReadinessResult ValidateRuntimeOnce()
         {
             if (Manifest == null)
                 return CharacterAclResourceReadinessResult.Invalid(CharacterAclResourceFailureCode.SchemaMismatch, "ACL resource manifest is missing.");

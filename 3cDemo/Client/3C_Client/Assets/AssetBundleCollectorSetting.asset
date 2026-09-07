@@ -89,15 +89,7 @@ MonoBehaviour:
         PackRuleName: PackGroup
         FilterRuleName: CollectAll
         AssetTags: Gameplay
-        UserData: 
-      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab
-        CollectorGUID: 2666876f0d0fecf41a9506503707fbb8
-        CollectorType: 0
-        AddressRuleName: AddressByFileName
-        PackRuleName: PackGroup
-        FilterRuleName: CollectAll
-        AssetTags: Gameplay
-        UserData: 
+        UserData:
     - GroupName: HotUpdateAssemblies
       GroupDesc: Core hot update and AOT metadata assemblies
       AssetTags: Core

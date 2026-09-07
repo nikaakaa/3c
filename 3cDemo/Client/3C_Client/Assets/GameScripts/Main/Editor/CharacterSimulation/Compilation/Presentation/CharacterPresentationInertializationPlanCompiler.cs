@@ -262,13 +262,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static void CollectPolicies(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             Dictionary<PoseNodeId, CharacterPoseInertializationPolicy> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
@@ -278,7 +278,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     node.Subgraph == null ||
                     !node.Subgraph.PoseGraphId.IsValid)
                     continue;
-                CharacterTypedPoseGraph child =
+                CharacterPoseCanvasGraph child =
                     owner.RequireGraph(node.Subgraph.PoseGraphId);
                 CollectPolicies(
                     owner,

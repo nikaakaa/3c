@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(request));
             var diagnostics = new List<CharacterPoseCompilationDiagnostic>();
             IReadOnlyList<string> capabilityErrors =
-                CharacterPoseGraphCapabilityValidator.Validate(request.Asset);
+                CharacterPoseGraphCapabilityValidator.Validate(request.AuthoringView);
             if (capabilityErrors.Count != 0)
             {
                 for (int i = 0; i < capabilityErrors.Count; i++)
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         CharacterPoseCompilationDiagnosticSeverity.Error,
                         "capability-contract-invalid",
                         capabilityErrors[i],
-                        request.Asset.Graph.GraphId));
+                        request.AuthoringView.RootGraph.GraphId));
                 }
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterMotionMatchingPosePlanCompilation motionMatching =
                     CharacterMotionMatchingPosePlanCompiler.Compile(
                         payloadPlan,
-                        request.Asset,
+                         request.AuthoringView.OwnerAsset,
                         request.Rig,
                         request.MotionMatching,
                         request.CurveIndices,
@@ -138,7 +138,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         CharacterPresentationInertializationPlanCompiler
                             .Compile(
                                 payloadPlan,
-                                request.Asset,
+                                request.AuthoringView.OwnerAsset,
                                 request.Rig,
                                 request.CurveIndices,
                                 request.ProfileIndicesByIdentity);
@@ -175,7 +175,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     CharacterPoseCompilationDiagnosticSeverity.Error,
                     "compiler-invariant-invalid",
                     exception.Message,
-                    request.Asset.Graph.GraphId));
+                    request.AuthoringView.RootGraph.GraphId));
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
         }

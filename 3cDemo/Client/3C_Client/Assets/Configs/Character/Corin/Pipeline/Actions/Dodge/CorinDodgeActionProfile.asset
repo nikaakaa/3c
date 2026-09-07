@@ -32,3 +32,4 @@ MonoBehaviour:
     - m_Value: Dodge
     m_None: []
   m_TargetRequirement: 0
+  m_MaxConcurrentInstances: 1

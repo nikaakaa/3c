@@ -25,6 +25,8 @@
 !3cDemo/[Ss]erver/*.csproj
 !3cDemo/[Ss]erver/**/*.csproj
 !Tools/ThirdPersonSimulation.Portable/**/*.csproj
+!Tools/ThirdPersonPerformanceCapture/ThirdPersonPerformanceCapture.Controller.csproj
+!Tools/ThirdPersonNetworkTest/ThirdPerson.NetworkTest.Orchestrator.csproj
 *.suo
 *.tmp
 *.user
@@ -59,6 +61,24 @@ coverage.cobertura.xml
 
 # Local diagnostic output
 /3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/
+/3cDemo/Client/3C_Client/Captures/
+/3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/
+
+# Local analysis and performance output
+/tmp/
+/.workbuddy/
+/.codex-artifacts/
+/.codex-canvas-probe-link/
+/.codex-tmp/
+/Maps/
+/CPU_Usage_*.csv
+
+# Python generated cache
+__pycache__/
+*.py[cod]
+
+# Local OpenSpec state
+/.agents/skills/.openspec-target
 
 # .NET generated output
 artifacts/
@@ -91,7 +111,33 @@ node_modules/
 .env.*
 !.env.example
 /3cDemo/Client/3C_Client/AgentAuthoring/
+/.performance-build/
 /ExternalDownloads/PhilippeKccReference/
 /3cDemo/Client/3C_Client/Assets/_HoaxGames/
 /3cDemo/Client/3C_Client/Assets/_HoaxGames.meta
 ExternalDownloads/ZZZ_Studio/
+/ExternalDownloads/ZZZMiyabi/
+
+# Third-party Feel asset (MoreMountains), local reference only
+/3cDemo/Client/3C_Client/Assets/Feel/
+/3cDemo/Client/3C_Client/Assets/Feel.meta
+
+# Third-party TND upscaling packages, local reference only
+/3cDemo/Client/3C_Client/Packages/com.tnd.upscaler.fsr4/
+/3cDemo/Client/3C_Client/Packages/com.tnd.upscaling/
+/3cDemo/Client/3C_Client/Packages/UnityHFSM/
+
+# Third-party Anime Shading Plus commercial asset, local reference only
+/3cDemo/Client/3C_Client/Assets/ASP/
+/3cDemo/Client/3C_Client/Assets/ASP.meta
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources.meta
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/ASPLocalizationData.asset
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/ASPLocalizationData.asset.meta
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/aspLocalized.csv
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/aspLocalized.csv.meta
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/aspLocalizeToolTip.csv
+/3cDemo/Client/3C_Client/Assets/Editor Default Resources/aspLocalizeToolTip.csv.meta
+
+# Third-party PSD to UGUI editor asset, local reference only
+/3cDemo/Client/3C_Client/Assets/Plugins/PSD2UIForm/
+/3cDemo/Client/3C_Client/Assets/Plugins/PSD2UIForm.meta

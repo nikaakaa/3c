@@ -812,6 +812,7 @@ namespace ThirdPersonSimulation
         }
 
         public void PrepareActivation(OperationExecutionDescriptor operation) { }
+        public void PrepareSubGraph(OperationControlCursor<AIIntentOperationTarget> cursor, OperationExecutionDescriptor operation) { }
         public void ActivateScopes(OperationControlCursor<AIIntentOperationTarget> cursor, OperationExecutionDescriptor operation, ulong generation) { }
         public void CompleteScopes(OperationExecutionDescriptor operation) { }
         public void ClearStateScope(OperationExecutionDescriptor state) { }
@@ -821,5 +822,6 @@ namespace ThirdPersonSimulation
         public void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) =>
             Context.SetActive(Context.Program.Operation(operation.Handle));
         public void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) { }
+        public void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState) { }
     }
 }

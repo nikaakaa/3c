@@ -38,12 +38,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         public const string SlotName = "ThirdPerson.Presentation.Animation.PoseGraph.Slot";
         public const string StateName = "ThirdPerson.Presentation.Animation.PoseGraph.State";
         public const string InertializationName = "ThirdPerson.Presentation.Animation.PoseGraph.Inertialization";
-        public const string BlendName = "ThirdPerson.Presentation.Animation.PoseGraph.Blend";
-        public const string ConstraintName = "ThirdPerson.Presentation.Animation.PoseGraph.Constraint";
         public const string IkGoalName = "ThirdPerson.Presentation.Animation.PoseGraph.IKGoal";
         public const string LinkedPoseName = "ThirdPerson.Presentation.Animation.PoseGraph.LinkedPose";
         public const string FullBodyIkName = "ThirdPerson.Presentation.Animation.PoseGraph.FinalIKFullBody";
-        public const string SpaceConversionName = "ThirdPerson.Presentation.Animation.PoseGraph.SpaceConversion";
         public const string OutputName = "ThirdPerson.Presentation.Animation.PoseGraph.Output";
         public const string ValueValidationName = "ThirdPerson.Presentation.Animation.PoseGraph.ValueValidation";
 
@@ -82,12 +79,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             Metric("presentation.animation.pose-graph.slot", SlotName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.state", StateName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.inertialization", InertializationName, "presentation.animation.pose-graph"),
-            Metric("presentation.animation.pose-graph.blend", BlendName, "presentation.animation.pose-graph"),
-            Metric("presentation.animation.pose-graph.constraint", ConstraintName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.ik-goal", IkGoalName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.linked-pose", LinkedPoseName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.full-body-ik", FullBodyIkName, "presentation.animation.pose-graph"),
-            Metric("presentation.animation.pose-graph.space-conversion", SpaceConversionName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.output", OutputName, "presentation.animation.pose-graph"),
             Metric("presentation.animation.pose-graph.value-validation", ValueValidationName, "presentation.animation.pose-graph")
         };

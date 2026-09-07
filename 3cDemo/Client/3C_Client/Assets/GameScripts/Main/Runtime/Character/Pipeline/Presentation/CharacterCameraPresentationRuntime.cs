@@ -37,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly List<CameraTargetSnapshot> m_FrameTargets = new List<CameraTargetSnapshot>();
         readonly CameraDebugSnapshot m_Debug = new CameraDebugSnapshot();
         ulong m_LastBodyResetSequence;
+        CharacterCameraPresentationCaptureFrame m_LastPresentationFrame;
         bool m_Disposed;
 
         public CharacterCameraPresentationRuntime(
@@ -76,13 +77,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CameraBasisSnapshot BasisSnapshot => m_CameraRig.BasisSnapshot;
         public CameraRigResult RigResult => m_CameraRig.Result;
         public CameraDebugSnapshot DebugSnapshot => m_Debug;
+        internal CharacterCameraPresentationCaptureFrame LastPresentationFrame => m_LastPresentationFrame;
 
         public void Publish(
             CharacterPresentationCommand command,
             CharacterPresentationProducerEntry producer)
         {
             RequireAlive();
-            CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
+            ThirdPersonCamera.CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
             var instance = new PresentationProducerInstanceId(
                 command.ProducerId,
                 command.ProducerGeneration,
@@ -91,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float weight = Mathf.Clamp01(command.Weight);
             switch (binding.Kind)
             {
-                case CharacterPresentationCameraBindingKind.Sequence:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Sequence:
                     m_Sequences[instance] = new CameraSequenceRequest(
                         binding.SequenceId,
                         binding.Priority,
@@ -109,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         command.SampleTime);
                     m_PendingSequenceTerminations.Remove(instance);
                     break;
-                case CharacterPresentationCameraBindingKind.Response:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Response:
                     m_Responses[instance] = new CameraResponseRequest(
                         binding.ResponseMode,
                         binding.ManualOrbitWeight,
@@ -124,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         command.Cycle,
                         command.SampleTime);
                     break;
-                case CharacterPresentationCameraBindingKind.Target:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Target:
                     m_Targets[instance] = new CameraTargetSelectionRequest(
                         binding.TargetKey,
                         binding.AnchorKey,
@@ -138,11 +140,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         command.Cycle,
                         command.Header.EventId.ToString());
                     break;
-                case CharacterPresentationCameraBindingKind.Override:
-                case CharacterPresentationCameraBindingKind.Zoom:
-                case CharacterPresentationCameraBindingKind.Stretch:
-                case CharacterPresentationCameraBindingKind.Shake:
-                case CharacterPresentationCameraBindingKind.Shot:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Override:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shake:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shot:
                     RemovePendingEffect(
                         command.Header.EventId.ToString(),
                         producer.ProgramProducerIdentity,
@@ -172,6 +174,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Terminate(command, producer, CameraPresentationStopReason.EventRevoked);
         }
+
+        public void Force(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer) =>
+            Retire(command, producer);
 
         public void Complete(
             CharacterPresentationCommand command,
@@ -216,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CameraPresentationStopReason reason)
         {
             RequireAlive();
-            CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
+            ThirdPersonCamera.CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
             var instance = new PresentationProducerInstanceId(
                 command.ProducerId,
                 command.ProducerGeneration,
@@ -224,7 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.Cycle);
             switch (binding.Kind)
             {
-                case CharacterPresentationCameraBindingKind.Sequence:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Sequence:
                     if (!m_Sequences.TryGetValue(instance, out CameraSequenceRequest sequenceRequest))
                     {
                         return;
@@ -254,25 +261,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             binding.BlendOutSeconds,
                             reason);
                     break;
-                case CharacterPresentationCameraBindingKind.Response:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Response:
                     if (reason == CameraPresentationStopReason.EventRevoked &&
                         (!m_Responses.TryGetValue(instance, out CameraResponseRequest responseRequest) ||
                          !string.Equals(responseRequest.EventId, command.Header.EventId.ToString(), StringComparison.Ordinal)))
                         return;
                     m_Responses.Remove(instance);
                     break;
-                case CharacterPresentationCameraBindingKind.Target:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Target:
                     if (reason == CameraPresentationStopReason.EventRevoked &&
                         (!m_Targets.TryGetValue(instance, out CameraTargetSelectionRequest targetRequest) ||
                          !string.Equals(targetRequest.EventId, command.Header.EventId.ToString(), StringComparison.Ordinal)))
                         return;
                     m_Targets.Remove(instance);
                     break;
-                case CharacterPresentationCameraBindingKind.Override:
-                case CharacterPresentationCameraBindingKind.Zoom:
-                case CharacterPresentationCameraBindingKind.Stretch:
-                case CharacterPresentationCameraBindingKind.Shake:
-                case CharacterPresentationCameraBindingKind.Shot:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Override:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shake:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shot:
                     m_EffectEvaluator.Retire(
                         command.Header.EventId.ToString(),
                         command.ProducerGeneration,
@@ -341,6 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CameraRig.Reset();
             m_Debug.Clear();
             m_LastBodyResetSequence = 0;
+            m_LastPresentationFrame = default;
         }
 
         public void Dispose()
@@ -435,6 +443,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingEffects.Clear();
             m_CameraRig.Apply(in plan);
             m_Debug.Set(plan, m_CameraRig.Result, resolvedTarget.SourceKey, m_CameraProjection.ProfileRevision);
+            CameraBasisSnapshot basis = m_CameraRig.BasisSnapshot;
+            CameraRigResult rig = m_CameraRig.Result;
+            m_LastPresentationFrame = new CharacterCameraPresentationCaptureFrame(
+                true,
+                0,
+                0,
+                m_LastBodyResetSequence,
+                presentationDeltaSeconds,
+                resetHistory,
+                in basis,
+                rig.Valid,
+                rig.Position,
+                rig.Rotation,
+                rig.FieldOfView);
         }
 
         void RemovePendingEffect(
@@ -573,7 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             key.SourceActionInstanceId == command.SourceActionInstanceId &&
             string.Equals(key.ProducerId, command.ProducerId, StringComparison.Ordinal);
 
-        static CharacterPresentationCameraBinding RequireCameraBinding(
+        static ThirdPersonCamera.CharacterPresentationCameraBinding RequireCameraBinding(
             CharacterPresentationProducerEntry producer)
         {
             if (producer == null || producer.Kind != CharacterPresentationProducerKind.Camera ||
@@ -593,10 +615,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPresentationProducerEntry producer = producers[i];
                 if (producer.Kind != CharacterPresentationProducerKind.Camera || producer.Camera == null)
                     continue;
-                CharacterPresentationCameraBinding binding = producer.Camera;
-                if (binding.Kind == CharacterPresentationCameraBindingKind.Sequence)
+                ThirdPersonCamera.CharacterPresentationCameraBinding binding = producer.Camera;
+                if (binding.Kind == ThirdPersonCamera.CharacterPresentationCameraBindingKind.Sequence)
                     resolver.RequireKey(binding.TargetKey, producer.SourceDisplayPath);
-                if (binding.Kind == CharacterPresentationCameraBindingKind.Target)
+                if (binding.Kind == ThirdPersonCamera.CharacterPresentationCameraBindingKind.Target)
                 {
                     resolver.RequireKey(binding.TargetKey, producer.SourceDisplayPath);
                     resolver.RequireKey(binding.AnchorKey, producer.SourceDisplayPath);

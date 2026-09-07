@@ -17,6 +17,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] string m_ProgramHash = string.Empty;
         [SerializeField] string m_LayoutHash = string.Empty;
         [SerializeField] string m_CanonicalBytesHash = string.Empty;
+        [SerializeField] byte m_RootKind;
+        [SerializeField] string m_RootIdentity = string.Empty;
+        [SerializeField] string m_EntryIdentity = string.Empty;
+        [SerializeField] string m_ContentIdentity = string.Empty;
 
         public string DefinitionGuid => m_DefinitionGuid;
         public string CompilerVersion => m_CompilerVersion;
@@ -27,6 +31,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public string ProgramHash => m_ProgramHash;
         public string LayoutHash => m_LayoutHash;
         public string CanonicalBytesHash => m_CanonicalBytesHash;
+        public SimulationProgramRootKind RootKind => (SimulationProgramRootKind)m_RootKind;
+        public string RootIdentity => m_RootIdentity;
+        public string EntryIdentity => m_EntryIdentity;
+        public string ContentIdentity => m_ContentIdentity;
         public int CanonicalByteLength => m_CanonicalArtifact?.Length ?? 0;
 
         public byte[] CopyCanonicalArtifact() =>
@@ -40,12 +48,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_CanonicalArtifact);
             if (!bytesHash.IsValid || !string.Equals(bytesHash.Value, m_CanonicalBytesHash, StringComparison.Ordinal))
                 throw new InvalidOperationException($"Fixed Character Program asset '{name}' canonical bytes hash is invalid.");
+            var root = new SimulationProgramRootDescriptor(
+                (SimulationProgramRootKind)m_RootKind,
+                m_RootIdentity,
+                m_EntryIdentity,
+                m_ContentIdentity);
+            if (!root.IsCharacter)
+                throw new InvalidOperationException($"Fixed Character Program asset '{name}' does not contain a Character root.");
             var expectation = new ThirdPersonSimulation.Fixed.ProgramLoadExpectation(
                 m_CompilerVersion,
                 new OperationSetVersion(m_OperationSetVersion),
                 new ProgramRevision(m_SourceRevision),
                 new SemanticHash(new StableHash(m_SemanticHash)),
-                FixedSimulationNumericProfile.Value);
+                FixedSimulationNumericProfile.Value,
+                root);
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program =
                 ThirdPersonSimulation.Fixed.CharacterSimulationProgramCodec.ReadArtifact(
                     m_CanonicalArtifact,
@@ -66,6 +82,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentNullException(nameof(artifact));
             ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactDescriptor descriptor = artifact.Descriptor;
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = artifact.Program;
+            if (!program.Manifest.Root.IsCharacter)
+                throw new InvalidOperationException("Fixed Character Program asset requires a Character root.");
             if (!descriptor.ProgramId.Equals(program.Manifest.ProgramId) ||
                 !descriptor.ProgramHash.Equals(program.ProgramHash) ||
                 !descriptor.LayoutHash.Equals(program.LayoutHash) ||
@@ -84,6 +102,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ProgramHash = program.ProgramHash.ToString();
             m_LayoutHash = program.LayoutHash.ToString();
             m_CanonicalBytesHash = descriptor.CanonicalBytesHash.Value;
+            m_RootKind = (byte)program.Manifest.Root.Kind;
+            m_RootIdentity = program.Manifest.Root.RootIdentity;
+            m_EntryIdentity = program.Manifest.Root.EntryIdentity;
+            m_ContentIdentity = program.Manifest.Root.ContentIdentity;
         }
 #endif
     }

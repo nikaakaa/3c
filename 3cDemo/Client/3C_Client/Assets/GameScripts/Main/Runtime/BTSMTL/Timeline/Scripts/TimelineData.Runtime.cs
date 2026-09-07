@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using BTSMTL.Diagnostics;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -50,6 +51,7 @@ namespace BTSMTL.Timeline
 
         public string Name;
         public string AuthoringId => m_AuthoringId ?? string.Empty;
+        public virtual string ContractKind => string.Empty;
 
         [SerializeField]
         protected bool m_PersistentMuted;
@@ -125,6 +127,7 @@ namespace BTSMTL.Timeline
         public int EaseOutFrame => OtherEaseOutFrame == 0 ? SelfEaseOutFrame : OtherEaseOutFrame;
         public int Duration => EndFrame - StartFrame;
         public string AuthoringId => m_AuthoringId ?? string.Empty;
+        public virtual string ContractKind => string.Empty;
         #endregion
 
         #region Time
@@ -268,9 +271,12 @@ namespace BTSMTL.Timeline
         public UnityEditor.SerializedObject SerializedTimeline;
         public UnityEditor.SerializedProperty SerializedData;
 
-        public void AddTrack(Type type)
+        public void AddTrack(Type type, TimelineContractCatalog catalog)
         {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
             Track track = Activator.CreateInstance(type) as Track;
+            catalog.RequireTrack(track?.ContractKind);
             track.RegenerateAuthoringIdentity();
             track.Name = type.Name.Replace("Track", string.Empty);
             m_Tracks.Add(track);
@@ -281,17 +287,38 @@ namespace BTSMTL.Timeline
             m_Tracks.Remove(track);
             Init();
         }
-        public Clip AddClip(Track track, int frame)
+        public Clip AddClip(TimelineContractCatalog catalog, Track track, int frame)
         {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
             Clip clip = track.AddClip(frame);
-
+            try
+            {
+                catalog.RequireClipPlacement(track, clip);
+            }
+            catch
+            {
+                track.RemoveClip(clip);
+                throw;
+            }
             Init();
             return clip;
         }
-        public Clip AddClip(UnityEngine.Object referenceObject, Track track, int frame)
+        public Clip AddClip(TimelineContractCatalog catalog, UnityEngine.Object referenceObject, Track track, int frame)
         {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
             Clip clip = track.AddClip(referenceObject, frame);
-
+            try
+            {
+                catalog.RequireClipPlacement(track, clip);
+            }
+            catch
+            {
+                if (clip != null)
+                    track.RemoveClip(clip);
+                throw;
+            }
             Init();
             return clip;
         }
@@ -310,6 +337,35 @@ namespace BTSMTL.Timeline
             SortSections();
             Init();
             return section;
+        }
+        public TimelineExternalBindingDeclaration AddExternalBinding(
+            string bindingId,
+            string displayName,
+            string domain,
+            TimelineBindingValueKind valueKind,
+            TimelineBindingAccess access,
+            TimelineBindingLifetime lifetime,
+            string parameterId = null)
+        {
+            TimelineExternalBindingDeclaration binding = TimelineExternalBindingDeclaration.Create(
+                bindingId,
+                displayName,
+                domain,
+                valueKind,
+                access,
+                lifetime,
+                parameterId);
+            if (m_ExternalBindings.Exists(value => value != null && string.Equals(value.BindingId, binding.BindingId, StringComparison.Ordinal)))
+                throw new InvalidOperationException($"Timeline external binding '{binding.BindingId}' already exists.");
+            m_ExternalBindings.Add(binding);
+            OnValueChanged?.Invoke();
+            return binding;
+        }
+        public void RemoveExternalBinding(TimelineExternalBindingDeclaration binding)
+        {
+            if (binding == null || !m_ExternalBindings.Remove(binding))
+                throw new ArgumentException("Timeline external binding is not owned by this Timeline.", nameof(binding));
+            OnValueChanged?.Invoke();
         }
 #if UNITY_EDITOR
         public TimelineSection EnsureSection(string authoringId, string name, int frame)

@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     sample.SampleId,
                     sample.Role,
                     sample.SourceDurationSeconds,
-                    sample.Clip.isLooping,
+                    sample.IsLooping,
                     sample.StationaryNormalizedTime,
                     phaseIndex);
             }

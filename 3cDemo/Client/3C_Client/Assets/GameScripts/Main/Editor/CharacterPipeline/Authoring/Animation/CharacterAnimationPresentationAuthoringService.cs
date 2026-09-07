@@ -524,22 +524,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var roots = new List<BaseTree>();
             if (definition.RootTreeAsset && definition.RootTreeAsset.Tree)
                 roots.Add(definition.RootTreeAsset.Tree);
-            if (!definition.EquipmentCapabilityEnabled || !definition.EquipmentProfile)
-                return roots;
-            for (int featureIndex = 0; featureIndex < definition.EquipmentProfile.Features.Count; featureIndex++)
-            {
-                CharacterEquipmentFeatureDefinition feature = definition.EquipmentProfile.Features[featureIndex];
-                if (!feature)
-                    continue;
-                if (feature.PersistentGraph)
-                    roots.Add(feature.PersistentGraph);
-                for (int routeIndex = 0; routeIndex < feature.RouteImplementations.Count; routeIndex++)
-                {
-                    EquipmentFeatureRouteImplementation route = feature.RouteImplementations[routeIndex];
-                    if (route?.InlineGraph)
-                        roots.Add(route.InlineGraph);
-                }
-            }
             return roots;
         }
 

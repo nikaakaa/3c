@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCamera;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
@@ -218,19 +217,13 @@ namespace ThirdPersonGameplay.Editor.Lab
             {
                 CharacterPipelineHost[] characters = root.GetComponentsInChildren<CharacterPipelineHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
-                    characters.Count(character => character.ControlSource is PlayerCharacterControlSource) != 1 ||
-                    characters.Count(character => character.ControlSource is AICharacterControlSource) != 1)
+                    characters.Count(character => character.ControlSource is PlayerCharacterControlSource) !=
+                    1 ||
+                    characters.Count(character => character.ControlSource is NeutralCharacterControlSource) !=
+                    1)
                 {
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one Float32 Player and one formal AI Control Source.");
-                }
-                CharacterPipelineHost enemy = characters.Single(
-                    character => character.ControlSource is AICharacterControlSource);
-                AICharacterControlSource ai = (AICharacterControlSource)enemy.ControlSource;
-                if (enemy.ActorId != "gameplay-lab-target" ||
-                    !ai.Controller ||
-                    !ai.Controller.PerceptionProfile.CandidateActorIds.Contains("gameplay-lab-player"))
-                {
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' AI target closure is not bound to the Gameplay Lab player roster.");
+                    throw new InvalidOperationException(
+                        $"Gameplay Lab Variant '{variant.VariantId}' requires one Float32 Player Control Source and one Float32 Neutral Control Source.");
                 }
             }
             variant.ValidateComposition(hosts[0].Composition);
@@ -273,12 +266,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void RebuildAssets()
         {
             GameplayLabAssetBuilder.Rebuild();
-        }
-
-        [MenuItem("Tools/3C/Characters/Sync Training Enemy to Gameplay Lab Float32")]
-        static void SyncTrainingEnemy()
-        {
-            GameplayLabAssetBuilder.SyncFloat32EnemyVariant();
         }
 
         [MenuItem("Tools/3C/Internal/Rebuild Gameplay Lab Fixed Character Prefabs")]

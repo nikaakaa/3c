@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
@@ -56,19 +57,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal AnimationPhysicalSourceReleaseToken(
             AnimationPhysicalSourceIndex sourceIndex,
             ulong generation,
-            AnimationPoseSourceId sourceId)
+            AnimationPoseSourceId sourceId,
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceCatalogIndex)
         {
-            if (!sourceIndex.IsValid || generation == 0 || !sourceId.IsValid)
+            if (!sourceIndex.IsValid || generation == 0 || !sourceId.IsValid ||
+                !PhysicalPoseSourceMetadata.IsValid(backend, resourceCatalogIndex))
                 throw new ArgumentException("Animation physical source release token is invalid.");
             SourceIndex = sourceIndex;
             Generation = generation;
             SourceId = sourceId;
+            Backend = backend;
+            ResourceCatalogIndex = resourceCatalogIndex;
         }
 
         internal AnimationPhysicalSourceIndex SourceIndex { get; }
         internal ulong Generation { get; }
         internal AnimationPoseSourceId SourceId { get; }
-        internal bool IsValid => SourceIndex.IsValid && Generation != 0 && SourceId.IsValid;
+        internal CharacterAnimationSamplingBackendKind Backend { get; }
+        internal int ResourceCatalogIndex { get; }
+        internal bool IsValid => SourceIndex.IsValid && Generation != 0 && SourceId.IsValid &&
+                                 PhysicalPoseSourceMetadata.IsValid(Backend, ResourceCatalogIndex);
+    }
+
+    static class PhysicalPoseSourceMetadata
+    {
+        internal static bool IsValid(
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceCatalogIndex) =>
+            Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), backend) &&
+            (backend == CharacterAnimationSamplingBackendKind.NativeClip
+                ? resourceCatalogIndex == -1
+                : resourceCatalogIndex >= 0);
     }
 
     internal readonly struct CharacterPoseSourceCommittedIdentity
@@ -77,23 +97,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             AnimationPhysicalSourceIdentity physicalIdentity,
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
-            int sourceOwnerIndex)
+            int sourceOwnerIndex,
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceCatalogIndex)
         {
             PhysicalIdentity = physicalIdentity;
             SourceId = sourceId;
             PoseNodeId = poseNodeId;
             SourceOwnerIndex = sourceOwnerIndex;
+            Backend = backend;
+            ResourceCatalogIndex = resourceCatalogIndex;
         }
 
         internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
         internal AnimationPoseSourceId SourceId { get; }
         internal PoseNodeId PoseNodeId { get; }
         internal int SourceOwnerIndex { get; }
+        internal CharacterAnimationSamplingBackendKind Backend { get; }
+        internal int ResourceCatalogIndex { get; }
         internal bool IsValid =>
             PhysicalIdentity.IsValid &&
             SourceId.IsValid &&
             PoseNodeId.IsValid &&
-            SourceOwnerIndex >= 0;
+            SourceOwnerIndex >= 0 &&
+            PhysicalPoseSourceMetadata.IsValid(Backend, ResourceCatalogIndex);
     }
 
     internal readonly struct CharacterPoseSourceCommittedDiagnosticsView
@@ -166,7 +193,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_Page.Generations[index] != identity.Generation ||
                 !m_Page.SourceIds[index].IsValid ||
                 !m_Page.PoseNodeIds[index].IsValid ||
-                m_Page.SourceOwnerIndices[index] < 0)
+                m_Page.SourceOwnerIndices[index] < 0 ||
+                !PhysicalPoseSourceMetadata.IsValid(
+                    m_Page.Backends[index],
+                    m_Page.ResourceCatalogIndices[index]))
             {
                 throw new InvalidOperationException(
                     "Pose Source committed physical identity is stale.");
@@ -175,7 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 identity,
                 m_Page.SourceIds[index],
                 m_Page.PoseNodeIds[index],
-                m_Page.SourceOwnerIndices[index]);
+                m_Page.SourceOwnerIndices[index],
+                m_Page.Backends[index],
+                m_Page.ResourceCatalogIndices[index]);
         }
 
         void RequireValid()
@@ -198,10 +230,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 PoseNodeIds = new PoseNodeId[capacity];
                 SourceOwnerIndices = new int[capacity];
                 Generations = new ulong[capacity];
+                Backends = new CharacterAnimationSamplingBackendKind[capacity];
+                ResourceCatalogIndices = new int[capacity];
                 Releases =
                     new AnimationReleasedPoseSourceSnapshot[capacity];
                 for (int i = 0; i < SourceOwnerIndices.Length; i++)
+                {
                     SourceOwnerIndices[i] = -1;
+                    ResourceCatalogIndices[i] = -1;
+                }
             }
 
             internal ulong Identity;
@@ -211,16 +248,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal readonly PoseNodeId[] PoseNodeIds;
             internal readonly int[] SourceOwnerIndices;
             internal readonly ulong[] Generations;
+            internal readonly CharacterAnimationSamplingBackendKind[] Backends;
+            internal readonly int[] ResourceCatalogIndices;
             internal readonly AnimationReleasedPoseSourceSnapshot[] Releases;
         }
 
         AnimationPoseSourceId[] m_SourceIds;
         PoseNodeId[] m_PoseNodeIds;
         int[] m_SourceOwnerIndices;
+        CharacterAnimationSamplingBackendKind[] m_Backends;
+        int[] m_ResourceCatalogIndices;
         ulong[] m_Generations;
         AnimationPoseSourceId[] m_PendingSourceIds;
         PoseNodeId[] m_PendingPoseNodeIds;
         int[] m_PendingSourceOwnerIndices;
+        CharacterAnimationSamplingBackendKind[] m_PendingBackends;
+        int[] m_PendingResourceCatalogIndices;
         ulong[] m_PendingGenerations;
         byte[] m_PreparedReleaseSlots;
         readonly AnimationReleasedPoseSourceSnapshot[]
@@ -245,10 +288,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_SourceIds = new AnimationPoseSourceId[capacity];
             m_PoseNodeIds = new PoseNodeId[capacity];
             m_SourceOwnerIndices = new int[capacity];
+            m_Backends = new CharacterAnimationSamplingBackendKind[capacity];
+            m_ResourceCatalogIndices = new int[capacity];
             m_Generations = new ulong[capacity];
             m_PendingSourceIds = new AnimationPoseSourceId[capacity];
             m_PendingPoseNodeIds = new PoseNodeId[capacity];
             m_PendingSourceOwnerIndices = new int[capacity];
+            m_PendingBackends = new CharacterAnimationSamplingBackendKind[capacity];
+            m_PendingResourceCatalogIndices = new int[capacity];
             m_PendingGenerations = new ulong[capacity];
             m_PreparedReleaseSlots = new byte[capacity];
             m_ReleaseDiagnostics =
@@ -258,6 +305,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 m_SourceOwnerIndices[i] = -1;
                 m_PendingSourceOwnerIndices[i] = -1;
+                m_ResourceCatalogIndices[i] = -1;
+                m_PendingResourceCatalogIndices[i] = -1;
             }
         }
 
@@ -394,6 +443,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_SourceIds[i] = m_PendingSourceIds[i];
                 m_PoseNodeIds[i] = m_PendingPoseNodeIds[i];
                 m_SourceOwnerIndices[i] = m_PendingSourceOwnerIndices[i];
+                m_Backends[i] = m_PendingBackends[i];
+                m_ResourceCatalogIndices[i] = m_PendingResourceCatalogIndices[i];
                 m_Generations[i] = m_PendingGenerations[i];
             }
             m_Count = checked(m_Count + m_PendingCount);
@@ -435,18 +486,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal AnimationPhysicalSourceIdentity Register(
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
-            int sourceOwnerIndex)
+            int sourceOwnerIndex,
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceCatalogIndex)
         {
             RequireAlive();
             RequireOpenFrame();
-            if (!sourceId.IsValid || !poseNodeId.IsValid || sourceOwnerIndex < 0)
+            if (!sourceId.IsValid || !poseNodeId.IsValid || sourceOwnerIndex < 0 ||
+                !PhysicalPoseSourceMetadata.IsValid(backend, resourceCatalogIndex))
                 throw new ArgumentException("Animation physical source identity is invalid.");
             if (TryFind(sourceId, poseNodeId, out int existing))
             {
                 int existingOwner = PendingIsOccupied(existing)
                     ? m_PendingSourceOwnerIndices[existing]
                     : m_SourceOwnerIndices[existing];
-                if (existingOwner != sourceOwnerIndex)
+                CharacterAnimationSamplingBackendKind existingBackend =
+                    PendingIsOccupied(existing)
+                        ? m_PendingBackends[existing]
+                        : m_Backends[existing];
+                int existingResourceCatalogIndex = PendingIsOccupied(existing)
+                    ? m_PendingResourceCatalogIndices[existing]
+                    : m_ResourceCatalogIndices[existing];
+                if (existingOwner != sourceOwnerIndex ||
+                    existingBackend != backend ||
+                    existingResourceCatalogIndex != resourceCatalogIndex)
                 {
                     throw new InvalidOperationException(
                         $"Animation pose source '{sourceId}' is already registered with different physical metadata.");
@@ -459,6 +522,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_PendingSourceIds[index] = sourceId;
             m_PendingPoseNodeIds[index] = poseNodeId;
             m_PendingSourceOwnerIndices[index] = sourceOwnerIndex;
+            m_PendingBackends[index] = backend;
+            m_PendingResourceCatalogIndices[index] = resourceCatalogIndex;
             m_PendingGenerations[index] = generation;
             m_PendingCount++;
             m_FrameValidated = false;
@@ -473,6 +538,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!TryFind(sourceId, nodeId, out int index))
                 throw new InvalidOperationException($"Animation pose source '{sourceId}' has no physical identity for Player '{nodeId}'.");
             return CreateIdentity(index);
+        }
+
+        internal bool ContainsCommitted(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId nodeId)
+        {
+            RequireAlive();
+            if (!sourceId.IsValid || !nodeId.IsValid ||
+                !TryFind(sourceId, nodeId, out int index))
+                return false;
+            return !PendingIsOccupied(index);
         }
 
         internal void FreezeCommittedDiagnostics(
@@ -497,6 +573,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_SourceOwnerIndices,
                 page.SourceOwnerIndices,
                 m_SourceOwnerIndices.Length);
+            Array.Copy(m_Backends, page.Backends, m_Backends.Length);
+            Array.Copy(
+                m_ResourceCatalogIndices,
+                page.ResourceCatalogIndices,
+                m_ResourceCatalogIndices.Length);
             Array.Copy(m_Generations, page.Generations, m_Generations.Length);
             Array.Copy(
                 m_ReleaseDiagnostics,
@@ -552,6 +633,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 : m_SourceOwnerIndices[value];
         }
 
+        internal CharacterAnimationSamplingBackendKind RequireBackendKind(
+            AnimationPhysicalSourceIdentity identity)
+        {
+            int value = RequireOccupied(identity);
+            return PendingIsOccupied(value)
+                ? m_PendingBackends[value]
+                : m_Backends[value];
+        }
+
+        internal int RequireResourceCatalogIndex(
+            AnimationPhysicalSourceIdentity identity)
+        {
+            int value = RequireOccupied(identity);
+            return PendingIsOccupied(value)
+                ? m_PendingResourceCatalogIndices[value]
+                : m_ResourceCatalogIndices[value];
+        }
+
         internal AnimationPhysicalSourceReleaseToken PrepareRelease(
             AnimationPhysicalSourceIdentity identity,
             AnimationPoseSourceId sourceId)
@@ -590,7 +689,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return new AnimationPhysicalSourceReleaseToken(
                 identity.Index,
                 identity.Generation,
-                sourceId);
+                sourceId,
+                m_Backends[index],
+                m_ResourceCatalogIndices[index]);
         }
 
         internal void ApplyPreparedRelease(
@@ -611,6 +712,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CancelReleaseDiagnostics();
             Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
             Array.Clear(m_PoseNodeIds, 0, m_PoseNodeIds.Length);
+            Array.Clear(m_Backends, 0, m_Backends.Length);
+            Array.Clear(m_ResourceCatalogIndices, 0, m_ResourceCatalogIndices.Length);
             Array.Clear(m_Generations, 0, m_Generations.Length);
             for (int i = 0; i < m_SourceOwnerIndices.Length; i++)
                 m_SourceOwnerIndices[i] = -1;
@@ -628,6 +731,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_CommittedDiagnostics.PoseNodeIds,
                 0,
                 m_CommittedDiagnostics.PoseNodeIds.Length);
+            Array.Clear(
+                m_CommittedDiagnostics.Backends,
+                0,
+                m_CommittedDiagnostics.Backends.Length);
+            Array.Clear(
+                m_CommittedDiagnostics.ResourceCatalogIndices,
+                0,
+                m_CommittedDiagnostics.ResourceCatalogIndices.Length);
             Array.Clear(
                 m_CommittedDiagnostics.Generations,
                 0,
@@ -666,8 +777,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             AnimationPoseSourceId sourceId = pending ? m_PendingSourceIds[index] : m_SourceIds[index];
             PoseNodeId nodeId = pending ? m_PendingPoseNodeIds[index] : m_PoseNodeIds[index];
             int ownerIndex = pending ? m_PendingSourceOwnerIndices[index] : m_SourceOwnerIndices[index];
+            CharacterAnimationSamplingBackendKind backend =
+                pending ? m_PendingBackends[index] : m_Backends[index];
+            int resourceCatalogIndex = pending
+                ? m_PendingResourceCatalogIndices[index]
+                : m_ResourceCatalogIndices[index];
             ulong generation = pending ? m_PendingGenerations[index] : m_Generations[index];
-            if (!sourceId.IsValid || !nodeId.IsValid || ownerIndex < 0 || generation == 0)
+            if (!sourceId.IsValid || !nodeId.IsValid || ownerIndex < 0 ||
+                generation == 0 ||
+                !PhysicalPoseSourceMetadata.IsValid(backend, resourceCatalogIndex))
             {
                 throw new InvalidOperationException(
                     $"Animation physical source identity ({index}, {identity.Generation}) is no longer occupied.");
@@ -724,6 +842,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_SourceIds[index] = default;
             m_PoseNodeIds[index] = default;
             m_SourceOwnerIndices[index] = -1;
+            m_Backends[index] = default;
+            m_ResourceCatalogIndices[index] = -1;
             m_Generations[index] = 0;
         }
 
@@ -734,9 +854,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             Array.Clear(m_PendingSourceIds, 0, m_PendingSourceIds.Length);
             Array.Clear(m_PendingPoseNodeIds, 0, m_PendingPoseNodeIds.Length);
+            Array.Clear(m_PendingBackends, 0, m_PendingBackends.Length);
+            Array.Clear(
+                m_PendingResourceCatalogIndices,
+                0,
+                m_PendingResourceCatalogIndices.Length);
             Array.Clear(m_PendingGenerations, 0, m_PendingGenerations.Length);
             for (int i = 0; i < m_PendingSourceOwnerIndices.Length; i++)
+            {
                 m_PendingSourceOwnerIndices[i] = -1;
+                m_PendingResourceCatalogIndices[i] = -1;
+            }
             m_PendingCount = 0;
         }
 
@@ -769,10 +897,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_SourceIds = null;
             m_PoseNodeIds = null;
             m_SourceOwnerIndices = null;
+            m_Backends = null;
+            m_ResourceCatalogIndices = null;
             m_Generations = null;
             m_PendingSourceIds = null;
             m_PendingPoseNodeIds = null;
             m_PendingSourceOwnerIndices = null;
+            m_PendingBackends = null;
+            m_PendingResourceCatalogIndices = null;
             m_PendingGenerations = null;
             m_PreparedReleaseSlots = null;
             m_Disposed = true;

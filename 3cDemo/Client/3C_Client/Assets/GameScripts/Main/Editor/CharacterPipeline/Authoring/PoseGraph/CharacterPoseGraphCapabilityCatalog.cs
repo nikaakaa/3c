@@ -695,7 +695,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal static class CharacterPoseAuthoringPortProjection
     {
         public static IReadOnlyList<CharacterPosePortDefinition> Get(
-            CharacterTypedPoseNode node)
+            CharacterPoseCanvasNode node)
         {
             if (node == null)
                 throw new ArgumentNullException(nameof(node));
@@ -707,7 +707,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public static IReadOnlyList<CharacterPosePortDefinition>
-            GetDeclared(CharacterTypedPoseNode node) =>
+            GetDeclared(CharacterPoseCanvasNode node) =>
             CharacterPoseNodeDefinitionModule.Shared
                 .Require(node.Kind)
                 .ProjectDeclaredPortShape(node.Payload)
@@ -715,7 +715,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .ToArray();
 
         public static CharacterPosePortDefinition Require(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             string portId,
             CharacterPosePortDirection? direction = null)
         {

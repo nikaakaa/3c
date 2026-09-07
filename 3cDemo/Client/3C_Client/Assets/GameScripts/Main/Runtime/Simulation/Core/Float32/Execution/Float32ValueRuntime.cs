@@ -110,6 +110,24 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Float32 value runtime retained recursion state across evaluations.");
         }
 
+        public void PrepareSubGraph<TTarget>(
+            OperationControlCursor<TTarget> cursor,
+            SimulationOperation operation)
+            where TTarget : struct, IOperationControlTarget<TTarget>
+        {
+            ProgramGraphCallFrame frame = RequireGraphCallFrame(operation);
+            OperationRunnableStatus status = cursor.ReadStatus(frame.EntryOperation);
+            if (status == OperationRunnableStatus.Running || status == OperationRunnableStatus.Stopping)
+                return;
+            using Float32ValueInputLease inputs = ReadInputs(cursor, operation);
+            if (inputs.Count != frame.Inputs.Count)
+                throw new InvalidOperationException($"Graph call frame '{frame.Identity}' received '{inputs.Count}' inputs, expected '{frame.Inputs.Count}'.");
+            for (int i = 0; i < frame.Outputs.Count; i++)
+                m_Blackboard.ResetGraphCallParameter(frame.Outputs[i].StateSlot);
+            for (int i = 0; i < frame.Inputs.Count; i++)
+                m_Blackboard.WriteGraphCallParameter(frame.Inputs[i].StateSlot, inputs[i]);
+        }
+
 		public CharacterStateValue Evaluate<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			OperationHandle handle,
@@ -147,6 +165,9 @@ namespace ThirdPersonSimulation
 						break;
 					case SimulationOperationCode.BlackboardGet:
 						result = ReadBlackboard(cursor, operation);
+						break;
+					case SimulationOperationCode.SubGraph:
+						result = ReadSubGraphOutput(cursor, operation, outputPort);
 						break;
 					case SimulationOperationCode.ActionContextActive:
 						result = CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
@@ -323,6 +344,37 @@ namespace ThirdPersonSimulation
             if (reference == null)
                 throw new InvalidOperationException($"Blackboard operation '{operation.Handle}' has no state address.");
             return m_Blackboard.Read(cursor, operation, reference.TargetIndex);
+        }
+
+        CharacterStateValue ReadSubGraphOutput<TTarget>(
+            OperationControlCursor<TTarget> cursor,
+            SimulationOperation operation,
+            string outputPort)
+            where TTarget : struct, IOperationControlTarget<TTarget>
+        {
+            ProgramGraphCallFrame frame = RequireGraphCallFrame(operation);
+            ProgramGraphParameterBinding binding = null;
+            for (int i = 0; i < frame.Outputs.Count; i++)
+            {
+                if (string.Equals(frame.Outputs[i].PortId, outputPort ?? string.Empty, StringComparison.Ordinal))
+                {
+                    binding = frame.Outputs[i];
+                    break;
+                }
+            }
+            if (binding == null)
+                throw new InvalidOperationException($"Graph call frame '{frame.Identity}' has no output port '{outputPort}'.");
+            if (cursor.ReadStatus(frame.EntryOperation) != OperationRunnableStatus.Success)
+                return CharacterStateValue.Default(m_Program.StateSlots[binding.StateSlot].ValueKind);
+            return m_Blackboard.ReadGraphCallParameter(binding.StateSlot);
+        }
+
+        ProgramGraphCallFrame RequireGraphCallFrame(SimulationOperation operation)
+        {
+            IReadOnlyList<ProgramGraphCallFrame> frames = m_Layout.Topology.GraphCallFrames(operation.Handle);
+            if (frames.Count != 1)
+                throw new InvalidOperationException($"SubGraph operation '{operation.Handle}' requires exactly one graph call frame.");
+            return frames[0];
         }
 
         Float32Scalar ReadMoveFacingAngle(Float32ValueInputLease inputs)

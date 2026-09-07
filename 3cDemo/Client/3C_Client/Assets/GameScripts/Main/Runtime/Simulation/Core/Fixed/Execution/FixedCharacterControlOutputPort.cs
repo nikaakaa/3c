@@ -9,19 +9,22 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedInputRuntime m_Input;
         readonly FixedLocomotionRuntime m_Locomotion;
         readonly FixedActionRuntime m_Actions;
+        readonly FixedTraceSink m_Trace;
 
         public FixedCharacterControlOutputPort(
             FixedProgramAccess access,
             ProgramCatalogEntry controlModule,
             FixedInputRuntime input,
             FixedLocomotionRuntime locomotion,
-            FixedActionRuntime actions)
+            FixedActionRuntime actions,
+            FixedTraceSink trace)
         {
             m_Access = access ?? throw new ArgumentNullException(nameof(access));
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
         }
 
         public void SubmitMotion(CharacterControlMotionRequest request)
@@ -33,6 +36,9 @@ namespace ThirdPersonSimulation.Fixed
         public bool SubmitSkill(CharacterControlSkillRequest request) => m_Actions.ActivateFromControl(request);
 
         public void SubmitSkillStop(CharacterControlSkillStopRequest request) => m_Actions.StopFromControl(request);
+
+        public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
+            m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);
 
         CharacterControlMotionDescriptor RequireMotion(string binding)
         {

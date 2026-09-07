@@ -18,7 +18,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const string LocalCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string RollbackCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
-        const string TrainingEnemyPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
         const string UnityAuthorityCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/UnityAuthority/CorinServerAuthoritativeUnityClient.prefab";
         const string DotRecastCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/DotRecast/CorinServerAuthoritativeDotRecastClient.prefab";
         const string UnityAuthorityClientScenePath = "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeClient.unity";
@@ -27,7 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static readonly string[] PipelineProfiles =
         {
             LocalCorinPath,
-            TrainingEnemyPath,
             UnityAuthorityCorinPath,
             DotRecastCorinPath
         };
@@ -56,6 +54,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SynchronizeRemoteTemplateScene(UnityAuthorityClientScenePath, UnityAuthorityCorinPath);
             SynchronizeRemoteTemplateScene(DotRecastClientScenePath, DotRecastCorinPath);
             AssetDatabase.SaveAssets();
+        }
+
+        public static CharacterAnimationRigBinding
+            RequireLocalCorinAnimationRigBinding(
+                CharacterAnimationRigPayload expected)
+        {
+            if (expected == null)
+                throw new ArgumentNullException(nameof(expected));
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                LocalCorinPath);
+            if (!prefab)
+                throw new InvalidOperationException(
+                    $"Local Corin Runtime Profile is missing: {LocalCorinPath}");
+            CharacterPipelineHost host =
+                prefab.GetComponent<CharacterPipelineHost>() ??
+                throw new InvalidOperationException(
+                    $"Character Runtime Profile '{LocalCorinPath}' has no CharacterPipelineHost.");
+            CharacterAnimationRigBinding binding = host.AnimationRigBinding ??
+                throw new InvalidOperationException(
+                    "Local Corin Runtime Profile has no Animation Rig Binding.");
+            binding.RequireValid(expected);
+            return binding;
         }
 
         static void SynchronizePipelineProfile(

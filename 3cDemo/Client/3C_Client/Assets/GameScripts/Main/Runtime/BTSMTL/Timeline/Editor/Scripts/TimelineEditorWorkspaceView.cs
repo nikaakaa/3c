@@ -27,6 +27,8 @@ namespace BTSMTL.Timeline.Editor
         VisualElement m_ToolContent;
         TimelineEditorToolPanel m_ActiveToolPanel;
         ITimelineEditorToolProvider m_ActiveToolProvider;
+        TimelineBindingSurface m_BindingSurface;
+        Button m_BindingButton;
         IVisualElementScheduledItem m_UpdateSchedule;
         readonly TimelinePreviewSession m_PreviewSession = new TimelinePreviewSession();
         bool m_LiveDebug;
@@ -43,12 +45,17 @@ namespace BTSMTL.Timeline.Editor
             InitializeView();
         }
         public TimelineData Timeline { get; private set; }
+        public TimelineContractCatalog ContractCatalog { get; private set; }
         public TimelineEditorSessionContext SessionContext { get; private set; }
         public TimelinePreviewSession PreviewSession => m_PreviewSession;
         public Vector2 ViewportOffset => m_TimelineField?.TrackScrollView.scrollOffset ?? Vector2.zero;
         public bool IsLiveDebug => m_LiveDebug;
         public float AuthoringTime => m_PreviewSession.Time;
         public int AuthoringFrame => m_PreviewSession.Frame;
+        public void SetContractCatalog(TimelineContractCatalog catalog)
+        {
+            ContractCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
         internal float DocumentScale
         {
             get => m_DocumentScale;
@@ -96,6 +103,11 @@ namespace BTSMTL.Timeline.Editor
                 m_PreviewSession.PlaySpeed = speed;
                 m_PlaySpeedField.SetValueWithoutNotify(speed);
             });
+            m_BindingButton = new Button(ToggleBindingSurface) { text = "Bindings" };
+            m_Top.Add(m_BindingButton);
+            m_BindingSurface = new TimelineBindingSurface();
+            m_BindingSurface.style.display = DisplayStyle.None;
+            Insert(1, m_BindingSurface);
             m_PreviewErrorLabel = new Label();
             m_PreviewErrorLabel.style.marginLeft = 6f;
             m_PreviewErrorLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
@@ -147,6 +159,7 @@ namespace BTSMTL.Timeline.Editor
                 () => m_TimelineField.OneFrameWidth,
                 position => m_TimelineField.Geometry.PositionToClosestFrame(position),
                 frame => m_TimelineField.Geometry.FrameToPosition(frame));
+            m_BindingSurface.Bind(Timeline, ContractCatalog, SessionContext);
             Timeline.Init();
             Timeline.UpdateSerializedTimeline();
             Timeline.OnValueChanged += OnTimelineValueChanged;
@@ -257,7 +270,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_LiveDebug)
                 return;
-            Timeline.ApplyModify(() => Timeline.AddTrack(type), "Add Track");
+            Timeline.ApplyModify(() => Timeline.AddTrack(type, ContractCatalog), "Add Track");
         }
         public void RefreshPreview(bool refreshView = false)
         {
@@ -266,6 +279,7 @@ namespace BTSMTL.Timeline.Editor
             Timeline.Init();
             Timeline.UpdateSerializedTimeline();
             m_PreviewSession.RefreshTimeline(false);
+            m_BindingSurface.Refresh();
             if (refreshView)
                 m_TimelineField.PopulateView();
             m_TimelineField.UpdateBindState();
@@ -367,6 +381,7 @@ namespace BTSMTL.Timeline.Editor
             Timeline.UpdateSerializedTimeline();
             if (!m_LiveDebug)
                 m_PreviewSession.RefreshTimeline(false);
+            m_BindingSurface.Refresh();
             m_TimelineField.PopulateView();
             m_TimelineField.UpdateBindState();
             UpdateBindState();
@@ -393,6 +408,8 @@ namespace BTSMTL.Timeline.Editor
                 ? DisplayStyle.None
                 : DisplayStyle.Flex;
             m_AddTrackButton.SetEnabled(!m_LiveDebug);
+            m_BindingButton.SetEnabled(Timeline != null);
+            m_BindingSurface.SetReadOnly(m_LiveDebug);
         }
         public void SetLiveDebug(bool liveDebug)
         {
@@ -517,6 +534,16 @@ namespace BTSMTL.Timeline.Editor
             m_PendingFocusClipAuthoringId = string.Empty;
             m_PreviewSession.SetTimeline(null);
             SetPreviewTarget(null);
+            m_BindingSurface?.Bind(null, null, null);
+        }
+
+        void ToggleBindingSurface()
+        {
+            if (m_BindingSurface == null)
+                return;
+            m_BindingSurface.style.display = m_BindingSurface.style.display == DisplayStyle.None
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
         }
 
         void SetPreviewTarget(TimelinePreviewTarget target)

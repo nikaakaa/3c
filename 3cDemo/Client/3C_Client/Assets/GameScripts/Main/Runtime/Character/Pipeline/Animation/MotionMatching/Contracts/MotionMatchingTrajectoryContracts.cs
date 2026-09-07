@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public readonly struct CharacterPresentationTrajectoryIntent
     {
         public const string StationaryMovementModeId = "presentation.movement-mode.stationary";
+        public const string MovementModeStatePrefix = "presentation.movement-mode.state/";
 
         public CharacterPresentationTrajectoryIntent(
             ActorId actorId,
@@ -122,6 +123,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (string.IsNullOrWhiteSpace(ownerIdentity))
                 return StationaryMovementModeId;
 
+            const string characterControlPrefix = "character-control:";
+            if (ownerIdentity.StartsWith(characterControlPrefix, StringComparison.Ordinal))
+            {
+                string controlIdentity = ownerIdentity.Substring(characterControlPrefix.Length);
+                int moduleEnd = controlIdentity.IndexOf(':');
+                int stateStart = moduleEnd + 1;
+                int stateEnd = controlIdentity.IndexOf(':', stateStart);
+                if (moduleEnd <= 0 || stateStart >= controlIdentity.Length || stateEnd < stateStart)
+                    throw new InvalidOperationException(
+                        $"Committed movement owner '{ownerIdentity}' has an invalid Character Control identity.");
+                string characterControlStateId = controlIdentity.Substring(stateStart, stateEnd - stateStart);
+                if (string.IsNullOrWhiteSpace(characterControlStateId))
+                {
+                    throw new InvalidOperationException(
+                        $"Committed movement owner '{ownerIdentity}' has an empty Gameplay State identity.");
+                }
+                return string.Concat(MovementModeStatePrefix, characterControlStateId);
+            }
+
             const string stateGraphReference = "/reference:stateBehaviorGraph.";
             int referenceIndex = ownerIdentity.IndexOf(
                 stateGraphReference,
@@ -149,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException(
                     $"Committed movement owner '{ownerIdentity}' has an empty Gameplay State identity.");
             }
-            return $"presentation.movement-mode.state/{stateId}";
+            return string.Concat(MovementModeStatePrefix, stateId);
         }
 
         public static bool HasPlanarMotion(Vector2 desiredPlanarVelocity)

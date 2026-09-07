@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "shader": "miHoYo/Character/NapAvatarStandard",
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260903_shader_corin_standard_json_v1\\1013241275.blk_export\\CAB-8f1ade485e6dbb268cac1df590e456c6\\miHoYo_Character_NapAvatarStandard.json",
+  "sourceSha256": "e5d5ea77a8536a15568e40ab2a4338683c82373ebee1f72416a68a0250cfc468",
+  "recovery": "D:\\ZZZ_Dump\\output\\corin_replication\\20260904_typed_named_shader_v3\\recovery.json",
+  "recoverySha256": "7bad879bd952cf2078ac38434484c8cab5b1ddb7c0195f7e30a9de5485f0c80b",
+  "entries": [
+    0,
+    16,
+    24,
+    48,
+    60,
+    65,
+    2700,
+    2705,
+    4020,
+    4024
+  ],
+  "properties": 419,
+  "runtimeBound": false,
+  "bindingAdaptation": "Unity named uniforms",
+  "samplers": {
+    "1": "linear-repeat",
+    "341": "linear-clamp-compare",
+    "material": "texture-associated"
+  }
+}

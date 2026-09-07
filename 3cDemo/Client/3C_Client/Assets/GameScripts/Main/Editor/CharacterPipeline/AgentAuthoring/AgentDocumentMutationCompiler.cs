@@ -33,7 +33,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             for (int i = 0; i < plan.Commands.Count; i++)
             {
                 AgentMutation command = plan.Commands[i];
-                m_Handlers.Get(command.Kind).Preflight(session, command);
+                bool valid = m_Handlers.Get(command.Kind).Preflight(session, command);
+                if (!valid && !report.HasErrors())
+                    report.Error(command.Path, "mutation_preflight_failed", "typed Mutation preflight未通过。");
             }
 
             report.metrics.diffSize = report.plannedDiff.Count;
@@ -106,7 +108,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return new AgentDocumentPreparation(plan, snapshot, null, report);
 
             for (int i = 0; i < plan.Commands.Count; i++)
-                m_Handlers.Get(plan.Commands[i].Kind).Preflight(session, plan.Commands[i]);
+            {
+                AgentMutation command = plan.Commands[i];
+                bool valid = m_Handlers.Get(command.Kind).Preflight(session, command);
+                if (!valid && !report.HasErrors())
+                    report.Error(command.Path, "mutation_preflight_failed", "typed Mutation preflight未通过。");
+            }
 
             report.metrics.diffSize = report.plannedDiff.Count;
             report.success = !report.HasErrors();

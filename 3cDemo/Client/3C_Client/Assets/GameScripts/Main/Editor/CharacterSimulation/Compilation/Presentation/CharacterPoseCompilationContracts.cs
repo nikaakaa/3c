@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal sealed class CharacterPoseCompilationRequest
     {
         public CharacterPoseCompilationRequest(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterPoseCanvasAuthoringView authoringView,
             CharacterAnimationRigDefinition rig,
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
             AnimationBlendNodePayload[] blendNodes,
@@ -131,9 +131,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
             MotionMatchingProjectionPayload motionMatching,
-            CharacterFootPlacementAnalysisCompilation footAnalysis)
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
+            IReadOnlyList<string> movementModeStateIdentities)
         {
-            Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
+            AuthoringView = authoringView ??
+                throw new ArgumentNullException(nameof(authoringView));
             Rig = rig ? rig : throw new ArgumentNullException(nameof(rig));
             ReachableAnimationChannels = reachableAnimationChannels ??
                 Array.Empty<AnimationChannelId>();
@@ -152,9 +154,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
             MotionMatching = motionMatching;
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+            MovementModeStateIdentities = movementModeStateIdentities ??
+                throw new ArgumentNullException(nameof(movementModeStateIdentities));
         }
 
-        public CharacterPresentationPoseGraphAsset Asset { get; }
+        public CharacterPoseCanvasAuthoringView AuthoringView { get; }
         public CharacterAnimationRigDefinition Rig { get; }
         public IReadOnlyCollection<AnimationChannelId> ReachableAnimationChannels { get; }
         public AnimationBlendNodePayload[] BlendNodes { get; }
@@ -169,6 +173,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
         public MotionMatchingProjectionPayload MotionMatching { get; }
         public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+        public IReadOnlyList<string> MovementModeStateIdentities { get; }
     }
 
     internal sealed class CharacterPoseCompilationResult

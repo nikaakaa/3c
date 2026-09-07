@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
@@ -13,17 +14,42 @@ using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonSimulation;
 using TreeDesigner;
-using ThirdPersonCamera;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
+    [Serializable]
+    public sealed class CharacterControlParameterConfiguration
+    {
+        [SerializeField] string m_ParameterId;
+        [SerializeField] SemanticValueKind m_ValueKind = SemanticValueKind.Number;
+        [SerializeField] double m_NumericValue;
+
+        public CharacterControlParameterConfiguration() { }
+
+        public CharacterControlParameterConfiguration(
+            string parameterId,
+            SemanticValueKind valueKind,
+            double numericValue)
+        {
+            m_ParameterId = parameterId ?? string.Empty;
+            m_ValueKind = valueKind;
+            m_NumericValue = numericValue;
+        }
+
+        public string ParameterId => m_ParameterId ?? string.Empty;
+        public SemanticValueKind ValueKind => m_ValueKind;
+        public double NumericValue => m_NumericValue;
+    }
+
     [CreateAssetMenu(fileName = "CharacterPipelineDefinition", menuName = "3C/Character/Pipeline Definition")]
     public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
         [SerializeField] string m_ControlModuleId;
+        [SerializeField] CharacterControlParameterConfiguration[] m_ControlParameters = Array.Empty<CharacterControlParameterConfiguration>();
         [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
@@ -43,6 +69,8 @@ namespace ThirdPersonCharacter.Pipeline
         public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
             ? string.Empty
             : m_ControlModuleId.Trim();
+        public IReadOnlyList<CharacterControlParameterConfiguration> ControlParameters =>
+            m_ControlParameters ?? Array.Empty<CharacterControlParameterConfiguration>();
         public IReadOnlyList<CharacterSkillAuthoringDefinition> SkillDefinitions =>
             m_SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
@@ -78,27 +106,6 @@ namespace ThirdPersonCharacter.Pipeline
                 }
             }
 
-            if (m_EquipmentCapabilityEnabled && m_EquipmentProfile)
-            {
-                IReadOnlyList<CharacterEquipmentFeatureDefinition> features = m_EquipmentProfile.Features;
-                for (int featureIndex = 0; featureIndex < features.Count; featureIndex++)
-                {
-                    CharacterEquipmentFeatureDefinition feature = features[featureIndex];
-                    if (!feature)
-                        continue;
-                    IReadOnlyList<EquipmentFeatureRouteImplementation> routes = feature.RouteImplementations;
-                    for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
-                    {
-                        ActionProfile actionProfile = routes[routeIndex]?.ActionProfile;
-                        if (actionProfile && string.Equals(actionProfile.BehaviorId, behaviorId, StringComparison.Ordinal))
-                        {
-                            profile = actionProfile;
-                            return true;
-                        }
-                    }
-                }
-            }
-
             IReadOnlyList<GameplayBehaviorProfile> behaviorProfiles = BehaviorProfiles;
             for (int i = 0; i < behaviorProfiles.Count; i++)
             {
@@ -129,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline
         public bool CollectConfigurationErrors(List<string> errors)
         {
             bool valid = true;
+            IReadOnlyList<ActionProfile> compiledActionProfiles = BuildCompiledActionProfileCatalog();
             if (string.IsNullOrEmpty(ControlModuleId))
             {
                 errors?.Add($"{name}: control module id is missing.");
@@ -144,15 +152,21 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
                 if (skill == null)
-                {
-                    errors?.Add($"{name}: skill definition #{i} is missing.");
-                    valid = false;
                     continue;
-                }
                 if (string.IsNullOrEmpty(skill.SkillId) || !skillIds.Add(skill.SkillId))
                 {
                     errors?.Add($"{name}: skill definition '{skill.SkillId}' is missing or duplicated.");
                     valid = false;
+                }
+            }
+            for (int i = 0; i < SkillDefinitions.Count; i++)
+            {
+                CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
+                if (skill == null)
+                {
+                    errors?.Add($"{name}: skill definition #{i} is missing.");
+                    valid = false;
+                    continue;
                 }
                 if (string.IsNullOrEmpty(skill.EntryGraphAuthoringId))
                 {
@@ -164,10 +178,66 @@ namespace ThirdPersonCharacter.Pipeline
                     errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile is missing.");
                     valid = false;
                 }
+                else
+                {
+                    bool actionProfileRegistered = false;
+                    for (int profileIndex = 0; profileIndex < compiledActionProfiles.Count; profileIndex++)
+                    {
+                        if (ReferenceEquals(compiledActionProfiles[profileIndex], skill.ActionProfile))
+                        {
+                            actionProfileRegistered = true;
+                            break;
+                        }
+                    }
+                    if (!actionProfileRegistered)
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile '{skill.ActionProfile.ActionId}' is not registered by the Definition catalog.");
+                        valid = false;
+                    }
+                }
                 if (!skill.ActionContext)
                 {
                     errors?.Add($"{name}: skill '{skill.SkillId}' ActionContext is missing.");
                     valid = false;
+                }
+
+                var dependencyIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int dependencyIndex = 0; dependencyIndex < skill.SubgraphDependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillSubgraphDependencyConfiguration dependency = skill.SubgraphDependencies[dependencyIndex];
+                    if (dependency == null ||
+                        string.IsNullOrWhiteSpace(dependency.SubgraphIdentity) ||
+                        string.IsNullOrWhiteSpace(dependency.CallSiteIdentity))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an incomplete subgraph dependency.");
+                        valid = false;
+                        continue;
+                    }
+                    string dependencyId = $"{dependency.SubgraphIdentity}\u001f{dependency.CallSiteIdentity}";
+                    if (!dependencyIds.Add(dependencyId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains duplicate subgraph dependency '{dependency.SubgraphIdentity}/{dependency.CallSiteIdentity}'.");
+                        valid = false;
+                    }
+                }
+
+                var followUps = new HashSet<string>(StringComparer.Ordinal);
+                for (int followUpIndex = 0; followUpIndex < skill.AllowedFollowUpSkillIds.Count; followUpIndex++)
+                {
+                    string followUpId = skill.AllowedFollowUpSkillIds[followUpIndex];
+                    if (string.IsNullOrWhiteSpace(followUpId) ||
+                        string.Equals(followUpId, skill.SkillId, StringComparison.Ordinal) ||
+                        !followUps.Add(followUpId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an invalid, recursive, or duplicate follow-up skill '{followUpId}'.");
+                        valid = false;
+                        continue;
+                    }
+                    if (!skillIds.Contains(followUpId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' references missing follow-up skill '{followUpId}'.");
+                        valid = false;
+                    }
                 }
             }
             IReadOnlyList<ActionProfile> profiles = ActionProfiles;
@@ -206,16 +276,6 @@ namespace ThirdPersonCharacter.Pipeline
             else
             {
                 valid &= m_AnimationPresentationProfile.CollectConfigurationErrors(errors);
-            }
-
-            if (!m_CameraProfile)
-            {
-                errors?.Add($"{name}: Camera Profile is missing.");
-                valid = false;
-            }
-            else
-            {
-                valid &= m_CameraProfile.CollectConfigurationErrors(errors);
             }
 
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
@@ -296,6 +356,40 @@ namespace ThirdPersonCharacter.Pipeline
         }
 
 #if UNITY_EDITOR
+        public void SetControlConfiguration(
+            CharacterControlModuleCatalog catalog,
+            string controlModuleId,
+            IEnumerable<CharacterControlParameterConfiguration> parameters)
+        {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            string moduleId = string.IsNullOrWhiteSpace(controlModuleId)
+                ? string.Empty
+                : controlModuleId.Trim();
+            ICharacterControlModule module = catalog.Require(new CharacterControlModuleId(moduleId));
+            var configurations = new List<CharacterControlParameterConfiguration>();
+            var values = new List<CharacterControlParameterValue>();
+            foreach (CharacterControlParameterConfiguration configuration in parameters ?? Array.Empty<CharacterControlParameterConfiguration>())
+            {
+                if (configuration == null)
+                    throw new ArgumentException("Character control configuration contains a missing parameter.", nameof(parameters));
+                if (string.IsNullOrWhiteSpace(configuration.ParameterId))
+                    throw new ArgumentException("Character control configuration contains a parameter without an identity.", nameof(parameters));
+                configurations.Add(new CharacterControlParameterConfiguration(
+                    configuration.ParameterId.Trim(),
+                    configuration.ValueKind,
+                    configuration.NumericValue));
+                values.Add(new CharacterControlParameterValue(
+                    new CharacterControlParameterId(configuration.ParameterId.Trim()),
+                    configuration.ValueKind,
+                    configuration.NumericValue));
+            }
+            if (!module.Contract.TryResolveParameterSet(values, out _, out IReadOnlyList<string> errors))
+                throw new ArgumentException(string.Join(" ", errors), nameof(parameters));
+            m_ControlModuleId = moduleId;
+            m_ControlParameters = configurations.ToArray();
+        }
+
         public void SetSimulationProgram(CharacterSimulationProgramAsset simulationProgram)
         {
             m_SimulationProgram = simulationProgram;
@@ -304,6 +398,11 @@ namespace ThirdPersonCharacter.Pipeline
         public void SetPresentationProjection(CharacterPresentationProjectionAsset presentationProjection)
         {
             m_PresentationProjection = presentationProjection;
+        }
+
+        public void SetSkillDefinitions(CharacterSkillAuthoringDefinition[] skillDefinitions)
+        {
+            m_SkillDefinitions = skillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
         }
 #endif
     }

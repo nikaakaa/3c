@@ -624,8 +624,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 nameof(opposingLandingDelaySeconds));
             OpposingLandingCycleOffset = opposingLandingCycleOffset;
             bool hasOpposingLanding = OpposingEventOrdinal != 0;
-            if (hasOpposingLanding != (OpposingLandingDelaySeconds > 0f) ||
-                !hasOpposingLanding && OpposingLandingCycleOffset != 0)
+            if (!hasOpposingLanding &&
+                (OpposingLandingDelaySeconds > 0f || OpposingLandingCycleOffset != 0))
                 throw new ArgumentException(
                     $"Predicted opposing landing pair is incomplete. Event={eventOrdinal}, " +
                     $"Phase={eventPhase:R}, OpposingEvent={OpposingEventOrdinal}, " +

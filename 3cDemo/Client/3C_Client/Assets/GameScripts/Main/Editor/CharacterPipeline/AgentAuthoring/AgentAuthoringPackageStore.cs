@@ -23,8 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string keySource = $"{domain}\n{rootAssetPath}\n{rootIdentity}";
             string hash = Hash(keySource).Substring(0, 16);
             string readable = Sanitize(rootIdentity);
-            if (readable.Length > 48)
-                readable = readable.Substring(0, 48);
+            if (readable.Length > 8)
+                readable = readable.Substring(0, 8);
             string directoryName = $"{readable}-{hash}.btsmtl";
             return Path.GetFullPath(Path.Combine(projectRoot, "AgentAuthoring", "Documents", domain, directoryName));
         }
@@ -46,6 +46,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!string.IsNullOrWhiteSpace(schemaVersion) &&
                     !string.Equals(schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
                     return true;
+                string controllerPath = Path.Combine(packagePath, "editable", "controller.json");
+                if (File.Exists(controllerPath))
+                {
+                    JObject controller = JObject.Parse(
+                        File.ReadAllText(controllerPath, Encoding.UTF8));
+                    if (string.IsNullOrWhiteSpace(controller.Value<string>("controlModuleId")))
+                        return true;
+                }
                 string profilePath = Path.Combine(
                     packagePath,
                     "editable",
@@ -137,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 DuplicatePropertyNameHandling =
                                     DuplicatePropertyNameHandling.Error,
                                 LineInfoHandling = LineInfoHandling.Load,
-                                CommentHandling = CommentHandling.Ignore
+                                CommentHandling = CommentHandling.Load
                             }));
                 }
             }
@@ -254,7 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             HashSet<string> declared = new HashSet<string>(manifest.files.Select(AgentAuthoringDocumentCodec.NormalizeRelativePath), StringComparer.Ordinal);
             HashSet<string> actual = new HashSet<string>(
-                Directory.GetFiles(packagePath, "*.json", SearchOption.AllDirectories)
+                Directory.GetFiles(packagePath, "*", SearchOption.AllDirectories)
                     .Select(path => AgentAuthoringDocumentCodec.NormalizeRelativePath(Path.GetRelativePath(packagePath, path)))
                     .Where(path => !string.Equals(path, "manifest.json", StringComparison.Ordinal) &&
                                    !string.Equals(path, ".sync.json", StringComparison.Ordinal)),
@@ -299,11 +307,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 var poseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var linkedPoseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
+                var graphCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var timelineCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
+                var skillCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 foreach (string relativePath in unknownPaths.Where(path =>
                              AgentAuthoringPresentationPackageCodec.IsDiscoverablePoseGraphFragment(path) ||
                              AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(path) ||
-                             AgentAuthoringPackageMapper.IsDiscoverableTimelineFragment(path)))
+                             AgentGraphDocumentFragments.IsDefinitionFragment(path) ||
+                             AgentTimelineDocumentFragments.IsDefinitionFragment(path) ||
+                             AgentSkillDocumentMapper.IsDefinitionPath(path)))
                 {
                     string fullPath = ResolveInside(packagePath, relativePath);
                     if (!TryReadContent(
@@ -316,27 +328,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         poseCandidates.Add(relativePath, raw);
                     else if (AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(relativePath))
                         linkedPoseCandidates.Add(relativePath, raw);
-                    else
+                    else if (AgentGraphDocumentFragments.IsDefinitionFragment(relativePath))
+                        graphCandidates.Add(relativePath, raw);
+                    else if (AgentTimelineDocumentFragments.IsDefinitionFragment(relativePath))
                         timelineCandidates.Add(relativePath, raw);
+                    else
+                        skillCandidates.Add(relativePath, raw);
                 }
                 if (!AgentAuthoringPresentationPackageCodec
                         .TryDiscoverNewPoseGraphFragments(
                             poseCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredPoseGraphs) ||
-                    !AgentAuthoringPresentationPackageCodec
-                        .TryDiscoverNewLinkedPoseFragments(
+                     !AgentAuthoringPresentationPackageCodec
+                         .TryDiscoverNewLinkedPoseFragments(
                             linkedPoseCandidates,
+                             report,
+                             out IReadOnlyCollection<string> discoveredLinkedPose) ||
+                     !AgentGraphDocumentFragments.TryDiscoverNew(
+                             graphCandidates,
+                             report,
+                             out IReadOnlyCollection<string> discoveredGraphs) ||
+                     !AgentTimelineDocumentFragments.TryDiscoverNew(
+                            timelineCandidates,
                             report,
-                            out IReadOnlyCollection<string> discoveredLinkedPose) ||
-                    !AgentAuthoringPackageMapper.TryDiscoverNewTimelineFragments(
-                        timelineCandidates,
-                        report,
-                        out IReadOnlyCollection<string> discoveredTimelines))
+                            out IReadOnlyCollection<string> discoveredTimelines) ||
+                     !AgentSkillDocumentMapper.TryDiscoverNewFragments(
+                            skillCandidates,
+                            report,
+                            out IReadOnlyCollection<string> discoveredSkills))
                     return false;
                 discovered = discoveredPoseGraphs
                     .Concat(discoveredLinkedPose)
+                    .Concat(discoveredGraphs)
                     .Concat(discoveredTimelines)
+                    .Concat(discoveredSkills)
                     .ToArray();
                 string[] rejected = unknownPaths
                     .Except(discovered, StringComparer.Ordinal)
@@ -393,6 +419,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageActionsFile _, out raw);
             if (string.Equals(relativePath, "editable/ai/perception.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageAIFile _, out raw);
+            if (relativePath.StartsWith("editable/skills/", StringComparison.Ordinal) &&
+                relativePath.EndsWith("/definition.json", StringComparison.Ordinal))
+                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageSkillDefinitionFile _, out raw);
             if (relativePath.StartsWith("editable/graphs/", StringComparison.Ordinal) && relativePath.EndsWith("/graph.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageGraphFile _, out raw);
             if (relativePath.StartsWith("editable/graphs/", StringComparison.Ordinal) && relativePath.EndsWith("/layout.json", StringComparison.Ordinal))

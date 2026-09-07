@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                              graphRoles.OrderBy(value => (byte)value))
                     {
                         CharacterPoseGraphValidationReport validation =
-                            CharacterPresentationPoseGraphValidator
+                            CharacterPoseTopologyValidator
                                 .ValidateClosedGraph(
                                     entry.Owner,
                                     entry.Graph,
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             CharacterPoseCompilationDiagnosticSeverity.Error,
                             "topology-invalid",
                             exception.Message,
-                            request.Asset.Graph.GraphId)
+                            request.AuthoringView.RootGraph.GraphId)
                     });
             }
         }
@@ -228,11 +228,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 HashSet<CharacterPoseIrGraphRole>>(StringComparer.Ordinal);
             string rootOwner =
                 CharacterPresentationAssetObjectIdentity.Require(
-                    request.Asset);
+                    request.AuthoringView.OwnerAsset);
             Add(
                 CharacterPoseGraphClosure.Key(
                     rootOwner,
-                    request.Asset.Graph.GraphId),
+                    request.AuthoringView.RootGraph.GraphId),
                 CharacterPoseIrGraphRole.Root);
             for (int referenceIndex = 0;
                  referenceIndex < closure.References.Count;
@@ -279,8 +279,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseTypedIrCatalog typedIr)
         {
             CharacterPoseTypedIrGraph root = typedIr.RequireGraph(
-                request.Asset,
-                request.Asset.Graph.GraphId);
+                request.AuthoringView.OwnerAsset,
+                request.AuthoringView.RootGraph.GraphId);
             int finalPublicationCount = root.AuthoredNodes.Values.Count(
                 value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int assemblerCount = typedIr.Graphs.Sum(graph =>

@@ -136,15 +136,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     Behaviour[] behaviours = m_Instance.GetComponentsInChildren<Behaviour>(true);
                     for (int i = 0; i < behaviours.Length; i++)
                     {
-                        if (behaviours[i] != m_Animator)
+                        if (behaviours[i] && behaviours[i] != m_Animator)
                             behaviours[i].enabled = false;
                     }
                     Collider[] colliders = m_Instance.GetComponentsInChildren<Collider>(true);
                     for (int i = 0; i < colliders.Length; i++)
-                        UnityEngine.Object.DestroyImmediate(colliders[i]);
+                    {
+                        if (colliders[i])
+                            UnityEngine.Object.DestroyImmediate(colliders[i]);
+                    }
                     Rigidbody[] rigidbodies = m_Instance.GetComponentsInChildren<Rigidbody>(true);
                     for (int i = 0; i < rigidbodies.Length; i++)
-                        UnityEngine.Object.DestroyImmediate(rigidbodies[i]);
+                    {
+                        if (rigidbodies[i])
+                            UnityEngine.Object.DestroyImmediate(rigidbodies[i]);
+                    }
                     m_Animator.applyRootMotion = false;
                     m_Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                     m_PlayableGraph = PlayableGraph.Create("Foot Analysis Sampling");

@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < entries.Length; i++)
             {
                 CharacterLinkedPoseImplementationEntryBinding binding = entries[i];
-                CharacterTypedPoseGraph graph = binding.RequireValid();
+                CharacterPoseCanvasGraph graph = binding.RequireValid();
                 values.Add(binding.EntryId.Value);
                 values.Add(binding.GraphOwnerIdentity);
                 values.Add(binding.GraphId.Value);

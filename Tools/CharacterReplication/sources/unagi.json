@@ -1,0 +1,30 @@
+{
+  "character": "Unagi",
+  "dumpRoot": "D:/ZZZ_Dump",
+  "output": "D:/ZZZ_Dump/output/unagi_replication/replication-guide",
+  "configCatalogFormat": "raw-export",
+  "animationManifestFormat": "animation-export",
+  "animationNamePattern": "^Avatar_Female_Size02_Unagi(_Default)?_Ani_",
+  "focusedStatePattern": "^(Attack_(?!ParryAid|AssaultAid|BeHitAid)|Evade_)",
+  "eventBindingMode": "character-map",
+  "sharedEvidenceRoot": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis",
+  "controller": "output/character_replication/analysis/animation-sync/unagi/controller/Avatar_Female_Size02_Unagi_Controller__2022846129_00078476.json",
+  "animationManifest": "output/unagi_replication/20260904_animations_static_v6/export-manifest.json",
+  "animationDirectory": "output/unagi_replication/20260904_animations_static_v6/animations",
+  "rawConfigManifests": ["output/unagi_replication/20260904_configs_raw/manifest.json", "output/unagi_replication/20260904_camera/raw/manifest.json"],
+  "decodedConfigManifests": ["output/unagi_replication/20260904_configs_decoded/manifest.json", "output/unagi_replication/20260904_camera/decoded/manifest.json"],
+  "decodedRoot": "output/unagi_replication",
+  "configRoots": {"attack":"AnimEvents","zones":"AnimatorZoneGroup","battle":"patterns","effect":"patterns","audio":"patterns","shake":"cameraShakes","zoom":"cameraZooms","stretch":"cameraStretchs","override":"config"},
+  "selectedConfigs": {
+    "character": "20260904_configs_decoded/raw/Avatar_Female_Size02_Unagi__3367691705_A67A1967A4E6C4B3.json",
+    "attack": "20260904_configs_decoded/raw/AttackProperty_Avatar_Female_Size02_Unagi__1387972831_C3C5DCE08FE588CE.json",
+    "zones": "20260904_configs_decoded/raw/AnimatorZone_Avatar_Female_Size02_Unagi__1132150417_52471D44B638B3F0.json",
+    "battle": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Unagi_Battle__1510480920_80204C5284D70464.json",
+    "effect": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Unagi_Effect__2393852806_0F8FE31E25EEFE64.json",
+    "audio": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Unagi_Audio__1483166593_6EE4940861073947.json",
+    "shake": "20260904_camera/decoded/raw/CameraShakes_Avatar_Unagi__1387972831_561466D74AC58856.json",
+    "zoom": "20260904_camera/decoded/raw/CameraZooms_Avatar_Unagi__1840230881_DD442D15143FE549.json",
+    "stretch": "20260904_camera/decoded/raw/CameraStretchs_Avatar_Unagi__1840230881_FEC9ED7C4F517765.json",
+    "override": "20260904_camera/decoded/raw/CameraOverrideTracks_Avatar_Unagi__2158315646_D221B3AFE171D17F.json"
+  }
+}

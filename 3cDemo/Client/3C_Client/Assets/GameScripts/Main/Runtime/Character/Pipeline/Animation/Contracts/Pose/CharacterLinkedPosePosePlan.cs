@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterLinkedPoseInterfaceAsset linkedInterface,
             CharacterLinkedPoseImplementationAsset implementation,
             LinkedPoseEntryId entryId,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             int operationStart,
             int operationCount,
             int poseValueStart,

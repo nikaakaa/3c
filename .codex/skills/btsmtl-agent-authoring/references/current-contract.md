@@ -2,7 +2,9 @@
 
 ## 唯一外部合同
 
-Schema：`btsmtl-agent-authoring-document.v4`
+Schema：`btsmtl-agent-authoring-document.v5`
+
+仅接受v5。v1、v2、v3、v4及Patch/Snapshot旧格式必须明确拒绝，并由调用方在精确Definition上重新checkout；不存在兼容reader、writer、alias或双写。
 
 Document固定为Unity项目根目录外部工作区中的目录包：
 
@@ -17,9 +19,11 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
   manifest.json
   .sync.json
   editable/
-    controller.json
+    controller.json               # controlModuleId、controlSemanticVersion、controlParameters、state summaries
     blackboard.json
     actions.json
+    skills/<canonical-id>/
+      definition.json
     graphs/<stable-segment>/
       graph.json
       layout.json
@@ -45,6 +49,8 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
 ```
 
 `manifest.json`声明schema、domain、root identity与精确文件闭包；`.sync.json`保存整包同步基线。两者、`context/`和`readonly/`由service拥有。`editable/`是AI唯一可写区域。整个目录仍是一个逻辑Document：hash、同步状态、dry-run、apply和冲突判定都以整包为单位；`readonly/`与`context/`共同进入context hash。
+
+CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；子图依赖的`callSiteIdentity`按`<ownerGraphId>/node:<nodeId>/<referenceKey>/call`寻址，并由入口Graph闭包与Graph reference目标同时校验。技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
 
 新增Pose Graph、Graph-owned Inline Timeline或Linked Pose Implementation/Entry Graph分片不要求也不允许AI编辑manifest。AI必须使用`local:<meaningful-id>`作为新对象identity，并在其canonical segment目录中创建完整文件对或Implementation闭包。canonical segment算法为：
 
@@ -105,7 +111,7 @@ AI `apply_document`只在受控Character Program为当前版本时校验并按�
 
 `layout.json`只保存可选位置。新节点不写layout时使用确定性排布。Document不暴露C#类型名、serialized field、冗余property port镜像、系统节点对象或不可编辑运行时字段。
 
-`context/node-catalog.json`是kind、允许property和logical port的机器可读能力目录；`context/graph-kinds.json`声明graph kind、owner slot和anchor。两个文件由同一个`AgentAuthoringCapabilityCatalog`按Document domain过滤生成，AIController只公开`BaseTree`与`ConditionRuleGraph`，不会看到Timeline、Action等Character-only capability，不能和Package Mapper、Reconciler或Validator能力分叉。
+`context/node-catalog.json`是kind、允许property和logical port的机器可读能力目录；`context/graph-kinds.json`声明graph kind、owner slot和anchor。两个文件由同一个`BtsmtlGraphAuthoringCapabilities`按Document domain过滤生成，AIController只公开`BaseTree`与`ConditionRuleGraph`，不会看到Timeline、Action等Character-only capability，不能和Package Mapper、Reconciler或Validator能力分叉。
 
 节点端口形状只能来自`GraphAuthoringNodePortShapeProjector`。Capability可声明固定端口、由strict typed property discriminator决定的`portVariants`，以及作者拥有的node-local动态端口；projector只接受capability与typed properties，必须唯一命中条件变体并拒绝三类端口的identity重叠。Canvas、Exporter、Package Mapper、Reconciler、Mutation preflight与Validator全部消费该结果，不读取默认构造节点、当前edge或Unity snapshot作为端口fallback。
 
@@ -143,10 +149,10 @@ Context：
 - Character Input、Action、Timeline与ActionContext asset catalog
 - AI受控Character合同
 - Presentation可引用的既有AnimationClip、Blend Space、Motion Matching Profile、Timeline/Animation Channel与Capability事实
-- Rig Definition v4、Physical/Virtual Bone、pelvis与左右腿chain、Body Motion、Foot Analysis identity/revision、Motion Matching索引与其它算法生成内容
+- Rig Definition、Physical/Virtual Bone、pelvis与左右腿chain、Body Motion、Foot Analysis identity/revision、Motion Matching索引与其它算法生成内容
 - Float32/Fixed Character Program、Presentation Projection、Native Pose Program与AIIntentProgram的identity/stale状态
 
-## Document v4 Presentation与AnimationClip合同
+## Document v5 Presentation与AnimationClip合同
 
 Character Presentation是`editable/`中的正式目标状态：
 
@@ -190,13 +196,13 @@ Presentation目标使用两类分离的业务来源：
 
 ```text
 five BTSMTL lifecycle MCP tools
-  -> AgentAuthoringDocumentTransactionServiceV4
-  -> AgentAuthoringDocumentV4Exporter
+  -> AgentAuthoringDocumentTransactionService
+  -> AgentAuthoringDocumentExporter
   -> AgentAuthoringTargetMapper
-  -> AgentAuthoringPresentationPackageCodecV4
+  -> AgentAuthoringPresentationPackageCodec
   -> AgentAuthoringDocumentCodec + AgentAuthoringPackageStore
   -> AgentDocumentMutationReconciler
-  -> AgentAuthoringPresentationReconcilerV4
+  -> AgentAuthoringPresentationReconciler
   -> AgentMutationPlanner
   -> immutable AgentMutationPlan
   -> AgentMutationSession preflight
@@ -220,21 +226,28 @@ Character generated product发布是上述Document事务之外的显式精确Def
 |---|---|
 | `Mcp/BtsmtlAgentAuthoringMcpTools.cs` | 五个独立生命周期薄桥与严格参数边界 |
 | `AgentAuthoringServiceModels.cs` | 内部command与response |
-| `AgentAuthoringDocumentTransactionServiceV4.cs` | domain dispatch、同步状态、Undo、rollback、save、publish、反向同步 |
-| `AgentAuthoringDocumentV4Models.cs` | manifest、sync、package file与内部target |
+| `AgentAuthoringDocumentTransactionService.cs` | domain dispatch、同步状态、Undo、rollback、save、publish、反向同步 |
+| `AgentAuthoringDocumentModels.cs` | manifest、sync、package file与内部target |
 | `AgentAuthoringDocumentCodec.cs` | strict parse、canonical write、整包hash |
 | `AgentAuthoringPackageStore.cs` | 确定目录、文件闭包、staging校验、package内容镜像与rollback恢复 |
-| `AgentAuthoringTargetMapper.cs` | 稀疏package与内部完整target双向映射 |
-| `AgentAuthoringCapabilityCatalog.cs` | stable node kind、typed property、port与system anchor唯一目录 |
-| `AgentAuthoringDocumentV4Exporter.cs` | Character/AI canonical package投影 |
-| `AgentAuthoringPresentationPackageModels.cs` | Document v4 Presentation Profile、Pose Graph与PoseStateMachine模型 |
-| `AgentAuthoringPresentationPackageCodecV4.cs` | Presentation分片路径、strict parse与文件闭包 |
+| `AgentAuthoringTargetMapper.cs` | 整包分片顺序、manifest闭包与跨分片协调；具体Graph、Timeline、AI、Blackboard映射由对应Mapper负责 |
+| `AgentGraphDocumentMapper.cs`、`AgentTimelineDocumentMapper.cs`、`AgentAIDocumentMapper.cs`、`AgentBlackboardDocumentMapper.cs` | 各自领域的sparse package与完整target映射、关系校验与正式能力投影 |
+| `AgentPackageMappingSupport.cs` | package主identity与引用的共享严格校验 |
+| `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | stable node kind、typed property、port与system anchor唯一目录 |
+| `AgentAuthoringDocumentExporter.cs` | Character/AI canonical package投影 |
+| `AgentControlDocumentMapper.cs` | controller.json控制模块binding与作者参数的严格映射、正式模块校验 |
+| `AgentSkillDocumentExporter.cs`、`AgentSkillDocumentMapper.cs`、`AgentSkillDocumentMutationPlanner.cs` | SkillDefinition分片导出、strict解析/local发现与技能差异计划 |
+| `AgentAuthoringPresentationPackageModels.cs` | Document v5 Presentation Profile、Pose Graph与PoseStateMachine模型 |
+| `AgentAuthoringPresentationPackageCodec.cs` | Presentation分片路径、strict parse与文件闭包 |
 | `AgentAuthoringPresentationPackageExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
-| `AgentAuthoringPresentationReconcilerV4.cs` | Presentation完整目标对账与typed Mutation事务规划 |
-| `AgentDocumentMutationReconciler.cs` | 完整目标集合对账与最小Mutation计划入口 |
-| `AgentMutationPlanner.cs`、`AgentMutations.cs` | typed Mutation lowering与immutable plan |
+| `AgentAuthoringPresentationReconciler.cs` | Presentation完整目标对账与typed Mutation事务规划 |
+| `AgentGraphDocumentFragments.cs`、`AgentTimelineDocumentFragments.cs` | 新增Graph/Timeline文件对的canonical local发现与strict闭包检查 |
+| `AgentDocumentMutationReconciler.cs` | 完整目标集合对账入口与有序领域模块协调 |
+| `Agent*DocumentMutationModule.cs`、`AgentSkillDocumentMutationPlanner.cs` | Graph、Timeline、Blackboard、Action、Control、AI与Skill各自的目标差异与依赖计划 |
+| `AgentMutationPlanner.cs`、`Agent*MutationLowering.cs`、`AgentMutations.cs` | typed Mutation lowering、Graph/State/Node planned identity与immutable plan；Blackboard lowering独立于Action lowering |
 | `AgentMutationSession.cs` | 单次Index、anchor/reference resolver、symbol、diff、touched owner |
 | `AgentGraphLinkMutationHandler.cs` | flow/property edge创建、删除与改接 |
+| `AgentGraphReferenceMutationHandler.cs` | StateMachine/StateBehavior/TreeReference正式setter的Graph创建与引用配置；SubTree挂载及动态binding等待共享authoring API并明确失败 |
 | 其余`Agent*MutationHandler.cs` | 正式typed authoring API适配 |
 
 ## 修改示例
@@ -252,6 +265,6 @@ Character generated product发布是上述Document事务之外的显式精确Def
 
 保存文件后调用`btsmtl.dry_run_document`，再把返回的`documentHash`原样传给`btsmtl.apply_document.expected_document_hash`。
 
-修改Presentation时直接编辑Document v4的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
+修改Presentation时直接编辑Document v5的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
 
 完成代码修改时必须说明Agent合同已同步，或说明变化为什么完全不影响package editable/context、identity、ownership、Reconciler和Validator。

@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         CharacterPoseCompilationDiagnosticSeverity.Error,
                         "worker-batch-plan-invalid",
                         exception.Message,
-                        request?.Asset?.Graph?.GraphId ?? default),
+                        request?.AuthoringView?.RootGraph?.GraphId ?? default),
                     exception);
             }
         }

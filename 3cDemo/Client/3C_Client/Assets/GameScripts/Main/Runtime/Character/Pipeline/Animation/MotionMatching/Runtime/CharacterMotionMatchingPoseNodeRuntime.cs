@@ -508,21 +508,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             MotionMatchingSamplePayload sample = runtime.Database.GetSample(selection.SampleIndex);
             MotionMatchingClipBindingPayload clip = runtime.Database.GetClipBinding(sample.ClipBindingIndex);
-            if (clip == null || !clip.RootLocked || !clip.Clip ||
+            if (clip == null || !clip.IsValid ||
                 clip.FootPlacementWeightCurve == null ||
                 !clip.FootPlacementWeightCurve.ParameterId.Equals(MotionMatchingPoseSourceParameterContract.FootPlacementWeightId))
             {
-                throw new InvalidOperationException("Motion Matching selected sample has no valid root-locked Clip and Foot parameter binding.");
+                throw new InvalidOperationException("Motion Matching selected sample has no valid Clip and Foot parameter binding.");
             }
             MotionMatchingClipDependencyIdentity dependency = RequireClipDependency(
                 runtime.Database.ArtifactIdentity,
                 clip.SourceClipId);
             var clipSample = new MotionMatchingClipSamplePlan(
-                clip.SourceClipId,
+                clip,
                 sample.ClipBindingIndex,
-                clip.Clip,
-                selection.PoseTime,
-                true);
+                selection.PoseTime);
             var footWeight = new MotionMatchingPoseParameterSample(
                 MotionMatchingPoseSourceParameterContract.FootPlacementWeightId,
                 clip.FootPlacementWeightCurve.Sample(clipSample.NormalizedTime));

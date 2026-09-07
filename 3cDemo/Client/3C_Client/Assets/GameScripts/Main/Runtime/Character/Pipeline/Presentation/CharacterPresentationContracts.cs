@@ -393,7 +393,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Cue = 6,
         Vfx = 7,
         Ui = 8,
-        ForceReleaseProducer = 9
+        ForceProducer = 9,
+        DomainEvent = 10,
+        ForceReleaseProducer = 11
     }
 
     public readonly struct CharacterPresentationCommand
@@ -407,15 +409,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong producerGeneration = 0,
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
-            float visualTimeScale = 0f)
+            float visualTimeScale = 0f,
+            string domainPayload = null)
         {
             if (float.IsNaN(sampleTime) || float.IsInfinity(sampleTime) ||
                 float.IsNaN(weight) || float.IsInfinity(weight))
             {
                 throw new ArgumentOutOfRangeException(nameof(sampleTime));
             }
-            if (IsPlaybackCommand(kind) && producerGeneration == 0)
+            if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
+            if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
+                throw new ArgumentException("Presentation producer generation does not match the event activation.", nameof(producerGeneration));
+            if (IsPlaybackCommand(kind) && sourceActionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (!float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
@@ -429,6 +436,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
+            DomainPayload = domainPayload ?? string.Empty;
+            if (kind == CharacterPresentationCommandKind.DomainEvent &&
+                (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(DomainPayload)))
+                throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
+            if (kind != CharacterPresentationCommandKind.DomainEvent && DomainPayload.Length != 0)
+                throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
         }
 
         public CharacterPresentationEventHeader Header { get; }
@@ -440,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int Cycle { get; }
         public ulong SourceActionInstanceId { get; }
         public float VisualTimeScale { get; }
+        public string DomainPayload { get; }
 
         public static CharacterPresentationCommand FromFloat32(PresentationCommand command)
         {
@@ -458,7 +472,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.ProducerGeneration,
                 command.Cycle,
                 command.SourceActionInstanceId,
-                command.VisualTimeScale.ToSingle());
+                command.VisualTimeScale.ToSingle(),
+                command.DomainPayload);
         }
 
         static bool IsPlaybackCommand(CharacterPresentationCommandKind kind)
@@ -469,6 +484,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    kind == CharacterPresentationCommandKind.ReleaseProducer ||
                    kind == CharacterPresentationCommandKind.ForceReleaseProducer;
         }
+
+        static bool RequiresProducerGeneration(CharacterPresentationCommandKind kind) =>
+            IsPlaybackCommand(kind) ||
+            kind == CharacterPresentationCommandKind.Camera ||
+            kind == CharacterPresentationCommandKind.Cue ||
+            kind == CharacterPresentationCommandKind.ForceProducer;
 
         static string RequireIdentity(string value, string parameterName)
         {

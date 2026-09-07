@@ -57,7 +57,8 @@ namespace ThirdPersonSimulation
     internal readonly struct SimulationActionWindowProjectionCandidate
     {
         public SimulationActionWindowProjectionCandidate(
-            OperationHandle source,
+            SimulationExecutionSource source,
+            ulong generation,
             ActorId actorId,
             ulong logicTick,
             string declarationId,
@@ -68,6 +69,7 @@ namespace ThirdPersonSimulation
             ulong digest)
         {
             Source = source;
+            Generation = generation;
             ActorId = actorId;
             LogicTick = logicTick;
             DeclarationId = declarationId;
@@ -78,7 +80,8 @@ namespace ThirdPersonSimulation
             Digest = digest;
         }
 
-        public OperationHandle Source { get; }
+        public SimulationExecutionSource Source { get; }
+        public ulong Generation { get; }
         public ActorId ActorId { get; }
         public ulong LogicTick { get; }
         public string DeclarationId { get; }
@@ -133,6 +136,26 @@ namespace ThirdPersonSimulation
             FlushBlackboardProjections();
             m_ActionWindowProjections.Clear();
             m_ActionWindowProjectionKeys.Clear();
+        }
+
+        public void WriteGraphCallParameter(int valueSlot, CharacterStateValue value)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            if (value.Kind != m_Program.StateSlots[valueSlot].ValueKind)
+                throw new InvalidOperationException($"Graph call parameter state '{valueSlot}' expects '{m_Program.StateSlots[valueSlot].ValueKind}', received '{value.Kind}'.");
+            m_State.Set(group.Value, value);
+        }
+
+        public CharacterStateValue ReadGraphCallParameter(int valueSlot)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            return m_State.Get(group.Value);
+        }
+
+        public void ResetGraphCallParameter(int valueSlot)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            m_State.Reset(group.Value);
         }
 
         public void ActivateOperationScopes<TTarget>(
@@ -201,10 +224,35 @@ namespace ThirdPersonSimulation
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            if (TryReadActiveGraphCallInput(cursor, valueSlot, out CharacterStateValue graphInput))
+                return graphInput;
             BlackboardOwnerToken expected = ResolveBlackboardOwnerToken(cursor, operation, group, false, out _);
             if (m_State.Get(group.OwnerToken).BlackboardOwnerToken != expected)
                 return DefaultValue(group);
             return m_State.Get(valueSlot);
+        }
+
+        bool TryReadActiveGraphCallInput<TTarget>(
+            OperationControlCursor<TTarget> cursor,
+            int valueSlot,
+            out CharacterStateValue value)
+            where TTarget : struct, IOperationControlTarget<TTarget>
+        {
+            for (int i = 0; i < m_Program.GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = m_Program.GraphCallFrames[i];
+                if (!cursor.IsActive(frame.OwnerOperation))
+                    continue;
+                for (int bindingIndex = 0; bindingIndex < frame.Inputs.Count; bindingIndex++)
+                {
+                    if (frame.Inputs[bindingIndex].StateSlot != valueSlot)
+                        continue;
+                    value = ReadGraphCallParameter(valueSlot);
+                    return true;
+                }
+            }
+            value = default;
+            return false;
         }
 
         public void Write<TTarget>(
@@ -232,7 +280,7 @@ namespace ThirdPersonSimulation
             }
             m_State.Set(valueSlot, value);
             m_State.Set(group.WriteStamp, CharacterStateValue.FromBlackboardWriteStamp(BuildBlackboardWriteStamp(operation, action)));
-            ProjectBlackboardWrite(operation, valueSlot, value, action);
+            ProjectBlackboardWrite(cursor, operation, valueSlot, value, action);
         }
 
         BlackboardOwnerToken ResolveBlackboardOwnerToken<TTarget>(
@@ -290,14 +338,27 @@ namespace ThirdPersonSimulation
             if (m_TimelineBlackboardContexts.Count > 0)
             {
                 SimulationTimelineBlackboardContext timeline = m_TimelineBlackboardContexts.Peek();
+                Float32ActionInstanceState action = m_Actions.RequireActive(timeline.Action);
+                if (!action.IsActive)
+                {
+                    string timelineContext = GetStringConstant(
+                        m_Program.Operations[timeline.Timeline.Value],
+                        OperationNamedConstant.ActionContext,
+                        string.Empty);
+                    if (!string.IsNullOrEmpty(timelineContext))
+                    {
+                        int slot = m_Actions.FindActive(timelineContext, out Float32ActionInstanceState current);
+                        action = slot >= 0 ? current : default;
+                    }
+                }
                 string explicitContext = GetStringConstant(operation, OperationNamedConstant.FactContext, string.Empty);
                 if (!string.IsNullOrEmpty(explicitContext) &&
-                    !string.Equals(explicitContext, timeline.Action.ContextId, StringComparison.Ordinal))
+                    !string.Equals(explicitContext, action.ContextId, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"TreeClip Blackboard write '{SourcePath(operation)}' Action Context does not match its Timeline playback context.");
                 }
-                return m_Actions.RequireActive(timeline.Action);
+                return action;
             }
 
             if (m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState skillAction))
@@ -344,11 +405,13 @@ namespace ThirdPersonSimulation
                 context.Cycle);
         }
 
-        void ProjectBlackboardWrite(
+        void ProjectBlackboardWrite<TTarget>(
+            OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot,
             CharacterStateValue value,
             Float32ActionInstanceState action)
+            where TTarget : struct, IOperationControlTarget<TTarget>
         {
             ProgramCatalogEntry declaration = RequireBlackboardDeclaration(operation);
             if (!TryCatalogInt32(declaration, ProgramCatalogFieldId.Projection, out int projectionValue))
@@ -378,7 +441,8 @@ namespace ThirdPersonSimulation
             if (!m_ActionWindowProjectionKeys.Add(key))
                 return;
             m_ActionWindowProjections.Add(new SimulationActionWindowProjectionCandidate(
-                operation.Handle,
+                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                cursor.ReadGeneration(operation.Handle),
                 m_Frame.ActorId,
                 m_Frame.Tick.Value,
                 declaration.Identity,
@@ -423,15 +487,14 @@ namespace ThirdPersonSimulation
 		{
 			if (string.IsNullOrWhiteSpace(windowType))
 				throw new ArgumentException("Action window type is missing.", nameof(windowType));
-			int actionSlot = m_Actions.FindActive(skillId, out Float32ActionInstanceState active);
-			if (actionSlot < 0)
+			if (!m_Actions.TryGetActiveSkillInstanceId(skillId, out ulong activeInstanceId))
 				return false;
 			for (int i = 0; i < m_ActionWindowProjections.Count; i++)
 			{
 				SimulationActionWindowProjectionCandidate candidate = m_ActionWindowProjections[i];
 				if (candidate.ActorId == m_Frame.ActorId &&
 					candidate.LogicTick == m_Frame.Tick.Value &&
-					candidate.ActionInstanceId == active.InstanceId &&
+					candidate.ActionInstanceId == activeInstanceId &&
 					string.Equals(candidate.WindowType, windowType, StringComparison.Ordinal))
 					return true;
 			}
@@ -458,8 +521,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_ActionWindowProjections.Count; i++)
             {
                 SimulationActionWindowProjectionCandidate candidate = m_ActionWindowProjections[i];
-                SimulationOperation source = m_Program.Operations[candidate.Source.Value];
-                SimulationEventHeader header = m_Facts.Next(source);
+                SimulationEventHeader header = m_Facts.Next(candidate.Source, candidate.Generation);
                 var window = new ActionWindowFact(
                     candidate.ActionInstanceId,
                     candidate.ActionId,
@@ -470,7 +532,7 @@ namespace ThirdPersonSimulation
                     candidate.Digest);
                 m_Facts.Add(new GameplayFact(header, window));
                 if (m_Trace.Enabled)
-                    m_Trace.Add(source, "blackboard_action_window_projected", SimulationTraceSeverity.Information, candidate.DeclarationId);
+                    m_Trace.Add(candidate.Source, "blackboard_action_window_projected", SimulationTraceSeverity.Information, candidate.DeclarationId, candidate.Generation);
             }
         }
 

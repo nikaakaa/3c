@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonSimulation;
+using ThirdPersonCharacter.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -448,7 +449,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         static void RestoreLastCapture()
         {
-            string manifestPath = EditorPrefs.GetString(
+            string manifestPath = ProjectEditorPreferences.GetString(
                 LastManifestPreference,
                 string.Empty);
             if (!File.Exists(manifestPath))
@@ -474,7 +475,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 string samplerId = manifest.Samplers[0].SamplerId;
                 CaptureArtifacts(manifest, samplerId);
                 s_SelectedSamplerId = samplerId;
-                s_LastSavedSampleIdentity = EditorPrefs.GetString(
+                s_LastSavedSampleIdentity = ProjectEditorPreferences.GetString(
                     LastSampleIdentityPreference,
                     Path.GetFileName(s_OutputRoot));
                 s_LastSavedFrameCount = checked(
@@ -519,10 +520,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         static void PersistLastCapture()
         {
-            EditorPrefs.SetString(
+            ProjectEditorPreferences.SetString(
                 LastManifestPreference,
                 Path.GetFullPath(s_LastManifestPath));
-            EditorPrefs.SetString(
+            ProjectEditorPreferences.SetString(
                 LastSampleIdentityPreference,
                 s_LastSavedSampleIdentity ?? string.Empty);
         }

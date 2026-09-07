@@ -7,8 +7,11 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Unity.Resources;
 using ThirdPersonSimulation;
+using TEngine;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -285,8 +288,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
             CharacterMotionMatchingPresentationModule motionMatching = null;
+            IResourceModule resourceModule =
+                ModuleSystem.GetModule<IResourceModule>();
             CharacterPoseWorkerPresentationSession workerSession =
-                CharacterPoseWorkerPresentationSession.RequireCurrent();
+                CharacterPoseWorkerPresentationSession.RequireCurrent(
+                    resourceModule,
+                    resourceModule.DefaultPackageName);
             try
             {
                 body = new CharacterBodyPresentationRuntime(
@@ -349,7 +356,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootHierarchy,
                     footPlacement,
                     true,
-                    workerSession.WorkerScheduler);
+                    workerSession.WorkerScheduler,
+                    workerSession.AnimationResources);
                 footPlacement = null;
                 animation.SetTuningBinding(
                     new CharacterPoseTuningRuntimeBinding(
@@ -397,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     camera,
                     poseRoot,
                     diagnostics,
+                    diagnostics.CharacterRuntimeId,
                     workerSession);
                 body = null;
                 animation = null;

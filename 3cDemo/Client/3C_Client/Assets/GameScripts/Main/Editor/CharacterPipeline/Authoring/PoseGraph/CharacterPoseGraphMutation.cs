@@ -63,7 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CreateLinkedPoseInterface = 47,
         ConfigureLinkedPoseInterface = 48,
         RemoveLinkedPoseInterface = 49,
-        ConfigureLinkedPoseCall = 50
+        ConfigureLinkedPoseCall = 50,
+        SetProfileSourceResourceBindings = 51,
+        SetProfileAnimationCompression = 52,
+        SetProfileAnimationPropertyBindings = 53
     }
 
     public abstract class CharacterPresentationMutation
@@ -83,13 +86,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public sealed class CreatePoseNodeMutation : CharacterPresentationMutation
     {
-        public CreatePoseNodeMutation(string graphId, CharacterTypedPoseNode node, Vector2 position)
+        public CreatePoseNodeMutation(string graphId, CharacterPoseCanvasNode node, Vector2 position)
             : base(CharacterPresentationMutationKind.CreatePoseNode, graphId)
         {
             Node = node ?? throw new ArgumentNullException(nameof(node));
             Position = position;
         }
-        public CharacterTypedPoseNode Node { get; }
+        public CharacterPoseCanvasNode Node { get; }
         public Vector2 Position { get; }
     }
 
@@ -172,13 +175,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public CreatePoseGraphMutation(
             string graphAssetId,
-            CharacterTypedPoseGraph graph)
+            CharacterPoseCanvasGraph graph)
             : base(CharacterPresentationMutationKind.CreatePoseGraph, graphAssetId)
         {
             Graph = graph ?? throw new ArgumentNullException(nameof(graph));
         }
 
-        public CharacterTypedPoseGraph Graph { get; }
+        public CharacterPoseCanvasGraph Graph { get; }
     }
 
     public sealed class DeletePoseGraphMutation : CharacterPresentationMutation
@@ -560,6 +563,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public CharacterFootPlacementAnalysisMode Mode { get; }
         public string SourceAssetGuid { get; }
+    }
+
+    public sealed class SetProfileSourceResourceBindingsMutation : CharacterPresentationMutation
+    {
+        public SetProfileSourceResourceBindingsMutation(
+            string profileId,
+            CharacterAnimationSourceResourceBinding[] bindings)
+            : base(
+                CharacterPresentationMutationKind.SetProfileSourceResourceBindings,
+                profileId)
+        {
+            Bindings = bindings ?? Array.Empty<CharacterAnimationSourceResourceBinding>();
+        }
+
+        public IReadOnlyList<CharacterAnimationSourceResourceBinding> Bindings { get; }
+    }
+
+    public sealed class SetProfileAnimationCompressionMutation : CharacterPresentationMutation
+    {
+        public SetProfileAnimationCompressionMutation(
+            string profileId,
+            CharacterAclCompressionSettings compression)
+            : base(
+                CharacterPresentationMutationKind.SetProfileAnimationCompression,
+                profileId)
+        {
+            Compression = compression ?? throw new ArgumentNullException(nameof(compression));
+        }
+
+        public CharacterAclCompressionSettings Compression { get; }
+    }
+
+    public sealed class SetProfileAnimationPropertyBindingsMutation : CharacterPresentationMutation
+    {
+        public SetProfileAnimationPropertyBindingsMutation(
+            string profileId,
+            CharacterAnimationPropertyAuthoringBinding[] bindings)
+            : base(
+                CharacterPresentationMutationKind.SetProfileAnimationPropertyBindings,
+                profileId)
+        {
+            Bindings = bindings ?? Array.Empty<CharacterAnimationPropertyAuthoringBinding>();
+        }
+
+        public IReadOnlyList<CharacterAnimationPropertyAuthoringBinding> Bindings { get; }
     }
 
     public sealed class CreateLinkedPoseImplementationMutation :
@@ -955,8 +1003,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public interface ICharacterPresentationMutationOwner
     {
         UnityEngine.Object SerializedOwner { get; }
-        CharacterTypedPoseGraph RequirePoseGraph(string graphId);
-        void ReplacePoseGraph(CharacterTypedPoseGraph graph);
+        CharacterPoseCanvasGraph RequirePoseGraph(string graphId);
+        void ReplacePoseGraph(CharacterPoseCanvasGraph graph);
         void ApplyGraphCatalogMutation(CharacterPresentationMutation mutation);
         void ApplyStateMachineMutation(CharacterPresentationMutation mutation);
         void ApplyProfileMutation(CharacterPresentationMutation mutation);
@@ -1004,9 +1052,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                          .Where(IsPoseGraphMutation)
                          .GroupBy(value => value.OwnerId, StringComparer.Ordinal))
             {
-                CharacterTypedPoseGraph current =
+                CharacterPoseCanvasGraph current =
                     owner.RequirePoseGraph(group.Key);
-                CharacterTypedPoseGraph next =
+                CharacterPoseCanvasGraph next =
                     ApplyPoseGraph(current, group.ToArray());
                 owner.ReplacePoseGraph(next);
             }
@@ -1021,7 +1069,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 owner.ApplyProfileMutation(mutation);
         }
 
-        static CharacterTypedPoseGraph ApplyPoseGraph(CharacterTypedPoseGraph graph, IReadOnlyList<CharacterPresentationMutation> mutations)
+        static CharacterPoseCanvasGraph ApplyPoseGraph(CharacterPoseCanvasGraph graph, IReadOnlyList<CharacterPresentationMutation> mutations)
         {
             var nodes = graph.Nodes.ToList();
             var edges = graph.Edges.ToList();
@@ -1054,12 +1102,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         if (!appliedFieldNodes.Add(set.NodeId))
                             break;
                         int index = RequireNodeIndex(nodes, set.NodeId);
-                        CharacterTypedPoseNode node = nodes[index];
+                        CharacterPoseCanvasNode node = nodes[index];
                         SetPoseNodeFieldMutation[] fields = mutations
                             .OfType<SetPoseNodeFieldMutation>()
                             .Where(value => value.NodeId == set.NodeId)
                             .ToArray();
-                        var replacement = new CharacterTypedPoseNode(
+                        var replacement = new CharacterPoseCanvasNode(
                             node.NodeId,
                             node.DisplayName,
                             CharacterPosePayloadFieldMutation.Set(
@@ -1076,13 +1124,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case ConfigureLinkedPoseCallMutation configure:
                     {
                         int index = RequireNodeIndex(nodes, configure.NodeId);
-                        CharacterTypedPoseNode node = nodes[index];
+                        CharacterPoseCanvasNode node = nodes[index];
                         if (CharacterPoseNodeDefinitionModule.Shared
                                 .Require(node.Kind).OperationFamily !=
                             CharacterPoseOperationFamily.LinkedPose)
                             throw new InvalidOperationException(
                                 $"Pose node '{configure.NodeId}' is not a Linked Pose Call.");
-                        var replacement = new CharacterTypedPoseNode(
+                        var replacement = new CharacterPoseCanvasNode(
                             node.NodeId,
                             node.DisplayName,
                             configure.Payload,
@@ -1097,7 +1145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case AddDynamicPosePortMutation add:
                     {
                         int index = RequireNodeIndex(nodes, add.NodeId);
-                        CharacterTypedPoseNode node = nodes[index];
+                        CharacterPoseCanvasNode node = nodes[index];
                         if (CharacterPoseAuthoringPortProjection
                                 .GetDeclared(node)
                                 .Any(value =>
@@ -1107,7 +1155,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 value.PortId.Equals(
                                     add.Port.PortId)))
                             throw new InvalidOperationException($"Pose port '{add.Port.PortId}' already exists on '{add.NodeId}'.");
-                        var replacement = new CharacterTypedPoseNode(
+                        var replacement = new CharacterPoseCanvasNode(
                             node.NodeId,
                             node.DisplayName,
                             node.Payload,
@@ -1123,18 +1171,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case RemoveDynamicPosePortMutation remove:
                     {
                         int index = RequireNodeIndex(nodes, remove.NodeId);
-                        CharacterTypedPoseNode node = nodes[index];
+                        CharacterPoseCanvasNode node = nodes[index];
                         if (!node.DynamicPorts.Any(value => value.PortId.Equals(remove.PortId)))
                             throw new InvalidOperationException($"Dynamic Pose port '{remove.PortId}' does not exist on '{remove.NodeId}'.");
-                        nodes[index] = new CharacterTypedPoseNode(node.NodeId, node.DisplayName, node.Payload, node.DynamicPorts.Where(value => !value.PortId.Equals(remove.PortId)).ToArray());
+                        nodes[index] = new CharacterPoseCanvasNode(node.NodeId, node.DisplayName, node.Payload, node.DynamicPorts.Where(value => !value.PortId.Equals(remove.PortId)).ToArray());
                         edges.RemoveAll(value => (value.SourceNodeId == remove.NodeId && value.SourcePortId.Equals(remove.PortId)) || (value.TargetNodeId == remove.NodeId && value.TargetPortId.Equals(remove.PortId)));
                         break;
                     }
                     case ConnectPosePortMutation connect:
                         if (edges.Any(value => string.Equals(value.EdgeId, connect.EdgeId, StringComparison.Ordinal)))
                             throw new InvalidOperationException($"Pose edge '{connect.EdgeId}' already exists.");
-                        CharacterTypedPoseNode sourceNode = RequireNode(nodes, connect.SourceNodeId);
-                        CharacterTypedPoseNode targetNode = RequireNode(nodes, connect.TargetNodeId);
+                        CharacterPoseCanvasNode sourceNode = RequireNode(nodes, connect.SourceNodeId);
+                        CharacterPoseCanvasNode targetNode = RequireNode(nodes, connect.TargetNodeId);
                         CharacterPosePortDefinition sourcePort = RequirePort(sourceNode, connect.SourcePortId);
                         CharacterPosePortDefinition targetPort = RequirePort(targetNode, connect.TargetPortId);
                         if (sourcePort.Direction != CharacterPosePortDirection.Output ||
@@ -1147,7 +1195,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         if (edges.Any(value => value.TargetNodeId == connect.TargetNodeId &&
                                                value.TargetPortId.Equals(connect.TargetPortId)))
                             throw new InvalidOperationException($"Pose input '{connect.TargetNodeId}/{connect.TargetPortId}' is already connected.");
-                        edges.Add(new CharacterPoseEdge(connect.EdgeId, connect.SourceNodeId, connect.SourcePortId, connect.TargetNodeId, connect.TargetPortId));
+                        edges.Add(new CharacterPoseCanvasConnection(connect.EdgeId, connect.SourceNodeId, connect.SourcePortId, connect.TargetNodeId, connect.TargetPortId));
                         break;
                     case DisconnectPosePortMutation disconnect:
                         if (edges.RemoveAll(value => string.Equals(value.EdgeId, disconnect.EdgeId, StringComparison.Ordinal)) != 1)
@@ -1164,8 +1212,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case SetPoseNodeNameMutation setName:
                     {
                         int index = RequireNodeIndex(nodes, setName.NodeId);
-                        CharacterTypedPoseNode node = nodes[index];
-                        nodes[index] = new CharacterTypedPoseNode(
+                        CharacterPoseCanvasNode node = nodes[index];
+                        nodes[index] = new CharacterPoseCanvasNode(
                             node.NodeId,
                             setName.DisplayName,
                             node.Payload,
@@ -1179,10 +1227,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string contentRevision = layoutOnly
                 ? graph.ContentRevision
                 : Guid.NewGuid().ToString("N");
-            return new CharacterTypedPoseGraph(graph.GraphId, contentRevision, parameters, nodes.ToArray(), edges.ToArray(), layout.ToArray());
+            CharacterPoseCanvasMutationPreflight.RequireValid(
+                graph.GraphId,
+                nodes,
+                edges);
+            return CharacterPoseCanvasGraph.CreateAuthoring(graph.GraphId, contentRevision, parameters, nodes.ToArray(), edges.ToArray(), layout.ToArray());
         }
 
-        static int RequireNodeIndex(IReadOnlyList<CharacterTypedPoseNode> nodes, PoseNodeId nodeId)
+        static int RequireNodeIndex(IReadOnlyList<CharacterPoseCanvasNode> nodes, PoseNodeId nodeId)
         {
             for (int i = 0; i < nodes.Count; i++)
                 if (nodes[i].NodeId == nodeId)
@@ -1190,11 +1242,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             throw new InvalidOperationException($"Pose node '{nodeId}' does not exist.");
         }
 
-        static CharacterTypedPoseNode RequireNode(IReadOnlyList<CharacterTypedPoseNode> nodes, PoseNodeId nodeId) =>
+        static CharacterPoseCanvasNode RequireNode(IReadOnlyList<CharacterPoseCanvasNode> nodes, PoseNodeId nodeId) =>
             nodes[RequireNodeIndex(nodes, nodeId)];
 
         static CharacterPosePortDefinition RequirePort(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             PosePortId portId) =>
             CharacterPoseAuthoringPortProjection.Get(node)
                 .SingleOrDefault(value => value != null && value.PortId.Equals(portId)) ??
@@ -1202,19 +1254,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"Pose node '{node.NodeId}' does not declare port '{portId}'.");
 
         static void RequireExistingEdgesCompatible(
-            CharacterTypedPoseNode node,
-            IReadOnlyList<CharacterTypedPoseNode> nodes,
-            IReadOnlyList<CharacterPoseEdge> edges)
+            CharacterPoseCanvasNode node,
+            IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            IReadOnlyList<CharacterPoseCanvasConnection> edges)
         {
-            foreach (CharacterPoseEdge edge in edges.Where(value =>
+            foreach (CharacterPoseCanvasConnection edge in edges.Where(value =>
                          value.SourceNodeId == node.NodeId ||
                          value.TargetNodeId == node.NodeId))
             {
-                CharacterTypedPoseNode sourceNode =
+                CharacterPoseCanvasNode sourceNode =
                     edge.SourceNodeId == node.NodeId
                         ? node
                         : RequireNode(nodes, edge.SourceNodeId);
-                CharacterTypedPoseNode targetNode =
+                CharacterPoseCanvasNode targetNode =
                     edge.TargetNodeId == node.NodeId
                         ? node
                         : RequireNode(nodes, edge.TargetNodeId);
@@ -1265,6 +1317,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind <= CharacterPresentationMutationKind.RemoveProfileProducerBinding ||
             value.Kind == CharacterPresentationMutationKind.CreateProfileSourceBinding ||
             value.Kind == CharacterPresentationMutationKind.RenameProfileSourceBinding ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileSourceResourceBindings ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileAnimationCompression ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileAnimationPropertyBindings ||
             value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseImplementation &&
             value.Kind <= CharacterPresentationMutationKind.RemoveEquipmentLinkedPoseMapping ||
             value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseInterface &&

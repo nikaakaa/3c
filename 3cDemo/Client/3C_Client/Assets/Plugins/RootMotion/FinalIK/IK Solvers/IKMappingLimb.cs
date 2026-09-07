@@ -101,7 +101,7 @@ namespace RootMotion.FinalIK {
 		#endregion Main Interface
 		
 		private BoneMap boneMapParent = new BoneMap(), boneMap1 = new BoneMap(), boneMap2 = new BoneMap(), boneMap3 = new BoneMap();
-		private IKSolverFullBody solver;
+		[System.NonSerialized] private IKSolverFullBody solver;
 		
 		public IKMappingLimb() {}
 		

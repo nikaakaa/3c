@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal enum TimelinePlaybackStatus : byte
+    public enum TimelinePlaybackStatus : byte
     {
         Dormant = 0,
         Running = 2,
@@ -13,7 +13,7 @@ namespace ThirdPersonSimulation
         Completing = 6
     }
 
-    internal enum TimelineTreeClipStatus : byte
+    public enum TimelineTreeClipStatus : byte
     {
         Dormant = 0,
         Enabling = 1,
@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
         Destroying = 5
     }
 
-    internal enum TimelineClipTimePoint : byte
+    public enum TimelineClipTimePoint : byte
     {
         Start = 1,
         End = 2,
@@ -32,7 +32,7 @@ namespace ThirdPersonSimulation
         EaseOut = 5
     }
 
-    internal enum TimelineCurveChannel : byte
+    public enum TimelineCurveChannel : byte
     {
         Weight = 1,
         EaseIn = 2,
@@ -43,12 +43,12 @@ namespace ThirdPersonSimulation
         Yaw = 7
     }
 
-    internal enum TimelineClipScalarValue : byte
+    public enum TimelineClipScalarValue : byte
     {
         Intensity = 1
     }
 
-    internal enum TimelineTreeClipEdgeKind : byte
+    public enum TimelineTreeClipEdgeKind : byte
     {
         Root = 1,
         Enable = 2,
@@ -56,17 +56,18 @@ namespace ThirdPersonSimulation
         Destroy = 4
     }
 
-    internal enum TimelinePresentationOutputKind : byte
+    public enum TimelinePresentationOutputKind : byte
     {
         SelectProducer = 1,
         SampleProducer = 2,
         CompleteProducer = 3,
         ReleaseProducer = 4,
         Camera = 5,
-        Cue = 6
+        Cue = 6,
+        ForceProducer = 7
     }
 
-    internal enum TimelineTraceSeverity : byte
+    public enum TimelineTraceSeverity : byte
     {
         Detail = 1,
         Information = 2,
@@ -74,7 +75,7 @@ namespace ThirdPersonSimulation
         Error = 4
     }
 
-    internal readonly struct TimelineActionContextIdentity : IEquatable<TimelineActionContextIdentity>
+    public readonly struct TimelineActionContextIdentity : IEquatable<TimelineActionContextIdentity>
     {
         public TimelineActionContextIdentity(
             string actionId,
@@ -122,7 +123,7 @@ namespace ThirdPersonSimulation
         public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey, SkillId, SkillEntryOperation, SkillExecutionGeneration);
     }
 
-    internal readonly struct TimelineSegment<TTime>
+    public readonly struct TimelineSegment<TTime>
         where TTime : struct
     {
         public TimelineSegment(TTime previous, TTime current, int cycle, bool startsCycle)
@@ -320,11 +321,12 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal readonly struct TimelinePresentationOutput<TTime>
+    public readonly struct TimelinePresentationOutput<TTime>
         where TTime : struct
     {
         public TimelinePresentationOutput(
             OperationHandle operation,
+            SimulationExecutionSource source,
             TimelinePresentationOutputKind kind,
             TTime sampleTime,
             TTime weight,
@@ -335,11 +337,14 @@ namespace ThirdPersonSimulation
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline presentation output requires a valid operation.", nameof(operation));
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline presentation output source is invalid.", nameof(source));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (RequiresGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             Operation = operation;
+            Source = source;
             Kind = kind;
             SampleTime = sampleTime;
             Weight = weight;
@@ -350,6 +355,7 @@ namespace ThirdPersonSimulation
         }
 
         public OperationHandle Operation { get; }
+        public SimulationExecutionSource Source { get; }
         public TimelinePresentationOutputKind Kind { get; }
         public TTime SampleTime { get; }
         public TTime Weight { get; }
@@ -363,29 +369,47 @@ namespace ThirdPersonSimulation
             kind == TimelinePresentationOutputKind.SampleProducer ||
             kind == TimelinePresentationOutputKind.CompleteProducer ||
             kind == TimelinePresentationOutputKind.ReleaseProducer ||
-            kind == TimelinePresentationOutputKind.Camera;
+            kind == TimelinePresentationOutputKind.Camera ||
+            kind == TimelinePresentationOutputKind.Cue ||
+            kind == TimelinePresentationOutputKind.ForceProducer;
     }
 
-    internal readonly struct TimelineCueOutput<TTime>
+    public readonly struct TimelineCueOutput<TTime>
         where TTime : struct
     {
-        public TimelineCueOutput(OperationHandle operation, TTime sampleTime, int cycle)
+        public TimelineCueOutput(
+            OperationHandle operation,
+            SimulationExecutionSource source,
+            TTime sampleTime,
+            int cycle,
+            ulong producerGeneration,
+            ulong sourceActionInstanceId)
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline cue output requires a valid operation.", nameof(operation));
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline cue output source is invalid.", nameof(source));
+            if (producerGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             Operation = operation;
+            Source = source;
             SampleTime = sampleTime;
             Cycle = cycle;
+            ProducerGeneration = producerGeneration;
+            SourceActionInstanceId = sourceActionInstanceId;
         }
 
         public OperationHandle Operation { get; }
+        public SimulationExecutionSource Source { get; }
         public TTime SampleTime { get; }
         public int Cycle { get; }
+        public ulong ProducerGeneration { get; }
+        public ulong SourceActionInstanceId { get; }
     }
 
-    internal readonly struct TimelineTraceOutput
+    public readonly struct TimelineTraceOutput
     {
         public TimelineTraceOutput(
             OperationHandle operation,
@@ -407,7 +431,7 @@ namespace ThirdPersonSimulation
         public string Detail { get; }
     }
 
-    internal interface ITimelineControlStatePort
+    public interface ITimelineControlStatePort
     {
         TimelinePlaybackStatus ReadPlayback(OperationHandle operation);
         bool TryReadPlayback(OperationHandle operation, out TimelinePlaybackStatus status);
@@ -424,7 +448,7 @@ namespace ThirdPersonSimulation
         void WriteRetainedActionContext(OperationHandle operation, TimelineActionContextIdentity identity);
     }
 
-    internal interface ITimelineTargetLeaf<TTime>
+    public interface ITimelineTargetLeaf<TTime>
         where TTime : struct
     {
         bool DiagnosticsEnabled { get; }
@@ -475,6 +499,12 @@ namespace ThirdPersonSimulation
             OperationHandle operation,
             TimelineSegment<TTime> segment,
             TimelineActionContextIdentity actionContext);
+        void SampleTimelineClip(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<TTime> segment);
+        void CompleteTimeline(OperationHandle timeline, TTime time);
+        void ReleaseTimeline(OperationHandle timeline);
         void EmitPresentation(TimelinePresentationOutput<TTime> output);
         void EmitCue(TimelineCueOutput<TTime> output);
         void EmitTrace(TimelineTraceOutput output);

@@ -1,0 +1,30 @@
+{
+  "character": "Anbi",
+  "dumpRoot": "D:/ZZZ_Dump",
+  "output": "D:/ZZZ_Dump/output/anbi_replication/replication-guide",
+  "configCatalogFormat": "raw-export",
+  "animationManifestFormat": "animation-export",
+  "animationNamePattern": "^Avatar_Female_Size02_Anbi(_Default)?_Ani_",
+  "focusedStatePattern": "^(Attack_(?!ParryAid|ParrySolo|AssaultAid|BeHitAid)|Evade_)",
+  "eventBindingMode": "character-map",
+  "sharedEvidenceRoot": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis",
+  "controller": "output/character_replication/analysis/animation-sync/anbi/controller/Avatar_Female_Size02_Anbi_Controller__3460639183_000637B7.json",
+  "animationManifest": "output/anbi_replication/20260904_animations_static/export-manifest.json",
+  "animationDirectory": "output/anbi_replication/20260904_animations_static/animations",
+  "rawConfigManifests": ["output/anbi_replication/20260904_configs_raw/manifest.json", "output/anbi_replication/20260904_camera/raw/manifest.json"],
+  "decodedConfigManifests": ["output/anbi_replication/20260904_configs_decoded/manifest.json", "output/anbi_replication/20260904_camera/decoded/manifest.json"],
+  "decodedRoot": "output/anbi_replication",
+  "configRoots": {"attack":"AnimEvents","zones":"AnimatorZoneGroup","battle":"patterns","effect":"patterns","audio":"patterns","shake":"cameraShakes","zoom":"cameraZooms","stretch":"cameraStretchs","override":"config"},
+  "selectedConfigs": {
+    "character": "20260904_configs_decoded/raw/Avatar_Female_Size02_Anbi__1387972831_157C163C4DE6FB03.json",
+    "attack": "20260904_configs_decoded/raw/AttackProperty_Avatar_Female_Size02_Anbi__1387972831_F726FD96B34F35E0.json",
+    "zones": "20260904_configs_decoded/raw/AnimatorZone_Avatar_Female_Size02_Anbi__1387972831_7233662224C10275.json",
+    "battle": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Anbi_Battle__119935916_2242B7B6A1FB143B.json",
+    "effect": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Anbi_Effect__119935916_95CF3591AEA6EA57.json",
+    "audio": "20260904_configs_decoded/raw/AnimatorEventPattern_Avatar_Female_Size02_Anbi_Audio__2629554710_D3031DDE4E9CE646.json",
+    "shake": "20260904_camera/decoded/raw/CameraShakes_Avatar_Anbi__1387972831_295DE5D635FFFB1A.json",
+    "zoom": "20260904_camera/decoded/raw/CameraZooms_Avatar_Anbi__1840230881_CC9372AD9F42F9B4.json",
+    "stretch": "20260904_camera/decoded/raw/CameraStretchs_Avatar_Anbi__1840230881_F42CFD307896D56B.json",
+    "override": "20260904_camera/decoded/raw/CameraOverrideTracks_Avatar_Anbi__2158315646_657742898ED1EDA1.json"
+  }
+}

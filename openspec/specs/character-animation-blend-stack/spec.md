@@ -1,7 +1,7 @@
 # character-animation-blend-stack Specification
 
 ## Purpose
-TBD - created by archiving change refactor-animation-playback-to-blend-stack. Update Purpose after archive.
+定义显式 Blend Stack 节点的独立状态、逐骨骼混合权重、容量压缩与 source 生命周期，保持中断连续性并避免隐式创建第二播放器。
 ## Requirements
 ### Requirement: 每个显式Blend Stack节点必须拥有唯一有序状态
 

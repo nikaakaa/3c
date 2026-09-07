@@ -3,6 +3,7 @@
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
         "KK.GeneratedDiagnosticSampling.Annotations",
+        "KK.GeneratedDiagnosticSampling",
         "ThirdPerson.Performance.Instrumentation.Core",
         "ThirdPerson.Performance.Instrumentation.Contracts",
         "GUID:8f6e9e98d8b94eb8a793b692eaf18b6b",
@@ -12,6 +13,7 @@
         "ThirdPersonSimulation.Unity",
         "ThirdPersonGameplay",
         "ThirdPersonCharacter.Animation.TransitionRouting",
+        "ThirdPerson.ProductStartup",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "RootMotion",
         "BTSMTL",
@@ -19,11 +21,15 @@
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
         "BTSMTL.TreeDesigner",
+        "NodeCanvas",
+        "ParadoxNotion",
         "Kybernetik.Animancer",
         "Cinemachine",
         "Unity.InputSystem",
         "Unity.Collections",
-        "Unity.Burst"
+        "Unity.Burst",
+        "TEngine.Runtime",
+        "YooAsset"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

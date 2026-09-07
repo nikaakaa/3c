@@ -321,11 +321,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
-        void IPoseStateSourceSelectionSink.PushMotionMatchingSelection(
+        CharacterPoseSourceResourceResolution
+            IPoseStateSourceSelectionSink.PushMotionMatchingSelection(
             PoseNodeId playerNodeId,
             in PresentationPoseSourceSample sample)
         {
-            m_ActorState.NodeRuntimeIndex.PushMotionMatchingSelection(
+            return m_ActorState.NodeRuntimeIndex.PushMotionMatchingSelection(
                 m_SourceModule,
                 playerNodeId,
                 in sample);

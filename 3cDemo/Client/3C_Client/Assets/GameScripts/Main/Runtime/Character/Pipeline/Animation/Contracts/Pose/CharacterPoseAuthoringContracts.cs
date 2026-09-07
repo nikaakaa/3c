@@ -253,6 +253,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Bool = 3
     }
 
+    public enum CharacterPoseParameterUsage : byte
+    {
+        Control = 1,
+        AnimatedProperty = 2
+    }
+
     public enum ModifyBoneReferenceSpace : byte
     {
         Local = 1,
@@ -273,11 +279,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_ParameterId = string.Empty;
         [SerializeField] PoseParameterValueType m_ValueType = PoseParameterValueType.Float;
+        [SerializeField] CharacterPoseParameterUsage m_Usage = CharacterPoseParameterUsage.Control;
         [SerializeField] string m_Unit = string.Empty;
         [SerializeField] float m_DefaultValue;
 
         public PoseParameterId ParameterId => string.IsNullOrWhiteSpace(m_ParameterId) ? default : new PoseParameterId(m_ParameterId);
         public PoseParameterValueType ValueType => m_ValueType;
+        public CharacterPoseParameterUsage Usage => m_Usage;
         public string Unit => m_Unit ?? string.Empty;
         public float DefaultValue => m_DefaultValue;
 
@@ -287,16 +295,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseParameterId parameterId,
             PoseParameterValueType valueType,
             float defaultValue,
-            string unit = "")
+            string unit = "",
+            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control)
         {
             if (!parameterId.IsValid)
                 throw new ArgumentException("Pose Parameter identity is invalid.", nameof(parameterId));
             if (!Enum.IsDefined(typeof(PoseParameterValueType), valueType))
                 throw new ArgumentOutOfRangeException(nameof(valueType));
+            if (!Enum.IsDefined(typeof(CharacterPoseParameterUsage), usage))
+                throw new ArgumentOutOfRangeException(nameof(usage));
             if (!float.IsFinite(defaultValue))
                 throw new ArgumentOutOfRangeException(nameof(defaultValue));
             m_ParameterId = parameterId.Value;
             m_ValueType = valueType;
+            m_Usage = usage;
             m_Unit = unit?.Trim() ?? string.Empty;
             m_DefaultValue = defaultValue;
         }
@@ -363,33 +375,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Kind = kind;
             m_Direction = direction;
             m_Required = required;
-        }
-    }
-
-    [Serializable]
-    public sealed class CharacterPoseEdge
-    {
-        [SerializeField] string m_EdgeId = string.Empty;
-        [SerializeField] string m_SourceNodeId = string.Empty;
-        [SerializeField] string m_SourcePortId = string.Empty;
-        [SerializeField] string m_TargetNodeId = string.Empty;
-        [SerializeField] string m_TargetPortId = string.Empty;
-
-        public string EdgeId => m_EdgeId ?? string.Empty;
-        public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId) ? default : new PoseNodeId(m_SourceNodeId);
-        public PosePortId SourcePortId => string.IsNullOrWhiteSpace(m_SourcePortId) ? default : new PosePortId(m_SourcePortId);
-        public PoseNodeId TargetNodeId => string.IsNullOrWhiteSpace(m_TargetNodeId) ? default : new PoseNodeId(m_TargetNodeId);
-        public PosePortId TargetPortId => string.IsNullOrWhiteSpace(m_TargetPortId) ? default : new PosePortId(m_TargetPortId);
-
-        public CharacterPoseEdge() { }
-
-        public CharacterPoseEdge(string edgeId, PoseNodeId sourceNodeId, PosePortId sourcePortId, PoseNodeId targetNodeId, PosePortId targetPortId)
-        {
-            m_EdgeId = PoseIdentity.Require(edgeId, nameof(edgeId));
-            m_SourceNodeId = sourceNodeId.IsValid ? sourceNodeId.Value : throw new ArgumentException("Source node is invalid.", nameof(sourceNodeId));
-            m_SourcePortId = sourcePortId.IsValid ? sourcePortId.Value : throw new ArgumentException("Source port is invalid.", nameof(sourcePortId));
-            m_TargetNodeId = targetNodeId.IsValid ? targetNodeId.Value : throw new ArgumentException("Target node is invalid.", nameof(targetNodeId));
-            m_TargetPortId = targetPortId.IsValid ? targetPortId.Value : throw new ArgumentException("Target port is invalid.", nameof(targetPortId));
         }
     }
 

@@ -23,13 +23,13 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     }
 
     [Serializable]
-    [NodeName("Request Camera Sequence")]
-    [NodePath("Base/Action/Camera/Request Camera Sequence")]
+    [NodeName("Request Camera State")]
+    [NodePath("Base/Action/Camera/Request Camera State")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class RequestCameraSequenceNode : CharacterSimulationOperationNode
+    public sealed class RequestCameraStateNode : CharacterSimulationOperationNode
     {
-        [SerializeField, ShowInPanel("Sequence")]
-        CameraSequenceAsset m_Sequence;
+        [SerializeField, ShowInPanel("Mode")]
+        CameraMode m_Mode = CameraMode.FreeLook;
 
         [SerializeField, ShowInPanel("Priority")]
         int m_Priority;
@@ -50,35 +50,43 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         ActionContextSlot m_ActionContext;
 
         [SerializeField, ShowInPanel("Interrupt Policy")]
-        CameraSequenceInterruptPolicy m_InterruptPolicy = CameraSequenceInterruptPolicy.BlendOut;
+        CameraInterruptPolicy m_InterruptPolicy = CameraInterruptPolicy.BlendOut;
 
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
-        public CameraSequenceAsset Sequence => m_Sequence;
-        public string SequenceId => m_Sequence ? m_Sequence.SequenceId : string.Empty;
+        public CameraMode Mode => m_Mode;
         public int Priority => m_Priority;
         public float Weight => m_Weight;
         public float BlendInSeconds => m_BlendInSeconds;
         public float BlendOutSeconds => m_BlendOutSeconds;
         public string TargetKey => m_TargetKey;
         public ActionContextSlot ActionContext => m_ActionContext;
-        public CameraSequenceInterruptPolicy InterruptPolicy => m_InterruptPolicy;
+        public CameraInterruptPolicy InterruptPolicy => m_InterruptPolicy;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
 
     }
 
     [Serializable]
-    [NodeName("Emit Camera Shake")]
-    [NodePath("Base/Action/Camera/Emit Camera Shake")]
+    [NodeName("Emit Camera Cue")]
+    [NodePath("Base/Action/Camera/Emit Camera Cue")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class EmitCameraShakeNode : CharacterSimulationOperationNode
+    public sealed class EmitCameraCueNode : CharacterSimulationOperationNode
     {
-        [SerializeField, ShowInPanel("Shake")]
-        CameraShakeAsset m_Shake;
+        [SerializeField, ShowInPanel("Cue Id")]
+        string m_CueId = "CameraCue";
+
+        [SerializeField, ShowInPanel("Cue Kind")]
+        CameraCueKind m_CueKind = CameraCueKind.Shake;
+
+        [SerializeField, ShowInPanel("Cue Type")]
+        string m_CueType = "Camera";
 
         [SerializeField, Min(0f), ShowInPanel("Intensity")]
         float m_Intensity = 1f;
+
+        [SerializeField, Min(0f), ShowInPanel("Duration Seconds")]
+        float m_DurationSeconds = 0.2f;
 
         [SerializeField, ShowInPanel("Priority")]
         int m_Priority;
@@ -89,9 +97,11 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
-        public CameraShakeAsset Shake => m_Shake;
-        public string ResourceId => m_Shake ? m_Shake.ShakeId : string.Empty;
+        public string CueId => m_CueId;
+        public CameraCueKind CueKind => m_CueKind;
+        public string CueType => m_CueType;
         public float Intensity => m_Intensity;
+        public float DurationSeconds => m_DurationSeconds;
         public int Priority => m_Priority;
         public ActionContextSlot ActionContext => m_ActionContext;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
@@ -105,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     public sealed class SetCameraResponseNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Look Response")]
-        CameraResponseMode m_LookResponse = CameraResponseMode.Full;
+        CameraLookResponseMode m_LookResponse = CameraLookResponseMode.Full;
 
         [SerializeField, Range(0f, 1f), ShowInPanel("Manual Orbit Weight")]
         float m_ManualOrbitWeight = 1f;
@@ -128,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
-        public CameraResponseMode LookResponse => m_LookResponse;
+        public CameraLookResponseMode LookResponse => m_LookResponse;
         public float ManualOrbitWeight => m_ManualOrbitWeight;
         public float PitchResponseWeight => m_PitchResponseWeight;
         public float YawResponseWeight => m_YawResponseWeight;

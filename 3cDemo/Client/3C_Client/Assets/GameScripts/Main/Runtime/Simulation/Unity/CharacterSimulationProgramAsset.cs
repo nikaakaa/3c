@@ -17,6 +17,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         [SerializeField] string m_ProgramHash = string.Empty;
         [SerializeField] string m_LayoutHash = string.Empty;
         [SerializeField] string m_CanonicalBytesHash = string.Empty;
+        [SerializeField] byte m_RootKind;
+        [SerializeField] string m_RootIdentity = string.Empty;
+        [SerializeField] string m_EntryIdentity = string.Empty;
+        [SerializeField] string m_ContentIdentity = string.Empty;
 
         public string CompilerVersion => m_CompilerVersion;
         public string OperationSetVersion => m_OperationSetVersion;
@@ -28,6 +32,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public string ProgramHash => m_ProgramHash;
         public string LayoutHash => m_LayoutHash;
         public string CanonicalBytesHash => m_CanonicalBytesHash;
+        public SimulationProgramRootKind RootKind => (SimulationProgramRootKind)m_RootKind;
+        public string RootIdentity => m_RootIdentity;
+        public string EntryIdentity => m_EntryIdentity;
+        public string ContentIdentity => m_ContentIdentity;
         public int CanonicalByteLength => m_CanonicalArtifact?.Length ?? 0;
 
         public byte[] CopyCanonicalArtifact()
@@ -51,6 +59,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new ArgumentException("Character Simulation Program Numeric Target is invalid.", nameof(numericProfile));
             if (!string.Equals(m_NumericProfileId, numericProfile.Id.Value, StringComparison.Ordinal) || m_TargetAbiVersion != numericProfile.AbiVersion.Value)
                 throw new InvalidOperationException($"Character Simulation Program asset '{name}' Numeric Target is not installed.");
+            var root = new SimulationProgramRootDescriptor(
+                (SimulationProgramRootKind)m_RootKind,
+                m_RootIdentity,
+                m_EntryIdentity,
+                m_ContentIdentity);
+            if (!root.IsCharacter)
+                throw new InvalidOperationException($"Character Simulation Program asset '{name}' does not contain a Character root.");
             CharacterSimulationProgram program = CharacterSimulationProgramCodec.ReadArtifact(
                 m_CanonicalArtifact,
                 new ProgramLoadExpectation(
@@ -58,7 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     new OperationSetVersion(m_OperationSetVersion),
                     new ProgramRevision(m_SourceRevision),
                     new SemanticHash(new StableHash(m_SemanticHash)),
-                    numericProfile));
+                    numericProfile,
+                    root));
             if (!string.Equals(program.Manifest.ProgramId.Value, m_ProgramId, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.OperationSetVersion.Value, m_OperationSetVersion, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.SemanticHash.ToString(), m_SemanticHash, StringComparison.Ordinal) ||
@@ -75,6 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new ArgumentNullException(nameof(artifact));
             CharacterSimulationProgram program = artifact.Program;
             CharacterTargetProgramArtifactDescriptor descriptor = artifact.Descriptor;
+            if (!program.Manifest.Root.IsCharacter)
+                throw new InvalidOperationException("Character Program asset requires a Character root.");
             if (!descriptor.ProgramId.Equals(program.Manifest.ProgramId) ||
                 !descriptor.ProgramHash.Equals(program.ProgramHash) ||
                 !descriptor.LayoutHash.Equals(program.LayoutHash))
@@ -90,6 +108,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_ProgramHash = program.ProgramHash.ToString();
             m_LayoutHash = program.LayoutHash.ToString();
             m_CanonicalBytesHash = descriptor.CanonicalBytesHash.ToString();
+            m_RootKind = (byte)program.Manifest.Root.Kind;
+            m_RootIdentity = program.Manifest.Root.RootIdentity;
+            m_EntryIdentity = program.Manifest.Root.EntryIdentity;
+            m_ContentIdentity = program.Manifest.Root.ContentIdentity;
         }
 #endif
     }

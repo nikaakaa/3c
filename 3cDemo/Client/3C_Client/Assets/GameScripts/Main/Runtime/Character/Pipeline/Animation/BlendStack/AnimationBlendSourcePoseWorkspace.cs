@@ -290,7 +290,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HasPrevious,
                 m_CompletedAt,
                 m_CaptureFailures,
-                presentationDeltaSeconds);
+                presentationDeltaSeconds,
+                new NativeSlice<float>(
+                    m_PoseParameters,
+                    parameterOffset,
+                    m_ParameterCount),
+                new NativeSlice<byte>(
+                    m_PoseParameterAvailability,
+                    parameterOffset,
+                    m_ParameterCount));
         }
 
         internal AnimationBlendSourcePoseNativeReadBinding RequireNativeReadBinding(ulong completionIdentity)

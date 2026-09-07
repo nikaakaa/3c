@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -29,6 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Transform m_VisualRoot;
         readonly Transform m_PoseRoot;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
+        readonly Guid m_RuntimeInstanceId;
+        CharacterPresentationFactFrame m_LastProjectedFactFrame;
         readonly CharacterPoseWorkerPresentationSession
             m_WorkerPresentationSession;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
@@ -59,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterCameraPresentationRuntime camera,
             Transform poseRoot,
             RuntimeDiagnosticsContext diagnostics,
+            Guid runtimeInstanceId,
             CharacterPoseWorkerPresentationSession workerPresentationSession)
         {
             if (!actorId.IsValid)
@@ -74,6 +78,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (requiresFootPlacement != m_Animation.HasFootPlacement)
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
             m_Camera = camera;
+            m_RuntimeInstanceId = runtimeInstanceId != Guid.Empty
+                ? runtimeInstanceId
+                : throw new ArgumentException(
+                    "Presentation runtime identity is invalid.",
+                    nameof(runtimeInstanceId));
             m_VisualRoot = m_Body.VisualRoot;
             m_PoseRoot = poseRoot
                 ? poseRoot
@@ -208,6 +217,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             if (command.Header.ActorId != m_ActorId)
                 throw new InvalidOperationException("Presentation command targets another Actor.");
+            if (command.Kind == CharacterPresentationCommandKind.DomainEvent)
+            {
+                m_Animation.NotifyDomainEvent(command);
+                return;
+            }
             CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
             switch (command.Kind)
             {
@@ -253,6 +267,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     m_CurrentFrameSignals.Add(command);
                     break;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation command requires a Camera producer.");
+                    RequireCamera().Force(command, producer);
+                    break;
                 case CharacterPresentationCommandKind.Vfx:
                 case CharacterPresentationCommandKind.Ui:
                     m_CurrentFrameSignals.Add(command);
@@ -290,6 +309,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);
+                    break;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation retirement requires a Camera producer.");
+                    RequireCamera().Force(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:
@@ -445,12 +469,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.RenderFrame,
                     animationDeltaSeconds,
                     in m_PendingBodyFrame);
+                m_LastProjectedFactFrame = factFrame;
                 try
                 {
                     CharacterPresentationProgramParameterFrame parameterFrame =
                         CharacterPresentationProgramParameterFrame.FromFact(
                             in factFrame);
-                    m_Animation.BeginPresentation(
+                    m_PendingAnimationFrame = m_Animation.BeginPresentation(
                         context.RenderFrame,
                         m_PendingBodyFrame.AnimationSampleTick,
                         m_PendingBodyFrame.AnimationSampleAlpha,
@@ -460,7 +485,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in parameterFrame,
                         m_LinkedPose.Session,
                         m_Diagnostics);
-                    m_PendingAnimationFrame = true;
                 }
                 catch (Exception exception)
                 {
@@ -529,6 +553,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Camera.Present(
                         m_PendingBodyFrame,
                         in m_PendingPresentationContext);
+#if KK_DIAGNOSTIC_SAMPLING
+                PublishPresentationReplicationDiagnostics();
+#endif
             }
             finally
             {
@@ -536,6 +563,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearPendingPresentationFrame();
             }
         }
+
+#if KK_DIAGNOSTIC_SAMPLING
+        void PublishPresentationReplicationDiagnostics()
+        {
+            var target = new DiagnosticEventTargetKey(
+                CharacterPresentationReplicationDiagnosticEvent.TargetTypeIdentity,
+                m_RuntimeInstanceId);
+            if (!CharacterPresentationReplicationDiagnosticEvent.IsInterested(
+                    in target))
+            {
+                return;
+            }
+            AnimationPresentationRuntimeSnapshot animation =
+                m_Animation.HasRuntimeDiagnosticsSnapshot
+                    ? m_Animation.RuntimeDiagnosticsSnapshot
+                    : default;
+            CharacterAnimationPresentationCaptureFrame animationFacts =
+                new CharacterAnimationPresentationCaptureFrame(
+                    m_PendingPresentationContext.RenderFrame,
+                    m_PendingPresentationContext.LocalLogicTick,
+                    m_PendingBodyFrame.ResetSequence,
+                    m_PendingPresentationContext.PresentationDeltaSeconds,
+                    in animation);
+            CharacterCameraPresentationCaptureFrame cameraFacts =
+                m_PendingCameraFrame
+                    ? m_Camera.LastPresentationFrame.WithPresentationContext(
+                        m_PendingPresentationContext.RenderFrame,
+                        m_PendingPresentationContext.LocalLogicTick,
+                        m_PendingBodyFrame.ResetSequence,
+                        m_PendingPresentationContext.PresentationDeltaSeconds)
+                    : CharacterCameraPresentationCaptureFrame.Empty;
+            var commandFacts = new CharacterPresentationCommandCaptureFacts(
+                m_CurrentFrameSignals);
+            var factFacts = new CharacterPresentationFactCaptureFrame(
+                in m_LastProjectedFactFrame);
+            var lineage = new DiagnosticLineageKey(
+                CharacterPresentationReplicationDiagnosticEvent.LineageTypeIdentity,
+                m_PendingPresentationContext.RenderFrame,
+                animation.CompletionIdentity != 0
+                    ? animation.CompletionIdentity
+                    : m_PendingPresentationContext.LocalLogicTick);
+            CharacterPresentationReplicationDiagnosticEvent.Publish(
+                in target,
+                in lineage,
+                in animationFacts,
+                in cameraFacts,
+                in factFacts,
+                in commandFacts);
+        }
+#endif
 
         internal Exception AbortPresentationFrame()
         {

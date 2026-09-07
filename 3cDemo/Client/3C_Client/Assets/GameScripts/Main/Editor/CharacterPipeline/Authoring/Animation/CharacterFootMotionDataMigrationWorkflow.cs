@@ -146,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int count = s_Clips.Length;
                 AssetDatabase.SaveAssets();
                 Debug.Log(
-                    $"Corin Foot Motion Data analyzed {count} AnimationClips and applied {s_AppliedCount}; TrainingEnemy was not touched.");
+                    $"Corin Foot Motion Data analyzed {count} AnimationClips and applied {s_AppliedCount}.");
                 Clear();
             }
             catch (Exception exception)

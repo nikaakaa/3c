@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -50,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationBlendSourcePoseWorkspace m_SourceWorkspace;
         readonly AnimationFootAnalysisProjectionIdentity m_FootAnalysis;
         readonly PoseParameterId[] m_ParameterIds;
+        readonly CharacterPoseParameterUsage[] m_ParameterUsages;
         readonly float[] m_Parameters;
         readonly byte[] m_ParameterAvailability;
         readonly ClipSamplePlan[] m_ClipSamples;
@@ -120,10 +122,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Weights = new CharacterAnimationBlendSpaceWeightPage(m_Plan.Samples.Count);
             m_Times = new CharacterAnimationBlendSpaceTimePage(m_Plan.Samples.Count);
             m_ParameterIds = new PoseParameterId[posePlan.Parameters.Count];
+            m_ParameterUsages = new CharacterPoseParameterUsage[posePlan.Parameters.Count];
             m_Parameters = new float[posePlan.Parameters.Count];
             m_ParameterAvailability = new byte[posePlan.Parameters.Count];
             for (int i = 0; i < posePlan.Parameters.Count; i++)
+            {
                 m_ParameterIds[i] = posePlan.Parameters[i].ParameterId;
+                m_ParameterUsages[i] = posePlan.Parameters[i].Usage;
+                m_Parameters[i] = posePlan.Parameters[i].DefaultValue;
+                m_ParameterAvailability[i] = 1;
+            }
             m_FootPlacementWeightParameterIndex = posePlan.RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight);
             m_ClipSamples = new ClipSamplePlan[m_Plan.Samples.Count];
             m_SampleRawTimes = new double[m_Plan.Samples.Count];
@@ -151,6 +159,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal int PlayerIndex => m_Descriptor.PlayerIndex;
         internal AnimationPoseSourceId SourceId => m_SourceId;
         internal bool IsRelevant => m_Relevant;
+        internal IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan>
+            ResourceSamples => m_Plan.Samples;
         internal bool HasCompletedFrame => m_HasCompletedFrame;
         internal float RemainingTime => float.MaxValue;
         internal double ContinuousTime => m_ContinuousTime;
@@ -347,6 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             var right = new AnimationFootFeatureBlendAccumulator();
             float footPlacementWeight = 0f;
             m_ClipSampleCount = 0;
+            float nativePropertyWeight = 0f;
             for (int weightIndex = 0; weightIndex < m_Weights.Count; weightIndex++)
             {
                 CharacterAnimationBlendSpaceSampleId sampleId =
@@ -357,17 +368,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterAnimationBlendSpaceSampleTime time =
                     FindTime(m_Times, sampleId);
                 int sampleIndex = FindSampleIndex(m_Plan, sampleId);
-                bool looping = sample.Clip.isLooping;
+                bool looping = sample.IsLooping;
                 double continuousClipTime = time.RawContinuousTime;
-                m_ClipSamples[m_ClipSampleCount++] = new ClipSamplePlan(
-                    sampleIndex,
-                    sample.SampleId,
-                    sample.Clip,
-                    time.ClipTime,
-                    continuousClipTime,
-                    time.NormalizedTime,
-                    weight,
-                    looping);
+                m_ClipSamples[m_ClipSampleCount++] = sample.IsAcl
+                    ? new ClipSamplePlan(
+                        sampleIndex,
+                        sample.SampleId,
+                        sample.ResourceCatalogIndex,
+                        sample.GroupClipIndex,
+                        sample.SourceDurationSeconds,
+                        time.ClipTime,
+                        continuousClipTime,
+                        time.NormalizedTime,
+                        weight,
+                        looping)
+                    : new ClipSamplePlan(
+                        sampleIndex,
+                        sample.SampleId,
+                        sample.Clip,
+                        time.ClipTime,
+                        continuousClipTime,
+                        time.NormalizedTime,
+                        weight,
+                        looping);
                 footPlacementWeight += sample.SampleFootPlacementWeight(time.NormalizedTime) * weight;
                 if (sample.HasFootFeatures)
                 {
@@ -384,12 +407,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         weight,
                         1f);
                 }
+                if (!sample.IsAcl)
+                    nativePropertyWeight += weight;
             }
             if (m_ClipSampleCount == 0)
                 throw new InvalidOperationException(
                     $"Blend Space Player '{NodeId}' produced no active samples.");
             m_Parameters[m_FootPlacementWeightParameterIndex] = Mathf.Clamp01(footPlacementWeight);
             m_ParameterAvailability[m_FootPlacementWeightParameterIndex] = 1;
+            bool resetNativeProperties = true;
+            for (int sampleIndex = 0; sampleIndex < m_ClipSampleCount; sampleIndex++)
+            {
+                ClipSamplePlan clipSample = m_ClipSamples[sampleIndex];
+                CharacterAnimationBlendSpaceSamplePlan sample =
+                    m_Plan.RequireSample(clipSample.BlendSpaceSampleId);
+                sample.SampleNativeProperties(
+                    clipSample.NormalizedTime,
+                    clipSample.IsAcl || nativePropertyWeight <= 0f
+                        ? 0f
+                        : clipSample.Weight / nativePropertyWeight,
+                    m_Parameters,
+                    m_ParameterAvailability,
+                    resetNativeProperties);
+                if (!clipSample.IsAcl && sample.ScalarPage != null)
+                    resetNativeProperties = false;
+            }
             bool hasFootFeatures =
                 m_Plan.Samples[0].HasFootFeatures;
             m_RawX = rawX;
@@ -490,7 +532,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPlayerPoseNativeWriteBinding output,
             AnimationPhysicalSourceIdentity physicalSource,
-            int sourceIndex)
+            int sourceIndex,
+            in CharacterPoseSourceScalarReadView scalarReadView)
         {
             RequireAlive();
             RequireOpenFrame();
@@ -499,6 +542,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in output,
                 physicalSource,
                 sourceIndex,
+                in scalarReadView,
                 m_ContinuityIdentity,
                 BuildDiscontinuity(completionIdentity),
                 m_Relevant
@@ -624,6 +668,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 else
                 {
+                    if (m_ParameterUsages[parameterIndex] == CharacterPoseParameterUsage.AnimatedProperty)
+                    {
+                        value = m_Parameters[parameterIndex];
+                        available = true;
+                        m_Parameters[parameterIndex] = value;
+                        m_ParameterAvailability[parameterIndex] = 1;
+                        continue;
+                    }
                     if (m_ParameterIds[parameterIndex].Equals(AnimationPoseParameterIds.FootPlacementWeight))
                     {
                         value = 0f;

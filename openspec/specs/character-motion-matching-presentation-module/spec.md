@@ -1,7 +1,7 @@
 # character-motion-matching-presentation-module Specification
 
 ## Purpose
-TBD - created by archiving change refactor-motion-matching-presentation-module. Update Purpose after archive.
+定义 Motion Matching 表现模块对轨迹、意图、查询、选择、历史及生命周期的唯一所有权；仅在 Projection 配置合法 MM payload 时装配。
 ## Requirements
 ### Requirement: Motion Matching表现状态必须由唯一深Module拥有
 
@@ -154,4 +154,3 @@ Editor-only Query Fixture Preview MUST显式选择正式Definition、MM Pose sou
 - **WHEN** Fixture引用的Projection、Database或Artifact identity与当前Definition不一致
 - **THEN** Preview MUST在Module Resolve前拒绝输入并显示identity mismatch
 - **AND** MUST不迁移旧query、自动重建Artifact或选择其它Definition
-

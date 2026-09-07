@@ -719,31 +719,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 if (existing != null)
                 {
-                    RequireOwnership(existing, command);
                     if (existing.Phase ==
                             ActionAnimationPlaybackLifecyclePhase.Retired ||
                         existing.LogicTerminal != ActionLogicTerminalKind.None)
                     {
-                        throw new InvalidOperationException(
-                            "Action playback Select targets a retired entry.");
+                        BeginSegment(playbackId: command.PlaybackId,
+                            actionInstanceId: command.ActionInstanceId,
+                            animationChannelId: command.AnimationChannelId,
+                            programProducerId: command.ProgramProducerId,
+                            eventId: command.EventId,
+                            sequence: inboxEntry.Sequence);
+                        return;
                     }
+                    RequireOwnership(existing, command);
                     Entry writable = GetWritable(command.PlaybackId, false);
                     writable.LatestEventId = command.EventId;
                     writable.LatestCommandSequence = inboxEntry.Sequence;
                     return;
                 }
-                Entry created = GetWritable(command.PlaybackId, true);
-                created.ActionInstanceId = command.ActionInstanceId;
-                created.SourcePoseContinuityIdentity =
-                    NextSourcePoseContinuityIdentity();
-                created.AnimationChannelId = command.AnimationChannelId;
-                created.ProgramProducerId = command.ProgramProducerId;
-                created.LatestEventId = command.EventId;
-                created.LatestCommandSequence = inboxEntry.Sequence;
-                created.FirstSampleReadiness = ActionFirstSampleReadiness.Pending;
-                created.LogicTerminal = ActionLogicTerminalKind.None;
-                created.Phase =
-                    ActionAnimationPlaybackLifecyclePhase.PendingFirstSample;
+                BeginSegment(
+                    command.PlaybackId,
+                    command.ActionInstanceId,
+                    command.AnimationChannelId,
+                    command.ProgramProducerId,
+                    command.EventId,
+                    inboxEntry.Sequence);
                 return;
             }
             if (existing == null)
@@ -1045,6 +1045,66 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             m_PendingSourcePoseContinuityIdentity++;
             return m_PendingSourcePoseContinuityIdentity;
+        }
+
+        public void BeginActionSegment(
+            ActionLifecycleMutationLease lease,
+            ulong actionInstanceId,
+            EventId causeEventId)
+        {
+            RequireLease(lease);
+            if (actionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
+            for (int i = 0; i < m_CommittedCount; i++)
+            {
+                Entry entry = m_CommittedEntries[i];
+                if (entry == null ||
+                    entry.ActionInstanceId != actionInstanceId ||
+                    entry.Phase == ActionAnimationPlaybackLifecyclePhase.Retired ||
+                    entry.LogicTerminal != ActionLogicTerminalKind.None)
+                {
+                    continue;
+                }
+                Entry writable = GetWritable(entry.PlaybackId, false);
+                writable.LatestEventId = causeEventId;
+                writable.LogicTerminal = ActionLogicTerminalKind.SegmentReplaced;
+                if (writable.Phase ==
+                    ActionAnimationPlaybackLifecyclePhase.PendingFirstSample)
+                {
+                    writable.FirstSampleReadiness =
+                        ActionFirstSampleReadiness.Unavailable;
+                    writable.Phase =
+                        ActionAnimationPlaybackLifecyclePhase.Selected;
+                }
+                if (writable.Phase ==
+                    ActionAnimationPlaybackLifecyclePhase.Selected)
+                {
+                    writable.Phase =
+                        ActionAnimationPlaybackLifecyclePhase.Retained;
+                }
+            }
+        }
+
+        void BeginSegment(
+            AnimationPlaybackId playbackId,
+            ulong actionInstanceId,
+            AnimationChannelId animationChannelId,
+            string programProducerId,
+            EventId eventId,
+            ulong sequence)
+        {
+            Entry created = GetWritable(playbackId, true);
+            created.ActionInstanceId = actionInstanceId;
+            created.SourcePoseContinuityIdentity =
+                NextSourcePoseContinuityIdentity();
+            created.AnimationChannelId = animationChannelId;
+            created.ProgramProducerId = programProducerId;
+            created.LatestEventId = eventId;
+            created.LatestCommandSequence = sequence;
+            created.FirstSampleReadiness = ActionFirstSampleReadiness.Pending;
+            created.LogicTerminal = ActionLogicTerminalKind.None;
+            created.Phase =
+                ActionAnimationPlaybackLifecyclePhase.PendingFirstSample;
         }
 
         static void RequireOwnership(

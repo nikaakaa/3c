@@ -95,6 +95,8 @@ namespace ThirdPersonPerformance.Runtime
         bool m_CompletionSent;
         bool m_ShuttingDown;
         int m_PendingExitCode;
+        Exception m_RuntimeFailure;
+        LogType m_RuntimeFailureType;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Install()
@@ -112,6 +114,7 @@ namespace ThirdPersonPerformance.Runtime
             try
             {
                 LoadRequest();
+                Application.logMessageReceived += OnRuntimeLog;
                 ConfigureInstrumentation();
                 ConfigureRuntime();
                 if (!IsOperation(PerformanceOperationKinds.Smoke))
@@ -135,6 +138,11 @@ namespace ThirdPersonPerformance.Runtime
             }
             if (m_Status == PerformanceCaptureStatus.Faulted)
                 return;
+            if (m_RuntimeFailure != null)
+            {
+                Fault(m_CurrentStage, m_RuntimeFailure);
+                return;
+            }
             try
             {
                 DrainCommands();
@@ -163,11 +171,24 @@ namespace ThirdPersonPerformance.Runtime
 
         void OnDestroy()
         {
+            Application.logMessageReceived -= OnRuntimeLog;
             PerformanceCameraInputOverride.Clear();
             PerformanceInstrumentationSpanRuntime.CancelCapture();
             DisposeRecorders();
             m_Transport?.Dispose();
             m_Transport = null;
+        }
+
+        void OnRuntimeLog(string message, string stackTrace, LogType type)
+        {
+            if (m_ShuttingDown || m_Status == PerformanceCaptureStatus.Faulted ||
+                (type != LogType.Error && type != LogType.Exception && type != LogType.Assert))
+                return;
+            if (m_RuntimeFailure == null || type == LogType.Exception && m_RuntimeFailureType != LogType.Exception)
+            {
+                m_RuntimeFailure = new InvalidOperationException(message + "\n" + stackTrace);
+                m_RuntimeFailureType = type;
+            }
         }
 
         void LoadRequest()
@@ -579,17 +600,23 @@ namespace ThirdPersonPerformance.Runtime
 
         void CompleteRecording()
         {
+            string completedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            double captureSeconds = Math.Max(double.Epsilon, Time.realtimeSinceStartup - m_CaptureStartedRealtime);
+            int presentationFrames = Time.frameCount - m_CaptureStartFrame;
+            int dropped = GameplayTickSystem.Current.DroppedLocalLogicTicks - m_DroppedLogicTicksAtStart;
             m_Status = PerformanceCaptureStatus.Finalizing;
             m_CurrentStage = "finalizing";
             if (PerformanceInstrumentationSpanRuntime.Faulted)
                 throw new InvalidOperationException("Performance instrumentation Span capture faulted before finalization.");
             PerformanceSpanRecord[] instrumentationSpans = PerformanceInstrumentationSpanRuntime.EndCapture();
-            string instrumentationSpanPath = Path.Combine(m_Request.staging_root, "instrumentation-spans.bin");
-            PerformanceInstrumentationSpanFile.Write(instrumentationSpanPath, instrumentationSpans);
-            string instrumentationSpanHash = Sha256(instrumentationSpanPath);
             Profiler.enabled = false;
             Profiler.enableBinaryLog = false;
             Profiler.logFile = string.Empty;
+            for (int i = 0; i < m_Recorders.Count; i++)
+                m_Recorders[i].Recorder.Stop();
+            string instrumentationSpanPath = Path.Combine(m_Request.staging_root, "instrumentation-spans.bin");
+            PerformanceInstrumentationSpanFile.Write(instrumentationSpanPath, instrumentationSpans);
+            string instrumentationSpanHash = Sha256(instrumentationSpanPath);
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
             if (!File.Exists(profilerPath) || new FileInfo(profilerPath).Length == 0L)
                 throw new InvalidDataException("Unity binary Profiler capture was not published.");
@@ -599,7 +626,6 @@ namespace ThirdPersonPerformance.Runtime
             WriteMetricSamples(instrumentationSpans);
             string catalogRevision = ComputeCatalogRevision();
             WriteMetricCatalog(catalogRevision);
-            int dropped = GameplayTickSystem.Current.DroppedLocalLogicTicks - m_DroppedLogicTicksAtStart;
             var result = new PerformanceRuntimeResultDocument
             {
                 operation = m_Request.operation,
@@ -608,11 +634,11 @@ namespace ThirdPersonPerformance.Runtime
                 stage = "completed",
                 message = "Performance Scenario completed.",
                 started_utc = m_StartedUtc,
-                completed_utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
-                presentation_frames = Time.frameCount - m_CaptureStartFrame,
+                completed_utc = completedUtc,
+                presentation_frames = presentationFrames,
                 logic_ticks = logicTicks,
                 dropped_logic_ticks = dropped,
-                capture_seconds = Math.Max(double.Epsilon, Time.realtimeSinceStartup - m_CaptureStartedRealtime),
+                capture_seconds = captureSeconds,
                 metric_catalog_revision = catalogRevision,
                 instrumentation_identity = m_InstrumentationIdentity,
                 instrumentation_mode = m_InstrumentationMode.ToString(),
@@ -640,7 +666,6 @@ namespace ThirdPersonPerformance.Runtime
             for (int recorderIndex = 0; recorderIndex < m_Recorders.Count; recorderIndex++)
             {
                 RecorderEntry entry = m_Recorders[recorderIndex];
-                entry.Recorder.Stop();
                 ProfilerRecorderSample[] samples = entry.Recorder.ToArray();
                 if (samples.Length >= entry.Capacity)
                     throw new InvalidOperationException($"Performance metric '{entry.Metric.MetricId}' exhausted its fixed sample capacity.");

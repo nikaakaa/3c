@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CreateIdentityEntryGraph(entryGraphId)));
             transaction.Add(new CreatePoseNodeMutation(
                 stateGraphId.Value,
-                new CharacterTypedPoseNode(
+                new CharacterPoseCanvasNode(
                     nodeId,
                     "Motion Matching Pose",
                     new CharacterMotionMatchingPosePayload(
@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Create Pose History Collector");
             transaction.Add(new CreatePoseNodeMutation(
                 stateGraphId.Value,
-                new CharacterTypedPoseNode(
+                new CharacterPoseCanvasNode(
                     nodeId,
                     "Pose History Collector",
                     new CharacterPoseHistoryCollectorPayload(historyId)),
@@ -99,8 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static CharacterPresentationMutationTransaction DuplicatePose(
             string graphAssetId,
             PoseGraphId stateGraphId,
-            CharacterTypedPoseNode sourceNode,
-            CharacterTypedPoseGraph sourceEntryGraph,
+            CharacterPoseCanvasNode sourceNode,
+            CharacterPoseCanvasGraph sourceEntryGraph,
             PoseNodeId targetNodeId,
             PoseGraphId targetEntryGraphId,
             Vector2 position)
@@ -109,14 +109,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentException("Source node is not a Motion Matching Pose.", nameof(sourceNode));
             if (sourceEntryGraph == null || source.EntryGraph == null || source.EntryGraph.PoseGraphId != sourceEntryGraph.GraphId)
                 throw new InvalidOperationException("Motion Matching source node and entry graph identity do not match.");
-            CharacterTypedPoseGraph clone = CloneEntryGraph(sourceEntryGraph, targetEntryGraphId);
+            CharacterPoseCanvasGraph clone = CloneEntryGraph(sourceEntryGraph, targetEntryGraphId);
             var transaction = new CharacterPresentationMutationTransaction(
                 $"duplicate-motion-matching-pose/{targetNodeId.Value}",
                 "Duplicate Motion Matching Pose");
             transaction.Add(new CreatePoseGraphMutation(graphAssetId, clone));
             transaction.Add(new CreatePoseNodeMutation(
                 stateGraphId.Value,
-                new CharacterTypedPoseNode(
+                new CharacterPoseCanvasNode(
                     targetNodeId,
                     sourceNode.DisplayName,
                     new CharacterMotionMatchingPosePayload(
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return transaction;
         }
 
-        static CharacterTypedPoseGraph CreateIdentityEntryGraph(PoseGraphId graphId)
+        static CharacterPoseCanvasGraph CreateIdentityEntryGraph(PoseGraphId graphId)
         {
             PoseNodeId inputId = new PoseNodeId(graphId.Value + "/entry-pose-input");
             PoseNodeId outputId = new PoseNodeId(graphId.Value + "/graph-output");
@@ -142,18 +142,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 true,
                 0,
                 new PoseInterfacePortId("entry.pose"));
-            return new CharacterTypedPoseGraph(
+            return CharacterPoseCanvasGraph.CreateAuthoring(
                 graphId,
                 graphId.Value + ".identity.v1",
                 Array.Empty<CharacterPoseParameterDeclaration>(),
                 new[]
                 {
-                    new CharacterTypedPoseNode(inputId, "Entry Pose Input", new CharacterEntryPoseInputPayload()),
-                    new CharacterTypedPoseNode(outputId, "Graph Output", new CharacterGraphOutputPosePayload(), new[] { outputPort })
+                    new CharacterPoseCanvasNode(inputId, "Entry Pose Input", new CharacterEntryPoseInputPayload()),
+                    new CharacterPoseCanvasNode(outputId, "Graph Output", new CharacterGraphOutputPosePayload(), new[] { outputPort })
                 },
                 new[]
                 {
-                    new CharacterPoseEdge(
+                    new CharacterPoseCanvasConnection(
                         graphId.Value + "/identity-edge",
                         inputId,
                         CharacterMotionMatchingPosePorts.LocalPoseOutput,
@@ -167,21 +167,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 });
         }
 
-        static CharacterTypedPoseGraph CloneEntryGraph(CharacterTypedPoseGraph source, PoseGraphId targetGraphId)
+        static CharacterPoseCanvasGraph CloneEntryGraph(CharacterPoseCanvasGraph source, PoseGraphId targetGraphId)
         {
             var nodeMap = new Dictionary<PoseNodeId, PoseNodeId>();
-            CharacterTypedPoseNode[] nodes = source.Nodes.Select((node, index) =>
+            CharacterPoseCanvasNode[] nodes = source.Nodes.Select((node, index) =>
             {
                 PoseNodeId targetId = new PoseNodeId(targetGraphId.Value + "/node-" + index);
                 nodeMap.Add(node.NodeId, targetId);
-                return new CharacterTypedPoseNode(
+                return new CharacterPoseCanvasNode(
                     targetId,
                     node.DisplayName,
                     node.Payload,
                     node.DynamicPorts.ToArray());
             }).ToArray();
-            CharacterPoseEdge[] edges = source.Edges.Select((edge, index) =>
-                new CharacterPoseEdge(
+            CharacterPoseCanvasConnection[] edges = source.Edges.Select((edge, index) =>
+                new CharacterPoseCanvasConnection(
                     targetGraphId.Value + "/edge-" + index,
                     nodeMap[edge.SourceNodeId],
                     edge.SourcePortId,
@@ -189,7 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     edge.TargetPortId)).ToArray();
             CharacterPoseGraphLayoutEntry[] layout = source.Layout.Select(value =>
                 new CharacterPoseGraphLayoutEntry(nodeMap[value.NodeId], value.Position)).ToArray();
-            return new CharacterTypedPoseGraph(
+            return CharacterPoseCanvasGraph.CreateAuthoring(
                 targetGraphId,
                 targetGraphId.Value + ".copy.v1",
                 source.Parameters.ToArray(),

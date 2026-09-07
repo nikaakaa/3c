@@ -36,12 +36,7 @@ struct Varyings
     float3 tangentWS    : TEXCOORD4;
     float3 bitangentWS  : TEXCOORD5;
 
-    DECLARE_LIGHTMAP_OR_SH(staticLightmapUV, vertexSH, 8);
-#ifdef DYNAMICLIGHTMAP_ON
-    
-    float2  dynamicLightmapUV : TEXCOORD9; // Dynamic lightmap UVs
-    
-#endif
+
 };
 
 // ---------------- Uniform Variable ---------------------
@@ -67,13 +62,6 @@ Varyings ZZZVert(Attributes input)
     output.tangentWS = normalInputs.tangentWS;
     output.bitangentWS = normalInputs.bitangentWS;
 
-    // TODO: vertexSH
-    output.vertexSH = 0;
-
-    #ifdef DYNAMICLIGHTMAP_ON
-    output.dynamicLightmapUV = float2(0.0f, 0.0f);
-    #endif
-    
     return output;
 }
 
@@ -314,23 +302,6 @@ float4 ZZZFrag(Varyings input) : SV_Target
     half DirectBRDFSpecular = ZZZDirectBRDFSpecular(brdfData, normalWS, lightDirWS, viewDirWS);
 
 
-    half3 bakedGI = 0;
-
-    // TODO: dynamicLightmapUV
-#if defined(DYNAMICLIGHTMAP_ON)
-    
-    // bakedGI = SAMPLE_GI(input.staticLightmapUV, input.dynamicLightmapUV, input.vertexSH, normalWS);
-    bakedGI = SAMPLE_GI(input.staticLightmapUV, float2(0,0), input.vertexSH, normalWS);
-    
-#else
-    
-    // bakedGI = SAMPLE_GI(input.staticLightmapUV, input.vertexSH, normalWS);
-    bakedGI = SAMPLE_GI(float2(0,0), input.vertexSH, normalWS);
-    
-#endif
-    
-    half3 GlobalIllumination = ZZZGlobalIllumination(brdfData, bakedGI, normalWS, viewDirWS);
-
     // ---------------- Final Stage ---------------- 
 #ifdef DEBUG_MODE
     
@@ -339,7 +310,6 @@ float4 ZZZFrag(Varyings input) : SV_Target
     float3 f0 = lerp(0.04, albedo.rgb, metallic);
     float3 directBRDTest = DirectPBR(clamp(NoL, 0, 1), NoV, NoH, HoV, albedo.rgb, metallic, 1 - smoothness, f0, lightColor);
 
-    // return half4(bakedGI, 1);
     return half4(albedoColor, 1.0);
     
 #endif

@@ -77,6 +77,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Ordered(1.5f), Color(126, 220, 146)]
     public sealed class MotionCurveTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.MotionCurveTrack;
+
         public void Sample(
             float previousTimelineTime,
             float timelineTime,
@@ -205,6 +207,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Color(126, 220, 146)]
     public sealed partial class MotionCurveClip : Clip
     {
+        public override string ContractKind => TimelineContractKinds.MotionCurveClip;
+
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CurveId = "MotionCurve";
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -249,5 +253,28 @@ namespace BTSMTL.Timeline
             CurveEndFrame = EndFrame;
         }
 #endif
+    }
+
+    public static class MotionCurveTimelineContracts
+    {
+        public static readonly ITimelineContractProvider Provider = new TimelineContractProvider(
+            new[]
+            {
+                new TimelineTrackContract(
+                    TimelineContractKinds.MotionCurveTrack,
+                    TimelineTrackOverlapPolicy.Blend,
+                    TimelineCapability.BodyMotion,
+                    TimelineContractKinds.MotionCurveClip)
+            },
+            new[]
+            {
+                new TimelineClipContract(
+                    TimelineContractKinds.MotionCurveClip,
+                    TimelineContractKinds.MotionCurveTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.BodyMotion,
+                    true,
+                    true)
+            });
     }
 }

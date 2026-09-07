@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     [Serializable]
-    public sealed class AgentPackageAssetReferenceV4
+    public sealed class AgentPackageObjectReference
     {
         public string assetPath;
         public string assetGuid;
@@ -37,9 +37,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentPackagePresentationProfileFile
     {
         public string id;
-        public AgentPackageAssetReferenceV4 owner;
-        public AgentPackageAssetReferenceV4 poseGraph;
-        public AgentPackageAssetReferenceV4 rig;
+        public AgentPackageObjectReference owner;
+        public AgentPackageObjectReference poseGraph;
+        public AgentPackageObjectReference rig;
         public AgentPackagePresentationPolicy policy;
         public List<AgentPackagePoseSourceBinding> poseSources =
             new List<AgentPackagePoseSourceBinding>();
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentPackageLinkedPoseInterfaceFile
     {
         public string id;
-        public AgentPackageAssetReferenceV4 asset;
+        public AgentPackageObjectReference asset;
         public string ownerIdentity;
         public string interfaceId;
         public ulong revision;
@@ -93,12 +93,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string id;
         public string name;
-        public AgentPackageAssetReferenceV4 asset;
+        public AgentPackageObjectReference asset;
         public string ownerIdentity;
         public string implementationId;
         public ulong revision;
-        public AgentPackageAssetReferenceV4 interfaceAsset;
-        public AgentPackageAssetReferenceV4 graphOwner;
+        public AgentPackageObjectReference interfaceAsset;
+        public AgentPackageObjectReference graphOwner;
         public string graphOwnerIdentity;
         public List<AgentPackageLinkedPoseImplementationEntry> entries =
             new List<AgentPackageLinkedPoseImplementationEntry>();
@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string id;
         public string groupId;
-        public AgentPackageAssetReferenceV4 interfaceAsset;
+        public AgentPackageObjectReference interfaceAsset;
     }
 
     [Serializable]
@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string id;
         public string kind;
-        public AgentPackageAssetReferenceV4 asset;
+        public AgentPackageObjectReference asset;
         public string selectorId;
         public string groupId;
         public AgentPackageEquipmentLinkedPoseSelectorPayload equipment;
@@ -159,7 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentPackagePresentationPolicy
     {
-        public AgentPackageAssetReferenceV4 motionMatchingProfile;
+        public AgentPackageObjectReference motionMatchingProfile;
         public string footPlacementAnalysisMode;
         public string footPlacementAnalysisSourceAssetGuid;
     }
@@ -169,12 +169,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string name;
         public string kind;
-        public AgentPackageAssetReferenceV4 slot;
-        public AgentPackageAssetReferenceV4 binding;
-        public AgentPackageAssetReferenceV4 source;
+        public AgentPackageObjectReference slot;
+        public AgentPackageObjectReference binding;
+        public AgentPackageObjectReference source;
         public string searchDomainId;
-        public List<AgentPackageAssetReferenceV4> databases =
-            new List<AgentPackageAssetReferenceV4>();
+        public List<AgentPackageObjectReference> databases =
+            new List<AgentPackageObjectReference>();
         public string footAnalysisIdentity;
         public string contentRevision;
     }
@@ -183,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentPackageAnimationClipCurvesFile
     {
         public string id;
-        public AgentPackageAssetReferenceV4 clip;
+        public AgentPackageObjectReference clip;
         public string dependencyBaseline;
         public string analysisInputHash;
         public string registeredCurveHash;
@@ -194,8 +194,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentPackageLocomotionSyncGroup
     {
         public string groupId;
-        public List<AgentPackageAssetReferenceV4> members =
-            new List<AgentPackageAssetReferenceV4>();
+        public List<AgentPackageObjectReference> members =
+            new List<AgentPackageObjectReference>();
     }
 
     [Serializable]
@@ -203,7 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string timelineId;
         public string trackId;
-        public AgentPackageAssetReferenceV4 source;
+        public AgentPackageObjectReference source;
     }
 
     [Serializable]

@@ -320,8 +320,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             internal CharacterPoseSymbolicProgram Build()
             {
                 CompileGraph(
-                    m_Request.Asset,
-                    m_Request.Asset.Graph,
+                    m_Request.AuthoringView.OwnerAsset,
+                    m_Request.AuthoringView.RootGraph,
                     CharacterPoseIrGraphRole.Root,
                     new Dictionary<PoseInterfacePortId,
                         CharacterPoseSymbolicValueReference>(),
@@ -332,7 +332,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             GraphResult CompileGraph(
                 CharacterPresentationPoseGraphAsset owner,
-                CharacterTypedPoseGraph graph,
+                CharacterPoseCanvasGraph graph,
                 CharacterPoseIrGraphRole role,
                 IReadOnlyDictionary<PoseInterfacePortId,
                     CharacterPoseSymbolicValueReference> imports,
@@ -343,7 +343,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     owner,
                     graph.GraphId,
                     role);
-                Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes =
+                Dictionary<PoseNodeId, CharacterPoseCanvasNode> nodes =
                     graph.Nodes.ToDictionary(value => value.NodeId);
                 var values = new Dictionary<string,
                     CharacterPoseSymbolicValueReference>(
@@ -356,7 +356,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                      nodeIndex++)
                 {
                     CharacterPoseIrNode irNode = ordered.Nodes[nodeIndex];
-                    CharacterTypedPoseNode node = nodes[
+                    CharacterPoseCanvasNode node = nodes[
                         new PoseNodeId(irNode.NodeId.Value)];
                     CharacterPoseNodeDefinition definition =
                         CharacterPoseNodeDefinitionModule.Shared
@@ -497,7 +497,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyList<CharacterPoseSymbolicValueReference>
                 CompileStateGraphs(
                     CharacterPresentationPoseGraphAsset owner,
-                    CharacterTypedPoseNode node,
+                    CharacterPoseCanvasNode node,
                     string scope,
                     string fragmentIdentity)
             {
@@ -510,7 +510,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                          payload.StateMachine.States.OrderBy(
                              value => value.StateId))
                 {
-                    CharacterTypedPoseGraph stateGraph =
+                    CharacterPoseCanvasGraph stateGraph =
                         m_Closure.RequireGraph(owner, state.PoseGraphId);
                     string stateScope = scopedNodeId.Value +
                         "/state/" + state.StateId.Value;
@@ -534,8 +534,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             LinkedResult CompileLinkedEntries(
                 CharacterPresentationPoseGraphAsset owner,
-                CharacterTypedPoseGraph graph,
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasGraph graph,
+                CharacterPoseCanvasNode node,
                 CharacterPoseIrNode irNode,
                 string scope,
                 IReadOnlyDictionary<string,
@@ -565,7 +565,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         m_Implementations[implementationId];
                     CharacterLinkedPoseImplementationEntryBinding binding =
                         implementation.RequireEntry(payload.EntryId);
-                    CharacterTypedPoseGraph entryGraph =
+                    CharacterPoseCanvasGraph entryGraph =
                         m_Closure.RequireGraph(
                             binding.GraphOwner,
                             binding.GraphId);
@@ -609,15 +609,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             void CompileSubgraph(
                 CharacterPresentationPoseGraphAsset owner,
-                CharacterTypedPoseGraph graph,
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasGraph graph,
+                CharacterPoseCanvasNode node,
                 CharacterPoseIrNode irNode,
                 string scope,
                 string fragmentIdentity,
                 Dictionary<string,
                     CharacterPoseSymbolicValueReference> values)
             {
-                CharacterTypedPoseGraph child = m_Closure.RequireGraph(
+                CharacterPoseCanvasGraph child = m_Closure.RequireGraph(
                     owner,
                     node.Subgraph.PoseGraphId);
                 Dictionary<PoseInterfacePortId,
@@ -654,7 +654,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             static Dictionary<PoseInterfacePortId,
                 CharacterPoseSymbolicValueReference> BuildImports(
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasNode node,
                 CharacterPoseIrNode irNode,
                 string scope,
                 IReadOnlyDictionary<string,
@@ -691,7 +691,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             static void BindGraphInputs(
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasNode node,
                 IReadOnlyDictionary<PoseInterfacePortId,
                     CharacterPoseSymbolicValueReference> imports,
                 string scope,
@@ -721,7 +721,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             static void BindGraphOutputs(
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasNode node,
                 CharacterPoseIrNode irNode,
                 string scope,
                 IReadOnlyDictionary<string,
@@ -758,7 +758,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             static IReadOnlyList<CharacterPoseSymbolicValueReference>
                 BindOperationOutputs(
-                    CharacterTypedPoseNode node,
+                    CharacterPoseCanvasNode node,
                     string scope,
                     IDictionary<string,
                         CharacterPoseSymbolicValueReference> values,
@@ -916,7 +916,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             static CharacterPoseSpace ResolveOutputPoseSpace(
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasNode node,
                 CharacterPoseOperationCode code)
             {
                 CharacterPoseSpace result = ResolvePoseSpace(
@@ -931,7 +931,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             static CharacterPoseSpace ResolvePoseSpace(
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasNode node,
                 CharacterPosePortDirection direction)
             {
                 CharacterPoseSpace result = CharacterPoseSpace.None;
@@ -1008,7 +1008,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             CharacterPoseCompilationDiagnosticSeverity.Error,
                             "symbolic-family-lowering-invalid",
                             exception.Message,
-                            request?.Asset?.Graph?.GraphId ?? default)
+                            request?.AuthoringView?.RootGraph?.GraphId ?? default)
                     });
             }
         }

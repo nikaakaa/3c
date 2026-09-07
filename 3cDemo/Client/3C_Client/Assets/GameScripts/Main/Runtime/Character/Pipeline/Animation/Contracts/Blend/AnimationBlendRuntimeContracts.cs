@@ -641,7 +641,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeArray<byte> hasPrevious,
             NativeArray<ulong> completedAt,
             NativeArray<AnimationSourcePoseCaptureFailure> failure,
-            float presentationDeltaSeconds)
+            float presentationDeltaSeconds,
+            NativeSlice<float> poseParameters = default,
+            NativeSlice<byte> poseParameterAvailability = default)
         {
             if (!sourceId.IsValid || sourceIndex < 0 || completionIdentity == 0 ||
                 currentPose.Length == 0 ||
@@ -650,6 +652,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !previousAvailable.IsCreated || !hasPrevious.IsCreated || !completedAt.IsCreated || !failure.IsCreated || hasPrevious.Length == 0 ||
                 previousAvailable.Length != hasPrevious.Length || hasPrevious.Length != completedAt.Length || hasPrevious.Length != failure.Length ||
                 sourceIndex >= hasPrevious.Length ||
+                poseParameters.Length != poseParameterAvailability.Length ||
                 previousAvailable[sourceIndex] > 1 || hasPrevious[sourceIndex] > 1 ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
             {
@@ -666,6 +669,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CompletedAt = completedAt;
             Failure = failure;
             PresentationDeltaSeconds = presentationDeltaSeconds;
+            PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
         }
 
         internal AnimationPoseSourceId SourceId { get; }
@@ -679,6 +684,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<ulong> CompletedAt { get; }
         internal NativeArray<AnimationSourcePoseCaptureFailure> Failure { get; }
         internal float PresentationDeltaSeconds { get; }
+        internal NativeSlice<float> PoseParameters { get; }
+        internal NativeSlice<byte> PoseParameterAvailability { get; }
+        internal int ParameterCount => PoseParameters.Length;
+
+        internal void WriteParameter(int parameterIndex, float value)
+        {
+            if ((uint)parameterIndex >= (uint)PoseParameters.Length || !float.IsFinite(value))
+                throw new ArgumentOutOfRangeException(nameof(parameterIndex));
+            NativeSlice<float> parameters = PoseParameters;
+            NativeSlice<byte> availability = PoseParameterAvailability;
+            parameters[parameterIndex] = value;
+            availability[parameterIndex] = 1;
+        }
     }
 
     public enum AnimationPoseAvailability : byte

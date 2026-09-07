@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.ActionSystem
         [SerializeField] GameplayTagQuery m_BlockTags = new GameplayTagQuery();
         [SerializeField] GameplayTagQuery m_CancelTags = new GameplayTagQuery();
         [SerializeField] ActionTargetRequirement m_TargetRequirement;
+        [SerializeField, Min(1)] int m_MaxConcurrentInstances = 1;
 
         public string ActionId => m_ActionId;
         public string BehaviorId => m_ActionId;
@@ -29,6 +30,7 @@ namespace ThirdPersonCharacter.ActionSystem
         public GameplayTagQuery BlockTags => m_BlockTags;
         public GameplayTagQuery CancelTags => m_CancelTags;
         public ActionTargetRequirement TargetRequirement => m_TargetRequirement;
+        public int MaxConcurrentInstances => m_MaxConcurrentInstances;
 
         public bool ContainsTag(GameplayTagId tag)
         {
@@ -51,6 +53,11 @@ namespace ThirdPersonCharacter.ActionSystem
             if (!Enum.IsDefined(typeof(ActionTargetRequirement), m_TargetRequirement))
             {
                 errors?.Add($"{name}: target requirement '{(int)m_TargetRequirement}' is invalid.");
+                valid = false;
+            }
+            if (m_MaxConcurrentInstances <= 0)
+            {
+                errors?.Add($"{name}: max concurrent instances must be positive.");
                 valid = false;
             }
 

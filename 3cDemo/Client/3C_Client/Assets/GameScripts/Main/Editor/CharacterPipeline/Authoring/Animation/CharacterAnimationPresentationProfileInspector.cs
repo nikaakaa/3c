@@ -24,18 +24,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly struct PoseSourceConsumer
         {
             public PoseSourceConsumer(
-                CharacterTypedPoseNode machine,
+                CharacterPoseCanvasNode machine,
                 CharacterPoseStateDefinition state,
-                CharacterTypedPoseNode player)
+                CharacterPoseCanvasNode player)
             {
                 Machine = machine;
                 State = state;
                 Player = player;
             }
 
-            public CharacterTypedPoseNode Machine { get; }
+            public CharacterPoseCanvasNode Machine { get; }
             public CharacterPoseStateDefinition State { get; }
-            public CharacterTypedPoseNode Player { get; }
+            public CharacterPoseCanvasNode Player { get; }
         }
 
         readonly List<CharacterPipelineDefinition> m_Contexts = new List<CharacterPipelineDefinition>();
@@ -741,7 +741,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void CollectPoseSourceConsumers(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             CharacterPresentationPoseSourceSlot slot,
             List<PoseSourceConsumer> consumers,
             HashSet<PoseGraphId> visited)
@@ -750,7 +750,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
             {
-                CharacterTypedPoseNode machine = graph.Nodes[nodeIndex];
+                CharacterPoseCanvasNode machine = graph.Nodes[nodeIndex];
                 if (machine?.Payload == null)
                     continue;
                 CharacterPoseNodeDefinition definition =
@@ -783,11 +783,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (state == null ||
                         !owner.TryGetGraph(
                             state.PoseGraphId,
-                            out CharacterTypedPoseGraph stateGraph))
+                            out CharacterPoseCanvasGraph stateGraph))
                         continue;
                     for (int stateNodeIndex = 0; stateNodeIndex < stateGraph.Nodes.Count; stateNodeIndex++)
                     {
-                        CharacterTypedPoseNode player = stateGraph.Nodes[stateNodeIndex];
+                        CharacterPoseCanvasNode player = stateGraph.Nodes[stateNodeIndex];
                         if (player?.Payload == null)
                             continue;
                         CharacterPoseNodeDefinition playerDefinition =

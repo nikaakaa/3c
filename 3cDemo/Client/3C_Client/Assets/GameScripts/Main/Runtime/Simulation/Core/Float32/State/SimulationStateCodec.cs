@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 13;
-		public const string CodecIdentity = "character-state/float32/v13";
-		const string HashIdentity = "character-state-hash/float32/v12";
+		const int Version = 14;
+		public const string CodecIdentity = "character-state/float32/v15";
+		const string HashIdentity = "character-state-hash/float32/v13";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -249,6 +249,7 @@ namespace ThirdPersonSimulation
             WriteTargetSnapshot(writer, value.TargetSnapshot);
             SimulationExecutionSourceCodec.Write(writer, value.Source);
             EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
+            writer.WriteUInt64(value.ReplacementActionInstanceId);
         }
 
         static Float32ActionActivationRequestState ReadActionRequest(
@@ -268,6 +269,7 @@ namespace ThirdPersonSimulation
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
             SimulationExecutionSource source = ReadExecutionSource(reader, layout);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
+            ulong replacementActionInstanceId = reader.ReadUInt64();
             return new Float32ActionActivationRequestState(
                 actionId,
                 skillId,
@@ -279,7 +281,8 @@ namespace ThirdPersonSimulation
                 targetKey,
                 target,
                 source,
-                equipmentContext);
+                equipmentContext,
+                replacementActionInstanceId);
         }
 
         static void WriteActionInstance(CanonicalWriter writer, Float32ActionInstanceState value)
@@ -397,7 +400,7 @@ namespace ThirdPersonSimulation
 
         static void WriteSkillExecutionState(
             CanonicalWriter writer,
-            Float32SkillExecutionStateAggregate value,
+			ActionSkillExecutionAggregate<CharacterStateValue> value,
             ProgramExecutionLayout layout)
         {
             if (value == null)
@@ -405,7 +408,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(value.Frames.Count);
             for (int frameIndex = 0; frameIndex < value.Frames.Count; frameIndex++)
             {
-                Float32SkillExecutionStateFrame frame = value.Frames[frameIndex];
+				ActionSkillExecutionFrame<CharacterStateValue> frame = value.Frames[frameIndex];
                 if (frame == null || frame.Generation == 0)
                     throw new InvalidDataException("Character state Skill execution frame is incomplete.");
                 writer.WriteString(frame.SkillId.Value);
@@ -425,14 +428,14 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static Float32SkillExecutionStateAggregate ReadSkillExecutionState(
+		static ActionSkillExecutionAggregate<CharacterStateValue> ReadSkillExecutionState(
             CanonicalReader reader,
             ProgramExecutionLayout layout)
         {
             int frameCount = reader.ReadInt32();
             if (frameCount < 0)
                 throw new InvalidDataException("Character state Skill execution frame count is invalid.");
-            var frames = new List<Float32SkillExecutionStateFrame>(frameCount);
+			var frames = new List<ActionSkillExecutionFrame<CharacterStateValue>>(frameCount);
             for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
             {
                 CharacterSkillId skillId = new CharacterSkillId(reader.ReadString());
@@ -457,7 +460,7 @@ namespace ThirdPersonSimulation
                         throw new InvalidDataException("Character state Skill execution frame state value kind does not match its address.");
                     values.Add(new KeyValuePair<int, CharacterStateValue>(slotIndex, value));
                 }
-                frames.Add(new Float32SkillExecutionStateFrame(
+				frames.Add(new ActionSkillExecutionFrame<CharacterStateValue>(
                     skillId,
                     entryOperation,
                     actionInstanceId,
@@ -465,7 +468,7 @@ namespace ThirdPersonSimulation
                     generation,
                     values));
             }
-            return new Float32SkillExecutionStateAggregate(frames);
+			return new ActionSkillExecutionAggregate<CharacterStateValue>(frames);
         }
 
         static void WriteTargetSnapshot(CanonicalWriter writer, SimulationActionTargetSnapshot value)

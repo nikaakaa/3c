@@ -74,6 +74,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.SetActionProfileCancelQuery,
                 AgentMutationKind.SetActionProfileTargetRequirement,
                 AgentMutationKind.SetActionRequestTimingClass);
+            Register(new AgentSkillDefinitionMutationHandler(),
+                AgentMutationKind.SetSkillDefinition,
+                AgentMutationKind.DeleteSkillDefinition);
+            Register(new AgentControlConfigurationMutationHandler(),
+                AgentMutationKind.ConfigureControlConfiguration);
             Register(new AgentAIControllerMutationHandler(),
                 AgentMutationKind.EnsureAIControllerDefinition,
                 AgentMutationKind.EnsureAIControllerTree,
@@ -88,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.EnsureAIActionRequest);
             Register(new AgentBTConditionRuleMutationHandler(conditionBuilder), AgentMutationKind.EnsureBTConditionRule);
             Register(new AgentGraphNodeMutationHandler(emitters), AgentMutationKind.EnsureGraphNode, AgentMutationKind.DeleteGraphNode);
+            Register(new AgentGraphReferenceMutationHandler(), AgentMutationKind.EnsureGraph, AgentMutationKind.ConfigureGraphReference);
             Register(new AgentGraphLinkMutationHandler(), AgentMutationKind.DeleteFlowEdge, AgentMutationKind.DeletePropertyEdge, AgentMutationKind.LinkFlow, AgentMutationKind.LinkProperty);
         }
 

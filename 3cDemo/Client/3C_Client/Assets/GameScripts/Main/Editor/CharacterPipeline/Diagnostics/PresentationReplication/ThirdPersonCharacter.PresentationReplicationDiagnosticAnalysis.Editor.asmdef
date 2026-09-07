@@ -1,0 +1,25 @@
+{
+    "name": "ThirdPersonCharacter.PresentationReplicationDiagnosticAnalysis.Editor",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Editor",
+    "references": [
+        "KK.GeneratedDiagnosticSampling.Annotations",
+        "KK.GeneratedDiagnosticSampling",
+        "KK.GeneratedDiagnosticSampling.Host",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonClient.Editor",
+        "ThirdPersonCharacter.PresentationReplicationDiagnosticSampling"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "KK_DIAGNOSTIC_SAMPLING"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

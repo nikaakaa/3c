@@ -131,12 +131,6 @@ Shader "CelShaders/ZZZShader"
         
         
         
-        // LightMap
-        [Title(LightMap Settings)]
-        [Main(LightMapGruop, _, off, off)] LightMapSettings ("LightMap Settings", float) = 1
-        [KWEnum(LightMapGruop, Dynamic, DYNAMICLIGHTMAP_ON, Static, _)]
-         _LightMapMode("LightMap Mode", Int) = 0
-        
 //////////////////////////// Render State Settings //////////////////////////////
 
         [Title(Render State Settings)]
@@ -209,7 +203,6 @@ Shader "CelShaders/ZZZShader"
 
             // TODO: PBR 工作流
             #pragma shader_feature _SPECULAR_SETUP
-            #pragma shader_feature DYNAMICLIGHTMAP_ON
 
             // Domain
             #pragma shader_feature IS_FACE

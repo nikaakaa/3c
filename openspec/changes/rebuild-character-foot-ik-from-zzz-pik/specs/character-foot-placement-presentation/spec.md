@@ -90,6 +90,12 @@ Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页。Foot采样
 - **THEN** Diagnostics MUST不发布本帧Pending Constraint或Physical结果
 - **AND** Projector MUST不为Foot Capture借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault
 
+#### Scenario: 增加响应解释字段
+
+- **WHEN** 仅增加本帧响应原因或前后数值的诊断记录
+- **THEN** 运行状态、脚目标、Pelvis、Bend与最终骨骼 MUST保持不变
+- **AND** MUST不要求修改Goal Assembler、Solver算法或质量评分政策
+
 ## ADDED Requirements
 
 ### Requirement: Foot结果必须形成紧凑的原控制输出

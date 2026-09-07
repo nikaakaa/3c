@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
@@ -50,9 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            Publication.Invalidate();
-            Program.ClearSourceDemand();
             Exception failure = null;
+            DisposeStep(Publication.RestoreInitialAndInvalidate, ref failure);
+            DisposeStep(Program.ClearSourceDemand, ref failure);
             DisposeStep(Diagnostics.Dispose, ref failure);
             DisposeStep(Program.DetachExecutionJobs, ref failure);
             DisposeStep(Source.Dispose, ref failure);
@@ -96,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationProjection projection,
+            CharacterAnimationResourceScope resourceScope,
             CharacterActionPlaybackRuntime actionPlayback,
             CharacterMotionMatchingPresentationModule motionMatching,
             AnimationSlotRuntime animationSlots,
@@ -116,6 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(animancer));
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            if (resourceScope == null)
+                throw new ArgumentNullException(nameof(resourceScope));
             Animator animator = animancer.Animator;
             if (!animator ||
                 animator.cullingMode != AnimatorCullingMode.AlwaysAnimate)
@@ -409,13 +413,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     clipCatalogCapacity,
                     directPlayers.Length,
                     clipPlayers.Length,
-                    blendSpacePlayers.Length);
+                    blendSpacePlayers.Length,
+                    resourceScope,
+                    initialLayout.ParameterCount);
+                poseStateSources.BindResourceModule(source);
                 publication = new CharacterFinalPosePublication(
                     projection.PosePlan,
                     projection.Rig,
                     rigBinding,
                     rootHierarchy,
-                    source);
+                    source,
+                    projection.AnimationProperties);
                 if (managesGraphClock)
                 {
                     animancer.Graph.PauseGraph();

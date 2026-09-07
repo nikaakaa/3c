@@ -1,0 +1,332 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5ae3c048510ba4bb65d1cfb507eb53, type: 3}
+  m_Name: CorinPanelExpandTimeline
+  m_EditorClassIdentifier: 
+  m_Data:
+    m_AuthoringId: f7cb540c-51dc-4348-a226-b71a55ecba38
+    m_Name: Corin Panel Expand
+    m_Tracks:
+    - rid: 1000000000000001
+    - rid: 207050278562168832
+    m_Sections: []
+    m_ExternalBindings:
+    - m_AuthoringId: 2632bf07-d41c-480f-857d-bd44954a5e02
+      m_BindingId: leftPanel
+      m_DisplayName: Left Panel
+      m_Domain: scene.presentation.panel
+      m_ParameterId: 
+      m_ValueKind: 1
+      m_Access: 1
+      m_Lifetime: 1
+    - m_AuthoringId: bb30d5b0-6025-49a8-9d6f-6c23725f37b9
+      m_BindingId: leftOpenAmount
+      m_DisplayName: Left Open Amount
+      m_Domain: scene.presentation.panel
+      m_ParameterId: openAmount
+      m_ValueKind: 2
+      m_Access: 3
+      m_Lifetime: 2
+    - m_AuthoringId: 81853984-07cc-48df-992a-e29e3bc87914
+      m_BindingId: rightPanel
+      m_DisplayName: Right Panel
+      m_Domain: scene.presentation.panel
+      m_ParameterId: 
+      m_ValueKind: 1
+      m_Access: 1
+      m_Lifetime: 1
+    - m_AuthoringId: 471b4fd4-1325-4101-a566-91faa2894b71
+      m_BindingId: rightOpenAmount
+      m_DisplayName: Right Open Amount
+      m_Domain: scene.presentation.panel
+      m_ParameterId: openAmount
+      m_ValueKind: 2
+      m_Access: 3
+      m_Lifetime: 2
+    - m_AuthoringId: 778d0992-ea36-4115-a3dd-f73658007ff7
+      m_BindingId: leftVisible
+      m_DisplayName: Left Visible
+      m_Domain: scene.presentation.panel
+      m_ParameterId: visible
+      m_ValueKind: 3
+      m_Access: 3
+      m_Lifetime: 2
+    - m_AuthoringId: d07ea552-5221-4d60-95a0-86885bbaf311
+      m_BindingId: rightVisible
+      m_DisplayName: Right Visible
+      m_Domain: scene.presentation.panel
+      m_ParameterId: visible
+      m_ValueKind: 3
+      m_Access: 3
+      m_Lifetime: 2
+    m_Scale: 1
+    m_Loop: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 1000000000000001
+      type: {class: ScenePresentationParameterTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c853d43f-cb54-47d4-b0e1-7edf4fe0fdf6
+        Name: Panel Presentation
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 1000000000000002
+        - rid: 1000000000000003
+        - rid: 207050278873333760
+        - rid: 207050278873333761
+    - rid: 1000000000000002
+      type: {class: ScenePresentationParameterCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ce3ac914-13d3-485a-bd11-32fb36b491de
+        StartFrame: 0
+        EndFrame: 60
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_TargetBindingId: leftPanel
+        m_ParameterBindingId: leftOpenAmount
+        m_ValueCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 1000000000000003
+      type: {class: ScenePresentationParameterCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 9b476da4-0a2f-46b6-bb6d-0ec38abf4ec3
+        StartFrame: 0
+        EndFrame: 60
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_TargetBindingId: rightPanel
+        m_ParameterBindingId: rightOpenAmount
+        m_ValueCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 207050278562168832
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 42addf3b-5c00-42e5-b18e-f43a2eb3b36e
+        Name: Tree
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050278562168833
+    - rid: 207050278562168833
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: d832eff3-e3ff-4a40-9ca6-9fbf0f05f344
+        StartFrame: 0
+        EndFrame: 3
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_InlineTree:
+          rid: 207050278562168834
+        m_SharedTreeAsset: {fileID: 0}
+    - rid: 207050278562168834
+      type: {class: TimelineRunningTree, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_Name: Timeline Tree
+        m_GraphAuthoringId: 394a92c7-4021-4c2c-ac6c-74a1d902edcf
+        m_Nodes:
+        - rid: 207050278562168835
+        - rid: 207050278562168836
+        - rid: 207050278562168837
+        - rid: 207050278562168838
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
+        m_RootGUID: ce177ebe-4a30-4c2f-a351-c50a3807a1ae
+        m_OnEnableGUID: 2b70db61-05e3-45b0-8d42-cf8414f0c937
+        m_OnDisableGUID: 8c80d39c-f233-47a1-ad42-e7f9c75645c3
+        m_OnDestroyGUID: 20ac61f9-5d18-464a-ae84-51696f2f1d64
+    - rid: 207050278562168835
+      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: ce177ebe-4a30-4c2f-a351-c50a3807a1ae
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 0}
+        m_DeltaTime:
+          m_Name: m_DeltaTime
+          m_PortId: m_DeltaTime
+          m_DisplayName: DeltaTime
+          m_OwnerModuleId: 
+          m_FieldKey: m_DeltaTime
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 0
+        m_OutputEdgeGUID: 
+    - rid: 207050278562168836
+      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_GUID: 2b70db61-05e3-45b0-8d42-cf8414f0c937
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 200}
+        m_OutputEdgeGUID: 
+        EnterType: 0
+    - rid: 207050278562168837
+      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_GUID: 8c80d39c-f233-47a1-ad42-e7f9c75645c3
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 400}
+        m_OutputEdgeGUID: 
+        EnterType: 1
+    - rid: 207050278562168838
+      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_GUID: 20ac61f9-5d18-464a-ae84-51696f2f1d64
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 600}
+        m_OutputEdgeGUID: 
+        EnterType: 2
+    - rid: 207050278873333760
+      type: {class: ScenePresentationParameterCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 47b02c2b-01e2-4042-a72c-e17a13dfae0d
+        StartFrame: 0
+        EndFrame: 60
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_TargetBindingId: leftPanel
+        m_ParameterBindingId: leftVisible
+        m_ValueCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+    - rid: 207050278873333761
+      type: {class: ScenePresentationParameterCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: f22bc2bb-c2fc-4894-bb6c-ed04da31432e
+        StartFrame: 0
+        EndFrame: 60
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_TargetBindingId: rightPanel
+        m_ParameterBindingId: rightVisible
+        m_ValueCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4

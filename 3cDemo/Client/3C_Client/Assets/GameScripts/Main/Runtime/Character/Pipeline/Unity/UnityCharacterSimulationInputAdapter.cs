@@ -339,6 +339,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 if (!found)
                     throw new InvalidOperationException($"Program operation '{operation.Definition.Identity}' must receive its movement Vector2 directly from an InputVector2 operation.");
             }
+            var controlInputs = new Dictionary<string, string>(StringComparer.Ordinal);
+            var controlSpaces = new Dictionary<string, CharacterControlMotionSpace>();
+            for (int i = 0; i < m_Program.CatalogEntries.Count; i++)
+            {
+                ProgramCatalogEntry entry = m_Program.CatalogEntries[i];
+                if (entry.Kind != ProgramCatalogEntryKind.ControlModule)
+                    continue;
+                for (int f = 0; f < entry.Fields.Count; f++)
+                {
+                    ProgramCatalogField field = entry.Fields[f];
+                    if (!field.Name.StartsWith("Motion:", StringComparison.Ordinal))
+                        continue;
+                    int split = field.Name.LastIndexOf(':');
+                    if (split <= "Motion:".Length)
+                        continue;
+                    string binding = field.Name.Substring("Motion:".Length, split - "Motion:".Length);
+                    string leaf = field.Name.Substring(split + 1);
+                    if (leaf == "Input" && field.Kind == ProgramCatalogFieldKind.Identity)
+                        controlInputs[binding] = field.Identity;
+                    else if (leaf == "Space" && field.Kind == ProgramCatalogFieldKind.Constant)
+                    {
+                        ProgramConstant constant = m_Program.Constants[field.ConstantIndex];
+                        if (constant.Kind == ProgramConstantKind.Int32)
+                            controlSpaces[binding] = (CharacterControlMotionSpace)constant.Int32;
+                    }
+                }
+            }
+            foreach (KeyValuePair<string, string> pair in controlInputs)
+            {
+                if (controlSpaces.TryGetValue(pair.Key, out CharacterControlMotionSpace space) &&
+                    space == CharacterControlMotionSpace.CameraRelative)
+                {
+                    m_CameraRelativeVector2Ids.Add(pair.Value);
+                }
+            }
             foreach (string inputId in m_CameraRelativeVector2Ids)
             {
                 if (m_WorldVector2Ids.Contains(inputId))

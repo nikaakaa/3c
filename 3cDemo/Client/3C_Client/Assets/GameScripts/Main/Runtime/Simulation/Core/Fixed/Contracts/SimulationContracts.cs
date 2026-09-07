@@ -582,7 +582,9 @@ namespace ThirdPersonSimulation.Fixed
         Cue = 6,
         Vfx = 7,
         Ui = 8,
-        ForceReleaseProducer = 9
+        ForceProducer = 9,
+        DomainEvent = 10,
+        ForceReleaseProducer = 11
     }
 
     public readonly struct PresentationCommand
@@ -596,7 +598,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong producerGeneration = 0,
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
-            FixedScalar visualTimeScale = default)
+            FixedScalar visualTimeScale = default,
+            string domainPayload = null)
         {
             Header = header;
             Kind = kind;
@@ -607,10 +610,20 @@ namespace ThirdPersonSimulation.Fixed
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
-            if (IsPlaybackCommand(kind) && producerGeneration == 0)
+            DomainPayload = domainPayload ?? string.Empty;
+            if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
+            if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
+                throw new ArgumentException("Presentation producer generation does not match the event activation.", nameof(producerGeneration));
+            if (IsPlaybackCommand(kind) && sourceActionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (kind == PresentationCommandKind.DomainEvent &&
+                (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(domainPayload)))
+                throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
+            if (kind != PresentationCommandKind.DomainEvent && !string.IsNullOrEmpty(domainPayload))
+                throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
             if (IsPlaybackSample(kind) && visualTimeScale < FixedScalar.Zero)
                 throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
         }
@@ -622,6 +635,7 @@ namespace ThirdPersonSimulation.Fixed
         public ulong ProducerGeneration { get; }
         public int Cycle { get; }
         public ulong SourceActionInstanceId { get; }
+        public string DomainPayload { get; }
         public FixedScalar VisualTimeScale { get; }
 
         static bool IsPlaybackCommand(PresentationCommandKind kind)
@@ -629,9 +643,14 @@ namespace ThirdPersonSimulation.Fixed
             return kind == PresentationCommandKind.SelectProducer ||
                    kind == PresentationCommandKind.SampleProducer ||
                    kind == PresentationCommandKind.CompleteProducer ||
-                   kind == PresentationCommandKind.ReleaseProducer ||
-                   kind == PresentationCommandKind.ForceReleaseProducer;
+                   kind == PresentationCommandKind.ReleaseProducer;
         }
+
+        static bool RequiresProducerGeneration(PresentationCommandKind kind) =>
+            IsPlaybackCommand(kind) ||
+            kind == PresentationCommandKind.Camera ||
+            kind == PresentationCommandKind.Cue ||
+            kind == PresentationCommandKind.ForceProducer;
 
         static bool IsPlaybackSample(PresentationCommandKind kind) =>
             kind == PresentationCommandKind.SampleProducer;
@@ -647,19 +666,30 @@ namespace ThirdPersonSimulation.Fixed
 
     public readonly struct SimulationTraceRecord
     {
-        public SimulationTraceRecord(SimulationEventHeader header, SimulationTraceSeverity severity, string boundary, string code, string detail)
+        public SimulationTraceRecord(
+            SimulationEventHeader header,
+            SimulationTraceSeverity severity,
+            string boundary,
+            string code,
+            string detail,
+            ulong actionInstanceId = 0,
+            string skillId = "")
         {
             Header = header;
             Severity = severity;
             Boundary = SimulationIdentity.Require(boundary, nameof(boundary));
             Code = SimulationIdentity.Require(code, nameof(code));
             Detail = detail ?? string.Empty;
+            ActionInstanceId = actionInstanceId;
+            SkillId = skillId ?? string.Empty;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
         public string Boundary { get; }
         public string Code { get; }
         public string Detail { get; }
+        public ulong ActionInstanceId { get; }
+        public string SkillId { get; }
     }
 }
 

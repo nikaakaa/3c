@@ -15,7 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         None = 0,
         Complete = 1,
-        Release = 2
+        Release = 2,
+        SegmentReplaced = 3
     }
 
     public enum ActionSlotSourceUsageKind : byte

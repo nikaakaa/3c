@@ -269,23 +269,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal CharacterPoseSourceBinding(
             AnimationPhysicalSourceIdentity physicalIdentity,
-            int sourceIndex)
+            int sourceIndex,
+            in CharacterPoseSourceScalarReadView scalarReadView)
         {
             if (!physicalIdentity.IsValid || sourceIndex < 0)
             {
                 throw new ArgumentException(
                     "Pose source binding is invalid.");
             }
+            if (!scalarReadView.IsValid ||
+                scalarReadView.PhysicalIdentity != physicalIdentity)
+            {
+                throw new ArgumentException(
+                    "Pose source scalar binding is invalid.");
+            }
             PhysicalIdentity = physicalIdentity;
             m_EncodedSourceIndex = checked(sourceIndex + 1);
+            ScalarReadView = scalarReadView;
         }
 
         readonly int m_EncodedSourceIndex;
         internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
         internal int SourceIndex => m_EncodedSourceIndex - 1;
+        internal CharacterPoseSourceScalarReadView ScalarReadView { get; }
         internal bool IsValid =>
             PhysicalIdentity.IsValid &&
-            m_EncodedSourceIndex > 0;
+            m_EncodedSourceIndex > 0 &&
+            ScalarReadView.IsValid &&
+            ScalarReadView.PhysicalIdentity == PhysicalIdentity;
     }
 
     internal sealed class CharacterPoseSourceBindingPage
@@ -613,21 +624,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSources,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> providerSources)
+                PresentationPoseSourceSample> providerSources,
+             in CharacterPoseSourceReadinessPageView readinessPage,
+             bool hasCurrentSource)
         {
             if (!demand.IsValid ||
                 !preparedResources.IsValid ||
                 preparedResources.Lineage != demand.Lineage ||
-                actionSources == null ||
-                providerSources == null ||
-                actionSources.Count != demand.ActionSourceCount ||
-                providerSources.Count != demand.ProviderSourceCount)
+                !readinessPage.IsValid ||
+                readinessPage.CompletionIdentity !=
+                     demand.Lineage.CompletionIdentity ||
+                 actionSources == null ||
+                 providerSources == null ||
+                 actionSources.Count != demand.ActionSourceCount ||
+                     providerSources.Count != demand.ProviderSourceCount)
             {
                 throw new ArgumentException(
                     "Character Pose source frame does not match its demand.");
             }
-            bool pending = false;
-            bool invalid = false;
+            CharacterPoseSourceReadinessView readiness =
+                readinessPage.Current;
+            CharacterPoseSourceReadinessView targetReadiness =
+                readinessPage.DeferredTarget;
+            if (!readiness.IsValid ||
+                readiness.CompletionIdentity != demand.Lineage.CompletionIdentity ||
+                !targetReadiness.IsValid ||
+                targetReadiness.CompletionIdentity !=
+                    demand.Lineage.CompletionIdentity)
+            {
+                throw new ArgumentException(
+                    "Character Pose source readiness page does not match its demand.");
+            }
+            bool pending = readiness.IsPending ||
+                           !hasCurrentSource && targetReadiness.IsPending;
+            bool invalid = readiness.IsInvalid;
+            if (!hasCurrentSource && targetReadiness.IsInvalid)
+                invalid = true;
             foreach (AnimationResolvedPoseSourceSample sample in
                      actionSources.Values)
             {
@@ -655,6 +687,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PreparedResources = preparedResources;
             ActionSources = actionSources;
             ProviderSources = providerSources;
+            ReadinessPage = readinessPage;
+            CurrentReadiness = readiness;
+            TargetReadiness = targetReadiness;
             Availability = invalid
                 ? PresentationPoseSourceAvailability.Invalid
                 : pending
@@ -666,7 +701,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? CharacterPoseSourceFrameOutcome.AwaitingSample
                     : CharacterPoseSourceFrameOutcome.Prepared;
             FailureReason = invalid
-                ? PresentationPoseSourceFailureReason.SampleInvalid
+                ? readiness.IsInvalid
+                    ? readiness.FailureReason
+                    : targetReadiness.IsInvalid
+                        ? targetReadiness.FailureReason
+                    : PresentationPoseSourceFailureReason.SampleInvalid
                 : PresentationPoseSourceFailureReason.None;
         }
 
@@ -680,6 +719,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationResolvedPoseSourceSample> ActionSources { get; }
         internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
             PresentationPoseSourceSample> ProviderSources { get; }
+        internal CharacterPoseSourceReadinessPageView ReadinessPage { get; }
+        internal CharacterPoseSourceReadinessView CurrentReadiness { get; }
+        internal CharacterPoseSourceReadinessView TargetReadiness { get; }
         internal PresentationPoseSourceAvailability Availability { get; }
         internal CharacterPoseSourceFrameOutcome Outcome { get; }
         internal PresentationPoseSourceFailureReason FailureReason { get; }
@@ -689,6 +731,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PreparedResources.Lineage == Demand.Lineage &&
             ActionSources != null &&
             ProviderSources != null &&
+            CurrentReadiness.IsValid &&
+            TargetReadiness.IsValid &&
             ActionSources.Count == Demand.ActionSourceCount &&
             ProviderSources.Count == Demand.ProviderSourceCount &&
             (Availability == PresentationPoseSourceAvailability.Ready
@@ -750,10 +794,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseSourceFrameOutcome Outcome =>
             SourceFrame.Outcome;
         internal bool IsValid =>
-            SourceFrame.IsReady &&
-            Outcome == CharacterPoseSourceFrameOutcome.Prepared &&
+            SourceFrame.IsValid &&
+            (Outcome == CharacterPoseSourceFrameOutcome.Prepared
+                ? SourceFrame.IsReady
+                : Outcome == CharacterPoseSourceFrameOutcome.AwaitingSample
+                    ? SourceFrame.Availability ==
+                      PresentationPoseSourceAvailability.Pending
+                    : Outcome == CharacterPoseSourceFrameOutcome.Invalid &&
+                      SourceFrame.Availability ==
+                      PresentationPoseSourceAvailability.Invalid) &&
             SourceFrame.Lineage == Lineage &&
             Lineage.IsValid;
+        internal bool IsReady =>
+            IsValid &&
+            Outcome == CharacterPoseSourceFrameOutcome.Prepared;
     }
 
     internal enum CharacterPoseOperationOutcome : byte

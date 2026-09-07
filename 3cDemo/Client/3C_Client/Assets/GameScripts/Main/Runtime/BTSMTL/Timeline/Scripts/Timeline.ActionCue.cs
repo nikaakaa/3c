@@ -25,6 +25,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("43f20139703b4e96a6c8f201f0a703c7"), Ordered(3), Color(255, 210, 92)]
     public sealed class ActionCueTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.ActionCueTrack;
+
         public void Sample(float previousTime, float timelineTime, string sourceId, string sourceName, ICollection<TimelineActionCueSample> cues)
         {
             if (m_PersistentMuted || cues == null)
@@ -55,6 +57,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("43f20139703b4e96a6c8f201f0a703c7"), Color(255, 210, 92)]
     public sealed class ActionCueClip : SignalClip
     {
+        public override string ContractKind => TimelineContractKinds.ActionCueClip;
+
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CueId = "Cue";
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -65,5 +69,28 @@ namespace BTSMTL.Timeline
         {
         }
 #endif
+    }
+
+    public static class ActionCueTimelineContracts
+    {
+        public static readonly ITimelineContractProvider Provider = new TimelineContractProvider(
+            new[]
+            {
+                new TimelineTrackContract(
+                    TimelineContractKinds.ActionCueTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Cue,
+                    TimelineContractKinds.ActionCueClip)
+            },
+            new[]
+            {
+                new TimelineClipContract(
+                    TimelineContractKinds.ActionCueClip,
+                    TimelineContractKinds.ActionCueTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Cue,
+                    false,
+                    false)
+            });
     }
 }

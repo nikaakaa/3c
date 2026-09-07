@@ -43,6 +43,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_BindingAssetIdentity = string.Empty;
         [SerializeField] string m_DisplayName = string.Empty;
         [SerializeField] AnimationClip m_Clip;
+        [SerializeField] CharacterAnimationSamplingBackendKind m_Backend = CharacterAnimationSamplingBackendKind.NativeClip;
+        [SerializeField] int m_ResourceCatalogIndex = -1;
+        [SerializeField] int m_GroupClipIndex = -1;
+        [SerializeField] bool m_Looping;
         [SerializeField] string m_ClipIdentity = string.Empty;
         [SerializeField] string m_FullClipDependencyHash = string.Empty;
         [SerializeField] string m_AnalysisInputHash = string.Empty;
@@ -55,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_FootAnalysisIdentity = string.Empty;
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
+        [SerializeReference] CharacterAnimationScalarCurvePage m_ScalarPage;
         [SerializeField] string m_ContentRevision = string.Empty;
 
         internal CharacterPresentationPoseSourcePlan(
@@ -70,7 +75,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceDurationSeconds,
             AnimationCurve normalizedFootPlacementWeightCurve,
             AnimationFootStepObservationCurvePair footStepObservation,
-            AnimationFootFeaturePair footFeatures)
+            AnimationFootFeaturePair footFeatures,
+            CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip,
+            CharacterAnimationScalarCurvePage scalarPage = null,
+            int resourceCatalogIndex = -1,
+            int groupClipIndex = -1)
         {
             if (!sourceIndex.IsValid || string.IsNullOrWhiteSpace(bindingAssetIdentity) ||
                 !binding || !rig || string.IsNullOrWhiteSpace(footAnalysisIdentity) ||
@@ -89,7 +98,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceIndex = sourceIndex.Value;
             m_BindingAssetIdentity = bindingAssetIdentity.Trim();
             m_DisplayName = binding.Slot.name;
-            m_Clip = binding.Clip;
+            m_Backend = backend;
+            m_Clip = backend == CharacterAnimationSamplingBackendKind.Acl ? null : binding.Clip;
+            m_ResourceCatalogIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? resourceCatalogIndex
+                : -1;
+            m_GroupClipIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? groupClipIndex
+                : -1;
+            m_Looping = binding.Clip.isLooping;
             m_ClipIdentity = clipIdentity.Trim();
             m_FullClipDependencyHash = fullClipDependencyHash.Trim();
             m_AnalysisInputHash = analysisInputHash.Trim();
@@ -102,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FootAnalysisIdentity = footAnalysisIdentity.Trim();
             m_LeftFootFeatures = footFeatures.Left;
             m_RightFootFeatures = footFeatures.Right;
+            m_ScalarPage = scalarPage;
             m_ContentRevision = $"{binding.ContentRevision}:{m_RegisteredCurveHash}";
             RequireValid();
         }
@@ -112,6 +130,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string BindingAssetIdentity => m_BindingAssetIdentity ?? string.Empty;
         public string DisplayName => m_DisplayName ?? string.Empty;
         public AnimationClip Clip => m_Clip;
+        public CharacterAnimationSamplingBackendKind Backend => m_Backend;
+        public int ResourceCatalogIndex => m_ResourceCatalogIndex;
+        public int GroupClipIndex => m_GroupClipIndex;
+        public bool IsAcl => Backend == CharacterAnimationSamplingBackendKind.Acl;
+        public bool IsLooping => m_Looping;
         public string ClipIdentity => m_ClipIdentity ?? string.Empty;
         public string FullClipDependencyHash => m_FullClipDependencyHash ?? string.Empty;
         public string AnalysisInputHash => m_AnalysisInputHash ?? string.Empty;
@@ -124,13 +147,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string FootAnalysisIdentity => m_FootAnalysisIdentity ?? string.Empty;
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
+        public CharacterAnimationScalarCurvePage ScalarPage => m_ScalarPage;
         public string ContentRevision => m_ContentRevision ?? string.Empty;
 
         public void RequireValid()
         {
             if (!string.Equals(SchemaVersion, CurrentSchemaVersion, StringComparison.Ordinal) ||
                 !SourceIndex.IsValid || string.IsNullOrWhiteSpace(BindingAssetIdentity) ||
-                string.IsNullOrWhiteSpace(DisplayName) || !Clip ||
+                string.IsNullOrWhiteSpace(DisplayName) ||
+                !Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), Backend) ||
+                Backend == CharacterAnimationSamplingBackendKind.NativeClip && !Clip ||
+                Backend == CharacterAnimationSamplingBackendKind.Acl && (m_ResourceCatalogIndex < 0 || m_GroupClipIndex < 0) ||
                 string.IsNullOrWhiteSpace(ClipIdentity) ||
                 string.IsNullOrWhiteSpace(FullClipDependencyHash) ||
                 string.IsNullOrWhiteSpace(AnalysisInputHash) ||
@@ -146,6 +173,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Compiled Presentation Clip source '{DisplayName}' is invalid.");
             }
             m_FootStepObservation.RequireValid();
+            if (ScalarPage != null)
+                ScalarPage.RequireValid();
+        }
+
+        internal void SampleNativeProperties(
+            float normalizedTime,
+            float[] values,
+            byte[] availability)
+        {
+            if (IsAcl || ScalarPage == null || values == null || availability == null || values.Length != availability.Length)
+                return;
+            for (int i = 0; i < ScalarPage.Tracks.Count; i++)
+            {
+                CharacterAnimationScalarCurveTrack track = ScalarPage.Tracks[i];
+                if (track.ParameterIndex < 0 || track.ParameterIndex >= values.Length)
+                    throw new InvalidOperationException("Presentation source scalar page parameter index is outside the Program page.");
+                values[track.ParameterIndex] = track.Sample(normalizedTime);
+                availability[track.ParameterIndex] = 1;
+            }
         }
 
         public float SampleFootPlacementWeight(float normalizedTime)

@@ -1,47 +1,65 @@
 # gameplay-network-test-build-workflow Specification
 
 ## Purpose
-定义三个 Network Test Product 共用的显式适配、原子构建、精确产物闭包与 Build/Run 分离流程。
+
+定义三个 Network Test Product 共享的 Editor Build Workflow，以干净源码、schema v3、精确产物与工具闭包发布不可变 Candidate，并与 Run 实例创建分离。
+
 ## Requirements
 ### Requirement: Network Test Product必须使用唯一Editor Build Workflow
 
-Unity Authority、DotRecast Authority与Deterministic Rollback Network Test Product MUST通过唯一Editor-only `NetworkTestProductBuildWorkflow`编排构建。每个Product MUST由显式adapter提供product identity、Player scene/assets、server project或no-server形态、output root、manifest字段和launch script；workflow MUST统一进程执行、临时目录、原子替换、exact file closure与manifest校验。公共process、asset/identity与server manifest/hash能力 MUST由独立utility拥有。公共workflow MUST不引用具体Network Model runtime类型，具体Product adapter MUST不调用另一adapter的helper，也 MUST不按reflection、字符串查找或fallback发现adapter。
+Unity Authority、DotRecast Authority与Deterministic Rollback MUST继续通过唯一Editor-only `NetworkTestProductBuildWorkflow`构建。Build request MUST包含显式CandidateLabel；公共workflow MUST统一Git源码身份、schema v3 manifest、Player构建、runtime artifact、Tool Bundle、Session Plan、staging、exact closure与不可变Candidate发布。每个Product adapter MUST只提供产品身份、Player输入、runtime artifacts、Tool Bundle扩展和Session Plan，不得调用另一adapter helper。公共workflow MUST不引用具体Network Model runtime类型、不按ProductId分支、不反射或fallback发现adapter。
+
+#### Scenario: 构建Rollback Candidate
+
+- **WHEN** 作者以合法CandidateLabel执行DeterministicRollback Build
+- **THEN** Rollback adapter MUST提供Player、Relay、GM和对应Session Plan/Tool Bundle描述
+- **AND** 公共workflow MUST按同一Candidate合同完成构建和发布
+
+#### Scenario: 构建Authority Candidate
+
+- **WHEN** 作者构建Unity Authority或DotRecast Authority Candidate
+- **THEN** 对应adapter MUST提供其精确Server Product和candidate-owned启动adapter
+- **AND** 公共workflow MUST不引入Rollback或GM产品分支
 
 #### Scenario: 构建Unity Authority Product
 
-- **WHEN** 作者执行Unity Authority Build命令
+- **WHEN** 作者执行Unity Authority Candidate Build命令
 - **THEN** Unity Authority adapter MUST提供Unity worker、两个client、Fantasy server和四进程launch产品描述
-- **AND** workflow MUST只写入Unity Authority专属output root
+- **AND** workflow MUST只写入Unity Authority专属Product根下的新Candidate目录
 
 #### Scenario: 构建DotRecast Authority Product
 
-- **WHEN** 作者执行DotRecast Authority Build命令
+- **WHEN** 作者执行DotRecast Authority Candidate Build命令
 - **THEN** DotRecast adapter MUST提供两个Unity client、普通.NET Authority host和所需server产品描述
 - **AND** workflow MUST不修改Unity Authority output或其adapter
 
 #### Scenario: 构建Deterministic Rollback Product
 
-- **WHEN** 作者执行Deterministic Rollback Build命令
+- **WHEN** 作者执行Deterministic Rollback Candidate Build命令
 - **THEN** adapter MUST明确声明no-Fantasy-server产品形态和对应Player/launch输入
 - **AND** workflow MUST不伪造空server或复用Authority manifest字段
 
 ### Requirement: Network Test Build与Run必须完全分离
 
-Build command MUST只生成并校验正式Product输出；Run command MUST只消费已经存在且manifest、product identity、scene list与exact file closure全部匹配的输出。Run MUST不隐式触发Build、重新编译Program、修复目录或选择其它Product。相同Product的新Build MAY原子覆盖自己的旧输出；不同Product MUST使用互斥目录且不得互相覆盖。候选与备份目录 MUST位于同一Network output parent并使用固定短identity，避免临时路径扩张破坏Windows Player深层文件读取；manifest唯一性 MUST按Product root下的完整路径判断。
+Build MUST只从干净源码生成并校验不可变Candidate；Run MUST只消费显式Candidate、Tool Bundle、Session Plan和Slot创建Run实例。Run MAY生成本次RunManifest、endpoint、token、PID和日志配置，但 MUST不触发Unity Build、dotnet publish、Program/Projection生成、Candidate修复或候选选择。相同CandidateId再次Build MUST失败；不同Candidate MUST并存。旧同产品覆盖、backup替换、默认当前Product和StopExisting语义 MUST删除。
 
 #### Scenario: Run时缺少有效manifest
 
-- **WHEN** Product output不存在、manifest schema过期或exact file closure不匹配
-- **THEN** Run MUST在启动进程前明确失败
-- **AND** MUST不自动Build、复制其它Product产物或继续启动部分进程
+- **WHEN** 显式Candidate缺少文件、manifest过期或hash不匹配
+- **THEN** Run MUST在创建Run目录和启动进程前失败
+- **AND** MUST不重新Build、复制另一Candidate或改写manifest
+
+#### Scenario: 新建Run实例
+
+- **WHEN** Candidate和Slot全部合法
+- **THEN** Run MUST只在RunLogs下创建本次实例配置并启动Candidate-owned Orchestrator
+- **AND** Candidate目录 MUST保持exact-byte不变
 
 #### Scenario: 重建同一Product
 
-- **WHEN** Unity Authority Product已有上一版完整输出并再次Build
-- **THEN** workflow MUST先在临时目录完成全部构建和校验
-- **AND** 临时目录 MUST保留不低于正式Product目录的深层文件路径预算
-- **AND** 成功后 MUST原子替换Unity Authority正式目录
-- **AND** 失败时 MUST不留下被部分覆盖的正式Product
+- **WHEN** 同一 Product 已有合法 Candidate，作者再次 Build
+- **THEN** 相同 CandidateId MUST在写入前失败；新的 CandidateId MUST在独立 staging 完成全部构建与校验后原子发布
+- **AND** staging MUST保留正式路径预算，失败 MUST不损坏任何已发布 Candidate
 
 ### Requirement: 外部编译进程必须使用统一受控生命周期
 
@@ -56,11 +74,16 @@ Network Test Build Workflow 调用dotnet或msbuild时 MUST包含`--disable-build
 
 ### Requirement: Product Manifest必须证明精确产物闭包
 
-每个Network Test Product manifest MUST记录product identity、build schema、Program/Pipeline/Host identity、Player scene清单、server产品形态、launch script和exact file closure。Build完成后workflow MUST从正式候选目录重新读取manifest并核对文件集合；未声明文件、缺失文件、混合其它Product identity或旧schema MUST失败。
+每个Network Test Candidate manifest MUST使用schema v3记录CandidateId、CandidateLabel、SourceCommit、SourceTreeHash、Product/Model/Topology、Program/Pipeline/Projection/World身份、runtime artifacts、Tool Bundles、Session Plan、Player配置和exact file closure。Build完成后workflow MUST从最终Candidate目录重新读取并严格核对全部身份。schema v2、时间BuildId、未声明文件、缺失文件、混合Product或工具hash不匹配 MUST失败，系统 MUST不提供兼容reader。
+
+#### Scenario: Candidate混入另一版GM
+
+- **WHEN** Rollback Candidate中的GM Tool Bundle来自另一Candidate或CommandCatalogHash不匹配
+- **THEN** Candidate validation MUST拒绝正式发布或Run
+- **AND** MUST不只校验Player/Relay后忽略工具差异
 
 #### Scenario: DotRecast目录混入Unity Authority Worker
 
-- **WHEN** DotRecast候选输出包含未声明的Unity Authority Worker文件或identity
+- **WHEN** DotRecast Candidate包含未声明的Unity Authority Worker文件、artifact或工具身份
 - **THEN** exact closure validation MUST拒绝发布
 - **AND** MUST不通过忽略额外文件或修改manifest掩盖混合产物
-

@@ -101,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FramePages,
                 m_Action,
                 m_PresentationWorkspace,
+                source,
                 m_SourcePreparation);
             Executor = new CharacterPoseProgramExecutor(
                 ExecutionView,
@@ -278,6 +279,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void RetireActionCommand(
             in ActionAnimationPlaybackCommand command) =>
             m_Action.Retire(in command);
+
+        internal void NotifyActionDomainEvent(
+            ulong actionInstanceId,
+            EventId causeEventId) =>
+            m_Action.NotifyDomainEvent(actionInstanceId, causeEventId);
 
         internal void ReplaceActionCommand(
             EventId targetEventId,
@@ -585,7 +591,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPresentationDiagnosticsInterest.None;
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
-            m_Action.ClearLeaseState();
             if (failure != null)
             {
                 throw new AggregateException(

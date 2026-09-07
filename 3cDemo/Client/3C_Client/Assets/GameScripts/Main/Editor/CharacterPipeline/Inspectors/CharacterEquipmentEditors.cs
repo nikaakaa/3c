@@ -3,8 +3,6 @@ using System.Linq;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
-using TreeDesigner;
-using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -107,13 +105,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_LocalStates;
         SerializedProperty m_GrantedTags;
         SerializedProperty m_PassiveEffects;
-        SerializedProperty m_PersistentGraph;
+        SerializedProperty m_CodeBindingId;
         SerializedProperty m_RouteImplementations;
         SerializedProperty m_RequiredGameplayCapabilities;
         SerializedProperty m_RequiredWorldCapabilities;
-        CharacterPipelineDefinition m_Context;
-
-        CharacterEquipmentFeatureDefinition Feature => target as CharacterEquipmentFeatureDefinition;
 
         void OnEnable()
         {
@@ -123,7 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_LocalStates = serializedObject.FindProperty("m_LocalStates");
             m_GrantedTags = serializedObject.FindProperty("m_GrantedTags");
             m_PassiveEffects = serializedObject.FindProperty("m_PassiveEffects");
-            m_PersistentGraph = serializedObject.FindProperty("m_PersistentGraph");
+            m_CodeBindingId = serializedObject.FindProperty("m_CodeBindingId");
             m_RouteImplementations = serializedObject.FindProperty("m_RouteImplementations");
             m_RequiredGameplayCapabilities = serializedObject.FindProperty("m_RequiredGameplayCapabilities");
             m_RequiredWorldCapabilities = serializedObject.FindProperty("m_RequiredWorldCapabilities");
@@ -134,25 +129,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             serializedObject.Update();
             EditorGUILayout.PropertyField(m_FeatureId, new GUIContent("Feature Id"));
             EditorGUILayout.PropertyField(m_FeatureRevision, new GUIContent("Feature Revision"));
+            EditorGUILayout.PropertyField(m_CodeBindingId, new GUIContent("Code Binding Id"));
             DrawParameters();
             DrawLocalStates();
             EditorGUILayout.PropertyField(m_GrantedTags, new GUIContent("Granted Tags"), true);
             EditorGUILayout.PropertyField(m_PassiveEffects, new GUIContent("Passive Effects"), true);
             EditorGUILayout.PropertyField(m_RequiredGameplayCapabilities, new GUIContent("Gameplay Capabilities"), true);
             EditorGUILayout.PropertyField(m_RequiredWorldCapabilities, new GUIContent("World Capabilities"));
-            DrawContext();
-            DrawPersistentGraph();
             DrawRoutes();
             serializedObject.ApplyModifiedProperties();
-        }
-
-        void DrawContext()
-        {
-            EditorGUILayout.Space(5f);
-            EditorGUILayout.LabelField("Graph Context", EditorStyles.boldLabel);
-            m_Context = EditorGUILayout.ObjectField("Pipeline Definition", m_Context, typeof(CharacterPipelineDefinition), false) as CharacterPipelineDefinition;
-            if (m_Context && !ReferencesFeature(m_Context, Feature))
-                EditorGUILayout.HelpBox("The selected Pipeline Definition does not reference this Feature.", MessageType.Error);
         }
 
         void DrawParameters()
@@ -210,29 +195,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        void DrawPersistentGraph()
-        {
-            EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Persistent Inline Graph", EditorStyles.boldLabel);
-            bool exists = m_PersistentGraph.managedReferenceValue != null;
-            using (new EditorGUI.DisabledScope(exists))
-            {
-                if (GUILayout.Button("Create Persistent Graph"))
-                {
-                    serializedObject.ApplyModifiedProperties();
-                    Undo.RecordObject(Feature, "Create Equipment Persistent Graph");
-                    Feature.CreatePersistentGraph();
-                    EditorUtility.SetDirty(Feature);
-                    serializedObject.Update();
-                }
-            }
-            using (new EditorGUI.DisabledScope(!exists || !CanOpenGraph()))
-            {
-                if (GUILayout.Button("Open Persistent Graph"))
-                    OpenGraph(Feature.PersistentGraph, "Persistent", "equipmentPersistent");
-            }
-        }
-
         void DrawRoutes()
         {
             m_RouteImplementations.isExpanded = EditorGUILayout.Foldout(
@@ -251,65 +213,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RouteId"), new GUIContent("Route Id"));
-                EditorGUILayout.PropertyField(route.FindPropertyRelative("m_ActionProfile"), new GUIContent("Action Profile"));
+                EditorGUILayout.PropertyField(route.FindPropertyRelative("m_SkillId"), new GUIContent("Skill Id"));
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RequiredParameterIds"), new GUIContent("Required Parameters"), true);
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RequiredProducerIds"), new GUIContent("Required Producers"), true);
-                SerializedProperty graph = route.FindPropertyRelative("m_InlineGraph");
-                bool exists = graph.managedReferenceValue != null;
-                EditorGUILayout.BeginHorizontal();
-                using (new EditorGUI.DisabledScope(exists))
-                {
-                    if (GUILayout.Button("Create Graph"))
-                        CreateRouteGraph(i);
-                }
-                using (new EditorGUI.DisabledScope(!exists || !CanOpenGraph()))
-                {
-                    if (GUILayout.Button("Open Graph"))
-                        OpenGraph(Feature.RouteImplementations[i].InlineGraph, $"Route {Feature.RouteImplementations[i].RouteIdValue}", $"equipmentRoute:{i}");
-                }
-                EditorGUILayout.EndHorizontal();
                 EditorGUILayout.EndVertical();
             }
             if (GUILayout.Button("Add Route Implementation"))
             {
                 SerializedProperty route = EquipmentEditorGui.AddElement(m_RouteImplementations);
                 route.FindPropertyRelative("m_RouteId").stringValue = EquipmentEditorGui.NewIdentity("route");
-                route.FindPropertyRelative("m_ActionProfile").objectReferenceValue = null;
-                route.FindPropertyRelative("m_InlineGraph").managedReferenceValue = null;
+                route.FindPropertyRelative("m_SkillId").stringValue = string.Empty;
                 route.FindPropertyRelative("m_RequiredParameterIds").arraySize = 0;
                 route.FindPropertyRelative("m_RequiredProducerIds").arraySize = 0;
             }
         }
 
-        void CreateRouteGraph(int index)
-        {
-            serializedObject.ApplyModifiedProperties();
-            Undo.RecordObject(Feature, "Create Equipment Route Graph");
-            Feature.RouteImplementations[index].CreateInlineGraph(Feature, index);
-            EditorUtility.SetDirty(Feature);
-            serializedObject.Update();
-        }
-
-        bool CanOpenGraph() => m_Context && ReferencesFeature(m_Context, Feature);
-
-        void OpenGraph(BaseTree graph, string displayName, string referenceKey)
-        {
-            if (!graph || !CanOpenGraph())
-                return;
-            BaseTreeWindow window = CharacterPipelineDefinitionTreeWindowUtility.OpenRootTree(m_Context);
-            window?.PushTreePage(
-                graph,
-                null,
-                displayName,
-                $"equipment-feature:{Feature.FeatureIdValue}",
-                referenceKey);
-        }
-
-        static bool ReferencesFeature(CharacterPipelineDefinition definition, CharacterEquipmentFeatureDefinition feature)
-        {
-            return definition && feature && definition.EquipmentCapabilityEnabled && definition.EquipmentProfile &&
-                   definition.EquipmentProfile.Features.Contains(feature);
-        }
     }
 
     [CustomEditor(typeof(EquipmentDefinition))]

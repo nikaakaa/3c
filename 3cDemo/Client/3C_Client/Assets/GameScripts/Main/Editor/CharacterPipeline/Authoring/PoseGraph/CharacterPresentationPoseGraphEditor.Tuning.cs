@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TuningOnlyAuthoringChange = false;
         }
 
-        internal void CapturePublishedPoseGraphRevision(CharacterTypedPoseGraph graph)
+        internal void CapturePublishedPoseGraphRevision(CharacterPoseCanvasGraph graph)
         {
             if (graph == null || !m_Asset || graph != m_Asset.Graph)
                 return;
@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!m_Asset || m_Asset.Graph == null)
                 return string.Empty;
             var parts = new List<string>();
-            foreach (CharacterTypedPoseGraph graph in m_Asset.EnumerateGraphs()
+            foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs()
                          .Where(value => value != null)
                          .OrderBy(value => value.GraphId.Value, StringComparer.Ordinal))
             {
@@ -76,10 +76,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFullBodyIkProfile profile = m_Profile.FullBodyIkProfile;
                 profiles[$"full-body:{profile.ProfileId}"] = profile.Revision;
             }
-            foreach (CharacterTypedPoseGraph graph in m_Asset.EnumerateGraphs()
+            foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs()
                          .Where(value => value != null))
             {
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     if (node?.Payload is CharacterFootPlacementPosePayload foot &&
                         foot.Profile)

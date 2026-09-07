@@ -13,6 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationBlendCurveCatalogPayload m_BlendCurveCatalog;
         [SerializeField] AnimationBlendProfileCatalogPayload m_BlendProfileCatalog;
         [SerializeField] CharacterAnimationRigPayload m_Rig;
+        [SerializeField] CharacterAnimationCompiledResourceDescriptor[] m_AnimationResources =
+            Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
         [SerializeField] CharacterPresentationPoseSourcePlan[] m_PoseSources = Array.Empty<CharacterPresentationPoseSourcePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlan[] m_BlendSpaces = Array.Empty<CharacterAnimationBlendSpacePlan>();
         [SerializeField] CharacterAnimationBlendSpacePlayerPlan[] m_BlendSpacePlayers = Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
@@ -21,14 +23,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPoseTuningLayout m_TuningLayout;
         [SerializeField] CharacterPoseTuningParameterBlock m_TuningDefaultBlock;
         [SerializeField] string m_PublishedParameterRevision = string.Empty;
+        [SerializeField] CharacterPresentationAnimationPropertyBinding[] m_AnimationProperties = Array.Empty<CharacterPresentationAnimationPropertyBinding>();
         [NonSerialized] MotionMatchingProjectionPayload m_MotionMatching;
         [SerializeField] byte[] m_MotionMatchingPayload = Array.Empty<byte>();
-        [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingClips = Array.Empty<UnityEngine.AnimationClip>();
+        [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingNativeClips = Array.Empty<UnityEngine.AnimationClip>();
 
         public CharacterPoseProgramImage PosePlan => m_PosePlan;
         public AnimationBlendCurveCatalogPayload BlendCurveCatalog => m_BlendCurveCatalog;
         public AnimationBlendProfileCatalogPayload BlendProfileCatalog => m_BlendProfileCatalog;
         public CharacterAnimationRigPayload Rig => m_Rig;
+        public IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> AnimationResources =>
+            m_AnimationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
         public IReadOnlyList<CharacterPresentationPoseSourcePlan> PoseSources =>
             m_PoseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
         public IReadOnlyList<CharacterAnimationBlendSpacePlan> BlendSpaces => m_BlendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>();
@@ -41,6 +46,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPoseTuningLayout TuningLayout => m_TuningLayout;
         public CharacterPoseTuningParameterBlock TuningDefaultBlock => m_TuningDefaultBlock;
         public string PublishedParameterRevision => m_PublishedParameterRevision ?? string.Empty;
+        public IReadOnlyList<CharacterPresentationAnimationPropertyBinding> AnimationProperties =>
+            m_AnimationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>();
 
         public bool TryGetPoseSource(
             PresentationPoseSourceIndex sourceIndex,
@@ -79,14 +86,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_MotionMatchingPayload = MotionMatchingProjectionPayloadCodec.Encode(
                 m_MotionMatching,
-                out m_MotionMatchingClips);
+                out m_MotionMatchingNativeClips);
         }
 
         public void OnAfterDeserialize()
         {
             m_MotionMatching = MotionMatchingProjectionPayloadCodec.Decode(
                 m_MotionMatchingPayload,
-                m_MotionMatchingClips);
+                m_MotionMatchingNativeClips);
         }
 
         public AnimationBlendNodePayload RequireBlendNode(PoseNodeId nodeId) => PosePlan.RequireBlendNode(nodeId);
@@ -97,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationBlendCurveCatalogPayload blendCurveCatalog,
             AnimationBlendProfileCatalogPayload blendProfileCatalog,
             CharacterAnimationRigPayload rig,
+            CharacterAnimationCompiledResourceDescriptor[] animationResources,
             MotionMatchingProjectionPayload motionMatching,
             CharacterPresentationPoseSourcePlan[] poseSources,
             CharacterAnimationBlendSpacePlan[] blendSpaces,
@@ -111,7 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterCameraProjectionPayload camera,
             CharacterPoseTuningLayout tuningLayout = null,
             CharacterPoseTuningParameterBlock tuningDefaultBlock = null,
-            string publishedParameterRevision = "")
+            string publishedParameterRevision = "",
+            CharacterPresentationAnimationPropertyBinding[] animationProperties = null)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
@@ -126,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BlendCurveCatalog = blendCurveCatalog ?? throw new ArgumentNullException(nameof(blendCurveCatalog)),
                 m_BlendProfileCatalog = blendProfileCatalog ?? throw new ArgumentNullException(nameof(blendProfileCatalog)),
                 m_Rig = rig ?? throw new ArgumentNullException(nameof(rig)),
+                m_AnimationResources = animationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>(),
                 m_MotionMatching = motionMatching,
                 m_PoseSources = poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
                 m_BlendSpaces = blendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>(),
@@ -134,10 +144,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
                 m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
                 m_FootAnalysis = footAnalysis,
-                m_Camera = camera ?? throw new ArgumentNullException(nameof(camera)),
+                m_Camera = camera,
                 m_TuningLayout = tuningLayout,
                 m_TuningDefaultBlock = tuningDefaultBlock,
-                m_PublishedParameterRevision = publishedParameterRevision ?? string.Empty
+                m_PublishedParameterRevision = publishedParameterRevision ?? string.Empty,
+                m_AnimationProperties = animationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>()
             };
             projection.SetEquipmentProjection(
                 projectionRevision,
@@ -233,6 +244,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Character Presentation Projection Pose payload is incomplete or inconsistent.");
             }
 
+            for (int i = 0; i < AnimationResources.Count; i++)
+            {
+                CharacterAnimationCompiledResourceDescriptor resource =
+                    AnimationResources[i] ??
+                    throw new InvalidOperationException($"Character Presentation Projection animation resource #{i} is missing.");
+                resource.RequireValid();
+                if (resource.ResourceIndex != i)
+                    throw new InvalidOperationException("Character Presentation Projection animation resource indices are not dense.");
+            }
+
             var poseSourceIndices = new HashSet<PresentationPoseSourceIndex>();
             for (int i = 0; i < PoseSources.Count; i++)
             {
@@ -267,6 +288,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             RequireMotionMatchingPayload();
             RequireBlendSpacePayload();
+            RequireAnimationPropertyPayload();
+        }
+
+        void RequireAnimationPropertyPayload()
+        {
+            var bindingIds = new HashSet<string>(StringComparer.Ordinal);
+            var parameterIds = new HashSet<PoseParameterId>();
+            for (int i = 0; i < AnimationProperties.Count; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = AnimationProperties[i];
+                binding?.RequireValid(PosePlan);
+                if (binding == null || !bindingIds.Add(binding.BindingId) || !parameterIds.Add(binding.ParameterId))
+                    throw new InvalidOperationException($"Character Presentation Projection animation property binding #{i} is missing or duplicated.");
+            }
         }
 
         void RequireLinkedPosePosePlan(HashSet<PresentationPoseSourceIndex> poseSourceIndices)
@@ -408,6 +443,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException(
                     "Projection Motion Matching Feature Schema Rig does not match the Presentation Rig.");
+            }
+            for (int databaseIndex = 0;
+                 databaseIndex < m_MotionMatching.DatabaseCount;
+                 databaseIndex++)
+            {
+                MotionMatchingDatabasePayload database =
+                    m_MotionMatching.GetDatabase(databaseIndex);
+                for (int clipIndex = 0;
+                     clipIndex < database.ClipBindingCount;
+                     clipIndex++)
+                {
+                    MotionMatchingClipBindingPayload binding =
+                        database.GetClipBinding(clipIndex);
+                    binding?.RequireValid();
+                    if (binding == null)
+                        throw new InvalidOperationException(
+                            $"Projection Motion Matching Database #{databaseIndex} clip binding #{clipIndex} is missing.");
+                    if (binding.Backend ==
+                            CharacterAnimationSamplingBackendKind.NativeClip &&
+                        binding.NativeScalarPage != null &&
+                        binding.NativeScalarPage.ParameterCount !=
+                            PosePlan.Parameters.Count)
+                    {
+                        throw new InvalidOperationException(
+                            "Projection Motion Matching Native Clip scalar page parameter count does not match the Pose Plan.");
+                    }
+                    if (binding.Backend ==
+                            CharacterAnimationSamplingBackendKind.Acl &&
+                        binding.NativeScalarPage != null)
+                    {
+                        throw new InvalidOperationException(
+                            "Projection Motion Matching ACL binding contains a Native scalar page.");
+                    }
+                }
             }
 
             var planNodes = new Dictionary<PoseNodeId, CharacterMotionMatchingPosePlanDescriptor>();

@@ -23,3 +23,9 @@ Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页。Foot采样
 - **WHEN** 通用Host已经完成Foot Capability manifest、Schema和CSV封存
 - **THEN** 独立Foot诊断器 MAY读取这些不可变Artifact执行当前Plan
 - **AND** Foot Runtime、Constraint和Final Publication MUST不持有Analyzer、Plan、评分或报告引用
+
+#### Scenario: 增加响应解释字段
+
+- **WHEN** 仅增加本帧响应原因或前后数值的诊断记录
+- **THEN** 运行状态、脚目标、Pelvis、Bend与最终骨骼 MUST保持不变
+- **AND** MUST不要求修改Goal Assembler、Solver算法或质量评分政策

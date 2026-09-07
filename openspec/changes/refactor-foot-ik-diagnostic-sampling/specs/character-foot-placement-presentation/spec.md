@@ -31,3 +31,9 @@ Gizmo、Trace与Pose Watch MUST继续只读取各自允许的Committed事实。G
 - **WHEN** 同一个Program组合多个Foot Sampler
 - **THEN** Generated Program MUST从同一PostCommit根集合求字段并集
 - **AND** Foot查询、Ground page、Goal Assembly、FBBIK与Final Publication执行次数 MUST保持不变
+
+#### Scenario: 增加响应解释字段
+
+- **WHEN** 仅增加本帧响应原因或前后数值的诊断记录
+- **THEN** 运行状态、脚目标、Pelvis、Bend与最终骨骼 MUST保持不变
+- **AND** MUST不要求修改Goal Assembler、Solver算法或质量评分政策

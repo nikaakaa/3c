@@ -9,16 +9,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 21;
+        const int SchemaVersion = 23;
 
-        public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
+        public static byte[] Encode(
+            MotionMatchingProjectionPayload payload,
+            out AnimationClip[] nativeClips)
         {
             if (payload == null)
             {
-                clips = Array.Empty<AnimationClip>();
+                nativeClips = Array.Empty<AnimationClip>();
                 return Array.Empty<byte>();
             }
-            var clipTable = new List<AnimationClip>();
+            var nativeClipTable = new List<AnimationClip>();
             using var stream = new MemoryStream();
             using var writer = new BinaryWriter(stream);
             writer.Write(SchemaVersion);
@@ -30,15 +32,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             WriteSearchPolicy(writer, payload.SearchPolicy);
             writer.Write(payload.DatabaseCount);
             for (int i = 0; i < payload.DatabaseCount; i++)
-                WriteDatabase(writer, payload.GetDatabase(i), clipTable);
+                WriteDatabase(writer, payload.GetDatabase(i), nativeClipTable);
             writer.Write(payload.NodeBindingCount);
             for (int i = 0; i < payload.NodeBindingCount; i++)
                 WriteNodeBinding(writer, payload.GetNodeBinding(i));
-            clips = clipTable.ToArray();
+            nativeClips = nativeClipTable.ToArray();
             return stream.ToArray();
         }
 
-        public static MotionMatchingProjectionPayload Decode(byte[] bytes, AnimationClip[] clips)
+        public static MotionMatchingProjectionPayload Decode(
+            byte[] bytes,
+            AnimationClip[] nativeClips)
         {
             if (bytes == null || bytes.Length == 0)
                 return null;
@@ -56,7 +60,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             int databaseCount = RequireCount(reader.ReadInt32(), "Database", false);
             var databases = new MotionMatchingDatabasePayload[databaseCount];
             for (int i = 0; i < databaseCount; i++)
-                databases[i] = ReadDatabase(reader, clips ?? Array.Empty<AnimationClip>());
+                databases[i] = ReadDatabase(
+                    reader,
+                    nativeClips ?? Array.Empty<AnimationClip>());
             int providerCount = RequireCount(
                 reader.ReadInt32(),
                 "node binding",
@@ -214,14 +220,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadInt32(), reader.ReadInt32(),
             reader.ReadSingle(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadSingle());
 
-        static void WriteDatabase(BinaryWriter writer, MotionMatchingDatabasePayload value, List<AnimationClip> clipTable)
+        static void WriteDatabase(
+            BinaryWriter writer,
+            MotionMatchingDatabasePayload value,
+            List<AnimationClip> nativeClipTable)
         {
             WriteArtifactIdentity(writer, value.ArtifactIdentity);
             writer.Write(value.SearchDomainId.Value);
             writer.Write(value.SampleRate);
             WriteCapacities(writer, value.Capacities);
             writer.Write(value.ClipBindingCount);
-            for (int i = 0; i < value.ClipBindingCount; i++) WriteClipBinding(writer, value.GetClipBinding(i), clipTable);
+            for (int i = 0; i < value.ClipBindingCount; i++)
+                MotionMatchingClipBindingCodec.Write(
+                    writer,
+                    value.GetClipBinding(i),
+                    nativeClipTable);
             writer.Write(value.SegmentCount);
             for (int i = 0; i < value.SegmentCount; i++) WriteSegment(writer, value.GetSegment(i));
             writer.Write(value.SampleCount);
@@ -242,7 +255,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             for (int i = 0; i < value.CoverageCount; i++) WriteCoverage(writer, value.GetCoverage(i));
         }
 
-        static MotionMatchingDatabasePayload ReadDatabase(BinaryReader reader, AnimationClip[] clipTable)
+        static MotionMatchingDatabasePayload ReadDatabase(
+            BinaryReader reader,
+            AnimationClip[] nativeClipTable)
         {
             CharacterMotionMatchingDatabaseArtifactIdentity identity = ReadArtifactIdentity(reader);
             var domain = new CharacterMotionMatchingSearchDomainId(reader.ReadString());
@@ -250,7 +265,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingRuntimeCapacityPayload capacities = ReadCapacities(reader);
             int clipCount = RequireCount(reader.ReadInt32(), "clip binding", false);
             var clips = new MotionMatchingClipBindingPayload[clipCount];
-            for (int i = 0; i < clips.Length; i++) clips[i] = ReadClipBinding(reader, clipTable);
+            for (int i = 0; i < clips.Length; i++)
+                clips[i] = MotionMatchingClipBindingCodec.Read(
+                    reader,
+                    nativeClipTable);
             int segmentCount = RequireCount(reader.ReadInt32(), "segment", false);
             var segments = new MotionMatchingSegmentPayload[segmentCount];
             for (int i = 0; i < segments.Length; i++) segments[i] = ReadSegment(reader);
@@ -353,52 +371,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         static MotionMatchingRuntimeCapacityPayload ReadCapacities(BinaryReader reader) => new MotionMatchingRuntimeCapacityPayload(
             reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
             reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-
-        static void WriteClipBinding(BinaryWriter writer, MotionMatchingClipBindingPayload value, List<AnimationClip> clipTable)
-        {
-            writer.Write(value.SourceClipId.Value);
-            writer.Write(value.AssetGuid);
-            writer.Write(value.LocalFileId);
-            int clipIndex = clipTable.IndexOf(value.Clip);
-            if (clipIndex < 0)
-            {
-                clipIndex = clipTable.Count;
-                clipTable.Add(value.Clip);
-            }
-            writer.Write(clipIndex);
-            writer.Write(value.RootLocked);
-            MotionMatchingPoseParameterCurvePayload curve = value.FootPlacementWeightCurve;
-            writer.Write(curve.ParameterId.Value);
-            writer.Write(curve.KeyCount);
-            for (int i = 0; i < curve.KeyCount; i++)
-            {
-                writer.Write(curve.GetNormalizedTime(i));
-                writer.Write(curve.GetValue(i));
-            }
-        }
-
-        static MotionMatchingClipBindingPayload ReadClipBinding(BinaryReader reader, AnimationClip[] clipTable)
-        {
-            var sourceClipId = new CharacterMotionMatchingSourceClipId(reader.ReadString());
-            string guid = reader.ReadString();
-            long localId = reader.ReadInt64();
-            int clipIndex = reader.ReadInt32();
-            if ((uint)clipIndex >= (uint)clipTable.Length || !clipTable[clipIndex])
-                throw new InvalidOperationException($"Motion Matching Projection clip reference #{clipIndex} is missing.");
-            bool rootLocked = reader.ReadBoolean();
-            var parameterId = new PoseParameterId(reader.ReadString());
-            int count = RequireCount(reader.ReadInt32(), "parameter curve key", false);
-            var times = new float[count];
-            var values = new float[count];
-            for (int i = 0; i < count; i++)
-            {
-                times[i] = reader.ReadSingle();
-                values[i] = reader.ReadSingle();
-            }
-            return new MotionMatchingClipBindingPayload(
-                sourceClipId, guid, localId, clipTable[clipIndex], rootLocked,
-                new MotionMatchingPoseParameterCurvePayload(parameterId, times, values));
-        }
 
         static void WriteSegment(BinaryWriter writer, MotionMatchingSegmentPayload value)
         {

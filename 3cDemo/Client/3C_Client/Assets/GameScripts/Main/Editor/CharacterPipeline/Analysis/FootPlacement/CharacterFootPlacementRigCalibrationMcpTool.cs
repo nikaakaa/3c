@@ -52,14 +52,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
 
                 CharacterFootPlacementRigCalibration calibration = source.RigCalibration;
-                calibration.Configure(
-                    calibration.CalibrationId,
-                    source.RigDefinition,
-                    calibration.CurrentSupportFootprint,
-                    calibration.Left,
-                    calibration.Right);
-                EditorUtility.SetDirty(calibration);
-                AssetDatabase.SaveAssetIfDirty(calibration);
                 CharacterFootPlacementRigGeometryValidationIdentity identity =
                     CharacterFootPlacementSamplingRigAuthoringService
                         .RebuildGeometryValidation(source);

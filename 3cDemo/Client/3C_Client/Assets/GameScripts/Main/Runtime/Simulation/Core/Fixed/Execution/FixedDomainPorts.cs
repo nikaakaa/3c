@@ -37,6 +37,7 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedActionContextReader
     {
         bool IsContextActive(string contextId);
+        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
         int FindActive(string contextId, out FixedActionInstanceState state);
         int FindActive(CharacterSkillId skillId, out FixedActionInstanceState state);
         FixedActionInstanceState FindOnlyActive();
@@ -57,6 +58,10 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedBlackboardPort
     {
+        void WriteGraphCallParameter(int valueSlot, CharacterStateValue value);
+        void ResetGraphCallParameter(int valueSlot);
+        CharacterStateValue ReadGraphCallParameter(int valueSlot);
+
         CharacterStateValue Read<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

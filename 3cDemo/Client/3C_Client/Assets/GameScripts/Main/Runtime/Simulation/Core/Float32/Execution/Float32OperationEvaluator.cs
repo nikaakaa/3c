@@ -7,15 +7,10 @@ namespace ThirdPersonSimulation
     internal sealed class Float32CameraOperationRuntime : Float32OperationModule
     {
         readonly Float32PresentationSink m_Presentation;
-        readonly Float32ActionStateStore m_Actions;
 
-        public Float32CameraOperationRuntime(
-            Float32ProgramAccess access,
-            Float32ActionStateStore actions,
-            Float32PresentationSink presentation)
+        public Float32CameraOperationRuntime(Float32ProgramAccess access, Float32PresentationSink presentation)
             : base(access)
         {
-            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         }
 
@@ -30,16 +25,10 @@ namespace ThirdPersonSimulation
                     $"Camera operation '{SourcePath(operation)}' payload version '{operation.Integer0}' is unsupported.");
 
             ProgramProducer producer = RequireProducer(operation);
-            if (!m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action))
-                throw new InvalidOperationException(
-                    $"Camera operation '{SourcePath(operation)}' has no active typed Skill execution.");
-            if (!action.SkillEntryOperation.IsValid || action.SkillExecutionGeneration == 0)
-                throw new InvalidOperationException(
-                    $"Camera operation '{SourcePath(operation)}' has an incomplete typed Skill execution identity.");
             Float32Scalar weight = operation.Code switch
             {
-                SimulationOperationCode.CameraSequenceRequest => RequireScalar(operation, OperationNamedConstant.Weight),
-                SimulationOperationCode.CameraShakeRequest => RequireScalar(operation, OperationNamedConstant.Intensity),
+                SimulationOperationCode.CameraStateRequest => RequireScalar(operation, OperationNamedConstant.Weight),
+                SimulationOperationCode.CameraCue => RequireScalar(operation, OperationNamedConstant.Intensity),
                 SimulationOperationCode.CameraResponse => RequireScalar(operation, OperationNamedConstant.Weight),
                 SimulationOperationCode.CameraTarget => RequireScalar(operation, OperationNamedConstant.Weight),
                 _ => throw new InvalidOperationException($"Camera operation '{operation.Code}' is unsupported.")
@@ -51,10 +40,7 @@ namespace ThirdPersonSimulation
                 producer.Identity,
                 Float32Scalar.Zero,
                 weight,
-                header.Activation.Generation,
-                0,
-                action.InstanceId,
-                Float32Scalar.Zero));
+                header.Activation.Generation));
         }
 
         Float32Scalar RequireScalar(SimulationOperation operation, OperationNamedConstant field)
@@ -102,6 +88,7 @@ namespace ThirdPersonSimulation
         readonly TimelineControlRuntime<Float32OperationTarget, Float32Scalar> m_Timeline;
         readonly Float32LocomotionRuntime m_Locomotion;
         readonly Float32FactSink m_Facts;
+        readonly Float32PresentationSink m_Presentation;
         readonly Float32TraceSink m_Trace;
 
         public Float32OperationTarget(
@@ -117,6 +104,7 @@ namespace ThirdPersonSimulation
             TimelineControlRuntime<Float32OperationTarget, Float32Scalar> timeline,
             Float32LocomotionRuntime locomotion,
             Float32FactSink facts,
+            Float32PresentationSink presentation,
             Float32TraceSink trace)
         {
             m_Access = access;
@@ -131,6 +119,7 @@ namespace ThirdPersonSimulation
             m_Timeline = timeline;
             m_Locomotion = locomotion;
             m_Facts = facts;
+            m_Presentation = presentation;
             m_Trace = trace;
         }
 
@@ -212,18 +201,17 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.BeginEquipmentChange:
 				case SimulationOperationCode.CommitEquipmentChange:
 				case SimulationOperationCode.CancelEquipmentChange:
-				case SimulationOperationCode.EnterEquipmentFeatureHost:
-				case SimulationOperationCode.ExitEquipmentFeatureHost:
-				case SimulationOperationCode.ResolveEquipmentActionRoute:
 					using (Float32ValueInputLease equipmentInputs = m_Values.ReadInputs(cursor, operation))
-						return m_Equipment.TickHost(cursor, operation, equipmentInputs);
+						return m_Equipment.Execute(cursor, operation, equipmentInputs)
+							? OperationExecutionResult.Success
+							: OperationExecutionResult.Failure;
 				case SimulationOperationCode.LocomotionInputMotion:
 					return TickLocomotion(cursor, operation);
-				case SimulationOperationCode.CameraSequenceRequest:
-				case SimulationOperationCode.CameraShakeRequest:
-                case SimulationOperationCode.CameraResponse:
-                case SimulationOperationCode.CameraTarget:
-                    m_Camera.Submit(operation);
+				case SimulationOperationCode.CameraStateRequest:
+				case SimulationOperationCode.CameraCue:
+				case SimulationOperationCode.CameraResponse:
+				case SimulationOperationCode.CameraTarget:
+					m_Camera.Submit(operation);
 					return OperationExecutionResult.Success;
 				case SimulationOperationCode.StateRootCompleted:
 				case SimulationOperationCode.StateExitCause:
@@ -258,6 +246,7 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.Sequence:
 				case SimulationOperationCode.Selector:
 				case SimulationOperationCode.Succeed:
+				case SimulationOperationCode.SubGraph:
 				case SimulationOperationCode.StateMachine:
 				case SimulationOperationCode.State:
 				case SimulationOperationCode.StateOnEnter:
@@ -272,10 +261,9 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.TimelineMotionCurve:
 				case SimulationOperationCode.TimelineTreeClip:
 				case SimulationOperationCode.TimelineCue:
-				case SimulationOperationCode.TimelineCameraSequence:
-				case SimulationOperationCode.TimelineCameraShake:
+				case SimulationOperationCode.TimelineCameraState:
+				case SimulationOperationCode.TimelineCameraCue:
 				case SimulationOperationCode.TimelineCameraResponse:
-				case SimulationOperationCode.TimelineCameraEffect:
 					throw new InvalidOperationException(
 						$"Descriptor operation '{descriptor.Code}' cannot execute as a Runnable leaf.");
 				default:
@@ -286,6 +274,13 @@ namespace ThirdPersonSimulation
 
         public void PrepareActivation(OperationExecutionDescriptor operation)
         {
+        }
+
+        public void PrepareSubGraph(
+            OperationControlCursor<Float32OperationTarget> cursor,
+            OperationExecutionDescriptor descriptor)
+        {
+            m_Values.PrepareSubGraph(cursor, m_Access.Operation(descriptor.Handle));
         }
 
 		public void ActivateScopes(
@@ -317,13 +312,7 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
-            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
-            {
-                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
-                return OperationStopStatus.Completed;
-            }
-            if (descriptor.Code != SimulationOperationCode.Timeline)
+			if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a graceful stop lifecycle.");
             return m_Timeline.ContinueTimelineStop(cursor, descriptor.Handle, context);
         }
@@ -333,13 +322,7 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
-            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
-            {
-                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
-                return;
-            }
-            if (descriptor.Code != SimulationOperationCode.Timeline)
+			if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a force-stop lifecycle.");
             m_Timeline.ForceStopTimeline(cursor, descriptor.Handle, context);
         }
@@ -372,6 +355,26 @@ namespace ThirdPersonSimulation
                 $"state:{state.Value}",
                 phase.ToString(),
                 Float32Scalar.Zero));
+        }
+
+        public void NotifyStateTransition(
+            OperationExecutionDescriptor machine,
+            OperationHandle exitingState,
+            OperationHandle targetState)
+        {
+            foreach (ActionAdmissionActiveAction action in ((IActionAdmissionReadPort)m_Actions).ActiveActions)
+            {
+                SimulationOperation operation = m_Access.Operation(machine.Handle);
+                SimulationEventHeader header = m_Presentation.Next(operation);
+                m_Presentation.Add(new PresentationCommand(
+                    header,
+                    PresentationCommandKind.DomainEvent,
+                    "domain/action-segment-changed",
+                    Float32Scalar.Zero,
+                    Float32Scalar.Zero,
+                    sourceActionInstanceId: action.InstanceId,
+                    domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
+            }
         }
     }
 
@@ -442,7 +445,6 @@ namespace ThirdPersonSimulation
                 m_Frame,
                 m_Frame.CreateStatePort("Equipment", services.EquipmentPolicy),
                 actionStore,
-                m_Input,
                 handles,
                 m_GameplayEffects,
                 m_Frame.Facts,
@@ -458,7 +460,10 @@ namespace ThirdPersonSimulation
                 handles,
                 m_Frame.Facts,
                 m_Frame.Trace,
-                m_Equipment);
+                m_Equipment,
+                operation => m_Control == null ||
+                    !m_Control.IsActive(operation) &&
+                    !m_Control.IsStopping(operation));
             m_Values = new Float32ValueRuntime(
                 access,
                 m_Input,
@@ -472,34 +477,42 @@ namespace ThirdPersonSimulation
             m_Motion = new Float32MotionAccumulator(
                 access,
                 m_Frame,
-                m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
-                workspace.MotionContributions,
-                workspace.MotionWarpSamples);
-            var locomotion = new Float32LocomotionRuntime(access, m_Values, m_Motion, m_Frame);
-            if (program.ControlModuleBinding.IsValid)
-            {
-                ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
-                Float32StatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
-                CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
-                m_CharacterControl = new CharacterControlStateMachineRuntime(module);
-                m_CharacterControlRead = new Float32CharacterControlReadPort(
-                    m_Input,
-                    m_Frame,
-                    parameter => ReadControlParameter(controlCatalog, parameter),
-                    skill => m_Actions.IsSkillActive(skill),
-                    skill => m_Actions.IsSkillCompleted(skill),
-                    skill => m_Actions.CompletedSkillInstanceId(skill),
-                    (skill, window) => m_Blackboard.IsActionWindowActive(skill, window));
-                m_CharacterControlState = new Float32CharacterControlStatePort(characterControlState, characterControlLayout);
-                m_CharacterControlOutput = new Float32CharacterControlOutputPort(
-                    access,
-                    controlCatalog,
+				m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
+				workspace.MotionContributions,
+				workspace.MotionWarpSamples,
+				m_ActionStore);
+			var locomotion = new Float32LocomotionRuntime(access, m_Values, m_Motion, m_Frame);
+			if (program.ControlModuleBinding.IsValid)
+			{
+				ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+				ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
+				Float32StatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
+				CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
+				m_CharacterControl = new CharacterControlStateMachineRuntime(module);
+				m_CharacterControlRead = new Float32CharacterControlReadPort(
+					m_Input,
+					m_Frame,
+					parameter => ReadControlParameter(controlCatalog, parameter),
+					skill => m_Actions.IsSkillActive(skill),
+					skill => (m_ActionStore.TryGetActiveSkillInstanceId(skill, out ulong instanceId), instanceId),
+					skill => m_Actions.IsSkillCompleted(skill),
+					skill => m_Actions.CompletedSkillInstanceId(skill),
+					(skill, window) => m_Blackboard.IsActionWindowActive(skill, window),
+					route =>
+					{
+						bool found = m_Equipment.TryReadActionContext(route, out EquipmentActionContext context);
+						return (found, context);
+					});
+				m_CharacterControlState = new Float32CharacterControlStatePort(characterControlState, characterControlLayout);
+				m_CharacterControlOutput = new Float32CharacterControlOutputPort(
+					access,
+					controlCatalog,
                     m_Input,
                     locomotion,
-                    m_Actions);
-            }
-            var camera = new Float32CameraOperationRuntime(access, actionStore, m_Frame.Presentation);
+                    m_Actions,
+                    m_Frame.Trace);
+			}
+			var camera = new Float32CameraOperationRuntime(access, m_Frame.Presentation);
             Float32StatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new Float32TimelineControlStatePort(access, timelineState);
             var timelineTarget = new Float32TimelineTargetLeaf(
@@ -531,6 +544,7 @@ namespace ThirdPersonSimulation
                 m_Timeline,
                 locomotion,
                 m_Frame.Facts,
+                m_Frame.Presentation,
                 m_Frame.Trace);
             m_Control = new OperationControlRuntime<Float32OperationTarget>(
                 access.Topology,
@@ -632,17 +646,18 @@ namespace ThirdPersonSimulation
 				return;
 			}
 			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-			bool preparedSkill = false;
 			for (int i = 0; i < skills.Count; i++)
 			{
-				if (m_ActionStore.FindActive(skills[i].SkillId, out Float32ActionInstanceState action) < 0)
-					continue;
-				preparedSkill = true;
-				using (m_ActionStore.EnterSkillExecution(action))
-					m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
+				{
+					Float32ActionInstanceState action = actions[actionIndex];
+					if (!action.IsActive)
+						continue;
+					using (m_ActionStore.EnterSkillExecution(action))
+						m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+				}
 			}
-			if (!preparedSkill)
-				m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
 		}
 
         [PerformanceProbe("simulation.operation.control-tick")]
@@ -672,51 +687,74 @@ namespace ThirdPersonSimulation
 			if (m_CharacterControl == null)
 				return;
 			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-			var stoppingContexts = new HashSet<string>(StringComparer.Ordinal);
+			var stoppingInstances = new HashSet<ulong>();
 			for (int i = 0; i < skills.Count; i++)
 			{
 				CharacterSkillProgramBinding skill = skills[i];
-				int actionSlot = m_ActionStore.FindCurrent(skill.SkillId, out Float32ActionInstanceState action);
-				if (m_Control.IsStopping(skill.EntryOperation))
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
-					OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
-					if (stop == OperationStopStatus.Failed)
-						throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-					if (stop == OperationStopStatus.Running)
-						stoppingContexts.Add(skill.ActionContextId);
-					else if (actionSlot >= 0 && !m_Control.IsActive(skill.EntryOperation))
-						m_ActionStore.RemoveSkillExecution(action.InstanceId);
+				Float32ActionInstanceState action = actions[actionIndex];
+				if (!action.IsValid)
 					continue;
-				}
-				if (actionSlot < 0)
-				{
-					if (!m_Control.IsActive(skill.EntryOperation))
-						continue;
-					OperationStopStatus stop = m_Control.RequestStop(
-						skill.EntryOperation,
-						OperationStopContext.ActionContextEnded(skill.EntryOperation));
-					if (stop == OperationStopStatus.Failed)
-						throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-					if (stop == OperationStopStatus.Running)
-						stoppingContexts.Add(skill.ActionContextId);
-					continue;
-				}
 				bool removeFrame = false;
-				using (m_ActionStore.EnterSkillExecution(action))
+				if (m_Actions.StopIfEquipmentContextStale(action))
 				{
-					if (!action.IsActive)
+					using (m_ActionStore.EnterSkillExecution(action))
 					{
 						if (m_Control.IsActive(skill.EntryOperation))
-						{
-							OperationStopStatus stop = m_Control.RequestStop(
+							m_Control.ForceStop(
 								skill.EntryOperation,
 								OperationStopContext.ActionContextEnded(skill.EntryOperation));
+					}
+					m_ActionStore.RemoveSkillExecution(action.InstanceId);
+					continue;
+				}
+				using (m_ActionStore.EnterSkillExecution(action))
+				{
+					if (m_Control.IsStopping(skill.EntryOperation))
+					{
+						if (action.State == SimulationActionState.Aborted || action.State == SimulationActionState.Rejected)
+						{
+							m_Control.ForceStop(
+								skill.EntryOperation,
+								OperationStopContext.ActionContextEnded(skill.EntryOperation));
+							removeFrame = true;
+						}
+						else
+						{
+							OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
 							if (stop == OperationStopStatus.Failed)
 								throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
 							if (stop == OperationStopStatus.Running)
-								stoppingContexts.Add(skill.ActionContextId);
-							else
+								stoppingInstances.Add(action.InstanceId);
+							else if (!m_Control.IsActive(skill.EntryOperation))
 								removeFrame = true;
+						}
+					}
+					else if (!action.IsActive)
+					{
+						if (m_Control.IsActive(skill.EntryOperation))
+						{
+							if (action.State == SimulationActionState.Aborted || action.State == SimulationActionState.Rejected)
+							{
+								m_Control.ForceStop(
+									skill.EntryOperation,
+									OperationStopContext.ActionContextEnded(skill.EntryOperation));
+								removeFrame = true;
+							}
+							else
+							{
+								OperationStopStatus stop = m_Control.RequestStop(
+									skill.EntryOperation,
+									OperationStopContext.ActionContextEnded(skill.EntryOperation));
+								if (stop == OperationStopStatus.Failed)
+									throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+								if (stop == OperationStopStatus.Running)
+								stoppingInstances.Add(action.InstanceId);
+								else
+									removeFrame = true;
+							}
 						}
 						else
 						{
@@ -726,20 +764,18 @@ namespace ThirdPersonSimulation
 				}
 				if (removeFrame)
 					m_ActionStore.RemoveSkillExecution(action.InstanceId);
+				}
 			}
 			for (int i = 0; i < skills.Count; i++)
 			{
 				CharacterSkillProgramBinding skill = skills[i];
-				if (stoppingContexts.Contains(skill.ActionContextId))
-					continue;
-				bool actionActive = m_ActionStore.FindActive(skill.SkillId, out Float32ActionInstanceState action) >= 0;
-				if (!actionActive)
+				m_Actions.TryCommitPendingControl(skill.SkillId);
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
-					m_Actions.TryCommitPendingControl(skill.SkillId);
-					actionActive = m_ActionStore.FindActive(skill.SkillId, out action) >= 0;
-				}
-				if (!actionActive)
-					continue;
+					Float32ActionInstanceState action = actions[actionIndex];
+					if (!action.IsActive || stoppingInstances.Contains(action.InstanceId))
+						continue;
 				using (m_ActionStore.EnterSkillExecution(action))
 				{
 					if (!action.SkillEntryOperation.Equals(skill.EntryOperation))
@@ -759,7 +795,7 @@ namespace ThirdPersonSimulation
 						else
 						{
 							m_Actions.FinishFromControl(
-								skill.SkillId,
+								action,
 								SimulationExecutionSource.FromSkillOperation(
 									skill.EntryOperation,
 									m_Frame.Services.SourcePath(skill.EntryOperation)),
@@ -786,7 +822,7 @@ namespace ThirdPersonSimulation
 								m_Control.ReadGeneration(skill.EntryOperation));
 							if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
 								m_Actions.FinishFromControl(
-									skill.SkillId,
+									current,
 									SimulationExecutionSource.FromSkillOperation(
 										skill.EntryOperation,
 										m_Frame.Services.SourcePath(skill.EntryOperation)),
@@ -794,6 +830,7 @@ namespace ThirdPersonSimulation
 									result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
 						}
 					}
+				}
 				}
 			}
 		}
@@ -822,17 +859,6 @@ namespace ThirdPersonSimulation
         [PerformanceProbe("simulation.operation.motion-resolve")]
         ResolvedGameplayMotion ResolveMotion()
         {
-            if (m_CharacterControl != null)
-            {
-                IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-                for (int i = 0; i < skills.Count; i++)
-                {
-                    if (m_ActionStore.FindCurrent(skills[i].SkillId, out Float32ActionInstanceState action) < 0)
-                        continue;
-                    using (m_ActionStore.EnterSkillExecution(action))
-                        return m_Motion.Resolve();
-                }
-            }
             return m_Motion.Resolve();
         }
 

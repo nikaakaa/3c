@@ -7,7 +7,9 @@ description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账
 
 ## 核心边界
 
-AI通过五个生命周期工具管理一个显式Document v4 JSON package，Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+AI通过五个生命周期工具管理一个显式Document v5 JSON package，控制配置、SkillDefinition、Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+
+只接受v5目录包；v1-v4及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
 
 ```text
 btsmtl.checkout_document
@@ -57,8 +59,9 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 ## 可写与只读边界
 
-Character Document v4正式可写：
+Character Document v5正式可写：
 
+- `editable/controller.json`中的已登记控制模块binding、语义版本和作者参数覆盖，以及`editable/skills/<canonical-id>/definition.json`中的SkillDefinition、ActionProfile、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能。控制模块代码、参数schema、默认值、状态schema和运行状态只读；参数必须经过正式Control Module合同校验并由Build采用。
 - Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
 - Pose Graph-owned typed Source Slot、Profile-owned direct Clip/Blend Space/Motion Matching Binding、Locomotion Sync Group、policy与有限Action producer binding。`editable/animation-clips/**/curves.json`只允许修改当前Definition可达原生AnimationClip的注册表现Curve；从目标分片移除已有channel表达正式删除，删除必填Foot Weight或仍为Group成员的Phase必须被Validator拒绝。Timeline Animation Segment直接引用AnimationClip。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
@@ -89,10 +92,10 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
 | Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
-| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v4 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
+| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v5 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
 | AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
-| Presentation Profile、Pose Graph或PoseStateMachine | Document v4模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v5模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
 | Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
 | MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
 
@@ -101,7 +104,7 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 ```text
 Package manifest + strict per-file parser
   -> AgentDocumentMutationReconciler
-  -> AgentAuthoringPresentationReconcilerV4
+  -> AgentAuthoringPresentationReconciler
   -> immutable AgentMutationPlan
   -> Mutation preflight
   -> one Undo transaction

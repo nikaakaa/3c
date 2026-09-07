@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonSimulation;
+using UnityHFSM;
 
 namespace ThirdPersonCharacter.Control.Rules
 {
@@ -42,7 +44,67 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
+        // UnityHFSM 骨架:状态/迁移/条件的唯一登记处。状态真值仍存仿真状态槽
+        // (CharacterControlStateMachineRuntime 按 Priority/Order 推进),本机器只承载
+        // 声明与条件求值,不持有活跃状态,因此与 rollback 天然一致。
+        readonly StateMachine<string, string> m_Machine;
+        readonly Dictionary<string, Transition<string>> m_TransitionsById =
+            new Dictionary<string, Transition<string>>(StringComparer.Ordinal);
+
+        CharacterControlTickContext m_EvaluatedContext;
+        ICharacterControlReadPort m_EvaluatedRead;
+        ICharacterControlStateReadPort m_EvaluatedState;
+
         public CharacterControlModuleContract Contract => s_Contract;
+
+        public CorinCharacterControlModule()
+        {
+            m_Machine = new StateMachine<string, string>();
+            m_Machine.SetStartState(Idle.Value);
+            for (int i = 0; i < s_Contract.States.Count; i++)
+                m_Machine.AddState(s_Contract.States[i].Id.Value, new State<string, string>());
+            for (int i = 0; i < s_Contract.Transitions.Count; i++)
+            {
+                CharacterControlTransitionDescriptor descriptor = s_Contract.Transitions[i];
+                string id = descriptor.Id.Value;
+                var transition = new Transition<string>(
+                    descriptor.Source.Value,
+                    descriptor.Target.Value,
+                    condition: _ => EvaluateRegistered(id));
+                m_TransitionsById.Add(id, transition);
+                m_Machine.AddTransition(transition);
+            }
+        }
+
+        bool EvaluateRegistered(string transitionId)
+        {
+            switch (transitionId)
+            {
+                case "IdleToWalkStart": return MoveAbove(m_EvaluatedRead);
+                case "WalkStartToWalkLoop": return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 1.1d) && MoveAbove(m_EvaluatedRead);
+                case "WalkLoopToWalkStopping": return MoveBelow(m_EvaluatedRead);
+                case "WalkStoppingToIdle": return MotionElapsed(m_EvaluatedState) > 0 && MoveBelow(m_EvaluatedRead);
+                case "RunLoopToRunStopping": return MoveBelow(m_EvaluatedRead);
+                case "RunStoppingToIdle": return MotionElapsed(m_EvaluatedState) > 0 && MoveBelow(m_EvaluatedRead);
+                case "MovingTurnToRunLoop":
+                    return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_EvaluatedRead);
+                case "WalkStartToWalkStopping": return MoveBelow(m_EvaluatedRead);
+                case "WalkStoppingToWalkStart": return MoveAbove(m_EvaluatedRead);
+                case "RunStoppingToRunLoop": return MoveAbove(m_EvaluatedRead);
+                case "MovingTurnToWalkStopping": return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && MoveBelow(m_EvaluatedRead);
+                case "WalkLoopToRunLoop": return m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent);
+                case "WalkStartToRunLoop": return m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent);
+                case "RunLoopToMovingTurn":
+                    return MoveAbove(m_EvaluatedRead) &&
+                           m_EvaluatedRead.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
+                           !IsAttackActive(m_EvaluatedRead) && !m_EvaluatedRead.IsSkillActive(DodgeBack) && !m_EvaluatedRead.IsSkillActive(DodgeForward);
+                case "MovingTurnToWalkLoop":
+                    return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && !m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_EvaluatedRead);
+                default: throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.");
+            }
+        }
+
+        static int MotionElapsed(ICharacterControlStateReadPort state) => state.ReadInt32(s_MotionElapsed);
 
         public void Enter(
             in CharacterControlTickContext context,
@@ -99,31 +161,10 @@ namespace ThirdPersonCharacter.Control.Rules
             ICharacterControlReadPort read,
             ICharacterControlStateReadPort state)
         {
-            int elapsed = state.ReadInt32(s_MotionElapsed);
-            switch (transitionId.Value)
-            {
-                case "IdleToWalkStart": return MoveAbove(read);
-                case "WalkStartToWalkLoop": return elapsed >= Ticks(context, 1.1d) && MoveAbove(read);
-                case "WalkLoopToWalkStopping": return MoveBelow(read);
-                case "WalkStoppingToIdle": return elapsed > 0 && MoveBelow(read);
-                case "RunLoopToRunStopping": return MoveBelow(read);
-                case "RunStoppingToIdle": return elapsed > 0 && MoveBelow(read);
-                case "MovingTurnToRunLoop":
-                    return elapsed >= Ticks(context, 28d / 30d) && state.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(read);
-                case "WalkStartToWalkStopping": return MoveBelow(read);
-                case "WalkStoppingToWalkStart": return MoveAbove(read);
-                case "RunStoppingToRunLoop": return MoveAbove(read);
-                case "MovingTurnToWalkStopping": return elapsed >= Ticks(context, 28d / 30d) && MoveBelow(read);
-                case "WalkLoopToRunLoop": return state.ReadBoolean(s_DirectionalDodgeRunIntent);
-                case "WalkStartToRunLoop": return state.ReadBoolean(s_DirectionalDodgeRunIntent);
-                case "RunLoopToMovingTurn":
-                    return MoveAbove(read) &&
-                           read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
-                           !IsAttackActive(read) && !read.IsSkillActive(DodgeBack) && !read.IsSkillActive(DodgeForward);
-                case "MovingTurnToWalkLoop":
-                    return elapsed >= Ticks(context, 28d / 30d) && !state.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(read);
-                default: throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.");
-            }
+            m_EvaluatedContext = context;
+            m_EvaluatedRead = read;
+            m_EvaluatedState = state;
+            return m_TransitionsById[transitionId.Value].ShouldTransition();
         }
 
         public void Exit(
@@ -145,30 +186,76 @@ namespace ThirdPersonCharacter.Control.Rules
             if (read.HasInputRequest(s_DodgeRequest))
             {
                 CharacterSkillId skill = read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
-                bool accepted = output.SubmitSkill(new CharacterControlSkillRequest(source, skill, s_DodgeRequest, true));
+                ulong replacementActionInstanceId = 0;
+                TryGetActiveAttackInstance(read, out replacementActionInstanceId);
+                bool accepted = output.SubmitSkill(new CharacterControlSkillRequest(
+                    source,
+                    skill,
+                    s_DodgeRequest,
+                    true,
+                    replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
             if (read.HasInputRequest(s_AttackRequest))
             {
-                CharacterSkillId skill = SelectAttackSkill(read);
+                CharacterSkillId skill = SelectAttackSkill(read, out ulong replacementActionInstanceId);
                 if (skill.IsValid)
-                    output.SubmitSkill(new CharacterControlSkillRequest(source, skill, s_AttackRequest, true, s_ActionTarget));
+                    output.SubmitSkill(new CharacterControlSkillRequest(
+                        source,
+                        skill,
+                        s_AttackRequest,
+                        true,
+                        s_ActionTarget,
+                        replacementActionInstanceId: replacementActionInstanceId));
             }
         }
 
-        CharacterSkillId SelectAttackSkill(ICharacterControlReadPort read)
+        CharacterSkillId SelectAttackSkill(ICharacterControlReadPort read, out ulong replacementActionInstanceId)
         {
+            replacementActionInstanceId = 0;
             if (read.IsSkillActive(Attack1))
-                return read.IsActionWindowActive(Attack1, "ComboAccept") ? Attack2 : default;
+            {
+                if (!read.IsActionWindowActive(Attack1, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack1, out replacementActionInstanceId);
+                return Attack2;
+            }
             if (read.IsSkillActive(Attack2))
-                return read.IsActionWindowActive(Attack2, "ComboAccept") ? Attack3 : default;
+            {
+                if (!read.IsActionWindowActive(Attack2, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack2, out replacementActionInstanceId);
+                return Attack3;
+            }
             if (read.IsSkillActive(Attack3))
-                return read.IsActionWindowActive(Attack3, "ComboAccept") ? Attack4 : default;
+            {
+                if (!read.IsActionWindowActive(Attack3, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack3, out replacementActionInstanceId);
+                return Attack4;
+            }
             if (read.IsSkillActive(Attack4))
-                return read.IsActionWindowActive(Attack4, "ComboAccept") ? Attack5 : default;
+            {
+                if (!read.IsActionWindowActive(Attack4, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack4, out replacementActionInstanceId);
+                return Attack5;
+            }
             if (read.IsSkillActive(Attack5))
                 return default;
             return Attack1;
+        }
+
+        bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId)
+        {
+            if (read.TryGetActiveSkillInstanceId(Attack1, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack2, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack3, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack4, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack5, out instanceId))
+                return true;
+            instanceId = 0;
+            return false;
         }
 
         bool IsAttackActive(ICharacterControlReadPort read) =>
@@ -237,9 +324,9 @@ namespace ThirdPersonCharacter.Control.Rules
                 new[] { s_MoveAxis, s_LookAxis },
                 new[]
                 {
-                    new CharacterControlMotionDescriptor(s_WalkStartMotion, s_MoveAxis, 4.592d, 720d, CharacterControlMotionExecutionMode.Timed, 1.1d),
-                    new CharacterControlMotionDescriptor(s_WalkLoopMotion, s_MoveAxis, 6d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d),
-                    new CharacterControlMotionDescriptor(s_RunLoopMotion, s_MoveAxis, 7.36d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d),
+                    new CharacterControlMotionDescriptor(s_WalkStartMotion, s_MoveAxis, 4.592d, 720d, CharacterControlMotionExecutionMode.Timed, 1.1d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
+                    new CharacterControlMotionDescriptor(s_WalkLoopMotion, s_MoveAxis, 6d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
+                    new CharacterControlMotionDescriptor(s_RunLoopMotion, s_MoveAxis, 7.36d, 720d, CharacterControlMotionExecutionMode.Continuous, 0d, string.Empty, CharacterControlMotionDisplacementMode.ConstantSpeed, CharacterControlMotionSpace.CameraRelative),
                     new CharacterControlMotionDescriptor(
                         s_MovingTurnMotion,
                         s_MoveAxis,

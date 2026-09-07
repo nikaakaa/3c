@@ -18,7 +18,23 @@ namespace ThirdPersonSimulation
         ActiveSourceNotCancelable = 2,
         SourceActionStillActive = 3,
         TargetSnapshotRequired = 4,
-        RequiredTagsMissing = 5
+        RequiredTagsMissing = 5,
+        ActionCapacityExceeded = 6,
+        ReplacementSourceMissing = 7
+    }
+
+    internal readonly struct ActionAdmissionActiveAction
+    {
+        public ActionAdmissionActiveAction(string actionId, ulong instanceId)
+        {
+            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            if (instanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(instanceId));
+            InstanceId = instanceId;
+        }
+
+        public string ActionId { get; }
+        public ulong InstanceId { get; }
     }
 
     internal readonly struct ActionAdmissionTargetCandidate
@@ -37,16 +53,19 @@ namespace ThirdPersonSimulation
         public ActionAdmissionRequest(
             ActionAdmissionProfile targetProfile,
             ActionAdmissionTargetCandidate targetCandidate,
-            ActionAdmissionEvaluationMode mode)
+            ActionAdmissionEvaluationMode mode,
+            ulong replacementActionInstanceId = 0)
         {
             TargetProfile = targetProfile ?? throw new ArgumentNullException(nameof(targetProfile));
             TargetCandidate = targetCandidate;
             Mode = mode;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public ActionAdmissionProfile TargetProfile { get; }
         public ActionAdmissionTargetCandidate TargetCandidate { get; }
         public ActionAdmissionEvaluationMode Mode { get; }
+        public ulong ReplacementActionInstanceId { get; }
     }
 
     internal readonly struct ActionAdmissionDecision
@@ -54,7 +73,8 @@ namespace ThirdPersonSimulation
         public ActionAdmissionDecision(
             bool allowed,
             ActionAdmissionRejectReason rejectReason,
-            string activeSourceActionId)
+            string activeSourceActionId,
+            ulong activeSourceActionInstanceId = 0)
         {
             if (allowed && rejectReason != ActionAdmissionRejectReason.None)
                 throw new ArgumentException("Allowed Action admission cannot carry a rejection reason.", nameof(rejectReason));
@@ -63,17 +83,19 @@ namespace ThirdPersonSimulation
             Allowed = allowed;
             RejectReason = rejectReason;
             ActiveSourceActionId = activeSourceActionId ?? string.Empty;
+            ActiveSourceActionInstanceId = activeSourceActionInstanceId;
         }
 
         public bool Allowed { get; }
         public ActionAdmissionRejectReason RejectReason { get; }
         public string ActiveSourceActionId { get; }
+        public ulong ActiveSourceActionInstanceId { get; }
     }
 
     internal interface IActionAdmissionReadPort
     {
         IEnumerable<string> OwnedGameplayTags { get; }
-        bool TryGetActiveAction(out string actionId);
+        IEnumerable<ActionAdmissionActiveAction> ActiveActions { get; }
         ActionAdmissionProfile RequireActionProfile(string actionId);
         bool TryGetGameplayTagParent(string tag, out string parentTag);
     }
@@ -98,6 +120,7 @@ namespace ThirdPersonSimulation
         public ActionAdmissionProfile(
             string actionId,
             ActionTargetRequirement targetRequirement,
+            int maxConcurrentInstances,
             string[] tags,
             ActionTagQuery required,
             ActionTagQuery block,
@@ -106,7 +129,10 @@ namespace ThirdPersonSimulation
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             if (!Enum.IsDefined(typeof(ActionTargetRequirement), targetRequirement))
                 throw new ArgumentOutOfRangeException(nameof(targetRequirement));
+            if (maxConcurrentInstances <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxConcurrentInstances));
             TargetRequirement = targetRequirement;
+            MaxConcurrentInstances = maxConcurrentInstances;
             Tags = tags ?? Array.Empty<string>();
             Required = required ?? throw new ArgumentNullException(nameof(required));
             Block = block ?? throw new ArgumentNullException(nameof(block));
@@ -115,6 +141,7 @@ namespace ThirdPersonSimulation
 
         public string ActionId { get; }
         public ActionTargetRequirement TargetRequirement { get; }
+        public int MaxConcurrentInstances { get; }
         public string[] Tags { get; }
         public ActionTagQuery Required { get; }
         public ActionTagQuery Block { get; }
@@ -146,6 +173,8 @@ namespace ThirdPersonSimulation
             var cancelNone = new List<string>();
             ActionTargetRequirement targetRequirement = default;
             bool hasTargetRequirement = false;
+            int maxConcurrentInstances = 0;
+            bool hasMaxConcurrentInstances = false;
             for (int i = 0; i < entry.Fields.Count; i++)
             {
                 ProgramCatalogField field = entry.Fields[i];
@@ -158,6 +187,16 @@ namespace ThirdPersonSimulation
                     if (!Enum.IsDefined(typeof(ActionTargetRequirement), targetRequirement))
                         throw new InvalidOperationException($"Action catalog '{entry.Identity}' has unknown target requirement '{value}'.");
                     hasTargetRequirement = true;
+                    continue;
+                }
+                if (string.Equals(field.Name, "MaxConcurrentInstances", StringComparison.Ordinal))
+                {
+                    if (hasMaxConcurrentInstances || field.Kind != ProgramCatalogFieldKind.Constant)
+                        throw new InvalidOperationException($"Action catalog '{entry.Identity}' has an invalid MaxConcurrentInstances field.");
+                    maxConcurrentInstances = readInt32Constant(field.ConstantIndex);
+                    if (maxConcurrentInstances <= 0)
+                        throw new InvalidOperationException($"Action catalog '{entry.Identity}' has non-positive MaxConcurrentInstances '{maxConcurrentInstances}'.");
+                    hasMaxConcurrentInstances = true;
                     continue;
                 }
                 if (field.Kind != ProgramCatalogFieldKind.Identity || string.IsNullOrWhiteSpace(field.Identity))
@@ -185,9 +224,12 @@ namespace ThirdPersonSimulation
             }
             if (!hasTargetRequirement)
                 throw new InvalidOperationException($"Action catalog '{entry.Identity}' has no TargetRequirement field.");
+            if (!hasMaxConcurrentInstances)
+                throw new InvalidOperationException($"Action catalog '{entry.Identity}' has no MaxConcurrentInstances field.");
             return new ActionAdmissionProfile(
                 entry.Identity.Substring(ActionPrefix.Length),
                 targetRequirement,
+                maxConcurrentInstances,
                 tags.ToArray(),
                 new ActionTagQuery(requiredAll.ToArray(), requiredAny.ToArray(), requiredNone.ToArray()),
                 new ActionTagQuery(blockAll.ToArray(), blockAny.ToArray(), blockNone.ToArray()),
@@ -226,34 +268,49 @@ namespace ThirdPersonSimulation
                     AddTag(m_OwnedTags, tag);
 
                 if (!request.TargetProfile.Required.IsEmpty && !MatchesQuery(request.TargetProfile.Required, m_OwnedTags))
-                    return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty, 0);
 
                 if (!request.TargetProfile.Block.IsEmpty && MatchesQuery(request.TargetProfile.Block, m_OwnedTags))
-                    return Reject(ActionAdmissionRejectReason.TargetBlocked, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.TargetBlocked, string.Empty, 0);
 
                 if (request.TargetProfile.TargetRequirement == ActionTargetRequirement.SnapshotRequired &&
                     !request.TargetCandidate.HasTarget)
                 {
-                    return Reject(ActionAdmissionRejectReason.TargetSnapshotRequired, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.TargetSnapshotRequired, string.Empty, 0);
                 }
 
-                bool hasActiveSource = m_Port.TryGetActiveAction(out string activeSourceActionId);
-                if (hasActiveSource)
+                int activeTargetCount = 0;
+                ActionAdmissionActiveAction replacementSource = default;
+                bool hasReplacementSource = false;
+                foreach (ActionAdmissionActiveAction active in m_Port.ActiveActions)
                 {
-                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(activeSourceActionId);
-                    AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
+                    if (string.Equals(active.ActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
+                        activeTargetCount++;
+                    if (request.ReplacementActionInstanceId == active.InstanceId)
+                    {
+                        replacementSource = active;
+                        hasReplacementSource = true;
+                    }
                 }
 
-                if (!hasActiveSource)
-                    return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
+                if (request.ReplacementActionInstanceId != 0)
+                {
+                    if (!hasReplacementSource)
+                        return Reject(ActionAdmissionRejectReason.ReplacementSourceMissing, string.Empty, 0);
 
-                if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
-                    return Reject(ActionAdmissionRejectReason.SourceActionStillActive, activeSourceActionId);
+                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(replacementSource.ActionId);
+                    AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
+                    if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
+                        return Reject(ActionAdmissionRejectReason.SourceActionStillActive, replacementSource.ActionId, replacementSource.InstanceId);
+                    return !request.TargetProfile.Cancel.IsEmpty &&
+                           MatchesQuery(request.TargetProfile.Cancel, m_ActiveSourceTags)
+                        ? new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, replacementSource.ActionId, replacementSource.InstanceId)
+                        : Reject(ActionAdmissionRejectReason.ActiveSourceNotCancelable, replacementSource.ActionId, replacementSource.InstanceId);
+                }
 
-                return !request.TargetProfile.Cancel.IsEmpty &&
-                       MatchesQuery(request.TargetProfile.Cancel, m_ActiveSourceTags)
-                    ? new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, activeSourceActionId)
-                    : Reject(ActionAdmissionRejectReason.ActiveSourceNotCancelable, activeSourceActionId);
+                if (activeTargetCount >= request.TargetProfile.MaxConcurrentInstances)
+                    return Reject(ActionAdmissionRejectReason.ActionCapacityExceeded, request.TargetProfile.ActionId, 0);
+                return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
             }
             finally
             {
@@ -262,9 +319,12 @@ namespace ThirdPersonSimulation
             }
         }
 
-        ActionAdmissionDecision Reject(ActionAdmissionRejectReason reason, string activeSourceActionId)
+        ActionAdmissionDecision Reject(
+            ActionAdmissionRejectReason reason,
+            string activeSourceActionId,
+            ulong activeSourceActionInstanceId)
         {
-            return new ActionAdmissionDecision(false, reason, activeSourceActionId);
+            return new ActionAdmissionDecision(false, reason, activeSourceActionId, activeSourceActionInstanceId);
         }
 
         bool MatchesQuery(ActionTagQuery query, HashSet<string> owned)
@@ -468,7 +528,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class NestedExecutionWorkspaceBuffer<T>
+    public sealed class NestedExecutionWorkspaceBuffer<T>
     {
         readonly List<List<T>> m_Buffers = new List<List<T>>();
         int m_Depth;
@@ -632,395 +692,4 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal enum ActionSkillTraceSeverity : byte
-    {
-        Detail = 1,
-        Information = 2
-    }
-
-    internal readonly struct ActionSkillActivationCandidate<TTargetSnapshot, TOperation>
-        where TTargetSnapshot : struct
-        where TOperation : class
-    {
-        public ActionSkillActivationCandidate(
-            CharacterSkillId skillId,
-            OperationHandle skillEntryOperation,
-            string contextId,
-            string sourceInputRequestId,
-            bool consumeSourceInputRequest,
-            string targetKey,
-            TTargetSnapshot targetSnapshot,
-            SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext,
-            TOperation operation = null)
-        {
-            if (!source.IsValid)
-                throw new ArgumentException("Action activation source is invalid.", nameof(source));
-            SkillId = skillId;
-            SkillEntryOperation = skillEntryOperation;
-            ContextId = contextId ?? string.Empty;
-            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
-            ConsumeSourceInputRequest = consumeSourceInputRequest;
-            TargetKey = targetKey ?? string.Empty;
-            TargetSnapshot = targetSnapshot;
-            Source = source;
-            EquipmentContext = equipmentContext;
-            Operation = operation;
-        }
-
-        public CharacterSkillId SkillId { get; }
-        public OperationHandle SkillEntryOperation { get; }
-        public string ContextId { get; }
-        public string SourceInputRequestId { get; }
-        public bool ConsumeSourceInputRequest { get; }
-        public string TargetKey { get; }
-        public TTargetSnapshot TargetSnapshot { get; }
-        public SimulationExecutionSource Source { get; }
-        public EquipmentActionContext EquipmentContext { get; }
-        public TOperation Operation { get; }
-    }
-
-    internal readonly struct ActionSkillActivationRequest<TTargetSnapshot>
-        where TTargetSnapshot : struct
-    {
-        public ActionSkillActivationRequest(
-            string actionId,
-            CharacterSkillId skillId,
-            OperationHandle skillEntryOperation,
-            string contextId,
-            string sourceInputRequestId,
-            ulong inputSequence,
-            ulong startTick,
-            string targetKey,
-            TTargetSnapshot targetSnapshot,
-            SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext)
-        {
-            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
-            ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
-            if (inputSequence == 0 || startTick == 0 || !source.IsValid ||
-                source.IsCharacterControl && (!skillId.IsValid || !skillEntryOperation.IsValid))
-            {
-                throw new ArgumentException("Action activation request identity is incomplete.");
-            }
-            SkillId = skillId;
-            SkillEntryOperation = skillEntryOperation;
-            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
-            InputSequence = inputSequence;
-            StartTick = startTick;
-            TargetKey = targetKey ?? string.Empty;
-            TargetSnapshot = targetSnapshot;
-            Source = source;
-            EquipmentContext = equipmentContext;
-        }
-
-        public string ActionId { get; }
-        public CharacterSkillId SkillId { get; }
-        public OperationHandle SkillEntryOperation { get; }
-        public string ContextId { get; }
-        public string SourceInputRequestId { get; }
-        public ulong InputSequence { get; }
-        public ulong StartTick { get; }
-        public string TargetKey { get; }
-        public TTargetSnapshot TargetSnapshot { get; }
-        public SimulationExecutionSource Source { get; }
-        public EquipmentActionContext EquipmentContext { get; }
-    }
-
-    internal interface IActionSkillActivationPort<TTargetSnapshot, TOperation>
-        where TTargetSnapshot : struct
-        where TOperation : class
-    {
-        ulong InputSequence { get; }
-        ulong Tick { get; }
-        bool TraceEnabled { get; }
-        bool TryReadInputSequence(string requestId, out ulong sequence);
-        void ClearInputRequest(string requestId);
-        TTargetSnapshot NoneTarget { get; }
-        TTargetSnapshot ReadTargetSnapshot(string inputValueId);
-        string TargetId(TTargetSnapshot targetSnapshot);
-        string FormatTarget(TTargetSnapshot targetSnapshot);
-        bool HasPendingRequest(string actionId);
-        void StageRequest(ActionSkillActivationRequest<TTargetSnapshot> request);
-        bool TryReadPendingRequest(CharacterSkillId skillId, out ActionSkillActivationRequest<TTargetSnapshot> request);
-        void ClearPendingRequest(ActionSkillActivationRequest<TTargetSnapshot> request);
-        ulong CommitRequest(ActionSkillActivationRequest<TTargetSnapshot> request, ActionAdmissionProfile profile);
-        void InterruptActive(SimulationExecutionSource source, string reason);
-        void Trace(TOperation operation, string code, ActionSkillTraceSeverity severity, string detail);
-        void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail);
-    }
-
-    internal sealed class ActionSkillActivationFlow<TTargetSnapshot, TOperation>
-        where TTargetSnapshot : struct
-        where TOperation : class
-    {
-        readonly ActionAdmissionControl m_Admission;
-        readonly IActionSkillActivationPort<TTargetSnapshot, TOperation> m_Port;
-
-        public ActionSkillActivationFlow(
-            ActionAdmissionControl admission,
-            IActionSkillActivationPort<TTargetSnapshot, TOperation> port)
-        {
-            m_Admission = admission ?? throw new ArgumentNullException(nameof(admission));
-            m_Port = port ?? throw new ArgumentNullException(nameof(port));
-        }
-
-        public bool ActivateImmediate(
-            ActionSkillActivationCandidate<TTargetSnapshot, TOperation> candidate,
-            ActionAdmissionProfile profile)
-        {
-            TTargetSnapshot targetSnapshot = NormalizeTarget(profile, candidate.TargetSnapshot);
-            ActionAdmissionDecision admission = Evaluate(
-                profile,
-                targetSnapshot,
-                ActionAdmissionEvaluationMode.CommitActivation);
-            if (!admission.Allowed)
-            {
-                Trace(
-                    candidate,
-                    "action_activation_rejected",
-                    ActionSkillTraceSeverity.Information,
-                    $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                return false;
-            }
-            if (!TryCreateRequest(candidate, profile, targetSnapshot, out ActionSkillActivationRequest<TTargetSnapshot> request))
-                return false;
-            m_Port.StageRequest(request);
-            ulong instanceId = m_Port.CommitRequest(request, profile);
-            TraceActivated(candidate, request, profile, instanceId);
-            return true;
-        }
-
-        public ActionAdmissionDecision Preview(
-            TOperation operation,
-            ActionAdmissionProfile profile,
-            TTargetSnapshot targetSnapshot)
-        {
-            targetSnapshot = NormalizeTarget(profile, targetSnapshot);
-            ActionAdmissionDecision decision = Evaluate(
-                profile,
-                targetSnapshot,
-                ActionAdmissionEvaluationMode.PreviewReplacement);
-            if (m_Port.TraceEnabled)
-            {
-                m_Port.Trace(
-                    operation,
-                    "action_admission_preview",
-                    ActionSkillTraceSeverity.Detail,
-                    $"{profile.ActionId}:{decision.Allowed}:{decision.RejectReason}:{decision.ActiveSourceActionId}");
-            }
-            return decision;
-        }
-
-        public bool ActivateFromControl(
-            CharacterControlSkillRequest controlRequest,
-            CharacterSkillProgramBinding skill,
-            ActionAdmissionProfile profile)
-        {
-            string requestId = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
-                ? skill.SourceInputRequestId
-                : controlRequest.SourceInputRequestId;
-            bool consumeRequest = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
-                ? skill.ConsumeSourceInputRequest
-                : controlRequest.ConsumeSourceInputRequest;
-            string targetInputValueId = string.IsNullOrEmpty(controlRequest.TargetInputValueId)
-                ? skill.TargetInputValueId
-                : controlRequest.TargetInputValueId;
-            TTargetSnapshot targetSnapshot = profile.TargetRequirement == ActionTargetRequirement.None ||
-                string.IsNullOrEmpty(targetInputValueId)
-                ? m_Port.NoneTarget
-                : m_Port.ReadTargetSnapshot(targetInputValueId);
-            return ActivatePending(
-                new ActionSkillActivationCandidate<TTargetSnapshot, TOperation>(
-                    skill.SkillId,
-                    skill.EntryOperation,
-                    skill.ActionContextId,
-                    requestId,
-                    consumeRequest,
-                    string.IsNullOrEmpty(controlRequest.TargetKey) ? skill.TargetKey : controlRequest.TargetKey,
-                    targetSnapshot,
-                    controlRequest.Source,
-                    default),
-                profile);
-        }
-
-        public bool TryCommitPendingControl(
-            CharacterSkillId skillId,
-            ActionAdmissionProfile profile)
-        {
-            if (!m_Port.TryReadPendingRequest(skillId, out ActionSkillActivationRequest<TTargetSnapshot> request))
-                return false;
-            ActionAdmissionDecision admission = Evaluate(
-                profile,
-                request.TargetSnapshot,
-                ActionAdmissionEvaluationMode.CommitActivation);
-            if (!admission.Allowed)
-            {
-                if (admission.RejectReason == ActionAdmissionRejectReason.SourceActionStillActive)
-                    return false;
-                m_Port.ClearPendingRequest(request);
-                Trace(
-                    request.Source,
-                    "action_activation_rejected",
-                    ActionSkillTraceSeverity.Information,
-                    $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                return false;
-            }
-            ulong instanceId = m_Port.CommitRequest(request, profile);
-            TraceActivated(request.Source, request, profile, instanceId);
-            return true;
-        }
-
-        bool ActivatePending(
-            ActionSkillActivationCandidate<TTargetSnapshot, TOperation> candidate,
-            ActionAdmissionProfile profile)
-        {
-            TTargetSnapshot targetSnapshot = NormalizeTarget(profile, candidate.TargetSnapshot);
-            ActionAdmissionDecision admission = Evaluate(
-                profile,
-                targetSnapshot,
-                ActionAdmissionEvaluationMode.CommitActivation);
-            bool replacementPending = false;
-            if (!admission.Allowed)
-            {
-                if (admission.RejectReason != ActionAdmissionRejectReason.SourceActionStillActive)
-                {
-                    Trace(
-                        candidate,
-                        "action_activation_rejected",
-                        ActionSkillTraceSeverity.Information,
-                        $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                    return false;
-                }
-                ActionAdmissionDecision replacement = Evaluate(
-                    profile,
-                    targetSnapshot,
-                    ActionAdmissionEvaluationMode.PreviewReplacement);
-                if (!replacement.Allowed)
-                {
-                    Trace(
-                        candidate,
-                        "action_replacement_rejected",
-                        ActionSkillTraceSeverity.Information,
-                        $"{profile.ActionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}");
-                    return false;
-                }
-                m_Port.InterruptActive(candidate.Source, "SkillReplacement");
-                replacementPending = true;
-            }
-            if (!TryCreateRequest(candidate, profile, targetSnapshot, out ActionSkillActivationRequest<TTargetSnapshot> request))
-                return false;
-            if (m_Port.HasPendingRequest(profile.ActionId))
-                throw new InvalidOperationException($"Action '{profile.ActionId}' already has a pending activation request.");
-            m_Port.StageRequest(request);
-            return !replacementPending;
-        }
-
-        ActionAdmissionDecision Evaluate(
-            ActionAdmissionProfile profile,
-            TTargetSnapshot targetSnapshot,
-            ActionAdmissionEvaluationMode mode)
-        {
-            return m_Admission.Evaluate(new ActionAdmissionRequest(
-                profile,
-                new ActionAdmissionTargetCandidate(m_Port.TargetId(targetSnapshot)),
-                mode));
-        }
-
-        bool TryCreateRequest(
-            ActionSkillActivationCandidate<TTargetSnapshot, TOperation> candidate,
-            ActionAdmissionProfile profile,
-            TTargetSnapshot targetSnapshot,
-            out ActionSkillActivationRequest<TTargetSnapshot> request)
-        {
-            ulong inputSequence = m_Port.InputSequence;
-            if (!string.IsNullOrEmpty(candidate.SourceInputRequestId))
-            {
-                if (!m_Port.TryReadInputSequence(candidate.SourceInputRequestId, out inputSequence))
-                {
-                    Trace(
-                        candidate,
-                        "action_request_unavailable",
-                        ActionSkillTraceSeverity.Detail,
-                        $"{candidate.SourceInputRequestId}:{m_Port.Tick}");
-                    request = default;
-                    return false;
-                }
-                if (candidate.ConsumeSourceInputRequest)
-                    m_Port.ClearInputRequest(candidate.SourceInputRequestId);
-            }
-            request = new ActionSkillActivationRequest<TTargetSnapshot>(
-                profile.ActionId,
-                candidate.SkillId,
-                candidate.SkillEntryOperation,
-                candidate.ContextId,
-                candidate.SourceInputRequestId,
-                inputSequence,
-                m_Port.Tick,
-                candidate.TargetKey,
-                targetSnapshot,
-                candidate.Source,
-                candidate.EquipmentContext);
-            return true;
-        }
-
-        TTargetSnapshot NormalizeTarget(
-            ActionAdmissionProfile profile,
-            TTargetSnapshot targetSnapshot)
-        {
-            return profile.TargetRequirement == ActionTargetRequirement.None
-                ? m_Port.NoneTarget
-                : targetSnapshot;
-        }
-
-        void Trace(
-            ActionSkillActivationCandidate<TTargetSnapshot, TOperation> candidate,
-            string code,
-            ActionSkillTraceSeverity severity,
-            string detail)
-        {
-            if (!m_Port.TraceEnabled)
-                return;
-            if (candidate.Operation != null)
-                m_Port.Trace(candidate.Operation, code, severity, detail);
-            else
-                m_Port.Trace(candidate.Source, code, severity, detail);
-        }
-
-        void Trace(
-            SimulationExecutionSource source,
-            string code,
-            ActionSkillTraceSeverity severity,
-            string detail)
-        {
-            if (m_Port.TraceEnabled)
-                m_Port.Trace(source, code, severity, detail);
-        }
-
-        void TraceActivated(
-            ActionSkillActivationCandidate<TTargetSnapshot, TOperation> candidate,
-            ActionSkillActivationRequest<TTargetSnapshot> request,
-            ActionAdmissionProfile profile,
-            ulong instanceId)
-        {
-            TraceActivated(request.Source, request, profile, instanceId, candidate.Operation);
-        }
-
-        void TraceActivated(
-            SimulationExecutionSource source,
-            ActionSkillActivationRequest<TTargetSnapshot> request,
-            ActionAdmissionProfile profile,
-            ulong instanceId,
-            TOperation operation = null)
-        {
-            if (!m_Port.TraceEnabled)
-                return;
-            string detail =
-                $"{request.ActionId}:{instanceId}:request={request.SourceInputRequestId}:sequence={request.InputSequence}:requirement={profile.TargetRequirement}:candidate={m_Port.TargetId(request.TargetSnapshot)}:captured={m_Port.TargetId(request.TargetSnapshot)}:captureTick={request.StartTick}:{m_Port.FormatTarget(request.TargetSnapshot)}:equipment={request.EquipmentContext}";
-            if (operation != null)
-                m_Port.Trace(operation, "action_activated", ActionSkillTraceSeverity.Information, detail);
-            else
-                m_Port.Trace(source, "action_activated", ActionSkillTraceSeverity.Information, detail);
-        }
-    }
 }

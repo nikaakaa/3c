@@ -108,7 +108,7 @@ Player Capture Agent MUST只发布Runtime Ready、接收Warmup/Start/Stop/Fault�
 
 ### Requirement: Performance Player必须是可符号化的本机诊断闭包
 
-正式Capture MUST只消费Windows x64 IL2CPP Development Performance Player。Build MUST关闭Deep Profiling、Script Debugging和Autoconnect Profiler。Unity BuildPipeline MUST使用项目外同盘的正式临时工作区，完整校验后移动进`Library/Performance/Players/.staging`并在`Library/Performance/Players/<BuildIdentity>`原子发布可执行文件、Data/GameAssembly、PDB/Burst/Native符号、Scenario catalog与manifest；外部工作区 MUST不成为第二可消费Player根。BuildIdentity MUST锁定Unity、目标、场景、脚本后端、Program、Pipeline、Projection、Solver、全部文件hash及canonical、稳定排序`DiagnosticCapabilitySet` identity。Performance Build Request MUST只用该Set承载诊断构建能力，不得增加Foot或其它领域专属Disabled／Capture字段。每项`DiagnosticCapabilityDescriptor` MUST保存CapabilityId、Mode、Event Set、Sampler Set identity、Schema identity、Program identity、维度、packet capacity与transport identity；Program identity MUST闭合AOT Generated Event Handler／Program hash、Generator revision与packet layout revision。Disabled闭包 MUST在编译期排除对应领域Definitions、typed Event Handler、Generated Program、capture页、packet队列与interest；Capture闭包 MUST只包含匹配Event／Program。该目录 MUST不被解释为商业Player、Network Product或第二诊断Player。
+正式Capture MUST只消费Windows x64 IL2CPP Development Performance Player。Build MUST关闭Deep Profiling、Script Debugging和Autoconnect Profiler。Unity BuildPipeline MUST使用项目外同盘的正式临时工作区，完整校验后移动进`Library/Performance/Players/.staging`并在`Library/Performance/Players/<BuildIdentity>`原子发布可执行文件、Data/GameAssembly、PDB/Burst/Native符号、Scenario catalog与manifest；外部工作区 MUST不成为第二可消费Player根。BuildIdentity MUST锁定Unity、目标、场景、脚本后端、Program、Pipeline、Projection、Solver、全部文件hash及canonical、稳定排序`DiagnosticCapabilitySet` identity。Performance Build Request MUST只用该Set承载诊断构建能力，不得增加Foot或其它领域专属Disabled／Capture字段。全部Capability Disabled时 MUST不定义`KK_DIAGNOSTIC_SAMPLING`或领域专属define；Capture时 MUST定义通用及匹配Capability符号。每项descriptor MUST保存CapabilityId、Mode、Event Set、Sampler Set、Schema、Program、维度、packet capacity与transport identity。Disabled闭包 MUST通过Cecil与IL2CPP硬门禁排除Diagnostic Attribute metadata／Sampling AssemblyRef、领域Definitions、typed Event Handler、Generated Program、Capture Runtime、capture页、packet队列、interest及Capability／Field identity字符串；Capture闭包 MUST只包含匹配Event／Program。该目录 MUST不被解释为商业Player、Network Product或第二诊断Player。
 
 #### Scenario: 构建Performance Player
 
@@ -119,14 +119,14 @@ Player Capture Agent MUST只发布Runtime Ready、接收Warmup/Start/Stop/Fault�
 #### Scenario: 构建领域实机采样变体
 
 - **WHEN** 同一Build Performance Player入口将一个或多个Diagnostic Capability设为Capture并引用合法Program Definition
-- **THEN** 工作流 MUST通过Player编译输入把每项匹配Generated Event Handler／Program、capture页和packet队列纳入IL2CPP AOT闭包
+- **THEN** 工作流 MUST通过Player编译输入定义`KK_DIAGNOSTIC_SAMPLING`及匹配Capability符号，把对应Generated Event Handler／Program、Runtime、capture页和packet队列纳入IL2CPP AOT闭包
 - **AND** Player manifest MUST保存完整Capability Set identity且不得包含运行时表达式编译或反射提取路径
 
 #### Scenario: 构建全部诊断关闭的纯性能基线
 
 - **WHEN** 同一Build Performance Player入口把全部Diagnostic Capability设为Disabled
-- **THEN** 构建闭包 MUST不包含任何领域诊断Definition、typed Event Handler、Generated Program、capture页、packet队列或Sampler interest
-- **AND** MUST不使用运行时bool、Null Adapter或空manifest冒充编译期关闭
+- **THEN** 构建 MUST不定义采样符号，Cecil检查 MUST确认业务程序集零Diagnostic Attribute metadata／Sampling AssemblyRef，Player不包含领域Diagnostics／Runtime、Handler、Program、capture页、packet队列或interest
+- **AND** IL2CPP输出 MUST不包含Generated Program／Session／packet／queue／interest类型或Capability／Field identity字符串，且不得使用运行时bool、Null Adapter、Linker推测或空manifest冒充关闭
 
 #### Scenario: Capture引用旧Player
 

@@ -47,6 +47,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_SampleId = string.Empty;
         [SerializeField] UnityAnimationClip m_Clip;
+        [SerializeField] CharacterAnimationSamplingBackendKind m_Backend = CharacterAnimationSamplingBackendKind.NativeClip;
+        [SerializeField] int m_ResourceCatalogIndex = -1;
+        [SerializeField] int m_GroupClipIndex = -1;
+        [SerializeField] bool m_Looping;
+        [SerializeReference] CharacterAnimationScalarCurvePage m_ScalarPage;
         [SerializeField] string m_ClipIdentity = string.Empty;
         [SerializeField] string m_FullClipDependencyHash = string.Empty;
         [SerializeField] string m_AnalysisInputHash = string.Empty;
@@ -69,16 +74,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string registeredCurveHash,
             float sourceDurationSeconds,
             AnimationCurve normalizedFootPlacementWeightCurve,
-            AnimationFootFeaturePair footFeatures)
+            AnimationFootFeaturePair footFeatures,
+            CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip,
+            CharacterAnimationScalarCurvePage scalarPage = null,
+            int resourceCatalogIndex = -1,
+            int groupClipIndex = -1)
         {
-            if (sample == null || !sample.SampleId.IsValid || !sample.Clip ||
+            if (sample == null || !sample.SampleId.IsValid ||
                 string.IsNullOrWhiteSpace(clipIdentity) || string.IsNullOrWhiteSpace(fullClipDependencyHash) ||
                 string.IsNullOrWhiteSpace(analysisInputHash) || string.IsNullOrWhiteSpace(registeredCurveHash) ||
                 !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f ||
                 normalizedFootPlacementWeightCurve == null || normalizedFootPlacementWeightCurve.length < 2)
                 throw new ArgumentException("Blend Space Clip Sample plan input is invalid.", nameof(sample));
             m_SampleId = sample.SampleId.Value;
-            m_Clip = sample.Clip;
+            if (!Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), backend))
+                throw new ArgumentOutOfRangeException(nameof(backend));
+            if (backend == CharacterAnimationSamplingBackendKind.NativeClip && !sample.Clip)
+                throw new ArgumentException("Native Blend Space sample requires an AnimationClip.", nameof(sample));
+            m_Backend = backend;
+            m_ResourceCatalogIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? resourceCatalogIndex
+                : -1;
+            m_GroupClipIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? groupClipIndex
+                : -1;
+            m_Looping = sample.Clip.isLooping;
+            m_ScalarPage = scalarPage;
+            m_Clip = backend == CharacterAnimationSamplingBackendKind.Acl ? null : sample.Clip;
             m_ClipIdentity = clipIdentity.Trim();
             m_FullClipDependencyHash = fullClipDependencyHash.Trim();
             m_AnalysisInputHash = analysisInputHash.Trim();
@@ -101,6 +123,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterAnimationBlendSpaceSampleId SampleId => string.IsNullOrWhiteSpace(m_SampleId) ? default : new CharacterAnimationBlendSpaceSampleId(m_SampleId);
         public UnityAnimationClip Clip => m_Clip;
+        public CharacterAnimationSamplingBackendKind Backend => m_Backend;
+        public int ResourceCatalogIndex => m_ResourceCatalogIndex;
+        public int GroupClipIndex => m_GroupClipIndex;
+        public bool IsAcl => Backend == CharacterAnimationSamplingBackendKind.Acl;
+        public CharacterAnimationScalarCurvePage ScalarPage => m_ScalarPage;
+        public bool IsLooping => m_Looping;
         public string ClipIdentity => m_ClipIdentity ?? string.Empty;
         public string FullClipDependencyHash => m_FullClipDependencyHash ?? string.Empty;
         public string AnalysisInputHash => m_AnalysisInputHash ?? string.Empty;
@@ -123,6 +151,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return Mathf.Clamp01(value);
         }
 
+        internal void SampleNativeProperties(
+            float normalizedTime,
+            float weight,
+            float[] values,
+            byte[] availability,
+            bool reset)
+        {
+            if (IsAcl || ScalarPage == null || !float.IsFinite(weight) || weight <= 0f)
+                return;
+            if (values == null || availability == null || values.Length != availability.Length)
+                throw new ArgumentException("Blend Space animation property sample page is invalid.");
+            for (int i = 0; i < ScalarPage.Tracks.Count; i++)
+            {
+                CharacterAnimationScalarCurveTrack track = ScalarPage.Tracks[i];
+                if (track.ParameterIndex < 0 || track.ParameterIndex >= values.Length)
+                    throw new InvalidOperationException("Blend Space animation scalar page parameter index is invalid.");
+                if (reset)
+                {
+                    values[track.ParameterIndex] = 0f;
+                    availability[track.ParameterIndex] = 0;
+                }
+                values[track.ParameterIndex] += track.Sample(normalizedTime) * weight;
+                availability[track.ParameterIndex] = 1;
+            }
+        }
+
         public bool TryGetParameter(PoseParameterId parameterId, out float value)
         {
             for (int i = 0; i < Parameters.Count; i++)
@@ -138,7 +192,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequireValid(bool requireFootFeatures)
         {
-            if (!SampleId.IsValid || !Clip || !float.IsFinite(Clip.length) || Clip.length <= 0f ||
+            if (!SampleId.IsValid ||
+                Backend == CharacterAnimationSamplingBackendKind.NativeClip && (!Clip || !float.IsFinite(Clip.length) || Clip.length <= 0f) ||
+                Backend == CharacterAnimationSamplingBackendKind.Acl && (m_ResourceCatalogIndex < 0 || m_GroupClipIndex < 0) ||
                 string.IsNullOrWhiteSpace(ClipIdentity) || string.IsNullOrWhiteSpace(FullClipDependencyHash) ||
                 string.IsNullOrWhiteSpace(AnalysisInputHash) || string.IsNullOrWhiteSpace(RegisteredCurveHash) ||
                 !float.IsFinite(SourceDurationSeconds) || SourceDurationSeconds <= 0f ||
@@ -148,6 +204,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_FootPlacementWeightCurve == null || m_FootPlacementWeightCurve.length < 2 ||
                 requireFootFeatures && !HasFootFeatures)
                 throw new InvalidOperationException($"Blend Space Sample plan '{SampleId}' is invalid.");
+            if (!IsAcl && ScalarPage != null)
+                ScalarPage.RequireValid();
         }
     }
 

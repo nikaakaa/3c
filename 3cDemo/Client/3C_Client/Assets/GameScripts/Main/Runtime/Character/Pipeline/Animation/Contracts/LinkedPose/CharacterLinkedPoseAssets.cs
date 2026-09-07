@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValid();
         }
 
-        public CharacterTypedPoseGraph RequireValid()
+        public CharacterPoseCanvasGraph RequireValid()
         {
             if (!EntryId.IsValid || string.IsNullOrWhiteSpace(GraphOwnerIdentity) || !GraphOwner || !GraphId.IsValid)
                 throw new InvalidOperationException("Linked Pose Implementation Entry binding is incomplete.");

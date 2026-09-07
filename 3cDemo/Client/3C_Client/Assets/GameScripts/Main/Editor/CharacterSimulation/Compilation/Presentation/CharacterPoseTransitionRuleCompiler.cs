@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class CharacterPoseTransitionRuleCompiler
     {
-        internal static CharacterPoseTransitionRuleProgram Compile(CharacterPoseTransitionRuleGraph graph)
+        internal static CharacterPoseTransitionRuleProgram Compile(
+            CharacterPoseTransitionRuleGraph graph,
+            IReadOnlyList<string> movementModeStateIdentities)
         {
             if (graph == null)
                 throw new ArgumentNullException(nameof(graph));
+            if (movementModeStateIdentities == null)
+                throw new ArgumentNullException(nameof(movementModeStateIdentities));
             if (!graph.GraphId.IsValid || string.IsNullOrWhiteSpace(graph.ContentRevision))
                 throw new InvalidOperationException("Pose Transition Rule graph identity is invalid.");
             if (!graph.OutputOperationId.IsValid)
@@ -64,7 +69,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.FloatLiteral,
                     signature.EnumTypeId,
                     operation.EnumLiteral,
-                    operation.IdentityLiteral);
+                    ValidateMovementModeIdentity(
+                        operation,
+                        movementModeStateIdentities));
                 compiledIndexById.Add(operation.OperationId, i);
                 signatures.Add(operation.OperationId, signature);
             }
@@ -182,6 +189,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose Transition Rule operation '{operation.OperationId}' has no pure compiler mapping.");
             }
+        }
+
+        static string ValidateMovementModeIdentity(
+            CharacterPoseTransitionRuleOperation operation,
+            IReadOnlyList<string> movementModeStateIdentities)
+        {
+            string literal = operation.IdentityLiteral;
+            if (string.IsNullOrEmpty(literal) ||
+                !literal.StartsWith(
+                    CharacterPresentationTrajectoryIntent.MovementModeStatePrefix,
+                    StringComparison.Ordinal))
+            {
+                return literal;
+            }
+            for (int i = 0; i < movementModeStateIdentities.Count; i++)
+            {
+                if (string.Equals(literal, movementModeStateIdentities[i], StringComparison.Ordinal))
+                    return literal;
+            }
+            throw new InvalidOperationException(
+                $"Pose Transition Rule identity literal '{operation.OperationId}' declares unknown Movement Mode state '{literal}'. " +
+                $"Valid states: {string.Join(", ", movementModeStateIdentities)}.");
         }
 
         static ValueSignature ResolveFactSignature(PresentationFactId factId)

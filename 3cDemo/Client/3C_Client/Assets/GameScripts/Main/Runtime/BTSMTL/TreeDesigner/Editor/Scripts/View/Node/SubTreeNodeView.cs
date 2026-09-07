@@ -34,26 +34,34 @@ namespace TreeDesigner.Editor
                     var exposedProperties = SubTree.ExposedProperties.OrderBy(i => i.Index).ToList();
                     foreach (var exposedProperty in exposedProperties)
                     {
-                        if (SubTreeNode.InputPropertyPorts.Find(i => i.Name == $"{exposedProperty.Name}_Input") == null)
+                        if (!PropertyPortAuthoringService.TryGetByDeclaration(
+                                SubTreeNode,
+                                exposedProperty.DeclarationId,
+                                PortDirection.Input,
+                                out _))
                         {
                             e.AppendAction($"{exposedProperty.Name}", (s) =>
                             {
-                                foreach (var targetTypePair in PropertyPortUtility.TargetTypeMap)
+                                if (!PropertyPortAuthoringService.TryGetPropertyPortType(
+                                        ExposedPropertyUtility.TargetType(exposedProperty.GetType()),
+                                        out System.Type propertyPortType))
+                                    throw new System.InvalidOperationException($"Exposed property '{exposedProperty.DeclarationId}' has no PropertyPort implementation.");
+                                SubTreeNode.ApplyModify("Add InputPropertyPort", () =>
                                 {
-                                    if (targetTypePair.Value == ExposedPropertyUtility.TargetType(exposedProperty.GetType()))
-                                    {
-                                        SubTreeNode.ApplyModify("Add InputPropertyPort", () =>
-                                        {
-                                            PropertyPort propertyPort = SubTreeNode.AddPropertyPort("m_InputPropertyPorts", $"{exposedProperty.Name}_Input", targetTypePair.Key, PortDirection.Input);
-                                            m_InputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Single);
-                                            m_Node.GetNewSerializedTree();
-                                            Refresh();
-                                            RefreshPorts();
-                                            SortPropertyPorts();
-                                        });
-                                        break;
-                                    }
-                                }
+                                    PropertyPort propertyPort = PropertyPortAuthoringService.AddByDeclaration(
+                                        SubTreeNode,
+                                        "m_InputPropertyPorts",
+                                        exposedProperty.DeclarationId,
+                                        exposedProperty.Name,
+                                        propertyPortType,
+                                        PortDirection.Input,
+                                        index: exposedProperty.Index);
+                                    m_InputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Single);
+                                    m_Node.GetNewSerializedTree();
+                                    Refresh();
+                                    RefreshPorts();
+                                    SortPropertyPorts();
+                                });
                             });
                         }
                     }
@@ -63,14 +71,13 @@ namespace TreeDesigner.Editor
             {
                 foreach (var propertyPort in SubTreeNode.InputPropertyPorts)
                 {
-                    string portName = propertyPort.Name;
-                    portName = portName.Substring(0, portName.Length - "_Input".Length);
-                    e.AppendAction($"{portName}", (s) =>
-                    {
-                        SubTreeNode.ApplyModify("RemoveTagWithChildren InputPropertyPort", () =>
+                        string declarationId = propertyPort.DeclarationId;
+                        e.AppendAction(propertyPort.DisplayName, (s) =>
+                        {
+                        SubTreeNode.ApplyModify("Remove InputPropertyPort", () =>
                         {
                             m_InputPortContainer.RemovePropertyPort(propertyPort);
-                            SubTreeNode.RemovePropertyPort("m_InputPropertyPorts", propertyPort);
+                            PropertyPortAuthoringService.RemoveByDeclaration(SubTreeNode, declarationId, PortDirection.Input);
                             m_Node.GetNewSerializedTree();
                             Refresh();
                             RefreshPorts();
@@ -81,29 +88,39 @@ namespace TreeDesigner.Editor
             }, MouseButton.LeftMouse));
             m_AddOutputPortButton.AddManipulator(new DropdownMenuManipulator((e) =>
             {
+                if (!SubTree)
+                    return;
                 var exposedProperties = SubTree.ExposedProperties.OrderBy(i => i.Index).ToList();
                 foreach (var exposedProperty in exposedProperties)
                 {
-                    if (SubTreeNode.OutputPropertyPorts.Find(i => i.Name == $"{exposedProperty.Name}_Output") == null)
+                    if (!PropertyPortAuthoringService.TryGetByDeclaration(
+                            SubTreeNode,
+                            exposedProperty.DeclarationId,
+                            PortDirection.Output,
+                            out _))
                     {
                         e.AppendAction($"{exposedProperty.Name}", (s) =>
                         {
-                            foreach (var targetTypePair in PropertyPortUtility.TargetTypeMap)
+                            if (!PropertyPortAuthoringService.TryGetPropertyPortType(
+                                    ExposedPropertyUtility.TargetType(exposedProperty.GetType()),
+                                    out System.Type propertyPortType))
+                                throw new System.InvalidOperationException($"Exposed property '{exposedProperty.DeclarationId}' has no PropertyPort implementation.");
+                            SubTreeNode.ApplyModify("Add OutputPropertyPort", () =>
                             {
-                                if (targetTypePair.Value == ExposedPropertyUtility.TargetType(exposedProperty.GetType()))
-                                {
-                                    SubTreeNode.ApplyModify("Add OutputPropertyPort", () =>
-                                    {
-                                        PropertyPort propertyPort = SubTreeNode.AddPropertyPort("m_OutputPropertyPorts", $"{exposedProperty.Name}_Output", targetTypePair.Key, PortDirection.Output);
-                                        m_OutputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Multi);
-                                        m_Node.GetNewSerializedTree();
-                                        Refresh();
-                                        RefreshPorts();
-                                        SortPropertyPorts();
-                                    });
-                                    break;
-                                }
-                            }
+                                PropertyPort propertyPort = PropertyPortAuthoringService.AddByDeclaration(
+                                        SubTreeNode,
+                                        "m_OutputPropertyPorts",
+                                        exposedProperty.DeclarationId,
+                                        exposedProperty.Name,
+                                        propertyPortType,
+                                        PortDirection.Output,
+                                        index: exposedProperty.Index);
+                                m_OutputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Multi);
+                                m_Node.GetNewSerializedTree();
+                                Refresh();
+                                RefreshPorts();
+                                SortPropertyPorts();
+                            });
                         });
                     }
                 }
@@ -112,14 +129,13 @@ namespace TreeDesigner.Editor
             {
                 foreach (var propertyPort in SubTreeNode.OutputPropertyPorts)
                 {
-                    string portName = propertyPort.Name;
-                    portName = portName.Substring(0, portName.Length - "_Output".Length);
-                    e.AppendAction($"{portName}", (s) =>
-                    {
-                        SubTreeNode.ApplyModify("RemoveTagWithChildren OutputPropertyPort", () =>
+                        string declarationId = propertyPort.DeclarationId;
+                        e.AppendAction(propertyPort.DisplayName, (s) =>
+                        {
+                        SubTreeNode.ApplyModify("Remove OutputPropertyPort", () =>
                         {
                             m_OutputPortContainer.RemovePropertyPort(propertyPort);
-                            SubTreeNode.RemovePropertyPort("m_OutputPropertyPorts", propertyPort);
+                            PropertyPortAuthoringService.RemoveByDeclaration(SubTreeNode, declarationId, PortDirection.Output);
                             m_Node.GetNewSerializedTree();
                             Refresh();
                             RefreshPorts();

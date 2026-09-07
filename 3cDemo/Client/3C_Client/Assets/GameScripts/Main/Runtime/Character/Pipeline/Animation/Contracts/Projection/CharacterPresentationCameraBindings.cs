@@ -2,7 +2,7 @@ using System;
 using ThirdPersonCamera;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Animation
+namespace ThirdPersonCamera
 {
     public enum CharacterPresentationCameraBindingKind
     {

@@ -4,6 +4,7 @@ using System.Linq;
 using Animancer;
 using BTSMTL.Timeline;
 using Cinemachine;
+using ThirdPerson.ProductStartup;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
@@ -31,6 +32,7 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabAssetBuilder
     {
         const string ConfigDirectory = "Assets/Configs/Simulation/GameplayLab";
+        const string ResourceProfilePath = "Assets/Configs/ProductStartup/ProductStartupProfile.asset";
         const string CompositionDirectory = ConfigDirectory + "/Compositions";
         const string PipelineDirectory = ConfigDirectory + "/Pipelines";
         const string SourceDirectory = ConfigDirectory + "/Sources";
@@ -48,8 +50,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string RollbackCompositionPath = "Assets/Configs/Simulation/DeterministicRollback/Compositions/CorinRollbackComposition.asset";
         const string CharacterDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
-        const string TrainingEnemyPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
-        const string TrainingEnemyAttackTimelinePath = "Assets/Configs/Character/TrainingEnemy/Pipeline/Graphs/Timelines/TrainingEnemyAttackTimeline.asset";
         const string FixedPlayerProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedPlayer.prefab";
         const string FixedTargetProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedTarget.prefab";
         const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
@@ -88,11 +88,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
             EnsureFolders();
-            NormalizeTrainingEnemyTimeline();
-            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
-            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
-            FixedCharacterSimulationProgramAsset fixedProgram =
-                FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
+            CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            FixedCharacterSimulationProgramAsset fixedProgram = BuildCharacterSimulationPrograms(definition);
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection
                 ? definition.PresentationProjection
                 : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
@@ -150,40 +147,27 @@ namespace ThirdPersonGameplay.Editor.Lab
             Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 AI and Deterministic Rollback.");
         }
 
-        public static void SyncFloat32EnemyVariant()
+        static FixedCharacterSimulationProgramAsset BuildCharacterSimulationPrograms(
+            CharacterPipelineDefinition definition)
         {
-            if (EditorApplication.isPlayingOrWillChangePlaymode)
-                throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
-            EnsureFolders();
-            NormalizeTrainingEnemyTimeline();
-            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
-            if (!definition.SimulationProgram || !definition.PresentationProjection)
-                throw new InvalidOperationException("Gameplay Lab Float32 player products are missing.");
-            SimulationSessionCompositionDefinition composition =
-                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
-            GameObject root = BuildFloatRuntimeRoot();
-            GameplayLabSessionVariantDefinition floatVariant = BuildVariant(
-                FloatVariantPath,
-                "gameplay-lab.local-float32",
-                root,
-                composition,
-                definition,
-                definition.SimulationProgram,
-                definition.PresentationProjection,
-                composition.WorldSolver,
-                null,
-                string.Empty);
-            GameplayLabSessionVariantDefinition fixedVariant =
-                LoadRequired<GameplayLabSessionVariantDefinition>(FixedVariantPath);
-            GameplayLabSessionVariantDefinition rollbackVariant =
-                LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
-            ScriptableObject fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
-            EnsureVariantProgram(fixedVariant, fixedProgram);
-            EnsureVariantProgram(rollbackVariant, fixedProgram);
-            SyncSceneVariants(fixedVariant, floatVariant, rollbackVariant);
-            AssetDatabase.SaveAssets();
-            GameplayLabEditorLauncher.Validate();
-            Debug.Log("Gameplay Lab Float32 Training Enemy synchronized without rebuilding Fixed or Rollback products.");
+            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                new CharacterSimulationBuildRequest(
+                    definition,
+                    CharacterSimulationBuildPublicationMode.Publish,
+                    new ICharacterSimulationTargetBuildAdapter[]
+                    {
+                        CharacterSimulationTargetCatalog.Float32(definition),
+                        new FixedCharacterSimulationTargetBuildAdapter(FixedProgramPath)
+                    }));
+            if (!result.IsValid)
+            {
+                string details = string.Join(
+                    Environment.NewLine,
+                    result.Report.Messages.Select(message => message.ToString()));
+                throw new InvalidOperationException(
+                    $"Gameplay Lab Character Simulation build failed.{Environment.NewLine}{details}");
+            }
+            return LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
         }
 
         static void EnsureVariantProgram(
@@ -219,6 +203,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     variants,
                     variant => string.Equals(variant.VariantId, selectedId, StringComparison.Ordinal));
                 bootstrap.SetVariants(selectedIndex >= 0 ? selectedIndex : 0, variants);
+                bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
                 EditorUtility.SetDirty(bootstrap);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene))
@@ -344,10 +329,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void ConfigureRollbackEndpoint(RollbackEndpointAuthoringDefinition endpoint)
         {
             var serialized = new SerializedObject(endpoint);
-            serialized.FindProperty("m_RelayServerAddress").stringValue = "127.0.0.1";
-            serialized.FindProperty("m_RelayServerPort").intValue = 24100;
             serialized.FindProperty("m_RelayServerPeerId").stringValue = "rollback-input-relay";
-            serialized.FindProperty("m_SessionId").stringValue = RollbackSessionId;
             serialized.FindProperty("m_MaximumDatagramBytes").intValue = 1200;
             serialized.FindProperty("m_MaximumQueuedMessages").intValue = 512;
             serialized.FindProperty("m_MaximumFragmentsPerMessage").intValue = 512;
@@ -361,18 +343,15 @@ namespace ThirdPersonGameplay.Editor.Lab
                 "peer-a",
                 "rollback-peer-a",
                 "rollback-player-a",
-                "rollback-actor-a",
-                24101);
+                "rollback-actor-a");
             ConfigureRollbackProfile(
                 profiles.GetArrayElementAtIndex(1),
                 "peer-b",
                 "rollback-peer-b",
                 "rollback-player-b",
-                "rollback-actor-b",
-                24102);
+                "rollback-actor-b");
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(endpoint);
-            endpoint.Build();
             endpoint.BuildRoster();
         }
 
@@ -381,15 +360,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             string profileId,
             string peerId,
             string playerId,
-            string actorId,
-            int port)
+            string actorId)
         {
             profile.FindPropertyRelative("m_ProfileId").stringValue = profileId;
             profile.FindPropertyRelative("m_PeerId").stringValue = peerId;
             profile.FindPropertyRelative("m_PlayerId").stringValue = playerId;
             profile.FindPropertyRelative("m_ActorId").stringValue = actorId;
-            profile.FindPropertyRelative("m_LocalAddress").stringValue = "127.0.0.1";
-            profile.FindPropertyRelative("m_LocalPort").intValue = port;
         }
 
         static void ConfigureRollbackSource(
@@ -481,23 +457,29 @@ namespace ThirdPersonGameplay.Editor.Lab
                     sessionHost,
                     CharacterPresentationRole.LocalOwner,
                     cameraRig);
-                CharacterPipelineHost enemy = InstantiateFloatActor(
-                    TrainingEnemyPrefabPath,
+                CharacterPipelineHost target = InstantiateFloatActor(
+                    PlayerPrefabPath,
                     root.transform,
-                    "Gameplay Lab Training Enemy",
+                    "Gameplay Lab Float Target",
                     TargetActorId,
                     s_TargetPosition,
                     Quaternion.Euler(0f, 180f, 0f),
                     sessionHost,
                     CharacterPresentationRole.SimulatedActor,
                     null);
-                if (enemy.ControlSource is not AICharacterControlSource)
-                    throw new InvalidOperationException("Gameplay Lab Float enemy requires the formal AI Character Control Source.");
+                Object.DestroyImmediate(target.ControlSource);
+                NeutralCharacterControlSource targetControlSource =
+                    target.gameObject.AddComponent<NeutralCharacterControlSource>();
+                target.SetRuntimeAuthoring(
+                    targetControlSource,
+                    CharacterPresentationRole.SimulatedActor,
+                    null);
+                Object.DestroyImmediate(target.GetComponent<SessionActorActionTargetInputProvider>());
                 SessionActorActionTargetInputProvider provider =
                     player.GetComponent<SessionActorActionTargetInputProvider>();
                 if (!provider)
                     throw new InvalidOperationException("Gameplay Lab Float player requires the formal Session Actor target provider.");
-                provider.SetAuthoring(enemy);
+                provider.SetAuthoring(target);
                 GameObject saved = SavePrefab(root, FloatRootPath);
                 Object.DestroyImmediate(root);
                 return saved;
@@ -644,19 +626,6 @@ namespace ThirdPersonGameplay.Editor.Lab
                 throw new InvalidOperationException($"Fixed Character Prefab '{prefabPath}' has no FixedCharacterHost.");
             fixedHost.SetSceneAuthoring(sessionHost, cameraRig);
             return fixedHost;
-        }
-
-        static void NormalizeTrainingEnemyTimeline()
-        {
-            TimelineAsset timeline = LoadRequired<TimelineAsset>(TrainingEnemyAttackTimelinePath);
-            foreach (AnimationTrack track in timeline.Data.Tracks.OfType<AnimationTrack>())
-            {
-                if (!track.AnimationChannelId.IsValid)
-                    throw new InvalidOperationException("Training Enemy Animation Track has no formal Animation Channel identity.");
-                track.SetAnimationChannelId(track.AnimationChannelId);
-            }
-            EditorUtility.SetDirty(timeline);
-            AssetDatabase.SaveAssetIfDirty(timeline);
         }
 
         public static void RebuildFixedCharacterPrefabs()
@@ -935,6 +904,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
                     GameplayLabBootstrap bootstrap = bootstrapObject.AddComponent<GameplayLabBootstrap>();
                     bootstrap.SetVariants(0, variants);
+                    bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
                 }
                 Scene loadedScene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
                 bool targetIsOpen = loadedScene.IsValid() && loadedScene.isLoaded;

@@ -2,12 +2,55 @@
 
 ## Purpose
 
-定义两个Unity Client与一个纯.NET Dedicated Relay Server组成的隔离Rollback对比Demo，以及构建、启动、握手、选择性输入时序和一致性诊断合同。
+定义两个 Unity Client、纯 .NET Relay 与独立只读 GM 组成的 Rollback Demo，保持精确 Candidate／Run 身份、选择性输入时序和现有 Gameplay 边界。
 
 ## Requirements
 ### Requirement: Demo 必须使用两个Unity Client与一个纯.NET Dedicated Relay Server
 
-系统 MUST提供一个本地DS Demo组合，启动一个`ThirdPerson.DeterministicRollback.Server`纯.NET Dedicated Relay Server与两个独立Unity Client Player。两端 MUST加载相同ModelId、SemanticHash、Fixed ProgramHash、TickRate、CollisionWorldHash、KccId和stable actor roster。Server MUST只拥有handshake、roster、原始输入立即转发、canonical排序、confirmation、hash与snapshot routing；MUST不执行Gameplay Program、KCC、Presentation或Unity Scene。Unity Player构建 MUST只包含Rollback Bootstrap与Peer Scene。
+Player MUST使用唯一共享 GameplayLab 场景和显式 Rollback Variant，不恢复旧 Bootstrap／Peer Scene 分裂入口。
+
+每个Demo Run MUST从一个精确DeterministicRollback Candidate启动两个独立Unity Client、一个纯.NET Dedicated Relay和一个独立开发GM。两端 MUST加载相同CandidateId、Model、SemanticHash、Fixed ProgramHash、TickRate、CollisionWorldHash、KCC identity和stable actor roster。Relay MUST只拥有网络职责和GM窄只读查询桥，不执行Gameplay Program、KCC、Presentation或Unity Scene；GM MUST不参与gameplay handshake、canonical input、rollback history或hash。不同Slot中的Demo Run MUST拥有独立RunId、SessionId、endpoint、token、进程与日志。
+
+#### Scenario: 双端开始模拟
+
+- **WHEN** 一个Run的Client A/B完成精确Candidate与Session handshake
+- **THEN** Relay MUST校验全部deterministic和Run identities后才允许SimulationTick推进
+- **AND** GM MUST只查询该Run的Relay快照
+
+#### Scenario: Demo 使用选择性输入时序
+
+- **WHEN** 一个Run的双Client开始推进Rollback Session
+- **THEN** 连续移动与Immediate request MUST使用0 Tick模型延迟，Corin Offensive request MUST使用2 Tick延迟
+- **AND** confirmed frontier MUST继续使用独立confirmation delay
+
+#### Scenario: 启动两个开发Session
+
+- **WHEN** 作者用两个不同Slot启动两份Candidate
+- **THEN** 每个Run MUST各自启动Relay、GM、Client A、Client B四个进程
+- **AND** 两个Run MUST不共享endpoint、token、mutable runtime或日志目录
+
+#### Scenario: 旧Unity Host或固定Product入口进入候选
+
+- **WHEN** Candidate Session Plan、Scene closure或启动参数包含Canonical Host、Host Player、固定ProductRoot或StopExisting
+- **THEN** Build或Run MUST失败
+- **AND** MUST不保留旧入口作为fallback
+
+#### Scenario: 启动开发产品
+
+- **WHEN** 作者从正式 Candidate 入口启动本次开发 Run
+- **THEN** MUST由该 Candidate 的工具与 Session Plan 启动 GM、Relay、Client A、Client B
+- **AND** 四个角色 MUST绑定同一 Candidate／Run／Session，只有两个进程是 Unity Player
+
+#### Scenario: 工具访问四个只读命令
+
+- **WHEN** 作者在独立 GM 进程的文本控制台提交正式查询
+- **THEN** 独立 GM MUST通过 Relay 查询桥获得该会话事实
+- **AND** MUST不修改移动、Offensive 延迟、最大预测领先量或表现链路
+
+#### Scenario: 旧 Unity Host 进入产品
+
+- **WHEN** Scene closure、manifest 或参数包含旧 Canonical Host 或 Host Player role
+- **THEN** Build MUST失败，不保留 fallback
 
 #### Scenario: 两端 Handshake
 
@@ -15,18 +58,11 @@
 - **THEN** Relay Server MUST校验全部deterministic identities后才允许SimulationTick推进
 - **AND** Server MUST不加载Fixed Program或Collision World内容
 
-#### Scenario: Demo 使用选择性输入时序
-
-- **WHEN** 双Client开始推进Rollback Session
-- **THEN** 连续移动与Immediate request MUST使用0 Tick模型延迟
-- **AND** Corin Offensive request MUST使用2 Tick延迟
-- **AND** confirmed frontier MUST使用独立confirmation delay
-
 #### Scenario: Demo 启动产品
 
-- **WHEN** 作者运行已经构建的DeterministicRollback network test product
-- **THEN** Run MUST启动Dedicated Relay Server、Client A Player与Client B Player
-- **AND** 进程列表 MUST只有两个Unity Player
+- **WHEN** 作者选择已发布的精确 Rollback Candidate 与合法 Slot
+- **THEN** Run MUST启动该候选的 Dedicated Relay、独立 GM、Client A 与 Client B
+- **AND** 只有两个进程是 Unity Player，Run MUST不重新 Build
 
 #### Scenario: 旧 Unity Host 资产进入产品
 
@@ -59,7 +95,7 @@
 
 ### Requirement: Demo 必须限制并明确世界能力范围
 
-Demo MUST只使用已编译的静态 DeterministicCollisionWorldArtifact、fixed capsule Actor contact profile和已声明 KCC capabilities。Rollback Peer Scene MUST复用与本地SandBox相同的通用灰盒移动环境Prefab；该Scene中唯一`DeterministicCollisionWorldAuthoring`及其显式surface marker MUST同时作为可见测试几何和Fixed Collision Artifact的唯一作者来源，Build MUST不创建隐藏临时碰撞世界。Rollback Composition MUST显式要求`WorldFeature.ActorCollision`。UI/文档 MUST明确支持静态世界与双Actor `SolidBodyBlock`，但未支持 Unity Physics、Rigidbody、moving platform、动态破坏、质量/冲量物理和完整竞技网络产品。
+Demo MUST只使用已编译的静态 DeterministicCollisionWorldArtifact、fixed capsule Actor contact profile和已声明 KCC capabilities。Rollback Variant MUST在共享GameplayLab场景中引用与Local Fixed相同的正式可见环境和Collision Artifact；该场景中唯一`DeterministicCollisionWorldAuthoring`及其显式surface marker MUST同时作为可见测试几何和Fixed Collision Artifact的唯一作者来源，Build MUST不创建隐藏临时碰撞世界。Rollback Composition MUST显式要求`WorldFeature.ActorCollision`。UI/文档 MUST明确支持静态世界与双Actor `SolidBodyBlock`，但未支持 Unity Physics、Rigidbody、moving platform、动态破坏、质量/冲量物理和完整竞技网络产品。
 
 #### Scenario: 查看 Demo 能力
 
@@ -69,7 +105,7 @@ Demo MUST只使用已编译的静态 DeterministicCollisionWorldArtifact、fixed
 #### Scenario: 作者调整通用移动测试环境
 
 - **WHEN** 作者修改共享Prefab中的楼梯、坡面、墙体、门洞、台阶或不平整静态几何并执行Rollback Prepare/Build
-- **THEN** Baker MUST从Peer Scene的同一可见Collider层级重新生成CollisionWorldHash
+- **THEN** Baker MUST从共享GameplayLab场景的同一正式Collider作者层级重新生成CollisionWorldHash
 - **AND** MUST不从代码生成第二份隐藏测试地图
 
 #### Scenario: 一个 Peer 冲刺撞向另一个 Actor

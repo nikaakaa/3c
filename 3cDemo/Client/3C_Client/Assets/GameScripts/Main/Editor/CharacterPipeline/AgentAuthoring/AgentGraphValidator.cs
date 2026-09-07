@@ -222,7 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     foreach (CharacterLinkedPoseImplementationEntryBinding entry in
                              implementation.Entries)
                     {
-                        CharacterTypedPoseGraph graph = entry.RequireValid();
+                        CharacterPoseCanvasGraph graph = entry.RequireValid();
                         CharacterLinkedPosePortProjection.RequireEntryGraphMatch(
                             graph,
                             implementation.Interface,
@@ -316,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         void ValidatePresentationGraph(
             CharacterAnimationPresentationProfile presentation,
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             HashSet<PoseGraphId> path,
             Dictionary<string, int> actionInputs,
@@ -326,7 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 string nodeId = string.IsNullOrEmpty(scope)
@@ -370,7 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         dependencies[dependencyIndex];
                     if (!dependency.GraphId.IsValid)
                         continue;
-                    CharacterTypedPoseGraph child =
+                    CharacterPoseCanvasGraph child =
                         owner.RequireGraph(dependency.GraphId);
                     ValidatePresentationGraph(
                         presentation,
@@ -391,7 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         void ValidateStateLocalPoseSource(
             CharacterAnimationPresentationProfile presentation,
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPoseNodeDefinition definition,
             string path)
         {
@@ -458,7 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         void CountActionChannel(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             string path,
             Dictionary<string, int> counts,
             string missingCode)

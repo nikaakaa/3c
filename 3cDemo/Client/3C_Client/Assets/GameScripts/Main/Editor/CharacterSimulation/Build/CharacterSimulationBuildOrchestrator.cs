@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -17,6 +20,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 definition,
                 CharacterSimulationBuildPublicationMode.Publish,
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
+        }
+
+        public static CharacterSimulationBuildResult Build(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.Publish,
+                targets));
         }
 
         public static CharacterSimulationBuildResult Build(CharacterSimulationBuildRequest request)
@@ -37,6 +50,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 string definitionGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(request.Definition));
                 semanticStage = CharacterSemanticIrArtifactStore.Stage(definitionGuid, semanticArtifact);
+                stages.Add(new CharacterAclAnimationArtifactPublishStage(
+                    definitionGuid,
+                    result.AnimationCatalog));
                 for (int i = 0; i < request.Targets.Count; i++)
                     stages.Add(request.Targets[i].Stage(definitionGuid, result.TargetProducts[i]));
                 CharacterPresentationProjection publishedProjection = Publish(
@@ -49,7 +65,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     result.Artifact,
                     result.TargetProducts,
                     publishedProjection,
-                    result.Report);
+                    result.Report,
+                    result.AnimationCatalog);
             }
             catch (Exception exception)
             {
@@ -58,6 +75,84 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 semanticStage?.Dispose();
                 result.Report.ArtifactError("artifact_group_publish_failed", AssetDatabase.GetAssetPath(request.Definition), exception.Message);
                 return Failed(result.Report);
+            }
+            FinalizePublication(
+                request.Definition,
+                stages,
+                result.Report);
+            for (int i = 0; i < stages.Count; i++)
+                stages[i].Dispose();
+            semanticStage.Dispose();
+            return result;
+        }
+
+        static void FinalizePublication(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetPublishStage> stages,
+            CharacterSimulationCompileReport report)
+        {
+            string sourceIdentity = AssetDatabase.GetAssetPath(definition);
+            for (int i = 0; i < stages.Count; i++)
+            {
+                if (!(stages[i] is ICharacterSimulationTargetPublishFinalizer finalizer))
+                    continue;
+                try
+                {
+                    if (finalizer.TryFinalizePublication(out string warning))
+                        continue;
+                    Debug.LogWarning(
+                        $"Character Simulation publication cleanup deferred for '{sourceIdentity}': {warning}");
+                    report.Warning(
+                        "target_publish_cleanup_deferred",
+                        sourceIdentity,
+                        warning);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning(
+                        $"Character Simulation publication cleanup deferred for '{sourceIdentity}': {exception.Message}");
+                    report.Warning(
+                        "target_publish_cleanup_deferred",
+                        sourceIdentity,
+                        exception.Message);
+                }
+            }
+        }
+
+        public static TimelineSimulationBuildResult Build(TimelineSimulationBuildRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            bool publish = request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish;
+            TimelineSimulationBuildResult result = ExecuteTimeline(
+                request,
+                out ValidatedSemanticIrArtifact semanticArtifact);
+            if (!result.IsValid || !publish)
+                return result;
+            var stages = new List<ICharacterSimulationTargetPublishStage>();
+            CharacterSemanticIrArtifactPublishTransaction semanticStage = null;
+            try
+            {
+                semanticStage = CharacterSemanticIrArtifactStore.Stage(result.RootGuid, semanticArtifact);
+                for (int i = 0; i < request.Targets.Count; i++)
+                    stages.Add(request.Targets[i].Stage(result.RootGuid, result.TargetProducts[i]));
+                semanticStage.Commit();
+                for (int i = 0; i < stages.Count; i++)
+                    stages[i].Commit();
+                for (int i = 0; i < stages.Count; i++)
+                    stages[i].Complete();
+                semanticStage.Complete();
+            }
+            catch (Exception exception)
+            {
+                for (int i = stages.Count - 1; i >= 0; i--)
+                    stages[i].Dispose();
+                semanticStage?.Dispose();
+                result.Report.ArtifactError(
+                    "timeline_artifact_group_publish_failed",
+                    AssetDatabase.GetAssetPath(request.Timeline),
+                    exception.Message);
+                return FailedTimeline(result.Report);
             }
             for (int i = 0; i < stages.Count; i++)
                 stages[i].Dispose();
@@ -73,6 +168,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
         }
 
+        public static CharacterSimulationBuildResult DryRun(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.DryRun,
+                targets));
+        }
+
         public static CharacterSemanticFrontendResult CompileSemanticIr(CharacterPipelineDefinition definition, bool persistCache)
         {
             CharacterSemanticFrontendResult result = CharacterSemanticFrontendCompiler.Compile(definition);
@@ -82,6 +187,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 result.CompilationModel.DefinitionGuid,
                 result.Artifact);
             return new CharacterSemanticFrontendResult(persisted, result.CompilationModel, result.Report);
+        }
+
+        public static TimelineSemanticFrontendResult CompileTimelineSemanticIr(TimelineAsset timeline, bool persistCache)
+        {
+            TimelineSemanticFrontendResult result = TimelineSemanticFrontendCompiler.Compile(timeline);
+            if (!result.IsValid || !persistCache)
+                return result;
+            ValidatedSemanticIrArtifact persisted = CharacterSemanticIrArtifactStore.Write(
+                result.RootGuid,
+                result.Artifact);
+            return new TimelineSemanticFrontendResult(
+                persisted,
+                result.Content,
+                result.RootGuid,
+                result.Report);
         }
 
         static CharacterSimulationBuildResult Execute(
@@ -106,14 +226,37 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
                 return Failed(report);
             }
+            if (!artifact.Header.Root.IsCharacter ||
+                !string.Equals(artifact.Header.Root.RootIdentity, frontend.CompilationModel.DefinitionGuid, StringComparison.Ordinal))
+            {
+                report.ArtifactError("character_root_identity_invalid", artifactPath, "Character Semantic IR root does not match the Definition cache identity.");
+                return Failed(report);
+            }
             semanticArtifact = artifact;
+
+            CharacterAnimationBuildInput animationBuildInput;
+            try
+            {
+                animationBuildInput = CreateAnimationBuildInput(frontend.CompilationModel);
+            }
+            catch (Exception exception)
+            {
+                report.PresentationError(
+                    "animation_build_input_invalid",
+                    AssetDatabase.AssetPathToGUID(
+                        AssetDatabase.GetAssetPath(definition)),
+                    exception.Message);
+                return Failed(report);
+            }
 
             CharacterPresentationProjection projection = CompileProjection(
                 frontend.CompilationModel,
                 artifact,
+                animationBuildInput,
                 request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish,
                 report,
-                out CharacterPresentationSemanticContract frontendContract);
+                out CharacterPresentationSemanticContract frontendContract,
+                out CharacterAnimationBuildCatalog animationCatalog);
             if (projection == null || !projection.IsValid || frontendContract == null || !report.IsValid)
                 return Failed(report);
             var targetProducts = new List<CharacterSimulationTargetBuildProduct>(request.Targets.Count);
@@ -150,17 +293,98 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 targetProducts.Add(product);
             }
             var descriptor = new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header);
-            return new CharacterSimulationBuildResult(descriptor, targetProducts, projection, report);
+            return new CharacterSimulationBuildResult(
+                descriptor,
+                targetProducts,
+                projection,
+                report,
+                animationCatalog);
+        }
+
+        static TimelineSimulationBuildResult ExecuteTimeline(
+            TimelineSimulationBuildRequest request,
+            out ValidatedSemanticIrArtifact semanticArtifact)
+        {
+            semanticArtifact = null;
+            TimelineSemanticFrontendResult frontend = TimelineSemanticFrontendCompiler.Compile(request.Timeline);
+            CharacterSimulationCompileReport report = frontend.Report;
+            if (!frontend.IsValid)
+                return FailedTimeline(report);
+            string artifactPath = CharacterSemanticIrArtifactStore.GetPath(frontend.RootGuid);
+            ValidatedSemanticIrArtifact artifact;
+            try
+            {
+                artifact = CharacterSemanticIrArtifactStore.RoundTrip(frontend.Artifact);
+            }
+            catch (Exception exception)
+            {
+                report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
+                return FailedTimeline(report);
+            }
+            if (!artifact.Header.Root.IsTimeline ||
+                !string.Equals(artifact.Header.Root.RootIdentity, frontend.RootGuid, StringComparison.Ordinal) ||
+                !string.Equals(artifact.Header.Root.EntryIdentity, $"timeline:{frontend.Content.Timeline.AuthoringId}", StringComparison.Ordinal) ||
+                !string.Equals(artifact.Header.Root.ContentIdentity, frontend.Content.ContentUnit.ContentHash, StringComparison.Ordinal))
+            {
+                report.ArtifactError("timeline_root_identity_invalid", artifactPath, "Timeline Semantic IR root does not match the persisted content, entry, or cache identity.");
+                return FailedTimeline(report);
+            }
+            semanticArtifact = artifact;
+            var targetProducts = new List<CharacterSimulationTargetBuildProduct>(request.Targets.Count);
+            for (int i = 0; i < request.Targets.Count; i++)
+            {
+                ICharacterSimulationTargetBuildAdapter adapter = request.Targets[i];
+                CharacterSimulationTargetBuildProduct product = adapter.Compile(artifact, report);
+                if (product == null || !report.IsValid)
+                    return FailedTimeline(report);
+                if (!product.NumericProfileId.Equals(adapter.NumericProfileId))
+                {
+                    report.TargetError(
+                        "target_product_identity_mismatch",
+                        adapter.NumericProfileId.Value,
+                        $"Target Adapter returned product '{product.NumericProfileId}' instead of '{adapter.NumericProfileId}'.");
+                    return FailedTimeline(report);
+                }
+                if (!ProductMatchesRoot(product, artifact.Header.Root))
+                {
+                    report.TargetError(
+                        "target_root_identity_mismatch",
+                        adapter.NumericProfileId.Value,
+                        "Target Program root does not match the Timeline Semantic IR root.");
+                    return FailedTimeline(report);
+                }
+                targetProducts.Add(product);
+            }
+            return new TimelineSimulationBuildResult(
+                new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header),
+                frontend.RootGuid,
+                targetProducts,
+                report);
+        }
+
+        static bool ProductMatchesRoot(
+            CharacterSimulationTargetBuildProduct product,
+            SimulationProgramRootDescriptor root)
+        {
+            return product switch
+            {
+                Float32CharacterSimulationTargetBuildProduct float32 => float32.Program.Manifest.Root == root,
+                FixedCharacterSimulationTargetBuildProduct fixedTarget => fixedTarget.Program.Manifest.Root == root,
+                _ => false
+            };
         }
 
         static CharacterPresentationProjection CompileProjection(
             CharacterAuthoringCompilationModel model,
             ValidatedSemanticIrArtifact artifact,
+            CharacterAnimationBuildInput animationBuildInput,
             bool generateMissingOrStaleArtifacts,
             CharacterSimulationCompileReport report,
-            out CharacterPresentationSemanticContract contract)
+            out CharacterPresentationSemanticContract contract,
+            out CharacterAnimationBuildCatalog animationCatalog)
         {
             contract = null;
+            animationCatalog = null;
             var errors = new List<string>();
             var footAnalysisDiagnostics = new List<CharacterFootAnalysisArtifactDiagnostic>();
             CharacterFootPlacementAnalysisCompilation footAnalysis =
@@ -193,8 +417,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     new CharacterPresentationProjectionCompileRequest(
                         artifact,
                         model,
-                        footAnalysis));
+                        footAnalysis,
+                        animationBuildInput));
             contract = compileResult.Contract;
+            animationCatalog = compileResult.AnimationCatalog;
             for (int i = 0; i < compileResult.Diagnostics.Count; i++)
             {
                 CharacterPresentationProjectionDiagnostic diagnostic = compileResult.Diagnostics[i];
@@ -203,30 +429,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationProjection projection = compileResult.Projection;
             if (!report.IsValid)
                 return projection;
-            if (!string.Equals(projection.ProgramId, artifact.Header.ProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(projection.SourceRevision, artifact.Header.SourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(projection.SemanticHash, artifact.Header.SemanticHash.ToString(), StringComparison.Ordinal) ||
-                !string.Equals(projection.ContractHash, contract.ContractHash.ToString(), StringComparison.Ordinal))
-            {
-                report.PresentationError("presentation_identity_mismatch", artifact.Header.ProgramId.Value, "Projection identity does not match the Semantic IR presentation contract.");
-                return projection;
-            }
-            if (projection.Producers.Count != artifact.SemanticIr.Producers.Count)
-            {
-                report.PresentationError("presentation_producer_set_mismatch", artifact.Header.ProgramId.Value, "Projection producer count does not match the Semantic IR artifact.");
-                return projection;
-            }
-            for (int i = 0; i < projection.Producers.Count; i++)
-            {
-                CharacterPresentationProducerEntry projected = projection.Producers[i];
-                ProgramProducer semantic = artifact.SemanticIr.Producers[i];
-                if (projected.ProgramProducerIndex != i || semantic.Index != i ||
-                    !string.Equals(projected.ProgramProducerIdentity, semantic.Identity, StringComparison.Ordinal))
-                {
-                    report.PresentationError("presentation_producer_identity_mismatch", projected.ProgramProducerIdentity, $"Producer index {i} is not identical across Semantic IR and Projection.");
-                }
-            }
             return projection;
+        }
+
+        static CharacterAnimationBuildInput CreateAnimationBuildInput(
+            CharacterAuthoringCompilationModel model)
+        {
+            CharacterAnimationPresentationProfile profile =
+                model.AnimationPresentationProfile ??
+                throw new InvalidOperationException("Animation Presentation Profile is missing.");
+            CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(
+                profile.RigDefinition ??
+                throw new InvalidOperationException("Animation Rig Definition is missing."));
+            CharacterAnimationParameterLayout layout =
+                CharacterAnimationParameterLayoutCompiler.Build(profile.PoseGraph.Graph);
+            CharacterAnimationRigBinding sourceRigBinding =
+                CharacterRuntimeProfileRootHierarchyBuilder
+                    .RequireLocalCorinAnimationRigBinding(rig);
+            CharacterAnimationSourceRig sourceRig =
+                CharacterAnimationSourceRig.FromRuntimeRig(rig, sourceRigBinding);
+            return new CharacterAnimationBuildInput(
+                model.DefinitionGuid,
+                CharacterAnimationBuildInput.RequireNativeArtifactIdentity(),
+                profile,
+                sourceRig,
+                layout,
+                profile.AnimationCompression ??
+                throw new InvalidOperationException("Animation compression settings are missing."));
         }
 
         static string ArtifactDiagnosticCode(AnimationFootAnalysisArtifactStatus status)
@@ -318,6 +547,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 null,
                 Array.Empty<CharacterSimulationTargetBuildProduct>(),
                 null,
+                report);
+        }
+
+        static TimelineSimulationBuildResult FailedTimeline(CharacterSimulationCompileReport report)
+        {
+            return new TimelineSimulationBuildResult(
+                null,
+                string.Empty,
+                Array.Empty<CharacterSimulationTargetBuildProduct>(),
                 report);
         }
 

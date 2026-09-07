@@ -812,20 +812,22 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Android: TextMeshPro
-    EmbeddedLinux: TextMeshPro
-    GameCoreXboxOne: TextMeshPro
-    Nintendo Switch: TextMeshPro
-    PS4: TextMeshPro
-    PS5: TextMeshPro
-    QNX: TextMeshPro
-    Stadia: TextMeshPro
-    Standalone: BBBNEXUS_HAS_CINEMACHINE;ENABLE_HYBRIDCLR;FANTASY_UNITY;MAGICACLOTH2;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3;TextMeshPro;BBBNEXUS_HAS_FINALIK;UNITY_PIPELINE_URP;STARTER_ASSETS_PACKAGES_CHECKED
-    VisionOS: TextMeshPro
-    WebGL: TextMeshPro
-    XboxOne: TextMeshPro
-    iPhone: TextMeshPro
-    tvOS: TextMeshPro
+    Android: TextMeshPro;TND_URP
+    EmbeddedLinux: TextMeshPro;TND_URP
+    GameCoreScarlett: TND_URP
+    GameCoreXboxOne: TextMeshPro;TND_URP
+    Nintendo Switch: TextMeshPro;TND_URP
+    PS4: TextMeshPro;TND_URP
+    PS5: TextMeshPro;TND_URP
+    QNX: TextMeshPro;TND_URP
+    Stadia: TextMeshPro;TND_URP
+    Standalone: BBBNEXUS_HAS_CINEMACHINE;ENABLE_HYBRIDCLR;FANTASY_UNITY;MAGICACLOTH2;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3;TextMeshPro;BBBNEXUS_HAS_FINALIK;UNITY_PIPELINE_URP;STARTER_ASSETS_PACKAGES_CHECKED;MOREMOUNTAINS_NICEVIBRATIONS_INSTALLED;TND_URP;KK_DIAGNOSTIC_SAMPLING;KK_DIAGNOSTIC_FOOT;NODECANVAS;FLOWCANVAS;GRAPH_DESIGNER
+    VisionOS: TextMeshPro;TND_URP
+    WebGL: TextMeshPro;TND_URP;GRAPH_DESIGNER
+    Windows Store Apps: TND_URP;GRAPH_DESIGNER
+    XboxOne: TextMeshPro;TND_URP
+    iPhone: TextMeshPro;TND_URP
+    tvOS: TextMeshPro;TND_URP
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

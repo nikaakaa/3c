@@ -84,7 +84,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             constructor.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
             il.InsertBefore(first, Instruction.Create(OpCodes.Ldstr, profilerName));
             il.InsertBefore(first, Instruction.Create(OpCodes.Newobj, constructor));
-            il.InsertBefore(first, Instruction.Create(OpCodes.Stsfld, field));
+            il.InsertBefore(first, Instruction.Create(OpCodes.Stsfld, BindField(field)));
             return field;
         }
 
@@ -180,7 +180,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             il.Append(Instruction.Create(OpCodes.Ldc_I8, unchecked((long)pointId)));
             if (mode == PerformanceInstrumentationMode.Span)
                 il.Append(Instruction.Create(OpCodes.Ldc_I8, unchecked((long)metricId)));
-            il.Append(Instruction.Create(OpCodes.Ldsfld, marker));
+            il.Append(Instruction.Create(OpCodes.Ldsfld, BindField(marker)));
             il.Append(Instruction.Create(OpCodes.Call, enter));
             il.Append(Instruction.Create(OpCodes.Stloc, scope));
             Instruction tryStart = Instruction.Create(OpCodes.Nop);
@@ -189,7 +189,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 il.Append(Instruction.Create(OpCodes.Ldarg_0));
             for (int i = 0; i < method.Parameters.Count; i++)
                 il.Append(Instruction.Create(OpCodes.Ldarg, method.Parameters[i]));
-            il.Append(Instruction.Create(OpCodes.Call, original));
+            il.Append(Instruction.Create(OpCodes.Call, BindMethod(original)));
             if (result != null)
                 il.Append(Instruction.Create(OpCodes.Stloc, result));
             il.Append(Instruction.Create(OpCodes.Ldc_I4_1));
@@ -369,6 +369,36 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 return reference;
             reference = new AssemblyNameReference(name, new Version(0, 0, 0, 0));
             module.AssemblyReferences.Add(reference);
+            return reference;
+        }
+
+        static TypeReference BindDeclaringType(TypeDefinition type)
+        {
+            if (!type.HasGenericParameters)
+                return type;
+            var instance = new GenericInstanceType(type);
+            foreach (GenericParameter parameter in type.GenericParameters)
+                instance.GenericArguments.Add(parameter);
+            return instance;
+        }
+
+        static FieldReference BindField(FieldDefinition field) =>
+            field.DeclaringType.HasGenericParameters
+                ? new FieldReference(field.Name, field.FieldType, BindDeclaringType(field.DeclaringType))
+                : field;
+
+        static MethodReference BindMethod(MethodDefinition method)
+        {
+            if (!method.DeclaringType.HasGenericParameters)
+                return method;
+            var reference = new MethodReference(method.Name, method.ReturnType, BindDeclaringType(method.DeclaringType))
+            {
+                HasThis = method.HasThis,
+                ExplicitThis = method.ExplicitThis,
+                CallingConvention = method.CallingConvention
+            };
+            foreach (ParameterDefinition parameter in method.Parameters)
+                reference.Parameters.Add(new ParameterDefinition(parameter.ParameterType));
             return reference;
         }
     }

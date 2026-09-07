@@ -9,26 +9,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal sealed class CharacterPoseTypedIrGraph
     {
-        readonly Dictionary<PoseNodeId, CharacterTypedPoseNode> m_AuthoredNodes;
-        readonly Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseEdge>>
+        readonly Dictionary<PoseNodeId, CharacterPoseCanvasNode> m_AuthoredNodes;
+        readonly Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseCanvasConnection>>
             m_Incoming;
         readonly Dictionary<PoseNodeId, CharacterPoseIrNode> m_Nodes;
 
         internal CharacterPoseTypedIrGraph(
             CharacterPoseGraphClosureEntry closure,
             IReadOnlyDictionary<PoseNodeId,
-                CharacterTypedPoseNode> authoredNodes,
+                CharacterPoseCanvasNode> authoredNodes,
             IReadOnlyDictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseEdge>> incoming,
+                IReadOnlyList<CharacterPoseCanvasConnection>> incoming,
             IReadOnlyDictionary<PoseNodeId, CharacterPoseIrNode> nodes)
         {
             Closure = closure ??
                 throw new ArgumentNullException(nameof(closure));
             m_AuthoredNodes = new Dictionary<PoseNodeId,
-                CharacterTypedPoseNode>(authoredNodes ??
+                CharacterPoseCanvasNode>(authoredNodes ??
                 throw new ArgumentNullException(nameof(authoredNodes)));
             m_Incoming = new Dictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseEdge>>(incoming ??
+                IReadOnlyList<CharacterPoseCanvasConnection>>(incoming ??
                 throw new ArgumentNullException(nameof(incoming)));
             m_Nodes = new Dictionary<PoseNodeId, CharacterPoseIrNode>(
                 nodes ?? throw new ArgumentNullException(nameof(nodes)));
@@ -44,11 +44,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         internal CharacterPoseGraphClosureEntry Closure { get; }
-        internal CharacterTypedPoseGraph Source => Closure.Graph;
+        internal CharacterPoseCanvasGraph Source => Closure.Graph;
         internal IReadOnlyDictionary<PoseNodeId,
-            CharacterTypedPoseNode> AuthoredNodes => m_AuthoredNodes;
+            CharacterPoseCanvasNode> AuthoredNodes => m_AuthoredNodes;
         internal IReadOnlyDictionary<PoseNodeId,
-            IReadOnlyList<CharacterPoseEdge>> Incoming => m_Incoming;
+            IReadOnlyList<CharacterPoseCanvasConnection>> Incoming => m_Incoming;
 
         internal CharacterPoseIrNode RequireNode(PoseNodeId nodeId) =>
             m_Nodes.TryGetValue(nodeId, out CharacterPoseIrNode node)
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return Failure(
                     "typed-lowering-invalid",
                     exception.Message,
-                    request.Asset.Graph.GraphId);
+                    request.AuthoringView.RootGraph.GraphId);
             }
         }
 
@@ -186,14 +186,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseCompilationRequest request,
             CharacterPoseGraphClosureEntry closure)
         {
-            CharacterTypedPoseGraph graph = closure.Graph;
+            CharacterPoseCanvasGraph graph = closure.Graph;
             var authoredNodes =
-                new Dictionary<PoseNodeId, CharacterTypedPoseNode>();
+                new Dictionary<PoseNodeId, CharacterPoseCanvasNode>();
             for (int nodeIndex = 0;
                  nodeIndex < graph.Nodes.Count;
                  nodeIndex++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                 if (node == null ||
                     !node.NodeId.IsValid ||
                     !authoredNodes.TryAdd(node.NodeId, node))
@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 ValidatePorts(graph, node);
             }
-            Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseEdge>> incoming =
+            Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseCanvasConnection>> incoming =
                 BuildIncoming(graph, authoredNodes);
             var lowered =
                 new Dictionary<PoseNodeId, CharacterPoseIrNode>();
@@ -215,7 +215,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                  nodeIndex < graph.Nodes.Count;
                  nodeIndex++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                 string sourcePath = NodePath(graph, node.NodeId);
                 try
                 {
@@ -260,8 +260,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static void ValidatePorts(
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode node)
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode node)
         {
             var ids = new HashSet<string>(
                 CharacterPoseAuthoringPortProjection
@@ -285,17 +285,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseEdge>>
+        static Dictionary<PoseNodeId, IReadOnlyList<CharacterPoseCanvasConnection>>
             BuildIncoming(
-                CharacterTypedPoseGraph graph,
+                CharacterPoseCanvasGraph graph,
                 IReadOnlyDictionary<PoseNodeId,
-                    CharacterTypedPoseNode> nodes)
+                    CharacterPoseCanvasNode> nodes)
         {
             var incoming = nodes.Keys.ToDictionary(
                 value => value,
-                _ => new List<CharacterPoseEdge>());
+                _ => new List<CharacterPoseCanvasConnection>());
             var edgeIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CharacterPoseEdge edge in graph.Edges)
+            foreach (CharacterPoseCanvasConnection edge in graph.Edges)
             {
                 if (edge == null ||
                     string.IsNullOrWhiteSpace(edge.EdgeId) ||
@@ -315,21 +315,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             return incoming.ToDictionary(
                 value => value.Key,
-                value => (IReadOnlyList<CharacterPoseEdge>)
+                value => (IReadOnlyList<CharacterPoseCanvasConnection>)
                     value.Value.ToArray());
         }
 
         static IReadOnlyList<CharacterPoseIrInput> BuildInputs(
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode target,
-            IReadOnlyList<CharacterPoseEdge> incoming,
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode target,
+            IReadOnlyList<CharacterPoseCanvasConnection> incoming,
             IReadOnlyDictionary<PoseNodeId,
-                CharacterTypedPoseNode> nodes,
+                CharacterPoseCanvasNode> nodes,
             string sourcePath)
         {
             var occupied = new HashSet<string>(StringComparer.Ordinal);
             var result = new List<CharacterPoseIrInput>();
-            foreach (CharacterPoseEdge edge in incoming.OrderBy(
+            foreach (CharacterPoseCanvasConnection edge in incoming.OrderBy(
                          value => value.TargetPortId.Value,
                          StringComparer.Ordinal))
             {
@@ -411,11 +411,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         sourcePath: sourcePath)
                 });
 
-        static string GraphPath(CharacterTypedPoseGraph graph) =>
+        static string GraphPath(CharacterPoseCanvasGraph graph) =>
             $"pose-graphs/{graph.GraphId.Value}";
 
         static string NodePath(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             PoseNodeId nodeId) =>
             $"{GraphPath(graph)}/nodes/{nodeId.Value}";
     }

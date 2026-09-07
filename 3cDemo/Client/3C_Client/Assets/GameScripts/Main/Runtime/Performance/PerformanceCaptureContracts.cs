@@ -16,12 +16,11 @@ namespace ThirdPersonPerformance
         public const string Player = "third-person-performance-player/1";
         public const string Request = "third-person-performance-run-request/3";
         public const string Status = "third-person-performance-run-status/2";
-        public const string RuntimeResult = "third-person-performance-runtime-result/2";
+        public const string RuntimeResult = "third-person-performance-runtime-result/3";
         public const string Gate = "third-person-performance-gate/1";
         public const string Manifest = "third-person-performance-capture/1";
-        public const string Summary = "third-person-performance-summary/1";
+        public const string Summary = "third-person-performance-summary/2";
         public const string Comparison = "third-person-performance-comparison/1";
-        public const string InstrumentationInput = "third-person-performance-instrumentation-build/1";
         public const string InstrumentationManifest = PerformanceInstrumentationIdentity.ManifestSchema;
         public const string CollectorId = "windows-wpr-cpu/1";
         public const string TransportId = "loopback-tcp/1";

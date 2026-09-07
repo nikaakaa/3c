@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 phaseValidation,
                 motionData,
                 out _);
-            string temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            string temporaryPath = Path.Combine(directory, "." + Guid.NewGuid().ToString("N") + ".tmp");
             try
             {
                 File.WriteAllBytes(temporaryPath, bytes);

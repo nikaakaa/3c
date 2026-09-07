@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal CharacterPoseGraphClosureEntry(
             CharacterPresentationPoseGraphAsset owner,
             string ownerIdentity,
-            CharacterTypedPoseGraph graph)
+            CharacterPoseCanvasGraph graph)
         {
             Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             OwnerIdentity = CharacterPoseGraphClosure.RequireOwnerIdentity(
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         internal CharacterPresentationPoseGraphAsset Owner { get; }
         internal string OwnerIdentity { get; }
-        internal CharacterTypedPoseGraph Graph { get; }
+        internal CharacterPoseCanvasGraph Graph { get; }
     }
 
     internal sealed class CharacterPoseGraphClosureReference
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal IReadOnlyList<CharacterPoseGraphClosureReference>
             References { get; }
 
-        internal CharacterTypedPoseGraph RequireGraph(
+        internal CharacterPoseCanvasGraph RequireGraph(
             CharacterPresentationPoseGraphAsset owner,
             PoseGraphId graphId)
         {
@@ -180,10 +180,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             readonly CharacterPoseCompilationRequest m_Request;
             readonly Dictionary<string,
-                Dictionary<PoseGraphId, CharacterTypedPoseGraph>>
+                Dictionary<PoseGraphId, CharacterPoseCanvasGraph>>
                 m_Catalogs =
                     new Dictionary<string,
-                        Dictionary<PoseGraphId, CharacterTypedPoseGraph>>(
+                        Dictionary<PoseGraphId, CharacterPoseCanvasGraph>>(
                         StringComparer.Ordinal);
             readonly Dictionary<LinkedPoseGroupId,
                 CharacterLinkedPoseGroupBinding> m_LinkedGroups;
@@ -222,8 +222,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             internal CharacterPoseGraphClosure Build()
             {
                 CharacterPresentationPoseGraphAsset rootOwner =
-                    m_Request.Asset;
-                CharacterTypedPoseGraph root = rootOwner.Graph;
+                    m_Request.AuthoringView.OwnerAsset;
+                CharacterPoseCanvasGraph root = rootOwner.Graph;
                 if (root == null || !root.GraphId.IsValid)
                 {
                     throw new GraphClosureFailure(
@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 string ownerIdentity =
                     CharacterPresentationAssetObjectIdentity.Require(owner);
-                Dictionary<PoseGraphId, CharacterTypedPoseGraph> catalog =
+                Dictionary<PoseGraphId, CharacterPoseCanvasGraph> catalog =
                     m_Catalogs[ownerIdentity];
                 foreach (PoseGraphId graphId in catalog.Keys)
                 {
@@ -296,7 +296,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 if (m_Visited.Contains(key))
                     return;
-                CharacterTypedPoseGraph graph = RequireCatalogGraph(
+                CharacterPoseCanvasGraph graph = RequireCatalogGraph(
                     owner,
                     ownerIdentity,
                     graphId,
@@ -310,7 +310,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                      nodeIndex < graph.Nodes.Count;
                      nodeIndex++)
                 {
-                    CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                    CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                     if (node?.Payload == null)
                         continue;
                     CharacterPoseNodeDefinition definition =
@@ -356,8 +356,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             void VisitLinkedPoseEntries(
                 CharacterPresentationPoseGraphAsset owner,
-                CharacterTypedPoseGraph graph,
-                CharacterTypedPoseNode node)
+                CharacterPoseCanvasGraph graph,
+                CharacterPoseCanvasNode node)
             {
                 if (node.Payload is not CharacterLinkedPoseCallPayload payload ||
                     !m_LinkedGroups.TryGetValue(
@@ -423,7 +423,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
             }
 
-            CharacterTypedPoseGraph RequireCatalogGraph(
+            CharacterPoseCanvasGraph RequireCatalogGraph(
                 CharacterPresentationPoseGraphAsset owner,
                 string ownerIdentity,
                 PoseGraphId graphId,
@@ -432,12 +432,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (!m_Catalogs.TryGetValue(
                         ownerIdentity,
                         out Dictionary<PoseGraphId,
-                            CharacterTypedPoseGraph> catalog))
+                            CharacterPoseCanvasGraph> catalog))
                 {
                     catalog = BuildCatalog(owner, ownerIdentity);
                     m_Catalogs.Add(ownerIdentity, catalog);
                 }
-                if (!catalog.TryGetValue(graphId, out CharacterTypedPoseGraph graph))
+                if (!catalog.TryGetValue(graphId, out CharacterPoseCanvasGraph graph))
                 {
                     throw new GraphClosureFailure(
                         "graph-dependency-missing",
@@ -449,14 +449,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return graph;
             }
 
-            static Dictionary<PoseGraphId, CharacterTypedPoseGraph>
+            static Dictionary<PoseGraphId, CharacterPoseCanvasGraph>
                 BuildCatalog(
                     CharacterPresentationPoseGraphAsset owner,
                     string ownerIdentity)
             {
                 var catalog =
-                    new Dictionary<PoseGraphId, CharacterTypedPoseGraph>();
-                foreach (CharacterTypedPoseGraph graph in owner.EnumerateGraphs())
+                    new Dictionary<PoseGraphId, CharacterPoseCanvasGraph>();
+                foreach (CharacterPoseCanvasGraph graph in owner.EnumerateGraphs())
                 {
                     if (graph == null ||
                         !graph.GraphId.IsValid ||
@@ -531,7 +531,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             CharacterPoseCompilationDiagnosticSeverity.Error,
                             "graph-closure-invalid",
                             exception.Message,
-                            request?.Asset?.Graph?.GraphId ?? default)
+                            request?.AuthoringView?.RootGraph?.GraphId ?? default)
                     });
             }
         }

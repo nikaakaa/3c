@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ZZZDumpRoot Condition="'$(ZZZDumpRoot)' == ''">D:/ZZZ_Dump</ZZZDumpRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ZZZDumpRoot)/tools_dl/AnimeStudio/AnimeStudio/AnimeStudio.csproj" />
+    <ProjectReference Include="$(ZZZDumpRoot)/tools_dl/AnimeStudio/AnimeStudio.Utility/AnimeStudio.Utility.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ContentWithTargetPath Include="$(ZZZDumpRoot)/tools_dl/AnimeStudio/AnimeStudio.Libraries/x86/AnimeStudio.FBXNative.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>x86/AnimeStudio.FBXNative.dll</TargetPath>
+    </ContentWithTargetPath>
+    <ContentWithTargetPath Include="$(ZZZDumpRoot)/tools_dl/AnimeStudio/AnimeStudio.Libraries/x64/AnimeStudio.FBXNative.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>x64/AnimeStudio.FBXNative.dll</TargetPath>
+    </ContentWithTargetPath>
+  </ItemGroup>
+</Project>

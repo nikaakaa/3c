@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -14,6 +15,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class CharacterPoseFamilyPayloadPlanPass
     {
+        static readonly CharacterPoseFamilyPayloadAdapterCatalog s_FamilyPayloadAdapters =
+            new CharacterPoseFamilyPayloadAdapterCatalog();
+
         readonly struct CompiledValue
         {
             public CompiledValue(CharacterPosePortKind kind, int index, int producerOperationIndex = -1)
@@ -54,7 +58,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public PoseStateId SourceStateId { get; }
         }
 
-        sealed class BindingBuilder
+        internal sealed class BindingBuilder
         {
             public BindingBuilder(
                 CharacterPresentationPoseGraphAsset graphAsset,
@@ -74,7 +78,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
                 CharacterLinkedPoseProjectionPayload linkedPose,
-                CharacterFootPlacementAnalysisCompilation footAnalysis)
+                CharacterFootPlacementAnalysisCompilation footAnalysis,
+                IReadOnlyList<string> movementModeStateIdentities)
             {
                 GraphAsset = graphAsset;
                 GraphClosure = graphClosure ??
@@ -107,6 +112,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
                 LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
                 FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+                MovementModeStateIdentities = movementModeStateIdentities ??
+                    throw new ArgumentNullException(nameof(movementModeStateIdentities));
                 LinkedGroups = profile.LinkedPoseGroups.ToDictionary(value => value.GroupId);
                 LinkedImplementations = profile.LinkedPoseImplementations.ToDictionary(value => value.ImplementationId);
             }
@@ -131,6 +138,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CharacterAnimationPresentationProfile Profile { get; }
             public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
             public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+            public IReadOnlyList<string> MovementModeStateIdentities { get; }
             public Dictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding> LinkedGroups { get; }
             public Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationAsset> LinkedImplementations { get; }
             public List<CharacterLinkedPoseEntryFragmentPlanDescriptor> LinkedFragments { get; } = new List<CharacterLinkedPoseEntryFragmentPlanDescriptor>();
@@ -171,11 +179,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseTopologyCatalog topology,
             CharacterPoseSymbolicProgram symbolicProgram)
         {
-            CharacterPresentationPoseGraphAsset asset = request.Asset;
+            CharacterPresentationPoseGraphAsset asset = request.AuthoringView.OwnerAsset;
             CharacterAnimationRigDefinition rig = request.Rig;
             AnimationBlendNodePayload[] blendNodes = request.BlendNodes;
-            CharacterTypedPoseGraph graph = asset.Graph;
-            CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
+            CharacterPoseCanvasGraph graph = asset.Graph;
+            CharacterAnimationParameterLayout parameterLayout =
+                CharacterAnimationParameterLayoutCompiler.Build(graph);
+            CharacterPoseParameterDeclaration[] authoredParameters = parameterLayout.Declarations;
             var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
             var parameterIndices = new Dictionary<PoseParameterId, int>();
             for (int i = 0; i < authoredParameters.Length; i++)
@@ -186,7 +196,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameter.ParameterId,
                     parameter.ValueType,
                     parameter.DefaultValue,
-                    parameter.Unit);
+                    parameter.Unit,
+                    parameter.Usage);
                 parameterIndices.Add(parameter.ParameterId, i);
             }
             var state = new BindingBuilder(
@@ -207,7 +218,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.ProfileIndicesByIdentity,
                 request.Profile,
                 request.LinkedPose,
-                request.FootAnalysis);
+                request.FootAnalysis,
+                request.MovementModeStateIdentities);
             CompileGraph(
                 state,
                 asset,
@@ -261,11 +273,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 in layout);
         }
 
-        static CharacterPoseSpace ResolveInputPoseSpace(CharacterTypedPoseNode node) =>
+        static CharacterPoseSpace ResolveInputPoseSpace(CharacterPoseCanvasNode node) =>
             ResolvePoseSpace(node, CharacterPosePortDirection.Input);
 
         static CharacterPoseSpace ResolveOutputPoseSpace(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPoseOperationCode code)
         {
             CharacterPoseSpace result = ResolvePoseSpace(node, CharacterPosePortDirection.Output);
@@ -278,7 +290,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static CharacterPoseSpace ResolvePoseSpace(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortDirection direction)
         {
             CharacterPoseSpace result = CharacterPoseSpace.None;
@@ -303,7 +315,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static Dictionary<PoseInterfacePortId, CompiledValue> CompileGraph(
             BindingBuilder state,
             CharacterPresentationPoseGraphAsset ownerAsset,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             IReadOnlyDictionary<PoseInterfacePortId, CompiledValue> imports,
             string scope,
             string callChain,
@@ -312,7 +324,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int linkedPoseFragmentIndex = -1,
             string linkedPoseFragmentIdentity = "")
         {
-            CharacterTypedPoseGraph closedGraph =
+            CharacterPoseCanvasGraph closedGraph =
                 state.GraphClosure.RequireGraph(
                     ownerAsset,
                     graph.GraphId);
@@ -333,14 +345,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ownerAsset,
                 graph.GraphId,
                 graphRole);
-            Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes = graph.Nodes.ToDictionary(value => value.NodeId);
-            Dictionary<string, CharacterPoseEdge> incoming = BuildIncoming(graph);
+            Dictionary<PoseNodeId, CharacterPoseCanvasNode> nodes = graph.Nodes.ToDictionary(value => value.NodeId);
+            Dictionary<string, CharacterPoseCanvasConnection> incoming = BuildIncoming(graph);
             var values = new Dictionary<string, CompiledValue>(StringComparer.Ordinal);
             var exports = new Dictionary<PoseInterfacePortId, CompiledValue>();
             for (int nodeIndex = 0; nodeIndex < ir.Nodes.Count; nodeIndex++)
             {
                 CharacterPoseIrNode irNode = ir.Nodes[nodeIndex];
-                CharacterTypedPoseNode node = nodes[new PoseNodeId(irNode.NodeId.Value)];
+                CharacterPoseCanvasNode node = nodes[new PoseNodeId(irNode.NodeId.Value)];
                 CharacterPoseNodeDefinition handler =
                     RequireNativeHandler(irNode);
                 if (handler.NativeRole ==
@@ -382,18 +394,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         callChain,
                         values)
                     : new LinkedPoseCallCompilation(-1, handler.ExecutionDomain);
-                int stateMachineIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.StateMachine)
-                    ? CompileStateMachine(
-                        ownerAsset,
-                        RequirePayload<CharacterPoseStateMachineNodePayload>(irNode),
-                        scopedNodeId,
-                        state,
-                        scope,
-                        callChain,
-                        linkedPoseFragmentIndex,
-                        linkedPoseFragmentIdentity)
-                    : -1;
+                CharacterPoseFamilyPayloadBindingResult preboundFamilyPayload =
+                    handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine)
+                        ? s_FamilyPayloadAdapters.Bind(
+                            CharacterPoseOperationFamily.StateMachine,
+                            new CharacterPoseFamilyPayloadBindingRequest(
+                                state,
+                                handler,
+                                irNode,
+                                node,
+                                scopedNodeId,
+                                scope,
+                                callChain,
+                                linkedPoseFragmentIndex,
+                                linkedPoseFragmentIdentity,
+                                -1,
+                                -1,
+                                -1,
+                                -1))
+                        : default;
                 CharacterPoseOperationCode expectedCode =
                     handler.NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput &&
@@ -523,71 +543,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         ? index
                         : throw new InvalidOperationException($"Animation transition owner '{scopedNodeId}' has no compiled policy payload.")
                     : -1;
-                int animationSlotIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.AnimationSlot)
-                    ? CompileAnimationSlot(
-                        RequirePayload<CharacterAnimationSlotPosePayload>(irNode),
-                        scopedNodeId,
-                        inputA,
-                        controlInputOperationIndex,
-                        playerIndex,
-                        blendNodeIndex,
-                        state)
-                    : -1;
-                int inertializationIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.Inertialization)
-                    ? CompileInertialization(state)
-                    : -1;
-                CharacterAnimationBoneMaskAsset boneMask = handler.BoneMask(irNode.Payload);
-                int maskIndex = boneMask
-                    ? CompileMask(boneMask, state.Rig, state.Masks, state.MaskIndices)
-                    : -1;
-                int additiveIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.Additive)
-                    ? CompileAdditiveReference(
-                        RequirePayload<CharacterAdditivePosePayload>(irNode),
-                        state.Rig,
-                        state.AdditiveReferences)
-                    : -1;
-                int modifyIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.ModifyBone)
-                    ? CompileModifyBone(
-                        RequirePayload<CharacterModifyBonePosePayload>(irNode),
-                        state)
-                    : -1;
-                int rootOrientationWarpIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.RootOrientationWarp)
-                    ? CompileRootOrientationWarp(
-                        RequirePayload<CharacterRootOrientationWarpPosePayload>(irNode),
-                        scopedNodeId,
-                        inputA,
-                        state)
-                    : -1;
-                int poseBoneIkGoalsIndex = handler.Kind == CharacterPoseNodeKind.PoseBoneIKGoals
-                    ? CompilePoseBoneIkGoals(
-                        RequirePayload<CharacterPoseBoneIkGoalsPayload>(irNode),
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int footPlacementIndex = handler.Kind == CharacterPoseNodeKind.FootPlacement
-                    ? CompileFootPlacement(
-                        RequirePayload<CharacterFootPlacementPosePayload>(irNode),
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int fullBodyIkIndex = handler.Kind == CharacterPoseNodeKind.FullBodyIK
-                    ? CompileFullBodyIk(
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int clipPlayerIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.ClipPlayer)
-                    ? CompileClipPlayer(
-                        RequirePayload<CharacterClipPlayerPosePayload>(irNode),
-                        scopedNodeId,
-                        playerIndex,
-                        state)
-                    : -1;
+                CharacterPoseFamilyPayloadBindingResult familyPayload =
+                    handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine)
+                        ? preboundFamilyPayload
+                        : s_FamilyPayloadAdapters.Bind(
+                            symbolic.Family,
+                            new CharacterPoseFamilyPayloadBindingRequest(
+                                state,
+                                handler,
+                                irNode,
+                                node,
+                                scopedNodeId,
+                                scope,
+                                callChain,
+                                linkedPoseFragmentIndex,
+                                linkedPoseFragmentIdentity,
+                                inputA,
+                                controlInputOperationIndex,
+                                playerIndex,
+                                blendNodeIndex));
                 PoseParameterResolvePolicy[] policies = CompilePolicies(
                     handler.ParameterPolicies(irNode.Payload),
                     state.Parameters,
@@ -621,22 +596,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     handler.InputRange(irNode.Payload),
                     playerIndex,
                     blendNodeIndex,
-                    inertializationIndex,
-                    maskIndex,
-                    additiveIndex,
-                    modifyIndex,
-                    rootOrientationWarpIndex,
-                    poseBoneIkGoalsIndex,
-                    footPlacementIndex,
-                    fullBodyIkIndex,
+                    familyPayload.InertializationIndex,
+                    familyPayload.BoneMaskIndex,
+                    familyPayload.AdditiveReferenceIndex,
+                    familyPayload.ModifyBoneIndex,
+                    familyPayload.RootOrientationWarpIndex,
+                    familyPayload.PoseBoneIkGoalsIndex,
+                    familyPayload.FootPlacementIndex,
+                    familyPayload.FullBodyIkIndex,
                     outputFullBodyIkGoalContributionValueIndex,
                     outputFullBodyIkGoalSetValueIndex,
                     inputFullBodyIkGoalSetValueIndex,
                     fullBodyIkGoalContributionInputStart,
                     fullBodyIkGoalContributionInputs.Length,
-                    clipPlayerIndex,
-                    stateMachineIndex,
-                    animationSlotIndex,
+                    familyPayload.ClipPlayerIndex,
+                    familyPayload.StateMachineIndex,
+                    familyPayload.AnimationSlotIndex,
                     linkedPoseCall.CallIndex,
                     linkedPoseFragmentIndex,
                     handler.Weight(irNode.Payload),
@@ -670,8 +645,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static LinkedPoseCallCompilation CompileLinkedPoseCall(
             BindingBuilder state,
-            CharacterTypedPoseNode call,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            CharacterPoseCanvasNode call,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             string callChain,
             Dictionary<string, CompiledValue> values)
@@ -711,7 +686,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (!state.LinkedImplementations.TryGetValue(implementationId, out CharacterLinkedPoseImplementationAsset implementation))
                     throw new InvalidOperationException($"Linked Pose Call '{call.NodeId}' candidate '{implementationId}' is absent from authoring.");
                 CharacterLinkedPoseImplementationEntryBinding entryBinding = implementation.RequireEntry(payload.EntryId);
-                CharacterTypedPoseGraph entryGraph =
+                CharacterPoseCanvasGraph entryGraph =
                     state.GraphClosure.RequireGraph(
                         entryBinding.GraphOwner,
                         entryBinding.GraphId);
@@ -831,7 +806,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static int CompileAnimationSlot(
+        internal static int CompileAnimationSlot(
             CharacterAnimationSlotPosePayload payload,
             PoseNodeId scopedNodeId,
             int sourcePoseValueIndex,
@@ -1073,7 +1048,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             identities[producerIndex] = producerIdentity;
         }
 
-        static int CompileModifyBone(
+        internal static int CompileModifyBone(
             CharacterModifyBonePosePayload payload,
             BindingBuilder state)
         {
@@ -1087,7 +1062,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompilePoseBoneIkGoals(
+        internal static int CompilePoseBoneIkGoals(
             CharacterPoseBoneIkGoalsPayload payload,
             PoseNodeId scopedNodeId,
             BindingBuilder state)
@@ -1118,10 +1093,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileInertialization(BindingBuilder state) =>
+        internal static int CompileInertialization(BindingBuilder state) =>
             state.InertializationCount++;
 
-        static int CompileFootPlacement(
+        internal static int CompileFootPlacement(
             CharacterFootPlacementPosePayload payload,
             PoseNodeId scopedNodeId,
             BindingBuilder state)
@@ -1143,7 +1118,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileFullBodyIk(
+        internal static int CompileFullBodyIk(
             PoseNodeId scopedNodeId,
             BindingBuilder state)
         {
@@ -1160,7 +1135,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileStateMachine(
+        internal static int CompileStateMachine(
             CharacterPresentationPoseGraphAsset ownerAsset,
             CharacterPoseStateMachineNodePayload payload,
             PoseNodeId scopedNodeId,
@@ -1201,7 +1176,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             for (int stateIndex = 0; stateIndex < orderedStates.Length; stateIndex++)
             {
                 CharacterPoseStateDefinition authored = orderedStates[stateIndex];
-                CharacterTypedPoseGraph stateGraph =
+                CharacterPoseCanvasGraph stateGraph =
                     state.GraphClosure.RequireGraph(
                         ownerAsset,
                         authored.PoseGraphId);
@@ -1311,7 +1286,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     sourceStateIndex,
                     targetStateIndex,
                     authored.Priority,
-                    CharacterPoseTransitionRuleCompiler.Compile(authored.Rule),
+                    CharacterPoseTransitionRuleCompiler.Compile(
+                        authored.Rule,
+                        state.MovementModeStateIdentities),
                     authored.BlendLogic,
                     authored.DurationSeconds,
                     completionDurationSeconds,
@@ -1449,7 +1426,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static void ValidateStateParameters(
             CharacterPoseStateDefinition state,
-            CharacterTypedPoseGraph stateGraph,
+            CharacterPoseCanvasGraph stateGraph,
             IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters)
         {
             if (stateGraph.Parameters.Count != parameters.Count)
@@ -1460,6 +1437,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseParameterEntry expected = parameters[i];
                 if (!authored.TryGetValue(expected.ParameterId, out CharacterPoseParameterDeclaration actual) ||
                     actual.ValueType != expected.ValueType ||
+                    actual.Usage != expected.Usage ||
                     !string.Equals(actual.Unit, expected.Unit, StringComparison.Ordinal) ||
                     actual.DefaultValue != expected.DefaultValue)
                 {
@@ -1674,7 +1652,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PoseStateId sourceStateId) =>
             new TransitionRuleId($"pose-state/{transitionId}/{sourceStateId}");
 
-        static int CompileClipPlayer(
+        internal static int CompileClipPlayer(
             CharacterClipPlayerPosePayload payload,
             PoseNodeId scopedNodeId,
             int playerIndex,
@@ -1692,7 +1670,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileRootOrientationWarp(
+        internal static int CompileRootOrientationWarp(
             CharacterRootOrientationWarpPosePayload payload,
             PoseNodeId scopedNodeId,
             int inputValueIndex,
@@ -1734,7 +1712,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static void BindGraphInputs(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             IReadOnlyDictionary<PoseInterfacePortId, CompiledValue> imports,
             string scope,
             Dictionary<string, CompiledValue> values)
@@ -1754,8 +1732,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static void BindGraphOutputs(
-            CharacterTypedPoseNode node,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            CharacterPoseCanvasNode node,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values,
             Dictionary<PoseInterfacePortId, CompiledValue> exports)
@@ -1777,16 +1755,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static void CompileSubgraphCall(
             BindingBuilder state,
             CharacterPresentationPoseGraphAsset ownerAsset,
-            CharacterTypedPoseGraph owner,
-            CharacterTypedPoseNode callSite,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            CharacterPoseCanvasGraph owner,
+            CharacterPoseCanvasNode callSite,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             string callChain,
             Dictionary<string, CompiledValue> values,
             int linkedPoseFragmentIndex,
             string linkedPoseFragmentIdentity)
         {
-            CharacterTypedPoseGraph child =
+            CharacterPoseCanvasGraph child =
                 state.GraphClosure.RequireGraph(
                     ownerAsset,
                     callSite.Subgraph.PoseGraphId);
@@ -1833,7 +1811,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static void BindOperationOutputs(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             string scope,
             int poseValue,
             int fullBodyIkGoalContributionValue,
@@ -1868,10 +1846,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static CompiledValue RequireInput(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortKind kind,
             int ordinal,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values,
             bool required = true)
@@ -1890,10 +1868,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static int RequireOptionalInput(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortKind kind,
             int ordinal,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values)
         {
@@ -1907,10 +1885,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static int TryGetInputIndex(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortKind kind,
             int ordinal,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values)
         {
@@ -1926,9 +1904,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static int[] GetInputIndices(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortKind kind,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values)
         {
@@ -1955,31 +1933,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static bool TryGetInputValue(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortDefinition port,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values,
             out CompiledValue value)
         {
             value = default;
-            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseEdge edge) &&
+            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseCanvasConnection edge) &&
                    values.TryGetValue(EndpointKey(edge.SourceNodeId, edge.SourcePortId, scope), out value) &&
                    value.Kind == port.Kind;
         }
 
-        static Dictionary<string, CharacterPoseEdge> BuildIncoming(CharacterTypedPoseGraph graph)
+        static Dictionary<string, CharacterPoseCanvasConnection> BuildIncoming(CharacterPoseCanvasGraph graph)
         {
-            var result = new Dictionary<string, CharacterPoseEdge>(StringComparer.Ordinal);
+            var result = new Dictionary<string, CharacterPoseCanvasConnection>(StringComparer.Ordinal);
             for (int i = 0; i < graph.Edges.Count; i++)
             {
-                CharacterPoseEdge edge = graph.Edges[i];
+                CharacterPoseCanvasConnection edge = graph.Edges[i];
                 result.Add(edge.TargetNodeId.Value + "\0" + edge.TargetPortId.Value, edge);
             }
             return result;
         }
 
-        static int CompileMask(
+        internal static int CompileMask(
             CharacterAnimationBoneMaskAsset mask,
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationDenseBoneMask> masks,
@@ -1995,7 +1973,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileAdditiveReference(
+        internal static int CompileAdditiveReference(
             CharacterAdditivePosePayload payload,
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationAdditiveReferenceDescriptor> references)
@@ -2049,9 +2027,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static int RequireOptionalPoseInput(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             int ordinal,
-            Dictionary<string, CharacterPoseEdge> incoming,
+            Dictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             Dictionary<string, CompiledValue> values)
         {
@@ -2070,12 +2048,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return -1;
         }
 
-        static bool HasPoseOutput(CharacterTypedPoseNode node) =>
+        static bool HasPoseOutput(CharacterPoseCanvasNode node) =>
             CharacterPoseAuthoringPortProjection.Get(node)
                 .Any(value => value != null && IsPose(value.Kind) && value.Direction == CharacterPosePortDirection.Output);
 
         static bool HasOutput(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortKind kind) =>
             CharacterPoseAuthoringPortProjection.Get(node)
                 .Any(value => value != null && value.Kind == kind &&
@@ -2140,7 +2118,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return operation;
         }
 
-        static TPayload RequirePayload<TPayload>(CharacterPoseIrNode node)
+        internal static TPayload RequirePayload<TPayload>(CharacterPoseIrNode node)
             where TPayload : CharacterPoseNodePayload
         {
             if (!(node?.Payload is TPayload payload))

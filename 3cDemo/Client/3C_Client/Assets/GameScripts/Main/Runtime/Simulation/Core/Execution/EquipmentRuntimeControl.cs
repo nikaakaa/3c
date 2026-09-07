@@ -190,8 +190,7 @@ namespace ThirdPersonSimulation
 
         public EquipmentChangeOutcome Commit(
             OperationHandle source,
-            EquipmentChangeId changeId,
-            Action<EquipmentSlotState> abortOutgoingHost)
+            EquipmentChangeId changeId)
         {
             EquipmentStateAggregate aggregate = m_Port.ReadState();
             PendingEquipmentChange pending = aggregate.PendingChange;
@@ -208,11 +207,10 @@ namespace ThirdPersonSimulation
             using IEquipmentMutationScope mutation = m_Port.BeginMutation();
             try
             {
-                abortOutgoingHost?.Invoke(outgoing);
                 Remove(outgoing);
                 ResetFeatureState(outgoing.FeatureId);
                 ulong nextRevision = checked(outgoing.Revision + 1);
-                ulong nextGeneration = checked(outgoing.HostGeneration + 1);
+                ulong nextGeneration = checked(outgoing.Generation + 1);
                 EquipmentSlotState incoming = CreateSlotState(outgoing.SlotId, pending.ToEquipmentId, nextRevision, nextGeneration);
                 ResetFeatureState(incoming.FeatureId);
                 if (incoming.IsEquipped)
@@ -286,7 +284,7 @@ namespace ThirdPersonSimulation
                 slot.FeatureRevision,
                 slot.VisualBindingId,
                 slot.Revision,
-                slot.HostGeneration,
+                slot.Generation,
                 true,
                 source,
                 handles);

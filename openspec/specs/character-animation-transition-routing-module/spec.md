@@ -1,7 +1,7 @@
 # character-animation-transition-routing-module Specification
 
 ## Purpose
-TBD - created by archiving change add-animation-transition-routing-module. Update Purpose after archive.
+定义独立 Transition Routing 模块的精确规则编译、Standard Blend／Inertialization 决策和 capture／release 协议；模块不计算 Pose 或拥有调用方状态。
 ## Requirements
 ### Requirement: Transition Routing模块必须独立于现有Pose执行链
 
@@ -124,4 +124,3 @@ Standard到Standard MUST输出新的普通混合命令；Standard到Inertializat
 - **THEN** Fixture MUST逐项调用正式模块Frame API
 - **AND** MUST显示每帧输入、输出和状态迁移
 - **AND** MUST不创建PlayableGraph或伪造视觉Pose结果
-

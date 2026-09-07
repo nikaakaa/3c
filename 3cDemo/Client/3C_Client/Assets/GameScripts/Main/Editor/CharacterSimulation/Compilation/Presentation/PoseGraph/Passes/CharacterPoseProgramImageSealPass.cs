@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             CharacterPresentationPoseStage[] stages =
                 schedule.Stages.ToArray();
-            CharacterTypedPoseGraph graph = request.Asset.Graph;
+            CharacterPoseCanvasGraph graph = request.AuthoringView.RootGraph;
             CharacterAnimationRigDefinition rig = request.Rig;
             int baseContributionCapacity = checked(
                 workspace.ContributionCapacity -
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static string ComputeHash(
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             CharacterAnimationRigDefinition rig,
             CharacterPoseFamilyPayloadBinding binding,
             IReadOnlyList<CharacterPresentationPoseStage> stages,

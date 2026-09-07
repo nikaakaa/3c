@@ -6,8 +6,6 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using FixedPresentationCommand = ThirdPersonSimulation.Fixed.PresentationCommand;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
-using ActivePresentationRecord = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedPresentationRecord;
-using PresentationStateKey = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedPresentationStateKey;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
@@ -64,11 +62,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             RequireCommit();
             CharacterPresentationCommand converted = Convert(command);
-            if (IsLocalCameraCommand(converted))
-            {
-                m_Runtime.Publish(converted);
-                return;
-            }
             if (TryBuildStateKey(converted, out PresentationStateKey key))
                 AddRecord(key, converted);
             else
@@ -173,7 +166,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 if (!TryResolveLatest(keys[i], out ActivePresentationRecord current) ||
                     !IsTerminal(current.Command) ||
-                    !IsAnimationProducer(current.Command) ||
                     current.Command.Header.Tick.Value > confirmedTick)
                 {
                     continue;
@@ -195,7 +187,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId))
                     {
-                        if (IsAnimationPlaybackCommand(current.Command) &&
+                        if (current.Command.Kind == CharacterPresentationCommandKind.ForceProducer)
+                        {
+                            m_Runtime.Publish(current.Command);
+                        }
+                        else if (IsAnimationPlaybackCommand(current.Command) &&
                             IsAnimationPlaybackCommand(applied.Command) &&
                             !SamePlayback(current.Command, applied.Command))
                         {
@@ -332,41 +328,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     command.ProducerGeneration));
         }
 
-        bool IsAnimationPlaybackCommand(CharacterPresentationCommand command)
+        static bool IsAnimationPlaybackCommand(CharacterPresentationCommand command)
         {
-            if (command.Kind == CharacterPresentationCommandKind.SelectProducer ||
-                command.Kind == CharacterPresentationCommandKind.SampleProducer)
-                return IsAnimationProducer(command);
-            return IsTerminal(command) && IsAnimationProducer(command);
+            return command.Kind == CharacterPresentationCommandKind.SelectProducer ||
+                   command.Kind == CharacterPresentationCommandKind.SampleProducer ||
+                   command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
+                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
         }
 
         static bool IsTerminal(CharacterPresentationCommand command)
         {
             return command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
                    command.Kind == CharacterPresentationCommandKind.ReleaseProducer ||
-                   command.Kind == CharacterPresentationCommandKind.ForceReleaseProducer;
-        }
-
-        bool IsAnimationProducer(CharacterPresentationCommand command)
-        {
-            return m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer) &&
-                   producer.Kind == CharacterPresentationProducerKind.Animation;
-        }
-
-        bool IsLocalCameraCommand(CharacterPresentationCommand command)
-        {
-            if (!m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer))
-                throw new InvalidOperationException(
-                    $"Fixed Presentation producer '{command.ProducerId}' is absent from the Projection.");
-            if (producer.Kind != CharacterPresentationProducerKind.Camera)
-                return false;
-            if (command.Kind != CharacterPresentationCommandKind.Camera &&
-                command.Kind != CharacterPresentationCommandKind.CompleteProducer &&
-                command.Kind != CharacterPresentationCommandKind.ReleaseProducer &&
-                command.Kind != CharacterPresentationCommandKind.ForceReleaseProducer)
-                throw new InvalidOperationException(
-                    $"Camera producer '{command.ProducerId}' received unsupported Presentation command '{command.Kind}'.");
-            return true;
+                   command.Kind == CharacterPresentationCommandKind.ForceProducer;
         }
 
         static bool SamePlayback(
@@ -443,6 +417,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     RemoveHistory(sampleKey);
                     m_Applied.Remove(sampleKey);
                 }
+                else if (string.Equals(key.Channel, "camera", StringComparison.Ordinal) &&
+                         baseline.Command.Weight <= 0f)
+                {
+                    RemoveHistory(key);
+                    m_Applied.Remove(key);
+                }
             }
         }
 
@@ -488,18 +468,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             switch (command.Kind)
             {
                 case CharacterPresentationCommandKind.SelectProducer:
-                    if (producer.Kind != CharacterPresentationProducerKind.Animation)
-                        throw new InvalidOperationException("Selection state requires an Animation producer.");
                     key = new PresentationStateKey("animation-selection", producer.AnimationChannelId.Value, 0);
                     return true;
                 case CharacterPresentationCommandKind.SampleProducer:
-                    if (producer.Kind != CharacterPresentationProducerKind.Animation)
-                        throw new InvalidOperationException("Sample state requires an Animation producer.");
                     key = new PresentationStateKey("animation-sample", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.CompleteProducer:
                 case CharacterPresentationCommandKind.ReleaseProducer:
                     key = new PresentationStateKey("animation-terminal", command.ProducerId, command.ProducerGeneration);
+                    return true;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation command requires a Camera producer.");
+                    key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
+                    return true;
+                case CharacterPresentationCommandKind.Camera:
+                    key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:
@@ -531,9 +515,66 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.ProducerGeneration,
                 command.Cycle,
                 command.SourceActionInstanceId,
-                command.VisualTimeScale.ToSingle());
+                command.VisualTimeScale.ToSingle(),
+                command.DomainPayload);
         }
 
+        readonly struct ActivePresentationRecord
+        {
+            public ActivePresentationRecord(PresentationStateKey key, CharacterPresentationCommand command)
+            {
+                Key = key;
+                Command = command;
+            }
+
+            public PresentationStateKey Key { get; }
+            public CharacterPresentationCommand Command { get; }
+        }
+
+        readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
+        {
+            public PresentationStateKey(string channel, string producer, ulong generation)
+            {
+                Channel = channel ?? string.Empty;
+                Producer = producer ?? string.Empty;
+                Generation = generation;
+            }
+
+            public string Channel { get; }
+            public string Producer { get; }
+            public ulong Generation { get; }
+            public bool Equals(PresentationStateKey other) =>
+                Generation == other.Generation &&
+                string.Equals(Channel, other.Channel, StringComparison.Ordinal) &&
+                string.Equals(Producer, other.Producer, StringComparison.Ordinal);
+            public override bool Equals(object obj) => obj is PresentationStateKey other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(Channel, Producer, Generation);
+            public int CompareTo(PresentationStateKey other)
+            {
+                int channel = ChannelOrder(Channel).CompareTo(ChannelOrder(other.Channel));
+                if (channel != 0)
+                    return channel;
+                channel = string.CompareOrdinal(Channel, other.Channel);
+                if (channel != 0)
+                    return channel;
+                int producer = string.CompareOrdinal(Producer, other.Producer);
+                return producer != 0 ? producer : Generation.CompareTo(other.Generation);
+            }
+            public override string ToString() => $"{Channel}/{Producer}/{Generation}";
+
+            static int ChannelOrder(string channel)
+            {
+                return channel switch
+                {
+                    "animation-selection" => 0,
+                    "animation-sample" => 1,
+                    "animation-terminal" => 2,
+                    "camera" => 3,
+                    _ => throw new InvalidOperationException(
+                        $"Fixed Presentation state channel '{channel}' has no reconciliation order.")
+                };
+            }
+        }
     }
 
     public static class FixedUnityPresentationBoundary

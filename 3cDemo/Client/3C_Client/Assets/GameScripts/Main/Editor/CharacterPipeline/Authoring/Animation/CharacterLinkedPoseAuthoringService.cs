@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (entry == null)
                     throw new InvalidOperationException($"Linked Pose Interface '{linkedInterface.InterfaceId}' contains a missing Entry.");
                 PoseGraphId graphId = new PoseGraphId($"{implementationId}.{entry.EntryId.Value}");
-                CharacterTypedPoseGraph graph = source && !emptyTemplate
+                CharacterPoseCanvasGraph graph = source && !emptyTemplate
                     ? CloneEntryGraph(source, entry.EntryId, graphId)
                     : BuildEntryGraph(linkedInterface, entry, graphId, emptyTemplate);
                 if (index == 0)
@@ -354,7 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var nodeId = new PoseNodeId($"linked-pose-call.{Guid.NewGuid():N}");
                 transaction.Add(new CreatePoseNodeMutation(
                     graphOwner.Graph.GraphId.Value,
-                    new CharacterTypedPoseNode(
+                    new CharacterPoseCanvasNode(
                         nodeId,
                         $"{value.group.GroupId} / {value.entry.EntryId}",
                         payload,
@@ -456,7 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             window.ShowLinkedPoseAsset(target);
         }
 
-        static CharacterTypedPoseGraph BuildEntryGraph(
+        static CharacterPoseCanvasGraph BuildEntryGraph(
             CharacterLinkedPoseInterfaceAsset linkedInterface,
             CharacterLinkedPoseInterfaceEntryDescriptor entry,
             PoseGraphId graphId,
@@ -468,23 +468,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterLinkedPosePortProjection.CreateGraphInputPorts(linkedInterface, entry.EntryId);
             CharacterPoseDynamicPort[] outputPorts =
                 CharacterLinkedPosePortProjection.CreateGraphOutputPorts(linkedInterface, entry.EntryId);
-            var nodes = new List<CharacterTypedPoseNode>
+            var nodes = new List<CharacterPoseCanvasNode>
             {
-                new CharacterTypedPoseNode(
+                new CharacterPoseCanvasNode(
                     inputId,
                     "Graph Input",
                     new CharacterGraphInputPosePayload(),
                     inputPorts),
-                new CharacterTypedPoseNode(
+                new CharacterPoseCanvasNode(
                     outputId,
                     "Graph Output",
                     new CharacterGraphOutputPosePayload(),
                     outputPorts)
             };
-            var edges = new List<CharacterPoseEdge>();
+            var edges = new List<CharacterPoseCanvasConnection>();
             if (emptyTemplate)
                 AddEmptyTemplateBody(entry, inputId, outputId, inputPorts, outputPorts, nodes, edges);
-            return new CharacterTypedPoseGraph(
+            return CharacterPoseCanvasGraph.CreateAuthoring(
                 graphId,
                 $"{graphId}/v1",
                 Array.Empty<CharacterPoseParameterDeclaration>(),
@@ -495,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     index == 0 ? new Vector2(-360f, 0f) : new Vector2(360f, 0f))).ToArray());
         }
 
-        static CharacterTypedPoseGraph CloneEntryGraph(
+        static CharacterPoseCanvasGraph CloneEntryGraph(
             CharacterLinkedPoseImplementationAsset source,
             LinkedPoseEntryId entryId,
             PoseGraphId graphId)
@@ -504,8 +504,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .FirstOrDefault(value => value != null && value.EntryId == entryId);
             if (binding == null || !binding.GraphOwner)
                 throw new InvalidOperationException($"Source Implementation '{source.ImplementationId}' is missing Entry '{entryId}'.");
-            CharacterTypedPoseGraph current = binding.GraphOwner.RequireGraph(binding.GraphId);
-            return new CharacterTypedPoseGraph(
+            CharacterPoseCanvasGraph current = binding.GraphOwner.RequireGraph(binding.GraphId);
+            return CharacterPoseCanvasGraph.CreateAuthoring(
                 graphId,
                 $"{graphId}/v1",
                 current.Parameters.ToArray(),
@@ -520,8 +520,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PoseNodeId outputId,
             IReadOnlyList<CharacterPoseDynamicPort> inputPorts,
             IReadOnlyList<CharacterPoseDynamicPort> outputPorts,
-            List<CharacterTypedPoseNode> nodes,
-            List<CharacterPoseEdge> edges)
+            List<CharacterPoseCanvasNode> nodes,
+            List<CharacterPoseCanvasConnection> edges)
         {
             CharacterLinkedPoseInterfacePortDescriptor input = entry.Ports
                 .FirstOrDefault(value => value != null && value.Direction == CharacterPosePortDirection.Input);
@@ -536,7 +536,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (input.Kind == CharacterPosePortKind.LocalPose &&
                 output.Kind == CharacterPosePortKind.LocalPose)
             {
-                edges.Add(new CharacterPoseEdge(
+                edges.Add(new CharacterPoseCanvasConnection(
                     $"{entry.EntryId}.passthrough",
                     inputId,
                     inputPort.PortId,

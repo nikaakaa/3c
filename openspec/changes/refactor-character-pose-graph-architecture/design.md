@@ -57,6 +57,8 @@ CharacterPresentationPosePlanCompiler.CompilationState
 
 本change以删除测试作为Module深度标准：删除一个Module后，如果其复杂度只是消失而不会重新散到调用方，它是浅包装；如果删除后调用方必须重新实现大量顺序、不变量和业务知识，它才提供足够Depth。本change不以文件数或类数作为架构结果。
 
+项目现已导入ParadoxNotion CanvasCore、NodeCanvas与FlowCanvas源码。当前Pose作者入口仍由项目自建`GraphAuthoringCanvasView`、Pose节点／端口View、独立StateMachine表面和`CharacterTypedPoseGraph`存储组成；Canvas源码尚未进入Pose作者、Mutation或Compiler链。用户将本次新增范围限定为Pose Graph接入Canvas，BTSMTL与AI继续使用各自现行作者实现。共享边界因此只统一Capability、Document、Mutation、事务、Clipboard、Selection和Diagnostics合同，不再统一具体Canvas类型。`TrainingEnemy`当前同时拥有未闭合的Gameplay、AI、Character Pipeline、Presentation、PoseGraph、Prefab和生成资产，且已不具备正式构建闭环；用户2026-09-05决定整套删除，不让该半成品进入Canvas资产迁移。
+
 ## Current Implementation Baseline
 
 用户指定行为基线为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`，不是实施时最新HEAD或任意较晚IK版本。已核对该提交对应动画时钟、Pose混合、Foot输入与Lifecycle、Pelvis、Goal、FBBIK、Writer和Bank链路；具体入口与保护项见[行为保护清单](behavior-baseline.md)。2026-09-01检查时动画／IK、Corin配置及相关诊断目录与该提交无差异；后续相关差异必须单独报告，不自动吸收或回退。Foot／IK未完成和未归档不阻塞本change，已知问题不伪装成已通过。
@@ -67,6 +69,7 @@ CharacterPresentationPosePlanCompiler.CompilationState
 | 根Bank与Frame事务 | 统一lineage、Pending页所有权、Seal／Discard连接 | 当前连续历史与提交／丢弃后的业务结果 |
 | PoseGraph／Compiler／ABI | Program Image、节点定义、Pass、执行布局与单一调度Owner | 节点业务语义、source时间、最终Pose |
 | Runtime诊断投影 | 从内部页读取改为消费同帧Result，并发布PoseGraph-owned具体`CharacterFootIkCommittedCaptureView`短租约 | 通用AOT生成、Generated Lifecycle、typed packet与Schema-driven Host由`add-generated-diagnostic-sampling-framework`拥有；Foot生命周期Event、字段、Sampler、Analyzer、Publisher和评分由`refactor-foot-ik-diagnostic-sampling`拥有 |
+| TrainingEnemy内容 | 整套退役并删除配置、Prefab、场景组合、目标绑定、专用工具与生成产物 | 保留的Corin内容和无目标攻击语义不受影响 |
 
 Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实、Rig和Profile，输出继续是当前Foot结果、Pelvis Result及三个Goal Contribution；后续Goal Set、FBBIK与Physical Pose必须保持相同业务结果。Foot当前由Lifecycle使用Transition、State Target、Interpolation与Post Constraint，并在Pelvis后完成Landing；这里只记录已存在链路，不把这些内部阶段重新设计成PoseGraph公开合同。
 
@@ -81,7 +84,11 @@ Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实
 - 序列化Program Image是唯一语义真相；可选Native执行存储只能是同identity、共享、只读的物理View。
 - 每个Operation在每帧只有一个执行Owner，每个业务结果只有一个写入Owner。
 - Node authoring、Document、Clipboard、Validation、Graph Closure与Lowering共享一个Node Definition真相，并继续通过唯一Capability与Port Shape Projector投影作者端口。
+- Pose Graph只使用一份基于CanvasCore的作者资产和一个具体Canvas，旧`CharacterTypedPoseGraph`存储与旧Pose Canvas在迁移后删除。
+- Canvas迁移清单只包含保留的正式Corin内容；`TrainingEnemy`在迁移前整套删除，不生成Canvas资产或占位配置。
+- Pose Canvas的创建、连线、删除、复制粘贴、Undo和Details编辑全部进入现有typed Presentation Mutation与Document事务。
 - Compiler每个Pass具有不可变输入输出，错误可以定位到明确阶段。
+- Compiler在第一次封存新ABI时同时产出Worker Batch Plan；Pure Pose通过有限Family Kernel执行，多个Actor由唯一会话级Scheduler合批。
 - Runtime ABI只允许Operation Family的合法字段组合，不能用`-1`表达任意非法组合。
 - 迁移保持实施前已验收动画行为，不同时改变算法政策。
 - 旧路径在对应正式替代接入后直接删除，不保留兼容或fallback。
@@ -89,11 +96,15 @@ Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实
 ## Non-Goals
 
 - 不把Pose Graph改造成运行时对象解释器。
+- 不使用FlowCanvas的Flow／Value委托、事件、反射方法或Graph Update作为Pose Runtime。
+- 不把BTSMTL或AI作者资产迁移到ParadoxNotion Canvas。
+- 不引入UAF式运行时Evaluation Program或Trait执行框架。
 - 不把所有内部Implementation都抽象成接口；只有真实存在多个Adapter的Seam才暴露可替换Interface。
 - 不让Node Definition承担跨节点全局拓扑规则。
 - 不让Source Module决定PoseState、Transition、Slot或Blend权重。
 - 不让Program Runtime直接访问Unity World Query、FinalIK对象或Physical Transform。
-- 不改变动画数学、Foot政策、FBBIK策略、Transition Routing或内容资产。
+- 不改变保留内容的动画数学、Foot政策、FBBIK策略或Transition Routing；`TrainingEnemy`整套内容删除是本次明确批准的范围变化。
+- 不在本change引入动画预算、Phase Offset、跳帧、旧Pose复用或插值补帧。
 - 不删除现有actor-local在线调参；只迁移调参Owner、原子生效和回滚边界。
 
 ## Decision 1: 最终Module结构
@@ -101,6 +112,9 @@ Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实
 正式运行结构固定为：
 
 ```text
+CharacterPoseWorkerScheduler (session-level)
+└─ typed Actor Batch leases / Family Kernel / Completion
+
 CharacterAnimationPresentationRuntime
 │
 ├─ CharacterPoseFrameTransaction
@@ -111,7 +125,7 @@ CharacterAnimationPresentationRuntime
 │  ├─ CharacterPoseProgramImage / actor-local Execution View
 │  ├─ CharacterPoseActorState
 │  ├─ CharacterPoseProgramFramePages
-│  ├─ Persistent Executor Implementation
+│  ├─ Persistent Worker/Managed Execution Implementation
 │  └─ node-local state implementations
 │
 ├─ CharacterPoseSourceModule
@@ -231,6 +245,9 @@ OperationHeader[]
 Operation Family Payload pages
 Typed Value Reference table
 Stage Schedule
+Worker Batch Plan
+Family Kernel Set / Execution Policy identity
+Rig execution layout
 Constant pages
 Source Map
 Workspace Layout
@@ -377,7 +394,7 @@ Foot行为、Support、Pelvis、Goal编码、Bend策略、连续状态和正常R
 
 ## Decision 6: 每个Operation只有Program Runtime一个执行Owner
 
-`CharacterPoseProgramRuntime`按Stage Schedule执行：
+`CharacterPoseProgramRuntime`按Stage Schedule与Worker Batch Plan执行：
 
 ```text
 FactAndDemand
@@ -388,7 +405,7 @@ PureValue
 FinalPublication preparation
 ```
 
-每个Operation Header在一个Stage中出现一次，Program Runtime的持久Executor根据Operation Family调用内部Implementation或正式Module。运行中不允许：
+每个Operation Header在一个Stage中出现一次，Program Runtime根据Operation Family与Execution Domain调用Worker Family Kernel、内部Managed Implementation或正式Module。Pure Pose只能由Program Image指定的Family Kernel执行；World Query、Foot Placement、Goal、FinalIK/FBBIK和Final Publication保持Compiler明确指定的Managed域。运行中不允许：
 
 - 外层Runtime预执行World-aware Operation。
 - Staged Executor重新解释已执行Operation。
@@ -396,6 +413,7 @@ FinalPublication preparation
 - Constraint Module扫描Program寻找自己的节点。
 - Source Module扫描Operation决定State或权重。
 - Writer从作者拓扑推断Output。
+- Pure Pose在Managed调用线程重算或因Burst不可用切回旧Executor。
 
 World Context在Frame开始以typed Adapter准备；Program Runtime只在编译标记的WorldAware阶段把该Adapter和业务输入传给Constraint Module。World Context缺失继续产生现有typed Unavailable/Fault结果，不插入默认地面或跳过节点。
 
@@ -676,7 +694,7 @@ Runtime Projector与Generated Diagnostic Sampling Framework、Foot IK插件不�
 
 ## Decision 14: Preview与Runtime只使用Adapter差异
 
-正式Runtime和Preview使用相同：
+正式Gameplay与Scene Play Preview通过正式Character Session使用相同：
 
 ```text
 Program Image
@@ -690,18 +708,15 @@ actor-local Tuning Snapshot
 Completion语义
 ```
 
-真实差异只存在于已有Seam的Adapter：
+真实差异只存在于场景实例和已选正式输入：
 
 ```text
-Presentation Fact输入
-Action输入
-World Context
-Source sample输入
-Physical Rig host
-Diagnostics target
+Preview Scene实例
+正式输入序列
+观察目标
 ```
 
-Preview缺少精确World Context时返回typed Unavailable；不得使用简化Foot、跳过Constraint、临时Program、第二Executor或绑定默认地面。Stale Projection继续停止Preview并要求显式Build。
+Pose作者窗口只发起创建、播放、暂停、单步、时间定位和观察命令，不拥有Scene、Session、播放时钟、Program Runtime或Gameplay状态。非连续时间定位由Scene Play销毁当前预览实例，从正式场景初始状态按已选输入重新推进Session到目标时间；不得直接写PoseState、Action、Player、Inertialization、Foot、Goal或FBBIK状态。缺少精确World Context时同一Program Runtime返回typed Unavailable；不得使用简化Foot、临时Program、第二Executor或默认地面。Stale Projection停止Scene Play并要求显式Build。
 
 ## Decision 15: Barrier与失败政策保持现行合同
 
@@ -755,6 +770,8 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 [行为保护清单](behavior-baseline.md)是本次迁移的输入合同，不是另外一条运行链。拆Module、改Family布局、复用Workspace和集中Diagnostics都不得改变source推进次数、Transition／Slot时机、混合数值顺序、Foot dominant contribution选择、IK内部调用顺序或Writer根骨策略。State字段按实际消费者分类，名称中包含Fact／Diagnostics不意味着可删除；凡被下一帧读取的值都按基线保留。
 
+该保护只覆盖继续保留的Corin正式内容。`TrainingEnemy`已由用户明确退役，不要求迁移或维持其Actor、AI、动画、Pose、Profile、Prefab和生成数据行为；清理边界必须保证Corin在无目标时仍按现行`OptionalSnapshot`攻击语义运行，不能顺带删除通用target input或MotionWarp能力。
+
 每个代码小步须同时比较指定基线和上一保留小步的已有正式输入／输出；只复用现有Replay、Proof、Analyzer、Publisher以及`refactor-foot-ik-diagnostic-sampling`迁移后的内建Full Adapter，不新增测试工程或临时验证链。先对账输入、Body、时钟和IK输入，再对账中间量和最终骨骼，不能只比较最终总分。纯生成身份差异要按稳定Node／call-site／Source／Event证明一一映射，不能用重标身份掩盖额外Reset或额外查询。可见业务数值差异、成功Reset差异或覆盖缺口必须报告，未解释前不继续堆叠迁移或调参。
 
 已有真实失败／初始化行为也不能因“清理旧路径”被默改：Physical Writer的根骨排除与Committed／Reference选择、无有效Goal时跳过Vendor Update、错误后停止与提交边界需要分别保留。若现有代码与目标的no-throw Seal／诊断发布顺序存在无法证明等价的冲突，必须先报告，不能把错误处理重设计伪装为纯迁移。
@@ -770,6 +787,146 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 不删除当前算法必要的动态检查，也不改变原Fault边界；这里只防止迁移时把同一检查复制到根Runtime、Module、Executor和每个Result中。业务失败在拥有对应输入的边界报告，下游传播typed失败，不再检查一遍后生成第二原因。
 
+## Decision 18: Worker执行必须在本change首次Compiler／ABI切换时一起落地
+
+Worker Batch、Family Kernel和跨Actor调度不是PoseGraph重构完成后的第二阶段。当前Node Definition已经开始收口，而固定Compiler Pass与分段ABI尚未落地；线程安全事实、批次布局、Kernel identity和Completion依赖必须在这次Program Image schema第一次封存时成为正式合同。若先发布纯串行新ABI，再用独立change加入Worker，Program Image、Compiler Pass、Execution View、Runtime调度和诊断lineage都要二次破坏性迁移，并在中间形成新ABI加旧Executor的分裂路径。
+
+固定Compiler顺序改为：
+
+```text
+Graph Closure
+-> Typed Lowering
+-> Topology
+-> Symbolic Family Lowering
+-> Stage Schedule
+-> Value Lifetime
+-> Workspace Plan
+-> Worker Batch Plan
+-> Bind Family Payload
+-> Seal Program Image
+```
+
+`Worker Batch Plan`只消费已经固定的Stage、Value寿命、Workspace布局与Node Definition线程安全事实，生成：
+
+```text
+Batch identity
+Stage dependency wave
+Family Kernel identity
+Actor Batch Key
+Rig execution layout
+Typed read/write ranges
+Input and output Completion
+Workspace range
+Required Kernel Set and Execution Policy
+```
+
+它不得发现新Operation、扩容Workspace或把不安全Operation留给Runtime现场判断。Node Definition中的Execution Domain与线程安全能力由代码固定，是Compiler输入，不是作者参数；Canvas、Inspector、Document和MCP不出现Burst、线程、Job、Batch size或调度策略开关。
+
+## Decision 19: 只并行Pure Pose有限Family，不把Playable／FinalIK伪装成线程安全
+
+执行域固定为：
+
+| 工作 | 执行域 | 原因 |
+|---|---|---|
+| Control、Demand、Animancer／Playable source准备与Evaluate | Managed SourceCapture | 需要PlayableGraph与Unity对象所有权 |
+| Local／Component Pose混合、空间转换、纯骨骼与纯Value数学 | Pure Pose Worker | 只消费固定Native布局，可由Burst/HPC# AOT Kernel执行 |
+| Physics／World Query、Foot Placement事实读取 | Managed World-aware | 依赖场景与查询后端 |
+| Goal Assembly、FinalIK/FBBIK Vendor Solver | Managed Constraint | 依赖Vendor对象与现有solver状态 |
+| Final Pose验证与Transform写入 | Managed Final Publication | 独占Physical binding与提交边界 |
+
+Worker实现按有限Operation Family提供AOT可知Kernel，不为每个Node、每个Bone或每个Graph实例生成Job。一个Kernel处理同Family、同Rig执行布局、同依赖波次的一组Actor Work Item；这样Job粒度足够大，Program Runtime也不需要暴露每个骨骼的调度细节。Kernel不得捕获托管对象、抛出异常或动态分配；失败只写入固定Outcome与Completion页，由Actor根事务按原Fault政策处理。
+
+## Decision 20: 唯一会话级Scheduler跨Actor合批，Actor根仍拥有自己的事务
+
+仅在单个Actor内部把Pure Pose放进Job，然后立刻`Complete`，通常只增加调度成本，无法利用2v2vE场景中的多个角色。正式结构增加唯一会话级`CharacterPoseWorkerScheduler`：
+
+```text
+Session Presentation Phase
+-> collect prepared Actor work
+-> run each Actor Animancer SourceCapture at its legal point
+-> group ready Pure Pose work by Program / Rig layout / wave / Family Kernel
+-> schedule fixed cross-Actor batches
+-> complete exact dependencies before each Actor Managed World/Constraint stage
+-> schedule later Pure Pose wave when its managed dependency becomes ready
+-> Final Publication and actor-local Seal
+```
+
+Scheduler只理解typed Batch Lease、Program／Rig／Kernel identity、依赖与Completion，不理解Node、Bone语义、Foot数学或Workspace内部字段。每个Actor的`CharacterAnimationPresentationRuntime`仍拥有唯一根Frame Transaction、Actor State、Pending页与Fault结果；同一批次中Actor A失败不得污染Actor B。Worker资源紧张不得改变Actor更新频率、Delta、source时间或Final Publication语义；本change只改变物理执行位置和跨Actor重叠，不增加动画预算。
+
+Reset、Projection Replacement与Dispose必须先经唯一Scheduler fence完成该Actor全部Outstanding Job，再释放Execution View、Frame页与Module状态。Diagnostics、Pose Watch和Live Debug只能在匹配Batch／Completion全部完成且根事务成功Seal后读取Committed Result，不得为了补字段等待、重放或重新调度Kernel。
+
+Program Image封存`Kernel Set`、`Execution Policy`、Rig执行布局与平台能力identity。Preview与Player消费相同Program语义和Kernel Set；缺少Kernel、Burst/AOT闭包或身份不匹配时，Runtime创建直接失败并要求正式Character Build，不保留串行Executor、Managed重算或按平台隐式fallback。
+
+## Decision 21: Pose作者资产使用CanvasCore，保持唯一业务数据
+
+Pose作者资产结构固定为：
+
+```text
+CharacterPresentationPoseGraphAsset
+├─ RootGraph -> CharacterPoseCanvasGraph
+└─ GraphCatalog[] -> CharacterPoseCanvasGraph
+
+CharacterPoseCanvasGraph : CanvasCore Graph
+├─ CharacterPoseCanvasNode[]
+│  ├─ PoseNodeId
+│  ├─ CharacterPoseNodeKind
+│  └─ CharacterPoseNodePayload
+└─ CharacterPoseCanvasConnection[]
+   ├─ PoseEdgeId
+   ├─ SourceNodeId / SourcePortId
+   └─ TargetNodeId / TargetPortId
+```
+
+`CharacterPresentationPoseGraphAsset`继续作为Profile引用和Graph catalog所有者，但不再保存`CharacterTypedPoseGraph`副本。Canvas Graph／Node／Connection是唯一可编辑拓扑；PoseStateMachine定义、状态元素和布局继续作为匹配节点的typed作者数据，由同一Pose Canvas显示，不建立独立可写状态机资产。
+
+Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础，不以FlowCanvas的`FlowScript`、`FlowNode`、`BinderConnection`或自动TypeConverter作为正式Pose模型。原因是Pose需要Local／Component、Goal Contribution、Goal Set等严格业务类型，而FlowCanvas允许面向通用C#值和调用的连接与转换。代价是项目需要实现Pose专用Port与Connection外观；收益是Canvas不会携带第二运行语义，也不会放宽现有拓扑合同。
+
+## Decision 22: Node Definition投影Canvas，Mutation拥有全部写入
+
+新增`CharacterPoseCanvasDefinitionProjection`，输入是唯一`CharacterPoseNodeDefinition`及节点typed payload，输出是Canvas节点标题、字段、固定／条件／动态端口、Pose空间、颜色、创建项和只读线程能力。该Projection只负责Editor显示，不保存第二字段表或端口表；绑定Graph、节点Mutation或Definition revision变化时重建对应View，不在`OnInspectorGUI`或普通Repaint中扫描、编译整图。
+
+所有作者操作固定通过：
+
+```text
+Canvas gesture
+-> CharacterPoseCanvasMutationAdapter
+-> CharacterPresentationMutation
+-> Document Transaction / Undo
+-> mutate the sole CharacterPoseCanvasGraph
+-> refresh affected Canvas projection
+```
+
+Pose Graph子类必须关闭CanvasCore直接添加、删除、连接、复制或字段写入的默认命令入口，并把右键菜单、拖线、Delete、Paste、Details与StateMachine编辑转交上述Adapter。Mutation preflight使用同一Capability与`GraphAuthoringNodePortShapeProjector`判断端口和字段合法性；Canvas不得先改Graph再回滚，也不得让Graph自身Undo与Document Transaction各记录一次。
+
+## Decision 23: Compiler通过只读Authoring View消费Canvas，不执行Canvas
+
+新增`CharacterPoseCanvasAuthoringView`作为Compiler唯一Canvas边界。它只枚举稳定Graph、Node、Payload、Port、Edge、Graph Role、布局来源和资源引用；不会提供Flow调用、Value getter、Event、Update、GraphOwner或运行状态。`CharacterPoseCompilationRequest`从该View取得root catalog，Graph Closure和Typed Lowering继续只通过Node Definition解析dependency与payload，不建立`CharacterTypedPoseGraph`中间作者副本。
+
+```text
+CharacterPoseCanvasGraph
+-> CharacterPoseCanvasAuthoringView
+-> Graph Closure
+-> Typed Lowering
+-> 现有Topology／Schedule／Workspace／Worker／Binding Pass
+-> CharacterPoseProgramImage
+```
+
+Canvas中没有唯一Pose Node Definition的节点在进入IR前直接失败；Compiler不得执行或包装通用Flow、Event、Method或反射节点。Program Image schema、Operation Family、Stage、Worker Batch、Runtime、Source、Constraint、FBBIK和Final Publication不因作者资产迁移增加第二版本。作者模型变化只提升作者revision及由正式Build产生的新ProjectionRevision／PoseProgramImageHash。
+
+## Decision 24: TrainingEnemy整套退役，不进入Canvas迁移
+
+`TrainingEnemy`不是一个可单独删除的PoseGraph文件。它同时占有GameplayLab第二Actor、玩家显式目标、AI authoring、Character Pipeline、Action／Timeline、动画与Root Motion、Foot Placement、Rig、Presentation Profile、运行／表现Prefab、AssetBundle collector、默认目录和专用构建工具。正式Gameplay、AI与动画资产都未闭合时继续迁移其中任一层，会迫使后续每次架构变化维护一套不能作为验收对象的内容。
+
+本change因此把它视为一个完整内容岛，一次删除：
+
+- 删除`Assets/Configs/Character/TrainingEnemy`及目录内Gameplay、AI、动画、PoseGraph、Rig、Foot、Profile和generated资产。
+- 删除`TrainingEnemyMonster.prefab`、`TrainingEnemyMonsterPresentation.prefab`及GameplayLab中的嵌套实例。
+- 从Session roster删除`corin-training-enemy`，移除玩家绑定该Actor的target provider配置；保留通用target input和MotionWarp能力，当前玩家按既有`OptionalSnapshot`无目标语义继续执行攻击。
+- 删除TrainingEnemy专用作者／构建脚本，并从GameplayLab builder、launcher、startup validator、root hierarchy builder、AssetBundle collector和默认目录中删除专用分支、路径和GUID。
+- 不生成新的Canvas资产，不保留空Profile、Prefab壳、旧GUID占位或迁移清单例外。未来训练敌人或中立怪物从届时正式的Gameplay、AI、Character Pipeline、Presentation与Canvas链重新建立。
+
+删除顺序固定为先清除外部引用和场景组合，再删除资产与专用工具，最后按名称、路径、ActorId和GUID做引用闭包检查。这样不会留下Missing Script、Missing Asset或仍被collector打包的孤儿内容。
+
 ## Migration
 
 迁移在同一change中顺序完成，但不保留并行运行路径：
@@ -783,12 +940,18 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 7. 建立`CharacterFinalPosePublication`，迁移唯一Committed/Pending Final Pose物理页、完整验证和Writer；Output Family只保留稳定layout handle并在Actor创建时绑定Publication页，旧Runtime不再直接操作Physical Bones。
 8. 建立actor-local Tuning Snapshot与原子Tuning Generation，迁移Program、Source、Constraint调参并删除直接修改Program Image/Execution View及失败后反向Apply旧值的路径。
 9. 在四个Module都接通后收窄`CharacterAnimationPresentationRuntime`，让它唯一拥有根Frame Transaction并删除其节点、offset、Constraint、source和Writer知识，只保留Tuning协调、Frame阶段与统一Seal/Discard/Fault。
-10. 建立Node Definition Module，一次性迁移Capability、Port Shape Projector、Authoring、Document v4 Exporter/strict parser/Target Mapper/Reconciler、Clipboard、Mutation preflight、local validation、Graph dependency和typed lowering；保留唯一Document Transaction Service，删除旧Handler Registry与重复switch。
-11. 将Compiler拆成`Graph Dependency -> Symbolic Family -> Schedule -> Value Lifetime -> Workspace -> Bind Payload`固定Pass，删除中央`CompilationState`和pass-through入口。
-12. 完成全部现行Operation Code到Family/Owner/Domain映射后，原子切换分段Operation ABI、Projection内Program Image schema和Runtime reader；提升PoseProgramImageHash但保持Gameplay ContractHash不变，删除万能Operation、旧Native Program语义容器与旧reader。
-13. 将Runtime Diagnostics改为只读Committed Result的Projector；外部薄Generated Capture在既有Post-Commit边界直接消费正式事实根并交给通用AOT Program／Generated Lifecycle／packet／Schema-driven Host，Host产物就是最终诊断输出。删除Capture View、Event、Bridge、Foot Host Adapter、跨Owner内部读取、旧Sampler二次join、Analyzer、Publisher、评分、Store与第二报告链。
-14. 迁移Preview到同一Factory、Program Image、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化或重复执行路径。
-15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
+10. 建立Node Definition Module，一次性迁移Capability、Port Shape Projector、Authoring、Document v4 Exporter/strict parser/Target Mapper/Reconciler、Clipboard、Mutation preflight、local validation、Graph dependency和typed lowering；同时为每个Operation Family固定Execution Domain与只读线程安全能力，不增加作者可编辑线程字段；保留唯一Document Transaction Service，删除旧Handler Registry与重复switch。
+11. 将Compiler拆成`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Worker Batch Plan -> Bind Family Payload -> Seal Program Image`固定Pass，生成Worker Batch、Rig执行布局、Kernel Set、Execution Policy与Completion依赖，删除中央`CompilationState`和pass-through入口。
+12. 完成全部现行Operation Code到Family/Owner/Domain/Kernel映射后，在同一次schema切换中原子接入分段Operation ABI、Worker Family Kernel、唯一会话级Scheduler、Projection内Program Image和Runtime reader；提升PoseProgramImageHash但保持Gameplay ContractHash不变，删除万能Operation、旧Native Program语义容器、旧串行Staged Executor、Managed重算、旧reader与Burst fallback。
+13. 将Runtime Diagnostics改为只读全部Worker／Managed Completion完成后的Committed Result Projector；外部薄Generated Capture在既有Post-Commit边界直接消费正式事实根并交给通用AOT Program／Generated Lifecycle／packet／Schema-driven Host，Host产物就是最终诊断输出。删除Capture View、Event、Bridge、Foot Host Adapter、跨Owner内部读取、旧Sampler二次join、Analyzer、Publisher、评分、Store与第二报告链。
+14. 迁移Preview到同一Factory、Program Image、Worker Batch Plan、Kernel Set、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化、串行或重复执行路径；完成Reset、Replacement与Dispose的Outstanding Job fence。
+15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，使用既有Replay对账行为并执行正式IL2CPP Performance Capture，更新project truth并完成编译与严格校验。
+16. 从GameplayLab composition、Session roster、玩家target provider、AssetBundle collector、默认目录和构建入口清除TrainingEnemy引用，随后删除其完整配置目录、运行／表现Prefab、专用作者／构建脚本和生成产物；不得把其中PoseGraph转换为Canvas资产。
+17. 在独立Pose作者程序集建立CanvasCore依赖和`CharacterPoseCanvasGraph/Node/Connection`，固定Canvas只承担作者数据与交互，禁止FlowCanvas运行入口进入Character装配。
+18. 实现Definition Projection与Canvas Mutation Adapter，把创建、连线、删除、复制粘贴、Undo、Details和StateMachine表面切到唯一typed Mutation链。
+19. 实现只读Canvas Authoring View并在同一次切换中让Graph Closure与Typed Lowering直接读取新资产；只迁移明确保留的Corin Pose Graph、状态机、节点、端口、边、布局、子图、identity和资源引用，然后通过正式Character Build重建Projection。
+20. 新资产与新Compiler输入闭合后删除`CharacterTypedPoseGraph`存储、旧Pose `GraphAuthoringCanvasView`、旧StateMachine画布、旧codec和所有镜像／双写／反向同步路径。
+21. 将Pose窗口的Preview命令与观察选择接入`rebuild-btsmtl-preview-with-scene-play`提供的正式入口，删除独立`AnimationPreviewRuntime`、第二播放时钟和直接状态Seek。
 
 每一步替代完成后立即删除旧Owner，不允许为了保持可运行而让新旧Owner同时执行、双写或通过开关切换。代码可以在同一个未提交小步中暂时不可编译，但每次小步提交前必须恢复可编译闭环并完成对应静态检查。
 
@@ -844,6 +1007,38 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 
 等待全部IK工作完成可以得到更晚的统一行为基线，但会把剩余效果改进与PoseGraph结构迁移绑定。冻结当前保留实现允许立即开展结构迁移，代价是保留已知效果问题，后续IK工作需适配新外部边界。用户已选择后者，并指定`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`；本change不再要求Foot／IK全部归档，也不借迁移继续做效果实验。
 
+### 12. Worker现在并入还是重构完成后另做
+
+重构完成后另做可以让本change表面更小，但新Compiler、Program Image、ABI、Execution View和Runtime调度会先按串行假设封存一次，随后全部二次迁移，并产生“新Program加旧Executor”的中间分裂路径。现在并入会扩大第10～12阶段的单次改动范围，但线程安全、read/write set、Kernel identity和跨ActorCompletion从第一版就是完整合同。这里选择现在并入；代价通过固定Pass、小步提交、既有Replay与正式Performance Capture控制，不通过兼容开关降低风险。
+
+### 13. 每Actor独立Job还是会话级跨Actor批次
+
+每Actor独立Job最容易接到现有Runtime，但小规模骨骼工作很可能在`Schedule -> Complete`之间没有足够并行窗口，调度成本反而更明显。会话级Scheduler需要显式Actor Batch Key、跨Actor隔离与生命周期fence，但能够把相同Program／Rig／Family工作组合为足够大的批次。项目有2v2vE多个角色压力场景，因此选择会话级批次；Actor根事务、Fault和Final Publication仍完全独立。
+
+### 14. CanvasCore作者基础与FlowCanvas运行语言
+
+直接使用FlowCanvas可以立即得到泛型Value端口、自动转换和委托执行，但这些能力同时引入Pose不允许的隐式类型转换、Flow生命周期和第二执行入口。本change选择CanvasCore作为交互与序列化基础，由Pose Definition投影严格端口并继续编译到现有Program Image。
+
+代价是Pose需要自己的Port／Connection表现和Mutation接线；收益是Local／Component与Goal类型保持严格，运行时仍只有一套Pose Program。
+
+### 15. Pose单领域迁移与全领域Canvas迁移
+
+一次迁移BTSMTL、AI和Pose可以统一具体画布，但会同时改动正在实施的控制作者架构、Document和大量内容资产。用户已经把本change限定为Pose Graph，因此这里只迁移Pose的唯一作者资产和具体Canvas，并让跨领域共享停留在Capability、Document、Mutation、事务和Diagnostics合同。
+
+代价是不同领域继续有不同具体Canvas实现；收益是Pose作者能力可以独立闭合，不触碰BTSMTL与AI资产或运行语义。
+
+### 16. 破坏性作者资产迁移
+
+保留旧`CharacterTypedPoseGraph`并让Canvas投影或双写，可以降低一次迁移压力，但会产生两个可编辑拓扑和长期对账问题。本change选择显式一次性迁移：在新资产、Document往返和Compiler输出闭合后立即删除旧存储与入口。
+
+代价是保留的Pose内容必须在同一迁移步骤完整转换；收益是后续作者、Agent和Compiler始终只有一个数据来源。
+
+### 17. 保留TrainingEnemy半成品还是整套删除
+
+保留但暂不引用可以留下动画和怪物内容样本，却仍要求每次Pose、AI、Character Build、Profile schema和资源收集变化维护这些资产，并持续制造“目录存在但不能正式构建”的误导。整套删除会暂时失去Standalone第二Actor和有目标MotionWarp演示，玩家攻击只能走既有无目标语义；收益是Canvas迁移只处理正式Corin资产，Character Build和内容清单不再背负不可验收数据。
+
+用户选择整套删除。未来需要训练敌人时重新建立正式内容闭环，不从旧Profile、旧生成产物或旧Prefab恢复。
+
 ## Rejected Alternatives
 
 - **只拆分大文件**：不改变Owner和Interface，调用方仍理解全部内部字段。
@@ -853,6 +1048,15 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - **把Program Image与Actor State放在同一对象但标注readonly字段**：对象仍同时拥有不同寿命与Dispose/Reset语义，无法证明隔离。
 - **保留旧Operation并增加typed payload可选字段**：形成双ABI和更多非法组合。
 - **为FinalIK、Writer、World Query统一建立插件接口**：当前实际Adapter数量和变化方向不同，会制造假Seam；只保留已有真实Adapter位置。
+- **先完成纯串行新ABI，再另开Worker change**：会让Compiler、Program Image、Execution View和Runtime调度发生第二次破坏性迁移，并在中间保留新旧执行假设。
+- **每个Node或Bone一个Job**：Job数量随Graph与Rig膨胀，调度开销和依赖图成为Runtime第二编译器；固定Family Kernel按跨ActorWork Item处理。
+- **缺少Burst时回退旧Managed Executor**：形成两套算法与两套产物身份，Preview和Player结果无法保证一致；正式创建直接失败并要求重建。
+- **把Canvas作为`CharacterTypedPoseGraph`的可编辑镜像**：会产生两份Pose拓扑、双写和冲突恢复政策。
+- **直接以FlowCanvas运行图替换Pose Runtime**：会绕过Program Image、Stage、Worker、Frame事务、Constraint和Final Publication所有权。
+- **只复用FlowCanvas泛型端口并允许自动类型转换**：无法保持Local／Component、Goal Contribution与Goal Set的严格连接合同。
+- **让Canvas直接修改Graph，再由Mutation补记Document**：Undo、保存和Agent事务会产生两个写入Owner。
+- **继续在Pose窗口维护独立Preview Runtime**：会与正式Scene Play形成第二Session、第二时钟和第二状态定位语义。
+- **只从GameplayLab移除TrainingEnemy实例并保留资产目录**：仍会让Build、collector、默认路径和后续schema迁移维护一套不能验收的内容。
 
 ## Spec Conflicts And Resolution
 
@@ -863,6 +1067,10 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - active Blend Space change的通用Clip/Blend Space能力已经进入current specs，剩余任务只建立独立演示内容。本change直接迁移current节点Definition与Source Adapter，不依赖该演示归档；两者不得并行修改通用Runtime或Compiler合同。
 - current `character-presentation-pose-graph`仍写明`compiler handler`，而current `graph-authoring-domain-framework`已经要求唯一Pose Node Definition并禁止第二Handler；现行代码仍保留Handler Registry。本change以Framework current requirement为方向修改Pose Graph requirement并删除旧实现，明确这是current specs之间的冲突，不把代码现状误写成current truth。
 - current `graph-authoring-domain-framework`已经固定Definition、共享Capability、Reconciler与Document Transaction Service边界。本change补足唯一`GraphAuthoringNodePortShapeProjector`、Document v4 Exporter/strict parser/Target Mapper/Mutation preflight调用链，以及Graph Closure读取Definition dependency的边界；Definition不得接管Document事务或五个MCP生命周期。
+- current `graph-authoring-domain-framework`要求BTSMTL、AI和Pose复用同一具体Canvas。本次用户明确只迁移Pose，因此delta把统一边界收窄为Capability、Document、Mutation、事务、Clipboard、Selection和Diagnostics合同，并要求每个领域内部只有一个具体Canvas和一套作者资产。不得保留旧Pose Canvas作为兼容入口。
+- current `character-presentation-pose-graph`以`CharacterTypedPoseGraph`和项目自建Canvas表达唯一作者图。本change以CanvasCore Graph／Node／Connection直接替换该存储，保留稳定identity、typed payload和Node Definition语义，并要求迁移完成后删除旧数据模型。
+- current Pose Preview仍允许独立Adapter持有Preview Runtime和非连续Seek。已确认的Scene Play方向要求正式Session拥有Scene、时钟、输入推进和重建；本change只保留Pose窗口的命令与Committed观察职责，实际预览生命周期由`rebuild-btsmtl-preview-with-scene-play`负责。
+- current `character-targeted-motion-warp-demo`明确要求Standalone注册玩家与`corin-training-enemy`两个Actor，并把玩家target provider绑定训练敌人。用户2026-09-05已改为整套删除TrainingEnemy；删除后GameplayLab只保留Corin，target input为None，五段攻击按`OptionalSnapshot`继续运行原始MotionCurve。该capability需要删除训练敌人、显式绑定和训练敌人范围三组现行Requirement，但当前change没有该capability的delta文件；实施前必须先补齐该delta，不能声称current spec已经同步。
 - current `btsmtl-compiled-simulation-program`与`project.md`并存`CharacterPresentationPoseProgram`、Native Pose Program称呼。本change统一为Projection内部唯一`CharacterPoseProgramImage`，每个Program Runtime只可建立一份同identity的actor-local只读Execution View，不生成第二语义程序。
 - current Pose Constraint合同已经把Foot/Goal/FBBIK结果收敛进根Bank。本change让Constraint Committed Result只拥有Foot/Goal/FBBIK事实，Physical结果只属于Final Publication Committed Result，由Diagnostics Projector按同lineage组合。
 - current动画事务允许各Module拥有内部Pending页，但没有明确Program Image、Actor State、根Frame Transaction和Module Owned Frame Pages。新增runtime architecture spec把静态、Actor、Program Frame、Module Frame与根事务分型，同时保留现有Barrier和Dense/Journal政策。

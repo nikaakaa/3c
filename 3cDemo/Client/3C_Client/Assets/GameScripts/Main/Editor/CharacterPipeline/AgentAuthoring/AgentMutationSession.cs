@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using UnityEditor;
@@ -15,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly Dictionary<string, AgentResolvedIdentity> m_ResolvedIdentities =
             new Dictionary<string, AgentResolvedIdentity>(StringComparer.Ordinal);
         readonly HashSet<UnityEngine.Object> m_TouchedOwners = new HashSet<UnityEngine.Object>();
+        readonly HashSet<string> m_InitialSkillIds = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, AgentPlannedBlackboardDeclaration> m_PlannedBlackboardDeclarations =
             new Dictionary<string, AgentPlannedBlackboardDeclaration>(StringComparer.Ordinal);
         readonly HashSet<string> m_PlannedGameplayTags = new HashSet<string>(StringComparer.Ordinal);
@@ -36,6 +38,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             PresentationPlan = presentationPlan;
             Resolver = new AgentAssetResolver(definition, snapshot);
             Index = new AgentGraphAuthoringIndex();
+            foreach (CharacterSkillAuthoringDefinition skill in definition?.SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
+            {
+                if (skill != null && !string.IsNullOrWhiteSpace(skill.SkillId))
+                    m_InitialSkillIds.Add(skill.SkillId);
+            }
         }
 
         public AgentMutationSession(
@@ -67,6 +74,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentGraphAuthoringIndex Index { get; }
         public BaseTree RootTree { get; private set; }
         public IReadOnlyCollection<UnityEngine.Object> TouchedOwners => m_TouchedOwners;
+        public IReadOnlyCollection<string> InitialSkillIds => m_InitialSkillIds;
+
+        public bool HasPlannedIdentity(string identity, params AgentMutationOutputKind[] kinds)
+        {
+            if (string.IsNullOrEmpty(identity) || Plan?.Commands == null)
+                return false;
+            for (int i = 0; i < Plan.Commands.Count; i++)
+            {
+                AgentMutation command = Plan.Commands[i];
+                if (!string.Equals(command.Id, identity, StringComparison.Ordinal))
+                    continue;
+                if (kinds == null || kinds.Length == 0)
+                    return true;
+                for (int kindIndex = 0; kindIndex < kinds.Length; kindIndex++)
+                {
+                    if (command.OutputKind == kinds[kindIndex])
+                        return true;
+                }
+            }
+            return false;
+        }
 
         public bool Initialize()
         {
@@ -381,6 +409,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             });
         }
 
+        public void AddAppliedGraph(
+            AgentMutation command,
+            BaseGraph parent,
+            BaseTree graph,
+            string target,
+            string detail)
+        {
+            Touch(parent);
+            Touch(graph);
+            m_ResolvedIdentities[command.Id] = new AgentResolvedIdentity(graph, null, null, null);
+            Report.appliedDiff.Add(new AgentCompileDiffEntry
+            {
+                mutationId = command.Id,
+                action = command.OperationName,
+                graph = Index.GetGraphPath(parent),
+                target = target ?? graph?.name ?? string.Empty,
+                detail = detail ?? string.Empty
+            });
+        }
+
         public void AddApplied(
             AgentMutation command,
             BaseGraph graph,
@@ -446,6 +494,68 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             Report.Error(path, "authoring_local_identity_unresolved", $"Authoring local identity无法解析：{reference.Value}");
             return false;
+        }
+
+        public string ResolveStableCallSiteIdentity(string identity, string path)
+        {
+            if (string.IsNullOrEmpty(identity))
+                return identity;
+            int nodeMarker = identity.IndexOf("/node:", StringComparison.Ordinal);
+            if (nodeMarker < 0)
+                return identity;
+            int nodeStart = nodeMarker + "/node:".Length;
+            int nodeEnd = identity.IndexOf('/', nodeStart);
+            if (nodeEnd < 0)
+                return identity;
+            string graphIdentity = ResolveStableGraphIdentity(identity.Substring(0, nodeMarker), path);
+            string nodeIdentity = ResolveStableNodeIdentity(identity.Substring(nodeStart, nodeEnd - nodeStart), path);
+            return graphIdentity + identity.Substring(nodeMarker, "/node:".Length) + nodeIdentity + identity.Substring(nodeEnd);
+        }
+
+        string ResolveStableGraphIdentity(string identity, string path)
+        {
+            if (string.IsNullOrEmpty(identity) || !identity.StartsWith("local:", StringComparison.Ordinal))
+                return identity;
+            if (!m_ResolvedIdentities.TryGetValue(identity, out AgentResolvedIdentity output))
+            {
+                Report.Error(path, "authoring_local_identity_unresolved", $"Call site Graph local identity无法解析：{identity}");
+                return identity;
+            }
+            if (output.Graph != null)
+                return output.Graph.GraphAuthoringId;
+            Report.Error(path, "authoring_local_identity_type_invalid", $"Call site Graph local identity没有Graph输出：{identity}");
+            return identity;
+        }
+
+        string ResolveStableNodeIdentity(string identity, string path)
+        {
+            if (string.IsNullOrEmpty(identity) || !identity.StartsWith("local:", StringComparison.Ordinal))
+                return identity;
+            string baseIdentity = identity;
+            string role = string.Empty;
+            int roleSeparator = identity.LastIndexOf('#');
+            if (roleSeparator > "local:".Length)
+            {
+                baseIdentity = identity.Substring(0, roleSeparator);
+                role = identity.Substring(roleSeparator + 1);
+            }
+            if (!m_ResolvedIdentities.TryGetValue(baseIdentity, out AgentResolvedIdentity output))
+            {
+                Report.Error(path, "authoring_local_identity_unresolved", $"Call site Node local identity无法解析：{identity}");
+                return identity;
+            }
+            if (!string.IsNullOrEmpty(role) && output.Graph is StateMachineGraph stateMachine)
+            {
+                BaseNode control = ResolveStateMachineControl(stateMachine, role);
+                if (control != null)
+                    return control.GUID;
+                Report.Error(path, "authoring_local_identity_role_invalid", $"Call site Node local role无法解析：{identity}");
+                return identity;
+            }
+            if (output.Node != null)
+                return output.Node.GUID;
+            Report.Error(path, "authoring_local_identity_type_invalid", $"Call site Node local identity没有Node输出：{identity}");
+            return identity;
         }
 
         static bool TryGetResolvedValue<T>(AgentResolvedIdentity output, out T value) where T : class

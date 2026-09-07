@@ -56,7 +56,8 @@ namespace ThirdPersonSimulation.Fixed
             OperationSetVersion operationSetVersion,
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
-            SimulationNumericProfile numericProfile)
+            SimulationNumericProfile numericProfile,
+            SimulationProgramRootDescriptor root)
         {
             CompilerVersion = SimulationIdentity.Require(compilerVersion, nameof(compilerVersion));
             if (!operationSetVersion.IsValid)
@@ -65,16 +66,20 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Source revision is required.", nameof(sourceRevision));
             if (!semanticHash.IsValid)
                 throw new ArgumentException("Semantic hash is required.", nameof(semanticHash));
+            if (!root.IsValid)
+                throw new ArgumentException("Program root descriptor is required.", nameof(root));
             OperationSetVersion = operationSetVersion;
             SourceRevision = sourceRevision;
             SemanticHash = semanticHash;
             NumericProfile = numericProfile;
+            Root = root;
         }
         public string CompilerVersion { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public readonly struct CharacterSimulationProgramArtifactHeader
@@ -88,7 +93,8 @@ namespace ThirdPersonSimulation.Fixed
             ProgramHash programHash,
             LayoutHash layoutHash,
             WorldCapability requiredWorldCapabilities,
-            IReadOnlyList<string> gameplayCapabilities)
+            IReadOnlyList<string> gameplayCapabilities,
+            SimulationProgramRootDescriptor root)
         {
             CompilerVersion = compilerVersion;
             OperationSetVersion = operationSetVersion;
@@ -99,6 +105,9 @@ namespace ThirdPersonSimulation.Fixed
             LayoutHash = layoutHash;
             RequiredWorldCapabilities = requiredWorldCapabilities;
             GameplayCapabilities = gameplayCapabilities;
+            if (!root.IsValid)
+                throw new ArgumentException("Program artifact root descriptor is invalid.", nameof(root));
+            Root = root;
         }
 
         public string CompilerVersion { get; }
@@ -110,13 +119,14 @@ namespace ThirdPersonSimulation.Fixed
         public LayoutHash LayoutHash { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> GameplayCapabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x58494643;
-        const int ArtifactVersion = 16;
-        const int ProgramFormatVersion = 17;
+        const int ArtifactVersion = 18;
+        const int ProgramFormatVersion = 19;
         const int LayoutFormatVersion = 10;
         const int SourceMapStringTableVersion = 3;
 
@@ -140,6 +150,7 @@ namespace ThirdPersonSimulation.Fixed
             var gameplayCapabilities = new string[gameplayCapabilityCount];
             for (int i = 0; i < gameplayCapabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             reader.ReadBytes();
             reader.RequireComplete();
             return new CharacterSimulationProgramArtifactHeader(
@@ -151,7 +162,8 @@ namespace ThirdPersonSimulation.Fixed
                 programHash,
                 layoutHash,
                 requiredWorldCapabilities,
-                Array.AsReadOnly(gameplayCapabilities));
+                Array.AsReadOnly(gameplayCapabilities),
+                root);
         }
 
         public static byte[] WriteArtifact(CharacterSimulationProgram program)
@@ -173,6 +185,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(program.Manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < program.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(program.Manifest.Capabilities.GameplayCapabilities[i]);
+            SimulationProgramRootDescriptorCodec.Write(writer, program.Manifest.Root);
             writer.WriteBytes(payload);
             return writer.ToArray();
         }
@@ -197,6 +210,7 @@ namespace ThirdPersonSimulation.Fixed
             var expectedGameplayCapabilities = new string[expectedGameplayCapabilityCount];
             for (int i = 0; i < expectedGameplayCapabilityCount; i++)
                 expectedGameplayCapabilities[i] = reader.ReadString();
+            SimulationProgramRootDescriptor expectedRoot = SimulationProgramRootDescriptorCodec.Read(reader);
             byte[] payload = reader.ReadBytes();
             reader.RequireComplete();
             if (!string.Equals(compilerVersion, expectation.CompilerVersion, StringComparison.Ordinal))
@@ -209,12 +223,15 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"Program SemanticHash '{semanticHash}' does not match expected '{expectation.SemanticHash}'.");
             if (numericProfile != expectation.NumericProfile)
                 throw new InvalidDataException($"Program Numeric Profile '{numericProfile.Id}' does not match expected '{expectation.NumericProfile.Id}'.");
+            if (expectedRoot != expectation.Root)
+                throw new InvalidDataException($"Program root '{expectedRoot}' does not match expected '{expectation.Root}'.");
             CharacterSimulationProgram program = ReadPayload(payload);
             if (!string.Equals(program.Manifest.CompilerVersion, compilerVersion, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.OperationSetVersion.Value, operationSetVersion, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.SourceRevision.Value, sourceRevision, StringComparison.Ordinal) ||
                 !program.Manifest.SemanticHash.Equals(semanticHash) ||
-                program.Manifest.NumericProfile != numericProfile)
+                program.Manifest.NumericProfile != numericProfile ||
+                program.Manifest.Root != expectedRoot)
                 throw new InvalidDataException("Program artifact header does not match its payload manifest.");
             if (!program.ProgramHash.Equals(expectedProgramHash))
                 throw new InvalidDataException($"Program hash mismatch. Expected '{expectedProgramHash}', actual '{program.ProgramHash}'.");
@@ -259,6 +276,7 @@ namespace ThirdPersonSimulation.Fixed
                 WriteScope(writer, program.Scopes[i]);
             WriteTable(writer, program.ConstantInputBindings, WriteConstantInputBinding);
             WriteTable(writer, program.MotionModifiers, WriteMotionModifier);
+            WriteTable(writer, program.GraphCallFrames, WriteGraphCallFrame);
             return new LayoutHash(writer.ComputeHash());
         }
 
@@ -273,7 +291,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             writer.WriteInt32(ProgramFormatVersion);
             WriteManifest(writer, program.Manifest);
-            WriteBodyMotion(writer, program.BodyMotion);
+            writer.WriteBoolean(program.BodyMotion != null);
+            if (program.BodyMotion != null)
+                WriteBodyMotion(writer, program.BodyMotion);
             writer.WriteString(program.LayoutHash.ToString());
             WriteTable(writer, program.Constants, WriteConstant);
             WriteTable(writer, program.OperationDefinitions, WriteOperationDefinition);
@@ -281,6 +301,7 @@ namespace ThirdPersonSimulation.Fixed
             WriteTable(writer, program.ConstantInputBindings, WriteConstantInputBinding);
             WriteTable(writer, program.ControlFlow, WriteControlFlow);
             WriteTable(writer, program.References, WriteReference);
+            WriteTable(writer, program.GraphCallFrames, WriteGraphCallFrame);
             WriteTable(writer, program.StateSlots, (target, value) => WriteStateSlot(target, value, true));
             WriteTable(writer, program.Scopes, WriteScope);
             WriteTable(writer, program.WorldRequests, WriteWorldRequest);
@@ -297,7 +318,9 @@ namespace ThirdPersonSimulation.Fixed
             if (reader.ReadInt32() != ProgramFormatVersion)
                 throw new InvalidDataException("Character Simulation Program payload version is unsupported.");
             CharacterSimulationProgramManifest manifest = ReadManifest(reader);
-            ProgramBodyMotionDescriptor bodyMotion = ReadBodyMotion(reader);
+            ProgramBodyMotionDescriptor bodyMotion = reader.ReadBoolean()
+                ? ReadBodyMotion(reader)
+                : null;
             var expectedLayoutHash = new LayoutHash(new StableHash(reader.ReadString()));
             ProgramConstant[] constants = ReadTable(reader, ReadConstant);
             SimulationOperationDefinition[] operationDefinitions = ReadTable(reader, ReadOperationDefinition);
@@ -308,6 +331,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
             ProgramControlFlowEdge[] controlFlow = ReadTable(reader, ReadControlFlow);
             ProgramReference[] references = ReadTable(reader, ReadReference);
+            ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, ReadGraphCallFrame);
             ProgramStateSlot[] stateSlots = ReadTable(reader, ReadStateSlot);
             ProgramScopeLayout[] scopes = ReadTable(reader, ReadScope);
             ProgramWorldRequestLayout[] worldRequests = ReadTable(reader, ReadWorldRequest);
@@ -333,7 +357,8 @@ namespace ThirdPersonSimulation.Fixed
                 catalogEntries,
                 motionModifiers,
                 sourceMap,
-                producers);
+                producers,
+                graphCallFrames);
             if (!program.LayoutHash.Equals(expectedLayoutHash))
                 throw new InvalidDataException($"Program payload layout hash mismatch. Expected '{expectedLayoutHash}', actual '{program.LayoutHash}'.");
             return program;
@@ -565,6 +590,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(manifest.Capabilities.GameplayCapabilities[i]);
             writer.WriteUInt64((ulong)manifest.Capabilities.RequiredWorldCapabilities);
+            SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
         static CharacterSimulationProgramManifest ReadManifest(CanonicalReader reader)
@@ -581,7 +607,8 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             var capabilities = new ProgramCapabilityManifest(gameplayCapabilities, (WorldCapability)reader.ReadUInt64());
-            return new CharacterSimulationProgramManifest(programId, compilerVersion, operationSetVersion, tickRate, sourceRevision, semanticHash, numericProfile, capabilities);
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
+            return new CharacterSimulationProgramManifest(programId, compilerVersion, operationSetVersion, tickRate, sourceRevision, semanticHash, numericProfile, capabilities, root);
         }
 
         static void WriteConstant(CanonicalWriter writer, ProgramConstant value)

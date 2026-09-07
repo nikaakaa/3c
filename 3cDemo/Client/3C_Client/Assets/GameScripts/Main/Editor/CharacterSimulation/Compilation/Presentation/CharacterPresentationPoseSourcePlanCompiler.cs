@@ -53,8 +53,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     diagnostics);
             CharacterPresentationPoseSourcePlan[] poseSources = CompilePoseSources(
                 sourceCatalog,
+                profile,
                 rig,
                 footAnalysisCompilation,
+                animationBuildInput,
                 diagnostics);
             return new CharacterPresentationPoseSourcePlanCompilationResult(
                 blendSpaces,
@@ -169,8 +171,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static CharacterPresentationPoseSourcePlan[] CompilePoseSources(
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
+            CharacterAnimationPresentationProfile profile,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            CharacterAnimationBuildInput animationBuildInput,
             List<string> errors)
         {
             AnimationFootAnalysisProjectionBuildData footAnalysis =
@@ -201,6 +205,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                     .PoseSourceBindingKey(bindingIdentity));
                         CharacterAnimationClipContentIdentity clipIdentity =
                             CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                        CharacterAnimationSourceResourceBinding resourceBinding =
+                            profile.FindSourceResourceBinding(directClip.Clip);
+                        CharacterAnimationSamplingBackendKind backend =
+                            resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
+                        resourceBinding?.RequireValid();
+                        CharacterAnimationScalarCurvePage scalarPage = null;
+                        if (backend == CharacterAnimationSamplingBackendKind.NativeClip)
+                            scalarPage = animationBuildInput.AnimationCatalog.BuildNativeScalarPage(
+                                directClip.Clip,
+                                errors);
+                        CharacterAnimationBuildCatalogEntry catalogEntry =
+                            animationBuildInput.AnimationCatalog.RegisterReference(
+                            directClip.Clip,
+                            backend,
+                            scalarPage,
+                            $"pose-source:{bindingIdentity}:{clipIdentity.AssetGuid}");
                         CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(directClip.Clip);
                         AnimationCurve secondsCurve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             directClip.Clip,
@@ -221,7 +241,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 directClip.Clip,
                                 clipIdentity.SourceDurationSeconds,
                                 directArtifact.MotionData),
-                            directFeatures));
+                            directFeatures,
+                            backend,
+                            scalarPage,
+                            catalogEntry.ResourceCatalogIndex,
+                            catalogEntry.GroupClipIndex));
                         continue;
                     }
                 }

@@ -15,11 +15,7 @@ namespace ThirdPersonCharacter.Control.Rules
         public static readonly CharacterControlStateId RunLoop = new CharacterControlStateId("RunLoop");
         public static readonly CharacterControlStateId RunStopping = new CharacterControlStateId("RunStopping");
         public static readonly CharacterControlStateId MovingTurn = new CharacterControlStateId("MovingTurn");
-        public static readonly CharacterSkillId Attack1 = new CharacterSkillId("Attack1");
-        public static readonly CharacterSkillId Attack2 = new CharacterSkillId("Attack2");
-        public static readonly CharacterSkillId Attack3 = new CharacterSkillId("Attack3");
-        public static readonly CharacterSkillId Attack4 = new CharacterSkillId("Attack4");
-        public static readonly CharacterSkillId Attack5 = new CharacterSkillId("Attack5");
+        public static readonly CharacterSkillId Attack = new CharacterSkillId("Attack");
         public static readonly CharacterSkillId DodgeBack = new CharacterSkillId("DodgeBack");
         public static readonly CharacterSkillId DodgeForward = new CharacterSkillId("DodgeForward");
 
@@ -198,72 +194,19 @@ namespace ThirdPersonCharacter.Control.Rules
             }
             if (read.HasInputRequest(s_AttackRequest))
             {
-                CharacterSkillId skill = SelectAttackSkill(read, out ulong replacementActionInstanceId);
-                if (skill.IsValid)
-                    output.SubmitSkill(new CharacterControlSkillRequest(
-                        source,
-                        skill,
-                        s_AttackRequest,
-                        true,
-                        s_ActionTarget,
-                        replacementActionInstanceId: replacementActionInstanceId));
+                output.SubmitSkill(new CharacterControlSkillRequest(
+                    source,
+                    Attack,
+                    s_AttackRequest,
+                    true,
+                    s_ActionTarget));
             }
         }
 
-        CharacterSkillId SelectAttackSkill(ICharacterControlReadPort read, out ulong replacementActionInstanceId)
-        {
-            replacementActionInstanceId = 0;
-            if (read.IsSkillActive(Attack1))
-            {
-                if (!read.IsActionWindowActive(Attack1, "ComboAccept"))
-                    return default;
-                read.TryGetActiveSkillInstanceId(Attack1, out replacementActionInstanceId);
-                return Attack2;
-            }
-            if (read.IsSkillActive(Attack2))
-            {
-                if (!read.IsActionWindowActive(Attack2, "ComboAccept"))
-                    return default;
-                read.TryGetActiveSkillInstanceId(Attack2, out replacementActionInstanceId);
-                return Attack3;
-            }
-            if (read.IsSkillActive(Attack3))
-            {
-                if (!read.IsActionWindowActive(Attack3, "ComboAccept"))
-                    return default;
-                read.TryGetActiveSkillInstanceId(Attack3, out replacementActionInstanceId);
-                return Attack4;
-            }
-            if (read.IsSkillActive(Attack4))
-            {
-                if (!read.IsActionWindowActive(Attack4, "ComboAccept"))
-                    return default;
-                read.TryGetActiveSkillInstanceId(Attack4, out replacementActionInstanceId);
-                return Attack5;
-            }
-            if (read.IsSkillActive(Attack5))
-                return default;
-            return Attack1;
-        }
+        bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId) =>
+            read.TryGetActiveSkillInstanceId(Attack, out instanceId);
 
-        bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId)
-        {
-            if (read.TryGetActiveSkillInstanceId(Attack1, out instanceId) ||
-                read.TryGetActiveSkillInstanceId(Attack2, out instanceId) ||
-                read.TryGetActiveSkillInstanceId(Attack3, out instanceId) ||
-                read.TryGetActiveSkillInstanceId(Attack4, out instanceId) ||
-                read.TryGetActiveSkillInstanceId(Attack5, out instanceId))
-                return true;
-            instanceId = 0;
-            return false;
-        }
-
-        bool IsAttackActive(ICharacterControlReadPort read) =>
-            read.IsSkillActive(Attack1) ||
-            read.IsSkillActive(Attack2) ||
-            read.IsSkillActive(Attack3) ||
-            read.IsSkillActive(Attack4) ||
-            read.IsSkillActive(Attack5);
+        bool IsAttackActive(ICharacterControlReadPort read) => read.IsSkillActive(Attack);
 
         SimulationExecutionSource Source(CharacterControlStateId stateId) =>
             SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, default);
@@ -340,7 +283,7 @@ namespace ThirdPersonCharacter.Control.Rules
                         100,
                         true)
                 },
-                new[] { Attack1, Attack2, Attack3, Attack4, Attack5, DodgeBack, DodgeForward });
+                new[] { Attack, DodgeBack, DodgeForward });
         }
 
         static CharacterControlTransitionDescriptor Transition(

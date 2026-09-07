@@ -16,48 +16,8 @@ MonoBehaviour:
   m_ControlModuleId: character.corin.control
   m_ControlParameters: []
   m_SkillDefinitions:
-  - m_SkillId: Attack1
-    m_EntryGraphAuthoringId: cf79f885-4e1f-4a3b-8bf7-8a21620959b1
-    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
-    m_SourceInputRequestId: Attack
-    m_ConsumeSourceInputRequest: 1
-    m_TargetInputValueId: ActionTarget
-    m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: Attack2
-    m_EntryGraphAuthoringId: cbe6f984-5d7a-48e7-89b9-f30bc6c91325
-    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
-    m_SourceInputRequestId: Attack
-    m_ConsumeSourceInputRequest: 1
-    m_TargetInputValueId: ActionTarget
-    m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: Attack3
-    m_EntryGraphAuthoringId: 451f8513-596d-416c-a685-fff57e9fe51f
-    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
-    m_SourceInputRequestId: Attack
-    m_ConsumeSourceInputRequest: 1
-    m_TargetInputValueId: ActionTarget
-    m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: Attack4
-    m_EntryGraphAuthoringId: 87cc7381-11cd-4631-a1b1-99114073ede9
-    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
-    m_SourceInputRequestId: Attack
-    m_ConsumeSourceInputRequest: 1
-    m_TargetInputValueId: ActionTarget
-    m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: Attack5
-    m_EntryGraphAuthoringId: 3dfd9a99-a63f-4df6-9689-b9b9789e2171
+  - m_SkillId: Attack
+    m_EntryGraphAuthoringId: 3ae19d5e-dd52-4f44-a80d-e32d2474e7ec
     m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
     m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
     m_SourceInputRequestId: Attack

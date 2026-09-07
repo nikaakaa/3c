@@ -488,6 +488,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:
                 case CharacterPresentationCommandKind.Ui:
+                case CharacterPresentationCommandKind.DomainEvent:
                     key = default;
                     return false;
                 default:

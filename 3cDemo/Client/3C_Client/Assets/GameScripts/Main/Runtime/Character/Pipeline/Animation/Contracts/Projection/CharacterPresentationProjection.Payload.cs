@@ -151,8 +151,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 projectionRevision,
                 equipmentVisualBindings);
             projection.SetLinkedPoseProjection(linkedPose);
-            projection.RequireContract(contract);
-            projection.RequirePosePayload();
             return projection;
         }
 
@@ -201,6 +199,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException("Character Presentation Projection Ground Detection contact capacity is stale.");
                 }
             }
+        }
+
+        internal void SetAnimationResources(
+            CharacterAnimationCompiledResourceDescriptor[] animationResources,
+            string projectionRevision)
+        {
+            m_AnimationResources = animationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+            if (string.IsNullOrWhiteSpace(projectionRevision))
+                throw new ArgumentException("Projection revision is required.", nameof(projectionRevision));
+            SetEquipmentProjection(projectionRevision, m_EquipmentVisualBindings);
         }
 
         internal void SetTuningPayload(

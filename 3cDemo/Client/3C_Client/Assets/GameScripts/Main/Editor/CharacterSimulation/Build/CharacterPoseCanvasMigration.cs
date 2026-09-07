@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         const string CorinPoseGraphPath =
             "Assets/Configs/Character/Corin/Pipeline/Presentation/PoseGraphs/CorinPresentationPoseGraph.asset";
 
+        [MenuItem("Tools/3C/Pose Canvas/Migrate Corin Legacy Typed Graph")]
         public static void MigrateCorin()
         {
             CharacterPresentationPoseGraphAsset asset =
@@ -68,7 +69,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     graphs[0],
                     graphs.Skip(1).ToArray());
                 foreach (CharacterPoseCanvasGraph graph in graphs)
+                {
+                    graph.SelfSerialize();
                     EditorUtility.SetDirty(graph);
+                }
                 EditorUtility.SetDirty(asset);
                 AssetDatabase.SaveAssetIfDirty(asset);
                 AssetDatabase.ImportAsset(

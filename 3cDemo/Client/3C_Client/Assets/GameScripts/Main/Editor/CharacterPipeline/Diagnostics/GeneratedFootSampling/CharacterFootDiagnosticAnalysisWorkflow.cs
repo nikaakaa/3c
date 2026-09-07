@@ -120,13 +120,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             s_LastFailure = string.Empty;
             s_LastQualityScorePath = string.Empty;
             string fullManifestPath = Path.GetFullPath(manifestPath);
-            string captureDirectory = Path.GetDirectoryName(fullManifestPath);
-            string outputRoot = Path.Combine(
-                Path.GetDirectoryName(captureDirectory),
-                "FootAnalysis");
+            string outputRoot = Path.GetFullPath(Path.Combine(
+                Application.dataPath, "..", "Diagnostics", "FootAnalysis"));
             string outputDirectory = Path.Combine(
-                outputRoot,
-                $"{Path.GetFileName(captureDirectory)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
+                outputRoot, Guid.NewGuid().ToString("N"));
             string fullPlanPath = Path.GetFullPath(planPath);
             string analyzerAssemblyPath = typeof(CharacterFootDiagnosticAnalysis)
                 .Assembly.Location;
@@ -163,7 +160,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     Application.dataPath,
                     "..",
                     "Diagnostics",
-                    "GeneratedFootSampling",
                     "FootAnalysis"));
                 if (Directory.Exists(root))
                 {

@@ -14,12 +14,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
             int groupIndex,
             string ownerAssetGuid,
             CharacterAclNativeArtifactIdentity nativeArtifactIdentity,
+            string buildInputIdentity,
             string sourceInputIdentity = null)
         {
             if (requests == null || requests.Count == 0)
                 throw new ArgumentNullException(nameof(requests));
             if (groupIndex < 0)
                 throw new ArgumentOutOfRangeException(nameof(groupIndex));
+            if (string.IsNullOrWhiteSpace(buildInputIdentity))
+                throw new ArgumentException(
+                    "ACL build input identity is required.",
+                    nameof(buildInputIdentity));
             ownerAssetGuid = CharacterAclAnimationArtifactIdentity.RequireOwnerAssetGuid(ownerAssetGuid);
             nativeArtifactIdentity = nativeArtifactIdentity ??
                 throw new ArgumentNullException(nameof(nativeArtifactIdentity));
@@ -124,6 +129,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
             return new CharacterAclAnimationGroupArtifact(
                 groupIndex,
                 groupContentHash,
+                buildInputIdentity,
                 manifests,
                 groupTransformPayloads,
                 groupScalarPayloads,

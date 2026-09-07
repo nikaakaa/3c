@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL;
 using ThirdPersonCharacter.Pipeline.Animation;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -217,6 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     group,
                     m_OutputFolder,
                     entry);
+                StampBuildInputIdentity(entry, group);
                 group.Resource = entry.Resource;
                 return;
             }
@@ -229,6 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         m_OutputFolder,
                         existing))
                 {
+                    StampBuildInputIdentity(existing, group);
                     group.Resource = existing.Resource;
                     m_ResolvedStems.Add(group.AssetStem);
                     return;
@@ -269,6 +272,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 finalEntry);
             group.Resource = finalEntry.Resource;
             m_ResolvedStems.Add(group.AssetStem);
+        }
+
+        void StampBuildInputIdentity(
+            CharacterAclPublishedGroupInventoryEntry entry,
+            CharacterAclAnimationPublishGroup group)
+        {
+            CharacterAclAnimationResource resource = entry.Resource;
+            if (resource == null ||
+                string.Equals(
+                    resource.BuildInputIdentity,
+                    group.Artifact.BuildInputIdentity,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+            resource.StampBuildInputIdentity(group.Artifact.BuildInputIdentity);
+            EditorUtility.SetDirty(resource);
+            AssetDatabase.SaveAssetIfDirty(resource);
+            AssetDatabase.ImportAsset(
+                $"{entry.Folder}/{entry.Stem}.asset",
+                ImportAssetOptions.ForceSynchronousImport);
         }
 
         static CharacterAnimationCompiledResourceDescriptor FindDescriptor(

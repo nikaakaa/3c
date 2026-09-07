@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
@@ -214,6 +216,135 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             return entry;
         }
 
+        string ComputeGroupBuildInputIdentity(
+            List<string> clipIdentityValues,
+            CharacterAnimationBuildChannel channels)
+        {
+            CharacterAclCompressionSettings settings = m_Input.Compression;
+            var values = new List<string>(clipIdentityValues.Count + 22)
+            {
+                "acl-group-build-input/v1",
+                m_Input.OwnerAssetGuid,
+                m_Input.NativeArtifactIdentity.Identity,
+                m_Input.SourceRig.RigId,
+                m_Input.SourceRig.RigRevision,
+                m_Input.ParameterLayout.Hash,
+                settings.Revision,
+                CharacterAclCompressionSettings.NativeEncodingAlgorithmVersion,
+                settings.CompilerOptions,
+                settings.SampleRate.ToString(CultureInfo.InvariantCulture),
+                settings.TransformPrecision.ToString("R", CultureInfo.InvariantCulture),
+                settings.ScalePrecision.ToString("R", CultureInfo.InvariantCulture),
+                settings.RotationPrecisionDegrees.ToString("R", CultureInfo.InvariantCulture),
+                settings.ScalarPrecision.ToString("R", CultureInfo.InvariantCulture),
+                settings.NativeTransformPrecision.ToString("R", CultureInfo.InvariantCulture),
+                settings.NativeScalarPrecision.ToString("R", CultureInfo.InvariantCulture),
+                settings.EnableDatabase ? "database" : "tracks",
+                settings.OptimizeLoops ? "optimize-loops" : string.Empty,
+                settings.EnableMediumTier ? "medium-tier" : string.Empty,
+                settings.EnableLowTier ? "low-tier" : string.Empty,
+                settings.EnablePerTrackRounding ? "per-track-rounding" : string.Empty,
+                settings.MediumImportanceTierProportion.ToString("R", CultureInfo.InvariantCulture),
+                settings.LowImportanceTierProportion.ToString("R", CultureInfo.InvariantCulture),
+                settings.MaxDatabaseChunkSize.ToString(CultureInfo.InvariantCulture),
+                channels.ToString()
+            };
+            values.AddRange(clipIdentityValues);
+            return CharacterAclHash.ComputeStrings(values);
+        }
+
+        CharacterAclAnimationGroupArtifact TryReusePublishedGroup(
+            string buildInputIdentity,
+            int groupIndex,
+            int clipCount)
+        {
+            string outputFolder =
+                CharacterAclAnimationArtifactIdentity.GetOutputFolder(
+                    m_Input.OwnerAssetGuid);
+            CharacterAclPublishedGroupInventory published =
+                CharacterAclPublishedGroupInventory.Scan(
+                    outputFolder,
+                    CharacterAclAnimationArtifactIdentity.GetAssetStemPrefix());
+            for (int i = 0; i < published.Groups.Count; i++)
+            {
+                CharacterAclPublishedGroupInventoryEntry entry = published.Groups[i];
+                if (entry.State != CharacterAclPublishedGroupFileState.Complete ||
+                    entry.Resource == null ||
+                    !string.Equals(
+                        entry.Resource.BuildInputIdentity,
+                        buildInputIdentity,
+                        StringComparison.Ordinal) ||
+                    entry.Resource.GroupClipCount != clipCount)
+                {
+                    continue;
+                }
+                try
+                {
+                    CharacterAclAnimationResourceManifest[] manifests =
+                        new CharacterAclAnimationResourceManifest[clipCount];
+                    for (int clipIndex = 0; clipIndex < clipCount; clipIndex++)
+                        manifests[clipIndex] = entry.Resource.GetGroupManifest(clipIndex);
+                    byte[][] transformPayloads =
+                        entry.Resource.RequireGroupPayload(
+                            CharacterAclDataBlockKind.Transform);
+                    byte[][] scalarPayloads =
+                        entry.Resource.RequireGroupPayload(
+                            CharacterAclDataBlockKind.Scalar);
+                    byte[] databasePayload = entry.Resource.RequirePayload(
+                        CharacterAclDataBlockKind.DatabaseHeader, 0);
+                    byte[] mediumPayload = entry.Resource.RequirePayload(
+                        CharacterAclDataBlockKind.BulkMedium, 0);
+                    byte[] lowPayload = entry.Resource.RequirePayload(
+                        CharacterAclDataBlockKind.BulkLow, 0);
+                    string reportPath =
+                        $"{outputFolder}/{entry.Stem}.quality.json";
+                    CharacterAclAnimationQualityReport[] qualityReports =
+                        ReadPublishedQualityReports(reportPath, clipCount);
+                    return new CharacterAclAnimationGroupArtifact(
+                        groupIndex,
+                        entry.Resource.Manifest.GroupContentHash,
+                        buildInputIdentity,
+                        manifests,
+                        transformPayloads,
+                        scalarPayloads,
+                        databasePayload,
+                        mediumPayload,
+                        lowPayload,
+                        qualityReports);
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        static CharacterAclAnimationQualityReport[] ReadPublishedQualityReports(
+            string reportPath,
+            int clipCount)
+        {
+            string full = CharacterAclAnimationArtifactFileStore.ToProjectFilePath(reportPath);
+            if (!System.IO.File.Exists(full))
+                throw new InvalidOperationException(
+                    $"ACL published quality report '{reportPath}' is missing.");
+            CharacterAclAnimationQualityBundle bundle = JsonUtility.FromJson<
+                CharacterAclAnimationQualityBundle>(
+                System.IO.File.ReadAllText(full));
+            if (bundle == null ||
+                !string.Equals(
+                    bundle.schema,
+                    "character-acl-animation-quality-bundle/v1",
+                    StringComparison.Ordinal) ||
+                bundle.reports == null ||
+                bundle.reports.Length != clipCount)
+            {
+                throw new InvalidOperationException(
+                    $"ACL published quality report '{reportPath}' does not match its group.");
+            }
+            return bundle.reports;
+        }
+
         internal CharacterAnimationBuildCatalog Complete(List<string> errors)
         {
             CharacterAnimationBuildCatalogEntry[] entries = m_Entries.Values
@@ -282,6 +413,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     continue;
                 }
                 var requests = new List<CharacterAclAnimationBuildRequest>(group.Count);
+                var clipIdentityValues = new List<string>(group.Count * 6);
                 try
                 {
                     for (int i = 0; i < group.Count; i++)
@@ -292,6 +424,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                                 $"ACL animation catalog entry '{entry.StableIdentity}' has no authoring Clip for the formal build.");
                         CharacterAnimationClipContentIdentity identity =
                             CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
+                        clipIdentityValues.Add(identity.AssetGuid);
+                        clipIdentityValues.Add(identity.LocalFileId.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture));
+                        clipIdentityValues.Add(identity.FullDependencyHash);
+                        clipIdentityValues.Add(identity.RegisteredCurveHash);
+                        clipIdentityValues.Add(identity.SourceDurationSeconds.ToString(
+                            "R", System.Globalization.CultureInfo.InvariantCulture));
+                        clipIdentityValues.Add(identity.Loop ? "loop" : "once");
                         requests.Add(new CharacterAclAnimationBuildRequest(
                             new CharacterAnimationAuthoringReadRequest(
                                 entry.AuthoringClip,
@@ -305,12 +445,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                                 CharacterAnimationBuildChannel.AnimatedProperty),
                             m_Input.Compression));
                     }
+                    string buildInputIdentity = ComputeGroupBuildInputIdentity(
+                        clipIdentityValues,
+                        CharacterAnimationBuildChannel.Transform |
+                        CharacterAnimationBuildChannel.AnimatedProperty);
                     CharacterAclAnimationGroupArtifact groupArtifact =
-                        CharacterAclAnimationResourceBuilder.BuildGroup(
+                        TryReusePublishedGroup(
+                            buildInputIdentity,
+                            groupIndex,
+                            group.Count)
+                        ?? CharacterAclAnimationResourceBuilder.BuildGroup(
                             requests,
                             groupIndex,
                             m_Input.OwnerAssetGuid,
-                            m_Input.NativeArtifactIdentity);
+                            m_Input.NativeArtifactIdentity,
+                            buildInputIdentity);
                     for (int i = 0; i < group.Count; i++)
                         group[i].GroupArtifact = groupArtifact;
                     artifacts[resourceIndex] = groupArtifact;

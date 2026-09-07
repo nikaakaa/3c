@@ -125,7 +125,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
                 scalarPayloads,
                 databasePayload,
                 mediumPayload,
-                lowPayload);
+                lowPayload,
+                artifact.BuildInputIdentity);
             EditorUtility.SetDirty(resource);
             AssetDatabase.SaveAssets();
             AssetDatabase.ImportAsset(manifestPath, ImportAssetOptions.ForceSynchronousImport);

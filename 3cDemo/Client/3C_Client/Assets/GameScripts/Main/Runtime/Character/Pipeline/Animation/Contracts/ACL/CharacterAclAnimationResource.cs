@@ -13,6 +13,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] TextAsset m_DatabaseHeaderPayload;
         [SerializeField] TextAsset m_BulkMediumPayload;
         [SerializeField] TextAsset m_BulkLowPayload;
+        [SerializeField] string m_BuildInputIdentity = string.Empty;
+
+        public string BuildInputIdentity => m_BuildInputIdentity ?? string.Empty;
+
+#if UNITY_EDITOR
+        internal void StampBuildInputIdentity(string buildInputIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(buildInputIdentity))
+                throw new ArgumentException("ACL build input identity is required.", nameof(buildInputIdentity));
+            m_BuildInputIdentity = buildInputIdentity;
+        }
+#endif
 
         public CharacterAclAnimationResourceManifest Manifest => m_Manifest;
         public TextAsset DatabaseHeaderPayload => m_DatabaseHeaderPayload;
@@ -212,7 +224,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             TextAsset[] scalarPayloads,
             TextAsset databaseHeaderPayload,
             TextAsset bulkMediumPayload,
-            TextAsset bulkLowPayload)
+            TextAsset bulkLowPayload,
+            string buildInputIdentity)
         {
             m_Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
             m_GroupManifests = groupManifests ?? throw new ArgumentNullException(nameof(groupManifests));
@@ -221,6 +234,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DatabaseHeaderPayload = databaseHeaderPayload;
             m_BulkMediumPayload = bulkMediumPayload;
             m_BulkLowPayload = bulkLowPayload;
+            m_BuildInputIdentity = string.IsNullOrWhiteSpace(buildInputIdentity)
+                ? throw new ArgumentException("ACL build input identity is required.", nameof(buildInputIdentity))
+                : buildInputIdentity;
             CharacterAclResourceReadinessResult result = ValidateRuntime();
             if (!result.IsReady)
                 throw new InvalidOperationException(result.Message);

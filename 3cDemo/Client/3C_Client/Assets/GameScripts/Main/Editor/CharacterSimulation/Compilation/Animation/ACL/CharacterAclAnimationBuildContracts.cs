@@ -177,6 +177,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
         internal CharacterAclAnimationGroupArtifact(
             int groupIndex,
             string groupContentHash,
+            string buildInputIdentity,
             CharacterAclAnimationResourceManifest[] manifests,
             byte[][] transformPayloads,
             byte[][] scalarPayloads,
@@ -191,6 +192,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
             GroupContentHash = string.IsNullOrWhiteSpace(groupContentHash)
                 ? throw new ArgumentException("ACL animation group content hash is required.", nameof(groupContentHash))
                 : groupContentHash;
+            BuildInputIdentity = string.IsNullOrWhiteSpace(buildInputIdentity)
+                ? throw new ArgumentException("ACL animation group build input identity is required.", nameof(buildInputIdentity))
+                : buildInputIdentity;
             Manifests = manifests ?? throw new ArgumentNullException(nameof(manifests));
             TransformPayloads = transformPayloads ?? throw new ArgumentNullException(nameof(transformPayloads));
             ScalarPayloads = scalarPayloads ?? throw new ArgumentNullException(nameof(scalarPayloads));
@@ -215,6 +219,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
 
         internal int GroupIndex { get; }
         internal string GroupContentHash { get; }
+        internal string BuildInputIdentity { get; }
         internal CharacterAclAnimationResourceManifest[] Manifests { get; }
         internal byte[][] TransformPayloads { get; }
         internal byte[][] ScalarPayloads { get; }

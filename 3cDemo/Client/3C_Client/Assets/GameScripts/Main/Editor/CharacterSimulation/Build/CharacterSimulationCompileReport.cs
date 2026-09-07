@@ -163,6 +163,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                !string.IsNullOrEmpty(RootGuid) &&
                                TargetProducts.Count > 0 &&
                                Report.IsValid;
->>>>>>> main
     }
 }

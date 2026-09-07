@@ -88,6 +88,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "camera",
         typeof(CharacterCameraPresentationCaptureFrame))]
     [DiagnosticFactRoot(
+        "facts",
+        typeof(CharacterPresentationFactCaptureFrame))]
+    [DiagnosticFactRoot(
         "commands",
         typeof(CharacterPresentationCommandCaptureFacts))]
     internal static class CharacterPresentationReplicationDiagnosticCapability

@@ -405,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     camera,
                     poseRoot,
                     diagnostics,
+                    diagnostics.CharacterRuntimeId,
                     workerSession);
                 body = null;
                 animation = null;

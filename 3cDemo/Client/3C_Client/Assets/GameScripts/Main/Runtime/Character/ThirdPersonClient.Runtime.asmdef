@@ -3,6 +3,7 @@
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
         "KK.GeneratedDiagnosticSampling.Annotations",
+        "KK.GeneratedDiagnosticSampling",
         "ThirdPerson.Performance.Instrumentation.Core",
         "ThirdPerson.Performance.Instrumentation.Contracts",
         "ThirdPersonPerformance.Contracts",

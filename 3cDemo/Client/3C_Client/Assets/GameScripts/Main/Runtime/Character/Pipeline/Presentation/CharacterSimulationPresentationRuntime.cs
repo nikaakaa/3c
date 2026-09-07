@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -29,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Transform m_VisualRoot;
         readonly Transform m_PoseRoot;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
+        readonly Guid m_RuntimeInstanceId;
         readonly CharacterPoseWorkerPresentationSession
             m_WorkerPresentationSession;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
@@ -59,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterCameraPresentationRuntime camera,
             Transform poseRoot,
             RuntimeDiagnosticsContext diagnostics,
+            Guid runtimeInstanceId,
             CharacterPoseWorkerPresentationSession workerPresentationSession)
         {
             if (!actorId.IsValid)
@@ -74,6 +77,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (requiresFootPlacement != m_Animation.HasFootPlacement)
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
             m_Camera = camera;
+            m_RuntimeInstanceId = runtimeInstanceId != Guid.Empty
+                ? runtimeInstanceId
+                : throw new ArgumentException(
+                    "Presentation runtime identity is invalid.",
+                    nameof(runtimeInstanceId));
             m_VisualRoot = m_Body.VisualRoot;
             m_PoseRoot = poseRoot
                 ? poseRoot
@@ -462,6 +470,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         m_PendingBodyFrame,
                         m_PendingPresentationContext
                             .PresentationDeltaSeconds);
+#if KK_DIAGNOSTIC_SAMPLING
+                PublishPresentationReplicationDiagnostics();
+#endif
             }
             finally
             {
@@ -469,6 +480,53 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearPendingPresentationFrame();
             }
         }
+
+#if KK_DIAGNOSTIC_SAMPLING
+        void PublishPresentationReplicationDiagnostics()
+        {
+            var target = new DiagnosticEventTargetKey(
+                CharacterPresentationReplicationDiagnosticEvent.TargetTypeIdentity,
+                m_RuntimeInstanceId);
+            if (!CharacterPresentationReplicationDiagnosticEvent.IsInterested(
+                    in target))
+            {
+                return;
+            }
+            AnimationPresentationRuntimeSnapshot animation =
+                m_Animation.HasRuntimeDiagnosticsSnapshot
+                    ? m_Animation.RuntimeDiagnosticsSnapshot
+                    : default;
+            CharacterAnimationPresentationCaptureFrame animationFacts =
+                new CharacterAnimationPresentationCaptureFrame(
+                    m_PendingPresentationContext.RenderFrame,
+                    m_PendingPresentationContext.LocalLogicTick,
+                    m_PendingBodyFrame.ResetSequence,
+                    m_PendingPresentationContext.PresentationDeltaSeconds,
+                    in animation);
+            CharacterCameraPresentationCaptureFrame cameraFacts =
+                m_PendingCameraFrame
+                    ? m_Camera.LastPresentationFrame.WithPresentationContext(
+                        m_PendingPresentationContext.RenderFrame,
+                        m_PendingPresentationContext.LocalLogicTick,
+                        m_PendingBodyFrame.ResetSequence,
+                        m_PendingPresentationContext.PresentationDeltaSeconds)
+                    : CharacterCameraPresentationCaptureFrame.Empty;
+            var commandFacts = new CharacterPresentationCommandCaptureFacts(
+                m_CurrentFrameSignals);
+            var lineage = new DiagnosticLineageKey(
+                CharacterPresentationReplicationDiagnosticEvent.LineageTypeIdentity,
+                m_PendingPresentationContext.RenderFrame,
+                animation.CompletionIdentity != 0
+                    ? animation.CompletionIdentity
+                    : m_PendingPresentationContext.LocalLogicTick);
+            CharacterPresentationReplicationDiagnosticEvent.Publish(
+                in target,
+                in lineage,
+                in animationFacts,
+                in cameraFacts,
+                in commandFacts);
+        }
+#endif
 
         internal Exception AbortPresentationFrame()
         {

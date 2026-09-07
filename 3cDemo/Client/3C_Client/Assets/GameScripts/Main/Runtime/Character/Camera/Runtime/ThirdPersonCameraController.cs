@@ -32,6 +32,10 @@ namespace ThirdPersonCamera
         public Vector3 LookDirection => basisSnapshot.Valid ? basisSnapshot.LookDirection : Vector3.zero;
         public Vector3 AimPoint => basisSnapshot.AimPoint;
         public CameraBasisSnapshot BasisSnapshot => basisSnapshot;
+        public bool HasFinalOutput => freeLook != null && freeLook.PreviousStateIsValid;
+        public Vector3 FinalPosition => HasFinalOutput ? freeLook.State.FinalPosition : Vector3.zero;
+        public Quaternion FinalOrientation => HasFinalOutput ? freeLook.State.FinalOrientation : Quaternion.identity;
+        public float FinalFieldOfView => freeLook != null ? freeLook.m_Lens.FieldOfView : 0f;
 
         void Awake()
         {

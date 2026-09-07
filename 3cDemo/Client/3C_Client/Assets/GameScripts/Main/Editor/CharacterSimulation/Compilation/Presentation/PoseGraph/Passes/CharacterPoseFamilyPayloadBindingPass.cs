@@ -75,7 +75,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
                 CharacterLinkedPoseProjectionPayload linkedPose,
-                CharacterFootPlacementAnalysisCompilation footAnalysis)
+                CharacterFootPlacementAnalysisCompilation footAnalysis,
+                IReadOnlyList<string> movementModeStateIdentities)
             {
                 GraphAsset = graphAsset;
                 GraphClosure = graphClosure ??
@@ -108,6 +109,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
                 LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
                 FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+                MovementModeStateIdentities = movementModeStateIdentities ??
+                    throw new ArgumentNullException(nameof(movementModeStateIdentities));
                 LinkedGroups = profile.LinkedPoseGroups.ToDictionary(value => value.GroupId);
                 LinkedImplementations = profile.LinkedPoseImplementations.ToDictionary(value => value.ImplementationId);
             }
@@ -132,6 +135,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CharacterAnimationPresentationProfile Profile { get; }
             public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
             public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+            public IReadOnlyList<string> MovementModeStateIdentities { get; }
             public Dictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding> LinkedGroups { get; }
             public Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationAsset> LinkedImplementations { get; }
             public List<CharacterLinkedPoseEntryFragmentPlanDescriptor> LinkedFragments { get; } = new List<CharacterLinkedPoseEntryFragmentPlanDescriptor>();
@@ -211,7 +215,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.ProfileIndicesByIdentity,
                 request.Profile,
                 request.LinkedPose,
-                request.FootAnalysis);
+                request.FootAnalysis,
+                request.MovementModeStateIdentities);
             CompileGraph(
                 state,
                 asset,
@@ -1315,7 +1320,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     sourceStateIndex,
                     targetStateIndex,
                     authored.Priority,
-                    CharacterPoseTransitionRuleCompiler.Compile(authored.Rule),
+                    CharacterPoseTransitionRuleCompiler.Compile(
+                        authored.Rule,
+                        state.MovementModeStateIdentities),
                     authored.BlendLogic,
                     authored.DurationSeconds,
                     completionDurationSeconds,

@@ -131,7 +131,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
             MotionMatchingProjectionPayload motionMatching,
-            CharacterFootPlacementAnalysisCompilation footAnalysis)
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
+            IReadOnlyList<string> movementModeStateIdentities)
         {
             Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
             Rig = rig ? rig : throw new ArgumentNullException(nameof(rig));
@@ -152,6 +153,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
             MotionMatching = motionMatching;
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+            MovementModeStateIdentities = movementModeStateIdentities ??
+                throw new ArgumentNullException(nameof(movementModeStateIdentities));
         }
 
         public CharacterPresentationPoseGraphAsset Asset { get; }
@@ -169,6 +172,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
         public MotionMatchingProjectionPayload MotionMatching { get; }
         public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
+        public IReadOnlyList<string> MovementModeStateIdentities { get; }
     }
 
     internal sealed class CharacterPoseCompilationResult

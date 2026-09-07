@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -1080,8 +1081,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseTransitionRuleProgram rule,
             out string movementMode)
         {
-            const string prefix = "presentation.movement-mode.state/";
             movementMode = string.Empty;
+            string prefix = CharacterPresentationTrajectoryIntent.MovementModeStatePrefix;
             for (int i = 0; i < rule.Operations.Count; i++)
             {
                 CharacterPoseTransitionRuleCompiledOperation operation =

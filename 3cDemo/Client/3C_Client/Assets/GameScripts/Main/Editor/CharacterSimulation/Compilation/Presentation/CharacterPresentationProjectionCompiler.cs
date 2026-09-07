@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL;
@@ -11,8 +12,7 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
-using ThirdPersonSimulation;
-using UnityEditor;
+using ThirdPersonSimulation;using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
@@ -188,6 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.AnimationPresentationProfile,
                     request.AnimationBuildInput,
                     errors);
+            IReadOnlyList<string> movementModeStateIdentities =
+                ResolveMovementModeStateIdentities(model, errors);
             CharacterPresentationProjectionDraft draft = CompileCore(
                 reader,
                 model.AnimationPresentationProfile,
@@ -199,7 +201,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.Timelines,
                 CollectTimelineCallSites(model.Root),
                 request.AnimationBuildInput,
-                 errors);
+                 errors,
+                movementModeStateIdentities);
             CharacterAnimationBuildCatalog animationCatalog =
                 request.AnimationBuildInput.AnimationCatalog.Complete(errors);
             CharacterPresentationProjection projection = null;
@@ -278,6 +281,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 projection.MotionMatching,
                 projection.AnimationResources);
             return true;
+        }
+
+        static IReadOnlyList<string> ResolveMovementModeStateIdentities(
+            CharacterAuthoringCompilationModel model,
+            List<string> errors)
+        {
+            string moduleId = model.Definition.ControlModuleId;
+            if (string.IsNullOrEmpty(moduleId))
+            {
+                errors?.Add("Presentation Projection requires a Definition Control Module identity for Movement Mode state validation.");
+                return Array.Empty<string>();
+            }
+            ICharacterControlModule controlModule =
+                CorinCharacterControlModuleCatalog.Create().Require(new CharacterControlModuleId(moduleId));
+            return CharacterMovementModeStateIdentities.FromControlContract(controlModule.Contract);
         }
 
         static PoseSourceCompilationCatalog CompilePoseSourceCatalog(
@@ -460,7 +478,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationTimelineCallSite>> timelineCallSites,
             CharacterAnimationBuildInput animationBuildInput,
-            List<string> errors)
+            List<string> errors,
+            IReadOnlyList<string> movementModeStateIdentities)
         {
             if (reader == null || profile == null || sourceCatalog == null || timelines == null ||
                 timelineCallSites == null || animationBuildInput == null)
@@ -591,7 +610,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile,
                 linkedPose,
                 motionMatching,
-                footAnalysisCompilation);
+                footAnalysisCompilation,
+                movementModeStateIdentities);
             CharacterPoseCompilationResult poseCompilation =
                 CharacterPoseCompilerModule.Compile(poseRequest);
             poseCompilation.CopyMessagesTo(errors);

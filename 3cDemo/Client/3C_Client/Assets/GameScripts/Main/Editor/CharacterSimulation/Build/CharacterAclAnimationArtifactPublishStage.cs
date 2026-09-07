@@ -104,9 +104,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         assetStem));
             }
             m_Inventory =
-                CharacterAclPublishedGroupInventory.Scan(
-                    m_OutputFolder,
-                    m_FilePrefix);
+                m_InterruptedBackupFolders.Count == 0
+                    ? catalog.PublishedInventory ??
+                      throw new InvalidOperationException(
+                          "ACL published group inventory is missing from the animation build catalog.")
+                    : CharacterAclPublishedGroupInventory.Scan(
+                        m_OutputFolder,
+                        m_FilePrefix);
         }
 
         public UnityEngine.Object Wrapper

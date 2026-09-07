@@ -40,7 +40,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             IReadOnlyList<CharacterAnimationBuildCatalogEntry> entries,
             IReadOnlyList<CharacterAclAnimationGroupArtifact> artifacts,
             IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> resources,
-            string contentHash)
+            string contentHash,
+            CharacterAclPublishedGroupInventory publishedInventory)
         {
             Entries = entries ?? throw new ArgumentNullException(nameof(entries));
             AnimationArtifacts = artifacts ?? throw new ArgumentNullException(nameof(artifacts));
@@ -48,12 +49,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             ContentHash = string.IsNullOrWhiteSpace(contentHash)
                 ? throw new ArgumentException("Animation build catalog content hash is required.", nameof(contentHash))
                 : contentHash;
+            PublishedInventory = publishedInventory ??
+                throw new ArgumentNullException(nameof(publishedInventory));
         }
 
         internal IReadOnlyList<CharacterAnimationBuildCatalogEntry> Entries { get; }
         internal IReadOnlyList<CharacterAclAnimationGroupArtifact> AnimationArtifacts { get; }
         internal IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> AnimationResources { get; }
         internal string ContentHash { get; }
+        internal CharacterAclPublishedGroupInventory PublishedInventory { get; }
     }
 
     internal sealed class CharacterAnimationBuildCatalogCompiler
@@ -254,20 +258,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
         }
 
         CharacterAclAnimationGroupArtifact TryReusePublishedGroup(
+            CharacterAclPublishedGroupInventory publishedInventory,
             string buildInputIdentity,
             int groupIndex,
             int clipCount)
         {
-            string outputFolder =
-                CharacterAclAnimationArtifactIdentity.GetOutputFolder(
-                    m_Input.OwnerAssetGuid);
-            CharacterAclPublishedGroupInventory published =
-                CharacterAclPublishedGroupInventory.Scan(
-                    outputFolder,
-                    CharacterAclAnimationArtifactIdentity.GetAssetStemPrefix());
-            for (int i = 0; i < published.Groups.Count; i++)
+            for (int i = 0; i < publishedInventory.Groups.Count; i++)
             {
-                CharacterAclPublishedGroupInventoryEntry entry = published.Groups[i];
+                CharacterAclPublishedGroupInventoryEntry entry = publishedInventory.Groups[i];
                 if (entry.State != CharacterAclPublishedGroupFileState.Complete ||
                     entry.Resource == null ||
                     !string.Equals(
@@ -297,7 +295,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     byte[] lowPayload = entry.Resource.RequirePayload(
                         CharacterAclDataBlockKind.BulkLow, 0);
                     string reportPath =
-                        $"{outputFolder}/{entry.Stem}.quality.json";
+                        $"{entry.Folder}/{entry.Stem}.quality.json";
                     CharacterAclAnimationQualityReport[] qualityReports =
                         ReadPublishedQualityReports(reportPath, clipCount);
                     return new CharacterAclAnimationGroupArtifact(
@@ -368,6 +366,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             KeyValuePair<string, int>[] aclGroups = m_AclResourceGroupIndices
                 .OrderBy(value => value.Value)
                 .ToArray();
+            CharacterAclPublishedGroupInventory publishedInventory =
+                CharacterAclPublishedGroupInventory.Scan(
+                    CharacterAclAnimationArtifactIdentity.GetOutputFolder(
+                        m_Input.OwnerAssetGuid),
+                    CharacterAclAnimationArtifactIdentity.GetAssetStemPrefix());
             for (int groupOrder = 0; groupOrder < aclGroups.Length; groupOrder++)
             {
                 string groupIdentity = aclGroups[groupOrder].Key;
@@ -451,6 +454,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                         CharacterAnimationBuildChannel.AnimatedProperty);
                     CharacterAclAnimationGroupArtifact groupArtifact =
                         TryReusePublishedGroup(
+                            publishedInventory,
                             buildInputIdentity,
                             groupIndex,
                             group.Count)
@@ -492,7 +496,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 entries,
                 artifacts,
                 resources,
-                CharacterAclHash.ComputeStrings(hashValues));
+                CharacterAclHash.ComputeStrings(hashValues),
+                publishedInventory);
         }
 
         CharacterAnimationBuildCatalogEntry RegisterCore(

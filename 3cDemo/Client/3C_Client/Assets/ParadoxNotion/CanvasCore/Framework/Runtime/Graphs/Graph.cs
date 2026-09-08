@@ -1216,6 +1216,15 @@ namespace NodeCanvas.Framework
 
         ///<summary>Makes a copy of provided nodes and if targetGraph is provided, puts those new nodes in that graph.</summary>
         public static List<Node> CloneNodes(List<Node> originalNodes, Graph targetGraph = null, Vector2 originPosition = default) {
+            return targetGraph != null
+                ? targetGraph.DuplicateNodes(originalNodes, originPosition)
+                : CloneNodesCore(originalNodes, null, originPosition);
+        }
+
+        public virtual List<Node> DuplicateNodes(List<Node> originalNodes, Vector2 originPosition = default) =>
+            CloneNodesCore(originalNodes, this, originPosition);
+
+        static List<Node> CloneNodesCore(List<Node> originalNodes, Graph targetGraph, Vector2 originPosition) {
 
             if ( targetGraph != null ) {
                 if ( originalNodes.Any(n => n.GetType().IsSubclassOf(targetGraph.baseNodeType) == false) ) {
@@ -1228,7 +1237,7 @@ namespace NodeCanvas.Framework
 
             //duplicate all nodes first
             foreach ( var original in originalNodes ) {
-                var newNode = targetGraph != null ? original.Duplicate(targetGraph) : JSONSerializer.Clone<Node>(original);
+                var newNode = targetGraph != null ? original.DuplicateInto(targetGraph) : JSONSerializer.Clone<Node>(original);
                 newNodes.Add(newNode);
                 //store the out connections that need dulpicate along with the indeces of source and target
                 foreach ( var c in original.outConnections ) {
@@ -1243,7 +1252,8 @@ namespace NodeCanvas.Framework
                 if ( linkPair.Value.Value != -1 ) { //we check this to see if the target node is part of the duplicated nodes since IndexOf returns -1 if element is not part of the list
                     var newSource = newNodes[linkPair.Value.Key];
                     var newTarget = newNodes[linkPair.Value.Value];
-                    targetGraph.AttachDuplicatedConnection(linkPair.Key, newSource, newTarget); // 3C: routed attach
+                    if (targetGraph != null) { targetGraph.AttachDuplicatedConnection(linkPair.Key, newSource, newTarget); }
+                    else { linkPair.Key.Duplicate(newSource, newTarget); }
                 }
             }
 
@@ -1271,7 +1281,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Clears the whole graph</summary>
-        public void ClearGraph() {
+        public virtual void ClearGraph() {
             UndoUtility.RecordObject(this, "Clear");
             canvasGroups = null;
             foreach ( var node in allNodes.ToArray() ) {

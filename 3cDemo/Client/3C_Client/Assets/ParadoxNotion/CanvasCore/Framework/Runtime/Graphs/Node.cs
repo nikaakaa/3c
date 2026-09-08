@@ -233,6 +233,11 @@ namespace NodeCanvas.Framework
                 return null;
             }
 
+            return targetGraph.DuplicateNodes(new List<Node> { this })?.FirstOrDefault();
+        }
+
+        internal Node DuplicateInto(Graph targetGraph) {
+
             //deep clone
             var newNode = JSONSerializer.Clone<Node>(this);
 

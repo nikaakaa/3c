@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         BtsmtlSkillFlowGraphRole Role { get; }
         IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations { get; }
         void SetBlackboardDeclarations(IEnumerable<BtsmtlSkillBlackboardDeclaration> declarations);
+        List<Node> DuplicateStructure(List<Node> nodes, Vector2 position);
     }
 
     static class BtsmtlSkillFlowGraphRules
@@ -158,6 +159,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override bool usesDomainAuthoring => true;
         public override bool isEditorReadOnly => Application.isPlaying;
         public override bool usesExplicitPortSelection => true;
+        public override bool HandleEditorCommand(string command, Vector2 position) =>
+            BtsmtlSkillFlowEditorMutation.HandleCommand(this, command, position);
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);
         public override bool CanAuthorConnection(Port source, Port target, out string reason) =>
             BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out reason);
@@ -176,6 +179,17 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public override BinderConnection CreatePortConnection(Port source, Port target) =>
             BtsmtlSkillFlowEditorMutation.Execute(this, "连接技能端口", () => base.CreatePortConnection(source, target));
+
+        public override List<Node> DuplicateNodes(List<Node> nodes, Vector2 position = default) =>
+            BtsmtlSkillGraphCopy.Copy(this, nodes, position);
+
+        public override void ClearGraph() => BtsmtlSkillFlowEditorMutation.Clear(this);
+
+        List<Node> IBtsmtlSkillFlowGraph.DuplicateStructure(List<Node> nodes, Vector2 position)
+        {
+            BtsmtlSkillFlowEditorMutation.RequireActive(this);
+            return base.DuplicateNodes(nodes, position);
+        }
 
         public override void RemoveNode(Node node, bool recordUndo = true, bool force = false)
         {

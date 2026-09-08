@@ -544,13 +544,13 @@ namespace NodeCanvas.Framework
                   var newNodes = Graph.CloneNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList(), graph);
                   GraphEditorUtility.activeElements = newNodes.Cast<IGraphElement>().ToList();
               });
-            menu.AddItem(new GUIContent("Copy Selected Nodes"), false, () => { CopyBuffer.SetCache<Node[]>(Graph.CloneNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList()).ToArray()); });
+            menu.AddItem(new GUIContent("Copy Selected Nodes"), false, () => { if (!graph.HandleEditorCommand("Copy", Vector2.zero)) { CopyBuffer.SetCache<Node[]>(Graph.CloneNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList()).ToArray()); } });
 
             //callback graph related extra menu items
             menu = graph.CallbackOnNodesContextMenu(menu, GraphEditorUtility.activeElements.OfType<Node>().ToArray());
 
             menu.AddSeparator("/");
-            menu.AddItem(new GUIContent("Delete Selected Nodes"), false, () => { foreach ( Node n in GraphEditorUtility.activeElements.ToArray() ) { graph.RemoveNode(n); } });
+            menu.AddItem(new GUIContent("Delete Selected Nodes"), false, () => { if (!graph.HandleEditorCommand("Delete", Vector2.zero)) { foreach ( Node n in GraphEditorUtility.activeElements.ToArray() ) { graph.RemoveNode(n); } } });
             return menu;
         }
 
@@ -566,7 +566,7 @@ namespace NodeCanvas.Framework
             }
 
             menu.AddItem(new GUIContent("Duplicate (CTRL+D)"), false, () => { GraphEditorUtility.activeElement = node.Duplicate(node.graph); });
-            menu.AddItem(new GUIContent("Copy Node"), false, () => { CopyBuffer.SetCache<Node[]>(new Node[] { node }); });
+            menu.AddItem(new GUIContent("Copy Node"), false, () => { if (!node.graph.HandleEditorCommand("Copy", node.position)) { CopyBuffer.SetCache<Node[]>(new Node[] { node }); } });
 
             if ( node.inConnections.Count > 0 ) {
                 menu.AddItem(new GUIContent(node.isActive ? "Disable" : "Enable"), false, () => { node.SetActive(!node.isActive); });

@@ -6,6 +6,7 @@ using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
+using ParadoxNotion.Design;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,6 +16,12 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         sealed class Depth { internal int Value; }
         static readonly ConditionalWeakTable<FlowGraph, Depth> s_Depth = new();
+
+        public static void RequireActive(FlowGraph graph)
+        {
+            if (!s_Depth.TryGetValue(graph, out Depth depth) || depth.Value == 0)
+                throw new InvalidOperationException("技能图写入必须加入现有编辑事务。");
+        }
 
         public static UnityEngine.Object UndoTarget(FlowGraph graph) =>
             s_Depth.TryGetValue(graph, out Depth depth) && depth.Value != 0 ? null : graph;
@@ -37,6 +44,75 @@ namespace ThirdPersonCharacter.Control.Authoring
                 throw new InvalidOperationException("删除目标不属于当前技能图。");
             if (node is IBtsmtlSkillSystemNode || node is MacroInputNode || node is MacroOutputNode)
                 throw new InvalidOperationException("系统入口随所属页面创建和删除，不能单独删除。");
+        }
+
+        public static bool HandleCommand(FlowGraph graph, string command, Vector2 position)
+        {
+            if (command is not ("Copy" or "Cut" or "Paste" or "Duplicate" or "Delete" or "SoftDelete"))
+                return false;
+            try
+            {
+                if (graph.isEditorReadOnly && command != "Copy")
+                    throw new InvalidOperationException("Play观察期间不能修改技能图。");
+                var selected = GraphEditorUtility.activeElements.Count != 0
+                    ? GraphEditorUtility.activeElements.ToArray()
+                    : GraphEditorUtility.activeElement != null
+                        ? new[] { GraphEditorUtility.activeElement }
+                        : Array.Empty<IGraphElement>();
+                if (selected.Any(element => element.graph != graph))
+                    throw new InvalidOperationException("选择集合不属于当前技能图。");
+                Node[] nodes = selected.OfType<Node>().ToArray();
+                if (command is "Delete" or "SoftDelete" or "Cut")
+                {
+                    foreach (Node node in nodes)
+                        RequireRemovable(graph, node);
+                    foreach (Connection edge in selected.OfType<Connection>())
+                        if (!edge.sourceNode.outConnections.Contains(edge))
+                            throw new InvalidOperationException("选择的连线已不属于当前拓扑。");
+                }
+                if (command is "Copy" or "Cut")
+                {
+                    if (nodes.Length == 0)
+                        return true;
+                    BtsmtlSkillGraphCopy.CaptureClipboard(nodes.ToList());
+                }
+                if (command is "Delete" or "SoftDelete" or "Cut")
+                {
+                    Execute(graph, "删除技能选择集合", () =>
+                    {
+                        foreach (Connection edge in selected.OfType<Connection>())
+                            graph.RemoveConnection(edge);
+                        foreach (Node node in nodes)
+                            graph.RemoveNode(node);
+                    });
+                    GraphEditorUtility.activeElement = null;
+                    GraphEditorUtility.activeElements = null;
+                }
+                if (command == "Paste" && CopyBuffer.TryGetCache<Node[]>(out Node[] copied))
+                    GraphEditorUtility.activeElements = graph.DuplicateNodes(copied.ToList(), position).Cast<IGraphElement>().ToList();
+                if (command == "Duplicate" && nodes.Length != 0)
+                    GraphEditorUtility.activeElements = graph.DuplicateNodes(nodes.ToList()).Cast<IGraphElement>().ToList();
+            }
+            catch (Exception error) when (error is InvalidOperationException || error is ArgumentException)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+            }
+            return true;
+        }
+
+        public static void Clear(FlowGraph graph)
+        {
+            Execute(graph, "清空技能页面内容", () =>
+            {
+                foreach (Connection edge in graph.allNodes.SelectMany(node => node.outConnections).ToArray())
+                    graph.RemoveConnection(edge);
+                foreach (Node node in graph.allNodes.Where(node => node is not IBtsmtlSkillSystemNode &&
+                    node is not MacroInputNode && node is not MacroOutputNode).ToArray())
+                    graph.RemoveNode(node);
+                graph.canvasGroups.Clear();
+            });
+            GraphEditorUtility.activeElement = null;
+            GraphEditorUtility.activeElements = null;
         }
 
         public static bool CanConnect(FlowGraph graph, Port source, Port target, out string reason)

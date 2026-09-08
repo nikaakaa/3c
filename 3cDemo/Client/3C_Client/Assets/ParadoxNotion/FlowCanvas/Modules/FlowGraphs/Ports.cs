@@ -138,9 +138,7 @@ namespace FlowCanvas
 
         ///<summary>Helper method to determine if a port can accept further connections</summary>
         public bool CanAcceptConnections() {
-            if ( this is ValueOutput || ( this is FlowOutput && !this.isConnected ) ) { return true; }
-            if ( this is FlowInput || ( this is ValueInput && !this.isConnected ) ) { return true; }
-            return false;
+            return parent.CanAcceptPortConnection(this);
         }
 
         ///<summary>Get all BinderConnections the port is using</summary>

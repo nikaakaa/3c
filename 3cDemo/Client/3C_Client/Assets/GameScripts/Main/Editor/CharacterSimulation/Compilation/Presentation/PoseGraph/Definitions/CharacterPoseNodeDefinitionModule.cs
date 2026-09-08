@@ -582,9 +582,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void EnsureCapabilities()
         {
             CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
-            if (!m_CapabilitiesBound)
-                throw new InvalidOperationException(
-                    "Pose Node Definition capabilities are not sealed.");
+            if (m_CapabilitiesBound)
+                return;
+            foreach (CharacterPoseNodeDefinition definition in m_Definitions.Values)
+                ProjectCapability(CharacterPoseGraphAuthoringCapabilities.Require(definition.Kind));
+            SealCapabilities();
         }
     }
 }

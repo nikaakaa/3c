@@ -383,7 +383,7 @@ namespace NodeCanvas.Framework
             //Node click
             if ( e.type == EventType.MouseDown && GraphEditorUtility.allowClick && e.button != 2 ) {
 
-                UndoUtility.RecordObjectComplete(node.graph, "Move Node");
+                if (!node.graph.usesDomainAuthoring) { UndoUtility.RecordObjectComplete(node.graph, "Move Node"); } // 3C: the domain records only actual mutations, not selection.
 
                 if ( !e.control ) {
                     GraphEditorUtility.activeElement = node;

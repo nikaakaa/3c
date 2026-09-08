@@ -511,7 +511,7 @@ namespace NodeCanvas.Editor
             }
 
             //should we set dirty? Put in practise at the end
-            var willDirty = e.rawType == EventType.MouseUp;
+            var willDirty = !currentGraph.usesDomainAuthoring && e.rawType == EventType.MouseUp; // 3C: domain transactions own serialization and dirty state.
 
 
             //background grid

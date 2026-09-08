@@ -42,6 +42,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
         }
 
+        public void DisconnectPort(FlowCanvas.Port port)
+        {
+            if (port.parent.graph != m_Graph)
+                throw new ArgumentException("Pose port belongs to another graph.", nameof(port));
+            CharacterPoseCanvasConnection[] connections = port.GetPortConnections().Cast<CharacterPoseCanvasConnection>().ToArray();
+            if (connections.Length == 0)
+                return;
+            var transaction = new CharacterPresentationMutationTransaction(Guid.NewGuid().ToString("N"), "Disconnect Pose Port");
+            foreach (CharacterPoseCanvasConnection connection in connections)
+                transaction.Add(new DisconnectPosePortMutation(m_Graph.GraphId.Value, connection.EdgeId));
+            Apply(transaction);
+        }
+
         public Node CreateNode(Type nodeType, Vector2 position) =>
             throw new InvalidOperationException(
                 "Pose Canvas nodes are created from their Node Definition; use the Definition-driven creation menu.");
@@ -51,7 +64,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector2 position,
             Node connectSource,
             int connectSourcePortIndex,
-            int targetPortIndex = -1)
+            int targetPortIndex = -1) =>
+            CreateNode(capabilityIdentity, position, connectSource,
+                CharacterPosePortDirection.Output, connectSourcePortIndex, targetPortIndex);
+
+        Node CreateNode(string capabilityIdentity, Vector2 position, Node context,
+            CharacterPosePortDirection direction, int contextPortIndex, int newPortIndex)
         {
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
@@ -72,19 +90,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Graph.GraphId.Value,
                 node,
                 position));
-            CharacterPoseCanvasNode source = connectSource as CharacterPoseCanvasNode;
-            if (source != null)
+            if (context is CharacterPoseCanvasNode existing)
             {
-                CharacterPosePortDefinition output = RequirePort(source, CharacterPosePortDirection.Output, connectSourcePortIndex);
-                PosePortId sourcePort = output.PortId;
-                PosePortId targetPort = RequirePort(node, CharacterPosePortDirection.Input, targetPortIndex, output.Kind).PortId;
+                bool outgoing = direction == CharacterPosePortDirection.Output;
+                CharacterPosePortDefinition existingPort = RequirePort(existing, direction, contextPortIndex);
+                PosePortId newPort = RequirePort(node, outgoing ? CharacterPosePortDirection.Input : CharacterPosePortDirection.Output,
+                    newPortIndex, existingPort.Kind).PortId;
                 transaction.Add(new ConnectPosePortMutation(
                     m_Graph.GraphId.Value,
                     NewEdgeId(),
-                    source.NodeId,
-                    sourcePort,
-                    node.NodeId,
-                    targetPort));
+                    outgoing ? existing.NodeId : node.NodeId,
+                    outgoing ? existingPort.PortId : newPort,
+                    outgoing ? node.NodeId : existing.NodeId,
+                    outgoing ? newPort : existingPort.PortId));
             }
             Apply(transaction);
             CharacterPoseCanvasNode created = m_Graph.RequireNode(node.NodeId);
@@ -247,7 +265,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public GenericMenu BuildNodeCreationMenu(
-            NodeCanvas.Framework.Graph.NodeCreationRequestContext request)
+            NodeCanvas.Framework.Graph.NodeCreationRequestContext request) =>
+            BuildCreationMenu(request.position, request.connectSource, CharacterPosePortDirection.Output, request.connectSourcePortIndex);
+
+        public GenericMenu BuildPortCreationMenu(Vector2 position, FlowCanvas.Port context)
+        {
+            CharacterPosePortDirection direction = context is FlowCanvas.ValueInput
+                ? CharacterPosePortDirection.Input : CharacterPosePortDirection.Output;
+            return BuildCreationMenu(position, context?.parent, direction,
+                context == null ? -1 : CharacterPoseCanvasNativePorts.Index(context, direction));
+        }
+
+        GenericMenu BuildCreationMenu(Vector2 position, Node context, CharacterPosePortDirection direction, int contextPortIndex)
         {
             var menu = new GenericMenu();
             IEnumerable<CharacterPoseNodeDefinition> definitions =
@@ -263,28 +292,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? definition.Capability.DisplayName
                     : $"{category}/{definition.Capability.DisplayName}";
                 string capabilityIdentity = definition.Capability.CapabilityId.Value;
-                if (request.connectSource is CharacterPoseCanvasNode source)
+                if (context is CharacterPoseCanvasNode existing)
                 {
-                    CharacterPosePortKind kind = RequirePort(source, CharacterPosePortDirection.Output,
-                        request.connectSourcePortIndex).Kind;
+                    CharacterPosePortKind kind = RequirePort(existing, direction, contextPortIndex).Kind;
                     var candidate = new CharacterPoseCanvasNode(new PoseNodeId(Guid.NewGuid().ToString("N")),
                         definition.Capability.DisplayName, definition.CreateDefaultPayload());
-                    CharacterPosePortDefinition[] inputs = CharacterPoseAuthoringPortProjection.Get(candidate)
-                        .Where(value => value.Direction == CharacterPosePortDirection.Input).ToArray();
-                    for (int i = 0; i < inputs.Length; i++)
+                    CharacterPosePortDirection newDirection = direction == CharacterPosePortDirection.Output
+                        ? CharacterPosePortDirection.Input : CharacterPosePortDirection.Output;
+                    CharacterPosePortDefinition[] candidates = CharacterPoseAuthoringPortProjection.Get(candidate)
+                        .Where(value => value.Direction == newDirection).ToArray();
+                    for (int i = 0; i < candidates.Length; i++)
                     {
-                        if (inputs[i].Kind != kind)
+                        if (candidates[i].Kind != kind)
                             continue;
                         int targetIndex = i;
-                        menu.AddItem(new GUIContent($"{label}/{inputs[i].Name}"), false,
-                            () => CharacterPoseCanvasPortsGUI.Apply(() => CreateNodeFromCapability(capabilityIdentity,
-                                request.position, source, request.connectSourcePortIndex, targetIndex)));
+                        menu.AddItem(new GUIContent($"{label}/{candidates[i].Name}"), false,
+                            () => CharacterPoseCanvasInteraction.Apply(() => CreateNode(capabilityIdentity,
+                                position, existing, direction, contextPortIndex, targetIndex)));
                     }
                 }
                 else
                     menu.AddItem(new GUIContent(label), false,
-                        () => CharacterPoseCanvasPortsGUI.Apply(() => CreateNodeFromCapability(capabilityIdentity,
-                            request.position, null, -1)));
+                        () => CharacterPoseCanvasInteraction.Apply(() => CreateNodeFromCapability(capabilityIdentity,
+                            position, null, -1)));
             }
             if (menu.GetItemCount() == 0)
                 menu.AddDisabledItem(new GUIContent("No Pose Node Definitions"));

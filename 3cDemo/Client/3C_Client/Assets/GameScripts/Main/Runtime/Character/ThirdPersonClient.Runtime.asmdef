@@ -22,6 +22,7 @@
         "BTSMTL.Timeline.Tree",
         "BTSMTL.TreeDesigner",
         "NodeCanvas",
+        "FlowCanvas",
         "ParadoxNotion",
         "Kybernetik.Animancer",
         "Cinemachine",

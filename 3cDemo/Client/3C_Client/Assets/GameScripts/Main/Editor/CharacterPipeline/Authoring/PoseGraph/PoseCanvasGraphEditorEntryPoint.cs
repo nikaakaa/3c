@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_Graph.EditorWriteRouter = null;
             s_Graph = null;
             s_Session = null;
-            CharacterPoseCanvasPortsGUI.ResetDrag();
+            FlowCanvas.FlowNode.ClearPortInteraction();
         }
 
         [UnityEditor.Callbacks.OnOpenAsset(0)]

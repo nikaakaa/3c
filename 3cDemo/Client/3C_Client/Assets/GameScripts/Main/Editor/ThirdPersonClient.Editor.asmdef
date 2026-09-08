@@ -45,6 +45,7 @@
         "BTSMTL.TreeDesigner",
         "BTSMTL.TreeDesigner.Editor",
         "NodeCanvas",
+        "FlowCanvas",
         "ParadoxNotion",
         "Kybernetik.Animancer",
         "MCPForUnity.Editor",

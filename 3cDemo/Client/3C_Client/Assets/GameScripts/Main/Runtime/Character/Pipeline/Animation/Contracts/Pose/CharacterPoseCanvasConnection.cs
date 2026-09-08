@@ -8,13 +8,24 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     [Serializable]
-    public sealed class CharacterPoseCanvasConnection : Connection
+    public sealed class CharacterPoseCanvasConnection : FlowCanvas.BinderConnection
     {
         [SerializeField] string m_EdgeId = string.Empty;
         [SerializeField] string m_SourceNodeId = string.Empty;
         [SerializeField] string m_SourcePortId = string.Empty;
         [SerializeField] string m_TargetNodeId = string.Empty;
         [SerializeField] string m_TargetPortId = string.Empty;
+#if UNITY_EDITOR
+        [NonSerialized] Type m_BindingType;
+#endif
+
+        protected override string serializedSourcePortID { get => m_SourcePortId; set => m_SourcePortId = value; }
+        protected override string serializedTargetPortID { get => m_TargetPortId; set => m_TargetPortId = value; }
+
+        public override void Bind() =>
+            throw new InvalidOperationException("Pose authoring connections are compiled, not executed by FlowCanvas.");
+
+        public override void UnBind() { }
 
         public string EdgeId => m_EdgeId ?? string.Empty;
         public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId)
@@ -64,10 +75,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TargetPortId = targetPortId.Value;
             m_SourceNodeId = source.NodeId.Value;
             m_TargetNodeId = target.NodeId.Value;
-            m_SourceNodeId = source.NodeId.Value;
-            m_TargetNodeId = target.NodeId.Value;
             sourceNode = source;
             targetNode = target;
+            InvalidatePortReferences();
+#if UNITY_EDITOR
+            m_BindingType = null;
+#endif
         }
 
         public CharacterPoseCanvasConnection(
@@ -102,9 +115,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Pose Canvas connection endpoint identity is invalid.");
             sourceNode = source;
             targetNode = target;
+            InvalidatePortReferences();
+#if UNITY_EDITOR
+            m_BindingType = null;
+#endif
         }
 
 #if UNITY_EDITOR
+        public override Type bindingType => m_BindingType ??= CharacterPoseCanvasNativePorts.BindingType(this);
+
+        public override void SetSourcePort(FlowCanvas.Port source)
+        {
+            var owner = (CharacterPoseCanvasGraph)graph;
+            owner.EditorWriteRouter.Reconnect(this, source.parent,
+                CharacterPoseCanvasNativePorts.Index(source, CharacterPosePortDirection.Output), targetNode, -1);
+        }
+
+        public override void SetTargetPort(FlowCanvas.Port target)
+        {
+            var owner = (CharacterPoseCanvasGraph)graph;
+            owner.EditorWriteRouter.Reconnect(this, sourceNode, -1, target.parent,
+                CharacterPoseCanvasNativePorts.Index(target, CharacterPosePortDirection.Input));
+        }
+
         public override int SetSourceNode(Node source, int index = -1)
         {
             CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph;

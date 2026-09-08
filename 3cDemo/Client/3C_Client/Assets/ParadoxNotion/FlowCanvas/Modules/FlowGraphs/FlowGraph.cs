@@ -50,6 +50,17 @@ namespace FlowCanvas
         ///---------------------------------------UNITY EDITOR-------------------------------------------
 #if UNITY_EDITOR
 
+        // 3C: domains route native port creation through their authoring transaction.
+        public virtual BinderConnection CreatePortConnection(Port source, Port target) {
+            return BinderConnection.CreateValidated(source, target);
+        }
+
+        // 3C: a domain disconnects a whole port in one transaction.
+        public virtual void DisconnectPort(Port port) {
+            foreach (var connection in port.GetPortConnections().ToArray()) { RemoveConnection(connection); }
+        }
+
+
         ///...
         public T AddFlowNode<T>(Vector2 pos, Port context, object dropInstance) where T : FlowNode { return (T)AddFlowNode(typeof(T), pos, context, dropInstance); }
         public FlowNode AddFlowNode(System.Type type, Vector2 pos, Port context, object dropInstance) {

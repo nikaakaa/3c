@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    internal sealed class CharacterPoseDocumentCanvas : NodeCanvas.Framework.Graph
+    internal sealed class CharacterPoseDocumentCanvas : FlowCanvas.FlowGraph
     {
         // These are editor views of the original state/rule document, never another saved graph.
         [NonSerialized] internal CharacterPoseCanvasBinding Binding;
@@ -79,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 connection.targetNode.inConnections.Add(connection);
             }
             GetGraphSource().Pack(this).Unpack(this);
+            foreach (var node in nodes) node.GatherPorts();
             Binding.RestoreSelection(selection);
 
             void Add(GraphAuthoringElementId id, string label, Vector2 position, GraphAuthoringSelectionKind kind,
@@ -96,6 +97,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static GraphAuthoringEdgeProjection Edge(GraphAuthoringElementId id, GraphAuthoringElementId source, GraphAuthoringElementId target) =>
             new(id, source, new GraphAuthoringPortId("output"), target, new GraphAuthoringPortId("input"));
+
+        public override GenericMenu GetNodesMenu(Vector2 position, FlowCanvas.Port context, UnityEngine.Object dropInstance)
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("创建"), false, () => Binding.RequestCreation(position));
+            return menu;
+        }
+
+        public override FlowCanvas.BinderConnection CreatePortConnection(FlowCanvas.Port source, FlowCanvas.Port target) =>
+            (FlowCanvas.BinderConnection)ConnectNodes(source.parent, target.parent,
+                CharacterPoseDocumentCanvasNode.PortIndex(source, GraphAuthoringPortDirection.Output),
+                CharacterPoseDocumentCanvasNode.PortIndex(target, GraphAuthoringPortDirection.Input));
+
+        public override void DisconnectPort(FlowCanvas.Port port)
+        {
+            var edges = port.GetPortConnections().Cast<CharacterPoseDocumentCanvasConnection>().ToArray();
+            if (edges.Any(edge => edge.Source.IsEntry))
+                throw new InvalidOperationException("Set the Entry target by connecting it to another state.");
+            var requests = edges.Select(edge => new GraphAuthoringMutationRequest(Binding.StateMachineBinding == null
+                ? GraphAuthoringMutationKind.DisconnectEdge : GraphAuthoringMutationKind.DeleteTransition, edge.ElementId)).ToArray();
+            if (requests.Length == 0) return;
+            if (Binding.StateMachineBinding != null)
+                Binding.StateMachineBinding.Mutation.Apply(Binding.StateMachineBinding.Document, requests);
+            else Binding.ProjectionBinding.Mutation.Apply(Binding.ProjectionBinding.Document, requests);
+            RefreshDocument();
+        }
+
+        protected override void OnGraphInitialize() => throw new InvalidOperationException("Pose document views do not execute.");
 
         public override Node AddNode(Type nodeType, Vector2 pos = default) =>
             throw new InvalidOperationException("Create document nodes through their registered authoring menu.");
@@ -176,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
-    internal sealed class CharacterPoseDocumentCanvasNode : Node
+    internal sealed class CharacterPoseDocumentCanvasNode : FlowCanvas.FlowNode
     {
         [NonSerialized] internal GraphAuthoringElementId ElementId;
         [NonSerialized] internal GraphAuthoringSelectionKind SelectionKind;
@@ -187,13 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [NonSerialized] internal bool HasChild;
         [NonSerialized] string m_Title;
         public override string name { get => m_Title; set { } }
-        public override int maxInConnections => IsEntry ? 0 : -1;
-        public override int maxOutConnections => -1;
-        public override bool allowAsPrime => false;
-        public override bool canSelfConnect => false;
-        public override Alignment2x2 commentsAlignment => Alignment2x2.Default;
         public override Alignment2x2 iconAlignment => Alignment2x2.Default;
-        public override Type outConnectionType => typeof(CharacterPoseDocumentCanvasConnection);
         protected override bool useDefaultInspectorHeader => false;
 
         public override Vector2 position
@@ -240,13 +263,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         protected override void OnNodeGUI()
         {
-            CharacterPoseCanvasPortsGUI.DrawBody(this);
+            base.OnNodeGUI();
+            if (CharacterPoseCanvasInteraction.IsActive(graph, ElementId.Value)) GUILayout.Label("当前状态", EditorStyles.miniLabel);
             if (HasChild && GUILayout.Button("打开子图"))
                 ((CharacterPoseDocumentCanvas)graph).Binding.OpenChild(ElementId);
         }
 
-        protected override void DrawNodeConnections(Rect canvas, bool fullDrawPass, Vector2 mouse, float zoom) =>
-            CharacterPoseCanvasPortsGUI.DrawConnections(this, canvas, fullDrawPass, mouse, zoom);
+        sealed class StatePort { }
+        sealed class RulePort { }
+        public override bool allowPortIdentityAliases => false;
+        public override bool ignoreSelfInstancePortAssignment => true;
+        public override bool CanAcceptPortConnection(FlowCanvas.Port port) =>
+            Ports.Single(value => value.PortId.Value == port.ID &&
+                (value.Direction == GraphAuthoringPortDirection.Input) == port.IsInputPort()).Capacity == GraphAuthoringPortCapacity.Multiple || !port.isConnected;
+
+        protected override void RegisterPorts()
+        {
+            foreach (var port in Ports ?? Array.Empty<GraphAuthoringDynamicPortProjection>())
+            {
+                Type type = port.ValueTypeId switch
+                {
+                    "pose.state" => typeof(StatePort),
+                    "pose.rule.value" => typeof(RulePort),
+                    _ => throw new InvalidOperationException($"Unknown document port type '{port.ValueTypeId}'.")
+                };
+                if (port.Direction == GraphAuthoringPortDirection.Input) AddValueInput(port.DisplayName, type, port.PortId.Value);
+                else AddValueOutput(port.DisplayName, type, () => throw new InvalidOperationException("Author ports do not execute."), port.PortId.Value);
+            }
+        }
+
+        internal static int PortIndex(FlowCanvas.Port port, GraphAuthoringPortDirection direction) =>
+            Array.FindIndex(((CharacterPoseDocumentCanvasNode)port.parent).Ports.Where(value => value.Direction == direction).ToArray(),
+                value => value.PortId.Value == port.ID);
 
         protected override void OnNodeInspectorGUI() => EditorGUILayout.LabelField(m_Title);
         protected override GenericMenu OnContextMenu(GenericMenu menu) =>
@@ -254,7 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
-    internal sealed class CharacterPoseDocumentCanvasConnection : Connection
+    internal sealed class CharacterPoseDocumentCanvasConnection : FlowCanvas.BinderConnection
     {
         [NonSerialized] internal GraphAuthoringElementId ElementId;
         [NonSerialized] internal string SourcePort;
@@ -274,7 +322,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             targetNode = target;
         }
 
-        protected override string GetConnectionInfo() => ElementId.Value;
+        protected override string serializedSourcePortID { get => SourcePort; set => SourcePort = value; }
+        protected override string serializedTargetPortID { get => TargetPort; set => TargetPort = value; }
+        public override Type bindingType => sourcePort.type;
+        public override void Bind() => throw new InvalidOperationException("Author connections do not execute.");
+        public override void UnBind() { }
+        public override void SetSourcePort(FlowCanvas.Port port) => throw new InvalidOperationException("Edit transition endpoints through their fields.");
+        public override void SetTargetPort(FlowCanvas.Port port) => throw new InvalidOperationException("Edit transition endpoints through their fields.");
+
         public override int SetSourceNode(Node source, int index = -1) =>
             throw new InvalidOperationException("Edit the transition endpoints through the state machine fields.");
         public override int SetTargetNode(Node target, int index = -1) =>

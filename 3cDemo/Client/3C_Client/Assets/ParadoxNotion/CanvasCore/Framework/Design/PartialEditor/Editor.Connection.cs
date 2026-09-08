@@ -129,6 +129,7 @@ namespace NodeCanvas.Framework
                 var onCenter = centerRect.Contains(e.mousePosition);
                 if ( onConnection || onStart || onEnd || onCenter ) {
                     GraphEditorUtility.activeElement = this;
+                    if (graph.isEditorReadOnly) { e.Use(); return; } // 3C: read-only observation permits selection without relinking.
                     relinkClickPos = e.mousePosition;
                     relinkSnaped = false;
                     if ( onConnection ) { relinkState = norm <= 0.55f || e.shift ? RelinkState.Source : RelinkState.Target; }
@@ -159,7 +160,7 @@ namespace NodeCanvas.Framework
                 }
             }
 
-            if ( GraphEditorUtility.allowClick && e.type == EventType.ContextClick && e.button == 1 && centerRect.Contains(e.mousePosition) ) {
+            if ( !graph.isEditorReadOnly && GraphEditorUtility.allowClick && e.type == EventType.ContextClick && e.button == 1 && centerRect.Contains(e.mousePosition) ) { // 3C: no mutation menus in observation mode.
                 GraphEditorUtility.PostGUI += () => { GetConnectionMenu().ShowAsContext(); };
                 e.Use();
             }

@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (command is not ("Copy" or "Cut" or "Paste" or "Duplicate" or "Delete" or "SoftDelete"))
                 return false;
-            CharacterPoseCanvasPortsGUI.Apply(() => Execute());
+            CharacterPoseCanvasInteraction.Apply(() => Execute());
             return true;
 
             void Execute()

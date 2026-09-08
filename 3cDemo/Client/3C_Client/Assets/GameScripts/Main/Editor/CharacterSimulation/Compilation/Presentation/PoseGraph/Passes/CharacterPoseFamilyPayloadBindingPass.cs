@@ -616,7 +616,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     linkedPoseFragmentIndex,
                     handler.Weight(irNode.Payload),
                     policies));
-                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(operationIndex, graph.GraphId.Value, scopedNodeId, callChain));
 
                 BindOperationOutputs(
                     node,
@@ -627,6 +626,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameterIndex,
                     operationIndex,
                     values);
+                CharacterPoseOutputPortSource[] outputSources = CharacterPoseAuthoringPortProjection.Get(node)
+                    .Where(port => port.Direction == CharacterPosePortDirection.Output)
+                    .Select(port => new CharacterPoseOutputPortSource(port.PortId.Value, port.Kind,
+                        values[EndpointKey(node.NodeId, port.PortId, scope)].Index)).ToArray();
+                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(operationIndex, graph.GraphId.Value,
+                    scopedNodeId, node.NodeId, callChain, scope, outputSources));
                 if (handler.NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput)
                 {
@@ -1183,7 +1188,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ValidateStateParameters(authored, stateGraph, state.Parameters);
                 int operationStart = state.Operations.Count;
                 int outputValueIndex = -1;
-                string stateScope = scopedNodeId.Value + "/state/" + authored.StateId.Value;
+                string stateScope = CharacterPoseCallScope.State(string.Empty, scopedNodeId, authored.StateId);
                 string stateCallChain = string.IsNullOrEmpty(callChain)
                     ? scopedNodeId.Value + "/" + authored.StateId.Value
                     : callChain + "/" + scopedNodeId.Value + "/" + authored.StateId.Value;
@@ -1783,7 +1788,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new InvalidOperationException($"PoseSubgraph '{callSite.NodeId}' Interface Port '{port.InterfacePortId}' has no source.");
             }
             PoseNodeId scopedCallSite = ScopeNodeId(callSite.NodeId, scope);
-            string childScope = scopedCallSite.Value + "/" + child.GraphId;
+            string childScope = CharacterPoseCallScope.Subgraph(scope, callSite.NodeId, child.GraphId);
             string childCallChain = string.IsNullOrEmpty(callChain)
                 ? $"{owner.GraphId}/{scopedCallSite.Value}->{child.GraphId}"
                 : $"{callChain}|{owner.GraphId}/{scopedCallSite.Value}->{child.GraphId}";
@@ -2133,7 +2138,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             ScopeNodeId(nodeId, scope).Value + "\0" + ScopePortId(portId, scope).Value;
 
         static PoseNodeId ScopeNodeId(PoseNodeId nodeId, string scope) =>
-            string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
+            CharacterPoseCallScope.Node(nodeId, scope);
 
         static PosePortId ScopePortId(PosePortId portId, string scope) =>
             string.IsNullOrEmpty(scope) ? portId : new PosePortId(scope + "/" + portId.Value);

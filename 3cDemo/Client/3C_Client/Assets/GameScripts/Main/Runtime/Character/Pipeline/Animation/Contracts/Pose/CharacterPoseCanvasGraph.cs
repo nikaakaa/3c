@@ -12,7 +12,7 @@ using UnityEditor;
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     [Serializable]
-    public sealed class CharacterPoseCanvasGraph : NodeCanvas.Framework.Graph
+    public sealed class CharacterPoseCanvasGraph : FlowCanvas.FlowGraph
     {
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_ContentRevision = string.Empty;
@@ -46,7 +46,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool allowBlackboardOverrides => false;
         public override bool canAcceptVariableDrops => false;
 
+        protected override void OnGraphInitialize() =>
+            throw new InvalidOperationException("Pose authoring graphs compile to the formal Pose Program; they cannot execute as FlowCanvas graphs.");
+
 #if UNITY_EDITOR
+        public override FlowCanvas.BinderConnection CreatePortConnection(FlowCanvas.Port source, FlowCanvas.Port target) =>
+            (FlowCanvas.BinderConnection)EditorWriteRouter.Connect(
+                source.parent, target.parent,
+                CharacterPoseCanvasNativePorts.Index(source, CharacterPosePortDirection.Output),
+                CharacterPoseCanvasNativePorts.Index(target, CharacterPosePortDirection.Input));
+
+        public override void DisconnectPort(FlowCanvas.Port port) => EditorWriteRouter.DisconnectPort(port);
+
+        public override GenericMenu GetNodesMenu(Vector2 position, FlowCanvas.Port context, UnityEngine.Object dropInstance) =>
+            EditorWriteRouter.BuildPortCreationMenu(position, context);
+
         public override bool allowsEditorExecution => false;
         public override bool usesDomainAuthoring => true;
         public override bool isEditorReadOnly => EditorWriteRouter?.ReadOnly ?? true;
@@ -160,6 +174,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 target.inConnections.Add(connection);
             }
             GetGraphSource().Pack(this).Unpack(this);
+#if UNITY_EDITOR
+            foreach (CharacterPoseCanvasNode node in nodeValues)
+                node.GatherPorts();
+#endif
             return this;
         }
 
@@ -286,8 +304,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static System.Action<CharacterPoseCanvasNode> InspectorOverride;
         internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
         internal static System.Action<CharacterPoseCanvasNode> BodyGUI;
-        internal static System.Action<CharacterPoseCanvasNode, Rect, bool, Vector2, float> ConnectionsGUI;
-        internal static System.Action<CharacterPoseCanvasNode, Connection> RelinkGUI;
+        internal static Func<CharacterPoseCanvasNode, string, string> PortObservation;
+        internal static Func<CharacterPoseCanvasNode, IReadOnlyList<CharacterPosePortDefinition>> PortShape;
         internal static Func<CharacterPoseCanvasNode, GenericMenu> ContextMenu;
         internal static Action<CharacterPoseCanvasNode> ChildSurface;
     }
@@ -300,6 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void RemoveNode(Node node);
         Connection Connect(Node sourceNode, Node targetNode, int sourceIndex, int targetIndex);
         void RemoveConnection(Connection connection);
+        void DisconnectPort(FlowCanvas.Port port);
         Node DuplicateNode(Node clonedNode);
         Connection DuplicateConnection(Connection original, Node newSource, Node newTarget);
         void SetNodeField(Node node, string fieldId, object value);
@@ -307,6 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void RenameNode(Node node, string name);
         Connection Reconnect(Connection connection, Node source, int sourceIndex, Node target, int targetIndex);
         GenericMenu BuildNodeCreationMenu(NodeCanvas.Framework.Graph.NodeCreationRequestContext request);
+        GenericMenu BuildPortCreationMenu(Vector2 position, FlowCanvas.Port context);
         bool HandleCommand(string command, Vector2 position);
         GenericMenu BuildSelectionMenu(Vector2 position);
     }

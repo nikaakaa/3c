@@ -1097,6 +1097,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentException(
                     "In-place editor session apply only accepts Pose Graph mutations.",
                     nameof(transaction));
+            if (transaction.Mutations.All(value => value is MovePoseNodeMutation))
+            {
+                ApplyNodePositions(owner, transaction);
+                return;
+            }
             int undoGroup = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName(transaction.DisplayName);
             var candidates = new List<(CharacterPoseCanvasGraph Current, CharacterPoseCanvasGraph Next)>();
@@ -1135,6 +1140,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 foreach (var candidate in candidates)
                     UnityEngine.Object.DestroyImmediate(candidate.Next);
+            }
+        }
+
+        static void ApplyNodePositions(ICharacterPresentationMutationOwner owner, CharacterPresentationMutationTransaction transaction)
+        {
+            var changes = transaction.Mutations.Cast<MovePoseNodeMutation>()
+                .GroupBy(value => value.OwnerId, StringComparer.Ordinal)
+                .Select(group => (Graph: owner.RequirePoseGraph(group.Key), Moves: group.ToArray())).ToArray();
+            foreach (var change in changes)
+                foreach (MovePoseNodeMutation move in change.Moves)
+                {
+                    change.Graph.RequireNode(move.NodeId);
+                    if (!float.IsFinite(move.Position.x) || !float.IsFinite(move.Position.y))
+                        throw new ArgumentException("Pose node position must be finite.");
+                }
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName(transaction.DisplayName);
+            bool recorded = false;
+            try
+            {
+                foreach (var change in changes)
+                {
+                    change.Graph.SelfSerialize();
+                    Undo.RegisterCompleteObjectUndo(change.Graph, transaction.DisplayName);
+                    recorded = true;
+                    foreach (MovePoseNodeMutation move in change.Moves)
+                        change.Graph.SetNodePosition(move.NodeId, move.Position);
+                    change.Graph.SelfSerialize();
+                    EditorUtility.SetDirty(change.Graph);
+                }
+                EditorUtility.SetDirty(owner.SerializedOwner);
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+            catch
+            {
+                if (recorded)
+                    Undo.RevertAllDownToGroup(undoGroup);
+                throw;
             }
         }
 

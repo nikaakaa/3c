@@ -2,7 +2,6 @@ using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BTSMTL.Diagnostics.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -18,12 +17,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly CharacterPresentationPoseGraphAsset m_Asset;
         readonly CharacterPresentationProjectionAsset m_Projection;
 
+        readonly Func<AnimationPresentationRuntimeTarget> m_GetTarget;
+        readonly Func<CharacterPoseProgramImage> m_GetPlan;
+        readonly Func<string> m_GetCallSite;
+        readonly Func<AnimationPresentationRuntimeSnapshot, bool> m_MatchesRevision;
+
         public CharacterPoseRuntimeTraceProjection(
             CharacterPresentationPoseGraphAsset asset,
-            CharacterPresentationProjectionAsset projection)
+            CharacterPresentationProjectionAsset projection,
+            Func<AnimationPresentationRuntimeTarget> getTarget,
+            Func<AnimationPresentationRuntimeSnapshot, bool> matchesRevision,
+            Func<CharacterPoseProgramImage> getPlan,
+            Func<string> getCallSite)
         {
             m_Asset = asset;
             m_Projection = projection;
+            m_GetTarget = getTarget;
+            m_GetPlan = getPlan;
+            m_GetCallSite = getCallSite;
+            m_MatchesRevision = matchesRevision;
         }
 
         public IReadOnlyList<GraphAuthoringDiagnosticProjection>
@@ -47,86 +59,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .ToArray();
             }
 
-            var operations =
-                new Dictionary<PoseNodeId, AnimationPoseOperationSnapshot>();
+            CharacterPoseProgramImage plan = m_GetPlan();
+            string callSite = m_GetCallSite();
+            if (plan == null || callSite == null)
+                return document.Nodes.Select(node => new GraphAuthoringRuntimeTraceProjection(
+                    node.NodeId, "等待调用位置", string.Empty, snapshot.PoseGraphRevision)).ToArray();
+            var operations = new Dictionary<string, List<AnimationPoseOperationSnapshot>>(StringComparer.Ordinal);
             for (int i = 0; i < snapshot.Operations.Count; i++)
             {
-                AnimationPoseOperationSnapshot operation =
-                    snapshot.Operations[i];
-                if (string.Equals(
-                        operation.GraphId,
-                        document.DocumentId,
-                        StringComparison.Ordinal))
-                {
-                    operations[operation.NodeId] = operation;
-                }
+                AnimationPoseOperationSnapshot operation = snapshot.Operations[i];
+                if (operation.OperationIndex < 0 || operation.OperationIndex >= plan.SourceMap.Count) continue;
+                CharacterPresentationPoseSourceMapEntry source = plan.SourceMap[operation.OperationIndex];
+                if (source.NodeId != operation.NodeId || source.GraphId != document.DocumentId ||
+                    source.CallSite != callSite || operation.CallSite != callSite) continue;
+                if (!operations.TryGetValue(source.AuthorNodeId.Value, out var values))
+                    operations.Add(source.AuthorNodeId.Value, values = new List<AnimationPoseOperationSnapshot>());
+                values.Add(operation);
             }
             return document.Nodes.Select(node =>
             {
-                if (!operations.TryGetValue(
-                        new PoseNodeId(node.NodeId.Value),
-                        out AnimationPoseOperationSnapshot operation))
+                if (!operations.TryGetValue(node.NodeId.Value, out var values))
                 {
-                    return new GraphAuthoringRuntimeTraceProjection(
-                        node.NodeId,
-                        "NotCompleted",
-                        string.Empty,
-                        snapshot.PoseGraphRevision);
+                    bool mapped = plan.SourceMap.Any(source => source.GraphId == document.DocumentId &&
+                        source.AuthorNodeId.Value == node.NodeId.Value && source.CallSite == callSite);
+                    return new GraphAuthoringRuntimeTraceProjection(node.NodeId,
+                        mapped ? "未采集运行操作" : "无独立运行操作", string.Empty, snapshot.PoseGraphRevision);
                 }
-                string details = $"{operation.Code} · {operation.InvalidReason} · weight {operation.OutputWeight:0.###}";
-                if (TryFindLinkedPoseEntry(
-                        in snapshot,
-                        in operation,
-                        out AnimationLinkedPoseEntryRuntimeSnapshot entry,
-                        out CharacterLinkedPoseRuntimeGroupSnapshot group))
-                {
-                    details +=
-                        $" · Linked {entry.GroupId}/{entry.EntryId} call={entry.CallNodeId} " +
-                        $"interface={entry.InterfaceId}@{entry.InterfaceSignature} " +
-                        $"selector={group.SelectorId} selection={group.SelectionRevision} " +
-                        $"implementation={group.ImplementationId}@{group.ImplementationRevision} " +
-                        $"content={group.ImplementationContentHash} generation={group.Generation} " +
-                        $"reset={group.StateReset} completed={entry.Completed} " +
-                        $"sources={entry.SourceDemandCount} " +
-                        $"operations={group.ActiveCapacity.OperationCount}/{group.MaximumCapacity.OperationCount}";
-                }
-                return new GraphAuthoringRuntimeTraceProjection(
-                    node.NodeId,
-                    operation.Availability.ToString(),
-                    details,
-                    snapshot.PoseGraphRevision);
+                string details = string.Join("\n", values.Select(operation =>
+                    $"#{operation.OperationIndex} {operation.Code} · {operation.InvalidReason} · 权重 {operation.OutputWeight:0.###} · 完成帧 {operation.CompletionIdentity}"));
+                string state = string.Join(" / ", values.Select(operation => operation.CompletionIdentity != snapshot.CompletionIdentity
+                    ? "等待完成" : operation.Availability.ToString()).Distinct());
+                return new GraphAuthoringRuntimeTraceProjection(node.NodeId, state, details, snapshot.PoseGraphRevision);
             }).ToArray();
-        }
-
-        static bool TryFindLinkedPoseEntry(
-            in AnimationPresentationRuntimeSnapshot snapshot,
-            in AnimationPoseOperationSnapshot operation,
-            out AnimationLinkedPoseEntryRuntimeSnapshot entry,
-            out CharacterLinkedPoseRuntimeGroupSnapshot group)
-        {
-            entry = default;
-            group = default;
-            for (int i = 0; i < snapshot.LinkedPoseEntries.Count; i++)
-            {
-                AnimationLinkedPoseEntryRuntimeSnapshot candidate = snapshot.LinkedPoseEntries[i];
-                bool isCall = candidate.CallNodeId == operation.NodeId;
-                bool isFragmentOperation = operation.OperationIndex >= candidate.OperationStart &&
-                                           operation.OperationIndex < candidate.OperationStart + candidate.OperationCount;
-                if (!isCall && !isFragmentOperation)
-                    continue;
-                entry = candidate;
-                for (int groupIndex = 0; groupIndex < snapshot.LinkedPoseGroups.Count; groupIndex++)
-                {
-                    CharacterLinkedPoseRuntimeGroupSnapshot candidateGroup = snapshot.LinkedPoseGroups[groupIndex];
-                    if (candidateGroup.GroupId == candidate.GroupId)
-                    {
-                        group = candidateGroup;
-                        return true;
-                    }
-                }
-                return false;
-            }
-            return false;
         }
 
         public bool TryGetSnapshot(
@@ -142,17 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return false;
             }
 
-            RuntimeDebugViewModel viewModel =
-                RuntimeDebugSession.Shared.ViewModel;
-            if (!viewModel.Attached ||
-                !AnimationPresentationRuntimeTargetRegistry.TryGet(
-                    viewModel.Target.CharacterRuntimeId,
-                    out AnimationPresentationRuntimeTarget target))
-            {
-                status =
-                    "Unavailable: no attached Animation Presentation runtime target.";
+            if (!TryResolveRuntimeTarget(out AnimationPresentationRuntimeTarget target, out status))
                 return false;
-            }
 
             try
             {
@@ -172,22 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return false;
             }
 
-            if (!string.Equals(
-                    target.ProjectionRevision,
-                    m_Projection.ProjectionRevision,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    snapshot.ProjectionRevision,
-                    m_Projection.ProjectionRevision,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    snapshot.PoseGraphId,
-                    m_Asset.Graph.GraphId.Value,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    snapshot.PoseGraphRevision,
-                    m_Asset.Graph.ContentRevision,
-                    StringComparison.Ordinal))
+            if (!m_MatchesRevision(snapshot))
             {
                 snapshot = default;
                 status =
@@ -226,13 +166,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 status = "Unavailable: formal Pose Graph or Presentation Projection is missing.";
                 return false;
             }
-            RuntimeDebugViewModel viewModel = RuntimeDebugSession.Shared.ViewModel;
-            if (!viewModel.Attached ||
-                !AnimationPresentationRuntimeTargetRegistry.TryGet(
-                    viewModel.Target.CharacterRuntimeId,
-                    out target))
+            target = m_GetTarget();
+            if (target == null ||
+                !AnimationPresentationRuntimeTargetRegistry.TryGet(target.RuntimeInstanceId, out AnimationPresentationRuntimeTarget current) ||
+                !ReferenceEquals(target, current))
             {
-                status = "Unavailable: no attached Animation Presentation runtime target.";
+                status = "等待运行角色";
                 return false;
             }
             status = string.Empty;

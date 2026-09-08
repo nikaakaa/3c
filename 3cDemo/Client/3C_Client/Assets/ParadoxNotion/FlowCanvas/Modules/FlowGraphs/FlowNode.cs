@@ -79,6 +79,7 @@ namespace FlowCanvas
 
         ///<summary>Ignore the Self Instance Object feature altogether for the the node?</summary>
         virtual public bool ignoreSelfInstancePortAssignment => false;
+        virtual public bool allowPortIdentityAliases => true; // 3C: strict authoring domains require exact stable port identities.
 
         ///----------------------------------------------------------------------------------------------
 
@@ -153,7 +154,7 @@ namespace FlowCanvas
             if ( inputPorts != null ) {
                 if ( !inputPorts.TryGetValue(ID, out input) ) {
                     // update from previous version
-                    input = inputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, ID));
+                    if (allowPortIdentityAliases) { input = inputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, ID)); }
                 }
             }
             return input;
@@ -165,7 +166,7 @@ namespace FlowCanvas
             if ( outputPorts != null ) {
                 if ( !outputPorts.TryGetValue(ID, out output) ) {
                     // update from previous version
-                    output = outputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, ID));
+                    if (allowPortIdentityAliases) { output = outputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, ID)); }
                 }
             }
             return output;
@@ -266,7 +267,7 @@ namespace FlowCanvas
             foreach ( var pair in _inputPortValues ) {
                 if ( !inputPorts.TryGetValue(pair.Key, out Port inputPort) ) {
                     // update from previous version
-                    inputPort = inputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, pair.Key));
+                    if (allowPortIdentityAliases) { inputPort = inputPorts.Values.FirstOrDefault(p => CheckReverseIDEquality(p, pair.Key)); }
                 }
 
                 if ( inputPort is ValueInput && pair.Value != null && inputPort.type.RTIsAssignableFrom(pair.Value.GetType()) ) {
@@ -286,6 +287,19 @@ namespace FlowCanvas
         //Port registration/definition methods, to be used within RegisterPorts override
 
         ///<summary>Add a new FlowInput with name and pointer. Pointer is the method to run when the flow port is called. Returns the new FlowInput object.</summary>
+        public virtual bool CanAcceptPortConnection(Port port) =>
+            port is ValueOutput || port is FlowInput || !port.isConnected;
+
+#if UNITY_EDITOR
+        public virtual string GetEditorPortObservation(Port port) => null;
+
+        public static void ClearPortInteraction()
+        {
+            clickedPort = null;
+            relinkBinder = null;
+        }
+#endif
+
         public FlowInput AddFlowInput(string name, string ID, FlowHandler pointer) { return AddFlowInput(name, pointer, ID); }
         public FlowInput AddFlowInput(string name, FlowHandler pointer, string ID = "") {
             QualifyPortNameAndID(ref name, ref ID, inputPorts);
@@ -905,11 +919,12 @@ namespace FlowCanvas
 
         ///<summary>Handle port events</summary>
         void HandlePortEvents(Port port) {
+            if (graph.isEditorReadOnly) { return; } // 3C: observing a domain never edits its ports.
             var e = Event.current;
             if ( GraphEditorUtility.allowClick ) {
                 //Right click removes connections
                 if ( port.isConnected && e.type == EventType.ContextClick && port.rect.Contains(e.mousePosition) ) {
-                    foreach ( var c in port.GetPortConnections().ToArray() ) { graph.RemoveConnection(c); }
+                    flowGraph.DisconnectPort(port); // 3C: preserve domain batch atomicity.
                     e.Use();
                     return;
                 }
@@ -997,8 +1012,8 @@ namespace FlowCanvas
             GUI.color = Color.white;
 
             //Tooltip
-            if ( !port.isConnected && port.rect.Contains(Event.current.mousePosition) ) {
-                var labelString = ( canConnect || port == contextPort ) ? port.type.FriendlyName() : "Can't Connect Here";
+            if ( ( !port.isConnected || port.parent.graph.usesDomainAuthoring ) && port.rect.Contains(Event.current.mousePosition) ) {
+                var labelString = port.parent.GetEditorPortObservation(port) ?? (( canConnect || port == contextPort ) ? port.type.FriendlyName() : "Can't Connect Here");
                 var size = StyleSheet.box.CalcSize(EditorUtils.GetTempContent(labelString));
                 var rect = new Rect(0, 0, size.x + 10, size.y + 5);
                 rect.x = port.rect.x - size.x - 10;
@@ -1008,7 +1023,7 @@ namespace FlowCanvas
             }
 
             //Or value tip
-            if ( !port.isConnected && port is ValueInput ) {
+            if ( !port.parent.graph.usesDomainAuthoring && !port.isConnected && port is ValueInput ) { // 3C: domain defaults belong to typed authoring fields, not native input storage.
                 var value = ( port as ValueInput ).serializedValue;
                 string labelString;
                 if ( !( port as ValueInput ).isDefaultValue ) {
@@ -1062,8 +1077,8 @@ namespace FlowCanvas
             GUI.Box(port.rect, string.Empty, port.isConnected ? StyleSheet.nodePortConnected : StyleSheet.nodePortEmpty);
             GUI.color = Color.white;
 
-            if ( !port.isConnected && port.rect.Contains(Event.current.mousePosition) ) {
-                var labelString = ( canConnect || port == contextPort ) ? port.type.FriendlyName() : "Can't Connect Here";
+            if ( ( !port.isConnected || port.parent.graph.usesDomainAuthoring ) && port.rect.Contains(Event.current.mousePosition) ) {
+                var labelString = port.parent.GetEditorPortObservation(port) ?? (( canConnect || port == contextPort ) ? port.type.FriendlyName() : "Can't Connect Here");
                 var size = StyleSheet.box.CalcSize(EditorUtils.GetTempContent(labelString));
                 var rect = new Rect(0, 0, size.x + 10, size.y + 5);
                 rect.x = port.rect.x + 15;

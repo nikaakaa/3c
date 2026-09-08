@@ -13,7 +13,7 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     [Serializable]
-    public sealed class CharacterPoseCanvasNode : Node
+    public sealed class CharacterPoseCanvasNode : FlowCanvas.FlowNode
     {
         [SerializeField] string m_NodeId = string.Empty;
         [SerializeField] string m_DisplayName = string.Empty;
@@ -68,13 +68,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void SetAuthoringPosition(Vector2 value) => base.position = value;
 
-        public override int maxInConnections => -1;
-        public override int maxOutConnections => -1;
-        public override Type outConnectionType => typeof(CharacterPoseCanvasConnection);
-        public override bool allowAsPrime => false;
-        public override bool canSelfConnect => false;
-        public override Alignment2x2 commentsAlignment => Alignment2x2.Default;
-        public override Alignment2x2 iconAlignment => Alignment2x2.Default;
+        public override Alignment2x2 iconAlignment => Alignment2x2.Left;
+        public override bool ignoreSelfInstancePortAssignment => true;
+        public override bool allowPortIdentityAliases => false;
+
+        protected override void RegisterPorts()
+        {
+#if UNITY_EDITOR
+            CharacterPoseCanvasNativePorts.Register(this);
+#endif
+        }
 
         public T RequirePayload<T>() where T : CharacterPoseNodePayload =>
             m_Payload as T ??
@@ -223,18 +226,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override UnityEditor.GenericMenu OnContextMenu(UnityEditor.GenericMenu menu) =>
             PoseCanvasEditorBridge.ContextMenu?.Invoke(this) ?? menu;
 
-        protected override void OnNodeGUI() => PoseCanvasEditorBridge.BodyGUI?.Invoke(this);
+        public override string GetEditorPortObservation(FlowCanvas.Port port) => PoseCanvasEditorBridge.PortObservation?.Invoke(this, port.ID);
+
+        protected override void OnNodeGUI()
+        {
+            base.OnNodeGUI();
+            PoseCanvasEditorBridge.BodyGUI?.Invoke(this);
+        }
         protected override void OnNodePicked()
         {
             if (Event.current.clickCount == 2)
                 PoseCanvasEditorBridge.ChildSurface?.Invoke(this);
         }
-
-        protected override void DrawNodeConnections(Rect canvas, bool fullDrawPass, Vector2 mouse, float zoom) =>
-            PoseCanvasEditorBridge.ConnectionsGUI?.Invoke(this, canvas, fullDrawPass, mouse, zoom);
-
-        public override void OnActiveRelinkEnd(Connection connection) =>
-            PoseCanvasEditorBridge.RelinkGUI?.Invoke(this, connection);
 
         protected override void OnNodeInspectorGUI()
         {

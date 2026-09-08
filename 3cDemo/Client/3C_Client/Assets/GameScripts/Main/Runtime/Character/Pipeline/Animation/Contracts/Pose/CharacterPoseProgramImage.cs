@@ -435,27 +435,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationInertializationRuleDescriptor> Rules => m_Rules ?? Array.Empty<CharacterPresentationInertializationRuleDescriptor>();
     }
 
+    public static class CharacterPoseCallScope
+    {
+        public static PoseNodeId Node(PoseNodeId nodeId, string scope) =>
+            string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
+        public static string Subgraph(string scope, PoseNodeId callNode, PoseGraphId graph) => Node(callNode, scope).Value + "/" + graph.Value;
+        public static string State(string scope, PoseNodeId machineNode, PoseStateId state) => Node(machineNode, scope).Value + "/state/" + state.Value;
+    }
+
+    [Serializable]
+    public sealed class CharacterPoseOutputPortSource
+    {
+        [SerializeField] string m_PortId;
+        [SerializeField] CharacterPosePortKind m_Kind;
+        [SerializeField] int m_ValueIndex;
+
+        public CharacterPoseOutputPortSource(string portId, CharacterPosePortKind kind, int valueIndex)
+        {
+            if (string.IsNullOrEmpty(portId) || valueIndex < 0) throw new ArgumentException("Pose output source is invalid.");
+            m_PortId = portId;
+            m_Kind = kind;
+            m_ValueIndex = valueIndex;
+        }
+        public string PortId => m_PortId;
+        public CharacterPosePortKind Kind => m_Kind;
+        public int ValueIndex => m_ValueIndex;
+    }
+
     [Serializable]
     public sealed class CharacterPresentationPoseSourceMapEntry
     {
         [SerializeField] int m_OperationIndex;
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_NodeId = string.Empty;
+        [SerializeField] string m_AuthorNodeId = string.Empty;
+        [SerializeField] CharacterPoseOutputPortSource[] m_OutputPorts;
+        [SerializeField] string m_Scope;
         [SerializeField] string m_CallSite = string.Empty;
 
-        public CharacterPresentationPoseSourceMapEntry(int operationIndex, string graphId, PoseNodeId nodeId, string callSite)
+        public CharacterPresentationPoseSourceMapEntry(int operationIndex, string graphId, PoseNodeId nodeId, PoseNodeId authorNodeId, string callSite, string scope, CharacterPoseOutputPortSource[] outputPorts)
         {
-            if (operationIndex < 0 || string.IsNullOrWhiteSpace(graphId) || !nodeId.IsValid)
+            if (operationIndex < 0 || string.IsNullOrWhiteSpace(graphId) || !nodeId.IsValid || !authorNodeId.IsValid)
                 throw new ArgumentException("Pose operation source map entry is invalid.");
             m_OperationIndex = operationIndex;
             m_GraphId = graphId.Trim();
             m_NodeId = nodeId.Value;
+            m_AuthorNodeId = authorNodeId.Value;
             m_CallSite = callSite ?? string.Empty;
+            m_Scope = scope;
+            m_OutputPorts = outputPorts ?? throw new ArgumentNullException(nameof(outputPorts));
         }
 
+        public string Scope => m_Scope;
+        public IReadOnlyList<CharacterPoseOutputPortSource> OutputPorts => m_OutputPorts;
         public int OperationIndex => m_OperationIndex;
         public string GraphId => m_GraphId ?? string.Empty;
         public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
+        public PoseNodeId AuthorNodeId => new PoseNodeId(m_AuthorNodeId);
         public string CallSite => m_CallSite ?? string.Empty;
     }
 
@@ -597,7 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPoseProgramImage
     {
-        public const string SchemaVersion = "character-presentation-pose-plan/v25";
+        public const string SchemaVersion = "character-presentation-pose-plan/v27";
         public const string RuntimeAbi = "character-presentation-pose-runtime/v28";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
@@ -1030,7 +1066,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (operation == null || operation.Index != i ||
                     operation.Version != CharacterPoseOperationHeader.PayloadVersion ||
                     CharacterPoseOperationFamilies.RequireFamily(operation.Code) != operation.Family ||
-                    !operationNodes.Add(operation.NodeId) || source == null || source.OperationIndex != i || source.NodeId != operation.NodeId)
+                    !operationNodes.Add(operation.NodeId) || source == null || !source.AuthorNodeId.IsValid || source.OperationIndex != i || source.NodeId != operation.NodeId)
                     throw new InvalidOperationException($"Pose Plan operation #{i} or source map is invalid.");
                 OperationPages.RequirePayload(operation);
                 int inputPoseA = OperationPages.FindInputValueIndex(

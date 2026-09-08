@@ -1,29 +1,14 @@
-using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ThirdPersonCharacter.Editor.CharacterSimulation;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
-using ThirdPersonCharacter.Pipeline.Animation;
+using TreeDesigner.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using TreeDesigner.Editor;
-using UnityEditor;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Editor
+namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    [InitializeOnLoad]
-    static class CharacterGraphAuthoringCapabilityBootstrap
-    {
-        static CharacterGraphAuthoringCapabilityBootstrap()
-        {
-            _ = new BtsmtlGraphAuthoringCapabilities();
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
-        }
-    }
-
     public static class CharacterPoseGraphAuthoringCapabilities
     {
         public static readonly GraphAuthoringCommandId PingPoseSource = new GraphAuthoringCommandId("ping-pose-source");
@@ -73,15 +58,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static GraphAuthoringCapabilityDescriptor Require(
             CharacterPoseNodeKind kind) =>
-            CharacterPoseNodeDefinitionModule.Shared.Require(kind).Capability;
+            Catalog.Require(Get(kind));
 
         public static Type RequirePayloadType(
             CharacterPoseNodeKind kind) =>
-            CharacterPoseNodeDefinitionModule.Shared.Require(kind).PayloadType;
+            Require(kind).AuthoringType;
 
         public static CharacterPoseNodeKind RequireKind(
             CharacterPoseNodePayload payload) =>
-            CharacterPoseNodeDefinitionModule.Shared.RequirePayload(payload).Kind;
+            payload != null && Require(payload.Kind).AuthoringType == payload.GetType() ? payload.Kind : throw new InvalidOperationException("Pose payload does not match its registered schema.");
 
         public static GraphAuthoringCapabilityId Get(
             PoseTransitionRuleOperationKind kind)
@@ -262,7 +247,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             catalog.Register(Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, rootAndState, "Output Pose", "Output", outputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),
                 executionDomain: CharacterPoseExecutionDomain.FinalPublication));
-            CharacterPoseNodeDefinitionModule.Shared.SealCapabilities();
 
             catalog.Register(Surface("pose.state-machine.entry", "Entry", GraphAuthoringNodePresentationKind.StateMachineEntry));
             catalog.Register(Surface(
@@ -324,9 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Pose capability '{Get(kind)}' payload type '{typeof(TPayload).FullName}' declares a different kind.");
             }
-            return CharacterPoseNodeDefinitionModule.Shared
-                .ProjectCapability(
-                    new GraphAuthoringCapabilityDescriptor(
+            return new GraphAuthoringCapabilityDescriptor(
                         Get(kind),
                         Domain,
                         roles,
@@ -344,7 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         documentCodecId: "presentation.pose-node",
                         authoringType: typeof(TPayload),
                         externalKind: Get(kind).Value,
-                        executionDomainId: executionDomain.ToString()));
+                        executionDomainId: executionDomain.ToString());
         }
 
         static GraphAuthoringCapabilityDescriptor Surface(
@@ -693,105 +675,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     }
 
-    internal static class CharacterPoseAuthoringPortProjection
-    {
-        public static IReadOnlyList<CharacterPosePortDefinition> Get(
-            CharacterPoseCanvasNode node)
-        {
-            if (node == null)
-                throw new ArgumentNullException(nameof(node));
-            return CharacterPoseNodeDefinitionModule.Shared
-                .Require(node.Kind)
-                .ProjectPortShape(node)
-                .Select(ToPosePort)
-                .ToArray();
-        }
-
-        public static IReadOnlyList<CharacterPosePortDefinition>
-            GetDeclared(CharacterPoseCanvasNode node) =>
-            CharacterPoseNodeDefinitionModule.Shared
-                .Require(node.Kind)
-                .ProjectDeclaredPortShape(node.Payload)
-                .Select(ToPosePort)
-                .ToArray();
-
-        public static CharacterPosePortDefinition Require(
-            CharacterPoseCanvasNode node,
-            string portId,
-            CharacterPosePortDirection? direction = null)
-        {
-            CharacterPosePortDefinition port = Get(node)
-                .SingleOrDefault(value =>
-                    string.Equals(
-                        value.PortId.Value,
-                        portId,
-                        StringComparison.Ordinal) &&
-                    (!direction.HasValue ||
-                     value.Direction == direction.Value));
-            return port ??
-                   throw new InvalidOperationException(
-                       $"Pose node '{node.NodeId}' does not declare port '{portId}'.");
-        }
-
-        public static CharacterPosePortKind Kind(string valueTypeId) =>
-            valueTypeId switch
-            {
-                "pose.local" => CharacterPosePortKind.LocalPose,
-                "pose.component" => CharacterPosePortKind.ComponentPose,
-                "pose.parameter" =>
-                    CharacterPosePortKind.Parameter,
-                "pose.discontinuity" =>
-                    CharacterPosePortKind.PoseDiscontinuity,
-                "pose.action-playback" =>
-                    CharacterPosePortKind.ActionPlayback,
-                "component.full-body-ik-goals" =>
-                    CharacterPosePortKind.FullBodyIkGoals,
-                "component.full-body-ik-goal-contribution" =>
-                    CharacterPosePortKind.FullBodyIkGoalContribution,
-                "pose.history" => CharacterPosePortKind.PoseHistory,
-                "motion-matching.trajectory" => CharacterPosePortKind.Trajectory,
-                "presentation.facts" => CharacterPosePortKind.PresentationFacts,
-                "motion-matching.binding" => CharacterPosePortKind.MotionMatchingBinding,
-                _ => throw new InvalidOperationException(
-                    $"Pose value type '{valueTypeId}' is not registered.")
-            };
-
-        public static string ValueType(CharacterPosePortKind kind) =>
-            kind switch
-            {
-                CharacterPosePortKind.LocalPose => "pose.local",
-                CharacterPosePortKind.ComponentPose => "pose.component",
-                CharacterPosePortKind.Parameter =>
-                    "pose.parameter",
-                CharacterPosePortKind.PoseDiscontinuity =>
-                    "pose.discontinuity",
-                CharacterPosePortKind.ActionPlayback =>
-                    "pose.action-playback",
-                CharacterPosePortKind.FullBodyIkGoals =>
-                    "component.full-body-ik-goals",
-                CharacterPosePortKind.FullBodyIkGoalContribution =>
-                    "component.full-body-ik-goal-contribution",
-                CharacterPosePortKind.PoseHistory => "pose.history",
-                CharacterPosePortKind.Trajectory => "motion-matching.trajectory",
-                CharacterPosePortKind.PresentationFacts => "presentation.facts",
-                CharacterPosePortKind.MotionMatchingBinding => "motion-matching.binding",
-                _ => throw new InvalidOperationException(
-                    $"Pose port kind '{kind}' is not registered.")
-            };
-
-        static CharacterPosePortDefinition ToPosePort(
-            GraphAuthoringDynamicPortProjection port) =>
-            new CharacterPosePortDefinition(
-                new PosePortId(port.PortId.Value),
-                port.DisplayName,
-                Kind(port.ValueTypeId),
-                port.Direction ==
-                GraphAuthoringPortDirection.Input
-                    ? CharacterPosePortDirection.Input
-                    : CharacterPosePortDirection.Output,
-                port.Required,
-                string.IsNullOrWhiteSpace(port.InterfacePortId)
-                    ? default
-                    : new PoseInterfacePortId(port.InterfacePortId));
-    }
 }

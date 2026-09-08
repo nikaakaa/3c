@@ -21,16 +21,21 @@ namespace FlowCanvas
         [System.NonSerialized]
         private Port _targetPort;
 
+        // 3C: authoring domains can retain their canonical serialized port identities.
+        protected virtual string serializedSourcePortID { get => _sourcePortID; set => _sourcePortID = value; }
+        protected virtual string serializedTargetPortID { get => _targetPortID; set => _targetPortID = value; }
+        protected void InvalidatePortReferences() { _sourcePort = null; _targetPort = null; }
+
         ///<summary>The source port ID name this binder is connected to</summary>
         public string sourcePortID {
-            get { return sourcePort != null ? sourcePort.ID : _sourcePortID; }
-            private set { _sourcePortID = value; }
+            get { return sourcePort != null ? sourcePort.ID : serializedSourcePortID; }
+            private set { serializedSourcePortID = value; }
         }
 
         ///<summary>The target port ID name this binder is connected to</summary>
         public string targetPortID {
-            get { return targetPort != null ? targetPort.ID : _targetPortID; }
-            private set { _targetPortID = value; }
+            get { return targetPort != null ? targetPort.ID : serializedTargetPortID; }
+            private set { serializedTargetPortID = value; }
         }
 
         ///<summary>The source Port</summary>
@@ -39,7 +44,7 @@ namespace FlowCanvas
             {
                 if ( _sourcePort == null ) {
                     if ( sourceNode is FlowNode ) { //In case it's 'MissingNode'
-                        _sourcePort = ( sourceNode as FlowNode ).GetOutputPort(_sourcePortID);
+                        _sourcePort = ( sourceNode as FlowNode ).GetOutputPort(serializedSourcePortID);
                     }
                 }
                 return _sourcePort;
@@ -52,7 +57,7 @@ namespace FlowCanvas
             {
                 if ( _targetPort == null ) {
                     if ( targetNode is FlowNode ) { //In case it's 'MissingNode'
-                        _targetPort = ( targetNode as FlowNode ).GetInputPort(_targetPortID);
+                        _targetPort = ( targetNode as FlowNode ).GetInputPort(serializedTargetPortID);
                     }
                 }
                 return _targetPort;
@@ -60,17 +65,23 @@ namespace FlowCanvas
         }
 
         ///<summary>The binder type. In case of Value connection, BinderConnection<T> is used, else it's basicaly a Flow binding</summary>
-        public System.Type bindingType => GetType().RTIsGenericType() ? GetType().RTGetGenericArguments()[0] : typeof(Flow);
+        public virtual System.Type bindingType => GetType().RTIsGenericType() ? GetType().RTGetGenericArguments()[0] : typeof(Flow); // 3C: domain semantic port type.
 
         ///----------------------------------------------------------------------------------------------
 
         ///<summary>Create a NEW BinderConnection object between two ports</summary>
         public static BinderConnection Create(Port source, Port target) {
-
             if ( !CanBeBoundVerbosed(source, target, null, out string verbose) ) {
-                Logger.LogWarning(verbose, LogTag.EDITOR, source.parent);
+                Logger.LogWarning(verbose, LogTag.EDITOR, source?.parent);
                 return null;
             }
+#if UNITY_EDITOR
+            if (source?.parent?.graph is FlowGraph graph) { return graph.CreatePortConnection(source, target); } // 3C: native UI uses the domain transaction.
+#endif
+            return CreateValidated(source, target);
+        }
+
+        internal static BinderConnection CreateValidated(Port source, Port target) {
 
             ParadoxNotion.Design.UndoUtility.RecordObject(source.parent.graph, "Connect Ports");
 
@@ -108,7 +119,7 @@ namespace FlowCanvas
         }
 
         ///<summary>Set binder source port</summary>
-        public void SetSourcePort(Port newSourcePort) {
+        public virtual void SetSourcePort(Port newSourcePort) { // 3C: domain relink transaction.
             if ( newSourcePort == sourcePort ) {
                 return;
             }
@@ -136,7 +147,7 @@ namespace FlowCanvas
         }
 
         ///<summary>Set binder target port</summary>
-        public void SetTargetPort(Port newTargetPort) {
+        public virtual void SetTargetPort(Port newTargetPort) { // 3C: domain relink transaction.
             if ( newTargetPort == targetPort ) {
                 return;
             }

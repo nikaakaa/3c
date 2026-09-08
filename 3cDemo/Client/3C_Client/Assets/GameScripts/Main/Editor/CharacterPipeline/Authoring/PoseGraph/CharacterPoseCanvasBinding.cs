@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return CharacterPoseCanvasCommands.Handle(ProjectionBinding, m_Graph, command, position);
             if (command is not ("Copy" or "Cut" or "Paste" or "Duplicate" or "Delete" or "SoftDelete"))
                 return false;
-            CharacterPoseCanvasPortsGUI.Apply(() =>
+            CharacterPoseCanvasInteraction.Apply(() =>
             {
                 if (command is not ("Delete" or "SoftDelete"))
                     throw new InvalidOperationException("State machine elements use their dedicated create and configure commands.");
@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void SetActiveElements(ISet<string> active)
         {
             if (m_Graph != null)
-                CharacterPoseCanvasPortsGUI.SetActiveNodes(m_Graph, active);
+                CharacterPoseCanvasInteraction.SetActiveNodes(m_Graph, active);
         }
 
         public void Dispose()

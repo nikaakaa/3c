@@ -18,11 +18,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             PoseCanvasEditorBridge.InspectorOverride = DrawInspector;
             PoseCanvasEditorBridge.VisualsRefresh = RefreshVisuals;
-            PoseCanvasEditorBridge.BodyGUI = CharacterPoseCanvasPortsGUI.DrawBody;
-            PoseCanvasEditorBridge.ConnectionsGUI = CharacterPoseCanvasPortsGUI.DrawConnections;
-            PoseCanvasEditorBridge.RelinkGUI = CharacterPoseCanvasPortsGUI.Relink;
+            PoseCanvasEditorBridge.PortShape = CharacterPoseAuthoringPortProjection.Get;
+            PoseCanvasEditorBridge.BodyGUI = DrawBody;
+            PoseCanvasEditorBridge.PortObservation = CharacterPoseGraphWorkspace.GetPortObservation;
             PoseCanvasEditorBridge.ContextMenu = node => ((CharacterPoseCanvasGraph)node.graph).EditorWriteRouter.BuildSelectionMenu(node.position);
-            PoseCanvasEditorBridge.ChildSurface = node => CharacterPoseCanvasPortsGUI.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
+            PoseCanvasEditorBridge.ChildSurface = node => CharacterPoseCanvasInteraction.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
+        }
+
+        static void DrawBody(CharacterPoseCanvasNode node)
+        {
+            if (CharacterPoseGraphWorkspace.TryGetNodeObservation(node, out GraphAuthoringRuntimeTraceProjection trace))
+            {
+                GUILayout.Label(new GUIContent(trace.Status, trace.Detail), EditorStyles.miniLabel);
+                if (GUILayout.Button("Pose Watch")) CharacterPoseGraphWorkspace.WatchNode(node);
+            }
+
+            if (CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Capability.ChildSurfaces.Count != 0 &&
+                GUILayout.Button("打开子图"))
+                CharacterPoseCanvasInteraction.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
         }
 
         static void RefreshVisuals(CharacterPoseCanvasGraph graph)
@@ -54,7 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using (new EditorGUI.DisabledScope(graph.isEditorReadOnly))
                 name = EditorGUILayout.DelayedTextField("名称", node.DisplayName);
             if (!string.Equals(name, node.DisplayName, StringComparison.Ordinal))
-                CharacterPoseCanvasPortsGUI.Apply(() => node.name = name);
+                CharacterPoseCanvasInteraction.Apply(() => node.name = name);
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields)
             {
                 if (!field.AuthoringVisible)
@@ -144,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (poseGraph?.EditorWriteRouter == null)
                 throw new InvalidOperationException(
                     "Pose Canvas field edits require the Pose Canvas editor session.");
-            CharacterPoseCanvasPortsGUI.Apply(() => poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next));
+            CharacterPoseCanvasInteraction.Apply(() => poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next));
             return false;
         }
 

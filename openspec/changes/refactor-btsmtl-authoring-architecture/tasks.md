@@ -1,5 +1,17 @@
 ## 当前进度
 
+### 当前核对结论（2026-09-08）
+
+核对源码基准为主目录 `main` 提交 `602682e589883afe8ab1a1950c14d9e410953130`；工作区仍有后续未提交代码和资产。本次只核对文档、源码、提交记录及已有原始证据，没有重新执行Unity构建、Document apply或Replay。下列带日期的旧记录保留历史事实，不能把其中的“当前”“下一步”当作今天仍成立的状态。
+
+- 清单实际为69项，8项已勾选、61项未关闭；已勾选项为1.2、1.3、2.1a、6.1、6.2、10.1、10.5、10.6。10.1、10.5、10.6仍保留整链复核或最终对账条件。本轮不改勾选，不把清单关闭比例当作代码实现比例。
+- 控制迁移已有1492帧重复回放一致的记录，2.1b仍缺含Turn的完整表现采样。随后Attack1–5收为Attack技能树，原控制迁移Proof不覆盖该语义变化；5.2与7.7仍待新组合回放。
+- 7.7上半、下半a与下半b已有代码提交，事件消费和实例段代已接通；但事件身份、实例隔离及双Target事件对账未闭合。具体源码差距见7.7，不以“只剩回放”描述本项。
+- `9461a642f`的提交记录报告修复Pose Canvas引用序列化、Clip资源注册和编译时序后，正式Gameplay Lab重建输出`Shared Gameplay Lab synchronized`、零错误，并提交Float32／Fixed／Projection资产。因此旧ACL来源孤立、几何过期和旧脚本编译失败记录不能直接充当今日阻塞。此为提交中的构建报告，本轮未复跑；其后相机合入`280b55bf7`及编辑器改动后的完整产物身份和运行证据仍须由12.3、13.1、13.2收口。
+- Document无改动dry-run的七条Skill假差异已由`93ad2a768`修复。已直接读取`.codex-tmp/corin-document-noop-fixed-20260907.json`：schema v5、success=true、syncState=Clean、plannedDiff=[]、applied=false、saved=false。这关闭该次no-op差异，不证明新技能／子图创建、整包apply、失败回滚和reverse export全部通过。
+- 作者规则、SubTree共享写入、技能工作区、热更／产品装配及旧入口清理仍有未交付范围。没有新证据的任务保持原审查结论，不用历史编译错误替代具体实现缺口。
+- 规范对账待13.3：TrainingEnemy已由后续退役提交删除，proposal／design中的“保护无效资产”属于原迁移边界；最终安装需与Pose退役条款对齐。领域事件规格要求typed实例／状态身份，当前字符串payload及事件发布范围不满足完整合同；本轮不把规格放宽成现有实现，也不安装delta或归档。
+
 ### 控制层 2.1b 推进记录（2026-09-07 晚）
 
 - 提交 `513c8fa7f`：`ThirdPersonCharacter.Control.Rules.asmdef` 显式引用补上 `UnityHFSM`（上次迁移漏项）；`movement-mode.state` 前缀提升为公共常量 `CharacterPresentationTrajectoryIntent.MovementModeStatePrefix`；新增 `CharacterMovementModeStateIdentities`，Projection 编译入口解析 `Definition.ControlModuleId` 对应控制合同，身份集合传入 `CharacterPoseTransitionRuleCompiler`，对带 `movement-mode.state` 前缀的 IdentityLiteral 做编译期校验（不命中构建失败并列出合法状态）。首战即逮住姿态图 `run-start-mode` 手抄 `RunStart` 错位。
@@ -35,16 +47,16 @@
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
 
-按当前清单实际勾选统计：共66项，7项已勾选，59项未关闭。已勾选项是1.2、1.3、2.1及Agent任务10.1、10.2、10.5、10.6；后四项仍明确保留整链复核或最终对账条件。未关闭项包含已实现待验证、部分完成和未完成，不能据此计算实现完成率。下面各条的历史状态说明仍须随业务提交更新，不能仅修改总览数字。
+清单统计与当前候选统一见首页“当前核对结论（2026-09-08）”；本节以下保留9月6日的阶段审查，未关闭项包含已实现待验证、部分完成和未完成，不能据此计算实现完成率。
 
-### 本轮确认的进展与剩余工作
+### 9月6日阶段审查与当时剩余工作（历史）
 
 - 公共根、入口与缓存身份校验已有`31f111d7e`、`8f3294561`及`6bcf16aa2`交付；ACL接入已有`dc7e720bc`，`b2d0e0d09`补齐资源配置入口并将组合Projection升级为`v15`，`466967dff`修正Unity可选资源读取。254项ACL来源路径均存在；244项与原固定索引相同，10项为公共Build、受保护运行时、Projection版本和明确资源补丁的接收差异。这是来源范围核对，不是整个接收组合已通过运行验收。
 - 实施报告本轮Runtime、Editor源码构建均为0错误，并按要求关闭build servers。正式Unity构建job `25a237be85b34263b2704289e0de245e`在主实例`e852139597e42532`返回19条`PresentationProjection`错误，原因均为当前Sampling Rig或Calibration Preview Pose的几何验证identity过期；尚未证明具体哪个输入变化。原始返回证据保存在`D:/Unity_Project_1/3C/.codex-tmp/bts-acl-main-build-25a237be.review.json`。
 - 此前成功返回的Projection仍为`v13`、PosePlan `v24`、PoseRuntime `v27`，不能作为当前源码Projection `v15`、PosePlan `v25`、PoseRuntime `v28`的构建证据。Float与Fixed也尚未形成当前版本的同组发布；12.3保持未关闭，完整Replay仍未通过。
 - 普通重构继续按原任务收口，包括装备入口迁移、规则热更与产品装配、作者规则和技能工作区、旧路径删除、中央职责迁移及最终结构审查。相机公共命令交接、公共诊断来源修复继续按已确认边界推进；Timeline内容和Agent Document仍由各自任务负责。脚部几何问题只阻塞相关产物构建，不能作为整项重构停止的条件。
 
-### 已有代码交付与剩余边界
+### 9月6日代码交付与当时剩余边界（历史）
 
 | 工作块 | 已有交付与审查 | 尚未完成 |
 |---|---|---|
@@ -57,7 +69,7 @@
 
 ### 历史构建与回放证据
 
-本节保留先前迁移阶段的检查记录。当前候选以“本轮确认的进展与剩余工作”为准；旧版本构建、引用检查和曾经关闭的任务不能替代新版本的验收。
+本节保留先前迁移阶段的检查记录。当前候选以首页“当前核对结论（2026-09-08）”为准；旧版本构建、引用检查和曾经关闭的任务不能替代新版本的验收。
 
 - Runtime源码编译由实施任务报告通过。当前按要求构建`ThirdPersonClient.Editor.csproj`及其新增语义模块，结果为0错误；输出中的警告均为现有依赖或既有字段警告。主审已确认各新Emitter、节点登记模块、目录绑定模块及共享BehaviorCatalogFields均进入实际Editor工程，正式Frontend的上一次有效产物仍为6ca8e09a7。Editor编译、构建调用与产品receipt的完整日志归位仍由13.1收口。
 - 正式资产操作在项目`D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`的主Editor执行。首轮Gameplay Lab重建因旧端点字段抛异常，已由`c3b2e3ed0`修正。后续唯一重建请求虽CLI超时，日志后来明确出现`Shared Gameplay Lab synchronized`；不能继续记为“尚未执行完”，也不能据此直接判定产物一致。
@@ -219,7 +231,9 @@
 
 - [ ] 7.7 按设计第14节接入逻辑到表现的领域事件层：定义 ActionSegmentChanged 事件契约（typed 实例／段／技能身份，复用 SimulationEventHeader 信封），Float32 与 Fixed 的技能状态机运行时在同一转移事务点发布；表现层 ActionAnimationPlaybackLifecycle 消费事件终结旧 playback 条目并推进新段 generation，所有权断言不再依赖命令形状推断技能组织形态；交付两 Target 同输入事件序列一致的对账与技能树化回放通过证明。
 
-  当前状态：**部分完成（上半已交付）**。触发背景：技能连招迁入资产层后（Attack 单技能入口指向连招树），同实例段转移发出的新段 Select 因 producer 变化撞表现层所有权断言，确认语义变化缺少一等通道（详见 design 第14节）。上半：两 Target 契约 DomainEvent kind＋DomainPayload、NotifyStateTransition 转移点发布链（Fixed/Float32/AI/TimelinePlayback 全实现）、表现命令类型同步、delta spec 已建。下半a已交付：表现分发 DomainEvent 分流与四层透传、playback runtime 事件队列与 lease 内 flush、registry 按实例终结活跃条目（SegmentReplaced）与已终结条目 Select 重初始化、Fixed Unity 适配 DomainPayload 透传。下半b已交付：ActionInstanceState（Fixed/Float32）新增 SegmentGeneration 字段并进 state codec（允许 ABI 变化），NotifyStateTransition 转移事务点推进段代，TimelineTarget.EmitPresentation 将 playback generation 组合段代（段切换后 PlaybackId 天然分代，旧段迟到命令路由不到新生命）。剩余：①构建仍报 RunLoop_Inplace ACL 源孤立（Pose Canvas 迁移中间态：m_PoseSourceBindings 4 个负 fileID 断链、RunLoop binding 缺失，归 pose graph 重构 owner）；②Unity 编辑器脚本编译与磁盘内容不同步（需编辑器侧 Refresh/重启后重验）；③技能树化回放两遍 matched:1492。
+  当前状态：**部分完成，事件合同与整链验证未闭合**。上半已接入两Target的DomainEvent／DomainPayload及状态转移发布点；`a4b373999`接通表现分流、事件队列、lease内消费、旧条目SegmentReplaced及Fixed适配；`238263ab4`加入ActionInstance.SegmentGeneration、state codec和Timeline播放代际组合。`9461a642f`已有修复Pose引用／资源注册后正式重建成功的报告，旧RunLoop_Inplace来源孤立和旧程序集不同步不能直接延用为当前阻塞。
+
+  9月8日源码核对仍有三项合同差距：①Fixed／Float32的NotifyStateTransition推进当前实例段代后，遍历全部ActiveActions发布事件，尚未限定为实际转移的ActionInstance；合法并发时存在误终结其它实例playback的风险。②前后状态使用`prev:…;next:…`字符串DomainPayload，未满足delta要求的typed状态身份。③CharacterPresentationRuntime.NotifyDomainEvent仅透传实例ID与EventId，未区分具体事件身份及消费前后状态。此处是静态发现，未声称已复现并发故障；不能用改宽规格或放松所有权断言关闭。还需交付两Target事件序列／Rollback丢弃恢复对账和技能树化回放两遍matched:1492的证据，按用户既有要求先完成重构再统一Replay。
 
 ## 8. 规则与数据发布
 
@@ -266,6 +280,8 @@
 
 ### 执行与审查记录 AGENT-EXEC-20260906-01
 
+记录时点说明：本节审查和批次要求形成于9月6日，CHANGES_REQUIRED未被本次文档核对解除。七条Skill差异已由9月7日no-op原始结果解释并验证为空计划，见首页及10.2；旧Equipment编译错误、Foot几何错误仅证明各自记录时点，不作为最新工作区阻塞结论。旧批次要求不重新触发已完成的差异归因，其余创建依赖、共享API和整包事务交付仍需补齐。
+
 协作按 COMM-20260906-01 改为文档为准。本节与 design 第 10、12 节是本任务的执行入口；实现将本范围提交、验证命令、原始证据路径、剩余问题写回本节，规划将审查结论与下一批要求写回本节。消息仅在需要调整执行、处理真实阻塞或提交完整交付时简短通知文档位置；普通编译、提交、收到、仍在等不发消息，不要求回执。对外关系仅由规划处理，实现仍只联系自己的规划，不改其它任务配对、模型、目录或共享代码所有权。
 
 记录边界：此处只记录 AI 通过既有 CLI／MCP 执行的结果摘要、退出状态和证据路径，不新增用户手工操作、手工验收清单或测试任务。完整命令与原始 JSON 留在独立证据文件，本节不粘贴全量响应。用户端到端验收不写成 OpenSpec task；这一规则不禁止记录已经执行的自动化检查及其失败证据。
@@ -298,7 +314,7 @@
   当前状态：**已完成实现，待13.2整链复核**。`AgentDocumentControlConfiguration`、控制参数、Skill definition、Graph/Timeline完整分片和local canonical目录已落地；`SKILL.md`与current contract已同步v5，代码实现明确只读context与generated边界。
 - [ ] 10.2 更新Exporter与strict Codec／Mapper，按控制配置、技能、Graph、Timeline及Presentation内容分责；AgentAuthoringPackageMapper及Package Codec只保留整包协调和跨分片引用。交付模块输入输出、中央字段分支删除清单、canonical往返、整包hash和未知／旧字段拒绝的现有校验结果，保持Presentation原owner。
 
-  当前状态：**部分完成，审查未通过**。Exporter和Mapper已迁入内容模块，strict codec及规范路径／内容hash已有实现，Presentation保持原owner。最新候选的canonical往返证据仍不完整；已加载版本的无改动dry-run产生7条未解释Skill写入，不能将本项标为完成。继续AGENT-BATCH-20260906-02及最新程序集上的正式复验。
+  当前状态：**部分完成，审查未通过**。Exporter和Mapper已迁入内容模块，strict codec及规范路径／内容hash已有实现，Presentation保持原owner。七条Skill写入已定位为空字符串省略后被读成null，`93ad2a768`修复后`.codex-tmp/corin-document-noop-fixed-20260907.json`返回Clean及空plannedDiff。该no-op问题已关闭；新建／修改／删除目标的完整canonical往返、共享SubTree写入和最新组合上的正式复验尚未交付，不能将本项标为完成。
 - [ ] 10.3 将AgentDocumentReconciler／Planner中的领域diff、依赖计划和Mutation lowering迁入对应内容模块，中央服务只协调完整有序计划与跨分片引用；新技能、子图、Timeline和控制binding仍共用同一事务。交付模块调用链、原中央业务分支删除清单及dry-run依赖／删除顺序报告，不新增分片apply入口。
 
   当前状态：**部分完成**。Skill diff/export、Control configuration diff/handler以及Graph/Timeline/Blackboard/StateMachine的文档模块与typed lowering已迁出并注册到同一MutationHandlers；创建阶段已先于声明、节点、边和Skill引用计划，StateMachine/State local Graph identity可通过正式setter回写。SubTree通用挂载与动态参数绑定仍等待共享authoring API，故不宣称本项闭合。
@@ -340,10 +356,10 @@
   当前状态：**部分完成**。Corin移动/动作来源已有接线并保留原Motion/Pose资源；有效装备入口及全部输入/变量/producer引用迁移尚未闭合。
 - [ ] 12.3 显式构建并发布所选Target、技能目录和同组Projection，更新现有Launcher／Variant／Profile引用；交付exact artifact与产品引用一致报告。
 
-  当前状态：**待正式重建**。旧6ca8e09a7产物是在公共 Projection ABI v15、ACL接收修正和当前脚部几何前置之前生成，不能继续作为当前交付；新正式构建需在脚部几何验证身份闭合后，由同一入口生成两Target与同组Projection并重新核对Variant/Launcher引用。该条的旧代码接线仍保留，运行行为仍由13.2验证。
+  当前状态：**已有后续正式重建报告，待最新组合身份对账**。`9461a642f`记录Gameplay Lab正式重建成功，并提交两Target及Projection资产，旧6ca8e09a7已不是最新构建依据。本轮只核对提交内容和报告，未重新执行Build；相机合入及后续代码／资产变化后，仍需核对同组Program／Projection的精确身份、Variant／Launcher引用和发布结果，不用旧几何失败推断当前仍不能构建。运行行为由13.2验证。
 - [ ] 12.4 删除已替代角色控制图入口、activation／Equipment Host编译注册、旧schema、菜单、字段、别名及废弃文件，交付定向零引用与仍保留AI／Pose／独立预览依赖的业务清单。
 
-  当前状态：**部分完成**。已删除部分旧控制代码位置、重复Action流程及中央发射分支；旧角色图、Equipment Host注册、v4 schema、菜单和别名尚未全量清除。
+  当前状态：**部分完成**。已删除部分旧控制代码位置、重复Action流程及中央发射分支；Document v4正文路径已按10.5删除，Locomotion图和TrainingEnemy已有后续清理提交。旧角色图入口、Equipment Host注册、菜单、别名及剩余资源引用仍需完整定向核对，不能继续把v4未删除作为已知缺口，也不能据局部删除判定全量清理完成。
 - [ ] 12.5 按设计12逐项核对最终目录、类型和公开命名，交付原职责→正式模块→输入输出→调用者→已删除旧实现的代码地图；确认没有重复Action业务流程、中央领域特例、partial拆分、转发壳、万能Context、临时桥接、双运行入口或兼容配置，不能只以新增类数或行数降低收口。
 
   当前状态：**部分完成**。Agent Document Mapper、Reconciler与Mutation Planner已按Graph、Timeline、Blackboard、Action、Control、AI和Skill职责拆成真实模块，旧中央领域分支已删除；Graph创建阶段、local owner顺序、Skill callsite的Graph/Node分型解析已接入。SubTree共享作者写入API尚未交付，且完整目录/命名地图与新包整链证据仍待收口。
@@ -352,13 +368,13 @@
 
 - [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
 
-  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`在补齐共享Action Workspace路由后最近一次完整构建成功（58个既有警告、0个错误）；Agent范围`--no-dependencies`定向构建同样为0警告/0错误，两个构建结束后均立即执行`dotnet build-server shutdown`。正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
+  当前状态：**部分完成**。历史Editor完整源码构建记录为58个既有警告、0个错误，Agent定向构建为0警告／0错误，均按规定关闭build server。后续`9461a642f`已有正式Rebuild成功报告；本轮没有执行新构建，不能把该报告或旧源码构建当作相机合入及当前工作区的完整验收。最新组合的portable／Editor／产品构建及精确receipt仍需交付。
 - [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
 
-  当前状态：**部分完成，待整链复核**。明确实例`e852139597e42532`上的v5 Character checkout成功（root `c7a7c1e3f7e64d81b5a04a90cbeb8d4e`，`editableHash=07390110c2c6173f43f0f92f208cc558e428a84069c44a0ea434900ef0917930`，`contextHash=05a7444d544becb03c6e3431ef214d277b8d49060c8c24336f14e5e7349e2994`，`documentHash=b04cd5547d92a9b0709fc343a89fe03f2fe8f785463813416868f62c385e2f51`）与formal validate成功；dry-run尚受Unity实例未加载最新Reconciler及外部`generated-diagnostic-sampling`编译错误影响，Replay/Proof未开始。
+  当前状态：**部分完成，待最新技能树组合整链复核**。已有v5 checkout／formal validate历史记录；9月7日原始no-op结果为Clean、空plannedDiff，不能再写成dry-run始终受阻。控制迁移阶段已有1492帧重复性报告，随后技能树化回放在表现所有权断言处失败，7.7又新增事件消费及段代；目前未核对到这一最终组合完整通过的Proof。剩余交付覆盖新包apply／恢复、两Target领域事件、输入／Body／动作阶段／窗口／表现输出；Foot缺1帧和表现采样窗口错位的旧证据不作为完整通过。
 - [ ] 13.3 安装本change的delta并同步当前项目口径、Purpose及关联接口说明，交付现行规范与预览／其它change不存在相反共享要求的对账；保留独立预览和受保护任务范围。
 
   当前状态：**尚未完成**。尚未安装本change全部delta和更新最终项目口径；AI/Timeline/预览/Pose等并行规范仍需按实际采用版本完成组合对账。
 - [ ] 13.4 执行严格OpenSpec校验与限定改动diff检查，按完整迁移单元形成中文小步提交；分别交付设计12的结构迁移证据和构建／Replay行为证据，附文件跳转、删除清单及剩余明确错误。仍有重复业务流程或未迁出的中央职责时保持对应任务未完成，不以编译通过、类行数或文件数宣称整个重构完成。
 
-  当前状态：**部分完成**。V4路径零引用、v5工具数量、strict文件族和定向构建结果已完成静态收口；本实现窗口已形成中文小步提交`84812507b`、`346e4024d`和`5538b80fc`，但共享工作区仍有Action Workspace编译错误、Unity最新assembly reload与dry-run复验缺口，保持整项未完成。
+  当前状态：**部分完成**。V4路径零引用、v5工具数量、strict文件族及定向构建已有历史检查与中文提交`84812507b`、`346e4024d`、`5538b80fc`。9月8日仅完成进度文档对账，不重新认定旧Action Workspace错误仍存在。最终结构迁移／删除清单、最新组合构建与行为证据、规范组合严格校验尚未完整交付，保持整项未完成。

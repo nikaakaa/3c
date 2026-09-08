@@ -10,6 +10,7 @@ using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL;
 using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Equipment;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
@@ -110,17 +111,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (request.AnimationBuildInput.Profile != model.AnimationPresentationProfile)
                 throw new InvalidOperationException("Animation build input Profile does not match the compilation model.");
             var reader = new CharacterPresentationSemanticReader(request.Artifact);
+            var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
             CharacterPresentationPoseSourceCompilationResult sourceCompilation =
                 CharacterPresentationPoseSourceCompiler.Compile(
                     model.AnimationPresentationProfile);
+            phaseWatch.Stop();
+            long poseSourceMs = phaseWatch.ElapsedMilliseconds;
             errors.AddRange(sourceCompilation.Diagnostics);
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog =
                 sourceCompilation.Catalog;
+            phaseWatch.Restart();
             CharacterPresentationMotionMatchingCompilationResult motionMatchingCompilation =
                 CharacterPresentationMotionMatchingCompiler.Compile(
                     model.AnimationPresentationProfile,
                     request.AnimationBuildInput);
+            phaseWatch.Stop();
+            long motionMatchingMs = phaseWatch.ElapsedMilliseconds;
             errors.AddRange(motionMatchingCompilation.Diagnostics);
+            long coreMs = 0;
+            long catalogMs = 0;
             MotionMatchingProjectionPayload motionMatching =
                 motionMatchingCompilation.Payload;
             IReadOnlyList<string> movementModeStateIdentities =
@@ -130,9 +139,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationBuildCatalog animationCatalog = null;
             if (errors.Count == 0)
             {
+                phaseWatch.Restart();
                 projection = CompileCore(
                     reader,
                     model.AnimationPresentationProfile,
+                    model.Definition.CameraProfile,
                     model.Definition.EquipmentProfile,
                     model.Definition.EquipmentPresentationProfile,
                     request.FootAnalysis,
@@ -143,6 +154,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     request.AnimationBuildInput,
                     movementModeStateIdentities,
                     errors);
+                phaseWatch.Stop();
+                coreMs = phaseWatch.ElapsedMilliseconds;
+                phaseWatch.Restart();
                 animationCatalog = request.AnimationBuildInput.AnimationCatalog.Complete(errors);
                 if (projection != null && animationCatalog != null && errors.Count == 0)
                 {
@@ -167,11 +181,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         tuning.DefaultBlock,
                         tuning.PublishedParameterRevision);
                 }
+                phaseWatch.Stop();
+                catalogMs = phaseWatch.ElapsedMilliseconds;
             }
+            phaseWatch.Restart();
             CharacterPresentationProjectionValidationResult validation =
                 CharacterPoseGraphProjectionValidator.Validate(
                     projection,
                     reader.Contract);
+            phaseWatch.Stop();
+            UnityEngine.Debug.Log(
+                $"[计时] 投影细分 PoseSource {poseSourceMs}ms | MM {motionMatchingMs}ms | " +
+                $"Core {coreMs}ms | 目录+修订 {catalogMs}ms | 校验 {phaseWatch.ElapsedMilliseconds}ms");
             errors.AddRange(validation.Diagnostics);
             var diagnostics = new CharacterPresentationProjectionDiagnostic[errors.Count];
             for (int i = 0; i < errors.Count; i++)
@@ -282,6 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterPresentationProjection CompileCore(
             CharacterPresentationSemanticReader reader,
             CharacterAnimationPresentationProfile profile,
+            CharacterCameraProfile cameraProfile,
             CharacterEquipmentProfile equipmentProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
@@ -454,6 +476,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (errors.Count > 0)
                 return null;
 
+            CharacterCameraProjectionPayload cameraPayload =
+                cameraProfile ? CharacterCameraProjectionBuilder.Build(cameraProfile) : null;
             CharacterPresentationProjection projection = CharacterPresentationProjection.Create(
                 reader.Contract,
                 poseProgram,
@@ -472,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 visualBindings,
                 linkedPose,
-                null,
+                cameraPayload,
                 null,
                 null,
                 string.Empty,

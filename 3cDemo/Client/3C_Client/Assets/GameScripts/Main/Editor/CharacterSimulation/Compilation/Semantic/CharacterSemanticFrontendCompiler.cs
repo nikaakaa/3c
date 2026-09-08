@@ -15,6 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public const string CompilerVersion = "character-simulation-compiler/25";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
+        static readonly Dictionary<string, string> s_VerifiedSourceRevisions =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
         {
             var report = new CharacterSimulationCompileReport();
@@ -37,6 +40,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (firstModel == null || firstArtifact == null || !report.IsValid)
                 return CharacterSemanticFrontendResult.Failed(report);
 
+            if (s_VerifiedSourceRevisions.TryGetValue(definitionGuid, out string verifiedRevision) &&
+                string.Equals(verifiedRevision, sourceRevision.Value, StringComparison.Ordinal))
+                return new CharacterSemanticFrontendResult(firstArtifact, firstModel, report);
+
             var verificationReport = new CharacterSimulationCompileReport();
             CharacterAuthoringCompilationModel secondModel = Discover(definition, definitionPath, definitionGuid, sourceRevision, root, verificationReport);
             CharacterGameplaySemanticIr secondIr = Emit(secondModel, verificationReport);
@@ -55,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.ArtifactError("semantic_ir_nondeterministic", definitionPath, "Two unchanged Frontend passes produced different canonical Semantic IR bytes.");
                 return CharacterSemanticFrontendResult.Failed(report);
             }
+            s_VerifiedSourceRevisions[definitionGuid] = sourceRevision.Value;
             return new CharacterSemanticFrontendResult(firstArtifact, firstModel, report);
         }
 

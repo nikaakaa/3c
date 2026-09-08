@@ -1,0 +1,35 @@
+## MODIFIED Requirements
+
+### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
+
+系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v6`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+
+#### Scenario: AI首次编辑现有Character Controller
+
+- **WHEN** Agent对已有合法Character root显式checkout
+- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline、Presentation与可达Clip Curve生成规范目录包
+- **AND** response MUST返回唯一文档包绝对路径
+- **AND** 系统 MUST不修改或保存Unity资产
+
+#### Scenario: 普通人工编辑期间没有AI会话
+
+- **WHEN** 作者修改Graph、Timeline或AnimationClip但没有显式checkout
+- **THEN** 系统 MUST不创建或刷新文档包
+- **AND** MUST不触发reconcile、compile、build或publish
+
+
+#### Scenario: 旧版本文档包请求写入
+
+- **WHEN** Agent使用v5或更早的Document包请求dry-run或apply
+- **THEN** 系统 MUST拒绝该包并要求从精确根重新checkout v6，不自动转换或兼容读取
+
+## ADDED Requirements
+
+### Requirement: 文档必须直接表达正式图和Macro闭包
+
+Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner表达技能、Pose及原生参数化子图接口与调用。导出和对账 MUST直接访问正式作者图，MUST不输出第三方C#类型、私有序列化字段、执行委托或观测状态。私有子图、共享引用、接口变化与根资产 MUST进入同一整包hash、Mutation、保存和反向导出事务。
+
+#### Scenario: 修改共享子图接口
+- **WHEN** Agent修改可写共享子图接口及其调用连接
+- **THEN** dry-run MUST对完整声明闭包计算修改和引用合法性，apply MUST只采用相同document hash
+- **AND** 任一owner保存或反向导出失败 MUST完整回滚，不留下只更新接口的调用点

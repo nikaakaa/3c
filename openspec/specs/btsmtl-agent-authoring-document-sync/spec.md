@@ -101,6 +101,12 @@
 
 每个editable Graph MUST拥有`owner.entityId`与`owner.slot`。已有Graph MUST保持stable authoring identity；新Graph MUST使用local identity并引用同文档包内已有或新建owner。系统 MUST不接受无owner Graph、按路径猜owner或以独立Graph asset作为默认私有下钻。
 
+#### Scenario: 内联图未指定共享资产路径
+
+- **WHEN** StateMachine或State body仍引用同一内联图，当前共享资产路径为空字符串，目录包因稀疏编码省略该字段
+- **THEN** Reconciler MUST将null与空字符串解释为同一无共享资产引用，不生成ConfigureGraphReference Mutation
+- **AND** ownership变化及非空共享资产路径变化 MUST继续生成正式对账结果
+
 #### Scenario: AI为新State创建body Graph
 
 - **WHEN** AI增加`local:attack-state`并增加owner为该State、slot为`body`的`local:attack-body`

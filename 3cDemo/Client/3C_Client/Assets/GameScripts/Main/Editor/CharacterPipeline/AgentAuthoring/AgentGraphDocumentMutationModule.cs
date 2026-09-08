@@ -201,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (currentMachineGraph != null && machineGraph != null &&
                     (!string.Equals(currentMachineGraph.ownership, machineGraph.ownership, StringComparison.Ordinal) ||
-                     !string.Equals(currentMachineGraph.sharedAssetPath, machineGraph.sharedAssetPath, StringComparison.Ordinal)) &&
+                     !SameOptionalText(currentMachineGraph.sharedAssetPath, machineGraph.sharedAssetPath)) &&
                     TryFindGraphOwner(targetGraphs, machine.graphAuthoringId, out AgentSnapshotGraph machineParent, out AgentSnapshotNode machineOwner))
                 {
                     AddGraphReferenceOwnershipMutation(
@@ -277,7 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 .FirstOrDefault(graph => string.Equals(graph.graphAuthoringId, state.behaviorGraphAuthoringId, StringComparison.Ordinal));
                             if (currentBehaviorGraph != null && behaviorGraph != null &&
                                 (!string.Equals(currentBehaviorGraph.ownership, behaviorGraph.ownership, StringComparison.Ordinal) ||
-                                 !string.Equals(currentBehaviorGraph.sharedAssetPath, behaviorGraph.sharedAssetPath, StringComparison.Ordinal)) &&
+                                 !SameOptionalText(currentBehaviorGraph.sharedAssetPath, behaviorGraph.sharedAssetPath)) &&
                                 TryFindGraphOwner(targetGraphs, state.behaviorGraphAuthoringId, out AgentSnapshotGraph behaviorParent, out AgentSnapshotNode behaviorOwner))
                             {
                                 AddGraphReferenceOwnershipMutation(

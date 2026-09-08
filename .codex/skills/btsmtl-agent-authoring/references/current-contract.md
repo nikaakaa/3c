@@ -6,6 +6,8 @@ Schema：`btsmtl-agent-authoring-document.v5`
 
 controller状态摘要若对应editable StateMachine Graph，其State identity引用该图内的正式State节点，不是第二个实体声明。重复摘要、跨Graph引用和非State节点引用必须拒绝；未作为editable Graph提供的组合状态机摘要继续参与全局identity登记。此规则不改变导出identity或Mutation owner。
 
+StateMachine及State body的Graph ownership对账中，未指定共享资产路径的null与空字符串表示相同的无共享资产引用，不得因目录包省略空字段产生ConfigureGraphReference；非空路径与ownership变化仍须正常对账。
+
 仅接受v5。v1、v2、v3、v4及Patch/Snapshot旧格式必须明确拒绝，并由调用方在精确Definition上重新checkout；不存在兼容reader、writer、alias或双写。
 
 Document固定为Unity项目根目录外部工作区中的目录包：

@@ -246,6 +246,9 @@ namespace ThirdPersonSimulation
             writer.WriteString(value.DisplayPath);
             writer.WriteString(value.ContentHash);
             writer.WriteString(value.GraphInvocationPath);
+            writer.WriteString(value.CompiledPortId);
+            writer.WriteByte((byte)value.ValuePortDirection);
+            writer.WriteString(value.SourceInvocationPath);
         }
 
         internal static ProgramSourceMapEntry ReadSourceMap(CanonicalReader reader)
@@ -264,6 +267,9 @@ namespace ThirdPersonSimulation
                 reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),
+                reader.ReadString(),
+                reader.ReadString(),
+                ReadEnum<ProgramValuePortDirection>(reader.ReadByte()),
                 reader.ReadString());
         }
 

@@ -120,7 +120,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
 - [ ] 6.1 实现Node／Port／Edge到operation／value／state及调用点路径的编译来源映射，支持一对多及优化标记；通过编译输出核对映射完整性。
 
-  当前进度：ProgramSourceMapEntry增加明确GraphInvocationPath，原生图编译通过嵌套作用域写入调用路径，Macro内部操作与父调用分别属于各自图调用。Float32／Fixed产物读写同步到Program格式20和来源表4，不在运行时从显示文字截取路径；完整边／值／优化映射及产物对账仍待完成。
+  当前进度：ProgramSourceMapEntry记录GraphInvocationPath；operation创建后固定所属调用，端口别名不能覆盖。端口使用独立OperationPort来源，记录编译端口、输入／输出方向和作者调用路径，避免同一operation重复登记运行目标。Float32／Fixed产物读写同步到Program格式21和来源表5，不在运行时从显示文字截取路径；完整边／值／优化映射及产物对账仍待完成。
 - [ ] 6.2 将映射纳入现有产物组发布和哈希校验，区分作者版本与运行版本；通过版本不匹配诊断证明不投射错误节点。
 ### 6.3 技能生命周期与调用身份
 

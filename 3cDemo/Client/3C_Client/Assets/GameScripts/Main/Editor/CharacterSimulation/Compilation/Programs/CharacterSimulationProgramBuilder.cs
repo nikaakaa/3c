@@ -87,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         readonly Stack<string> m_GraphInvocationPaths = new();
+        readonly List<string> m_OperationInvocationPaths = new();
 
         public IDisposable PushGraphInvocation(string path)
         {
@@ -183,17 +184,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 $"{source.Identity}/number0",
                 text0,
                 flags));
+            m_OperationInvocationPaths.Add(m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek());
             AddSourceMap(ProgramSourceTargetKind.Operation, handle.Value, source);
             return handle;
         }
 
-        public void DeclareOperationPortSource(OperationHandle operation, CharacterSimulationSourceLocation source)
+        public void DeclareOperationPortSource(OperationHandle operation, CharacterSimulationSourceLocation source,
+            string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None)
         {
             if (!operation.IsValid || operation.Value >= m_Operations.Count)
                 throw new ArgumentOutOfRangeException(nameof(operation));
             if (string.IsNullOrEmpty(source.PortId))
                 throw new ArgumentException("Operation port Source Map requires a port identity.", nameof(source));
-            AddSourceMap(ProgramSourceTargetKind.Operation, operation.Value, source);
+            AddSourceMap(ProgramSourceTargetKind.OperationPort, operation.Value, source, compiledPortId, direction);
         }
 
         public int DeclareConstant(CharacterSimulationSourceLocation source, string fieldName, object value)
@@ -736,7 +739,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        void AddSourceMap(ProgramSourceTargetKind targetKind, int targetIndex, CharacterSimulationSourceLocation source)
+        void AddSourceMap(ProgramSourceTargetKind targetKind, int targetIndex, CharacterSimulationSourceLocation source,
+            string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None)
         {
             try
             {
@@ -754,6 +758,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     source.ClipId,
                     source.DisplayPath,
                     source.ContentHash,
+                    targetKind is ProgramSourceTargetKind.Operation or ProgramSourceTargetKind.OperationPort
+                        ? m_OperationInvocationPaths[targetIndex]
+                        : m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek(),
+                    compiledPortId,
+                    direction,
                     m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek()));
             }
             catch (Exception exception)

@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool OpenSkillGraph(FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
         {
             NodeCanvas.Framework.IGraphElement element = null;
-            if (source.Kind == RuntimeSourceElementKind.Node)
+            if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
                 element = graph.allNodes.SingleOrDefault(node => node.UID == source.ElementAuthoringId);
             else if (source.Kind == RuntimeSourceElementKind.Edge)
                 element = graph.allNodes.SelectMany(node => node.outConnections)

@@ -88,6 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             switch (source.Kind)
             {
                 case RuntimeSourceElementKind.Node:
+                case RuntimeSourceElementKind.Port:
                 case RuntimeSourceElementKind.Edge:
                 case RuntimeSourceElementKind.BlackboardDeclaration:
                     return EnsureContainer(
@@ -173,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 return contentHash;
             RuntimeSourceElementKey container = source.Kind switch
             {
-                RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Edge or RuntimeSourceElementKind.BlackboardDeclaration => RuntimeSourceElementKey.Graph(source.GraphAuthoringId),
+                RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port or RuntimeSourceElementKind.Edge or RuntimeSourceElementKind.BlackboardDeclaration => RuntimeSourceElementKey.Graph(source.GraphAuthoringId),
                 RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip => RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
                 _ => default
             };
@@ -199,6 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         static RuntimeSourceElementKey ResolveSource(ProgramSourceMapEntry source)
         {
+            if (source.TargetKind == ProgramSourceTargetKind.OperationPort)
+                return RuntimeSourceElementKey.Port(source.GraphId, source.NodeId, source.PortId);
             if (source.TargetKind == ProgramSourceTargetKind.BodyMotion)
                 return RuntimeSourceElementKey.BodyMotionProfile(source.DisplayPath);
             if (!string.IsNullOrEmpty(source.ClipId))
@@ -223,6 +226,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         static RuntimeSourceTarget ResolveTarget(ProgramSourceMapEntry source)
         {
+            if (source.TargetKind == ProgramSourceTargetKind.OperationPort)
+                return RuntimeSourceTarget.Source;
             RuntimeSourceTargetKind kind = source.TargetKind switch
             {
                 ProgramSourceTargetKind.Operation => RuntimeSourceTargetKind.Operation,

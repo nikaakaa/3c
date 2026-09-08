@@ -88,7 +88,8 @@ namespace BTSMTL.Diagnostics
         Track,
         Clip,
         TreeClip,
-        BodyMotionProfile
+        BodyMotionProfile,
+        Port
     }
 
     public readonly struct RuntimeSourceElementKey : IEquatable<RuntimeSourceElementKey>
@@ -99,7 +100,8 @@ namespace BTSMTL.Diagnostics
             string elementAuthoringId = "",
             string timelineAuthoringId = "",
             string trackAuthoringId = "",
-            string clipAuthoringId = "")
+            string clipAuthoringId = "",
+            string portAuthoringId = "")
         {
             Kind = kind;
             GraphAuthoringId = graphAuthoringId ?? string.Empty;
@@ -107,6 +109,7 @@ namespace BTSMTL.Diagnostics
             TimelineAuthoringId = timelineAuthoringId ?? string.Empty;
             TrackAuthoringId = trackAuthoringId ?? string.Empty;
             ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            PortAuthoringId = portAuthoringId ?? string.Empty;
         }
 
         public RuntimeSourceElementKind Kind { get; }
@@ -115,7 +118,10 @@ namespace BTSMTL.Diagnostics
         public string TimelineAuthoringId { get; }
         public string TrackAuthoringId { get; }
         public string ClipAuthoringId { get; }
+        public string PortAuthoringId { get; }
         public bool IsValid => Kind != RuntimeSourceElementKind.None &&
+                               (Kind != RuntimeSourceElementKind.Port ||
+                                !string.IsNullOrEmpty(ElementAuthoringId) && !string.IsNullOrEmpty(PortAuthoringId)) &&
                                (!string.IsNullOrEmpty(GraphAuthoringId) ||
                                 !string.IsNullOrEmpty(TimelineAuthoringId) ||
                                 Kind == RuntimeSourceElementKind.BodyMotionProfile && !string.IsNullOrEmpty(ElementAuthoringId));
@@ -127,7 +133,8 @@ namespace BTSMTL.Diagnostics
                    string.Equals(ElementAuthoringId, other.ElementAuthoringId, StringComparison.Ordinal) &&
                    string.Equals(TimelineAuthoringId, other.TimelineAuthoringId, StringComparison.Ordinal) &&
                    string.Equals(TrackAuthoringId, other.TrackAuthoringId, StringComparison.Ordinal) &&
-                   string.Equals(ClipAuthoringId, other.ClipAuthoringId, StringComparison.Ordinal);
+                   string.Equals(ClipAuthoringId, other.ClipAuthoringId, StringComparison.Ordinal) &&
+                   string.Equals(PortAuthoringId, other.PortAuthoringId, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj) => obj is RuntimeSourceElementKey other && Equals(other);
@@ -142,12 +149,15 @@ namespace BTSMTL.Diagnostics
                 hash = hash * 31 + (TimelineAuthoringId?.GetHashCode() ?? 0);
                 hash = hash * 31 + (TrackAuthoringId?.GetHashCode() ?? 0);
                 hash = hash * 31 + (ClipAuthoringId?.GetHashCode() ?? 0);
+                hash = hash * 31 + (PortAuthoringId?.GetHashCode() ?? 0);
                 return hash;
             }
         }
 
         public static RuntimeSourceElementKey Graph(string graphId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Graph, graphId);
         public static RuntimeSourceElementKey Node(string graphId, string nodeId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Node, graphId, nodeId);
+        public static RuntimeSourceElementKey Port(string graphId, string nodeId, string portId) =>
+            new RuntimeSourceElementKey(RuntimeSourceElementKind.Port, graphId, nodeId, portAuthoringId: portId);
         public static RuntimeSourceElementKey Edge(string graphId, string edgeId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Edge, graphId, edgeId);
         public static RuntimeSourceElementKey Declaration(string graphId, string declarationId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.BlackboardDeclaration, graphId, declarationId);
         public static RuntimeSourceElementKey Timeline(string timelineId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Timeline, timelineAuthoringId: timelineId);

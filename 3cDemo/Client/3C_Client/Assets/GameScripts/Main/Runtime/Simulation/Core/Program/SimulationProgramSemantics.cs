@@ -1386,7 +1386,15 @@ namespace ThirdPersonSimulation
         BodyMotion = 7,
         ControlModule = 8,
         ControlState = 9,
-        ControlTransition = 10
+        ControlTransition = 10,
+        OperationPort = 11
+    }
+
+    public enum ProgramValuePortDirection : byte
+    {
+        None,
+        Input,
+        Output
     }
 
 	public sealed class ProgramSourceMapEntry
@@ -1405,7 +1413,10 @@ namespace ThirdPersonSimulation
 			string clipId,
 			string displayPath,
 			string contentHash,
-			string graphInvocationPath = "")
+			string graphInvocationPath = "",
+			string compiledPortId = "",
+			ProgramValuePortDirection valuePortDirection = ProgramValuePortDirection.None,
+			string sourceInvocationPath = "")
 		{
 			if (targetIndex < 0)
 				throw new ArgumentOutOfRangeException(nameof(targetIndex));
@@ -1423,6 +1434,9 @@ namespace ThirdPersonSimulation
 			DisplayPath = displayPath ?? string.Empty;
 			ContentHash = contentHash ?? string.Empty;
 			GraphInvocationPath = graphInvocationPath ?? string.Empty;
+			CompiledPortId = compiledPortId ?? string.Empty;
+			ValuePortDirection = valuePortDirection;
+			SourceInvocationPath = sourceInvocationPath ?? string.Empty;
 			if (GraphId.Length == 0 && TimelineId.Length == 0 && targetKind != ProgramSourceTargetKind.BodyMotion)
 				throw new ArgumentException("Source map entry requires a graph or timeline identity.");
 		}
@@ -1441,6 +1455,9 @@ namespace ThirdPersonSimulation
 		public string DisplayPath { get; }
 		public string ContentHash { get; }
 		public string GraphInvocationPath { get; }
+		public string CompiledPortId { get; }
+		public ProgramValuePortDirection ValuePortDirection { get; }
+		public string SourceInvocationPath { get; }
 	}
 
     public static class ProgramSourceMapCoverage
@@ -1467,6 +1484,14 @@ namespace ThirdPersonSimulation
                 {
                     case ProgramSourceTargetKind.Operation:
                         RequireTarget(entry.TargetIndex, operations, "operation");
+                        break;
+                    case ProgramSourceTargetKind.OperationPort:
+                        if (entry.TargetIndex >= operationCount || string.IsNullOrEmpty(entry.GraphId) ||
+                            string.IsNullOrEmpty(entry.NodeId) || string.IsNullOrEmpty(entry.PortId) ||
+                            string.IsNullOrEmpty(entry.SourceInvocationPath) ||
+                            !Enum.IsDefined(typeof(ProgramValuePortDirection), entry.ValuePortDirection) ||
+                            (entry.ValuePortDirection == ProgramValuePortDirection.None) != string.IsNullOrEmpty(entry.CompiledPortId))
+                            throw new InvalidDataException("Program operation-port source is incomplete.");
                         break;
                     case ProgramSourceTargetKind.StateSlot:
                         RequireTarget(entry.TargetIndex, stateSlots, "state slot");

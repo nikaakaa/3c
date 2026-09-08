@@ -117,9 +117,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foreach (FlowOutput port in node.GetOutputFlowPorts())
                     m_Builder.DeclareOperationPortSource(operations.FlowSource(node.UID), Source(graph, node, port.ID));
                 foreach (ValueInput port in node.GetInputValuePorts())
-                    m_Builder.DeclareOperationPortSource(operations.Input(node.UID, port.ID).Operation, Source(graph, node, port.ID));
+                {
+                    BtsmtlSkillValuePortBinding binding = operations.Input(node.UID, port.ID);
+                    m_Builder.DeclareOperationPortSource(binding.Operation, Source(graph, node, port.ID), binding.PortId, ProgramValuePortDirection.Input);
+                }
                 foreach (ValueOutput port in node.GetOutputValuePorts())
-                    m_Builder.DeclareOperationPortSource(operations.Output(node.UID, port.ID).Operation, Source(graph, node, port.ID));
+                {
+                    BtsmtlSkillValuePortBinding binding = operations.Output(node.UID, port.ID);
+                    m_Builder.DeclareOperationPortSource(binding.Operation, Source(graph, node, port.ID), binding.PortId, ProgramValuePortDirection.Output);
+                }
             }
         }
 

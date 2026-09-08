@@ -27,9 +27,12 @@
 
 ### Requirement: 文档必须直接表达正式图和Macro闭包
 
-Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner表达技能、Pose及原生参数化子图接口与调用。导出和对账 MUST直接访问正式作者图，MUST不输出第三方C#类型、私有序列化字段、执行委托或观测状态。私有子图、共享引用、接口变化与根资产 MUST进入同一整包hash、Mutation、保存和反向导出事务。
+Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner表达技能及原生参数化子图接口与调用。导出和对账 MUST直接访问正式作者图，MUST不输出第三方C#类型、私有序列化字段、执行委托或观测状态。私有子图、共享引用、接口变化与根资产 MUST进入同一整包hash、Mutation、保存和反向导出事务。
 
 #### Scenario: 修改共享子图接口
 - **WHEN** Agent修改可写共享子图接口及其调用连接
 - **THEN** dry-run MUST对完整声明闭包计算修改和引用合法性，apply MUST只采用相同document hash
 - **AND** 任一owner保存或反向导出失败 MUST完整回滚，不留下只更新接口的调用点
+
+非技能分片 MUST保持原有业务语义及正式作者模型；协议版本升级不得触发其他领域资产迁移。
+

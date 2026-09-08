@@ -2,7 +2,7 @@
 
 ### Requirement: Graph Authoring必须拥有唯一领域框架
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 系统 MUST在BTSMTL作者层提供唯一Graph Authoring Domain Framework，统一承载Graph document、capability catalog、canvas、node view、port view、selection、clipboard、search、Details host、Navigator host、Mutation和diagnostics契约。BTSMTL Gameplay Graph与Character Presentation Pose Graph MUST分别适配该框架，但 MUST不共享正式序列化Graph基类、runtime node或compiler operation。
 
@@ -20,7 +20,7 @@
 
 ### Requirement: 唯一领域框架必须从现有BTSMTL作者UI原地抽象
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 共享Canvas、Node View、Port View、Edge View、Details、Navigator、Data Catalog与StateMachine表面 MUST以现有BTSMTL作者UI实现作为提取基线。系统 MUST通过抽取domain-neutral交互并注入document、capability、mutation与presenter边界完成共享化；MUST不新建功能更少的替代GraphView再切换BTSMTL入口。BTSMTL现有布局、节点信息、黑板变量拖拽、Flow/Property Port、节点搜索与创建、selection、框选、clipboard、Undo、Inspector、子树/StateMachine下钻和Live Debug行为 MUST保持。
 
@@ -32,7 +32,7 @@
 
 ### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、固定端口、条件`portVariants`、动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、Graph dependency、局部校验与typed lowering，并向共享Capability投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。
 
@@ -78,7 +78,7 @@ Pose Node Definition只拥有节点局部作者语义、直接Graph dependency�
 
 ### Requirement: Graph Canvas必须复用统一节点与端口投影
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 Graph Canvas MUST通过document projection和Capability生成通用Node View、Port View、Edge View、创建菜单、搜索结果与clipboard payload。领域adapter MAY提供业务标题、图标、颜色、状态badge与特殊交互命令，但 MUST不重新实现selection、拖线、框选、复制粘贴、Undo或GraphView生命周期。固定端口 MUST来自Capability；动态端口 MUST由node-local稳定identity声明并接受同一port policy裁决。Pose端口 MUST从stable type投影Local/Component空间颜色和标签；非Pose瞬时control value MUST使用独立稳定类型、标签与颜色。转换节点 MUST作为普通serialized authoring节点显示。Canvas MUST不根据C#类型名、显示名或Compiler operation猜测空间，也 MUST不隐藏插入未序列化节点。
 
@@ -102,7 +102,7 @@ Graph Canvas MUST通过document projection和Capability生成通用Node View、P
 
 ### Requirement: Details必须只显示当前作者需要的业务字段
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 Details MUST只投影当前selection、当前capability与当前authoring mode允许查看或修改的字段和命令。Unity资源关系 MUST使用Capability声明的精确对象类型和对象选择器；领域identity关系 MUST使用精确上下文提供的可读选项目录。IdentityReference缺少选项目录时 MUST显示Unavailable并禁止编辑，不得退化为TextField；选项标签 MUST不拼接内部value。稳定identity、revision、GUID、local file id、compiled index、runtime handle、generated path、内部枚举载荷、缓存、Projection中间值与不适用nullable字段 MUST默认隐藏；只读References与Diagnostics MUST放入明确折叠区，且 MUST不伪装成可编辑属性。
 
@@ -121,7 +121,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: Navigator与Data Catalog必须复用统一信息架构
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 框架 MUST提供统一Navigator、breadcrumb、Data Catalog、搜索与Open命令宿主。领域adapter MUST只投影真实owner、引用、页面和业务分组，并使用业务显示名与Unity资源名作为作者标签；不得保存第二份authoring数据，也不得在缺失显示名时回退显示GUID、hash或stable identity。跨资产字段修改 MUST通过Open Owner导航到唯一正式编辑入口。
 
@@ -134,7 +134,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: StateMachine作者表面必须复用且语义隔离
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 框架 MUST提供唯一共享Entry、State、Alias、Transition edge、画布平移缩放、节点拖动、selection、增选框选、下钻、breadcrumb与edge Details表面。共享框选与selection实现 MUST面向通用GraphView能力，不得要求`BaseTreeView`具体类型，也不得为Pose领域创建第二个Manipulator。BTSMTL Gameplay StateMachine与PoseStateMachine MUST分别提供状态payload、transition payload、rule surface、layout owner、validator与compiler adapter；Gameplay condition MUST不进入Pose transition，Pose blend与sync MUST不进入Gameplay transition。Entry、State与Alias位置变化 MUST通过共享`MoveElement`请求进入当前领域Mutation；只读状态 MUST禁止Mutation，但不得替换成另一套View。
 
@@ -164,7 +164,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: 人工编辑与Document Apply必须复用同一类型化Mutation
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 窗口交互与Agent Authoring Document Reconciler MUST分别把用户操作或目标状态差异降低为同一领域类型化Mutation，再由同一Validator、transaction、dirty owner和Undo边界应用。系统 MUST不允许Document直接写Unity YAML、SerializedObject path、AnimationClip序列化文本或构造第二套Pose/Clip资产写服务。
 
@@ -182,7 +182,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 
-本要求中涉及旧GraphView、BaseGraph、BaseNode或旧UI原地抽取的实现限制，仅适用于尚未迁移领域。Character技能及Pose MUST采用统一FlowCanvas作者基础和原生交互；共享正式序列化图基础是允许的，业务payload、端口语义、Mutation、Validator、Compiler和运行状态 MUST按领域隔离。两领域的作者及观察行为以flowcanvas-compiled-authoring和flowcanvas-compiled-runtime-observation为准，不能保留第二套可写投影图；下列旧实现名称不构成恢复旧路径的要求。
+本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
 Graph Authoring Domain Framework MUST只理解稳定作者identity、typed payload、port与mutation，不得要求authoring node继承runtime node。领域compiler MUST把authoring graph编译为领域自己的中间表示和runtime program；Runtime性能枚举、线性index与switch MAY存在于compiled层，但 MUST不反向成为创建菜单、Details或Document schema。
 

@@ -1,5 +1,7 @@
 # Change: 重构角色Pose Graph架构
 
+BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanvas-authoring/proposal.md)管理；本目录只负责PoseGraph，不要求两者采用相同runtime。
+
 ## 2026-09-08 当前增量范围
 
 用户决定先做[PoseGraph 原生 FlowCanvas 实验](flowcanvas-experiment.md)，验证真实 FlowNode／typed Port／BinderConnection 及运行求值，不只借用端口 UI。最小范围为两个 Clip Player、Weight、Blend、Output 和独立实验角色输出；未来 BTSMTL 技能也可能采用同一基础，本轮不迁移技能。

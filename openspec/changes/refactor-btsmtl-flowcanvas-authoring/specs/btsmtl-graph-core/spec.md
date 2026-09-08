@@ -2,7 +2,7 @@
 
 ### Requirement: BaseGraph 承载唯一图结构数据
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 使用普通 C# 可序列化的 `BaseGraph` 保存节点、普通边、属性边、暴露属性和对应 GUID 映射。节点、普通边、属性边、模块、端口和私有下钻 Graph MUST 作为所属 owner 的内联序列化数据保存。`BaseTreeAsset` 或其它 Unity asset 外壳 MUST NOT 再保存第二套节点、边或属性边集合。
 
 #### Scenario: 编辑器读取图数据
@@ -23,7 +23,7 @@
 
 ### Requirement: BaseGraph 承载结构编辑操作
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 在 `BaseGraph` 上提供正式结构编辑操作，包括创建/删除节点、连接/断开普通边、连接/断开属性边、刷新和初始化清理。所有入口 MUST 使用同一套集合和 GUID 映射。
 
 #### Scenario: 创建节点
@@ -38,7 +38,7 @@
 
 ### Requirement: 节点创建尊重图类型规则
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 让 `BaseGraph.CreateNode(Type)` 尊重当前图的 `CanCreateNodeType(Type)`。节点搜索、拖拽、粘贴和脚本创建 MUST 不绕过该规则。`StateMachineGraph` MUST 只接收状态结构节点；`ConditionRuleGraph` MUST 只接收纯条件求值节点。
 
 #### Scenario: StateMachineGraph 拒绝非法节点
@@ -58,7 +58,7 @@
 
 ### Requirement: BaseTreeAsset 保持资产和编辑器入口
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 保持 `BaseTreeAsset` 或等价 graph asset 类型作为 Unity Project、Inspector 和 BTSMTL 编辑器可打开入口。`BaseTreeAsset` MUST 作为 asset 外壳持有正式 `BaseTree` / `BaseGraph` 图数据，`BaseTree` 和 `BaseGraph` MUST NOT 混入 Unity asset 身份。直接打开 Graph asset MUST 继续通过 `OpenTree()` 或等价 `TreeWindowUtility` 入口打开，不新增并行 `BaseGraphWindow`。
 
 #### Scenario: 直接打开资产
@@ -69,7 +69,7 @@
 
 ### Requirement: Graph 引用和页面栈保持 editor-only
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 系统 MUST 让节点、边、模块、TimelineNode 和 Timeline Clip 通过正式 authoring reference 表达下钻内容。默认私有 Graph 和 Timeline MUST 支持 inline data，需要复用时才显式使用 shared asset。BaseTreeWindow 的作者页面栈 MUST 只支持 Graph page 和 TreeClip resolved Graph page；Timeline MUST 由独立 TimelineEditorWindow 编辑，不得进入 Graph breadcrumb。页面栈、窗口绑定、selection restore 和来源 identity MUST 保持 editor-only，不得参与 runtime 或序列化到业务数据。
 
@@ -116,7 +116,7 @@
 
 ### Requirement: 私有下钻 Graph 默认 inline data
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 将“默认创建即私有可编辑”作为下钻 Graph 的创作心智。用户创建拥有下钻内容的 owner 节点或边时，编辑器 MUST 自动创建普通 C# 内联 graph data 并绑定到 owner。用户 MUST NOT 被要求先手动创建、保存或拖拽一个 Graph asset 才能使用新建节点或边。
 
 #### Scenario: 创建拥有下钻 Graph 的节点
@@ -147,7 +147,7 @@
 
 ### Requirement: 下钻引用 UI 表达编辑意图
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 让默认下钻操作表现为 `Open`、双击或等价下钻命令。Inspector 可以配置引用 ownership、shared asset 和抽取复用，但 MUST NOT 把“创建 inline graph”作为普通节点初始化入口。普通节点或边创建后若必须拥有私有 Graph，创建流程 MUST 已经完成 inline graph 初始化。
 
 #### Scenario: 默认下钻
@@ -176,7 +176,7 @@
 
 ### Requirement: BaseGraph 承载运行上下文但不承担执行生命周期
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 系统 MUST允许 `BaseGraph` 保存非序列化运行上下文，包括 `User`、`DeltaTime`和类型化上下文读取能力。`BaseGraph` MUST NOT拥有 `Running`、`State`、`UpdateTree`或 `ResetTree`。通用 BTSMTL解释器 MAY从 resolved authoring graph data创建隔离运行工作副本，但正式 Character runtime MUST将同一 authoring编译为 `CharacterSimulationProgram`，并由 Session Pipeline的标准 Program Step Pass执行，不得通过 `RunnableTree`、`StateMachineGraphRuntime`或运行时 Graph clone执行角色 Gameplay。两种用途 MUST不共享或回写运行状态。
 
@@ -194,7 +194,7 @@
 
 ### Requirement: 不新增 Graph 分裂路径
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 系统 MUST在BTSMTL领域保持一套`BaseGraph`数据、一套`PropertyPort`/`PropertyEdge`端口系统和一套`BaseTreeAsset`入口。StateMachineGraph、ConditionRuleGraph和BT edge decorator MUST继续使用该正式BTSMTL链路，不得新增Workbench、并行BTSMTL端口协议、旧数据fallback或重复序列化集合。跨领域的Character Presentation Pose Graph MUST使用独立Pose数据、typed Pose端口、validator和compiler，同时与BTSMTL共享唯一Graph Authoring Domain Framework中的Canvas、Node/Port View、selection、clipboard、Details、Navigator与StateMachine作者交互。共享层 MUST只消费domain document、Capability、typed payload、port policy和mutation adapter；Pose MUST不继承BTSMTL runtime node/edge语义，也 MUST不成为第二个BTSMTL Graph执行路径。
 
@@ -218,7 +218,7 @@
 
 ### Requirement: Shared Graph Asset 只是复用外壳
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 允许 graph data 被显式保存到独立 ScriptableObject asset 以支持复用。Shared graph asset MUST 只作为项目文件、复用和直接打开入口，不得成为默认私有 graph 的保存方式。
 
 #### Scenario: 创建 shared asset
@@ -234,7 +234,7 @@
 
 ### Requirement: Graph 运行工作副本来自数据克隆
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 为运行时创建 graph data 工作副本。多个运行实例引用同一 inline graph template 或 shared graph asset 时，它们 MUST 拥有互相隔离的运行状态。
 
 #### Scenario: 多个运行实例引用同一 shared graph
@@ -249,7 +249,7 @@
 
 ### Requirement: TreeWindow 支持 editor-only authoring context
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 系统 MUST 允许 `BaseTreeWindow` 持有 editor-only authoring context，用于 Tree Inspector 中依赖业务上下文的 authoring 区块展示当前打开入口提供的信息。该 context MUST NOT 序列化到 `BaseGraph`、`BaseTree`、`BaseTreeAsset`、节点、边或 property port 中。下钻 inline graph 或 shared graph 时，窗口 MUST 保持同一个 authoring context。
 
 #### Scenario: 从业务定义打开 RootTree
@@ -269,7 +269,7 @@
 
 ### Requirement: BaseGraph declaration 必须保持局部所有权并支持显式外层引用
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 每个 `BaseGraph` MUST 只序列化自己拥有的 `BaseExposedProperty` declarations。Graph 节点 MAY 通过正式 variable reference 引用 authoring context 中可见的外层 declaration，但该 reference MUST NOT 把 declaration 复制进当前 Graph。Graph 克隆、inline ownership 和 shared asset 解析 MUST 保持 declaration identity 与 owner 关系。
 
@@ -293,7 +293,7 @@
 
 ### Requirement: Graph evaluation context 必须携带变量访问所有权
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 Graph runtime 和下钻 evaluation context MUST 能向统一 blackboard resolver 提供当前 Graph runtime、active State、ActionInstance 和 local logic tick ownership。节点 MUST NOT 自行拼接字符串地址或从 asset path 推断 runtime owner。缺少 declaration 所需 owner 时读取或写入 MUST 失败。
 
@@ -311,7 +311,7 @@ Graph runtime 和下钻 evaluation context MUST 能向统一 blackboard resolver
 
 ### Requirement: TreeClip 私有下钻 Graph 必须默认 inline
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 MUST 自动创建并保存 inline `TimelineRunningTree` graph data。作者需要复用时 MAY 显式 Extract Shared 到 `BaseTreeAsset`。Inline 与 shared MUST 共享同一 resolved authoring graph 合同，并且同一 TreeClip 只能有一个真数据来源。`TimelineRunningTree` 在正式 Character runtime 中 MUST 只作为 Compiler 输入，不能被克隆为 playback runtime。
 
@@ -338,7 +338,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph 必须拥有统一稳定 authoring identity
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 每个 `BaseGraph` MUST 持有稳定 `GraphAuthoringId`，Node 和 Edge MUST 继续持有各自稳定 authoring GUID。Graph runtime clone MUST 保留这些 source identities，但 MUST 使用独立 runtime instance identity。Pipeline Blackboard declaration owner、Agent Snapshot、Debug Source Map 和 editor navigation MUST 引用同一个 Graph authoring identity。
 
@@ -362,7 +362,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph 运行时初始化必须收敛到统一非虚入口
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 明确保留的非 Character 通用解释器 MAY 通过 `BaseGraph` 公开非虚入口完成 root/nested route、runtime identity、节点、边和通用上下文初始化。正式 Character runtime MUST 不调用该入口；Character Graph、StateMachine 与 Timeline TreeClip 必须由 Compiler 解析为 Program operation。`TimelineRunningTree` MUST 不再提供 Character gameplay 专用运行时初始化入口。
 
@@ -387,7 +387,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: TreeWindow runtime 状态必须通过只读 diagnostics overlay 表达
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 `BaseTreeWindow` MUST 继续绑定 authoring Graph，并通过 `RuntimeDebugSession` 和 source identity 显示选中 runtime instance 的 Node、Edge、StateMachine 和生命周期状态。TreeWindow MUST NOT 打开 runtime clone 作为 authoring page，也 MUST NOT 直接读取 authoring Node 的 runtime `State` 字段。
 
@@ -412,7 +412,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph节点兼容性必须由稳定Authoring Capability裁决
 
-本要求及以下场景仅适用于尚未迁移的非Character技能领域。Character技能执行图、技能局部状态／规则图及Pose图 MUST遵循flowcanvas-compiled-authoring的唯一作者图、原生子图所有权和直接编译合同，不再要求BaseGraph、PropertyEdge、普通C#内联私有图或Tree窗口入口；未迁移领域不得被本次清理破坏。
+本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
 每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。系统 MUST为后续自动authoring暴露同一只读policy查询，但本change MUST NOT修改Agent schema。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
 

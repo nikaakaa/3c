@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using FlowCanvas;
+using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
@@ -20,6 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly CharacterSemanticBlackboardEmitter m_Blackboard;
         readonly IReadOnlyList<ICharacterSemanticNodeBinding> m_Bindings;
+        readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
+        readonly CharacterSimulationCatalogIndex m_CatalogIndex;
 
         public CharacterSemanticDomainBindingEmitter(
             CharacterSimulationCatalogIndex catalogIndex,
@@ -35,6 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(report));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             var catalog = new CharacterSemanticCatalogReferenceEmitter(catalogIndex, builder, report);
+            m_Catalog = catalog;
+            m_CatalogIndex = catalogIndex;
             m_Bindings = new ICharacterSemanticNodeBinding[]
             {
                 new CharacterSemanticInputNodeBindingEmitter(catalog, catalogIndex),
@@ -76,6 +83,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             reference = default;
             return false;
+        }
+
+        public void Bind(FlowNode node, OperationHandle operation, string route, CharacterSimulationSourceLocation source)
+        {
+            switch (node)
+            {
+                case BtsmtlSkillActionRequestFlowNode request:
+                    m_Catalog.Bind(operation, route, source, ProgramCatalogEntryKind.InputRequest,
+                        $"input:request:{request.InputId}", m_CatalogIndex.InputRequests.Contains(request.InputId));
+                    break;
+                case IBtsmtlSkillInputNode input:
+                    m_Catalog.Bind(operation, route, source, ProgramCatalogEntryKind.InputValue,
+                        $"input:value:{input.InputId}", m_CatalogIndex.InputValues.Contains(input.InputId));
+                    break;
+                case IBtsmtlSkillBlackboardReadNode blackboard:
+                    m_Blackboard.Bind(operation, route, blackboard.Variable.OwnerId, blackboard.Variable.DeclarationId, blackboard.ValueType, source);
+                    break;
+                case BtsmtlSkillCanActivateActionFlowNode action:
+                    string actionId = action.ActionProfile ? action.ActionProfile.ActionId : string.Empty;
+                    m_Catalog.Bind(operation, route, source, ProgramCatalogEntryKind.Action,
+                        $"action:{actionId}", m_CatalogIndex.Actions.Contains(actionId));
+                    if (!string.IsNullOrEmpty(action.TargetSnapshotDeclarationId))
+                        m_Blackboard.Bind(operation, route, action.TargetSnapshotOwnerId, action.TargetSnapshotDeclarationId, typeof(ActionTargetSnapshot), source);
+                    break;
+            }
         }
     }
 }

@@ -1,10 +1,10 @@
 ## 当前执行位置
 
-下一项：4.1.3，完成正式技能发现和原生图遍历，让已有叶节点发射器真正进入Character Build；接着完成4.1.4、4.2及4.3的控制边、黑板、Macro、Timeline与TreeClip编译。
+下一项：4.1.4的普通黑板声明／作用域及4.3的Timeline／TreeClip编译。4.1.3已切换正式技能发现；单入口Macro参数及嵌套编译代码已实现，4.2的正式产物对账留待最终资产阶段。
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-已具备：原生作者基础、部分编辑事务、叶节点发射、观察绘制接口和适配器。尚未接通：正式技能入口到新图编译、完整Macro调用定位、端口值采集、Document v6。资产迁移未执行。
+已具备：原生作者基础、部分编辑事务、正式技能发现到新图编译的代码入口、单入口Macro参数编译、观察绘制接口和适配器。尚未接通：完整Timeline／普通黑板编译、原生编辑器正式实例入口、完整Macro运行调用定位、端口值采集、Document v6。资产迁移未执行。
 
 维护规则：每次小步提交后同步本表中的对应项和提交证据；结束一项后继续下一项，不到最后再统一补记。
 
@@ -74,13 +74,13 @@
 
 - [x] 4.1.1 分离操作写入和旧节点读取，使既有路径使用唯一CharacterSimulationOperationEmitter。证据：cfe1d9065。
 - [x] 4.1.2 实现原生逻辑、已支持结构节点及输入／动作节点的叶节点发射器；读取serializedValue并校验Program端口合同，不调用getter。证据：ee557a353；目前尚未接入正式技能发现。
-- [ ] 4.1.3 替换CharacterSkillAuthoringDefinition的旧入口关联与CharacterSkillCompilationDiscovery的旧图发现，遍历正式原生图并调用叶节点发射器，进入唯一Semantic IR。
+- [x] 4.1.3 替换技能入口的旧图发现：Definition.SkillGraphs提供明确原生根，CharacterSkillCompilationDiscovery按SkillDefinition稳定入口ID解析并生成原生调用记录，CharacterSemanticEmitter通过BtsmtlSkillGraphCompiler调用叶节点／Macro／边发射器进入唯一Semantic IR。源码审计无旧图对象中转；脚本检查无CS编译错误。资产赋值与构建验收仍在5及8，不由此项代替。
 
-  当前进度：已实现BtsmtlSkillGraphOccurrence，直接记录原生节点、连线、条件及每次Macro／状态页面调用的独立路径；版本捕获使用原生GraphSource序列化，不调用Graph.Serialize重排作者节点。正式技能入口和发现调用者尚未切换，因此本项仍未完成。
+  代码入口已切换；存量资产尚未填入SkillGraphs，缺失时明确报错，不回到旧RootTree查找技能。SkillDefinition的入口ID保持稳定业务身份，不增加另一份技能定义。
 - [ ] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
 - [ ] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。
 
-  当前进度：4dc3e82a2将状态所属状态机改为编译的operation引用，移除运行层按作者Graph ID猜归属的路径；Character和独立Timeline树编译器同步发射该引用。Macro参数和完整调用布局仍待完成，旧产物需在最终显式Build后更新，当前不提前构建。
+  当前进度：4dc3e82a2以operation引用明确状态机归属；9d7b3b765完成单入口Macro的主体等待、输出阶段、每次调用参数槽及GraphCallFrame。正式产物中的调用隔离、停止和状态恢复对账未执行，旧产物在最终显式Build后更新，当前不提前构建。
 - [ ] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；通过精确根构建及引用闭包报告核对。
 ### 4.4 作者与运行隔离
 

@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSemanticDomainBindingEmitter m_DomainBindings;
         readonly CharacterSemanticSkillProgramEmitter m_SkillPrograms;
         readonly CharacterSemanticGraphFlowEmitter m_Flow;
+        readonly BtsmtlSkillGraphCompiler m_NativeSkills;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_CompiledGraphOperations = new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
         int m_SkillCompilationDepth;
 
@@ -34,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_Blackboard = new CharacterSemanticBlackboardEmitter(model.Declarations, builder, report);
             m_DomainBindings = new CharacterSemanticDomainBindingEmitter(catalogIndex, builder, report, m_Blackboard);
+            m_NativeSkills = new BtsmtlSkillGraphCompiler(builder, m_DomainBindings.Bind);
             m_SkillPrograms = new CharacterSemanticSkillProgramEmitter(model.SkillRecords, builder, report);
             m_NodeEmitters = model.NodeEmitters;
             m_Timelines = new CharacterSemanticTimelineEmitter(
@@ -85,15 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         OperationHandle CompileSkillEntry(CharacterSkillCompilationRecord record)
         {
-            m_SkillCompilationDepth++;
-            try
-            {
-                return CompileGraph(record.EntryGraph, OperationHandle.Invalid);
-            }
-            finally
-            {
-                m_SkillCompilationDepth--;
-            }
+            return m_NativeSkills.Compile(record.EntryGraph, OperationHandle.Invalid).Entry;
         }
 
         OperationHandle CompileGraph(CharacterAuthoringGraphOccurrence occurrence, OperationHandle stateScopeOwner)

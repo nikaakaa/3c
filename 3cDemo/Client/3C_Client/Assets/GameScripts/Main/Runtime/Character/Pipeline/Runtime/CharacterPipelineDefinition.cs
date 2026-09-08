@@ -51,6 +51,9 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] string m_ControlModuleId;
         [SerializeField] CharacterControlParameterConfiguration[] m_ControlParameters = Array.Empty<CharacterControlParameterConfiguration>();
         [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
+#if UNITY_EDITOR
+        [SerializeField] BtsmtlSkillFlowGraph[] m_SkillGraphs = Array.Empty<BtsmtlSkillFlowGraph>();
+#endif
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
@@ -73,6 +76,9 @@ namespace ThirdPersonCharacter.Pipeline
             m_ControlParameters ?? Array.Empty<CharacterControlParameterConfiguration>();
         public IReadOnlyList<CharacterSkillAuthoringDefinition> SkillDefinitions =>
             m_SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
+#if UNITY_EDITOR
+        public IReadOnlyList<BtsmtlSkillFlowGraph> SkillGraphs => m_SkillGraphs;
+#endif
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
         public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
@@ -403,6 +409,17 @@ namespace ThirdPersonCharacter.Pipeline
         public void SetSkillDefinitions(CharacterSkillAuthoringDefinition[] skillDefinitions)
         {
             m_SkillDefinitions = skillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
+        }
+
+        public void SetSkillGraphs(BtsmtlSkillFlowGraph[] graphs)
+        {
+            if (graphs == null)
+                throw new ArgumentNullException(nameof(graphs));
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            foreach (BtsmtlSkillFlowGraph graph in graphs)
+                if (graph == null || graph.Role != BtsmtlSkillFlowGraphRole.Skill || !identities.Add(graph.AuthoringId))
+                    throw new ArgumentException("技能根图必须是身份唯一的正式Skill页面。", nameof(graphs));
+            m_SkillGraphs = (BtsmtlSkillFlowGraph[])graphs.Clone();
         }
 #endif
     }

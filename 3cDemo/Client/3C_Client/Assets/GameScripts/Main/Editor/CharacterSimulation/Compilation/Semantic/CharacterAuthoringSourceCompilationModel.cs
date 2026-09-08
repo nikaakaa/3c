@@ -401,7 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
                 definition.SkillDefinitions,
-                roots,
+                definition.SkillGraphs,
                 m_Report);
             if (!m_Report.IsValid)
                 return null;

@@ -5,7 +5,6 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
-using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -72,13 +71,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterSkillAuthoringDefinition definition = record.Definition;
                 CharacterSimulationSourceLocation source = new CharacterSimulationSourceLocation(
                     typeof(CharacterSkillAuthoringDefinition).FullName,
-                    record.EntryGraph.Graph.GraphAuthoringId,
+                    record.EntryGraph.GraphId,
                     string.Empty,
                     string.Empty,
                     string.Empty,
                     string.Empty,
                     $"{record.EntryGraph.Route}/skill:{skillId.Value}",
-                    contentHash: GraphAuthoringFingerprint.Compute(record.EntryGraph.Graph));
+                    contentHash: record.EntryGraph.ContentHash);
                 var dependencies = new List<CharacterSkillDependency>();
                 for (int dependencyIndex = 0; dependencyIndex < definition.SubgraphDependencies.Count; dependencyIndex++)
                 {

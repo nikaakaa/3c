@@ -1,0 +1,99 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using FlowCanvas;
+using NodeCanvas.Editor;
+using ThirdPersonSimulation;
+using UnityEditor;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Control.Authoring
+{
+    static class BtsmtlSkillStepInspector
+    {
+        internal static void Draw(BtsmtlSkillCompositeFlowNode node)
+        {
+            var graph = (FlowGraph)node.graph;
+            using var disabled = new EditorGUI.DisabledScope(graph.isEditorReadOnly);
+            if (node is BtsmtlSkillParallelFlowNode parallel)
+            {
+                var mode = (BtsmtlSkillParallelMode)EditorGUILayout.EnumPopup("完成方式", parallel.Mode);
+                if (mode != parallel.Mode)
+                    Change(graph, "修改并行完成方式", () => parallel.SetMode(mode));
+            }
+            if (node is BtsmtlSkillStateFlowNode state)
+            {
+                var body = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField("状态内容", state.Body, typeof(BtsmtlSkillFlowGraph), false);
+                if (body != state.Body)
+                    Change(graph, "修改状态内容", () => state.SetBody(body));
+            }
+            bool transition = graph is IBtsmtlSkillFlowGraph owner && owner.Role == BtsmtlSkillFlowGraphRole.StateMachine;
+            EditorGUILayout.LabelField(transition ? "状态转换" : "执行步骤", EditorStyles.boldLabel);
+            for (int index = 0; index < node.Steps.Count; index++)
+            {
+                BtsmtlSkillStepPort step = node.Steps[index];
+                using var box = new EditorGUILayout.VerticalScope(EditorStyles.helpBox);
+                EditorGUI.BeginChangeCheck();
+                string name = EditorGUILayout.DelayedTextField($"{index + 1}. 名称", step.Name);
+                var condition = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField("条件页面", step.Condition, typeof(BtsmtlSkillFlowGraph), false);
+                int priority = transition ? EditorGUILayout.DelayedIntField("转换优先级", step.Priority) : step.Priority;
+                var abort = transition ? step.AbortPolicy : (ProgramAbortPolicy)EditorGUILayout.EnumPopup("条件失效时中断", step.AbortPolicy);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    int position = index;
+                    Change(graph, "修改技能步骤", () =>
+                    {
+                        var replacement = new BtsmtlSkillStepPort(step.Id, name);
+                        replacement.Configure(name, condition, priority, abort);
+                        List<BtsmtlSkillStepPort> steps = node.Steps.ToList();
+                        steps[position] = replacement;
+                        node.SetSteps(steps);
+                    });
+                    return;
+                }
+                using var buttons = new EditorGUILayout.HorizontalScope();
+                using (new EditorGUI.DisabledScope(index == 0))
+                    if (GUILayout.Button("上移")) { Move(node, index, index - 1); return; }
+                using (new EditorGUI.DisabledScope(index == node.Steps.Count - 1))
+                    if (GUILayout.Button("下移")) { Move(node, index, index + 1); return; }
+                bool connected = node.outConnections.OfType<BinderConnection>().Any(edge => edge.sourcePortID == step.Id);
+                using (new EditorGUI.DisabledScope(connected))
+                    if (GUILayout.Button(new GUIContent("删除", connected ? "请先断开该步骤的连线" : "删除此步骤")))
+                    {
+                        int position = index;
+                        Change(graph, "删除技能步骤", () =>
+                        {
+                            var steps = node.Steps.ToList();
+                            steps.RemoveAt(position);
+                            node.SetSteps(steps);
+                        });
+                        return;
+                    }
+            }
+            if (GUILayout.Button(transition ? "添加状态转换" : "添加执行步骤"))
+                Change(graph, "添加技能步骤", () =>
+                {
+                    var steps = node.Steps.ToList();
+                    steps.Add(new BtsmtlSkillStepPort(Guid.NewGuid().ToString("N"), transition ? "转换" : "步骤"));
+                    node.SetSteps(steps);
+                });
+        }
+
+        static void Move(BtsmtlSkillCompositeFlowNode node, int from, int to) =>
+            Change((FlowGraph)node.graph, "调整技能步骤顺序", () =>
+            {
+                var steps = node.Steps.ToList();
+                (steps[from], steps[to]) = (steps[to], steps[from]);
+                node.SetSteps(steps);
+            });
+
+        static void Change(FlowGraph graph, string title, Action mutation)
+        {
+            try { BtsmtlSkillFlowEditorMutation.Apply(graph, title, mutation); }
+            catch (InvalidOperationException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
+            catch (ArgumentException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
+        }
+    }
+}
+#endif

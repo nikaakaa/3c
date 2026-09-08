@@ -1,0 +1,165 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using FlowCanvas;
+using FlowCanvas.Macros;
+using NodeCanvas.Framework;
+
+namespace ThirdPersonCharacter.Control.Authoring
+{
+    public static class BtsmtlSkillGraphClosure
+    {
+        public static IReadOnlyList<FlowGraph> Validate(FlowGraph root, bool requireComplete)
+        {
+            var result = new List<FlowGraph>();
+            var active = new HashSet<FlowGraph>();
+            var identities = new Dictionary<string, FlowGraph>(StringComparer.Ordinal);
+            Visit(root, "skill", requireComplete, active, identities, result);
+            return result.AsReadOnly();
+        }
+
+        static void Visit(FlowGraph graph, string path, bool complete, HashSet<FlowGraph> active,
+            Dictionary<string, FlowGraph> identities, List<FlowGraph> result)
+        {
+            if (graph is not IBtsmtlSkillFlowGraph authoring)
+                throw Error(path, "引用目标不是技能图。");
+            if (!active.Add(graph))
+                throw Error(path, "子图或条件调用形成递归。");
+            if (string.IsNullOrWhiteSpace(authoring.AuthoringId))
+                throw Error(path, "图缺少稳定身份。");
+            if (identities.TryGetValue(authoring.AuthoringId, out FlowGraph existing))
+            {
+                if (existing != graph)
+                    throw Error(path, "不同图使用了相同身份。");
+                active.Remove(graph);
+                return;
+            }
+            identities.Add(authoring.AuthoringId, graph);
+            result.Add(graph);
+            ValidateTopology(graph, authoring.Role, path, complete);
+            foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
+            {
+                string nodePath = $"{path}/graph:{authoring.AuthoringId}/node:{node.UID}";
+                if (node is MacroNodeWrapper call)
+                {
+                    if (call.macro == null && !complete)
+                        continue;
+                    if (call.macro is not BtsmtlSkillMacroGraph macro)
+                        throw Error(nodePath, "调用目标必须是正式技能 Macro。");
+                    if (authoring.Role == BtsmtlSkillFlowGraphRole.ConditionRule &&
+                        (macro.inputDefinitions.Any(port => port.type == typeof(Flow)) ||
+                         macro.outputDefinitions.Any(port => port.type == typeof(Flow))))
+                        throw Error(nodePath, "条件页面不能调用带执行端口的 Macro。");
+                    Visit(macro, nodePath, complete, active, identities, result);
+                    if (authoring.Role == BtsmtlSkillFlowGraphRole.ConditionRule)
+                        ValidatePureMacro(macro, nodePath, new HashSet<BtsmtlSkillMacroGraph>());
+                }
+                if (node is BtsmtlSkillStateMachineFlowNode machine)
+                    VisitChild(machine.StateMachine, BtsmtlSkillFlowGraphRole.StateMachine, nodePath, complete, active, identities, result);
+                if (node is BtsmtlSkillStateFlowNode state)
+                    VisitChild(state.Body, BtsmtlSkillFlowGraphRole.StateBody, nodePath, complete, active, identities, result);
+                if (node is BtsmtlSkillCompositeFlowNode composite)
+                    foreach (BtsmtlSkillStepPort step in composite.Steps)
+                        if (step.Condition != null)
+                            VisitChild(step.Condition, BtsmtlSkillFlowGraphRole.ConditionRule, $"{nodePath}/port:{step.Id}", complete, active, identities, result);
+            }
+            active.Remove(graph);
+        }
+
+        static void VisitChild(BtsmtlSkillFlowGraph child, BtsmtlSkillFlowGraphRole role, string path,
+            bool complete, HashSet<FlowGraph> active, Dictionary<string, FlowGraph> identities, List<FlowGraph> result)
+        {
+            if (child == null && !complete)
+                return;
+            if (child == null || child.Role != role)
+                throw Error(path, $"缺少 {role} 页面或引用页面类型错误。");
+            Visit(child, path, complete, active, identities, result);
+        }
+
+        static void ValidatePureMacro(BtsmtlSkillMacroGraph graph, string path, HashSet<BtsmtlSkillMacroGraph> visited)
+        {
+            if (!visited.Add(graph))
+                return;
+            foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
+            {
+                if (node.GetInputFlowPorts().Any() || node.GetOutputFlowPorts().Any())
+                    throw Error($"{path}/node:{node.UID}", "条件 Macro 闭包包含执行节点。");
+                if (node is MacroNodeWrapper call && call.macro is BtsmtlSkillMacroGraph child)
+                    ValidatePureMacro(child, path, visited);
+            }
+        }
+
+        static void ValidateTopology(FlowGraph graph, BtsmtlSkillFlowGraphRole role, string path, bool complete)
+        {
+            var nodes = new HashSet<string>(StringComparer.Ordinal);
+            var edges = new HashSet<string>(StringComparer.Ordinal);
+            var anchors = new HashSet<Type>();
+            var occupied = new HashSet<Port>();
+            foreach (Node value in graph.allNodes)
+            {
+                if (value is not FlowNode node || !graph.CanAuthorNodeType(node.GetType()))
+                    throw Error(path, "页面包含未登记或不属于当前页面的节点。");
+                if (!nodes.Add(node.UID))
+                    throw Error(path, "节点身份重复。");
+                bool anchor = node is IBtsmtlSkillSystemNode || node is MacroInputNode || node is MacroOutputNode;
+                if (anchor && !anchors.Add(node.GetType()))
+                    throw Error(path, "系统入口重复。");
+                if (node is BtsmtlSkillCompositeFlowNode composite)
+                {
+                    var ports = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (BtsmtlSkillStepPort step in composite.Steps)
+                        if (step == null || string.IsNullOrWhiteSpace(step.Id) || !ports.Add(step.Id))
+                            throw Error($"{path}/node:{node.UID}", "步骤端口身份缺失或重复。");
+                }
+                foreach (Connection valueEdge in node.outConnections)
+                {
+                    if (valueEdge is not BinderConnection edge || !edges.Add(edge.UID) ||
+                        edge.sourceNode != node || !graph.allNodes.Contains(edge.targetNode) ||
+                        !edge.targetNode.inConnections.Contains(edge))
+                        throw Error(path, "连线身份或端点归属无效。");
+                    Port source = edge.sourcePort;
+                    Port target = edge.targetPort;
+                    if (source == null || target == null || source.type != target.type ||
+                        source.IsFlowPort() != target.IsFlowPort())
+                        throw Error($"{path}/edge:{edge.UID}", "端口缺失或声明类型不一致。");
+                    if ((source is FlowOutput && !occupied.Add(source)) ||
+                        (target is ValueInput && !occupied.Add(target)))
+                        throw Error($"{path}/edge:{edge.UID}", "端口超过原生连接容量。");
+                }
+            }
+            var visiting = new HashSet<Node>();
+            var visited = new HashSet<Node>();
+            if (role != BtsmtlSkillFlowGraphRole.StateMachine)
+                foreach (Node node in graph.allNodes)
+                    VisitEdges(node, path, visiting, visited);
+            if (!complete)
+                return;
+            Type[] required = role switch
+            {
+                BtsmtlSkillFlowGraphRole.Skill => new[] { typeof(BtsmtlSkillRootFlowNode) },
+                BtsmtlSkillFlowGraphRole.StateBody => new[] { typeof(BtsmtlSkillRootFlowNode), typeof(BtsmtlSkillStateOnEnterFlowNode), typeof(BtsmtlSkillStateOnExitFlowNode) },
+                BtsmtlSkillFlowGraphRole.StateMachine => new[] { typeof(BtsmtlSkillStateEnterFlowNode), typeof(BtsmtlSkillStateAnyFlowNode), typeof(BtsmtlSkillStateExitFlowNode) },
+                BtsmtlSkillFlowGraphRole.ConditionRule => new[] { typeof(BtsmtlSkillConditionResultFlowNode) },
+                BtsmtlSkillFlowGraphRole.Subgraph => new[] { typeof(MacroInputNode), typeof(MacroOutputNode) },
+                _ => throw Error(path, "未知技能页面类型。")
+            };
+            foreach (Type type in required)
+                if (!anchors.Contains(type))
+                    throw Error(path, $"页面缺少 {type.Name} 系统入口。");
+        }
+
+        static void VisitEdges(Node node, string path, HashSet<Node> active, HashSet<Node> visited)
+        {
+            if (visited.Contains(node))
+                return;
+            if (!active.Add(node))
+                throw Error($"{path}/node:{node.UID}", "连线形成环；重复执行应使用循环节点。");
+            foreach (Connection edge in node.outConnections)
+                VisitEdges(edge.targetNode, path, active, visited);
+            active.Remove(node);
+            visited.Add(node);
+        }
+
+        static InvalidOperationException Error(string path, string message) => new($"{path}: {message}");
+    }
+}

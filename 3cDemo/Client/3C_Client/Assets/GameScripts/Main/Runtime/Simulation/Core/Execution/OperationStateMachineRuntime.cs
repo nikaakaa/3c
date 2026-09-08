@@ -26,6 +26,7 @@ namespace ThirdPersonSimulation
         void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState);
         void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail);
         void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
+        OperationExecutionResult Wait(OperationExecutionDescriptor operation, OperationWaitReason reason);
         string CurrentStateExecutionPath { get; }
         IDisposable PushStateScope(OperationHandle state, int exitCause);
         IDisposable PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride);
@@ -125,7 +126,7 @@ namespace ThirdPersonSimulation
             OperationStopContext context = OperationStopContext.StateTransition(exiting, target);
             OperationStopStatus stop = m_Host.RequestStop(exiting, context);
             if (stop == OperationStopStatus.Running)
-                return OperationExecutionResult.Running;
+                return m_Host.Wait(machine, OperationWaitReason.StateExit);
             if (stop == OperationStopStatus.Failed)
                 return OperationExecutionResult.Failure;
             m_Host.WriteIdentity(exitingSlot, string.Empty);
@@ -155,7 +156,7 @@ namespace ThirdPersonSimulation
                 {
                     OperationExecutionResult result = TickInStateContext(operation, enter.Target, -1);
                     if (result != OperationExecutionResult.Success)
-                        return result;
+                        return result == OperationExecutionResult.Running ? m_Host.Wait(operation, OperationWaitReason.StateEnter) : result;
                     m_Host.ForceStop(enter.Target, OperationStopContext.Reset(enter.Target));
                 }
                 phase = 1;

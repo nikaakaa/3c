@@ -354,6 +354,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             return code switch
             {
                 "operation_enter" => RuntimeTraceEventKind.NodeEntered,
+                "operation_running" => RuntimeTraceEventKind.NodeRunning,
+                "operation_waiting" => RuntimeTraceEventKind.NodeWaiting,
                 "operation_complete" => RuntimeTraceEventKind.NodeCompleted,
                 "operation_stop_requested" => RuntimeTraceEventKind.NodeStopRequested,
                 "operation_stopped" => RuntimeTraceEventKind.NodeStopped,

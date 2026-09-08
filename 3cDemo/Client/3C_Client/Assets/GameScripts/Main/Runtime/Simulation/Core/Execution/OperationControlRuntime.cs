@@ -33,6 +33,7 @@ namespace ThirdPersonSimulation
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;
+        public bool ControlTraceEnabled => m_EdgeTrace != null && m_EdgeTrace.ControlTraceEnabled && !IsPredictiveEvaluation;
         public bool IsPredictiveEvaluation
         {
             get
@@ -54,6 +55,13 @@ namespace ThirdPersonSimulation
         {
             TraceEdge(edge, true, true);
             return Tick(edge.Target);
+        }
+
+        public OperationExecutionResult Wait(OperationExecutionDescriptor operation, OperationWaitReason reason)
+        {
+            if (ControlTraceEnabled)
+                m_Target.EmitTrace(operation, "operation_waiting", OperationControlTraceSeverity.Detail, reason.ToString());
+            return OperationExecutionResult.Running;
         }
         public void BeginEvaluation()
         {
@@ -278,7 +286,10 @@ namespace ThirdPersonSimulation
             ProgramControlFlowEdge edge = children[0];
             if (!EvaluateCondition(edge))
                 return OperationExecutionResult.Failure;
-            return TickEdge(edge);
+            OperationExecutionResult result = TickEdge(edge);
+            return result == OperationExecutionResult.Running
+                ? Wait(operation, operation.Code == SimulationOperationCode.SubGraph ? OperationWaitReason.SubgraphCompletion : OperationWaitReason.ChildCompletion)
+                : result;
         }
 
         bool EvaluateCondition(ProgramControlFlowEdge edge)

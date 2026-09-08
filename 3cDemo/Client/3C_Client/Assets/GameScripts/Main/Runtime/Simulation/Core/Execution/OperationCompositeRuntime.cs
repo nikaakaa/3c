@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation
         void WriteInt32(int slotIndex, int value);
         bool EvaluateCondition(ProgramControlFlowEdge edge);
         OperationExecutionResult TickEdge(ProgramControlFlowEdge edge);
+        OperationExecutionResult Wait(OperationExecutionDescriptor operation, OperationWaitReason reason);
         bool IsActive(OperationHandle handle);
         bool IsRunning(OperationHandle handle);
         bool IsStopping(OperationHandle handle);
@@ -41,7 +42,7 @@ namespace ThirdPersonSimulation
                 return OperationExecutionResult.Success;
             if (operation.Integer0 == 2 && child == OperationExecutionResult.Failure)
                 return OperationExecutionResult.Failure;
-            return OperationExecutionResult.Running;
+            return m_Host.Wait(operation, child == OperationExecutionResult.Running ? OperationWaitReason.ChildCompletion : OperationWaitReason.NextIteration);
         }
 
         public OperationExecutionResult TickSequence(OperationExecutionDescriptor operation)
@@ -54,7 +55,7 @@ namespace ThirdPersonSimulation
             {
                 OperationStopStatus stop = m_Host.RequestStop(children[cursor].Target, pending);
                 if (stop == OperationStopStatus.Running)
-                    return OperationExecutionResult.Running;
+                    return m_Host.Wait(operation, OperationWaitReason.ChildStop);
                 m_Host.ClearStopContext(operation);
                 return OperationExecutionResult.Failure;
             }
@@ -69,7 +70,7 @@ namespace ThirdPersonSimulation
                         m_Host.WriteStopContext(operation, context);
                         OperationStopStatus stop = m_Host.RequestStop(edge.Target, context);
                         if (stop == OperationStopStatus.Running)
-                            return OperationExecutionResult.Running;
+                            return m_Host.Wait(operation, OperationWaitReason.ChildStop);
                         m_Host.ClearStopContext(operation);
                         if (stop == OperationStopStatus.Failed)
                             return OperationExecutionResult.Failure;
@@ -80,7 +81,7 @@ namespace ThirdPersonSimulation
                 if (result == OperationExecutionResult.Running)
                 {
                     m_Host.WriteInt32(slot, cursor);
-                    return result;
+                    return m_Host.Wait(operation, OperationWaitReason.ChildCompletion);
                 }
                 if (result == OperationExecutionResult.Failure)
                     return result;
@@ -100,7 +101,7 @@ namespace ThirdPersonSimulation
             {
                 OperationStopStatus stop = m_Host.RequestStop(children[cursor].Target, pending);
                 if (stop == OperationStopStatus.Running)
-                    return OperationExecutionResult.Running;
+                    return m_Host.Wait(operation, pending.Cause == OperationStopCause.LowerPriorityAbort ? OperationWaitReason.PriorityReplacement : OperationWaitReason.ChildStop);
                 m_Host.ClearStopContext(operation);
                 m_Host.WriteInt32(slot, -1);
                 if (stop == OperationStopStatus.Failed)
@@ -118,7 +119,7 @@ namespace ThirdPersonSimulation
                     m_Host.WriteStopContext(operation, context);
                     OperationStopStatus stop = m_Host.RequestStop(current.Target, context);
                     if (stop == OperationStopStatus.Running)
-                        return OperationExecutionResult.Running;
+                        return m_Host.Wait(operation, OperationWaitReason.ChildStop);
                     m_Host.ClearStopContext(operation);
                     m_Host.WriteInt32(slot, -1);
                     if (stop == OperationStopStatus.Failed)
@@ -133,7 +134,7 @@ namespace ThirdPersonSimulation
                     m_Host.WriteStopContext(operation, context);
                     OperationStopStatus stop = m_Host.RequestStop(current.Target, context);
                     if (stop == OperationStopStatus.Running)
-                        return OperationExecutionResult.Running;
+                        return m_Host.Wait(operation, OperationWaitReason.PriorityReplacement);
                     m_Host.ClearStopContext(operation);
                     m_Host.WriteInt32(slot, -1);
                     if (stop == OperationStopStatus.Failed)
@@ -142,7 +143,7 @@ namespace ThirdPersonSimulation
                 }
                 OperationExecutionResult currentResult = m_Host.TickEdge(current);
                 if (currentResult != OperationExecutionResult.Failure)
-                    return currentResult;
+                    return currentResult == OperationExecutionResult.Running ? m_Host.Wait(operation, OperationWaitReason.ChildCompletion) : currentResult;
                 cursor++;
             }
             return TickSelectorFrom(operation, children, slot, cursor < 0 ? 0 : cursor);
@@ -154,6 +155,7 @@ namespace ThirdPersonSimulation
             int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
             int completedMask = m_Host.ReadInt32(slot);
             bool running = false;
+            bool stopping = false;
             for (int i = 0; i < children.Count; i++)
             {
                 if (i >= 31)
@@ -167,7 +169,10 @@ namespace ThirdPersonSimulation
                         if (pendingStop == OperationStopStatus.Failed)
                             return OperationExecutionResult.Failure;
                         if (pendingStop == OperationStopStatus.Running)
+                        {
                             running = true;
+                            stopping = true;
+                        }
                     }
                     else if (UsesSelfAbort(edge.AbortPolicy) && m_Host.IsActive(edge.Target))
                     {
@@ -175,7 +180,10 @@ namespace ThirdPersonSimulation
                         if (stop == OperationStopStatus.Failed)
                             return OperationExecutionResult.Failure;
                         if (stop == OperationStopStatus.Running)
+                        {
                             running = true;
+                            stopping = true;
+                        }
                     }
                     completedMask &= ~(1 << i);
                     continue;
@@ -189,7 +197,7 @@ namespace ThirdPersonSimulation
                     completedMask |= 1 << i;
             }
             m_Host.WriteInt32(slot, completedMask);
-            return running ? OperationExecutionResult.Running : OperationExecutionResult.Success;
+            return running ? m_Host.Wait(operation, stopping ? OperationWaitReason.ParallelStop : OperationWaitReason.ParallelCompletion) : OperationExecutionResult.Success;
         }
 
         OperationExecutionResult TickSelectorFrom(
@@ -206,7 +214,7 @@ namespace ThirdPersonSimulation
                 if (result == OperationExecutionResult.Failure)
                     continue;
                 m_Host.WriteInt32(cursorSlot, i);
-                return result;
+                return result == OperationExecutionResult.Running ? m_Host.Wait(operation, OperationWaitReason.ChildCompletion) : result;
             }
             m_Host.WriteInt32(cursorSlot, -1);
             return OperationExecutionResult.Failure;

@@ -426,7 +426,9 @@ namespace BTSMTL.Diagnostics
         EquipmentVisual,
         MotionMatchingFrame,
         ValueSampled,
-        ValueSamplingLimited
+        ValueSamplingLimited,
+        NodeRunning,
+        NodeWaiting
     }
 
     public enum DebugValueKind

@@ -125,6 +125,7 @@ namespace ThirdPersonSimulation
 
         public int ReadInt32(int slotIndex) => m_ControlState.ReadInt32(slotIndex);
         public bool DiagnosticsEnabled => m_Trace.Enabled;
+        public bool ControlTraceEnabled => m_Trace.CaptureControlFlow;
         public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) => m_Trace.AddControlFlow(edge, selected, passed);
         public void WriteInt32(int slotIndex, int value) => m_ControlState.WriteInt32(slotIndex, value);
         public ulong ReadUInt64(int slotIndex) => m_ControlState.ReadUInt64(slotIndex);

@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return Status.Resting;
             return state.Phase switch
             {
-                RuntimeNodeExecutionPhase.Running or RuntimeNodeExecutionPhase.Stopping => Status.Running,
+                RuntimeNodeExecutionPhase.Running or RuntimeNodeExecutionPhase.Waiting or RuntimeNodeExecutionPhase.Stopping => Status.Running,
                 RuntimeNodeExecutionPhase.Succeeded => Status.Success,
                 RuntimeNodeExecutionPhase.Failed => Status.Failure,
                 _ => Status.Resting
@@ -96,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string label = state.Phase switch
             {
                 RuntimeNodeExecutionPhase.Running => "执行中",
+                RuntimeNodeExecutionPhase.Waiting => WaitingLabel(state.Event.Event.Payload.Detail),
                 RuntimeNodeExecutionPhase.Succeeded => "成功完成",
                 RuntimeNodeExecutionPhase.Failed => "执行失败",
                 RuntimeNodeExecutionPhase.Stopping => "正在停止",
@@ -105,6 +106,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
             return $"{label} · Tick {state.Event.Event.Position}";
         }
+
+        static string WaitingLabel(string reason) => reason switch
+        {
+            "ChildCompletion" => "等待子步骤完成",
+            "ChildStop" => "等待子步骤停止",
+            "SubgraphCompletion" => "等待子图完成",
+            "PriorityReplacement" => "等待切换优先分支",
+            "ParallelCompletion" => "等待并行分支完成",
+            "ParallelStop" => "等待并行分支停止",
+            "NextIteration" => "等待下一轮更新",
+            "StateEnter" => "等待状态进入流程完成",
+            "StateExit" => "等待当前状态退出",
+            _ => $"等待原因未识别：{reason}"
+        };
 
         public Status GetConnectionStatus(string connectionId)
         {

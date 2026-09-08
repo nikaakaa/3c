@@ -4,7 +4,21 @@ namespace ThirdPersonSimulation
 {
     public interface IOperationControlEdgeTraceTarget
     {
+        bool ControlTraceEnabled { get; }
         void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
+    }
+
+    public enum OperationWaitReason
+    {
+        ChildCompletion,
+        ChildStop,
+        SubgraphCompletion,
+        PriorityReplacement,
+        ParallelCompletion,
+        ParallelStop,
+        NextIteration,
+        StateEnter,
+        StateExit
     }
 
     public interface ISimulationControlTraceInterest

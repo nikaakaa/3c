@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation
         void ForceStopLeaf(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context);
         OperationExecutionResult Execute(OperationExecutionDescriptor operation);
         void RequireExecution(OperationHandle handle);
+        bool ControlTraceEnabled { get; }
     }
 
     internal sealed class OperationExecutionLifecycleRuntime<TTarget>
@@ -45,7 +46,14 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor operation = m_Host.Topology.Operation(handle);
             int lifecycleSlot = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
             if (lifecycleSlot < 0)
-                return m_Host.Execute(operation);
+            {
+                if (m_Host.ControlTraceEnabled)
+                    m_Host.EmitTrace(operation, "operation_running", OperationControlTraceSeverity.Detail, string.Empty);
+                OperationExecutionResult statelessResult = m_Host.Execute(operation);
+                if (m_Host.ControlTraceEnabled && statelessResult != OperationExecutionResult.Running)
+                    m_Host.EmitTrace(operation, "operation_complete", OperationControlTraceSeverity.Detail, statelessResult.ToString());
+                return statelessResult;
+            }
             var status = (OperationRunnableStatus)m_Host.ReadInt32(lifecycleSlot);
             if (status == OperationRunnableStatus.Stopping)
                 return OperationExecutionResult.Running;
@@ -59,6 +67,8 @@ namespace ThirdPersonSimulation
                 if (m_Host.DiagnosticsEnabled)
                     m_Host.EmitTrace(operation, "operation_enter", OperationControlTraceSeverity.Detail, operation.Code.ToString());
             }
+            if (!entering && m_Host.ControlTraceEnabled)
+                m_Host.EmitTrace(operation, "operation_running", OperationControlTraceSeverity.Detail, string.Empty);
             OperationExecutionResult result = m_Host.Execute(operation);
             if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
             {

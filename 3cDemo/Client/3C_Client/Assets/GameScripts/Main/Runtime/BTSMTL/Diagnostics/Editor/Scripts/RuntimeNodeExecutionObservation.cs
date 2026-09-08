@@ -9,7 +9,8 @@ namespace BTSMTL.Diagnostics.Editor
         Failed,
         Stopping,
         Stopped,
-        ForceStopped
+        ForceStopped,
+        Waiting
     }
 
     public readonly struct RuntimeNodeExecutionObservation
@@ -32,7 +33,11 @@ namespace BTSMTL.Diagnostics.Editor
             switch (source.Event.Kind)
             {
                 case RuntimeTraceEventKind.NodeEntered:
+                case RuntimeTraceEventKind.NodeRunning:
                     phase = RuntimeNodeExecutionPhase.Running;
+                    break;
+                case RuntimeTraceEventKind.NodeWaiting:
+                    phase = RuntimeNodeExecutionPhase.Waiting;
                     break;
                 case RuntimeTraceEventKind.NodeCompleted:
                     if (string.Equals(source.Event.Payload.Detail, "Success", StringComparison.Ordinal))

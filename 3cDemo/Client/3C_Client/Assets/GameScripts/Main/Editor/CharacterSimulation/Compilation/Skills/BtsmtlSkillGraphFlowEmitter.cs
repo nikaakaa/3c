@@ -15,15 +15,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
-        public void EmitEdges(BtsmtlSkillGraphOccurrence graph, IReadOnlyDictionary<string, OperationHandle> operations,
+        public void EmitEdges(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillOperationBindings operations,
             OperationHandle stateOwner, Func<BtsmtlSkillGraphOccurrence, OperationHandle, OperationHandle> compileCondition)
         {
             foreach (BtsmtlSkillEdgeOccurrence record in graph.Edges)
             {
                 BinderConnection edge = record.Edge;
-                OperationHandle source = operations[edge.sourceNode.UID];
-                OperationHandle target = operations[edge.targetNode.UID];
                 bool value = edge.sourcePort is ValueOutput;
+                BtsmtlSkillValuePortBinding valueSource = value ? operations.Output(edge.sourceNode.UID, edge.sourcePortID) : default;
+                BtsmtlSkillValuePortBinding valueTarget = value ? operations.Input(edge.targetNode.UID, edge.targetPortID) : default;
+                OperationHandle source = value ? valueSource.Operation : operations.FlowSource(edge.sourceNode.UID);
+                OperationHandle target = value ? valueTarget.Operation : operations.Node(edge.targetNode.UID);
                 ProgramControlFlowKind kind = value
                     ? ProgramControlFlowKind.Value
                     : graph.Role == BtsmtlSkillFlowGraphRole.StateMachine
@@ -32,12 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 OperationHandle condition = record.Condition == null
                     ? OperationHandle.Invalid
                     : compileCondition(record.Condition, edge.sourceNode is BtsmtlSkillStateFlowNode ? source : stateOwner);
-                string sourcePort = value && BtsmtlSkillNativeNodeCatalog.TryGet(edge.sourceNode.GetType(), out BtsmtlSkillNativeNodeContract nativeSource)
-                    ? nativeSource.Output(edge.sourcePortID)
-                    : edge.sourcePortID;
-                string targetPort = value && BtsmtlSkillNativeNodeCatalog.TryGet(edge.targetNode.GetType(), out BtsmtlSkillNativeNodeContract nativeTarget)
-                    ? nativeTarget.Input(edge.targetPortID)
-                    : edge.targetPortID;
+                string sourcePort = value ? valueSource.PortId : edge.sourcePortID;
+                string targetPort = value ? valueTarget.PortId : edge.targetPortID;
                 m_Builder.DeclareControlFlow(record.Route, source, target, sourcePort, targetPort,
                     kind, record.Order, record.Step?.Priority ?? 0, record.Step?.AbortPolicy ?? ProgramAbortPolicy.None,
                     record.Condition != null, condition,

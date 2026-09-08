@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 ? $"graph:{GraphId}"
                                 : SourceType;
         public string ImmutableDataIdentity => !string.IsNullOrEmpty(NodeId) || !string.IsNullOrEmpty(ClipId)
-            ? TemplateIdentity
+            ? !string.IsNullOrEmpty(PortId) ? $"{TemplateIdentity}/port:{PortId}" : TemplateIdentity
             : Identity;
         public string Identity => !string.IsNullOrEmpty(DisplayPath)
             ? DisplayPath

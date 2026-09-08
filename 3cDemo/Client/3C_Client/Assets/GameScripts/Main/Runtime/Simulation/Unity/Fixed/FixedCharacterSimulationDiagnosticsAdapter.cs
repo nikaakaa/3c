@@ -113,6 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     ActionInstanceId = record.ActionInstanceId,
                     CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
                     ActivationGeneration = record.Header.Activation.Generation,
+                    SkillExecutionGeneration = record.SkillExecutionGeneration,
                     Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });

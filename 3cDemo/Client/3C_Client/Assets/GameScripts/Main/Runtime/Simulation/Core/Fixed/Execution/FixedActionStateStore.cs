@@ -350,7 +350,7 @@ namespace ThirdPersonSimulation.Fixed
                 action.SkillExecutionGeneration));
             return new TraceExecutionScope(
                 execution,
-                m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
+				m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
         }
 
         public bool RemoveSkillExecution(ulong actionInstanceId)
@@ -502,7 +502,7 @@ namespace ThirdPersonSimulation.Fixed
             return new SkillExecutionScope(
                 this,
                 reference,
-                m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
+			m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId, action.SkillEntryOperation));
         }
 
         public bool TryGetCurrentSkillExecution(out FixedActionInstanceState action)
@@ -910,4 +910,3 @@ namespace ThirdPersonSimulation.Fixed
 
     }
 }
-

@@ -260,6 +260,11 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.AnimationChannelId, right.AnimationChannelId, StringComparison.Ordinal) &&
                    string.Equals(left.OwnerId, right.OwnerId, StringComparison.Ordinal) &&
                    string.Equals(left.RelatedElementId, right.RelatedElementId, StringComparison.Ordinal) &&
+                   string.Equals(left.SkillId, right.SkillId, StringComparison.Ordinal) &&
+                   left.ActionInstanceId == right.ActionInstanceId &&
+                   string.Equals(left.CallSiteId, right.CallSiteId, StringComparison.Ordinal) &&
+                   left.ActivationGeneration == right.ActivationGeneration &&
+                   left.SkillExecutionGeneration == right.SkillExecutionGeneration &&
                    left.Time.Equals(right.Time) &&
                    left.SecondaryTime.Equals(right.SecondaryTime) &&
                    left.NormalizedTime.Equals(right.NormalizedTime) &&

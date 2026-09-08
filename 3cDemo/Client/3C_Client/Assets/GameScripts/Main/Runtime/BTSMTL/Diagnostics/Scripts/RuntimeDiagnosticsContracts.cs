@@ -592,6 +592,7 @@ namespace BTSMTL.Diagnostics
         public ulong ActionInstanceId;
         public string CallSiteId;
         public ulong ActivationGeneration;
+        public ulong SkillExecutionGeneration;
         public float Time;
         public float SecondaryTime;
         public float NormalizedTime;

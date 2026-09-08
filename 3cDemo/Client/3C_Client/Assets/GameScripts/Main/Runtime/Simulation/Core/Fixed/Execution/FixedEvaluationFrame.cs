@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation.Fixed
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
+        OperationHandle m_ActionTraceEntryOperation = OperationHandle.Invalid;
 
         public FixedEvaluationFrame(
             CharacterSimulationProgram program,
@@ -141,6 +142,7 @@ namespace ThirdPersonSimulation.Fixed
             Body = default;
             m_ActionTraceInstanceId = 0;
             m_ActionTraceSkillId = string.Empty;
+            m_ActionTraceEntryOperation = OperationHandle.Invalid;
             Trace.End();
         }
 
@@ -151,13 +153,28 @@ namespace ThirdPersonSimulation.Fixed
         internal ulong CurrentActionTraceInstanceId => m_ActionTraceInstanceId;
         internal string CurrentActionTraceSkillId => m_ActionTraceSkillId;
 
-        internal IDisposable PushActionTraceContext(ulong actionInstanceId, CharacterSkillId skillId)
+        internal ulong CurrentSkillTraceGeneration
+        {
+            get
+            {
+                if (!m_ActionTraceEntryOperation.IsValid)
+                    return 0;
+                int slot = Layout.FindOperationStateSlot(m_ActionTraceEntryOperation, ProgramStateSemantic.RunnableActivationGeneration);
+                if (slot < 0)
+                    throw new InvalidOperationException("Skill trace entry has no activation generation state.");
+                return ReadState(slot).UInt64;
+            }
+        }
+
+        internal IDisposable PushActionTraceContext(ulong actionInstanceId, CharacterSkillId skillId, OperationHandle entryOperation)
         {
             ulong previousInstanceId = m_ActionTraceInstanceId;
             string previousSkillId = m_ActionTraceSkillId;
+            OperationHandle previousEntryOperation = m_ActionTraceEntryOperation;
             m_ActionTraceInstanceId = actionInstanceId;
             m_ActionTraceSkillId = skillId.IsValid ? skillId.Value : string.Empty;
-            return new ActionTraceContextScope(this, previousInstanceId, previousSkillId);
+            m_ActionTraceEntryOperation = entryOperation;
+            return new ActionTraceContextScope(this, previousInstanceId, previousSkillId, previousEntryOperation);
         }
 
         internal void BindSkillExecutionStateAccess(IFixedSkillExecutionStateAccess access)
@@ -218,13 +235,15 @@ namespace ThirdPersonSimulation.Fixed
             readonly FixedEvaluationFrame m_Owner;
             readonly ulong m_PreviousInstanceId;
             readonly string m_PreviousSkillId;
+            readonly OperationHandle m_PreviousEntryOperation;
             bool m_Disposed;
 
-            public ActionTraceContextScope(FixedEvaluationFrame owner, ulong previousInstanceId, string previousSkillId)
+            public ActionTraceContextScope(FixedEvaluationFrame owner, ulong previousInstanceId, string previousSkillId, OperationHandle previousEntryOperation)
             {
                 m_Owner = owner;
                 m_PreviousInstanceId = previousInstanceId;
                 m_PreviousSkillId = previousSkillId;
+                m_PreviousEntryOperation = previousEntryOperation;
             }
 
             public void Dispose()
@@ -234,6 +253,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Disposed = true;
                 m_Owner.m_ActionTraceInstanceId = m_PreviousInstanceId;
                 m_Owner.m_ActionTraceSkillId = m_PreviousSkillId;
+                m_Owner.m_ActionTraceEntryOperation = m_PreviousEntryOperation;
             }
         }
     }
@@ -501,7 +521,8 @@ namespace ThirdPersonSimulation.Fixed
                 code,
                 detail,
                 m_Frame.CurrentActionTraceInstanceId,
-                m_Frame.CurrentActionTraceSkillId));
+                m_Frame.CurrentActionTraceSkillId,
+                m_Frame.CurrentSkillTraceGeneration));
         }
 
         public void Add(SimulationExecutionSource source, string code, SimulationTraceSeverity severity, string detail, ulong generation = 1)
@@ -516,7 +537,8 @@ namespace ThirdPersonSimulation.Fixed
                 code,
                 detail,
                 m_Frame.CurrentActionTraceInstanceId,
-                m_Frame.CurrentActionTraceSkillId));
+                m_Frame.CurrentActionTraceSkillId,
+                m_Frame.CurrentSkillTraceGeneration));
         }
     }
 }

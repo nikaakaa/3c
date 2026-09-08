@@ -673,7 +673,8 @@ namespace ThirdPersonSimulation.Fixed
             string code,
             string detail,
             ulong actionInstanceId = 0,
-            string skillId = "")
+            string skillId = "",
+            ulong skillExecutionGeneration = 0)
         {
             Header = header;
             Severity = severity;
@@ -682,6 +683,7 @@ namespace ThirdPersonSimulation.Fixed
             Detail = detail ?? string.Empty;
             ActionInstanceId = actionInstanceId;
             SkillId = skillId ?? string.Empty;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -690,6 +692,7 @@ namespace ThirdPersonSimulation.Fixed
         public string Detail { get; }
         public ulong ActionInstanceId { get; }
         public string SkillId { get; }
+        public ulong SkillExecutionGeneration { get; }
     }
 }
 

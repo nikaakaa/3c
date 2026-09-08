@@ -79,6 +79,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterAclResourceReadinessResult ValidateRuntime()
         {
+            CharacterAclResourceReadinessResult cached = m_CachedRuntimeValidation;
+            if (cached.IsReady || cached.IsInvalid)
+                return cached;
             CharacterAclResourceReadinessResult result = ValidateRuntimeOnce();
             if (!result.IsPending)
                 m_CachedRuntimeValidation = result;

@@ -93,8 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static double IdentityResolveTotalMs;
         internal static int IdentityResolveCount;
         internal static int IdentityResolveCacheHits;
-        static readonly Dictionary<string, CharacterAnimationClipContentIdentity> s_IdentityCache =
-            new Dictionary<string, CharacterAnimationClipContentIdentity>(StringComparer.Ordinal);
+        const string IdentitySessionKeyPrefix = "3C.clipIdentity.";
 
         static readonly CharacterAnimationClipRegisteredCurveDescriptor[] Descriptors =
         {
@@ -290,11 +289,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"AnimationClip '{clip.name}' does not have a stable object identity.");
             }
             string dependencyHash = AssetDatabase.GetAssetDependencyHash(path).ToString();
-            string cacheKey = $"{guid}:{localFileId}:{dependencyHash}";
-            if (s_IdentityCache.TryGetValue(cacheKey, out CharacterAnimationClipContentIdentity cached))
+            string sessionKey =
+                IdentitySessionKeyPrefix + guid + ":" + localFileId + ":" + dependencyHash;
+            string stored = SessionState.GetString(sessionKey, string.Empty);
+            if (stored.Length > 0)
             {
-                IdentityResolveCacheHits++;
-                return cached;
+                CharacterAnimationClipContentIdentity cached = ParseIdentity(stored);
+                if (string.Equals(cached.AssetPath, path, StringComparison.Ordinal))
+                {
+                    IdentityResolveCacheHits++;
+                    return cached;
+                }
             }
             var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             float sourceDuration = ResolveSourceDurationSeconds(clip);
@@ -310,8 +315,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             timingWatch.Stop();
             IdentityResolveTotalMs += timingWatch.Elapsed.TotalMilliseconds;
             IdentityResolveCount++;
-            s_IdentityCache.Add(cacheKey, identity);
+            SessionState.SetString(sessionKey, SerializeIdentity(identity));
             return identity;
+        }
+
+        static string SerializeIdentity(CharacterAnimationClipContentIdentity identity) =>
+            string.Join("\n",
+                identity.AssetPath,
+                identity.AssetGuid,
+                identity.LocalFileId.ToString(CultureInfo.InvariantCulture),
+                identity.FullDependencyHash,
+                identity.AnalysisInputHash,
+                identity.RegisteredCurveHash,
+                identity.SourceDurationSeconds.ToString("R", CultureInfo.InvariantCulture),
+                identity.Loop ? "loop" : "once");
+
+        static CharacterAnimationClipContentIdentity ParseIdentity(string stored)
+        {
+            string[] parts = stored.Split('\n');
+            return new CharacterAnimationClipContentIdentity(
+                parts[0],
+                parts[1],
+                long.Parse(parts[2], CultureInfo.InvariantCulture),
+                parts[3],
+                parts[4],
+                parts[5],
+                float.Parse(parts[6], CultureInfo.InvariantCulture),
+                string.Equals(parts[7], "loop", StringComparison.Ordinal));
         }
 
         public static float ResolveSourceDurationSeconds(AnimationClip clip)

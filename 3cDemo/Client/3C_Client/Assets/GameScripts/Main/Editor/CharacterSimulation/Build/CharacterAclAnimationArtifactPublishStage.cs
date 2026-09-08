@@ -151,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             finally
             {
                 timingWatch.Stop();
-                Debug.Log($"[计时] ACL发布提交 {timingWatch.ElapsedMilliseconds}ms");
+                UnityEngine.Debug.Log($"[计时] ACL发布提交 {timingWatch.ElapsedMilliseconds}ms");
             }
         }
 

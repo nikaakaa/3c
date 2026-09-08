@@ -11,7 +11,7 @@
 
 普通`Ground`离散楼梯 MUST不注册`StairTraversalSurfaceAuthoring`，其合法性由显式Deterministic Surface所有权和普通Ground表面合同表达；系统 MUST不因为场景存在连续真实台阶而强迫其创建Ramp绑定。
 
-#### Scenario: 角色跑上Ramp楼梯
+#### Scenario: 角色跑上连续楼梯
 
 - **WHEN** Fixed KCC沿注册`StairTraversalSurfaceAuthoring`的楼梯移动且Foot Placement查询当前与未来落面
 - **THEN** Fixed KCC MUST只接触Gameplay Traversal Ramp
@@ -27,7 +27,7 @@
 
 普通共享地面与离散楼梯阶梯代理 MUST使用`Ground`层，并 MAY同时被Deterministic Surface作者拥有和Foot Placement查询。Ramp楼梯的Traversal Ramp MUST使用`CharacterTraversal`层、被且只被一个`DeterministicCollisionSurfaceAuthoring`拥有，并 MUST被Foot Placement查询Mask排除。Ramp楼梯的真实踏面Collider MUST使用`FootPlacementSurface`层、被Foot Placement查询Mask包含，并 MUST不被任何`DeterministicCollisionSurfaceAuthoring`拥有。离散楼梯 MUST不复制`FootPlacementSurface`踏面，其同一组`Ground`阶梯Collider MUST同时承担Gameplay Bake与Foot Placement support。Layer MUST不替代Deterministic Surface作者所有权，作者所有权 MUST不替代Foot Placement LayerMask。
 
-#### Scenario: Ramp楼梯真实踏面仍位于Deterministic Surface作者子树
+#### Scenario: 真实踏面仍位于Deterministic Surface作者子树
 
 - **WHEN** 楼梯validator发现Ramp楼梯Foot Surface Collider会被Collision Baker收集
 - **THEN** validator MUST阻止Bake并报告Collider与冲突作者

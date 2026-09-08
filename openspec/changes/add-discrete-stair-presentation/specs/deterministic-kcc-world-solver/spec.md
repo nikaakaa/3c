@@ -12,13 +12,13 @@
 - **THEN** Baker MUST生成稳定量化顶点、索引、winding和adjacency
 - **AND** 两个Peer MUST从相同CollisionWorldHash读取该坡面
 
-#### Scenario: Ramp楼梯具有合法双表面作者数据
+#### Scenario: 连续楼梯具有合法双表面作者数据
 
 - **WHEN** 注册绑定的Traversal Ramp被唯一Deterministic Surface作者拥有且Foot Surface位于作者子树之外
 - **THEN** Artifact MUST包含Ramp而不包含真实踏面Collider
 - **AND** Content Hash MUST覆盖Ramp降低后的canonical geometry与surface identity
 
-#### Scenario: Ramp楼梯Foot Surface会被Fixed Artifact收集
+#### Scenario: Foot Surface会被Fixed Artifact收集
 
 - **WHEN** 任一注册Ramp楼梯真实踏面Collider仍属于Deterministic Surface作者子树
 - **THEN** Baker MUST在写入Artifact前失败并报告Stair、Collider和Surface owner

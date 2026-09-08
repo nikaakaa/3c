@@ -1,3 +1,27 @@
+## ADDED Requirements
+
+### Requirement: 原生FlowCanvas Pose实验必须独立且真实执行
+
+系统 MUST允许明确标注的独立PoseGraph实验使用原生FlowGraph、FlowNode、typed Value端口和BinderConnection，验证两个Clip Player经Weight与Blend进入Output Pose及实验角色动画输出。实验 MUST不装入正式Character Definition、默认启动配置或正式构建产物；既有Program Image执行要求继续约束正式Character链路。实验 MUST不将FlowCanvas拓扑转换为旧Pose图后调用旧执行器来宣称FlowCanvas运行成功。
+
+#### Scenario: 最小实验实际求值
+
+- **WHEN** 实验角色收到明确的帧编号、时间步长和混合权重
+- **THEN** 原生端口绑定 MUST驱动Pose节点获取输入并调用动画业务模块
+- **AND** 每个运行实例 MUST独立拥有播放状态；同帧重复读取 MUST不重复推进播放时间或最终输出
+
+#### Scenario: 实验与正式角色同时存在
+
+- **WHEN** 独立实验被创建或运行
+- **THEN** 它 MUST不替换Corin正式运行入口或修改其共享作者资产
+- **AND** 实验结论 MUST区分原生编辑能力、Pose正确性、运行开销和未验证范围，不自动认领完整PoseGraph或BTSMTL技能迁移
+
+#### Scenario: 计划正式采用FlowCanvas Runtime
+
+- **WHEN** 实验结束后提出生产迁移
+- **THEN** 迁移方案 MUST同步解决Program Image、Compiler／Build、运行生命周期、Document及Diagnostics合同冲突
+- **AND** MUST明确旧图模型与执行路径的删除项，不保留两份生产拓扑和长期转换链
+
 ## MODIFIED Requirements
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段

@@ -1,5 +1,11 @@
 # Change: 重构角色Pose Graph架构
 
+## 2026-09-08 当前增量范围
+
+用户决定先做[PoseGraph 原生 FlowCanvas 实验](flowcanvas-experiment.md)，验证真实 FlowNode／typed Port／BinderConnection 及运行求值，不只借用端口 UI。最小范围为两个 Clip Player、Weight、Blend、Output 和独立实验角色输出；未来 BTSMTL 技能也可能采用同一基础，本轮不迁移技能。
+
+以下原方案仍描述现有正式 Character 链路；其中“只使用 CanvasCore、禁止 FlowCanvas 执行”的结论不再排除明确隔离的实验，但继续约束正式运行装配。实验尚未实现，不切换 Corin 正式入口、不删除正在使用的执行器，也不把两套图长期转换作为目标。正式采用 FlowCanvas Runtime 将与当前 Program Image 执行要求冲突，须在实验结论后同步修改对应规范和迁移清单。
+
 ## Why
 
 当前Pose Graph的作者拓扑、typed端口、单次PlayableGraph Evaluate、唯一Goal Assembler、唯一FullBodyIK和唯一Final Writer方向正确，但运行与编译实现没有形成同等清晰的所有权。

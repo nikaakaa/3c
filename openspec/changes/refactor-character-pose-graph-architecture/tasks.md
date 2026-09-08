@@ -1,3 +1,7 @@
+# PoseGraph 任务进度
+
+2026-09-08：新增[原生 FlowCanvas 实验](flowcanvas-experiment.md)，先实施23.x的独立最小链。1—22节保留原正式重构任务及历史事实，不因新实验自动完成或作废；16.3等禁止FlowCanvas执行的条款继续限定正式Character装配。当前仅完成实验文档，尚无实验运行证据。
+
 ## 1. 冻结当前保留IK与完整迁移清单
 
 - [x] 1.1 对照用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`与behavior-baseline.md核对当前动画／IK源码、Profile／Rig／作者数据、generated artifact及已有正式输入／诊断证据；后续相关差异单独报告，不等待Foot／IK全部归档
@@ -245,7 +249,7 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 
 ## 22. Pose编辑表面接入CanvasCore GraphEditor（2026-09-08新增，Decision 25）
 
-本批代码、调用链、删除项和真实验证范围见[Canvas接入记录](canvas-integration.md)。编译与正式打开入口已核对；22.3／22.5不因代码存在自动关闭，当前Corin空Clip节点和Document身份重复仍阻止完整数据验证。19.x Scene Play不在本批冒领。
+本批代码、调用链、删除项和真实验证范围见[Canvas接入记录](canvas-integration.md)。Document身份误报已修复，用户已确认拖动恢复；空节点清理尚未apply，后续dry-run存在布局Conflict，用户已选择保留清理前布局。22.3／22.5仍未闭环，19.x Scene Play不在本批冒领。
 
 - [x] 22.1 解锁`CharacterPoseCanvasGraph`的8个写方法（AddNode/AddNode\<T\>/RemoveNode/ConnectNodes/RemoveConnection等）：方法体从抛异常改为把CanvasCore编辑器原语翻译成typed Mutation——端口索引反查端口ID、粘贴时检测无效或重复NodeId并重建、经`CharacterPoseCanvasMutationPreflight`校验后应用；Mutation合同不变，非法操作仍被preflight拦截。
 - [x] 22.2 在CanvasCore源码加节点位置与名称的变更事件钩子（改动点全部`// 3C`标记），路由进Document记录，保持Layout进入Undo与迁移对账；不引入第二写入链。
@@ -255,3 +259,16 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 - [x] 22.6 命名端口视觉适配：为`CharacterPoseCanvasNode`实现NodeCanvas端口绘制，显示Definition投影的命名端口（pose/parameter-source等）；适配完成前接受默认端口视觉降级，数据与编译不受影响。
 - [ ] 22.7 StateMachine子图导航（ChildSurface等价物）、Pose Watch与Preview Dock挂进GraphEditor面板体系；其中预览部分依赖`19.x`Scene Play，保持未完成状态不并入本项验收。
 - [x] 22.8 删除自建`CharacterPoseCanvasView`及其窗口装配，Pose图入口切换到`GraphEditor.OpenWindow(asset.Graph)`；全项目搜索确认无第二画布、无残留引用。
+
+## 23. 原生 FlowCanvas PoseGraph 独立实验（2026-09-08新增）
+
+- [x] 23.1 写明最小链、输入输出、非目标、原正式规范冲突与证据门槛；未来技能复用作为方向，不认领技能迁移。
+- [ ] 23.2 核对动画播放、混合和输出模块对旧ProgramImage、operation index、帧页及Scheduler的依赖，列出直接复用、需分离和未来删除项。
+- [ ] 23.3 建立明确标注的实验FlowGraph和Pose FlowNode基础，使用原生端口、BinderConnection、节点菜单与保存模型，不引用第二份作者拓扑。
+- [ ] 23.4 实现Clip Player、Weight、Blend、Output最小节点与严格输入类型，禁止通过旧Pose图转换或旧图Executor完成求值。
+- [ ] 23.5 实现每角色独立运行实例、显式帧推进、同帧结果复用、启动／停止／重启／销毁和资源释放。
+- [ ] 23.6 将最小链结果接到独立实验角色动画输出，不写入正式Definition、默认启动或GameplayLab生产配置。
+- [ ] 23.7 接通原生创建、连接、改接、删除、复制粘贴、Undo、保存和重载能力，保持节点及端口身份，观察不推进运行状态。
+- [ ] 23.8 使用已有编译、执行和诊断能力记录混合输出、求值次数、时间推进、实例隔离及生命周期证据；没有执行能力时记录具体缺口，不新增测试代码。
+- [ ] 23.9 记录采样环境和运行开销；有同条件对照才给性能比较结论，不能继承旧Native／Job性能结论。
+- [ ] 23.10 汇总原生复用程度、剩余领域代码、旧模块去留、未验证项及生产迁移取舍；只有证据满足实验完成条件才关闭本节。

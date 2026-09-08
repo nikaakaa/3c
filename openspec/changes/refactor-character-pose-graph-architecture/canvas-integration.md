@@ -1,5 +1,14 @@
 # CanvasCore 接入记录
 
+## 当前状态补充（2026-09-08）
+
+本页保留此前CanvasCore接入证据，后续工作转为[原生FlowCanvas独立实验](flowcanvas-experiment.md)。该实验尚未实现，不能把本页代码视为FlowCanvas运行闭环。
+
+- `6aede211a`修正状态摘要重复登记，正式checkout已成功返回Clean；下文五处identity错误为修复前记录。
+- `a52cdc534`修正节点拖动与端口排版，用户实际确认“能拖动了”；端口完整视觉和连续Undo仍未验收。
+- 两个空Clip节点尚未删除写回。第一次清理dry-run虽然成功，但包含六条额外图引用修改，未执行apply；随后因Unity布局变化返回Conflict。用户已选择保留清理前布局，rebase／apply尚未执行。
+- 当前端口原生样式和图引用对账仍有工作区修改，未登记完整验证通过。
+
 更新：2026-09-08。实施目录：`D:/Unity_Project_1/3C`。本批只收口 Canvas 编辑表面及必要的作者写入／撤销，不认领整个 PoseGraph Runtime、PIK、Pose Correction 或 Scene Play 重构完成。
 
 代码提交：`726315c59`（接入CanvasCore作为Pose唯一编辑表面）。

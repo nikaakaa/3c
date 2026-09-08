@@ -1,5 +1,13 @@
 # Design: 以不可变Program和深Module重构Pose Graph
 
+## 2026-09-08 增量决定：先验证原生 FlowCanvas PoseGraph
+
+最新实验范围、输入输出、依赖核对和完成证据统一见[FlowCanvas 实验](flowcanvas-experiment.md)，任务见23.x。先完成独立的 Clip A／Clip B／Weight／Blend／Output 最小链，使用真实 FlowCanvas 编辑和求值；不得转换为旧 Pose 图后交给旧执行器。
+
+原 Decision、Trade-offs 和 Rejected Alternatives 中对 FlowCanvas 执行的拒绝继续限定现有正式 Character 装配，不再作为独立实验禁令。实验不预先承诺生产替换、完整动画状态机／IK迁移或技能图执行能力。公共图机制不能绑定 Pose 业务；后续技能复用的中断、Timeline、时钟及状态恢复需求仍须单独核对。
+
+已对照 current Pose spec：其固定 Program Image、禁止 Runtime 解释作者图的要求与“正式改用 FlowCanvas Runtime”存在直接冲突。本轮只登记隔离实验，不修改当前生产执行合同；最终迁移若被采纳，需要一并替换这些要求及旧代码，不能新增生产桥接路径维持两份图。
+
 ## Context
 
 Pose Graph的正式业务链已经明确：

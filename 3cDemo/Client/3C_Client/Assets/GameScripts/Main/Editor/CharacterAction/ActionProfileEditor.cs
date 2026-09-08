@@ -1,8 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline;
-using ThirdPersonCharacter.Pipeline.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -53,10 +49,6 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
             DrawHeader("Configuration");
             m_Errors.Clear();
             ActionProfile profile = target as ActionProfile;
-            if (profile &&
-                !string.IsNullOrWhiteSpace(profile.ActionId) &&
-                GUILayout.Button("Open Action Animation Workspace"))
-                OpenWorkspace(profile);
             if (profile && profile.CollectConfigurationErrors(m_Errors))
             {
                 EditorGUILayout.HelpBox("Configuration is valid.", MessageType.Info);
@@ -71,100 +63,6 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
         {
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
-        }
-
-        static void OpenWorkspace(ActionProfile profile)
-        {
-            CharacterPipelineDefinition[] definitions =
-                AssetDatabase.FindAssets("t:CharacterPipelineDefinition")
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .Select(
-                        AssetDatabase
-                            .LoadAssetAtPath<CharacterPipelineDefinition>)
-                    .Where(
-                        value =>
-                            value &&
-                            value.ActionProfiles.Any(
-                                candidate =>
-                                    ReferenceEquals(candidate, profile)))
-                    .OrderBy(
-                        value => AssetDatabase.GetAssetPath(value),
-                        System.StringComparer.Ordinal)
-                    .ToArray();
-            if (definitions.Length == 0)
-            {
-                EditorUtility.DisplayDialog(
-                    "Action Animation Workspace",
-                    "没有 Character Definition 以正式引用拥有该 ActionProfile。",
-                    "OK");
-                return;
-            }
-            if (definitions.Length == 1)
-            {
-                OpenWorkspace(definitions[0], profile);
-                return;
-            }
-            var menu = new GenericMenu();
-            for (int i = 0; i < definitions.Length; i++)
-            {
-                CharacterPipelineDefinition definition = definitions[i];
-                menu.AddItem(
-                    new GUIContent(
-                        $"{definition.name} ({AssetDatabase.GetAssetPath(definition)})"),
-                    false,
-                    () => OpenWorkspace(definition, profile));
-            }
-            menu.ShowAsContext();
-        }
-
-        static void OpenWorkspace(
-            CharacterPipelineDefinition definition,
-            ActionProfile profile)
-        {
-            CharacterSkillAuthoringDefinition[] skills = definition.SkillDefinitions
-                .Where(value =>
-                    value != null &&
-                    value.ActionProfile &&
-                    ReferenceEquals(value.ActionProfile, profile) &&
-                    !string.IsNullOrWhiteSpace(value.SkillId))
-                .OrderBy(value => value.SkillId, System.StringComparer.Ordinal)
-                .ToArray();
-            if (skills.Length == 1)
-            {
-                OpenWorkspace(definition, profile, skills[0].SkillId);
-                return;
-            }
-            if (skills.Length > 1)
-            {
-                var menu = new GenericMenu();
-                for (int i = 0; i < skills.Length; i++)
-                {
-                    CharacterSkillAuthoringDefinition skill = skills[i];
-                    CharacterSkillAuthoringDefinition captured = skill;
-                    menu.AddItem(
-                        new GUIContent($"{captured.SkillId} ({profile.ActionId})"),
-                        false,
-                        () => OpenWorkspace(definition, profile, captured.SkillId));
-                }
-                menu.ShowAsContext();
-                return;
-            }
-            ActionAnimationAuthoringWorkspaceWindow.Open(
-                new ActionAnimationWorkspaceOpenRequest(
-                    definition,
-                    profile.ActionId));
-        }
-
-        static void OpenWorkspace(
-            CharacterPipelineDefinition definition,
-            ActionProfile profile,
-            string skillId)
-        {
-            ActionAnimationAuthoringWorkspaceWindow.Open(
-                new ActionAnimationWorkspaceOpenRequest(
-                    definition,
-                    profile.ActionId,
-                    skillId: skillId));
         }
     }
 }

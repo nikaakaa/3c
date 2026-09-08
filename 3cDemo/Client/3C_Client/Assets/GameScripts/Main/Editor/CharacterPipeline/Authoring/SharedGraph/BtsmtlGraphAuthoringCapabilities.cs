@@ -69,7 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "assetReferences");
             Register<ActivateActionInstanceNode>(
                 "activate-action-instance",
-                ActionAnimationWorkspaceCommand(),
                 "assetReferences");
             Register<SubmitActionLifecycleTransitionNode>("submit-action-lifecycle", "assetReferences");
             Register<CharacterActionRequestInfoNode>("character-action-request", "requestId");
@@ -1003,23 +1002,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static IReadOnlyList<GraphAuthoringCommandDescriptor>
-            ActionAnimationWorkspaceCommand() =>
-            new[]
-            {
-                new GraphAuthoringCommandDescriptor(
-                    ActionAnimationWorkspaceCommands.Open,
-                    "Open Action Animation Workspace",
-                    false)
-            };
-
-        static IReadOnlyList<GraphAuthoringCommandDescriptor>
             TimelineCommands() =>
             new[]
             {
-                new GraphAuthoringCommandDescriptor(
-                    ActionAnimationWorkspaceCommands.Open,
-                    "Open Action Animation Workspace",
-                    false),
                 new GraphAuthoringCommandDescriptor(
                     TimelineAuthoringCommands.UseInline,
                     "Use Inline Timeline",

@@ -1,12 +1,47 @@
-# Pose FlowCanvas编辑器实施记录
+# Pose UE式作者组织：实施状态与历史记录
 
-## 当前实现状态（2026-09-08，代码优先）
+## 当前状态（2026-09-09）
 
-按照作者最新要求，tasks已删除检查、证据、性能对照和验收任务，只保留实现、清理及产物发布。作者资产格式和identity没有变化，已撤去两项没有必要的迁移任务。清单现在为21项，其中20项代码与文档工作完成，仅3.3的v28产物发布未完成。历史6/26和20/23描述仅记录此前进度，不代表当前清单。
+本提案已经按UE式作者组织重新规划，正式方案见[design.md](design.md)，实施清单见[tasks.md](tasks.md)。当前为44项任务：3项既有基础保留，41项待实施。新作者组织尚未实现；此前“代码完成、只剩Build”的结论已撤回，不能继续用于本提案。
 
-没有新增测试、运行回放或迁移业务资产。编译和运行检查的历史结果保留在下方，与实现完成状态分开记录；代码完成不宣称产物已经发布或作者已经验收。
+本次文档整理没有修改C#、Unity作者资产、编译产物或场景，没有执行Build或迁移。源代码当前的Document常量仍是v6，Pose Program Image仍是v28；Document v7及新的作者组织是计划目标，不是已交付状态。
 
-### 正式v28发布尝试
+## 本轮确认的作者分工
+
+| 内容 | 已确定的目标 |
+|---|---|
+| AnimGraph | 组合状态机、动画层、Slot、骨骼混合、显式惯性化及Control Rig引用。 |
+| Animation Layer | 复用现有Linked Pose体系，可以封装状态机、Slot及按骨骼混合；不会自动获得Mask或私有播放实例。 |
+| Montage职责 | 由现有有限Action Timeline承担；原位补Slot轨道、Sections及动画Blend设置，不新增Montage资产或第二时钟。 |
+| Slot与骨骼范围 | Slot负责动作插入；Mask／Branch Filter与层Alpha决定骨骼混合。Layer实例共享组与Slot Group分开。 |
+| 状态与动作混合 | 转换边拥有状态混合设置，各Action Timeline拥有自身动画进入／退出设置，Blend Profile作为Rig关联配置引用。 |
+| Control Rig | 组织控制目标、Foot Placement和FBIK；内部Goal组装由Compiler展开，现有算法、Native／Job及唯一Writer保留。 |
+| Player与参数 | Player直接选择资源或typed资源参数；内部Source binding与默认参数汇总退出作者界面。 |
+| 迁移 | 新组织确实改变作者数据，代码完成后才迁移Corin；Timeline动画片段和玩法窗口仍在原owner，无法无损转换的旧策略明确报告冲突。 |
+
+## 已有基础与尚待实施的区别
+
+已有FlowCanvas原生编辑、typed Mutation、flat catalog、状态／条件详情、v28来源元数据及普通Play观察代码可以复用。这些基础并未实现上述完整图角色、层内Slot、Timeline的Montage式设置、直接资源Player或Control Rig作者合同。
+
+新范围的实施必须沿tasks逐项推进，不能沿用旧任务编号和已完成标记。检查、运行、性能和发布记录只放在本文件，不写成tasks里的验证或验收任务。
+
+现行spec与新设计的冲突及同步方向见design.md第12节。当前规范中的显式Assembler作者拓扑、Source Slot双重绑定、惯性化直接owner限制和Document旧版本不能被静默忽略，也不能当成新方案已经实现的依据。
+
+## 提交与产物记录的适用范围
+
+| 提交／记录 | 范围 |
+|---|---|
+| `149273005`、`5b529238a` | 旧作者模型上的选择、详情、导航和编辑反馈修正。 |
+| `b16397bee`、`70ee5b50f` | v28来源元数据、条件读取记录、状态／别名详情等可复用基础。 |
+| `52690a462` | 旧UI范围下撤去不必要迁移及当时Build失败的记录；不约束新组织的数据迁移。 |
+| `7fe744de9` | 重写原提案的8份规划文档，确立UE式作者分工及Timeline承接Montage职责；没有实施新代码。 |
+| v27发布成功、v28发布失败 | 都是旧阶段记录，不证明新组织已构建或可以运行。 |
+
+## 历史记录（旧UI接入范围）
+
+以下保留当时的提交、哈希、命令结果和问题经过，供追溯。其“本轮”“当前”“最终”等表述均指对应历史阶段，不代表今天的任务状态或实时Unity状态。历史错误没有在本次文档更新中重新检查；不能据此断言它们现在仍存在，也不能把旧Console零错误当成新方案通过。
+
+### 旧范围的v28发布尝试
 
 用户确认“开始”后，调用正式`character.build_fixed_products`，目标Definition为`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`，Fixed wrapper为`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。该入口统一发布Float32、Fixed和共享Projection，不重复启动两次Build，不修改作者数据。
 
@@ -14,7 +49,8 @@
 
 构建前后读取Definition、Pose作者资产、Float32 Program、Fixed Program及Presentation Projection的SHA-256，五个文件均未变化。原始结果为`.codex-tmp/canvas-core/pose-v28-build-result.json`，前后记录为同目录`pose-v28-build-before.json`和`pose-v28-build-after.json`。这次没有发布新产物。
 
-### 本轮代码链
+
+### v28代码阶段的接口改动
 
 | 作者操作／输入 | 实现与结果 |
 |---|---|
@@ -35,7 +71,8 @@
 
 代码检查记录单独放在本节：Unity刷新过程中发生过Domain Reload断连，随后恢复，最近一次Console读取为零错误；未新增测试，未执行回放、业务asset apply或Character Build。OpenSpec格式检查通过。此记录不占tasks项目，也不代表用户已完成端到端验收。
 
-## 基线与归属
+
+### 基线与归属
 
 - 提案：`integrate-pose-flowcanvas-editor-preview`；目录：`D:/Unity_Project_1/3C`。
 - 本轮读取的HEAD：`f74e9b2aba6d4d9d4476b48933b5fe01cfb29b2c`。工作区存在其它任务及此前Pose准备改动，不是干净checkout。
@@ -61,13 +98,13 @@
 | Document | Pose owner与现行业务分片适配 | 技能Macro／v6协议迁移仍归技能侧；此处不创建协议分支 |
 | Runtime | 保留Program Image、Native页、Worker、Source／Constraint／Final Publication | 不启用FlowCanvas角色执行，不改技能runtime |
 
-最新用户指令允许刷新Unity检查本批接入。只修复Pose／FlowCanvas接入造成的错误，其它领域错误记录但不修改；若阻止程序集加载，明确报告验证受阻。整根Build与回放仍按收口阶段实际条件执行，未执行不勾选通过。
+该历史阶段的用户指令允许刷新Unity检查当时的接入。只修复Pose／FlowCanvas接入造成的错误，其它领域错误记录但不修改；若阻止程序集加载，明确报告验证受阻。整根Build与回放仍按收口阶段实际条件执行，未执行不勾选通过。
 
-## 历史证据的使用边界
+### 历史证据的使用边界
 
 此前已完成一次空节点清理、正式Document apply和Float32 Build，原始日志位于`.codex-tmp/canvas-core/`。当前源码已有后续变化，因此这些日志不能代替本提案的修改后验证。当前仍没有本提案的作者交互、同输入回放或观察开销闭环证据。
 
-## 本轮代码与验证记录
+### 本轮代码与验证记录
 
 代码提交 `41ac26f1a`。本轮继续实施，不视为全部任务完成，不归档。
 
@@ -79,7 +116,7 @@
 - 原生节点与端口悬停只读取 10 Hz 更新得到的显示文本。Pose Watch 复用正式接口，每窗口上限 8 项；不调用 Job.Complete，不读 Pending 页，不执行作者 getter。
 - 输出端口元数据新增到 Pose Plan v27，含作者节点、调用范围、端口种类和工作区索引。没有边读取证据时不播放边动画；未采集值不显示成零。
 
-### 已完成的正式 Document 检查
+#### 已完成的正式 Document 检查
 
 同一精确 Corin Definition 的 checkout 与未修改正文 dry-run 都成功，`syncState=Clean`。dry-run 的 `plannedDiff=[]`、`touchedOwners=[]`、`diffSize=0`。
 
@@ -90,13 +127,13 @@
 
 无业务修改，因此上述动作是 `applied=false / saved=false`，不能写成资产 apply 成功。它证明的是导出／对账没有伪修改，不是交互操作全部验证通过。
 
-### 编译和构建证据边界
+#### 编译和构建证据边界
 
 本轮 Unity 刷新中出现的 Pose 接入编译错误已修正，之后 Console 返回零错误。一次中间 v26 Build 在 Editor.log 记录编译 89509 ms、发布及收尾 15764 ms、总计 105273 ms；产物中实际读取到 v26 与 25 条作者节点 SourceMap。它不替代最终 v27 构建验证。
 
 Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行恢复；未关闭或重启用户 Editor。最终 v27 Build 及运行检查结果继续在下方登记。
 
-### 最终 v27 Build
+#### 最终 v27 Build
 
 正式 `character.build_float32_products` 返回 `success=true`，消息为精确 Float32 Program 与 Presentation Projection 已发布。结果对应同一 Corin Definition：
 
@@ -107,7 +144,7 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 - 实际产物 `m_SchemaVersion=character-presentation-pose-plan/v27`，25 条 SourceMap、24 个输出端口来源、8 个调用范围。来源摘录为 `.codex-tmp/canvas-core/pose-v27-source-map.json`。
 - Build 信息只有 Float32 常量舍入与 ABI 说明，没有构建错误。生成资产此前已有工作区修改，本批未把这些混合资产改动整包提交。
 
-### 观察生命周期
+#### 观察生命周期
 
 | 条件 | 窗口行为 |
 |---|---|
@@ -122,7 +159,7 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 真正显示的数据包括已完成节点可用性、权重、完成帧、已采集参数、已订阅 Pose Watch；输出端口值从 SourceMap 指定类型与索引关联。没有边读取采集时不画执行动画。上表为实现路径说明，不能替代每种场景的实际运行覆盖证据。
 
-## 用户截图暴露的未完成项与新的执行顺序
+### 用户截图暴露的未完成项与新的执行顺序
 
 用户指出侧栏挤占、内容重叠、节点缩放过小，以及未使用原生子图导航。此前的编译、Document、Build 记录不代表作者界面可用；作者 UI 验收没有通过。
 
@@ -132,13 +169,13 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 普通 GameplayLab Play 曾被其它领域错误阻止：`ProgramStateSemantic=144` 在 Fixed Program 读取中不合法，调用链为 `SimulationProgramSemanticsCodec → CharacterSimulationProgramCodec → FixedCharacterSimulationProgramAsset → DeterministicRollbackSessionSourceDefinition → GameplayLabBootstrap`。按用户要求未修改该领域；未因此绕开正式启动或创建替代角色。正常角色运行观察和性能对照尚无通过证据。
 
-### 截图后的代码验证状态
+#### 截图后的代码验证状态
 
 修正后再次读取 Console 为零错误，并通过正式菜单重新打开 Corin 图。UXML 中代码要求的所有区域均存在，自定义 Breadcrumb Host / PageStack 引用数为零。原生双击入口为 `Node.TryOpenEditorChild → GraphEditor.OpenEditorChild → Graph.SetCurrentEditorChild`，返回沿原生画布面包屑；Pose 状态／规则页面仍从唯一作者 Document 建立不持久化视图。
 
 作者反馈新版已经能看，但明确认为只达到可读，UI 仍未完成，不能据此写成整体视觉验收通过。后续仅继续代码修正，资产迁移与最终 Build 放在代码和 UI 完成之后。
 
-### 属性编辑与选中卡顿修正
+#### 属性编辑与选中卡顿修正
 
 用户后续要求按 AnimGraph 作者习惯整理属性，不展示空运行状态和无用元信息。代码新增领域结构化字段编辑器接口，Pose 提供参数策略列表与 IK 效应器绑定的具体控件，提交仍进入现有 typed Mutation。默认 Pose 详情采用 authoring-only 展示，运行目标控件移入运行观察页；默认不渲染 Runtime Inputs、Applied Values、空 References 等栏目，状态转移保留可编辑策略和条件图入口。
 
@@ -148,7 +185,7 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 这些修正尚无完整交互通过证据，资产迁移仍未继续。
 
-### 第二批代码提交与转移详情故障
+#### 第二批代码提交与转移详情故障
 
 代码提交：`149273005`（35 个文件）。用户已经确认节点选中卡顿改善；其后截图仍显示状态转换选中后没有策略，不能标记交互闭环。
 
@@ -160,7 +197,7 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 尚未完成的证据：完整编辑交互覆盖、资产最终往返、正常角色运行观察与观察开销对照。用户要求继续完成代码后再处理资产，当前没有继续迁移或 Build。
 
-### 2026-09-08：目录导航、详情写入与观察调用定位
+#### 2026-09-08：目录导航、详情写入与观察调用定位
 
 本批修改由当前任务单独实施，没有新增测试或迁移业务资产。
 
@@ -185,4 +222,4 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 本批小步提交曾被仓库已有.git/index.lock阻止；未删除锁或终止其它git进程。锁正常释放后，5个代码文件已提交为`5b529238a`（补齐Pose目录导航与属性编辑反馈）。149273005不包含本批新增修正。
 
-任务1.2和6.3按已有盘点、当前资产哈希以及删除消费者源码搜索收口；总计6/26。其它编辑、版本化运行、最终资产往返、正式Build与性能证据仍未收口，未把局部修正勾成整组完成。
+该阶段收口了原能力盘点和旧UI消费者清理，其它部分当时仍未闭环；旧统计已被新作者组织的44项实施清单替代。

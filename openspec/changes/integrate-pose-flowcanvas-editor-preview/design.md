@@ -4,7 +4,7 @@
 
 已有基础：原生画布与端口、typed Mutation、稳定identity、flat graph catalog、状态／规则下钻、真实Actor观察、v28来源元数据、Native／Job帧事务。现有Corin根图为11个节点、12条连接，完整作者资产为8张Pose图、25个节点，状态机为7个状态与21条转换。历史计数只描述盘点基线，不是新模型容量限制。
 
-尚未完成的是作者职责重组：根图仍展示Action Playback Input、Pose Parameter Resolve、Foot Placement、Goal Assembler与FBBIK内部流程；Slot仅允许根图，Player还通过Source Slot／Profile Binding间接选资源。旧implementation.md中的“20/21、只剩Build”只适用于上一版范围，不代表本设计已经实现。
+尚未完成的是作者职责重组：根图仍展示Action Playback Input、Pose Parameter Resolve、Foot Placement、Goal Assembler与FBBIK内部流程；Slot仅允许根图，Player还通过Source Slot／Profile Binding间接选资源。旧UI阶段曾被记为“20/21、只剩Build”，该完成结论已撤回；implementation.md现将它与新范围状态分开记录。
 
 当前实际Document常量为v6；现行spec与部分skill还写v4／v5，必须作为规范漂移处理。原统一Build曾因Attack、DodgeBack、DodgeForward缺失正式SkillGraphs入口失败，这个外部资产问题保留，不作为停止本提案代码实施的理由。
 
@@ -218,7 +218,7 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 
 ### 12. 现行规范对账与必须同步的冲突
 
-本次update只改status列出的8份现有规划文件，不把未实施设计直接写成current truth。下表列出必须随实施同步的其它现行规范；它们的旧条款仍存在，不能在apply时忽略。已有delta文件承载本方案完整行为要求；不会为更新文档另建一个change。
+正式规划由status列出的8份文件承载；implementation.md与authoring-inventory.md分别记录实施事实、历史基线和旧能力去向，不把未实施设计写成current truth。下表列出必须随实施同步的其它现行规范；它们的旧条款仍存在，不能在apply时忽略。已有delta文件承载本方案完整行为要求，不另建change。
 
 | 现行来源／精确条款 | 与新方案关系 | 本提案处理 |
 |---|---|---|

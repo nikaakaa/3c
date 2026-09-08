@@ -78,6 +78,26 @@ v6增加技能Macro接口、owner和调用闭包，保持业务kind、typed字�
 
 协议升级不等于迁移其他领域：非技能分片保持现有业务模型，共用Codec须证明其无业务变化往返，不能借版本切换强制转换Pose。
 
+Document实现范围由作者指定的「agent工具」任务负责，修改仍归入本change，不新建交接文档。需要贯通的代码链是Document模型与Codec、Exporter、Mapper、Reconciler、现有Mutation dispatcher、资产resolver与索引、Validator及五生命周期说明；不能只修改版本号或只增加导出字段。
+
+原生技能源与Document的对应合同如下。表内为本批必须完成的目标，不表示当前Document已经支持：
+
+| 正式作者源 | Document必须表达和保持的内容 |
+|---|---|
+| CharacterPipelineDefinition.SkillGraphs及SkillDefinition.EntryGraphAuthoringId | 明确技能根引用与稳定入口身份；不得从旧RootTree重新推测技能入口 |
+| BtsmtlSkillFlowGraph及BtsmtlSkillMacroGraph | 图身份、角色、真实owner、节点与连线身份、布局；导入和反向导出直接访问原生对象 |
+| Macro接口及原生调用节点 | 单执行入口、多值输入输出、稳定参数ID和明确调用引用；重命名不重建端口ID，类型变化校验所有受影响调用 |
+| 组合节点的步骤列表 | 稳定步骤ID、次序、条件页、优先级及中断策略；排序不重建已连接端口 |
+| 原生Variable与BlackboardDeclarations | Variable唯一保存名称、类型和默认值；元数据只补充作用域、生命周期、输入绑定及窗口投射，不另存一份变量值 |
+| Timeline节点及TimelineAsset | 节点引用真实资产；私有Timeline由技能根文件拥有，共享Timeline引用独立资产，不在节点正文复制TimelineData |
+| TreeClip.AssetTree | 引用TimelineBody原生页面并保留生命周期入口；技能闭包不经旧内联树中转 |
+
+能力目录必须覆盖已支持的原生逻辑、结构、输入、动作、黑板和移动节点，并与唯一端口形状合同一致。Document只表达业务kind、typed属性、逻辑端口和资源身份；C#类型名、私有字段名、编译索引及运行观察状态不进入可编辑正文。
+
+人工编辑与Document应用使用同一能力校验和Mutation处理链。Document先对整包做预检，再修改根、私有页面及实际受影响的共享owner；保存或反向导出失败时恢复整个事务。当前原生编辑事务辅助代码不能被当作另一套正式Document服务保留。
+
+v6完成标准包括严格拒绝v5及更早包、显式checkout、无业务变化的零修改dry-run、同hash的apply及重新checkout、完整owner回滚和非技能分片语义保持。实际资产执行仍遵守先代码与编辑器、最后迁移的顺序；源码完成和往返执行证据分别记录。
+
 按精确技能闭包先生成迁移计划，核对身份、布局和资源，真实冲突由作者决定。根、私有Macro及实际修改共享owner进入完整事务；失败完整恢复。旧入口仅在确有未迁移消费者时保留并列明。
 
 ## Risks / Trade-offs

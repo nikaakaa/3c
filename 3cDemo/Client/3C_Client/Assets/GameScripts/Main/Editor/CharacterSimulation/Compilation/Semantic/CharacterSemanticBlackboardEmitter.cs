@@ -141,10 +141,39 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             PipelineBlackboardVariableReference reference,
             CharacterSimulationSourceLocation source)
         {
-            string declarationIdentity = DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId);
-            if (!reference.IsValid || !m_Declarations.TryGetValue(declarationIdentity, out BlackboardDeclaration declaration))
+            Bind(operation, route, reference.DeclarationOwnerId, reference.DeclarationId, source);
+        }
+
+        public void Bind(
+            OperationHandle operation,
+            string route,
+            string declarationOwnerId,
+            string declarationId,
+            CharacterSimulationSourceLocation source)
+        {
+            Bind(operation, route, declarationOwnerId, declarationId, null, source);
+        }
+
+        public void Bind(
+            OperationHandle operation,
+            string route,
+            string declarationOwnerId,
+            string declarationId,
+            Type expectedValueType,
+            CharacterSimulationSourceLocation source)
+        {
+            string declarationIdentity = DeclarationIdentity(declarationOwnerId, declarationId);
+            if (string.IsNullOrEmpty(declarationOwnerId) || string.IsNullOrEmpty(declarationId) ||
+                !m_Declarations.TryGetValue(declarationIdentity, out BlackboardDeclaration declaration))
             {
                 m_Report.Error("blackboard_reference_invalid", source.Identity, $"Blackboard reference '{declarationIdentity}' does not resolve.");
+                return;
+            }
+
+            if (expectedValueType != null && declaration.Declaration.ValueType != expectedValueType)
+            {
+                m_Report.Error("blackboard_value_type_mismatch", source.Identity,
+                    $"Blackboard '{declarationIdentity}' is '{declaration.Declaration.ValueType}', expected '{expectedValueType}'.");
                 return;
             }
 

@@ -76,6 +76,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillVector2InputFlowNode input => Input(SimulationOperationCode.InputVector2, input.InputId),
             BtsmtlSkillInputMagnitudeFlowNode input => Input(SimulationOperationCode.InputVector2Magnitude, input.InputId),
             BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, input.InputId),
+            IBtsmtlSkillBlackboardReadNode blackboard => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.BlackboardGet, text0: blackboard.Variable.DeclarationId,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId))),
             BtsmtlSkillMoveFacingAngleFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),

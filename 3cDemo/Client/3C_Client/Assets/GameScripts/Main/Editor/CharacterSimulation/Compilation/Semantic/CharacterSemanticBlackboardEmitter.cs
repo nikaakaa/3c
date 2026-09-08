@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
 using TreeDesigner;
@@ -11,7 +12,7 @@ using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.Ch
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class CharacterSemanticBlackboardEmitter
+    internal sealed class CharacterSemanticBlackboardEmitter : IBtsmtlSkillBlackboardCompilation
     {
         readonly IReadOnlyDictionary<string, BlackboardDeclaration> m_Declarations;
         readonly CharacterSimulationProgramBuilder m_Builder;
@@ -34,9 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             foreach (BlackboardDeclaration item in m_Declarations.Values)
             {
-                BaseExposedProperty declaration = item.Declaration;
+                CharacterBlackboardDeclarationSnapshot declaration = item.Declaration;
                 CharacterSimulationSourceLocation source = DeclarationSource(item, item.Route);
-                string identity = DeclarationIdentity(item.Graph.GraphAuthoringId, declaration.DeclarationId);
+                string identity = DeclarationIdentity(item.GraphId, declaration.DeclarationId);
                 var fields = new List<ProgramCatalogField>
                 {
                     m_Builder.ConstantField(source, "Key", declaration.BlackboardKey),
@@ -44,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Builder.ConstantField(source, "Scope", declaration.BlackboardScope),
                     m_Builder.ConstantField(source, "Lifetime", declaration.BlackboardLifetime),
                     m_Builder.ConstantField(source, "Category", declaration.BlackboardCategoryPath),
-                    m_Builder.ConstantField(source, "Default", CompileBlackboardDefault(declaration.GetValue(), source))
+                    m_Builder.ConstantField(source, "Default", CompileBlackboardDefault(declaration.DefaultValue, source))
                 };
                 if (declaration.InputBinding != null)
                     fields.Add(m_Builder.ConstantField(source, "InputValueId", declaration.InputBinding.InputValueId));
@@ -94,6 +95,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public void EndGraph()
         {
             m_GraphStack.RemoveAt(m_GraphStack.Count - 1);
+        }
+
+        public void BeginSkillGraph(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner)
+        {
+            m_GraphStack.Add(new GraphRoute(graph.GraphId, graph.Route));
+            foreach (BtsmtlSkillBlackboardDeclaration declaration in ((IBtsmtlSkillFlowGraph)graph.Graph).BlackboardDeclarations)
+                EnsureDeclarationState(m_Declarations[DeclarationIdentity(graph.GraphId, declaration.VariableId)], graph.Route, stateOwner);
         }
 
         public void CompleteGraph(string route, OperationHandle graphEntry)
@@ -160,7 +168,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string declarationOwnerId,
             string declarationId,
             Type expectedValueType,
-            CharacterSimulationSourceLocation source)
+            CharacterSimulationSourceLocation source,
+            bool requireWritable = false)
         {
             string declarationIdentity = DeclarationIdentity(declarationOwnerId, declarationId);
             if (string.IsNullOrEmpty(declarationOwnerId) || string.IsNullOrEmpty(declarationId) ||
@@ -174,6 +183,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 m_Report.Error("blackboard_value_type_mismatch", source.Identity,
                     $"Blackboard '{declarationIdentity}' is '{declaration.Declaration.ValueType}', expected '{expectedValueType}'.");
+                return;
+            }
+            if (requireWritable && declaration.Declaration.BlackboardLifetime == PipelineBlackboardVariableLifetime.Config)
+            {
+                m_Report.Error("blackboard_config_read_only", source.Identity, $"Blackboard '{declarationIdentity}' is read-only configuration.");
                 return;
             }
 
@@ -215,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         int EnsureDeclarationState(BlackboardDeclaration item, string route, OperationHandle stateScopeOwner)
         {
             string stateKey = item.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Character
-                ? DeclarationIdentity(item.Graph.GraphAuthoringId, item.Declaration.DeclarationId)
+                ? DeclarationIdentity(item.GraphId, item.Declaration.DeclarationId)
                 : $"{route}/declaration:{item.Declaration.DeclarationId}";
             if (m_ValueSlots.TryGetValue(stateKey, out int existing))
                 return existing;
@@ -229,7 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardValue,
                 stateKey,
-                CompileBlackboardDefault(item.Declaration.GetValue(), source));
+                CompileBlackboardDefault(item.Declaration.DefaultValue, source));
             int owner = m_Builder.DeclareStandaloneStateSlot(
                 source,
                 ProgramStateValueKind.BlackboardOwnerToken,
@@ -270,12 +284,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         string ResolveDeclarationStateKey(BlackboardDeclaration declaration)
         {
             if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Character)
-                return DeclarationIdentity(declaration.Graph.GraphAuthoringId, declaration.Declaration.DeclarationId);
+                return DeclarationIdentity(declaration.GraphId, declaration.Declaration.DeclarationId);
             if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Frame)
                 return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
             for (int i = m_GraphStack.Count - 1; i >= 0; i--)
             {
-                if (string.Equals(m_GraphStack[i].GraphId, declaration.Graph.GraphAuthoringId, StringComparison.Ordinal))
+                if (string.Equals(m_GraphStack[i].GraphId, declaration.GraphId, StringComparison.Ordinal))
                     return $"{m_GraphStack[i].Route}/declaration:{declaration.Declaration.DeclarationId}";
             }
             return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
@@ -337,15 +351,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item, string route)
         {
             return new CharacterSimulationSourceLocation(
-                item.Declaration.GetType().FullName,
-                item.Graph.GraphAuthoringId,
+                item.SourceType,
+                item.GraphId,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 $"{route}/blackboard:{item.Declaration.DeclarationId}",
                 declarationId: item.Declaration.DeclarationId,
-                contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
+                contentHash: item.ContentHash);
         }
 
         sealed class ScopeRecord

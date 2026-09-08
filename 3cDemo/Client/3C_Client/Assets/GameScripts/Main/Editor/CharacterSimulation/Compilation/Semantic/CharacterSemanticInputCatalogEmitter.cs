@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
             foreach (CharacterAuthoringBlackboardDeclaration item in m_Model.Declarations.Values)
             {
-                BaseExposedProperty declaration = item.Declaration;
+                CharacterBlackboardDeclarationSnapshot declaration = item.Declaration;
                 if (declaration.InputBinding == null)
                     continue;
                 ProgramInputValueKind kind = MapInputValueKind(declaration.ValueType);

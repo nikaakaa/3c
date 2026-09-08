@@ -8,6 +8,12 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
+    public interface IBtsmtlSkillBlackboardCompilation
+    {
+        void BeginSkillGraph(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner);
+        void CompleteGraph(string route, OperationHandle entry);
+        void EndGraph();
+    }
     public sealed class BtsmtlSkillGraphCompilation
     {
         internal BtsmtlSkillGraphCompilation(OperationHandle entry, BtsmtlSkillOperationBindings operations,
@@ -29,15 +35,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly BtsmtlSkillFlowLeafEmitter m_Leaves;
         readonly BtsmtlSkillGraphFlowEmitter m_Flow;
         readonly BtsmtlSkillTimelineCompiler m_Timelines;
+        readonly IBtsmtlSkillBlackboardCompilation m_Blackboard;
         readonly Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> m_BindDomain;
         readonly Dictionary<string, BtsmtlSkillGraphCompilation> m_Graphs = new(StringComparer.Ordinal);
 
         public BtsmtlSkillGraphCompiler(CharacterSimulationProgramBuilder builder,
             Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain,
-            TimelineSemanticEmitterRegistry timelineEmitters)
+            TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_BindDomain = bindDomain ?? throw new ArgumentNullException(nameof(bindDomain));
+            m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Leaves = new BtsmtlSkillFlowLeafEmitter(builder);
             m_Flow = new BtsmtlSkillGraphFlowEmitter(builder);
             m_Timelines = new BtsmtlSkillTimelineCompiler(timelineEmitters, builder, Compile);
@@ -47,47 +55,56 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (m_Graphs.TryGetValue(graph.Route, out BtsmtlSkillGraphCompilation existing))
                 return existing;
-            var operations = new BtsmtlSkillOperationBindings();
-            BtsmtlSkillMacroCompilation macro = graph.Role == BtsmtlSkillFlowGraphRole.Subgraph
-                ? new BtsmtlSkillMacroCompilation(m_Builder, graph, operations)
-                : null;
-            foreach (FlowNode node in graph.Nodes)
+            m_Blackboard.BeginSkillGraph(graph, stateOwner);
+            try
             {
-                if (node is MacroInputNode || node is MacroOutputNode || node is MacroNodeWrapper)
-                    continue;
-                OperationHandle operation = m_Leaves.Emit(node, graph.Route, graph.ContentHash);
-                operations.AddLeaf(node, operation);
-                m_BindDomain(node, operation, graph.Route, Source(graph, node));
-            }
-            foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
-            {
-                OperationHandle childStateOwner = reference.Kind == BtsmtlSkillGraphReferenceKind.StateBody
-                    ? operations.Node(reference.Owner.UID)
-                    : stateOwner;
-                BtsmtlSkillGraphCompilation child = Compile(reference.Child, childStateOwner);
-                switch (reference.Kind)
+                var operations = new BtsmtlSkillOperationBindings();
+                BtsmtlSkillMacroCompilation macro = graph.Role == BtsmtlSkillFlowGraphRole.Subgraph
+                    ? new BtsmtlSkillMacroCompilation(m_Builder, graph, operations)
+                    : null;
+                foreach (FlowNode node in graph.Nodes)
                 {
-                    case BtsmtlSkillGraphReferenceKind.Macro:
-                        child.Macro.EmitCall(reference, operations);
-                        break;
-                    case BtsmtlSkillGraphReferenceKind.StateMachine:
-                        m_Flow.EmitStateMachine(reference, operations.Node(reference.Owner.UID), child.Operations.Nodes);
-                        break;
-                    case BtsmtlSkillGraphReferenceKind.StateBody:
-                        m_Flow.EmitStateBody(reference, operations.Node(reference.Owner.UID), child.Operations.Nodes);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                    if (node is MacroInputNode || node is MacroOutputNode || node is MacroNodeWrapper)
+                        continue;
+                    OperationHandle operation = m_Leaves.Emit(node, graph.Route, graph.ContentHash);
+                    operations.AddLeaf(node, operation);
+                    m_BindDomain(node, operation, graph.Route, Source(graph, node));
                 }
+                foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
+                {
+                    OperationHandle childStateOwner = reference.Kind == BtsmtlSkillGraphReferenceKind.StateBody
+                        ? operations.Node(reference.Owner.UID)
+                        : stateOwner;
+                    BtsmtlSkillGraphCompilation child = Compile(reference.Child, childStateOwner);
+                    switch (reference.Kind)
+                    {
+                        case BtsmtlSkillGraphReferenceKind.Macro:
+                            child.Macro.EmitCall(reference, operations);
+                            break;
+                        case BtsmtlSkillGraphReferenceKind.StateMachine:
+                            m_Flow.EmitStateMachine(reference, operations.Node(reference.Owner.UID), child.Operations.Nodes);
+                            break;
+                        case BtsmtlSkillGraphReferenceKind.StateBody:
+                            m_Flow.EmitStateBody(reference, operations.Node(reference.Owner.UID), child.Operations.Nodes);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+                m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition, owner).Entry);
+                foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
+                    m_Timelines.Emit(graph, timeline, operations.Node(timeline.Node.UID), stateOwner);
+                PublishPortSources(graph, operations);
+                OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
+                m_Blackboard.CompleteGraph(graph.Route, entry);
+                var result = new BtsmtlSkillGraphCompilation(entry, operations, macro);
+                m_Graphs.Add(graph.Route, result);
+                return result;
             }
-            m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition, owner).Entry);
-            foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
-                m_Timelines.Emit(graph, timeline, operations.Node(timeline.Node.UID), stateOwner);
-            PublishPortSources(graph, operations);
-            OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
-            var result = new BtsmtlSkillGraphCompilation(entry, operations, macro);
-            m_Graphs.Add(graph.Route, result);
-            return result;
+            finally
+            {
+                m_Blackboard.EndGraph();
+            }
         }
 
         void PublishPortSources(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillOperationBindings operations)

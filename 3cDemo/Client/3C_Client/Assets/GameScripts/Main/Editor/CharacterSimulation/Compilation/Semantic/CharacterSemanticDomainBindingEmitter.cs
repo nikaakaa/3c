@@ -97,8 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Catalog.Bind(operation, route, source, ProgramCatalogEntryKind.InputValue,
                         $"input:value:{input.InputId}", m_CatalogIndex.InputValues.Contains(input.InputId));
                     break;
-                case IBtsmtlSkillBlackboardReadNode blackboard:
-                    m_Blackboard.Bind(operation, route, blackboard.Variable.OwnerId, blackboard.Variable.DeclarationId, blackboard.ValueType, source);
+                case IBtsmtlSkillBlackboardAccessNode blackboard:
+                    m_Blackboard.Bind(operation, route, blackboard.Variable.OwnerId, blackboard.Variable.DeclarationId, blackboard.ValueType, source, blackboard.Writes);
                     break;
                 case BtsmtlSkillCanActivateActionFlowNode action:
                     string actionId = action.ActionProfile ? action.ActionProfile.ActionId : string.Empty;

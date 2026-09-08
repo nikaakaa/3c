@@ -39,6 +39,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             }
             identities.Add(authoring.AuthoringId, graph);
             result.Add(graph);
+            BtsmtlSkillBlackboardDeclarations.Validate(graph, authoring.BlackboardDeclarations);
             if (graph is BtsmtlSkillMacroGraph signature)
                 BtsmtlSkillMacroInterface.Validate(signature);
             ValidateTopology(graph, authoring.Role, path, complete);

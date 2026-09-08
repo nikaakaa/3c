@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
@@ -14,11 +16,14 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             public object Macro;
             public string Identity;
+            public List<BtsmtlSkillBlackboardDeclaration> Declarations = new();
         }
 
         [SerializeField, HideInInspector] string m_AuthoringId = Guid.NewGuid().ToString("N");
+        [SerializeField, HideInInspector] List<BtsmtlSkillBlackboardDeclaration> m_BlackboardDeclarations = new();
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => BtsmtlSkillFlowGraphRole.Subgraph;
+        public IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations => m_BlackboardDeclarations;
         public override bool canAcceptVariableDrops => false;
         public override bool allowsPortIdentityAliases => false;
         public override bool usesExternalExecution => true;
@@ -31,10 +36,17 @@ namespace ThirdPersonCharacter.Control.Authoring
             m_AuthoringId = identity;
         }
 
+        public void SetBlackboardDeclarations(IEnumerable<BtsmtlSkillBlackboardDeclaration> declarations)
+        {
+            var next = declarations.ToList();
+            BtsmtlSkillBlackboardDeclarations.Validate(this, next);
+            m_BlackboardDeclarations = next;
+        }
+
         public override object OnDerivedDataSerialization()
         {
             BtsmtlSkillFlowGraphRules.EnsureIdentities(this);
-            return new AuthoringData { Macro = base.OnDerivedDataSerialization(), Identity = m_AuthoringId };
+            return new AuthoringData { Macro = base.OnDerivedDataSerialization(), Identity = m_AuthoringId, Declarations = m_BlackboardDeclarations };
         }
 
         public override void OnDerivedDataDeserialization(object data)
@@ -43,6 +55,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 throw new InvalidOperationException("Skill Macro authoring data is missing.");
             base.OnDerivedDataDeserialization(authoring.Macro);
             ConfigureIdentity(authoring.Identity);
+            m_BlackboardDeclarations = authoring.Declarations ?? throw new InvalidOperationException("技能Macro缺少黑板声明列表。");
         }
 
         protected override void OnGraphInitialize() =>

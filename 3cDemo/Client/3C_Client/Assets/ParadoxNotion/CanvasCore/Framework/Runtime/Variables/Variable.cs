@@ -9,6 +9,10 @@ using Logger = ParadoxNotion.Services.Logger;
 
 namespace NodeCanvas.Framework
 {
+    public interface ISerializedVariableValue
+    {
+        object serializedValue { get; }
+    }
 
 #if UNITY_EDITOR //handles missing variable types
     [fsObject(Processor = typeof(fsRecoveryProcessor<Variable, MissingVariableType>))]
@@ -46,6 +50,7 @@ namespace NodeCanvas.Framework
 
         ///<summary>A Unique ID</summary>
         public string ID { get { return string.IsNullOrEmpty(_id) ? _id = Guid.NewGuid().ToString() : _id; } }
+        public bool hasStableIdentity => !string.IsNullOrWhiteSpace(_id);
         ///<summary>The value as object type when accessing from base class</summary>
         public object value { get { return GetValueBoxed(); } set { SetValueBoxed(value); } }
         ///<summary>Is the variable exposed public?</summary>
@@ -144,7 +149,7 @@ namespace NodeCanvas.Framework
     ///----------------------------------------------------------------------------------------------
 
     ///<summary>The actual Variable</summary>
-    public class Variable<T> : Variable
+    public class Variable<T> : Variable, ISerializedVariableValue
     {
 
         [SerializeField] private T _value;
@@ -156,6 +161,7 @@ namespace NodeCanvas.Framework
         //
 
         public override Type varType => typeof(T);
+        public object serializedValue => _value;
         public override bool isDataBound => getter != null || setter != null;
         public override string propertyPath { get { return _propertyPath; } set { _propertyPath = value; } }
 

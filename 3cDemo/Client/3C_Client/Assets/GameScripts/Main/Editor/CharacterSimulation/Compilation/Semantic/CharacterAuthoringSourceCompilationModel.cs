@@ -4,6 +4,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
+using FlowCanvas;
+using NodeCanvas.Framework;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
 using ThirdPersonCharacter.Equipment;
@@ -347,17 +350,67 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string Route { get; }
     }
 
+    public sealed class CharacterBlackboardDeclarationSnapshot
+    {
+        public CharacterBlackboardDeclarationSnapshot(string identity, string key, Type valueType,
+            PipelineBlackboardVariableScope scope, PipelineBlackboardVariableLifetime lifetime, string category,
+            object defaultValue, PipelineBlackboardInputBinding inputBinding, PipelineBlackboardFactProjection factProjection)
+        {
+            DeclarationId = identity;
+            BlackboardKey = key;
+            ValueType = valueType;
+            BlackboardScope = scope;
+            BlackboardLifetime = lifetime;
+            BlackboardCategoryPath = category;
+            DefaultValue = defaultValue;
+            InputBinding = inputBinding;
+            FactProjection = factProjection;
+        }
+
+        public string DeclarationId { get; }
+        public string BlackboardKey { get; }
+        public Type ValueType { get; }
+        public PipelineBlackboardVariableScope BlackboardScope { get; }
+        public PipelineBlackboardVariableLifetime BlackboardLifetime { get; }
+        public string BlackboardCategoryPath { get; }
+        public object DefaultValue { get; }
+        public PipelineBlackboardInputBinding InputBinding { get; }
+        public string InputValueId => InputBinding?.InputValueId ?? string.Empty;
+        public PipelineBlackboardFactProjection FactProjection { get; }
+    }
+
     public sealed class CharacterAuthoringBlackboardDeclaration
     {
         internal CharacterAuthoringBlackboardDeclaration(BaseTree graph, BaseExposedProperty declaration, string route)
         {
-            Graph = graph ?? throw new ArgumentNullException(nameof(graph));
-            Declaration = declaration ?? throw new ArgumentNullException(nameof(declaration));
-            Route = route ?? throw new ArgumentNullException(nameof(route));
+            GraphId = graph.GraphAuthoringId;
+            SourceType = declaration.GetType().FullName;
+            ContentHash = GraphAuthoringFingerprint.Compute(graph);
+            AuthoringDeclaration = declaration;
+            Declaration = new CharacterBlackboardDeclarationSnapshot(declaration.DeclarationId, declaration.BlackboardKey,
+                declaration.ValueType, declaration.BlackboardScope, declaration.BlackboardLifetime, declaration.BlackboardCategoryPath,
+                declaration.GetValue(), declaration.InputBinding, declaration.FactProjection);
+            Route = route;
         }
 
-        public BaseTree Graph { get; }
-        public BaseExposedProperty Declaration { get; }
+        internal CharacterAuthoringBlackboardDeclaration(FlowGraph graph, BtsmtlSkillBlackboardDeclaration declaration, string route, string contentHash)
+        {
+            Variable variable = BtsmtlSkillBlackboardDeclarations.RequireVariable(graph, declaration.VariableId);
+            GraphId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
+            SourceType = variable.GetType().FullName;
+            ContentHash = contentHash;
+            AuthoringDeclaration = variable;
+            Declaration = new CharacterBlackboardDeclarationSnapshot(variable.ID, variable.name, variable.varType,
+                declaration.Scope, declaration.Lifetime, declaration.Category, ((ISerializedVariableValue)variable).serializedValue,
+                declaration.InputBinding, declaration.FactProjection);
+            Route = route;
+        }
+
+        public string GraphId { get; }
+        public string SourceType { get; }
+        public string ContentHash { get; }
+        public object AuthoringDeclaration { get; }
+        public CharacterBlackboardDeclarationSnapshot Declaration { get; }
         public string Route { get; }
     }
 
@@ -406,6 +459,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Report);
             if (!m_Report.IsValid)
                 return null;
+            foreach (CharacterSkillCompilationRecord skill in skills)
+                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+                    foreach (BtsmtlSkillBlackboardDeclaration declaration in ((IBtsmtlSkillFlowGraph)graph.Graph).BlackboardDeclarations)
+                    {
+                        var record = new CharacterAuthoringBlackboardDeclaration(graph.Graph, declaration, graph.Route, graph.ContentHash);
+                        string identity = DeclarationIdentity(graph.GraphId, declaration.VariableId);
+                        if (m_Declarations.TryGetValue(identity, out CharacterAuthoringBlackboardDeclaration existing))
+                        {
+                            if (!ReferenceEquals(existing.AuthoringDeclaration, record.AuthoringDeclaration))
+                                m_Report.DiscoveryError("blackboard_declaration_duplicate", graph.Route, $"声明'{identity}'指向不同对象。");
+                        }
+                        else
+                            m_Declarations.Add(identity, record);
+                    }
             foreach (CharacterSkillCompilationRecord skill in skills)
                 foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillTimelineOccurrence record in graph.Timelines)
@@ -521,14 +588,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                     continue;
                                 if (!m_Declarations.TryGetValue(DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId), out CharacterAuthoringBlackboardDeclaration declarationRecord))
                                     continue;
-                                BaseExposedProperty declaration = declarationRecord.Declaration;
+                                CharacterBlackboardDeclarationSnapshot declaration = declarationRecord.Declaration;
                                 if (declaration.FactProjection?.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
                                     !string.Equals(declaration.FactProjection.ActionWindowType, query.WindowType, StringComparison.Ordinal))
                                     continue;
 
-                                candidates.Add($"owner={declarationRecord.Graph.GraphAuthoringId},phase={clip.ExecutionPhase},windowId={declaration.FactProjection.ActionWindowId},clip={clip.AuthoringId}");
+                                candidates.Add($"owner={declarationRecord.GraphId},phase={clip.ExecutionPhase},windowId={declaration.FactProjection.ActionWindowId},clip={clip.AuthoringId}");
                                 if (clip.ExecutionPhase == TimelineTreeExecutionPhase.Decision &&
-                                    visibleOwnerIds.Contains(declarationRecord.Graph.GraphAuthoringId))
+                                    visibleOwnerIds.Contains(declarationRecord.GraphId))
                                     matched = true;
                             }
                         }
@@ -782,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string key = DeclarationIdentity(graph.GraphAuthoringId, declaration.DeclarationId);
             if (m_Declarations.TryGetValue(key, out CharacterAuthoringBlackboardDeclaration existing))
             {
-                if (!ReferenceEquals(existing.Declaration, declaration))
+                if (!ReferenceEquals(existing.AuthoringDeclaration, declaration))
                     m_Report.DiscoveryError("blackboard_declaration_duplicate", source, $"Declaration identity '{key}' belongs to multiple objects.");
                 return;
             }

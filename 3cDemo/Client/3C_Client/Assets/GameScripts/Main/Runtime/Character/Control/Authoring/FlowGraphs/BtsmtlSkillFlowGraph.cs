@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
@@ -23,6 +25,8 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         string AuthoringId { get; }
         BtsmtlSkillFlowGraphRole Role { get; }
+        IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations { get; }
+        void SetBlackboardDeclarations(IEnumerable<BtsmtlSkillBlackboardDeclaration> declarations);
     }
 
     static class BtsmtlSkillFlowGraphRules
@@ -73,13 +77,16 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             public string Identity;
             public BtsmtlSkillFlowGraphRole Role;
+            public List<BtsmtlSkillBlackboardDeclaration> Declarations = new();
         }
 
         [SerializeField, HideInInspector] string m_AuthoringId = Guid.NewGuid().ToString("N");
         [SerializeField, HideInInspector] BtsmtlSkillFlowGraphRole m_Role;
+        [SerializeField, HideInInspector] List<BtsmtlSkillBlackboardDeclaration> m_BlackboardDeclarations = new();
 
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => m_Role;
+        public IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations => m_BlackboardDeclarations;
         public bool IsTimelineTree => m_Role == BtsmtlSkillFlowGraphRole.TimelineBody;
         public override bool canAcceptVariableDrops => false;
         public override bool allowsPortIdentityAliases => false;
@@ -91,6 +98,13 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override PlanarDirection flowDirection => PlanarDirection.Horizontal;
 
         public override bool CanAuthorNodeType(Type nodeType) => BtsmtlSkillFlowGraphRules.Allows(nodeType, m_Role, false);
+
+        public void SetBlackboardDeclarations(IEnumerable<BtsmtlSkillBlackboardDeclaration> declarations)
+        {
+            var next = declarations.ToList();
+            BtsmtlSkillBlackboardDeclarations.Validate(this, next);
+            m_BlackboardDeclarations = next;
+        }
 
         public void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath)
         {
@@ -123,7 +137,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             return new AuthoringData
             {
                 Identity = m_AuthoringId,
-                Role = m_Role
+                Role = m_Role,
+                Declarations = m_BlackboardDeclarations
             };
         }
 
@@ -132,6 +147,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (data is not AuthoringData authoring)
                 throw new InvalidOperationException("Skill graph authoring data is missing.");
             ConfigureIdentity(authoring.Identity, authoring.Role);
+            m_BlackboardDeclarations = authoring.Declarations ?? throw new InvalidOperationException("技能图缺少黑板声明列表。");
         }
 
         protected override void OnGraphInitialize() =>

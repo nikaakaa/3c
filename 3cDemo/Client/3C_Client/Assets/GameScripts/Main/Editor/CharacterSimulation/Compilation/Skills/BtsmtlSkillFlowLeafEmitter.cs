@@ -83,6 +83,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IBtsmtlSkillBlackboardReadNode blackboard => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.BlackboardGet, text0: blackboard.Variable.DeclarationId,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId))),
+            BtsmtlSkillBlackboardAccessFlowNode blackboard => new CharacterSimulationNodeEmission(
+                blackboard.Writes ? SimulationOperationCode.BlackboardSet : SimulationOperationCode.BlackboardGet,
+                integer0: blackboard.Writes ? 1 : 0, text0: blackboard.Variable.DeclarationId,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId),
+                    ("FactContext", CharacterSimulationNodeEmitterContext.AssetIdentity(blackboard.FactContext)))),
             BtsmtlSkillMoveFacingAngleFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),

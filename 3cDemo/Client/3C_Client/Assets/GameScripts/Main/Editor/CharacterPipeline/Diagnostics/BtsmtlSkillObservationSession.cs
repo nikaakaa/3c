@@ -1,0 +1,258 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using BTSMTL.Diagnostics;
+using BTSMTL.Diagnostics.Editor;
+using BTSMTL.Timeline;
+using BTSMTL.Timeline.Editor;
+using FlowCanvas;
+using NodeCanvas.Editor;
+using NodeCanvas.Framework;
+using ThirdPersonCharacter.Control.Authoring;
+using UnityEditor;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Editor
+{
+    public sealed class BtsmtlSkillObservationSession : IDisposable
+    {
+        sealed class TimelineCaller
+        {
+            internal TimelineAsset Asset;
+            internal string NodeId;
+            internal Scope Scope;
+        }
+        sealed class Scope
+        {
+            internal Scope(RuntimeInstanceKey root, IEnumerable<string> calls)
+            {
+                Root = root;
+                Calls = calls.ToArray();
+            }
+            internal RuntimeInstanceKey Root { get; }
+            internal string[] Calls { get; }
+            internal string Path => Calls.Length == 0 ? Root.CallSiteId : Calls[Calls.Length - 1];
+            internal Scope Append(string path) => new(Root, Calls.Append(path));
+            internal Scope Parent() => new(Root, Calls.Take(Calls.Length - 1));
+
+            internal RuntimeInstanceKey Resolve(RuntimeDebugViewModel view)
+            {
+                RuntimeInstanceKey current = Root;
+                foreach (string path in Calls)
+                {
+                    if (!view.TryGetInvocation(path, out RuntimeGraphInvocation invocation))
+                        return default;
+                    RuntimeInstanceKey next = default;
+                    ulong latest = 0;
+                    foreach (RuntimeInstanceKey candidate in view.GetGraphInstances(invocation.GraphId))
+                    {
+                        if (!SameRelease(candidate, Root) || candidate.CallSiteId != path ||
+                            !view.TryGetParentGeneration(candidate, out ulong parent) || parent != current.InvocationGeneration)
+                            continue;
+                        ulong sequence = view.InvocationSequence(candidate);
+                        if (!next.IsValid || sequence > latest)
+                        {
+                            next = candidate;
+                            latest = sequence;
+                        }
+                    }
+                    if (!next.IsValid)
+                        return default;
+                    current = next;
+                }
+                return current;
+            }
+        }
+
+        static BtsmtlSkillObservationSession s_Current;
+        readonly CharacterPipelineDefinition m_Definition;
+        readonly RuntimeDebugSession m_Session;
+        readonly FlowGraph m_RootGraph;
+        readonly Scope m_RootScope;
+        Scope m_PageScope;
+        BtsmtlSkillFlowObservation m_Observation;
+        bool m_NavigationDirty = true;
+        bool m_Disposed;
+        bool m_CaptureValues;
+        TimelineCaller m_PendingTimeline;
+        TimelineCaller m_ActiveTimeline;
+
+        BtsmtlSkillObservationSession(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, Scope scope)
+        {
+            m_Definition = definition;
+            m_RootGraph = graph;
+            m_Session = session;
+            m_RootScope = scope;
+            EditorApplication.update += Update;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            GraphEditor.onEditorNavigationChanged += OnNavigationChanged;
+            TimelineEditorWindow.AssetOpened += OnTimelineAssetOpened;
+            TimelineEditorWindow.AssetTreeOpened += OnTimelineTreeOpened;
+        }
+
+        public static void Open(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, RuntimeInstanceKey instance) =>
+            OpenScope(definition, graph, session, new Scope(instance, Array.Empty<string>()));
+
+        static void OpenScope(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, Scope scope)
+        {
+            bool capture = s_Current?.m_Observation?.CaptureValues ?? false;
+            s_Current?.Dispose();
+            s_Current = new BtsmtlSkillObservationSession(definition, graph, session, scope) { m_CaptureValues = capture };
+            s_Current.Update();
+        }
+
+        void OnNavigationChanged() => m_NavigationDirty = true;
+
+        void Update()
+        {
+            if (m_Disposed)
+                return;
+            if (!Application.isPlaying || !GraphEditor.current || GraphEditor.rootGraph != m_RootGraph)
+            {
+                Dispose();
+                return;
+            }
+            if (!m_NavigationDirty)
+                return;
+            m_NavigationDirty = false;
+            m_CaptureValues = m_Observation?.CaptureValues ?? m_CaptureValues;
+            m_Observation?.Dispose();
+            m_Observation = null;
+            try
+            {
+                var graph = m_RootGraph;
+                Scope scope = m_RootScope;
+                while (graph.GetCurrentChildGraph() is FlowGraph child && child is IBtsmtlSkillFlowGraph childAuthoring)
+                {
+                    IGraphElement caller = graph.GetCurrentChildGraphSource();
+                    RuntimeSourceElementKind kind = caller is Connection ? RuntimeSourceElementKind.Edge : RuntimeSourceElementKind.Node;
+                    RuntimeGraphInvocation[] matches = m_Session.ViewModel.GraphInvocations.Where(value =>
+                        value.ParentPath == scope.Path && value.GraphId == childAuthoring.AuthoringId &&
+                        value.Caller.Kind == kind && value.Caller.ElementAuthoringId == caller.UID &&
+                        string.IsNullOrEmpty(value.CallerClipId)).ToArray();
+                    if (matches.Length != 1)
+                        throw new InvalidOperationException("当前页面没有唯一的同版本运行调用路径。");
+                    scope = scope.Append(matches[0].Path);
+                    graph = child;
+                }
+                m_PageScope = scope;
+                var request = new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(((IBtsmtlSkillFlowGraph)graph).AuthoringId),
+                    new BtsmtlSkillGraphFingerprint().Compute(graph));
+                m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
+                m_Observation.CaptureValues = m_CaptureValues;
+                m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
+            }
+            catch (InvalidOperationException error)
+            {
+                GraphEditor.current.ShowNotification(new GUIContent(error.Message));
+            }
+        }
+
+        bool CanNavigateParent()
+        {
+            if (m_PageScope == null || !m_Session.ViewModel.TryGetInvocation(m_PageScope.Path, out RuntimeGraphInvocation invocation) ||
+                string.IsNullOrEmpty(invocation.ParentPath))
+                return false;
+            return m_PageScope.Calls.Length != 0 ||
+                m_Session.ViewModel.TryGetParentGeneration(m_PageScope.Root, out ulong generation) && generation != 0;
+        }
+
+        void NavigateParent()
+        {
+            RuntimeDebugViewModel view = m_Session.ViewModel;
+            if (!CanNavigateParent() || !view.TryGetInvocation(m_PageScope.Path, out RuntimeGraphInvocation invocation) ||
+                !view.TryGetInvocation(invocation.ParentPath, out RuntimeGraphInvocation parent))
+                return;
+            Scope scope;
+            if (m_PageScope.Calls.Length != 0)
+                scope = m_PageScope.Parent();
+            else
+            {
+                view.TryGetParentGeneration(m_PageScope.Root, out ulong generation);
+                RuntimeInstanceKey root = m_PageScope.Root;
+                scope = new Scope(RuntimeInstanceKey.SkillExecution(root.CharacterRuntimeId, root.GraphRuntimeId, root.StateId,
+                    root.ActionInstanceId, parent.Path, root.ActivationGeneration, generation), Array.Empty<string>());
+            }
+            FlowGraph graph = FindGraph(parent.GraphId);
+            graph.SetCurrentChildGraphAssignable(null);
+            GraphEditor.OpenWindow(graph);
+            OpenScope(m_Definition, graph, m_Session, scope);
+            IGraphElement caller = invocation.Caller.Kind == RuntimeSourceElementKind.Edge
+                ? graph.allNodes.SelectMany(node => node.outConnections).SingleOrDefault(edge => edge.UID == invocation.Caller.ElementAuthoringId)
+                : graph.allNodes.SingleOrDefault(node => node.UID == invocation.Caller.ElementAuthoringId);
+            if (caller != null)
+                GraphEditor.FocusElement(caller, true);
+            if (!string.IsNullOrEmpty(invocation.CallerClipId) && caller is BtsmtlSkillTimelineFlowNode timeline)
+            {
+                var track = timeline.Timeline.Tracks.Single(value => value.Clips.Any(clip => clip.AuthoringId == invocation.CallerClipId));
+                s_Current.OnTimelineOpening(timeline);
+                TimelineEditorWindow.Open(timeline.TimelineAsset).FocusSource(track.AuthoringId, invocation.CallerClipId);
+                s_Current.OnTimelineOpening(null);
+            }
+        }
+
+        void OnTimelineOpening(BtsmtlSkillTimelineFlowNode node)
+        {
+            m_PendingTimeline = node == null ? null : new TimelineCaller
+            {
+                Asset = node.TimelineAsset,
+                NodeId = node.UID,
+                Scope = m_PageScope
+            };
+        }
+
+        void OnTimelineAssetOpened(TimelineAsset asset)
+        {
+            m_ActiveTimeline = m_PendingTimeline?.Asset == asset ? m_PendingTimeline : null;
+            m_PendingTimeline = null;
+        }
+
+        void OnTimelineTreeOpened(TimelineAsset asset, TreeClip clip)
+        {
+            if (m_ActiveTimeline == null || m_ActiveTimeline.Asset != asset || clip.AssetTree is not BtsmtlSkillFlowGraph graph)
+                return;
+            RuntimeGraphInvocation[] matches = m_Session.ViewModel.GraphInvocations.Where(value =>
+                value.ParentPath == m_ActiveTimeline.Scope.Path && value.GraphId == graph.AuthoringId &&
+                value.Caller.ElementAuthoringId == m_ActiveTimeline.NodeId && value.CallerClipId == clip.AuthoringId).ToArray();
+            if (matches.Length != 1)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent("TreeClip缺少唯一的同版本调用路径。"));
+                return;
+            }
+            Scope scope = m_ActiveTimeline.Scope.Append(matches[0].Path);
+            graph.SetCurrentChildGraphAssignable(null);
+            GraphEditor.OpenWindow(graph);
+            OpenScope(m_Definition, graph, m_Session, scope);
+        }
+
+        FlowGraph FindGraph(string identity) => m_Definition.SkillGraphs.Where(graph => graph != null)
+            .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false)).Distinct()
+            .Single(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == identity);
+
+        static bool SameRelease(RuntimeInstanceKey left, RuntimeInstanceKey right) =>
+            left.Kind == RuntimeInstanceKind.SkillExecution && left.CharacterRuntimeId == right.CharacterRuntimeId &&
+            left.GraphRuntimeId == right.GraphRuntimeId && left.StateId == right.StateId &&
+            left.ActionInstanceId == right.ActionInstanceId && left.ActivationGeneration == right.ActivationGeneration;
+
+        void OnPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingPlayMode)
+                Dispose();
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            m_Disposed = true;
+            m_Observation?.Dispose();
+            EditorApplication.update -= Update;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            GraphEditor.onEditorNavigationChanged -= OnNavigationChanged;
+            TimelineEditorWindow.AssetOpened -= OnTimelineAssetOpened;
+            TimelineEditorWindow.AssetTreeOpened -= OnTimelineTreeOpened;
+            if (ReferenceEquals(s_Current, this))
+                s_Current = null;
+        }
+    }
+}

@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .Where(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == source.GraphAuthoringId)
                     .ToArray();
                 if (nativeGraphs.Length != 0)
-                    return nativeGraphs.Length == 1 && OpenSkillGraph(nativeGraphs[0], source, instance);
+                    return nativeGraphs.Length == 1 && OpenSkillGraph(definition, nativeGraphs[0], source, instance);
             }
             if (!definition.RootTreeAsset)
                 return false;
@@ -89,7 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return false;
         }
 
-        static bool OpenSkillGraph(FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
+        static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
         {
             NodeCanvas.Framework.IGraphElement element = null;
             if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
@@ -102,19 +102,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
                 return false;
 
-            string hash = new BtsmtlSkillGraphFingerprint().Compute(graph);
             if (graph.editorObservation is BtsmtlSkillFlowObservation existing)
                 existing.Dispose();
             if (GraphEditor.currentGraph?.editorObservation is BtsmtlSkillFlowObservation previous)
                 previous.Dispose();
+            graph.SetCurrentChildGraphAssignable(null);
             GraphEditor window = GraphEditor.OpenWindow(graph);
             window.Show();
             window.Focus();
             if (element != null)
                 GraphEditor.FocusElement(element, true);
             if (UnityEngine.Application.isPlaying && instance.IsValid)
-                _ = new BtsmtlSkillFlowObservation(graph, RuntimeDebugSession.Shared,
-                    new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(source.GraphAuthoringId), hash), instance);
+                BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             return true;
         }
 

@@ -18,6 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly string m_GraphId;
         readonly RuntimeDebugSession m_Session;
         readonly RuntimeDebugViewBinding m_Binding = new(RuntimeDebugViewKind.Graph);
+        readonly Func<RuntimeDebugViewModel, RuntimeInstanceKey> m_SelectInstance;
+        readonly Guid m_CharacterRuntimeId;
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
@@ -28,30 +30,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool m_CanReadSnapshot;
         bool m_ValueSamplingLimited;
         bool m_CoverageGap;
+        Func<bool> m_CanNavigateParent;
+        Action m_NavigateParent;
+        Action<BtsmtlSkillTimelineFlowNode> m_TimelineOpening;
         bool m_Dirty = true;
         bool m_Disposed;
         ulong m_LatestLogicTick;
 
         public BtsmtlSkillFlowObservation(FlowGraph graph, RuntimeDebugSession session,
             RuntimeDebugTargetRequest request, RuntimeInstanceKey instance)
+            : this(graph, session, request, instance, instance.CharacterRuntimeId, null) { }
+
+        internal static BtsmtlSkillFlowObservation ForScope(FlowGraph graph, RuntimeDebugSession session,
+            RuntimeDebugTargetRequest request, Guid characterRuntimeId, Func<RuntimeDebugViewModel, RuntimeInstanceKey> select) =>
+            new(graph, session, request, default, characterRuntimeId, select);
+
+        BtsmtlSkillFlowObservation(FlowGraph graph, RuntimeDebugSession session, RuntimeDebugTargetRequest request,
+            RuntimeInstanceKey instance, Guid characterRuntimeId, Func<RuntimeDebugViewModel, RuntimeInstanceKey> select)
         {
             if (graph is not IBtsmtlSkillFlowGraph authoring || !request.IsValid ||
                 !request.Source.Equals(RuntimeSourceElementKey.Graph(authoring.AuthoringId)))
                 throw new ArgumentException("技能观察必须使用当前正式图及其作者版本。");
-            if (!Application.isPlaying || !instance.IsValid)
+            if (!Application.isPlaying || !instance.IsValid && (select == null || characterRuntimeId == Guid.Empty))
                 throw new InvalidOperationException("技能观察必须绑定Play中的明确执行实例。");
             if (graph.editorObservation != null)
                 throw new InvalidOperationException("当前图已有观察绑定，请先释放原绑定。");
             m_Graph = graph;
             m_GraphId = authoring.AuthoringId;
             m_Session = session ?? throw new ArgumentNullException(nameof(session));
+            m_CharacterRuntimeId = characterRuntimeId;
+            m_SelectInstance = select;
             m_NodeIds = graph.allNodes.Select(node => node.UID).ToHashSet(StringComparer.Ordinal);
             m_EdgeIds = graph.allNodes.SelectMany(node => node.outConnections).Select(edge => edge.UID).ToHashSet(StringComparer.Ordinal);
             m_ValuePortIds = graph.allNodes.Cast<FlowNode>().SelectMany(node =>
                 node.GetInputValuePorts().Cast<Port>().Concat(node.GetOutputValuePorts())
                     .Select(port => (node.UID, port.ID))).ToHashSet();
             m_Binding.Configure(request);
-            m_Binding.Pin(instance);
+            if (instance.IsValid)
+                m_Binding.Pin(instance);
+            else
+                m_Binding.AwaitInstance(characterRuntimeId);
             graph.editorObservation = this;
             m_Session.Changed += OnChanged;
             EditorApplication.update += Update;
@@ -59,6 +77,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public RuntimeInstanceKey Instance => m_Binding.SelectedInstance;
+        public string InvocationLabel => Instance.IsValid
+            ? $"技能 {Instance.ActionInstanceId} · 释放 {Instance.ActivationGeneration} · 调用 {Instance.InvocationGeneration}"
+            : "等待该调用执行";
+        public bool CanNavigateParent => m_CanNavigateParent?.Invoke() == true;
+        public void NavigateParent() => m_NavigateParent?.Invoke();
+        public void NotifyTimelineOpening(BtsmtlSkillTimelineFlowNode node) => m_TimelineOpening?.Invoke(node);
+        internal void SetParentNavigation(Func<bool> canNavigate, Action navigate, Action<BtsmtlSkillTimelineFlowNode> timelineOpening)
+        {
+            m_CanNavigateParent = canNavigate;
+            m_NavigateParent = navigate;
+            m_TimelineOpening = timelineOpening;
+        }
         public string StatusMessage => m_ValueSamplingLimited || m_CoverageGap
             ? $"{m_Binding.StatusMessage} · 该角色的诊断记录不完整"
             : m_Binding.StatusMessage;
@@ -155,6 +185,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void Update()
         {
+            if (m_Disposed)
+                return;
             if (m_Graph == null || !Application.isPlaying || GraphEditor.current == null || GraphEditor.currentGraph != m_Graph)
             {
                 Dispose();
@@ -167,12 +199,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Edges.Clear();
             m_Values.Clear();
             m_ValueSamplingLimited = false;
+            if (m_SelectInstance != null)
+            {
+                RuntimeInstanceKey selected = m_SelectInstance(m_Session.ViewModel);
+                if (selected.IsValid)
+                    m_Binding.Pin(selected);
+                else
+                    m_Binding.AwaitInstance(m_CharacterRuntimeId);
+            }
             RuntimeDebugTargetResolution resolution = m_Binding.Refresh(m_Session,
                 RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine |
                 (m_CaptureValues ? RuntimeTraceChannel.Values : RuntimeTraceChannel.None));
             RuntimeDebugViewModel view = m_Session.ViewModel;
             m_CoverageGap = view.HasCoverageGap;
-            m_CanReadSnapshot = resolution.CanReadSnapshot && view.Valid;
+            m_CanReadSnapshot = m_Binding.CanReadSelectedInstance && view.Valid;
             if (!m_CanReadSnapshot)
             {
                 GraphEditor.current?.Repaint();

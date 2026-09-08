@@ -64,7 +64,7 @@ namespace NodeCanvas.Framework
             _editorChildOwnerId = null;
             _editorChildGraph = null;
             if (assignable == null || assignable.subGraph == null) { return; }
-            if (Application.isPlaying && EditorUtility.IsPersistent(assignable.subGraph)) {
+            if (Application.isPlaying && allowsEditorExecution && EditorUtility.IsPersistent(assignable.subGraph)) {
                 ParadoxNotion.Services.Logger.LogWarning("You can't view sub-graphs in play mode until they are initialized to avoid editing asset references accidentally", LogTag.EDITOR, this);
                 return;
             }

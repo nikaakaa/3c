@@ -44,7 +44,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             base.OnNodeInspectorGUI();
             if (m_Timeline && GUILayout.Button("打开Timeline编辑器"))
-                UnityEditor.AssetDatabase.OpenAsset(m_Timeline);
+            {
+                var observation = graph.editorObservation as IBtsmtlSkillObservationControls;
+                observation?.NotifyTimelineOpening(this);
+                try { UnityEditor.AssetDatabase.OpenAsset(m_Timeline); }
+                finally { observation?.NotifyTimelineOpening(null); }
+            }
         }
     }
 

@@ -9,6 +9,10 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         bool CaptureValues { get; set; }
         string StatusMessage { get; }
+        string InvocationLabel { get; }
+        bool CanNavigateParent { get; }
+        void NavigateParent();
+        void NotifyTimelineOpening(BtsmtlSkillTimelineFlowNode node);
     }
 
     public static class BtsmtlSkillObservationToolbar
@@ -19,6 +23,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                 return;
             bool changed = GUI.changed;
             controls.CaptureValues = GUILayout.Toggle(controls.CaptureValues, "采集端口值", EditorStyles.toolbarButton);
+            if (controls.CanNavigateParent && GUILayout.Button("返回父调用", EditorStyles.toolbarButton))
+                controls.NavigateParent();
+            GUILayout.Label(controls.InvocationLabel, EditorStyles.miniLabel);
             GUILayout.Label(controls.StatusMessage, EditorStyles.miniLabel);
             GUI.changed = changed;
         }

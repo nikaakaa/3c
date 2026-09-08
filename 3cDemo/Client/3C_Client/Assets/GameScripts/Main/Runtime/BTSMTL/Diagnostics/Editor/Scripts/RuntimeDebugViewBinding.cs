@@ -51,6 +51,7 @@ namespace BTSMTL.Diagnostics.Editor
         public RuntimeDebugTargetResolution Resolution => m_Resolution;
         public bool Following => m_Mode == RuntimeDebugViewBindingMode.Following;
         public bool Pinned => m_Mode == RuntimeDebugViewBindingMode.Pinned;
+        public bool CanReadSelectedInstance => m_Resolution.CanReadSnapshot && m_Status == RuntimeDebugViewBindingStatus.Ready && m_SelectedInstance.IsValid;
 
         public string StatusMessage
         {
@@ -110,6 +111,16 @@ namespace BTSMTL.Diagnostics.Editor
             m_SelectedInstance = instance;
             m_BoundCharacterRuntimeId = instance.CharacterRuntimeId;
             return true;
+        }
+
+        public void AwaitInstance(Guid characterRuntimeId)
+        {
+            if (characterRuntimeId == Guid.Empty)
+                throw new ArgumentException("等待实例必须绑定明确角色。", nameof(characterRuntimeId));
+            m_Mode = RuntimeDebugViewBindingMode.Pinned;
+            m_SelectedInstance = default;
+            m_BoundCharacterRuntimeId = characterRuntimeId;
+            m_Status = RuntimeDebugViewBindingStatus.NoInstance;
         }
 
         public void Dispose(RuntimeDebugSession session)
@@ -177,7 +188,7 @@ namespace BTSMTL.Diagnostics.Editor
 
             if (m_Mode == RuntimeDebugViewBindingMode.Pinned)
             {
-                m_Status = Contains(instances, m_SelectedInstance)
+                m_Status = !m_SelectedInstance.IsValid ? RuntimeDebugViewBindingStatus.NoInstance : Contains(instances, m_SelectedInstance)
                     ? RuntimeDebugViewBindingStatus.Ready
                     : RuntimeDebugViewBindingStatus.PinnedInstanceMissing;
                 return m_Resolution;

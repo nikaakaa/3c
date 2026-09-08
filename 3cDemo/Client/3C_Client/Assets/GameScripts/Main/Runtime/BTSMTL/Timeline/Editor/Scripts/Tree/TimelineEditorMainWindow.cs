@@ -18,6 +18,8 @@ namespace BTSMTL.Timeline.Editor
 
     public sealed class TimelineEditorWindow : EditorWindow
     {
+        public static event Action<TimelineAsset> AssetOpened;
+        public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
         sealed class TimelineRuntimeDebugBinding : ITimelineEditorRuntimeDebugBinding
         {
             public TimelineRuntimeDebugBinding(string timelineAuthoringId)
@@ -237,6 +239,7 @@ namespace BTSMTL.Timeline.Editor
                 ownershipLabel,
                 sourceGraphWindow,
                 new TimelineRuntimeDebugBinding(timeline.AuthoringId)));
+            AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());
             rootVisualElement.Add(ownership);
@@ -327,6 +330,7 @@ namespace BTSMTL.Timeline.Editor
             if (clip is TreeClip assetClip && assetClip.AssetTree)
             {
                 AssetDatabase.OpenAsset(assetClip.AssetTree);
+                AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
                 return;
             }
             if (!(clip is TreeClip treeClip) || treeClip.ResolvedTree == null)

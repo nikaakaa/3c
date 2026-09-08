@@ -4,6 +4,12 @@
 
 本节反映当前状态；后文按小步实施顺序记录，早期的待迁移描述不代表当前代码仍停留在该阶段。
 
+最新集成（2026-09-09）：Document任务已提交035057efd及a7a21da08，主任务通过754127e99修正其6处类型与调用签名编译错误。当前Unity恢复后error CS查询为0；仍未执行资产apply、内容Build或回放。资产组织存在待作者选择的接口差异：原生根文件与Document的Definition子资产创建路径尚未统一，未擅自修改已有存放规则。
+
+最新调用合同：GraphInvocation来源记录明确生命周期操作、父路径、调用节点／边及TreeClip身份。Macro以自身入口、状态页以所属机器／状态、条件页以指定调用者、Commit TreeClip以Enable入口、Decision TreeClip以Root入口读取原有代次；新增GraphInvocationGeneration及ParentInvocationGeneration只进入诊断记录。Program格式22、来源表6，Character编译器29、Timeline编译器5。发现SubGraph未分配标准生命周期槽会使RequestStop提前返回，已补齐正常Runnable槽并移除无状态代理显示补丁；这是停止传播修复，不是为诊断新增状态。
+
+导航接合：BtsmtlSkillObservationSession沿原生调用源和编译父路径建立只读观察范围，逐层要求相同释放身份与正确父调用代次。未执行的页面等待真实记录，不创建虚构实例。原生Macro／状态下钻可在编译执行的只读Play图中打开；返回父调用沿记录中的代次定位。Timeline通过明确打开上下文关联TreeClip，回退恢复调用节点及clip位置。此处是代码及编译检查结论，运行交互证据仍未完成。
+
 - 已提交：5f700e6b8接通Definition.SkillGraphs到原生技能编译；da820d615接通Timeline／TreeClip及表现调用点；2e0bd1e9a接通原生黑板声明快照、作用域和读写节点。
 - 尚未完成：完整公开能力对账、编辑器全部写入的统一Mutation、实例选择入口、Macro完整运行调用定位、实际经过边的采集、采样开销与运行对账、Document v6及最终资产迁移。tasks.md中的对应集成任务保持未勾选。
 - 原生窗口查询已接入发现阶段：逐次遍历Macro、状态、条件和TreeClip调用，按实际祖先声明owner匹配Decision阶段投射。共享定义的不同调用分别校验；缺少窗口类型或只有不可见／其他阶段投射时返回明确诊断和候选路径。该检查确认静态阶段与作用域合法性，不代替运行中窗口实际开放的记录。

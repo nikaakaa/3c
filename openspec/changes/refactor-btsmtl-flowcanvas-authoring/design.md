@@ -1,6 +1,8 @@
 ## Context
 
-本设计只覆盖BTSMTL技能。PoseGraph由[独立提案](../refactor-character-pose-graph-architecture/proposal.md)及[FlowCanvas文档](../refactor-character-pose-graph-architecture/flowcanvas-experiment.md)管理；本文不决定其执行路线、不修改其任务状态。
+执行纠正（2026-09-08）：作者要求当前大改阶段停止主动编译、Build、整根校验和回放；实施先完成代码及接口迁移，验证留到收口。技能入口以实例工作区为中心，通过明确Actor、ActionInstance、generation及调用位置定位作者来源；Character Definition仅是资源／合同引用，不再作为Open Root Tree作者或观察入口。现存依赖RootTree的发现与导航代码是待迁移旧实现，不是应当复刻的目标。
+
+本设计只覆盖BTSMTL技能。PoseGraph由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)管理；两边均为编译执行加Editor观察，本文不实施Pose迁移。
 
 当前技能入口仍从旧图闭包发现，节点发射直接依赖BaseNode和PropertyPort；运行已有ActionInstance、generation、调用状态和Numeric Target。FlowCanvas已有原生Macro和端口，原生高亮依赖实际Flow／Value调用，不能直接观察项目编译执行器。原生Sequence是Flip Flop，不能替代技能等待完成的顺序语义。
 
@@ -56,11 +58,11 @@
 
 业务取舍：只按图GUID实现简单但混淆多次调用；完整调用定位多一些诊断数据，却能准确说明这次技能在等待什么。
 
-### 5. 预览由正式Scene Play拥有
+### 5. 技能预览就是普通运行观察
 
-场景、Session、启动、停止、重建、暂停和单步都由唯一Scene Play协调器负责；本文只接技能观察和显示。构建显式触发，stale产物不冒充新内容；一步是完整安全更新单位，不在半次事务暂停。
+Unity进入Play后，角色通过普通输入或已有正式调试入口释放技能，原Session及ActionInstance照常执行。窗口只观察某一次释放，不创建预览实例、独立场景或时钟，不以Scene Play协调器作为前置条件。构建显式触发；版本不匹配停止错误叠加，不热换运行产物。
 
-子图缺少角色或参数上下文时从父技能运行并定位调用，不填假数据。协调器未完成则保留依赖缺口，不建临时播放器。原生协程断点不用于编译执行，本批不展示不支持的指令断点。
+没有有效角色或释放实例时显示等待目标，多个实例时明确选择；子图沿真实调用位置观察，不填假数据。若窗口提供释放按钮，它只向已有角色提交正式技能请求，仍由原准入、成本和中断规则决定结果，本提案不要求新增该按钮。Unity暂停时保留最后完成结果；退出Play、关闭窗口或实例代次变化时解绑。不提供窗口播放、暂停、单步、seek或原生协程断点。
 
 ### 6. Document及迁移
 
@@ -76,7 +78,7 @@ v6增加技能Macro接口、owner和调用闭包，保持业务kind、typed字�
 - [原生编辑绕过Mutation] → 审计所有创建、字段、连线、接口、clipboard及Undo入口，必要扩展只做一次。
 - [共享定义与执行实例混淆] → 区分资产owner、节点identity与调用执行identity。
 - [观察影响执行] → 只消费完成快照，采集沿既有有界通道。
-- [预览依赖未闭合] → 记录具体缺口，不增加第二预览路径。
+- [没有真实释放实例] → 显示等待目标，不创建假角色或预览技能实例。
 - [共用修改影响Pose] → 审计消费者，本文不得替代Pose文档的决定。
 
 ## Migration Plan
@@ -85,7 +87,7 @@ v6增加技能Macro接口、owner和调用闭包，保持业务kind、typed字�
 2. 完成原生作者、能力与事务入口，迁Macro及局部状态／规则页面。
 3. 直接编译新技能图，保持Numeric Target、ActionInstance及恢复合同。
 4. 完成v6与技能资产事务迁移，显式构建产物。
-5. 接入来源映射、实例观察、子图导航及正式Scene Play控制。
+5. 接入来源映射、Play生命周期、精确释放实例观察和子图导航，不新增运行控制器。
 6. 用现有CLI完成编译、Document往返、技能回放及诊断；不新增测试代码，不把手工验收写入tasks。
 7. 删除无消费者旧技能路径，安装规范和说明；不迁移Pose资产。
 
@@ -96,8 +98,8 @@ v6增加技能Macro接口、owner和调用闭包，保持业务kind、typed字�
 | 文档 | 本变更关系 |
 |---|---|
 | refactor-btsmtl-authoring-architecture | 原变更拥有C#控制、技能业务和状态拆分；本文拥有技能FlowCanvas作者、直接编译入口及观察 |
-| rebuild-btsmtl-preview-with-scene-play | 拥有预览生命周期；本文消费正式接口 |
-| refactor-character-pose-graph-architecture | 独立管理Pose，不由本文替代其22.x、23.x或24.x |
+| rebuild-btsmtl-preview-with-scene-play | 可选独立受控场景不属于本观测前置条件；本文不接管该生命周期 |
+| integrate-pose-flowcanvas-editor-preview | 独立管理Pose作者UI和真实动画帧观察；共享显示钩子复用，技能按某次释放定位 |
 | btsmtl-graph-core | 技能退出旧BaseGraph和inline图要求；其他领域原约束保留 |
 | Domain Framework／Editor Shell | 只迁技能，不强制其他领域切换 |
 | Document与project旧版本描述 | 安装时统一v6协议，保持非技能业务语义 |

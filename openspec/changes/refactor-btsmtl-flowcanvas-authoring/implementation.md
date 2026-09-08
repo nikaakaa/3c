@@ -2,12 +2,14 @@
 
 ## 实施基线与归属
 
+最新执行约束：用户要求停止当前大改过程中的主动编译、Build、整根校验及回放。下方已发生的检查仅记录历史事实，不再重复。接入入口必须从实例工作区定位，不恢复`Character Definition -> Open Root Tree`；精确Definition路径只保留为已有资源关联及历史检查定位。
+
 - 目录：`D:/Unity_Project_1/3C`；开始本轮apply时HEAD：`9c447aa4b5f2ddbc7d114476bccb59910d785e6c`。
 - 工作区已有未提交资产、Pose、相机和插件变更，不把整个工作区视为干净基线，不覆盖这些改动。
 - Center：`BTSMTL技能FlowCanvas作者与编译接入`，`change_id=2d129d09136d4ac3b77312b9e43d42f8`。
 - 精确根：`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。
 - 原`refactor-btsmtl-authoring-architecture`继续负责角色C#控制、技能业务、状态及生命周期；本文负责技能FlowCanvas作者入口、直接编译和观察。
-- `rebuild-btsmtl-preview-with-scene-play`继续负责正式场景和运行控制；本文仅接观察接口。
+- 当前观察按最新设计消费普通Unity Play中的真实Actor／ActionInstance，不以前述独立Scene Play方案为前置条件，也不创建预览运行控制器。
 - PoseGraph及原生runtime方案独立管理，不迁其资产、执行器或算法。
 
 ## 已核对的代码依赖
@@ -39,4 +41,5 @@
 - 正式RunHost基线编译返回`WorkspaceEditorInUse`，没有RunId；保留主验收Editor，没有另建临时运行器。
 - 同实例`e852139597e42532`完成脚本refresh／重载后，Console返回0条错误。重载期间CLI断开后原实例已恢复。
 - 尚未生成同输入前后回放比较，不能用脚本编译证明语义和性能完全一致。
+- 正式Validate job `4c215d1c6c344cf7a6b480324e81dcb9`已结束：success=true、compileSuccessCount=1、semanticValidCount=1，未apply或保存资产。sourceRevision=`5f692b49fd460f45732b1fb707a33afda75c4493c89bafeff7eeabe532577479`。用户要求停止编译后不再启动同类检查。
 - 未新增测试代码，未修改Unity YAML，未调用局部资产修复工具。

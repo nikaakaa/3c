@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace TreeDesigner.Editor
+namespace TreeDesigner.Authoring
 {
     public enum GraphAuthoringFieldValueKind : byte
     {

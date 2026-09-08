@@ -1,3 +1,4 @@
+using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -109,11 +110,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public static object DecodeValue(
-            TreeDesigner.Editor.GraphAuthoringFieldDescriptor field,
+            TreeDesigner.Authoring.GraphAuthoringFieldDescriptor field,
             JToken token,
             Type expectedType,
             Func<
-                TreeDesigner.Editor.GraphAuthoringFieldDescriptor,
+                TreeDesigner.Authoring.GraphAuthoringFieldDescriptor,
                 JToken,
                 Type,
                 UnityEngine.Object> decodeAsset)
@@ -129,40 +130,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return field.ValueKind switch
             {
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Boolean =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean =>
                     token.Value<bool>(),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Integer =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer =>
                     token.Value<int>(),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Float =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float =>
                     token.Value<float>(),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.String or
-                    TreeDesigner.Editor.GraphAuthoringFieldValueKind.Enum or
-                    TreeDesigner.Editor.GraphAuthoringFieldValueKind
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String or
+                    TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum or
+                    TreeDesigner.Authoring.GraphAuthoringFieldValueKind
                         .IdentityReference =>
                     token.Value<string>(),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Vector2 =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Vector2 =>
                     new Vector2(
                         token["x"].Value<float>(),
                         token["y"].Value<float>()),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Vector3 =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Vector3 =>
                     new Vector3(
                         token["x"].Value<float>(),
                         token["y"].Value<float>(),
                         token["z"].Value<float>()),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Quaternion =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Quaternion =>
                     new Quaternion(
                         token["x"].Value<float>(),
                         token["y"].Value<float>(),
                         token["z"].Value<float>(),
                         token["w"].Value<float>()),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind
                     .AssetReference =>
                     (decodeAsset ?? throw new ArgumentNullException(
                         nameof(decodeAsset)))(
                         field,
                         token,
                         expectedType),
-                TreeDesigner.Editor.GraphAuthoringFieldValueKind.Object =>
+                TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object =>
                     DecodeObject(field.FieldId.Value, token, expectedType),
                 _ => throw new InvalidOperationException(
                     $"Unsupported Pose field kind '{field.ValueKind}'.")

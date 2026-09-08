@@ -1,3 +1,4 @@
+using TreeDesigner.Authoring;
 using System.Linq;
 using TreeDesigner;
 using TreeDesigner.Editor;

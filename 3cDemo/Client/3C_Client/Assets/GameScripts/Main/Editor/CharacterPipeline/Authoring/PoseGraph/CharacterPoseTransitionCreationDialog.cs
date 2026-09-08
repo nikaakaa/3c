@@ -1,3 +1,4 @@
+using TreeDesigner.Authoring;
 using System;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;

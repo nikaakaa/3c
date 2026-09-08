@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
     [NodeName("Locomotion Input Motion")]
     [NodePath("Base/Locomotion/Locomotion Input Motion")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class LocomotionInputMotionNode : ActionNode
+    public sealed class LocomotionInputMotionNode : ActionNode, ILocomotionInputMotionAuthoring
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Move Input")]
         Vector2PropertyPort m_MoveInput = new Vector2PropertyPort();

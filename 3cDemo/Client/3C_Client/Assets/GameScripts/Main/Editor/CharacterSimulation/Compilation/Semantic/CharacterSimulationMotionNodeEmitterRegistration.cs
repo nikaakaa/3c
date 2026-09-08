@@ -12,10 +12,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static void Register(CharacterSimulationNodeEmitterRegistry registry)
         {
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<LocomotionInputMotionNode>(Locomotion));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<LocomotionInputMotionNode>(node => Locomotion(node, node.GUID)));
         }
 
-        static LocomotionInputMotionExecutionMode RequireLocomotionExecution(LocomotionInputMotionNode node)
+        static LocomotionInputMotionExecutionMode RequireLocomotionExecution(ILocomotionInputMotionAuthoring node)
         {
             LocomotionInputMotionExecutionMode mode = node.ExecutionMode;
             if (!Enum.IsDefined(typeof(LocomotionInputMotionExecutionMode), mode))
@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return mode;
         }
 
-        static CharacterSimulationNodeEmission Locomotion(LocomotionInputMotionNode node)
+        internal static CharacterSimulationNodeEmission Locomotion(ILocomotionInputMotionAuthoring node, string identity)
         {
             LocomotionInputMotionExecutionMode execution = RequireLocomotionExecution(node);
             LocomotionInputMotionDisplacementMode displacement = node.DisplacementMode;
@@ -62,8 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     throw new InvalidOperationException("Action Motion Curve locomotion requires a positive finite curve duration.");
                 if (execution == LocomotionInputMotionExecutionMode.Timed && node.DurationSeconds > curve.Duration + 0.0001f)
                     throw new InvalidOperationException("Timed locomotion cannot exceed its Action Motion Curve duration.");
-                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionX", BakeCurve(curve.LocalPositionX, $"{node.GUID}/ActionMotionPositionX")));
-                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionZ", BakeCurve(curve.LocalPositionZ, $"{node.GUID}/ActionMotionPositionZ")));
+                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionX", BakeCurve(curve.LocalPositionX, $"{identity}/ActionMotionPositionX")));
+                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionZ", BakeCurve(curve.LocalPositionZ, $"{identity}/ActionMotionPositionZ")));
                 constants.Add(new KeyValuePair<string, object>("ActionMotionDuration", curve.Duration));
             }
 

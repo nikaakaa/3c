@@ -6,8 +6,8 @@
 
 - 已提交：5f700e6b8接通Definition.SkillGraphs到原生技能编译；da820d615接通Timeline／TreeClip及表现调用点；2e0bd1e9a接通原生黑板声明快照、作用域和读写节点。
 - 尚未完成：完整公开能力对账、窗口查询阶段校验、编辑器全部写入的统一Mutation、实例入口装配、Macro完整运行调用定位、真实边与端口值采集、Document v6及最终资产迁移。tasks.md中的对应集成任务保持未勾选。
-- 当前工作区另有尚未提交的原生LocomotionInputMotion节点、共用运动参数读取接口及黑板输入绑定类型收紧。这些代码不作为已提交或已验证成果；本次只整理change文档，不继续修改或提交这批代码。
-- 最新脚本刷新请求返回HTTP 503：没有已连接的Unity实例。随后实例发现仍为空；本批新增代码尚无成功编译结果，之前的零CS错误记录只适用于此前提交。
+- 原生LocomotionInputMotion节点通过ILocomotionInputMotionAuthoring共享运动参数读取合同，复用原有速度／曲线校验和Program发射；黑板InputBinding限定为正式输入目录支持的ActionTargetSnapshot及Character／Spawn作用域。Document能力目录接入仍未完成。
+- Unity实例恢复后已再次请求脚本刷新，等待结果时插件会话断开，随后Console读取返回HTTP 503。本批代码尚无成功编译结果，之前的零CS错误记录只适用于此前提交；新增脚本的meta已由Unity生成。
 - Document v6由作者指定的「agent工具」任务负责，范围和正式合同直接记在design.md第6节、tasks.md第5节。没有新增独立交接文档；未经作者明确允许，不向其他窗口发送消息。
 - 资产迁移、Document apply、内容Build和回放均未因本次整理而执行。
 

@@ -89,6 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId),
                     ("FactContext", CharacterSimulationNodeEmitterContext.AssetIdentity(blackboard.FactContext)))),
             BtsmtlSkillMoveFacingAngleFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle),
+            BtsmtlSkillLocomotionFlowNode motion => CharacterSimulationMotionNodeEmitterRegistration.Locomotion(motion, motion.UID),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),
             BtsmtlSkillActionWindowActiveFlowNode window => new CharacterSimulationNodeEmission(

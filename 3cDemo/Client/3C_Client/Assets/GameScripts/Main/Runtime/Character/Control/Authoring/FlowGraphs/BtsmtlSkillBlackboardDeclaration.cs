@@ -54,8 +54,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 !PipelineBlackboardVariablePolicy.IsValid(m_Scope, m_Lifetime))
                 throw new InvalidOperationException("技能黑板作用域与生命周期不匹配。");
             if (m_InputBinding != null && (!m_InputBinding.IsDefined || m_Scope != PipelineBlackboardVariableScope.Character ||
-                m_Lifetime != PipelineBlackboardVariableLifetime.Spawn))
-                throw new InvalidOperationException("黑板输入绑定必须使用有效输入ID和Character／Spawn作用域。");
+                m_Lifetime != PipelineBlackboardVariableLifetime.Spawn || type != typeof(ActionTargetSnapshot)))
+                throw new InvalidOperationException("黑板输入绑定必须使用有效输入ID、ActionTargetSnapshot类型和Character／Spawn作用域。");
             if (m_FactProjection != null && (m_FactProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
                 type != typeof(bool) || m_Scope != PipelineBlackboardVariableScope.Frame ||
                 m_Lifetime != PipelineBlackboardVariableLifetime.Frame || string.IsNullOrWhiteSpace(m_FactProjection.ActionWindowType) ||

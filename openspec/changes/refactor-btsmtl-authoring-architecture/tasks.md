@@ -4,6 +4,8 @@
 
 ### 当前核对结论（2026-09-08）
 
+下午补核至`a52cdc534`及15:07原始日志：Pose已接入唯一CanvasCore GraphEditor，拖动修复已有提交；完整交互、正式Build和Scene Play仍未关闭。`6aede211a`修复状态摘要引用的五处身份重复误报，正式checkout已返回Clean，10.2该项局部阻塞解除。Corin两个空Clip Player在本次核对的资产中仍存在；15:01清理dry-run虽成功，但除两项删除外还计划六项Graph reference配置，applied／saved均为false；15:07后续dry-run因Conflict拒绝。后续先对齐源资产与编辑包并核清完整计划，再通过既有事务处理；不沿用过期计划，不把该结果认作12.3 Build或13.2整链通过。原始证据见`.codex-tmp/canvas-core/checkout-identity-fix.log`、`cleanup-dry-run.log`、`cleanup-dry-run-reference-fix.log`，职责与继续入口见[闭环文档](closure.md)。本次不修改任务勾选；下方原核对基准及历史结果保留各自适用范围。
+
 核对源码基准为主目录 `main` 提交 `602682e589883afe8ab1a1950c14d9e410953130`；工作区仍有后续未提交代码和资产。本次只核对文档、源码、提交记录及已有原始证据，没有重新执行Unity构建、Document apply或Replay。下列带日期的旧记录保留历史事实，不能把其中的“当前”“下一步”当作今天仍成立的状态。
 
 - 清单实际为69项，8项已勾选、61项未关闭；已勾选项为1.2、1.3、2.1a、6.1、6.2、10.1、10.5、10.6。10.1、10.5、10.6仍保留整链复核或最终对账条件。本轮不改勾选，不把清单关闭比例当作代码实现比例。

@@ -2,11 +2,17 @@
 
 更新日期：2026-09-08。主目录核对基准：`a5853d45c1e33a3445af0b32e219604cd8bd6b40`。
 
+后续状态补核至`a52cdc534`及本机15:07的Document记录；下方worktree盘点仍保留原基准，不表示重新审查了所有分支。本次只同步已有源码、提交和日志事实，没有执行apply、Build或Replay。
+
 ## 1. 先看结论
 
 目标是：作者能修改角色控制参数和技能内容，正式构建后在真实角色上运行，出现问题时能定位到具体技能、实例和片段，修正后能用同一输入确认结果。
 
 当前已经建立控制、技能执行、Timeline、Pose、资源和部分编辑工具的基础。主目录已接收多项分支成果，但运行边界、作者操作、版本发布和最终证据仍有缺口，尚未进入只做验收的阶段。
+
+9月8日下午增量：`726315c59`已把Pose编辑表面统一到CanvasCore；`a52cdc534`修复拖动与端口显示，提交记录报告Unity编译无错误及用户确认可拖动，端口视觉和连续Undo仍未完整验收。`6aede211a`修复State摘要引用被误判为重复实体，正式checkout已返回Clean，五处身份误报关闭。Corin两个缺少Source Slot的Clip Player在本次核对的资产中仍存在；15:01清理dry-run成功但含六项Graph reference配置和两项删除，未apply／save；15:07后续dry-run因Conflict被拒绝。不能沿用旧计划直接写入，也不能把checkout成功当成Build通过。
+
+继续实施入口：作者计划与共享写入问题归主任务10.2–10.4，最新产物组合归12.3，完整运行证据归13.2；Pose完整交互和Scene Play仍归其22.3／22.5及19.x。先核对源资产与编辑包差异、六项额外Graph reference计划的来源，再通过既有Document生命周期和正式事务处理；不能绕过Conflict。Pose文档正在并行加入第23节原生FlowCanvas独立实验，本次未覆盖这些未提交改动；实验不自动成为正式主线已安装能力，也不改变本节已核实的交付边界。
 
 后续只围绕四个结果组织进度：
 
@@ -174,6 +180,9 @@ Center正式仓库为`D:/Unity_Project_1/3C-Development-Center`，本次读到`6
 | PIK的原函数对照与1044帧实验 | 指定子步骤的公式或阶段结果，有失败及撤回记录 | 原算法完整迁移或主要脚部质量已经改善 |
 | `eb503bc83`提交说明 | 新控制模块按Actor工厂化及若干程序集增量编译成功报告 | 恢复合同仍成立、最新Build和Replay通过 |
 | `a5853d45c`提交说明 | Pose节点字段编辑和粘贴／重复路由已有代码 | 该批次编译、交互验证和Build完成；提交本身明确仍待验证 |
+| `726315c59`、`a52cdc534`及Canvas接入记录 | 唯一GraphEditor入口、脚本编译及节点拖动的阶段交付 | 端口视觉、连续Undo、完整作者操作、正式Build和Scene Play全部完成 |
+| `.codex-tmp/canvas-core/checkout-identity-fix.log` | `6aede211a`后正式checkout为Clean，五处身份误报已解除 | 当前编辑包始终Clean或已有完整apply／保存结果 |
+| `.codex-tmp/canvas-core/cleanup-dry-run.log`、`cleanup-dry-run-reference-fix.log` | 15:01计划成功且未应用；15:07请求因Conflict拒绝，原始失败保留 | 两个空Clip节点已删除、六项额外Graph配置已确认合理或最新Build成功 |
 
 原始失败不删除、不覆盖。恢复到旧行为也不计为新的功能收益。后续取得新结果时，保留原记录并写明替代了哪个版本的哪项结论。
 

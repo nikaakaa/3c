@@ -61,6 +61,23 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             var sourceMap = new DebugSourceMap(revision);
             var containers = new Dictionary<RuntimeSourceElementKey, RuntimeSourceElementHandle>();
             Dictionary<RuntimeSourceElementKey, string> containerContentHashes = ResolveContainerContentHashes(entries);
+            var invocations = new Dictionary<string, ProgramSourceMapEntry>(StringComparer.Ordinal);
+            foreach (ProgramSourceMapEntry entry in entries)
+                if (entry.TargetKind == ProgramSourceTargetKind.GraphInvocation)
+                    invocations.Add(entry.GraphInvocationPath, entry);
+            foreach (ProgramSourceMapEntry entry in invocations.Values)
+            {
+                RuntimeSourceElementKey caller = default;
+                if (!string.IsNullOrEmpty(entry.ParentInvocationPath))
+                {
+                    string parentGraph = invocations[entry.ParentInvocationPath].GraphId;
+                    caller = entry.InvocationCallerKind == ProgramInvocationCallerKind.Edge
+                        ? RuntimeSourceElementKey.Edge(parentGraph, entry.InvocationCallerId)
+                        : RuntimeSourceElementKey.Node(parentGraph, entry.InvocationCallerId);
+                }
+                sourceMap.AddGraphInvocation(new RuntimeGraphInvocation(entry.GraphInvocationPath, entry.GraphId,
+                    entry.ParentInvocationPath, caller, entry.InvocationCallerClipId));
+            }
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramSourceMapEntry entry = entries[i];
@@ -200,6 +217,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         static RuntimeSourceElementKey ResolveSource(ProgramSourceMapEntry source)
         {
+            if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation)
+                return RuntimeSourceElementKey.Graph(source.GraphId);
             if (source.TargetKind == ProgramSourceTargetKind.OperationPort)
                 return RuntimeSourceElementKey.Port(source.GraphId, source.NodeId, source.PortId);
             if (source.TargetKind == ProgramSourceTargetKind.BodyMotion)
@@ -226,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         static RuntimeSourceTarget ResolveTarget(ProgramSourceMapEntry source)
         {
-            if (source.TargetKind == ProgramSourceTargetKind.OperationPort)
+            if (source.TargetKind is ProgramSourceTargetKind.OperationPort or ProgramSourceTargetKind.GraphInvocation)
                 return RuntimeSourceTarget.Source;
             RuntimeSourceTargetKind kind = source.TargetKind switch
             {

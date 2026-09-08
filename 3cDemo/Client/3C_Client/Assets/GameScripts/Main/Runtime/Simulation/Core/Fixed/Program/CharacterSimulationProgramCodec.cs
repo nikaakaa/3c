@@ -126,9 +126,9 @@ namespace ThirdPersonSimulation.Fixed
     {
         const uint ArtifactMagic = 0x58494643;
         const int ArtifactVersion = 18;
-        const int ProgramFormatVersion = 21;
+        const int ProgramFormatVersion = 22;
         const int LayoutFormatVersion = 10;
-        const int SourceMapStringTableVersion = 5;
+        const int SourceMapStringTableVersion = 6;
 
         public static CharacterSimulationProgramArtifactHeader ReadArtifactHeader(byte[] bytes)
         {
@@ -475,6 +475,9 @@ namespace ThirdPersonSimulation.Fixed
                 strings.Add(value.GraphInvocationPath);
                 strings.Add(value.CompiledPortId);
                 strings.Add(value.SourceInvocationPath);
+                strings.Add(value.ParentInvocationPath);
+                strings.Add(value.InvocationCallerId);
+                strings.Add(value.InvocationCallerClipId);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
                     strings.Add(segments[segmentIndex]);
@@ -509,6 +512,10 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteInt32(stringIndex[value.CompiledPortId]);
                 writer.WriteByte((byte)value.ValuePortDirection);
                 writer.WriteInt32(stringIndex[value.SourceInvocationPath]);
+                writer.WriteInt32(stringIndex[value.ParentInvocationPath]);
+                writer.WriteByte((byte)value.InvocationCallerKind);
+                writer.WriteInt32(stringIndex[value.InvocationCallerId]);
+                writer.WriteInt32(stringIndex[value.InvocationCallerClipId]);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 writer.WriteInt32(segments.Length);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
@@ -553,6 +560,10 @@ namespace ThirdPersonSimulation.Fixed
                 string compiledPortId = ReadSourceMapString(reader, strings);
                 ProgramValuePortDirection valuePortDirection = ReadEnum<ProgramValuePortDirection>(reader.ReadByte());
                 string sourceInvocationPath = ReadSourceMapString(reader, strings);
+                string parentInvocationPath = ReadSourceMapString(reader, strings);
+                ProgramInvocationCallerKind callerKind = ReadEnum<ProgramInvocationCallerKind>(reader.ReadByte());
+                string callerId = ReadSourceMapString(reader, strings);
+                string callerClipId = ReadSourceMapString(reader, strings);
                 int segmentCount = ReadCount(reader);
                 var pathSegments = new string[segmentCount];
                 for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
@@ -574,7 +585,11 @@ namespace ThirdPersonSimulation.Fixed
                     graphInvocationPath,
                     compiledPortId,
                     valuePortDirection,
-                    sourceInvocationPath);
+                    sourceInvocationPath,
+                    parentInvocationPath,
+                    callerKind,
+                    callerId,
+                    callerClipId);
             }
             return entries;
         }

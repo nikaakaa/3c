@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         }
 
         public void Publish(ProgramControlFlowEdge edge, bool selected, bool passed, string skillId,
-            ulong actionInstanceId, ulong skillGeneration, ulong nodeGeneration)
+            ulong actionInstanceId, ulong skillGeneration, ulong nodeGeneration, ulong invocationGeneration, ulong parentGeneration)
         {
             if (!m_Edges.TryGetValue(edge.Identity, out Projection projection))
                 return;
@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 throw new InvalidOperationException("技能边缺少编译调用路径。");
             RuntimeInstanceKey instance = actionInstanceId != 0
                 ? RuntimeInstanceKey.SkillExecution(m_Context.CharacterRuntimeId, m_ExecutionId, skillId,
-                    actionInstanceId, projection.Invocation, skillGeneration)
+                    actionInstanceId, projection.Invocation, skillGeneration, invocationGeneration)
                 : RuntimeInstanceKey.Runnable(m_Context.CharacterRuntimeId, m_ExecutionId, edge.Source.Value.ToString(), nodeGeneration);
             bool transition = edge.Kind == ProgramControlFlowKind.Transition;
             RuntimeTraceEventKind kind = selected
@@ -64,7 +64,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     ActionInstanceId = actionInstanceId,
                     CallSiteId = projection.Invocation,
                     ActivationGeneration = nodeGeneration,
-                    SkillExecutionGeneration = skillGeneration
+                    SkillExecutionGeneration = skillGeneration,
+                    GraphInvocationGeneration = invocationGeneration,
+                    ParentInvocationGeneration = parentGeneration
                 });
         }
     }

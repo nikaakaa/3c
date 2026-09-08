@@ -213,7 +213,8 @@ namespace BTSMTL.Diagnostics
             ulong timelinePlaybackId,
             int treeClipCycle,
             ulong actionInstanceId = 0,
-            string callSiteId = "")
+            string callSiteId = "",
+            ulong invocationGeneration = 0)
         {
             Kind = kind;
             CharacterRuntimeId = characterRuntimeId;
@@ -224,6 +225,7 @@ namespace BTSMTL.Diagnostics
             TreeClipCycle = treeClipCycle;
             ActionInstanceId = actionInstanceId;
             CallSiteId = callSiteId ?? string.Empty;
+            InvocationGeneration = invocationGeneration;
         }
 
         public RuntimeInstanceKind Kind { get; }
@@ -235,6 +237,7 @@ namespace BTSMTL.Diagnostics
         public int TreeClipCycle { get; }
         public ulong ActionInstanceId { get; }
         public string CallSiteId { get; }
+        public ulong InvocationGeneration { get; }
         public bool IsValid => Kind != RuntimeInstanceKind.None && CharacterRuntimeId != Guid.Empty;
 
         public static RuntimeInstanceKey Character(Guid characterId) => new RuntimeInstanceKey(RuntimeInstanceKind.Character, characterId, Guid.Empty, string.Empty, 0, 0, -1);
@@ -248,14 +251,15 @@ namespace BTSMTL.Diagnostics
         public static RuntimeInstanceKey ControlTransition(Guid characterId, Guid moduleRuntimeId, string transitionId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlTransition, characterId, moduleRuntimeId, transitionId, generation, 0, -1);
         public static RuntimeInstanceKey ActionInstance(Guid characterId, Guid actionRuntimeId, string skillId, ulong instanceId, ulong generation) =>
             new RuntimeInstanceKey(RuntimeInstanceKind.ActionInstance, characterId, actionRuntimeId, skillId, generation, 0, -1, instanceId);
-        public static RuntimeInstanceKey SkillExecution(Guid characterId, Guid actionRuntimeId, string skillId, ulong instanceId, string callSiteId, ulong generation) =>
-            new RuntimeInstanceKey(RuntimeInstanceKind.SkillExecution, characterId, actionRuntimeId, skillId, generation, 0, -1, instanceId, callSiteId);
+        public static RuntimeInstanceKey SkillExecution(Guid characterId, Guid actionRuntimeId, string skillId, ulong instanceId, string callSiteId, ulong generation, ulong invocationGeneration = 0) =>
+            new RuntimeInstanceKey(RuntimeInstanceKind.SkillExecution, characterId, actionRuntimeId, skillId, generation, 0, -1, instanceId, callSiteId, invocationGeneration);
 
         public bool Equals(RuntimeInstanceKey other)
         {
             return Kind == other.Kind && CharacterRuntimeId.Equals(other.CharacterRuntimeId) && GraphRuntimeId.Equals(other.GraphRuntimeId) &&
                    ActivationGeneration == other.ActivationGeneration && TimelinePlaybackId == other.TimelinePlaybackId && TreeClipCycle == other.TreeClipCycle &&
                    ActionInstanceId == other.ActionInstanceId &&
+                   InvocationGeneration == other.InvocationGeneration &&
                    string.Equals(StateId, other.StateId, StringComparison.Ordinal) &&
                    string.Equals(CallSiteId, other.CallSiteId, StringComparison.Ordinal);
         }
@@ -274,6 +278,7 @@ namespace BTSMTL.Diagnostics
                 hash = hash * 31 + TimelinePlaybackId.GetHashCode();
                 hash = hash * 31 + TreeClipCycle;
                 hash = hash * 31 + ActionInstanceId.GetHashCode();
+                hash = hash * 31 + InvocationGeneration.GetHashCode();
                 hash = hash * 31 + (CallSiteId?.GetHashCode() ?? 0);
                 return hash;
             }
@@ -304,7 +309,7 @@ namespace BTSMTL.Diagnostics
                 case RuntimeInstanceKind.ActionInstance:
                     return $"Action:{GraphRuntimeId:N}/{StateId}/{ActionInstanceId}/{ActivationGeneration}";
                 case RuntimeInstanceKind.SkillExecution:
-                    return $"Skill:{GraphRuntimeId:N}/{StateId}/{ActionInstanceId}/{CallSiteId}/{ActivationGeneration}";
+                    return $"Skill:{GraphRuntimeId:N}/{StateId}/{ActionInstanceId}/{CallSiteId}/{ActivationGeneration}/{InvocationGeneration}";
                 default:
                     return "None";
             }
@@ -608,6 +613,8 @@ namespace BTSMTL.Diagnostics
         public string CallSiteId;
         public ulong ActivationGeneration;
         public ulong SkillExecutionGeneration;
+        public ulong GraphInvocationGeneration;
+        public ulong ParentInvocationGeneration;
         public float Time;
         public float SecondaryTime;
         public float NormalizedTime;

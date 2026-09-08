@@ -1387,7 +1387,8 @@ namespace ThirdPersonSimulation
         ControlModule = 8,
         ControlState = 9,
         ControlTransition = 10,
-        OperationPort = 11
+        OperationPort = 11,
+        GraphInvocation = 12
     }
 
     public enum ProgramValuePortDirection : byte
@@ -1395,6 +1396,14 @@ namespace ThirdPersonSimulation
         None,
         Input,
         Output
+    }
+
+    public enum ProgramInvocationCallerKind : byte
+    {
+        None,
+        Node,
+        Edge,
+        TimelineClip
     }
 
 	public sealed class ProgramSourceMapEntry
@@ -1416,7 +1425,11 @@ namespace ThirdPersonSimulation
 			string graphInvocationPath = "",
 			string compiledPortId = "",
 			ProgramValuePortDirection valuePortDirection = ProgramValuePortDirection.None,
-			string sourceInvocationPath = "")
+			string sourceInvocationPath = "",
+			string parentInvocationPath = "",
+			ProgramInvocationCallerKind invocationCallerKind = ProgramInvocationCallerKind.None,
+			string invocationCallerId = "",
+			string invocationCallerClipId = "")
 		{
 			if (targetIndex < 0)
 				throw new ArgumentOutOfRangeException(nameof(targetIndex));
@@ -1437,6 +1450,10 @@ namespace ThirdPersonSimulation
 			CompiledPortId = compiledPortId ?? string.Empty;
 			ValuePortDirection = valuePortDirection;
 			SourceInvocationPath = sourceInvocationPath ?? string.Empty;
+			ParentInvocationPath = parentInvocationPath ?? string.Empty;
+			InvocationCallerKind = invocationCallerKind;
+			InvocationCallerId = invocationCallerId ?? string.Empty;
+			InvocationCallerClipId = invocationCallerClipId ?? string.Empty;
 			if (GraphId.Length == 0 && TimelineId.Length == 0 && targetKind != ProgramSourceTargetKind.BodyMotion)
 				throw new ArgumentException("Source map entry requires a graph or timeline identity.");
 		}
@@ -1458,6 +1475,10 @@ namespace ThirdPersonSimulation
 		public string CompiledPortId { get; }
 		public ProgramValuePortDirection ValuePortDirection { get; }
 		public string SourceInvocationPath { get; }
+		public string ParentInvocationPath { get; }
+		public ProgramInvocationCallerKind InvocationCallerKind { get; }
+		public string InvocationCallerId { get; }
+		public string InvocationCallerClipId { get; }
 	}
 
     public static class ProgramSourceMapCoverage
@@ -1476,6 +1497,7 @@ namespace ThirdPersonSimulation
 
             var operations = new bool[operationCount];
             var stateSlots = new bool[stateSlotCount];
+            var invocations = new Dictionary<string, ProgramSourceMapEntry>(StringComparer.Ordinal);
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramSourceMapEntry entry = entries[i] ??
@@ -1493,12 +1515,33 @@ namespace ThirdPersonSimulation
                             (entry.ValuePortDirection == ProgramValuePortDirection.None) != string.IsNullOrEmpty(entry.CompiledPortId))
                             throw new InvalidDataException("Program operation-port source is incomplete.");
                         break;
+                    case ProgramSourceTargetKind.GraphInvocation:
+                        if (entry.TargetIndex >= operationCount || string.IsNullOrEmpty(entry.GraphId) ||
+                            string.IsNullOrEmpty(entry.GraphInvocationPath) || !invocations.TryAdd(entry.GraphInvocationPath, entry) ||
+                            !Enum.IsDefined(typeof(ProgramInvocationCallerKind), entry.InvocationCallerKind) ||
+                            (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.ParentInvocationPath) ||
+                            (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.InvocationCallerId) ||
+                            (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
+                            throw new InvalidDataException("Program graph invocation source is incomplete.");
+                        break;
                     case ProgramSourceTargetKind.StateSlot:
                         RequireTarget(entry.TargetIndex, stateSlots, "state slot");
                         break;
                     case ProgramSourceTargetKind.ControlState:
                         RequireTarget(entry.TargetIndex, stateSlots, "control state");
                         break;
+                }
+            }
+
+            foreach (ProgramSourceMapEntry invocation in invocations.Values)
+            {
+                var visited = new HashSet<string>(StringComparer.Ordinal) { invocation.GraphInvocationPath };
+                string parent = invocation.ParentInvocationPath;
+                while (!string.IsNullOrEmpty(parent))
+                {
+                    if (!visited.Add(parent) || !invocations.TryGetValue(parent, out ProgramSourceMapEntry owner))
+                        throw new InvalidDataException("Program graph invocation hierarchy is invalid.");
+                    parent = owner.ParentInvocationPath;
                 }
             }
 

@@ -4,6 +4,24 @@ using System.Globalization;
 
 namespace BTSMTL.Diagnostics
 {
+    public readonly struct RuntimeGraphInvocation
+    {
+        public RuntimeGraphInvocation(string path, string graphId, string parentPath,
+            RuntimeSourceElementKey caller, string callerClipId)
+        {
+            Path = path;
+            GraphId = graphId;
+            ParentPath = parentPath ?? string.Empty;
+            Caller = caller;
+            CallerClipId = callerClipId ?? string.Empty;
+        }
+        public string Path { get; }
+        public string GraphId { get; }
+        public string ParentPath { get; }
+        public RuntimeSourceElementKey Caller { get; }
+        public string CallerClipId { get; }
+    }
+
     public readonly struct DebugSourceMapEntry
     {
         public DebugSourceMapEntry(
@@ -34,6 +52,7 @@ namespace BTSMTL.Diagnostics
     {
         RuntimeProgramRevision Revision { get; }
         IReadOnlyList<DebugSourceMapEntry> Entries { get; }
+        IReadOnlyList<RuntimeGraphInvocation> GraphInvocations { get; }
         bool TryGet(RuntimeSourceElementHandle handle, out DebugSourceMapEntry entry);
         bool TryGetHandle(RuntimeSourceElementKey source, out RuntimeSourceElementHandle handle);
         bool TryGetProgramTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle);
@@ -47,6 +66,7 @@ namespace BTSMTL.Diagnostics
         readonly Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>> m_BySource = new Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>>();
         readonly Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle> m_ByProgramTarget = new Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle>();
         bool m_Sealed;
+        readonly List<RuntimeGraphInvocation> m_GraphInvocations = new();
 
         public DebugSourceMap(RuntimeProgramRevision revision)
         {
@@ -56,6 +76,14 @@ namespace BTSMTL.Diagnostics
         public RuntimeProgramRevision Revision { get; }
         public IDebugSourceMap SourceMap => this;
         public IReadOnlyList<DebugSourceMapEntry> Entries => m_Entries;
+        public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
+
+        public void AddGraphInvocation(RuntimeGraphInvocation invocation)
+        {
+            if (m_Sealed)
+                throw new InvalidOperationException("Debug Source Map is sealed.");
+            m_GraphInvocations.Add(invocation);
+        }
 
         public RuntimeSourceElementHandle Add(
             RuntimeSourceElementKey source,

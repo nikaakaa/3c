@@ -40,7 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         }
 
         public void Publish(int operation, string port, ProgramValuePortDirection direction, DebugValueSnapshot value,
-            string skillId, ulong actionInstanceId, ulong skillGeneration, ulong nodeGeneration)
+            string skillId, ulong actionInstanceId, ulong skillGeneration, ulong nodeGeneration,
+            ulong invocationGeneration, ulong parentGeneration)
         {
             if (!m_Ports.TryGetValue((operation, port, direction), out List<Projection> projections))
                 return;
@@ -48,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             {
                 RuntimeInstanceKey instance = actionInstanceId != 0
                     ? RuntimeInstanceKey.SkillExecution(m_Context.CharacterRuntimeId, m_ExecutionId, skillId,
-                        actionInstanceId, projection.Invocation, skillGeneration)
+                        actionInstanceId, projection.Invocation, skillGeneration, invocationGeneration)
                     : RuntimeInstanceKey.Runnable(m_Context.CharacterRuntimeId, m_ExecutionId, operation.ToString(), nodeGeneration);
                 m_Context.Publish(RuntimeTraceChannel.Values, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.ValueSampled,
                     projection.Source, instance, new RuntimeTracePayload
@@ -61,6 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         CallSiteId = projection.Invocation,
                         ActivationGeneration = nodeGeneration,
                         SkillExecutionGeneration = skillGeneration,
+                        GraphInvocationGeneration = invocationGeneration,
+                        ParentInvocationGeneration = parentGeneration,
                         Value = value
                     });
             }

@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public void EmitEdges(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillOperationBindings operations,
-            OperationHandle stateOwner, Func<BtsmtlSkillGraphOccurrence, OperationHandle, OperationHandle> compileCondition)
+            OperationHandle stateOwner, Func<BtsmtlSkillEdgeOccurrence, OperationHandle, OperationHandle> compileCondition)
         {
             foreach (BtsmtlSkillEdgeOccurrence record in graph.Edges)
             {
@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         : ProgramControlFlowKind.Child;
                 OperationHandle condition = record.Condition == null
                     ? OperationHandle.Invalid
-                    : compileCondition(record.Condition, edge.sourceNode is BtsmtlSkillStateFlowNode ? source : stateOwner);
+                    : compileCondition(record, edge.sourceNode is BtsmtlSkillStateFlowNode ? source : stateOwner);
                 string sourcePort = value ? valueSource.PortId : edge.sourcePortID;
                 string targetPort = value ? valueTarget.PortId : edge.targetPortID;
                 m_Builder.DeclareControlFlow(record.Route, source, target, sourcePort, targetPort,

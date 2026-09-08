@@ -108,7 +108,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (record.ControlFlow != null)
             {
                 m_ControlEdges.Publish(record.ControlFlow, record.ControlFlowSelected, record.ControlFlowPassed,
-                    record.SkillId, record.ActionInstanceId, record.SkillExecutionGeneration, record.Header.Activation.Generation);
+                    record.SkillId, record.ActionInstanceId, record.SkillExecutionGeneration, record.Header.Activation.Generation,
+                    record.GraphInvocationGeneration, record.ParentInvocationGeneration);
                 return;
             }
             if (record.Code == "value_sampling_limit")
@@ -120,7 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             {
                 m_PortValues.Publish(record.Header.Activation.Source.Operation.Value, record.ValueTrace.PortId,
                     record.ValueTrace.Direction, CaptureValue(record.ValueTrace.Value), record.SkillId, record.ActionInstanceId,
-                    record.SkillExecutionGeneration, record.Header.Activation.Generation);
+                    record.SkillExecutionGeneration, record.Header.Activation.Generation, record.GraphInvocationGeneration, record.ParentInvocationGeneration);
                 return;
             }
             if (record.Header.Activation.Source.IsCharacterControl)
@@ -146,7 +147,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     record.SkillId,
                     record.ActionInstanceId,
                     callSite,
-                    record.SkillExecutionGeneration)
+                    record.SkillExecutionGeneration,
+                    record.GraphInvocationGeneration)
                 : RuntimeInstanceKey.Runnable(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
@@ -170,6 +172,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     CallSiteId = callSite,
                     ActivationGeneration = record.Header.Activation.Generation,
                     SkillExecutionGeneration = record.SkillExecutionGeneration,
+                    GraphInvocationGeneration = record.GraphInvocationGeneration,
+                    ParentInvocationGeneration = record.ParentInvocationGeneration,
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });

@@ -51,7 +51,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Timelines = new BtsmtlSkillTimelineCompiler(timelineEmitters, builder, Compile);
         }
 
-        public BtsmtlSkillGraphCompilation Compile(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner)
+        public BtsmtlSkillGraphCompilation Compile(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner) =>
+            Compile(graph, stateOwner, default);
+
+        BtsmtlSkillGraphCompilation Compile(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner, BtsmtlSkillInvocationContext context)
         {
             if (m_Graphs.TryGetValue(graph.Route, out BtsmtlSkillGraphCompilation existing))
                 return existing;
@@ -71,12 +74,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     operations.AddLeaf(node, operation);
                     m_BindDomain(node, operation, graph.Route, Source(graph, node));
                 }
+                OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
+                if (graph.Role == BtsmtlSkillFlowGraphRole.ConditionRule && !context.Owner.IsValid)
+                    throw new InvalidOperationException("条件页必须继承明确的调用生命周期。");
+                OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
+                    ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
+                    : entry;
+                m_Builder.DeclareGraphInvocation(invocationOwner, new CharacterSimulationSourceLocation(
+                    graph.Graph.GetType().FullName, graph.GraphId, string.Empty, string.Empty, string.Empty, string.Empty,
+                    graph.Route, contentHash: graph.ContentHash), context.CallerKind, context.CallerId, context.ClipId);
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {
                     OperationHandle childStateOwner = reference.Kind == BtsmtlSkillGraphReferenceKind.StateBody
                         ? operations.Node(reference.Owner.UID)
                         : stateOwner;
-                    BtsmtlSkillGraphCompilation child = Compile(reference.Child, childStateOwner);
+                    OperationHandle childInvocationOwner = reference.Kind == BtsmtlSkillGraphReferenceKind.Macro
+                        ? default : operations.Node(reference.Owner.UID);
+                    BtsmtlSkillGraphCompilation child = Compile(reference.Child, childStateOwner,
+                        BtsmtlSkillInvocationContext.Call(reference.Owner.UID, childInvocationOwner));
                     switch (reference.Kind)
                     {
                         case BtsmtlSkillGraphReferenceKind.Macro:
@@ -92,11 +107,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             throw new ArgumentOutOfRangeException();
                     }
                 }
-                m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition, owner).Entry);
+                m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition.Condition, owner,
+                    BtsmtlSkillInvocationContext.Condition(condition.Edge.UID,
+                        condition.Edge.sourceNode is BtsmtlSkillStateFlowNode ? owner : invocationOwner)).Entry);
                 foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
                     m_Timelines.Emit(graph, timeline, operations.Node(timeline.Node.UID), stateOwner);
                 PublishPortSources(graph, operations);
-                OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
                 m_Blackboard.CompleteGraph(graph.Route, entry);
                 var result = new BtsmtlSkillGraphCompilation(entry, operations, macro);
                 m_Graphs.Add(graph.Route, result);

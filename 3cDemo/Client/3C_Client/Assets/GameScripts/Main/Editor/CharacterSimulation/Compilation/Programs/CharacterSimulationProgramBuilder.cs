@@ -199,6 +199,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AddSourceMap(ProgramSourceTargetKind.OperationPort, operation.Value, source, compiledPortId, direction);
         }
 
+        public void DeclareGraphInvocation(OperationHandle owner, CharacterSimulationSourceLocation source,
+            ProgramInvocationCallerKind callerKind, string callerId, string callerClipId)
+        {
+            if (!owner.IsValid || owner.Value >= m_Operations.Count)
+                throw new InvalidOperationException("图调用必须指定已有生命周期操作。");
+            bool hasGeneration = false;
+            foreach (int slot in m_Operations[owner.Value].StateSlots)
+                hasGeneration |= m_StateSlots[slot].Semantic == ProgramStateSemantic.RunnableActivationGeneration;
+            if (!hasGeneration)
+                throw new InvalidOperationException("图调用的生命周期操作没有执行代次槽。");
+            string parent = string.Empty;
+            int depth = 0;
+            foreach (string path in m_GraphInvocationPaths)
+                if (depth++ == 1)
+                {
+                    parent = path;
+                    break;
+                }
+            AddSourceMap(ProgramSourceTargetKind.GraphInvocation, owner.Value, source,
+                parentInvocation: parent, callerKind: callerKind, callerId: callerId, callerClipId: callerClipId);
+        }
+
         public int DeclareConstant(CharacterSimulationSourceLocation source, string fieldName, object value)
         {
             string identity = $"{source.ImmutableDataIdentity}/constant/{fieldName}";
@@ -599,6 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static bool RequiresSingleChild(SimulationOperationCode code)
         {
             return code == SimulationOperationCode.Root ||
+                   code == SimulationOperationCode.SubGraph ||
                    code == SimulationOperationCode.StateOnEnter ||
                    code == SimulationOperationCode.StateOnExit ||
                    code == SimulationOperationCode.TimelineEnter;
@@ -740,7 +763,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         void AddSourceMap(ProgramSourceTargetKind targetKind, int targetIndex, CharacterSimulationSourceLocation source,
-            string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None)
+            string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None,
+            string parentInvocation = "", ProgramInvocationCallerKind callerKind = ProgramInvocationCallerKind.None,
+            string callerId = "", string callerClipId = "")
         {
             try
             {
@@ -763,7 +788,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         : m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek(),
                     compiledPortId,
                     direction,
-                    m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek()));
+                    m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek(),
+                    parentInvocation, callerKind, callerId, callerClipId));
             }
             catch (Exception exception)
             {

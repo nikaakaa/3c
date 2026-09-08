@@ -174,6 +174,7 @@ namespace BTSMTL.Diagnostics.Editor
     {
         readonly RuntimeDebugSourceMapSnapshot m_SourceMap;
         readonly Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> m_CurrentEvents = new Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>();
+        readonly Dictionary<RuntimeInstanceKey, (ulong Parent, ulong Sequence)> m_InvocationParents = new();
         readonly Dictionary<ElementInstanceKey, RuntimeElementDebugState> m_ElementStates = new Dictionary<ElementInstanceKey, RuntimeElementDebugState>();
         readonly Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>> m_Instances = new Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>>();
         readonly Dictionary<string, HashSet<RuntimeInstanceKey>> m_GraphInstanceMembership = new Dictionary<string, HashSet<RuntimeInstanceKey>>(StringComparer.Ordinal);
@@ -219,6 +220,15 @@ namespace BTSMTL.Diagnostics.Editor
             m_HasCoverageGap |= missedChanges || evictedStates != 0;
         }
         public RuntimeDebugChangeSet Changes => m_Changes;
+        public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_SourceMap.GraphInvocations;
+        public bool TryGetInvocation(string path, out RuntimeGraphInvocation invocation) => m_SourceMap.TryGetInvocation(path, out invocation);
+        public bool TryGetParentGeneration(RuntimeInstanceKey instance, out ulong generation)
+        {
+            bool found = m_InvocationParents.TryGetValue(instance, out var value);
+            generation = value.Parent;
+            return found;
+        }
+        public ulong InvocationSequence(RuntimeInstanceKey instance) => m_InvocationParents.TryGetValue(instance, out var value) ? value.Sequence : 0;
 
         public RuntimeDebugTargetMatch MatchSource(RuntimeDebugTargetRequest request)
         {
@@ -376,6 +386,7 @@ namespace BTSMTL.Diagnostics.Editor
                 return;
 
             m_CurrentEvents.Clear();
+            m_InvocationParents.Clear();
             m_ElementStates.Clear();
             m_Instances.Clear();
             m_GraphInstanceMembership.Clear();
@@ -415,6 +426,9 @@ namespace BTSMTL.Diagnostics.Editor
 
             var eventView = new RuntimeDebugEventView(traceEvent, source, sourceName);
             m_CurrentEvents[key] = eventView;
+            if (traceEvent.RuntimeInstance.Kind == RuntimeInstanceKind.SkillExecution)
+                if (!m_InvocationParents.TryGetValue(traceEvent.RuntimeInstance, out var previous) || traceEvent.Sequence > previous.Sequence)
+                    m_InvocationParents[traceEvent.RuntimeInstance] = (traceEvent.Payload.ParentInvocationGeneration, traceEvent.Sequence);
             if (source.IsValid)
                 m_PendingSources.Add(source);
             if (traceEvent.RuntimeInstance.IsValid)
@@ -617,12 +631,21 @@ namespace BTSMTL.Diagnostics.Editor
     {
         readonly Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> m_Entries;
         readonly Dictionary<RuntimeSourceElementKey, string[]> m_Hashes;
+        readonly Dictionary<string, RuntimeGraphInvocation> m_Invocations = new(StringComparer.Ordinal);
+        readonly IReadOnlyList<RuntimeGraphInvocation> m_GraphInvocations;
 
-        RuntimeDebugSourceMapSnapshot(Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries, Dictionary<RuntimeSourceElementKey, string[]> hashes)
+        RuntimeDebugSourceMapSnapshot(Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries, Dictionary<RuntimeSourceElementKey, string[]> hashes,
+            IReadOnlyList<RuntimeGraphInvocation> invocations = null)
         {
             m_Entries = entries ?? new Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry>();
             m_Hashes = hashes ?? new Dictionary<RuntimeSourceElementKey, string[]>();
+            m_GraphInvocations = invocations ?? Array.Empty<RuntimeGraphInvocation>();
+            foreach (RuntimeGraphInvocation invocation in m_GraphInvocations)
+                m_Invocations.Add(invocation.Path, invocation);
         }
+
+        public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
+        public bool TryGetInvocation(string path, out RuntimeGraphInvocation invocation) => m_Invocations.TryGetValue(path, out invocation);
 
         public static RuntimeDebugSourceMapSnapshot Empty { get; } = new RuntimeDebugSourceMapSnapshot(null, null);
 
@@ -651,7 +674,7 @@ namespace BTSMTL.Diagnostics.Editor
             var frozen = new Dictionary<RuntimeSourceElementKey, string[]>();
             foreach (KeyValuePair<RuntimeSourceElementKey, List<string>> pair in collected)
                 frozen.Add(pair.Key, pair.Value.ToArray());
-            return new RuntimeDebugSourceMapSnapshot(entries, frozen);
+            return new RuntimeDebugSourceMapSnapshot(entries, frozen, new List<RuntimeGraphInvocation>(sourceMap.GraphInvocations).AsReadOnly());
         }
 
         public bool TryResolve(RuntimeSourceElementHandle handle, out RuntimeSourceElementKey source, out string sourceName)

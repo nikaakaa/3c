@@ -692,7 +692,9 @@ namespace ThirdPersonSimulation
             SimulationValueTrace valueTrace = null,
             ProgramControlFlowEdge controlFlow = null,
             bool controlFlowSelected = false,
-            bool controlFlowPassed = false)
+            bool controlFlowPassed = false,
+            ulong graphInvocationGeneration = 0,
+            ulong parentInvocationGeneration = 0)
         {
             Header = header;
             Severity = severity;
@@ -706,6 +708,8 @@ namespace ThirdPersonSimulation
             ControlFlow = controlFlow;
             ControlFlowSelected = controlFlowSelected;
             ControlFlowPassed = controlFlowPassed;
+            GraphInvocationGeneration = graphInvocationGeneration;
+            ParentInvocationGeneration = parentInvocationGeneration;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -719,5 +723,7 @@ namespace ThirdPersonSimulation
         public ProgramControlFlowEdge ControlFlow { get; }
         public bool ControlFlowSelected { get; }
         public bool ControlFlowPassed { get; }
+        public ulong GraphInvocationGeneration { get; }
+        public ulong ParentInvocationGeneration { get; }
     }
 }

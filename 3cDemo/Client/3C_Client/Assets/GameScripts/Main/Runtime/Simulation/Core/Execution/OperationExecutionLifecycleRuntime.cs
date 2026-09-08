@@ -46,14 +46,7 @@ namespace ThirdPersonSimulation
             OperationExecutionDescriptor operation = m_Host.Topology.Operation(handle);
             int lifecycleSlot = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
             if (lifecycleSlot < 0)
-            {
-                if (m_Host.ControlTraceEnabled)
-                    m_Host.EmitTrace(operation, "operation_running", OperationControlTraceSeverity.Detail, string.Empty);
-                OperationExecutionResult statelessResult = m_Host.Execute(operation);
-                if (m_Host.ControlTraceEnabled && statelessResult != OperationExecutionResult.Running)
-                    m_Host.EmitTrace(operation, "operation_complete", OperationControlTraceSeverity.Detail, statelessResult.ToString());
-                return statelessResult;
-            }
+                return m_Host.Execute(operation);
             var status = (OperationRunnableStatus)m_Host.ReadInt32(lifecycleSlot);
             if (status == OperationRunnableStatus.Stopping)
                 return OperationExecutionResult.Running;

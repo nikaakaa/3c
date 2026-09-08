@@ -491,6 +491,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly HashSet<(int Operation, string Port, ProgramValuePortDirection Direction)> m_ValuePorts = new();
         readonly HashSet<string> m_EdgeIds = new(StringComparer.Ordinal);
+        readonly ProgramGraphInvocationLayout m_Invocations;
         readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
         readonly FixedEvaluationFrame m_Frame;
@@ -501,6 +502,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_Frame = frame;
             m_Sequence = sequence;
+            m_Invocations = new ProgramGraphInvocationLayout(frame.Program.SourceMap, frame.Program.Operations.Count,
+                owner => frame.Layout.FindOperationStateSlot(owner, ProgramStateSemantic.RunnableActivationGeneration));
             foreach (ProgramSourceMapEntry source in frame.Program.SourceMap)
             {
                 if (source.TargetKind == ProgramSourceTargetKind.OperationPort && source.ValuePortDirection != ProgramValuePortDirection.None)
@@ -542,7 +545,9 @@ namespace ThirdPersonSimulation.Fixed
                 m_Sequence.Next(m_Frame.Program.Operations[edge.Source.Value]), SimulationTraceSeverity.Detail, "Kernel.Flow",
                 selected ? "edge_selected" : "edge_evaluated", string.Empty,
                 m_Frame.CurrentActionTraceInstanceId, m_Frame.CurrentActionTraceSkillId, m_Frame.CurrentSkillTraceGeneration,
-                controlFlow: edge, controlFlowSelected: selected, controlFlowPassed: passed));
+                controlFlow: edge, controlFlowSelected: selected, controlFlowPassed: passed,
+                graphInvocationGeneration: InvocationGeneration(edge.Source),
+                parentInvocationGeneration: ParentGeneration(edge.Source)));
         }
 
         public void End()
@@ -570,7 +575,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Frame.AddTrace(new SimulationTraceRecord(
                 m_Sequence.Next(operation), SimulationTraceSeverity.Detail, "Kernel.Value", "value_sampled", string.Empty,
                 m_Frame.CurrentActionTraceInstanceId, m_Frame.CurrentActionTraceSkillId, m_Frame.CurrentSkillTraceGeneration,
-                new SimulationValueTrace(portId, direction, value)));
+                new SimulationValueTrace(portId, direction, value),
+                graphInvocationGeneration: InvocationGeneration(operation.Handle),
+                parentInvocationGeneration: ParentGeneration(operation.Handle)));
         }
 
         public void Add(SimulationOperation operation, string code, SimulationTraceSeverity severity, string detail)
@@ -586,7 +593,9 @@ namespace ThirdPersonSimulation.Fixed
                 detail,
                 m_Frame.CurrentActionTraceInstanceId,
                 m_Frame.CurrentActionTraceSkillId,
-                m_Frame.CurrentSkillTraceGeneration));
+                m_Frame.CurrentSkillTraceGeneration,
+                graphInvocationGeneration: InvocationGeneration(operation.Handle),
+                parentInvocationGeneration: ParentGeneration(operation.Handle)));
         }
 
         public void Add(SimulationExecutionSource source, string code, SimulationTraceSeverity severity, string detail, ulong generation = 1)
@@ -602,7 +611,21 @@ namespace ThirdPersonSimulation.Fixed
                 detail,
                 m_Frame.CurrentActionTraceInstanceId,
                 m_Frame.CurrentActionTraceSkillId,
-                m_Frame.CurrentSkillTraceGeneration));
+                m_Frame.CurrentSkillTraceGeneration,
+                graphInvocationGeneration: source.IsSkillOperation ? InvocationGeneration(source.Operation) : 0,
+                parentInvocationGeneration: source.IsSkillOperation ? ParentGeneration(source.Operation) : 0));
+        }
+
+        ulong InvocationGeneration(OperationHandle operation)
+        {
+            int slot = m_Invocations.GenerationSlot(operation);
+            return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
+        }
+
+        ulong ParentGeneration(OperationHandle operation)
+        {
+            int slot = m_Invocations.ParentGenerationSlot(operation);
+            return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
         }
     }
 }

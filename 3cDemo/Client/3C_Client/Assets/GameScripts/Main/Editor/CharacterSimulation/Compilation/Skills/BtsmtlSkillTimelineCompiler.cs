@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
 
@@ -9,10 +10,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly TimelineSemanticEmitter m_Emitter;
         readonly CharacterSimulationProgramBuilder m_Builder;
-        readonly Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillGraphCompilation> m_Compile;
+        readonly Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillInvocationContext, BtsmtlSkillGraphCompilation> m_Compile;
 
         public BtsmtlSkillTimelineCompiler(TimelineSemanticEmitterRegistry registry, CharacterSimulationProgramBuilder builder,
-            Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillGraphCompilation> compile)
+            Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillInvocationContext, BtsmtlSkillGraphCompilation> compile)
         {
             m_Emitter = new TimelineSemanticEmitter(registry);
             m_Builder = builder;
@@ -29,7 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     if (!timeline.Trees.TryGetValue(clip.Clip.AuthoringId, out BtsmtlSkillGraphOccurrence tree))
                         throw new InvalidOperationException($"{clip.Route}: 技能TreeClip没有原生节点图编译记录。");
-                    BtsmtlSkillGraphCompilation compiled = m_Compile(tree, owner);
+                    BtsmtlSkillGraphCompilation compiled = m_Compile(tree, owner,
+                        BtsmtlSkillInvocationContext.TreeClip(timeline.Node.UID, clip.Clip.AuthoringId,
+                            ((TreeClip)clip.Clip).ExecutionPhase == TimelineTreeExecutionPhase.Commit));
                     return new TimelineSemanticTreeCompilation(tree.Route, compiled.Entry, port =>
                     {
                         BtsmtlSkillTimelineHookFlowNode hook = tree.Nodes.OfType<BtsmtlSkillTimelineHookFlowNode>()

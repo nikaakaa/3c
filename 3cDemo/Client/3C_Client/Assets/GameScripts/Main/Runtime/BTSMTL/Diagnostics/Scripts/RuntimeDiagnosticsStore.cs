@@ -300,6 +300,8 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.CallSiteId, right.CallSiteId, StringComparison.Ordinal) &&
                    left.ActivationGeneration == right.ActivationGeneration &&
                    left.SkillExecutionGeneration == right.SkillExecutionGeneration &&
+                   left.GraphInvocationGeneration == right.GraphInvocationGeneration &&
+                   left.ParentInvocationGeneration == right.ParentInvocationGeneration &&
                    left.Time.Equals(right.Time) &&
                    left.SecondaryTime.Equals(right.SecondaryTime) &&
                    left.NormalizedTime.Equals(right.NormalizedTime) &&

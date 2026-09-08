@@ -62,6 +62,10 @@
 
 ## 本批小步提交
 
+接续实施：BtsmtlSkillGraphOccurrence只引用实际FlowNode／BinderConnection，为每个Macro、状态机和状态内容引用建立不同的调用路径，条件页面沿连线路径定位。BtsmtlSkillGraphFingerprint使用独立GraphSource包装原生节点做版本捕获，递归纳入明确资产引用；不调用会重排作者节点的Graph.Serialize。原生序列化仅捕获输入常量缓存，不执行Flow／Value委托，不保存资产。正式技能发现尚未改用该记录。
+
+运行层状态归属从作者Graph ID匹配改为显式State operation到StateMachine operation的ProgramReference。这样相同作者图出现在不同调用路径时，不再因Graph ID重复被拒绝。现有Character和独立Timeline树编译器都发射该引用；不保留旧Graph ID查找作为fallback。旧编译产物缺少关系时会明确拒绝，最终资产阶段通过正式Build更新，不在当前阶段偷偷补建。
+
 | 提交 | 独立内容 |
 |---|---|
 | 00761c2aa | 原生图领域规则、Macro外部执行及观察绘制接口 |

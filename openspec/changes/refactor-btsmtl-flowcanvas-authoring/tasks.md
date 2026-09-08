@@ -75,8 +75,12 @@
 - [x] 4.1.1 分离操作写入和旧节点读取，使既有路径使用唯一CharacterSimulationOperationEmitter。证据：cfe1d9065。
 - [x] 4.1.2 实现原生逻辑、已支持结构节点及输入／动作节点的叶节点发射器；读取serializedValue并校验Program端口合同，不调用getter。证据：ee557a353；目前尚未接入正式技能发现。
 - [ ] 4.1.3 替换CharacterSkillAuthoringDefinition的旧入口关联与CharacterSkillCompilationDiscovery的旧图发现，遍历正式原生图并调用叶节点发射器，进入唯一Semantic IR。
+
+  当前进度：已实现BtsmtlSkillGraphOccurrence，直接记录原生节点、连线、条件及每次Macro／状态页面调用的独立路径；版本捕获使用原生GraphSource序列化，不调用Graph.Serialize重排作者节点。正式技能入口和发现调用者尚未切换，因此本项仍未完成。
 - [ ] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
 - [ ] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。
+
+  当前进度：4dc3e82a2将状态所属状态机改为编译的operation引用，移除运行层按作者Graph ID猜归属的路径；Character和独立Timeline树编译器同步发射该引用。Macro参数和完整调用布局仍待完成，旧产物需在最终显式Build后更新，当前不提前构建。
 - [ ] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；通过精确根构建及引用闭包报告核对。
 ### 4.4 作者与运行隔离
 

@@ -8,6 +8,7 @@
 - 尚未完成：完整公开能力对账、编辑器全部写入的统一Mutation、实例入口装配、Macro完整运行调用定位、真实边与端口值采集、Document v6及最终资产迁移。tasks.md中的对应集成任务保持未勾选。
 - 原生窗口查询已接入发现阶段：逐次遍历Macro、状态、条件和TreeClip调用，按实际祖先声明owner匹配Decision阶段投射。共享定义的不同调用分别校验；缺少窗口类型或只有不可见／其他阶段投射时返回明确诊断和候选路径。该检查确认静态阶段与作用域合法性，不代替运行中窗口实际开放的记录。
 - Timeline基础导航已接通现有AssetDatabase.OpenAsset链：原生技能节点打开TimelineAsset，Timeline窗口区分私有子资产与共享主资产，TreeClip.AssetTree直接打开原生图并显示身份。没有复制窗口或另建画布；父调用返回和运行breadcrumb仍未接通。
+- 私有Macro增加原生菜单创建入口，调用节点与私有页面在同一编辑事务生成；拖线创建只连接唯一执行入口。BtsmtlSkillOwnedAssets以实际资产文件为边界比较修改前后的可达私有内容，只回收本次失去引用的图和Timeline；外部共享资产、仍可达私有资产及此前孤立内容不删除。回收使用现有Undo组，未另建Mutation服务；闭包复制及Document统一接入仍待完成。
 - 原生LocomotionInputMotion节点通过ILocomotionInputMotionAuthoring共享运动参数读取合同，复用原有速度／曲线校验和Program发射；黑板InputBinding限定为正式输入目录支持的ActionTargetSnapshot及Character／Spawn作用域。Document能力目录接入仍未完成。
 - 本轮小步提交：0e7798c1a（移动节点与运动编译合同）、f9cd29bbe（窗口查询阶段与调用作用域）、ab505e08c（Timeline及TreeClip原生资产打开）。新增脚本meta由Unity生成。
 - 刷新等待期间发生插件重载断连和HTTP 503；最后一次恢复连接后，Console按error CS查询返回0条。OpenSpec严格校验通过。该结果不代替编辑器交互、内容构建或运行对账，也不表示其他领域Console没有错误。

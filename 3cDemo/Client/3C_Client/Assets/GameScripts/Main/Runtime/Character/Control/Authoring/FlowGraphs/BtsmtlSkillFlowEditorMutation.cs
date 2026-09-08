@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (depth.Value != 0)
                 throw new InvalidOperationException("A skill mutation must join its existing transaction instead of nesting another one.");
             graph.SelfSerialize();
+            var previousOwnedAssets = BtsmtlSkillOwnedAssets.Collect(graph);
             int group = -1;
             if (recordUndo)
             {
@@ -73,6 +74,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 mutation();
                 BtsmtlSkillGraphClosure.Validate(graph, false);
+                BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
                 graph.SelfSerialize();
                 EditorUtility.SetDirty(graph);
                 if (recordUndo)
@@ -119,6 +121,38 @@ namespace ThirdPersonCharacter.Control.Authoring
                 menu.AddItem(new GUIContent(category + "/" + ports[i].name), false,
                     () => Create(graph, type, position, context, index));
             }
+        }
+
+        public static void AppendPrivateMacroCreationItem(FlowGraph graph, GenericMenu menu, Vector2 position, Port context)
+        {
+            if (graph.isEditorReadOnly || !graph.CanAuthorNodeType(typeof(MacroNodeWrapper)) ||
+                context != null && context is not FlowOutput)
+                return;
+            menu.AddItem(new GUIContent("BTSMTL/子图/新建私有Macro"), false, () =>
+            {
+                try
+                {
+                    MacroNodeWrapper call = Execute(graph, "创建私有技能子图", () =>
+                    {
+                        var created = (MacroNodeWrapper)graph.AddNode(typeof(MacroNodeWrapper), position);
+                        created.macro = BtsmtlSkillGraphAssetFactory.CreatePrivateMacro(graph, "技能子图");
+                        if (context != null)
+                        {
+                            Port source = context.parent.GetOutputPort(context.ID);
+                            Port target = created.GetInputPort(created.macro.inputDefinitions.Single(value => value.type == typeof(Flow)).ID);
+                            if (source == null || !CanConnect(graph, source, target, out _) ||
+                                !BinderConnection.CanBeBoundVerbosed(source, target, null, out _) || BinderConnection.Create(source, target) == null)
+                                throw new InvalidOperationException("原执行端口已变化，无法连接新建子图。");
+                        }
+                        return created;
+                    });
+                    GraphEditorUtility.activeElement = call;
+                }
+                catch (InvalidOperationException error)
+                {
+                    GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+                }
+            });
         }
 
         static Port[] Ports(FlowNode node, bool input) => input

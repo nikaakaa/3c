@@ -192,6 +192,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override UnityEditor.GenericMenu GetNodesMenu(Vector2 position, Port context, UnityEngine.Object instance)
         {
             var menu = AppendFlowNodesMenu(new UnityEditor.GenericMenu(), string.Empty, position, context, instance);
+            BtsmtlSkillFlowEditorMutation.AppendPrivateMacroCreationItem(this, menu, position, context);
             return this.AppendSimplexNodesMenu(menu, "原生逻辑", position, context, instance);
         }
 

@@ -140,7 +140,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!asset)
                 throw new ArgumentNullException(nameof(asset));
-            Bind(asset.Data, asset, "m_Data", "Shared Asset", null, null, string.Empty);
+            Bind(asset.Data, asset, "m_Data", AssetDatabase.IsSubAsset(asset) ? "Private Asset" : "Shared Asset", null, null, string.Empty);
         }
 
         public static void RebindIfOpen(TimelineNode node)
@@ -322,6 +322,11 @@ namespace BTSMTL.Timeline.Editor
             {
                 Selection.activeObject = animationClip.Clip;
                 EditorGUIUtility.PingObject(animationClip.Clip);
+                return;
+            }
+            if (clip is TreeClip assetClip && assetClip.AssetTree)
+            {
+                AssetDatabase.OpenAsset(assetClip.AssetTree);
                 return;
             }
             if (!(clip is TreeClip treeClip) || treeClip.ResolvedTree == null)

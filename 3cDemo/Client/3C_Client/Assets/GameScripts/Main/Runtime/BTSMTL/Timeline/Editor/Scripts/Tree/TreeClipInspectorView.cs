@@ -49,6 +49,24 @@ namespace BTSMTL.Timeline.Editor
             m_OwnershipLabel = new Label();
             Add(m_OwnershipLabel);
 
+            if (m_TreeClip.AssetTree)
+            {
+                var graphField = new ObjectField("节点图")
+                {
+                    objectType = typeof(ScriptableObject),
+                    allowSceneObjects = false,
+                    value = m_TreeClip.AssetTree
+                };
+                graphField.SetEnabled(false);
+                Add(graphField);
+                Add(new Button(OpenTree) { text = "打开节点图" });
+                m_OutputSummary = new Label();
+                m_OutputSummary.style.whiteSpace = WhiteSpace.Normal;
+                Add(m_OutputSummary);
+                Refresh();
+                return;
+            }
+
             ObjectField sharedTreeField = new ObjectField("Shared Tree")
             {
                 objectType = typeof(BaseTreeAsset),
@@ -141,6 +159,11 @@ namespace BTSMTL.Timeline.Editor
             m_DecisionToggle?.SetValueWithoutNotify(m_TreeClip.ExecutionPhase == TimelineTreeExecutionPhase.Decision);
             m_CommitToggle?.SetValueWithoutNotify(m_TreeClip.ExecutionPhase == TimelineTreeExecutionPhase.Commit);
             m_OwnershipLabel.text = $"Ownership: {m_TreeClip.Ownership}";
+            if (m_TreeClip.AssetTree is ITimelineTreeGraphAsset graph)
+            {
+                m_OutputSummary.text = $"节点图：{m_TreeClip.AssetTree.name}\n身份：{graph.AuthoringId}";
+                return;
+            }
             TimelineRunningTree tree = m_TreeClip.ResolvedTree;
             if (tree == null)
             {

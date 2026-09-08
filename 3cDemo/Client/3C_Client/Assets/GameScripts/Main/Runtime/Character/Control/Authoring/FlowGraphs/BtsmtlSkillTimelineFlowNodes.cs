@@ -39,6 +39,13 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");
+
+        protected override void OnNodeInspectorGUI()
+        {
+            base.OnNodeInspectorGUI();
+            if (m_Timeline && GUILayout.Button("打开Timeline编辑器"))
+                UnityEditor.AssetDatabase.OpenAsset(m_Timeline);
+        }
     }
 
     public enum BtsmtlSkillTimelineHook

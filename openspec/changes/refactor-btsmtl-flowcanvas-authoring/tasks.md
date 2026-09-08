@@ -70,6 +70,8 @@
   当前进度：原生LocomotionInputMotion节点已连接共用运动参数读取与Program发射，保留Once／Timed／持续执行及速度／曲线模式；完整能力目录、Document接入和正式产物对账仍待完成。
 - [ ] 3.4 接入原生下钻、breadcrumb及私有／共享标识，保留Timeline独立编辑和TreeClip返回关系；交付页面来源身份及生命周期对账记录。
 
+  当前进度：技能Timeline节点可通过现有资产打开入口进入Timeline编辑器，子资产显示Private；TreeClip.AssetTree通过同一资产打开机制进入原生图，详情显示稳定图身份，不再显示旧树缺失或提供旧树转换按钮。父调用返回、breadcrumb及运行调用绑定仍待接通，此项不勾选。
+
 ## 4. 直接编译
 
 ### 4.1 正式原生图直接编译

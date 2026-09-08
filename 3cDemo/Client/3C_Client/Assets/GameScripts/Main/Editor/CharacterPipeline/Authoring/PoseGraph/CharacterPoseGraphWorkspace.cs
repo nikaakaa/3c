@@ -755,7 +755,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GraphAuthoringChildSurfaceDescriptor child =
                 capability.ChildSurfaces.Single(value =>
                     value.CommandId.Equals(request.CommandId));
-            OpenChildSurface(node, child);
+            CharacterPoseCanvasNode caller = m_Document.Graph.RequireNode(new PoseNodeId(node.NodeId.Value));
+            NodeCanvas.Editor.GraphEditor.OpenEditorChild(caller, () => OpenChildSurface(node, child));
         }
 
         bool TryOpenFullBodyIkProfile(
@@ -1560,7 +1561,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_LiveDebugToggle == null ||
                 !m_LiveDebugToggle.value)
                 return;
-            RefreshSelectedDetails();
             RefreshRuntimeHighlight();
         }
 
@@ -1588,6 +1588,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (m_ShowingStateMachine &&
                     m_StateMachineDocument != null)
                 {
+                    var owner = CharacterPoseGraphAssetMutationOwner.ResolveStateMachineOwner(
+                        m_Asset, m_StateMachineDocument.Definition.StateMachineId);
+                    CharacterPoseProgramImage plan = m_ObservationPanel.PublishedPlan;
+                    string callSite = m_ObservationPanel.CallSite;
                     for (int i = 0;
                          i < snapshot.PoseStateMachines.Count;
                          i++)
@@ -1596,7 +1600,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             snapshot.PoseStateMachines[i];
                         if (!stateMachine.StateMachineId.Equals(
                                 m_StateMachineDocument.Definition
-                                    .StateMachineId))
+                                    .StateMachineId) || callSite == null || plan == null ||
+                            !plan.SourceMap.Any(source => source.GraphId == owner.Item1.Value &&
+                                source.AuthorNodeId.Equals(owner.Item2) && source.CallSite == callSite &&
+                                source.NodeId.Equals(stateMachine.NodeId)))
                             continue;
                         if (stateMachine.ActiveStateId.IsValid)
                             active.Add(
@@ -2003,6 +2010,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             machine.States.Select(value =>
                                 value.DisplayName))));
                 }
+                AppendLinkedPoseItems(items);
                 return items;
             }
 
@@ -2164,6 +2172,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 IGraphAuthoringDocumentProjection document,
                 GraphAuthoringNavigatorItem item)
             {
+                if (TryOpenLinkedPoseItem(item.ItemId.Value)) return;
                 const string stateMachinePrefix = "state-machine:";
                 if (item.ItemId.Value.StartsWith(
                         stateMachinePrefix,
@@ -2171,18 +2180,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     string stateMachineId = item.ItemId.Value.Substring(
                         stateMachinePrefix.Length);
-                    CharacterPoseStateMachineDefinition machine =
-                        m_Window.m_Asset.EnumerateStateMachines()
-                            .Single(value =>
-                                value.StateMachineId.Value ==
-                                stateMachineId);
-                    m_Window.OpenStateMachine(machine);
+                    m_Window.NavigateFromCatalog("state", stateMachineId);
                     return;
                 }
                 var graphId = new PoseGraphId(item.ItemId.Value);
                 if (m_Window.m_Asset.TryGetGraph(graphId, out _))
                 {
-                    m_Window.OpenGraph(graphId);
+                    m_Window.NavigateFromCatalog("graph", graphId.Value);
                     return;
                 }
             }

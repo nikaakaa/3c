@@ -8,6 +8,22 @@ using UnityEngine.UIElements;
 
 namespace TreeDesigner.Editor
 {
+    internal static class GraphAuthoringDetailsMutation
+    {
+        internal static void Apply(Action mutation, Action refresh, VisualElement content)
+        {
+            string error = null;
+            try { mutation(); }
+            catch (Exception exception) when (exception is ArgumentException || exception is InvalidOperationException)
+            {
+                error = exception.Message;
+            }
+            refresh();
+            if (error != null)
+                content.Insert(0, new HelpBox(error, HelpBoxMessageType.Error));
+        }
+    }
+
     public readonly struct GraphAuthoringReadOnlyDetail
     {
         public GraphAuthoringReadOnlyDetail(string label, string value, string tooltip = "")
@@ -579,18 +595,20 @@ namespace TreeDesigner.Editor
 
         void SetField(GraphAuthoringElementId elementId, GraphAuthoringFieldDescriptor field, object value)
         {
-            m_Binding.Capabilities.RequireField(
-                m_Binding.Document.Nodes.First(node => node.NodeId.Equals(elementId)).CapabilityId,
-                field.FieldId,
-                true);
-            m_Binding.Mutation.Apply(
-                m_Binding.Document,
-                new GraphAuthoringMutationRequest(
-                    GraphAuthoringMutationKind.SetField,
-                    elementId,
-                    fieldId: field.FieldId,
-                    value: value));
-            Rebuild();
+            GraphAuthoringDetailsMutation.Apply(() =>
+            {
+                m_Binding.Capabilities.RequireField(
+                    m_Binding.Document.Nodes.First(node => node.NodeId.Equals(elementId)).CapabilityId,
+                    field.FieldId,
+                    true);
+                m_Binding.Mutation.Apply(
+                    m_Binding.Document,
+                    new GraphAuthoringMutationRequest(
+                        GraphAuthoringMutationKind.SetField,
+                        elementId,
+                        fieldId: field.FieldId,
+                        value: value));
+            }, Rebuild, m_Scroll);
         }
 
         void AddReadOnlySection(string title, IReadOnlyList<GraphAuthoringReadOnlyDetail> rows, bool expanded)

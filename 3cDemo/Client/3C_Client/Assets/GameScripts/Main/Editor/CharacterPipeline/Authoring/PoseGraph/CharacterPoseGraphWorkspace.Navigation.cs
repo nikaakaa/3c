@@ -4,6 +4,7 @@ using System.Linq;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.Pipeline.Animation;
+using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -24,6 +25,74 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             public string ownerId;
             public bool connection;
+        }
+
+        void NavigateFromCatalog(string role, string id)
+        {
+            CharacterPoseCanvasInteraction.Apply(() =>
+            {
+                var routes = new List<(string Label, SavedNavigation Navigation)>();
+                Visit(m_Asset.Graph, new List<SavedNavigationStep>(), "Root Pose Graph", new HashSet<PoseGraphId>());
+                if (routes.Count == 0)
+                {
+                    if (role == "graph") OpenGraph(new PoseGraphId(id));
+                    else
+                    {
+                        var owner = CharacterPoseGraphAssetMutationOwner.ResolveStateMachineOwner(m_Asset, new PoseStateMachineId(id));
+                        OpenGraph(owner.Item1);
+                        m_Asset.RequireGraph(owner.Item1).RequireNode(owner.Item2).TryOpenEditorChild();
+                    }
+                    return;
+                }
+                if (routes.Count == 1)
+                {
+                    RestoreNavigation(JsonUtility.ToJson(routes[0].Navigation));
+                    return;
+                }
+                var menu = new GenericMenu();
+                foreach (var route in routes)
+                {
+                    string navigation = JsonUtility.ToJson(route.Navigation);
+                    menu.AddItem(new GUIContent(route.Label), false, () => RestoreNavigation(navigation));
+                }
+                menu.ShowAsContext();
+
+                void AddRoute(List<SavedNavigationStep> steps, string label) => routes.Add((label, new SavedNavigation
+                {
+                    rootRole = "graph",
+                    rootId = m_Asset.Graph.GraphId.Value,
+                    steps = new List<SavedNavigationStep>(steps)
+                }));
+
+                void Visit(CharacterPoseCanvasGraph graph, List<SavedNavigationStep> steps, string label, HashSet<PoseGraphId> ancestors)
+                {
+                    if (!ancestors.Add(graph.GraphId)) return;
+                    if (role == "graph" && graph.GraphId.Value == id) AddRoute(steps, label);
+                    foreach (CharacterPoseCanvasNode node in graph.Nodes)
+                    {
+                        var childSteps = new List<SavedNavigationStep>(steps)
+                        {
+                            new SavedNavigationStep { ownerId = node.NodeId.Value }
+                        };
+                        string childLabel = label + " › " + node.DisplayName;
+                        if (node.Payload is CharacterPoseStateMachineNodePayload machine && machine.StateMachine != null)
+                        {
+                            if (role == "state" && machine.StateMachine.StateMachineId.Value == id) AddRoute(childSteps, childLabel);
+                            foreach (CharacterPoseStateDefinition state in machine.StateMachine.States)
+                            {
+                                var stateSteps = new List<SavedNavigationStep>(childSteps)
+                                {
+                                    new SavedNavigationStep { ownerId = state.StateId.Value }
+                                };
+                                Visit(m_Asset.RequireGraph(state.PoseGraphId), stateSteps, childLabel + " › " + state.DisplayName, ancestors);
+                            }
+                        }
+                        else if (node.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null)
+                            Visit(m_Asset.RequireGraph(subgraph.Subgraph.PoseGraphId), childSteps, childLabel, ancestors);
+                    }
+                    ancestors.Remove(graph.GraphId);
+                }
+            });
         }
 
         string CaptureNavigation()

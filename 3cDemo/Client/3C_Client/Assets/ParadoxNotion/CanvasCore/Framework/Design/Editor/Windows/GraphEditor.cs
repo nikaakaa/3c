@@ -729,7 +729,13 @@ namespace NodeCanvas.Editor
 
         public static void FocusSelection() {
             if ( GraphEditorUtility.activeElements != null && GraphEditorUtility.activeElements.Count > 0 ) {
-                FocusPosition(GetNodeBounds(GraphEditorUtility.activeElements.Cast<Node>().ToList()).center);
+                Rect[] bounds = GraphEditorUtility.activeElements
+                    .Where(element => element.graph == currentGraph)
+                    .Select(element => element is Node node ? node.rect : ((Connection)element).GetMidRect())
+                    .ToArray();
+                if (bounds.Length == 0) { return; }
+                FocusPosition(Rect.MinMaxRect(bounds.Min(rect => rect.xMin), bounds.Min(rect => rect.yMin),
+                    bounds.Max(rect => rect.xMax), bounds.Max(rect => rect.yMax)).center);
                 return;
             }
             if ( GraphEditorUtility.activeElement != null ) {

@@ -216,7 +216,8 @@ namespace TreeDesigner.Editor
                              fields.Single(candidate => candidate.FieldId.Equals(controller)))))
             {
                 object current = m_DataSource.ReadStateField(m_Binding.Document, state, field);
-                section.Add(CreateFieldRow(field, current, value => SetStateField(state, field, value)));
+                section.Add(CreateFieldRow(field, current, value => GraphAuthoringDetailsMutation.Apply(
+                    () => SetStateField(state, field, value), () => InspectState(state.StateId), m_Content)));
             }
             if (section.childCount == 0)
                 section.Add(new Label("This State has no editable authoring fields."));
@@ -235,7 +236,8 @@ namespace TreeDesigner.Editor
                              fields.Single(candidate => candidate.FieldId.Equals(controller)))))
             {
                 object current = ReadTransitionField(transition, field);
-                section.Add(CreateFieldRow(field, current, value => SetTransitionField(transition, field, value)));
+                section.Add(CreateFieldRow(field, current, value => GraphAuthoringDetailsMutation.Apply(
+                    () => SetTransitionField(transition, field, value), () => InspectTransition(transition.TransitionId), m_Content)));
             }
             if (section.childCount == 0)
                 section.Add(new Label("This Transition has no editable authoring fields."));
@@ -341,7 +343,6 @@ namespace TreeDesigner.Editor
                     state.StateId,
                     fieldId: field.FieldId,
                     value: value));
-            InspectState(state.StateId);
         }
 
         void SetTransitionField(
@@ -363,7 +364,6 @@ namespace TreeDesigner.Editor
                 if (m_DataSource.ReadTransitionField(m_Binding.Document, transition, customCurve) == null)
                 {
                     m_DraftCustomTransitionId = transition.TransitionId;
-                    InspectTransition(transition.TransitionId);
                     return;
                 }
             }
@@ -375,7 +375,6 @@ namespace TreeDesigner.Editor
                     fieldId: field.FieldId,
                     value: value));
             m_DraftCustomTransitionId = default;
-            InspectTransition(transition.TransitionId);
         }
 
         object ReadTransitionField(

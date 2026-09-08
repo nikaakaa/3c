@@ -630,7 +630,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Where(port => port.Direction == CharacterPosePortDirection.Output)
                     .Select(port => new CharacterPoseOutputPortSource(port.PortId.Value, port.Kind,
                         values[EndpointKey(node.NodeId, port.PortId, scope)].Index)).ToArray();
-                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(operationIndex, graph.GraphId.Value,
+                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(operationIndex, graph.GraphId.Value, graph.ContentRevision,
                     scopedNodeId, node.NodeId, callChain, scope, outputSources));
                 if (handler.NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput)
@@ -1156,7 +1156,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 graphId => state.GraphClosure.RequireGraph(
                     ownerAsset,
                     graphId));
-            Dictionary<PoseStateAliasId, HashSet<PoseStateId>> aliases = ExpandAliases(definition);
+            Dictionary<PoseStateAliasId, HashSet<PoseStateId>> aliases = CharacterPoseStateAliasResolver.Expand(definition.Aliases);
             List<ExpandedStateTransition> expanded = ExpandTransitions(definition, aliases);
             HashSet<PoseStateId> reachable = CollectReachableStates(definition.Entry.TargetStateId, expanded);
             if (reachable.Count != definition.States.Count)
@@ -1347,44 +1347,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new CompiledTransitionRoutingPlanPayload(
                     routing.Plan)));
             return descriptorIndex;
-        }
-
-        static Dictionary<PoseStateAliasId, HashSet<PoseStateId>> ExpandAliases(
-            CharacterPoseStateMachineDefinition definition)
-        {
-            var authored = definition.Aliases.ToDictionary(value => value.AliasId);
-            var result = new Dictionary<PoseStateAliasId, HashSet<PoseStateId>>();
-            var visiting = new HashSet<PoseStateAliasId>();
-            foreach (CharacterPoseStateAlias alias in definition.Aliases.OrderBy(value => value.AliasId))
-                ExpandAlias(alias.AliasId, authored, result, visiting);
-            return result;
-        }
-
-        static HashSet<PoseStateId> ExpandAlias(
-            PoseStateAliasId aliasId,
-            IReadOnlyDictionary<PoseStateAliasId, CharacterPoseStateAlias> authored,
-            Dictionary<PoseStateAliasId, HashSet<PoseStateId>> result,
-            HashSet<PoseStateAliasId> visiting)
-        {
-            if (result.TryGetValue(aliasId, out HashSet<PoseStateId> existing))
-                return existing;
-            if (!visiting.Add(aliasId))
-                throw new InvalidOperationException($"Pose State Alias cycle contains '{aliasId}'.");
-            CharacterPoseStateAlias alias = authored[aliasId];
-            var states = new HashSet<PoseStateId>();
-            for (int i = 0; i < alias.Sources.Count; i++)
-            {
-                CharacterPoseStateTransitionSource source = alias.Sources[i];
-                if (source.Kind == PoseStateTransitionSourceKind.State)
-                    states.Add(source.StateId);
-                else
-                    states.UnionWith(ExpandAlias(source.AliasId, authored, result, visiting));
-            }
-            visiting.Remove(aliasId);
-            if (states.Count == 0)
-                throw new InvalidOperationException($"Pose State Alias '{aliasId}' expands to no State.");
-            result.Add(aliasId, states);
-            return states;
         }
 
         static List<ExpandedStateTransition> ExpandTransitions(

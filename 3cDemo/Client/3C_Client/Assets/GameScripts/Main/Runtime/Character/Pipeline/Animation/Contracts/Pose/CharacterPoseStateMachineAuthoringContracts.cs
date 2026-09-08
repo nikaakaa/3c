@@ -527,6 +527,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
 
+            try { CharacterPoseStateAliasResolver.Expand(definition.Aliases); }
+            catch (InvalidOperationException exception)
+            {
+                return Issue("PoseStateAliasExpansionInvalid", exception.Message,
+                    CharacterPoseStateMachineValidationTargetKind.StateMachine);
+            }
             var transitions = new HashSet<PoseStateTransitionId>();
             for (int i = 0; i < definition.Transitions.Count; i++)
             {

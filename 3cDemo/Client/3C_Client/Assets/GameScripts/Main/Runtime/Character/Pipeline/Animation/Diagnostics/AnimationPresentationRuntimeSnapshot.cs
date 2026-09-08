@@ -903,7 +903,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal PoseTransitionRuleEvaluationSnapshot(
             PoseStateMachineId stateMachineId,
+            PoseNodeId stateMachineNodeId,
             PoseStateTransitionId transitionId,
+            PoseTransitionRuleOperationId operationId,
+            PoseTransitionRuleOperationId readInputA,
+            PoseTransitionRuleOperationId readInputB,
             bool prospective,
             bool ruleResult,
             int operationIndex,
@@ -915,7 +919,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             string identityValue)
         {
             StateMachineId = stateMachineId;
+            StateMachineNodeId = stateMachineNodeId;
             TransitionId = transitionId;
+            OperationId = operationId;
+            ReadInputA = readInputA;
+            ReadInputB = readInputB;
             Prospective = prospective;
             RuleResult = ruleResult;
             OperationIndex = operationIndex;
@@ -928,7 +936,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         public PoseStateMachineId StateMachineId { get; }
+        public PoseNodeId StateMachineNodeId { get; }
         public PoseStateTransitionId TransitionId { get; }
+        public PoseTransitionRuleOperationId OperationId { get; }
+        public PoseTransitionRuleOperationId ReadInputA { get; }
+        public PoseTransitionRuleOperationId ReadInputB { get; }
         public bool Prospective { get; }
         public bool RuleResult { get; }
         public int OperationIndex { get; }

@@ -977,16 +977,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseStateTransitionDescriptor transition,
             bool prospective,
             bool result)
-        {            int operationCount = transition.Rule.Operations.Count;
+        {
+            int operationCount = transition.Rule.Operations.Count;
             for (int i = 0; i < operationCount; i++)
             {
                 if (m_RuleEvaluationRowCount >= m_RuleEvaluationRows.Length)
                     return;
                 CharacterPoseTransitionRuleValue value = m_RuleValues[i];
+                CharacterPoseTransitionRuleCompiledOperation operation = transition.Rule.Operations[i];
                 m_RuleEvaluationRows[m_RuleEvaluationRowCount++] =
                     new PoseTransitionRuleEvaluationSnapshot(
                         m_Descriptor.StateMachineId,
+                        m_Descriptor.NodeId,
                         transition.TransitionId,
+                        operation.OperationId,
+                        (value.InputReadMask & 1) != 0 ? transition.Rule.Operations[operation.InputA].OperationId : default,
+                        (value.InputReadMask & 2) != 0 ? transition.Rule.Operations[operation.InputB].OperationId : default,
                         prospective,
                         result,
                         i,
@@ -1624,13 +1630,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool boolValue,
             float floatValue,
             int enumValue,
-            string identityValue)
+            string identityValue,
+            byte inputReadMask = 0)
         {
             Kind = kind;
             BoolValue = boolValue;
             FloatValue = floatValue;
             EnumValue = enumValue;
             IdentityValue = identityValue ?? string.Empty;
+            InputReadMask = inputReadMask;
         }
 
         internal PoseTransitionRuleValueKind Kind { get; }
@@ -1638,6 +1646,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float FloatValue { get; }
         internal int EnumValue { get; }
         internal string IdentityValue { get; }
+        internal byte InputReadMask { get; }
+        internal CharacterPoseTransitionRuleValue WithInputReads(byte mask) =>
+            new CharacterPoseTransitionRuleValue(Kind, BoolValue, FloatValue, EnumValue, IdentityValue, mask);
     }
 
     internal static class CharacterPoseTransitionRuleRuntime
@@ -1695,6 +1706,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 CharacterPoseTransitionRuleCompiledOperation operation = program.Operations[i];
+                byte reads = 0;
                 values[i] = operation.Code switch
                 {
                     PoseTransitionRuleOperationCode.ReadFact => ReadFact(
@@ -1705,28 +1717,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     PoseTransitionRuleOperationCode.FloatLiteral => Float(operation.FloatLiteral),
                     PoseTransitionRuleOperationCode.EnumLiteral => Enum(operation.EnumLiteral),
                     PoseTransitionRuleOperationCode.IdentityLiteral => Identity(operation.IdentityLiteral),
-                    PoseTransitionRuleOperationCode.Not => Bool(!RequireBool(values, operation.InputA)),
+                    PoseTransitionRuleOperationCode.Not => Bool(!ReadBoolInput(values, operation.InputA, ref reads, 1)),
                     PoseTransitionRuleOperationCode.And => Bool(
-                        RequireBool(values, operation.InputA) && RequireBool(values, operation.InputB)),
+                        ReadBoolInput(values, operation.InputA, ref reads, 1) && ReadBoolInput(values, operation.InputB, ref reads, 2)),
                     PoseTransitionRuleOperationCode.Or => Bool(
-                        RequireBool(values, operation.InputA) || RequireBool(values, operation.InputB)),
-                    PoseTransitionRuleOperationCode.Equal => Bool(Equal(values, operation.InputA, operation.InputB)),
-                    PoseTransitionRuleOperationCode.NotEqual => Bool(!Equal(values, operation.InputA, operation.InputB)),
+                        ReadBoolInput(values, operation.InputA, ref reads, 1) || ReadBoolInput(values, operation.InputB, ref reads, 2)),
+                    PoseTransitionRuleOperationCode.Equal => Bool(EqualInputs(values, operation.InputA, operation.InputB, ref reads)),
+                    PoseTransitionRuleOperationCode.NotEqual => Bool(!EqualInputs(values, operation.InputA, operation.InputB, ref reads)),
                     PoseTransitionRuleOperationCode.Greater => Bool(
-                        RequireFloat(values, operation.InputA) > RequireFloat(values, operation.InputB)),
+                        ReadFloatInput(values, operation.InputA, ref reads, 1) > ReadFloatInput(values, operation.InputB, ref reads, 2)),
                     PoseTransitionRuleOperationCode.GreaterOrEqual => Bool(
-                        RequireFloat(values, operation.InputA) >= RequireFloat(values, operation.InputB)),
+                        ReadFloatInput(values, operation.InputA, ref reads, 1) >= ReadFloatInput(values, operation.InputB, ref reads, 2)),
                     PoseTransitionRuleOperationCode.Less => Bool(
-                        RequireFloat(values, operation.InputA) < RequireFloat(values, operation.InputB)),
+                        ReadFloatInput(values, operation.InputA, ref reads, 1) < ReadFloatInput(values, operation.InputB, ref reads, 2)),
                     PoseTransitionRuleOperationCode.LessOrEqual => Bool(
-                        RequireFloat(values, operation.InputA) <= RequireFloat(values, operation.InputB)),
+                        ReadFloatInput(values, operation.InputA, ref reads, 1) <= ReadFloatInput(values, operation.InputB, ref reads, 2)),
                     PoseTransitionRuleOperationCode.TimeInState => Float(timeInState),
                     PoseTransitionRuleOperationCode.StatePoseRemainingTime => Float(statePoseRemainingTime),
                     _ => throw new InvalidOperationException(
                         $"Pose Transition Rule operation '{operation.Code}' is unsupported.")
                 };
+                values[i] = values[i].WithInputReads(reads);
             }
             return RequireBool(values, program.OutputOperationIndex);
+        }
+
+        static bool ReadBoolInput(CharacterPoseTransitionRuleValue[] values, int index, ref byte reads, byte input)
+        {
+            reads |= input;
+            return RequireBool(values, index);
+        }
+
+        static float ReadFloatInput(CharacterPoseTransitionRuleValue[] values, int index, ref byte reads, byte input)
+        {
+            reads |= input;
+            return RequireFloat(values, index);
+        }
+
+        static bool EqualInputs(CharacterPoseTransitionRuleValue[] values, int a, int b, ref byte reads)
+        {
+            reads = 3;
+            return Equal(values, a, b);
         }
 
         static CharacterPoseTransitionRuleValue ReadFact(

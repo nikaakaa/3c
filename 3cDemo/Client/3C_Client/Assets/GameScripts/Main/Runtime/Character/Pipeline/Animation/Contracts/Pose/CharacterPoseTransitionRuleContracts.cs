@@ -224,6 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPoseTransitionRuleCompiledOperation
     {
+        [SerializeField] string m_OperationId = string.Empty;
         [SerializeField] PoseTransitionRuleOperationCode m_Code;
         [SerializeField] PoseTransitionRuleValueKind m_ValueKind;
         [SerializeField] int m_InputA = -1;
@@ -236,6 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_IdentityLiteral = string.Empty;
 
         public PoseTransitionRuleOperationCode Code => m_Code;
+        public PoseTransitionRuleOperationId OperationId => new PoseTransitionRuleOperationId(m_OperationId);
         public PoseTransitionRuleValueKind ValueKind => m_ValueKind;
         public int InputA => m_InputA;
         public int InputB => m_InputB;
@@ -249,6 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string IdentityLiteral => m_IdentityLiteral ?? string.Empty;
 
         internal CharacterPoseTransitionRuleCompiledOperation(
+            PoseTransitionRuleOperationId operationId,
             PoseTransitionRuleOperationCode code,
             PoseTransitionRuleValueKind valueKind,
             int inputA,
@@ -260,6 +263,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int enumLiteral,
             string identityLiteral)
         {
+            m_OperationId = operationId.Value;
             m_Code = code;
             m_ValueKind = valueKind;
             m_InputA = inputA;
@@ -276,7 +280,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPoseTransitionRuleProgram
     {
-        public const string SchemaVersion = "character-pose-transition-rule/v2";
+        public const string SchemaVersion = "character-pose-transition-rule/v3";
 
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_ContentRevision = string.Empty;

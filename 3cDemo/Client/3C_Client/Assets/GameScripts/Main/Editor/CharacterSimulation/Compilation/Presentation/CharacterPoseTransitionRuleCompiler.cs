@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 int inputB = ResolveCompiledInput(operation.InputB, compiledIndexById);
                 ValidateInputShape(operation, inputA, inputB);
                 compiled[i] = new CharacterPoseTransitionRuleCompiledOperation(
+                    operation.OperationId,
                     ResolveCode(operation.Kind),
                     signature.Kind,
                     inputA,

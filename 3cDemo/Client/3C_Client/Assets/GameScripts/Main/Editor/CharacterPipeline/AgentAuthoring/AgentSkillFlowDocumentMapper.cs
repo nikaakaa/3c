@@ -311,7 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     string nodePath = path + ".nodes[" + (node?.id ?? string.Empty) + "]";
                     if (node == null || !IsIdentity(node.id) || !graphNodes.Add(node.id) ||
-                        !nodeIds.Add(node.id) || !AgentSkillFlowAuthoringCapabilities.TryResolveType(node.capability) ||
+                        !nodeIds.Add(node.id) || !AgentSkillFlowAuthoringCapabilities.TryResolveType(node.capability, out _) ||
                         AgentSkillFlowAuthoringCapabilities.IsAnchor(node.capability) ||
                         !AgentSkillFlowAuthoringCapabilities.IsAllowed(node, role))
                     {
@@ -563,7 +563,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static bool ValidateOwner(
-            AgentPackageSkillFlowGraph graph,
+            AgentPackageSkillFlowGraphFile graph,
             BtsmtlSkillFlowGraphRole role,
             AgentGraphOwnership ownership,
             string path,
@@ -746,7 +746,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             return value is JObject target &&
                    target.Properties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal)
-                       .SetEquals("targetId", "x", "y", "z", "rx", "ry", "rz", "rw") &&
+                       .SetEquals(new[] { "targetId", "x", "y", "z", "rx", "ry", "rz", "rw" }) &&
                    target.Value<string>("targetId") != null &&
                    new[] { "x", "y", "z", "rx", "ry", "rz", "rw" }
                        .All(field => target[field]?.Type == JTokenType.Integer || target[field]?.Type == JTokenType.Float);
@@ -846,7 +846,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static bool ValidateBlackboard(
-            AgentPackageSkillFlowGraph graph,
+            AgentPackageSkillFlowGraphFile graph,
             string path,
             AgentCompileReport report)
         {

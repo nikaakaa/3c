@@ -149,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     FlowGraph ownerGraphAsset = null;
                     if (ownerGraph?.asset != null)
                         ResolveAsset<FlowGraph>(ownerGraph.asset, out ownerGraphAsset);
-                    string ownerPath = AssetDatabase.GetAssetPath(ownerGraphAsset ?? session.Definition);
+                    string ownerPath = AssetDatabase.GetAssetPath((UnityEngine.Object)ownerGraphAsset ?? session.Definition);
                     if (shared != AssetDatabase.IsMainAsset(timelineAsset) ||
                         !shared && (!AssetDatabase.IsSubAsset(timelineAsset) ||
                                     AssetDatabase.GetAssetPath(timelineAsset) != ownerPath))
@@ -1379,7 +1379,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 source = local as MotionCurveClip;
                 return source != null;
             }
-            return MotionWarpAuthoring.TryResolveClip(timeline, identity, out source);
+            if (!MotionWarpAuthoring.TryResolveClip(timeline, identity, out Clip resolved))
+                return false;
+            source = resolved as MotionCurveClip;
+            return source != null;
         }
 
         T ResolveObject<T>(JToken token) where T : UnityEngine.Object

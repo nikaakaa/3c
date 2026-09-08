@@ -28,16 +28,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly BtsmtlSkillFlowLeafEmitter m_Leaves;
         readonly BtsmtlSkillGraphFlowEmitter m_Flow;
+        readonly BtsmtlSkillTimelineCompiler m_Timelines;
         readonly Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> m_BindDomain;
         readonly Dictionary<string, BtsmtlSkillGraphCompilation> m_Graphs = new(StringComparer.Ordinal);
 
         public BtsmtlSkillGraphCompiler(CharacterSimulationProgramBuilder builder,
-            Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain)
+            Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain,
+            TimelineSemanticEmitterRegistry timelineEmitters)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_BindDomain = bindDomain ?? throw new ArgumentNullException(nameof(bindDomain));
             m_Leaves = new BtsmtlSkillFlowLeafEmitter(builder);
             m_Flow = new BtsmtlSkillGraphFlowEmitter(builder);
+            m_Timelines = new BtsmtlSkillTimelineCompiler(timelineEmitters, builder, Compile);
         }
 
         public BtsmtlSkillGraphCompilation Compile(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner)
@@ -78,6 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition, owner).Entry);
+            foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
+                m_Timelines.Emit(graph, timeline, operations.Node(timeline.Node.UID), stateOwner);
             PublishPortSources(graph, operations);
             OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
             var result = new BtsmtlSkillGraphCompilation(entry, operations, macro);
@@ -104,7 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             FlowNode entry = graph.Role switch
             {
-                BtsmtlSkillFlowGraphRole.Skill or BtsmtlSkillFlowGraphRole.StateBody => graph.Nodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
+                BtsmtlSkillFlowGraphRole.Skill or BtsmtlSkillFlowGraphRole.StateBody or BtsmtlSkillFlowGraphRole.TimelineBody => graph.Nodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
                 BtsmtlSkillFlowGraphRole.StateMachine => graph.Nodes.OfType<BtsmtlSkillStateEnterFlowNode>().Single(),
                 BtsmtlSkillFlowGraphRole.ConditionRule => graph.Nodes.OfType<BtsmtlSkillConditionResultFlowNode>().Single(),
                 _ => throw new InvalidOperationException($"{graph.Route}: 未登记图入口规则。")

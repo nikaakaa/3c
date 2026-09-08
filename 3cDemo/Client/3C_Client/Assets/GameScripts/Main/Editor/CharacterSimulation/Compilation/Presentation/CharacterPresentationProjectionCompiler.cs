@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     motionMatching,
                     sourceCatalog,
                     model.Timelines,
-                    CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
+                    CharacterPresentationProducerCompiler.CollectTimelineCallSites(model),
                     request.AnimationBuildInput,
                     movementModeStateIdentities,
                     errors);

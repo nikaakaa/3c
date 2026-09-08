@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
@@ -49,16 +51,53 @@ namespace ThirdPersonCharacter.Control.Authoring
                         continue;
                     if (call.macro is not BtsmtlSkillMacroGraph macro)
                         throw Error(nodePath, "调用目标必须是正式技能 Macro。");
+                    RequirePrivateOwnership(graph, macro, nodePath);
                     Visit(macro, nodePath, complete, active, identities, result);
                 }
                 if (node is BtsmtlSkillStateMachineFlowNode machine)
+                {
+                    RequirePrivateOwnership(graph, machine.StateMachine, nodePath);
                     VisitChild(machine.StateMachine, BtsmtlSkillFlowGraphRole.StateMachine, nodePath, complete, active, identities, result);
+                }
                 if (node is BtsmtlSkillStateFlowNode state)
+                {
+                    RequirePrivateOwnership(graph, state.Body, nodePath);
                     VisitChild(state.Body, BtsmtlSkillFlowGraphRole.StateBody, nodePath, complete, active, identities, result);
+                }
+                if (node is BtsmtlSkillTimelineFlowNode timeline)
+                {
+                    if (timeline.TimelineAsset == null)
+                    {
+                        if (complete)
+                            throw Error(nodePath, "缺少技能Timeline资产。");
+                    }
+                    else
+                    {
+                        if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Private &&
+                            (!AssetDatabase.IsSubAsset(timeline.TimelineAsset) ||
+                             AssetDatabase.GetAssetPath(timeline.TimelineAsset) != AssetDatabase.GetAssetPath(graph)))
+                            throw Error(nodePath, "私有Timeline必须是当前技能根中的子资产。");
+                        if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Shared && !AssetDatabase.IsMainAsset(timeline.TimelineAsset))
+                            throw Error(nodePath, "共享Timeline必须是明确的独立资产。");
+                        foreach (Track track in timeline.Timeline.Tracks)
+                            foreach (Clip clip in track.Clips)
+                                if (clip is TreeClip tree)
+                                {
+                                    if (tree.AssetTree is not BtsmtlSkillFlowGraph child)
+                                        throw Error($"{nodePath}/clip:{clip.AuthoringId}", "技能TreeClip必须引用正式原生节点图。");
+                                    RequirePrivateOwnership(timeline.TimelineAsset, child, nodePath);
+                                    VisitChild(child, BtsmtlSkillFlowGraphRole.TimelineBody, $"{nodePath}/clip:{clip.AuthoringId}",
+                                        complete, active, identities, result);
+                                }
+                    }
+                }
                 if (node is BtsmtlSkillCompositeFlowNode composite)
                     foreach (BtsmtlSkillStepPort step in composite.Steps)
                         if (step.Condition != null)
+                        {
+                            RequirePrivateOwnership(graph, step.Condition, nodePath);
                             VisitChild(step.Condition, BtsmtlSkillFlowGraphRole.ConditionRule, $"{nodePath}/port:{step.Id}", complete, active, identities, result);
+                        }
             }
             active.Remove(graph);
         }
@@ -71,6 +110,12 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (child == null || child.Role != role)
                 throw Error(path, $"缺少 {role} 页面或引用页面类型错误。");
             Visit(child, path, complete, active, identities, result);
+        }
+
+        static void RequirePrivateOwnership(UnityEngine.Object owner, FlowGraph child, string path)
+        {
+            if (child != null && AssetDatabase.IsSubAsset(child) && AssetDatabase.GetAssetPath(owner) != AssetDatabase.GetAssetPath(child))
+                throw Error(path, "不能直接引用其他根的私有节点图，应使用明确的共享资产。");
         }
 
         static void ValidateTopology(FlowGraph graph, BtsmtlSkillFlowGraphRole role, string path, bool complete)
@@ -125,6 +170,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 BtsmtlSkillFlowGraphRole.StateMachine => new[] { typeof(BtsmtlSkillStateEnterFlowNode), typeof(BtsmtlSkillStateAnyFlowNode), typeof(BtsmtlSkillStateExitFlowNode) },
                 BtsmtlSkillFlowGraphRole.ConditionRule => new[] { typeof(BtsmtlSkillConditionResultFlowNode) },
                 BtsmtlSkillFlowGraphRole.Subgraph => new[] { typeof(MacroInputNode), typeof(MacroOutputNode) },
+                BtsmtlSkillFlowGraphRole.TimelineBody => new[] { typeof(BtsmtlSkillRootFlowNode), typeof(BtsmtlSkillTimelineEnableFlowNode), typeof(BtsmtlSkillTimelineDisableFlowNode), typeof(BtsmtlSkillTimelineDestroyFlowNode) },
                 _ => throw Error(path, "未知技能页面类型。")
             };
             foreach (Type type in required)

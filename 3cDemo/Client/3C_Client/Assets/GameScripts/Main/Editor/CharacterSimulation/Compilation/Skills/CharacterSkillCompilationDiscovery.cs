@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static IReadOnlyList<CharacterSkillCompilationRecord> Discover(
             IReadOnlyList<CharacterSkillAuthoringDefinition> definitions,
             IReadOnlyList<BtsmtlSkillFlowGraph> roots,
+            TimelineSemanticEmitterRegistry timelineEmitters,
             CharacterSimulationCompileReport report)
         {
             if (definitions == null || roots == null || report == null)
@@ -71,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 try
                 {
                     BtsmtlSkillGraphOccurrence entry = BtsmtlSkillGraphOccurrence.Read(graph,
-                        $"skill:{definition.SkillId}/graph:{graph.AuthoringId}");
+                        $"skill:{definition.SkillId}/graph:{graph.AuthoringId}", timelineEmitters, report);
                     ValidateRelations(definition, declaration.Id, entry, knownSkills, report);
                     result.Add(new CharacterSkillCompilationRecord(definition, entry));
                 }

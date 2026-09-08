@@ -402,7 +402,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
                 definition.SkillDefinitions,
                 definition.SkillGraphs,
+                m_TimelineEmitters,
                 m_Report);
+            if (!m_Report.IsValid)
+                return null;
+            foreach (CharacterSkillCompilationRecord skill in skills)
+                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+                    foreach (BtsmtlSkillTimelineOccurrence record in graph.Timelines)
+                    {
+                        TimelineData timeline = record.Content.Timeline;
+                        RegisterIdentity(timeline.AuthoringId, timeline, "Timeline", record.Content.Route);
+                        ValidateAssetIdentity(record.Node.TimelineAsset, "Skill Timeline", record.Content.Route);
+                        if (m_Timelines.TryGetValue(timeline.AuthoringId, out TimelineData existing) && !ReferenceEquals(existing, timeline))
+                            m_Report.DiscoveryError("timeline_identity_duplicate", record.Content.Route, "不同Timeline内容使用了相同身份。");
+                        else
+                            m_Timelines[timeline.AuthoringId] = timeline;
+                        foreach (TimelineSemanticTrackRecord track in record.Content.Tracks)
+                        {
+                            RegisterIdentity(track.Track.AuthoringId, track.Track, "TimelineTrack", track.Route);
+                            foreach (TimelineSemanticClipRecord clip in track.Clips)
+                                RegisterIdentity(clip.Clip.AuthoringId, clip.Clip, "TimelineClip", clip.Route);
+                        }
+                    }
             if (!m_Report.IsValid)
                 return null;
             return new CharacterAuthoringCompilationModel(

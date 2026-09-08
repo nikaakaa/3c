@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using UnityEditor;
@@ -28,6 +29,23 @@ namespace ThirdPersonCharacter.Control.Authoring
                 BtsmtlSkillMacroInterface.Initialize(graph);
                 return graph;
             });
+
+        public static TimelineAsset CreatePrivateTimeline(FlowGraph owner, string name)
+        {
+            string path = AssetDatabase.GetAssetPath(owner);
+            if (owner is not IBtsmtlSkillFlowGraph || string.IsNullOrEmpty(path))
+                throw new InvalidOperationException("私有Timeline必须属于已保存的技能图。");
+            return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能私有Timeline", () =>
+            {
+                var asset = ScriptableObject.CreateInstance<TimelineAsset>();
+                asset.name = name;
+                AssetDatabase.AddObjectToAsset(asset, path);
+                Undo.RegisterCreatedObjectUndo(asset, "创建技能私有Timeline");
+                asset.SetData(TimelineData.CreateDefault(name));
+                EditorUtility.SetDirty(asset);
+                return asset;
+            });
+        }
 
         static T CreatePrivate<T>(FlowGraph owner, string name, Func<T> create) where T : FlowGraph, IBtsmtlSkillFlowGraph
         {
@@ -72,6 +90,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                     graph.AddNode<MacroInputNode>(new Vector2(100, 180));
                     graph.AddNode<MacroOutputNode>(new Vector2(650, 180));
                     break;
+                case BtsmtlSkillFlowGraphRole.TimelineBody:
+                    graph.AddNode<BtsmtlSkillTimelineEnableFlowNode>(new Vector2(120, 60));
+                    graph.AddNode<BtsmtlSkillRootFlowNode>(new Vector2(120, 260));
+                    graph.AddNode<BtsmtlSkillTimelineDisableFlowNode>(new Vector2(120, 460));
+                    graph.AddNode<BtsmtlSkillTimelineDestroyFlowNode>(new Vector2(120, 660));
+                    break;
                 default:
                     throw new InvalidOperationException("未知技能图页面类型。");
             }
@@ -83,6 +107,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                 machine.SetStateMachine(CreatePrivatePage(owner, BtsmtlSkillFlowGraphRole.StateMachine, "技能状态机"));
             if (node is BtsmtlSkillStateFlowNode state)
                 state.SetBody(CreatePrivatePage(owner, BtsmtlSkillFlowGraphRole.StateBody, "状态内容"));
+            if (node is BtsmtlSkillTimelineFlowNode timeline)
+                timeline.Configure(CreatePrivateTimeline(owner, "技能Timeline"), BtsmtlSkillTimelineOwnership.Private,
+                    null, TimelinePlaybackMode.Once);
         }
     }
 }

@@ -15,7 +15,15 @@ namespace BTSMTL.Timeline
     {
         Missing,
         Inline,
-        Shared
+        Shared,
+        AssetGraph
+    }
+
+    public interface ITimelineTreeGraphAsset
+    {
+        string AuthoringId { get; }
+        bool IsTimelineTree { get; }
+        void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath);
     }
 
     [TrackGroup("Base"), ScriptGuid("31085f11443fe1347b871c5d69db3774"), IconGuid("e28acf5dc5b2e3d4a97920bf4e831c87"), Ordered(3), Color(201, 060, 032)]
@@ -28,7 +36,9 @@ namespace BTSMTL.Timeline
 
         public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
         {
-            var clip = new TreeClip(this, frame);
+            var clip = referenceObject is ScriptableObject asset && asset is ITimelineTreeGraphAsset
+                ? new TreeClip(this, frame, asset)
+                : new TreeClip(this, frame);
             clip.RegenerateAuthoringIdentity();
             if (referenceObject is BaseTreeAsset treeAsset && treeAsset.Tree is TimelineRunningTree)
                 clip.SetSharedTreeAsset(treeAsset);
@@ -60,6 +70,11 @@ namespace BTSMTL.Timeline
         [SerializeField]
         BaseTreeAsset m_SharedTreeAsset;
 
+#if UNITY_EDITOR
+        [SerializeField] ScriptableObject m_AssetTree;
+        public ScriptableObject AssetTree => m_AssetTree;
+#endif
+
         public TimelineTreeExecutionPhase ExecutionPhase => m_ExecutionPhase;
         public TimelineClipExecutionPhase TimelineExecutionPhase =>
             m_ExecutionPhase == TimelineTreeExecutionPhase.Decision
@@ -68,7 +83,11 @@ namespace BTSMTL.Timeline
         public TimelineRunningTree InlineTree => m_InlineTree;
         public BaseTreeAsset SharedTreeAsset => m_SharedTreeAsset;
         public TimelineRunningTree ResolvedTree => m_SharedTreeAsset ? m_SharedTreeAsset.Tree as TimelineRunningTree : m_InlineTree;
-        public TimelineTreeOwnership Ownership => m_SharedTreeAsset
+        public TimelineTreeOwnership Ownership =>
+#if UNITY_EDITOR
+            m_AssetTree != null ? TimelineTreeOwnership.AssetGraph :
+#endif
+            m_SharedTreeAsset
             ? TimelineTreeOwnership.Shared
             : m_InlineTree != null
                 ? TimelineTreeOwnership.Inline
@@ -78,6 +97,18 @@ namespace BTSMTL.Timeline
         {
             if (builder == null)
                 throw new ArgumentNullException(nameof(builder));
+#if UNITY_EDITOR
+            if (m_AssetTree != null)
+            {
+                if (m_InlineTree != null || m_SharedTreeAsset != null || m_AssetTree is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
+                {
+                    builder.AddError("timeline_tree_asset_invalid", AuthoringId, "TreeClip必须只有一个有效的节点图来源。");
+                    return;
+                }
+                graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}");
+                return;
+            }
+#endif
             if (!ResolvedTree)
             {
                 builder.AddError("timeline_tree_missing", AuthoringId, "TreeClip has no resolved Timeline tree.");
@@ -107,6 +138,9 @@ namespace BTSMTL.Timeline
 
         public void SetInlineTree(TimelineRunningTree tree)
         {
+#if UNITY_EDITOR
+            m_AssetTree = null;
+#endif
             m_InlineTree = tree;
             m_SharedTreeAsset = null;
             BindInlineTree();
@@ -121,6 +155,9 @@ namespace BTSMTL.Timeline
                 throw new ArgumentException("Shared Tree asset must contain TimelineRunningTree.", nameof(treeAsset));
 
             m_SharedTreeAsset = treeAsset;
+#if UNITY_EDITOR
+            m_AssetTree = null;
+#endif
             if (m_SharedTreeAsset)
                 m_InlineTree = null;
 #if UNITY_EDITOR
@@ -197,7 +234,7 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
-        public override string Name => $"{m_ExecutionPhase} / {(ResolvedTree ? ResolvedTree.name : "Missing Tree")}";
+        public override string Name => $"{m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : ResolvedTree ? ResolvedTree.name : "Missing Tree")}";
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
 
         public TreeClip(Track track, int frame) : base(track, frame)
@@ -205,8 +242,15 @@ namespace BTSMTL.Timeline
             SetInlineTree(TimelineRunningTree.CreateDefault("Timeline Tree"));
         }
 
+        public TreeClip(Track track, int frame, ScriptableObject assetTree) : base(track, frame)
+        {
+            SetAssetTree(assetTree);
+        }
+
         public void EnsureInlineTree()
         {
+            if (m_AssetTree != null)
+                throw new InvalidOperationException("资产节点图不能隐式切换为内联旧树。");
             if (!m_SharedTreeAsset && m_InlineTree == null)
                 SetInlineTree(TimelineRunningTree.CreateDefault("Timeline Tree"));
         }
@@ -215,6 +259,16 @@ namespace BTSMTL.Timeline
         {
             if (m_InlineTree != null)
                 m_InlineTree = m_InlineTree.CloneForAuthoring();
+        }
+
+        public void SetAssetTree(ScriptableObject asset)
+        {
+            if (asset is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
+                throw new ArgumentException("TreeClip需要支持Timeline生命周期入口的正式节点图资产。", nameof(asset));
+            m_AssetTree = asset;
+            m_InlineTree = null;
+            m_SharedTreeAsset = null;
+            OnClipChanged();
         }
 
         void OnClipChanged()

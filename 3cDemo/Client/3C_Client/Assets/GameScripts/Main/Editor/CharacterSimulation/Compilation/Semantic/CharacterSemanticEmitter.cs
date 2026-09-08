@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_Blackboard = new CharacterSemanticBlackboardEmitter(model.Declarations, builder, report);
             m_DomainBindings = new CharacterSemanticDomainBindingEmitter(catalogIndex, builder, report, m_Blackboard);
-            m_NativeSkills = new BtsmtlSkillGraphCompiler(builder, m_DomainBindings.Bind);
+            m_NativeSkills = new BtsmtlSkillGraphCompiler(builder, m_DomainBindings.Bind, model.TimelineEmitters);
             m_SkillPrograms = new CharacterSemanticSkillProgramEmitter(model.SkillRecords, builder, report);
             m_NodeEmitters = model.NodeEmitters;
             m_Timelines = new CharacterSemanticTimelineEmitter(

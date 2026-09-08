@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,11 +8,10 @@ using System.Text;
 using FlowCanvas;
 using NodeCanvas.Framework.Internal;
 using ParadoxNotion.Serialization;
-using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
+namespace ThirdPersonCharacter.Control.Authoring
 {
     public sealed class BtsmtlSkillGraphFingerprint
     {
@@ -65,3 +65,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
+#endif

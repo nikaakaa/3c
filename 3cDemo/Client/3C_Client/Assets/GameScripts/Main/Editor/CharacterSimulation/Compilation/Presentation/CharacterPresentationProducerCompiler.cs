@@ -74,11 +74,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         internal static IReadOnlyDictionary<string,
             IReadOnlyList<CharacterPresentationTimelineCallSite>>
-            CollectTimelineCallSites(CharacterAuthoringGraphOccurrence root)
+            CollectTimelineCallSites(CharacterAuthoringCompilationModel model)
         {
             var result = new Dictionary<string,
                 List<CharacterPresentationTimelineCallSite>>(StringComparer.Ordinal);
-            CollectTimelineCallSites(root, result);
+            CollectTimelineCallSites(model.Root, result);
+            foreach (CharacterSkillCompilationRecord skill in model.SkillRecords)
+                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+                    foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
+                    {
+                        string identity = timeline.Content.Timeline.AuthoringId;
+                        if (!result.TryGetValue(identity, out List<CharacterPresentationTimelineCallSite> calls))
+                        {
+                            calls = new List<CharacterPresentationTimelineCallSite>();
+                            result.Add(identity, calls);
+                        }
+                        calls.Add(new CharacterPresentationTimelineCallSite(timeline.Content.Route, timeline.Node.PlaybackMode));
+                    }
             return result.ToDictionary(
                 pair => pair.Key,
                 pair => (IReadOnlyList<CharacterPresentationTimelineCallSite>)pair.Value.ToArray(),

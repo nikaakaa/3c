@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
@@ -14,7 +15,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         Subgraph,
         StateMachine,
         ConditionRule,
-        StateBody
+        StateBody,
+        TimelineBody
     }
 
     public interface IBtsmtlSkillFlowGraph
@@ -38,7 +40,9 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (!typeof(BtsmtlSkillFlowNode).IsAssignableFrom(nodeType))
                 return false;
             if (nodeType == typeof(BtsmtlSkillRootFlowNode))
-                return role == BtsmtlSkillFlowGraphRole.Skill || role == BtsmtlSkillFlowGraphRole.StateBody;
+                return role == BtsmtlSkillFlowGraphRole.Skill || role == BtsmtlSkillFlowGraphRole.StateBody || role == BtsmtlSkillFlowGraphRole.TimelineBody;
+            if (typeof(BtsmtlSkillTimelineHookFlowNode).IsAssignableFrom(nodeType))
+                return role == BtsmtlSkillFlowGraphRole.TimelineBody;
             if (typeof(BtsmtlSkillStateLifecycleFlowNode).IsAssignableFrom(nodeType))
                 return role == BtsmtlSkillFlowGraphRole.StateBody;
             if (nodeType == typeof(BtsmtlSkillConditionResultFlowNode))
@@ -62,7 +66,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 
-    public sealed class BtsmtlSkillFlowGraph : FlowGraph, IBtsmtlSkillFlowGraph
+    public sealed class BtsmtlSkillFlowGraph : FlowGraph, IBtsmtlSkillFlowGraph, ITimelineTreeGraphAsset
     {
         [Serializable]
         sealed class AuthoringData
@@ -76,6 +80,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => m_Role;
+        public bool IsTimelineTree => m_Role == BtsmtlSkillFlowGraphRole.TimelineBody;
         public override bool canAcceptVariableDrops => false;
         public override bool allowsPortIdentityAliases => false;
         public override bool allowBlackboardOverrides => false;
@@ -86,6 +91,23 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override PlanarDirection flowDirection => PlanarDirection.Horizontal;
 
         public override bool CanAuthorNodeType(Type nodeType) => BtsmtlSkillFlowGraphRules.Allows(nodeType, m_Role, false);
+
+        public void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath)
+        {
+            try
+            {
+                var fingerprint = new BtsmtlSkillGraphFingerprint();
+                foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(this, true))
+                {
+                    string identity = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
+                    builder.AddDependency($"tree:{identity}", "timeline.tree", $"{sourcePath}/graph:{identity}", fingerprint.Compute(graph));
+                }
+            }
+            catch (InvalidOperationException error)
+            {
+                builder.AddError("timeline_skill_graph_invalid", sourcePath, error.Message);
+            }
+        }
 
         public void ConfigureIdentity(string identity, BtsmtlSkillFlowGraphRole role)
         {

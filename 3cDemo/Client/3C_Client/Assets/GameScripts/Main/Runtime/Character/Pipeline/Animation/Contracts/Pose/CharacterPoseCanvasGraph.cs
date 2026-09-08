@@ -5,6 +5,9 @@ using NodeCanvas.Framework;
 using ParadoxNotion;
 using ParadoxNotion.Design;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -43,24 +46,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool allowBlackboardOverrides => false;
         public override bool canAcceptVariableDrops => false;
 
-        public new Node AddNode(Type nodeType, Vector2 pos = default) =>
-            throw new InvalidOperationException("Pose Canvas nodes must be changed through the Presentation Mutation chain.");
+#if UNITY_EDITOR
+        [NonSerialized] internal CharacterPoseCanvasEditorWriteRouter EditorWriteRouter;
 
-        public new T AddNode<T>(Vector2 pos = default) where T : Node =>
-            throw new InvalidOperationException("Pose Canvas nodes must be changed through the Presentation Mutation chain.");
+        public override Node AddNode(Type nodeType, Vector2 pos = default) =>
+            EditorWriteRouter != null
+                ? EditorWriteRouter.CreateNode(nodeType, pos)
+                : throw new InvalidOperationException(
+                    "Pose Canvas nodes must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
 
-        public new void RemoveNode(Node node, bool recordUndo = true, bool force = false) =>
-            throw new InvalidOperationException("Pose Canvas nodes must be changed through the Presentation Mutation chain.");
+        public override void RemoveNode(Node node, bool recordUndo = true, bool force = false)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas nodes must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
+            EditorWriteRouter.RemoveNode(node);
+        }
 
-        public new Connection ConnectNodes(
+        public override Connection ConnectNodes(
             Node sourceNode,
             Node targetNode,
             int sourceIndex = -1,
-            int targetIndex = -1) =>
-            throw new InvalidOperationException("Pose Canvas connections must be changed through the Presentation Mutation chain.");
+            int targetIndex = -1)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas connections must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
+            return EditorWriteRouter.Connect(sourceNode, targetNode, sourceIndex, targetIndex);
+        }
 
-        public new void RemoveConnection(Connection connection, bool recordUndo = true) =>
-            throw new InvalidOperationException("Pose Canvas connections must be changed through the Presentation Mutation chain.");
+        public override void RemoveConnection(Connection connection, bool recordUndo = true)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas connections must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
+            EditorWriteRouter.RemoveConnection(connection);
+        }
+
+        public override GenericMenu GetNodeSelectionMenu(NodeCreationRequestContext request)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas node creation requires the Pose Canvas editor session.");
+            return EditorWriteRouter.BuildNodeCreationMenu(request);
+        }
+#endif
 
         public CharacterPoseCanvasNode RequireNode(PoseNodeId nodeId) =>
             Nodes.SingleOrDefault(node => node.NodeId == nodeId) ??
@@ -190,4 +220,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
     }
+
+#if UNITY_EDITOR
+    internal interface CharacterPoseCanvasEditorWriteRouter
+    {
+        Node CreateNode(Type nodeType, Vector2 position);
+        Node CreateNodeFromCapability(string capabilityIdentity, Vector2 position, Node connectSource, int connectSourcePortIndex);
+        void RemoveNode(Node node);
+        Connection Connect(Node sourceNode, Node targetNode, int sourceIndex, int targetIndex);
+        void RemoveConnection(Connection connection);
+        GenericMenu BuildNodeCreationMenu(NodeCanvas.Framework.Graph.NodeCreationRequestContext request);
+    }
+#endif
 }

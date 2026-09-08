@@ -934,13 +934,11 @@ namespace NodeCanvas.Framework
                         var pos = e.mousePosition;
                         clickedPort = null;
 
-                        void Selected(System.Type type) {
-                            var newNode = graph.AddNode(type, pos);
-                            graph.ConnectNodes(source, newNode, index);
-                            GraphEditorUtility.activeElement = newNode;
-                        }
-
-                        var menu = EditorUtils.GetTypeSelectionMenu(graph.baseNodeType, Selected);
+                        var menu = graph.GetNodeSelectionMenu(new Graph.NodeCreationRequestContext { // 3C: domain-driven creation menu
+                            position = pos,
+                            connectSource = source,
+                            connectSourcePortIndex = index
+                        });
                         if ( zoomFactor == 1 ) {
                             menu.ShowAsBrowser(string.Format("Add {0} Node", graph.GetType().Name), graph.baseNodeType);
                         } else {

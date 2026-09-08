@@ -1069,6 +1069,55 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 owner.ApplyProfileMutation(mutation);
         }
 
+        internal void ApplyGraphMutationsInPlace(
+            ICharacterPresentationMutationOwner owner,
+            CharacterPresentationMutationTransaction transaction)
+        {
+            if (owner?.SerializedOwner == null)
+                throw new ArgumentNullException(nameof(owner));
+            if (transaction == null || transaction.Mutations.Count == 0)
+                throw new ArgumentException(
+                    "Presentation mutation transaction is empty.",
+                    nameof(transaction));
+            if (transaction.Mutations.Any(value => !IsPoseGraphMutation(value)))
+                throw new ArgumentException(
+                    "In-place editor session apply only accepts Pose Graph mutations.",
+                    nameof(transaction));
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName(transaction.DisplayName);
+            try
+            {
+                foreach (IGrouping<string, CharacterPresentationMutation> group in
+                         transaction.Mutations
+                             .GroupBy(value => value.OwnerId, StringComparer.Ordinal))
+                {
+                    CharacterPoseCanvasGraph current =
+                        owner.RequirePoseGraph(group.Key);
+                    Undo.RegisterCompleteObjectUndo(current, transaction.DisplayName);
+                    CharacterPoseCanvasGraph next =
+                        ApplyPoseGraph(current, group.ToArray());
+                    current.SetAuthoring(
+                        next.GraphId,
+                        next.ContentRevision,
+                        next.Parameters.ToArray(),
+                        next.Nodes.ToArray(),
+                        next.Edges.ToArray());
+                    IReadOnlyList<CharacterPoseGraphLayoutEntry> layout = next.Layout;
+                    for (int i = 0; i < layout.Count; i++)
+                        current.SetNodePosition(layout[i].NodeId, layout[i].Position);
+                    owner.ReplacePoseGraph(current);
+                    EditorUtility.SetDirty(current);
+                }
+                EditorUtility.SetDirty(owner.SerializedOwner);
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+            catch
+            {
+                Undo.RevertAllDownToGroup(undoGroup);
+                throw;
+            }
+        }
+
         static CharacterPoseCanvasGraph ApplyPoseGraph(CharacterPoseCanvasGraph graph, IReadOnlyList<CharacterPresentationMutation> mutations)
         {
             var nodes = graph.Nodes.ToList();

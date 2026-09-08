@@ -9,6 +9,9 @@ using UnityEngine;
 using Logger = ParadoxNotion.Services.Logger;
 using UndoUtility = ParadoxNotion.Design.UndoUtility;
 using System.Collections;
+#if UNITY_EDITOR
+using UnityEditor; // 3C: GenericMenu for domain-driven node creation menu
+#endif
 
 namespace NodeCanvas.Framework
 {
@@ -1045,7 +1048,7 @@ namespace NodeCanvas.Framework
 
         ///<summary>Add a new node to this graph</summary>
         public T AddNode<T>(Vector2 pos = default) where T : Node { return (T)AddNode(typeof(T), pos); }
-        public Node AddNode(System.Type nodeType, Vector2 pos = default) {
+        public virtual Node AddNode(System.Type nodeType, Vector2 pos = default) { // 3C: virtual for Pose Canvas mutation routing
 
             if ( nodeType.IsGenericTypeDefinition ) {
                 nodeType = nodeType.MakeGenericType(nodeType.GetFirstGenericParameterConstraintType());
@@ -1073,7 +1076,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Disconnects and then removes a node from this graph</summary>
-        public void RemoveNode(Node node, bool recordUndo = true, bool force = false) {
+        public virtual void RemoveNode(Node node, bool recordUndo = true, bool force = false) { // 3C: virtual for Pose Canvas mutation routing
 
             if ( !force && node.GetType().RTIsDefined<ParadoxNotion.Design.ProtectedSingletonAttribute>(true) ) {
                 if ( allNodes.Where(n => n.GetType() == node.GetType()).Count() == 1 ) {
@@ -1129,7 +1132,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Connect two nodes together to a specific port index of the source and target node. Leave index at -1 to add at the end of the list.</summary>
-        public Connection ConnectNodes(Node sourceNode, Node targetNode, int sourceIndex = -1, int targetIndex = -1) {
+        public virtual Connection ConnectNodes(Node sourceNode, Node targetNode, int sourceIndex = -1, int targetIndex = -1) { // 3C: virtual for Pose Canvas mutation routing
 
             if ( Node.IsNewConnectionAllowed(sourceNode, targetNode) == false ) {
                 return null;
@@ -1146,7 +1149,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Removes a connection</summary>
-        public void RemoveConnection(Connection connection, bool recordUndo = true) {
+        public virtual void RemoveConnection(Connection connection, bool recordUndo = true) { // 3C: virtual for Pose Canvas mutation routing
 
             //for live editing
             if ( Application.isPlaying ) {
@@ -1172,6 +1175,26 @@ namespace NodeCanvas.Framework
             UpdateNodeIDs(false);
             UndoUtility.SetDirty(this);
         }
+
+#if UNITY_EDITOR // 3C: domain-driven node creation menu (single-source creation items instead of reflected type list)
+        public sealed class NodeCreationRequestContext {
+            public Vector2 position;
+            public Node connectSource;
+            public int connectSourcePortIndex = -1;
+        }
+
+        ///<summary>3C: The node creation menu for this graph. Default enumerates reflected sub-types of baseNodeType.</summary>
+        public virtual GenericMenu GetNodeSelectionMenu(NodeCreationRequestContext request) {
+            System.Action<System.Type> Selected = (type) => {
+                var newNode = AddNode(type, request.position);
+                if ( newNode != null && request.connectSource != null ) {
+                    ConnectNodes(request.connectSource, newNode, request.connectSourcePortIndex);
+                }
+                NodeCanvas.Editor.GraphEditorUtility.activeElement = newNode;
+            };
+            return ParadoxNotion.Design.EditorUtils.GetTypeSelectionMenu(baseNodeType, Selected);
+        }
+#endif
 
         ///<summary>Makes a copy of provided nodes and if targetGraph is provided, puts those new nodes in that graph.</summary>
         public static List<Node> CloneNodes(List<Node> originalNodes, Graph targetGraph = null, Vector2 originPosition = default) {

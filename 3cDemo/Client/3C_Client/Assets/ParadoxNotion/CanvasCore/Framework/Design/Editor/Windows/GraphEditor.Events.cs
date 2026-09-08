@@ -172,8 +172,7 @@ namespace NodeCanvas.Editor
 
         ///<summary>The final generic menu used for adding nodes in the canvas</summary>
         static GenericMenu GetAddNodeMenu(Graph graph, Vector2 canvasMousePos) {
-            System.Action<System.Type> Selected = (type) => { GraphEditorUtility.activeElement = graph.AddNode(type, canvasMousePos); };
-            var menu = EditorUtils.GetTypeSelectionMenu(graph.baseNodeType, Selected);
+            var menu = graph.GetNodeSelectionMenu(new Graph.NodeCreationRequestContext { position = canvasMousePos }); // 3C: domain-driven creation menu
             menu = graph.CallbackOnCanvasContextMenu(menu, canvasMousePos);
 
             if ( CopyBuffer.TryGetCache<Node[]>(out Node[] copiedNodes) && copiedNodes.Length > 0 ) {

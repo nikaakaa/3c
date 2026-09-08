@@ -1,5 +1,7 @@
 ## Why
 
+技能FlowCanvas作者、直接编译入口与运行观察由[独立接入变更](../refactor-btsmtl-flowcanvas-authoring/proposal.md)实施；本变更继续负责角色控制、技能业务和状态拆分，不重复建立图接入路径。
+
 BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局部状态机和子图嵌套，以纯数据编译后的 Program 解释执行复杂技能。原提案只拆分作者工具大类、保持整个角色控制图和 ABI 不变，已经不能表达新的职责边界；本变更将角色级控制迁入 C#，同时保留并重整已有技能编译、ActionInstance、Session／Pass 与状态恢复基础。
 
 ## What Changes

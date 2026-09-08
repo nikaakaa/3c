@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly string m_GraphContentHash;
         readonly string m_Route;
         readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly CharacterSimulationOperationEmitter m_OperationEmitter;
 
         public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, CharacterSimulationProgramBuilder builder)
         {
@@ -51,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_GraphContentHash = GraphAuthoringFingerprint.Compute(m_Graph);
             m_Route = route ?? string.Empty;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            m_OperationEmitter = new CharacterSimulationOperationEmitter(builder);
         }
 
         public CharacterSimulationProgramBuilder Builder => m_Builder;
@@ -63,38 +65,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmission emission, string portId)
         {
             CharacterSimulationSourceLocation source = Source(node, portId);
-            var constants = new List<int>();
             List<CapturedValuePort> valuePorts = CaptureValuePorts(node, emission.Code);
-            var constantInputs = new List<CapturedConstantInput>();
-            CaptureUnconnectedInputConstants(node, valuePorts, constants, constantInputs);
-            for (int i = 0; i < emission.Constants.Count; i++)
-            {
-                KeyValuePair<string, object> pair = emission.Constants[i];
-                int constant = m_Builder.DeclareConstant(source, pair.Key, pair.Value);
-                if (constant >= 0)
-                    constants.Add(constant);
-            }
-            OperationHandle operation = m_Builder.DeclareOperation(
-                source,
-                emission.Code,
-                constants,
-                emission.Integer0,
-                emission.Integer1,
-                emission.Unsigned0,
-                default,
-                emission.Text0,
-                emission.Flags);
-            for (int i = 0; i < constantInputs.Count; i++)
-            {
-                CapturedConstantInput input = constantInputs[i];
-                m_Builder.DeclareConstantInputBinding(
-                    operation,
-                    input.PortId,
-                    input.ConstantIndex,
-                    input.Kind,
-                    input.Source);
-            }
-            return operation;
+            var constantInputs = new List<CharacterSimulationConstantInput>();
+            CaptureUnconnectedInputConstants(node, valuePorts, constantInputs);
+            return m_OperationEmitter.Emit(source, emission, constantInputs);
         }
 
         public CharacterSimulationSourceLocation Source(BaseNode node, string portId = "")
@@ -162,8 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void CaptureUnconnectedInputConstants(
             BaseNode node,
             IReadOnlyList<CapturedValuePort> ports,
-            List<int> constants,
-            List<CapturedConstantInput> constantInputs)
+            List<CharacterSimulationConstantInput> constantInputs)
         {
             for (int i = 0; i < ports.Count; i++)
             {
@@ -174,12 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (IsPropertyInputLinked(node.GUID, portId, captured.FieldKey))
                     continue;
                 CharacterSimulationSourceLocation source = Source(node, portId);
-                int constant = m_Builder.DeclareConstant(source, "default-value", captured.Port.GetValue());
-                if (constant >= 0)
-                {
-                    constants.Add(constant);
-                    constantInputs.Add(new CapturedConstantInput(portId, constant, captured.Kind, source));
-                }
+                constantInputs.Add(new CharacterSimulationConstantInput(portId, captured.Kind, captured.Port.GetValue(), source));
             }
         }
 
@@ -246,21 +214,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public PropertyPort Port { get; }
         }
 
-        readonly struct CapturedConstantInput
-        {
-            public CapturedConstantInput(string portId, int constantIndex, SemanticValueKind kind, CharacterSimulationSourceLocation source)
-            {
-                PortId = portId;
-                ConstantIndex = constantIndex;
-                Kind = kind;
-                Source = source;
-            }
-
-            public string PortId { get; }
-            public int ConstantIndex { get; }
-            public SemanticValueKind Kind { get; }
-            public CharacterSimulationSourceLocation Source { get; }
-        }
     }
 
     public sealed class CharacterSimulationNodeEmitterRegistry

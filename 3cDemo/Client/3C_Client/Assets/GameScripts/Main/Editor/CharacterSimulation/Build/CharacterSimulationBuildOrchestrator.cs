@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSemanticIrArtifactPublishTransaction semanticStage = null;
             try
             {
+                var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
                 string definitionGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(request.Definition));
                 semanticStage = CharacterSemanticIrArtifactStore.Stage(definitionGuid, semanticArtifact);
                 stages.Add(new CharacterAclAnimationArtifactPublishStage(
@@ -60,12 +61,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     result.AnimationCatalog));
                 for (int i = 0; i < request.Targets.Count; i++)
                     stages.Add(request.Targets[i].Stage(definitionGuid, result.TargetProducts[i]));
+                phaseWatch.Stop();
+                long stageMs = phaseWatch.ElapsedMilliseconds;
+                phaseWatch.Restart();
                 CharacterPresentationProjection publishedProjection = Publish(
                     request.Definition,
                     semanticStage,
                     stages,
                     result.PresentationProjection,
                     result.TargetProducts[0].Contract);
+                phaseWatch.Stop();
+                Debug.Log(
+                    $"[计时] 发布相位 Stage构造 {stageMs}ms | 投影发布 {phaseWatch.ElapsedMilliseconds}ms");
                 result = new CharacterSimulationBuildResult(
                     result.Artifact,
                     result.TargetProducts,
@@ -217,7 +224,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             semanticArtifact = null;
             CharacterPipelineDefinition definition = request.Definition;
+            var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
             CharacterSemanticFrontendResult frontend = CharacterSemanticFrontendCompiler.Compile(definition);
+            phaseWatch.Stop();
+            long frontendMs = phaseWatch.ElapsedMilliseconds;
             CharacterSimulationCompileReport report = frontend.Report;
             if (!frontend.IsValid)
                 return Failed(report);
@@ -226,13 +236,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string artifactPath = CharacterSemanticIrArtifactStore.GetPath(frontend.CompilationModel.DefinitionGuid);
             try
             {
+                phaseWatch.Restart();
                 artifact = CharacterSemanticIrArtifactStore.RoundTrip(frontend.Artifact);
+                phaseWatch.Stop();
             }
             catch (Exception exception)
             {
                 report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
                 return Failed(report);
             }
+            long roundTripMs = phaseWatch.ElapsedMilliseconds;
             if (!artifact.Header.Root.IsCharacter ||
                 !string.Equals(artifact.Header.Root.RootIdentity, frontend.CompilationModel.DefinitionGuid, StringComparison.Ordinal))
             {
@@ -244,7 +257,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationBuildInput animationBuildInput;
             try
             {
+                phaseWatch.Restart();
                 animationBuildInput = CreateAnimationBuildInput(frontend.CompilationModel);
+                phaseWatch.Stop();
             }
             catch (Exception exception)
             {
@@ -255,6 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     exception.Message);
                 return Failed(report);
             }
+            long animationInputMs = phaseWatch.ElapsedMilliseconds;
 
             CharacterPresentationProjection projection = CompileProjection(
                 frontend.CompilationModel,
@@ -267,6 +283,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (projection == null || !projection.IsValid || frontendContract == null || !report.IsValid)
                 return Failed(report);
             var targetProducts = new List<CharacterSimulationTargetBuildProduct>(request.Targets.Count);
+            phaseWatch.Restart();
             for (int i = 0; i < request.Targets.Count; i++)
             {
                 ICharacterSimulationTargetBuildAdapter adapter = request.Targets[i];
@@ -299,6 +316,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 targetProducts.Add(product);
             }
+            phaseWatch.Stop();
+            Debug.Log(
+                $"[计时] 编译相位 前端 {frontendMs}ms | IR往返 {roundTripMs}ms | " +
+                $"动画输入 {animationInputMs}ms | 目标产物 {phaseWatch.ElapsedMilliseconds}ms");
             var descriptor = new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header);
             return new CharacterSimulationBuildResult(
                 descriptor,
@@ -394,6 +415,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             animationCatalog = null;
             var errors = new List<string>();
             var footAnalysisDiagnostics = new List<CharacterFootAnalysisArtifactDiagnostic>();
+            var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
             CharacterFootPlacementAnalysisCompilation footAnalysis =
                 CharacterProjectionFootAnalysisResolver.Resolve(
                     model.AnimationPresentationProfile,
@@ -401,6 +423,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     generateMissingOrStaleArtifacts,
                     footAnalysisDiagnostics,
                     errors);
+            phaseWatch.Stop();
+            long footAnalysisMs = phaseWatch.ElapsedMilliseconds;
             for (int i = 0; i < footAnalysisDiagnostics.Count; i++)
             {
                 CharacterFootAnalysisArtifactDiagnostic diagnostic = footAnalysisDiagnostics[i];
@@ -419,6 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.PresentationError("presentation_projection_invalid", artifact.Header.ProgramId.Value, errors[i]);
             if (!report.IsValid)
                 return null;
+            phaseWatch.Restart();
             CharacterPresentationProjectionCompileResult compileResult =
                 CharacterPresentationProjectionCompiler.Compile(
                     new CharacterPresentationProjectionCompileRequest(
@@ -426,6 +451,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         model,
                         footAnalysis,
                         animationBuildInput));
+            phaseWatch.Stop();
+            Debug.Log(
+                $"[计时] 投影编译 足部分析 {footAnalysisMs}ms | 投影 {phaseWatch.ElapsedMilliseconds}ms");
             contract = compileResult.Contract;
             animationCatalog = compileResult.AnimationCatalog;
             for (int i = 0; i < compileResult.Diagnostics.Count; i++)

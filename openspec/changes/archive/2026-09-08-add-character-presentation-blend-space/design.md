@@ -1,5 +1,9 @@
 # Design: 角色表现 Blend Space
 
+## 最终范围（2026-09-08）
+
+用户取消独立八向演示，保留既有Blend Space通用能力。下方独立演示描述仅为被取消的历史设计，不再要求生成角色、素材或产物；最终运行与作者边界以同步后的current specs为准。此归档不代表正在进行的PoseGraph／Scene Play迁移完成。
+
 ## Context
 
 当前最终目标链路是：

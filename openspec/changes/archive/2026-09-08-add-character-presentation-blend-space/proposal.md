@@ -1,8 +1,14 @@
 # Change: 新增角色表现 Blend Space
 
+## 归档范围（2026-09-08）
+
+用户明确取消独立八向Blend Space演示，只保留已实现的通用能力并归档。原22.11–22.20不再作为后续工作；不创建替代演示change，不修改Corin主图。原文“已进入current specs”缺少独立能力spec，归档时补齐，并保留现行Foot Motion作者曲线、typed Slot/Binding及后续Pose架构合同，不安装过时的第二份Foot feature或预览执行路径。
+
+最终delta只保留`character-animation-blend-space`。原三个关联delta的typed Slot/Binding、依赖身份、显式构建及观察要求已由现行`character-animation-presentation-authoring`、`character-animation-foot-analysis-artifact`、`character-presentation-pose-graph`覆盖，Blend Space专属轴、权重和样本观察补入独立能力spec；旧的“只从artifact读取Foot feature”和“全部样本强制原生采样后端”不再重装。三个重复delta删除，其历史可从归档前Git版本追溯；关联current spec原文保持不变。
+
 ## Why
 
-本change建立时，角色表现链已经能够由`CharacterPresentationFactFrame`驱动Locomotion PoseStateMachine，并用显式ClipPlayer、State transition、AnimationSlot、骨骼分层、脚步修正和最终输出形成唯一Pose，但还不能在PoseState内部按连续参数计算多动画样本贡献。通用Blend Space能力现已实施并进入current specs；active状态只保留尚未完成的独立演示内容，不再代表运行能力缺失。
+本change建立时，角色表现链已经能够由`CharacterPresentationFactFrame`驱动Locomotion PoseStateMachine，并用显式ClipPlayer、State transition、AnimationSlot、骨骼分层、脚步修正和最终输出形成唯一Pose，但还不能在PoseState内部按连续参数计算多动画样本贡献。通用Blend Space能力已实施；本次归档补齐独立能力spec，用户取消独立演示，不再保留该演示待办。
 
 因此，需要为后续具备完整方向移动素材的演示配置提供连续样本空间能力。当前Corin可以继续用Idle、起步、循环、停步和转身等明确ClipPlayer State；在素材未齐时强行把这些状态压进Blend Space会丢掉动作阶段。继续把参数插值问题塞进PoseState transition或`BlendStack`也会混淆两件业务：
 
@@ -28,7 +34,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 
 ## 后续动画职责重构关系
 
-本change已经安装`BlendSpacePlayer`的通用source-local参数混合能力。剩余独立演示内容任务 MUST直接把BlendSpacePlayer放入PoseState inline subgraph；不得再创建Gameplay BaseLocomotion Selection、Timeline locomotion producer或旧Selection Input接线。已完成任务保留其当时实施记录，不作为剩余任务的目标拓扑。
+本change保留BlendSpacePlayer通用source-local参数混合能力，独立演示已取消；既有Player继续服从正式Pose图、typed Binding与编译合同。
 
 ## Capabilities
 
@@ -49,7 +55,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - current `character-animation-foot-analysis-artifact`已经把Blend Space Dynamic Sample纳入Definition Build与稳定source usage，不存在Timeline与Blend Space双读feature的第二路径。
 - current Character Document v4已经表达BlendSpacePlayer typed payload与Profile binding；资源正文、generated payload和运行时权重保持只读。
 - current Pose Graph已经包含正式BlendSpacePlayer并限定在PoseState inline subgraph；Presentation Fact只携带参数，不携带最终样本权重。
-- 本change剩余任务只创建独立Definition、Profile、Pose Graph和完整样本内容，不修改Corin主图或通用Runtime合同。
+- 独立Definition、Profile、Pose Graph与样本演示已取消，不再作为后续工作。
 - current BlendStack合同规定BlendStack独占跨source过渡。本change不把参数空间插值塞入BlendStack，也不让BlendSpacePlayer保留旧来源。
 - `refactor-pose-graph-to-btsmtl-authoring-domain`提供唯一Navigator、Canvas、Details、Bottom Dock、Pose Watch、Capability和显式Compile边界；本change不得保留独立BlendSpace节点UI或字段switch。
 - current Timeline authoring合同把Timeline和独立领域工具分开。本change使用独立Blend Space资产模式，不把二维样本空间伪装成Timeline lane。
@@ -59,7 +65,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 1. current specs已经固定Presentation Fact、PoseStateMachine、state-local source、Player、BlendStack与局部Inertialization边界。
 2. Pose authoring framework负责把BlendSpacePlayer接入唯一Capability、typed payload、Document v4、共享UI和Pose IR handler；本change不得建立独立GraphView、Inspector switch或第二Presentation Mutation。
 3. Virtual Bone change要求BlendSpace每个sample通过统一source capture输出完整PoseBoneCount；BlendSpace不得自行派生第二份Virtual Bone。
-4. 剩余任务只创建独立Blend Space内容演示，不修改Corin主图，也不阻塞Character authoring、Fixed产品或DeterministicRollback闭环。演示只在完整样本、Projection、Profile、PoseState和全部source binding能一次配置时创建。
+4. 独立Blend Space演示已取消，不再作为Character authoring、Fixed产品或Rollback闭环的待办。
 5. 唯一跨change串行顺序见`openspec/character-pipeline-serial-execution.md`。
 
 ## Deliberate Scope
@@ -84,5 +90,5 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - 作者能在正式workspace创建、编辑、编译和预览三种正式Blend Space资产，并在Pose Graph中通过显式BlendSpacePlayer使用它们。
 - 参数落点在Preview与Runtime得到相同的稳定SampleId集合、归一化权重、canonical phase、样本时间、Pose Parameter和Foot feature贡献。
 - BlendSpacePlayer、PoseState Phase relation、Transition/BlendStack、显式Inertialization、唯一CharacterFootPlacementModule、唯一Goal Assembler与唯一FullBodyIK各自只有一项清晰职责，代码链中没有第二个权重、过渡、同步、Foot状态、Goal或IK权威。
-- Corin正式Profile、Projection和Pose Graph只走PoseState持续Locomotion链；后续Blend Space演示拥有独立Definition、Profile和Pose Graph，不污染当前双端帧同步验证配置。
+- Corin保留现有持续Locomotion配置；本change不新增独立演示或修改双端配置。
 - Character Document v4能往返BlendSpacePlayer与Profile binding；Blend Space资源正文和generated诊断保持只读。

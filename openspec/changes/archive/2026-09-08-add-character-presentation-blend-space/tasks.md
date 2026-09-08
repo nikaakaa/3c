@@ -1,5 +1,9 @@
 # Tasks
 
+## 归档裁决（2026-09-08）
+
+用户明确取消22.11–22.20独立演示任务，保留通用能力并归档。下方这十项改为取消记录，不勾选成已实现，也不转移为新的演示计划；其它306项保留原完成记录。归档补齐独立能力spec，不继承历史产物作为当前Pose重构的运行证明。
+
 > `LocomotionPhase`、direct Clip、Phase source endpoint与旧Marker删除只由`replace-animation-sequence-with-clip-authoring`的第7、9、10、14组任务实施；本change不保留重复任务或第二迁移路径。
 
 ## 1. 统一实施基线与依赖
@@ -355,16 +359,16 @@
 - [x] 22.8 删除Corin主图未再使用的速度参数声明、节点策略与惯性策略过滤。
 - [x] 22.9 让正式producer binding工具原子执行纯Timeline拓扑归一化与遗留参数清理。
 - [x] 22.10 通过正式Definition Build发布纯Timeline Projection、Float32与Fixed产物。
-- [ ] 22.11 在八向素材齐备后盘点独立演示所需AnimationClip、Rig和Foot Analysis状态。
-- [ ] 22.12 在动画职责重构完成后创建独立Blend Space演示Definition、Profile与Pose Graph。
-- [ ] 22.13 选择与完整样本集合匹配的正式BlendSpace mode。
-- [ ] 22.14 配置独立演示的轴ParameterId、单位、范围与Presentation Fact参数投影。
-- [ ] 22.15 为独立演示每个样本生成稳定SampleId并配置phase角色。
-- [ ] 22.16 通过正式Foot Analysis链生成并绑定独立演示所需artifact。
-- [ ] 22.17 配置独立演示完整Pose Parameter policy。
-- [ ] 22.18 把独立演示全部可达Pose source一次绑定到合法BlendSpace source。
-- [ ] 22.19 在独立演示PoseState inline subgraph连接`Fact Parameter -> BlendSpacePlayer -> 可选Inertialization`。
-- [ ] 22.20 通过独立Definition Build发布演示Projection，不修改Corin主图。
+- 已取消（2026-09-08用户决定）：22.11 在八向素材齐备后盘点独立演示所需AnimationClip、Rig和Foot Analysis状态。
+- 已取消（2026-09-08用户决定）：22.12 在动画职责重构完成后创建独立Blend Space演示Definition、Profile与Pose Graph。
+- 已取消（2026-09-08用户决定）：22.13 选择与完整样本集合匹配的正式BlendSpace mode。
+- 已取消（2026-09-08用户决定）：22.14 配置独立演示的轴ParameterId、单位、范围与Presentation Fact参数投影。
+- 已取消（2026-09-08用户决定）：22.15 为独立演示每个样本生成稳定SampleId并配置phase角色。
+- 已取消（2026-09-08用户决定）：22.16 通过正式Foot Analysis链生成并绑定独立演示所需artifact。
+- 已取消（2026-09-08用户决定）：22.17 配置独立演示完整Pose Parameter policy。
+- 已取消（2026-09-08用户决定）：22.18 把独立演示全部可达Pose source一次绑定到合法BlendSpace source。
+- 已取消（2026-09-08用户决定）：22.19 在独立演示PoseState inline subgraph连接`Fact Parameter -> BlendSpacePlayer -> 可选Inertialization`。
+- 已取消（2026-09-08用户决定）：22.20 通过独立Definition Build发布演示Projection，不修改Corin主图。
 
 ## 23. 清理分裂路径
 

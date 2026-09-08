@@ -2,6 +2,8 @@
 
 ## 当前裁决
 
+2026-09-08整理：按已记录的用户否决与完整撤回结果移入archive，状态为“已撤销实验”，不是能力交付。五项候选实现保留未完成／撤销标记，三个delta要求均不安装到current specs；失败及恢复证据继续保留。
+
 2026-08-31：183002 Replay出现新的整脚离面、穿透和锁脚漂移，用户已否决并要求撤销。本change保留为失败实验记录，下面的方案及delta不安装为现行合同；Runtime、Corin Profile和Diagnostics恢复160901保留链路。正式产品重建及恢复Replay结果见experiment.md。
 
 ## Why

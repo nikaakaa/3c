@@ -36,14 +36,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             bool publish = request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish;
             CharacterSimulationBuildResult result = Execute(
                 request,
                 out ValidatedSemanticIrArtifact semanticArtifact);
+            long compileMs = timingWatch.ElapsedMilliseconds;
             if (!result.IsValid)
                 return result;
             if (!publish)
+            {
+                Debug.Log($"[计时] 重建总览(未发布) 编译 {compileMs}ms | 总 {timingWatch.ElapsedMilliseconds}ms");
                 return result;
+            }
             var stages = new List<ICharacterSimulationTargetPublishStage>();
             CharacterSemanticIrArtifactPublishTransaction semanticStage = null;
             try
@@ -83,6 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < stages.Count; i++)
                 stages[i].Dispose();
             semanticStage.Dispose();
+            Debug.Log(
+                $"[计时] 重建总览 编译 {compileMs}ms | 发布+收尾 {timingWatch.ElapsedMilliseconds - compileMs}ms | 总 {timingWatch.ElapsedMilliseconds}ms");
             return result;
         }
 

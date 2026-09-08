@@ -90,6 +90,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const float TimeTolerance = 0.00001f;
         const float ValueTolerance = 0.00001f;
 
+        internal static double IdentityResolveTotalMs;
+        internal static int IdentityResolveCount;
+
         static readonly CharacterAnimationClipRegisteredCurveDescriptor[] Descriptors =
         {
             Curve(
@@ -276,6 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static CharacterAnimationClipContentIdentity ResolveIdentity(AnimationClip clip)
         {
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             string path = RequireNativeClip(clip);
             if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(clip, out string guid, out long localFileId) ||
                 string.IsNullOrEmpty(guid) || localFileId == 0)
@@ -284,7 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"AnimationClip '{clip.name}' does not have a stable object identity.");
             }
             float sourceDuration = ResolveSourceDurationSeconds(clip);
-            return new CharacterAnimationClipContentIdentity(
+            var identity = new CharacterAnimationClipContentIdentity(
                 path,
                 guid,
                 localFileId,
@@ -293,6 +297,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ComputeRegisteredCurveHash(clip),
                 sourceDuration,
                 clip.isLooping);
+            timingWatch.Stop();
+            IdentityResolveTotalMs += timingWatch.Elapsed.TotalMilliseconds;
+            IdentityResolveCount++;
+            return identity;
         }
 
         public static float ResolveSourceDurationSeconds(AnimationClip clip)

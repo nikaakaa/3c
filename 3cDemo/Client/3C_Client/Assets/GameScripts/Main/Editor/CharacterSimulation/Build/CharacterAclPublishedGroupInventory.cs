@@ -188,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 entry.AddPath($"{folder.TrimEnd('/')}/{logicalName}");
             }
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             var ordered = new List<CharacterAclPublishedGroupInventoryEntry>(
                 groups.Values);
             ordered.Sort(
@@ -195,6 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.CompareOrdinal(left.Stem, right.Stem));
             for (int i = 0; i < ordered.Count; i++)
                 ordered[i].Resolve();
+            UnityEngine.Debug.Log(
+                $"[计时] ACL清单扫描 {folder} 组数{ordered.Count} {timingWatch.ElapsedMilliseconds}ms");
             return new CharacterAclPublishedGroupInventory(ordered);
         }
 

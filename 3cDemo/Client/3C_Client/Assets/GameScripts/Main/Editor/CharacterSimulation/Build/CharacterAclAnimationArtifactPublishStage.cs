@@ -132,6 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException(
                     "ACL animation artifact publication is already committed.");
             m_Committed = true;
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 m_Stager =
@@ -146,6 +147,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 Rollback();
                 throw;
+            }
+            finally
+            {
+                timingWatch.Stop();
+                Debug.Log($"[计时] ACL发布提交 {timingWatch.ElapsedMilliseconds}ms");
             }
         }
 

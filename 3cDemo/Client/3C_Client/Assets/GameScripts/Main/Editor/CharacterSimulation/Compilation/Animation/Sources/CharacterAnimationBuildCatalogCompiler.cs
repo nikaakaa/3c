@@ -328,6 +328,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
 
         internal CharacterAnimationBuildCatalog Complete(List<string> errors)
         {
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
+            double reuseMs = 0;
             CharacterAnimationBuildCatalogEntry[] entries = m_Entries.Values
                 .OrderBy(value => value.StableIdentity, StringComparer.Ordinal)
                 .ToArray();
@@ -435,6 +437,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                         clipIdentityValues,
                         CharacterAnimationBuildChannel.Transform |
                         CharacterAnimationBuildChannel.AnimatedProperty);
+                    var reuseWatch = System.Diagnostics.Stopwatch.StartNew();
                     CharacterAclAnimationGroupArtifact groupArtifact =
                         TryReusePublishedGroup(
                             publishedInventory,
@@ -447,6 +450,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                             m_Input.OwnerAssetGuid,
                             m_Input.NativeArtifactIdentity,
                             buildInputIdentity);
+                    reuseWatch.Stop();
+                    reuseMs += reuseWatch.Elapsed.TotalMilliseconds;
                     for (int i = 0; i < group.Count; i++)
                         group[i].GroupArtifact = groupArtifact;
                     artifacts[resourceIndex] = groupArtifact;
@@ -475,6 +480,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 hashValues.Add(entries[i].GroupClipIndex.ToString());
                 hashValues.Add(entries[i].GroupArtifact?.GroupContentHash ?? string.Empty);
             }
+            Debug.Log(
+                $"[计时] 动画目录 身份计算 {CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount}次/" +
+                $"{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs:F0}ms | " +
+                $"复用判定 {reuseMs:F0}ms | 总 {timingWatch.ElapsedMilliseconds}ms");
+            CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount = 0;
+            CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs = 0;
             return new CharacterAnimationBuildCatalog(
                 entries,
                 artifacts,

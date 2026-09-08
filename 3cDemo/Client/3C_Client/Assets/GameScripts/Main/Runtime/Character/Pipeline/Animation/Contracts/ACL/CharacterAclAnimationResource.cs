@@ -90,6 +90,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         CharacterAclResourceReadinessResult ValidateRuntimeOnce()
         {
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                return ValidateRuntimeBody();
+            }
+            finally
+            {
+                timingWatch.Stop();
+                Debug.Log($"[计时] ACL资源校验 {name} {timingWatch.ElapsedMilliseconds}ms");
+            }
+        }
+
+        CharacterAclResourceReadinessResult ValidateRuntimeBody()
+        {
             if (Manifest == null)
                 return CharacterAclResourceReadinessResult.Invalid(CharacterAclResourceFailureCode.SchemaMismatch, "ACL resource manifest is missing.");
             try

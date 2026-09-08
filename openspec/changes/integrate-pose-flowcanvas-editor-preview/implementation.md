@@ -1,5 +1,32 @@
 # Pose FlowCanvas编辑器实施记录
 
+## 当前实现状态（2026-09-08，代码优先）
+
+按照作者最新要求，tasks已删除检查、证据、性能对照和验收任务，只保留实现、清理及最终资产工作。清单现在为23项，其中20项代码与文档工作完成；3.3、3.4、3.5为最后进行的资产计划、正式事务保存及v28产物发布，不在本轮执行。历史6/26描述仅记录此前进度，不代表当前实现清单。
+
+本轮没有新增测试、运行回放或迁移业务资产。编译和运行检查的历史结果保留在下方，与实现完成状态分开记录；代码完成不宣称资产已经发布或作者已经验收。
+
+### 本轮代码链
+
+| 作者操作／输入 | 实现与结果 |
+|---|---|
+| 修改状态名称或进入重置策略 | State Capability → Details → SetPoseStateFieldMutation → 原状态owner；保留StateId、子图和转换引用。 |
+| 修改状态别名名称和成员 | 共享别名详情 → ConfigureStateAlias → 既有ConfigurePoseStateMachineMutation；成员使用正式State／Alias identity，空成员、未知成员及循环引用进入原事务约束。Document继续保存原aliases正文。 |
+| 修改节点名称、普通参数或策略参数失败 | Mutation失败返回到当前详情，重新读取正式值后显示错误；不再以“已处理”吞掉失败。转换duration请求也进入正确的SetTransitionField分支。 |
+| 保存图和调参策略 | 显式保存序列化图、根owner、Profile及当前图引用的Foot／FBBIK／Blend／Inertialization调参owner；不调用全项目SaveAssets或Build。这里只补实现，本轮未触发保存。 |
+| 修改状态、转换或条件 | 版本变化后刷新同一原生文档视图，更新标题、转换标签及端口，保留仍存在的NodeId／EdgeId选择。 |
+| 查看转换条件运行结果 | Rule Compiler保留作者OperationId；正式求值记录实际输入读取位，完成结果带编译状态机NodeId、作者OperationId、ReadInputA／ReadInputB。只读projector按当前调用和转换匹配，当前条件与目标预判分开选择。 |
+| And／Or短路 | 只有RequireBool实际读取时才记录输入位，保留原短路语义；UI显示本次未读取、未采集、False及0各自含义，边高亮来自ReadInput记录。 |
+| 修改子图或Linked图后继续观察 | Source Map保留每张图GraphRevision，窗口核对所有相关作者图版本、PlanHash和Rig版本，停止版本失配结果叠加。调参变化记录同时覆盖Linked作者图。 |
+
+运行算法仍属于现有Native／Job及状态机求值链。本轮运行层只增加诊断来源字段和读取标记，没有新播放器、假输入或Editor侧求值。Pose Program Image为v28，Transition Rule合同为v3；旧v27产物不会被当作新字段齐全的产物读取，等待最终统一Build。
+
+共享请求和UI合同没有新增Agent Document版本：状态name和aliases原本已在v5中，Editor和Document最终进入相同Presentation Mutation owner。原生角色绑定、完成帧租约、Pose Watch容量、关闭／退出／重载解绑沿用既有实现。
+
+本轮代码提交：`b16397bee`提供条件观察来源、读取标记与共享别名展开；`70ee5b50f`完成作者详情、条件显示、版本绑定及保存owner接入。别名展开算法从编译器移到唯一CharacterPoseStateAliasResolver，配置请求在提交前调用，正式作者约束和编译复用同一实现。
+
+代码检查记录单独放在本节：Unity刷新过程中发生过Domain Reload断连，随后恢复，最近一次Console读取为零错误；未新增测试，未执行回放、业务asset apply或Character Build。OpenSpec格式检查通过。此记录不占tasks项目，也不代表用户已完成端到端验收。
+
 ## 基线与归属
 
 - 提案：`integrate-pose-flowcanvas-editor-preview`；目录：`D:/Unity_Project_1/3C`。

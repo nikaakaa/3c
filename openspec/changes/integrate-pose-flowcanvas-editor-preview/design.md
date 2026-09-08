@@ -99,6 +99,16 @@ Runtime 在现有完成／Seal边界发布有界快照或受控只读租约。Ed
 
 ## Risks / Trade-offs
 
+### 实施细化：状态编辑与条件观察
+
+状态别名使用共享的ConfigureStateAlias编辑请求，Pose adapter将完整名称和成员提交给既有ConfigurePoseStateMachineMutation；Document仍使用原有aliases数据，不增加第二套存储。状态名称作为正式State Capability字段提供，写入既有SetPoseStateFieldMutation。
+
+条件Program保留作者OperationId，完成帧记录编译状态机NodeId、作者OperationId以及实际读取的InputA／InputB来源。条件求值仍执行原有顺序及短路规则，只增加有界的读取标记；Editor不会重新求值。条件观察可以分别选择当前条件和目标预判，同一完成帧展示所选类别最后一次已采集结果。
+
+Pose Program Image升级为v28，Transition Rule合同为v3。Source Map增加各图ContentRevision；观察同时匹配PlanHash、Rig identity／revision及本地与Linked作者图版本。旧产物不兼容读取，代码完成后再通过唯一Build发布，不在窗口打开或选择时自动重建。
+
+按照作者2026-09-08指令，tasks只记录实现、清理和最终资产工作；编译、运行、性能与操作检查记录留在implementation.md，不占用实现任务项。
+
 - [原生编辑API绕过Mutation] → 逐入口列出实际写入者和Undo owner，非法批量修改在提交前拒绝。
 - [Native帧页已经复用或释放] → 消费正式完成快照／租约，目标generation变化立即解绑。
 - [高亮存在但不是当前产物] → 同版本Source Map校验失败时清空叠加，保留作者图和错误来源。

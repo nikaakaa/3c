@@ -104,15 +104,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationBlendSpacePlayerRuntime(
             CharacterAnimationBlendSpacePlayerPlan descriptor,
             CharacterAnimationBlendSpacePlan plan,
-            CharacterPoseProgramImage posePlan,
+            IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters,
+            int footPlacementWeightParameterIndex,
             CharacterAnimationRigPayload rig,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
             System.Collections.Generic.IReadOnlyList<AnimationClipPhasePlan> clipPhasePlans)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             m_Plan = plan ?? throw new ArgumentNullException(nameof(plan));
-            if (posePlan == null)
-                throw new ArgumentNullException(nameof(posePlan));
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
+            if ((uint)footPlacementWeightParameterIndex >= (uint)parameters.Count ||
+                !parameters[footPlacementWeightParameterIndex].ParameterId.Equals(AnimationPoseParameterIds.FootPlacementWeight))
+                throw new ArgumentException("Blend Space Player foot weight parameter binding is invalid.", nameof(footPlacementWeightParameterIndex));
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             m_FootAnalysis = footAnalysis;
@@ -121,24 +125,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Phase = m_Plan.CreatePhasePlan(clipPhasePlans);
             m_Weights = new CharacterAnimationBlendSpaceWeightPage(m_Plan.Samples.Count);
             m_Times = new CharacterAnimationBlendSpaceTimePage(m_Plan.Samples.Count);
-            m_ParameterIds = new PoseParameterId[posePlan.Parameters.Count];
-            m_ParameterUsages = new CharacterPoseParameterUsage[posePlan.Parameters.Count];
-            m_Parameters = new float[posePlan.Parameters.Count];
-            m_ParameterAvailability = new byte[posePlan.Parameters.Count];
-            for (int i = 0; i < posePlan.Parameters.Count; i++)
+            m_ParameterIds = new PoseParameterId[parameters.Count];
+            m_ParameterUsages = new CharacterPoseParameterUsage[parameters.Count];
+            m_Parameters = new float[parameters.Count];
+            m_ParameterAvailability = new byte[parameters.Count];
+            for (int i = 0; i < parameters.Count; i++)
             {
-                m_ParameterIds[i] = posePlan.Parameters[i].ParameterId;
-                m_ParameterUsages[i] = posePlan.Parameters[i].Usage;
-                m_Parameters[i] = posePlan.Parameters[i].DefaultValue;
+                m_ParameterIds[i] = parameters[i].ParameterId;
+                m_ParameterUsages[i] = parameters[i].Usage;
+                m_Parameters[i] = parameters[i].DefaultValue;
                 m_ParameterAvailability[i] = 1;
             }
-            m_FootPlacementWeightParameterIndex = posePlan.RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight);
+            m_FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
             m_ClipSamples = new ClipSamplePlan[m_Plan.Samples.Count];
             m_SampleRawTimes = new double[m_Plan.Samples.Count];
             m_SourceWorkspace =
                 new AnimationBlendSourcePoseWorkspace(
                     rig,
-                    posePlan.Parameters.Count,
+                    parameters.Count,
                     AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);
             m_Releases = new AnimationPlayerReleaseJournal(
                 AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);

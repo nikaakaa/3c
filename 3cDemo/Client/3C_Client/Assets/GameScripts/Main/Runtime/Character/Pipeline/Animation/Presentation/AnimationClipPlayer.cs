@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -293,36 +294,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationClipPlayerRuntime(
             CharacterPresentationClipPlayerDescriptor descriptor,
             CharacterPresentationPoseSourcePlan source,
-            CharacterPoseProgramImage posePlan,
+            IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters,
+            int footPlacementWeightParameterIndex,
             CharacterAnimationRigPayload rig)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
-            if (posePlan == null)
-                throw new ArgumentNullException(nameof(posePlan));
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             source.RequireValid();
             if (descriptor.PresentationPoseSourceIndex != source.SourceIndex ||
                 !string.Equals(source.RigId, rig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(source.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
-                descriptor.InitialTime > source.SourceDurationSeconds)
+                descriptor.InitialTime > source.SourceDurationSeconds ||
+                (uint)footPlacementWeightParameterIndex >= (uint)parameters.Count ||
+                !parameters[footPlacementWeightParameterIndex].ParameterId.Equals(source.FootPlacementWeightParameterId))
             {
                 throw new InvalidOperationException($"Clip Player '{descriptor.NodeId}' source binding does not match its compiled descriptor.");
             }
             source.LeftFootFeatures.RequireValid();
             source.RightFootFeatures.RequireValid();
-            m_Parameters = new float[posePlan.Parameters.Count];
-            m_ParameterAvailability = new byte[posePlan.Parameters.Count];
-            for (int i = 0; i < posePlan.Parameters.Count; i++)
+            m_Parameters = new float[parameters.Count];
+            m_ParameterAvailability = new byte[parameters.Count];
+            for (int i = 0; i < parameters.Count; i++)
             {
-                m_Parameters[i] = posePlan.Parameters[i].DefaultValue;
+                m_Parameters[i] = parameters[i].DefaultValue;
                 m_ParameterAvailability[i] = 1;
             }
-            FootPlacementWeightParameterIndex = posePlan.RequireParameterIndex(source.FootPlacementWeightParameterId);
+            FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
             m_SourceWorkspace = new AnimationBlendSourcePoseWorkspace(
                 rig,
-                posePlan.Parameters.Count,
+                parameters.Count,
                 AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);
             m_Releases = new AnimationPlayerReleaseJournal(
                 AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);

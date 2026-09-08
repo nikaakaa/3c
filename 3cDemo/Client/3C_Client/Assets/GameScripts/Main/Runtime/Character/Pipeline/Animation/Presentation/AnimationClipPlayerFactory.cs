@@ -21,7 +21,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return new AnimationClipPlayerRuntime(
                 descriptor,
                 source,
-                projection.PosePlan,
+                projection.PosePlan.Parameters,
+                projection.PosePlan.RequireParameterIndex(source.FootPlacementWeightParameterId),
                 projection.Rig);
         }
     }

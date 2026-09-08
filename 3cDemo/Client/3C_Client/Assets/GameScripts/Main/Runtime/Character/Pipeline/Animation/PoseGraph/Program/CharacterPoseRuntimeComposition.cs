@@ -365,7 +365,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         descriptor,
                         projection.BlendSpaces[
                             descriptor.BlendSpacePlanIndex],
-                        projection.PosePlan,
+                        projection.PosePlan.Parameters,
+                        projection.PosePlan.RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight),
                         projection.Rig,
                         projection.FootAnalysis,
                         projection.ClipPhasePlans);

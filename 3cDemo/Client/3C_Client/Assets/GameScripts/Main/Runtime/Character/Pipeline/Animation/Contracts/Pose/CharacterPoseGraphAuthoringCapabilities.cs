@@ -253,7 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 StateMachineState.Value,
                 "State",
                 GraphAuthoringNodePresentationKind.State,
-                fields: Fields(BoolField("always-reset-on-entry", "Always Reset on Entry", true))));
+                fields: Fields(StringField("display-name", "名称", "State"), BoolField("always-reset-on-entry", "Always Reset on Entry", true))));
             catalog.Register(Surface("pose.state-machine.alias", "State Alias", GraphAuthoringNodePresentationKind.StateAlias));
             catalog.Register(Surface(
                 StateMachineTransition.Value,

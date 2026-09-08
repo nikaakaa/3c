@@ -53,6 +53,13 @@ namespace TreeDesigner.Editor
         public void InspectState(GraphAuthoringElementId stateId)
         {
             RequireBinding();
+            GraphAuthoringStateAliasProjection alias = m_Binding.Document.Aliases
+                .FirstOrDefault(value => value.AliasId.Equals(stateId));
+            if (alias != null)
+            {
+                InspectAlias(alias);
+                return;
+            }
             GraphAuthoringStateProjection state = m_Binding.Document.States
                 .FirstOrDefault(value => value.StateId.Equals(stateId));
             if (state == null)
@@ -130,6 +137,43 @@ namespace TreeDesigner.Editor
                 "Diagnostics",
                 new[] { new GraphAuthoringReadOnlyDetail("Status", "No diagnostic.") },
                 false);
+        }
+
+        void InspectAlias(GraphAuthoringStateAliasProjection alias)
+        {
+            m_DraftCustomTransitionId = default;
+            m_Content.Clear();
+            m_Content.Add(new Label("状态别名"));
+            var name = new TextField("名称") { value = alias.DisplayName, isDelayed = true };
+            name.SetEnabled(!m_Binding.Mutation.ReadOnly);
+            name.RegisterValueChangedCallback(evt => ApplyAlias(evt.newValue, alias.SourceIds));
+            m_Content.Add(name);
+            var members = new Foldout { text = "包含的状态与别名", value = true };
+            foreach (GraphAuthoringStateProjection state in m_Binding.Document.States)
+                AddMember(state.StateId, state.DisplayName);
+            foreach (GraphAuthoringStateAliasProjection source in m_Binding.Document.Aliases)
+                if (!source.AliasId.Equals(alias.AliasId)) AddMember(source.AliasId, source.DisplayName + "（别名）");
+            m_Content.Add(members);
+
+            void AddMember(GraphAuthoringElementId id, string label)
+            {
+                var toggle = new Toggle(label) { value = alias.SourceIds.Contains(id) };
+                toggle.SetEnabled(!m_Binding.Mutation.ReadOnly);
+                toggle.RegisterValueChangedCallback(evt =>
+                {
+                    var sources = alias.SourceIds.ToList();
+                    if (evt.newValue) sources.Add(id);
+                    else sources.Remove(id);
+                    ApplyAlias(alias.DisplayName, sources);
+                });
+                members.Add(toggle);
+            }
+
+            void ApplyAlias(string displayName, IReadOnlyList<GraphAuthoringElementId> sources) =>
+                GraphAuthoringDetailsMutation.Apply(() => m_Binding.Mutation.Apply(m_Binding.Document,
+                    new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.ConfigureStateAlias, alias.AliasId,
+                        value: new GraphAuthoringStateAliasProjection(alias.AliasId, sources, displayName, alias.Position))),
+                    () => InspectState(alias.AliasId), m_Content);
         }
 
         public void ClearSelection()

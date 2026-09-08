@@ -12,6 +12,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     internal static class CharacterPoseTuningAuthoringService
     {
+        internal static void SaveReferencedOwners(CharacterPresentationPoseGraphAsset asset, CharacterAnimationPresentationProfile profile)
+        {
+            if (profile?.FullBodyIkProfile) AssetDatabase.SaveAssetIfDirty(profile.FullBodyIkProfile);
+            var owners = FindNodeAssets<CharacterFootPlacementProfile>(asset).Cast<UnityEngine.Object>()
+                .Concat(FindNodeAssets<CharacterAnimationBlendPolicy>(asset))
+                .Concat(FindNodeAssets<CharacterPoseInertializationPolicy>(asset));
+            foreach (UnityEngine.Object owner in owners.Distinct()) AssetDatabase.SaveAssetIfDirty(owner);
+        }
+
         public static bool TryApply(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationPresentationProfile profile,

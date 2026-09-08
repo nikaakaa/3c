@@ -302,13 +302,12 @@ namespace TreeDesigner.Editor
                         node.DisplayName,
                         StringComparison.Ordinal))
                     return;
-                m_Binding.Mutation.Apply(
+                GraphAuthoringDetailsMutation.Apply(() => m_Binding.Mutation.Apply(
                     m_Binding.Document,
                     new GraphAuthoringMutationRequest(
                         GraphAuthoringMutationKind.SetDisplayName,
                         node.NodeId,
-                        value: value));
-                Rebuild();
+                        value: value)), Rebuild, m_Scroll);
             });
             m_Scroll.Add(displayName);
         }

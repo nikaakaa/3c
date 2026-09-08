@@ -406,10 +406,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void SaveAuthoring()
         {
             foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs())
+            {
                 graph.SelfSerialize();
+                AssetDatabase.SaveAssetIfDirty(graph);
+            }
             AssetDatabase.SaveAssetIfDirty(m_Asset);
             if (m_Profile)
                 AssetDatabase.SaveAssetIfDirty(m_Profile);
+            CharacterPoseTuningAuthoringService.SaveReferencedOwners(m_Asset, m_Profile);
             RefreshPublishedStatus();
         }
 
@@ -423,6 +427,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? m_Asset.Graph.GraphId
                 : new PoseGraphId(m_CurrentGraphId);
             CharacterPoseCanvasGraph graph = m_Asset.RequireGraph(graphId);
+            m_ObservationPanel.SetRuleContext(false);
             m_RuleDocument = null;
             m_RuleMutation = null;
             m_Canvas.style.display = DisplayStyle.Flex;
@@ -633,6 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Status.text = tuningOnly
                     ? "Unpublished Parameter · published Projection remains active."
                     : "Authoring changed · published Projection is Stale until explicit Build.";
+                if (m_ShowingTransitionRule) m_Canvas.PopulateProjection();
                 RefreshSelectedDetails();
             }
             IReadOnlyList<GraphAuthoringSelection> selected = CharacterPoseCanvasCommands.Selection(NodeCanvas.Editor.GraphEditor.currentGraph);
@@ -723,6 +729,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? DisplayStyle.None
                         : DisplayStyle.Flex;
             }
+        }
+
+        internal void ShowSelectionTuningError(string message)
+        {
+            RefreshSelectedDetails();
+            m_SelectionTuningHost.style.display = DisplayStyle.Flex;
+            m_SelectionTuningHost.Insert(0, new HelpBox(message, HelpBoxMessageType.Error));
         }
 
         void OpenGraph(PoseGraphId graphId)
@@ -885,6 +898,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (machine == null)
                 throw new ArgumentNullException(nameof(machine));
             BindMachineOwnerContext(machine);
+            m_ObservationPanel.SetRuleContext(false);
             m_RuleDocument = null;
             m_RuleMutation = null;
             m_Canvas.style.display = DisplayStyle.None;
@@ -972,6 +986,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void BindTransitionRuleCore(CharacterPoseStateMachineDefinition machine, PoseStateTransitionId transitionId)
         {
             BindMachineOwnerContext(machine);
+            m_ObservationPanel.SetRuleContext(true);
             m_Canvas.style.display = DisplayStyle.Flex;
             m_StateMachineSurface.style.display =
                 DisplayStyle.None;
@@ -1164,6 +1179,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_LastContentRevision = revision;
                 m_Status.text =
                     "Authoring changed · published Projection is Stale until explicit Build.";
+                m_StateMachineSurface.PopulateStateMachine();
                 RefreshSelectedDetails();
             }
             IReadOnlyList<GraphAuthoringSelection> selection =
@@ -1585,6 +1601,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         m_ObservedNodes[trace.ElementId.Value] = trace;
                     UpdatePortObservations(in snapshot);
                 }
+                if (m_ShowingTransitionRule && m_RuleDocument != null)
+                    CharacterPoseTransitionRuleObservation.Project(m_RuleDocument, m_ObservationPanel.PublishedPlan,
+                        m_ObservationPanel.CallSite, in snapshot, m_ObservationPanel.ObserveProspectiveRule,
+                        m_ObservedNodes, m_ObservedPorts, active);
                 if (m_ShowingStateMachine &&
                     m_StateMachineDocument != null)
                 {
@@ -1622,8 +1642,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         if (trace.Status == "完成 · 有贡献") active.Add(trace.ElementId.Value);
                 }
             }
-            canvas.UpdateObservation(m_ShowingStateMachine || m_ShowingTransitionRule ? null : m_ObservedNodes,
-                m_ShowingStateMachine || m_ShowingTransitionRule ? null : m_ObservedPorts, active);
+            canvas.UpdateObservation(m_ShowingStateMachine ? null : m_ObservedNodes,
+                m_ShowingStateMachine ? null : m_ObservedPorts, active, m_ShowingTransitionRule ? "已读取" : "当前转移");
             m_Editor?.Repaint();
         }
 
@@ -1756,11 +1776,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_Projection.ProjectionRevision,
                     StringComparison.Ordinal))
                 return false;
+            CharacterPoseProgramImage plan = m_ObservationPanel?.PublishedPlan;
+            if (plan == null || snapshot.PosePlanHash != plan.PlanHash || !m_Profile?.RigDefinition ||
+                plan.RigId != m_Profile.RigDefinition.RigId || plan.RigRevision != m_Profile.RigDefinition.Revision)
+                return false;
+            bool tuningOnly = IsTuningOnlyAuthoringChange();
+            if (!tuningOnly)
+            {
+                var revisions = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (CharacterPoseCanvasGraph graph in EnumerateAuthoringGraphs())
+                {
+                    if (revisions.TryGetValue(graph.GraphId.Value, out string revision) && revision != graph.ContentRevision)
+                        return false;
+                    revisions[graph.GraphId.Value] = graph.ContentRevision;
+                }
+                foreach (CharacterPresentationPoseSourceMapEntry source in plan.SourceMap)
+                    if (!revisions.TryGetValue(source.GraphId, out string revision) || revision != source.GraphRevision)
+                        return false;
+            }
             return string.Equals(
                        snapshot.PoseGraphRevision,
                        m_Asset.Graph.ContentRevision,
                        StringComparison.Ordinal) ||
-                   (IsTuningOnlyAuthoringChange() &&
+                   (tuningOnly &&
                     string.Equals(
                         snapshot.PoseGraphRevision,
                         m_LastPublishedPoseGraphRevision,

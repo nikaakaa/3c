@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void ClearHighlights() => GraphEditor.current?.RemoveNotification();
 
         public void UpdateObservation(IReadOnlyDictionary<string, GraphAuthoringRuntimeTraceProjection> nodes,
-            IReadOnlyDictionary<string, string> ports, ISet<string> active) => m_Observation.Update(nodes, ports, active);
+            IReadOnlyDictionary<string, string> ports, ISet<string> active, string connectionText) => m_Observation.Update(nodes, ports, active, connectionText);
 
         public void Dispose()
         {

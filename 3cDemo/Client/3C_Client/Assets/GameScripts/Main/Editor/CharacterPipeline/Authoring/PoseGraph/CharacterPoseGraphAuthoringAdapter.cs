@@ -731,13 +731,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         throw new InvalidOperationException(
                             $"Pose State '{set.StateId}' does not exist.");
                     CharacterPoseStateDefinition current = states[index];
-                    bool alwaysResetOnEntry = set.FieldId == "always-reset-on-entry"
-                        ? Convert.ToBoolean(set.Value)
-                        : throw new InvalidOperationException(
-                            $"Pose State does not declare field '{set.FieldId}'.");
+                    bool alwaysResetOnEntry = current.AlwaysResetOnEntry;
+                    string displayName = current.DisplayName;
+                    switch (set.FieldId)
+                    {
+                        case "display-name": displayName = Convert.ToString(set.Value); break;
+                        case "always-reset-on-entry": alwaysResetOnEntry = Convert.ToBoolean(set.Value); break;
+                        default: throw new InvalidOperationException($"Pose State does not declare field '{set.FieldId}'.");
+                    }
                     states[index] = new CharacterPoseStateDefinition(
                         current.StateId,
-                        current.DisplayName,
+                        displayName,
                         current.PoseGraphId,
                         current.OutputPoseNodeId,
                         alwaysResetOnEntry);

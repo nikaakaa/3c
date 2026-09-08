@@ -53,12 +53,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TuningOnlyAuthoringFingerprint = string.Empty;
         }
 
+        IEnumerable<CharacterPoseCanvasGraph> EnumerateAuthoringGraphs()
+        {
+            var owners = new HashSet<CharacterPresentationPoseGraphAsset> { m_Asset };
+            if (m_Profile)
+                foreach (CharacterLinkedPoseImplementationAsset implementation in m_Profile.LinkedPoseImplementations.Where(value => value))
+                    foreach (CharacterLinkedPoseImplementationEntryBinding entry in implementation.Entries)
+                        if (entry?.GraphOwner) owners.Add(entry.GraphOwner);
+            return owners.SelectMany(owner => owner.EnumerateGraphs());
+        }
+
         string ComputePoseTuningAuthoringFingerprint()
         {
             if (!m_Asset || m_Asset.Graph == null)
                 return string.Empty;
             var parts = new List<string>();
-            foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs()
+            foreach (CharacterPoseCanvasGraph graph in EnumerateAuthoringGraphs()
                          .Where(value => value != null)
                          .OrderBy(value => value.GraphId.Value, StringComparer.Ordinal))
             {
@@ -76,7 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFullBodyIkProfile profile = m_Profile.FullBodyIkProfile;
                 profiles[$"full-body:{profile.ProfileId}"] = profile.Revision;
             }
-            foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs()
+            foreach (CharacterPoseCanvasGraph graph in EnumerateAuthoringGraphs()
                          .Where(value => value != null))
             {
                 foreach (CharacterPoseCanvasNode node in graph.Nodes)

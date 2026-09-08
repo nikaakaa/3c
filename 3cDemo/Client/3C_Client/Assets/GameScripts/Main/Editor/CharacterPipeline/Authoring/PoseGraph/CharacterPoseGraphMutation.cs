@@ -313,6 +313,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             Entry = entry ?? throw new ArgumentNullException(nameof(entry));
             Aliases = aliases ?? Array.Empty<CharacterPoseStateAlias>();
+            CharacterPoseStateAliasResolver.Expand(Aliases);
             MaxTransitionsPerFrame = maxTransitionsPerFrame > 0
                 ? maxTransitionsPerFrame
                 : throw new ArgumentOutOfRangeException(

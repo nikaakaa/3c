@@ -210,79 +210,71 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_Window.IsRuntimeObservation) return false;
             if (m_TuningLayout == null || m_TuningBlock == null)
                 return false;
-            try
+            CharacterPoseTuningParameterBlock authoredBlock = CharacterPoseTuningCandidateCompiler.CompileBlock(
+                m_TuningLayout,
+                m_TuningBlock,
+                entry,
+                value);
+            if (!CharacterPoseTuningAuthoringService.TryApply(
+                    m_Window.AssetContext,
+                    m_Window.ProfileContext,
+                    entry,
+                    value,
+                    out string authoringError))
             {
-                _ = CharacterPoseTuningCandidateCompiler.CompileBlock(
+                throw new InvalidOperationException(authoringError);
+            }
+
+            m_TuningBlock = authoredBlock;
+            m_Window.MarkPoseTuningAuthoringChanged();
+            if (!m_Target)
+            {
+                m_Status.text = "Saved · No live target is selected.";
+                return true;
+            }
+            if (!m_Window.TryGetPublishedProjection(
+                    out CharacterPresentationProjection projection,
+                    out string projectionError))
+            {
+                m_Status.text = $"Saved · {projectionError}";
+                return true;
+            }
+            if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
+                    m_Window.AssetContext,
+                    m_Window.ProfileContext,
+                    projection,
                     m_TuningLayout,
                     m_TuningBlock,
-                    entry,
-                    value);
-                if (!CharacterPoseTuningAuthoringService.TryApply(
-                        m_Window.AssetContext,
-                        m_Window.ProfileContext,
-                        entry,
-                        value,
-                        out string authoringError))
-                {
-                    m_Status.text = authoringError;
-                    return true;
-                }
-
-                m_Window.MarkPoseTuningAuthoringChanged();
-                if (!m_Target)
-                {
-                    m_Status.text = "Saved · No live target is selected.";
-                    return true;
-                }
-                if (!m_Window.TryGetPublishedProjection(
-                        out CharacterPresentationProjection projection,
-                        out string projectionError))
-                {
-                    m_Status.text = $"Saved · {projectionError}";
-                    return true;
-                }
-                if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
-                        m_Window.AssetContext,
-                        m_Window.ProfileContext,
-                        projection,
-                        m_TuningLayout,
-                        m_TuningBlock,
-                        out CharacterPoseTuningParameterBlock nextBlock,
-                        out string compileError))
-                {
-                    m_Status.text = $"Saved · {compileError}";
-                    return true;
-                }
-                m_TuningBlock = nextBlock;
-                string sourceRevision =
-                    m_Window.AssetContext?.Graph?.ContentRevision ??
-                    string.Empty;
-                bool submitted;
-                string error;
-                submitted = m_Target.SubmitLivePoseTuningCandidate(
-                        sourceRevision,
-                        Guid.NewGuid().ToString("N"),
-                        m_TuningBlock,
-                        out error);
-                m_Status.text = submitted
-                    ? entry.ApplyTiming == CharacterPoseTuningApplyTiming.NextActivation
-                        ? "Saved · queued for the next activation."
-                        : "Saved · applies on the next frame."
-                    : error;
-                return true;
-            }
-            catch (Exception exception)
+                    out CharacterPoseTuningParameterBlock nextBlock,
+                    out string compileError))
             {
-                m_Status.text = exception.Message;
+                m_Status.text = $"Saved · {compileError}";
                 return true;
             }
+            m_TuningBlock = nextBlock;
+            string sourceRevision =
+                m_Window.AssetContext?.Graph?.ContentRevision ??
+                string.Empty;
+            bool submitted;
+            string error;
+            submitted = m_Target.SubmitLivePoseTuningCandidate(
+                    sourceRevision,
+                    Guid.NewGuid().ToString("N"),
+                    m_TuningBlock,
+                    out error);
+            m_Status.text = submitted
+                ? entry.ApplyTiming == CharacterPoseTuningApplyTiming.NextActivation
+                    ? "Saved · queued for the next activation."
+                    : "Saved · applies on the next frame."
+                : error;
+            return true;
         }
 
         internal bool TryApplySelectionTuning(
             IGraphAuthoringDocumentProjection document,
             GraphAuthoringMutationRequest request)
         {
-            if (request.Kind != GraphAuthoringMutationKind.SetField ||
+            if (request.Kind is not (GraphAuthoringMutationKind.SetField or GraphAuthoringMutationKind.SetTransitionField) ||
                 m_TuningLayout == null ||
                 m_TuningBlock == null)
                 return false;
@@ -493,8 +485,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseTuningLayoutEntry entry,
             CharacterPoseTuningValue value)
         {
-            if (SubmitTuningValue(entry, value))
-                m_Window.RefreshSelectedDetails();
+            try
+            {
+                if (SubmitTuningValue(entry, value))
+                    m_Window.RefreshSelectedDetails();
+            }
+            catch (Exception exception) when (exception is ArgumentException || exception is InvalidOperationException)
+            {
+                m_Window.ShowSelectionTuningError(exception.Message);
+            }
         }
 
         CharacterPoseTuningRuntimeState CurrentTuningState() =>

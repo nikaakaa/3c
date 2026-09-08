@@ -866,6 +866,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         new PoseStateAliasId(request.TargetId.Value),
                         transaction);
                     return;
+                case GraphAuthoringMutationKind.ConfigureStateAlias:
+                {
+                    var edit = request.Value as GraphAuthoringStateAliasProjection ??
+                        throw new InvalidOperationException("状态别名编辑需要完整的名称与成员。");
+                    if (!edit.AliasId.Equals(request.TargetId))
+                        throw new InvalidOperationException("状态别名编辑目标不一致。");
+                    CharacterPoseStateAlias current = pose.Definition.Aliases.Single(value => value.AliasId.Value == request.TargetId.Value);
+                    CharacterPoseStateTransitionSource[] sources = edit.SourceIds.Select(id =>
+                    {
+                        if (pose.Definition.States.Any(state => state.StateId.Value == id.Value))
+                            return CharacterPoseStateTransitionSource.FromState(new PoseStateId(id.Value));
+                        CharacterPoseStateAlias source = pose.Definition.Aliases.Single(value => value.AliasId.Value == id.Value);
+                        return CharacterPoseStateTransitionSource.FromAlias(source.AliasId);
+                    }).ToArray();
+                    var replacement = new CharacterPoseStateAlias(current.AliasId, edit.DisplayName, sources);
+                    transaction.Add(new ConfigurePoseStateMachineMutation(machineId, pose.Definition.Entry,
+                        pose.Definition.Aliases.Select(value => value.AliasId == current.AliasId ? replacement : value).ToArray(),
+                        pose.Definition.MaxTransitionsPerFrame));
+                    return;
+                }
                 case GraphAuthoringMutationKind.MoveElement:
                     transaction.Add(
                         new SetPoseStateMachineLayoutElementMutation(
@@ -1374,6 +1394,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Pose details reject non-Pose state payload.");
             return field.FieldId.Value switch
             {
+                "display-name" => state.DisplayName,
                 "always-reset-on-entry" => payload.AlwaysResetOnEntry,
                 _ => throw new InvalidOperationException(
                     $"Pose State does not declare field '{field.FieldId}'.")

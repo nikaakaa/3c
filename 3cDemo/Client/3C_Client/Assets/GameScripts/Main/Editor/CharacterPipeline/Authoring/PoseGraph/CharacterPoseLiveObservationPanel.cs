@@ -23,6 +23,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             allowSceneObjects = true
         };
         readonly DropdownField m_CallSiteField = new DropdownField("调用位置");
+        readonly DropdownField m_RuleEvaluationField = new DropdownField("条件结果", new List<string> { "当前状态条件", "目标预判条件" }, 0);
+        internal bool ObserveProspectiveRule => m_RuleEvaluationField.index == 1;
+        internal void SetRuleContext(bool enabled) => m_RuleEvaluationField.style.display = enabled ? DisplayStyle.Flex : DisplayStyle.None;
         string[] m_CallSites = Array.Empty<string>();
         internal CharacterPoseProgramImage PublishedPlan { get; private set; }
         internal string CallSite { get; private set; }
@@ -74,6 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TargetField.RegisterValueChangedCallback(_ => SelectTarget(m_TargetField.index));
             m_ClipTarget.RegisterValueChangedCallback(evt => m_Window.BindObservationContext(evt.newValue as CharacterPipelineHost));
             Content.Add(m_CallSiteField);
+            Content.Add(m_RuleEvaluationField);
+            SetRuleContext(false);
+            m_RuleEvaluationField.RegisterValueChangedCallback(_ => m_Window.RefreshObservedRuntime());
             m_CallSiteField.RegisterValueChangedCallback(_ =>
             {
                 int index = m_CallSiteField.index - 1;

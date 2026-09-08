@@ -210,7 +210,8 @@ namespace TreeDesigner.Authoring
         DeleteStack = 20,
         SetDisplayName = 21,
         DeleteStateAlias = 22,
-        SetStateField = 23
+        SetStateField = 23,
+        ConfigureStateAlias = 24
     }
 
     public enum GraphAuthoringDiagnosticSeverity : byte

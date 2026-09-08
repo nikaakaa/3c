@@ -15,6 +15,7 @@ namespace NodeCanvas.Framework
 
     partial class Node
     {
+        public Status editorStatus => graph.editorObservation?.GetNodeStatus(UID) ?? status;
 
         //Class for the nodeports GUI
         class GUIPort
@@ -289,8 +290,8 @@ namespace NodeCanvas.Framework
             GUI.color = Color.white;
             Styles.Draw(node.rect, StyleSheet.windowShadow);
 
-            if ( Application.isPlaying && node.status != Status.Resting ) {
-                GUI.color = StyleSheet.GetStatusColor(node.status);
+            if ( Application.isPlaying && node.editorStatus != Status.Resting ) {
+                GUI.color = StyleSheet.GetStatusColor(node.editorStatus);
                 Styles.Draw(node.rect, StyleSheet.windowHighlight);
 
             } else {
@@ -445,17 +446,17 @@ namespace NodeCanvas.Framework
 
         //Shows the icons relative to the current node status
         static void ShowStatusIcons(Node node) {
-            if ( Application.isPlaying && node.status != Status.Resting ) {
+            if ( Application.isPlaying && node.editorStatus != Status.Resting ) {
                 var markRect = new Rect(5, 5, 16, 16);
-                if ( node.status == Status.Success ) {
+                if ( node.editorStatus == Status.Success ) {
                     GUI.color = EditorGUIUtility.isProSkin ? StyleSheet.GetStatusColor(Status.Success) : Colors.Grey(0.25f);
                     GUI.DrawTexture(markRect, StyleSheet.statusSuccess);
 
-                } else if ( node.status == Status.Running ) {
+                } else if ( node.editorStatus == Status.Running ) {
                     GUI.color = EditorGUIUtility.isProSkin ? StyleSheet.GetStatusColor(Status.Running) : Colors.Grey(0.25f);
                     GUI.DrawTexture(markRect, StyleSheet.statusRunning);
 
-                } else if ( node.status == Status.Failure ) {
+                } else if ( node.editorStatus == Status.Failure ) {
                     GUI.color = EditorGUIUtility.isProSkin ? StyleSheet.GetStatusColor(Status.Failure) : Colors.Grey(0.25f);
                     GUI.DrawTexture(markRect, StyleSheet.statusFailure);
                 }
@@ -475,6 +476,8 @@ namespace NodeCanvas.Framework
 
             GUI.skin.label.alignment = TextAnchor.UpperLeft;
         }
+            string observation = node.graph.editorObservation?.GetNodeText(node.UID);
+            if (!string.IsNullOrEmpty(observation)) { GUILayout.Label(observation, EditorStyles.miniLabel); }
 
         //...
         static void TaskAssignableNodeGUI(Node node) {

@@ -291,7 +291,7 @@ namespace FlowCanvas
             port is ValueOutput || port is FlowInput || !port.isConnected;
 
 #if UNITY_EDITOR
-        public virtual string GetEditorPortObservation(Port port) => null;
+        public virtual string GetEditorPortObservation(Port port) => graph.editorObservation?.GetPortText(UID, port.ID);
 
         public static void ClearPortInteraction()
         {

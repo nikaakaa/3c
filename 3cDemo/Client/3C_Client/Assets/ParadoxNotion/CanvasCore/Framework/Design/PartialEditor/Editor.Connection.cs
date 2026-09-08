@@ -71,10 +71,11 @@ namespace NodeCanvas.Framework
         public RelinkState relinkState { get; private set; }
 
         ///<summary>Editor. Default Color of connection</summary>
-        virtual public Color defaultColor => StyleSheet.GetStatusColor(status);
+        public Status editorStatus => graph.editorObservation?.GetConnectionStatus(UID) ?? status;
+        virtual public Color defaultColor => StyleSheet.GetStatusColor(editorStatus);
 
         ///<summary>Editor. Will animate connection? By default if status running</summary>
-        virtual public bool animate => status == Status.Running;
+        virtual public bool animate => editorStatus == Status.Running;
 
         ///<summary>Editor. Defacult size of connection</summary>
         virtual public float defaultSize => 3f;
@@ -259,6 +260,12 @@ namespace NodeCanvas.Framework
             OnBeforeUpdateBlinkStatus();
 
             if ( !graph.isRunning ) {
+            if (graph.editorObservation != null) {
+                size = defaultSize + (editorStatus == Status.Running ? STATUS_BLINK_SIZE_ADD : 0f);
+                color = StyleSheet.GetStatusColor(editorStatus);
+                return;
+            }
+
                 size = defaultSize;
                 color = defaultColor;
                 return;

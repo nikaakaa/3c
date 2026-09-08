@@ -160,12 +160,17 @@ namespace FlowCanvas
         ///----------------------------------------------------------------------------------------------
 
         ///<summary>Simplex Nodes</summary>
-        static UnityEditor.GenericMenu AppendSimplexNodesMenu(this FlowGraph graph, UnityEditor.GenericMenu menu, string baseCategory, Vector2 pos, Port contextPort, object dropInstance) {
+        public static UnityEditor.GenericMenu AppendSimplexNodesMenu(this FlowGraph graph, UnityEditor.GenericMenu menu, string baseCategory, Vector2 pos, Port contextPort, object dropInstance) { // 3C: reuse the native function catalog in domain editors.
             var infos = EditorUtils.GetScriptInfosOfType(typeof(SimplexNode));
             var generalized = new List<System.Type>();
             foreach ( var _info in infos ) {
                 var info = _info;
-                if ( contextPort != null ) {
+                System.Type wrapperType = null;
+                if (graph.usesExplicitPortSelection) { // 3C
+                    wrapperType = typeof(SimplexNodeWrapper<>).MakeGenericType(info.type);
+                    if (!graph.CanAuthorNodeType(wrapperType)) { continue; }
+                }
+                if ( contextPort != null && !graph.usesExplicitPortSelection ) { // 3C: domains inspect actual ports, including extra ports.
 
                     if ( generalized.Contains(info.originalType) ) {
                         continue;
@@ -205,7 +210,11 @@ namespace FlowCanvas
                 }
 
                 var category = string.Join("/", new string[] { baseCategory, info.category, info.name }).TrimStart('/');
-                menu.AddItem(new GUIContent(category), false, (o) => { graph.AddSimplexNode((System.Type)o, pos, contextPort, dropInstance); }, info.type);
+                if (graph.usesExplicitPortSelection) { // 3C
+                    graph.AppendNodeCreationItem(menu, category, wrapperType, pos, contextPort, dropInstance);
+                } else {
+                    menu.AddItem(new GUIContent(category), false, (o) => { graph.AddSimplexNode((System.Type)o, pos, contextPort, dropInstance); }, info.type);
+                }
             }
             return menu;
         }

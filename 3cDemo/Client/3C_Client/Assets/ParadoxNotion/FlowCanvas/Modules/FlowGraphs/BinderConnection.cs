@@ -265,6 +265,8 @@ namespace FlowCanvas
                 return "A port is null.";
             }
 
+            if (source.parent.graph is FlowGraph authoringGraph && !authoringGraph.CanAuthorConnection(source, target, out string reason)) { return reason; } // 3C
+
             if ( source == target ) {
                 // return "Can't connect port to itself.";
                 return string.Empty;
@@ -365,6 +367,8 @@ namespace FlowCanvas
 
         //...
         sealed protected override string GetConnectionInfo() {
+
+            if (graph.editorObservation != null) { return graph.editorObservation.GetConnectionText(UID); }
 
             var case1 = sourcePort == null || sourcePort.bindStatus != Port.BindStatus.Valid;
             var case2 = targetPort == null || targetPort.bindStatus != Port.BindStatus.Valid;

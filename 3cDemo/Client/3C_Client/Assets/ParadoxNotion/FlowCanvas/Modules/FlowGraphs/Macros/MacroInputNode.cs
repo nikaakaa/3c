@@ -21,6 +21,11 @@ namespace FlowCanvas.Macros
             if ( macro == null || macro.inputDefinitions == null ) { return; }
             for ( var i = 0; i < macro.inputDefinitions.Count; i++ ) {
                 var def = macro.inputDefinitions[i];
+                if (macro.usesExternalExecution) {
+                    if (def.type == typeof(Flow)) { AddFlowOutput(def.name, def.ID); }
+                    else { AddValueOutput(def.name, def.type, Macro.RejectExternalValue, def.ID); }
+                    continue;
+                }
                 if ( def.type == typeof(Flow) ) {
                     macro.entryActionMap[def.ID] = AddFlowOutput(def.name, def.ID).Call;
                 } else {

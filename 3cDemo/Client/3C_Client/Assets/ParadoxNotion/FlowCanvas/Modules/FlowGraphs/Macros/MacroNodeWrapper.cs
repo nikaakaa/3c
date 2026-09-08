@@ -55,6 +55,7 @@ namespace FlowCanvas.Macros
         ///----------------------------------------------------------------------------------------------
 
         public void MakeInstance() {
+            if (macro != null && macro.usesExternalExecution) { throw new System.InvalidOperationException("External Macro execution does not clone authoring graphs."); }
             if ( _currentInstance == null && macro != null ) {
                 _currentInstance = Graph.Clone<Macro>(macro, this.graph);
                 _macro = _currentInstance;
@@ -69,6 +70,18 @@ namespace FlowCanvas.Macros
         protected override void RegisterPorts() {
 
             var target = _currentInstance != null ? _currentInstance : macro;
+
+            if (target != null && target.usesExternalExecution) {
+                foreach (var definition in target.inputDefinitions) {
+                    if (definition.type == typeof(Flow)) { AddFlowInput(definition.name, Macro.RejectExternalFlow, definition.ID); }
+                    else { AddValueInput(definition.name, definition.type, definition.ID); }
+                }
+                foreach (var definition in target.outputDefinitions) {
+                    if (definition.type == typeof(Flow)) { AddFlowOutput(definition.name, definition.ID); }
+                    else { AddValueOutput(definition.name, definition.type, Macro.RejectExternalValue, definition.ID); }
+                }
+                return;
+            }
 
             if ( target == null || target.entry == null || target.exit == null ) {
                 return;

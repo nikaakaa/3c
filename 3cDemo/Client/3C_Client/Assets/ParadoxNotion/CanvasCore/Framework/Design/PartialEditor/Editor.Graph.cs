@@ -7,6 +7,15 @@ using UnityEngine;
 namespace NodeCanvas.Framework
 {
 
+    public interface IGraphEditorObservation
+    {
+        Status GetNodeStatus(string nodeId);
+        string GetNodeText(string nodeId);
+        Status GetConnectionStatus(string connectionId);
+        string GetPortText(string nodeId, string portId);
+        string GetConnectionText(string connectionId);
+    }
+
     partial class Graph
     {
         public virtual bool persistsEditorGraph => true; // 3C: view-only document surfaces retain their original authoring owner.
@@ -14,6 +23,7 @@ namespace NodeCanvas.Framework
         public virtual bool isEditorReadOnly => false; // 3C: observe domain instances without mutating authoring state.
         public virtual bool usesDomainAuthoring => false; // 3C: exclude generic refactoring and raw JSON import from strict domain assets.
         public virtual Object EditorUndoTarget => this;
+        public IGraphEditorObservation editorObservation { get; set; }
         public virtual bool HandleEditorCommand(string command, Vector2 position) => false; // 3C: domains keep their clipboard and batch mutation contracts.
 
         private int _childAssignableIndex = -1;
@@ -35,7 +45,8 @@ namespace NodeCanvas.Framework
                 _childAssignableIndex = -1;
                 return;
             }
-            if ( Application.isPlaying && EditorUtility.IsPersistent(assignable.subGraph) ) {
+            if ( Application.isPlaying && EditorUtility.IsPersistent(assignable.subGraph) &&
+                 !(isEditorReadOnly && !allowsEditorExecution && assignable.subGraph.isEditorReadOnly && !assignable.subGraph.allowsEditorExecution) ) {
                 ParadoxNotion.Services.Logger.LogWarning("You can't view sub-graphs in play mode until they are initialized to avoid editing asset references accidentally", LogTag.EDITOR, this);
                 _childAssignableIndex = -1;
                 return;

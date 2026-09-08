@@ -20,6 +20,13 @@ namespace FlowCanvas
 
         private Dictionary<System.Type, Component> cachedAgentComponents;
 
+        public virtual bool CanAuthorNodeType(System.Type type) => type != null && baseNodeType.IsAssignableFrom(type); // 3C: domain catalogs filter the native node menu.
+
+        public virtual bool CanAuthorConnection(Port source, Port target, out string reason) { // 3C: domain rules apply to native create and relink operations.
+            reason = null;
+            return true;
+        }
+
         ///----------------------------------------------------------------------------------------------
 
         ///<summary>Returns cached component type from graph agent</summary>
@@ -50,6 +57,8 @@ namespace FlowCanvas
         ///---------------------------------------UNITY EDITOR-------------------------------------------
 #if UNITY_EDITOR
 
+        public virtual bool usesExplicitPortSelection => false; // 3C: opt into declaration-based creation without changing existing graph domains.
+
         // 3C: domains route native port creation through their authoring transaction.
         public virtual BinderConnection CreatePortConnection(Port source, Port target) {
             return BinderConnection.CreateValidated(source, target);
@@ -60,13 +69,16 @@ namespace FlowCanvas
             foreach (var connection in port.GetPortConnections().ToArray()) { RemoveConnection(connection); }
         }
 
-
         ///...
         public T AddFlowNode<T>(Vector2 pos, Port context, object dropInstance) where T : FlowNode { return (T)AddFlowNode(typeof(T), pos, context, dropInstance); }
         public FlowNode AddFlowNode(System.Type type, Vector2 pos, Port context, object dropInstance) {
             var node = (FlowNode)this.AddNode(type, pos);
             FinalizeNodeAdditionToPortAndInstance(node, context, dropInstance);
             return node;
+        }
+
+        public virtual void AppendNodeCreationItem(UnityEditor.GenericMenu menu, string category, System.Type type, Vector2 pos, Port context, object dropInstance) { // 3C: domains resolve ambiguous ports before creating a node.
+            menu.AddItem(new GUIContent(category), false, () => AddFlowNode(type, pos, context, dropInstance));
         }
 
         ///...
@@ -93,7 +105,8 @@ namespace FlowCanvas
             var generalized = new List<System.Type>();
             foreach ( var _info in infos ) {
                 var info = _info;
-                if ( contextPort != null ) {
+                if (!CanAuthorNodeType(info.type)) { continue; } // 3C
+                if ( contextPort != null && !usesExplicitPortSelection ) { // 3C: domains use the complete registered port shape.
 
                     if ( generalized.Contains(info.originalType) ) {
                         continue;
@@ -146,7 +159,7 @@ namespace FlowCanvas
                 }
 
                 var category = string.Join("/", new string[] { baseCategory, info.category, info.name }).TrimStart('/');
-                menu.AddItem(new GUIContent(category), false, (o) => { AddFlowNode((System.Type)o, pos, contextPort, dropInstance); }, info.type);
+                AppendNodeCreationItem(menu, category, info.type, pos, contextPort, dropInstance); // 3C
             }
             return menu;
         }

@@ -50,6 +50,10 @@ namespace FlowCanvas.Macros
 
         ///<summary>Macros dont use blackboard overrides or blackboard variables parametrization</summary>
         public override bool allowBlackboardOverrides => false;
+        public virtual bool usesExternalExecution => false;
+
+        internal static void RejectExternalFlow(Flow flow) => throw new InvalidOperationException("This Macro executes through its domain program.");
+        internal static object RejectExternalValue() => throw new InvalidOperationException("This Macro value is supplied by its domain program.");
 
         ///<summary>The entry node of the Macro (input ports)</summary>
         public MacroInputNode entry {
@@ -58,6 +62,7 @@ namespace FlowCanvas.Macros
                 if ( _entry == null ) {
                     _entry = allNodes.OfType<MacroInputNode>().FirstOrDefault();
                     if ( _entry == null ) {
+                        if (usesExternalExecution) { throw new InvalidOperationException("The Macro input anchor is missing."); }
                         _entry = AddNode<MacroInputNode>(new Vector2(-translation.x + 200, -translation.y + 200));
                     }
                 }
@@ -72,6 +77,7 @@ namespace FlowCanvas.Macros
                 if ( _exit == null ) {
                     _exit = allNodes.OfType<MacroOutputNode>().FirstOrDefault();
                     if ( _exit == null ) {
+                        if (usesExternalExecution) { throw new InvalidOperationException("The Macro output anchor is missing."); }
                         _exit = AddNode<MacroOutputNode>(new Vector2(-translation.x + 600, -translation.y + 200));
                     }
                 }
@@ -84,6 +90,7 @@ namespace FlowCanvas.Macros
             base.OnGraphValidate();
             _entry = null;
             _exit = null;
+            if (usesExternalExecution) { return; }
             _entry = entry;
             _exit = exit;
         }

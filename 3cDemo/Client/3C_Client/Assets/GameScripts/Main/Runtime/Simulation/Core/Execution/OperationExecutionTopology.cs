@@ -336,7 +336,7 @@ namespace ThirdPersonSimulation
             m_References = BuildReferences(operationList.Count, referenceList);
             m_OperationStateSlots = BuildOperationStateSlots(operationList, stateSlots);
             BuildTimelineIndexes(operationList, edges, out m_TimelineOperations, out m_TimelineOwners);
-            m_StateMachineOwners = BuildStateMachineOwners(operationList, sourceMap);
+            m_StateMachineOwners = BuildStateMachineOwners(operationList, referenceList);
             BuildStateEdges(operationList, edges, out m_StateOnEnter, out m_StateRoot, out m_StateOnExit);
             m_GraphCallFrames = BuildGraphCallFrames(operationList, graphCallFrames);
             RootOperation = rootOperation;
@@ -601,32 +601,27 @@ namespace ThirdPersonSimulation
 
         static int[] BuildStateMachineOwners(
             IReadOnlyList<OperationExecutionDescriptor> operations,
-            IReadOnlyList<ProgramSourceMapEntry> sourceMap)
+            IReadOnlyList<ProgramReference> references)
         {
-            var machineByGraph = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (int i = 0; i < operations.Count; i++)
-            {
-                if (operations[i].Code != SimulationOperationCode.StateMachine || string.IsNullOrEmpty(operations[i].Text0))
-                    continue;
-                if (!machineByGraph.TryAdd(operations[i].Text0, i))
-                    throw new ArgumentException($"StateMachine graph identity '{operations[i].Text0}' is duplicated.");
-            }
             var result = new int[operations.Count];
             for (int i = 0; i < result.Length; i++)
                 result[i] = -1;
-            for (int i = 0; i < sourceMap.Count; i++)
+            for (int i = 0; i < references.Count; i++)
             {
-                ProgramSourceMapEntry source = sourceMap[i];
-                if (source.TargetKind != ProgramSourceTargetKind.Operation ||
-                    source.TargetIndex < 0 || source.TargetIndex >= operations.Count ||
-                    operations[source.TargetIndex].Code != SimulationOperationCode.State ||
-                    string.IsNullOrEmpty(source.GraphId) ||
-                    !machineByGraph.TryGetValue(source.GraphId, out int machine))
+                ProgramReference reference = references[i];
+                if (reference.Kind != ProgramReferenceKind.Operation || !reference.HasSourceOperation ||
+                    operations[reference.SourceOperation.Value].Code != SimulationOperationCode.State)
                     continue;
-                if (result[source.TargetIndex] >= 0 && result[source.TargetIndex] != machine)
-                    throw new ArgumentException($"State '{source.TargetIndex}' resolves to multiple StateMachine owners.");
-                result[source.TargetIndex] = machine;
+                if (operations[reference.TargetIndex].Code != SimulationOperationCode.StateMachine)
+                    continue;
+                int state = reference.SourceOperation.Value;
+                if (result[state] >= 0)
+                    throw new ArgumentException($"State '{state}' declares multiple StateMachine owner references.");
+                result[state] = reference.TargetIndex;
             }
+            for (int i = 0; i < operations.Count; i++)
+                if (operations[i].Code == SimulationOperationCode.State && result[i] < 0)
+                    throw new ArgumentException($"State '{i}' has no compiled StateMachine owner reference.");
             return result;
         }
 

@@ -170,6 +170,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             false,
                             OperationHandle.Invalid,
                             Source(graph, owner, childRoute));
+                        if (owner is StateMachineNode)
+                        {
+                            foreach (BaseNode stateNode in reference.Tree.Nodes)
+                            {
+                                if (stateNode is not StateNode)
+                                    continue;
+                                if (!TryGetOperation(childRoute, stateNode.GUID, out OperationHandle stateOperation))
+                                    throw new InvalidOperationException($"State '{stateNode.GUID}' has no compiled operation.");
+                                m_Builder.DeclareReference(
+                                    $"{childRoute}/node:{stateNode.GUID}/state-machine-owner",
+                                    stateOperation,
+                                    ProgramReferenceKind.Operation,
+                                    ownerOperation.Value,
+                                    childRoute,
+                                    Source(reference.Tree, stateNode, childRoute));
+                            }
+                        }
                         if (owner is StateMachineNode &&
                             reference.Tree is StateMachineGraph stateMachine &&
                             stateMachine.AnyStateNode != null &&

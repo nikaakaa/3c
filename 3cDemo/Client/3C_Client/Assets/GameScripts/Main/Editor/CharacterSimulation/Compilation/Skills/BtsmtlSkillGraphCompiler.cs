@@ -55,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (m_Graphs.TryGetValue(graph.Route, out BtsmtlSkillGraphCompilation existing))
                 return existing;
+            using var invocation = m_Builder.PushGraphInvocation(graph.Route);
             m_Blackboard.BeginSkillGraph(graph, stateOwner);
             try
             {

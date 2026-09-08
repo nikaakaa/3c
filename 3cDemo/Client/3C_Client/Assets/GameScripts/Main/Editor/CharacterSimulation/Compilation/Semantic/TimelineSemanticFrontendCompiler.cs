@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class TimelineSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "timeline-simulation-compiler/2";
+        public const string CompilerVersion = "timeline-simulation-compiler/3";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static TimelineSemanticFrontendResult Compile(

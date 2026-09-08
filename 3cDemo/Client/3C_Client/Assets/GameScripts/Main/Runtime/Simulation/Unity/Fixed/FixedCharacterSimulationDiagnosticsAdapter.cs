@@ -11,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
+        readonly string[] m_GraphInvocationPaths;
 
         public FixedCharacterSimulationDiagnosticsAdapter(
             RuntimeDiagnosticsContext context,
@@ -21,6 +22,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            m_GraphInvocationPaths = new string[program.Operations.Count];
+            foreach (ThirdPersonSimulation.ProgramSourceMapEntry entry in program.SourceMap)
+                if (entry.TargetKind == ThirdPersonSimulation.ProgramSourceTargetKind.Operation)
+                    m_GraphInvocationPaths[entry.TargetIndex] = entry.GraphInvocationPath;
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 if (!m_SourceMap.TryGetProgramTarget(
@@ -83,14 +88,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Fixed operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
+            string callSite = m_GraphInvocationPaths[record.Header.Activation.Source.Operation.Value];
+            if (record.ActionInstanceId != 0 && string.IsNullOrEmpty(callSite))
+                throw new InvalidOperationException("技能诊断操作缺少编译图调用路径。");
             RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
                 ? RuntimeInstanceKey.SkillExecution(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
                     record.SkillId,
                     record.ActionInstanceId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation)
+                    callSite,
+                    record.SkillExecutionGeneration)
                 : RuntimeInstanceKey.Runnable(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
@@ -111,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     OwnerId = record.Header.ActorId.Value,
                     SkillId = record.SkillId,
                     ActionInstanceId = record.ActionInstanceId,
-                    CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
+                    CallSiteId = callSite,
                     ActivationGeneration = record.Header.Activation.Generation,
                     SkillExecutionGeneration = record.SkillExecutionGeneration,
                     Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,

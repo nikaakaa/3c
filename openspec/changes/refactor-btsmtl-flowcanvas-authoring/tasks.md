@@ -117,12 +117,16 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 ## 6. 编译来源及运行观测
 
 - [ ] 6.1 实现Node／Port／Edge到operation／value／state及调用点路径的编译来源映射，支持一对多及优化标记；通过编译输出核对映射完整性。
+
+  当前进度：ProgramSourceMapEntry增加明确GraphInvocationPath，原生图编译通过嵌套作用域写入调用路径，Macro内部操作与父调用分别属于各自图调用。Float32／Fixed产物读写同步到Program格式20和来源表4，不在运行时从显示文字截取路径；完整边／值／优化映射及产物对账仍待完成。
 - [ ] 6.2 将映射纳入现有产物组发布和哈希校验，区分作者版本与运行版本；通过版本不匹配诊断证明不投射错误节点。
 ### 6.3 技能生命周期与调用身份
 
 - [x] 6.3.1 浮点／定点trace发布技能根generation，与节点activation generation分开保留，并同步诊断payload差异判定。证据：87f16e650。
 - [x] 6.3.2 从真实进入、完成及停止事件读取节点阶段，不把日志severity当成功或失败。证据：01f254500。
 - [ ] 6.3.3 发布完整Macro调用路径及调用代次、实际经过的边和等待原因，保持原技能状态所有权；用正式执行记录对账。
+
+  当前进度：Float32／Fixed技能诊断以编译图调用路径和SkillExecutionGeneration构造观察实例，节点ActivationGeneration留在payload，修正用操作编号把同一次图调用拆成不同实例的问题。同一调用位置重复进入的子调用代次、实际边及等待原因仍待完成。
 
 ### 6.4 订阅、缓存与采集开销
 

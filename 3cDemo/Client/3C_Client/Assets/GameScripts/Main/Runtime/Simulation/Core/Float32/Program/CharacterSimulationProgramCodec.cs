@@ -125,9 +125,9 @@ namespace ThirdPersonSimulation
     {
         const uint ArtifactMagic = 0x4d495343;
         const int ArtifactVersion = 17;
-        const int ProgramFormatVersion = 19;
+        const int ProgramFormatVersion = 20;
         const int LayoutFormatVersion = 10;
-        const int SourceMapStringTableVersion = 3;
+        const int SourceMapStringTableVersion = 4;
 
         public static CharacterSimulationProgramArtifactHeader ReadArtifactHeader(byte[] bytes)
         {
@@ -471,6 +471,7 @@ namespace ThirdPersonSimulation
                 strings.Add(value.TrackId);
                 strings.Add(value.ClipId);
                 strings.Add(value.ContentHash);
+                strings.Add(value.GraphInvocationPath);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
                     strings.Add(segments[segmentIndex]);
@@ -501,6 +502,7 @@ namespace ThirdPersonSimulation
                 writer.WriteInt32(stringIndex[value.TrackId]);
                 writer.WriteInt32(stringIndex[value.ClipId]);
                 writer.WriteInt32(stringIndex[value.ContentHash]);
+                writer.WriteInt32(stringIndex[value.GraphInvocationPath]);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 writer.WriteInt32(segments.Length);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
@@ -541,6 +543,7 @@ namespace ThirdPersonSimulation
                 string trackId = ReadSourceMapString(reader, strings);
                 string clipId = ReadSourceMapString(reader, strings);
                 string contentHash = ReadSourceMapString(reader, strings);
+                string graphInvocationPath = ReadSourceMapString(reader, strings);
                 int segmentCount = ReadCount(reader);
                 var pathSegments = new string[segmentCount];
                 for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
@@ -558,7 +561,8 @@ namespace ThirdPersonSimulation
                     trackId,
                     clipId,
                     string.Join("/", pathSegments),
-                    contentHash);
+                    contentHash,
+                    graphInvocationPath);
             }
             return entries;
         }

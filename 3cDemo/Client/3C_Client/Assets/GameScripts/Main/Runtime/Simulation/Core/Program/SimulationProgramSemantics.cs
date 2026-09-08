@@ -1404,7 +1404,8 @@ namespace ThirdPersonSimulation
 			string trackId,
 			string clipId,
 			string displayPath,
-			string contentHash)
+			string contentHash,
+			string graphInvocationPath = "")
 		{
 			if (targetIndex < 0)
 				throw new ArgumentOutOfRangeException(nameof(targetIndex));
@@ -1421,6 +1422,7 @@ namespace ThirdPersonSimulation
 			ClipId = clipId ?? string.Empty;
 			DisplayPath = displayPath ?? string.Empty;
 			ContentHash = contentHash ?? string.Empty;
+			GraphInvocationPath = graphInvocationPath ?? string.Empty;
 			if (GraphId.Length == 0 && TimelineId.Length == 0 && targetKind != ProgramSourceTargetKind.BodyMotion)
 				throw new ArgumentException("Source map entry requires a graph or timeline identity.");
 		}
@@ -1438,6 +1440,7 @@ namespace ThirdPersonSimulation
 		public string ClipId { get; }
 		public string DisplayPath { get; }
 		public string ContentHash { get; }
+		public string GraphInvocationPath { get; }
 	}
 
     public static class ProgramSourceMapCoverage

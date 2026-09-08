@@ -10,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
+        readonly string[] m_GraphInvocationPaths;
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
@@ -23,9 +24,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            m_GraphInvocationPaths = new string[program.Operations.Count];
             for (int i = 0; i < program.SourceMap.Count; i++)
             {
                 ProgramSourceMapEntry entry = program.SourceMap[i];
+                if (entry.TargetKind == ProgramSourceTargetKind.Operation)
+                    m_GraphInvocationPaths[entry.TargetIndex] = entry.GraphInvocationPath;
                 RuntimeSourceTarget target = entry.TargetKind switch
                 {
                     ProgramSourceTargetKind.ControlModule => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlModule, entry.TargetIndex),
@@ -106,14 +110,17 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
+            string callSite = m_GraphInvocationPaths[record.Header.Activation.Source.Operation.Value];
+            if (record.ActionInstanceId != 0 && string.IsNullOrEmpty(callSite))
+                throw new InvalidOperationException("技能诊断操作缺少编译图调用路径。");
             RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
                 ? RuntimeInstanceKey.SkillExecution(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
                     record.SkillId,
                     record.ActionInstanceId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation)
+                    callSite,
+                    record.SkillExecutionGeneration)
                 : RuntimeInstanceKey.Runnable(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
@@ -134,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     OwnerId = record.Header.ActorId.Value,
                     SkillId = record.SkillId,
                     ActionInstanceId = record.ActionInstanceId,
-                    CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
+                    CallSiteId = callSite,
                     ActivationGeneration = record.Header.Activation.Generation,
                     SkillExecutionGeneration = record.SkillExecutionGeneration,
                     Flag = record.Severity != SimulationTraceSeverity.Error,

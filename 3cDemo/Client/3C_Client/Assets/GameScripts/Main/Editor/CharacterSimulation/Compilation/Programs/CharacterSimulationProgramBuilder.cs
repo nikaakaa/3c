@@ -71,6 +71,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterSimulationProgramBuilder
     {
+        sealed class GraphInvocationScope : IDisposable
+        {
+            Stack<string> m_Paths;
+            internal GraphInvocationScope(Stack<string> paths, string path)
+            {
+                m_Paths = paths;
+                paths.Push(path);
+            }
+            public void Dispose()
+            {
+                m_Paths?.Pop();
+                m_Paths = null;
+            }
+        }
+
+        readonly Stack<string> m_GraphInvocationPaths = new();
+
+        public IDisposable PushGraphInvocation(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("技能图编译必须指定调用路径。", nameof(path));
+            return new GraphInvocationScope(m_GraphInvocationPaths, path);
+        }
+
         readonly ProgramId m_ProgramId;
         readonly string m_CompilerVersion;
         readonly OperationSetVersion m_OperationSetVersion;
@@ -729,7 +753,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     source.TrackId,
                     source.ClipId,
                     source.DisplayPath,
-                    source.ContentHash));
+                    source.ContentHash,
+                    m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek()));
             }
             catch (Exception exception)
             {

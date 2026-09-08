@@ -245,6 +245,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(value.ClipId);
             writer.WriteString(value.DisplayPath);
             writer.WriteString(value.ContentHash);
+            writer.WriteString(value.GraphInvocationPath);
         }
 
         internal static ProgramSourceMapEntry ReadSourceMap(CanonicalReader reader)
@@ -252,6 +253,7 @@ namespace ThirdPersonSimulation
             return new ProgramSourceMapEntry(
                 ReadEnum<ProgramSourceTargetKind>(reader.ReadByte()),
                 reader.ReadInt32(),
+                reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),

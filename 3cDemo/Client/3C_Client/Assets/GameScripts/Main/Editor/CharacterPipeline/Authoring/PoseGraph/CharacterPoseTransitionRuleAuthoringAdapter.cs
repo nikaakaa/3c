@@ -109,7 +109,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         operation.OperationId.Value),
                     CharacterPoseGraphAuthoringCapabilities.Get(
                         operation.Kind),
-                    string.Empty,
+                    CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                        CharacterPoseGraphAuthoringCapabilities.Get(operation.Kind), DomainId, DocumentRoleId).DisplayName,
                     new Vector2(
                         depth * 280f,
                         row * 150f),

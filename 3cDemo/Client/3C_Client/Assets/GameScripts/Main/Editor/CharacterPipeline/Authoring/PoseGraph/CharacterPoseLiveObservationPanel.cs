@@ -67,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_Window = window;
             m_Tuning = new CharacterPoseLiveTuningPresenter(window, ResolveHost, m_TuningStatus);
+            m_TargetControls.AddToClassList("pose-target-controls");
             m_TargetControls.Add(m_TargetField);
             m_TargetControls.Add(m_ClipTarget);
             m_ClipTarget.tooltip = "仅选择已有场景角色，供正式AnimationClip编辑入口使用；不会创建或运行预览角色。";

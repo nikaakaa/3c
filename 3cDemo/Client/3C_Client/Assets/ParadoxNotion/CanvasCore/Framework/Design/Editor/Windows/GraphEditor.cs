@@ -102,6 +102,7 @@ namespace NodeCanvas.Editor
         ///----------------------------------------------------------------------------------------------
 
         public static event System.Action<Graph> onCurrentGraphChanged;
+        public static event System.Action onEditorNavigationChanged;
         public static event System.Action onEditorClosed; // 3C: release domain editor sessions with the owning window.
 
         //The graph from which we start editing
@@ -704,6 +705,28 @@ namespace NodeCanvas.Editor
         }
 
         ///<summary>Translate the graph to focus selection</summary>
+        public static void OpenEditorChild(IGraphElement caller, System.Action openChild) {
+            Graph navigationRoot = rootGraph;
+            Graph parent = caller.graph;
+            openChild();
+            Graph child = GetCurrentGraph(rootGraph);
+            if (child == null || child == parent) { return; }
+            parent.SetCurrentEditorChild(caller, child);
+            rootGraph = navigationRoot;
+            GraphEditorUtility.activeElement = null;
+            GraphEditorUtility.activeElements = null;
+            FocusReadableGraph();
+            onEditorNavigationChanged?.Invoke();
+        }
+
+        public static void FocusReadableGraph() {
+            if (currentGraph == null) { return; }
+            smoothZoomFactor = null;
+            zoomFactor = 1;
+            FocusSelection();
+            current.Repaint();
+        }
+
         public static void FocusSelection() {
             if ( GraphEditorUtility.activeElements != null && GraphEditorUtility.activeElements.Count > 0 ) {
                 FocusPosition(GetNodeBounds(GraphEditorUtility.activeElements.Cast<Node>().ToList()).center);
@@ -908,14 +931,45 @@ namespace NodeCanvas.Editor
         //This is the hierarchy shown at top left. Recusrsively show the nested path
         static void StartBreadCrumbNavigation(Graph root) {
             GUILayout.BeginArea(Rect.MinMaxRect(canvasRect.xMin + 15, canvasRect.yMin + 5, canvasRect.xMax, canvasRect.yMax));
-            DoBreadCrumbNavigationStep(root);
+            if (root != null && root.usesDomainAuthoring) { DrawDomainBreadcrumb(root); }
+            else { DoBreadCrumbNavigationStep(root); }
             GUILayout.EndArea();
+        }
+
+        static void DrawDomainBreadcrumb(Graph root) {
+            GUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.ExpandWidth(false));
+            for (Graph graph = root; graph != null; graph = graph.GetCurrentChildGraph()) {
+                string title = string.IsNullOrEmpty(graph.editorTitle) ? graph.name : graph.editorTitle;
+                string label = title.Length > 28 ? title.Substring(0, 27) + "…" : title;
+                var content = new GUIContent(label, title);
+                if (graph.GetCurrentChildGraph() == null) {
+                    GUILayout.Label(content, EditorStyles.boldLabel);
+                } else {
+                    if (GUILayout.Button(content, EditorStyles.toolbarButton)) {
+                        IGraphElement source = graph.GetCurrentChildGraphSource();
+                        string sourceId = source?.UID;
+                        bool connection = source is Connection;
+                        graph.SetCurrentChildGraphAssignable(null);
+                        currentGraph = GetCurrentGraph(rootGraph);
+                        current.OnCurrentGraphChanged();
+                        if (sourceId != null) {
+                            GraphEditorUtility.activeElement = connection
+                                ? currentGraph.allNodes.SelectMany(node => node.outConnections).FirstOrDefault(edge => edge.UID == sourceId)
+                                : currentGraph.allNodes.FirstOrDefault(node => node.UID == sourceId);
+                        }
+                        onEditorNavigationChanged?.Invoke();
+                        break;
+                    }
+                    GUILayout.Label("›", EditorStyles.label, GUILayout.Width(12));
+                }
+            }
+            GUILayout.EndHorizontal();
         }
 
         static void DoBreadCrumbNavigationStep(Graph root) {
             if ( root == null ) { return; }
             //if something selected the inspector panel shows on top of the breadcrub. If external inspector active it doesnt matter, so draw anyway.
-            if ( GraphEditorUtility.activeElement != null && !Prefs.useExternalInspector ) { return; }
+            if ( !root.usesDomainAuthoring && GraphEditorUtility.activeElement != null && !Prefs.useExternalInspector ) { return; }
 
             var resultInfo = EditorUtility.IsPersistent(root) ? "Asset Reference" : ( Application.isPlaying ? "Instance" : "Bound" );
             if ( targetOwner != null && EditorUtility.IsPersistent(targetOwner) ) { resultInfo += " | Prefab Asset"; }

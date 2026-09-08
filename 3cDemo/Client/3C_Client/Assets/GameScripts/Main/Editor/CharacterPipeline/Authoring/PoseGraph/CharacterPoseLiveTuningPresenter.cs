@@ -385,6 +385,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_TuningLayout.Entries
                     .Where(value =>
                         owners.Contains(value.OwnerId) &&
+                        !value.OwnerId.StartsWith("pose-node:", StringComparison.Ordinal) &&
+                        !value.OwnerId.StartsWith("pose-state-machine:", StringComparison.Ordinal) &&
                         (string.IsNullOrEmpty(fieldPrefix) ||
                          value.FieldId.IndexOf(
                              fieldPrefix,
@@ -399,12 +401,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             host.style.display = DisplayStyle.Flex;
             var foldout = new Foldout
             {
-                text = "Live Tuning",
+                text = "策略参数",
                 value = true
             };
-            foldout.Add(new Label(m_Target
-                ? $"Live Actor · {CurrentTuningState().Status}"
-                : "No Target · edits are saved to the formal owner."));
             for (int i = 0; i < entries.Length; i++)
                 foldout.Add(CreateSelectionTuningField(entries[i]));
             host.Add(foldout);
@@ -426,10 +425,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 error.AddToClassList("pose-tuning-authoring-error");
                 return error;
             }
-            string timing = entry.ApplyTiming ==
-                            CharacterPoseTuningApplyTiming.NextActivation
-                ? "Next Activation"
-                : "Live Now";
             string label = string.IsNullOrEmpty(entry.Unit)
                 ? entry.DisplayName
                 : $"{entry.DisplayName} ({entry.Unit})";
@@ -454,26 +449,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     break;
                 }
                 case CharacterPoseTuningValueKind.Integer:
+                {
+                    var field = new IntegerField(label) { value = currentValue.IntegerValue, isDelayed = true };
+                    field.RegisterValueChangedCallback(evt => SubmitSelectionTuningValue(entry, CharacterPoseTuningValue.Integer(evt.newValue)));
+                    authoringField = field;
+                    break;
+                }
                 case CharacterPoseTuningValueKind.Enum:
                 {
-                    int current = entry.ValueKind ==
-                                  CharacterPoseTuningValueKind.Integer
-                        ? currentValue.IntegerValue
-                        : currentValue.EnumValue;
-                    var field = new IntegerField(label)
-                    {
-                        value = current,
-                        isDelayed = true
-                    };
-                    field.RegisterValueChangedCallback(evt =>
-                        SubmitSelectionTuningValue(
-                            entry,
-                            entry.ValueKind ==
-                                CharacterPoseTuningValueKind.Integer
-                                ? CharacterPoseTuningValue.Integer(
-                                    evt.newValue)
-                                : CharacterPoseTuningValue.Enum(
-                                    evt.newValue)));
+                    if (!entry.OwnerId.StartsWith("full-body-ik-profile:", StringComparison.Ordinal) ||
+                        (!entry.FieldId.EndsWith("/reach-smoothing", StringComparison.Ordinal) && !entry.FieldId.EndsWith("/push-smoothing", StringComparison.Ordinal)))
+                        throw new InvalidOperationException($"Enum editor is not registered for '{entry.FieldId}'.");
+                    var field = new EnumField(label, (CharacterFullBodyIkSmoothing)currentValue.EnumValue);
+                    field.RegisterValueChangedCallback(evt => SubmitSelectionTuningValue(entry,
+                        CharacterPoseTuningValue.Enum(Convert.ToInt32(evt.newValue))));
                     authoringField = field;
                     break;
                 }
@@ -497,13 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             authoringField.AddToClassList("pose-tuning-authoring-field");
             row.Add(authoringField);
-            var applied = new Label(CurrentAppliedValue(entry));
-            applied.tooltip = "Current value applied by the selected runtime target.";
-            applied.AddToClassList("pose-tuning-applied-value");
-            row.Add(applied);
-            var status = new Label(timing);
-            status.AddToClassList("pose-tuning-apply-status");
-            row.Add(status);
             return row;
         }
 

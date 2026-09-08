@@ -20,22 +20,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PoseCanvasEditorBridge.VisualsRefresh = RefreshVisuals;
             PoseCanvasEditorBridge.PortShape = CharacterPoseAuthoringPortProjection.Get;
             PoseCanvasEditorBridge.BodyGUI = DrawBody;
-            PoseCanvasEditorBridge.PortObservation = CharacterPoseGraphWorkspace.GetPortObservation;
             PoseCanvasEditorBridge.ContextMenu = node => ((CharacterPoseCanvasGraph)node.graph).EditorWriteRouter.BuildSelectionMenu(node.position);
-            PoseCanvasEditorBridge.ChildSurface = node => CharacterPoseCanvasInteraction.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
+            PoseCanvasEditorBridge.ChildSurface = node => {
+                if (CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Capability.ChildSurfaces.Count == 0) return false;
+                CharacterPoseCanvasInteraction.Apply(() => NodeCanvas.Editor.GraphEditor.OpenEditorChild(node,
+                    () => CharacterPoseGraphWorkspace.OpenNodeChild(node)));
+                return true;
+            };
         }
 
         static void DrawBody(CharacterPoseCanvasNode node)
         {
+            if (node.Payload is CharacterAnimationSlotPosePayload slot)
+            {
+                GUILayout.Label($"Slot: {slot.SlotId.Value}", EditorStyles.miniLabel);
+                if (slot.BlendPolicy)
+                    GUILayout.Label($"默认混合: {slot.BlendPolicy.DefaultTransition.BlendLogic} · {slot.BlendPolicy.DefaultTransition.DurationSeconds:0.###} s", EditorStyles.miniLabel);
+            }
+
             if (CharacterPoseGraphWorkspace.TryGetNodeObservation(node, out GraphAuthoringRuntimeTraceProjection trace))
             {
-                GUILayout.Label(new GUIContent(trace.Status, trace.Detail), EditorStyles.miniLabel);
                 if (GUILayout.Button("Pose Watch")) CharacterPoseGraphWorkspace.WatchNode(node);
             }
 
             if (CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Capability.ChildSurfaces.Count != 0 &&
                 GUILayout.Button("打开子图"))
-                CharacterPoseCanvasInteraction.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
+                node.TryOpenEditorChild();
         }
 
         static void RefreshVisuals(CharacterPoseCanvasGraph graph)

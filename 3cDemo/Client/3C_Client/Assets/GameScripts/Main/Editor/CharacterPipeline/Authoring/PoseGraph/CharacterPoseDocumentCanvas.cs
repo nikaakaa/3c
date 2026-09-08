@@ -15,6 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         // These are editor views of the original state/rule document, never another saved graph.
         [NonSerialized] internal CharacterPoseCanvasBinding Binding;
+        [NonSerialized] internal GraphAuthoringStateMachineBinding StateMachineBinding;
+        [NonSerialized] internal GraphAuthoringProjectionCanvasBinding ProjectionBinding;
+        internal bool PersistsLayout => StateMachineBinding?.Policy.PersistsLayout ?? ProjectionBinding.PersistsLayout;
         public override Type baseNodeType => typeof(CharacterPoseDocumentCanvasNode);
         public override bool requiresAgent => false;
         public override bool requiresPrimeNode => false;
@@ -26,18 +29,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public override bool allowsEditorExecution => false;
         public override bool usesDomainAuthoring => true;
         public override UnityEngine.Object EditorUndoTarget => null;
-        public override bool isEditorReadOnly => Binding.StateMachineBinding?.Mutation.ReadOnly ?? Binding.ProjectionBinding.Mutation.ReadOnly;
+        public override bool isEditorReadOnly => StateMachineBinding?.Mutation.ReadOnly ?? ProjectionBinding.Mutation.ReadOnly;
+        internal void Apply(GraphAuthoringMutationRequest request)
+        {
+            if (StateMachineBinding != null) StateMachineBinding.Mutation.Apply(StateMachineBinding.Document, request);
+            else ProjectionBinding.Mutation.Apply(ProjectionBinding.Document, request);
+            RefreshDocument();
+            NodeCanvas.Editor.GraphEditor.current?.Repaint();
+        }
+
         public override bool HandleEditorCommand(string command, Vector2 position) => Binding.HandleCommand(command, position);
         protected override GenericMenu OnNodesContextMenu(GenericMenu menu, Node[] nodes) =>
-            CharacterPoseCanvasCommands.Menu(HandleEditorCommand, nodes.Length == 0 ? Vector2.zero : nodes[0].position);
+            CharacterPoseCanvasCommands.Menu(HandleEditorCommand, nodes.Length == 0 ? Vector2.zero : nodes[0].position, CanExecuteCommand);
+
+        internal bool CanExecuteCommand(string command) => StateMachineBinding != null
+            ? (command is "Delete" or "SoftDelete") && !StateMachineBinding.Mutation.ReadOnly && CharacterPoseCanvasCommands.Selection(this).Count != 0
+            : CharacterPoseCanvasCommands.CanExecute(ProjectionBinding, this, command);
 
         internal void RefreshDocument()
         {
-            List<GraphAuthoringSelection> selection = Binding.GetStableSelection().ToList();
+            List<GraphAuthoringSelection> selection = CharacterPoseCanvasCommands.Selection(this).ToList();
             var previous = allNodes.OfType<CharacterPoseDocumentCanvasNode>().ToDictionary(value => value.ElementId);
+            var previousEdges = allNodes.SelectMany(node => node.outConnections).OfType<CharacterPoseDocumentCanvasConnection>()
+                .ToDictionary(value => value.ElementId);
+            var labels = new Dictionary<GraphAuthoringElementId, string>();
             var nodes = new List<CharacterPoseDocumentCanvasNode>();
             var edges = new List<GraphAuthoringEdgeProjection>();
-            if (Binding.StateMachineBinding is GraphAuthoringStateMachineBinding state)
+            if (StateMachineBinding is GraphAuthoringStateMachineBinding state)
             {
                 GraphAuthoringStateMachineEntryProjection entry = state.Document.Entry;
                 Add(entry.ElementId, "Entry", entry.Position, GraphAuthoringSelectionKind.State,
@@ -51,11 +69,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (entry.TargetStateId.IsValid)
                     edges.Add(Edge(new GraphAuthoringElementId("entry-link"), entry.ElementId, entry.TargetStateId));
                 foreach (GraphAuthoringTransitionProjection value in state.Document.Transitions)
+                {
                     edges.Add(Edge(value.TransitionId, value.SourceStateId, value.TargetStateId));
+                    var payload = (CharacterPoseTransitionPayload)value.Payload;
+                    labels.Add(value.TransitionId, $"优先级 {value.Priority} · {payload.DurationSeconds:0.###} s");
+                }
             }
             else
             {
-                GraphAuthoringProjectionCanvasBinding projection = Binding.ProjectionBinding;
+                GraphAuthoringProjectionCanvasBinding projection = ProjectionBinding;
                 foreach (GraphAuthoringNodeProjection value in projection.Document.Nodes)
                 {
                     GraphAuthoringCapabilityDescriptor capability = projection.Capabilities.Require(value.CapabilityId,
@@ -73,14 +95,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var index = nodes.ToDictionary(value => value.ElementId);
             foreach (GraphAuthoringEdgeProjection edge in edges)
             {
-                var connection = new CharacterPoseDocumentCanvasConnection(edge,
-                    index[edge.SourceNodeId], index[edge.TargetNodeId]);
+                if (!previousEdges.TryGetValue(edge.EdgeId, out CharacterPoseDocumentCanvasConnection connection))
+                    connection = new CharacterPoseDocumentCanvasConnection();
+                GraphAuthoringEdgeProjection[] parallel = edges.Where(value => value.SourceNodeId.Equals(edge.SourceNodeId) &&
+                    value.TargetNodeId.Equals(edge.TargetNodeId)).ToArray();
+                int ordinal = Array.FindIndex(parallel, value => value.EdgeId.Equals(edge.EdgeId));
+                float labelPosition = parallel.Length == 1 ? 0.55f : 0.3f + 0.4f * ordinal / (parallel.Length - 1);
+                connection.Configure(edge, index[edge.SourceNodeId], index[edge.TargetNodeId],
+                    labels.TryGetValue(edge.EdgeId, out string label) ? label : null, labelPosition);
                 connection.sourceNode.outConnections.Add(connection);
                 connection.targetNode.inConnections.Add(connection);
             }
             GetGraphSource().Pack(this).Unpack(this);
             foreach (var node in nodes) node.GatherPorts();
-            Binding.RestoreSelection(selection);
+            if (NodeCanvas.Editor.GraphEditor.currentGraph == this) Binding.RestoreSelection(selection);
 
             void Add(GraphAuthoringElementId id, string label, Vector2 position, GraphAuthoringSelectionKind kind,
                 GraphAuthoringDynamicPortProjection[] ports, bool entry, bool alias, bool deletable, bool child)
@@ -88,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool existed = previous.TryGetValue(id, out CharacterPoseDocumentCanvasNode node);
                 if (!existed)
                     node = new CharacterPoseDocumentCanvasNode();
-                if (existed && !Binding.PersistsLayout)
+                if (existed && !PersistsLayout)
                     position = node.position;
                 node.Configure(id, label, position, kind, ports, entry, alias, deletable, child);
                 nodes.Add(node);
@@ -115,12 +143,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var edges = port.GetPortConnections().Cast<CharacterPoseDocumentCanvasConnection>().ToArray();
             if (edges.Any(edge => edge.Source.IsEntry))
                 throw new InvalidOperationException("Set the Entry target by connecting it to another state.");
-            var requests = edges.Select(edge => new GraphAuthoringMutationRequest(Binding.StateMachineBinding == null
+            var requests = edges.Select(edge => new GraphAuthoringMutationRequest(StateMachineBinding == null
                 ? GraphAuthoringMutationKind.DisconnectEdge : GraphAuthoringMutationKind.DeleteTransition, edge.ElementId)).ToArray();
             if (requests.Length == 0) return;
-            if (Binding.StateMachineBinding != null)
-                Binding.StateMachineBinding.Mutation.Apply(Binding.StateMachineBinding.Document, requests);
-            else Binding.ProjectionBinding.Mutation.Apply(Binding.ProjectionBinding.Document, requests);
+            if (StateMachineBinding != null)
+                StateMachineBinding.Mutation.Apply(StateMachineBinding.Document, requests);
+            else ProjectionBinding.Mutation.Apply(ProjectionBinding.Document, requests);
             RefreshDocument();
         }
 
@@ -141,35 +169,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var value = (CharacterPoseDocumentCanvasNode)node;
             if (!value.Deletable)
                 throw new InvalidOperationException("This document element is system owned.");
-            GraphAuthoringMutationKind kind = Binding.StateMachineBinding == null ? GraphAuthoringMutationKind.DeleteElement
+            GraphAuthoringMutationKind kind = StateMachineBinding == null ? GraphAuthoringMutationKind.DeleteElement
                 : value.IsAlias ? GraphAuthoringMutationKind.DeleteStateAlias : GraphAuthoringMutationKind.DeleteState;
-            Binding.Apply(new GraphAuthoringMutationRequest(kind, value.ElementId));
+            Apply(new GraphAuthoringMutationRequest(kind, value.ElementId));
         }
 
         public override Connection ConnectNodes(Node sourceNode, Node targetNode, int sourceIndex = -1, int targetIndex = -1)
         {
             var source = (CharacterPoseDocumentCanvasNode)sourceNode;
             var target = (CharacterPoseDocumentCanvasNode)targetNode;
-            if (Binding.StateMachineBinding is GraphAuthoringStateMachineBinding state)
+            if (StateMachineBinding is GraphAuthoringStateMachineBinding state)
             {
                 if (!state.Policy.CanCreateTransition(state.Document, source.ElementId, target.ElementId))
                     throw new InvalidOperationException("This state transition is not permitted.");
                 object payload = state.Policy.CreateTransitionPayload(state.Document, source.ElementId, target.ElementId);
                 if (!source.IsEntry && payload == null)
                     return null;
-                Binding.Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.CreateTransition,
+                Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.CreateTransition,
                     source.ElementId, secondaryTargetId: target.ElementId, value: payload));
             }
             else
             {
-                GraphAuthoringProjectionCanvasBinding projection = Binding.ProjectionBinding;
+                GraphAuthoringProjectionCanvasBinding projection = ProjectionBinding;
                 GraphAuthoringDynamicPortProjection output = RequirePort(source, GraphAuthoringPortDirection.Output, sourceIndex);
                 GraphAuthoringDynamicPortProjection input = RequirePort(target, GraphAuthoringPortDirection.Input, targetIndex);
                 if (!projection.ConnectionPolicy.CanConnect(projection.Document,
                     projection.Document.Nodes.Single(value => value.NodeId.Equals(source.ElementId)), output.PortId,
                     projection.Document.Nodes.Single(value => value.NodeId.Equals(target.ElementId)), input.PortId))
                     throw new InvalidOperationException("This rule connection is not permitted.");
-                Binding.Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.ConnectPorts,
+                Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.ConnectPorts,
                     sourceNodeId: source.ElementId, sourcePortId: output.PortId,
                     targetNodeId: target.ElementId, targetPortId: input.PortId));
             }
@@ -193,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var edge = (CharacterPoseDocumentCanvasConnection)connection;
             if (edge.Source.IsEntry)
                 throw new InvalidOperationException("Set the Entry target by connecting it to another state.");
-            Binding.Apply(new GraphAuthoringMutationRequest(Binding.StateMachineBinding == null
+            Apply(new GraphAuthoringMutationRequest(StateMachineBinding == null
                 ? GraphAuthoringMutationKind.DisconnectEdge : GraphAuthoringMutationKind.DeleteTransition, edge.ElementId));
         }
 
@@ -208,6 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterPoseDocumentCanvasNode : FlowCanvas.FlowNode
     {
         [NonSerialized] internal GraphAuthoringElementId ElementId;
+        public override string UID => ElementId.Value;
         [NonSerialized] internal GraphAuthoringSelectionKind SelectionKind;
         [NonSerialized] internal GraphAuthoringDynamicPortProjection[] Ports;
         [NonSerialized] internal bool IsEntry;
@@ -226,8 +255,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (base.position == value)
                     return;
-                if (graph is CharacterPoseDocumentCanvas canvas && canvas.Binding != null && canvas.Binding.PersistsLayout)
-                    canvas.Binding.Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.MoveElement,
+                if (graph is CharacterPoseDocumentCanvas canvas && canvas.Binding != null && canvas.PersistsLayout)
+                    canvas.Apply(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.MoveElement,
                         ElementId, position: value));
                 else
                     base.position = value;
@@ -264,9 +293,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         protected override void OnNodeGUI()
         {
             base.OnNodeGUI();
-            if (CharacterPoseCanvasInteraction.IsActive(graph, ElementId.Value)) GUILayout.Label("当前状态", EditorStyles.miniLabel);
             if (HasChild && GUILayout.Button("打开子图"))
-                ((CharacterPoseDocumentCanvas)graph).Binding.OpenChild(ElementId);
+                TryOpenEditorChild();
+        }
+
+        public override bool TryOpenEditorChild()
+        {
+            if (!HasChild) return false;
+            NodeCanvas.Editor.GraphEditor.OpenEditorChild(this,
+                () => ((CharacterPoseDocumentCanvas)graph).Binding.OpenChild(ElementId));
+            return true;
         }
 
         sealed class StatePort { }
@@ -281,16 +317,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             foreach (var port in Ports ?? Array.Empty<GraphAuthoringDynamicPortProjection>())
             {
-                Type type = port.ValueTypeId switch
-                {
-                    "pose.state" => typeof(StatePort),
-                    "pose.rule.value" => typeof(RulePort),
-                    _ => throw new InvalidOperationException($"Unknown document port type '{port.ValueTypeId}'.")
-                };
+                Type type = PortType(port);
                 if (port.Direction == GraphAuthoringPortDirection.Input) AddValueInput(port.DisplayName, type, port.PortId.Value);
                 else AddValueOutput(port.DisplayName, type, () => throw new InvalidOperationException("Author ports do not execute."), port.PortId.Value);
             }
         }
+
+        internal static Type PortType(GraphAuthoringDynamicPortProjection port) => port.ValueTypeId switch
+        {
+            "pose.state" => typeof(StatePort),
+            "pose.rule.value" => typeof(RulePort),
+            _ => throw new InvalidOperationException($"Unknown document port type '{port.ValueTypeId}'.")
+        };
 
         internal static int PortIndex(FlowCanvas.Port port, GraphAuthoringPortDirection direction) =>
             Array.FindIndex(((CharacterPoseDocumentCanvasNode)port.parent).Ports.Where(value => value.Direction == direction).ToArray(),
@@ -298,13 +336,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         protected override void OnNodeInspectorGUI() => EditorGUILayout.LabelField(m_Title);
         protected override GenericMenu OnContextMenu(GenericMenu menu) =>
-            CharacterPoseCanvasCommands.Menu(((CharacterPoseDocumentCanvas)graph).HandleEditorCommand, position);
+            CharacterPoseCanvasCommands.Menu(((CharacterPoseDocumentCanvas)graph).HandleEditorCommand, position, ((CharacterPoseDocumentCanvas)graph).CanExecuteCommand);
     }
 
     [Serializable]
     internal sealed class CharacterPoseDocumentCanvasConnection : FlowCanvas.BinderConnection
     {
         [NonSerialized] internal GraphAuthoringElementId ElementId;
+        public override string UID => ElementId.Value;
         [NonSerialized] internal string SourcePort;
         [NonSerialized] internal string TargetPort;
         internal CharacterPoseDocumentCanvasNode Source => (CharacterPoseDocumentCanvasNode)sourceNode;
@@ -312,27 +351,101 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public CharacterPoseDocumentCanvasConnection() { }
 
-        internal CharacterPoseDocumentCanvasConnection(GraphAuthoringEdgeProjection edge,
-            CharacterPoseDocumentCanvasNode source, CharacterPoseDocumentCanvasNode target)
+        [NonSerialized] string m_Label;
+        [NonSerialized] float m_LabelPosition;
+        internal void Configure(GraphAuthoringEdgeProjection edge, CharacterPoseDocumentCanvasNode source,
+            CharacterPoseDocumentCanvasNode target, string label, float labelPosition)
         {
             ElementId = edge.EdgeId;
             SourcePort = edge.SourcePortId.Value;
             TargetPort = edge.TargetPortId.Value;
             sourceNode = source;
             targetNode = target;
+            m_Label = label;
+            m_LabelPosition = labelPosition;
+            InvalidatePortReferences();
         }
+
+        public override string editorLabel => m_Label == null ? null :
+            NodeCanvas.Editor.GraphEditorUtility.activeElement == this ? m_Label : "◆";
+        public override float editorLabelPosition => m_LabelPosition;
 
         protected override string serializedSourcePortID { get => SourcePort; set => SourcePort = value; }
         protected override string serializedTargetPortID { get => TargetPort; set => TargetPort = value; }
-        public override Type bindingType => sourcePort.type;
+        public override Type bindingType => CharacterPoseDocumentCanvasNode.PortType(
+            Source.Ports.Single(port => port.Direction == GraphAuthoringPortDirection.Output && port.PortId.Value == SourcePort));
+        public override TipConnectionStyle tipConnectionStyle =>
+            ((CharacterPoseDocumentCanvas)graph).StateMachineBinding != null ? TipConnectionStyle.Arrow : TipConnectionStyle.None;
+        public override bool TryOpenEditorChild()
+        {
+            var binding = ((CharacterPoseDocumentCanvas)graph).StateMachineBinding;
+            if (binding == null || Source.IsEntry) return false;
+            binding.Policy.OpenTransitionRule(binding.Document, ElementId);
+            return true;
+        }
+
         public override void Bind() => throw new InvalidOperationException("Author connections do not execute.");
         public override void UnBind() { }
-        public override void SetSourcePort(FlowCanvas.Port port) => throw new InvalidOperationException("Edit transition endpoints through their fields.");
-        public override void SetTargetPort(FlowCanvas.Port port) => throw new InvalidOperationException("Edit transition endpoints through their fields.");
+        public override void SetSourcePort(FlowCanvas.Port port) => CharacterPoseCanvasInteraction.Apply(() =>
+            Relink((CharacterPoseDocumentCanvasNode)port.parent, port.ID, Target, TargetPort));
+        public override void SetTargetPort(FlowCanvas.Port port) => CharacterPoseCanvasInteraction.Apply(() =>
+            Relink(Source, SourcePort, (CharacterPoseDocumentCanvasNode)port.parent, port.ID));
 
-        public override int SetSourceNode(Node source, int index = -1) =>
-            throw new InvalidOperationException("Edit the transition endpoints through the state machine fields.");
-        public override int SetTargetNode(Node target, int index = -1) =>
-            throw new InvalidOperationException("Edit the transition endpoints through the state machine fields.");
+        void Relink(CharacterPoseDocumentCanvasNode source, string sourcePort, CharacterPoseDocumentCanvasNode target, string targetPort)
+        {
+            var canvas = (CharacterPoseDocumentCanvas)graph;
+            if (source.graph != canvas || target.graph != canvas) throw new InvalidOperationException("只能改接当前图中的节点。");
+            if (canvas.StateMachineBinding is GraphAuthoringStateMachineBinding state)
+            {
+                if (Source.IsEntry)
+                {
+                    if (source != Source) throw new InvalidOperationException("Entry 连线的来源不能改变。");
+                    canvas.ConnectNodes(source, target, 0, 0);
+                    return;
+                }
+                if (source.IsEntry || target.IsEntry || target.IsAlias) throw new InvalidOperationException("转换来源必须是状态或别名，目标必须是状态。");
+                var requests = new List<GraphAuthoringMutationRequest>();
+                if (source != Source)
+                {
+                    CharacterPoseStateTransitionSource value = source.IsAlias
+                        ? CharacterPoseStateTransitionSource.FromAlias(new PoseStateAliasId(source.ElementId.Value))
+                        : CharacterPoseStateTransitionSource.FromState(new PoseStateId(source.ElementId.Value));
+                    requests.Add(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.SetTransitionField,
+                        ElementId, fieldId: new GraphAuthoringFieldId("source"), value: value));
+                }
+                if (target != Target)
+                    requests.Add(new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.SetTransitionField,
+                        ElementId, fieldId: new GraphAuthoringFieldId("target-state-id"), value: target.ElementId.Value));
+                if (requests.Count != 0) state.Mutation.Apply(state.Document, requests);
+            }
+            else
+            {
+                GraphAuthoringProjectionCanvasBinding projection = canvas.ProjectionBinding;
+                var output = new GraphAuthoringPortId(sourcePort);
+                var input = new GraphAuthoringPortId(targetPort);
+                projection.Mutation.Apply(projection.Document, new[] {
+                    new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.DisconnectEdge, ElementId),
+                    new GraphAuthoringMutationRequest(GraphAuthoringMutationKind.ConnectPorts,
+                        sourceNodeId: source.ElementId, sourcePortId: output, targetNodeId: target.ElementId, targetPortId: input)
+                });
+            }
+            canvas.RefreshDocument();
+        }
+
+        public override int SetSourceNode(Node source, int index = -1)
+        {
+            var node = (CharacterPoseDocumentCanvasNode)source;
+            var port = CharacterPoseDocumentCanvas.RequirePort(node, GraphAuthoringPortDirection.Output, index);
+            SetSourcePort(node.GetOutputPort(port.PortId.Value));
+            return node.outConnections.IndexOf(this);
+        }
+        public override int SetTargetNode(Node target, int index = -1)
+        {
+            var node = (CharacterPoseDocumentCanvasNode)target;
+            var port = CharacterPoseDocumentCanvas.RequirePort(node, GraphAuthoringPortDirection.Input, index);
+            SetTargetPort(node.GetInputPort(port.PortId.Value));
+            return Source.outConnections.IndexOf(this);
+        }
+
     }
 }

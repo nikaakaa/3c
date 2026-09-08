@@ -56,17 +56,6 @@ namespace ThirdPersonCharacter.Editor
         public override VisualElement CreateInspectorGUI()
         {
             var root = new VisualElement();
-            var schema = new PropertyField(
-                serializedObject.FindProperty("m_Schema"),
-                "Schema");
-            schema.SetEnabled(false);
-            root.Add(schema);
-            root.Add(new PropertyField(
-                serializedObject.FindProperty("m_PolicyId"),
-                "Policy Id"));
-            root.Add(new PropertyField(
-                serializedObject.FindProperty("m_Revision"),
-                "Revision"));
             root.Add(new PropertyField(
                 serializedObject.FindProperty("m_StackPolicy"),
                 "Stack Policy"));

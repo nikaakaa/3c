@@ -250,6 +250,12 @@ namespace NodeCanvas.Framework
         ///----------------------------------------------------------------------------------------------
 
         //The main function for drawing a node's gui.Fires off others.
+        public virtual bool TryOpenEditorChild() {
+            if (this is not IGraphAssignable assignable || assignable.subGraph == null) { return false; }
+            graph.SetCurrentChildGraphAssignable(assignable);
+            return true;
+        }
+
         public static void ShowNodeGUI(Node node, Rect drawCanvas, bool fullDrawPass, Vector2 canvasMousePos, float zoomFactor) {
 
             if ( node.isHidden ) {
@@ -409,8 +415,7 @@ namespace NodeCanvas.Framework
 
                 //Double click
                 if ( e.button == 0 && e.clickCount == 2 ) {
-                    if ( node is IGraphAssignable && ( node as IGraphAssignable ).subGraph != null ) {
-                        node.graph.SetCurrentChildGraphAssignable(node as IGraphAssignable);
+                    if ( node.TryOpenEditorChild() ) {
                         node.nodeIsPressed = false;
                     } else if ( node is ITaskAssignable && ( node as ITaskAssignable ).task != null ) {
                         EditorUtils.OpenScriptOfType(( node as ITaskAssignable ).task.GetType());
@@ -471,13 +476,13 @@ namespace NodeCanvas.Framework
             GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
             node.OnNodeGUI();
+            string observation = node.graph.editorObservation?.GetNodeText(node.UID);
+            if (!string.IsNullOrEmpty(observation)) { GUILayout.Label(observation, EditorStyles.miniLabel); }
             TaskAssignableNodeGUI(node);
             GraphAssignableNodeGUI(node);
 
             GUI.skin.label.alignment = TextAnchor.UpperLeft;
         }
-            string observation = node.graph.editorObservation?.GetNodeText(node.UID);
-            if (!string.IsNullOrEmpty(observation)) { GUILayout.Label(observation, EditorStyles.miniLabel); }
 
         //...
         static void TaskAssignableNodeGUI(Node node) {

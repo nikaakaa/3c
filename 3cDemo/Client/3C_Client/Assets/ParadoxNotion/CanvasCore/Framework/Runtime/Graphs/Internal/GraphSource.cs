@@ -11,8 +11,8 @@ namespace NodeCanvas.Framework.Internal
 
         ///----------------------------------------------------------------------------------------------
         ///<summary>We are already parsing everything on serialization/deserialization, so we might just as well collect things at the same time.</summary>
-        public List<Task> allTasks { get; private set; }
-        public List<BBParameter> allParameters { get; private set; }
+        public List<Task> allTasks { get; private set; } = new List<Task>();
+        public List<BBParameter> allParameters { get; private set; } = new List<BBParameter>();
 
         void ISerializationCollector.OnPush(ISerializationCollector parent) {
             allTasks = new List<Task>();

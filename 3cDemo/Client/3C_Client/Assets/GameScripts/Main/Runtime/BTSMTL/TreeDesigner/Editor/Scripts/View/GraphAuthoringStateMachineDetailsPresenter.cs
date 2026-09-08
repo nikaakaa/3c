@@ -29,6 +29,8 @@ namespace TreeDesigner.Editor
             m_AppliedValues;
         GraphAuthoringElementId m_DraftCustomTransitionId;
 
+        bool m_AuthoringOnly;
+
         public GraphAuthoringStateMachineDetailsPresenter(VisualElement content)
         {
             m_Content = content ?? throw new ArgumentNullException(nameof(content));
@@ -38,11 +40,13 @@ namespace TreeDesigner.Editor
             GraphAuthoringStateMachineBinding binding,
             IGraphAuthoringStateMachineDetailsDataSource dataSource,
             Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>>
-                appliedValues = null)
+                appliedValues = null,
+            bool authoringOnly = false)
         {
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             m_DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             m_AppliedValues = appliedValues;
+            m_AuthoringOnly = authoringOnly;
             m_Content.Clear();
         }
 
@@ -59,6 +63,7 @@ namespace TreeDesigner.Editor
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields =
                 m_Binding.Policy.GetStateFields(state) ?? Array.Empty<GraphAuthoringFieldDescriptor>();
             AddStateAuthoringSection(state, fields);
+            if (m_AuthoringOnly) return;
             AddReadOnlySection(
                 "Runtime Inputs",
                 new[] { new GraphAuthoringReadOnlyDetail("Source", "Compiled Pose StateMachine runtime") },
@@ -96,13 +101,14 @@ namespace TreeDesigner.Editor
                 var openRule = new Button(() =>
                     m_Binding.Policy.OpenTransitionRule(m_Binding.Document, transition.TransitionId))
                 {
-                    text = "Open Rule"
+                    text = m_AuthoringOnly ? "编辑转换条件" : "Open Rule"
                 };
                 var commands = new Foldout { text = "Commands", value = true };
                 commands.AddToClassList("graph-authoring-details-section");
                 commands.Add(openRule);
                 m_Content.Add(commands);
             }
+            if (m_AuthoringOnly) return;
             AddReadOnlySection(
                 "Runtime Inputs",
                 new[] { new GraphAuthoringReadOnlyDetail("Source", "Compiled Pose StateMachine runtime") },
@@ -150,14 +156,14 @@ namespace TreeDesigner.Editor
                 }
                 case GraphAuthoringFieldValueKind.Integer:
                 {
-                    var integer = new IntegerField(field.DisplayName) { value = value is int current ? current : 0 };
+                    var integer = new IntegerField(field.DisplayName) { value = value is int current ? current : 0, isDelayed = true };
                     integer.RegisterValueChangedCallback(evt => setValue(evt.newValue));
                     control = integer;
                     break;
                 }
                 case GraphAuthoringFieldValueKind.Float:
                 {
-                    var number = new FloatField(field.DisplayName) { value = value is float current ? current : 0f };
+                    var number = new FloatField(field.DisplayName) { value = value is float current ? current : 0f, isDelayed = true };
                     number.RegisterValueChangedCallback(evt => setValue(evt.newValue));
                     control = number;
                     break;
@@ -187,7 +193,7 @@ namespace TreeDesigner.Editor
                 }
                 default:
                 {
-                    var text = new TextField(field.DisplayName) { value = value?.ToString() ?? string.Empty };
+                    var text = new TextField(field.DisplayName) { value = value?.ToString() ?? string.Empty, isDelayed = true };
                     text.RegisterValueChangedCallback(evt => setValue(evt.newValue));
                     control = text;
                     break;
@@ -201,7 +207,7 @@ namespace TreeDesigner.Editor
             GraphAuthoringStateProjection state,
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields)
         {
-            var section = new Foldout { text = "Authoring Defaults", value = true };
+            var section = new Foldout { text = m_AuthoringOnly ? "参数与策略" : "Authoring Defaults", value = true };
             section.AddToClassList("graph-authoring-details-section");
             foreach (GraphAuthoringFieldDescriptor field in VisibleFields(fields, controller =>
                          m_DataSource.ReadStateField(
@@ -221,7 +227,7 @@ namespace TreeDesigner.Editor
             GraphAuthoringTransitionProjection transition,
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields)
         {
-            var section = new Foldout { text = "Authoring Defaults", value = true };
+            var section = new Foldout { text = m_AuthoringOnly ? "参数与策略" : "Authoring Defaults", value = true };
             section.AddToClassList("graph-authoring-details-section");
             foreach (GraphAuthoringFieldDescriptor field in VisibleFields(fields, controller =>
                          ReadTransitionField(
@@ -236,11 +242,11 @@ namespace TreeDesigner.Editor
             m_Content.Add(section);
         }
 
-        static IEnumerable<GraphAuthoringFieldDescriptor> VisibleFields(
+        IEnumerable<GraphAuthoringFieldDescriptor> VisibleFields(
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields,
             Func<GraphAuthoringFieldId, object> readField) =>
             fields
-                .Where(value => value.AuthoringVisible && value.IsVisible(readField))
+                .Where(value => value.AuthoringVisible && (!m_AuthoringOnly || value.AuthoringWritable) && value.IsVisible(readField))
                 .OrderBy(value => value.DisplayName, StringComparer.Ordinal);
 
         VisualElement CreateFieldRow(
@@ -251,8 +257,11 @@ namespace TreeDesigner.Editor
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.AddToClassList("graph-authoring-details-field-row");
-            row.Add(CreateField(field, value, setValue));
-            row.Add(new Label(TuningLabel(field)));
+            VisualElement control = CreateField(field, value, setValue);
+            control.style.flexGrow = 1;
+            control.style.minWidth = 0;
+            row.Add(control);
+            if (!m_AuthoringOnly) row.Add(new Label(TuningLabel(field)));
             return row;
         }
 

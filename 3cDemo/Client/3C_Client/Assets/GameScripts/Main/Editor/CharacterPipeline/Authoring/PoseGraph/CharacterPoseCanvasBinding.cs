@@ -15,8 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterPoseCanvasBinding : VisualElement, IDisposable
     {
         NodeCanvas.Framework.Graph m_Graph;
-        CharacterPoseDocumentCanvas m_DocumentCanvas;
+        readonly Dictionary<string, CharacterPoseDocumentCanvas> m_DocumentCanvases = new Dictionary<string, CharacterPoseDocumentCanvas>(StringComparer.Ordinal);
         bool m_RuntimeReadOnly;
+        readonly CharacterPoseCanvasObservation m_Observation = new CharacterPoseCanvasObservation();
         public GraphAuthoringProjectionCanvasBinding ProjectionBinding { get; private set; }
         public GraphAuthoringStateMachineBinding StateMachineBinding { get; private set; }
         internal bool PersistsLayout => StateMachineBinding?.Policy.PersistsLayout ?? ProjectionBinding.PersistsLayout;
@@ -42,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void PopulateProjection()
         {
             if (ProjectionBinding.Document is CharacterPoseCanvasGraphDocument pose)
-                m_Graph = pose.Graph;
+                SetGraph(pose.Graph);
             else
                 RefreshDocumentCanvas();
             Activate();
@@ -56,15 +57,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void RefreshDocumentCanvas()
         {
-            if (m_DocumentCanvas == null)
+            string id = StateMachineBinding?.Document.DocumentId ?? ProjectionBinding.Document.DocumentId;
+            if (!m_DocumentCanvases.TryGetValue(id, out CharacterPoseDocumentCanvas canvas))
             {
-                m_DocumentCanvas = ScriptableObject.CreateInstance<CharacterPoseDocumentCanvas>();
-                m_DocumentCanvas.hideFlags = HideFlags.HideAndDontSave;
-                m_DocumentCanvas.Binding = this;
+                canvas = ScriptableObject.CreateInstance<CharacterPoseDocumentCanvas>();
+                canvas.hideFlags = HideFlags.HideAndDontSave;
+                canvas.Binding = this;
+                m_DocumentCanvases.Add(id, canvas);
             }
-            m_Graph = m_DocumentCanvas;
-            m_DocumentCanvas.name = StateMachineBinding?.Document.DisplayName ?? ProjectionBinding.Document.DisplayName;
-            m_DocumentCanvas.RefreshDocument();
+            canvas.StateMachineBinding = StateMachineBinding;
+            canvas.ProjectionBinding = ProjectionBinding;
+            SetGraph(canvas);
+            canvas.name = StateMachineBinding?.Document.DisplayName ?? ProjectionBinding.Document.DisplayName;
+            canvas.RefreshDocument();
+        }
+
+        void SetGraph(NodeCanvas.Framework.Graph graph)
+        {
+            if (m_Graph != null && ReferenceEquals(m_Graph.editorObservation, m_Observation)) m_Graph.editorObservation = null;
+            m_Graph = graph;
         }
 
         void Activate()
@@ -74,16 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             else if (GraphEditor.currentGraph != m_Graph)
                 GraphEditor.SetReferences(m_Graph);
             SetRuntimeReadOnly(m_RuntimeReadOnly);
-        }
-
-        internal void Apply(GraphAuthoringMutationRequest request)
-        {
-            if (StateMachineBinding != null)
-                StateMachineBinding.Mutation.Apply(StateMachineBinding.Document, request);
-            else
-                ProjectionBinding.Mutation.Apply(ProjectionBinding.Document, request);
-            RefreshDocumentCanvas();
-            GraphEditor.current?.Repaint();
         }
 
         internal bool HandleCommand(string command, Vector2 position)
@@ -187,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void SetRuntimeReadOnly(bool readOnly)
         {
             m_RuntimeReadOnly = readOnly;
+            if (m_Graph != null) m_Graph.editorObservation = readOnly ? m_Observation : null;
             if (m_Graph is CharacterPoseCanvasGraph graph && graph.EditorWriteRouter is CharacterPoseCanvasEditorWriteSession session)
                 session.ReadOnly = readOnly;
         }
@@ -199,17 +201,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public void ClearHighlights() => GraphEditor.current?.RemoveNotification();
 
-        public void SetActiveElements(ISet<string> active)
-        {
-            if (m_Graph != null)
-                CharacterPoseCanvasInteraction.SetActiveNodes(m_Graph, active);
-        }
+        public void UpdateObservation(IReadOnlyDictionary<string, GraphAuthoringRuntimeTraceProjection> nodes,
+            IReadOnlyDictionary<string, string> ports, ISet<string> active) => m_Observation.Update(nodes, ports, active);
 
         public void Dispose()
         {
-            if (m_DocumentCanvas != null)
-                UnityEngine.Object.DestroyImmediate(m_DocumentCanvas);
-            m_DocumentCanvas = null;
+            SetGraph(null);
+            foreach (CharacterPoseDocumentCanvas canvas in m_DocumentCanvases.Values)
+                UnityEngine.Object.DestroyImmediate(canvas);
+            m_DocumentCanvases.Clear();
             m_Graph = null;
         }
     }

@@ -88,7 +88,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string details = string.Join("\n", values.Select(operation =>
                     $"#{operation.OperationIndex} {operation.Code} · {operation.InvalidReason} · 权重 {operation.OutputWeight:0.###} · 完成帧 {operation.CompletionIdentity}"));
                 string state = string.Join(" / ", values.Select(operation => operation.CompletionIdentity != snapshot.CompletionIdentity
-                    ? "等待完成" : operation.Availability.ToString()).Distinct());
+                    ? "等待完成" : operation.Availability switch
+                    {
+                        AnimationPoseAvailability.Pose => operation.OutputWeight > 0 ? "完成 · 有贡献" : "完成 · 无贡献",
+                        AnimationPoseAvailability.NoPose => "完成 · 无姿势",
+                        _ => "不可用"
+                    }).Distinct());
                 return new GraphAuthoringRuntimeTraceProjection(node.NodeId, state, details, snapshot.PoseGraphRevision);
             }).ToArray();
         }

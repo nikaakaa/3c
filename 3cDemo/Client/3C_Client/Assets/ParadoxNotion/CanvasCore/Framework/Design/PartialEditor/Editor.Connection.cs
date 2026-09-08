@@ -85,6 +85,10 @@ namespace NodeCanvas.Framework
 
         ///----------------------------------------------------------------------------------------------
 
+        public virtual bool TryOpenEditorChild() => false;
+        public virtual string editorLabel => null;
+        public virtual float editorLabelPosition => 0.55f;
+
         //Draw connection from-to
         public void DrawConnectionGUI(Vector2 fromPos, Vector2 toPos) {
 
@@ -102,7 +106,7 @@ namespace NodeCanvas.Framework
                 toTangent = toTangent.normalized * 120;
             }
 
-            centerRect.center = CurveUtils.GetPosAlongCurve(fromPos, toPos, fromTangent, toTangent, 0.55f);
+            centerRect.center = CurveUtils.GetPosAlongCurve(fromPos, toPos, fromTangent, toTangent, editorLabelPosition);
 
             HandleEvents(fromPos, toPos);
             DrawConnection(fromPos, toPos);
@@ -130,6 +134,7 @@ namespace NodeCanvas.Framework
                 var onCenter = centerRect.Contains(e.mousePosition);
                 if ( onConnection || onStart || onEnd || onCenter ) {
                     GraphEditorUtility.activeElement = this;
+                    if (e.clickCount == 2 && TryOpenEditorChild()) { e.Use(); return; }
                     if (graph.isEditorReadOnly) { e.Use(); return; } // 3C: read-only observation permits selection without relinking.
                     relinkClickPos = e.mousePosition;
                     relinkSnaped = false;
@@ -151,13 +156,14 @@ namespace NodeCanvas.Framework
                 }
 
                 if ( e.rawType == EventType.MouseUp && e.button == 0 ) {
-                    if ( relinkSnaped == true ) {
-                        sourceNode.OnActiveRelinkEnd(this);
+                    try {
+                        if (relinkSnaped) { sourceNode.OnActiveRelinkEnd(this); }
+                    } finally {
+                        relinkClickPos = null;
+                        relinkSnaped = false;
+                        relinkState = RelinkState.None;
+                        e.Use();
                     }
-                    relinkClickPos = null;
-                    relinkSnaped = false;
-                    relinkState = RelinkState.None;
-                    e.Use();
                 }
             }
 
@@ -211,7 +217,7 @@ namespace NodeCanvas.Framework
         void DrawInfoRect(Vector2 fromPos, Vector2 toPos) {
             var isExpanded = infoExpanded || GraphEditorUtility.activeElement == this || GraphEditorUtility.activeElement == sourceNode;
             var alpha = isExpanded ? 0.8f : 0.25f;
-            var info = GetConnectionInfo();
+            var info = editorLabel ?? GetConnectionInfo();
             var extraInfo = sourceNode.GetConnectionInfo(sourceNode.outConnections.IndexOf(this));
             if ( !string.IsNullOrEmpty(info) || !string.IsNullOrEmpty(extraInfo) ) {
 
@@ -257,15 +263,15 @@ namespace NodeCanvas.Framework
         ///<summary>Updates the blink status</summary>
         void UpdateBlinkStatus(Vector2 fromPos, Vector2 toPos) {
 
-            OnBeforeUpdateBlinkStatus();
-
-            if ( !graph.isRunning ) {
             if (graph.editorObservation != null) {
                 size = defaultSize + (editorStatus == Status.Running ? STATUS_BLINK_SIZE_ADD : 0f);
                 color = StyleSheet.GetStatusColor(editorStatus);
                 return;
             }
 
+            OnBeforeUpdateBlinkStatus();
+
+            if ( !graph.isRunning ) {
                 size = defaultSize;
                 color = defaultColor;
                 return;

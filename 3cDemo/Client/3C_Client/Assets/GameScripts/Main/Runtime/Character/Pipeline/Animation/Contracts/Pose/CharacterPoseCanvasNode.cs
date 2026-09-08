@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField, fsSerializeAsReference] CharacterPoseNodePayload m_Payload;
         [SerializeField] CharacterPoseDynamicPort[] m_DynamicPorts = Array.Empty<CharacterPoseDynamicPort>();
 
+        public override string UID => NodeId.Value;
         public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId)
             ? default
             : new PoseNodeId(m_NodeId);
@@ -226,7 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override UnityEditor.GenericMenu OnContextMenu(UnityEditor.GenericMenu menu) =>
             PoseCanvasEditorBridge.ContextMenu?.Invoke(this) ?? menu;
 
-        public override string GetEditorPortObservation(FlowCanvas.Port port) => PoseCanvasEditorBridge.PortObservation?.Invoke(this, port.ID);
+        public override bool TryOpenEditorChild() => PoseCanvasEditorBridge.ChildSurface?.Invoke(this) == true;
+
 
         protected override void OnNodeGUI()
         {

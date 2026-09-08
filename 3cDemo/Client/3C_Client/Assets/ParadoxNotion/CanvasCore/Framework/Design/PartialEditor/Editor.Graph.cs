@@ -26,33 +26,49 @@ namespace NodeCanvas.Framework
         public IGraphEditorObservation editorObservation { get; set; }
         public virtual bool HandleEditorCommand(string command, Vector2 position) => false; // 3C: domains keep their clipboard and batch mutation contracts.
 
-        private int _childAssignableIndex = -1;
+        private string _editorChildOwnerId;
+        private bool _editorChildOwnerIsConnection;
+        private Graph _editorChildGraph;
+        public string editorTitle { get; set; }
 
-        ///<summary>EDITOR. Responsible for breacrumb navigation only</summary>
-        public Graph GetCurrentChildGraph() {
-            if ( _childAssignableIndex == -1 || _childAssignableIndex > allNodes.Count - 1 ) {
-                return null;
-            }
-            if ( allNodes[_childAssignableIndex] is IGraphAssignable assignable ) {
-                return assignable.subGraph;
+        public IGraphElement GetCurrentChildGraphSource() {
+            if (string.IsNullOrEmpty(_editorChildOwnerId)) { return null; }
+            foreach (Node node in allNodes) {
+                if (!_editorChildOwnerIsConnection && node.UID == _editorChildOwnerId) { return node; }
+                if (_editorChildOwnerIsConnection) {
+                    foreach (Connection connection in node.outConnections) {
+                        if (connection.UID == _editorChildOwnerId) { return connection; }
+                    }
+                }
             }
             return null;
         }
 
-        ///<summary>EDITOR. Responsible for breacrumb navigation only</summary>
+        public Graph GetCurrentChildGraph() {
+            IGraphElement owner = GetCurrentChildGraphSource();
+            if (owner == null) { return null; }
+            return owner is IGraphAssignable assignable ? assignable.subGraph : _editorChildGraph;
+        }
+
+        public void SetCurrentEditorChild(IGraphElement source, Graph child) {
+            if (source == null || source.graph != this || child == null || child == this) {
+                throw new System.ArgumentException("Editor child navigation requires an owned element and a different graph.");
+            }
+            child.SetCurrentChildGraphAssignable(null);
+            _editorChildOwnerId = source.UID;
+            _editorChildOwnerIsConnection = source is Connection;
+            _editorChildGraph = child;
+        }
+
         public void SetCurrentChildGraphAssignable(IGraphAssignable assignable) {
-            if ( assignable == null || assignable.subGraph == null ) {
-                _childAssignableIndex = -1;
-                return;
-            }
-            if ( Application.isPlaying && EditorUtility.IsPersistent(assignable.subGraph) &&
-                 !(isEditorReadOnly && !allowsEditorExecution && assignable.subGraph.isEditorReadOnly && !assignable.subGraph.allowsEditorExecution) ) {
+            _editorChildOwnerId = null;
+            _editorChildGraph = null;
+            if (assignable == null || assignable.subGraph == null) { return; }
+            if (Application.isPlaying && EditorUtility.IsPersistent(assignable.subGraph)) {
                 ParadoxNotion.Services.Logger.LogWarning("You can't view sub-graphs in play mode until they are initialized to avoid editing asset references accidentally", LogTag.EDITOR, this);
-                _childAssignableIndex = -1;
                 return;
             }
-            assignable.subGraph.SetCurrentChildGraphAssignable(null);
-            _childAssignableIndex = allNodes.IndexOf(assignable as Node);
+            SetCurrentEditorChild(assignable, assignable.subGraph);
         }
 
         ///----------------------------------------------------------------------------------------------

@@ -323,16 +323,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static string NewEdgeId() => $"pose-edge-{Guid.NewGuid():N}";
 
-        public bool HandleCommand(string command, Vector2 position)
+        GraphAuthoringProjectionCanvasBinding CreateCommandBinding()
         {
             var mutation = new CharacterPoseCanvasMutationAdapter { ReadOnly = ReadOnly };
             var document = new CharacterPoseCanvasGraphDocument(m_Owner, m_Graph.GraphId.Value, ResolveRole(), m_Asset.name);
-            var binding = new GraphAuthoringProjectionCanvasBinding(document, CharacterPoseGraphAuthoringCapabilities.Catalog,
+            return new GraphAuthoringProjectionCanvasBinding(document, CharacterPoseGraphAuthoringCapabilities.Catalog,
                 mutation, new CharacterPoseCanvasConnectionPolicy(), new CharacterPoseCanvasGraphClipboardCodec(mutation));
-            return CharacterPoseCanvasCommands.Handle(binding, m_Graph, command, position);
         }
 
-        public GenericMenu BuildSelectionMenu(Vector2 position) => CharacterPoseCanvasCommands.Menu(HandleCommand, position);
+        public bool HandleCommand(string command, Vector2 position) =>
+            CharacterPoseCanvasCommands.Handle(CreateCommandBinding(), m_Graph, command, position);
+
+        public GenericMenu BuildSelectionMenu(Vector2 position)
+        {
+            GraphAuthoringProjectionCanvasBinding binding = CreateCommandBinding();
+            return CharacterPoseCanvasCommands.Menu(HandleCommand, position,
+                command => CharacterPoseCanvasCommands.CanExecute(binding, m_Graph, command));
+        }
 
         GraphAuthoringDocumentRoleId ResolveRole()
         {

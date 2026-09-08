@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 else if (element is CharacterPoseDocumentCanvasNode projected && projected.graph == graph && !projected.IsEntry)
                     result.Add(new GraphAuthoringSelection(projected.SelectionKind, projected.ElementId));
                 else if (element is CharacterPoseDocumentCanvasConnection projectedEdge && projectedEdge.graph == graph && !projectedEdge.Source.IsEntry)
-                    result.Add(new GraphAuthoringSelection(((CharacterPoseDocumentCanvas)graph).Binding.StateMachineBinding != null
+                    result.Add(new GraphAuthoringSelection(((CharacterPoseDocumentCanvas)graph).StateMachineBinding != null
                         ? GraphAuthoringSelectionKind.Transition : GraphAuthoringSelectionKind.Edge, projectedEdge.ElementId));
             }
             return result;
@@ -88,11 +88,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        internal static GenericMenu Menu(Func<string, Vector2, bool> handle, Vector2 position)
+        internal static bool CanExecute(GraphAuthoringProjectionCanvasBinding binding, NodeCanvas.Framework.Graph graph, string command)
+        {
+            IReadOnlyList<GraphAuthoringSelection> selection = Selection(graph);
+            bool canCopy = binding.Clipboard != null && selection.Any(value => value.Kind == GraphAuthoringSelectionKind.Node);
+            if (command == "Copy") return canCopy;
+            if (binding.Mutation.ReadOnly) return false;
+            if (command == "Paste") return binding.Clipboard != null && binding.Clipboard.CanPaste(binding.Document, EditorGUIUtility.systemCopyBuffer);
+            if (command is "Cut" or "Duplicate") return canCopy;
+            return selection.Count != 0;
+        }
+
+        internal static GenericMenu Menu(Func<string, Vector2, bool> handle, Vector2 position, Func<string, bool> canExecute = null)
         {
             var menu = new GenericMenu();
             foreach (var entry in new[] { ("复制", "Copy"), ("剪切", "Cut"), ("粘贴", "Paste"), ("重复", "Duplicate"), ("删除", "Delete") })
-                menu.AddItem(new GUIContent(entry.Item1), false, () => handle(entry.Item2, position));
+                if (canExecute == null || canExecute(entry.Item2))
+                    menu.AddItem(new GUIContent(entry.Item1), false, () => handle(entry.Item2, position));
+                else menu.AddDisabledItem(new GUIContent(entry.Item1));
             return menu;
         }
     }

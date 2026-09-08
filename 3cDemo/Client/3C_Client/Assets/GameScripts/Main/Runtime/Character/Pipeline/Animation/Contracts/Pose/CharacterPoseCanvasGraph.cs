@@ -304,10 +304,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static System.Action<CharacterPoseCanvasNode> InspectorOverride;
         internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
         internal static System.Action<CharacterPoseCanvasNode> BodyGUI;
-        internal static Func<CharacterPoseCanvasNode, string, string> PortObservation;
         internal static Func<CharacterPoseCanvasNode, IReadOnlyList<CharacterPosePortDefinition>> PortShape;
         internal static Func<CharacterPoseCanvasNode, GenericMenu> ContextMenu;
-        internal static Action<CharacterPoseCanvasNode> ChildSurface;
+        internal static Func<CharacterPoseCanvasNode, bool> ChildSurface;
     }
 
     internal interface CharacterPoseCanvasEditorWriteRouter

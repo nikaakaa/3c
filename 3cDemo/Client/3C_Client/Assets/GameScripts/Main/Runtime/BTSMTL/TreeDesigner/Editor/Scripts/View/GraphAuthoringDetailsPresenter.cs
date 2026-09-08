@@ -104,6 +104,12 @@ namespace TreeDesigner.Editor
         public object Value { get; }
     }
 
+    public interface IGraphAuthoringDetailsFieldEditor
+    {
+        VisualElement CreateField(IGraphAuthoringDocumentProjection document, GraphAuthoringElementId elementId,
+            GraphAuthoringFieldDescriptor field, object value, Action<object> apply);
+    }
+
     public sealed class GraphAuthoringDetailsBinding
     {
         public GraphAuthoringDetailsBinding(
@@ -113,7 +119,9 @@ namespace TreeDesigner.Editor
             IGraphAuthoringDetailsDataSource dataSource,
             Action<GraphAuthoringDetailsCommandRequest>
                 commandHandler = null,
-            bool allowDisplayNameMutation = false)
+            bool allowDisplayNameMutation = false,
+            bool authoringOnly = false,
+            IGraphAuthoringDetailsFieldEditor fieldEditor = null)
         {
             Document = document ?? throw new ArgumentNullException(nameof(document));
             Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
@@ -121,6 +129,8 @@ namespace TreeDesigner.Editor
             DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             CommandHandler = commandHandler;
             AllowDisplayNameMutation = allowDisplayNameMutation;
+            AuthoringOnly = authoringOnly;
+            FieldEditor = fieldEditor;
         }
 
         public IGraphAuthoringDocumentProjection Document { get; }
@@ -130,6 +140,8 @@ namespace TreeDesigner.Editor
         public Action<GraphAuthoringDetailsCommandRequest>
             CommandHandler { get; }
         public bool AllowDisplayNameMutation { get; }
+        public bool AuthoringOnly { get; }
+        public IGraphAuthoringDetailsFieldEditor FieldEditor { get; }
     }
 
     public sealed class GraphAuthoringDetailsRegion :
@@ -163,8 +175,9 @@ namespace TreeDesigner.Editor
             GraphAuthoringStateMachineBinding binding,
             IGraphAuthoringStateMachineDetailsDataSource dataSource,
             Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>>
-                appliedValues = null) =>
-            m_StateMachinePresenter.Bind(binding, dataSource, appliedValues);
+                appliedValues = null,
+            bool authoringOnly = false) =>
+            m_StateMachinePresenter.Bind(binding, dataSource, appliedValues, authoringOnly);
 
         public void InspectState(
             GraphAuthoringElementId stateId) =>
@@ -226,6 +239,7 @@ namespace TreeDesigner.Editor
             GraphAuthoringSelection selection = m_Selection.Value;
             if (selection.Kind != GraphAuthoringSelectionKind.Node)
             {
+                if (m_Binding.AuthoringOnly) return;
                 AddReadOnlySection("Runtime Inputs", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
                 AddAppliedValuesSection(selection);
                 AddReadOnlySection("References", m_Binding.DataSource.GetReferences(m_Binding.Document, selection), true);
@@ -242,6 +256,7 @@ namespace TreeDesigner.Editor
             AddHeader(node, capability);
             AddAuthoringSection(node, capability);
             AddCommandSection(node, capability);
+            if (m_Binding.AuthoringOnly) return;
             AddReadOnlySection("Runtime Inputs", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
             AddAppliedValuesSection(selection);
             AddReadOnlySection("References", m_Binding.DataSource.GetReferences(m_Binding.Document, selection), true);
@@ -253,11 +268,11 @@ namespace TreeDesigner.Editor
             var header = new VisualElement();
             header.AddToClassList("graph-authoring-details-header");
             header.Add(new Label(string.IsNullOrWhiteSpace(node.DisplayName) ? capability.DisplayName : node.DisplayName));
-            header.Add(new Label(capability.Category));
+            if (!m_Binding.AuthoringOnly) header.Add(new Label(capability.Category));
             m_Scroll.Add(header);
             if (!m_Binding.AllowDisplayNameMutation)
                 return;
-            var displayName = new TextField("Display Name")
+            var displayName = new TextField(m_Binding.AuthoringOnly ? "名称" : "Display Name")
             {
                 isDelayed = true,
                 value = node.DisplayName
@@ -284,11 +299,11 @@ namespace TreeDesigner.Editor
 
         void AddAuthoringSection(GraphAuthoringNodeProjection node, GraphAuthoringCapabilityDescriptor capability)
         {
-            var section = new Foldout { text = "Authoring Defaults", value = true };
+            var section = new Foldout { text = m_Binding.AuthoringOnly ? "参数与策略" : "Authoring Defaults", value = true };
             section.AddToClassList("graph-authoring-details-section");
             GraphAuthoringFieldDescriptor[] fields = capability.Fields
                 .Where(value =>
-                    value.AuthoringVisible &&
+                    value.AuthoringVisible && (!m_Binding.AuthoringOnly || value.AuthoringWritable) &&
                     value.Section == GraphAuthoringDetailsSection.Authoring &&
                     value.IsVisible(controller =>
                         m_Binding.DataSource.ReadField(
@@ -307,9 +322,13 @@ namespace TreeDesigner.Editor
                 row.style.flexDirection = FlexDirection.Row;
                 row.AddToClassList("graph-authoring-details-field-row");
                 row.Add(control);
-                var policy = new Label(TuningLabel(field));
-                policy.AddToClassList("graph-authoring-details-field-policy");
-                row.Add(policy);
+                control.style.flexGrow = 1;
+                control.style.minWidth = 0;
+                if (!m_Binding.AuthoringOnly) {
+                    var policy = new Label(TuningLabel(field));
+                    policy.AddToClassList("graph-authoring-details-field-policy");
+                    row.Add(policy);
+                }
                 section.Add(row);
             }
             if (fields.Length == 0)
@@ -403,6 +422,9 @@ namespace TreeDesigner.Editor
 
         VisualElement CreateField(GraphAuthoringElementId elementId, GraphAuthoringFieldDescriptor field, object value)
         {
+            VisualElement custom = m_Binding.FieldEditor?.CreateField(m_Binding.Document, elementId, field, value,
+                next => SetField(elementId, field, next));
+            if (custom != null) return custom;
             switch (field.ValueKind)
             {
                 case GraphAuthoringFieldValueKind.Boolean:
@@ -568,6 +590,7 @@ namespace TreeDesigner.Editor
                     elementId,
                     fieldId: field.FieldId,
                     value: value));
+            Rebuild();
         }
 
         void AddReadOnlySection(string title, IReadOnlyList<GraphAuthoringReadOnlyDetail> rows, bool expanded)

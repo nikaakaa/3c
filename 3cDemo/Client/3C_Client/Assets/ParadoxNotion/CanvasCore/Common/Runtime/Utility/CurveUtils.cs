@@ -25,13 +25,21 @@ namespace ParadoxNotion
 
         ///<summary>Is target position along from, to curve</summary>
         public static bool IsPosAlongCurve(Vector2 from, Vector2 to, Vector2 fromTangent, Vector2 toTangent, Vector2 targetPosition, out float norm) {
-            if ( RectUtils.GetBoundRect(from, to).ExpandBy(POS_CHECK_DISTANCE).Contains(targetPosition) ) {
-                for ( var i = 0f; i <= POS_CHECK_RES; i++ ) {
-                    var checkPos = GetPosAlongCurve(from, to, fromTangent, toTangent, i / POS_CHECK_RES);
-                    if ( Vector2.Distance(targetPosition, checkPos) < POS_CHECK_DISTANCE ) {
-                        norm = i / POS_CHECK_RES;
+            Vector2 controlA = from + fromTangent;
+            Vector2 controlB = to + toTangent;
+            Vector2 minimum = Vector2.Min(Vector2.Min(from, to), Vector2.Min(controlA, controlB));
+            Vector2 maximum = Vector2.Max(Vector2.Max(from, to), Vector2.Max(controlA, controlB));
+            if (RectUtils.GetBoundRect(minimum, maximum).ExpandBy(POS_CHECK_DISTANCE).Contains(targetPosition)) {
+                Vector2 previous = from;
+                for (int i = 1; i <= POS_CHECK_RES; i++) {
+                    Vector2 next = GetPosAlongCurve(from, to, fromTangent, toTangent, i / POS_CHECK_RES);
+                    Vector2 segment = next - previous;
+                    float t = segment.sqrMagnitude > 0 ? Mathf.Clamp01(Vector2.Dot(targetPosition - previous, segment) / segment.sqrMagnitude) : 0;
+                    if ((targetPosition - (previous + segment * t)).sqrMagnitude < POS_CHECK_DISTANCE * POS_CHECK_DISTANCE) {
+                        norm = (i - 1 + t) / POS_CHECK_RES;
                         return true;
                     }
+                    previous = next;
                 }
             }
             norm = 0;

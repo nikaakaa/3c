@@ -65,7 +65,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>The Unique ID of the node. One is created only if requested.</summary>
-        public string UID => string.IsNullOrEmpty(_UID) ? _UID = System.Guid.NewGuid().ToString() : _UID;
+        public virtual string UID => string.IsNullOrEmpty(_UID) ? _UID = System.Guid.NewGuid().ToString() : _UID;
 
         ///<summary>All incomming connections to this node.</summary>
         public List<Connection> inConnections {

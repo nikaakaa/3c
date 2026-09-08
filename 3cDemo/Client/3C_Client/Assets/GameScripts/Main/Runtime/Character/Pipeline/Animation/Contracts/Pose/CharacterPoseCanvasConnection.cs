@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public override void UnBind() { }
 
+        public override string UID => EdgeId;
         public string EdgeId => m_EdgeId ?? string.Empty;
         public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId)
             ? SourceNode?.NodeId ?? default

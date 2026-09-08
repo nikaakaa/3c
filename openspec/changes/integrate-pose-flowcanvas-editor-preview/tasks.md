@@ -11,13 +11,11 @@
 - [x] 2.4 接通原生选择、复制、Undo、保存与重载，保持存活节点身份；状态、状态别名及转换提供相应的参数编辑入口。
 - [x] 2.5 将Navigator、Details、状态／规则下钻和观察区组合到同一原生窗口，所有子图入口复用原生面包屑和选择，不保留第二画布。
 
-## 3. 编译输入与资产迁移
+## 3. 编译输入与产物发布
 
 - [x] 3.1 现有Pose Compiler直接遍历原生作者数据，保留正式lowering及Native运行，不经过旧图中转或getter求值。
 - [x] 3.2 同步Document的Exporter、Reconciler、Mutation、owner和反向导出，保持现行业务协议及无业务变化的零修改往返。
-- [ ] 3.3 在代码完成后生成精确Corin闭包的迁移计划，覆盖子图、状态、端口、资源及实际共享owner，保留稳定身份。
-- [ ] 3.4 在代码完成后通过正式事务应用迁移并保存作者资产，失败完整回滚，不发布半迁移内容。
-- [ ] 3.5 在代码完成后通过唯一Character Build发布当前v28所需产物组，不复制其它worktree产物，不切换Native执行器。
+- [ ] 3.3 通过唯一Character Build为精确Corin Definition发布当前v28的Float32、Fixed及共享Presentation Projection，保留现有作者资产，不切换Native执行器。
 
 ## 4. 真实执行结果映射
 

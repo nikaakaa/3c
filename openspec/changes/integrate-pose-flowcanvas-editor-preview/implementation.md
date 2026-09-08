@@ -2,9 +2,17 @@
 
 ## 当前实现状态（2026-09-08，代码优先）
 
-按照作者最新要求，tasks已删除检查、证据、性能对照和验收任务，只保留实现、清理及最终资产工作。清单现在为23项，其中20项代码与文档工作完成；3.3、3.4、3.5为最后进行的资产计划、正式事务保存及v28产物发布，不在本轮执行。历史6/26描述仅记录此前进度，不代表当前实现清单。
+按照作者最新要求，tasks已删除检查、证据、性能对照和验收任务，只保留实现、清理及产物发布。作者资产格式和identity没有变化，已撤去两项没有必要的迁移任务。清单现在为21项，其中20项代码与文档工作完成，仅3.3的v28产物发布未完成。历史6/26和20/23描述仅记录此前进度，不代表当前清单。
 
-本轮没有新增测试、运行回放或迁移业务资产。编译和运行检查的历史结果保留在下方，与实现完成状态分开记录；代码完成不宣称资产已经发布或作者已经验收。
+没有新增测试、运行回放或迁移业务资产。编译和运行检查的历史结果保留在下方，与实现完成状态分开记录；代码完成不宣称产物已经发布或作者已经验收。
+
+### 正式v28发布尝试
+
+用户确认“开始”后，调用正式`character.build_fixed_products`，目标Definition为`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`，Fixed wrapper为`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。该入口统一发布Float32、Fixed和共享Projection，不重复启动两次Build，不修改作者数据。
+
+实际返回`success=false`、`character_build_failed`，失败阶段为AuthoringDiscovery。三条`skill_entry_graph_missing`分别对应Attack、DodgeBack、DodgeForward：它们的技能入口尚未进入Definition正式SkillGraphs。遵守用户不处理其它领域报错的范围，不修改技能配置、不绕过共享编译链，也未将Build任务勾选完成。
+
+构建前后读取Definition、Pose作者资产、Float32 Program、Fixed Program及Presentation Projection的SHA-256，五个文件均未变化。原始结果为`.codex-tmp/canvas-core/pose-v28-build-result.json`，前后记录为同目录`pose-v28-build-before.json`和`pose-v28-build-after.json`。这次没有发布新产物。
 
 ### 本轮代码链
 

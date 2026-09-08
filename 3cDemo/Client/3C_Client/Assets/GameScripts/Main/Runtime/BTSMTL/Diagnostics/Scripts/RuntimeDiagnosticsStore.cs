@@ -150,13 +150,14 @@ namespace BTSMTL.Diagnostics
     {
         readonly IReadOnlyList<RuntimeCaptureSegmentSnapshot> m_Segments;
 
-        public RuntimeCaptureSnapshot(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, IReadOnlyList<RuntimeCaptureSegmentSnapshot> segments, long version)
+        public RuntimeCaptureSnapshot(Guid captureId, RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, IReadOnlyList<RuntimeCaptureSegmentSnapshot> segments, long version, long evictedEvents = 0)
         {
             CaptureId = captureId;
             Channels = channels & RuntimeTraceChannel.All;
             Detail = detail;
             m_Segments = segments ?? Array.Empty<RuntimeCaptureSegmentSnapshot>();
             Version = version;
+            EvictedEvents = evictedEvents;
         }
 
         public Guid CaptureId { get; }
@@ -164,6 +165,7 @@ namespace BTSMTL.Diagnostics
         public RuntimeDiagnosticsCaptureDetail Detail { get; }
         public long Version { get; }
         public IReadOnlyList<RuntimeCaptureSegmentSnapshot> Segments => m_Segments;
+        public long EvictedEvents { get; }
         public int SegmentCount => m_Segments.Count;
 
         public IReadOnlyList<RuntimeTraceEvent> GetEvents(int historyOffset)
@@ -387,13 +389,20 @@ namespace BTSMTL.Diagnostics
         RuntimeDiagnosticsCaptureDetail m_Detail;
         long m_Version;
 
-        public RuntimeCaptureStore(Guid captureId, RuntimeDiagnosticsCaptureDetail detail, int maxSegments = 512)
+        readonly int m_MaxEvents;
+        long m_EvictedEvents;
+        long m_LastEvictionVersion;
+
+        public RuntimeCaptureStore(Guid captureId, RuntimeDiagnosticsCaptureDetail detail, int maxSegments = 512, int maxEvents = 32768)
         {
             if (maxSegments < 8)
                 throw new ArgumentOutOfRangeException(nameof(maxSegments));
+            if (maxEvents < 64)
+                throw new ArgumentOutOfRangeException(nameof(maxEvents));
             m_CaptureId = captureId;
             m_Detail = detail;
             m_MaxSegments = maxSegments;
+            m_MaxEvents = maxEvents;
         }
 
         public Guid CaptureId => m_CaptureId;
@@ -419,6 +428,12 @@ namespace BTSMTL.Diagnostics
 
             m_Version++;
             var change = new RuntimeCaptureChange(m_Version, traceEvent);
+            if (segment.Events.Count == m_MaxEvents)
+            {
+                m_EvictedEvents++;
+                m_LastEvictionVersion = m_Version;
+                return;
+            }
             segment.Events.Add(change);
             m_Changes.Add(change);
             TrimToCapacity();
@@ -430,7 +445,7 @@ namespace BTSMTL.Diagnostics
                 return new RuntimeCaptureRead(m_Version, false, Array.Empty<RuntimeCaptureChange>());
 
             long earliestAvailable = m_Changes.Count > 0 ? m_Changes[0].Revision : m_Version + 1;
-            if (cursor < earliestAvailable - 1)
+            if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
                 return new RuntimeCaptureRead(m_Version, true, CollectAllChanges());
 
             var changes = new List<RuntimeCaptureChange>();
@@ -454,7 +469,7 @@ namespace BTSMTL.Diagnostics
                     events[j] = source.Events[j].TraceEvent;
                 segments.Add(new RuntimeCaptureSegmentSnapshot(source.Domain, source.Position, events));
             }
-            return new RuntimeCaptureSnapshot(m_CaptureId, channels, m_Detail, segments, m_Version);
+            return new RuntimeCaptureSnapshot(m_CaptureId, channels, m_Detail, segments, m_Version, m_EvictedEvents);
         }
 
         public void Dispose()
@@ -465,10 +480,12 @@ namespace BTSMTL.Diagnostics
 
         void TrimToCapacity()
         {
-            while (m_Segments.Count > m_MaxSegments)
+            while (m_Segments.Count > m_MaxSegments || m_Changes.Count > m_MaxEvents)
             {
                 Segment removed = m_Segments[0];
                 m_Segments.RemoveAt(0);
+                m_EvictedEvents += removed.Events.Count;
+                m_LastEvictionVersion = m_Version;
                 if (removed.Events.Count > 0)
                     m_Changes.RemoveRange(0, Math.Min(removed.Events.Count, m_Changes.Count));
             }

@@ -41,26 +41,32 @@ namespace UnityHFSM
 			clock = shared;
 			for (int i = 0; i < boundTimers.Count; i++)
 				boundTimers[i].Bind(shared);
+			foreach (StateBundle bundle in stateBundlesByName.Values)
+				if (bundle.state is ITickClockHost host)
+					host.AdoptClock(shared);
+		}
+
+		protected void BindTiming(ITimer timer)
+		{
+			if (timer is ITickBound bound)
+			{
+				bound.Bind(clock);
+				boundTimers.Add(bound);
+			}
 		}
 
 		void BindTiming(StateBase<TStateId> state)
 		{
-			if (state is ITimerHolder holder && holder.Timer is ITickBound bound)
-			{
-				bound.Bind(clock);
-				boundTimers.Add(bound);
-			}
 			if (state is ITickClockHost host)
 				host.AdoptClock(clock);
+			else if (state is ITimerHolder holder)
+				BindTiming(holder.Timer);
 		}
 
 		void BindTiming(TransitionBase<TStateId> transition)
 		{
-			if (transition is ITimerHolder holder && holder.Timer is ITickBound bound)
-			{
-				bound.Bind(clock);
-				boundTimers.Add(bound);
-			}
+			if (transition is ITimerHolder holder)
+				BindTiming(holder.Timer);
 		}
 
 		/// <summary>

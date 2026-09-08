@@ -6,7 +6,7 @@ namespace UnityHFSM
 	/// A class used to determine whether the state machine should transition to another state
 	/// depending on a delay and an optional condition.
 	/// </summary>
-	public class TransitionAfter<TStateId> : TransitionBase<TStateId>
+	public class TransitionAfter<TStateId> : TransitionBase<TStateId>, ITimerHolder
 	{
 		public long delay;
 		public ITimer timer;

@@ -11,7 +11,7 @@ namespace UnityHFSM
 	/// The HybridStateMachine can also be seen as a state wrapper / decorator around
 	/// a normal <see cref="StateMachine"/>.
 	/// </summary>
-	public class HybridStateMachine<TOwnId, TStateId, TEvent> : StateMachine<TOwnId, TStateId, TEvent>
+	public class HybridStateMachine<TOwnId, TStateId, TEvent> : StateMachine<TOwnId, TStateId, TEvent>, ITimerHolder
 	{
 		private Action<HybridStateMachine<TOwnId, TStateId, TEvent>>
 			beforeOnEnter, afterOnEnter,
@@ -61,6 +61,7 @@ namespace UnityHFSM
 			this.afterOnExit = afterOnExit;
 
 			this.timer = new Timer();
+			BindTiming(timer);
 		}
 
 		public override void OnEnter()

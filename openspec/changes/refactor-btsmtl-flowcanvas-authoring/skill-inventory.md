@@ -1,0 +1,58 @@
+# 技能作者迁移盘点
+
+2026-09-08静态读取精确Corin Definition及其引用资产，没有编译、Build或Unity资产写入。此表用于确定迁移输入，不作为运行验收。
+
+## 精确入口与资产闭包
+
+| 技能 | 当前入口identity | 根文件中可达图数据 | 可达节点 | 内联Timeline数据 |
+|---|---|---:|---:|---:|
+| Attack | 3ae19d5e-dd52-4f44-a80d-e32d2474e7ec | 68 | 419 | 4 |
+| DodgeBack | ee909991-5be0-4961-838a-a2854baca30d | 9 | 61 | 1 |
+| DodgeForward | b2328afd-40a8-467d-91f8-784c461f6137 | 9 | 61 | 1 |
+
+读取源为`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`与其当前`Graphs/CorinPlayableRootTree.asset`。以上按技能入口的managed-reference闭包统计，不包含角色根，不意味着迁移后仍保留RootTree入口。角色实例仍是运行观察入口，Definition仅定位当前资产数据。
+
+Attack还引用`Graphs/SharedTimelines/CorinAttack1Timeline.asset`，GUID为`be588770448d17444828b566954e2709`。该共享资源含4份图数据、20个节点：RootNode 4、TimelineEnterNode 12、ExposedPropertyNode 4；没有进一步共享图／Timeline引用。不能只迁根文件而漏掉该资源。
+
+## 当前资产实际节点类型与去向
+
+| 类型／分组 | Attack | DodgeBack | DodgeForward | 迁移处理 |
+|---|---:|---:|---:|---|
+| RootNode | 21 | 3 | 3 | 编译入口锚点；不提供Character Root Tree作者入口 |
+| SequenceNode | 1 | 1 | 1 | 独立步骤Flow端口；保留等待完成的Sequence语义 |
+| SelectorNode | 5 | 1 | 1 | 独立候选Flow端口；保留失败后选择语义 |
+| SucceedNode | 5 | 1 | 1 | 保留技能完成结果 |
+| StateMachineNode／StateNode | 1／5 | 0 | 0 | 技能局部状态和规则页面，不迁回C#角色总状态机 |
+| StateMachine Enter／Any／Exit | 各1 | 0 | 0 | 结构锚点，领域规则控制创建和删除 |
+| StateOnEnter／StateOnExit | 各6 | 各1 | 各1 | 保留进入和退出执行关系 |
+| StateRootCompletedNode | 5 | 0 | 0 | 从本次技能调用状态读取 |
+| StateExitCauseInfoNode | 25 | 5 | 5 | 保留退出原因条件 |
+| TimelineNode | 5 | 1 | 1 | 调用原Timeline内容，保留owner、完成和中断顺序 |
+| TimelineEnterNode | 45 | 6 | 6 | 包含TreeClip图入口，不以普通Update替代 |
+| ActivateActionInstanceNode | 5 | 1 | 1 | 现技能编译明确跳过这些节点；迁移不得恢复二次激活，按正式边重定向语义清理 |
+| SubmitActionLifecycleTransitionNode | 20 | 4 | 4 | 继续提交当前ActionInstance生命周期 |
+| ActionContextActiveInfoNode | 20 | 4 | 4 | 读取当前执行上下文 |
+| ActionWindowActiveInfoNode | 28 | 3 | 3 | 读取正式动作窗口，不另建预览窗口状态 |
+| CanActivateActionInfoNode | 18 | 2 | 2 | 保留准入判断，不能自行发起第二次激活 |
+| CharacterActionRequestInfoNode | 18 | 2 | 2 | 读取正式请求输入 |
+| CharacterInputVector2MagnitudeInfoNode | 10 | 1 | 1 | 稳定输入identity到数值输出 |
+| PipelineBlackboardFloatInfoNode | 10 | 1 | 1 | 保留声明identity和作用域，不能按显示名查找 |
+| ExposedPropertyNode | 16 | 3 | 3 | 按声明类型注册原生值端口，保留默认值与作用域 |
+| CompareNode | 10 | 1 | 1 | 保留比较方式和两个输入的数值类型约束 |
+| AndNode／OrNode | 71／14 | 10／3 | 10／3 | 可复用原生外观与端口，语义进入已有操作合同 |
+| ConditionRuleResultNode | 46 | 6 | 6 | 条件图返回锚点，不能调用行为或Timeline |
+
+未在上述资产出现但当前能力目录存在的Loop、Parallel、Not、Bool／Float／Vector2输入、MoveFacingAngle、其他合法黑板类型和LocomotionInputMotion仍须迁移其公开能力，不能以Corin没有使用为由删掉。AI专用节点不迁移；Camera、Equipment、GE等额外发射器须按真实技能可达引用核对，不因在全局注册表存在就开放进技能菜单。
+
+## 唯一端口和字段来源
+
+- 作者kind、字段可写性、role、固定／条件／动态端口：`BtsmtlGraphAuthoringCapabilities`及共享Port Shape；不在本文复制另一份可维护schema。
+- 编译值合同：`OperationValuePortContracts.cs`。输入读取使用`m_Output`；Compare使用`m_InputValue1/m_InputValue2/m_Result`；And／Or使用`m_Input1/m_Input2/m_Output`；条件返回使用`m_Result`。这些是当前编译端口身份，不应因显示文案变化而丢失映射。
+- 系统Root、状态入口／出口、Timeline入口和条件返回均有保留anchor；Macro接口和组合步骤slot是不同来源，不混用数组index作为稳定身份。
+- 新组合节点遵守原生一输出一连线，每步骤独立slot，原技能执行顺序由slot顺序发射；原生Sequence类实际是Flip Flop，不直接映射为技能Sequence。
+
+## 编译和运行调用者
+
+`CharacterSkillCompilationDiscovery`发现技能及调用关系；`CharacterAuthoringGraphOccurrence`、GraphReference及TreeClip记录仍依赖旧图对象；`CharacterSemanticEmitter`编译图和边；Core／Input／Action／Motion注册模块读取业务字段；`CharacterSemanticSkillProgramEmitter`发布技能目录；`CharacterSimulationOperationEmitter`写入唯一Program Builder。下一阶段应替换作者读取与遍历，不能把旧Node实例装进新FlowNode。
+
+运行继续由ActionSkillExecutionRuntime及现有Session／Numeric Program拥有，观测由RuntimeDiagnosticsTargetRegistry、RuntimeDebugSession与RuntimeDebugViewBinding提供。本表未声明已完成原生作者模型、Macro编译或资产迁移。

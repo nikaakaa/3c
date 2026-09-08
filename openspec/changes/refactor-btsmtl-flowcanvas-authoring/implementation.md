@@ -2,7 +2,9 @@
 
 ## 实施基线与归属
 
-最新执行约束：用户要求停止当前大改过程中的主动编译、Build、整根校验及回放。下方已发生的检查仅记录历史事实，不再重复。接入入口必须从实例工作区定位，不恢复`Character Definition -> Open Root Tree`；精确Definition路径只保留为已有资源关联及历史检查定位。
+最新补充授权：允许Unity刷新和脚本编译检查，只修本次BTSMTL错误，不处理其他领域报错；不触发内容Build、整根Validator或回放。以下较早的禁止脚本编译记录由本条取代。
+
+执行顺序：先完成代码、编辑器及实例观察，资产迁移最后执行。当前不触发内容Build、整根校验及回放。接入入口必须从实例工作区定位，不恢复`Character Definition -> Open Root Tree`；精确Definition路径只保留为已有资源关联及历史检查定位。
 
 - 目录：`D:/Unity_Project_1/3C`；开始本轮apply时HEAD：`9c447aa4b5f2ddbc7d114476bccb59910d785e6c`。
 - 工作区已有未提交资产、Pose、相机和插件变更，不把整个工作区视为干净基线，不覆盖这些改动。
@@ -37,6 +39,42 @@
 当前改动不改变Document字段、identity、ownership、Reconciler或Validator；Agent合同仍为实际v5，不能只因提案目标为v6就修改运行schema。
 
 ## 验证事实
+
+## 原生作者基础、结构页面与编辑接口
+
+本阶段新增的正式类型位于`Runtime/Character/Control/Authoring/FlowGraphs`。技能、状态机、状态内容和条件页面使用FlowGraph；参数化子图使用原生Macro子类，调用与接口锚点使用原生MacroNodeWrapper／MacroInputNode／MacroOutputNode，没有生成旧BaseGraph或BaseNode镜像。
+
+已实现的结构节点包括技能入口、顺序、选择、并行、循环、成功、状态机、状态、进入／任意／退出状态、OnEnter／OnExit、条件返回、状态主体完成及退出原因。输入读取和动作上下文、窗口、准入、生命周期提交、移动朝向夹角提供正式FlowNode字段与端口。AND／OR／NOT及浮点／整数六种比较使用原生SimplexNodeWrapper，编译目录只描述原生端口到现有操作端口的映射。
+
+组合节点每个步骤拥有独立稳定Flow输出。步骤编辑器支持名称、条件页、次序、转换优先级和中断策略；换序不改变identity，连接中的端口拒绝直接删除。系统节点限制到对应页面，不能单独删除。创建状态机或状态的原生菜单操作会在所属技能根资产内创建私有内容页并初始化入口；本阶段只编写该代码，尚未在业务资产上执行。
+
+创建节点、创建连接、删除节点／连接、断开整个端口和步骤修改已进入统一编辑事务；子操作复用外层Undo，失败回滚。图闭包检查拒绝跨领域引用、递归、重复图／节点／边身份和连接容量错误。技能行为／值连接拒绝直接成环，状态机转换允许返回之前状态。人工批量复制、共享Macro接口编辑涉及的全部caller owner、私有闭包删除／回收及Document整包事务尚未完成，不据此关闭2.3、2.4或3.1。
+
+原生Macro增加外部执行合同：技能Macro收集端口只创建端口声明，不写入共享Macro的entry／exit运行委托表；不允许原生运行克隆，也不在读取缺失入口时自动修复作者资产。其他Macro保持原运行行为。
+
+`BtsmtlSkillFlowLeafEmitter`读取真实FlowNode的字段和serializedValue，经原生端口映射与现有OperationValuePortContract核对后进入唯一CharacterSimulationOperationEmitter。它不调用getter。完整技能发现、嵌套调用状态布局、Timeline及黑板作用域遍历仍未替换旧读取链，不能宣布直接编译接入完成。
+
+原生编辑框架新增只读IGraphEditorObservation接口。节点高亮、连接状态和端口文字可读取外部缓存；连接绘制在外部观察时不读取graph.isRunning作为前置条件，也不执行原生Blink回调。只读且禁止原生执行的父子图允许在普通Play时下钻。该接口尚未绑定正式技能实例观察器，未声明7.1或7.2完整完成。
+
+后续代码进展：新增BtsmtlSkillFlowObservation，明确接收正式图、作者hash和RuntimeInstanceKey，复用RuntimeDebugViewBinding订阅现有Graph／StateMachine诊断。节点显示只读取进入／完成／停止事件，RuntimeNodeExecutionObservation不使用日志级别推测成功或失败。观察缓存仅保留当前图的节点与边；版本不匹配清除显示，切换页面、关闭原生窗口或退出Play释放订阅。原生正式技能入口尚未装配该适配器，端口无采集记录时明确显示缺失，不调用getter补值。
+
+普通停止／强制停止保留明确文字，不伪装成原生Failure；原生节点内容区展示阶段和记录Tick。原生颜色及成功／失败图标继续使用原生绘制。最新一次脚本刷新后Console返回0条错误；本批没有运行交互、内容Build、回放或资产迁移。提交一度被遗留空锁阻塞；确认该锁自18:57未变化、没有写入进程及持有句柄后，已备份到`.git/index.lock.stale-btsmtl-20260908-193632`并恢复正常提交，没有终止其他进程。
+
+## 本批小步提交
+
+| 提交 | 独立内容 |
+|---|---|
+| 00761c2aa | 原生图领域规则、Macro外部执行及观察绘制接口 |
+| ebc41bfcc | 技能作者图、状态页面、步骤编辑与闭包检查模块 |
+| ee557a353 | 输入／动作节点及已有Program操作发射合同 |
+| 87f16e650 | 浮点／定点技能根诊断generation |
+| 01f254500 | 节点生命周期读取及原生观察适配器 |
+
+共享编辑器文件只提交本任务的接口与绘制改动；其他任务的页面导航、连线下钻和Pose改动保留。后续按独立功能块及时提交，不再累计到完整迁移结束。以上提交不表示OpenSpec整项全部完成，正式图发现、Macro调用编译、完整实例定位、Document v6和最终迁移仍按任务表收口。
+
+浮点和定点SimulationTraceRecord新增SkillExecutionGeneration。现有Action trace作用域携带技能入口operation；写trace时从当前技能实例的根激活状态读取generation，退出作用域恢复之前的入口。该值与原操作Activation.Generation分别保留，不替换Gameplay状态或凭操作编号推测释放代次。两条诊断adapter均发布该字段；RuntimeDiagnosticsStore的payload差异判定同步包含技能身份、动作实例、调用点及两个generation。完整Macro调用范围仍须由编译来源补齐。
+
+诊断链仍有需要完成的身份工作：CharacterSimulationDiagnosticsAdapter当前以操作编号填充SkillExecution的CallSiteId，Payload.Status保存的是trace severity。不能直接把它当作整次子图调用身份或节点运行状态；需按编译调用范围及正式完成／中断事件补齐之后再接高亮，避免一个节点一次执行冒充整个技能实例。
 
 ## 实例观察入口接入中的第二小步
 

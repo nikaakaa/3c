@@ -242,7 +242,7 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | CharacterSimulationProgram／State／Kernel | 角色静态运行包、声明式控制状态、技能目录与实例执行 | 唯一角色 root handle、控制状态镜像、旧 ABI reader |
 | BtsmtlGraphAuthoringCapabilities 与 Editor 中央回调 | Flow、Skill、Timeline、参数／变量、领域叶子作者模块 | 原中央特例、旧角色图菜单、转发 alias |
 | Agent Package Codec／Reconciler／Planner | v5 分片模块＋唯一整包准备／事务 | v4 分支、角色图正文与局部 apply |
-| Action Workspace、Tree／Timeline窗口 | 技能工作区和共享 Shell | 假角色图页面、按模板混合多个实例的观察 |
+| Tree／Timeline窗口 | 技能编辑页面和共享 Shell | 假角色图页面、按模板混合多个实例的观察 |
 | 外层 Projection组装 | 保留现有内容模块，只替换技能producer来源与合同 | 角色State path决定动作producer的旧来源假设 |
 
 仅为技能服务的新增类型使用 Skill 前缀；ActionProfile／ActionInstance保留其策略与释放含义；CharacterSimulationProgram保留角色组合包含义。字段名、目录和文档必须与这些职责一致，不保留 obsolete forwarding type。AI／Pose复用的Graph基础不能按BTSMTL目录整块删除。已明确由独立预览change删除的旧播放器不能被本次重复实现或作为技能运行路径。

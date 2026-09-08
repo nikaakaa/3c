@@ -29,7 +29,6 @@ BTSMTL 的角色作者内容已明确收敛到技能，角色控制迁入 C#；�
 - `btsmtl-timeline-editor-preview`：窗口播放器改为正式技能或非 Skill 调用方的真实 Timeline 观察，消费各自实例身份和 TreeClip 阶段，保留技能同 Tick 顺序，区分作者游标、运行标记和历史位置。
 - `graph-authoring-editor-shell`：共享外壳承载场景操作及本地观察；技能、独立 Timeline、Pose 和其它仍保留的领域沿各自作者接口接入，C# 控制配置与代码来源不伪装成角色图。
 - `graph-authoring-domain-framework`：领域提供作者字段编辑资格与运行采用合同，保持技能、代码控制配置、Pose 和只读观察的边界。
-- `character-action-animation-authoring-workspace`：消费以 SkillDefinition 为根、Tree-only/多个/嵌套 Timeline 的工作区合同，增加受控场景中的精确 ActionInstance 观察。
 - `character-presentation-pose-graph`：真实 Actor 的 Pose Plan 和 World Context 替代独立 Fact Preview，保留 Actor 级观察与直接作者调参。
 - `character-pose-graph-runtime-architecture`：移除独立 Preview 装配和预览 seek 重置原因，使用真实 Actor 的正式参数、Fault 和 Dispose。
 - `character-animation-pipeline`：完整预览使用同一控制、动作、技能和表现链，保留唯一正式 Timeline、Pose Plan 与帧事务。

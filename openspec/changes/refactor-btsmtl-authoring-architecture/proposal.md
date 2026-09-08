@@ -47,7 +47,6 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 - `btsmtl-graph-core`：正式 Character 图作者范围变为技能，运行状态始终由编译后的实例存储拥有。
 - `graph-authoring-domain-framework`：共享框架装配技能、AI 和 Pose 等隔离领域，代码控制配置不伪装为角色图。
 - `graph-authoring-editor-shell`：窗口恢复、只读刷新和订阅生命周期继续保持明确边界。
-- `character-action-animation-authoring-workspace`：技能定义与子图导航、ActionInstance 观察及原有动画作者入口统一。
 - `btsmtl-agent-authoring-document-sync`：唯一 v5 技能／控制配置分片、严格对账和整包事务。
 - `btsmtl-ai-controller-authoring`：复用共享作者基础，继续只绑定正式 Character 输入合同。
 - `btsmtl-runtime-diagnostics`：区分 C# 控制来源、技能模板、子图调用点和具体 ActionInstance。
@@ -64,7 +63,7 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 ## Impact
 
 - 运行与构建：`Main/Runtime/Simulation/Core` 的 Program、Kernel、状态及共享控制执行模块；Numeric Target、Character Definition／Composition、编译 Frontend／Target Build、产品发布与现有网络 checkpoint 接入。
-- 作者与工具：BTSMTL Tree／Timeline、共享 Graph Framework、Action Workspace、Agent Document、Capability、Exporter／Reconciler／Mutation／Validator 及 `btsmtl-agent-authoring` 合同。
+- 作者与工具：BTSMTL Tree／Timeline、共享 Graph Framework、Agent Document、Capability、Exporter／Reconciler／Mutation／Validator 及 `btsmtl-agent-authoring` 合同。
 - 实施分工：本change的Agent Document、Agent工具窗口、五个MCP工具及对应作者技能由独立Agent作者工具任务承接，包括任务10.1–10.6及相关旧路径删除、结构说明和Document验证。原BTSMTL实现继续普通编译／运行／作者模块重构、共享合同、最终产物发布与全链Replay；完整change仍需两侧交付及统一集成验收，具体文件和交付归属见design第10节。
 - 数据迁移：正式可发布 Character composition 可达的角色控制图、技能图、装备入口和产物引用需要一次性迁移。保留业务稳定身份与作者引用；生成索引、ProgramHash、LayoutHash、EventId 来源映射及 ABI 可以随新结构变化，不要求跨 ABI 字节相同。
 - 保护范围：不改动已正确的 KCC、MotionWarp 数学、Pose／IK／Camera／渲染算法，不顺带修复 TrainingEnemy 的现有资产阻塞，也不实现尚缺的装备样例、网络装备业务或战斗 consumer。已存在的能力保留正式迁移接口；无效资产继续明确报错。

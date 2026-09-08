@@ -231,7 +231,7 @@
 
 #### Scenario: 从不同作者页面开始预览
 
-- **WHEN** 作者分别从 Timeline、Pose Graph、Blend Space 或 Action Workspace 请求完整角色预览
+- **WHEN** 作者分别从 Timeline、Pose Graph 或 Blend Space 请求完整角色预览
 - **THEN** 各入口 MUST使用同一场景预览合同和正式运行链
 - **AND** MUST不因页面不同而选择不同的角色执行器
 

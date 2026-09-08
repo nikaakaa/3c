@@ -269,8 +269,7 @@ Timeline 游标只编辑定位和浏览历史。试验重建经场景正式 Sess
 | 主重构 `character-control-runtime`、`btsmtl-skill-program-runtime`、Action服务合同 | 删除角色总控RootTree及外层Action/连招FSM；保留每技能Root和局部状态机 | 主重构拥有定义与迁移；预览只经输入、C#控制、唯一ActionInstance和技能执行链试验 |
 | `btsmtl-compiled-simulation-program`、`btsmtl-runtime-diagnostics` 的主重构delta | 新角色组合包、技能目录、代码/operation来源和完整状态identity | 主重构唯一拥有schema；本change消费发布和来源结果，预览检查见本change场景规范，不复制第二delta/schema |
 | `decouple-timeline-from-skill` 的独立内容根、运行与来源delta | 旧预览将 SessionHost/Actor、ActionInstance 和 Character Build 要求用于所有目标 | 本change限定其角色适用范围，非 Skill 消费 Timeline 正式内容根、调用方/播放identity/generation与只读观察；共用执行和独立运行仍归Timeline |
-| `character-action-animation-authoring-workspace` 当前“有限Action动画必须提供统一作者工作面” | 旧文将无Timeline和多Timeline视为错误 | 本change该重叠MODIFIED块完整采用主重构的技能上下文及所有场景；两份合并结果一致，不恢复唯一Timeline限制 |
-| 同工作区跨owner与实例上下文 | ActionProfile唯一策略、SkillDefinition拥有内容、运行实例与调用generation分离 | 保留主重构原文；场景预览只新增运行控制和真实观察 |
+| 共享编辑器跨owner与实例上下文 | ActionProfile唯一策略、SkillDefinition拥有内容、运行实例与调用generation分离 | 保留主重构原文；场景预览只新增运行控制和真实观察 |
 | `btsmtl-timeline-editor-preview` 的窗口session、target、隔离采样、seek与界面拆分条款 | 要求独立表现播放器、禁止Gameplay | 替换为正式技能/非 Skill 调用的场景运行观察，编辑游标/历史不执行，窗口只管理视图 |
 | 同spec的“Timeline Live Debug 必须显示真实 runtime membership” | 只认Graph/Node来源不足以覆盖代码控制和多技能调用 | 本change补齐消费主重构来源合同，保留原membership、时间、Follow/Pin等场景 |
 | 动画Pipeline/Layer/Selection、MM和Inertialization | 旧Action/Fact/Query fixture与非连续seek | 本change删除完整角色替代执行入口，保留正式算法、动作服务和每Actor状态 |

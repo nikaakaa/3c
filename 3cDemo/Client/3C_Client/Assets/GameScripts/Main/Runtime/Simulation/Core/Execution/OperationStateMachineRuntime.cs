@@ -25,6 +25,7 @@ namespace ThirdPersonSimulation
         void NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase);
         void NotifyStateTransition(OperationExecutionDescriptor machine, OperationHandle exitingState, OperationHandle targetState);
         void EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail);
+        void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
         string CurrentStateExecutionPath { get; }
         IDisposable PushStateScope(OperationHandle state, int exitCause);
         IDisposable PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride);
@@ -80,6 +81,7 @@ namespace ThirdPersonSimulation
                 if (initial == null || m_Host.Topology.Operation(initial.Target).Code != SimulationOperationCode.State)
                     return OperationExecutionResult.Failure;
                 active = initial.Target;
+                m_Host.TraceEdge(initial, true, true);
                 ActivateState(operation, activeSlot, active);
             }
 
@@ -94,6 +96,8 @@ namespace ThirdPersonSimulation
             }
             if (transition == null)
                 return OperationExecutionResult.Running;
+
+            m_Host.TraceEdge(transition, true, true);
 
             if (m_Host.DiagnosticsEnabled)
             {

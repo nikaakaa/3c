@@ -91,7 +91,7 @@ namespace ThirdPersonSimulation
                 request.ActorId,
                 request.Tick,
                 m_StateTransactions);
-            Trace.Begin(request.DiagnosticsEnabled, request.ValueTraceEnabled);
+            Trace.Begin(request.DiagnosticsEnabled, request.ValueTraceEnabled, request.ControlTraceEnabled);
         }
 
         public CharacterSimulationProgram Program { get; }
@@ -489,6 +489,8 @@ namespace ThirdPersonSimulation
     internal sealed class Float32TraceSink
     {
         readonly HashSet<(int Operation, string Port, ProgramValuePortDirection Direction)> m_ValuePorts = new();
+        readonly HashSet<string> m_EdgeIds = new(StringComparer.Ordinal);
+        readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32DiagnosticSequence m_Sequence;
@@ -499,25 +501,54 @@ namespace ThirdPersonSimulation
             m_Frame = frame;
             m_Sequence = sequence;
             foreach (ProgramSourceMapEntry source in frame.Program.SourceMap)
+            {
                 if (source.TargetKind == ProgramSourceTargetKind.OperationPort && source.ValuePortDirection != ProgramValuePortDirection.None)
                     m_ValuePorts.Add((source.TargetIndex, source.CompiledPortId, source.ValuePortDirection));
+                if (source.TargetKind == ProgramSourceTargetKind.Reference && !string.IsNullOrEmpty(source.EdgeId))
+                {
+                    ProgramControlFlowEdge edge = frame.Program.ControlFlow[source.TargetIndex];
+                    m_EdgeIds.Add(edge.Identity);
+                    if (edge.Kind == ProgramControlFlowKind.Value)
+                        m_ValueEdges.Add((edge.Target.Value, edge.TargetPort), edge);
+                }
+            }
         }
 
-        public void Begin(bool enabled, bool captureValues = false)
+        public void Begin(bool enabled, bool captureValues = false, bool captureControlFlow = false)
         {
             m_Enabled = enabled;
             CaptureValues = enabled && captureValues;
+            CaptureControlFlow = enabled && captureControlFlow;
             m_ValueSampleCount = 0;
             m_Sequence.Reset();
         }
 
         public bool Enabled => m_Enabled;
         public bool CaptureValues { get; private set; }
+        public bool CaptureControlFlow { get; private set; }
+
+        public void AddValueEdge(SimulationOperation target, string port)
+        {
+            if (CaptureControlFlow && m_ValueEdges.TryGetValue((target.Handle.Value, port), out ProgramControlFlowEdge edge))
+                AddControlFlow(edge, true, true);
+        }
+
+        public void AddControlFlow(ProgramControlFlowEdge edge, bool selected, bool passed)
+        {
+            if (!CaptureControlFlow || !m_EdgeIds.Contains(edge.Identity))
+                return;
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                m_Sequence.Next(m_Frame.Program.Operations[edge.Source.Value]), SimulationTraceSeverity.Detail, "Kernel.Flow",
+                selected ? "edge_selected" : "edge_evaluated", string.Empty,
+                m_Frame.CurrentActionTraceInstanceId, m_Frame.CurrentActionTraceSkillId, m_Frame.CurrentSkillTraceGeneration,
+                controlFlow: edge, controlFlowSelected: selected, controlFlowPassed: passed));
+        }
 
         public void End()
         {
             m_Enabled = false;
             CaptureValues = false;
+            CaptureControlFlow = false;
         }
 
         public void AddValue(SimulationOperation operation, string portId, ProgramValuePortDirection direction, in CharacterStateValue value)

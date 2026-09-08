@@ -2,6 +2,16 @@ using System;
 
 namespace ThirdPersonSimulation
 {
+    public interface IOperationControlEdgeTraceTarget
+    {
+        void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed);
+    }
+
+    public interface ISimulationControlTraceInterest
+    {
+        bool IsControlCaptureRequested(ActorId actorId);
+    }
+
     public enum OperationRunnableStatus : byte
     {
         Dormant = 0,
@@ -138,6 +148,7 @@ namespace ThirdPersonSimulation
         }
 
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
+        public bool IsPredictiveEvaluation => m_Runtime.IsPredictiveEvaluation;
         public OperationExecutionResult TickPersistent(OperationHandle operation) => m_Runtime.TickPersistent(operation);
         public void RequireExecution(OperationHandle operation) => m_Runtime.RequireExecution(operation);
         public OperationStopStatus RequestStop(OperationHandle operation, OperationStopContext context) => m_Runtime.RequestStop(operation, context);

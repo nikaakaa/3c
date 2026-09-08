@@ -5,13 +5,14 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics
 {
-    public sealed class CharacterSimulationDiagnosticsAdapter : ISimulationDiagnosticsSink, ISimulationValueTraceInterest
+    public sealed class CharacterSimulationDiagnosticsAdapter : ISimulationDiagnosticsSink, ISimulationValueTraceInterest, ISimulationControlTraceInterest
     {
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
         readonly string[] m_GraphInvocationPaths;
         readonly CharacterPortValueDiagnostics m_PortValues;
+        readonly CharacterControlFlowDiagnostics m_ControlEdges;
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
@@ -26,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
             m_PortValues = new CharacterPortValueDiagnostics(context, m_ExecutionId, program.SourceMap);
+            m_ControlEdges = new CharacterControlFlowDiagnostics(context, m_ExecutionId, program.SourceMap, program.ControlFlow);
             m_GraphInvocationPaths = new string[program.Operations.Count];
             for (int i = 0; i < program.SourceMap.Count; i++)
             {
@@ -66,6 +68,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         public RuntimeDiagnosticsContext Context => m_Context;
         public bool IsEnabled => m_Context.Store.EffectiveChannels != RuntimeTraceChannel.None;
         public bool IsValueCaptureRequested(ActorId actorId) => m_Context.Store.IsInterested(RuntimeTraceChannel.Values, RuntimeTraceEventKind.ValueSampled);
+        public bool IsControlCaptureRequested(ActorId actorId) =>
+            m_Context.Store.IsInterested(RuntimeTraceChannel.Graph, RuntimeTraceEventKind.EdgeSelected) ||
+            m_Context.Store.IsInterested(RuntimeTraceChannel.StateMachine, RuntimeTraceEventKind.StateTransitionSelected);
 
         public void PublishBoundary(SimulationBoundaryTraceRecord record)
         {
@@ -100,6 +105,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.ControlFlow != null)
+            {
+                m_ControlEdges.Publish(record.ControlFlow, record.ControlFlowSelected, record.ControlFlowPassed,
+                    record.SkillId, record.ActionInstanceId, record.SkillExecutionGeneration, record.Header.Activation.Generation);
+                return;
+            }
             if (record.Code == "value_sampling_limit")
             {
                 m_PortValues.PublishLimit(record.Detail);

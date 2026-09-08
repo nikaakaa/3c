@@ -689,7 +689,10 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId = 0,
             string skillId = "",
             ulong skillExecutionGeneration = 0,
-            SimulationValueTrace valueTrace = null)
+            SimulationValueTrace valueTrace = null,
+            ProgramControlFlowEdge controlFlow = null,
+            bool controlFlowSelected = false,
+            bool controlFlowPassed = false)
         {
             Header = header;
             Severity = severity;
@@ -700,6 +703,9 @@ namespace ThirdPersonSimulation
             SkillId = skillId ?? string.Empty;
             SkillExecutionGeneration = skillExecutionGeneration;
             ValueTrace = valueTrace;
+            ControlFlow = controlFlow;
+            ControlFlowSelected = controlFlowSelected;
+            ControlFlowPassed = controlFlowPassed;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -710,5 +716,8 @@ namespace ThirdPersonSimulation
         public string SkillId { get; }
         public ulong SkillExecutionGeneration { get; }
         public SimulationValueTrace ValueTrace { get; }
+        public ProgramControlFlowEdge ControlFlow { get; }
+        public bool ControlFlowSelected { get; }
+        public bool ControlFlowPassed { get; }
     }
 }

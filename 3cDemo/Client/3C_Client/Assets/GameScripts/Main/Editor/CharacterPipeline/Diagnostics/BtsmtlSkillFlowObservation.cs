@@ -126,10 +126,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : "此端口尚无值采集记录";
         }
 
-        public string GetConnectionText(string connectionId) =>
-            m_Edges.TryGetValue(connectionId, out RuntimeElementDebugState state)
-                ? $"{state.Kind} · Tick {state.Position}"
-                : m_CoverageGap ? "无保留记录；部分诊断记录已覆盖" : null;
+        public string GetConnectionText(string connectionId)
+        {
+            if (!m_Edges.TryGetValue(connectionId, out RuntimeElementDebugState state))
+                return m_CoverageGap ? "无保留记录；部分诊断记录已覆盖" : null;
+            string label = state.Kind is RuntimeTraceEventKind.EdgeEvaluated or RuntimeTraceEventKind.StateTransitionEvaluated
+                ? state.Payload.Flag ? "条件通过" : "条件未通过"
+                : state.Payload.Name == "Value" ? "值已读取" : "已选中经过";
+            return $"{label} · Tick {state.Position}";
+        }
 
         void OnChanged() => m_Dirty = true;
 

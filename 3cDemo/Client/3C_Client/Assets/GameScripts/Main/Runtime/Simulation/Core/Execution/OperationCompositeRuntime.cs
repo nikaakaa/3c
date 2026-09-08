@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
         int ReadInt32(int slotIndex);
         void WriteInt32(int slotIndex, int value);
         bool EvaluateCondition(ProgramControlFlowEdge edge);
-        OperationExecutionResult Tick(OperationHandle handle);
+        OperationExecutionResult TickEdge(ProgramControlFlowEdge edge);
         bool IsActive(OperationHandle handle);
         bool IsRunning(OperationHandle handle);
         bool IsStopping(OperationHandle handle);
@@ -36,7 +36,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
             if (children.Count != 1 || !EvaluateCondition(children[0]))
                 return OperationExecutionResult.Failure;
-            OperationExecutionResult child = m_Host.Tick(children[0].Target);
+            OperationExecutionResult child = m_Host.TickEdge(children[0]);
             if (operation.Integer0 == 1 && child == OperationExecutionResult.Success)
                 return OperationExecutionResult.Success;
             if (operation.Integer0 == 2 && child == OperationExecutionResult.Failure)
@@ -76,7 +76,7 @@ namespace ThirdPersonSimulation
                     }
                     return OperationExecutionResult.Failure;
                 }
-                OperationExecutionResult result = m_Host.Tick(edge.Target);
+                OperationExecutionResult result = m_Host.TickEdge(edge);
                 if (result == OperationExecutionResult.Running)
                 {
                     m_Host.WriteInt32(slot, cursor);
@@ -140,7 +140,7 @@ namespace ThirdPersonSimulation
                         return OperationExecutionResult.Failure;
                     return TickSelectorFrom(operation, children, slot, i);
                 }
-                OperationExecutionResult currentResult = m_Host.Tick(current.Target);
+                OperationExecutionResult currentResult = m_Host.TickEdge(current);
                 if (currentResult != OperationExecutionResult.Failure)
                     return currentResult;
                 cursor++;
@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation
                 }
                 if (operation.Integer0 == 0 && (completedMask & (1 << i)) != 0)
                     continue;
-                OperationExecutionResult result = m_Host.Tick(edge.Target);
+                OperationExecutionResult result = m_Host.TickEdge(edge);
                 if (result == OperationExecutionResult.Running)
                     running = true;
                 else if (operation.Integer0 == 0)
@@ -202,7 +202,7 @@ namespace ThirdPersonSimulation
             {
                 if (!EvaluateCondition(children[i]))
                     continue;
-                OperationExecutionResult result = m_Host.Tick(children[i].Target);
+                OperationExecutionResult result = m_Host.TickEdge(children[i]);
                 if (result == OperationExecutionResult.Failure)
                     continue;
                 m_Host.WriteInt32(cursorSlot, i);

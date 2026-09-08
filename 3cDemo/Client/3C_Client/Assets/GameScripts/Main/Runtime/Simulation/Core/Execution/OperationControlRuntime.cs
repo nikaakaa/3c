@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation
     {
         readonly OperationExecutionTopology m_Topology;
         readonly TTarget m_Target;
+        readonly IOperationControlEdgeTraceTarget m_EdgeTrace;
         readonly OperationControlCursor<TTarget> m_Cursor;
         readonly OperationStateMachineRuntime<TTarget> m_StateMachine;
         readonly OperationExecutionLifecycleRuntime<TTarget> m_Lifecycle;
@@ -23,6 +24,7 @@ namespace ThirdPersonSimulation
             if (maxExecutionCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxExecutionCount));
             m_Target = target;
+            m_EdgeTrace = target is IOperationControlEdgeTraceTarget edgeTrace ? edgeTrace : null;
             m_MaxExecutionCount = maxExecutionCount;
             m_Cursor = new OperationControlCursor<TTarget>(this);
             m_StateMachine = new OperationStateMachineRuntime<TTarget>(this);
@@ -31,6 +33,28 @@ namespace ThirdPersonSimulation
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;
+        public bool IsPredictiveEvaluation
+        {
+            get
+            {
+                foreach (StateExecutionContext context in m_StateExecution)
+                    if (context.HasRootCompletedOverride)
+                        return true;
+                return false;
+            }
+        }
+
+        public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed)
+        {
+            if (m_Target.DiagnosticsEnabled && !IsPredictiveEvaluation)
+                m_EdgeTrace?.TraceEdge(edge, selected, passed);
+        }
+
+        public OperationExecutionResult TickEdge(ProgramControlFlowEdge edge)
+        {
+            TraceEdge(edge, true, true);
+            return Tick(edge.Target);
+        }
         public void BeginEvaluation()
         {
             if (m_StateExecution.Count != 0 || m_Lifecycle.HasTransientState)
@@ -254,12 +278,14 @@ namespace ThirdPersonSimulation
             ProgramControlFlowEdge edge = children[0];
             if (!EvaluateCondition(edge))
                 return OperationExecutionResult.Failure;
-            return Tick(edge.Target);
+            return TickEdge(edge);
         }
 
         bool EvaluateCondition(ProgramControlFlowEdge edge)
         {
             bool result = !edge.HasCondition || m_Target.EvaluateCondition(m_Cursor, edge);
+            if (edge.HasCondition)
+                TraceEdge(edge, false, result);
             if (edge.HasCondition && m_Target.DiagnosticsEnabled)
             {
                 m_Target.EmitTrace(

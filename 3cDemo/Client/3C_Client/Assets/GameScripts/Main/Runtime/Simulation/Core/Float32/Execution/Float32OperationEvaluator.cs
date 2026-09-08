@@ -74,7 +74,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal readonly struct Float32OperationTarget : IOperationControlTarget<Float32OperationTarget>
+    internal readonly struct Float32OperationTarget : IOperationControlTarget<Float32OperationTarget>, IOperationControlEdgeTraceTarget
     {
         readonly Float32ProgramAccess m_Access;
         readonly Float32ControlStateAccess m_ControlState;
@@ -125,6 +125,7 @@ namespace ThirdPersonSimulation
 
         public int ReadInt32(int slotIndex) => m_ControlState.ReadInt32(slotIndex);
         public bool DiagnosticsEnabled => m_Trace.Enabled;
+        public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) => m_Trace.AddControlFlow(edge, selected, passed);
         public void WriteInt32(int slotIndex, int value) => m_ControlState.WriteInt32(slotIndex, value);
         public ulong ReadUInt64(int slotIndex) => m_ControlState.ReadUInt64(slotIndex);
         public void WriteUInt64(int slotIndex, ulong value) => m_ControlState.WriteUInt64(slotIndex, value);

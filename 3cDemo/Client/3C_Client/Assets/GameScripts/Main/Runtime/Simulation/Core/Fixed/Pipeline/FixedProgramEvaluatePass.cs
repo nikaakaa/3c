@@ -95,7 +95,9 @@ namespace ThirdPersonSimulation.Fixed
                             state.WorldState.Bodies[i],
                             readPorts.Diagnostics.Sink.IsEnabled,
                             readPorts.Diagnostics.Sink is ISimulationValueTraceInterest valueInterest &&
-                            valueInterest.IsValueCaptureRequested(actor.ActorId)));
+                            valueInterest.IsValueCaptureRequested(actor.ActorId),
+                            readPorts.Diagnostics.Sink is ISimulationControlTraceInterest controlInterest &&
+                            controlInterest.IsControlCaptureRequested(actor.ActorId)));
                     m_Pending[i] = evaluation;
                     m_Requests[i] = evaluation.WorldRequest;
                 }

@@ -15,6 +15,24 @@ namespace NodeCanvas.Editor
 
     public partial class GraphEditor : EditorWindow
     {
+        UnityEngine.UIElements.VisualElement domainPanel; // 3C: domain authoring tools share this editor's canvas.
+        float domainPanelWidth;
+
+        public void SetDomainPanel(UnityEngine.UIElements.VisualElement panel, float width) {
+            if (domainPanel == panel) { return; }
+            domainPanel?.RemoveFromHierarchy();
+            domainPanel = panel;
+            domainPanelWidth = panel != null ? width : 0;
+            if (panel != null) {
+                panel.style.position = UnityEngine.UIElements.Position.Absolute;
+                panel.style.right = 0;
+                panel.style.top = TOP_MARGIN;
+                panel.style.bottom = 0;
+                panel.style.width = width;
+                rootVisualElement.Add(panel);
+            }
+            Repaint();
+        }
 
         //the root graph that was first opened in the editor
         [System.NonSerialized]
@@ -84,6 +102,7 @@ namespace NodeCanvas.Editor
         ///----------------------------------------------------------------------------------------------
 
         public static event System.Action<Graph> onCurrentGraphChanged;
+        public static event System.Action onEditorClosed; // 3C: release domain editor sessions with the owning window.
 
         //The graph from which we start editing
         public static Graph rootGraph {
@@ -202,6 +221,7 @@ namespace NodeCanvas.Editor
 
         //...
         void OnDisable() {
+            onEditorClosed?.Invoke(); // 3C: detach authoring routers before clearing the active editor.
             current = null;
             welcomeShown = false;
             GraphEditorUtility.activeElement = null;
@@ -368,6 +388,8 @@ namespace NodeCanvas.Editor
             }
             GraphEditorUtility.activeElement = null;
             current.Repaint();
+            currentGraph = newGraph; // 3C: domain routing and panels must bind before the first canvas event.
+            current.OnCurrentGraphChanged();
         }
 
         ///<summary>Editor update</summary>
@@ -467,7 +489,8 @@ namespace NodeCanvas.Editor
             GraphEditorUtility.realMousePosition = e.mousePosition;
 
             //canvas and minimap rects
-            canvasRect = Rect.MinMaxRect(SIDE_MARGIN, TOP_MARGIN, position.width - SIDE_MARGIN, position.height - BOTTOM_MARGIN);
+            canvasRect = Rect.MinMaxRect(SIDE_MARGIN, TOP_MARGIN, position.width - SIDE_MARGIN - domainPanelWidth, position.height - BOTTOM_MARGIN); // 3C: reserve the domain panel outside the native canvas.
+            if (domainPanel != null) { GraphEditorUtility.allowClick = canvasRect.Contains(e.mousePosition); } // 3C: do not inherit another graph's inspector hit state.
             var aspect = canvasRect.width / canvasRect.height;
             minimapRect = Rect.MinMaxRect(canvasRect.xMax - ( Prefs.minimapSize * aspect ), canvasRect.yMax - Prefs.minimapSize, canvasRect.xMax - 2, canvasRect.yMax - 2);
             //canvas bg
@@ -1100,6 +1123,7 @@ namespace NodeCanvas.Editor
 
         //Snap all nodes to grid if option enabled
         static void SnapNodesAndGroupsToGrid(Graph graph) {
+            if (graph.usesDomainAuthoring) { return; } // 3C: the dragged node uses its domain mutation; other nodes keep their exact layout.
             if ( Prefs.snapToGrid ) {
                 for ( var i = 0; i < graph.allNodes.Count; i++ ) {
                     var node = graph.allNodes[i];
@@ -1285,6 +1309,7 @@ namespace NodeCanvas.Editor
 
         //Playmode gui
         void ShowPlaymodeGUI() {
+            if (!rootGraph.allowsEditorExecution) { return; } // 3C: Pose executes only through its compiled character runtime.
             if ( !Application.isPlaying || targetOwner == null ) { return; }
 
             var bWidth = 96;

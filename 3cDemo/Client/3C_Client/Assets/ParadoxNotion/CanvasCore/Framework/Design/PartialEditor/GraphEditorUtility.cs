@@ -23,6 +23,7 @@ namespace NodeCanvas.Editor
         public static int lastConnectionID { get; private set; }
         public static event System.Action PostGUI;
         public static event System.Action<IGraphElement> onActiveElementChanged;
+        public static event System.Action onSelectionChanged; // 3C: domain panels also observe multi-selection changes.
         private static WeakReference<IGraphElement> _activeElement = new WeakReference<IGraphElement>(null);
         private static WeakReferenceList<IGraphElement> _activeElements = new WeakReferenceList<IGraphElement>();
 
@@ -67,6 +68,7 @@ namespace NodeCanvas.Editor
                     }
                     UnityEditor.SceneView.RepaintAll();
                     onActiveElementChanged?.Invoke(value);
+                    onSelectionChanged?.Invoke(); // 3C
                 }
             }
         }
@@ -82,6 +84,7 @@ namespace NodeCanvas.Editor
                     value.Clear();
                 }
                 _activeElements = value != null ? value : new List<IGraphElement>();
+                onSelectionChanged?.Invoke(); // 3C
             }
         }
 
@@ -96,11 +99,13 @@ namespace NodeCanvas.Editor
         ///<summary>Adds an element to active elements</summary>
         public static void AddActiveElement(IGraphElement e) {
             _activeElements.Add(e);
+            onSelectionChanged?.Invoke(); // 3C
         }
 
         ///<summary>Removes and element from active elements</summary>
         public static void RemoveActiveElement(IGraphElement e) {
             _activeElements.Remove(e);
+            onSelectionChanged?.Invoke(); // 3C
         }
 
         ///----------------------------------------------------------------------------------------------

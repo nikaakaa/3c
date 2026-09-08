@@ -106,12 +106,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal sealed class CharacterLinkedPoseAuthoringWorkspacePresenter
     {
-        readonly CharacterPresentationPoseGraphEditorWindow m_Window;
+        readonly CharacterPoseGraphWorkspace m_Window;
         VisualElement m_Root;
         string m_SelectionId = string.Empty;
 
         public CharacterLinkedPoseAuthoringWorkspacePresenter(
-            CharacterPresentationPoseGraphEditorWindow window)
+            CharacterPoseGraphWorkspace window)
         {
             m_Window = window ?? throw new ArgumentNullException(nameof(window));
         }

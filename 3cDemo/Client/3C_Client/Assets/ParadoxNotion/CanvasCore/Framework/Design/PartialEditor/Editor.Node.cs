@@ -73,7 +73,9 @@ namespace NodeCanvas.Framework
             }
             private set
             {
-                _position = new Vector2(value.x, value.y);
+                if (!graph.usesDomainAuthoring || Event.current.rawType == EventType.MouseDrag) { // 3C: layout/repaint rounding must not move authored nodes.
+                    position = new Vector2(value.x, value.y);
+                }
                 size = new Vector2(Mathf.Max(value.width, MIN_SIZE.x), Mathf.Max(value.height, MIN_SIZE.y));
             }
         }
@@ -429,7 +431,7 @@ namespace NodeCanvas.Framework
 
             //Mouse up
             if ( e.type == EventType.MouseUp ) {
-                if ( node.nodeIsPressed ) {
+                if ( node.nodeIsPressed && (!node.graph.usesDomainAuthoring || e.rawType == EventType.MouseDrag) ) { // 3C: selection alone is not a layout edit.
                     node.TrySortConnectionsByRelativePosition();
                 }
                 if ( adjustingBoundCanvasGroups != null ) {
@@ -610,6 +612,7 @@ namespace NodeCanvas.Framework
 
         //basicaly handles the node position and draging etc
         static void HandleNodePosition(Node node, Event e) {
+            if (node.graph.isEditorReadOnly) { return; } // 3C: read-only domains still support selection and inspection.
 
             if ( GraphEditorUtility.allowClick && e.button != 2 ) {
                 //drag all selected nodes
@@ -748,6 +751,12 @@ namespace NodeCanvas.Framework
         static public void ShowNodeInspectorGUI(Node node) {
 
             UndoUtility.CheckUndo(node.graph, "Node Inspector");
+
+            if ( !node.useDefaultInspectorHeader ) { // 3C: domain inspectors own their registered fields and title.
+                node.OnNodeInspectorGUI();
+                UndoUtility.CheckDirty(node.graph);
+                return;
+            }
 
             GUI.backgroundColor = Colors.lightBlue;
             EditorGUILayout.HelpBox(node.description, MessageType.None);
@@ -1063,6 +1072,7 @@ namespace NodeCanvas.Framework
         virtual protected void OnNodeExternalGUI() { }
         ///<summary>Editor. Override to show controls within the inline inspector or leave it to show an automatic editor</summary>
         virtual protected void OnNodeInspectorGUI() { DrawDefaultInspector(); }
+        virtual protected bool useDefaultInspectorHeader => true; // 3C: avoid exposing unregistered metadata for domain nodes.
         ///<summary>Editor. Override to add more entries to the right click context menu of the node</summary>
         virtual protected GenericMenu OnContextMenu(GenericMenu menu) { return menu; }
 

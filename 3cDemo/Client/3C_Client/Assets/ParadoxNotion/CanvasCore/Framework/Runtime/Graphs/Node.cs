@@ -80,7 +80,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>The position of the node in the graph.</summary>
-        public Vector2 position {
+        public virtual Vector2 position { // 3C: authoring domains route position writes through their mutation owner.
             get { return _position; }
             set { _position = value; }
         }

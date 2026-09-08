@@ -447,8 +447,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 projection = candidate.PresentationProjection;
                 break;
             }
-            CharacterPresentationPoseGraphEditorWindow window =
-                CharacterPresentationPoseGraphEditorWindow.Open(
+            CharacterPoseGraphWorkspace window =
+                CharacterPoseGraphWorkspace.Open(
                     profile.PoseGraph,
                     profile,
                     projection,

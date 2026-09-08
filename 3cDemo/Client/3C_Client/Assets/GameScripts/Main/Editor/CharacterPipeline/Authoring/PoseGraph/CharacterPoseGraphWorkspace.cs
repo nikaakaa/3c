@@ -12,15 +12,82 @@ using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using TreeDesigner.Editor;
 using UnityEditor;
-using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed partial class CharacterPresentationPoseGraphEditorWindow : EditorWindow
+    public sealed partial class CharacterPoseGraphWorkspace : IDisposable
     {
+        static CharacterPoseGraphWorkspace s_Current;
+        const string SessionKey = "3C.PoseCanvas.Workspace.";
+        static bool s_Reloading;
+        NodeCanvas.Editor.GraphEditor m_Editor;
+        readonly VisualElement rootVisualElement = new VisualElement();
+        Rect position => m_Editor.position;
+        void Repaint() => m_Editor.Repaint();
+        void ShowNotification(GUIContent message) => m_Editor.ShowNotification(message);
+
+        [InitializeOnLoadMethod]
+        static void RegisterWorkspace()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload += () =>
+            {
+                s_Reloading = true;
+                s_Current?.Dispose();
+            };
+            EditorApplication.delayCall += RestoreWorkspace;
+        }
+
+        static void RestoreWorkspace()
+        {
+            string assetPath = SessionState.GetString(SessionKey + "Asset", string.Empty);
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+            var asset = AssetDatabase.LoadAssetAtPath<CharacterPresentationPoseGraphAsset>(assetPath);
+            var profile = AssetDatabase.LoadAssetAtPath<CharacterAnimationPresentationProfile>(SessionState.GetString(SessionKey + "Profile", string.Empty));
+            var projection = AssetDatabase.LoadAssetAtPath<CharacterPresentationProjectionAsset>(SessionState.GetString(SessionKey + "Projection", string.Empty));
+            var definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(SessionState.GetString(SessionKey + "Definition", string.Empty));
+            string page = SessionState.GetString(SessionKey + "Page", string.Empty);
+            string graphId = SessionState.GetString(SessionKey + "Graph", string.Empty);
+            string machineId = SessionState.GetString(SessionKey + "Machine", string.Empty);
+            string transitionId = SessionState.GetString(SessionKey + "Transition", string.Empty);
+            bool authoringOnly = string.IsNullOrEmpty(SessionState.GetString(SessionKey + "Definition", string.Empty));
+            if (!asset || !authoringOnly && (!profile || !projection || !definition || definition.AnimationPresentationProfile != profile || definition.PresentationProjection != projection))
+            {
+                SessionState.EraseString(SessionKey + "Asset");
+                Debug.LogWarning("Pose Canvas workspace context changed; reopen it from the exact Character Definition.");
+                return;
+            }
+            CharacterPoseGraphWorkspace workspace = authoringOnly ? OpenAuthoring(asset) : Open(asset, profile, projection, definition);
+            if (page == "graph" && asset.TryGetGraph(new PoseGraphId(graphId), out _))
+                workspace.FocusGraph(new PoseGraphId(graphId));
+            else if (page is "state" or "rule")
+            {
+                CharacterPoseStateMachineDefinition machine = asset.EnumerateStateMachines()
+                    .SingleOrDefault(value => value.StateMachineId.Value == machineId);
+                if (machine != null && page == "state")
+                    workspace.OpenStateMachine(machine, true);
+                else if (machine != null && machine.Transitions.Any(value => value.TransitionId.Value == transitionId))
+                    workspace.BindTransitionRule(machine, new PoseStateTransitionId(transitionId), true);
+                else
+                    workspace.ShowNotification(new GUIContent("保存的状态机页面已失效，请重新选择。"));
+            }
+        }
+
+        void SaveWorkspace()
+        {
+            SessionState.SetString(SessionKey + "Asset", AssetDatabase.GetAssetPath(m_Asset));
+            SessionState.SetString(SessionKey + "Profile", AssetDatabase.GetAssetPath(m_Profile));
+            SessionState.SetString(SessionKey + "Projection", AssetDatabase.GetAssetPath(m_Projection));
+            SessionState.SetString(SessionKey + "Definition", AssetDatabase.GetAssetPath(m_Definition));
+            SessionState.SetString(SessionKey + "Page", m_ShowingTransitionRule ? "rule" : m_ShowingStateMachine ? "state" : "graph");
+            SessionState.SetString(SessionKey + "Graph", m_CurrentGraphId);
+            SessionState.SetString(SessionKey + "Machine", m_ShowingTransitionRule ? m_RuleDocument.Machine.StateMachineId.Value : m_StateMachineDocument?.Definition.StateMachineId.Value ?? string.Empty);
+            SessionState.SetString(SessionKey + "Transition", m_RuleDocument?.TransitionId.Value ?? string.Empty);
+        }
+
         const string WorkspaceVisualTreePath =
             "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.uxml";
         const string WorkspaceStylePath =
@@ -32,8 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [SerializeField] CharacterPipelineDefinition m_Definition;
         [SerializeField] string m_CurrentGraphId = string.Empty;
 
-        CharacterPoseCanvasView m_Canvas;
-        CharacterPoseCanvasView m_StateMachineSurface;
+        CharacterPoseCanvasBinding m_Canvas;
+        CharacterPoseCanvasBinding m_StateMachineSurface;
         GraphAuthoringDetailsRegion m_Details;
         GraphAuthoringNavigatorPresenter m_Navigator;
         GraphAuthoringBreadcrumbHost m_BreadcrumbHost;
@@ -74,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal bool IsLinkedPoseReadOnly => m_LiveDebugToggle != null && m_LiveDebugToggle.value;
         internal string LinkedPoseWorkspaceStatus => m_LinkedPoseWorkspaceStatus;
 
-        public static CharacterPresentationPoseGraphEditorWindow Open(
+        public static CharacterPoseGraphWorkspace Open(
             CharacterAnimationPresentationProfile profile)
         {
             if (!profile || !profile.PoseGraph || !profile.RigDefinition)
@@ -107,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 definition);
         }
 
-        public static CharacterPresentationPoseGraphEditorWindow Open(
+        public static CharacterPoseGraphWorkspace Open(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationPresentationProfile profile,
             CharacterPresentationProjectionAsset projection,
@@ -122,13 +189,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Character Definition does not own the selected Presentation Profile.");
             if (definition.PresentationProjection != projection)
                 throw new InvalidOperationException("Character Definition does not own the selected Presentation Projection.");
-            CharacterPresentationPoseGraphEditorWindow window = GetWindow<CharacterPresentationPoseGraphEditorWindow>();
-            window.minSize = new Vector2(1280f, 760f);
-            window.titleContent = new GUIContent("Presentation Pose Graph");
-            window.SetDocument(asset, profile, projection, definition);
-            window.Show();
-            window.Focus();
-            return window;
+            return CreateWorkspace(asset, profile, projection, definition);
+        }
+
+        internal static CharacterPoseGraphWorkspace OpenAuthoring(CharacterPresentationPoseGraphAsset asset)
+        {
+            if (!asset || asset.Graph == null || !asset.Graph.GraphId.IsValid)
+                throw new ArgumentException("Pose Graph has no valid authoring graph.", nameof(asset));
+            return CreateWorkspace(asset, null, null, null);
+        }
+
+        static CharacterPoseGraphWorkspace CreateWorkspace(CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile, CharacterPresentationProjectionAsset projection, CharacterPipelineDefinition definition)
+        {
+            s_Current?.Dispose();
+            NodeCanvas.Editor.GraphEditor editor = NodeCanvas.Editor.GraphEditor.OpenWindow(asset.Graph);
+            editor.minSize = new Vector2(1000f, 680f);
+            var workspace = new CharacterPoseGraphWorkspace { m_Editor = editor };
+            s_Current = workspace;
+            workspace.SetDocument(asset, profile, projection, definition);
+            workspace.CreateGUI();
+            editor.SetDomainPanel(workspace.rootVisualElement, 430f);
+            NodeCanvas.Editor.GraphEditorUtility.onSelectionChanged += workspace.PublishSelection;
+            NodeCanvas.Editor.GraphEditor.onEditorClosed += workspace.Dispose;
+            EditorApplication.projectChanged += workspace.OnAuthoringAssetsChanged;
+            return workspace;
         }
 
         public void CreateGUI()
@@ -153,11 +238,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             VisualElement canvasHost = Require("pose-graph-content");
             VisualElement detailsHost = Require("pose-details-content");
 
-            m_Canvas = new CharacterPoseCanvasView
+            m_Canvas = new CharacterPoseCanvasBinding
             {
                 name = "tree-view"
             };
-            m_StateMachineSurface = new CharacterPoseCanvasView();
+            m_StateMachineSurface = new CharacterPoseCanvasBinding();
             m_StateMachineSurface.style.display = DisplayStyle.None;
             m_Details = new GraphAuthoringDetailsRegion
             {
@@ -192,13 +277,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Title = rootVisualElement.Q<Label>("pose-document-title");
             m_Status = rootVisualElement.Q<Label>("pose-authoring-status");
             toolbar.Add(new Button(ValidateAuthoring) { text = "Validate" });
-            toolbar.Add(new Button(CompileSemanticIr) { text = "Compile" });
-            toolbar.Add(new Button(BuildDefinition) { text = "Build" });
+            toolbar.Add(new Button(SaveAuthoring) { text = "保存" });
+            var compile = new Button(CompileSemanticIr) { text = "Compile" };
+            var build = new Button(BuildDefinition) { text = "Build" };
+            compile.SetEnabled(m_Definition != null);
+            build.SetEnabled(m_Definition != null);
+            toolbar.Add(compile);
+            toolbar.Add(build);
             m_LiveDebugToggle = new ToolbarToggle
             {
                 text = "Live"
             };
             m_LiveDebugToggle.RegisterValueChangedCallback(evt => SetLiveDebug(evt.newValue));
+            m_LiveDebugToggle.SetEnabled(m_Definition != null);
+            previewHost.SetEnabled(m_Definition != null);
             toolbar.Add(m_LiveDebugToggle);
             toolbar.Add(m_PreviewPanel.TargetField);
 
@@ -219,8 +311,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             BindCurrentGraph(true);
         }
 
-        void OnDisable()
+        public void Dispose()
         {
+            if (!s_Reloading && s_Current == this)
+                SessionState.EraseString(SessionKey + "Asset");
+            NodeCanvas.Editor.GraphEditorUtility.onSelectionChanged -= PublishSelection;
+            NodeCanvas.Editor.GraphEditor.onEditorClosed -= Dispose;
+            EditorApplication.projectChanged -= OnAuthoringAssetsChanged;
+            m_Editor?.SetDomainPanel(null, 0f);
+            m_Canvas?.Dispose();
+            m_StateMachineSurface?.Dispose();
+            rootVisualElement.RemoveFromHierarchy();
+            if (s_Current == this)
+                s_Current = null;
             m_UndoBinding?.Dispose();
             m_UndoBinding = null;
             m_SelectionBinding?.Dispose();
@@ -278,6 +381,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             OpenGraph(graphId);
         }
 
+        internal static void OpenNodeChild(CharacterPoseCanvasNode node)
+        {
+            if (s_Current == null || s_Current.m_Document == null ||
+                !s_Current.m_Document.Graph.Nodes.Contains(node))
+                throw new InvalidOperationException("Open the Pose Graph with its authoring workspace to navigate child documents.");
+            GraphAuthoringNodeProjection projection = s_Current.m_Document.Nodes.Single(value => value.NodeId.Value == node.NodeId.Value);
+            GraphAuthoringCapabilityDescriptor capability = CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Capability;
+            if (capability.ChildSurfaces.Count != 0)
+                s_Current.OpenChildSurface(projection, capability.ChildSurfaces[0]);
+        }
+
+        internal static void HandleGraphSelection(NodeCanvas.Framework.Graph graph)
+        {
+            CharacterPoseGraphWorkspace workspace = s_Current;
+            if (workspace == null)
+                return;
+            if (graph is CharacterPoseCanvasGraph pose && workspace.m_Asset.TryGetGraph(pose.GraphId, out CharacterPoseCanvasGraph owned) && owned == pose)
+            {
+                if (workspace.m_CurrentGraphId != pose.GraphId.Value || workspace.m_ShowingStateMachine || workspace.m_ShowingTransitionRule)
+                    workspace.FocusGraph(pose.GraphId);
+                workspace.m_Canvas?.SetRuntimeReadOnly(workspace.m_LiveDebugToggle != null && workspace.m_LiveDebugToggle.value);
+            }
+            else if (graph != workspace.m_Canvas?.Graph && graph != workspace.m_StateMachineSurface?.Graph)
+                workspace.Dispose();
+        }
+
+        void SaveAuthoring()
+        {
+            foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs())
+                graph.SelfSerialize();
+            AssetDatabase.SaveAssetIfDirty(m_Asset);
+            if (m_Profile)
+                AssetDatabase.SaveAssetIfDirty(m_Profile);
+            RefreshPublishedStatus();
+        }
+
         void BindCurrentGraph(bool resetPages = false)
         {
             if (m_Canvas == null || !m_Asset || m_Asset.Graph == null)
@@ -305,8 +444,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_PreviewPanel.TryApplySelectionTuning);
             m_Mutation.ReadOnly =
                 m_LiveDebugToggle != null && m_LiveDebugToggle.value;
-            m_RuntimeTrace =
-                new CharacterPoseRuntimeTraceProjection(m_Asset, m_Projection);
+            m_RuntimeTrace = m_Projection ? new CharacterPoseRuntimeTraceProjection(m_Asset, m_Projection) : null;
             GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphAuthoringCapabilities.Catalog;
             m_Canvas.BindProjection(
                 new GraphAuthoringProjectionCanvasBinding(
@@ -331,7 +469,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Details.style.display = DisplayStyle.Flex;
             m_LinkedPoseDetails.style.display = DisplayStyle.None;
             m_Navigator.Bind(m_Document, new NavigatorDataSource(this));
-            m_PreviewPanel.Rebind(m_Document);
+            if (m_Definition)
+                m_PreviewPanel.Rebind(m_Document);
             m_Title.text = $"{m_Asset.name} / {graphDisplayName}";
             RefreshLinkedPoseWorkspaceStatus();
             m_LastContentRevision = graph.ContentRevision;
@@ -441,8 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPoseTransitionRuleOperationFactory
                         .Create(ruleKind);
                 Vector2 rulePosition =
-                    m_Canvas.contentViewContainer.WorldToLocal(
-                        screenPosition - position.position);
+                    screenPosition;
                 m_Canvas.CreateNode(
                     capability.CapabilityId,
                     operation,
@@ -464,7 +602,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseNodePayload payload =
                 definition.CreateDefaultPayload();
             var node = new CharacterPoseCanvasNode(new PoseNodeId(Guid.NewGuid().ToString("N")), capability.DisplayName, payload);
-            Vector2 graphPosition = m_Canvas.contentViewContainer.WorldToLocal(screenPosition - position.position);
+            Vector2 graphPosition = screenPosition;
             m_Canvas.CreateNode(capability.CapabilityId, node, graphPosition);
             m_Status.text =
                 "Authoring changed · published Projection is Stale until explicit Build.";
@@ -903,8 +1041,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             var menu = new GenericMenu();
             Vector2 graphPosition =
-                m_StateMachineSurface.contentViewContainer.WorldToLocal(
-                    screenPosition - position.position);
+                screenPosition;
             menu.AddItem(
                 new GUIContent("State"),
                 false,
@@ -1171,6 +1308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void RenderBreadcrumb()
         {
+            SaveWorkspace();
             m_BreadcrumbHost?.Render(
                 m_PageStack.Pages.Select(page =>
                     new GraphAuthoringBreadcrumbEntry(
@@ -1391,50 +1529,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                        ?.Name ?? string.Empty;
         }
 
-        static void AddValidationHighlight(
-            CharacterPoseCanvasView canvas,
-            GraphAuthoringElementId elementId,
-            string portName = "")
-        {
-            if (canvas == null)
-                return;
-            foreach (GraphElement element in canvas.graphElements)
-            {
-                if (string.Equals(
-                        element.viewDataKey,
-                        elementId.Value,
-                        StringComparison.Ordinal))
-                    continue;
-                element.AddToClassList("pose-validation-error");
-                if (string.IsNullOrEmpty(portName))
-                    continue;
-                foreach (Port port in element.Query<Port>().ToList())
-                {
-                    if (string.Equals(
-                            port.portName,
-                            portName,
-                            StringComparison.Ordinal))
-                        port.AddToClassList("pose-validation-error");
-                }
-            }
-        }
+        static void AddValidationHighlight(CharacterPoseCanvasBinding canvas, GraphAuthoringElementId elementId, string portName = "") =>
+            canvas?.Highlight(elementId, portName);
 
         void ClearValidationHighlights()
         {
-            ClearValidationHighlights(m_Canvas);
-            ClearValidationHighlights(m_StateMachineSurface);
-        }
-
-        static void ClearValidationHighlights(
-            CharacterPoseCanvasView canvas)
-        {
-            if (canvas == null)
-                return;
-            foreach (VisualElement element in
-                     canvas.Query<VisualElement>(
-                         className:
-                         "pose-validation-error").ToList())
-                element.RemoveFromClassList("pose-validation-error");
+            m_Canvas?.ClearHighlights();
+            m_StateMachineSurface?.ClearHighlights();
         }
 
         void BuildDefinition()
@@ -1462,6 +1563,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!m_Asset)
                 return;
+            GraphAuthoringSelection[] selection = (m_ShowingStateMachine ? m_StateMachineSurface : m_Canvas).GetStableSelection().ToArray();
             if (m_ShowingTransitionRule &&
                 m_RuleDocument != null)
             {
@@ -1481,6 +1583,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 BindCurrentGraph(false);
             }
+            (m_ShowingStateMachine ? m_StateMachineSurface : m_Canvas).RestoreSelection(selection);
+        }
+
+        void OnAuthoringAssetsChanged()
+        {
+            if (!m_Asset)
+                return;
+            string revision = m_ShowingTransitionRule ? m_RuleDocument.ContentRevision
+                : m_ShowingStateMachine ? m_StateMachineDocument.ContentRevision
+                : m_Asset.RequireGraph(new PoseGraphId(m_CurrentGraphId)).ContentRevision;
+            if (revision != m_LastContentRevision || !m_ShowingStateMachine && !m_ShowingTransitionRule &&
+                m_Canvas.Graph != m_Asset.RequireGraph(new PoseGraphId(m_CurrentGraphId)))
+                Reload();
+            else if (m_ShowingStateMachine)
+                m_StateMachineSurface.PopulateStateMachine();
         }
 
         void ReloadAfterUndoRedo()
@@ -1533,7 +1650,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal void RefreshRuntimeHighlight()
         {
-            CharacterPoseCanvasView canvas = m_ShowingStateMachine
+            CharacterPoseCanvasBinding canvas = m_ShowingStateMachine
                 ? m_StateMachineSurface
                 : m_Canvas;
             if (canvas == null)
@@ -1584,15 +1701,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                 }
             }
-            foreach (GraphElement element in canvas.graphElements)
-            {
-                bool isActive = !string.IsNullOrEmpty(
-                                    element.viewDataKey) &&
-                                active.Contains(element.viewDataKey);
-                element.EnableInClassList(
-                    "pose-runtime-active",
-                    isActive);
-            }
+            canvas.SetActiveElements(active);
         }
 
         internal bool TryGetPublishedPosePlan(
@@ -1851,8 +1960,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 OpenGraph(graphId);
                 return;
             }
-            CharacterPresentationPoseGraphEditorWindow window =
-                CharacterPresentationPoseGraphEditorWindow.Open(
+            CharacterPoseGraphWorkspace window =
+                CharacterPoseGraphWorkspace.Open(
                     graphOwner,
                     m_Profile,
                     m_Projection,
@@ -1931,8 +2040,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         sealed class NavigatorDataSource : IGraphAuthoringNavigatorDataSource
         {
-            readonly CharacterPresentationPoseGraphEditorWindow m_Window;
-            public NavigatorDataSource(CharacterPresentationPoseGraphEditorWindow window) => m_Window = window;
+            readonly CharacterPoseGraphWorkspace m_Window;
+            public NavigatorDataSource(CharacterPoseGraphWorkspace window) => m_Window = window;
 
             public IReadOnlyList<GraphAuthoringNavigatorItem> GetItems(
                 IGraphAuthoringDocumentProjection document)

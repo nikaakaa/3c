@@ -19,6 +19,9 @@ namespace NodeCanvas.Framework
     ///<summary>This is the base and main class of NodeCanvas and graphs. All graph System are deriving from this.</summary>
     [System.Serializable]
     abstract public partial class Graph : ScriptableObject, ITaskSystem, ISerializationCallbackReceiver
+#if UNITY_EDITOR
+        , ParadoxNotion.Design.IEditorUndoTarget // 3C: only authoring views redirect framework undo.
+#endif
     {
         ///<summary>Update mode of the graph (see 'StartGraph')</summary>
         public enum UpdateMode
@@ -66,6 +69,9 @@ namespace NodeCanvas.Framework
 
         ///<summary>Serialize the Graph. Return if serialization changed</summary>
         public bool SelfSerialize() {
+#if UNITY_EDITOR
+            if (!persistsEditorGraph) { return false; } // 3C: document projections have no separate serialized topology.
+#endif
 
             //if something went wrong on deserialization, dont serialize back, but rather keep what we had until a deserialization attempt is successful.
             if ( _haltSerialization ) {

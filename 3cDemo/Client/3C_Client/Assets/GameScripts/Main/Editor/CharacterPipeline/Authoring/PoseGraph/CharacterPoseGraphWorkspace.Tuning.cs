@@ -5,7 +5,7 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed partial class CharacterPresentationPoseGraphEditorWindow
+    public sealed partial class CharacterPoseGraphWorkspace
     {
         string m_LastPublishedPoseGraphRevision = string.Empty;
         string m_TuningOnlyAuthoringFingerprint = string.Empty;

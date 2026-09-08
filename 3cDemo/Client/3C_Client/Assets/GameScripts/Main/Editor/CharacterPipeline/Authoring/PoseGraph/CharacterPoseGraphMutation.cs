@@ -1003,6 +1003,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public interface ICharacterPresentationMutationOwner
     {
         UnityEngine.Object SerializedOwner { get; }
+        IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction);
         CharacterPoseCanvasGraph RequirePoseGraph(string graphId);
         void ReplacePoseGraph(CharacterPoseCanvasGraph graph);
         void ApplyGraphCatalogMutation(CharacterPresentationMutation mutation);
@@ -1018,13 +1019,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentNullException(nameof(owner));
             if (transaction == null || transaction.Mutations.Count == 0)
                 throw new ArgumentException("Presentation mutation transaction is empty.", nameof(transaction));
+            if (transaction.Mutations.All(IsPoseGraphMutation))
+            {
+                ApplyGraphMutationsInPlace(owner, transaction);
+                return;
+            }
             int undoGroup = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName(transaction.DisplayName);
-            Undo.RegisterCompleteObjectUndo(owner.SerializedOwner, transaction.DisplayName);
+            UnityEngine.Object[] owners = owner.GetTransactionOwners(transaction).Distinct().ToArray();
+            foreach (CharacterPoseCanvasGraph graph in owners.OfType<CharacterPoseCanvasGraph>())
+                graph.SelfSerialize();
+            Undo.RegisterCompleteObjectUndo(owners, transaction.DisplayName);
             try
             {
                 ApplyWithoutUndo(owner, transaction);
-                EditorUtility.SetDirty(owner.SerializedOwner);
+                foreach (UnityEngine.Object target in owners)
+                {
+                    if (target is CharacterPoseCanvasGraph graph)
+                        graph.SelfSerialize();
+                    EditorUtility.SetDirty(target);
+                }
                 Undo.CollapseUndoOperations(undoGroup);
             }
             catch
@@ -1085,6 +1099,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     nameof(transaction));
             int undoGroup = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName(transaction.DisplayName);
+            var candidates = new List<(CharacterPoseCanvasGraph Current, CharacterPoseCanvasGraph Next)>();
+            bool recorded = false;
             try
             {
                 foreach (IGrouping<string, CharacterPresentationMutation> group in
@@ -1093,28 +1109,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     CharacterPoseCanvasGraph current =
                         owner.RequirePoseGraph(group.Key);
-                    Undo.RegisterCompleteObjectUndo(current, transaction.DisplayName);
                     CharacterPoseCanvasGraph next =
                         ApplyPoseGraph(current, group.ToArray());
-                    current.SetAuthoring(
-                        next.GraphId,
-                        next.ContentRevision,
-                        next.Parameters.ToArray(),
-                        next.Nodes.ToArray(),
-                        next.Edges.ToArray());
-                    IReadOnlyList<CharacterPoseGraphLayoutEntry> layout = next.Layout;
-                    for (int i = 0; i < layout.Count; i++)
-                        current.SetNodePosition(layout[i].NodeId, layout[i].Position);
-                    owner.ReplacePoseGraph(current);
-                    EditorUtility.SetDirty(current);
+                    candidates.Add((current, next));
+                }
+                foreach (var candidate in candidates)
+                {
+                    candidate.Current.SelfSerialize();
+                    Undo.RegisterCompleteObjectUndo(candidate.Current, transaction.DisplayName);
+                    recorded = true;
+                    candidate.Current.ApplyAuthoringState(candidate.Next);
+                    candidate.Current.SelfSerialize();
+                    EditorUtility.SetDirty(candidate.Current);
                 }
                 EditorUtility.SetDirty(owner.SerializedOwner);
                 Undo.CollapseUndoOperations(undoGroup);
             }
             catch
             {
-                Undo.RevertAllDownToGroup(undoGroup);
+                if (recorded)
+                    Undo.RevertAllDownToGroup(undoGroup);
                 throw;
+            }
+            finally
+            {
+                foreach (var candidate in candidates)
+                    UnityEngine.Object.DestroyImmediate(candidate.Next);
             }
         }
 

@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     sealed class CharacterPosePreviewViewport :
         CharacterPoseReadOnlyPanel
     {
-        readonly CharacterPresentationPoseGraphEditorWindow m_Window;
+        readonly CharacterPoseGraphWorkspace m_Window;
         readonly VisualElement m_PreviewFrame = new VisualElement();
         readonly IMGUIContainer m_PreviewRender = new IMGUIContainer();
         readonly DropdownField m_TargetField =
@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         string m_LinkedPoseCatalogKey = string.Empty;
 
         public CharacterPosePreviewViewport(
-            CharacterPresentationPoseGraphEditorWindow window)
+            CharacterPoseGraphWorkspace window)
         {
             m_Window = window ??
                 throw new ArgumentNullException(nameof(window));

@@ -30,6 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public UnityEngine.Object SerializedOwner => m_Profile;
+        public IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction) =>
+            new UnityEngine.Object[] { m_Profile };
 
         public CharacterPoseCanvasGraph RequirePoseGraph(string graphId) =>
             m_Profile.PoseGraph
@@ -540,6 +542,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public UnityEngine.Object SerializedOwner => m_Asset;
+        public IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction)
+        {
+            var owners = new HashSet<string>(transaction.Mutations
+                .Where(value => value is not SetPoseStateMachineLayoutElementMutation && value is not RemovePoseStateMachineLayoutElementMutation)
+                .Select(value => value.OwnerId), StringComparer.Ordinal);
+            return new UnityEngine.Object[] { m_Asset }.Concat(m_Asset.EnumerateGraphs()
+                .Where(graph => graph.Nodes.Any(node => node.Payload is CharacterPoseStateMachineNodePayload payload &&
+                    payload.StateMachine != null && owners.Contains(payload.StateMachine.StateMachineId.Value))))
+                .ToArray();
+        }
+
+        internal static (PoseGraphId GraphId, PoseNodeId NodeId) ResolveStateMachineOwner(
+            CharacterPresentationPoseGraphAsset asset, PoseStateMachineId id)
+        {
+            var matches = asset.EnumerateGraphs().SelectMany(graph => graph.Nodes
+                .Where(node => node.Payload is CharacterPoseStateMachineNodePayload payload &&
+                    payload.StateMachine != null && payload.StateMachine.StateMachineId.Equals(id))
+                .Select(node => (GraphId: graph.GraphId, NodeId: node.NodeId))).ToArray();
+            if (matches.Length != 1)
+                throw new InvalidOperationException($"Pose StateMachine '{id}' must have exactly one owning node.");
+            return matches[0];
+        }
         internal CharacterAnimationPresentationProfile Profile => m_Profile;
         public CharacterPoseCanvasGraph RequirePoseGraph(string graphId) => m_Asset.RequireGraph(new PoseGraphId(graphId));
         public void ReplacePoseGraph(CharacterPoseCanvasGraph graph)
@@ -765,6 +789,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .ToArray(),
                 aliases.OrderBy(value => value.AliasId).ToArray(),
                 maxTransitionsPerFrame);
+            var location = ResolveStateMachineOwner(m_Asset, machine.StateMachineId);
+            CharacterPoseCanvasGraph ownerGraph = m_Asset.RequireGraph(location.GraphId);
+            ownerGraph.SetAuthoring(ownerGraph.GraphId, Guid.NewGuid().ToString("N"), ownerGraph.Parameters.ToArray(),
+                ownerGraph.Nodes.ToArray(), ownerGraph.Edges.ToArray());
             if (mutation is CreatePoseTransitionMutation created)
             {
                 CharacterPoseStateTransition applied = machine.Transitions.Single(value =>

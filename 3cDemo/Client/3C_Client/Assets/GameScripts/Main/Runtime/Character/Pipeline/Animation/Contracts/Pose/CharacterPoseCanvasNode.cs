@@ -34,8 +34,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override string name
         {
             get => string.IsNullOrWhiteSpace(m_DisplayName) ? Kind.ToString() : m_DisplayName;
-            set => m_DisplayName = value ?? string.Empty;
+            set
+            {
+#if UNITY_EDITOR
+                if (graph is CharacterPoseCanvasGraph owner && owner.EditorWriteRouter != null)
+                {
+                    if (!string.Equals(m_DisplayName, value, StringComparison.Ordinal))
+                        owner.EditorWriteRouter.RenameNode(this, value);
+                    return;
+                }
+#endif
+                m_DisplayName = value ?? string.Empty;
+            }
         }
+
+        public override Vector2 position
+        {
+            get => base.position;
+            set
+            {
+                if (base.position == value)
+                    return;
+#if UNITY_EDITOR
+                if (graph is CharacterPoseCanvasGraph owner && owner.EditorWriteRouter != null)
+                {
+                    owner.EditorWriteRouter.MoveNode(this, value);
+                    return;
+                }
+#endif
+                base.position = value;
+            }
+        }
+
+        internal void SetAuthoringPosition(Vector2 value) => base.position = value;
 
         public override int maxInConnections => -1;
         public override int maxOutConnections => -1;
@@ -188,6 +219,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 position);
 
 #if UNITY_EDITOR
+        protected override bool useDefaultInspectorHeader => false;
+        protected override UnityEditor.GenericMenu OnContextMenu(UnityEditor.GenericMenu menu) =>
+            PoseCanvasEditorBridge.ContextMenu?.Invoke(this) ?? menu;
+
+        protected override void OnNodeGUI() => PoseCanvasEditorBridge.BodyGUI?.Invoke(this);
+        protected override void OnNodePicked()
+        {
+            if (Event.current.clickCount == 2)
+                PoseCanvasEditorBridge.ChildSurface?.Invoke(this);
+        }
+
+        protected override void DrawNodeConnections(Rect canvas, bool fullDrawPass, Vector2 mouse, float zoom) =>
+            PoseCanvasEditorBridge.ConnectionsGUI?.Invoke(this, canvas, fullDrawPass, mouse, zoom);
+
+        public override void OnActiveRelinkEnd(Connection connection) =>
+            PoseCanvasEditorBridge.RelinkGUI?.Invoke(this, connection);
+
         protected override void OnNodeInspectorGUI()
         {
             System.Action<CharacterPoseCanvasNode> handler =
@@ -197,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 handler(this);
                 return;
             }
-            base.OnNodeInspectorGUI();
+            throw new InvalidOperationException("Pose Canvas editor hooks are not registered.");
         }
 #endif
     }

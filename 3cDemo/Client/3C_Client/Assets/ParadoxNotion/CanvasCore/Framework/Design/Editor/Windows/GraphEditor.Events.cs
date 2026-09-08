@@ -77,6 +77,7 @@ namespace NodeCanvas.Editor
                 }
 
                 if ( e.type == EventType.ExecuteCommand ) {
+                    if (graph.HandleEditorCommand(e.commandName, canvasMousePos)) { e.Use(); return; } // 3C: domain edits are atomic authoring commands.
 
                     //COPY/CUT
                     if ( e.commandName == "Copy" || e.commandName == "Cut" ) {

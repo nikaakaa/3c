@@ -64,6 +64,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TargetPortId = targetPortId.Value;
             m_SourceNodeId = source.NodeId.Value;
             m_TargetNodeId = target.NodeId.Value;
+            m_SourceNodeId = source.NodeId.Value;
+            m_TargetNodeId = target.NodeId.Value;
             sourceNode = source;
             targetNode = target;
         }
@@ -101,5 +103,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             sourceNode = source;
             targetNode = target;
         }
+
+#if UNITY_EDITOR
+        public override int SetSourceNode(Node source, int index = -1)
+        {
+            CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph;
+            if (owner?.EditorWriteRouter == null)
+                throw new InvalidOperationException("Pose connection relinking requires its editor session.");
+            Connection result = owner.EditorWriteRouter.Reconnect(this, source, index, targetNode, -1);
+            return result.sourceNode.outConnections.IndexOf(result);
+        }
+
+        public override int SetTargetNode(Node target, int index = -1)
+        {
+            CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph;
+            if (owner?.EditorWriteRouter == null)
+                throw new InvalidOperationException("Pose connection relinking requires its editor session.");
+            Connection result = owner.EditorWriteRouter.Reconnect(this, sourceNode, -1, target, index);
+            return result.targetNode.inConnections.IndexOf(result);
+        }
+#endif
     }
 }

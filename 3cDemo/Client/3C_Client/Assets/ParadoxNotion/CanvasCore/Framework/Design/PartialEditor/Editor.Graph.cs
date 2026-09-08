@@ -9,6 +9,12 @@ namespace NodeCanvas.Framework
 
     partial class Graph
     {
+        public virtual bool persistsEditorGraph => true; // 3C: view-only document surfaces retain their original authoring owner.
+        public virtual bool allowsEditorExecution => true;
+        public virtual bool isEditorReadOnly => false; // 3C: observe domain instances without mutating authoring state.
+        public virtual bool usesDomainAuthoring => false; // 3C: exclude generic refactoring and raw JSON import from strict domain assets.
+        public virtual Object EditorUndoTarget => this;
+        public virtual bool HandleEditorCommand(string command, Vector2 position) => false; // 3C: domains keep their clipboard and batch mutation contracts.
 
         private int _childAssignableIndex = -1;
 

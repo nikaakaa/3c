@@ -405,14 +405,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public sealed class CharacterPoseStateMachineDocument : IGraphAuthoringStateMachineProjection
     {
         readonly CharacterPresentationPoseGraphAsset m_Asset;
-        readonly CharacterPoseStateMachineDefinition m_Definition;
+        readonly PoseGraphId m_OwnerGraphId;
+        readonly PoseNodeId m_OwnerNodeId;
+        CharacterPoseStateMachineDefinition m_Definition => m_Asset.RequireGraph(m_OwnerGraphId)
+            .RequireNode(m_OwnerNodeId).RequirePayload<CharacterPoseStateMachineNodePayload>().StateMachine;
 
         public CharacterPoseStateMachineDocument(
             CharacterPresentationPoseGraphAsset asset,
             CharacterPoseStateMachineDefinition definition)
         {
             m_Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
-            m_Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+            (m_OwnerGraphId, m_OwnerNodeId) = CharacterPoseGraphAssetMutationOwner.ResolveStateMachineOwner(asset, definition.StateMachineId);
             CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
         }
 

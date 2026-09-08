@@ -12,7 +12,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         IGraphAuthoringDocumentProjection
     {
         readonly CharacterPresentationPoseGraphAsset m_Asset;
-        readonly CharacterPoseStateMachineDefinition m_Machine;
+        readonly PoseGraphId m_OwnerGraphId;
+        readonly PoseNodeId m_OwnerNodeId;
+        CharacterPoseStateMachineDefinition m_Machine => m_Asset.RequireGraph(m_OwnerGraphId)
+            .RequireNode(m_OwnerNodeId).RequirePayload<CharacterPoseStateMachineNodePayload>().StateMachine;
         readonly PoseStateTransitionId m_TransitionId;
 
         public CharacterPoseTransitionRuleDocument(
@@ -23,8 +26,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Asset = asset
                 ? asset
                 : throw new ArgumentNullException(nameof(asset));
-            m_Machine = machine ??
+            if (machine == null)
                 throw new ArgumentNullException(nameof(machine));
+            (m_OwnerGraphId, m_OwnerNodeId) = CharacterPoseGraphAssetMutationOwner.ResolveStateMachineOwner(asset, machine.StateMachineId);
             m_TransitionId = transitionId.IsValid
                 ? transitionId
                 : throw new ArgumentException(

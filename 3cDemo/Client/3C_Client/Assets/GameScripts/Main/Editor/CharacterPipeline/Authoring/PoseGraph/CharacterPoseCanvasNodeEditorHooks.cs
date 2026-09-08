@@ -17,6 +17,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             PoseCanvasEditorBridge.InspectorOverride = DrawInspector;
             PoseCanvasEditorBridge.VisualsRefresh = RefreshVisuals;
+            PoseCanvasEditorBridge.BodyGUI = CharacterPoseCanvasPortsGUI.DrawBody;
+            PoseCanvasEditorBridge.ConnectionsGUI = CharacterPoseCanvasPortsGUI.DrawConnections;
+            PoseCanvasEditorBridge.RelinkGUI = CharacterPoseCanvasPortsGUI.Relink;
+            PoseCanvasEditorBridge.ContextMenu = node => ((CharacterPoseCanvasGraph)node.graph).EditorWriteRouter.BuildSelectionMenu(node.position);
+            PoseCanvasEditorBridge.ChildSurface = node => CharacterPoseCanvasPortsGUI.Apply(() => CharacterPoseGraphWorkspace.OpenNodeChild(node));
         }
 
         static void RefreshVisuals(CharacterPoseCanvasGraph graph)
@@ -37,13 +42,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind);
             GraphAuthoringCapabilityDescriptor capability = definition.Capability;
-            Graph graph = node.graph;
+            NodeCanvas.Framework.Graph graph = node.graph;
             EditorGUILayout.LabelField(
                 capability.DisplayName,
                 EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
                 $"Kind: {definition.Kind} · Domain: {capability.ExecutionDomainId}");
             EditorGUILayout.Space();
+            string name;
+            using (new EditorGUI.DisabledScope(graph.isEditorReadOnly))
+                name = EditorGUILayout.DelayedTextField("名称", node.DisplayName);
+            if (!string.Equals(name, node.DisplayName, StringComparison.Ordinal))
+                CharacterPoseCanvasPortsGUI.Apply(() => node.name = name);
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields)
             {
                 if (!field.AuthoringVisible)
@@ -59,21 +69,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool DrawField(
             CharacterPoseCanvasNode node,
-            Graph graph,
+            NodeCanvas.Framework.Graph graph,
             CharacterPoseNodeDefinition definition,
             GraphAuthoringFieldDescriptor field)
         {
             string fieldId = field.FieldId.Value;
             object current = definition.ReadField(node.Payload, fieldId);
             object next = current;
-            using (new EditorGUI.DisabledScope(!field.AuthoringWritable))
+            EditorGUI.BeginChangeCheck();
+            using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
             {
                 switch (field.ValueKind)
                 {
                     case GraphAuthoringFieldValueKind.String:
-                        next = EditorGUILayout.TextField(field.DisplayName, current as string);
-                        if (field.Constraint.NonEmpty && string.IsNullOrEmpty((string)next))
-                            next = current;
+                        next = EditorGUILayout.DelayedTextField(field.DisplayName, current as string);
                         break;
                     case GraphAuthoringFieldValueKind.Boolean:
                         next = EditorGUILayout.Toggle(field.DisplayName, current is bool value && value);
@@ -127,13 +136,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         break;
                 }
             }
-            if (!field.AuthoringWritable || Equals(next, current) || next == current)
+            bool changed = EditorGUI.EndChangeCheck();
+            if (!changed || graph.isEditorReadOnly || !field.AuthoringWritable || Equals(next, current) || next == current)
                 return true;
             var poseGraph = graph as CharacterPoseCanvasGraph;
             if (poseGraph?.EditorWriteRouter == null)
                 throw new InvalidOperationException(
                     "Pose Canvas field edits require the Pose Canvas editor session.");
-            poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next);
+            CharacterPoseCanvasPortsGUI.Apply(() => poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next));
             return false;
         }
 

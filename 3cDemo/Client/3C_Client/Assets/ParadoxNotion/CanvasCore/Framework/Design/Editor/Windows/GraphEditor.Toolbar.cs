@@ -15,6 +15,20 @@ namespace NodeCanvas.Editor
 
         //This is called outside Begin/End Windows from GraphEditor.
         public static void ShowToolbar(Graph graph) {
+            if (graph.usesDomainAuthoring) { // 3C: all content writes come from the registered domain controls.
+                GUILayout.BeginHorizontal(EditorStyles.toolbar);
+                GUILayout.Label(graph.name, EditorStyles.miniLabel);
+                if (GUILayout.Button("全部居中", EditorStyles.toolbarButton, GUILayout.Width(70))) {
+                    if (graph.allNodes.Count != 0) { FocusPosition(GetNodeBounds(graph.allNodes).center); }
+                }
+                if (GUILayout.Button("显示设置", EditorStyles.toolbarDropDown, GUILayout.Width(80))) {
+                    GetToolbarMenu_Prefs(graph, null).ShowAsContext();
+                }
+                graph.CallbackOnGraphEditorToolbar();
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+                return;
+            }
 
             var owner = graph.agent as GraphOwner;
 

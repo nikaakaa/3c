@@ -47,6 +47,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool canAcceptVariableDrops => false;
 
 #if UNITY_EDITOR
+        public override bool allowsEditorExecution => false;
+        public override bool usesDomainAuthoring => true;
+        public override bool isEditorReadOnly => EditorWriteRouter?.ReadOnly ?? true;
+        public override bool HandleEditorCommand(string command, Vector2 position) =>
+            EditorWriteRouter != null && EditorWriteRouter.HandleCommand(command, position);
+
+        protected override GenericMenu OnNodesContextMenu(GenericMenu menu, Node[] nodes) =>
+            EditorWriteRouter.BuildSelectionMenu(nodes.Length == 0 ? Vector2.zero : nodes[0].position);
+
+        protected override GenericMenu OnCanvasContextMenu(GenericMenu menu, Vector2 position)
+        {
+            GenericMenu creation = EditorWriteRouter.BuildNodeCreationMenu(new NodeCreationRequestContext { position = position });
+            creation.AddSeparator("");
+            creation.AddItem(new GUIContent("粘贴"), false, () => EditorWriteRouter.HandleCommand("Paste", position));
+            return creation;
+        }
         [NonSerialized] internal CharacterPoseCanvasEditorWriteRouter EditorWriteRouter;
 
         public override Node AddNode(Type nodeType, Vector2 pos = default) =>
@@ -143,6 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 source.outConnections.Add(connection);
                 target.inConnections.Add(connection);
             }
+            GetGraphSource().Pack(this).Unpack(this);
             return this;
         }
 
@@ -179,7 +196,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!float.IsFinite(position.x) || !float.IsFinite(position.y))
                 throw new ArgumentException("Pose Canvas node position must be finite.", nameof(position));
-            RequireNode(nodeId).position = position;
+            RequireNode(nodeId).SetAuthoringPosition(position);
+        }
+
+        internal void ApplyAuthoringState(CharacterPoseCanvasGraph candidate)
+        {
+            var existingNodes = Nodes.ToDictionary(value => value.NodeId);
+            CharacterPoseCanvasNode[] nodes = candidate.Nodes.Select(value =>
+            {
+                if (!existingNodes.TryGetValue(value.NodeId, out CharacterPoseCanvasNode current))
+                    return value;
+                current.SetAuthoring(value.NodeId, value.DisplayName, value.Payload, value.DynamicPorts.ToArray());
+                current.SetAuthoringPosition(value.position);
+                return current;
+            }).ToArray();
+            var nodesById = nodes.ToDictionary(value => value.NodeId);
+            var existingEdges = Connections.ToDictionary(value => value.EdgeId, StringComparer.Ordinal);
+            CharacterPoseCanvasConnection[] edges = candidate.Connections.Select(value =>
+            {
+                if (!existingEdges.TryGetValue(value.EdgeId, out CharacterPoseCanvasConnection current))
+                    return value;
+                current.SetAuthoring(value.EdgeId, nodesById[value.SourceNodeId], value.SourcePortId,
+                    nodesById[value.TargetNodeId], value.TargetPortId);
+                return current;
+            }).ToArray();
+            SetAuthoring(candidate.GraphId, candidate.ContentRevision, candidate.Parameters.ToArray(), nodes, edges);
         }
 
         public void RequireValid()
@@ -219,7 +260,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
         }
-    }
 
 #if UNITY_EDITOR
         public override Node AttachDuplicatedNode(Node newNode)
@@ -245,19 +285,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static System.Action<CharacterPoseCanvasNode> InspectorOverride;
         internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
+        internal static System.Action<CharacterPoseCanvasNode> BodyGUI;
+        internal static System.Action<CharacterPoseCanvasNode, Rect, bool, Vector2, float> ConnectionsGUI;
+        internal static System.Action<CharacterPoseCanvasNode, Connection> RelinkGUI;
+        internal static Func<CharacterPoseCanvasNode, GenericMenu> ContextMenu;
+        internal static Action<CharacterPoseCanvasNode> ChildSurface;
     }
 
     internal interface CharacterPoseCanvasEditorWriteRouter
     {
+        bool ReadOnly { get; }
         Node CreateNode(Type nodeType, Vector2 position);
-        Node CreateNodeFromCapability(string capabilityIdentity, Vector2 position, Node connectSource, int connectSourcePortIndex);
+        Node CreateNodeFromCapability(string capabilityIdentity, Vector2 position, Node connectSource, int connectSourcePortIndex, int targetPortIndex = -1);
         void RemoveNode(Node node);
         Connection Connect(Node sourceNode, Node targetNode, int sourceIndex, int targetIndex);
         void RemoveConnection(Connection connection);
         Node DuplicateNode(Node clonedNode);
         Connection DuplicateConnection(Connection original, Node newSource, Node newTarget);
         void SetNodeField(Node node, string fieldId, object value);
+        void MoveNode(Node node, Vector2 position);
+        void RenameNode(Node node, string name);
+        Connection Reconnect(Connection connection, Node source, int sourceIndex, Node target, int targetIndex);
         GenericMenu BuildNodeCreationMenu(NodeCanvas.Framework.Graph.NodeCreationRequestContext request);
+        bool HandleCommand(string command, Vector2 position);
+        GenericMenu BuildSelectionMenu(Vector2 position);
     }
 #endif
 }

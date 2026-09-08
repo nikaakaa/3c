@@ -128,7 +128,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Sets the source node of the connection</summary>
-        public int SetSourceNode(Node newSource, int index = -1) {
+        public virtual int SetSourceNode(Node newSource, int index = -1) { // 3C: domain connections must preserve typed endpoint identities.
 
             if ( sourceNode == newSource ) {
                 return -1;
@@ -160,7 +160,7 @@ namespace NodeCanvas.Framework
         }
 
         ///<summary>Sets the target node of the connection</summary>
-        public int SetTargetNode(Node newTarget, int index = -1) {
+        public virtual int SetTargetNode(Node newTarget, int index = -1) { // 3C: domain connections must preserve typed endpoint identities.
 
             if ( targetNode == newTarget ) {
                 return -1;

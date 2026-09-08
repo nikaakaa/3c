@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace ParadoxNotion.Design
 {
+    public interface IEditorUndoTarget // 3C: editor projections forward or decline framework undo recording.
+    {
+        Object EditorUndoTarget { get; }
+    }
 
     ///<summary> A simple Undo utility to avoid checking application playing, nulls and if unity editor all the time</summary>
     public static class UndoUtility
@@ -13,6 +17,7 @@ namespace ParadoxNotion.Design
         [Conditional("UNITY_EDITOR")]
         public static void RecordObject(Object target, string name) {
 #if UNITY_EDITOR
+            if (target is IEditorUndoTarget owner) { target = owner.EditorUndoTarget; } // 3C
             if ( Application.isPlaying || UnityEditor.EditorApplication.isUpdating || target == null ) { return; }
             lastOperationName = name;
             UnityEditor.Undo.RecordObject(target, name);
@@ -23,6 +28,7 @@ namespace ParadoxNotion.Design
         [Conditional("UNITY_EDITOR")]
         public static void RecordObjectComplete(Object target, string name) {
 #if UNITY_EDITOR
+            if (target is IEditorUndoTarget owner) { target = owner.EditorUndoTarget; } // 3C
             if ( Application.isPlaying || UnityEditor.EditorApplication.isUpdating || target == null ) { return; }
             lastOperationName = name;
             UnityEditor.Undo.RegisterCompleteObjectUndo(target, name);
@@ -33,6 +39,7 @@ namespace ParadoxNotion.Design
         [Conditional("UNITY_EDITOR")]
         public static void SetDirty(Object target) {
 #if UNITY_EDITOR
+            if (target is IEditorUndoTarget owner) { target = owner.EditorUndoTarget; } // 3C
             if ( Application.isPlaying || UnityEditor.EditorApplication.isUpdating || target == null ) { return; }
             UnityEditor.EditorUtility.SetDirty(target);
 #endif

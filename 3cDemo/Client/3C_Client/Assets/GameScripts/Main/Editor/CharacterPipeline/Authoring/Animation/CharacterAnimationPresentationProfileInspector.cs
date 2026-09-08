@@ -230,7 +230,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using (new EditorGUI.DisabledScope(!poseGraph))
             {
                 if (GUILayout.Button("Open Pose Graph"))
-                    CharacterPresentationPoseGraphEditorWindow.Open(profile);
+                    CharacterPoseGraphWorkspace.Open(profile);
             }
             using (new EditorGUI.DisabledScope(!rig))
             {
@@ -807,8 +807,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationPresentationProfile profile,
             PoseSourceConsumer consumer)
         {
-            CharacterPresentationPoseGraphEditorWindow window =
-                CharacterPresentationPoseGraphEditorWindow.Open(profile);
+            CharacterPoseGraphWorkspace window =
+                CharacterPoseGraphWorkspace.Open(profile);
             window.FocusStatePlayer(consumer.Machine, consumer.State, consumer.Player.NodeId);
         }
 

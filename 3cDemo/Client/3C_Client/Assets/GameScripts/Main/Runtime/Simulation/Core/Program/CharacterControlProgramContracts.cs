@@ -422,21 +422,37 @@ namespace ThirdPersonSimulation
 
     public sealed class CharacterControlModuleCatalog
     {
-        readonly Dictionary<CharacterControlModuleId, ICharacterControlModule> m_Modules;
-
-        public CharacterControlModuleCatalog(IEnumerable<ICharacterControlModule> modules)
+        readonly struct ModuleEntry
         {
-            m_Modules = new Dictionary<CharacterControlModuleId, ICharacterControlModule>();
-            if (modules == null)
-                return;
-            foreach (ICharacterControlModule module in modules)
+            public ModuleEntry(Func<ICharacterControlModule> factory, CharacterControlModuleContract contract)
             {
-                if (module == null || module.Contract == null)
-                    throw new ArgumentException("Character control module catalog contains an incomplete module.", nameof(modules));
-                if (!m_Modules.TryAdd(module.Contract.ModuleId, module))
+                Factory = factory;
+                Contract = contract;
+            }
+
+            public Func<ICharacterControlModule> Factory { get; }
+            public CharacterControlModuleContract Contract { get; }
+        }
+
+        readonly Dictionary<CharacterControlModuleId, ModuleEntry> m_Entries;
+
+        // 每次 Require 新建模块实例:模块内部持有可变状态机,作用域必须按 actor 隔离。
+        public CharacterControlModuleCatalog(IEnumerable<Func<ICharacterControlModule>> factories)
+        {
+            m_Entries = new Dictionary<CharacterControlModuleId, ModuleEntry>();
+            if (factories == null)
+                return;
+            foreach (Func<ICharacterControlModule> factory in factories)
+            {
+                if (factory == null)
+                    throw new ArgumentException("Character control module catalog contains a missing factory.", nameof(factories));
+                ICharacterControlModule probe = factory();
+                if (probe == null || probe.Contract == null)
+                    throw new ArgumentException("Character control module catalog contains an incomplete module.", nameof(factories));
+                if (!m_Entries.TryAdd(probe.Contract.ModuleId, new ModuleEntry(factory, probe.Contract)))
                     throw new ArgumentException(
-                        $"Character control module '{module.Contract.ModuleId}' is registered more than once.",
-                        nameof(modules));
+                        $"Character control module '{probe.Contract.ModuleId}' is registered more than once.",
+                        nameof(factories));
             }
         }
 
@@ -444,21 +460,21 @@ namespace ThirdPersonSimulation
         {
             if (!binding.IsValid)
                 throw new ArgumentException("Character control module binding is invalid.", nameof(binding));
-            if (!m_Modules.TryGetValue(binding.ModuleId, out ICharacterControlModule module))
+            if (!m_Entries.TryGetValue(binding.ModuleId, out ModuleEntry entry))
                 throw new InvalidOperationException($"Character control module '{binding.ModuleId}' is not installed.");
-            if (module.Contract.SemanticVersion != binding.SemanticVersion)
+            if (entry.Contract.SemanticVersion != binding.SemanticVersion)
                 throw new InvalidOperationException(
-                    $"Character control module '{binding.ModuleId}' version '{module.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
-            return module;
+                    $"Character control module '{binding.ModuleId}' version '{entry.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
+            return entry.Factory();
         }
 
         public ICharacterControlModule Require(CharacterControlModuleId moduleId)
         {
             if (!moduleId.IsValid)
                 throw new ArgumentException("Character control module identity is invalid.", nameof(moduleId));
-            if (!m_Modules.TryGetValue(moduleId, out ICharacterControlModule module))
+            if (!m_Entries.TryGetValue(moduleId, out ModuleEntry entry))
                 throw new InvalidOperationException($"Character control module '{moduleId}' is not installed.");
-            return module;
+            return entry.Factory();
         }
     }
 

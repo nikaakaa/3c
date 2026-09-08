@@ -397,7 +397,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
         readonly FixedMotionAccumulator m_Motion;
         readonly OperationControlRuntime<FixedOperationTarget> m_Control;
-        readonly CharacterControlStateMachineRuntime m_CharacterControl;
+        readonly ICharacterControlModule m_CharacterControl;
         readonly FixedCharacterControlReadPort m_CharacterControlRead;
         readonly ICharacterControlStatePort m_CharacterControlState;
         readonly FixedCharacterControlOutputPort m_CharacterControlOutput;
@@ -494,7 +494,7 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
                 FixedStatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
                 CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
-                m_CharacterControl = new CharacterControlStateMachineRuntime(module);
+                m_CharacterControl = module;
                 m_CharacterControlRead = new FixedCharacterControlReadPort(
                     m_Input,
                     m_Frame,

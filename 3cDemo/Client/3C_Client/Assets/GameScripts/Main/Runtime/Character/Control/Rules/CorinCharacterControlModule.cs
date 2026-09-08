@@ -22,7 +22,6 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly CharacterControlStateFieldId s_ActiveState = new CharacterControlStateFieldId("control:character.corin.control:active-state");
         static readonly CharacterControlStateFieldId s_EnteredTick = new CharacterControlStateFieldId("control:character.corin.control:entered-tick");
         static readonly CharacterControlStateFieldId s_LastTransition = new CharacterControlStateFieldId("control:character.corin.control:last-transition");
-        static readonly CharacterControlStateFieldId s_TransitionProgress = new CharacterControlStateFieldId("control:character.corin.control:transition-progress");
         static readonly CharacterControlStateFieldId s_MotionElapsed = new CharacterControlStateFieldId("control:character.corin.control:motion-elapsed-ticks");
         static readonly CharacterControlStateFieldId s_DirectionalDodgeRunIntent = new CharacterControlStateFieldId("control:character.corin.control:directional-dodge-run-intent");
         static readonly CharacterControlStateFieldId s_DodgeForwardCompletionInstance = new CharacterControlStateFieldId("control:character.corin.control:dodge-forward-completion-instance");
@@ -40,16 +39,16 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
-        // UnityHFSM 骨架:状态/迁移/条件的唯一登记处。状态真值仍存仿真状态槽
-        // (CharacterControlStateMachineRuntime 按 Priority/Order 推进),本机器只承载
-        // 声明与条件求值,不持有活跃状态,因此与 rollback 天然一致。
+        // UnityHFSM 是控制层状态机的执行引擎:Contract 构造时已按 Priority/Order/Id 排序,
+        // 机器按该序登记转移,OnLogic 内"体先行、按登记序首个真条件即转移"实现优先级抢占语义。
+        // 状态真值仍在仿真槽位,模块由目录工厂按 evaluator(即按 actor)新建,机器可变状态不跨 actor 共享。
         readonly StateMachine<string, string> m_Machine;
-        readonly Dictionary<string, Transition<string>> m_TransitionsById =
-            new Dictionary<string, Transition<string>>(StringComparer.Ordinal);
+        bool m_Initialized;
 
-        CharacterControlTickContext m_EvaluatedContext;
-        ICharacterControlReadPort m_EvaluatedRead;
-        ICharacterControlStateReadPort m_EvaluatedState;
+        CharacterControlTickContext m_Context;
+        ICharacterControlReadPort m_Read;
+        ICharacterControlStatePort m_State;
+        ICharacterControlOutputPort m_Output;
 
         public CharacterControlModuleContract Contract => s_Contract;
 
@@ -58,133 +57,147 @@ namespace ThirdPersonCharacter.Control.Rules
             m_Machine = new StateMachine<string, string>();
             m_Machine.SetStartState(Idle.Value);
             for (int i = 0; i < s_Contract.States.Count; i++)
-                m_Machine.AddState(s_Contract.States[i].Id.Value, new State<string, string>());
+            {
+                CharacterControlStateId stateId = s_Contract.States[i].Id;
+                m_Machine.AddState(stateId.Value, new State<string, string>(
+                    onEnter: _ => OnStateEnter(stateId),
+                    onLogic: _ => OnStateLogic(stateId),
+                    onExit: _ => OnStateExit(stateId)));
+            }
             for (int i = 0; i < s_Contract.Transitions.Count; i++)
             {
                 CharacterControlTransitionDescriptor descriptor = s_Contract.Transitions[i];
-                string id = descriptor.Id.Value;
-                var transition = new Transition<string>(
+                string transitionId = descriptor.Id.Value;
+                m_Machine.AddTransition(new Transition<string>(
                     descriptor.Source.Value,
                     descriptor.Target.Value,
-                    condition: _ => EvaluateRegistered(id));
-                m_TransitionsById.Add(id, transition);
-                m_Machine.AddTransition(transition);
+                    condition: _ => EvaluateTransition(transitionId, descriptor)));
             }
-        }
-
-        bool EvaluateRegistered(string transitionId)
-        {
-            switch (transitionId)
-            {
-                case "IdleToWalkStart": return MoveAbove(m_EvaluatedRead);
-                case "WalkStartToWalkLoop": return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 1.1d) && MoveAbove(m_EvaluatedRead);
-                case "WalkLoopToWalkStopping": return MoveBelow(m_EvaluatedRead);
-                case "WalkStoppingToIdle": return MotionElapsed(m_EvaluatedState) > 0 && MoveBelow(m_EvaluatedRead);
-                case "RunLoopToRunStopping": return MoveBelow(m_EvaluatedRead);
-                case "RunStoppingToIdle": return MotionElapsed(m_EvaluatedState) > 0 && MoveBelow(m_EvaluatedRead);
-                case "MovingTurnToRunLoop":
-                    return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_EvaluatedRead);
-                case "WalkStartToWalkStopping": return MoveBelow(m_EvaluatedRead);
-                case "WalkStoppingToWalkStart": return MoveAbove(m_EvaluatedRead);
-                case "RunStoppingToRunLoop": return MoveAbove(m_EvaluatedRead);
-                case "MovingTurnToWalkStopping": return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && MoveBelow(m_EvaluatedRead);
-                case "WalkLoopToRunLoop": return m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent);
-                case "WalkStartToRunLoop": return m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent);
-                case "RunLoopToMovingTurn":
-                    return MoveAbove(m_EvaluatedRead) &&
-                           m_EvaluatedRead.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
-                           !IsAttackActive(m_EvaluatedRead) && !m_EvaluatedRead.IsSkillActive(DodgeBack) && !m_EvaluatedRead.IsSkillActive(DodgeForward);
-                case "MovingTurnToWalkLoop":
-                    return MotionElapsed(m_EvaluatedState) >= Ticks(m_EvaluatedContext, 28d / 30d) && !m_EvaluatedState.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_EvaluatedRead);
-                default: throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.");
-            }
-        }
-
-        static int MotionElapsed(ICharacterControlStateReadPort state) => state.ReadInt32(s_MotionElapsed);
-
-        public void Enter(
-            in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
-            ICharacterControlReadPort read,
-            ICharacterControlStatePort state,
-            ICharacterControlOutputPort output)
-        {
-            state.WriteInt32(s_MotionElapsed, 0);
-            if (stateId == Idle)
-                state.WriteBoolean(s_DirectionalDodgeRunIntent, false);
         }
 
         public void Tick(
             in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
             ICharacterControlReadPort read,
             ICharacterControlStatePort state,
             ICharacterControlOutputPort output)
         {
-            int elapsed = state.ReadInt32(s_MotionElapsed);
+            m_Context = context;
+            m_Read = read;
+            m_State = state;
+            m_Output = output;
+            if (!m_Initialized)
+            {
+                m_Initialized = true;
+                m_Machine.Init();
+            }
+            m_Machine.OnLogic();
+        }
+
+        void OnStateEnter(CharacterControlStateId stateId)
+        {
+            m_State.WriteState(s_ActiveState, stateId);
+            m_State.WriteUInt64(s_EnteredTick, m_Context.Tick.Value);
+            m_State.WriteInt32(s_MotionElapsed, 0);
+            if (stateId == Idle)
+                m_State.WriteBoolean(s_DirectionalDodgeRunIntent, false);
+            Trace(stateId, default, "control_state_entered", $"state={stateId.Value}:tick={m_Context.Tick.Value}", m_Context.Tick.Value);
+        }
+
+        void OnStateLogic(CharacterControlStateId stateId)
+        {
+            int elapsed = m_State.ReadInt32(s_MotionElapsed);
             if (stateId == WalkStart)
             {
-                output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkStartMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkStartMotion, s_MoveAxis, elapsed, 0));
             }
             else if (stateId == WalkLoop)
             {
-                output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkLoopMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkLoopMotion, s_MoveAxis, elapsed, 0));
             }
             else if (stateId == RunLoop)
             {
-                output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0));
             }
             else if (stateId == MovingTurn)
             {
-                output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_MovingTurnMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_MovingTurnMotion, s_MoveAxis, elapsed, 0));
             }
 
             if (stateId != Idle)
-                state.WriteInt32(s_MotionElapsed, checked(elapsed + 1));
-            ulong completedDodgeForward = read.CompletedSkillInstanceId(DodgeForward);
+                m_State.WriteInt32(s_MotionElapsed, checked(elapsed + 1));
+
+            ulong completedDodgeForward = m_Read.CompletedSkillInstanceId(DodgeForward);
             if (completedDodgeForward != 0 &&
-                state.ReadUInt64(s_DodgeForwardCompletionInstance) != completedDodgeForward)
+                m_State.ReadUInt64(s_DodgeForwardCompletionInstance) != completedDodgeForward)
             {
-                state.WriteUInt64(s_DodgeForwardCompletionInstance, completedDodgeForward);
-                state.WriteBoolean(s_DirectionalDodgeRunIntent, true);
+                m_State.WriteUInt64(s_DodgeForwardCompletionInstance, completedDodgeForward);
+                m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
             }
-            SubmitSkillRequests(stateId, read, state, output);
+            SubmitSkillRequests(stateId);
         }
 
-        public bool EvaluateTransition(
-            in CharacterControlTickContext context,
-            CharacterControlTransitionId transitionId,
-            ICharacterControlReadPort read,
-            ICharacterControlStateReadPort state)
+        void OnStateExit(CharacterControlStateId stateId)
         {
-            m_EvaluatedContext = context;
-            m_EvaluatedRead = read;
-            m_EvaluatedState = state;
-            return m_TransitionsById[transitionId.Value].ShouldTransition();
+            Trace(
+                stateId,
+                default,
+                "control_state_exited",
+                $"state={stateId.Value}:tick={m_Context.Tick.Value}",
+                m_State.ReadUInt64(s_EnteredTick));
         }
 
-        public void Exit(
-            in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
-            ICharacterControlReadPort read,
-            ICharacterControlStatePort state,
-            ICharacterControlOutputPort output)
+        bool EvaluateTransition(string transitionId, CharacterControlTransitionDescriptor descriptor)
         {
+            ulong enteredTick = m_State.ReadUInt64(s_EnteredTick);
+            bool result = transitionId switch
+            {
+                "IdleToWalkStart" => MoveAbove(m_Read),
+                "WalkStartToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 1.1d) && MoveAbove(m_Read),
+                "WalkLoopToWalkStopping" => MoveBelow(m_Read),
+                "WalkStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
+                "RunLoopToRunStopping" => MoveBelow(m_Read),
+                "RunStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
+                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "WalkStartToWalkStopping" => MoveBelow(m_Read),
+                "WalkStoppingToWalkStart" => MoveAbove(m_Read),
+                "RunStoppingToRunLoop" => MoveAbove(m_Read),
+                "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && MoveBelow(m_Read),
+                "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
+                "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
+                "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
+                    m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
+                    !IsAttackActive(m_Read) && !m_Read.IsSkillActive(DodgeBack) && !m_Read.IsSkillActive(DodgeForward),
+                "MovingTurnToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                _ => throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.")
+            };
+            Trace(
+                descriptor.Source,
+                descriptor.Id,
+                "control_transition_evaluated",
+                $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:result={result}",
+                enteredTick);
+            if (result)
+            {
+                m_State.WriteTransition(s_LastTransition, descriptor.Id);
+                Trace(
+                    descriptor.Source,
+                    descriptor.Id,
+                    "control_transition_selected",
+                    $"source={descriptor.Source.Value}:target={descriptor.Target.Value}:tick={m_Context.Tick.Value}",
+                    m_Context.Tick.Value);
+            }
+            return result;
         }
 
-        void SubmitSkillRequests(
-            CharacterControlStateId stateId,
-            ICharacterControlReadPort read,
-            ICharacterControlStatePort state,
-            ICharacterControlOutputPort output)
+        void SubmitSkillRequests(CharacterControlStateId stateId)
         {
             SimulationExecutionSource source = Source(stateId);
-            if (read.HasInputRequest(s_DodgeRequest))
+            if (m_Read.HasInputRequest(s_DodgeRequest))
             {
-                CharacterSkillId skill = read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
+                CharacterSkillId skill = m_Read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
                 ulong replacementActionInstanceId = 0;
-                TryGetActiveAttackInstance(read, out replacementActionInstanceId);
-                bool accepted = output.SubmitSkill(new CharacterControlSkillRequest(
+                TryGetActiveAttackInstance(m_Read, out replacementActionInstanceId);
+                m_Output.SubmitSkill(new CharacterControlSkillRequest(
                     source,
                     skill,
                     s_DodgeRequest,
@@ -192,9 +205,9 @@ namespace ThirdPersonCharacter.Control.Rules
                     replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
-            if (read.HasInputRequest(s_AttackRequest))
+            if (m_Read.HasInputRequest(s_AttackRequest))
             {
-                output.SubmitSkill(new CharacterControlSkillRequest(
+                m_Output.SubmitSkill(new CharacterControlSkillRequest(
                     source,
                     Attack,
                     s_AttackRequest,
@@ -211,8 +224,23 @@ namespace ThirdPersonCharacter.Control.Rules
         SimulationExecutionSource Source(CharacterControlStateId stateId) =>
             SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, default);
 
+        void Trace(
+            CharacterControlStateId stateId,
+            CharacterControlTransitionId transitionId,
+            string code,
+            string detail,
+            ulong generation)
+        {
+            m_Output.Trace(
+                SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, transitionId),
+                code,
+                detail,
+                generation == 0 ? 1 : generation);
+        }
+
         bool MoveAbove(ICharacterControlReadPort read) => read.CompareInputVector2Magnitude(s_MoveAxis, s_StopThreshold, CharacterControlNumericComparison.Greater);
         bool MoveBelow(ICharacterControlReadPort read) => read.CompareInputVector2Magnitude(s_MoveAxis, s_StopThreshold, CharacterControlNumericComparison.Less);
+        static int MotionElapsed(ICharacterControlStateReadPort state) => state.ReadInt32(s_MotionElapsed);
         static int Ticks(in CharacterControlTickContext context, double seconds) => checked((int)Math.Ceiling(seconds * context.TickRate));
 
         static CharacterControlModuleContract BuildContract()
@@ -254,7 +282,6 @@ namespace ThirdPersonCharacter.Control.Rules
                     new CharacterControlStateFieldDescriptor(s_ActiveState, ProgramStateValueKind.Identity, ProgramStateSemantic.ControlActiveState),
                     new CharacterControlStateFieldDescriptor(s_EnteredTick, ProgramStateValueKind.UInt64, ProgramStateSemantic.ControlEnteredTick),
                     new CharacterControlStateFieldDescriptor(s_LastTransition, ProgramStateValueKind.Identity, ProgramStateSemantic.ControlTransition),
-                    new CharacterControlStateFieldDescriptor(s_TransitionProgress, ProgramStateValueKind.Int32, ProgramStateSemantic.ControlTransitionProgress),
                     new CharacterControlStateFieldDescriptor(s_MotionElapsed, ProgramStateValueKind.Int32, ProgramStateSemantic.ControlState),
                     new CharacterControlStateFieldDescriptor(s_DirectionalDodgeRunIntent, ProgramStateValueKind.Boolean, ProgramStateSemantic.ControlState),
                     new CharacterControlStateFieldDescriptor(s_DodgeForwardCompletionInstance, ProgramStateValueKind.UInt64, ProgramStateSemantic.ControlState)
@@ -296,6 +323,7 @@ namespace ThirdPersonCharacter.Control.Rules
 
     public static class CorinCharacterControlModuleCatalog
     {
-        public static CharacterControlModuleCatalog Create() => new CharacterControlModuleCatalog(new[] { new CorinCharacterControlModule() });
+        public static CharacterControlModuleCatalog Create() =>
+            new CharacterControlModuleCatalog(new Func<ICharacterControlModule>[] { () => new CorinCharacterControlModule() });
     }
 }

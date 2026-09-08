@@ -392,7 +392,7 @@ namespace ThirdPersonSimulation
 		readonly TimelineControlRuntime<Float32OperationTarget, Float32Scalar> m_Timeline;
 		readonly Float32MotionAccumulator m_Motion;
 		readonly OperationControlRuntime<Float32OperationTarget> m_Control;
-		readonly CharacterControlStateMachineRuntime m_CharacterControl;
+		readonly ICharacterControlModule m_CharacterControl;
 		readonly Float32CharacterControlReadPort m_CharacterControlRead;
 		readonly ICharacterControlStatePort m_CharacterControlState;
 		readonly Float32CharacterControlOutputPort m_CharacterControlOutput;
@@ -489,7 +489,7 @@ namespace ThirdPersonSimulation
 				ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
 				Float32StatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
 				CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
-				m_CharacterControl = new CharacterControlStateMachineRuntime(module);
+				m_CharacterControl = module;
 				m_CharacterControlRead = new Float32CharacterControlReadPort(
 					m_Input,
 					m_Frame,

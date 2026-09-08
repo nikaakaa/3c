@@ -21,26 +21,11 @@ namespace ThirdPersonSimulation
     public interface ICharacterControlModule
     {
         CharacterControlModuleContract Contract { get; }
-        void Enter(
-            in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
-            ICharacterControlReadPort read,
-            ICharacterControlStatePort state,
-            ICharacterControlOutputPort output);
+
+        // 模块自治推进:内部状态机先跑当前状态逻辑、后判转移(与库时序一致),
+        // 并自行维护 Control 语义槽位(active-state / entered-tick / transition)与 trace。
         void Tick(
             in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
-            ICharacterControlReadPort read,
-            ICharacterControlStatePort state,
-            ICharacterControlOutputPort output);
-        bool EvaluateTransition(
-            in CharacterControlTickContext context,
-            CharacterControlTransitionId transitionId,
-            ICharacterControlReadPort read,
-            ICharacterControlStateReadPort state);
-        void Exit(
-            in CharacterControlTickContext context,
-            CharacterControlStateId stateId,
             ICharacterControlReadPort read,
             ICharacterControlStatePort state,
             ICharacterControlOutputPort output);

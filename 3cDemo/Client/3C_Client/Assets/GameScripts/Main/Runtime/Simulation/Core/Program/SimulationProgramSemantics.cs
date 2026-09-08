@@ -1050,8 +1050,7 @@ namespace ThirdPersonSimulation
         ControlState = 140,
         ControlActiveState = 141,
         ControlEnteredTick = 142,
-        ControlTransition = 143,
-        ControlTransitionProgress = 144
+        ControlTransition = 143
     }
 
     public sealed class ProgramStateSlot
@@ -1139,7 +1138,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ControlActiveState => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.Control,
                 ProgramStateSemantic.ControlEnteredTick => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Control,
                 ProgramStateSemantic.ControlTransition => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.Control,
-                ProgramStateSemantic.ControlTransitionProgress => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Control,
                 ProgramStateSemantic.StateMachineActive => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachinePending => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachineExiting => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,

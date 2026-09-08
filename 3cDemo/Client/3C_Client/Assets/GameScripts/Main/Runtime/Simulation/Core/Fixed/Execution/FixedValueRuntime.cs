@@ -230,6 +230,7 @@ namespace ThirdPersonSimulation.Fixed
 						throw new InvalidOperationException($"Operation '{handle}' code '{operation.Code}' is not a value operation.");
 				}
 				TraceValue(operation, result);
+                m_Frame.Trace.AddValue(operation, outputPort, ProgramValuePortDirection.Output, result);
 				return result;
 			}
 			finally
@@ -308,9 +309,16 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < inputs.Length; i++)
                 {
                     CompiledValueInputBinding input = inputs[i];
-                    buffer.Values.Add(input.SourceKind == CompiledValueInputSourceKind.Operation
+                    CharacterStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
                         ? Evaluate(cursor, input.SourceOperation, m_Layout.ValueSourceOutputPort(input))
-                        : ValueFromConstant(m_Program.Constants[input.ConstantIndex]));
+                        : ValueFromConstant(m_Program.Constants[input.ConstantIndex]);
+                    buffer.Values.Add(value);
+                    if (m_Frame.Trace.CaptureValues)
+                    {
+                        string port = CharacterGameplayValuePortContracts.Require(operation.Code, operation.Handle, m_Program.GraphCallFrames)
+                            .Inputs[input.TargetPortIndex].Identity;
+                        m_Frame.Trace.AddValue(operation, port, ProgramValuePortDirection.Input, value);
+                    }
                 }
                 return new FixedValueInputLease(this, buffer, depth);
             }

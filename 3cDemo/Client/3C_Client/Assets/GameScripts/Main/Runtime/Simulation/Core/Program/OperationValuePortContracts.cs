@@ -4,6 +4,16 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
+    public interface ISimulationValueTraceInterest
+    {
+        bool IsValueCaptureRequested(ActorId actorId);
+    }
+
+    public static class SimulationValueTraceLimits
+    {
+        public const int MaxSamplesPerEvaluation = 4096;
+    }
+
     public enum SemanticValueKind : byte
     {
         Boolean = 1,

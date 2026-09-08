@@ -91,7 +91,7 @@ namespace ThirdPersonSimulation
                 request.ActorId,
                 request.Tick,
                 m_StateTransactions);
-            Trace.Begin(request.DiagnosticsEnabled);
+            Trace.Begin(request.DiagnosticsEnabled, request.ValueTraceEnabled);
         }
 
         public CharacterSimulationProgram Program { get; }
@@ -488,6 +488,8 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32TraceSink
     {
+        readonly HashSet<(int Operation, string Port, ProgramValuePortDirection Direction)> m_ValuePorts = new();
+        int m_ValueSampleCount;
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32DiagnosticSequence m_Sequence;
         bool m_Enabled;
@@ -496,17 +498,48 @@ namespace ThirdPersonSimulation
         {
             m_Frame = frame;
             m_Sequence = sequence;
+            foreach (ProgramSourceMapEntry source in frame.Program.SourceMap)
+                if (source.TargetKind == ProgramSourceTargetKind.OperationPort && source.ValuePortDirection != ProgramValuePortDirection.None)
+                    m_ValuePorts.Add((source.TargetIndex, source.CompiledPortId, source.ValuePortDirection));
         }
 
-        public void Begin(bool enabled)
+        public void Begin(bool enabled, bool captureValues = false)
         {
             m_Enabled = enabled;
+            CaptureValues = enabled && captureValues;
+            m_ValueSampleCount = 0;
             m_Sequence.Reset();
         }
 
         public bool Enabled => m_Enabled;
+        public bool CaptureValues { get; private set; }
 
-        public void End() => m_Enabled = false;
+        public void End()
+        {
+            m_Enabled = false;
+            CaptureValues = false;
+        }
+
+        public void AddValue(SimulationOperation operation, string portId, ProgramValuePortDirection direction, in CharacterStateValue value)
+        {
+            if (!CaptureValues || string.IsNullOrEmpty(portId) || !m_ValuePorts.Contains((operation.Handle.Value, portId, direction)))
+                return;
+            if (m_ValueSampleCount >= SimulationValueTraceLimits.MaxSamplesPerEvaluation)
+            {
+                if (m_ValueSampleCount == SimulationValueTraceLimits.MaxSamplesPerEvaluation)
+                {
+                    m_ValueSampleCount++;
+                    Add(operation, "value_sampling_limit", SimulationTraceSeverity.Detail,
+                        "本次求值的端口采样达到上限，后续值未采集。");
+                }
+                return;
+            }
+            m_ValueSampleCount++;
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                m_Sequence.Next(operation), SimulationTraceSeverity.Detail, "Kernel.Value", "value_sampled", string.Empty,
+                m_Frame.CurrentActionTraceInstanceId, m_Frame.CurrentActionTraceSkillId, m_Frame.CurrentSkillTraceGeneration,
+                new SimulationValueTrace(portId, direction, value)));
+        }
 
         public void Add(SimulationOperation operation, string code, SimulationTraceSeverity severity, string detail)
         {

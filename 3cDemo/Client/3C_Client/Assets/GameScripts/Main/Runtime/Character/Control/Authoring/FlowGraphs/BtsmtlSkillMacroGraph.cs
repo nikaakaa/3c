@@ -68,6 +68,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override bool usesExplicitPortSelection => true;
         public override bool HandleEditorCommand(string command, Vector2 position) =>
             BtsmtlSkillFlowEditorMutation.HandleCommand(this, command, position);
+        protected override void OnGraphEditorToolbar() => BtsmtlSkillObservationToolbar.Draw(this);
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);
         public override bool CanAuthorConnection(Port source, Port target, out string reason) =>
             BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out reason);

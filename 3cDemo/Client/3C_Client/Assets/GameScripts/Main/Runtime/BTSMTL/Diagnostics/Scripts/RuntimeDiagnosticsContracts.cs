@@ -332,7 +332,8 @@ namespace BTSMTL.Diagnostics
         Network = 1 << 7,
         FootPlacement = 1 << 8,
         Equipment = 1 << 9,
-        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect | Network | FootPlacement | Equipment
+        Values = 1 << 10,
+        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect | Network | FootPlacement | Equipment | Values
     }
 
     public enum RuntimeTraceEventKind
@@ -423,7 +424,9 @@ namespace BTSMTL.Diagnostics
         EquipmentSnapshot,
         EquipmentChange,
         EquipmentVisual,
-        MotionMatchingFrame
+        MotionMatchingFrame,
+        ValueSampled,
+        ValueSamplingLimited
     }
 
     public enum DebugValueKind

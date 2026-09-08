@@ -5,12 +5,13 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics
 {
-    public sealed class CharacterSimulationDiagnosticsAdapter : ISimulationDiagnosticsSink
+    public sealed class CharacterSimulationDiagnosticsAdapter : ISimulationDiagnosticsSink, ISimulationValueTraceInterest
     {
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
         readonly string[] m_GraphInvocationPaths;
+        readonly CharacterPortValueDiagnostics m_PortValues;
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
@@ -24,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            m_PortValues = new CharacterPortValueDiagnostics(context, m_ExecutionId, program.SourceMap);
             m_GraphInvocationPaths = new string[program.Operations.Count];
             for (int i = 0; i < program.SourceMap.Count; i++)
             {
@@ -63,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         public RuntimeDiagnosticsContext Context => m_Context;
         public bool IsEnabled => m_Context.Store.EffectiveChannels != RuntimeTraceChannel.None;
+        public bool IsValueCaptureRequested(ActorId actorId) => m_Context.Store.IsInterested(RuntimeTraceChannel.Values, RuntimeTraceEventKind.ValueSampled);
 
         public void PublishBoundary(SimulationBoundaryTraceRecord record)
         {
@@ -97,6 +100,18 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.Code == "value_sampling_limit")
+            {
+                m_PortValues.PublishLimit(record.Detail);
+                return;
+            }
+            if (record.ValueTrace != null)
+            {
+                m_PortValues.Publish(record.Header.Activation.Source.Operation.Value, record.ValueTrace.PortId,
+                    record.ValueTrace.Direction, CaptureValue(record.ValueTrace.Value), record.SkillId, record.ActionInstanceId,
+                    record.SkillExecutionGeneration, record.Header.Activation.Generation);
+                return;
+            }
             if (record.Header.Activation.Source.IsCharacterControl)
             {
                 PublishControl(record);
@@ -148,6 +163,19 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
         }
+
+        static DebugValueSnapshot CaptureValue(CharacterStateValue value) => value.Kind switch
+        {
+            ProgramStateValueKind.Boolean => DebugValueSnapshot.Capture(value.Boolean),
+            ProgramStateValueKind.Int32 => DebugValueSnapshot.Capture(value.Int32),
+            ProgramStateValueKind.UInt64 => DebugValueSnapshot.Capture(value.UInt64),
+            ProgramStateValueKind.Scalar => DebugValueSnapshot.Capture(value.Scalar.Value),
+            ProgramStateValueKind.Identity => DebugValueSnapshot.Capture(value.Identity),
+            ProgramStateValueKind.Vector2 => DebugValueSnapshot.Capture(new UnityEngine.Vector2(value.Vector2.X.Value, value.Vector2.Y.Value)),
+            ProgramStateValueKind.Vector3 => DebugValueSnapshot.Capture(new UnityEngine.Vector3(value.Vector3.X.Value, value.Vector3.Y.Value, value.Vector3.Z.Value)),
+            ProgramStateValueKind.Yaw => DebugValueSnapshot.Capture(value.Yaw.Degrees.Value),
+            _ => DebugValueSnapshot.Capture(value)
+        };
 
         void PublishControl(SimulationTraceRecord record)
         {

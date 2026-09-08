@@ -191,6 +191,8 @@ namespace BTSMTL.Diagnostics.Editor
         ulong m_LatestLogicTick;
         ulong m_LatestPresentationFrame;
         long m_Revision;
+        bool m_HasCoverageGap;
+        long m_EvictedStates;
 
         internal RuntimeDebugViewModel(RuntimeDebugTargetInfo target, RuntimeDebugSourceMapSnapshot sourceMap, RuntimeTraceChannel channels)
         {
@@ -208,6 +210,14 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong LatestLogicTick => m_LatestLogicTick;
         public ulong LatestPresentationFrame => m_LatestPresentationFrame;
         public long Revision => m_Revision;
+        public bool HasCoverageGap => m_HasCoverageGap;
+        public long EvictedStates => m_EvictedStates;
+
+        internal void SetCoverage(long evictedStates, bool missedChanges)
+        {
+            m_EvictedStates = evictedStates;
+            m_HasCoverageGap |= missedChanges || evictedStates != 0;
+        }
         public RuntimeDebugChangeSet Changes => m_Changes;
 
         public RuntimeDebugTargetMatch MatchSource(RuntimeDebugTargetRequest request)

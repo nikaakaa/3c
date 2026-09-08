@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 
-    internal sealed class FixedSimulationDiagnosticsAggregate : ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink
+    internal sealed class FixedSimulationDiagnosticsAggregate : ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink, ISimulationValueTraceInterest
     {
         readonly Dictionary<ActorId, ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink> m_ByActor;
         readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink[] m_Ordered;
@@ -222,6 +222,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int i = 0; i < m_Ordered.Length; i++)
                 m_Ordered[i].PublishBoundary(record);
         }
+
+        public bool IsValueCaptureRequested(ActorId actorId) =>
+            GetRequired(actorId) is ISimulationValueTraceInterest interest && interest.IsValueCaptureRequested(actorId);
 
         public void PublishPipeline(ThirdPersonSimulation.Fixed.SimulationPipelineTraceRecord record)
         {

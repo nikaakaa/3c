@@ -16,7 +16,8 @@ namespace ThirdPersonSimulation
             IEnumerable<SimulationIngress> ingress,
             CharacterSimulationState currentState,
             WorldBodyState previousBody,
-            bool diagnosticsEnabled)
+            bool diagnosticsEnabled,
+            bool valueTraceEnabled = false)
         {
             Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             Program = binding.Program;
@@ -37,6 +38,7 @@ namespace ThirdPersonSimulation
             Tick = tick;
             PreviousBody = previousBody;
             DiagnosticsEnabled = diagnosticsEnabled;
+            ValueTraceEnabled = diagnosticsEnabled && valueTraceEnabled;
             var copied = ingress == null ? new List<SimulationIngress>() : new List<SimulationIngress>(ingress);
             copied.Sort(CompareIngress);
             for (int i = 0; i < copied.Count; i++)
@@ -63,6 +65,7 @@ namespace ThirdPersonSimulation
         public CharacterSimulationState CurrentState { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
+        public bool ValueTraceEnabled { get; }
 
         internal static int CompareIngress(SimulationIngress left, SimulationIngress right)
         {

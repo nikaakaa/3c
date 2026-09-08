@@ -663,6 +663,21 @@ namespace ThirdPersonSimulation
         Error = 4
     }
 
+    public sealed class SimulationValueTrace
+    {
+        public SimulationValueTrace(string portId, ProgramValuePortDirection direction, CharacterStateValue value)
+        {
+            PortId = SimulationIdentity.Require(portId, nameof(portId));
+            if (direction is not (ProgramValuePortDirection.Input or ProgramValuePortDirection.Output))
+                throw new ArgumentOutOfRangeException(nameof(direction));
+            Direction = direction;
+            Value = value;
+        }
+        public string PortId { get; }
+        public ProgramValuePortDirection Direction { get; }
+        public CharacterStateValue Value { get; }
+    }
+
     public readonly struct SimulationTraceRecord
     {
         public SimulationTraceRecord(
@@ -673,7 +688,8 @@ namespace ThirdPersonSimulation
             string detail,
             ulong actionInstanceId = 0,
             string skillId = "",
-            ulong skillExecutionGeneration = 0)
+            ulong skillExecutionGeneration = 0,
+            SimulationValueTrace valueTrace = null)
         {
             Header = header;
             Severity = severity;
@@ -683,6 +699,7 @@ namespace ThirdPersonSimulation
             ActionInstanceId = actionInstanceId;
             SkillId = skillId ?? string.Empty;
             SkillExecutionGeneration = skillExecutionGeneration;
+            ValueTrace = valueTrace;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -692,5 +709,6 @@ namespace ThirdPersonSimulation
         public ulong ActionInstanceId { get; }
         public string SkillId { get; }
         public ulong SkillExecutionGeneration { get; }
+        public SimulationValueTrace ValueTrace { get; }
     }
 }

@@ -1,17 +1,19 @@
 using System;
 using BTSMTL.Diagnostics;
+using ThirdPersonSimulation;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using UnityEngine;
 using FixedRuntime = ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
-    public sealed class FixedCharacterSimulationDiagnosticsAdapter : FixedRuntime.ISimulationDiagnosticsSink
+    public sealed class FixedCharacterSimulationDiagnosticsAdapter : FixedRuntime.ISimulationDiagnosticsSink, ISimulationValueTraceInterest
     {
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
         readonly string[] m_GraphInvocationPaths;
+        readonly CharacterPortValueDiagnostics m_PortValues;
 
         public FixedCharacterSimulationDiagnosticsAdapter(
             RuntimeDiagnosticsContext context,
@@ -22,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            m_PortValues = new CharacterPortValueDiagnostics(context, m_ExecutionId, program.SourceMap);
             m_GraphInvocationPaths = new string[program.Operations.Count];
             foreach (ThirdPersonSimulation.ProgramSourceMapEntry entry in program.SourceMap)
                 if (entry.TargetKind == ThirdPersonSimulation.ProgramSourceTargetKind.Operation)
@@ -42,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         public bool IsEnabled => m_Context.Store.EffectiveChannels != RuntimeTraceChannel.None;
+        public bool IsValueCaptureRequested(ActorId actorId) => m_Context.Store.IsInterested(RuntimeTraceChannel.Values, RuntimeTraceEventKind.ValueSampled);
 
         public void PublishBoundary(FixedRuntime.SimulationBoundaryTraceRecord record)
         {
@@ -75,6 +79,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.Code == "value_sampling_limit")
+            {
+                m_PortValues.PublishLimit(record.Detail);
+                return;
+            }
+            if (record.ValueTrace != null)
+            {
+                m_PortValues.Publish(record.Header.Activation.Source.Operation.Value, record.ValueTrace.PortId,
+                    record.ValueTrace.Direction, CaptureValue(record.ValueTrace.Value), record.SkillId, record.ActionInstanceId,
+                    record.SkillExecutionGeneration, record.Header.Activation.Generation);
+                return;
+            }
             if (record.Header.Activation.Source.IsCharacterControl)
             {
                 PublishControl(record);
@@ -127,6 +143,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 });
             CharacterPipelineTraceCommandLine.LogOperation(record, kind, source, m_SourceMap);
         }
+
+        static DebugValueSnapshot CaptureValue(FixedRuntime.CharacterStateValue value) => value.Kind switch
+        {
+            ProgramStateValueKind.Boolean => DebugValueSnapshot.Capture(value.Boolean),
+            ProgramStateValueKind.Int32 => DebugValueSnapshot.Capture(value.Int32),
+            ProgramStateValueKind.UInt64 => DebugValueSnapshot.Capture(value.UInt64),
+            ProgramStateValueKind.Scalar => DebugValueSnapshot.Capture(value.Scalar.ToDouble()),
+            ProgramStateValueKind.Identity => DebugValueSnapshot.Capture(value.Identity),
+            ProgramStateValueKind.Vector2 => DebugValueSnapshot.Capture(new Vector2(value.Vector2.X.ToSingle(), value.Vector2.Y.ToSingle())),
+            ProgramStateValueKind.Vector3 => DebugValueSnapshot.Capture(new Vector3(value.Vector3.X.ToSingle(), value.Vector3.Y.ToSingle(), value.Vector3.Z.ToSingle())),
+            ProgramStateValueKind.Yaw => DebugValueSnapshot.Capture(value.Yaw.Degrees.ToDouble()),
+            _ => DebugValueSnapshot.Capture(value)
+        };
 
         void PublishControl(FixedRuntime.SimulationTraceRecord record)
         {

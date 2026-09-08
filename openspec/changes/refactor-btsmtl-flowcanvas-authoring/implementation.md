@@ -20,6 +20,14 @@
 
 ## 实施基线与归属
 
+### 技能作者与运行依赖审计
+
+已沿正式入口核对：CharacterPipelineHost读取Definition.SimulationProgram.Load和PresentationProjection.Load，将编译Program交给Session装配、输入及诊断适配器。Float32OperationEvaluator与FixedOperationEvaluator均从技能目录取得EntryOperation，通过m_Control.Tick进入共用OperationControlRuntime及OperationExecutionLifecycleRuntime；ActionSkillExecutionRuntime只持有操作、状态槽、技能目录和ActionInstance数据。停止与恢复仍使用这些Program操作和状态，未引入原生技能运行实例。
+
+源码搜索覆盖Runtime/Simulation、Runtime/Character/Pipeline/Unity及Runtime/Character/Pipeline/Runtime：运行执行与Unity装配未引用FlowCanvas或调用StartGraph／BindPorts。Definition中的SkillGraphs字段、getter和setter受UNITY_EDITOR保护，技能FlowGraph／Macro及节点文件也仅在Editor编译。编辑器观察通过已有诊断数据调用原生绘制，不能作为Gameplay执行入口。TreeDesigner旧RootTree字段仍有其他未迁移作者消费者，本项不把它误报为原生技能runtime依赖，也不擅自删除。
+
+结论：4.4.2的源码依赖边界已核对。此结论不证明资产已迁移或技能运行结果已验收；这些仍由第5节和8.1收口。
+
 最新补充授权：允许Unity刷新和脚本编译检查，只修本次BTSMTL错误，不处理其他领域报错；不触发内容Build、整根Validator或回放。以下较早的禁止脚本编译记录由本条取代。
 
 执行顺序：先完成代码、编辑器及实例观察，资产迁移最后执行。当前不触发内容Build、整根校验及回放。接入入口必须从实例工作区定位，不恢复`Character Definition -> Open Root Tree`；精确Definition路径只保留为已有资源关联及历史检查定位。

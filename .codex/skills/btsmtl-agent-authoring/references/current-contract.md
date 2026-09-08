@@ -76,6 +76,12 @@ Store在整包strict parse前只发现满足以下全部条件的新增文件对
 
 ## MCP生命周期工具
 
+### CanvasCore人工作者入口
+
+Pose根图与子图由CanvasCore `GraphEditor`直接显示正式`CharacterPoseCanvasGraph`；`CharacterPoseGraphWorkspace`在同一窗口提供导航、详情及状态机／规则编辑。状态机和规则的`CharacterPoseDocumentCanvas`是不保存的Editor视图，只引用原Document的稳定实体身份，不进入manifest、资产目录、Compiler或Runtime，不构成第二份作者拓扑。
+
+人工编辑原语、端口选择和批量clipboard仍进入Definition／Port Shape与typed Presentation Mutation。图内容由实际Canvas子资产记录Undo并同步原序列化数据；状态机和规则的Undo包含它们实际所属的Canvas子资产。视图自己不记录第二份Undo，也不能从通用Graph JSON或反射菜单写入作者数据。该UI接入不增加MCP局部编辑工具，不放宽Document必填字段、身份唯一性或整包事务；无效源树仍保留正式错误，不能通过手改YAML修复。
+
 | 工具 | 额外输入 | Unity副作用 | 输出 |
 |---|---|---|---|
 | `btsmtl.checkout_document` | 无 | 无 | Package绝对路径、同步状态与revision/hash |

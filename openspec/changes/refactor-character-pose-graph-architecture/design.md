@@ -879,7 +879,7 @@ CharacterPoseCanvasGraph : CanvasCore Graph
 
 `CharacterPresentationPoseGraphAsset`继续作为Profile引用和Graph catalog所有者，但不再保存`CharacterTypedPoseGraph`副本。Canvas Graph／Node／Connection是唯一可编辑拓扑；PoseStateMachine定义、状态元素和布局继续作为匹配节点的typed作者数据，由同一Pose Canvas显示，不建立独立可写状态机资产。
 
-Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础，不以FlowCanvas的`FlowScript`、`FlowNode`、`BinderConnection`或自动TypeConverter作为正式Pose模型。原因是Pose需要Local／Component、Goal Contribution、Goal Set等严格业务类型，而FlowCanvas允许面向通用C#值和调用的连接与转换。代价是项目需要实现Pose专用Port与Connection外观；收益是Canvas不会携带第二运行语义，也不会放宽现有拓扑合同。
+Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础（编辑表面按Decision 25采用CanvasCore `GraphEditor`），不以FlowCanvas的`FlowScript`、`FlowNode`、`BinderConnection`或自动TypeConverter作为正式Pose模型。原因是Pose需要Local／Component、Goal Contribution、Goal Set等严格业务类型，而FlowCanvas允许面向通用C#值和调用的连接与转换。代价是项目需要实现Pose专用Port与Connection外观；收益是Canvas不会携带第二运行语义，也不会放宽现有拓扑合同。
 
 ## Decision 22: Node Definition投影Canvas，Mutation拥有全部写入
 
@@ -889,9 +889,9 @@ Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础，不�
 
 ```text
 Canvas gesture
--> CharacterPoseCanvasMutationAdapter
+-> CharacterPoseCanvasMutationAdapter（编辑器表面为CanvasCore GraphEditor时经由Graph原生API入口路由，见Decision 25）
 -> CharacterPresentationMutation
--> Document Transaction / Undo
+-> Document Transaction / Undo（编辑器会话内CanvasCore Undo唯一，见Decision 25）
 -> mutate the sole CharacterPoseCanvasGraph
 -> refresh affected Canvas projection
 ```
@@ -926,6 +926,21 @@ Canvas中没有唯一Pose Node Definition的节点在进入IR前直接失败；C
 - 不生成新的Canvas资产，不保留空Profile、Prefab壳、旧GUID占位或迁移清单例外。未来训练敌人或中立怪物从届时正式的Gameplay、AI、Character Pipeline、Presentation与Canvas链重新建立。
 
 删除顺序固定为先清除外部引用和场景组合，再删除资产与专用工具，最后按名称、路径、ActorId和GUID做引用闭包检查。这样不会留下Missing Script、Missing Asset或仍被collector打包的孤儿内容。
+
+## Decision 25: Pose编辑表面采用CanvasCore GraphEditor，Mutation路由保唯一写入
+
+接入补充（2026-09-08）：根图与Pose子图直接使用正式Canvas作者对象。StateMachine和TransitionRule仍保存原typed作者数据；同一GraphEditor中的`CharacterPoseDocumentCanvas`只持有稳定identity与显示投影，不保存、不进入Document或Compiler、不独立运行，修改仍提交原Document Mutation。这是编辑视图，不是第二套可写状态机资产。窗口导航、详情和既有观察界面由`CharacterPoseGraphWorkspace`组合，不再创建第二个Pose EditorWindow。
+
+图操作先对完整候选preflight，再在实际Canvas owner上记录Undo及序列化；仍存在的节点对象保持身份，减少拖动和选择失效。状态机内容的Undo必须包含其实际Canvas子资产，布局仍归原布局owner；撤销后按Graph／Node稳定identity重新读取定义，不复用撤销前对象。重绘、选择和全图吸附不得偷偷写入作者布局，运行高亮只保留在视图状态中。当前实现与尚未通过的验收见`canvas-integration.md`。
+
+（2026-09-08新增，取代execution记录21.7"保留自建GraphView"的旧取舍。）Pose作者编辑表面从877行自建`CharacterPoseCanvasView`切换为CanvasCore `GraphEditor`（`OpenWindow(graph)`入口），自建View随22.x完成后退役删除。CanvasCore以vendored源码形式取得第一方地位：允许在其源码内加最小钩子，全部改动点以`// 3C`标记，便于将来与上游版本手工对账。
+
+写入路径：`CharacterPoseCanvasGraph`的8个写方法（AddNode/AddNode<T>/RemoveNode/ConnectNodes/RemoveConnection等）从抛异常改为把CanvasCore编辑器的原语调用翻译成typed Mutation——端口索引反查端口ID、粘贴时重建NodeId、经`CharacterPoseCanvasMutationPreflight`校验后应用。Mutation合同（17.2/17.3）不变，硬锁变正门。节点位置与名称这类CanvasCore直接写字段的操作，在CanvasCore侧加变更事件钩子路由进Document记录，保持Layout进Undo与迁移对账。
+
+Undo owner定界：编辑器会话内CanvasCore Undo唯一（Mutation应用后不双记Document），外部入口（MCP、Inspector、Clipboard、正式写入命令）Document Transaction唯一。创建菜单只放行`CharacterPoseNodeDefinition`注册的类型（16.3禁令不变），菜单文案、分组与颜色继续由Definition投影提供；命名端口视觉与Pose Watch、StateMachine子图导航、Preview Dock挂进GraphEditor面板体系属于后续增量，不阻塞画布编辑可用性。
+
+代价：CanvasCore升级需人工diff对账（改动点已标记）；NodeCanvas默认端口视觉在命名端口适配完成前降级显示（数据与编译不受影响）。收益：编辑器交互、连线渲染、Undo、复制粘贴、小地图等由成熟框架承载，项目不再自养GraphView。
+
 
 ## Migration
 

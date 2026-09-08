@@ -84,7 +84,25 @@ Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`�
 
 ### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
 
-Pose Graph、PoseStateMachine、Node、Port、Edge、布局与子图 MUST只保存在唯一Pose作者资产模型中，并由唯一Pose Canvas编辑。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、线程安全能力、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Pose Canvas、Document v4 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering、线程安全事实与Source Map。Canvas创建、连线、删除、复制粘贴、Undo和Details编辑 MUST通过typed Presentation Mutation提交；Canvas运行委托、反射方法和事件流 MUST不成为Pose执行语义。旧Pose作者资产和旧Canvas在迁移后 MUST删除，系统 MUST不保留第二节点目录、镜像Graph、双写、反向同步、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。迁移清单 MUST只包含明确保留并能进入正式Character Build的Pose内容；被批准整套退役的内容 MUST在迁移前删除，迁移器 MUST不为其生成Canvas资产、空Profile或兼容占位。
+Pose Graph、PoseStateMachine、Node、Port、Edge、布局与子图 MUST只保存在唯一Pose作者资产模型中，并由唯一Pose Canvas编辑。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、线程安全能力、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Pose Canvas、Document v4 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering、线程安全事实与Source Map。Canvas创建、连线、删除、复制粘贴、Undo和Details编辑 MUST通过typed Presentation Mutation提交；当编辑来自CanvasCore `GraphEditor`表面时，写入 MUST经由Graph原生API入口（AddNode/ConnectNodes/RemoveNode/RemoveConnection等）路由到同一typed Mutation与preflight，Undo在编辑器会话内由CanvasCore唯一拥有，外部入口（MCP、Inspector、Clipboard、正式写入命令）仍由Document Transaction唯一拥有；Canvas运行委托、反射方法和事件流 MUST不成为Pose执行语义。旧Pose作者资产和旧Canvas在迁移后 MUST删除，系统 MUST不保留第二节点目录、镜像Graph、双写、反向同步、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。迁移清单 MUST只包含明确保留并能进入正式Character Build的Pose内容；被批准整套退役的内容 MUST在迁移前删除，迁移器 MUST不为其生成Canvas资产、空Profile或兼容占位。
+
+#### Scenario: CanvasCore GraphEditor原语路由Mutation
+
+- **WHEN** 作者在CanvasCore `GraphEditor`表面执行建节点、拖线、删除、粘贴或字段编辑原语
+- **THEN** Graph写方法 MUST把该原语（含端口索引反查与粘贴NodeId重建）翻译为typed Mutation并经同一preflight校验后应用
+- **AND** 编辑器会话内撤销 MUST由CanvasCore Undo唯一记录，不与Document Transaction双记；外部写入入口的Undo归属不变
+
+#### Scenario: 状态机与规则使用同窗口编辑视图
+
+- **WHEN** 作者从Pose节点进入StateMachine或TransitionRule
+- **THEN** 同一GraphEditor MAY使用不保存的视图节点显示原Document的稳定实体、端口和布局
+- **AND** 该视图 MUST NOT成为第二作者资产、进入Document清单／Compiler或建立运行逻辑；修改 MUST提交原Document Mutation，Undo MUST覆盖实际存储内容的owner
+
+#### Scenario: 观察与重绘保持作者内容
+
+- **WHEN** Canvas重绘、选择节点、恢复窗口或显示运行高亮
+- **THEN** 系统 MUST只更新视图状态，不改变作者位置、字段值或业务revision
+- **AND** 只有明确的作者编辑操作 MUST提交Mutation；Undo后 MUST按稳定identity读取当前对象，不沿用旧状态机对象
 
 #### Scenario: 新增Pose节点能力
 
@@ -112,7 +130,7 @@ Pose Graph、PoseStateMachine、Node、Port、Edge、布局与子图 MUST只保�
 
 ### Requirement: Pose Graph UI必须保留准确术语和serialized identity
 
-Pose Canvas、Document、Mutation、Compiler source map和Diagnostics MUST对同一节点使用相同稳定identity与业务术语，包括Clip Player、Blend Space Player、Selected Pose Player、Animation State Machine、Slot、Layered Blend Per Bone、Inertialization、Locomotion Phase Group、Pose Watch和Output Pose。Canvas MAY提供领域图标、颜色、节点折叠和搜索表现，但 MUST不改变serialized kind、端口identity或Pose空间；MUST不保留旧node kind alias或按Canvas类型名生成业务kind。
+Pose编辑表面 MUST为CanvasCore `GraphEditor`（`OpenWindow(graph)`入口），节点视觉（标题、分组、颜色、端口）MUST由唯一Node Definition投影提供；自建GraphView画布在接入完成后 MUST删除，系统 MUST不保留第二画布。Pose Canvas、Document、Mutation、Compiler source map和Diagnostics MUST对同一节点使用相同稳定identity与业务术语，包括Clip Player、Blend Space Player、Selected Pose Player、Animation State Machine、Slot、Layered Blend Per Bone、Inertialization、Locomotion Phase Group、Pose Watch和Output Pose。Canvas MAY提供领域图标、颜色、节点折叠和搜索表现，但 MUST不改变serialized kind、端口identity或Pose空间；MUST不保留旧node kind alias或按Canvas类型名生成业务kind。命名端口视觉完成适配前 MAY接受默认端口显示降级，但端口identity数据与编译语义 MUST不受影响。
 
 #### Scenario: 作者添加单Clip播放器
 

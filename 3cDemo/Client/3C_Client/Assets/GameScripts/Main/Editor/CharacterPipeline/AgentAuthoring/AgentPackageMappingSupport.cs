@@ -51,20 +51,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Add(declaration?.declarationId, "editable.blackboard.declarations");
             foreach (AgentSnapshotSkillDefinition skill in editable.skills ?? new List<AgentSnapshotSkillDefinition>())
                 Add(skill?.skillId, "editable.skills");
+            var summaryGraphIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (AgentSnapshotStateMachineSummary stateMachine in editable.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
             {
                 if (stateMachine == null)
                     continue;
-                if (!(editable.graphs ?? new List<AgentSnapshotGraph>())
-                    .Any(graph => graph != null && string.Equals(
+                if (!summaryGraphIds.Add(stateMachine.graphAuthoringId))
+                {
+                    report.Error("editable.controller.stateMachines", "entity_identity_duplicate", $"StateMachine摘要重复：{stateMachine.graphAuthoringId}");
+                    valid = false;
+                }
+                AgentSnapshotGraph ownerGraph = (editable.graphs ?? new List<AgentSnapshotGraph>())
+                    .FirstOrDefault(graph => graph != null && string.Equals(
                         graph.graphAuthoringId,
                         stateMachine.graphAuthoringId,
-                        StringComparison.Ordinal)))
+                        StringComparison.Ordinal));
+                if (ownerGraph == null)
                 {
                     Add(stateMachine.graphAuthoringId, "editable.controller.stateMachines");
                 }
+                var summaryStateIds = new HashSet<string>(StringComparer.Ordinal);
                 foreach (AgentSnapshotStateSummary state in stateMachine.states ?? new List<AgentSnapshotStateSummary>())
-                    Add(state?.stateAuthoringId, "editable.controller.stateMachines.states");
+                {
+                    string stateId = state?.stateAuthoringId;
+                    if (!summaryStateIds.Add(stateId))
+                    {
+                        report.Error("editable.controller.stateMachines.states", "entity_identity_duplicate", $"State摘要重复：{stateId}");
+                        valid = false;
+                        continue;
+                    }
+                    if (ownerGraph == null)
+                    {
+                        Add(stateId, "editable.controller.stateMachines.states");
+                        continue;
+                    }
+                    if (!IsIdentity(stateId) ||
+                        !string.Equals(ownerGraph.kind, AgentGraphKind.StateMachineGraph.ToString(), StringComparison.Ordinal) ||
+                        !(ownerGraph.nodes ?? new List<AgentSnapshotNode>()).Any(node =>
+                            node != null &&
+                            string.Equals(node.elementAuthoringId, stateId, StringComparison.Ordinal) &&
+                            string.Equals(node.typeName, typeof(TreeDesigner.StateNode).FullName, StringComparison.Ordinal)))
+                    {
+                        report.Error("editable.controller.stateMachines.states", "state_summary_reference_invalid", $"State摘要必须引用所属StateMachine Graph中的State节点：{stateId}");
+                        valid = false;
+                    }
+                }
             }
             foreach (AgentSnapshotAIBlackboardDeclaration declaration in editable.aiController?.blackboardDeclarations ?? new List<AgentSnapshotAIBlackboardDeclaration>())
                 Add(declaration?.declarationAuthoringId, "editable.ai.blackboard");

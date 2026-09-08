@@ -70,6 +70,17 @@
 - **THEN** strict parser MUST在mutation前拒绝该Graph
 - **AND** MUST不忽略字段或转换为SerializedProperty写入
 
+### Requirement: 状态摘要必须复用正式节点身份
+
+系统 MUST区分状态摘要引用与实体声明，并按所属Graph核对摘要身份。
+
+#### Scenario: 状态摘要引用同一Graph中的状态节点
+
+- **WHEN** controller状态摘要和editable Graph同时表达同一个状态节点
+- **THEN** identity校验 MUST将摘要视为所属StateMachine Graph中State节点的引用，不得将其再次登记为独立实体
+- **AND** MUST拒绝摘要内重复状态、重复状态机摘要、跨Graph引用及非State节点引用；Graph自身的实体identity仍须全局唯一
+- **AND** 对只以摘要提供的组合状态机，摘要身份 MUST继续参与全局唯一校验
+
 ### Requirement: 系统Node必须通过只读anchor参与Graph连接
 
 系统 MUST按Graph kind把Root、Enter、Exit、Any、OnEnter、OnExit、TimelineEnter和ConditionRuleResult等系统Node投影为保留anchor。Anchor MUST只作为Edge endpoint，不得进入editable Node集合，不得拥有layout、properties或可删除identity。每个Graph kind允许的anchor与逻辑port MUST来自同一Graph kind catalog。

@@ -23,6 +23,19 @@ namespace UnityHFSM
 		void Bind(TickClock clock);
 	}
 
+	internal static class TickClockBinding
+	{
+		public static void Bind(object target, TickClock clock)
+		{
+			if (target is ITickClockHost host)
+				host.AdoptClock(clock);
+			else if (target is ITickBound bound)
+				bound.Bind(clock);
+			else if (target is ITimerHolder holder && holder.Timer is ITickBound timer)
+				timer.Bind(clock);
+		}
+	}
+
 	/// <summary> Exposes the timing object owned by a state or transition. </summary>
 	public interface ITimerHolder
 	{

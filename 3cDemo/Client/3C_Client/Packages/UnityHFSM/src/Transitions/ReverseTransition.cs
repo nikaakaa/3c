@@ -7,10 +7,12 @@ namespace UnityHFSM
 	/// The <c>BeforeTransition</c> and <c>AfterTransition</c> callbacks of the wrapped transition
 	/// are also swapped.
 	/// </summary>
-	public class ReverseTransition<TStateId> : TransitionBase<TStateId>
+	public class ReverseTransition<TStateId> : TransitionBase<TStateId>, ITickBound
 	{
 		public readonly TransitionBase<TStateId> wrappedTransition;
 		private readonly bool shouldInitWrappedTransition;
+
+		public void Bind(TickClock clock) => TickClockBinding.Bind(wrappedTransition, clock);
 
 		public ReverseTransition(
 				TransitionBase<TStateId> wrappedTransition,

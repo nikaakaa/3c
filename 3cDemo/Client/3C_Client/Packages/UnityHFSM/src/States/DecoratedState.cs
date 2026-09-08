@@ -7,7 +7,7 @@ namespace UnityHFSM
 	/// before and after the wrapped state's code.
 	/// It does not interfere with the wrapped state's timing / needsExitTime / ... behaviour.
 	/// </summary>
-	public class DecoratedState<TStateId, TEvent> : StateBase<TStateId>, ITriggerable<TEvent>, IActionable<TEvent>
+	public class DecoratedState<TStateId, TEvent> : StateBase<TStateId>, ITriggerable<TEvent>, IActionable<TEvent>, ITickBound
 	{
 		private readonly Action<StateBase<TStateId>>
         	beforeOnEnter,
@@ -20,6 +20,8 @@ namespace UnityHFSM
         	afterOnExit;
 
         public readonly StateBase<TStateId> state;
+
+        public void Bind(TickClock clock) => TickClockBinding.Bind(state, clock);
 
         public DecoratedState(
         	StateBase<TStateId> state,

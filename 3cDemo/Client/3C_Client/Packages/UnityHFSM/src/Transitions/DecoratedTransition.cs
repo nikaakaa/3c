@@ -6,7 +6,7 @@ namespace UnityHFSM
 	/// A class that allows you to run additional functions (companion code)
 	/// before and after the wrapped transition's code.
 	/// </summary>
-	public class DecoratedTransition<TStateId> : TransitionBase<TStateId>
+	public class DecoratedTransition<TStateId> : TransitionBase<TStateId>, ITickBound
 	{
 		private readonly Action<TransitionBase<TStateId>>
         	beforeOnEnter,
@@ -22,6 +22,8 @@ namespace UnityHFSM
 	        afterAfterTransition;
 
         public readonly TransitionBase<TStateId> transition;
+
+        public void Bind(TickClock clock) => TickClockBinding.Bind(transition, clock);
 
         public DecoratedTransition(
         		TransitionBase<TStateId> transition,

@@ -49,23 +49,30 @@ namespace UnityHFSM
 		protected void BindTiming(ITimer timer)
 		{
 			if (timer is ITickBound bound)
-			{
-				bound.Bind(clock);
-				boundTimers.Add(bound);
-			}
+				BindTiming(bound);
+		}
+
+		void BindTiming(ITickBound bound)
+		{
+			bound.Bind(clock);
+			boundTimers.Add(bound);
 		}
 
 		void BindTiming(StateBase<TStateId> state)
 		{
 			if (state is ITickClockHost host)
 				host.AdoptClock(clock);
+			else if (state is ITickBound bound)
+				BindTiming(bound);
 			else if (state is ITimerHolder holder)
 				BindTiming(holder.Timer);
 		}
 
 		void BindTiming(TransitionBase<TStateId> transition)
 		{
-			if (transition is ITimerHolder holder)
+			if (transition is ITickBound bound)
+				BindTiming(bound);
+			else if (transition is ITimerHolder holder)
 				BindTiming(holder.Timer);
 		}
 

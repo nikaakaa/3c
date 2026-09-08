@@ -1,10 +1,14 @@
 using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
+using FlowCanvas;
+using NodeCanvas.Editor;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using TreeDesigner.Editor;
@@ -32,7 +36,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
         {
-            if (!definition || !source.IsValid || !definition.RootTreeAsset)
+            if (!definition || !source.IsValid)
+                return false;
+
+            if (!string.IsNullOrEmpty(source.GraphAuthoringId))
+            {
+                FlowGraph[] nativeGraphs = definition.SkillGraphs
+                    .Where(graph => graph != null)
+                    .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false))
+                    .Distinct()
+                    .Where(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == source.GraphAuthoringId)
+                    .ToArray();
+                if (nativeGraphs.Length != 0)
+                    return nativeGraphs.Length == 1 && OpenSkillGraph(nativeGraphs[0], source, instance);
+            }
+            if (!definition.RootTreeAsset)
                 return false;
 
             BaseTree root = definition.RootTreeAsset.Tree;
@@ -69,6 +87,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             return false;
+        }
+
+        static bool OpenSkillGraph(FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
+        {
+            NodeCanvas.Framework.IGraphElement element = null;
+            if (source.Kind == RuntimeSourceElementKind.Node)
+                element = graph.allNodes.SingleOrDefault(node => node.UID == source.ElementAuthoringId);
+            else if (source.Kind == RuntimeSourceElementKind.Edge)
+                element = graph.allNodes.SelectMany(node => node.outConnections)
+                    .SingleOrDefault(edge => edge.UID == source.ElementAuthoringId);
+            else if (source.Kind != RuntimeSourceElementKind.Graph)
+                return false;
+            if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
+                return false;
+
+            string hash = new BtsmtlSkillGraphFingerprint().Compute(graph);
+            if (graph.editorObservation is BtsmtlSkillFlowObservation existing)
+                existing.Dispose();
+            if (GraphEditor.currentGraph?.editorObservation is BtsmtlSkillFlowObservation previous)
+                previous.Dispose();
+            GraphEditor window = GraphEditor.OpenWindow(graph);
+            window.Show();
+            window.Focus();
+            if (element != null)
+                GraphEditor.FocusElement(element, true);
+            if (UnityEngine.Application.isPlaying && instance.IsValid)
+                _ = new BtsmtlSkillFlowObservation(graph, RuntimeDebugSession.Shared,
+                    new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(source.GraphAuthoringId), hash), instance);
+            return true;
         }
 
         public static bool OpenGraph(BaseTree graph, string elementAuthoringId, object authoringContext = null)

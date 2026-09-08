@@ -73,7 +73,7 @@ namespace NodeCanvas.Framework
             }
             private set
             {
-                if (!graph.usesDomainAuthoring || Event.current.rawType == EventType.MouseDrag) { // 3C: layout/repaint rounding must not move authored nodes.
+                if (!graph.usesDomainAuthoring) { // 3C: domain dragging submits the mouse delta through its position mutation.
                     position = new Vector2(value.x, value.y);
                 }
                 size = new Vector2(Mathf.Max(value.width, MIN_SIZE.x), Mathf.Max(value.height, MIN_SIZE.y));
@@ -613,6 +613,29 @@ namespace NodeCanvas.Framework
         //basicaly handles the node position and draging etc
         static void HandleNodePosition(Node node, Event e) {
             if (node.graph.isEditorReadOnly) { return; } // 3C: read-only domains still support selection and inspection.
+
+            if (node.graph.usesDomainAuthoring) { // 3C: GUILayout.Window can return its moved rect after consuming the drag event.
+                int dragControl = GUIUtility.GetControlID(FocusType.Passive);
+                if (GraphEditorUtility.allowClick && node.nodeIsPressed && e.type == EventType.MouseDown && e.button == 0) {
+                    GUIUtility.hotControl = dragControl;
+                    e.Use();
+                }
+                if (GUIUtility.hotControl == dragControl && e.type == EventType.MouseDrag && e.button == 0) {
+                    if (GraphEditorUtility.activeElements.Count > 1) {
+                        foreach (var element in GraphEditorUtility.activeElements) {
+                            if (element is Node selected) { selected.position += e.delta; }
+                        }
+                    } else {
+                        node.position += e.delta;
+                    }
+                    e.Use();
+                }
+                if (GUIUtility.hotControl == dragControl && e.type == EventType.MouseUp) {
+                    GUIUtility.hotControl = 0;
+                    e.Use();
+                }
+                return;
+            }
 
             if ( GraphEditorUtility.allowClick && e.button != 2 ) {
                 //drag all selected nodes

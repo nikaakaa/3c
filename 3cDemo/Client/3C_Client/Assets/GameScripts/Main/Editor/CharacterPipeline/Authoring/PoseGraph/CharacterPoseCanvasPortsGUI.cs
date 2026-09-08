@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static Node s_DragSource;
         static int s_DragPort;
         static GUIStyle s_OutputLabel;
+        static GUIStyle s_InputLabel;
 
         internal static void ResetDrag() => s_DragSource = null;
 
@@ -80,26 +81,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static void DrawBody(Node node)
         {
             NodePorts ports = Ports(node);
+            s_InputLabel ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleLeft, clipping = TextClipping.Clip };
+            s_OutputLabel ??= new GUIStyle(s_InputLabel) { alignment = TextAnchor.MiddleRight };
+            float inputWidth = ports.Inputs.Length == 0 ? 0f : ports.Inputs.Max(port => s_InputLabel.CalcSize(new GUIContent(port.Name)).x);
+            float outputWidth = ports.Outputs.Length == 0 ? 0f : ports.Outputs.Max(port => s_OutputLabel.CalcSize(new GUIContent(port.Name)).x);
+            float width = Math.Max(240f, inputWidth + outputWidth + 32f);
             int count = Math.Max(ports.Inputs.Length, ports.Outputs.Length);
             for (int i = 0; i < count; i++)
             {
-                Rect row = GUILayoutUtility.GetRect(240f, 20f);
+                Rect row = GUILayoutUtility.GetRect(width, 24f, GUILayout.MinWidth(width));
                 if (i < ports.Inputs.Length)
                 {
                     CanvasPort port = ports.Inputs[i];
-                    GUI.Label(new Rect(row.x + 3f, row.y, row.width * .5f - 6f, row.height),
-                        new GUIContent(port.Name, $"{port.Id} · {port.Kind}"));
+                    GUI.Label(new Rect(row.x + 3f, row.y, inputWidth + 2f, row.height),
+                        new GUIContent(port.Name, $"{port.Id} · {port.Kind}"), s_InputLabel);
                     if (Event.current.type == EventType.Repaint)
-                        ports.InputRects[i] = new Rect(-6f, row.center.y - 6f, 12f, 12f);
+                        ports.InputRects[i] = new Rect(-16f, row.center.y - 6f, 12f, 12f);
                 }
                 if (i < ports.Outputs.Length)
                 {
                     CanvasPort port = ports.Outputs[i];
-                    s_OutputLabel ??= new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight };
-                    GUI.Label(new Rect(row.center.x, row.y, row.width * .5f - 3f, row.height),
+                    GUI.Label(new Rect(row.xMax - outputWidth - 5f, row.y, outputWidth + 2f, row.height),
                         new GUIContent(port.Name, $"{port.Id} · {port.Kind}"), s_OutputLabel);
                     if (Event.current.type == EventType.Repaint)
-                        ports.OutputRects[i] = new Rect(node.rect.width - 6f, row.center.y - 6f, 12f, 12f);
+                        ports.OutputRects[i] = new Rect(node.rect.width + 4f, row.center.y - 6f, 12f, 12f);
                 }
             }
             if (node is CharacterPoseCanvasNode pose &&
@@ -167,7 +172,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < ports.Length; i++)
             {
                 Rect rect = WorldRect(node, rects[i]);
-                GUI.Box(rect, new GUIContent(string.Empty, $"{ports[i].Name} · {ports[i].Kind}"), EditorStyles.radioButton);
+                GUI.Label(rect, new GUIContent(string.Empty, $"{ports[i].Name} · {ports[i].Kind}"));
+                if (current.type == EventType.Repaint)
+                {
+                    EditorGUI.DrawRect(rect, new Color(.08f, .09f, .12f));
+                    Rect fill = new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f);
+                    EditorGUI.DrawRect(fill, rect.Contains(current.mousePosition) ? Color.white : new Color(.45f, .8f, 1f));
+                }
                 if (node.graph.isEditorReadOnly || !GraphEditorUtility.allowClick || !rect.Contains(current.mousePosition))
                     continue;
                 if (output && current.type == EventType.MouseDown && current.button == 0)

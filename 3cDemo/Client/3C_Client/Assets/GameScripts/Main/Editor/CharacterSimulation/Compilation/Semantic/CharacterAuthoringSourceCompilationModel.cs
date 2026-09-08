@@ -491,6 +491,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 RegisterIdentity(clip.Clip.AuthoringId, clip.Clip, "TimelineClip", clip.Route);
                         }
                     }
+            foreach (CharacterSkillCompilationRecord skill in skills)
+                ValidateSkillActionWindowQueries(skill.EntryGraph);
             if (!m_Report.IsValid)
                 return null;
             return new CharacterAuthoringCompilationModel(
@@ -610,6 +612,62 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             $"WindowType '{query.WindowType}' has no visible Decision TreeClip projection for the current frame. VisibleOwners={string.Join(",", visibleOwnerIds.OrderBy(value => value, StringComparer.Ordinal))}; Candidates={available}.");
                     }
                 }
+            }
+        }
+
+        void ValidateSkillActionWindowQueries(BtsmtlSkillGraphOccurrence root)
+        {
+            var paths = new Dictionary<BtsmtlSkillGraphOccurrence, BtsmtlSkillGraphOccurrence[]>();
+            var phases = new Dictionary<BtsmtlSkillGraphOccurrence, TreeClip>();
+            Collect(root, Array.Empty<BtsmtlSkillGraphOccurrence>(), null);
+            var projections = new List<(string WindowType, BtsmtlSkillGraphOccurrence Owner, TreeClip Clip, string Route)>();
+            foreach (var pair in phases)
+                foreach (IBtsmtlSkillBlackboardAccessNode setter in pair.Key.Nodes.OfType<IBtsmtlSkillBlackboardAccessNode>())
+                {
+                    if (!setter.Writes || !setter.Variable.IsValid)
+                        continue;
+                    BtsmtlSkillGraphOccurrence owner = paths[pair.Key].LastOrDefault(graph => graph.GraphId == setter.Variable.OwnerId);
+                    if (owner == null)
+                        continue;
+                    BtsmtlSkillBlackboardDeclaration declaration = ((IBtsmtlSkillFlowGraph)owner.Graph).BlackboardDeclarations
+                        .SingleOrDefault(value => value.VariableId == setter.Variable.DeclarationId);
+                    if (declaration?.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow)
+                        projections.Add((declaration.FactProjection.ActionWindowType, owner, pair.Value, pair.Key.Route));
+                }
+            foreach (var pair in paths)
+                foreach (BtsmtlSkillActionWindowActiveFlowNode query in pair.Key.Nodes.OfType<BtsmtlSkillActionWindowActiveFlowNode>())
+                {
+                    string source = $"{pair.Key.Route}/node:{query.UID}";
+                    if (string.IsNullOrWhiteSpace(query.WindowType))
+                    {
+                        m_Report.DiscoveryError("action_window_type_missing", source, "动作窗口查询必须指定窗口类型。");
+                        continue;
+                    }
+                    var candidates = projections.Where(value => value.WindowType == query.WindowType).ToArray();
+                    if (candidates.Any(value => value.Clip.ExecutionPhase == TimelineTreeExecutionPhase.Decision && pair.Value.Contains(value.Owner)))
+                        continue;
+                    string available = candidates.Length == 0 ? "无" : string.Join(";", candidates.Select(value =>
+                        $"owner={value.Owner.Route},phase={value.Clip.ExecutionPhase},clip={value.Clip.AuthoringId},source={value.Route}"));
+                    m_Report.DiscoveryError("action_window_phase_unavailable", source,
+                        $"窗口'{query.WindowType}'没有当前调用可见的Decision TreeClip投射。候选={available}。");
+                }
+
+            void Collect(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillGraphOccurrence[] ancestors, TreeClip phase)
+            {
+                BtsmtlSkillGraphOccurrence[] path = ancestors.Append(graph).ToArray();
+                paths.Add(graph, path);
+                if (phase != null)
+                    phases.Add(graph, phase);
+                foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
+                    Collect(reference.Child, path, phase);
+                foreach (BtsmtlSkillEdgeOccurrence edge in graph.Edges)
+                    if (edge.Condition != null)
+                        Collect(edge.Condition, path, phase);
+                foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
+                    foreach (TimelineSemanticTrackRecord track in timeline.Content.Tracks)
+                        foreach (TimelineSemanticClipRecord clip in track.Clips)
+                            if (clip.Clip is TreeClip tree)
+                                Collect(timeline.Trees[tree.AuthoringId], path, tree);
             }
         }
 

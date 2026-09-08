@@ -31,7 +31,8 @@ namespace BTSMTL.Diagnostics.Editor
         RevisionMismatch,
         NoExactTarget,
         MultipleExactTargets,
-        InvalidSource
+        InvalidSource,
+        PinnedTargetNotAttached
     }
 
     public readonly struct RuntimeDebugTargetRequest : IEquatable<RuntimeDebugTargetRequest>
@@ -124,6 +125,7 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugTargetResolutionStatus.NoExactTarget => "No registered target exactly matches this authoring source.",
             RuntimeDebugTargetResolutionStatus.MultipleExactTargets => "Multiple registered targets match this authoring source. Choose a target.",
             RuntimeDebugTargetResolutionStatus.InvalidSource => "The current authoring source has no stable identity or content hash.",
+            RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached => "The pinned runtime target is not attached. Select that target or explicitly resume Follow.",
             _ => string.Empty
         };
     }

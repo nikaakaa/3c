@@ -508,6 +508,15 @@ namespace TreeDesigner.Editor
         public void OnTreeChanged()
         {
             InvalidateOverlay();
+            if (m_Window?.AuthoringContext is IRuntimeDebugInstanceContext context && context.RuntimeInstance.IsValid)
+            {
+                RuntimeDebugViewBinding binding = GetBinding(m_Window.Tree);
+                if (binding != null && binding.Pin(context.RuntimeInstance))
+                {
+                    SetMode(TreeWindowMode.LiveDebug);
+                    return;
+                }
+            }
             if (IsLiveDebug)
                 Refresh();
         }

@@ -38,6 +38,16 @@
 
 ## 验证事实
 
+## 实例观察入口接入中的第二小步
+
+诊断事件打开来源现在传递完整RuntimeDebugEventView，依据事件中的CharacterRuntimeId查询既有Registry，核对Session、ProgramRevision及SourceMap handle与source一致，再定位该Host关联的作者资源。删除扫描全部Definition／Timeline的运行事件入口；静态Semantic IR检查器仍使用它显式拥有的Definition，不把它当成运行实例入口。
+
+作者上下文通过通用IRuntimeDebugInstanceContext携带RuntimeInstanceKey，当前图观察面读取该身份并Pin。修正首次Pin后的刷新丢失绑定：Pinned目标不受场景选择自动替换，不匹配时显示PinnedTargetNotAttached并保留原实例。Follow遇到多个执行实例时要求明确选择，不取列表第一项。
+
+目前底层来源资源解析仍读取现有作者存储，不能据此宣布FlowCanvas技能图已迁移；后续正式图和编译入口完成后替换该资源解析，不能再增加旧图镜像。Timeline独立页面、Macro调用导航及完整原生图观察仍待接入，7.2等整项不勾选。
+
+本小步只做调用者搜索和diff静态检查；按用户要求未编译、未Build、未运行验证。运行状态及来源导航不改变Document可写字段或实际v5协议。
+
 - 正式RunHost基线编译返回`WorkspaceEditorInUse`，没有RunId；保留主验收Editor，没有另建临时运行器。
 - 同实例`e852139597e42532`完成脚本refresh／重载后，Console返回0条错误。重载期间CLI断开后原实例已恢复。
 - 尚未生成同输入前后回放比较，不能用脚本编译证明语义和性能完全一致。

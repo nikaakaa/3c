@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 namespace BTSMTL.Diagnostics.Editor
 {
+    public interface IRuntimeDebugInstanceContext
+    {
+        RuntimeInstanceKey RuntimeInstance { get; }
+    }
+
     public enum RuntimeDebugViewKind
     {
         Graph,
@@ -21,7 +26,7 @@ namespace BTSMTL.Diagnostics.Editor
         Ready,
         NoInstance,
         NoSelection,
-        MultipleTimelinePlaybacks,
+        MultipleRuntimeInstances,
         PinnedInstanceMissing
     }
 
@@ -61,7 +66,7 @@ namespace BTSMTL.Diagnostics.Editor
                         ? "The current target has not executed this Graph."
                         : "The current target has not executed this Timeline.",
                     RuntimeDebugViewBindingStatus.NoSelection => "Enable Follow or select a runtime instance.",
-                    RuntimeDebugViewBindingStatus.MultipleTimelinePlaybacks => "Multiple Timeline playbacks are available. Pin one playback.",
+                    RuntimeDebugViewBindingStatus.MultipleRuntimeInstances => "Multiple runtime instances are available. Pin one execution.",
                     RuntimeDebugViewBindingStatus.PinnedInstanceMissing => "The pinned runtime instance is absent from this snapshot.",
                     _ => string.Empty
                 };
@@ -100,6 +105,7 @@ namespace BTSMTL.Diagnostics.Editor
 
             m_Mode = RuntimeDebugViewBindingMode.Pinned;
             m_SelectedInstance = instance;
+            m_BoundCharacterRuntimeId = instance.CharacterRuntimeId;
             return true;
         }
 
@@ -113,15 +119,19 @@ namespace BTSMTL.Diagnostics.Editor
             if (session == null)
             {
                 m_Resolution = new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.NoExactTarget);
-                m_SelectedInstance = default;
+                if (m_Mode != RuntimeDebugViewBindingMode.Pinned)
+                    m_SelectedInstance = default;
                 return m_Resolution;
             }
 
-            m_Resolution = session.ResolveTarget(m_Request);
+            m_Resolution = m_Mode == RuntimeDebugViewBindingMode.Pinned
+                ? session.ResolvePinnedTarget(m_Request, m_BoundCharacterRuntimeId)
+                : session.ResolveTarget(m_Request);
             if (!m_Resolution.CanReadSnapshot)
             {
                 session.ReleaseLiveInterest(this);
-                m_SelectedInstance = default;
+                if (m_Mode != RuntimeDebugViewBindingMode.Pinned)
+                    m_SelectedInstance = default;
                 return m_Resolution;
             }
 
@@ -133,7 +143,8 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugViewModel view = session.ViewModel;
             if (!view.Valid)
             {
-                m_SelectedInstance = default;
+                if (m_Mode != RuntimeDebugViewBindingMode.Pinned)
+                    m_SelectedInstance = default;
                 return m_Resolution;
             }
 
@@ -147,10 +158,10 @@ namespace BTSMTL.Diagnostics.Editor
             IReadOnlyList<RuntimeInstanceKey> instances = GetInstances(view);
             if (m_Mode == RuntimeDebugViewBindingMode.Following)
             {
-                if (Kind == RuntimeDebugViewKind.Timeline && instances.Count > 1)
+                if (instances.Count > 1)
                 {
                     m_SelectedInstance = default;
-                    m_Status = RuntimeDebugViewBindingStatus.MultipleTimelinePlaybacks;
+                    m_Status = RuntimeDebugViewBindingStatus.MultipleRuntimeInstances;
                     return m_Resolution;
                 }
 

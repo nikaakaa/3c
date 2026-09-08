@@ -545,7 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : $"{eventView.Source.TimelineAuthoringId}/{eventView.Source.TrackAuthoringId}/{eventView.Source.ClipAuthoringId}";
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Source", identity);
-            if (GUILayout.Button("Open", GUILayout.Width(48f)) && !RuntimeDebugSourceNavigator.Open(eventView.Source))
+            if (GUILayout.Button("Open", GUILayout.Width(48f)) && !RuntimeDebugSourceNavigator.Open(eventView))
                 Debug.LogError($"Runtime debug source could not be resolved by exact authoring identity: {identity}");
             EditorGUILayout.EndHorizontal();
         }

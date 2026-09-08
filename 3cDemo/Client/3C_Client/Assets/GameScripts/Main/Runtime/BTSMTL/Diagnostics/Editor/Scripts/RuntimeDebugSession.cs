@@ -337,6 +337,22 @@ namespace BTSMTL.Diagnostics.Editor
                 candidates);
         }
 
+        public RuntimeDebugTargetResolution ResolvePinnedTarget(RuntimeDebugTargetRequest request, Guid characterRuntimeId)
+        {
+            if (!request.IsValid)
+                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.InvalidSource);
+            if (characterRuntimeId == Guid.Empty || m_ViewModel.Target.CharacterRuntimeId != characterRuntimeId)
+                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached);
+            if (m_AttachmentState == RuntimeDebugAttachmentState.Ended)
+                return CreateEndedResolution(request);
+            if (m_Target == null || m_Target.CharacterRuntimeId != characterRuntimeId)
+                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached);
+            RuntimeDebugTargetMatch match = MatchTarget(m_Target, request);
+            return match == RuntimeDebugTargetMatch.Exact
+                ? new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached)
+                : CreateExplicitMismatchResolution(match, GetTargetCandidates(request));
+        }
+
         public void Dispose()
         {
             if (m_Disposed)

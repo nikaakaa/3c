@@ -4,18 +4,22 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 using BTSMTL.Editor;
+using BTSMTL.Diagnostics;
+using BTSMTL.Diagnostics.Editor;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using TreeDesigner.Editor;
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed partial class CharacterPipelineAuthoringContext : ITreeInspectorBlackboardAuthoringContext
+    public sealed partial class CharacterPipelineAuthoringContext : ITreeInspectorBlackboardAuthoringContext, IRuntimeDebugInstanceContext
     {
-        public CharacterPipelineAuthoringContext(CharacterPipelineDefinition definition)
+        public CharacterPipelineAuthoringContext(CharacterPipelineDefinition definition, RuntimeInstanceKey runtimeInstance = default)
         {
             Definition = definition;
+            RuntimeInstance = runtimeInstance;
         }
+        public RuntimeInstanceKey RuntimeInstance { get; }
         public CharacterPipelineDefinition Definition { get; }
         public CharacterInputProfile InputProfile => Definition ? Definition.InputProfile : null;
         BaseTree RootTree => Definition && Definition.RootTreeAsset ? Definition.RootTreeAsset.Tree : null;

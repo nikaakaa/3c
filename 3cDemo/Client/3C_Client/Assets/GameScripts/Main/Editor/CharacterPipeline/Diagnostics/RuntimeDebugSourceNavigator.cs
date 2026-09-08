@@ -2,6 +2,7 @@ using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -13,35 +14,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
-        public static bool Open(RuntimeSourceElementKey source)
+        public static bool Open(RuntimeDebugEventView eventView)
         {
-            if (!source.IsValid)
+            RuntimeTraceEvent trace = eventView.Event;
+            RuntimeInstanceKey instance = trace.RuntimeInstance;
+            if (!instance.IsValid || !eventView.Source.IsValid ||
+                !RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out RuntimeDiagnosticsTarget target))
                 return false;
-
-            string[] definitionGuids = AssetDatabase.FindAssets("t:CharacterPipelineDefinition");
-            for (int i = 0; i < definitionGuids.Length; i++)
-            {
-                CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(definitionGuids[i]));
-                if (Open(definition, source))
-                    return true;
-            }
-
-            if (!string.IsNullOrEmpty(source.TimelineAuthoringId))
-            {
-                string[] timelineGuids = AssetDatabase.FindAssets("t:TimelineAsset");
-                for (int i = 0; i < timelineGuids.Length; i++)
-                {
-                    TimelineAsset asset = AssetDatabase.LoadAssetAtPath<TimelineAsset>(AssetDatabase.GUIDToAssetPath(timelineGuids[i]));
-                    if (!asset || !string.Equals(asset.Data?.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
-                        continue;
-                    TimelineEditorWindow window = TimelineEditorWindow.Open(asset);
-                    return window != null && window.FocusSource(source.TrackAuthoringId, source.ClipAuthoringId);
-                }
-            }
-            return false;
+            if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ProgramRevision) ||
+                !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) || !entry.Source.Equals(eventView.Source))
+                return false;
+            CharacterPipelineHost host = EditorUtility.InstanceIDToObject(target.HostInstanceId) as CharacterPipelineHost;
+            if (!host || !RuntimeDebugSession.Shared.AttachToTarget(instance.CharacterRuntimeId))
+                return false;
+            return Open(host.Definition, eventView.Source, instance);
         }
 
-        public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source)
+        public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
         {
             if (!definition || !source.IsValid || !definition.RootTreeAsset)
                 return false;
@@ -60,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (!string.Equals(graph.GraphAuthoringId, source.GraphAuthoringId, StringComparison.Ordinal))
                         continue;
                     graph.RebindReadOnlyViewReferences();
-                    return OpenGraph(graph, source, new CharacterPipelineAuthoringContext(definition));
+                    return OpenGraph(graph, source, new CharacterPipelineAuthoringContext(definition, instance));
                 }
                 return false;
             }
@@ -74,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         continue;
                     timeline.Graph.RebindReadOnlyViewReferences();
                     BaseTreeWindow graphWindow = TreeWindowUtility.TreeWindowUtilityInstance.OpenBaseTreeWindow();
-                    graphWindow.ReplaceNavigationRoot(timeline.Graph, new CharacterPipelineAuthoringContext(definition));
+                    graphWindow.ReplaceNavigationRoot(timeline.Graph, new CharacterPipelineAuthoringContext(definition, instance));
                     TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(graphWindow, timeline.Node);
                     return timelineWindow != null && timelineWindow.FocusSource(source.TrackAuthoringId, source.ClipAuthoringId);
                 }

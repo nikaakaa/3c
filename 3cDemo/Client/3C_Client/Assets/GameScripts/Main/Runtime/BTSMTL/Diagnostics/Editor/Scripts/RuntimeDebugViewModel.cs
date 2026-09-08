@@ -326,6 +326,26 @@ namespace BTSMTL.Diagnostics.Editor
             return result;
         }
 
+        public IReadOnlyList<RuntimeNodeExecutionObservation> GetGraphExecutionStates(string graphAuthoringId, RuntimeInstanceKey instance)
+        {
+            if (!instance.IsValid)
+                return Array.Empty<RuntimeNodeExecutionObservation>();
+            var latest = new Dictionary<RuntimeSourceElementKey, RuntimeNodeExecutionObservation>();
+            foreach (RuntimeDebugEventView item in m_CurrentEvents.Values)
+            {
+                if (item.Source.Kind != RuntimeSourceElementKind.Node ||
+                    !string.Equals(item.Source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) ||
+                    !item.Event.RuntimeInstance.Equals(instance) ||
+                    !RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation))
+                    continue;
+                if (!latest.TryGetValue(item.Source, out RuntimeNodeExecutionObservation previous) ||
+                    item.Event.Position > previous.Event.Event.Position ||
+                    item.Event.Position == previous.Event.Event.Position && item.Event.Sequence > previous.Event.Event.Sequence)
+                    latest[item.Source] = observation;
+            }
+            return new List<RuntimeNodeExecutionObservation>(latest.Values);
+        }
+
         public bool TryGetState(RuntimeSourceElementKey source, RuntimeInstanceKey instance, out RuntimeElementDebugState state)
         {
             state = default;

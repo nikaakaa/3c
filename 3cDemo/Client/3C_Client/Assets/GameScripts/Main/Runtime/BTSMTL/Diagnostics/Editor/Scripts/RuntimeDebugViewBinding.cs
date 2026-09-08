@@ -78,7 +78,10 @@ namespace BTSMTL.Diagnostics.Editor
             if (m_Request.Equals(request))
                 return;
 
+            bool preservePinnedInstance = Pinned && m_Request.Source.Equals(request.Source);
             m_Request = request;
+            if (preservePinnedInstance)
+                return;
             m_SelectedInstance = default;
             m_Mode = RuntimeDebugViewBindingMode.Following;
             m_BoundCharacterRuntimeId = Guid.Empty;

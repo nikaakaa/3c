@@ -1,127 +1,274 @@
 ## Context
 
-动机与范围见[proposal.md](proposal.md)。本设计中的 Editor“预览”仅表示观察 Unity Play Mode 中已经运行的真实角色，不表示创建场景、预览角色或独立播放器。
+本文件是`integrate-pose-flowcanvas-editor-preview`的新目标设计，直接替换原“接通FlowCanvas UI即可收口”的方案。动机见proposal.md。2026-09-09作者明确要求基本照搬UE的作者组织：分图、层内状态机与Slot、Montage路由、骨骼混合与Control Rig；保留现有编译／Native运行方向。
 
-当前 Pose 已有不可变 Program Image、每 Actor Execution View／状态／帧页、Burst Kernel、跨 Actor Job 批次、Source／Constraint／Final Publication 与根帧事务。FlowCanvas 的原生节点编辑和端口显示可以复用，但它的 getter、协程与更新循环不替代上述运行实现。
+已有基础：原生画布与端口、typed Mutation、稳定identity、flat graph catalog、状态／规则下钻、真实Actor观察、v28来源元数据、Native／Job帧事务。现有Corin根图为11个节点、12条连接，完整作者资产为8张Pose图、25个节点，状态机为7个状态与21条转换。历史计数只描述盘点基线，不是新模型容量限制。
 
-已核对本地 FlowNode、BinderConnection 和 FlowScript：原生连线闪烁与传值缓存来自其自身的执行回调，不能直接冒充项目 Native runtime 的结果。所需接入是显式、只读的外部观测显示接口。
+尚未完成的是作者职责重组：根图仍展示Action Playback Input、Pose Parameter Resolve、Foot Placement、Goal Assembler与FBBIK内部流程；Slot仅允许根图，Player还通过Source Slot／Profile Binding间接选资源。旧implementation.md中的“20/21、只剩Build”只适用于上一版范围，不代表本设计已经实现。
+
+当前实际Document常量为v6；现行spec与部分skill还写v4／v5，必须作为规范漂移处理。原统一Build曾因Attack、DodgeBack、DodgeForward缺失正式SkillGraphs入口失败，这个外部资产问题保留，不作为停止本提案代码实施的理由。
+
+精确资产范围：Definition为`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`；现有Pose作者根为`Assets/Configs/Character/Corin/Pipeline/Presentation/PoseGraphs/CorinPresentationPoseGraph.asset`；Fixed产物目的地为`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。新增层或Rig作者资产必须进入该Definition的正式引用闭包，不通过名称或当前Selection猜根。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 作者只编辑一份正式 Pose 图，原生交互与编译输入使用同一节点、端口和边身份。
-- Play 中打开窗口即可发现合法运行目标；绑定目标后自动随实际完成帧更新，不需要另点“运行 Pose 图”。
-- 已完成的 Pose／Native 重构继续使用；修改作者图只影响后续显式 Build，不热换正在执行的产物。
-- 观察只影响诊断订阅与显示，不影响角色执行次数、时间、Job 顺序或骨骼输出。
+- 作者按UE的AnimGraph、Animation Layer、State Machine、State Pose、Transition Rule、Action Timeline（Montage职责）、Control Rig分工编辑，操作和数据组织一致，而非只替换节点标题或外观。
+- 每份动画、图、Mask、Profile、Montage与Rig配置只有一个可编辑owner；主图引用子图和资产，不复制内部内容。
+- 主图表达基础动画、动作插入、分层混合、惯性化和身体修正；内部读取、组装和调度由同一Compiler展开。
+- 当前Corin的动作、动画资源、过渡设置、Foot／IK算法和单次最终写入在迁移时保持；无法无损表达的旧配置明确停止迁移并定位冲突。
 
 **Non-Goals:**
 
-- 不迁移技能、AI、Gameplay／网络执行，不改 Foot、IK、混合或动画采样算法。
-- 不增加 Scene Play 协调器依赖、独立预览场景、假输入、窗口播放器、seek、窗口单步或节点断点。
-- 不采用 FlowCanvas runtime，不统一替换现有子图为 Macro，不为 UI 接入主动升级 Document v5。
+- 不运行FlowCanvas getter／协程，不引入RigVM、第二PlayableGraph、第二动作时钟或第二骨骼Writer。
+- 不新建平行动画Montage资产，不将所有通用Timeline重命名为Montage，不重做技能图、Action admission、战斗窗口、Gameplay root motion或网络模型。
+- 不移植UE引擎源码、UE资产格式或整个Control Rig工具箱。Backwards Solve、Sequencer录制／烘焙、通用RigVM脚本、编辑器控制器操纵器不属于本次作者组织重构。
+- 不把已有FinalIK FBBIK伪装成UE PBIK：对齐骨骼／目标／权重的作者分工，算法参数按真实后端提供，不能摆出没有实现效果的UE专用参数。
+- 不创建预览场景、假输入或窗口播放器；观察只消费普通Unity Play中的真实实例。
+- 作者数据迁移只处理Corin；TrainingEnemy等未稳定资产不在范围，不能顺手重建、修曲线或迁移其Rig。
 
 ## Decisions
 
-### 1. 一份作者图，直接编译
+### 1. 图层次与作者入口
+
+| 作者表面 | 输入／输出 | 作者在这里做什么 | 不属于这里的内容 |
+|---|---|---|---|
+| AnimGraph | Fact／参数／资源引用 → 最终Local Pose | 组合状态机、Slot、动画层、Blend、Inertialization、Control Rig | 动作时间轴正文、Goal打包、Native调度 |
+| Animation Layer | 明确的Pose／参数／资源接口 → Pose | 封装可复用身体部位、武器或姿势功能；可包含状态机和Slot | 隐含骨骼范围、私有Montage播放实例 |
+| State Machine | 表现Fact → 当前状态组合Pose | Entry、State、Alias、Transition及转换策略 | 普通数值线式状态连线、玩法状态机逻辑 |
+| State Pose Graph | 本状态输入 → Pose | Sequence Player、Blend Space、Blend或层调用，也可放Slot | 状态转换条件、动作准入 |
+| Transition Rule | Fact／状态时间／相关动画剩余时间 → Bool | 进入下一状态的条件 | 播动画、World query、写骨骼 |
+| Control Rig | 输入姿势形成的Rig hierarchy＋目标／参数 → 修正姿势 | Forwards Solve、控制目标、Foot Placement、FBIK及已有骨骼控制 | Montage播放、状态选择、Goal Assembler作者节点 |
+| 有限Action Timeline（Montage职责） | 原生Clip、Slot轨道、Sections、混合设置与原玩法轨道 → 已提交动作播放结果 | 在原时间轴编排动作动画与同步事件 | 第二Montage资产、复制Clip曲线或独立动画时钟 |
+
+上述图统一使用已有原生GraphEditor及领域合同。State Machine的连接表达“允许转换”；AnimGraph连接表达Pose／数据依赖；Rig图的执行连接表达Forwards Solve顺序，目标数据连接保持独立。不能用同一种普通Value Port表现所有图。
+
+serialized目录继续是flat catalog：State、Layer和Control Rig调用引用稳定GraphId／EntryId及接口签名。库资产拥有自己的catalog，根Definition持有引用闭包。嵌套是作者导航关系，Runtime不展开可变对象树。
+
+### 2. Corin根图和动画层的目标组织
+
+基础全身组织如下，Inertialization只在对应混合请求需要时出现：
 
 ```text
-FlowCanvas Pose作者图
-  → 唯一只读作者遍历／现有Compiler
-  → Program Image与Presentation Projection
-  → 原Source／Pose／Constraint／Final Publication运行链
+Locomotion State Machine → Slot: FullBody → Inertialization → Control Rig: Body → Output Pose
 ```
 
-FlowGraph／FlowNode／BinderConnection 是正式作者资产的基础，原生端口注册读取唯一 Capability 与 Port Shape。Compiler 读取持久化字段和连接，不能调用 getter 获取编译值，也不能构建旧 CharacterPoseCanvasGraph／旧 typed graph 的中间副本。历史类名是否保留按最终职责决定，不能靠改名冒充迁移。
-
-业务取舍：直接采用原生 runtime 会获得执行回调，但要重做缓存、Job依赖及提交边界；本方案保留这些已有成果，代价是维护作者图到编译数据的读取和诊断映射。编译产物不是第二份可编辑作者图。
-
-### 2. 原生交互与领域写入分责
-
-复用原生节点框、端口已连接／未连接状态、类型显示、布局、命中、连线、框选、复制、Undo 和导航。Pose 提供字段、图角色、严格空间类型和业务菜单；状态／规则页面保持原语义和唯一存储，不凭第三方同名节点推定等价。
-
-逐项核对 Create、Connect、Reconnect、Paste、Delete、Rename、Move 和字段修改，进入既有 typed Mutation 预检及实际序列化 owner。缺少拦截点时只在共享框架增加领域无关钩子，不复制一份编辑器或添加第二写入服务。人工操作和 Document 整包事务各有一个 Undo owner，内部 handler 不重复记账。
-
-运行观察视图只读。退出观察回到作者模式后可编辑；如果图已改变，旧运行结果停止叠加并提示版本不匹配，不能热写运行实例。
-
-### 3. Play Mode 自动观察，不管理场景
+分层动作采用以下语义，不强制把所有内容放进根图：
 
 ```text
-现有游戏入口 → 真实Actor → 原编译／Native运行
-                                  ↓ 已完成诊断
-                     版本／实例／调用点映射
-                                  ↓
-                       FlowCanvas窗口显示
+Locomotion Pose ───────────────────────────→ Base Pose
+UpperBody Layer〔State Machine → Slot〕────→ Blend Pose
+                                              ↓
+                                  Layered Blend Per Bone〔Mask、Alpha〕
+                                              ↓
+                                    FullBody Slot（需要时）
+                                              ↓
+                                       Control Rig → Output
 ```
 
-窗口监听 Play 状态和正式运行实例注册／移除。已有明确观察目标且身份有效时自动绑定；只有一个与当前 Definition 精确匹配的实例时可自动选定，多个匹配实例则显示选择器，不按名称、当前 Selection 或扫描 Transform 猜角色。仅打开裸图且无法确定角色上下文时显示“选择运行角色”。
+动画层有两种合法接口：只输出一份姿势，由调用者配置按骨骼混合；或显式接收Base Pose，在层内部完成按骨骼混合后输出。由接口和图中节点决定，不增加隐含的UpperBody／LowerBody运行类型。层名称、Slot名称都不会自动生成Mask；同一层不能在内部和外部不知情地重复应用Mask。
 
-状态固定为：未播放、等待目标、观察中、版本不匹配、目标已结束。进入 Play 或在 Play 中打开窗口均可绑定；停止 Play、关闭窗口、脚本重载、实例替换／销毁均释放订阅。Unity 自身暂停时保留最后完成帧；恢复后随新结果更新。窗口不调用 Play、Stop、Pause、Step 或场景加载来控制游戏。
+Animation Layer复用现有Linked Pose Interface、Implementation、Group和selector体系，统一作者名称和职责，不再创建第二套Layer runtime。组用于明确的Implementation／实例共享，默认调用状态按Actor、implementation generation和call-site隔离。共享组也不能把两个角色的状态合并。
 
-### 4. 观察绑定要能区分角色与子图调用
+Source Pose被多个分支使用时，提供Save／Use Cached Pose作者表达或明确的同帧值复用。缓存是当前帧、当前调用范围内的同一求值结果，不是上一帧姿势，不拥有播放器、状态机或独立时钟。层调用和缓存使用完整接口，递归与跨作用域悬空引用在编译前失败。
 
-绑定键包含 Session、Actor、实例 generation、Projection／Pose Program identity、作者 revision、Rig identity 及 call-site。只观察当前目标的同版本结果；同一子图多处调用时导航携带调用位置，不能把多个调用的状态合并。
+业务取舍：直接在AnimGraph串接骨骼控制更适合少量局部修正；Control Rig层适合多个目标共享一次身体求解。Corin采用后者，局部Modify Bone等明确Pose控制仍可以按其空间合同使用，不强迫所有图都包含Control Rig。
 
-Source Map 随对应产物发布，表达节点到多条 operation、输出端口到值以及调用位置的关系。编译优化掉的节点明确显示“已优化／无独立运行操作”，未知映射显示不可用。不能用 operation 数组位置、显示名或连线几何猜测身份。
+### 3. Player直接选动画资源
 
-编译算法、操作布局与 Worker 顺序保持；必要的诊断元数据增量单独说明。新旧源码或布局 Hash 不同不直接等于行为回归，但不允许版本混用。
+作者名称对齐Sequence Player、Blend Space Player及项目已有Motion Matching能力。Sequence Player直接显示原生AnimationClip对象选择器；名称不代表恢复已删除的Animation Sequence包装资产。资源也可来自动画层明确声明的typed资源参数，两种绑定只能选一种。
 
-### 5. 适配结果显示，不借原生执行造高亮
+Player设置包含Animation、Play Rate、Start Position、Loop Animation及相关性／进入重置行为。Loop成为本次source usage的明确播放策略；导入资源的循环信息仍属于素材信息，不再强制决定每个使用点。迁移时把原Clip循环语义写成对应Player配置，保持Corin原行为；Sync Group与Phase编译按实际usage clock处理，不能把有限播放错误当成循环成员。
 
-原生 renderer 通过外部只读观测源取得节点状态、边读取事实、端口值和帧号；有必要时增加共享 editor-only 显示钩子。不得调用 FlowScript、BindPorts、值 getter 或修改 Graph.isRunning 来激活高亮。
+删除作者层Source Slot与Profile source binding的两次选择。Player或资源参数是引用的唯一作者owner，Compiler从它与Rig／分析合同生成dense binding、source usage及采样计划。Profile继续装配Rig、Foot Analysis、控制图、层Implementation、Slot定义等角色配置，不复制节点动画引用。
 
-Pose“参与求值”“贡献权重非零”“等待 Source”“已完成”“不可用”分别表达。值来自运行时按兴趣冻结的结果；未订阅、覆盖、失效与数值0分开显示。不存在边读取证据时不播放执行动画，也不把两个端点都执行过当作该边被读取。
+### 4. Montage、Slot、Group与内部AnimationChannel
 
-Runtime 在现有完成／Seal边界发布有界快照或受控只读租约。Editor 不直接读正在写入的 Native 页、不调用 JobHandle.Complete、不保留跨失效边界的 NativeArray。普通重绘和悬停只读已取得的显示数据，避免 OnInspectorGUI 重操作。诊断未订阅时不创建无界记录；新订阅从下一个可用完成帧生效。
+四者明确分开：
 
-业务取舍：与原生 getter 调试相比，需要少量外部观测适配，但不会为看一个值再次推进动画。成本应测量诊断开启前后的时间和分配，不能预先承诺零开销。
+| 概念 | 唯一职责／owner |
+|---|---|
+| Montage职责 | 由现有有限Action Timeline承担；Slot轨道、Clip片段、Sections、Blend In／Out、Blend Profile In／Out均由该资产拥有 |
+| Slot | Rig／Skeleton对应目录中的稳定动画插入点；AnimGraph节点引用它 |
+| Slot Group | 已接受Montage播放的互斥组；不描述骨骼范围 |
+| AnimationChannel | 已有Program到Presentation的内部动画指令路由，编译时与Slot Group／Slot合同绑定，不直接充当作者Slot名称 |
 
-### 6. 保留作者资产，通过正式Build更新产物
+Layer的实例共享Group与动画Slot Group是两个不同合同：前者决定层Implementation的状态共享，后者决定动作播放互斥。它们不共用identity，也不能因为名字相同而自动关联。
 
-保持现有 v5 的图／布局、Source Slot／Binding、状态／规则等业务表达，替换底层 owner 适配；不暴露第三方私有序列化字段或运行委托。Graph及节点稳定身份可保留时保留，新增子资产引用由正式事务分配并反向导出。
+Slot节点保留Source Pose、Slot Name和Always Update Source Pose等作者设置，输出Pose。删除Action Playback输入端口和独立Action Playback Input作者节点。没有活动Montage时透传合法Source Pose；存在活动Montage时消费同一已完成播放结果；释放时回到当前Source Pose。Corin迁移保持原持续更新基础姿势的行为。
 
-范围为精确 Corin Definition 的全部可达闭包。实际实现保留原作者资产序列化类型、GraphCatalog、Payload、稳定identity、布局及引用，不需要迁移作者数据。盘点为8张Pose图、25个节点、12种实际使用能力；数量不作为迁移或运行规则。29种注册能力统一接入正式目录。
+Slot可以位于动画层或状态Pose图。层内Slot仍使用角色动画实例的Slot路由，放入子图不自动私有化。多个Slot引用同一播放入口时共享播放实例与source采样，分别在各自Pose上下文混合；不能因多个消费者重复推进动作。重复使用同一姿势优先通过Cached Pose表达，并保留准确的每个调用观察。
 
-无业务变更的Document往返保持零Mutation，不为完成任务而制造apply或作者资产重写。新增的图版本和条件观察来源属于编译产物，使用唯一Character Build发布Float32、Fixed与共享Projection。后续真实作者修改仍遵循现有Document资产事务；不引入双版本reader或第二条发布路径。
+Montage轨道选择Slot；同一Montage的轨道属于同一Group。不同Group可以并行，前提是Gameplay已经允许对应动作且AnimGraph有明确组合；同一Group的新合法播放使用既有Action播放owner处理旧播放的退出。Group规则处理动画播放，不在Slot节点中重新判断技能准入、优先级或取消。稳定事件顺序与generation由现有committed指令合同提供，不采用Editor时间或到包顺序。
 
-### 7. 规范与在途变更对账
+现有有限Action Timeline提供Clip片段的时间范围／速率，并扩展Section名称和下一Section、Blend In／Out时间／方式／Curve、Blend Profile In／Out及Auto Blend Out。Play、Stop、Jump to Section、Set Next Section由同一Timeline控制入口处理；Section循环受该Action lifetime约束。动画采样、玩法窗口、Motion与MotionWarp使用同一Section选择和raw time结果，没有另一份Montage游标或Update时钟。跳段必须遵循原Timeline对跳过、退出和重新进入窗口的正式事件规则，不能只跳动画而让伤害窗口继续旧时间。
 
-| 来源 | 当前冲突或边界 | 处理 |
+BTSMTL Timeline的动画轨道继续直接引用原生AnimationClip，轨道上声明Animation Slot；游戏窗口、Cue、Motion与MotionWarp仍是同一Timeline的原有内容。根位移继续由Gameplay Motion处理，不能从最终动画反推角色移动。UE Montage的Notifies对应这里已有的事件／窗口作者能力，不另加一套重复事件数据。
+
+这里沿用已有owner，只对齐UE Montage的动画组织和设置。正式名称保留Action Timeline，文档用“Montage职责”解释对应关系；通用Scene／工具Timeline不因此获得角色Slot规则。当前动画片段、资源引用和玩法窗口原位保留，只迁入缺少的Slot／Group及混合配置，不重新复制一份时间轴。
+
+### 5. 骨骼范围、权重和混合策略
+
+| 设置 | 定义在哪里 | 使用在哪里 |
 |---|---|---|
-| project.md／Pose编译与runtime规范 | 要求Program Image、Native、Worker与唯一帧输出 | 保留，不产生原生FlowCanvas业务执行 |
-| Pose工作区／UI规范 | 固定旧GraphView与专用画布 | 本提案delta改为原生作者UI，保留领域信息和稳定身份 |
-| 共享领域框架 | 禁止共享序列化基类，并强制旧UI原地抽取 | 对Pose调整实现限制；共享领域合同与其它领域既有行为保留 |
-| Pose Preview规范 | 允许独立Preview运行装配 | 本窗口只观察已有Play角色；不创建自己的Preview Runtime或时钟 |
-| `rebuild-btsmtl-preview-with-scene-play` | 负责独立受控场景生命周期 | 本提案不依赖或实施该生命周期，其Pose观察消费者可复用本接口 |
-| `refactor-btsmtl-flowcanvas-authoring` | 已由原混合提案拆成技能作者与编译观察 | 技能归原提案，Pose归本提案；两边都是普通运行加Editor观察，共享钩子按实际已提交版本复用，不同时覆盖同段源码 |
-| Pose原change 22.x、23.x、24.x | 专用端口、原生runtime实验及正式runtime替换并存 | 原生runtime路线撤回，作者与观察改归本提案；未完成事项不伪造勾选或归档 |
-| project／current Document旧版本文字 | 文本含v4，现有实现为v5 | 此处以已实现v5为输入并在delta中同步相关条款；不新增v4兼容，不宣布全项目版本漂移已修完 |
+| Branch Filter | Layered Blend Per Bone节点 | 按指定骨骼、后代及深度展开范围 |
+| Blend Mask | Rig／Skeleton对应资产，逐骨骼权重 | Layered Blend Per Bone选择引用 |
+| Layer Alpha／Blend Weight | 节点字段或显式数据输入 | 控制该姿势层当前贡献 |
+| Transition Duration／Blend Mode／Curve | 转换边 | 控制状态之间怎样过渡 |
+| Montage式Blend In／Out | 各有限Action Timeline的动画设置 | 控制动作进入与退出 |
+| Blend Profile | Rig拥有的共享逐骨骼混合配置 | 转换、Montage或惯性化请求引用 |
+| Effector Position／Rotation Weight | Control Rig目标或FBIK配置 | 控制目标对求解的影响，不替代动画Mask |
+
+例如攻击和换弹可引用同一UpperBody Slot，经同一上半身Mask组合；两份Montage各自拥有不同淡入淡出设置。Slot Group不会替代Mask，Blend Profile也不作为Slot私有骨骼列表。
+
+Mask覆盖Physical与Virtual Pose Bone；未知骨骼、跨Rig数据和缺失required映射明确失败。Mask为0表示该骨骼的混合结果选择Base对应数据，不承诺其世界位置固定，因为祖先骨骼仍会影响它。下游Control Rig也可以继续修正动画混合结果；不引入“蒙太奇永久认领骨骼”的第二ownership系统。
+
+Layered Blend Per Bone提供Branch Filter／Blend Mask、输入层顺序、Alpha、Mesh Space Rotation／Scale Blend和Curve Blend Options。冲突层按明确图顺序与权重组合，不按节点位置或显示名称选赢家。Root Motion相关显示必须说明它受本项目Gameplay位移合同约束。
+
+### 6. 曲线、参数和惯性化
+
+普通变量／Fact输入仍可接权重端口；可作为常量的值直接在节点详情设置，也可明确暴露为输入。Curve Blend Options属于实际组合节点，参数默认传播由Compiler展开。删除每张根图必须接Pose Parameter Resolve的要求；Corin同一Slot结果接两次Resolve的模式迁到相应组合配置。确有单独改曲线需求时使用明确的Modify Curve作者能力；不能借此恢复通用内部Resolver节点。旧曲线规则无法表达为目标节点设置时报告具体规则并停止迁移。
+
+Inertialization仍是显式Pose节点，不能藏在Slot、状态机或Output中。Transition和Montage混合设置声明惯性请求，沿真实Pose依赖传到下游指定处理节点；Source Map保留请求来源。不同局部分支各有自己的history，正常首帧、NoPose、Invalid和Reset不伪造连续目标。
+
+UE式同一处理节点可以承接多项上游请求；请求集合必须有界，采用最短请求duration，其他设置绑定到该请求，等长按稳定owner顺序选择。每个请求自身有唯一时间设置owner，不继续要求“整个下游节点只能有一个直接Player／时间owner”。现有残差、rebase和Foot前置阶段复用，不能改成全局request bus。Corin原Standard Blend保持，不能为了补一颗可见节点而改变过渡方式。
+
+### 7. Control Rig作者图与单一身体求解
+
+Control Rig引用已有Rig定义，Entry把输入Pose放入本次求解的hierarchy；Forwards Solve执行关系安排控制步骤，数据端口传递目标。可用作者能力包括已有Modify Bone／空间转换、目标Transform与权重、Foot Placement目标生成、FBIK及明确输入／输出。骨骼和目标选择来自Rig层级，不手填运行时slot index。
+
+```text
+执行关系：Forwards Solve → Foot Placement → Full Body IK → Return
+数据关系：Foot Placement的左右脚目标 ─┐
+          手／其它明确控制目标 ────────┴→ FBIK Effectors
+          输入Pose ─────────────────────→ 本次Rig hierarchy
+```
+
+Foot Placement参数按角色已有Profile组织；作者选择脚部配置和Alpha，得到带可用性、目标骨骼与权重的目标。FBIK配置Root、Effectors、目标位置／旋转权重及真实后端支持的求解参数。多个来源竞争同一Effector时必须通过显式目标混合／选择表达，不能由连线顺序覆盖。Foot内部Pelvis响应、可达处理、Goal编码和BendHistory维持原算法与owner。
+
+Control Rig节点对AnimGraph声明Local Pose输入／输出，Compiler在该声明边界展开必要Local／Component转换；Rig目标的Component／World空间仍明确，任意不同空间连接不能自动cast。独立使用Skeletal Control或空间转换节点仍遵守其显式端口合同。
+
+编译后的Goal Contribution、唯一Goal Assembler、Goal Set与FBBIK步骤保留。它们由FBIK作者请求和Effectors连接确定，不由Runtime临时补建。当前项目允许每个角色最终计划一个身体求解位置、每帧至多一次Foot事务和一次FBBIK；没有Control Rig／FBIK请求就不生成求解链。多处复用已完成结果不会重复求解。
+
+与UE的明确差异：本项目继续使用现有FinalIK FBBIK，不将PBIK的Preferred Angles、Stiffness等无对应实现的字段摆成可编辑假功能。已有可对应的Root、目标、位置／旋转权重直接提供；后端特有的Pull／Reach等真实参数在Advanced里按原名说明。多个独立FBIK求解器、Backwards Solve及RigVM脚本不是本次迁移的目标。
+
+### 8. 作者节点到内部operation的展开
+
+| 作者意图 | 唯一Compiler展开 |
+|---|---|
+| Sequence／Blend Space Player | 资源binding、usage／clock、demand和source capture |
+| Slot | 已有Action播放读取、Source／Montage混合、release、曲线传播 |
+| Layered Blend Per Bone | dense mask／branch expansion、各层骨骼与曲线混合 |
+| Animation Layer／Control Rig调用 | 精确接口绑定、call-site展开及状态／值范围 |
+| FBIK Effectors | typed Goal编码、一次Assembler、一次Goal Set和FBBIK |
+| Cached Pose | 同帧producer唯一求值、值引用复用与固定寿命 |
+| Output Pose | 本图return；只有最终根输出进入Final Publication |
+
+保留既有Compiler Pass链，在Node Definition的语义展开中生成typed IR和内部依赖，再交统一Topology、Stage、Value Lifetime、Workspace和Seal。生成规则必须由作者节点／配置唯一确定；Source Map把内部步骤归到其作者owner，并保留内部步骤种类便于按需展开。
+
+删除旧Action Playback Input、Pose Parameter Resolve、Goal Assembler作为可创建／可序列化作者节点的路径。对应运行operation按实际消费者保留，不因为隐藏作者步骤而删除正确的后端实现。禁止第二套旧作者图中转、运行时默认补节点或为未迁移资产切换旧Executor。
+
+### 9. 编辑体验和普通Play观察
+
+节点创建目录按当前图角色组织；状态机只显示状态／Alias／转换，Rig图显示控制与求解，根图不展示内部operation。状态和转换的命中、箭头、平行边与Details采用UE式语义，转换不再借普通数据端口连线表达。
+
+导航由唯一原生图编辑器拥有。双击、目录、Details命令与运行定位均携带完整调用路径，面包屑返回正确父页面；多次引用同一层时不能默认跳到第一处。作者布局按图保存，平移／缩放／选中与观察目标属于窗口状态。
+
+Details默认显示资源、数值、策略和必要命令。Mask、Blend Profile、Slot／Group、Montage引用使用typed资产或声明选择；GUID、hash、compiled index与空运行字段默认隐藏。普通选中、拖动、悬停、Inspector重绘不解码大型Program或进行Build。
+
+普通Play绑定真实Actor，精确区分Session／Actor、generation、Program／Projection／Rig、作者图版本、层Implementation和call-site。节点与端口只显示已完成采集结果；条件边只使用实际读取，当前条件与预判分别选择；未采集、覆盖和0分开。作者一个Slot或Control Rig节点可以按需展开其内部操作诊断，不把这些操作重新变成作者节点。
+
+退出Play、关闭、销毁、替换和重载释放兴趣与租约；Unity暂停保留最后完成帧。观察不推进Montage、状态机、Clip或Solver，不提供窗口播放器。
+
+### 10. 唯一数据owner和Document v7
+
+| 数据 | 作者owner |
+|---|---|
+| 动画骨骼轨迹与注册Curve | 原生AnimationClip |
+| 动画组合与节点参数 | 所属AnimGraph／State Pose／Animation Layer图 |
+| 状态、Alias、转换与Rule | 所属State Machine与Rule图 |
+| Layer接口／Implementation／Group绑定 | 现有Linked Pose体系演进后的唯一合同 |
+| Slot定义／Group、Mask与Blend Profile | Rig／Skeleton对应资产；Profile只引用 |
+| Montage式Slot轨道、Sections与混合设置 | 现有有限Action Timeline资产，与原动画片段和玩法轨道共用owner |
+| Rig控制拓扑与目标绑定 | Control Rig资产；共享Rig／Profile引用不复制 |
+| 玩法时序、窗口、位移与动画播放命令 | 既有BTSMTL Timeline／Action |
+| dense binding、Goal组装、Stage、Workspace | generated Program／Projection，作者不可写 |
+
+以当前v6为唯一输入基线，目标v7一次升级。v7保留技能Macro及其它领域全部现行业务字段，新增／调整动画图角色、层接口、Timeline动画设置、Slot目录、Mask／Profile与控制图分片，并移除旧Source Slot／作者内部节点字段。版本和新字段必须同时进入Catalog、严格codec、Exporter、Reconciler、Mutation、owner事务与MCP说明，不只改UI。
+
+建议的正式分片职责：profile.json保存装配引用；graphs的graph.json／layout.json保存各图正文和布局；state-machines保存状态与转换；既有timeline.json／curves.json原位扩展Slot轨道、Sections和动画混合设置；Rig目录保存Slot／Group／Mask／Blend Profile；Linked接口／Implementation沿用既有owner。具体目录使用当前Store的canonical identity分段规则，不另加watcher或manifest外自由文件。
+
+五生命周期仍是checkout、dry-run、apply、rebase、validate；不新增逐节点／逐骨骼写入API。v7严格拒绝旧包并要求重新checkout，不常驻v6兼容reader。旧Unity作者资产仅通过显式、一次性的Editor迁移入口转换，不能放在Runtime加载、窗口打开或Getters中。
+
+### 11. 旧数据与代码去向
+
+| 现有内容 | 新去向／删除边界 |
+|---|---|
+| Pose根图、State图及稳定引用 | 保留可复用identity，补图角色与接口 |
+| Source Slot／Profile source binding | 还原精确资源引用到Player／显式资源参数；无消费者的子资产删除 |
+| Action Timeline里的动画编排 | 原位保留；扩展轨道Slot、Sections和动画混合设置，不创建Montage资产副本 |
+| Action Playback Input作者节点 | 删除，归入Slot展开及其Source Map |
+| Slot上的时间混合Policy | 按入场／退场方向迁到对应Action Timeline的动画Blend设置；不可表达的exact pair规则报告冲突 |
+| Pose Parameter Resolve作者节点 | 迁入真正组合节点的Curve设置；无法表达的规则停止迁移 |
+| Foot Placement／目标／FBIK配置 | 进入Control Rig；Goal Assembler作者节点删除，内部operation保留 |
+| Inertialization | 保留显式节点，按实际混合配置放置；不自动把Standard改成惯性化 |
+| 当前v28来源元数据 | 复用并扩展到新作者边界，最终正式版本一次升级 |
+| 旧窗口、旧GraphView、旧作者kind及失效配置 | 完成转换后删除，不保留可编辑副本或运行fallback |
+
+### 12. 现行规范对账与必须同步的冲突
+
+本次update只改status列出的8份现有规划文件，不把未实施设计直接写成current truth。下表列出必须随实施同步的其它现行规范；它们的旧条款仍存在，不能在apply时忽略。已有delta文件承载本方案完整行为要求；不会为更新文档另建一个change。
+
+| 现行来源／精确条款 | 与新方案关系 | 本提案处理 |
+|---|---|---|
+| character-presentation-pose-graph：Pose Graph必须唯一表达完整表现拓扑；Pose端口必须显式区分空间并允许typed控制目标 | 强制作者摆Contribution／Assembler | 本delta改为作者分层＋编译后显式内部拓扑；保留Goal合法性与唯一输出 |
+| 同spec：State-local source必须由Profile binding和provider解析 | Source Slot两次选资源、禁止Player Loop | 本delta改为直接资源／typed参数及usage播放策略；保留provider、readiness和原生Clip唯一性 |
+| 同spec：AnimationSlot必须是有限Action的唯一Pose插入口；Pose参数必须通过typed页面和显式解析传播 | 暴露Action输入与必接Resolver | 本delta隐藏内部读取／汇总，Slot／Curve业务设置仍显式 |
+| character-animation-presentation-authoring：Presentation Profile必须唯一绑定Pose source；Pipeline Definition 必须引用唯一 Animation Presentation Profile | Profile仍强制保存旧source wrappers和完整低层作者节点清单 | 实施同步改为Profile装配＋Player直接资源＋层／Rig／Montage引用；删除旧authoring消费者，不增加第二来源 |
+| character-animation-layer-runtime：持续Pose与有限Action控制边界必须分离；每类连续性必须只有一个明确owner | 禁止旧Layer catalog有保留价值，但不能误杀新的作者Animation Layer | 保留旧runtime Layer删除结论；新Layer基于现有Linked实现与编译范围，Runtime owner仍唯一 |
+| character-pose-inertialization：Inertialization时间数学必须由触发owner唯一提供；Inertialization必须位于native Pose阶段且早于FootPlacement | 当前限制恰好一个直接owner／Player，与UE下游接收请求不一致 | 实施同步为每请求唯一owner、节点处理有界请求集合；保留局部history、残差与Foot前置阶段 |
+| character-pose-plan-compilation：Typed Lowering／Topology／Family／Source Map相关条款 | 同一Pass链可复用，但作者节点与operation不再一一对应 | 保留唯一Compiler；同步语义展开、内部合成来源和没有Rig时不强制Assembler／FBBIK |
+| btsmtl-agent-authoring-document-sync：Presentation分片、typed字段、v4替代v3及失败恢复 | current仍写v4，实际已为v6；作者合同再次改变 | 本delta明确v6基线与v7一次升级，保留完整技能v6字段和整包事务 |
+| graph-authoring-domain-framework／editor-shell：旧GraphView、Details、目录、状态表面 | 实现与组织限制旧 | 既有delta更新为原生角色化表面、调用导航和作者有意义的字段 |
+| character-animation-clip-authoring：原生AnimationClip唯一owner | 与新方案相容 | Montage不复制素材曲线；Sequence Player名称不恢复Sequence包装资产 |
+| btsmtl-timeline-animation-authoring-surface／animation-layer-runtime：Timeline本地编排及有限Action命令 | 原动画轨道扩展Montage式设置及Sections | 实施同步现有payload和Section控制；保留窗口与动画同一时间，不新增Montage资产或播放器 |
+| character-animation-transition-routing-module | 唯一Routing与capture／release可复用 | 接收转换／Montage拥有的设置，保持握手与generation，不由Slot另做动作仲裁 |
+| character-pose-graph-runtime-architecture：四个Owner、帧事务、单Writer与IK基线 | 与新方案相容，是必须保留的运行边界 | 不更换Foot／FBBIK算法，不新增RigVM、调度器或骨骼写入链 |
+| project.md Presentation Direction | 显式低层作者节点、禁止Source Loop／Montage混称、旧Preview、Document旧版文字混杂 | 实施同步作者／编译两层口径；有限Action Timeline承接Montage职责，通用Timeline名称保留；AnimationChannel与Slot仍是不同概念；普通Play观察保留 |
+
+现有Node Definition中的root-only Slot、旧Source字段、旧29能力数量不能继续充当新范围完成标准。此前代码与实施记录属于可复用基础，任务只保留经过源码确认不受新语义影响的已完成项。
 
 ## Risks / Trade-offs
 
-### 实施细化：状态编辑与条件观察
-
-状态别名使用共享的ConfigureStateAlias编辑请求，Pose adapter将完整名称和成员提交给既有ConfigurePoseStateMachineMutation；Document仍使用原有aliases数据，不增加第二套存储。状态名称作为正式State Capability字段提供，写入既有SetPoseStateFieldMutation。
-
-条件Program保留作者OperationId，完成帧记录编译状态机NodeId、作者OperationId以及实际读取的InputA／InputB来源。条件求值仍执行原有顺序及短路规则，只增加有界的读取标记；Editor不会重新求值。条件观察可以分别选择当前条件和目标预判，同一完成帧展示所选类别最后一次已采集结果。
-
-Pose Program Image升级为v28，Transition Rule合同为v3。Source Map增加各图ContentRevision；观察同时匹配PlanHash、Rig identity／revision及本地与Linked作者图版本。旧产物不兼容读取，代码完成后再通过唯一Build发布，不在窗口打开或选择时自动重建。
-
-按照作者2026-09-08指令，tasks只记录实现、清理和最终资产工作；编译、运行、性能与操作检查记录留在implementation.md，不占用实现任务项。
-
-- [原生编辑API绕过Mutation] → 逐入口列出实际写入者和Undo owner，非法批量修改在提交前拒绝。
-- [Native帧页已经复用或释放] → 消费正式完成快照／租约，目标generation变化立即解绑。
-- [高亮存在但不是当前产物] → 同版本Source Map校验失败时清空叠加，保留作者图和错误来源。
-- [观察引入额外计算或UI卡顿] → 检查求值／采样／输出计数及观察开关的诊断开销；显示端不执行算法、不等待Job。
-- [共享文件被技能任务同时调整] → 先读最新接口和变更范围；实际冲突交给作者决定，不回退正确改动。
-- [编辑器能打开但资产或交互没闭环] → 分别保存交互、Document往返、Build和Play观察证据，不用编译成功代替全部验收。
+- [作者UI看起来相同但语义不同] → 用上述owner／输入输出合同约束实现，FBBIK／Gameplay位移等差异在字段说明中明确，不放无效选项。
+- [把Montage概念做成第二份Timeline] → 动画片段、Sections、Slot设置和玩法轨道都留在原Action Timeline，只有一个时钟、游标和生命周期；不新增Montage资产。
+- [Slot、Group与骨骼范围混淆] → 独立typed身份和详情；层内封装不创造隐式Mask或私有播放实例。
+- [多个层重复求值或重复身体求解] → 完整call-site、同帧缓存和唯一身体求解位置进入统一编译拓扑；不是运行时看到重复后跳过。
+- [旧exact pair混合或曲线规则不能表达为UE设置] → 迁移生成精确冲突清单，不保留隐藏兼容Policy、不猜默认值；交由作者决定业务取舍。
+- [共享规范或技能v6仍在修改] → 实施前读取当前合同，保留技能字段；真实同段冲突停止并报告，不覆盖其它正确改动。
+- [作者图仍能打开但新产物尚未发布] → 明确Stale；只有显式Build更新产物，不用旧v28冒充新组织完成。
 
 ## Migration Plan
 
-1. 固定源码／资产／现有运行基线与共享接口，登记替代关系。
-2. 接通原生作者模型、唯一端口合同和事务；编译器直接消费新图。
-3. 保留精确Corin作者资产，通过唯一Character Build发布新版本产物，不执行无业务变化的作者迁移。
-4. 完成Source Map及有界诊断投影，接Play生命周期和精确目标选择。
-5. 接入原生只读高亮、端口值、子图与Pose Watch；从任意正常游戏入口的合法角色获得结果。
-6. 通过已有正式编译、Build、回放和诊断能力保存证据，补齐实际编辑交互结果；不新增测试代码，不把人工验收写入tasks。
-7. 删除无消费者的旧Pose画布、重复端口UI、窗口播放器和失效入口，同步规范及实际进度。资产失败按既有事务回滚；整体回退仅按明确批次与作者决定执行，不提供运行时fallback。
+1. 在改动作者schema前，使用正式Document导出精确Corin的图、资源、动作动画、Slot与Policy目标；固定完整closure及可回滚owner。只读导出不是提前迁移资产。
+2. 完成新Capability、图角色、直接资源、Layer／Slot／Montage、Mask／Profile、Control Rig、编译展开、Document v7和编辑器代码。一次性旧资产读取器仅存在于显式Editor迁移模块，Runtime和普通编辑入口拒绝旧格式；不保留长期双写。
+3. 补齐第12节的现行规范与共享合同同步。完成代码后，按唯一事务生成并应用Corin的新作者目标；对保留节点沿用identity，对被内部化的节点保存迁移对应记录，退役旧作者ID而非另留可编辑图。
+4. 保留原有限动作片段与玩法窗口，在同一Timeline补齐Slot轨道、Sections与Blend设置；将原Foot／目标／FBIK迁到Control Rig。布局按作者职责重建，状态条件、资源、Loop、时间和IK设置不擅自改变。
+5. 事务保存与规范反向导出成功后删除无消费者的旧Source Slot、Binding、作者内部节点及过期编辑代码。任一owner转换或保存失败，原组资产与Document目标一起回滚。
+6. 通过精确Corin的唯一Character Build一起发布所需Float32、Fixed和共享Projection。若SkillGraphs等外部根输入不完整，构建明确失败，不能绕行；新代码与作者数据状态分别记录，不虚勾发布任务。
+
+检查、运行结果和性能记录留在实施记录中，不写进tasks。当前原始UE组织决定已确定；字段的代码命名和文件拆分由实施遵守既有模块边界，不作为新增架构分支。
+
+## References
+
+以下来源说明UE行为；上文的Unity资产owner、编译展开和既有后端映射是本项目设计，不宣称UE内部使用同样实现。
+
+- [Animation Slots](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-slots-in-unreal-engine)：Slot插入位置、Source Pose与Slot Group。
+- [Montage Editor](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-montage-editor-in-unreal-engine)：Slot轨道、Sections、Blend In／Out和Blend Profile。
+- [Blend Nodes](https://dev.epicgames.com/documentation/en-us/unreal-engine/animation-blueprint-blend-nodes-in-unreal-engine)：骨骼混合、Branch Filter、Curve设置与下游惯性请求。
+- [Blend Masks and Profiles](https://dev.epicgames.com/documentation/en-us/unreal-engine/blend-masks-and-blend-profiles-in-unreal-engine)：骨骼范围与逐骨骼过渡的不同职责。
+- [State Machines](https://dev.epicgames.com/documentation/en-us/unreal-engine/state-machines-in-unreal-engine)与[Transition Rules](https://dev.epicgames.com/documentation/unreal-engine/transition-rules-in-unreal-engine?lang=en-US)：状态／规则子图、Alias与边详情。
+- [Animation Blueprint Linking](https://dev.epicgames.com/documentation/unreal-engine/animation-blueprint-linking-in-unreal-engine?lang=en-US)：Layer接口、Pose／参数输入与显式共享组。
+- [Sequence Player](https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AnimNode_SequencePlayer?application_version=5.0)：资源、速率、起始位置和Loop设置；本项目不采用UE资产序列化。
+- [Control Rig in AnimGraph](https://dev.epicgames.com/documentation/en-us/unreal-engine/control-rig-in-animation-blueprints-in-unreal-engine)与[FBIK](https://dev.epicgames.com/documentation/en-us/unreal-engine/control-rig-full-body-ik-in-unreal-engine)：控制图入口、Root、Effectors及UE PBIK职责。

@@ -1,38 +1,41 @@
 ## Why
 
-PoseGraph 已有 Program Image、Native 数据、Burst／Job、帧事务及唯一输出实现，但编辑器仍维护专用端口和交互，预览也缺少与正式执行结果一致的原生显示接入。本提案只为 Pose 复用 FlowCanvas 作者 UI，并把 Editor 预览接到现有编译运行链，保留已经完成的动画运行重构。
-
-作者使用流程：编辑图 → 显式Build → 点Unity的Play → 角色照常运行 → 图窗口显示该角色的节点、权重和Pose Watch。技能窗口同理，但观察的是某一次技能释放；技能实施仍归独立提案。
+当前Pose虽然已经接入FlowCanvas，但作者仍被要求把Action输入、参数汇总、Goal Contribution、Goal Assembler与求解阶段逐个连接，根图表达的是内部执行流程。更新本提案，按UE的AnimGraph、Animation Layer、State Machine、Montage／Slot、按骨骼混合与Control Rig组织作者数据，让作者用动画功能搭图，同时继续编译到已有Program Image、Native／Job和唯一最终输出。
 
 ## What Changes
 
-- **BREAKING**：Pose 的唯一作者图使用领域 FlowGraph／FlowNode／BinderConnection，复用原生端口、节点布局、连线、选择、复制、Undo 和子图导航；Compiler 直接遍历这份图，不转换成旧 Pose 作者图、不保留可写镜像。
-- 保留 Pose Compiler、Program Image、Execution View、Native 页、Worker 调度、Source／Constraint／Final Publication 与根帧事务。FlowCanvas 的端口 getter、FlowScript、协程和 Graph Update 不承担角色动画执行。
-- 从唯一 Capability 和 Port Shape 注册 Pose 的字段与端口，保持 Local／Component 空间、动态端口、Graph Role 及稳定身份约束；原生写入原语进入既有 typed Mutation 和真实资产事务。
-- 增加 Pose Editor 运行观察：Unity 进入 Play 后，角色由现有游戏入口正常运行；窗口绑定明确的角色实例，通过版本化 Source Map 读取已完成的节点、端口、状态、权重与 Pose Watch 结果。这里的“预览”只指看到实际运行结果。
-- 原生状态外观通过只读观测数据绘制，不为连线闪烁启动一份 FlowCanvas 图；悬停、重绘和下钻不得重新计算动画、等待 Job 或写骨骼。无采样与零贡献必须区分。
-- 明确未播放、等待目标、观察中、版本不匹配和目标结束状态；停止 Play、目标销毁或重载时解绑。Unity 自身暂停时保留最后完成帧；不新增场景启动、窗口播放／暂停／单步、节点指令断点、seek 或隐藏播放器。
-- 保留精确 Corin Definition 的现有 Pose 图、状态／规则、布局及资源引用；实际实现保留序列化类型与稳定identity，不执行无业务变化的作者数据迁移。通过唯一Character Build重建包含观察元数据的产物，保持Document v5业务字段和五生命周期。
-- 删除被替代的 Pose 画布、端口绘制和编辑入口；不删除仍有正式消费者的 Native／编译实现，不迁移技能、AI、网络或修改 Foot／IK 算法。
+- **BREAKING**：本提案从“接通原生图UI与观察”扩大为“UE式动画作者组织与编译适配”。原来的20/21完成计数只代表旧范围；受新职责影响的任务重新打开，不另建change。
+- AnimGraph作为角色动画总装图；Animation Layer、状态机、状态Pose图、转换条件图、Control Rig分别拥有明确输入、输出和下钻入口，只有一份正式作者拓扑。
+- Player按UE习惯直接选择AnimationClip／Blend Space／Motion Matching资源或显式资源参数；废除面向作者的Source Slot与Profile Binding两次选择。资源准备、dense source binding和usage identity由编译器生成。
+- 现有有限Action Timeline承担本项目的Montage职责，在原资产内补齐Slot轨道、Clip引用、Sections、Blend In／Out和Blend Profile。动画片段、玩法窗口、Motion与MotionWarp继续共用原Timeline时钟与生命周期；原生AnimationClip唯一拥有素材骨骼与注册曲线，不新增并行Montage资产或播放器。
+- Slot是Montage进入Pose流的明确位置，能位于AnimGraph、Animation Layer或State Pose图。Slot选择稳定Slot定义，不保存Bone Mask；动画层可以封装状态机、Slot与Layered Blend Per Bone，但不自动获得私有Slot或独立Montage实例。
+- Layered Blend Per Bone通过Branch Filter或Rig拥有的Blend Mask决定骨骼范围，Alpha控制层贡献；状态转换与各Montage分别配置过渡时间、曲线和Blend Profile。Slot名称、Slot Group、Bone Mask与Blend Profile保持不同职责。
+- Control Rig作者图组织Forwards Solve、控制目标、Foot Placement和Full Body IK。目标构造与实际求解对作者可见；Goal Contribution打包、Goal Assembler、必要边界转换与工作区分配由编译器展开，不再是必接作者节点。
+- 保留显式Inertialization、局部分支连续性、Pose可用性、实际调用身份和UE式状态／转换编辑。不能为了减少节点隐藏惯性化，也不能用重新排版或把旧流水线塞进子图代替职责重构。
+- 一颗作者节点可生成多条内部operation，Source Map同时标识作者节点、内部步骤、图版本、调用路径和输出端口。Unity普通Play中的真实角色继续提供只读运行观察；不运行FlowCanvas作者图、不创建预览角色或窗口时钟。
+- 在当前唯一Document v6基础上规划一次v7升级，完整承接技能侧v6内容并加入新的动画作者合同。统一Capability、Exporter、Reconciler、typed Mutation、owner事务及五生命周期，不增加局部动画MCP写入入口。
+- 先完成代码与编辑能力，最后通过正式资产事务迁移Corin。此次迁移有真实的数据组织变化；上一轮“仅换UI无需迁移”的结论只适用于旧范围。迁移保持可保留的图／节点／状态identity及原动作语义，删除被替代的作者配置后统一发布Float32、Fixed和Projection。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `pose-flowcanvas-editor-preview`：Pose 原生作者 UI、Play Mode 下编译结果的只读显示、精确实例／版本绑定及生命周期。
+- `pose-flowcanvas-editor-preview`：扩充原有未归档能力，覆盖UE式作者分层、Montage与Slot、骨骼混合、Control Rig、源映射及普通Play观察。
 
 ### Modified Capabilities
 
-- `character-presentation-pose-graph`：原生 FlowCanvas 作者入口与编译运行分离，窗口只观察实际运行角色的 Committed Result。
-- `graph-authoring-domain-framework`：允许 Pose 在复用唯一语义合同的同时采用原生编辑和序列化基础，保留其它领域边界。
-- `graph-authoring-editor-shell`：Pose 的画布与通用交互由 GraphEditor 拥有，领域区域同窗口组合。
-- `btsmtl-agent-authoring-document-sync`：Presentation Reconciler 直接修改正式 FlowCanvas 作者 owner，保留 v5 整包事务和反向发布。
+- `character-presentation-pose-graph`：作者层次与内部运行拓扑分离；直接资源Player、层内Slot、曲线传播、控制图和编译展开。
+- `graph-authoring-domain-framework`：统一角色、接口、作用域、字段、交互及多operation来源合同。
+- `graph-authoring-editor-shell`：同一窗口按图职责提供UE式导航、状态连线、作者详情及运行观察。
+- `btsmtl-agent-authoring-document-sync`：v7动画分片、完整owner事务、旧作者数据迁移与唯一反向导出。
+
+本次只修改上述已有delta文件。其它现行规范的精确冲突、适用边界和实施同步要求集中记录在design.md“现行规范对账”；未将未改动的旧条款宣称为已经一致。
 
 ## Impact
 
-- Pose 作者模型、Capability、Compiler 输入遍历、Agent Document、Mutation、编译产物重建、窗口与运行观察适配。
-- CanvasCore／FlowCanvas 必要的领域无关编辑及外部观测钩子；不复制框架源码，不开启其业务 runtime。
-- 运行层只扩展必要的诊断来源及结果投影，不替换计算、Stage、Worker、Frame 或 Physical Writer。
-- `refactor-btsmtl-flowcanvas-authoring` 保留技能侧；共享框架接口先核对并复用，不由本提案实施技能。该提案近期由 `unify-flowcanvas-authoring-and-compiled-debug` 更名，历史 Pose 文字不构成本提案的重复实施范围。
-- 本提案不依赖 `rebuild-btsmtl-preview-with-scene-play` 创建场景或预览角色。任何既有游戏／场景入口正常运行的合法角色都可被观察；本提案不接管这些入口，也不提供独立预览生命周期。
-- 本提案取代 Pose 原任务 23.x／24.x 的原生 runtime 方向，以及22.x中被原生 UI 替代的专用交互目标；不自动完成或归档旧任务。具体规范对账见 design.md。
+- Pose作者Capability、资源选择、图角色／接口、Slot与Group定义、Montage、Mask／Profile、Rig控制目标和Document。
+- Pose Compiler的Closure、语义展开、Topology、Stage／Value／Workspace规划及Source Map；允许扩展正式动画指令和所需运行描述，不建立第二Compiler或Runtime。
+- 复用既有Linked Pose接口、Implementation／Group绑定和调用生命周期承载Animation Layer；复用原Native帧事务、Foot／Goal／FBBIK算法、Animancer source backend和Final Publication。
+- Montage式设置直接扩展现有Action Timeline动画内容合同；技能图重构、动作准入、战斗规则和网络执行仍归原技能提案，不借此调整它们的业务行为。
+- 当前v28观察元数据是可复用基础，不承诺新作者结构仍使用v28产物。最终schema由同一编译链一次升级，旧产物明确Stale，禁止双reader、自动Build或运行时修复。
+- 本轮仅更新计划文档，不实施代码、不迁移资产、不Build、不归档。tasks仅列实现、清理、文档同步与迁移／发布工作。

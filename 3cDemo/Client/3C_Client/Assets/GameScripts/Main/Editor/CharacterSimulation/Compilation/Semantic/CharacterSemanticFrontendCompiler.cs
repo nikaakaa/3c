@@ -237,6 +237,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new ProgramId($"character:{guid}");
         }
 
+        static readonly string s_SourceRevisionSessionPrefix = "3C.sourceRevision.fingerprint.";
+
         static ProgramRevision ComputeSourceRevision(string definitionPath)
         {
             string[] dependencies = AssetDatabase.GetDependencies(definitionPath, true)
@@ -245,6 +247,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 .Where(IsSourceDependency)
                 .OrderBy(value => value, StringComparer.Ordinal)
                 .ToArray();
+            string sessionKey;
+            using (var fingerprintWriter = new CanonicalWriter())
+            {
+                fingerprintWriter.WriteString(CompilerVersion);
+                fingerprintWriter.WriteInt32(dependencies.Length);
+                for (int i = 0; i < dependencies.Length; i++)
+                {
+                    string path = dependencies[i].Replace('\\', '/');
+                    string absolute = Path.GetFullPath(path);
+                    if (!File.Exists(absolute))
+                        throw new FileNotFoundException($"Authoring dependency '{path}' does not exist.", absolute);
+                    var file = new FileInfo(absolute);
+                    fingerprintWriter.WriteString(path);
+                    fingerprintWriter.WriteString(AssetDatabase.AssetPathToGUID(path));
+                    fingerprintWriter.WriteString(
+                        file.LastWriteTimeUtc.Ticks.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture));
+                    fingerprintWriter.WriteInt64(file.Length);
+                }
+                sessionKey = s_SourceRevisionSessionPrefix + fingerprintWriter.ComputeHash().Value;
+                string cachedRevision = SessionState.GetString(sessionKey, string.Empty);
+                if (cachedRevision.Length > 0)
+                    return new ProgramRevision(cachedRevision);
+            }
             using var writer = new CanonicalWriter();
             writer.WriteString(CompilerVersion);
             writer.WriteInt32(dependencies.Length);
@@ -261,7 +287,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 writer.WriteString(guid);
                 writer.WriteBytes(File.ReadAllBytes(absolute));
             }
-            return new ProgramRevision(writer.ComputeHash().Value);
+            string revision = writer.ComputeHash().Value;
+            SessionState.SetString(sessionKey, revision);
+            return new ProgramRevision(revision);
         }
 
         static bool IsSourceDependency(string path)

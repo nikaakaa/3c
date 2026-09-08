@@ -186,5 +186,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Payload,
                 DynamicPorts.ToArray(),
                 position);
+
+#if UNITY_EDITOR
+        protected override void OnNodeInspectorGUI()
+        {
+            System.Action<CharacterPoseCanvasNode> handler =
+                PoseCanvasEditorBridge.InspectorOverride;
+            if (handler != null)
+            {
+                handler(this);
+                return;
+            }
+            base.OnNodeInspectorGUI();
+        }
+#endif
     }
 }

@@ -236,9 +236,10 @@ namespace NodeCanvas.Framework
             //deep clone
             var newNode = JSONSerializer.Clone<Node>(this);
 
-            UndoUtility.RecordObject(targetGraph, "Duplicate Node");
-
-            targetGraph.allNodes.Add(newNode);
+            newNode = targetGraph.AttachDuplicatedNode(newNode); // 3C: routed attach (records undo in default impl)
+            if ( newNode == null ) {
+                return null;
+            }
             newNode.inConnections.Clear();
             newNode.outConnections.Clear();
 

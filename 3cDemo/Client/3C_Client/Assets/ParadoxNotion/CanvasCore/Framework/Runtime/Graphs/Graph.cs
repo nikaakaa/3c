@@ -1196,6 +1196,18 @@ namespace NodeCanvas.Framework
         }
 #endif
 
+        ///<summary>3C: attach a duplicated node. Default records undo and adds to allNodes; domain graphs override to route their own write chain.</summary>
+        public virtual Node AttachDuplicatedNode(Node newNode) {
+            UndoUtility.RecordObject(this, "Duplicate Node");
+            allNodes.Add(newNode);
+            return newNode;
+        }
+
+        ///<summary>3C: attach a duplicated connection. Default duplicates the connection onto the new endpoints.</summary>
+        public virtual Connection AttachDuplicatedConnection(Connection original, Node newSource, Node newTarget) {
+            return original.Duplicate(newSource, newTarget);
+        }
+
         ///<summary>Makes a copy of provided nodes and if targetGraph is provided, puts those new nodes in that graph.</summary>
         public static List<Node> CloneNodes(List<Node> originalNodes, Graph targetGraph = null, Vector2 originPosition = default) {
 
@@ -1225,7 +1237,7 @@ namespace NodeCanvas.Framework
                 if ( linkPair.Value.Value != -1 ) { //we check this to see if the target node is part of the duplicated nodes since IndexOf returns -1 if element is not part of the list
                     var newSource = newNodes[linkPair.Value.Key];
                     var newTarget = newNodes[linkPair.Value.Value];
-                    linkPair.Key.Duplicate(newSource, newTarget);
+                    targetGraph.AttachDuplicatedConnection(linkPair.Key, newSource, newTarget); // 3C: routed attach
                 }
             }
 

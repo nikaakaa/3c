@@ -222,6 +222,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
 #if UNITY_EDITOR
+        public override Node AttachDuplicatedNode(Node newNode)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas nodes must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
+            return EditorWriteRouter.DuplicateNode(newNode);
+        }
+
+        public override Connection AttachDuplicatedConnection(Connection original, Node newSource, Node newTarget)
+        {
+            if (EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas connections must be changed through the Pose Canvas editor session or the Presentation Mutation chain.");
+            return EditorWriteRouter.DuplicateConnection(original, newSource, newTarget);
+        }
+#endif
+    }
+
+#if UNITY_EDITOR
+    internal static class PoseCanvasEditorBridge
+    {
+        internal static System.Action<CharacterPoseCanvasNode> InspectorOverride;
+        internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
+    }
+
     internal interface CharacterPoseCanvasEditorWriteRouter
     {
         Node CreateNode(Type nodeType, Vector2 position);
@@ -229,6 +254,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void RemoveNode(Node node);
         Connection Connect(Node sourceNode, Node targetNode, int sourceIndex, int targetIndex);
         void RemoveConnection(Connection connection);
+        Node DuplicateNode(Node clonedNode);
+        Connection DuplicateConnection(Connection original, Node newSource, Node newTarget);
+        void SetNodeField(Node node, string fieldId, object value);
         GenericMenu BuildNodeCreationMenu(NodeCanvas.Framework.Graph.NodeCreationRequestContext request);
     }
 #endif

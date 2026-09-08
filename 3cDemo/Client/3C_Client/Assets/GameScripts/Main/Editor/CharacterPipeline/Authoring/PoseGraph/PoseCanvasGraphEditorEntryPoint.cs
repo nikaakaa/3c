@@ -33,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentNullException(nameof(graph));
             var session = new CharacterPoseCanvasEditorWriteSession(asset, graph);
             graph.EditorWriteRouter = session;
+            PoseCanvasEditorBridge.VisualsRefresh?.Invoke(graph);
             GraphEditor editor = GraphEditor.OpenWindow(graph);
             EditorApplication.CallbackFunction detach = null;
             detach = () =>

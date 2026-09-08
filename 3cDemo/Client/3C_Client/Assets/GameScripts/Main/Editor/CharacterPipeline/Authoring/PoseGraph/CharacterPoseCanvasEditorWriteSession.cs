@@ -72,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
             CharacterPoseCanvasNode created = m_Graph.RequireNode(node.NodeId);
+            created.customColor = definition.Capability.Color;
             GraphEditorUtility.activeElement = created;
             return created;
         }
@@ -130,6 +131,67 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Graph.GraphId.Value,
                 edge.EdgeId));
             m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
+        }
+
+        public Node DuplicateNode(Node clonedNode)
+        {
+            var clone = clonedNode as CharacterPoseCanvasNode ??
+                throw new InvalidOperationException("Duplicated node is not a Pose Canvas node.");
+            var node = new CharacterPoseCanvasNode(
+                new PoseNodeId(Guid.NewGuid().ToString("N")),
+                clone.DisplayName,
+                ParadoxNotion.Serialization.JSONSerializer.Clone<CharacterPoseNodePayload>(clone.Payload),
+                clone.DynamicPorts.ToArray(),
+                clone.position);
+            var transaction = new CharacterPresentationMutationTransaction(
+                Guid.NewGuid().ToString("N"),
+                $"Duplicate {clone.DisplayName}");
+            transaction.Add(new CreatePoseNodeMutation(
+                m_Graph.GraphId.Value,
+                node,
+                clone.position));
+            m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
+            return m_Graph.RequireNode(node.NodeId);
+        }
+
+        public Connection DuplicateConnection(Connection original, Node newSource, Node newTarget)
+        {
+            var edge = original as CharacterPoseCanvasConnection ??
+                throw new InvalidOperationException("Duplicated connection is not a Pose Canvas connection.");
+            var source = newSource as CharacterPoseCanvasNode ??
+                throw new InvalidOperationException("Connection source is not a Pose Canvas node.");
+            var target = newTarget as CharacterPoseCanvasNode ??
+                throw new InvalidOperationException("Connection target is not a Pose Canvas node.");
+            string edgeId = NewEdgeId();
+            var transaction = new CharacterPresentationMutationTransaction(
+                Guid.NewGuid().ToString("N"),
+                "Duplicate Pose Connection");
+            transaction.Add(new ConnectPosePortMutation(
+                m_Graph.GraphId.Value,
+                edgeId,
+                source.NodeId,
+                edge.SourcePortId,
+                target.NodeId,
+                edge.TargetPortId));
+            m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
+            return m_Graph.Connections.SingleOrDefault(
+                value => value.EdgeId == edgeId);
+        }
+
+        public void SetNodeField(Node node, string fieldId, object value)
+        {
+            var target = node as CharacterPoseCanvasNode ??
+                throw new InvalidOperationException("Edited node is not a Pose Canvas node.");
+            var transaction = new CharacterPresentationMutationTransaction(
+                Guid.NewGuid().ToString("N"),
+                $"Set {target.DisplayName} Field");
+            transaction.Add(new SetPoseNodeFieldMutation(
+                m_Graph.GraphId.Value,
+                target.NodeId,
+                fieldId,
+                value));
+            m_Service.ApplyGraphMutationsInPlace(m_Owner, transaction);
+            GraphEditorUtility.activeElement = m_Graph.RequireNode(target.NodeId);
         }
 
         public GenericMenu BuildNodeCreationMenu(

@@ -1,5 +1,7 @@
 ## Context
 
+当前执行范围（2026-09-08最新指示）：只实施BTSMTL技能及其必要共用基础。以下涉及Pose编译执行、Pose资产迁移和Pose运行观察的设计暂不实施；Pose是否采用原生runtime须在恢复该领域工作前统一修订相关规范。共用代码改动必须保留当前Pose行为，不把共用基座作为暗中迁移Pose的入口。
+
 动机见[proposal.md](proposal.md)。本设计记录2026-09-08最后确认的路线：FlowCanvas是作者图和编辑器基础，角色仍执行编译产物。此前讨论过的原生委托runtime不是本提案目标。
 
 本地源码证据：`Assets/ParadoxNotion/FlowCanvas/Modules/FlowGraphs/`下的`FlowNode.cs`提供端口编辑；`Macros/Macro.cs`和`MacroNodeWrapper.cs`提供接口、引用、实例及下钻；`BinderConnection.cs`与`BinderConnection(T).cs`在真实端口调用后触发闪烁并缓存传递值。该原生运行观测依赖UNITY_EDITOR和Play Mode，不能直接观察项目的编译执行器。`FlowScript`已有手动更新，但本方案不运行它。原生`Sequence`是轮流输出的Flip Flop，不能替代技能等待完成的顺序语义。

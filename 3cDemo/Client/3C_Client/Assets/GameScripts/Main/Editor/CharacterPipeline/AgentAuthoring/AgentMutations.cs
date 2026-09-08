@@ -61,8 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionProfileTargetRequirement,
         SetActionRequestTimingClass,
         ConfigureControlConfiguration,
-        SetSkillDefinition,
-        DeleteSkillDefinition,
+        SetSkillFlowDocument,
         EnsureAIControllerDefinition,
         EnsureAIControllerTree,
         BindAIControllerAssets,
@@ -99,7 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         TimelineClip,
         FlowEdge,
         PropertyEdge,
-        SkillDefinition,
         Graph
     }
 
@@ -1493,30 +1491,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public CharacterActionRequestTimingClass TimingClass { get; }
     }
 
-    public sealed class AgentSetSkillDefinitionMutation : AgentMutation
-    {
-        public AgentSetSkillDefinitionMutation(
-            string id,
-            string path,
-            AgentSnapshotSkillDefinition definition,
-            AgentGraphTargetReference entryGraph)
-            : base(
-                id,
-                AgentMutationKind.SetSkillDefinition,
-                "set_skill_definition",
-                AgentMutationOutputKind.SkillDefinition,
-                path,
-                "CharacterSkillDefinitions",
-                Vector2.zero)
-        {
-            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
-            EntryGraph = entryGraph;
-        }
-
-        public AgentSnapshotSkillDefinition Definition { get; }
-        public AgentGraphTargetReference EntryGraph { get; }
-    }
-
     public sealed class AgentConfigureControlConfigurationMutation : AgentMutation
     {
         public AgentConfigureControlConfigurationMutation(
@@ -1536,24 +1510,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public AgentDocumentControlConfiguration Configuration { get; }
-    }
-
-    public sealed class AgentDeleteSkillDefinitionMutation : AgentMutation
-    {
-        public AgentDeleteSkillDefinitionMutation(string id, string path, string skillId)
-            : base(
-                id,
-                AgentMutationKind.DeleteSkillDefinition,
-                "delete_skill_definition",
-                AgentMutationOutputKind.None,
-                path,
-                "CharacterSkillDefinitions",
-                Vector2.zero)
-        {
-            SkillId = skillId ?? string.Empty;
-        }
-
-        public string SkillId { get; }
     }
 
     public abstract class AgentGraphLinkMutation : AgentMutation

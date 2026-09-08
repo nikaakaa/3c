@@ -399,6 +399,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         out string message))
                     return FailOwner(report, code, message, out owners);
                 var allOwners = new HashSet<UnityEngine.Object>(graphOwners);
+                AgentSetSkillFlowDocumentMutation skillFlow = preparation?.Plan?.Commands
+                    .OfType<AgentSetSkillFlowDocumentMutation>()
+                    .FirstOrDefault();
+                if (skillFlow != null &&
+                    !AgentSkillFlowDocumentOwnerCollector.TryCollect(
+                        character,
+                        skillFlow.Document,
+                        allOwners,
+                        report))
+                {
+                    owners = Array.Empty<UnityEngine.Object>();
+                    return false;
+                }
                 AgentPresentationMutationPlan presentation =
                     preparation?.PresentationPlan;
                 if (presentation != null)

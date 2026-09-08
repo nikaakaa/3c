@@ -149,9 +149,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentGraphDocumentMutationModule.BuildCharacterGraphMutations(current.graphs, target.graphs, target.stateMachines, mutations, report);
             AgentTimelineDocumentMutationModule.BuildTimelineMutations(current, target, mutations, report);
             AgentActionDocumentMutationModule.BuildActionMutations(current, target, mutations, report);
-            AgentSkillDocumentMutationPlanner.Build(
-                current.skills,
-                target.skills,
+            AgentSkillFlowDocumentMutationModule.Build(
+                current,
+                target,
                 mutations,
                 report);
             AgentControlDocumentMutationModule.BuildControlConfigurationMutations(current, target, mutations, report);

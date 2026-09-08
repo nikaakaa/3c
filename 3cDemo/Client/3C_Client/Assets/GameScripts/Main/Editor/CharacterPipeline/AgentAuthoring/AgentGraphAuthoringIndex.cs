@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ThirdPersonCharacter.Pipeline.Graph;
+using ThirdPersonCharacter.Pipeline;
+using FlowCanvas;
+using FlowCanvas.Macros;
+using ThirdPersonCharacter.Control.Authoring;
 using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -9,11 +14,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         readonly Dictionary<string, BaseTree> m_Graphs = new Dictionary<string, BaseTree>(StringComparer.Ordinal);
         readonly Dictionary<BaseGraph, string> m_GraphPaths = new Dictionary<BaseGraph, string>();
+        readonly Dictionary<string, FlowGraph> m_SkillGraphs = new Dictionary<string, FlowGraph>(StringComparer.Ordinal);
+        readonly Dictionary<FlowGraph, string> m_SkillGraphPaths = new Dictionary<FlowGraph, string>();
 
         public void Rebuild(BaseTree root)
         {
             m_Graphs.Clear();
             m_GraphPaths.Clear();
+            m_SkillGraphs.Clear();
+            m_SkillGraphPaths.Clear();
             if (root == null)
                 return;
 
@@ -37,6 +46,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
+        public void RebuildSkills(CharacterPipelineDefinition definition)
+        {
+            m_SkillGraphs.Clear();
+            m_SkillGraphPaths.Clear();
+            if (!definition)
+                return;
+            var runtime = new AgentSkillFlowDocumentRuntimeIndex();
+            runtime.Build(definition);
+            foreach (KeyValuePair<string, FlowGraph> pair in runtime.Graphs)
+            {
+                if (m_SkillGraphs.TryGetValue(pair.Key, out FlowGraph existing) && existing != pair.Value)
+                    throw new InvalidOperationException($"Duplicate Skill Graph identity: {pair.Key}.");
+                m_SkillGraphs[pair.Key] = pair.Value;
+                m_SkillGraphPaths[pair.Value] = "skill/graph:" + pair.Key;
+            }
+        }
+
         public bool TryGetGraph(string key, out BaseTree graph)
         {
             graph = null;
@@ -46,6 +72,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string GetGraphPath(BaseGraph graph)
         {
             return graph != null && m_GraphPaths.TryGetValue(graph, out string path) ? path : string.Empty;
+        }
+
+        public bool TryGetSkillGraph(string key, out FlowGraph graph)
+        {
+            graph = null;
+            return !string.IsNullOrEmpty(key) && m_SkillGraphs.TryGetValue(key, out graph);
+        }
+
+        public string GetSkillGraphPath(FlowGraph graph)
+        {
+            return graph != null && m_SkillGraphPaths.TryGetValue(graph, out string path) ? path : string.Empty;
+        }
+
+        public bool TryFindSkillNode(FlowGraph graph, string key, out FlowNode node)
+        {
+            node = null;
+            if (graph == null || string.IsNullOrEmpty(key))
+                return false;
+            node = graph.allNodes.OfType<FlowNode>().FirstOrDefault(value => value.UID == key);
+            return node != null;
+        }
+
+        public bool TryFindSkillConnection(FlowGraph graph, string key, out BinderConnection connection)
+        {
+            connection = null;
+            if (graph == null || string.IsNullOrEmpty(key))
+                return false;
+            connection = graph.allNodes.OfType<FlowNode>()
+                .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                .FirstOrDefault(value => value.UID == key);
+            return connection != null;
         }
 
         public bool TryFindNode(BaseGraph graph, string key, out BaseNode node)

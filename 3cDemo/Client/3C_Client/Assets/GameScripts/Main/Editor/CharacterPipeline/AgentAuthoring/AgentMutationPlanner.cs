@@ -358,10 +358,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     foreach (string dependency in Planned(admission.Element.Value))
                         yield return dependency;
                     break;
-                case AgentSetSkillDefinitionMutation skill:
-                    foreach (string dependency in Planned(skill.EntryGraph.Value))
-                        yield return dependency;
-                    break;
                 case AgentStateBehaviorMutation behavior:
                     foreach (string dependency in Planned(behavior.Target.DirectGraph.Value))
                         yield return dependency;
@@ -560,8 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileTargetRequirement),
                 [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionRequestTimingClass),
                 [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerConfigureControlConfiguration),
-                [AgentMutationKind.SetSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillDefinition, AgentMutationOutputKind.SkillDefinition, AgentControlMutationLowering.LowerSetSkillDefinition),
-                [AgentMutationKind.DeleteSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteSkillDefinition, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerDeleteSkillDefinition),
+                [AgentMutationKind.SetSkillFlowDocument] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillFlowDocument, AgentMutationOutputKind.None, AgentSkillFlowDocumentMutationLowering.LowerSetSkillFlowDocument, AgentMutationDomainMask.CharacterController),
                 [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.BindAIControllerAssets] = new AgentMutationDraftDescriptor(AgentMutationKind.BindAIControllerAssets, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerBindAIControllerAssets, AgentMutationDomainMask.AIController),

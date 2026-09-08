@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
+using FlowCanvas;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -162,6 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             try
             {
                 Index.Rebuild(RootTree);
+                if (Definition)
+                    Index.RebuildSkills(Definition);
                 return true;
             }
             catch (Exception exception)
@@ -174,6 +177,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool TryResolveGraph(AgentGraphTargetReference reference, string path, out BaseTree graph)
         {
             return TryResolveGraph(reference.Value, path, out graph);
+        }
+
+        public bool TryResolveSkillGraph(string identity, string path, out FlowGraph graph)
+        {
+            graph = null;
+            if (Index.TryGetSkillGraph(identity, out graph))
+                return true;
+            Report.Error(path, "skill_graph_not_found", $"Skill Graph identity无法解析：{identity}");
+            return false;
+        }
+
+        public bool TryResolveSkillNode(FlowGraph graph, string identity, string path, out FlowNode node)
+        {
+            node = null;
+            if (Index.TryFindSkillNode(graph, identity, out node))
+                return true;
+            Report.Error(path, "skill_node_not_found", $"Skill Node identity无法解析：{identity}");
+            return false;
         }
 
         public bool TryResolveFlowEdge(
@@ -811,6 +832,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentDocumentBoundaryIdentity
     {
         readonly Dictionary<string, BaseTree> m_Graphs;
+        readonly Dictionary<string, string> m_SkillGraphs;
 
         AgentDocumentBoundaryIdentity(
             UnityEngine.Object definition,
@@ -820,7 +842,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string definitionGuid,
             string rootPath,
             string rootGuid,
-            IDictionary<string, BaseTree> graphs)
+            IDictionary<string, BaseTree> graphs,
+            IDictionary<string, string> skillGraphs)
         {
             Definition = definition;
             RootTreeAsset = rootTreeAsset;
@@ -831,6 +854,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             RootGuid = rootGuid;
             RootGraphAuthoringId = rootTree?.GraphAuthoringId ?? string.Empty;
             m_Graphs = new Dictionary<string, BaseTree>(graphs, StringComparer.Ordinal);
+            m_SkillGraphs = new Dictionary<string, string>(skillGraphs, StringComparer.Ordinal);
         }
 
         UnityEngine.Object Definition { get; }
@@ -855,6 +879,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (AuthoringIdentity.IsValid(owner) && session.Index.TryGetGraph(owner, out BaseTree graph))
                     graphs[owner] = graph;
             }
+            var skillGraphs = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (session.Definition)
+            {
+                var native = new AgentSkillFlowDocumentRuntimeIndex();
+                native.Build(session.Definition);
+                var fingerprint = new ThirdPersonCharacter.Control.Authoring.BtsmtlSkillGraphFingerprint();
+                foreach (KeyValuePair<string, FlowGraph> pair in native.Graphs)
+                    skillGraphs[pair.Key] = fingerprint.Compute(pair.Value);
+            }
             return new AgentDocumentBoundaryIdentity(
                 definition,
                 rootTreeAsset,
@@ -863,7 +896,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AssetDatabase.AssetPathToGUID(definitionPath),
                 rootPath,
                 AssetDatabase.AssetPathToGUID(rootPath),
-                graphs);
+                graphs,
+                skillGraphs);
         }
 
         public bool Validate(UnityEngine.Object definition, AgentMutationSession session, AgentCompileReport report)
@@ -894,6 +928,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!session.Index.TryGetGraph(pair.Key, out BaseTree current) || !ReferenceEquals(current, pair.Value))
                 {
                     report.Error("transaction", "authoring_graph_changed", $"Graph identity 在 dry-run 与 apply 之间发生变化：{pair.Key}");
+                    return false;
+                }
+            }
+            if (session.Definition)
+            {
+                try
+                {
+                    var native = new AgentSkillFlowDocumentRuntimeIndex();
+                    native.Build(session.Definition);
+                    if (native.Graphs.Count != m_SkillGraphs.Count)
+                    {
+                        report.Error("transaction", "authoring_skill_graph_changed", "Skill Graph闭包在dry-run与apply之间发生变化。");
+                        return false;
+                    }
+                    var fingerprint = new ThirdPersonCharacter.Control.Authoring.BtsmtlSkillGraphFingerprint();
+                    foreach (KeyValuePair<string, string> pair in m_SkillGraphs)
+                    {
+                        if (!native.Graphs.TryGetValue(pair.Key, out FlowGraph graph) ||
+                            !string.Equals(fingerprint.Compute(graph), pair.Value, StringComparison.Ordinal))
+                        {
+                            report.Error("transaction", "authoring_skill_graph_changed", $"Skill Graph identity在dry-run与apply之间发生变化：{pair.Key}");
+                            return false;
+                        }
+                    }
+                }
+                catch (Exception exception)
+                {
+                    report.Error("transaction", "authoring_skill_graph_changed", exception.Message);
                     return false;
                 }
             }

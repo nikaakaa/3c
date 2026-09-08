@@ -9,7 +9,8 @@
 - 原生窗口查询已接入发现阶段：逐次遍历Macro、状态、条件和TreeClip调用，按实际祖先声明owner匹配Decision阶段投射。共享定义的不同调用分别校验；缺少窗口类型或只有不可见／其他阶段投射时返回明确诊断和候选路径。该检查确认静态阶段与作用域合法性，不代替运行中窗口实际开放的记录。
 - Timeline基础导航已接通现有AssetDatabase.OpenAsset链：原生技能节点打开TimelineAsset，Timeline窗口区分私有子资产与共享主资产，TreeClip.AssetTree直接打开原生图并显示身份。没有复制窗口或另建画布；父调用返回和运行breadcrumb仍未接通。
 - 原生LocomotionInputMotion节点通过ILocomotionInputMotionAuthoring共享运动参数读取合同，复用原有速度／曲线校验和Program发射；黑板InputBinding限定为正式输入目录支持的ActionTargetSnapshot及Character／Spawn作用域。Document能力目录接入仍未完成。
-- Unity实例恢复后已再次请求脚本刷新，等待结果时插件会话断开，随后Console读取返回HTTP 503。本批代码尚无成功编译结果，之前的零CS错误记录只适用于此前提交；新增脚本的meta已由Unity生成。
+- 本轮小步提交：0e7798c1a（移动节点与运动编译合同）、f9cd29bbe（窗口查询阶段与调用作用域）、ab505e08c（Timeline及TreeClip原生资产打开）。新增脚本meta由Unity生成。
+- 刷新等待期间发生插件重载断连和HTTP 503；最后一次恢复连接后，Console按error CS查询返回0条。OpenSpec严格校验通过。该结果不代替编辑器交互、内容构建或运行对账，也不表示其他领域Console没有错误。
 - Document v6由作者指定的「agent工具」任务负责，范围和正式合同直接记在design.md第6节、tasks.md第5节。没有新增独立交接文档；未经作者明确允许，不向其他窗口发送消息。
 - 资产迁移、Document apply、内容Build和回放均未因本次整理而执行。
 

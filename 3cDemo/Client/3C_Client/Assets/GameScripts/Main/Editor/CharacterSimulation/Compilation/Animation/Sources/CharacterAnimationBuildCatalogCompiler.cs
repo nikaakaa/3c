@@ -482,10 +482,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             }
             Debug.Log(
                 $"[计时] 动画目录 身份计算 {CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount}次/" +
-                $"{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs:F0}ms | " +
+                $"{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs:F0}ms/" +
+                $"命中{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCacheHits} | " +
                 $"复用判定 {reuseMs:F0}ms | 总 {timingWatch.ElapsedMilliseconds}ms");
             CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount = 0;
             CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs = 0;
+            CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCacheHits = 0;
             return new CharacterAnimationBuildCatalog(
                 entries,
                 artifacts,

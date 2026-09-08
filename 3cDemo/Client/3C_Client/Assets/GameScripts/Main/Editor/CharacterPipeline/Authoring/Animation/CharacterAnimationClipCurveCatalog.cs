@@ -92,6 +92,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal static double IdentityResolveTotalMs;
         internal static int IdentityResolveCount;
+        internal static int IdentityResolveCacheHits;
+        static readonly Dictionary<string, CharacterAnimationClipContentIdentity> s_IdentityCache =
+            new Dictionary<string, CharacterAnimationClipContentIdentity>(StringComparer.Ordinal);
 
         static readonly CharacterAnimationClipRegisteredCurveDescriptor[] Descriptors =
         {
@@ -279,7 +282,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static CharacterAnimationClipContentIdentity ResolveIdentity(AnimationClip clip)
         {
-            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             string path = RequireNativeClip(clip);
             if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(clip, out string guid, out long localFileId) ||
                 string.IsNullOrEmpty(guid) || localFileId == 0)
@@ -287,12 +289,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"AnimationClip '{clip.name}' does not have a stable object identity.");
             }
+            string dependencyHash = AssetDatabase.GetAssetDependencyHash(path).ToString();
+            string cacheKey = $"{guid}:{localFileId}:{dependencyHash}";
+            if (s_IdentityCache.TryGetValue(cacheKey, out CharacterAnimationClipContentIdentity cached))
+            {
+                IdentityResolveCacheHits++;
+                return cached;
+            }
+            var timingWatch = System.Diagnostics.Stopwatch.StartNew();
             float sourceDuration = ResolveSourceDurationSeconds(clip);
             var identity = new CharacterAnimationClipContentIdentity(
                 path,
                 guid,
                 localFileId,
-                AssetDatabase.GetAssetDependencyHash(path).ToString(),
+                dependencyHash,
                 ComputeAnalysisInputHash(clip, sourceDuration),
                 ComputeRegisteredCurveHash(clip),
                 sourceDuration,
@@ -300,6 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             timingWatch.Stop();
             IdentityResolveTotalMs += timingWatch.Elapsed.TotalMilliseconds;
             IdentityResolveCount++;
+            s_IdentityCache.Add(cacheKey, identity);
             return identity;
         }
 

@@ -1,6 +1,6 @@
 # PoseGraph 任务进度
 
-2026-09-08：新增[原生 FlowCanvas 实验](flowcanvas-experiment.md)，先实施23.x的独立最小链。1—22节保留原正式重构任务及历史事实，不因新实验自动完成或作废；16.3等禁止FlowCanvas执行的条款继续限定正式Character装配。当前仅完成实验文档，尚无实验运行证据。
+当前决定：保留Pose Compiler、Program Image、Native／Job及正式运行链，只复用FlowCanvas作者UI并观察Unity Play中的真实Actor。作者接入与观察由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)负责；技能留在其独立提案。此前23.x／24.x的原生runtime实验和替换计划已撤回，从可执行任务清单移除，历史见[决策记录](flowcanvas-experiment.md)。1—22节保留既有重构事实，22.x中被替代的UI任务以新提案为准，不自动勾选或归档。
 
 ## 1. 冻结当前保留IK与完整迁移清单
 
@@ -259,16 +259,3 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 - [x] 22.6 命名端口视觉适配：为`CharacterPoseCanvasNode`实现NodeCanvas端口绘制，显示Definition投影的命名端口（pose/parameter-source等）；适配完成前接受默认端口视觉降级，数据与编译不受影响。
 - [ ] 22.7 StateMachine子图导航（ChildSurface等价物）、Pose Watch与Preview Dock挂进GraphEditor面板体系；其中预览部分依赖`19.x`Scene Play，保持未完成状态不并入本项验收。
 - [x] 22.8 删除自建`CharacterPoseCanvasView`及其窗口装配，Pose图入口切换到`GraphEditor.OpenWindow(asset.Graph)`；全项目搜索确认无第二画布、无残留引用。
-
-## 23. 原生 FlowCanvas PoseGraph 独立实验（2026-09-08新增）
-
-- [x] 23.1 写明最小链、输入输出、非目标、原正式规范冲突与证据门槛；未来技能复用作为方向，不认领技能迁移。
-- [ ] 23.2 核对动画播放、混合和输出模块对旧ProgramImage、operation index、帧页及Scheduler的依赖，列出直接复用、需分离和未来删除项。
-- [ ] 23.3 建立明确标注的实验FlowGraph和Pose FlowNode基础，使用原生端口、BinderConnection、节点菜单与保存模型，不引用第二份作者拓扑。
-- [ ] 23.4 实现Clip Player、Weight、Blend、Output最小节点与严格输入类型，禁止通过旧Pose图转换或旧图Executor完成求值。
-- [ ] 23.5 实现每角色独立运行实例、显式帧推进、同帧结果复用、启动／停止／重启／销毁和资源释放。
-- [ ] 23.6 将最小链结果接到独立实验角色动画输出，不写入正式Definition、默认启动或GameplayLab生产配置。
-- [ ] 23.7 接通原生创建、连接、改接、删除、复制粘贴、Undo、保存和重载能力，保持节点及端口身份，观察不推进运行状态。
-- [ ] 23.8 使用已有编译、执行和诊断能力记录混合输出、求值次数、时间推进、实例隔离及生命周期证据；没有执行能力时记录具体缺口，不新增测试代码。
-- [ ] 23.9 记录采样环境和运行开销；有同条件对照才给性能比较结论，不能继承旧Native／Job性能结论。
-- [ ] 23.10 汇总原生复用程度、剩余领域代码、旧模块去留、未验证项及生产迁移取舍；只有证据满足实验完成条件才关闭本节。

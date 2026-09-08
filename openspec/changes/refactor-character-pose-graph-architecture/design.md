@@ -1,12 +1,12 @@
 # Design: 以不可变Program和深Module重构Pose Graph
 
-## 2026-09-08 增量决定：先验证原生 FlowCanvas PoseGraph
+## 2026-09-08 当前决定：原生UI与普通运行观察
 
-最新实验范围、输入输出、依赖核对和完成证据统一见[FlowCanvas 实验](flowcanvas-experiment.md)，任务见23.x。先完成独立的 Clip A／Clip B／Weight／Blend／Output 最小链，使用真实 FlowCanvas 编辑和求值；不得转换为旧 Pose 图后交给旧执行器。
+作者UI及运行结果显示统一由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)管理。使用原生编辑能力，Compiler直接读取唯一作者图，正式角色继续执行Program Image及Native／Job链。
 
-原 Decision、Trade-offs 和 Rejected Alternatives 中对 FlowCanvas 执行的拒绝继续限定现有正式 Character 装配，不再作为独立实验禁令。实验不预先承诺生产替换、完整动画状态机／IK迁移或技能图执行能力。公共图机制不能绑定 Pose 业务；后续技能复用的中断、Timeline、时钟及状态恢复需求仍须单独核对。
+此前原生runtime实验与正式替换路线撤回，不再实施23.x／24.x。窗口在Unity Play中读取实际Actor的已完成结果，不另建场景、角色、时钟或执行器；技能窗口同样只观察普通技能释放，技能迁移仍由其独立提案负责。
 
-已对照 current Pose spec：其固定 Program Image、禁止 Runtime 解释作者图的要求与“正式改用 FlowCanvas Runtime”存在直接冲突。本轮只登记隔离实验，不修改当前生产执行合同；最终迁移若被采纳，需要一并替换这些要求及旧代码，不能新增生产桥接路径维持两份图。
+current Pose spec的固定Program Image及Native执行要求保留。具体画布、作者模型与窗口观察的旧要求通过新提案delta更新；本设计中的旧专用Canvas目标不再决定后续UI实现。没有运行切换或全部验收完成的声明。
 
 ## Context
 

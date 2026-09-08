@@ -2,12 +2,12 @@
 
 ## 当前状态补充（2026-09-08）
 
-本页保留此前CanvasCore接入证据，后续工作转为[原生FlowCanvas独立实验](flowcanvas-experiment.md)。该实验尚未实现，不能把本页代码视为FlowCanvas运行闭环。
+本页保留此前CanvasCore接入证据。当前方向为[原生作者UI与普通运行观察](../integrate-pose-flowcanvas-editor-preview/proposal.md)，保留已有编译和Native运行；原生runtime实验已撤回，历史见[决策记录](flowcanvas-experiment.md)。
 
 - `6aede211a`修正状态摘要重复登记，正式checkout已成功返回Clean；下文五处identity错误为修复前记录。
 - `a52cdc534`修正节点拖动与端口排版，用户实际确认“能拖动了”；端口完整视觉和连续Undo仍未验收。
-- 两个空Clip节点尚未删除写回。第一次清理dry-run虽然成功，但包含六条额外图引用修改，未执行apply；随后因Unity布局变化返回Conflict。用户已选择保留清理前布局，rebase／apply尚未执行。
-- 当前端口原生样式和图引用对账仍有工作区修改，未登记完整验证通过。
+- `ad779d225`修复内联图共享路径空值伪差异；随后正式apply job `92b0831046c048059f5244c31cdf786b`成功返回applied、saved及Clean，删除两个空Clip节点并按用户选择恢复清理前布局。
+- 正式Float32 Build job `d3b622ce0d87440ebd87ddcbed6c33d3`已发布Program／Projection，checkout job `51ad61430e2e48afae34bff2576157ef`再次返回Clean。下文失败内容为修复前记录，不代表当前仍有同一阻塞，也不代替后续源码变更的验证。
 
 更新：2026-09-08。实施目录：`D:/Unity_Project_1/3C`。本批只收口 Canvas 编辑表面及必要的作者写入／撤销，不认领整个 PoseGraph Runtime、PIK、Pose Correction 或 Scene Play 重构完成。
 

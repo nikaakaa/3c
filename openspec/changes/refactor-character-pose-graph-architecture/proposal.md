@@ -4,9 +4,9 @@ BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanva
 
 ## 2026-09-08 当前增量范围
 
-用户决定先做[PoseGraph 原生 FlowCanvas 实验](flowcanvas-experiment.md)，验证真实 FlowNode／typed Port／BinderConnection 及运行求值，不只借用端口 UI。最小范围为两个 Clip Player、Weight、Blend、Output 和独立实验角色输出；未来 BTSMTL 技能也可能采用同一基础，本轮不迁移技能。
+当前已确定：保留Pose编译及Native／Job运行，只复用FlowCanvas作者UI，并在Unity Play中观察已有角色。该作者接入由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)负责；技能留在独立技能提案，两边都不创建预览执行器。
 
-以下原方案仍描述现有正式 Character 链路；其中“只使用 CanvasCore、禁止 FlowCanvas 执行”的结论不再排除明确隔离的实验，但继续约束正式运行装配。实验尚未实现，不切换 Corin 正式入口、不删除正在使用的执行器，也不把两套图长期转换作为目标。正式采用 FlowCanvas Runtime 将与当前 Program Image 执行要求冲突，须在实验结论后同步修改对应规范和迁移清单。
+原生FlowCanvas runtime实验与替换计划已撤回，历史见[决策记录](flowcanvas-experiment.md)。以下正式运行重构成果继续保留；旧专用画布目标由新提案替代，不自动完成未验收项或归档本change。
 
 ## Why
 

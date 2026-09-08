@@ -10,6 +10,7 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCamera;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
@@ -98,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BodyMotionSourceIdentity = $"asset:{BodyMotionProfileGuid}";
             BodyMotionContentRevision = ComputeBodyMotionContentRevision(BodyMotionProfile, BodyMotionProfileGuid);
             AnimationPresentationProfile = definition.AnimationPresentationProfile;
+            CameraProfile = definition.CameraProfile;
             ActionProfiles = definition.BuildCompiledActionProfileCatalog();
             BehaviorProfiles = definition.BehaviorProfiles.Where(value => value).OrderBy(value => value.BehaviorId, StringComparer.Ordinal).ToArray();
             InputValues = InputProfile ? InputProfile.InputValues.Where(value => value != null).OrderBy(value => value.InputValueId, StringComparer.Ordinal).ToArray() : Array.Empty<CharacterInputValueDefinition>();
@@ -135,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string BodyMotionSourceIdentity { get; }
         public StableHash BodyMotionContentRevision { get; }
         public ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationPresentationProfile AnimationPresentationProfile { get; }
+        public CharacterCameraProfile CameraProfile { get; }
         public IReadOnlyList<ActionProfile> ActionProfiles { get; }
         public IReadOnlyList<GameplayBehaviorProfile> BehaviorProfiles { get; }
         public IReadOnlyList<CharacterInputValueDefinition> InputValues { get; }

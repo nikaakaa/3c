@@ -134,23 +134,50 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return true;
         }
 
-        public bool ShouldReplicateReliably(PresentationCommand command)
+        public bool ShouldReplicateReliably(
+            PresentationCommand command,
+            CharacterSimulationProgram program)
         {
             if (!m_ReliableProducerSet.Contains(command.ProducerId))
                 throw new InvalidOperationException($"ServerAuthoritative replication policy has no producer mapping for '{command.ProducerId}'.");
+            if (IsCameraProducer(program, command.ProducerId))
+                return false;
             return command.Kind == PresentationCommandKind.SelectProducer ||
                    command.Kind == PresentationCommandKind.CompleteProducer ||
                    command.Kind == PresentationCommandKind.ReleaseProducer ||
+                   command.Kind == PresentationCommandKind.ForceReleaseProducer ||
                    command.Kind == PresentationCommandKind.Cue ||
                    command.Kind == PresentationCommandKind.Vfx ||
                    command.Kind == PresentationCommandKind.Ui;
         }
 
-        public bool ShouldStream(PresentationCommand command)
+        public bool ShouldStream(
+            PresentationCommand command,
+            CharacterSimulationProgram program)
         {
             if (!m_ReliableProducerSet.Contains(command.ProducerId))
                 throw new InvalidOperationException($"ServerAuthoritative replication policy has no producer mapping for '{command.ProducerId}'.");
-            return command.Kind == PresentationCommandKind.SampleProducer;
+            return command.Kind == PresentationCommandKind.SampleProducer &&
+                !IsCameraProducer(program, command.ProducerId);
+        }
+
+        public static bool IsCameraProducer(
+            CharacterSimulationProgram program,
+            string producerId)
+        {
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            string identity = RequireIdentity(producerId);
+            for (int i = 0; i < program.Producers.Count; i++)
+            {
+                ProgramProducer producer = program.Producers[i];
+                if (!string.Equals(producer.Identity, identity, StringComparison.Ordinal))
+                    continue;
+                return producer.ChannelKind == ProgramOutputChannelKind.Presentation &&
+                    producer.AnimationChannelId == CameraProgramOperationSchema.ChannelId;
+            }
+            throw new InvalidOperationException(
+                $"Program has no presentation producer mapping for '{identity}'.");
         }
 
         static string RequireIdentity(string value)

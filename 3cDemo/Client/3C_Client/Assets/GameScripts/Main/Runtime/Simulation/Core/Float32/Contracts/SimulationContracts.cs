@@ -582,7 +582,8 @@ namespace ThirdPersonSimulation
         Vfx = 7,
         Ui = 8,
         ForceProducer = 9,
-        DomainEvent = 10
+        DomainEvent = 10,
+        ForceReleaseProducer = 11
     }
 
     public readonly struct PresentationCommand

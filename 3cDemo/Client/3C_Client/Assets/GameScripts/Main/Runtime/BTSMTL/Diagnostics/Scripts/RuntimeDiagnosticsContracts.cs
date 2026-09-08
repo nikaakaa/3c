@@ -399,7 +399,7 @@ namespace BTSMTL.Diagnostics
         PresentationInterpolated,
         CameraSnapshot,
         CameraRequest,
-        CameraCue,
+        CameraShakeRequest,
         SimulationTick,
         SimulationRestore,
         SimulationEvaluate,

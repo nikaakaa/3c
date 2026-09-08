@@ -108,12 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "animation-parameters",
         "animation-state",
         "camera-frame",
-        "camera-plan",
-        "camera-response",
-        "camera-state",
-        "camera-target",
         "camera-output",
-        "camera-cues",
         "presentation-commands",
         "capture-metadata")]
     internal static class CharacterPresentationReplicationCoreSamplerDefinition

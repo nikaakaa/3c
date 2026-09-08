@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91b88cc1ef7e4ca6a626a33d3fadd9e2, type: 3}
+  m_Name: Corin_Attack_AssaultAid_CamStretch_01
+  m_EditorClassIdentifier: 
+  m_Schema: character-camera-stretch/v1
+  m_StretchId: Corin_Attack_AssaultAid_CamStretch_01
+  m_StartCurve: {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
+  m_EndCurve: {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
+  m_RuntimeCamFollowYPoints: 0
+  m_RotationZ: 0
+  m_IgnoreLocalAvatar: 0
+  m_IsAppliedElevationRatio: 1
+  m_IsAppliedEndElevationAngle: 1
+  m_PlayStackingType: 2
+  m_RuntimeCamFollowYOffsetRatio: 0
+  m_IsElevationAngleAbsolute: 1
+  m_IgnorePriorityInEndTime: 0
+  m_IgnoreWorldTimeScale: 0
+  m_IsEndElevationAngleAbsolute: 1
+  m_ElevationAngleMin: 0.600000023841858
+  m_RecoilTime: 1.5
+  m_DataPriority: 0
+  m_EndElevationAngleMax: 0.699999988079071
+  m_ApplyAimPointsCameraFollowYOffset: 0
+  m_ApplyRuntimeCamFollowYOffset: 0
+  m_CamOffsetSpace: 1
+  m_IgnoreOwnerTimeScale: 0
+  m_ElevationAngleMax: 0.600000023841858
+  m_HoldTime: -1
+  m_DelayTime: 0
+  m_CamOffset: {x: 0, y: -0.150000005960464, z: 0}
+  m_EndElevationAngleMin: 0.699999988079071
+  m_RadiusRatio: 0.100000001490116
+  m_StretchTime: 0.349999994039536
+  m_FovVariationType: 1

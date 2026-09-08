@@ -209,7 +209,27 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 {
                     if (previous.ConfirmedOnly != value.ConfirmedOnly)
                         throw new InvalidOperationException($"Rollback output EventId '{value.EventId}' changed disposition class.");
-                    keeps++;
+                    if (!previous.IsGameplay &&
+                        !value.IsGameplay &&
+                        !SamePresentationCommand(previous.Presentation, value.Presentation))
+                    {
+                        if (!previous.ConfirmedOnly && !value.ConfirmedOnly)
+                        {
+                            operations.Add(RollbackOutputOperation.Replace(previous.EventId, value, executionKind));
+                            replacements++;
+                        }
+                        else if (!previous.ConfirmedOnly)
+                        {
+                            operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
+                            cancellations++;
+                        }
+                        else if (!value.ConfirmedOnly)
+                        {
+                            operations.Add(RollbackOutputOperation.Publish(value, executionKind));
+                        }
+                    }
+                    else
+                        keeps++;
                     records[value.Slot] = value;
                     continue;
                 }
@@ -273,6 +293,25 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             values.Sort((left, right) => left.Slot.CompareTo(right.Slot));
             return values;
+        }
+
+        static bool SamePresentationCommand(
+            PresentationCommand left,
+            PresentationCommand right)
+        {
+            return left.Kind == right.Kind &&
+                   left.Header.Tick.Value == right.Header.Tick.Value &&
+                   left.Header.Sequence == right.Header.Sequence &&
+                   left.Header.Activation.Equals(right.Header.Activation) &&
+                   string.Equals(left.Header.Channel, right.Header.Channel, StringComparison.Ordinal) &&
+                   string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
+                   left.SampleTime.Equals(right.SampleTime) &&
+                   left.Weight.Equals(right.Weight) &&
+                   left.ProducerGeneration == right.ProducerGeneration &&
+                   left.Cycle == right.Cycle &&
+                   left.SourceActionInstanceId == right.SourceActionInstanceId &&
+                   left.VisualTimeScale.Equals(right.VisualTimeScale) &&
+                   left.Header.Activation.Equals(right.Header.Activation);
         }
 
         static SimulationOutputDisposition GetRequiredDisposition(

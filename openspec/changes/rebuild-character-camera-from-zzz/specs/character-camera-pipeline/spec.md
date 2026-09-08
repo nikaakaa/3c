@@ -2,7 +2,7 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST让 BTSMTL 节点和 Timeline 相机轨道只声明强类型序列请求、效果触发、响应策略、目标请求或读取 CameraBasisSnapshot。每个公开能力 MUST经唯一 Compiler 降低为版本化 Program operation，并保留 Graph/Node/Timeline/Track/Clip identity、端口和 Source Map；Float32 与 Fixed MUST按同一语义提交现有 PresentationCommand。序列、Override、Zoom、Stretch、Shake、Shot 和曲线的实际表现参数 MUST从同一 Projection 的正式相机资源绑定取得。节点、Clip、编译 operation 与 Action MUST不直接控制 Cinemachine、Unity Camera、相机 Transform 或优先级，不将本地相机状态写入 Character/World state。未知类型、缺失字段、无效资源引用和 Target 未实现 MUST在 build/composition 明确失败。
+系统 MUST让 SkillProgram Root、技能局部 Graph、TreeClip/Timeline 的相机入口只声明强类型序列请求、效果触发、响应策略、目标请求或读取 CameraBasisSnapshot。每个公开能力 MUST经唯一 Compiler 降低为版本化 Program operation，并保留 Graph/Node/TreeClip/Timeline/Track/Clip identity、端口和 Source Map；Float32 与 Fixed MUST按同一语义提交现有 PresentationCommand。序列、Override、Zoom、Stretch、Shake、Shot 和曲线的实际表现参数 MUST从同一 Projection 的正式相机资源绑定取得。C# Locomotion 控制拓扑不得提供 Camera 图节点。节点、Clip、编译 operation 与 Action MUST不直接控制 Cinemachine、Unity Camera、相机 Transform 或优先级，不将本地相机状态写入 Character/World state。未知类型、缺失字段、无效资源引用和 Target 未实现 MUST在 build/composition 明确失败。
 
 #### Scenario: BTSMTL 请求瞄准相机
 
@@ -80,17 +80,17 @@
 
 ### Requirement: Cinemachine 必须是 CameraRigAdapter 实现细节
 
-相机 MUST通过唯一正式 Rig Adapter 将相机计划应用到 Unity 输出。ZZZ 原调用链中属于相机核心的构图、球面/轨道、阻尼、转场和效果计算 MUST允许由核心执行；原本属于 Cinemachine 的承载、组件计算、碰撞或镜头混合 MUST通过 Adapter 的明确平台能力执行。每项计算 MUST只有一个确定 owner，同一种阻尼、效果、碰撞或过渡不得在核心与 Cinemachine 重复执行。Adapter MUST不另行裁决业务请求、寻找目标或维护技能生命周期；Graph、Timeline、Program 与相机核心 MUST不依赖具体 Cinemachine 组件作为业务状态机。旧 ThirdPersonCameraController 的 FreeLook 专用公开合同 MUST迁入新的正式输出合同后删除。
+系统 MUST通过 `ICameraRigAdapter` 的正式实现 `CinemachineCameraRigAdapter` 将 `CameraFramePlan` 应用到 Unity 相机系统。ZZZ 原调用链中属于相机核心的构图、球面/轨道、阻尼、转场和效果计算 MUST允许由核心执行；原本属于 Cinemachine 的承载、组件计算、碰撞或镜头混合 MUST通过 Adapter 的明确平台能力执行。每项计算 MUST只有一个确定 owner，同一种阻尼、效果、碰撞或过渡不得在核心与 Cinemachine 重复执行。Adapter MUST不另行裁决业务请求、寻找目标或维护技能生命周期；Graph、Timeline、Program 与相机核心 MUST不依赖具体 Cinemachine 组件作为业务状态机。旧具体 Controller 的 FreeLook 专用公开合同 MUST迁入新的正式输出合同后删除。
 
-#### Scenario: FreeLook 输出到 Cinemachine
+#### Scenario: 默认序列输出到 Cinemachine
 
-- **WHEN** 相机核心生成默认跟随的正式计划
+- **WHEN** `CameraFramePlan` 表达 follow point、aim point、FOV 和裁决后的 look delta
 - **THEN** Adapter MUST按已确认的原职责分工应用计划并更新唯一输出
 - **AND** 默认镜头是否活动 MUST来自相机 Runtime，Cinemachine MUST不再次作业务选择
 
-#### Scenario: SkillCloseup 使用专用 virtual camera
+#### Scenario: Shot 使用专用 virtual camera
 
-- **WHEN** Shot 资源明确要求专用虚拟相机承载
+- **WHEN** `CameraFramePlan` 表达需要专用 Shot 承载的镜头
 - **THEN** Adapter MUST使用正式绑定建立或复用该承载，激活、退出和混合请求 MUST来自相机 Runtime
 - **AND** 专用承载 MUST不注册独立更新或成为另一个 influence stack
 
@@ -118,7 +118,7 @@
 
 ### Requirement: Camera Timeline控制曲线必须作为typed Curve Channel编辑
 
-相机 Sequence/Response 等 Clip 的 Timeline-local Weight、Ease In 与 Ease Out MUST继续通过显式 registered ChannelId 进入 Timeline Curve Editor，使用 ClipNormalized 时间域和 `[0,1]` 值域，并由该 Clip 的正式 Mutation 原子替换。共享 Camera Curve 与效果资源的曲线 MUST由各自真实 owner 保存，声明自身单位、时间和值域，不得强制套用 Clip 的归一化合同。Curve Editor、Catalog 与 Agent MUST只写作者数据；Runtime MUST只消费编译后的相机计划，不直接读取 Editor 曲线或形成第二套效果求值。
+相机 Sequence/Response/Resource Clip 的 Timeline-local Weight、Ease In 与 Ease Out MUST继续通过显式 registered ChannelId 进入 Timeline Curve Editor，使用 ClipNormalized 时间域和 `[0,1]` 值域，并由该 Clip 的正式 Mutation 原子替换。共享 Camera Curve 与效果资源的曲线 MUST由各自真实 owner 保存，声明自身单位、时间和值域，不得强制套用 Clip 的归一化合同。Curve Editor、Catalog 与 Agent MUST只写作者数据；Runtime MUST只消费编译后的相机计划，不直接读取 Editor 曲线或形成第二套效果求值。
 
 #### Scenario: 编辑Camera Ease In
 
@@ -158,11 +158,11 @@
 
 相机 MUST从明确 Profile 取得默认序列及有限的已注册算法组合；没有活动覆盖请求时 MUST使用该正式默认配置，不要求 Graph 每帧重发，也不使用硬编码参数补齐缺失 Profile。请求 MUST根据已确认的优先级、权重、稳定顺序和生命周期规则确定活动序列。进入、退出、抢占、恢复和 Cut MUST实际作用于构图、位置、旋转、轨道与镜头参数，混合进度不得只作为诊断数字。需要从当前镜头进入时 MUST使用对应原规则指定的当前输出阶段，不能把临时震动误当成持久轨道状态。
 
-#### Scenario: 默认 FreeLook
+#### Scenario: 默认角色镜头
 
 - **WHEN** 本帧没有活动序列覆盖请求
 - **THEN** 相机 MUST执行 Profile 的正式默认跟随序列
-- **AND** 默认序列 MUST不依赖额外 Gameplay producer 或旧 FreeLook 参数补齐
+- **AND** 默认序列 MUST不依赖额外 Gameplay producer 或旧平台镜头参数补齐
 
 #### Scenario: 技能特写覆盖瞄准
 

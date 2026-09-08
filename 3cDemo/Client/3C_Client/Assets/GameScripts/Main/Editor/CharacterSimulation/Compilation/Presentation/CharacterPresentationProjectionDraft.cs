@@ -101,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_LinkedPose,
                 null,
                 null,
+                null,
                 string.Empty,
                 m_AnimationProperties);
         }

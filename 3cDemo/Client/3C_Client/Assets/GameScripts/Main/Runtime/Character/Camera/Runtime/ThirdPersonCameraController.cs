@@ -4,7 +4,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
     [DefaultExecutionOrder(-50)]
-    public sealed class ThirdPersonCameraController : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraRigAdapter
+    public sealed class ThirdPersonCameraController : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider
     {
         [SerializeField] CinemachineFreeLook freeLook;
         [SerializeField] CinemachineBrain brain;
@@ -65,30 +65,6 @@ namespace ThirdPersonCamera
         {
             freeLook = GetComponentInChildren<CinemachineFreeLook>(true);
             brain = GetComponent<CinemachineBrain>();
-        }
-
-        public void Apply(CameraPosePlan plan) => Apply(plan, false);
-
-        public void ApplyAfterTrackingReset(CameraPosePlan plan) => Apply(plan, true);
-
-        void Apply(CameraPosePlan plan, bool resetTracking)
-        {
-            if (!plan.Valid)
-            {
-                basisSnapshot = CameraBasisSnapshot.Invalid;
-                return;
-            }
-
-            if (!CanApply())
-                return;
-
-            ApplyLookDelta(plan.LookDelta);
-            ApplyTargets(plan.FollowPoint, plan.AimPoint);
-            ApplyLens(plan.FieldOfView);
-            if (resetTracking)
-                freeLook.PreviousStateIsValid = false;
-            UpdateBrain();
-            RefreshBasisSnapshot(plan.AimPoint);
         }
 
         public void SnapTargets(Vector3 followPoint, Vector3 aimPoint)

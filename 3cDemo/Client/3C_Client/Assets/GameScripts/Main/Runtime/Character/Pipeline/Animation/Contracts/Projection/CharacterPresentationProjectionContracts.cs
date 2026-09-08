@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
+using ThirdPersonCamera;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -27,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_ContractHash = string.Empty;
         [SerializeField] CharacterPresentationProducerEntry[] m_Producers = Array.Empty<CharacterPresentationProducerEntry>();
         [SerializeField] AnimationFootAnalysisProjectionIdentity m_FootAnalysis;
+        [SerializeField] CharacterCameraProjectionPayload m_Camera;
 
         public string ProgramId => m_ProgramId;
         public string AbiVersion => m_AbiVersion ?? string.Empty;
@@ -35,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string ContractHash => m_ContractHash;
         public IReadOnlyList<CharacterPresentationProducerEntry> Producers => m_Producers ?? Array.Empty<CharacterPresentationProducerEntry>();
         public AnimationFootAnalysisProjectionIdentity FootAnalysis => m_FootAnalysis;
+        public CharacterCameraProjectionPayload Camera => m_Camera;
         public bool IsValid
         {
             get
@@ -163,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_SourceTrackId = string.Empty;
         [SerializeField] string m_SourceDisplayPath = string.Empty;
         [SerializeReference] CharacterPresentationAnimationBinding m_Animation;
-        [SerializeReference] CharacterPresentationCameraBinding m_Camera;
+        [SerializeReference] ThirdPersonCamera.CharacterPresentationCameraBinding m_Camera;
         [SerializeReference] CharacterPresentationCueBinding m_Cue;
 
         public CharacterPresentationProducerEntry(
@@ -182,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string sourceTrackId,
             string sourceDisplayPath,
             CharacterPresentationAnimationBinding animation,
-            CharacterPresentationCameraBinding camera,
+            ThirdPersonCamera.CharacterPresentationCameraBinding camera,
             CharacterPresentationCueBinding cue)
         {
             if (!animationChannelId.IsValid)
@@ -222,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string SourceTrackId => m_SourceTrackId;
         public string SourceDisplayPath => m_SourceDisplayPath;
         public CharacterPresentationAnimationBinding Animation => m_Animation;
-        public CharacterPresentationCameraBinding Camera => m_Camera;
+        public ThirdPersonCamera.CharacterPresentationCameraBinding Camera => m_Camera;
         public CharacterPresentationCueBinding Cue => m_Cue;
         public int AuthoredClipCount => m_Animation?.Clips.Count ?? 0;
         public float SourceDurationSeconds => m_Animation?.DurationSeconds ?? 0f;

@@ -4,9 +4,9 @@
 
 Character 编译 MUST通过现有 Semantic IR 与 Presentation contract 表达相机命令种类、稳定 producer、generation/lifecycle 所需信息、目标语义和 Source Map。Camera producer MUST不伪装成 AnimationChannel 或拥有 Gameplay 相机状态。Profile、Sequence、效果、曲线与 Shot 的实际资源和算法参数 MUST属于 Presentation dependency，并通过精确作者引用绑定；运行消费者 MUST不按作者字符串、显示名或目录寻找资源。
 
-#### Scenario: Graph 与 Timeline 引用同一效果
+#### Scenario: 技能局部Graph与Timeline引用同一效果
 
-- **WHEN** Graph 节点和 Timeline Clip 引用同一个正式 Shake 资源
+- **WHEN** 技能局部 Graph 节点、TreeClip 或 Timeline Clip 引用同一个正式 Shake 资源
 - **THEN** 它们 MUST各自保留 producer/source identity，并在同一 Projection 中引用同一效果数据
 - **AND** 资源参数 MUST不复制为两份相机运行真相
 
@@ -50,7 +50,7 @@ Character 编译 MUST通过现有 Semantic IR 与 Presentation contract 表达�
 
 ### Requirement: 相机依赖身份必须反映正确的修改范围
 
-相机表现资源参数、曲线和平台绑定描述变化 MUST更新 Presentation dependency 与 ProjectionRevision；在命令种类、producer identity、目标语义和时点不变时，MUST不改变 Gameplay SourceRevision、SemanticHash、ContractHash 或 Numeric ProgramHash。改变 Graph/Timeline 请求的语义、时点或生命周期 MUST更新相应 Gameplay 合同。资源选择本身 MUST通过明确的 Presentation binding 进入依赖，不把 Unity 资源对象编码进 portable Program。
+相机表现资源参数、曲线和平台绑定描述变化 MUST更新 Presentation dependency 与 ProjectionRevision；在命令种类、producer identity、目标语义和时点不变时，MUST不改变 Gameplay SourceRevision、SemanticHash、ContractHash 或 Numeric ProgramHash。改变 SkillProgram、技能局部 Graph、TreeClip/Timeline 请求的语义、时点或生命周期 MUST更新相应 Gameplay 合同。资源选择本身 MUST通过明确的 Presentation binding 进入依赖，不把 Unity 资源对象编码进 portable Program。
 
 #### Scenario: 只修改震动幅度
 

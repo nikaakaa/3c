@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         readonly CharacterInputProfile m_Profile;
         readonly CharacterSimulationProgram m_Program;
-        readonly ThirdPersonCameraController m_CameraRig;
+        readonly ICameraBasisSnapshotProvider m_CameraBasis;
         readonly CharacterPipelineHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -41,14 +41,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public UnityCharacterSimulationInputAdapter(
             CharacterInputProfile profile,
             CharacterSimulationProgram program,
-            ThirdPersonCameraController cameraRig,
+            ICameraBasisSnapshotProvider cameraBasis,
             CharacterPipelineHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
+            m_CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
             m_Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             m_ActionTargetInputValueId = RequireIdentity(actionTargetInputValueId, nameof(actionTargetInputValueId));
             m_ActionTargetProvider = actionTargetProvider;
@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             foreach (KeyValuePair<string, InputValueBinding> pair in m_ValueBindings)
                 m_LatchedValues.Add(pair.Key, ReadValue(pair.Value));
             if (m_RequiresCameraBasis)
-                m_LatchedCameraBasis = m_CameraRig.BasisSnapshot;
+                m_LatchedCameraBasis = m_CameraBasis.BasisSnapshot;
             for (int i = 0; i < m_RequestBindings.Count; i++)
             {
                 RequestBinding binding = m_RequestBindings[i];
@@ -429,7 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 input.Normalize();
             if (input.sqrMagnitude <= 0.000001f)
                 return Vector2.zero;
-            CameraBasisSnapshot basis = m_CameraRig.BasisSnapshot;
+            CameraBasisSnapshot basis = m_CameraBasis.BasisSnapshot;
             if (!basis.Valid)
                 throw new InvalidOperationException($"Camera-relative input '{inputId}' requires a valid camera basis snapshot.");
             Vector3 forward = basis.PlanarForward;

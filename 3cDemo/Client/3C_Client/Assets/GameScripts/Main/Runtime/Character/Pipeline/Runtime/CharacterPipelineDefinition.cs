@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
@@ -57,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
         [SerializeField] CharacterBodyMotionProfile m_BodyMotionProfile;
         [SerializeField] CharacterAnimationPresentationProfile m_AnimationPresentationProfile;
+        [SerializeField] CharacterCameraProfile m_CameraProfile;
         [SerializeField] bool m_EquipmentCapabilityEnabled;
         [SerializeField] CharacterEquipmentProfile m_EquipmentProfile;
         [SerializeField] CharacterEquipmentPresentationProfile m_EquipmentPresentationProfile;
@@ -78,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
         public CharacterBodyMotionProfile BodyMotionProfile => m_BodyMotionProfile;
         public CharacterAnimationPresentationProfile AnimationPresentationProfile => m_AnimationPresentationProfile;
+        public CharacterCameraProfile CameraProfile => m_CameraProfile;
         public bool EquipmentCapabilityEnabled => m_EquipmentCapabilityEnabled;
         public CharacterEquipmentProfile EquipmentProfile => m_EquipmentProfile;
         public CharacterEquipmentPresentationProfile EquipmentPresentationProfile => m_EquipmentPresentationProfile;

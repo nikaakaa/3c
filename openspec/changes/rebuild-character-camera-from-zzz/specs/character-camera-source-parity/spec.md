@@ -54,7 +54,7 @@
 
 ### Requirement: Corin 相机资源与事件必须完整接入同一角色配置
 
-Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，以及其余可达 Profile、Curve、Sequence、Shot 与事件 MUST逐项对账并进入正式角色配置。事件 MUST迁入现有角色 Graph/Action Timeline 的已提交请求链，原 Animator 事件表 MUST不成为第二个运行调度器。完整性 MUST同时覆盖资源、时间、绑定、作者编辑、运行消费和诊断来源。
+Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，以及其余可达 Profile、Curve、Sequence、Shot 与事件 MUST逐项对账并进入正式角色配置。事件 MUST迁入SkillProgram Root、技能局部 Graph 与 TreeClip/Timeline 的已提交请求链，原 Animator 事件表 MUST不成为第二个运行调度器。完整性 MUST同时覆盖资源、时间、绑定、作者编辑、运行消费和诊断来源。
 
 #### Scenario: AssaultAid 相机时点
 
@@ -62,11 +62,11 @@ Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override�
 - **THEN** 第 0 帧 Override/Zoom/Stretch 和第 8、19、32、52、55 帧 Shake MUST分别有正式请求与对应资源
 - **AND** 帧号 MUST按原事件帧率解释，不按目标 tick rate 直接代入
 
-#### Scenario: ParryAid 与 SwitchInAttack
+#### Scenario: ParryAid 与未决来源事件
 
 - **WHEN** 对照 ParryAid H/L 与 SwitchInAttack 的已确认事件表
-- **THEN** ParryAid 第 124 帧共享 Shake，以及 SwitchInAttack 第 0、32 帧相机构图变化和第 42、54、67、71 帧 Shake MUST保持对应关系
-- **AND** 共享资源 MUST保持单一真实 owner，不为每个技能复制一套控制器
+- **THEN** ParryAid 第 124 帧共享 Shake MUST进入单角色相机对账，SwitchInAttack 的身份和时点 MUST只保持为来源证据
+- **AND** SwitchInAttack 在换人/跨角色归属未完成设计前 MUST不生成当前框架的切人或第二角色相机路径
 
 ### Requirement: 完成判定必须覆盖每个原行为的正式去向
 

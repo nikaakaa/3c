@@ -43,9 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     case SimulationOperationCode.TimelineCameraState:
                     case SimulationOperationCode.TimelineCameraCue:
                     case SimulationOperationCode.TimelineCameraResponse:
-                    case SimulationOperationCode.CameraStateRequest:
-                    case SimulationOperationCode.CameraCue:
-                    case SimulationOperationCode.CameraResponse:
                     case SimulationOperationCode.CameraTarget:
                         camera = true;
                         break;

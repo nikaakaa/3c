@@ -474,6 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 linkedPose,
                 null,
                 null,
+                null,
                 string.Empty,
                 animationProperties);
             return projection;

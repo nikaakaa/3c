@@ -104,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
             if (kind.Value != CharacterPresentationProducerKind.Animation)
             {
-                CharacterPresentationCameraBinding camera = kind.Value == CharacterPresentationProducerKind.Camera
+                ThirdPersonCamera.CharacterPresentationCameraBinding camera = kind.Value == CharacterPresentationProducerKind.Camera
                     ? BuildCameraBinding(reader, producer, source, timelines, errors)
                     : null;
                 CharacterPresentationCueBinding cue = kind.Value == CharacterPresentationProducerKind.Cue
@@ -425,87 +425,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CollectTimelineCallSites(occurrence.GraphReferences[i].Child, result);
         }
 
-        static CharacterPresentationCameraBinding BuildCameraBinding(
+static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraBinding(
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             ProgramSourceMapEntry source,
             IReadOnlyDictionary<string, TimelineData> timelines,
             List<string> errors)
         {
-            if (TryFindSourceClip(source, timelines, out Clip clip))
-            {
-                if (clip is CameraStateClip state)
-                {
-                    return CharacterPresentationCameraBinding.State(
-                        state.Mode,
-                        state.Priority,
-                        state.BlendInSeconds,
-                        state.BlendOutSeconds,
-                        state.TargetKey,
-                        state.InterruptPolicy);
-                }
-                if (clip is CameraCueClip cue)
-                {
-                    return CharacterPresentationCameraBinding.Cue(
-                        cue.CueId,
-                        cue.CueKind,
-                        cue.CueType,
-                        cue.DurationSeconds,
-                        cue.Priority);
-                }
-                if (clip is CameraResponseClip response)
-                {
-                    return CharacterPresentationCameraBinding.Response(
-                        response.LookResponse,
-                        response.ManualOrbitWeight,
-                        response.PitchResponseWeight,
-                        response.YawResponseWeight,
-                        response.Priority);
-                }
-                errors?.Add($"Camera producer '{producer.Identity}' source clip type '{clip.GetType().Name}' is unsupported.");
-                return null;
-            }
-
-            try
-            {
-                SemanticOperation operation = reader.RequireProducerOperation(producer);
-                if (operation.Integer0 != CameraProgramOperationSchema.PayloadVersion)
-                    throw new InvalidOperationException($"payload version '{operation.Integer0}' is unsupported");
-                return operation.Code switch
-                {
-                    SimulationOperationCode.CameraStateRequest => CharacterPresentationCameraBinding.State(
-                        (TimelineCameraMode)operation.Integer1,
-                        reader.RequireInt32(operation, "Priority"),
-                        reader.RequireScalar(operation, "BlendInSeconds"),
-                        reader.RequireScalar(operation, "BlendOutSeconds"),
-                        reader.RequireString(operation, "TargetKey"),
-                        (TimelineCameraInterruptPolicy)operation.Flags),
-                    SimulationOperationCode.CameraCue => CharacterPresentationCameraBinding.Cue(
-                        reader.RequireString(operation, "CueId"),
-                        (TimelineCameraCueKind)operation.Integer1,
-                        reader.RequireString(operation, "CueType"),
-                        reader.RequireScalar(operation, "DurationSeconds"),
-                        reader.RequireInt32(operation, "Priority")),
-                    SimulationOperationCode.CameraResponse => CharacterPresentationCameraBinding.Response(
-                        (TimelineCameraLookResponseMode)operation.Integer1,
-                        reader.RequireScalar(operation, "ManualOrbitWeight"),
-                        reader.RequireScalar(operation, "PitchResponseWeight"),
-                        reader.RequireScalar(operation, "YawResponseWeight"),
-                        reader.RequireInt32(operation, "Priority")),
-                    SimulationOperationCode.CameraTarget => CharacterPresentationCameraBinding.Target(
-                        reader.RequireString(operation, "TargetKey"),
-                        reader.RequireString(operation, "AnchorKey"),
-                        reader.RequireString(operation, "AimPointKey"),
-                        reader.RequireString(operation, "PreferredBoneKey"),
-                        reader.RequireInt32(operation, "Priority")),
-                    _ => throw new InvalidOperationException($"operation '{operation.Code}' is unsupported")
-                };
-            }
-            catch (Exception exception)
-            {
-                errors?.Add($"Camera producer '{producer.Identity}' Graph payload is invalid: {exception.Message}.");
-                return null;
-            }
+            errors?.Add(
+                $"Camera producer '{producer.Identity}' requires the camera projection builder integration; timeline camera clip compilation is not supported on this pipeline.");
+            return null;
         }
 
         static CharacterPresentationCueBinding BuildCueBinding(

@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             CharacterInputProfile inputProfile = m_InputProfile ? m_InputProfile :
                 throw new InvalidOperationException($"Fixed Player Control Source '{name}' requires a Character Input Profile.");
-            ThirdPersonCameraController cameraRig = context.Owner.CameraRig ? context.Owner.CameraRig :
+            CinemachineCameraRigAdapter cameraRig = context.Owner.CameraRig ? context.Owner.CameraRig :
                 throw new InvalidOperationException($"Fixed Player Control Source '{name}' requires the Fixed Character Host Camera Rig.");
             return new UnityFixedCharacterInputAdapter(
                 inputProfile,

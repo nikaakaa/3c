@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
@@ -115,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string projectionRevision,
             EquipmentVisualProjectionBinding[] equipmentVisualBindings,
             CharacterLinkedPoseProjectionPayload linkedPose,
+            CharacterCameraProjectionPayload camera,
             CharacterPoseTuningLayout tuningLayout = null,
             CharacterPoseTuningParameterBlock tuningDefaultBlock = null,
             string publishedParameterRevision = "",
@@ -142,6 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
                 m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
                 m_FootAnalysis = footAnalysis,
+                m_Camera = camera,
                 m_TuningLayout = tuningLayout,
                 m_TuningDefaultBlock = tuningDefaultBlock,
                 m_PublishedParameterRevision = publishedParameterRevision ?? string.Empty,
@@ -152,6 +155,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 equipmentVisualBindings);
             projection.SetLinkedPoseProjection(linkedPose);
             return projection;
+        }
+
+        public void RequireCameraPayload()
+        {
+            if (Camera == null)
+                throw new InvalidOperationException("Character Presentation Projection Camera payload is missing.");
+            Camera.RequireValid();
         }
 
         public void RequireTuningPayload()

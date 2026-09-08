@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0efd719533d742faa5b613a057cbd08c, type: 3}
+  m_Name: CorinCharacterCameraProfile
+  m_EditorClassIdentifier: 
+  m_Schema: character-camera-profile/v1
+  m_ProfileId: corin.camera.profile
+  m_DefaultSequence: {fileID: 11400000, guid: b3351f824e49467c893d83d326b392b3, type: 2}
+  m_Sequences: []
+  m_OverrideTracks: []
+  m_Zooms:
+  - {fileID: 11400000, guid: fab08c3883cc49c2af5dd60a5d6f18e2, type: 2}
+  - {fileID: 11400000, guid: 39dd3a734e9c498f8dc45fa2ee64b026, type: 2}
+  - {fileID: 11400000, guid: 646202ba81874aa9b4b44b3ccd42ee30, type: 2}
+  - {fileID: 11400000, guid: 4e2e35a48c224f14ad29ad52d2861e5a, type: 2}
+  - {fileID: 11400000, guid: e8e8d1282d7445699805f8b12937b801, type: 2}
+  - {fileID: 11400000, guid: 9a8072a67d84452da17fa587db195a5a, type: 2}
+  - {fileID: 11400000, guid: 6ac748e37f034bb3b7eea90529399e3b, type: 2}
+  - {fileID: 11400000, guid: 0f50b611cc824e54841b455bc47844db, type: 2}
+  - {fileID: 11400000, guid: e1943a4b957a4c15bcf129d5bbe3d00e, type: 2}
+  - {fileID: 11400000, guid: f1539af696114de18468230f4335b54a, type: 2}
+  - {fileID: 11400000, guid: f44d086af3e3493a86c496c9cb2c1853, type: 2}
+  - {fileID: 11400000, guid: b5898d5109f4455e936ef35611cd80e9, type: 2}
+  - {fileID: 11400000, guid: 446bec5c76b8465fa30c1e44e6f69408, type: 2}
+  - {fileID: 11400000, guid: 306e52d3851b49f1bd0826b7bf956aa1, type: 2}
+  - {fileID: 11400000, guid: 74913cff86d2426087d0685dded8dece, type: 2}
+  - {fileID: 11400000, guid: 50f1783936ab4ce896e57bb591cfa425, type: 2}
+  - {fileID: 11400000, guid: 2b4eb77df4a14da39ce3333bb4791f89, type: 2}
+  - {fileID: 11400000, guid: 8ee80f5fe707436294bdd632a46e456d, type: 2}
+  m_Stretches:
+  - {fileID: 11400000, guid: bc08288692d54a769bb8d1d420fc9157, type: 2}
+  - {fileID: 11400000, guid: 66d84878291e4f26986fde082535d919, type: 2}
+  - {fileID: 11400000, guid: 34ad9270c6174dd18933705d4f39d0b5, type: 2}
+  - {fileID: 11400000, guid: 1dab74fa73694ca0af3e62b4d087f12a, type: 2}
+  - {fileID: 11400000, guid: ed8c282cbb30461ca15ae61f08df3bff, type: 2}
+  - {fileID: 11400000, guid: 35e14f9af0694a659d3457827ea732e4, type: 2}
+  - {fileID: 11400000, guid: a6a9c56444c14eceba6ed0daeaab611b, type: 2}
+  - {fileID: 11400000, guid: 3c0b6bf1727d45adb5bce042c3a21ab8, type: 2}
+  - {fileID: 11400000, guid: b9a963806e1b45b3b35abcff4fca6905, type: 2}
+  - {fileID: 11400000, guid: c24fa8b3873d4ac7b19b33f184f7c2a9, type: 2}
+  - {fileID: 11400000, guid: c2325a55262e4b008bf68d6184b3462f, type: 2}
+  - {fileID: 11400000, guid: 6135dcc1253e44b39caca690acdff481, type: 2}
+  - {fileID: 11400000, guid: 9efce5e15dd543dc8d27d8ad6135d3af, type: 2}
+  - {fileID: 11400000, guid: f76eb604ba7d47fdb1e7f65b6c2a561c, type: 2}
+  - {fileID: 11400000, guid: 09fcf9b856df49d69642c54019a4488d, type: 2}
+  - {fileID: 11400000, guid: 50a95d93dc3549dfa250f5abecab291b, type: 2}
+  - {fileID: 11400000, guid: 22888a80d7e04178a09768be62af92be, type: 2}
+  - {fileID: 11400000, guid: bccc68648e194901bbd09d174895d5ae, type: 2}
+  m_Shakes: []
+  m_Shots: []
+  m_Curves:
+  - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}
+  - {fileID: 11400000, guid: c6b42d6548944e6e82c6b6f6f4611871, type: 2}
+  - {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
+  m_DefaultSphere:
+    m_Height: 0.22499999
+    m_Radius: 3.75
+  m_DefaultOrbitGroup:
+  - m_Height: 2.2249999
+    m_Radius: 2.5
+  - m_Height: 0.22499999
+    m_Radius: 3.75
+  - m_Height: -0.77499998
+    m_Radius: 2.2
+  m_NearClipPlane: 0.1
+  m_FarClipPlane: 2000
+  m_CameraLocateRadius: 3.75
+  m_DefaultElevationAngle: 3.4336302
+  m_DefaultFieldOfView: 50
+  m_DefaultSmoothTime: 0.15
+  m_RotationTransitionSeconds: 3
+  m_ChangeAvatarTransitionSeconds: 0.3
+  m_Input:
+    m_Sensitivity: {x: 0.12, y: 0.0025}
+    m_PitchLimit: {x: -70, y: 70}
+    m_DefaultResponseWeight: 1
+    m_PitchResponseWeight: 1
+    m_YawResponseWeight: 1
+  m_Locking:
+    m_EnableTargetLock: 0
+    m_EnableBossLock: 0
+    m_TransitionSeconds: 0.2
+    m_Weight: 1
+  m_Collision:
+    m_Enabled: 0
+    m_LayerMask: -1
+    m_Radius: 0.2
+    m_NearClipPlane: 0.05
+    m_SmoothTime: 0.08
+    m_TimeDomain: 1
+  m_TargetSlots: []

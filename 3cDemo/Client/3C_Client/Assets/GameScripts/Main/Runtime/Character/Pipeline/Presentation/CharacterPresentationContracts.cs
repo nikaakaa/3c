@@ -394,7 +394,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Vfx = 7,
         Ui = 8,
         ForceProducer = 9,
-        DomainEvent = 10
+        DomainEvent = 10,
+        ForceReleaseProducer = 11
     }
 
     public readonly struct CharacterPresentationCommand
@@ -480,7 +481,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return kind == CharacterPresentationCommandKind.SelectProducer ||
                    kind == CharacterPresentationCommandKind.SampleProducer ||
                    kind == CharacterPresentationCommandKind.CompleteProducer ||
-                   kind == CharacterPresentationCommandKind.ReleaseProducer;
+                   kind == CharacterPresentationCommandKind.ReleaseProducer ||
+                   kind == CharacterPresentationCommandKind.ForceReleaseProducer;
         }
 
         static bool RequiresProducerGeneration(CharacterPresentationCommandKind kind) =>

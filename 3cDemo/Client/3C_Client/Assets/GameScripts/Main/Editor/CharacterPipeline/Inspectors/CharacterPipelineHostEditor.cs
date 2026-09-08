@@ -298,7 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawEventSection("Camera", Filter(view, RuntimeTraceChannel.Animation,
                 RuntimeTraceEventKind.CameraSnapshot,
                 RuntimeTraceEventKind.CameraRequest,
-                RuntimeTraceEventKind.CameraCue), eventView =>
+                RuntimeTraceEventKind.CameraShakeRequest), eventView =>
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.Event.Kind} | {payload.Name} | {payload.Status} | owner {payload.OwnerId} | P{payload.Priority} w{payload.Weight:0.###} | {payload.Value.DisplayValue()}";
@@ -312,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < source.Count; i++)
             {
                 RuntimeTraceEventKind kind = source[i].Event.Kind;
-                if (kind is RuntimeTraceEventKind.CameraSnapshot or RuntimeTraceEventKind.CameraRequest or RuntimeTraceEventKind.CameraCue)
+                if (kind is RuntimeTraceEventKind.CameraSnapshot or RuntimeTraceEventKind.CameraRequest or RuntimeTraceEventKind.CameraShakeRequest)
                     continue;
                 events.Add(source[i]);
             }

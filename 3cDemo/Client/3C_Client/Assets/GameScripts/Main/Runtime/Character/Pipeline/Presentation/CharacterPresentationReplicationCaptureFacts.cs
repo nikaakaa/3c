@@ -501,12 +501,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterCameraPresentationCaptureFrame
     {
-        readonly CameraStateRequest m_State;
-        readonly CameraResponsePolicy m_Response;
-        readonly CameraResolvedTargetPlan m_Target;
-        readonly CameraPosePlan m_Plan;
         readonly CameraBasisSnapshot m_Basis;
-        readonly IReadOnlyList<CameraCue> m_Cues;
 
         public CharacterCameraPresentationCaptureFrame(
             bool hasCamera,
@@ -515,23 +510,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong resetSequence,
             float deltaSeconds,
             bool resetTracking,
-            in CameraStateRequest state,
-            in CameraResponsePolicy response,
-            in CameraResolvedTargetPlan target,
-            in CameraPosePlan plan,
             in CameraBasisSnapshot basis,
             bool finalOutputAvailable,
             Vector3 finalPosition,
             Quaternion finalRotation,
-            float finalFieldOfView,
-            IReadOnlyList<CameraCue> cues)
+            float finalFieldOfView)
         {
-            m_State = state;
-            m_Response = response;
-            m_Target = target;
-            m_Plan = plan;
             m_Basis = basis;
-            m_Cues = cues;
             HasCamera = hasCamera;
             PresentationFrame = presentationFrame;
             LocalLogicTick = localLogicTick;
@@ -542,7 +527,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FinalPosition = finalPosition;
             FinalRotation = finalRotation;
             FinalFieldOfView = finalFieldOfView;
-            Cues = new CharacterCameraCueCapturePage(cues);
         }
 
         public static CharacterCameraPresentationCaptureFrame Empty =>
@@ -554,15 +538,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0f,
                 false,
                 default,
-                default,
-                default,
-                default,
-                default,
                 false,
                 default,
                 default,
-                0f,
-                null);
+                0f);
 
         public CharacterCameraPresentationCaptureFrame WithPresentationContext(
             ulong presentationFrame,
@@ -576,16 +555,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resetSequence,
                 deltaSeconds,
                 ResetTracking,
-                in m_State,
-                in m_Response,
-                in m_Target,
-                in m_Plan,
                 in m_Basis,
                 FinalOutputAvailable,
                 FinalPosition,
                 FinalRotation,
-                FinalFieldOfView,
-                m_Cues);
+                FinalFieldOfView);
 
         [DiagnosticField]
         [DiagnosticKey("has-camera")]
@@ -616,131 +590,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("reset-tracking")]
         [DiagnosticGroup("camera-frame")]
         public bool ResetTracking { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("plan-valid")]
-        [DiagnosticGroup("camera-plan")]
-        public bool PlanValid => m_Plan.Valid;
-
-        [DiagnosticField]
-        [DiagnosticKey("mode")]
-        [DiagnosticGroup("camera-plan")]
-        public CameraMode Mode => m_Plan.Mode;
-
-        [DiagnosticField]
-        [DiagnosticKey("source-id")]
-        [DiagnosticGroup("camera-plan")]
-        public string SourceId => m_Plan.SourceId;
-
-        [DiagnosticField]
-        [DiagnosticKey("source-action-instance-id")]
-        [DiagnosticGroup("camera-plan")]
-        public ulong SourceActionInstanceId => m_Plan.SourceActionInstanceId;
-
-        [DiagnosticField]
-        [DiagnosticKey("blend-progress")]
-        [DiagnosticGroup("camera-plan")]
-        public float BlendProgress => m_Plan.BlendProgress;
-
-        [DiagnosticField]
-        [DiagnosticKey("follow-point")]
-        [DiagnosticGroup("camera-plan")]
-        public Vector3 FollowPoint => m_Plan.FollowPoint;
-
-        [DiagnosticField]
-        [DiagnosticKey("aim-point")]
-        [DiagnosticGroup("camera-plan")]
-        public Vector3 AimPoint => m_Plan.AimPoint;
-
-        [DiagnosticField]
-        [DiagnosticKey("field-of-view")]
-        [DiagnosticGroup("camera-plan")]
-        public float FieldOfView => m_Plan.FieldOfView;
-
-        [DiagnosticField]
-        [DiagnosticKey("look-delta")]
-        [DiagnosticGroup("camera-response")]
-        public Vector2 LookDelta => m_Plan.LookDelta;
-
-        [DiagnosticField]
-        [DiagnosticKey("response-mode")]
-        [DiagnosticGroup("camera-response")]
-        public CameraLookResponseMode ResponseMode => m_Response.LookResponse;
-
-        [DiagnosticField]
-        [DiagnosticKey("manual-orbit-weight")]
-        [DiagnosticGroup("camera-response")]
-        public float ManualOrbitWeight => m_Response.ManualOrbitWeight;
-
-        [DiagnosticField]
-        [DiagnosticKey("pitch-response-weight")]
-        [DiagnosticGroup("camera-response")]
-        public float PitchResponseWeight => m_Response.PitchResponseWeight;
-
-        [DiagnosticField]
-        [DiagnosticKey("yaw-response-weight")]
-        [DiagnosticGroup("camera-response")]
-        public float YawResponseWeight => m_Response.YawResponseWeight;
-
-        [DiagnosticField]
-        [DiagnosticKey("response-priority")]
-        [DiagnosticGroup("camera-response")]
-        public int ResponsePriority => m_Response.Priority;
-
-        [DiagnosticField]
-        [DiagnosticKey("response-weight")]
-        [DiagnosticGroup("camera-response")]
-        public float ResponseWeight => m_Response.Weight;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-priority")]
-        [DiagnosticGroup("camera-state")]
-        public int StatePriority => m_State.Priority;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-weight")]
-        [DiagnosticGroup("camera-state")]
-        public float StateWeight => m_State.Weight;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-blend-in-seconds")]
-        [DiagnosticGroup("camera-state")]
-        public float StateBlendInSeconds => m_State.BlendInSeconds;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-blend-out-seconds")]
-        [DiagnosticGroup("camera-state")]
-        public float StateBlendOutSeconds => m_State.BlendOutSeconds;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-target-key")]
-        [DiagnosticGroup("camera-state")]
-        public string StateTargetKey => m_State.TargetKey;
-
-        [DiagnosticField]
-        [DiagnosticKey("state-source-id")]
-        [DiagnosticGroup("camera-state")]
-        public string StateSourceId => m_State.SourceId;
-
-        [DiagnosticField]
-        [DiagnosticKey("target-valid")]
-        [DiagnosticGroup("camera-target")]
-        public bool TargetValid => m_Target.Valid;
-
-        [DiagnosticField]
-        [DiagnosticKey("target-source-key")]
-        [DiagnosticGroup("camera-target")]
-        public string TargetSourceKey => m_Target.SourceKey;
-
-        [DiagnosticField]
-        [DiagnosticKey("target-follow-point")]
-        [DiagnosticGroup("camera-target")]
-        public Vector3 TargetFollowPoint => m_Target.FollowPoint;
-
-        [DiagnosticField]
-        [DiagnosticKey("target-aim-point")]
-        [DiagnosticGroup("camera-target")]
-        public Vector3 TargetAimPoint => m_Target.AimPoint;
 
         [DiagnosticField]
         [DiagnosticKey("final-output-available")]
@@ -781,77 +630,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("look-direction")]
         [DiagnosticGroup("camera-output")]
         public Vector3 LookDirection => m_Basis.LookDirection;
-
-        [DiagnosticTable("cues", 1, 64)]
-        [DiagnosticGroup("camera-cues")]
-        public CharacterCameraCueCapturePage Cues { get; }
-    }
-
-    public readonly struct CharacterCameraCueCapturePage
-    {
-        readonly IReadOnlyList<CameraCue> m_Source;
-
-        public CharacterCameraCueCapturePage(IReadOnlyList<CameraCue> source)
-        {
-            m_Source = source;
-        }
-
-        public int Count => m_Source?.Count ?? 0;
-
-        public CharacterCameraCueCaptureRow this[int index] =>
-            new CharacterCameraCueCaptureRow(m_Source[index]);
-    }
-
-    public readonly struct CharacterCameraCueCaptureRow
-    {
-        internal CharacterCameraCueCaptureRow(CameraCue source)
-        {
-            CueId = source.CueId;
-            CueKind = source.CueKind;
-            CueType = source.CueType;
-            Intensity = source.Intensity;
-            DurationSeconds = source.DurationSeconds;
-            Priority = source.Priority;
-            SourceId = source.SourceId;
-            SourceActionInstanceId = source.SourceActionInstanceId;
-            Active = source.Active;
-        }
-
-        [DiagnosticField]
-        [DiagnosticKey("cue-id")]
-        public string CueId { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("cue-kind")]
-        public CameraCueKind CueKind { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("cue-type")]
-        public string CueType { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("intensity")]
-        public float Intensity { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("duration-seconds")]
-        public float DurationSeconds { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("priority")]
-        public int Priority { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("source-id")]
-        public string SourceId { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("source-action-instance-id")]
-        public ulong SourceActionInstanceId { get; }
-
-        [DiagnosticField]
-        [DiagnosticKey("active")]
-        public bool Active { get; }
     }
 
     public readonly struct CharacterPresentationCommandCaptureFacts

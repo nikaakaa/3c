@@ -2,13 +2,13 @@
 
 ## 唯一外部合同
 
-Schema：`btsmtl-agent-authoring-document.v5`
+Schema：`btsmtl-agent-authoring-document.v6`
 
 controller状态摘要若对应editable StateMachine Graph，其State identity引用该图内的正式State节点，不是第二个实体声明。重复摘要、跨Graph引用和非State节点引用必须拒绝；未作为editable Graph提供的组合状态机摘要继续参与全局identity登记。此规则不改变导出identity或Mutation owner。
 
 StateMachine及State body的Graph ownership对账中，未指定共享资产路径的null与空字符串表示相同的无共享资产引用，不得因目录包省略空字段产生ConfigureGraphReference；非空路径与ownership变化仍须正常对账。
 
-仅接受v5。v1、v2、v3、v4及Patch/Snapshot旧格式必须明确拒绝，并由调用方在精确Definition上重新checkout；不存在兼容reader、writer、alias或双写。
+仅接受v6。v1、v2、v3、v4、v5及Patch/Snapshot旧格式必须明确拒绝，并由调用方在精确Definition上重新checkout；不存在兼容reader、writer、alias或双写。
 
 Document固定为Unity项目根目录外部工作区中的目录包：
 
@@ -28,6 +28,14 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
     actions.json
     skills/<canonical-id>/
       definition.json
+    skills/graphs/<stable-segment>/
+      graph.json
+      layout.json
+    skills/macros/<stable-segment>/
+      macro.json
+    skills/timelines/<stable-segment>/
+      timeline.json
+      curves.json
     graphs/<stable-segment>/
       graph.json
       layout.json
@@ -54,7 +62,11 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
 
 `manifest.json`声明schema、domain、root identity与精确文件闭包；`.sync.json`保存整包同步基线。两者、`context/`和`readonly/`由service拥有。`editable/`是AI唯一可写区域。整个目录仍是一个逻辑Document：hash、同步状态、dry-run、apply和冲突判定都以整包为单位；`readonly/`与`context/`共同进入context hash。
 
-CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；子图依赖的`callSiteIdentity`按`<ownerGraphId>/node:<nodeId>/<referenceKey>/call`寻址，并由入口Graph闭包与Graph reference目标同时校验。技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
+CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；子图依赖的`callSiteIdentity`按原生编译路径`skill:<skillId>/graph:<ownerGraphId>/node:<nodeId>/call:Macro`寻址，并由入口Graph闭包与Graph reference目标同时校验。技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
+
+v6技能闭包的正式文件位于`editable/skills/graphs/**`、`editable/skills/macros/**`和`editable/skills/timelines/**`。Graph正文只保存Skill role、ownership、显式owner、业务kind、typed properties、逻辑Flow/Value port endpoint、稳定Edge identity与原生Variable元数据；Macro文件只保存稳定输入/输出参数identity、名称和值类型；Timeline文件保存稳定Timeline/Section/ExternalBinding/Track/Clip identity、contract kind、资源引用、TreeClip Graph引用、typed clip properties和业务曲线。`BtsmtlSkillFlowGraph`与`BtsmtlSkillMacroGraph`是唯一正式来源，不生成旧`BaseGraph`镜像，不把FlowCanvas私有字段、委托、运行状态或编译索引写入Document。
+
+Skill Graph的根owner是`skill-root`，由`SkillDefinition`通过`entryGraphAuthoringId`唯一反向引用；状态机、状态内容、条件页和Timeline TreeClip Graph使用`node`、`step`或`timeline-clip` owner；共享Macro只能使用`shared` owner和正式资产引用。新Graph、Node、Edge、Step Port、Macro Parameter、Blackboard declaration、Timeline、Track与Clip均使用`local:*`计划identity，dry-run纳入同一manifest/hash，apply经唯一Mutation dispatcher创建后由canonical reverse export替换为稳定identity。
 
 新增Pose Graph、Graph-owned Inline Timeline或Linked Pose Implementation/Entry Graph分片不要求也不允许AI编辑manifest。AI必须使用`local:<meaningful-id>`作为新对象identity，并在其canonical segment目录中创建完整文件对或Implementation闭包。canonical segment算法为：
 
@@ -66,6 +78,7 @@ segment = readable + "-" + suffix
 
 Store在整包strict parse前只发现满足以下全部条件的新增文件对：
 
+- `editable/skills/graphs/<canonical-segment>/graph.json + layout.json`、`editable/skills/macros/<canonical-segment>/macro.json`与`editable/skills/timelines/<canonical-segment>/timeline.json + curves.json`只允许通过完整`local:*` Skill Flow闭包发现；Graph、Macro接口与Timeline必须相互可达且strict parse通过。
 - 两个文件位于`editable/presentation/pose-graphs/<canonical-segment>/`。
 - 文件精确为`graph.json`与`layout.json`，缺一不可。
 - graph id为非空`local:*`，layout graphId与其相同。
@@ -117,7 +130,7 @@ AI `apply_document`只在受控Character Program为当前版本时校验并按�
 - graph stable identity、kind、ownership、显式owner和shared asset。
 - editable node的stable identity、stable kind、可选name与该kind允许的typed properties。
 - flow/property edge的stable identity、逻辑endpoint与port。
-- 系统节点使用`@root`、`@enter`、`@exit`、`@any`、`@onEnter`、`@onExit`、`@timelineEnter`、`@result`等anchor。
+- 系统节点使用`@root`、`@enter`、`@exit`、`@any`、`@onEnter`、`@onExit`、`@timelineEnable`、`@timelineDisable`、`@timelineDestroy`、`@result`、`@input`、`@output`等anchor；Timeline生命周期入口按Hook类型分别表达。
 
 `layout.json`只保存可选位置。新节点不写layout时使用确定性排布。Document不暴露C#类型名、serialized field、冗余property port镜像、系统节点对象或不可编辑运行时字段。
 
@@ -162,7 +175,7 @@ Context：
 - Rig Definition、Physical/Virtual Bone、pelvis与左右腿chain、Body Motion、Foot Analysis identity/revision、Motion Matching索引与其它算法生成内容
 - Float32/Fixed Character Program、Presentation Projection、Native Pose Program与AIIntentProgram的identity/stale状态
 
-## Document v5 Presentation与AnimationClip合同
+## Document v6 Presentation、Skill Flow与AnimationClip合同
 
 Character Presentation是`editable/`中的正式目标状态：
 
@@ -200,7 +213,7 @@ Presentation目标使用两类分离的业务来源：
 - ActionPlaybackInput与AnimationSlot只引用同一Document Timeline目标状态中已存在的Animation Channel，AnimationSlot是唯一consumer。
 - `profile.json.actionProducers`只允许引用同一Document中已经存在的Timeline与Animation track，不通过Presentation Mutation创建Timeline owner。
 
-不存在`MotionMatchingSelectionInput`、`AnimationSelection` port、素材Marker/Notify或对应摘要。Timeline只保存Action AnimationClip Segment与Timeline-local Curve；原生AnimationClip只保存骨骼动画和`presentation.locomotion-phase`、`presentation.foot-placement-weight`两项注册Curve；Profile只保存角色装配与Locomotion Sync Group。
+不存在`MotionMatchingSelectionInput`、`AnimationSelection` port、素材Marker/Notify或对应摘要。Presentation侧Timeline只保存Action AnimationClip Segment与Timeline-local Curve；原生AnimationClip只保存骨骼动画和`presentation.locomotion-phase`、`presentation.foot-placement-weight`两项注册Curve；Skill Flow Timeline另按原生Timeline contract保存其Section、ExternalBinding、Animation/Motion/Tree/Cue/Camera/Scene typed内容。Profile只保存角色装配与Locomotion Sync Group。
 
 ## 正式调用链
 
@@ -211,13 +224,14 @@ five BTSMTL lifecycle MCP tools
   -> AgentAuthoringTargetMapper
   -> AgentAuthoringPresentationPackageCodec
   -> AgentAuthoringDocumentCodec + AgentAuthoringPackageStore
+  -> AgentSkillFlowDocumentMapper (native FlowGraph/Macro/Timeline closure)
   -> AgentDocumentMutationReconciler
   -> AgentAuthoringPresentationReconciler
   -> AgentMutationPlanner
   -> immutable AgentMutationPlan
   -> AgentMutationSession preflight
   -> AgentDocumentMutationCompiler
-  -> typed Gameplay/Timeline/Presentation Mutation handlers
+  -> typed Gameplay/Skill Flow/Timeline/Presentation Mutation handlers
   -> Character/AI Validator
   -> domain transaction owners + one Undo group
   -> SaveAssets
@@ -246,14 +260,18 @@ Character generated product发布是上述Document事务之外的显式精确Def
 | `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | stable node kind、typed property、port与system anchor唯一目录 |
 | `AgentAuthoringDocumentExporter.cs` | Character/AI canonical package投影 |
 | `AgentControlDocumentMapper.cs` | controller.json控制模块binding与作者参数的严格映射、正式模块校验 |
-| `AgentSkillDocumentExporter.cs`、`AgentSkillDocumentMapper.cs`、`AgentSkillDocumentMutationPlanner.cs` | SkillDefinition分片导出、strict解析/local发现与技能差异计划 |
-| `AgentAuthoringPresentationPackageModels.cs` | Document v5 Presentation Profile、Pose Graph与PoseStateMachine模型 |
+| `AgentSkillDocumentExporter.cs`、`AgentSkillDocumentMapper.cs` | SkillDefinition分片导出与strict解析/local发现 |
+| `AgentAuthoringPresentationPackageModels.cs` | Document v6 Presentation Profile、Pose Graph与PoseStateMachine模型 |
 | `AgentAuthoringPresentationPackageCodec.cs` | Presentation分片路径、strict parse与文件闭包 |
 | `AgentAuthoringPresentationPackageExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
 | `AgentAuthoringPresentationReconciler.cs` | Presentation完整目标对账与typed Mutation事务规划 |
 | `AgentGraphDocumentFragments.cs`、`AgentTimelineDocumentFragments.cs` | 新增Graph/Timeline文件对的canonical local发现与strict闭包检查 |
+| `AgentSkillFlowDocumentModels.cs`、`AgentSkillFlowDocumentMapper.cs` | v6原生Skill FlowGraph、Macro接口、Timeline与owner闭包模型、strict parser与canonical local发现 |
+| `AgentSkillFlowAuthoringCapabilities.cs` | 原生技能kind、typed字段、实际Flow/Value port shape与locomotion capability目录 |
+| `AgentSkillFlowDocumentMutationModule.cs`、`AgentSkillFlowDocumentMutationHandler.cs` | 原生技能整包typed Mutation、真实FlowGraph/Timeline owner对账与保存 |
+| `AgentSkillFlowDocumentOwnerCollector.cs`、`AgentSkillFlowMutationDispatcher.cs` | 原生技能事务owner收集与唯一Mutation dispatcher契约 |
 | `AgentDocumentMutationReconciler.cs` | 完整目标集合对账入口与有序领域模块协调 |
-| `Agent*DocumentMutationModule.cs`、`AgentSkillDocumentMutationPlanner.cs` | Graph、Timeline、Blackboard、Action、Control、AI与Skill各自的目标差异与依赖计划 |
+| `Agent*DocumentMutationModule.cs`、`AgentSkillFlowDocumentMutationModule.cs` | Graph、Timeline、Blackboard、Action、Control、AI与Skill各自的目标差异与依赖计划 |
 | `AgentMutationPlanner.cs`、`Agent*MutationLowering.cs`、`AgentMutations.cs` | typed Mutation lowering、Graph/State/Node planned identity与immutable plan；Blackboard lowering独立于Action lowering |
 | `AgentMutationSession.cs` | 单次Index、anchor/reference resolver、symbol、diff、touched owner |
 | `AgentGraphLinkMutationHandler.cs` | flow/property edge创建、删除与改接 |
@@ -275,6 +293,6 @@ Character generated product发布是上述Document事务之外的显式精确Def
 
 保存文件后调用`btsmtl.dry_run_document`，再把返回的`documentHash`原样传给`btsmtl.apply_document.expected_document_hash`。
 
-修改Presentation时直接编辑Document v5的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
+修改Presentation时直接编辑Document v6的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
 
 完成代码修改时必须说明Agent合同已同步，或说明变化为什么完全不影响package editable/context、identity、ownership、Reconciler和Validator。

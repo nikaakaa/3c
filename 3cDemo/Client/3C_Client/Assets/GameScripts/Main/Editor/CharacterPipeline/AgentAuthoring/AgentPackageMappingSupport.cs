@@ -51,6 +51,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Add(declaration?.declarationId, "editable.blackboard.declarations");
             foreach (AgentSnapshotSkillDefinition skill in editable.skills ?? new List<AgentSnapshotSkillDefinition>())
                 Add(skill?.skillId, "editable.skills");
+            foreach (AgentPackageSkillFlowGraphFile graph in editable.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>())
+            {
+                string graphPath = "editable.skills.graphs[" + graph?.id + "]";
+                Add(graph?.id, graphPath);
+                foreach (AgentPackageSkillFlowNode node in graph?.nodes ?? new List<AgentPackageSkillFlowNode>())
+                    Add(node?.id, graphPath + ".nodes");
+                foreach (AgentPackageSkillFlowEdge edge in graph?.edges ?? new List<AgentPackageSkillFlowEdge>())
+                    Add(edge?.id, graphPath + ".edges");
+                foreach (AgentPackageSkillBlackboardDeclaration declaration in graph?.blackboardDeclarations ?? new List<AgentPackageSkillBlackboardDeclaration>())
+                    Add(declaration?.id, graphPath + ".blackboardDeclarations");
+            }
+            foreach (AgentPackageSkillMacroFile macro in editable.skillMacros ?? new List<AgentPackageSkillMacroFile>())
+            {
+                string macroPath = "editable.skills.macros[" + macro?.id + "]";
+                foreach (AgentPackageSkillMacroParameter parameter in (macro?.inputs ?? new List<AgentPackageSkillMacroParameter>()).Concat(macro?.outputs ?? new List<AgentPackageSkillMacroParameter>()))
+                    Add(parameter?.id, macroPath + ".parameters");
+            }
+            foreach (AgentPackageSkillTimelineFile timeline in editable.skillTimelines ?? new List<AgentPackageSkillTimelineFile>())
+            {
+                string timelinePath = "editable.skills.timelines[" + timeline?.id + "]";
+                Add(timeline?.id, timelinePath);
+                foreach (AgentPackageSkillTimelineSection section in timeline?.sections ?? new List<AgentPackageSkillTimelineSection>())
+                    Add(section?.id, timelinePath + ".sections");
+                foreach (AgentPackageSkillTimelineExternalBinding binding in timeline?.externalBindings ?? new List<AgentPackageSkillTimelineExternalBinding>())
+                    Add(binding?.id, timelinePath + ".externalBindings");
+                foreach (AgentPackageSkillTimelineTrack track in timeline?.tracks ?? new List<AgentPackageSkillTimelineTrack>())
+                {
+                    Add(track?.id, timelinePath + ".tracks");
+                    foreach (AgentPackageSkillTimelineClip clip in track?.clips ?? new List<AgentPackageSkillTimelineClip>())
+                        Add(clip?.id, timelinePath + ".clips");
+                }
+            }
             var summaryGraphIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (AgentSnapshotStateMachineSummary stateMachine in editable.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
             {

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
+using FlowCanvas;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -130,6 +132,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             curve = ResolveObject(reference.AssetGuid, reference.AssetPath, typeof(RootMotionCurveAsset)) as RootMotionCurveAsset;
             return curve;
+        }
+
+        public bool TryResolveSkillGraph(string identity, out FlowGraph graph)
+        {
+            graph = null;
+            if (!m_Definition || string.IsNullOrWhiteSpace(identity))
+                return false;
+            var index = new AgentSkillFlowDocumentRuntimeIndex();
+            index.Build(m_Definition);
+            return index.Graphs.TryGetValue(identity, out graph);
+        }
+
+        public bool TryResolveSkillTimeline(string identity, out TimelineAsset timeline)
+        {
+            timeline = null;
+            if (!m_Definition || string.IsNullOrWhiteSpace(identity))
+                return false;
+            var index = new AgentSkillFlowDocumentRuntimeIndex();
+            index.Build(m_Definition);
+            return index.Timelines.TryGetValue(identity, out timeline);
+        }
+
+        public bool TryResolveSkillObject<T>(AgentPackageObjectReference reference, out T value)
+            where T : UnityEngine.Object
+        {
+            value = null;
+            if (reference == null || !string.IsNullOrEmpty(reference.localId))
+                return false;
+            string path = AssetDatabase.GUIDToAssetPath(reference.assetGuid);
+            if (string.IsNullOrEmpty(path) || !string.Equals(path, reference.assetPath, StringComparison.Ordinal))
+                return false;
+            value = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<T>()
+                .FirstOrDefault(candidate => AssetDatabase.TryGetGUIDAndLocalFileIdentifier(candidate, out _, out long localFileId) && localFileId == reference.localFileId);
+            return value;
         }
 
         bool TryResolveTimelineFromSnapshot(string key, out TimelineAsset timelineAsset)

@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "btsmtl-agent-authoring-document.v5";
+        public const string Version = "btsmtl-agent-authoring-document.v6";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -87,6 +87,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
         public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
+        public List<AgentPackageSkillFlowGraphFile> skillGraphs = new List<AgentPackageSkillFlowGraphFile>();
+        public List<AgentPackageSkillFlowGraphLayoutFile> skillGraphLayouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
+        public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
+        public List<AgentPackageSkillTimelineFile> skillTimelines = new List<AgentPackageSkillTimelineFile>();
         public AgentSnapshotAnimationPresentation presentation = new AgentSnapshotAnimationPresentation();
         public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
         public List<AgentSnapshotTimeline> timelines = new List<AgentSnapshotTimeline>();
@@ -962,6 +966,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string targetKey;
         public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
         public List<string> allowedFollowUpSkillIds = new List<string>();
+        public AgentPackageSkillFlowDocument skillFlowDocument;
         public string targetSnapshotBlackboardKey;
         public string targetSnapshotBlackboardDeclarationId;
         public string targetSnapshotBlackboardDeclarationPlannedIdentity;

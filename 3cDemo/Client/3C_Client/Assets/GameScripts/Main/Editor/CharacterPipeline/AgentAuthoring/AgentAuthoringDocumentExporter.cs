@@ -27,21 +27,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.controlModuleId = definition.ControlModuleId;
             List<AgentSnapshotSkillDefinition> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
             snapshot.skills = skills;
-            HashSet<string> skillGraphIds = AgentSkillDocumentMapper.SelectGraphIds(snapshot, skills);
-            List<AgentSnapshotGraph> editableGraphs = snapshot.graphs
-                .Where(value => value != null && skillGraphIds.Contains(value.graphAuthoringId))
-                .ToList();
-            List<AgentSnapshotStateMachineSummary> editableStateMachines = AgentSkillDocumentMapper.SelectStateMachines(
-                snapshot,
-                skillGraphIds,
-                skills);
-            HashSet<string> skillTimelineIds = SelectSkillTimelineIds(snapshot.timelines, editableGraphs);
-            List<AgentSnapshotTimeline> editableTimelines = snapshot.timelines
-                .Where(value => value != null && skillTimelineIds.Contains(value.timelineAuthoringId))
-                .ToList();
-            List<AgentSnapshotTimelineTreeClip> editableTimelineTreeClips = snapshot.timelineTreeClips
-                .Where(value => value != null && skillTimelineIds.Contains(value.timelineAuthoringId))
-                .ToList();
+            var skillReport = new AgentCompileReport
+            {
+                success = true,
+                domain = AgentAuthoringSchema.CharacterControllerDomain,
+                rootIdentity = snapshot.rootIdentity
+            };
+            AgentPackageSkillFlowDocument skillDocument =
+                AgentSkillFlowDocumentExporter.Export(definition, skillReport);
+            if (!AgentSkillFlowDocumentMapper.Validate(skillDocument, skillReport) || skillReport.HasErrors())
+                throw new InvalidOperationException(string.Join(Environment.NewLine, skillReport.messages.Select(value => value.message)));
+            snapshot.skillGraphs = skillDocument.graphs;
+            snapshot.skillGraphLayouts = skillDocument.layouts;
+            snapshot.skillMacros = skillDocument.macros;
+            snapshot.skillTimelines = skillDocument.timelines;
+            var editableGraphs = new List<AgentSnapshotGraph>();
+            var editableStateMachines = new List<AgentSnapshotStateMachineSummary>();
+            var editableTimelines = new List<AgentSnapshotTimeline>();
+            var editableTimelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
             var editable = new AgentDocumentEditable
             {
                 control = new AgentDocumentControlConfiguration
@@ -59,6 +62,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 actionRequests = snapshot.actionRequests,
                 actionProfiles = snapshot.actionProfiles,
                 skills = skills,
+                skillGraphs = skillDocument.graphs,
+                skillGraphLayouts = skillDocument.layouts,
+                skillMacros = skillDocument.macros,
+                skillTimelines = skillDocument.timelines,
                 presentation = new AgentAuthoringPresentationExporter().Export(definition)
             };
             var context = new AgentDocumentContext
@@ -85,27 +92,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             projectionSnapshot.timelines = editableTimelines;
             projectionSnapshot.timelineTreeClips = editableTimelineTreeClips;
             projectionSnapshot.skills = skills;
+            projectionSnapshot.skillGraphs = skillDocument.graphs;
+            projectionSnapshot.skillGraphLayouts = skillDocument.layouts;
+            projectionSnapshot.skillMacros = skillDocument.macros;
+            projectionSnapshot.skillTimelines = skillDocument.timelines;
             return Finish(projectionSnapshot, editable, context);
-        }
-
-        static HashSet<string> SelectSkillTimelineIds(
-            IReadOnlyList<AgentSnapshotTimeline> timelines,
-            IReadOnlyList<AgentSnapshotGraph> graphs)
-        {
-            string[] graphPaths = (graphs ?? Array.Empty<AgentSnapshotGraph>())
-                .Where(value => value != null && !string.IsNullOrEmpty(value.path))
-                .Select(value => value.path)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-            return (timelines ?? Array.Empty<AgentSnapshotTimeline>())
-                .Where(value => value != null &&
-                    (value.callSites ?? new List<AgentSnapshotTimelineCallSite>()).Any(callSite =>
-                        callSite != null && graphPaths.Any(path =>
-                            string.Equals(callSite.graphPath, path, StringComparison.Ordinal) ||
-                            callSite.graphPath?.StartsWith(path + "/", StringComparison.Ordinal) == true)))
-                .Select(value => value.timelineAuthoringId)
-                .Where(value => !string.IsNullOrEmpty(value))
-                .ToHashSet(StringComparer.Ordinal);
         }
 
         public AgentAuthoringPackageProjection Export(AIControllerDefinition definition)
@@ -203,6 +194,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static string ComputeSourceRevision(AgentDocumentEditable editable)
         {
+            AgentPackageSkillFlowDocument skillDocument = AgentSkillFlowDocumentClone.Clone(new AgentPackageSkillFlowDocument
+            {
+                skills = editable?.skills,
+                graphs = editable?.skillGraphs,
+                layouts = editable?.skillGraphLayouts,
+                macros = editable?.skillMacros,
+                timelines = editable?.skillTimelines
+            });
             AgentDocumentEditable semantic = AgentAuthoringDocumentCodec.Clone(editable);
             foreach (AgentSnapshotGraph graph in semantic.graphs ?? new List<AgentSnapshotGraph>())
             {
@@ -225,7 +224,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         new List<AgentPackagePoseStateMachineLayoutFile>();
                 }
             }
-            return AgentAuthoringDocumentCodec.Hash(semantic);
+            semantic.skillGraphLayouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
+            foreach (AgentPackageSkillFlowGraphFile graph in semantic.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>())
+                if (graph != null)
+                    graph.contentRevision = string.Empty;
+            skillDocument.layouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
+            foreach (AgentPackageSkillFlowGraphFile graph in skillDocument.graphs ?? new List<AgentPackageSkillFlowGraphFile>())
+                if (graph != null)
+                    graph.contentRevision = string.Empty;
+            return AgentAuthoringDocumentCodec.Hash(new
+            {
+                document = semantic,
+                skillTimelineCurves = skillDocument.timelines
+                    .SelectMany(timeline => timeline?.tracks ?? new List<AgentPackageSkillTimelineTrack>())
+                    .SelectMany(track => track?.clips ?? new List<AgentPackageSkillTimelineClip>())
+                    .SelectMany(clip => clip?.curves ?? new List<AgentPackageCurve>())
+                    .ToList()
+            });
         }
 
         static AgentDocumentGeneratedProduct ExportGeneratedProduct(
@@ -450,7 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static List<string> CharacterCapabilities()
         {
-            return new List<string>
+            var capabilities = new HashSet<string>(StringComparer.Ordinal)
             {
                 "Graph",
                 "StateMachine",
@@ -468,6 +483,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "PoseTransitionRule",
                 "LinkedPoseInterfaceRuntime"
             };
+            foreach (AgentPackageSkillNodeKindDescriptor descriptor in AgentSkillFlowAuthoringCapabilities.ExportCatalog())
+                capabilities.Add(descriptor.kind);
+            return capabilities.OrderBy(value => value, StringComparer.Ordinal).ToList();
         }
 
         static AgentPackageLinkedPoseInterfaceFile ExportLinkedPoseInterface(

@@ -57,6 +57,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
         public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
+        public List<AgentPackageSkillFlowGraphFile> skillGraphs = new List<AgentPackageSkillFlowGraphFile>();
+        public List<AgentPackageSkillFlowGraphLayoutFile> skillGraphLayouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
+        public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
+        public List<AgentPackageSkillTimelineFile> skillTimelines = new List<AgentPackageSkillTimelineFile>();
         public AgentDocumentPresentationEditable presentation;
         public AgentDocumentAIEditable aiController;
     }
@@ -491,6 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentPackageNodeCatalogFile
     {
         public List<AgentPackageNodeKindDescriptor> kinds = new List<AgentPackageNodeKindDescriptor>();
+        public List<AgentPackageSkillNodeKindDescriptor> skillKinds = new List<AgentPackageSkillNodeKindDescriptor>();
     }
 
     [Serializable]

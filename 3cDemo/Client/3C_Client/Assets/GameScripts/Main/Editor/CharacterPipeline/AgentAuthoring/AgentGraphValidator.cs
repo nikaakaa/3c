@@ -121,6 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     ValidateGraph(entry.Graph, path, entry.VisibleGraphs);
                 }
             }
+            if (definition.SkillDefinitions.Count > 0 || (definition.SkillGraphs?.Count ?? 0) > 0)
+                AgentSkillFlowDocumentMapper.ValidateDefinition(definition, m_Report);
             if (includeExactCompile)
             {
                 CharacterSimulationBuildResult compileResult =

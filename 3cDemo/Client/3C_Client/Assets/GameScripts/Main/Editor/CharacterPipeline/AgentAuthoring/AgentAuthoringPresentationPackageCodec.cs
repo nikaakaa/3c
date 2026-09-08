@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(
                     ProfilePath,
                     "presentation_profile_missing",
-                    "Character Document v5缺少Presentation Profile目标状态。");
+                    "Character Document v6缺少Presentation Profile目标状态。");
                 return;
             }
             files.Add(
@@ -591,7 +591,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             report.Error(
                 relativePath,
                 "presentation_file_unknown",
-                "Document v5包含未知Presentation文件。");
+                "Document v6包含未知Presentation文件。");
             return false;
         }
 
@@ -867,7 +867,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report.Error(
                             pair.Key,
                             "presentation_readonly_file_unknown",
-                            "Document v5包含未知Presentation readonly文件。");
+                            "Document v6包含未知Presentation readonly文件。");
                         valid = false;
                     }
                     valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -896,7 +896,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(
                         pair.Key,
                         "presentation_file_unknown",
-                        "Document v5包含未知Presentation文件。");
+                        "Document v6包含未知Presentation文件。");
                     valid = false;
                 }
                 valid &= RejectInternalFields(pair.Value, pair.Key, report);

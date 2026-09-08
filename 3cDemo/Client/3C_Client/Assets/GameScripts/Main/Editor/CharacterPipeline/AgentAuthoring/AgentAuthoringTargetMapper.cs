@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     profiles = target.editable.actionProfiles
                 });
                 AgentSkillDocumentMapper.Write(files, target.editable.skills);
+                AgentSkillFlowDocumentMapper.Write(files, target.editable, report);
                 AgentAuthoringPresentationPackageCodec.Write(
                     files,
                     target.editable.presentation,
@@ -82,7 +83,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             var nodeCatalog = new AgentPackageNodeCatalogFile
             {
-                kinds = m_Catalog.ExportNodeKinds(target.domain).ToList()
+                kinds = m_Catalog.ExportNodeKinds(target.domain).ToList(),
+                skillKinds = string.Equals(target.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal)
+                    ? AgentSkillFlowAuthoringCapabilities.ExportCatalog().ToList()
+                    : new List<AgentPackageSkillNodeKindDescriptor>()
             };
             AgentPackageNodeCatalogValidator.Validate(nodeCatalog, report);
             files["context/node-catalog.json"] = AgentAuthoringDocumentCodec.ToToken(nodeCatalog);
@@ -184,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
                 target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
                 valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
+                valid &= AgentSkillFlowDocumentMapper.TryRead(files, target.editable, report);
             }
             else
             {
@@ -199,7 +204,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             string.Equals(path, "editable/blackboard.json", StringComparison.Ordinal) ||
                             string.Equals(path, "editable/actions.json", StringComparison.Ordinal) ||
                             path.StartsWith("editable/timelines/", StringComparison.Ordinal) ||
-                            AgentSkillDocumentMapper.IsDefinitionPath(path)))
+                            AgentSkillDocumentMapper.IsDefinitionPath(path) ||
+                            AgentSkillFlowDocumentMapper.IsFragmentPath(path)))
                 {
                     report.Error(
                         "editable",
@@ -343,13 +349,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
 
             valid &= m_GraphMapper.ValidateGraphRelationships(target.editable, report);
-            valid &= AgentSkillDocumentMapper.Validate(
-                target.editable,
-                target.editable.graphs
-                    .Where(value => value != null)
-                    .Select(value => value.graphAuthoringId)
-                    .ToHashSet(StringComparer.Ordinal),
-                report);
+            if (string.Equals(
+                    manifest.domain,
+                    AgentAuthoringSchema.CharacterControllerDomain,
+                    StringComparison.Ordinal))
+                valid &= AgentSkillFlowDocumentMapper.Validate(
+                    new AgentPackageSkillFlowDocument
+                    {
+                        skills = target.editable.skills,
+                        graphs = target.editable.skillGraphs,
+                        layouts = target.editable.skillGraphLayouts,
+                        macros = target.editable.skillMacros,
+                        timelines = target.editable.skillTimelines
+                    },
+                    report);
             valid &= AgentTimelineDocumentMapper.ValidateTimelineRelationships(target.editable, report);
             valid &= AgentPackageMappingSupport.ValidatePrimaryIdentities(target.editable, report);
             if (packageAI != null && valid)

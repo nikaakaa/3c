@@ -232,7 +232,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (selector is not CharacterEquipmentLinkedPoseSelectionBinding equipment)
                 throw new InvalidOperationException(
-                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v5 codec.");
+                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v6 codec.");
             AgentPackageObjectReference asset = Asset(equipment, true);
             return new AgentPackageLinkedPoseSelectorBinding
             {

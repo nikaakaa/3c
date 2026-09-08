@@ -7,9 +7,9 @@ description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账
 
 ## 核心边界
 
-AI通过五个生命周期工具管理一个显式Document v5 JSON package，控制配置、SkillDefinition、Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+AI通过五个生命周期工具管理一个显式Document v6 JSON package，控制配置、SkillDefinition、Skill FlowGraph、Macro、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
 
-只接受v5目录包；v1-v4及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
+只接受v6目录包；v1-v5及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
 
 ```text
 btsmtl.checkout_document
@@ -59,7 +59,7 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 ## 可写与只读边界
 
-Character Document v5正式可写：
+Character Document v6正式可写：
 
 - `editable/controller.json`中的已登记控制模块binding、语义版本和作者参数覆盖，以及`editable/skills/<canonical-id>/definition.json`中的SkillDefinition、ActionProfile、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能。控制模块代码、参数schema、默认值、状态schema和运行状态只读；参数必须经过正式Control Module合同校验并由Build采用。
 - Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
@@ -68,6 +68,7 @@ Character Document v5正式可写：
 - Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。
 - PoseStateMachine的entry、state、alias、transition、transition rule与blend策略；可选Locomotion Phase relation只从Profile Group与Clip曲线编译，不是Transition可写字段。
 - PoseStateMachine同目录layout只稀疏保存Entry、State与Alias的稳定identity和有限二维位置；纯layout apply不修改StateMachine `ContentRevision`，也不触发Build。
+- Skill Flow目标位于`editable/skills/graphs/**`、`editable/skills/macros/**`与`editable/skills/timelines/**`。Skill Graph直接对应`CharacterPipelineDefinition.SkillGraphs`及原生`BtsmtlSkillFlowGraph`/`BtsmtlSkillMacroGraph`闭包；Graph、Node、Edge、稳定Step Port、Macro Parameter、原生Variable元数据、Timeline和TreeClip都使用业务identity与typed字段。不得保存FlowCanvas私有字段、委托、运行状态或旧BaseGraph镜像；新实体使用`local:*`，apply后由反向导出替换为稳定identity。
 
 以下内容只作为现有资产引用或`context`事实，不能通过Document创建或修改：
 
@@ -82,7 +83,7 @@ Presentation目标必须把State-local Pose Source与Action AnimationChannel分�
 
 PoseStateMachine Transition混合字段固定为`blendLogic`、`durationSeconds`、`blendMode`、条件式`customBlendCurveAssetId`与`blendProfileAssetId`。Curve/Profile必须从只读Asset Catalog解析为强类型资产并提交同一Presentation Mutation；禁止恢复`blendCurveId`、旧`blendProfileId`或GUID文本输入。Custom必须带Curve Asset，非Custom不得保留Curve Asset；BlendStack只作为显式Pose Graph节点存在。
 
-不得恢复旧MotionMatchingSelectionInput、AnimationSelection port、素材Marker/Notify、旧Layer、PoseSlot、TransitionLibrary、presentation第二MCP入口或generated payload写入。Timeline只拥有Action Segment与Timeline-local Curve；素材骨骼和两项注册表现Curve统一由原生AnimationClip拥有。
+不得恢复旧MotionMatchingSelectionInput、AnimationSelection port、素材Marker/Notify、旧Layer、PoseSlot、TransitionLibrary、presentation第二MCP入口或generated payload写入。Presentation Timeline只拥有Action Segment与Timeline-local Curve；Skill Flow Timeline按原生Timeline contract保存其Section、ExternalBinding、Animation/Motion/Tree/Cue/Camera/Scene typed内容；素材骨骼和两项注册表现Curve统一由原生AnimationClip拥有。
 
 ## 修改相关代码
 
@@ -92,12 +93,13 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
 | Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
-| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v5 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
+| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v6 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
 | AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
-| Presentation Profile、Pose Graph或PoseStateMachine | Document v5模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v6模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
 | Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
 | MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
+| Skill FlowGraph、Macro、native Timeline或locomotion capability | Skill Flow模型、Codec/Store、Exporter/Mapper、唯一Mutation dispatcher、AssetResolver/Index、Validator与五工具说明 |
 
 正式调用链必须保持：
 
@@ -130,7 +132,8 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 - Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
 - 不存在BTSMTL局部节点/边/属性修改工具；AI直接修改package文件。
 - Package严格拒绝清单外文件、未知字段、重复属性、非法数值、`.sync.json`语义改动和read-only context改动；Character必须包含完整Presentation目标文件闭包，每个Pose StateMachine必须同时具有`state-machine.json`与`layout.json`。
-- manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`创建对，以及graph-owned Inline Timeline的`timeline.json + curves.json`创建对；两者都属于同一Store、hash和apply生命周期，不是未知文件fallback。
+- v6 Character Skill Flow必须包含入口Skill Graph、完整Macro接口、Graph owner闭包、稳定Step Port、原生Variable元数据、Timeline/TreeClip引用；所有变化必须通过唯一typed Mutation dispatcher进入同一事务。
+- manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`、Skill FlowGraph的`graph.json + layout.json`、Skill Macro的`macro.json`和Skill Timeline的`timeline.json + curves.json`创建闭包；它们都属于同一Store、hash和apply生命周期，不是未知文件fallback。
 - dry-run不dirty、不保存、不build；apply使用同一Document hash，Character apply不build。
 - apply失败必须同时恢复Unity owner与正式package并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。
 - 没有watcher、selection/focus自动执行、第二套graph/timeline/AI mutation service。

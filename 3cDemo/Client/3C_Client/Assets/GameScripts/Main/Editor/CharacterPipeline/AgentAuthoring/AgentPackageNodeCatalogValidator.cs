@@ -16,9 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
-            if (catalog?.kinds == null)
+            if (catalog?.kinds == null || catalog.skillKinds == null)
             {
-                report.Error(path, "node_catalog_missing", "Node Catalog 缺少 kinds。");
+                report.Error(path, "node_catalog_missing", "Node Catalog 缺少 kinds或skillKinds。");
                 return false;
             }
 
@@ -49,6 +49,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 valid &= ValidatePorts(kind.flowPorts, false, fixedPorts, kindPath + ".flowPorts", report);
                 valid &= ValidatePorts(kind.propertyPorts, true, fixedPorts, kindPath + ".propertyPorts", report);
                 valid &= ValidateVariants(kind, properties, fixedPorts, kindPath, report);
+            }
+            var skillKindIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int skillIndex = 0; skillIndex < (catalog.skillKinds?.Count ?? 0); skillIndex++)
+            {
+                AgentPackageSkillNodeKindDescriptor kind = catalog.skillKinds[skillIndex];
+                string kindPath = $"{path}.skillKinds[{skillIndex}]";
+                if (kind == null || string.IsNullOrWhiteSpace(kind.kind) || !skillKindIds.Add(kind.kind) ||
+                    kind.graphRoles == null || kind.graphRoles.Count == 0 ||
+                    kind.properties == null || kind.flowPorts == null || kind.valuePorts == null)
+                {
+                    report.Error(kindPath, "skill_node_catalog_invalid", "Skill Node Capability目录项不完整或重复。");
+                    valid = false;
+                    continue;
+                }
+                var skillProperties = new HashSet<string>(StringComparer.Ordinal);
+                foreach (string property in kind.properties)
+                    if (string.IsNullOrWhiteSpace(property) || !skillProperties.Add(property))
+                    {
+                        report.Error(kindPath + ".properties", "skill_node_catalog_property_invalid", "Skill Node property identity缺失或重复。");
+                        valid = false;
+                    }
+                var skillFlowPorts = new HashSet<string>(StringComparer.Ordinal);
+                valid &= ValidateSkillPorts(kind.flowPorts, false, skillFlowPorts, kindPath + ".flowPorts", report);
+                valid &= ValidateSkillPorts(kind.valuePorts, true, skillFlowPorts, kindPath + ".valuePorts", report);
+            }
+            return valid;
+        }
+
+        static bool ValidateSkillPorts(
+            IReadOnlyList<AgentPackagePortDescriptor> ports,
+            bool value,
+            ISet<string> identities,
+            string path,
+            AgentCompileReport report)
+        {
+            if (ports == null)
+            {
+                report.Error(path, "skill_node_catalog_ports_missing", "Skill Node port列表不能为null。");
+                return false;
+            }
+            bool valid = true;
+            foreach (AgentPackagePortDescriptor port in ports)
+            {
+                GraphAuthoringPortDirection direction = default;
+                GraphAuthoringPortCapacity capacity = default;
+                if (port == null || string.IsNullOrWhiteSpace(port.key) ||
+                    !Enum.TryParse(port.direction, false, out direction) ||
+                    !Enum.IsDefined(typeof(GraphAuthoringPortDirection), direction) ||
+                    !Enum.TryParse(port.capacity, false, out capacity) ||
+                    !Enum.IsDefined(typeof(GraphAuthoringPortCapacity), capacity) ||
+                    value && string.IsNullOrWhiteSpace(port.valueType) ||
+                    !value && !string.IsNullOrEmpty(port.valueType) ||
+                    port.required && direction != GraphAuthoringPortDirection.Input ||
+                    !identities.Add((value ? "value:" : "flow:") + port.key))
+                {
+                    report.Error(path, "skill_node_catalog_port_invalid", "Skill Node port identity、direction、capacity或valueType无效。");
+                    valid = false;
+                }
             }
             return valid;
         }

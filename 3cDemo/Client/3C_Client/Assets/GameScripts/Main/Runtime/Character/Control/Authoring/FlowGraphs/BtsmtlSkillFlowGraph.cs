@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using FlowCanvas;
 using FlowCanvas.Macros;
@@ -31,7 +32,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (nodeType == typeof(MacroInputNode) || nodeType == typeof(MacroOutputNode))
                 return macro;
             if (nodeType == typeof(MacroNodeWrapper))
-                return role != BtsmtlSkillFlowGraphRole.StateMachine;
+                return role != BtsmtlSkillFlowGraphRole.StateMachine && role != BtsmtlSkillFlowGraphRole.ConditionRule;
             if (BtsmtlSkillNativeNodeCatalog.TryGet(nodeType, out _))
                 return role != BtsmtlSkillFlowGraphRole.StateMachine;
             if (!typeof(BtsmtlSkillFlowNode).IsAssignableFrom(nodeType))
@@ -76,6 +77,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => m_Role;
         public override bool canAcceptVariableDrops => false;
+        public override bool allowsPortIdentityAliases => false;
         public override bool allowBlackboardOverrides => false;
         public override bool requiresAgent => false;
         public override bool requiresPrimeNode => false;
@@ -160,3 +162,4 @@ namespace ThirdPersonCharacter.Control.Authoring
 #endif
     }
 }
+#endif

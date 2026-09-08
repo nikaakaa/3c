@@ -21,6 +21,7 @@ namespace FlowCanvas
         private Dictionary<System.Type, Component> cachedAgentComponents;
 
         public virtual bool CanAuthorNodeType(System.Type type) => type != null && baseNodeType.IsAssignableFrom(type); // 3C: domain catalogs filter the native node menu.
+        public virtual bool allowsPortIdentityAliases => true;
 
         public virtual bool CanAuthorConnection(Port source, Port target, out string reason) { // 3C: domain rules apply to native create and relink operations.
             reason = null;

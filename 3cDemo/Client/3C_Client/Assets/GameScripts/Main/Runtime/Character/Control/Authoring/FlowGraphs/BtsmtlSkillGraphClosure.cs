@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,6 +37,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             }
             identities.Add(authoring.AuthoringId, graph);
             result.Add(graph);
+            if (graph is BtsmtlSkillMacroGraph signature)
+                BtsmtlSkillMacroInterface.Validate(signature);
             ValidateTopology(graph, authoring.Role, path, complete);
             foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
             {
@@ -46,13 +49,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                         continue;
                     if (call.macro is not BtsmtlSkillMacroGraph macro)
                         throw Error(nodePath, "调用目标必须是正式技能 Macro。");
-                    if (authoring.Role == BtsmtlSkillFlowGraphRole.ConditionRule &&
-                        (macro.inputDefinitions.Any(port => port.type == typeof(Flow)) ||
-                         macro.outputDefinitions.Any(port => port.type == typeof(Flow))))
-                        throw Error(nodePath, "条件页面不能调用带执行端口的 Macro。");
                     Visit(macro, nodePath, complete, active, identities, result);
-                    if (authoring.Role == BtsmtlSkillFlowGraphRole.ConditionRule)
-                        ValidatePureMacro(macro, nodePath, new HashSet<BtsmtlSkillMacroGraph>());
                 }
                 if (node is BtsmtlSkillStateMachineFlowNode machine)
                     VisitChild(machine.StateMachine, BtsmtlSkillFlowGraphRole.StateMachine, nodePath, complete, active, identities, result);
@@ -74,19 +71,6 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (child == null || child.Role != role)
                 throw Error(path, $"缺少 {role} 页面或引用页面类型错误。");
             Visit(child, path, complete, active, identities, result);
-        }
-
-        static void ValidatePureMacro(BtsmtlSkillMacroGraph graph, string path, HashSet<BtsmtlSkillMacroGraph> visited)
-        {
-            if (!visited.Add(graph))
-                return;
-            foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
-            {
-                if (node.GetInputFlowPorts().Any() || node.GetOutputFlowPorts().Any())
-                    throw Error($"{path}/node:{node.UID}", "条件 Macro 闭包包含执行节点。");
-                if (node is MacroNodeWrapper call && call.macro is BtsmtlSkillMacroGraph child)
-                    ValidatePureMacro(child, path, visited);
-            }
         }
 
         static void ValidateTopology(FlowGraph graph, BtsmtlSkillFlowGraphRole role, string path, bool complete)
@@ -163,3 +147,4 @@ namespace ThirdPersonCharacter.Control.Authoring
         static InvalidOperationException Error(string path, string message) => new($"{path}: {message}");
     }
 }
+#endif

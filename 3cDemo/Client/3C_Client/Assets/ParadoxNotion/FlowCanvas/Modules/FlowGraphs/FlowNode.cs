@@ -79,7 +79,7 @@ namespace FlowCanvas
 
         ///<summary>Ignore the Self Instance Object feature altogether for the the node?</summary>
         virtual public bool ignoreSelfInstancePortAssignment => false;
-        virtual public bool allowPortIdentityAliases => true; // 3C: strict authoring domains require exact stable port identities.
+        virtual public bool allowPortIdentityAliases => graph is FlowGraph flowGraph ? flowGraph.allowsPortIdentityAliases : true; // 3C: strict authoring domains require exact stable port identities.
 
         ///----------------------------------------------------------------------------------------------
 

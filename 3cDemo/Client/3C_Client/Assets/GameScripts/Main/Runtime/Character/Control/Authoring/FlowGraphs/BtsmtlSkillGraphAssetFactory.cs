@@ -22,7 +22,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         public static BtsmtlSkillMacroGraph CreatePrivateMacro(FlowGraph owner, string name) =>
-            CreatePrivate(owner, name, ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>);
+            CreatePrivate(owner, name, () =>
+            {
+                var graph = ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>();
+                BtsmtlSkillMacroInterface.Initialize(graph);
+                return graph;
+            });
 
         static T CreatePrivate<T>(FlowGraph owner, string name, Func<T> create) where T : FlowGraph, IBtsmtlSkillFlowGraph
         {

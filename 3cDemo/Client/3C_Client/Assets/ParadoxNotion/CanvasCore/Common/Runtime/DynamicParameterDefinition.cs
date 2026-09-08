@@ -32,6 +32,8 @@ namespace ParadoxNotion
             private set { _ID = value; }
         }
 
+        public bool hasStableIdentity => !string.IsNullOrWhiteSpace(_ID);
+
         //The name of the definition
         public string name {
             get { return _name; }
@@ -42,8 +44,10 @@ namespace ParadoxNotion
         public Type type { get; set; }
 
         public DynamicParameterDefinition() { }
-        public DynamicParameterDefinition(string name, Type type) {
-            this.ID = Guid.NewGuid().ToString();
+        public DynamicParameterDefinition(string name, Type type) : this(Guid.NewGuid().ToString(), name, type) { }
+        public DynamicParameterDefinition(string identity, string name, Type type) {
+            if (string.IsNullOrWhiteSpace(identity)) { throw new ArgumentException("Parameter identity is required.", nameof(identity)); }
+            this.ID = identity;
             this.name = name;
             this.type = type;
         }

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using FlowCanvas;
@@ -145,3 +146,4 @@ namespace ThirdPersonCharacter.Control.Authoring
         Dictionary<Graph, Graph> IGraphAssignable.instances { get => new(); set => throw new InvalidOperationException("Skill states do not create authoring graph runtime instances."); }
     }
 }
+#endif

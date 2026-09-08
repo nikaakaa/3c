@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using BTSMTL.Timeline;
 using ParadoxNotion.Design;
@@ -87,3 +88,4 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -77,3 +78,4 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 }
+#endif

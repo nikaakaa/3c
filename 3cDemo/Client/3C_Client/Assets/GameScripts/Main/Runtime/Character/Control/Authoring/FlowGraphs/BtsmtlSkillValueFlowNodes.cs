@@ -1,10 +1,16 @@
+#if UNITY_EDITOR
 using System;
 using ParadoxNotion.Design;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
-    public abstract class BtsmtlSkillInputFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    public interface IBtsmtlSkillInputNode
+    {
+        string InputId { get; }
+    }
+
+    public abstract class BtsmtlSkillInputFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillInputNode
     {
         [SerializeField] string m_InputId = string.Empty;
         public string InputId => m_InputId;
@@ -50,3 +56,4 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
 }
+#endif

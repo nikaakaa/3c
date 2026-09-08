@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using FlowCanvas;
 using FlowCanvas.Macros;
@@ -19,6 +20,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => BtsmtlSkillFlowGraphRole.Subgraph;
         public override bool canAcceptVariableDrops => false;
+        public override bool allowsPortIdentityAliases => false;
         public override bool usesExternalExecution => true;
         public override bool CanAuthorNodeType(Type nodeType) => BtsmtlSkillFlowGraphRules.Allows(nodeType, Role, true);
 
@@ -93,3 +95,4 @@ namespace ThirdPersonCharacter.Control.Authoring
 #endif
     }
 }
+#endif

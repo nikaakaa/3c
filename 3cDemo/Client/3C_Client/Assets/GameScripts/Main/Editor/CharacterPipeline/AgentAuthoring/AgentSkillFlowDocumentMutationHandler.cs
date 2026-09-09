@@ -90,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         session.Report.Error(path + ".graphs[" + graph.id + "].owner", "skill_graph_owner_file_invalid", "私有Skill Graph必须保存在调用方所属的技能文件中。");
                         valid = false;
                     }
+                    valid &= ValidateExistingGraphIdentity(graph, graphAsset, path, session.Report);
                 }
                 foreach (AgentPackageSkillFlowNode node in graph?.nodes ?? new List<AgentPackageSkillFlowNode>())
                 {
@@ -198,6 +199,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         skill.actionContextAssetGuid), out _))
                 {
                     session.Report.Error(path + ".skills[" + skill.skillId + "].actionContext", "skill_action_context_unresolved", "Skill ActionContext无法解析。");
+                    valid = false;
+                }
+            }
+            return valid;
+        }
+
+        static bool ValidateExistingGraphIdentity(
+            AgentPackageSkillFlowGraphFile target,
+            FlowGraph asset,
+            string path,
+            AgentCompileReport report)
+        {
+            bool valid = true;
+            var nodes = asset.allNodes.OfType<FlowNode>()
+                .ToDictionary(value => value.UID, StringComparer.Ordinal);
+            var edges = asset.allNodes.OfType<FlowNode>()
+                .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                .ToDictionary(value => value.UID, StringComparer.Ordinal);
+            foreach (AgentPackageSkillGraphAnchor anchor in target.anchors ?? new List<AgentPackageSkillGraphAnchor>())
+            {
+                if (!string.IsNullOrEmpty(anchor?.nodeId) &&
+                    !anchor.nodeId.StartsWith("local:", StringComparison.Ordinal) &&
+                    !nodes.ContainsKey(anchor.nodeId))
+                {
+                    report.Error(path + ".graphs[" + target.id + "].anchors[" + anchor.kind + "]",
+                        "skill_anchor_identity_missing",
+                        "Document anchor identity不存在于当前正式Skill Graph。");
+                    valid = false;
+                }
+            }
+            foreach (AgentPackageSkillFlowNode node in target.nodes ?? new List<AgentPackageSkillFlowNode>())
+            {
+                if (!string.IsNullOrEmpty(node?.id) &&
+                    !node.id.StartsWith("local:", StringComparison.Ordinal) &&
+                    !nodes.ContainsKey(node.id))
+                {
+                    report.Error(path + ".graphs[" + target.id + "].nodes[" + node.id + "]",
+                        "skill_node_identity_missing",
+                        "Document Node identity不存在于当前正式Skill Graph。");
+                    valid = false;
+                }
+            }
+            foreach (AgentPackageSkillFlowEdge edge in target.edges ?? new List<AgentPackageSkillFlowEdge>())
+            {
+                if (!string.IsNullOrEmpty(edge?.id) &&
+                    !edge.id.StartsWith("local:", StringComparison.Ordinal) &&
+                    !edges.ContainsKey(edge.id))
+                {
+                    report.Error(path + ".graphs[" + target.id + "].edges[" + edge.id + "]",
+                        "skill_edge_identity_missing",
+                        "Document Edge identity不存在于当前正式Skill Graph。");
                     valid = false;
                 }
             }

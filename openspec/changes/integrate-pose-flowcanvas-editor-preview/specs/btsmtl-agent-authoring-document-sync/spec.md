@@ -46,6 +46,8 @@
 
 v7 MUST在现有整包语义下表达Profile装配、各角色图、层接口／Implementation、Slot／Group、Mask／Blend Profile、Rig控制以及既有Action Timeline动画设置。Timeline的Slot轨道、Sections和Blend设置 MUST扩展原timeline.json／curves.json及其owner，不新增并行Montage分片或资产。
 
+动画字段、资源目录及局部作者约束 MUST来自动画模块与Animation Input Contract，不能以Gameplay编译成功为前提。整包apply继续处理所有实际受影响owner及跨域引用，不引入第二动画Document服务或跳过约束开关；角色集成错误与动画局部错误必须分开归属。
+
 Player与Timeline Segment的AnimationClip引用必须为结构化真实对象引用，包含GUID、合法local file id及一致路径；新增可拥有的图、声明或子资产使用正式local identity分配，既有Clip不能伪造local资源。Profile不重复保存Player资源来源，generated binding不可编辑。
 
 所有分片 MUST服从整包hash、五生命周期、Conflict与反向导出，不提供文件级apply、名称猜测或第二套Presentation同步服务。
@@ -58,12 +60,12 @@ Player与Timeline Segment的AnimationClip引用必须为结构化真实对象引
 - **WHEN** 调用方修改Action Timeline动画轨道的Slot引用
 - **THEN** 该Timeline与Rig Slot目录引用 MUST进入同一事务语义，原动画片段和玩法窗口不复制
 
-#### Scenario: AI只修改一个Clip Binding
+#### Scenario: AI只修改一个Player资源
 - **WHEN** 调用方改变一个Player使用的资源
 - **THEN** v7 MUST写入Player唯一结构化资源引用并锁定整包及真实owner
 - **AND** 不保留Source Slot／Profile双重binding
 
-#### Scenario: AI创建Profile binding子资产
+#### Scenario: AI提交退役Profile binding
 - **WHEN** v7目标请求创建退役Source Slot或重复Profile source binding
 - **THEN** parser MUST拒绝旧创建语义并要求直接资源或typed资源参数
 - **AND** 不得生成兼容子资产
@@ -120,7 +122,7 @@ Reconciler MUST只计算完整typed计划，人工编辑与Document共用相同C
 - **WHEN** 当前版本包checkout后原样dry-run
 - **THEN** 计划 MUST为空，不因显示名、可选字段或布局格式产生假变更
 
-#### Scenario: apply新增Clip Source Slot与binding
+#### Scenario: apply提交退役Source Slot与binding
 - **WHEN** v7 apply目标要求新增旧Source Slot与重复binding
 - **THEN** 计划 MUST拒绝退役作者模型且不写资产
 - **AND** 新的Player资源和Layer接口仍进入同一正式Mutation

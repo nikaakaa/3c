@@ -41,6 +41,8 @@
 
 唯一Pose Compiler MUST通过既有Closure、typed语义展开、Topology、Family Lowering、Stage、Value Lifetime、Workspace与Seal链生成不可变Program Image。作者一个Slot、层或Rig节点可以对应多条内部operation；内部步骤 MUST具有稳定作者owner、步骤种类、端口和完整call-site来源，不形成第二份可编辑图。
 
+该Compiler MUST只依赖动画根、Rig／资源及动画输入合同，不接收或遍历SkillGraphs、完整Character Semantic IR或Numeric Target布局。独立入口与角色总Build MUST调用同一编译实现；角色装配单独绑定Gameplay的实际输入与资源上下文，不能将技能编译作为进入Pose编译的前置条件。
+
 Source capture、Action读取、Slot、曲线传播、空间转换、Goal组装与FBBIK MUST进入显式有序依赖。没有作者Rig／FBIK请求时不得为了满足旧固定拓扑而补建求解；存在唯一身体求解请求且有效贡献为零时，保持现有固定容量零Goal语义。每个source usage每帧最多capture一次，每个有效operation仅按计划执行，PlayableGraph最多Evaluate一次，Physical Bones只由唯一Final Publication写入。Runtime不重新编译、重排或解释作者图。
 
 #### Scenario: 一个Slot展开多个步骤

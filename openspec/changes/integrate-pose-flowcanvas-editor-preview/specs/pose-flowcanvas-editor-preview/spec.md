@@ -162,3 +162,34 @@ Control Rig MUST按Forwards Solve和明确的数据依赖组织已有骨骼控�
 #### Scenario: 迁移成功
 - **WHEN** 正式事务保存了新图、Timeline设置与Rig控制引用
 - **THEN** 反向导出 MUST只保留一套正式作者数据，旧作者类型不再可创建或编辑
+
+### Requirement: Pose必须独立编译并由角色层完成接口装配
+
+完整动画根、Rig、资源、可达图及Animation Input Contract MUST足以进入唯一Pose Compiler，无需合法SkillGraphs、Character Program、Numeric Target或场景Actor。输入合同只声明所需Fact／参数／Slot消息与能力，MUST不伪造运行值、读取过期角色产物或遍历技能实现来填充。
+
+独立结果 MUST包含不可变Pose程序、资源及依赖清单、来源映射和动画输入接口，能够以自身输入identity／hash保存和复用。角色总Build MUST调用同一Compiler或复用精确匹配结果，在装配时绑定Gameplay producer、参数、Timeline播放消息、Rig与World能力，并原子发布角色产物。角色装配失败不能否定已成功的独立Pose编译，也不能发布未绑定的角色Projection。
+
+#### Scenario: 技能入口缺失但动画输入完整
+- **WHEN** Character的技能入口不完整，但动画图、Rig、资源和动画输入声明合法
+- **THEN** 独立Pose编译 MUST成功生成自己的正式结果
+- **AND** 角色组装／发布 MUST单独报告缺失技能输入，不把该错误当成Pose错误
+
+#### Scenario: 动画自身的输入声明缺失
+- **WHEN** 动画节点引用了未声明的参数、Slot消息或所需Rig资源
+- **THEN** Pose编译 MUST失败并定位动画owner及输入
+- **AND** MUST不生成假输入、默认角色或旧Program补足声明
+
+#### Scenario: 没有角色上下文
+- **WHEN** 作者仅提供完整动画根与其依赖并点击编译动画
+- **THEN** 系统 MUST能执行唯一Pose编译，不要求先打开角色或配置SkillGraphs
+- **AND** 普通Play观察仍需要真实运行实例，编译本身不创建预览角色
+
+#### Scenario: 总Build复用动画结果
+- **WHEN** 动画输入hash与已生成Pose结果一致且角色输入合法
+- **THEN** 总Build MUST复用同一动画结果并生成正式接口绑定
+- **AND** MUST不维护另一份仅供角色使用的Pose编译器或旧图中转
+
+#### Scenario: 技能实现改变
+- **WHEN** 技能内部逻辑改变但公开动画输入合同与动画作者数据未改变
+- **THEN** Pose编译结果的失效判定 MUST只依据自身真实依赖
+- **AND** 角色总Build仍 MUST重新处理受影响的Gameplay结果及绑定，不擅自放行错误接口

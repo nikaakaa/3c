@@ -59,9 +59,9 @@ Build、资源生成、作者迁移与正式资产发布 MUST由明确命令触�
 
 #### Scenario: 显式点击Compile
 
-- **WHEN** 作者点击当前domain正式提供的Compile或Build命令
-- **THEN** Shell MUST只调用该domain唯一正式命令入口
-- **AND** MUST不复制compiler、发布事务或AssetDatabase保存逻辑
+- **WHEN** 作者在Pose窗口点击“编译动画”
+- **THEN** Shell MUST调用唯一独立Pose编译入口，不先编译Character或SkillGraphs
+- **AND** “发布角色” MUST作为有明确Character上下文的独立装配命令，不复制Compiler或发布逻辑
 
 ## ADDED Requirements
 

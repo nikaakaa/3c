@@ -45,6 +45,10 @@
 - [ ] 6.3 扩展作者节点到多operation、端口、内部步骤及Timeline／层／Rig调用的Source Map。
 - [ ] 6.4 更新必要的动画指令、产物与codec合同，保持原Runtime owner、固定容量和唯一最终写入。
 - [ ] 6.5 将作者版本、Rig、Implementation、Actor generation和call-site匹配覆盖到新组织全部观察入口。
+- [ ] 6.6 建立动画侧Animation Input Contract，声明Fact、参数、Slot播放输入与World能力，不从SkillGraphs或旧Gameplay产物反推。
+- [ ] 6.7 拆出只接收动画根、Rig、资源和输入声明的Pose编译请求与不可变结果，移除对Character前端及Numeric布局的依赖。
+- [ ] 6.8 将Pose窗口和正式命令接到独立动画编译入口，无Character上下文时仍能编译完整动画输入。
+- [ ] 6.9 将Character总Build改为复用同一Pose Compiler／结果，在装配层绑定Gameplay输入并原子发布，删除先技能编译才能进入Pose的调用链。
 
 ## 7. 作者窗口
 
@@ -61,6 +65,7 @@
 - [ ] 8.3 将新图、Rig关联设置和Timeline动画字段纳入同一保存、回滚与反向导出事务。
 - [ ] 8.4 同步design.md列出的现行spec与project.md冲突条款，删除旧作者显式流水线、Source Slot及旧版本描述。
 - [ ] 8.5 整理一次性Editor迁移入口，禁止普通窗口、Runtime或Build暗中迁移旧作者资产。
+- [ ] 8.6 将动画目录与Document动画字段处理接到独立动画合同，保留现有整包事务，不以Gameplay编译成功作为动画编辑前提。
 
 ## 9. 最后迁移与发布
 

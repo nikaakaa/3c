@@ -6,6 +6,7 @@
 
 - **BREAKING**：本提案从“接通原生图UI与观察”扩大为“UE式动画作者组织与编译适配”。原来的20/21完成计数只代表旧范围；受新职责影响的任务重新打开，不另建change。
 - AnimGraph作为角色动画总装图；Animation Layer、状态机、状态Pose图、转换条件图、Control Rig分别拥有明确输入、输出和下钻入口，只有一份正式作者拓扑。
+- **BREAKING**：Pose成为独立编译模块。动画图、Rig、资源及动画侧输入声明即可进入同一个Pose Compiler，不先编译Character／SkillGraphs；角色总Build只复用其结果并完成Gameplay到动画的接口绑定及原子发布。技能缺失可以阻止角色发布，不能阻止合法Pose的编辑与编译。
 - Player按UE习惯直接选择AnimationClip／Blend Space／Motion Matching资源或显式资源参数；废除面向作者的Source Slot与Profile Binding两次选择。资源准备、dense source binding和usage identity由编译器生成。
 - 现有有限Action Timeline承担本项目的Montage职责，在原资产内补齐Slot轨道、Clip引用、Sections、Blend In／Out和Blend Profile。动画片段、玩法窗口、Motion与MotionWarp继续共用原Timeline时钟与生命周期；原生AnimationClip唯一拥有素材骨骼与注册曲线，不新增并行Montage资产或播放器。
 - Slot是Montage进入Pose流的明确位置，能位于AnimGraph、Animation Layer或State Pose图。Slot选择稳定Slot定义，不保存Bone Mask；动画层可以封装状态机、Slot与Layered Blend Per Bone，但不自动获得私有Slot或独立Montage实例。
@@ -24,7 +25,7 @@
 
 ### Modified Capabilities
 
-- `character-presentation-pose-graph`：作者层次与内部运行拓扑分离；直接资源Player、层内Slot、曲线传播、控制图和编译展开。
+- `character-presentation-pose-graph`：作者层次与内部运行拓扑分离；直接资源Player、层内Slot、曲线传播、控制图、独立Pose编译及角色接口装配。
 - `graph-authoring-domain-framework`：统一角色、接口、作用域、字段、交互及多operation来源合同。
 - `graph-authoring-editor-shell`：同一窗口按图职责提供UE式导航、状态连线、作者详情及运行观察。
 - `btsmtl-agent-authoring-document-sync`：v7动画分片、完整owner事务、旧作者数据迁移与唯一反向导出。
@@ -35,6 +36,7 @@
 
 - Pose作者Capability、资源选择、图角色／接口、Slot与Group定义、Montage、Mask／Profile、Rig控制目标和Document。
 - Pose Compiler的Closure、语义展开、Topology、Stage／Value／Workspace规划及Source Map；允许扩展正式动画指令和所需运行描述，不建立第二Compiler或Runtime。
+- 将动画编译输入构造从Character Semantic Frontend中拆出。Pose窗口调用动画模块入口；角色构建器分别取得Gameplay和Pose结果，再绑定Fact／参数／Slot／Timeline动画接口。不能以跳过技能检查、读取旧角色产物或伪造输入实现所谓独立编译。
 - 复用既有Linked Pose接口、Implementation／Group绑定和调用生命周期承载Animation Layer；复用原Native帧事务、Foot／Goal／FBBIK算法、Animancer source backend和Final Publication。
 - Montage式设置直接扩展现有Action Timeline动画内容合同；技能图重构、动作准入、战斗规则和网络执行仍归原技能提案，不借此调整它们的业务行为。
 - 当前v28观察元数据是可复用基础，不承诺新作者结构仍使用v28产物。最终schema由同一编译链一次升级，旧产物明确Stale，禁止双reader、自动Build或运行时修复。

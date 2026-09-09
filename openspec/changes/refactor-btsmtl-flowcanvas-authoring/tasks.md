@@ -108,7 +108,7 @@
 - [x] 4.1.3 替换技能入口的旧图发现：Definition.SkillGraphs提供明确原生根，CharacterSkillCompilationDiscovery按SkillDefinition稳定入口ID解析并生成原生调用记录，CharacterSemanticEmitter通过BtsmtlSkillGraphCompiler调用叶节点／Macro／边发射器进入唯一Semantic IR。源码审计无旧图对象中转；脚本检查无CS编译错误。资产赋值与构建验收仍在5及8，不由此项代替。
 
   代码入口已切换；存量资产尚未填入SkillGraphs，缺失时明确报错，不回到旧RootTree查找技能。SkillDefinition的入口ID保持稳定业务身份，不增加另一份技能定义。
-- [ ] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
+- [x] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
 
   当前进度：普通黑板使用原生Variable保存名称、类型和默认值，声明元数据只记录作用域／生命周期／输入与窗口绑定；编译取已存值，进入共用声明快照和作用域发射器。原生读写节点已接类型及Config只读检查。原生窗口查询按每次调用的祖先作用域匹配Decision TreeClip投射，记录候选来源，不使用共享图的首次出现代替其他调用；正式构建来源核对仍待完成。
 - [ ] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。

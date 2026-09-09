@@ -136,7 +136,15 @@ namespace ThirdPersonCharacter.Control.Authoring
             return reason == null;
         }
 
-        public static void Apply(FlowGraph graph, string title, Action mutation, bool recordUndo = true)
+        public static void Apply(FlowGraph graph, string title, Action mutation, bool recordUndo = true) =>
+            Apply(graph, title, mutation, recordUndo, Array.Empty<UnityEngine.Object>());
+
+        public static void Apply(
+            FlowGraph graph,
+            string title,
+            Action mutation,
+            bool recordUndo,
+            IEnumerable<UnityEngine.Object> additionalOwners)
         {
             if (graph is not IBtsmtlSkillFlowGraph || graph.isEditorReadOnly)
                 throw new InvalidOperationException("The skill authoring graph is not writable.");
@@ -144,6 +152,13 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (depth.Value != 0)
                 throw new InvalidOperationException("A skill mutation must join its existing transaction instead of nesting another one.");
             graph.SelfSerialize();
+            var undoOwners = new List<UnityEngine.Object> { graph };
+            foreach (UnityEngine.Object owner in additionalOwners ?? Array.Empty<UnityEngine.Object>())
+                if (owner && !undoOwners.Contains(owner))
+                    undoOwners.Add(owner);
+            foreach (UnityEngine.Object owner in undoOwners)
+                if (owner is FlowGraph ownerGraph)
+                    ownerGraph.SelfSerialize();
             var previousOwnedAssets = BtsmtlSkillOwnedAssets.Collect(graph);
             int group = -1;
             if (recordUndo)
@@ -151,7 +166,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 Undo.IncrementCurrentGroup();
                 group = Undo.GetCurrentGroup();
                 Undo.SetCurrentGroupName(title);
-                Undo.RegisterCompleteObjectUndo(graph, title);
+                Undo.RegisterCompleteObjectUndo(undoOwners.ToArray(), title);
             }
             depth.Value++;
             try
@@ -160,7 +175,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 BtsmtlSkillGraphClosure.Validate(graph, false);
                 BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
                 graph.SelfSerialize();
-                EditorUtility.SetDirty(graph);
+                foreach (UnityEngine.Object owner in undoOwners)
+                    EditorUtility.SetDirty(owner);
                 if (recordUndo)
                     Undo.CollapseUndoOperations(group);
             }
@@ -170,7 +186,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                 {
                     Undo.FlushUndoRecordObjects();
                     Undo.RevertAllDownToGroup(group);
-                    graph.SelfDeserialize();
+                    foreach (UnityEngine.Object owner in undoOwners)
+                        if (owner is FlowGraph ownerGraph)
+                            ownerGraph.SelfDeserialize();
                     GraphEditorUtility.activeElement = null;
                 }
                 throw;

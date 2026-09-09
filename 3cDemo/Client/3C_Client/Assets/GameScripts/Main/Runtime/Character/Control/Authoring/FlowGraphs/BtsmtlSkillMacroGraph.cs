@@ -72,6 +72,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         protected override void OnGraphEditorToolbar()
         {
             GUILayout.Label(AssetDatabase.IsMainAsset(this) ? "共享 Macro" : "私有 Macro", EditorStyles.miniLabel);
+            if (GUILayout.Button("编辑接口", EditorStyles.toolbarButton))
+                BtsmtlSkillMacroInterface.OpenEditor(this);
             BtsmtlSkillObservationToolbar.Draw(this);
         }
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);

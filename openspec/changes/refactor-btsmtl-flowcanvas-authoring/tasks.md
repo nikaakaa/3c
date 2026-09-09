@@ -214,3 +214,5 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.4.2 最终汇总代码与资产提交、正式CLI证据及各项结论；编译成功不得代替交互、运行观察或性能完成，所有任务按真实证据收口。
 - [ ] 8.5 核对Character RootTree删除后的Definition、GA精确导航、provider Blackboard、Simulation Pipeline和Network Adapter规范一致性；运行OpenSpec严格校验并输出仍存在的非技能RootTree残留清单。
 
+  当前残留清单：`AgentAIControllerSnapshotExporter`、`AgentAIMutationLowering`、`AgentAIControllerMutationHandler`及AI事务owner仍使用AIController RootTree，属于保留的非技能领域；旧通用Graph/State/Timeline/Blackboard Mutation已由域掩码限制为AIController。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口。正式CLI/运行一致性核对仍待收口。
+

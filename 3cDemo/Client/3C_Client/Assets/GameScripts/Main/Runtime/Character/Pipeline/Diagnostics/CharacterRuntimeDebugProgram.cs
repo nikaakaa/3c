@@ -245,7 +245,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
 
         static RuntimeSourceTarget ResolveTarget(ProgramSourceMapEntry source)
         {
-            if (source.TargetKind is ProgramSourceTargetKind.OperationPort or ProgramSourceTargetKind.GraphInvocation)
+            if (source.TargetKind is ProgramSourceTargetKind.OperationPort or
+                ProgramSourceTargetKind.GraphInvocation or
+                ProgramSourceTargetKind.OptimizedAway)
                 return RuntimeSourceTarget.Source;
             RuntimeSourceTargetKind kind = source.TargetKind switch
             {

@@ -1388,7 +1388,8 @@ namespace ThirdPersonSimulation
         ControlState = 9,
         ControlTransition = 10,
         OperationPort = 11,
-        GraphInvocation = 12
+        GraphInvocation = 12,
+        OptimizedAway = 13
     }
 
     public enum ProgramValuePortDirection : byte
@@ -1523,6 +1524,12 @@ namespace ThirdPersonSimulation
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.InvocationCallerId) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
                             throw new InvalidDataException("Program graph invocation source is incomplete.");
+                        break;
+                    case ProgramSourceTargetKind.OptimizedAway:
+                        if (string.IsNullOrEmpty(entry.GraphId) ||
+                            string.IsNullOrEmpty(entry.NodeId) ||
+                            string.IsNullOrEmpty(entry.ContentHash))
+                            throw new InvalidDataException("Program optimized source is incomplete.");
                         break;
                     case ProgramSourceTargetKind.StateSlot:
                         RequireTarget(entry.TargetIndex, stateSlots, "state slot");

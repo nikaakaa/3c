@@ -199,6 +199,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AddSourceMap(ProgramSourceTargetKind.OperationPort, operation.Value, source, compiledPortId, direction);
         }
 
+        public void DeclareOptimizedSource(CharacterSimulationSourceLocation source)
+        {
+            if (string.IsNullOrEmpty(source.GraphId) || string.IsNullOrEmpty(source.NodeId) ||
+                string.IsNullOrEmpty(source.ContentHash))
+                throw new ArgumentException("Optimized source mapping requires graph, node and content identities.", nameof(source));
+            AddSourceMap(ProgramSourceTargetKind.OptimizedAway, 0, source);
+        }
+
         public void DeclareGraphInvocation(OperationHandle owner, CharacterSimulationSourceLocation source,
             ProgramInvocationCallerKind callerKind, string callerId, string callerClipId)
         {

@@ -88,3 +88,49 @@
 - **WHEN** 根及部分子图迁移后任一保存失败
 - **THEN** 事务 MUST恢复迁移前完整资产闭包，正式产物 MUST不采用半迁移内容
 
+### Requirement: 每个GA式技能必须只有一个正式入口图
+
+每个正式Skill MUST由一个稳定Skill identity和一个Entry Graph组成。Skill外壳 MUST保存激活、目标、Action Context、替换和后续关系；执行Graph MUST承载节点、Macro、State、Condition和Timeline闭包。系统 MUST拒绝同一Skill的多个执行根、隐藏入口或从旧Character RootTree推断入口。
+
+#### Scenario: 激活技能
+- **WHEN** 输入或正式控制规则请求一个Skill
+- **THEN** 系统 MUST通过该Skill唯一Entry Graph创建一次正式激活
+- **AND** 编译、网络、回滚和观察 MUST使用同一Skill root identity
+
+### Requirement: Skill变量必须按正式provider和生命周期访问
+
+技能作者面板 MUST区分Character State、Ability Attribute、GameplayTag、Input/TargetData、Skill Local Blackboard、State、ActionInstance和Frame Fact。每个变量引用 MUST包含owner、稳定声明ID、类型、读写权限和生命周期。Skill MUST不通过名字、反射、路径扫描或某个Skill Graph的隐式共享变量访问其他provider。
+
+#### Scenario: 读取角色移动事实
+- **WHEN** Skill读取速度、朝向或移动模式
+- **THEN** 系统 MUST提供只读typed fact
+- **AND** Skill MUST不直接写入Movement Runtime字段
+
+#### Scenario: 修改能力数值
+- **WHEN** Skill需要修改资源、层数或冷却等会受GameplayEffect影响的数值
+- **THEN** 系统 MUST通过Ability Attribute/GameplayEffect合同写入
+- **AND** MUST不把该数值复制成一个Skill Local Blackboard变量
+
+#### Scenario: 创建技能私有变量
+- **WHEN** 作者在当前Skill Graph创建变量
+- **THEN** 变量 MUST属于当前Graph的Local Blackboard并拥有稳定声明ID
+- **AND** 从其他provider拖入的变量 MUST只保存显式引用，不复制其正式值
+
+### Requirement: Skill Timeline必须表达有限动作并输出表现合同
+
+Skill Timeline MUST能够表达动作AnimationTrack、AnimationClip、Action Slot、进入/退出混合请求、命中窗口、取消和完成时序。Timeline MUST输出稳定的Animation Producer/Playback合同；最终Locomotion混合、Layer、IK和Output Pose MUST由Presentation/PoseGraph完成，Skill MUST不直接写最终Pose。
+
+#### Scenario: 技能播放动作
+- **WHEN** GA式Skill进入动作Timeline
+- **THEN** Program MUST按Timeline发出动作表现请求并等待完成、混出或中断
+- **AND** Presentation MUST依据该请求完成最终动画组合
+
+### Requirement: Skill Program必须进入可替换的Simulation Pipeline
+
+正式Skill Program MUST通过Session Composition进入可校验的Simulation Pipeline。Pipeline MUST区分Ingress、Schedule、Step和Egress，并验证Program、Backend、World Solver、Snapshot和Pass Contract兼容性。网络实现 MAY替换Session Source和Pipeline Adapter，但 MUST不改变Skill的执行语义。
+
+#### Scenario: 使用Rollback或Server Authority运行同一Skill
+- **WHEN** 同一Character Program被不同正式Session Pipeline加载
+- **THEN** Skill语义、ActionInstance身份和状态恢复合同 MUST保持一致
+- **AND** 网络层 MUST同步输入、权威状态、Hash或Snapshot，不得复制作者Graph或最终Pose
+

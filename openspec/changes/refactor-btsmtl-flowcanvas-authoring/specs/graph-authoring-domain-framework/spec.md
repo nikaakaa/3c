@@ -22,13 +22,20 @@
 
 本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
-共享Canvas、Node View、Port View、Edge View、Details、Navigator、Data Catalog与StateMachine表面 MUST以现有BTSMTL作者UI实现作为提取基线。系统 MUST通过抽取domain-neutral交互并注入document、capability、mutation与presenter边界完成共享化；MUST不新建功能更少的替代GraphView再切换BTSMTL入口。BTSMTL现有布局、节点信息、黑板变量拖拽、Flow/Property Port、节点搜索与创建、selection、框选、clipboard、Undo、Inspector、子树/StateMachine下钻和Live Debug行为 MUST保持。
+共享Canvas、Node View、Port View、Edge View、Details、Navigator、Data Catalog与StateMachine表面 MUST以现有BTSMTL作者UI实现作为提取基线。系统 MUST通过抽取domain-neutral交互并注入document、capability、mutation与presenter边界完成共享化；MUST不新建功能更少的替代GraphView再切换BTSMTL入口。BTSMTL现有布局、节点信息、provider-aware Blackboard变量拖拽、Flow/Property Port、节点搜索与创建、selection、框选、clipboard、Undo、Inspector、子树/StateMachine下钻和Live Debug行为 MUST保持。Blackboard面板 MUST区分Skill Local变量与外部Character State、Ability Attribute、GameplayTag、Input/TargetData和Frame Fact引用，不得把外部值复制为第二份变量。
+
+#### Scenario: 拖出Skill Blackboard变量
+
+- **WHEN** 作者从Skill Graph Blackboard或明确provider目录把变量拖到BTSMTL画布
+- **THEN** 共享实现 MUST保留原拖拽手势、变量节点表现、typed Port和正式BTSMTL mutation语义
+- **AND** 外部provider MUST以owner和声明ID引用，不得复制正式值
+- **AND** MUST不把该操作降级成功能不完整的通用节点创建
 
 #### Scenario: 拖出黑板变量
 
-- **WHEN** 作者从现有Data Catalog把黑板变量拖到BTSMTL画布
+- **WHEN** 未迁移领域作者从其正式Data Catalog把黑板变量拖到BTSMTL画布
 - **THEN** 共享实现 MUST保留原拖拽手势、变量节点表现、Property Port和正式BTSMTL mutation语义
-- **AND** MUST不把该操作降级成功能不完整的通用节点创建
+- **AND** Skill Graph中的provider规则 MUST不改变该未迁移领域的既有业务语义
 
 ### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
 

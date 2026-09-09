@@ -56,15 +56,28 @@
 - **WHEN** 部分观测事件被覆盖
 - **THEN** UI MUST标记数据缺口，不将缺失解释为节点未执行
 
-### Requirement: 场景预览必须观察同一正式执行链
+### Requirement: 技能预览必须只是普通运行观察
 
-预览 MUST通过唯一正式场景协调器驱动与游戏相同版本的编译产物。构建、重启、暂停、继续和单步 MUST委托正式入口；一步为协调器规定的完整安全更新单位，并显示模拟tick及表现frame。MUST不建立窗口私有播放器、时钟或在半帧暂停。未提供正式节点断点能力时 MUST不展示可用的原生执行断点。
+Unity Play中的技能 MUST通过原Session和ActionInstance普通执行，窗口只观察某次真实释放的已完成结果。窗口 MUST不创建预览角色、技能实例、时钟或独立场景，也不要求专用场景协调器作为前提。多个实例时 MUST明确选择；释放结束后不得自动混入下一次释放。若提供释放按钮，MUST只提交正式技能请求并遵循原准入规则。窗口不得提供私有播放、单步、seek或原生执行断点。
 
-#### Scenario: 预览暂停后单步
-- **WHEN** 作者在正式预览中请求一步
-- **THEN** 协调器 MUST完成一个规定更新单位再发布快照，图窗口只更新观察
+#### Scenario: 普通输入释放技能
+- **WHEN** Play中角色通过正常输入启动技能
+- **THEN** 窗口 MUST能绑定此次真实释放，无需另启动预览运行
+
+#### Scenario: 停止Play或暂停Unity
+- **WHEN** Unity暂停或退出Play
+- **THEN** 窗口 MUST分别保留最后完成结果或释放运行绑定，不自行推进技能
 
 #### Scenario: 单独子图缺少输入上下文
 - **WHEN** 子图没有可用的正式角色及参数上下文
-- **THEN** 系统 MUST提示从父图运行并定位调用，不伪造默认输入启动预览
+- **THEN** 系统 MUST等待真实角色与释放实例，并沿父调用定位，不伪造默认输入启动预览
+
+### Requirement: 运行观察必须绑定正式Simulation Session
+
+技能观察 MUST绑定Actor、Simulation Session、Program identity、Pipeline/authority identity、SkillId、ActionInstanceId、generation和调用路径。Rollback重演、Server Authority纠正或Snapshot恢复后，观察 MUST按正式运行身份重新确认目标；MUST不把网络传输对象、作者变量名或最终Pose当作运行身份。
+
+#### Scenario: 网络纠正后继续观察Skill
+- **WHEN** Server Authority或Rollback对已选择Skill释放执行纠正
+- **THEN** 观察窗口 MUST显示目标版本变化或重新绑定正式实例
+- **AND** MUST不把纠正前的作者Graph状态伪装成当前运行状态
 

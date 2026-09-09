@@ -52,3 +52,21 @@ Document MUST把技能RootAsset解析或创建为独立FlowGraph主资产，Defi
 - **THEN** 同一事务 MUST恢复Definition及已有owner的修改，移除本次新建根文件及其私有内容
 - **AND** 事务开始前的共享资产 MUST保留，结果 MUST不得报告applied、saved或Clean成功
 
+### Requirement: Document必须保持Skill变量provider和声明合同
+
+Document MUST表达Skill变量所属provider、owner identity、稳定声明ID、类型、scope、lifetime、读写权限及输入/事实绑定。Character State、Ability Attribute、GameplayTag、Input/TargetData和Skill Local Blackboard MUST保持不同的业务语义；Document MUST不把外部provider复制为Skill局部变量。
+
+#### Scenario: 导出Skill变量引用
+- **WHEN** 正式Skill Graph引用Character State或Ability provider变量
+- **THEN** Document MUST保存显式owner和声明身份
+- **AND** 反向导出 MUST保持引用而不是创建第二份变量值
+
+### Requirement: Document不得成为网络运行状态包
+
+Document MUST不保存PredictionKey、ActionInstance当前值、Rollback Snapshot、State Hash、Session transport状态或最终Animation Pose。Document MAY保存编译来源、provider schema和稳定业务引用；网络运行状态 MUST由正式Simulation Session管理。
+
+#### Scenario: Checkout运行过的Skill
+- **WHEN** Agent对已有Network Session执行checkout
+- **THEN** 文档 MUST只导出作者源和只读编译上下文
+- **AND** MUST不把运行时状态写入editable内容或反向导出目标
+

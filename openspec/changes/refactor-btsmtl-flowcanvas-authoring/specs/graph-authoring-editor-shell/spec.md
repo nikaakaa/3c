@@ -6,11 +6,17 @@
 
 唯一`GraphAuthoringEditorShell` MUST提供Toolbar、Navigator、Graph Canvas、Details与可折叠Bottom Dock五个通用区域。Shell MUST继续通过显式domain adapter取得各区域内容，不得按BTSMTL Node、AI Node、Pose Node、AnimationChannel、Blackboard或Runtime Trace类型构造领域UI。Graph Canvas MUST继续承载唯一GraphView、selection、breadcrumb、搜索、clipboard和Undo链路；其它区域 MUST不保存第二份node、edge或selection集合。
 
+#### Scenario: 打开正式BTSMTL Skill Graph
+
+- **WHEN** 作者通过正式入口打开Skill Graph
+- **THEN** Shell MUST在Navigator装配当前Skill Graph Data Catalog、在Graph Canvas装配唯一原生Skill Graph editor、在Details装配BTSMTL capability presenter
+- **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
+
 #### Scenario: 打开BTSMTL RootTree
 
-- **WHEN** 作者通过正式入口打开RootTree
-- **THEN** Shell MUST在Navigator装配当前Graph Data Catalog、在Graph Canvas装配唯一`GraphAuthoringCanvasView`的BTSMTL domain adapter、在Details装配BTSMTL capability presenter
-- **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
+- **WHEN** 未迁移领域通过正式入口打开Legacy RootTree
+- **THEN** Shell MUST在Navigator装配当前Graph Data Catalog、在Graph Canvas装配唯一BTSMTL domain adapter、在Details装配BTSMTL capability presenter
+- **AND** Character Skill正式入口 MUST不把该Legacy RootTree作为技能或角色主线入口
 
 #### Scenario: 打开Character Pose Graph
 
@@ -155,5 +161,21 @@ Shell MUST只通过domain diagnostics adapter显示编译、validation或runtime
 - **WHEN** 用户双击Pose Graph asset
 - **THEN** 正式入口 MUST打开基于Shell的Pose domain document
 - **AND** BTSMTL breadcrumb和runtime context MUST不被写入Pose asset
+
+## ADDED Requirements
+
+### Requirement: Skill Graph Blackboard必须提供provider-aware作者入口
+
+Skill Graph Shell MUST显示当前Skill Local Blackboard以及可引用的Character State、Ability Attribute、GameplayTag、Input/TargetData和Frame Fact provider。作者创建Skill变量时 MUST创建当前Graph的正式声明；作者引用外部provider时 MUST保存owner和稳定声明ID，不得复制值或按名称猜测。
+
+#### Scenario: 从Blackboard拖出Get节点
+- **WHEN** 作者把一个变量拖到Skill Graph空白画布
+- **THEN** 编辑器 MUST创建带明确owner、声明ID和类型的Get节点
+- **AND** 该操作 MUST进入当前domain的Mutation和Undo
+
+#### Scenario: 创建Set节点
+- **WHEN** 作者对允许写入的Skill Local或Ability provider变量选择Create Set
+- **THEN** 编辑器 MUST创建typed Set节点
+- **AND** 对只读Character State、Input、Target或Frame provider MUST拒绝写入
 
 

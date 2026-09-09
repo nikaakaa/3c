@@ -129,10 +129,20 @@
 ### 4.5 状态Provider与Simulation Pipeline
 
 - [ ] 4.5.1 接入C# Character State的只读typed projection；验证Skill只能读取Movement事实，不能直接写Velocity、BodyYaw或Control State，影响主线必须提交正式Command。
+
+  当前代码：`CharacterStateProviderFields`固定Position、Velocity、VerticalVelocity、BodyYaw、Grounded五个只读字段；Skill Graph提供按输出类型分开的Get节点，Document保存`fieldId + providerOwnerId`，Float32/Fixed的`CharacterStateRead`只从当前Tick `WorldBodyState`读取，没有Set端口。Tundra脚本编译通过；正式Character Build受既有Presentation Projection错误阻塞，运行证据待补。
 - [ ] 4.5.2 接入GAS式Ability Attribute、GameplayEffect、GameplayTag和ActivationData访问合同；验证跨GA状态不通过某个Skill Graph隐式共享。
+
+  当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；跨Skill共享只经过Ability provider，Skill Local仍按图owner保存。正式Program运行与跨GA证据待补。
 - [ ] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。
+
+  当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec已经共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；需要精确Definition Build后再做双Target/Snapshot对账。
 - [ ] 4.5.4 将Character Program接入Session Composition和Simulation Pipeline；验证ProgramRuntime、ExecutionBackend、WorldSolver、Pipeline Pass和SessionSource通过正式兼容校验。
+
+  当前代码：`SimulationSessionCompositionDefinition`、`SimulationPipelineCompiler`、Float32/Fixed Composer及Pass Factory已形成唯一组合链，兼容检查覆盖NumericProfile、Target ABI、Backend、Solver、Source Pass/Port和ExecutionSupport；正式 Corin 组合证据待补。
 - [ ] 4.5.5 接入Rollback与Server Authority的正式Pass/Adapter；验证网络只传Input、Canonical Request、Hash和Snapshot，不复制Graph、Blackboard名称、Timeline对象或最终Pose。
+
+  当前代码：Rollback与Server Authority各自通过Session Source、Pipeline Pass、Snapshot/Canonical Codec和Network Adapter接入同一Program；现有网络编解码只保存Input、Request、Program/Layout/State Hash、Snapshot与Output disposition，尚缺本变更的正式网络产品运行记录。
 
 ## 5. Document v7和资产迁移
 

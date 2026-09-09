@@ -1,5 +1,34 @@
 # 技能作者迁移盘点
 
+## 2026-09-09 公开能力补充对账
+
+本节为源码对账，不表示 Corin 资产已经迁移。读取 `BtsmtlGraphAuthoringCapabilities` 构造注册：48 项显式 Register 加 1 项 ExposedProperty，共 49 项；其中 12 项 AI 专用能力不在本 change 内。其余 37 项按下表处理，含资产里没有出现的能力。
+
+| 原公开 kind | 原生技能对应与处理 |
+|---|---|
+| `@root`、`@enter`、`@exit`、`@any`、`@onEnter`、`@onExit`、`@result` | 对应原生系统锚点，保留页面角色限制，不能在普通创建菜单单独新增 |
+| `@timelineEnter` | 根据原 Hook 拆为 `@timelineEnable`、`@timelineDisable`、`@timelineDestroy`；继续分别编译对应生命周期入口 |
+| `state-machine`、`state`、`sequence`、`selector`、`parallel`、`loop`、`succeed` | 均进入原生目录及原操作发射；组合步骤使用 stable slot Flow 输出，不能把原生 Flip Flop 当作顺序等待 |
+| `timeline` | 原生 Timeline 节点引用正式 TimelineAsset，TreeClip 进入原生 TimelineBody 编译 |
+| `activate-action-instance` | 从技能作者目录移除；旧 `CharacterSemanticEmitter` 在技能深度下已经跳过该操作，运行继续由 ActionSkillExecutionRuntime 激活，迁移重定向边而不重新激活动作 |
+| `submit-action-lifecycle`、`action-context-active`、`action-window-active`、`can-activate-action` | 对应原生业务节点及原 Action 操作；窗口查询仍核对当前调用及执行阶段 |
+| `character-action-request`、`character-input-bool`、`character-input-float`、`character-input-vector2`、`character-input-vector2-magnitude`、`character-move-facing-angle` | 全部保留，读取稳定 Input identity 或正式操作输入 |
+| `pipeline-blackboard-bool`、`pipeline-blackboard-float`、`exposed-property` | 保留声明 ID 和 owner ID；ExposedProperty 的 Get／Set 是同一 kind 的两种访问模式，按声明类型投影端口 |
+| `state-root-completed`、`state-exit-cause` | 从编译状态及具体状态机 owner 读取结果，不依赖作者图 runtime |
+| `locomotion-input-motion` | 原生 Locomotion 节点通过共享只读参数接口进入已有 Motion emitter，不另建位移执行器 |
+| `and`、`or`、`not` | 复用原生 AND／OR／NOT；原生 `a/b/value` 显式映射到 Program 的输入 ID |
+| `compare` | 显式展开 float 和 int 的相等、不等、小于、小于等于、大于等于、大于共 12 个原生比较种类；保留比较操作 variant 与类型约束 |
+
+AI 排除项完整名单：`ai-read-self`、`ai-enumerate-candidates`、`ai-select-nearest-candidate`、`ai-read-target-distance`、`ai-read-target-direction`、`ai-read-target-snapshot`、`ai-read-memory`、`ai-write-memory`、`ai-write-continuous-input`、`ai-write-action-target`、`ai-submit-action-request`、`ai-wait-ticks`。这些节点继续属于 AI 域，不通过技能目录暴露。
+
+本批新增原生 Macro 调用、输入与输出锚点，统一注册在 `BtsmtlSkillNodeCatalog`。技能原生类型共 53 个：旧技能能力去掉二次激活，Timeline Hook 拆分，比较展开，Get／Set 分开类型，再加入 Macro 三种类型。没有因 Corin 未使用而漏掉 Loop、Parallel、NOT 或 Locomotion。
+
+固定端口以节点 `RegisterPorts` 声明为准，Document 读取同一原型声明，编译用 `CharacterGameplayValuePortContracts` 校验输入／输出数量、ID 和值类型。组合步骤、Macro 参数及黑板访问按显式文档数据投影动态端口；Flow 输出和值输入为单连接，Flow 输入和值输出为多连接。动态端口代码进一步合并、全部人工编辑的 typed Mutation 接入及正式构建报告仍归任务 2.2.3、2.3 和 4，不由本盘点代替。
+
+目录导出不发布原型构造器随机生成的示例步骤 ID，避免重复 checkout 因临时 slot identity 产生不同 context hash。Macro 参数预检复用 `BtsmtlSkillMacroInterface`，同侧重名、重复 ID、多个执行入口和控制输出在写资产前拒绝。
+
+以下为 2026-09-08 的资产基线和当时调用链记录。
+
 2026-09-08静态读取精确Corin Definition及其引用资产，没有编译、Build或Unity资产写入。此表用于确定迁移输入，不作为运行验收。
 
 ## 精确入口与资产闭包

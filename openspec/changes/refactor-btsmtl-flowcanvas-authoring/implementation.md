@@ -2,7 +2,13 @@
 
 ## 当前进度快照
 
-本节反映当前状态；后文按小步实施顺序记录，早期的待迁移描述不代表当前代码仍停留在该阶段。
+2026-09-09 本轮已落实作者选择A：技能根独立文件，私有内容同文件保存，Document预检及失败文件清理统一。节点目录和角色规则由原生与Document共用，固定端口不再重复声明，Macro参数共用校验。Host与原生工具栏已接实际执行实例选择，Fixed Host按Program来源定位作者。公开能力盘点完成；剩余编辑事务、共享Macro作者流程及资产／运行执行证据见tasks.md。
+
+当前Document源码及现行规范为v7；本change的目标版本随之同步，不回退成旧v6包。最新编译受其他Presentation文件8条CS0246阻塞；此前零错误仅对应此前提交。资产迁移、Document apply、内容Build和回放本轮均未执行。
+
+## 此前增量记录
+
+本节保留此前各次检查与实施事实，旧的“尚未完成”和旧版本号不代表当前状态。
 
 最新集成（2026-09-09）：Document任务已提交035057efd及a7a21da08，主任务通过754127e99修正其6处类型与调用签名编译错误。当前Unity恢复后error CS查询为0；仍未执行资产apply、内容Build或回放。资产组织存在待作者选择的接口差异：原生根文件与Document的Definition子资产创建路径尚未统一，未擅自修改已有存放规则。
 
@@ -155,3 +161,5 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 后续代码对账：新增唯一 `BtsmtlSkillNodeCatalog`，原生创建规则和 Document 类型解析均读取同一注册表；Document 的页面角色限制复用原生规则。三个 Timeline Hook 直接声明各自 capability，删除 Document 的特殊名称翻译。固定端口形状直接读取原生节点声明，删除重复手写列表；修正 Flow 输出单连接、Flow 输入多连接的容量声明，并在整图 dry-run 拒绝超容量边。组合步骤、Macro 参数和黑板动态类型仍按 Document 中的显式声明投影；完整 typed 编辑接入和能力审计任务尚未据此标完成。
 
 实例入口代码：Host Inspector 增加“选择技能图／执行实例”，仅在点击后解析当前 Host 的 Definition 并生成菜单；Fixed Host 使用其正式 Program 的 DefinitionGuid。Play 菜单只列当前 Actor 已采集的 SkillExecution，显示 ActionInstance、释放代次、调用代次及路径，点击后锁定明确实例。原生图工具栏可再次选择当前页实例，不默认选第一条，也不创建预览执行器。事件来源导航同样支持 Fixed Host。Inspector 默认不订阅 Values，端口值由原生工具栏显式开启；完整交互、结束实例与多调用运行证据仍属于 7.2—7.5 和 8.1，未提前勾选。
+
+本轮提交：`8480a753e` 所有权统一，`71fb69c08` 目录与端口预检，`f0a6115ee` Host／原生实例选择。这三批提交前分别取得 Unity Console 的零 CS 错误结果。随后补充 Macro 共用参数校验和目录导出的示例 slot 清理；最新刷新返回 Presentation 的 `CharacterPresentationProjectionCompileContext.cs` 共 8 条 CS0246（Camera／Equipment Profile 与 TimelineData 类型不可见），该文件不属于本轮修改，按作者要求未处理。因此不能把更早的零错误结果当作最新整仓编译成功。OpenSpec strict 当前通过；任务 1.2.2 按源码盘点完成，其他执行证据项仍保持未完成。

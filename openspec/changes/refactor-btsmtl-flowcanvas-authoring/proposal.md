@@ -13,7 +13,7 @@ PoseGraph独立由[PoseGraph提案](../refactor-character-pose-graph-architectur
 - 建立技能节点、端口、边及调用位置到编译操作和状态的同版本映射，支持精确Actor、ActionInstance、generation及调用实例观察。
 - 复用原生视觉显示经过、运行、等待、完成、中断及采集值，不为高亮执行第二份图。
 - 预览消费唯一Scene Play协调器；本变更只负责技能观察绑定，不建立播放器、时钟、历史seek或指令级断点。
-- **BREAKING**：Document v6增加技能Macro接口、owner和调用闭包，五生命周期和整包事务不分裂；非技能领域业务语义保持不变。
+- **BREAKING**：Document v7增加技能Macro接口、owner和调用闭包，五生命周期和整包事务不分裂；非技能领域业务语义保持不变。
 - 原子迁移精确技能闭包，删除被替代且无消费者的旧作者入口；共用框架改动不得迁移或破坏其他领域。
 
 ## Capabilities
@@ -28,7 +28,7 @@ PoseGraph独立由[PoseGraph提案](../refactor-character-pose-graph-architectur
 - `btsmtl-graph-core`：技能退出旧BaseGraph与Tree窗口实现要求，未迁移领域继续原合同。
 - `graph-authoring-domain-framework`：技能采用原生作者基础，保持领域数据、校验与运行隔离。
 - `graph-authoring-editor-shell`：技能使用原生GraphEditor及同窗口领域区域，其他领域不随之迁移。
-- `btsmtl-agent-authoring-document-sync`：v6直接读写正式技能图及Macro；非技能分片不改变业务意义。
+- `btsmtl-agent-authoring-document-sync`：v7直接读写正式技能图及Macro；非技能分片不改变业务意义。
 
 ## Impact
 

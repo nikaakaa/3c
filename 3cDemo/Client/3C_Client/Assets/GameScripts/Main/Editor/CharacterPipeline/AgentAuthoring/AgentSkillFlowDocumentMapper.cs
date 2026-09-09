@@ -940,28 +940,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             bool valid = true;
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            int flowInputs = 0;
             foreach (AgentPackageSkillMacroParameter parameter in macro.inputs ??
                          new List<AgentPackageSkillMacroParameter>())
             {
                 if (!ValidParameter(parameter, ids, path + ".inputs", report))
                     valid = false;
-                if (parameter?.valueType == "flow")
-                    flowInputs++;
             }
             foreach (AgentPackageSkillMacroParameter parameter in macro.outputs ??
                          new List<AgentPackageSkillMacroParameter>())
                 if (!ValidParameter(parameter, ids, path + ".outputs", report))
                     valid = false;
-            if ((macro.outputs ?? new List<AgentPackageSkillMacroParameter>()).Any(value => value?.valueType == "flow"))
+            if (valid)
             {
-                report.Error(path + ".outputs", "skill_macro_flow_output_invalid", "Skill Macro不支持flow output，只能声明值output。");
-                valid = false;
-            }
-            if (flowInputs != 1)
-            {
-                report.Error(path + ".inputs", "skill_macro_flow_input_invalid", "Skill Macro必须有且仅有一个flow input。");
-                valid = false;
+                DynamicParameterDefinition Project(AgentPackageSkillMacroParameter parameter)
+                {
+                    AgentSkillFlowAuthoringCapabilities.TryResolveValueType(parameter.valueType, out Type type);
+                    return new DynamicParameterDefinition(parameter.id, parameter.name, type);
+                }
+                try
+                {
+                    BtsmtlSkillMacroInterface.Validate(
+                        (macro.inputs ?? new List<AgentPackageSkillMacroParameter>()).Select(Project),
+                        (macro.outputs ?? new List<AgentPackageSkillMacroParameter>()).Select(Project));
+                }
+                catch (InvalidOperationException exception)
+                {
+                    report.Error(path, "skill_macro_interface_invalid", exception.Message);
+                    valid = false;
+                }
             }
             return valid;
         }
@@ -970,7 +976,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (parameter == null || !IsIdentity(parameter.id) || !ids.Add(parameter.id) ||
                 string.IsNullOrWhiteSpace(parameter.name) ||
-                !AgentSkillFlowAuthoringCapabilities.TryResolveValueType(parameter.valueType, out _) ||
+                !AgentSkillFlowAuthoringCapabilities.TryResolveValueType(parameter.valueType, out Type type) ||
+                AgentSkillFlowAuthoringCapabilities.ValueType(type) != parameter.valueType ||
                 parameter.valueType == "action-target-snapshot")
             {
                 report.Error(path, "skill_macro_parameter_invalid", "Macro parameter必须有稳定identity、名称和稳定值类型。");

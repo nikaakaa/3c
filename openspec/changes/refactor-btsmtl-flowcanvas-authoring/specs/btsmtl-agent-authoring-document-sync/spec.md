@@ -2,7 +2,7 @@
 
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v6`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v7`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: AI首次编辑现有Character Controller
 
@@ -20,8 +20,8 @@
 
 #### Scenario: 旧版本文档包请求写入
 
-- **WHEN** Agent使用v5或更早的Document包请求dry-run或apply
-- **THEN** 系统 MUST拒绝该包并要求从精确根重新checkout v6，不自动转换或兼容读取
+- **WHEN** Agent使用v6或更早的Document包请求dry-run或apply
+- **THEN** 系统 MUST拒绝该包并要求从精确根重新checkout v7，不自动转换或兼容读取
 
 ## ADDED Requirements
 

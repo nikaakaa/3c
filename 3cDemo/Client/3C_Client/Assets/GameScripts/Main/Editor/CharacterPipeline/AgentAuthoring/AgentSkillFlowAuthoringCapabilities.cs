@@ -25,6 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!TryGetKind(type, out string kind) || IsAnchor(kind))
                     continue;
                 FlowNode prototype = (FlowNode)Activator.CreateInstance(type);
+                if (prototype is BtsmtlSkillCompositeFlowNode composite)
+                    composite.SetSteps(Array.Empty<BtsmtlSkillStepPort>());
                 prototype.GatherPorts();
                 result.Add(new AgentPackageSkillNodeKindDescriptor
                 {

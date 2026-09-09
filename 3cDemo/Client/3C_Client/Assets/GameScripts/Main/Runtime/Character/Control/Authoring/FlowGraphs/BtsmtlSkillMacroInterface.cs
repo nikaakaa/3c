@@ -17,11 +17,14 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         public static void Validate(BtsmtlSkillMacroGraph graph)
+            => Validate(graph.inputDefinitions, graph.outputDefinitions);
+
+        public static void Validate(IEnumerable<DynamicParameterDefinition> inputs, IEnumerable<DynamicParameterDefinition> outputs)
         {
             var identities = new HashSet<string>(StringComparer.Ordinal);
             var names = new HashSet<string>(StringComparer.Ordinal);
             int flowInputs = 0;
-            foreach (DynamicParameterDefinition input in graph.inputDefinitions)
+            foreach (DynamicParameterDefinition input in inputs)
             {
                 RequireParameter(input, identities, names);
                 if (input.type == typeof(Flow))
@@ -30,9 +33,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                     RequireValueType(input.type);
             }
             if (flowInputs != 1)
-                throw new InvalidOperationException($"技能Macro '{graph.AuthoringId}'必须有且仅有一个执行入口。");
+                throw new InvalidOperationException("技能Macro必须有且仅有一个执行入口。");
             names.Clear();
-            foreach (DynamicParameterDefinition output in graph.outputDefinitions)
+            foreach (DynamicParameterDefinition output in outputs)
             {
                 RequireParameter(output, identities, names);
                 RequireValueType(output.type);

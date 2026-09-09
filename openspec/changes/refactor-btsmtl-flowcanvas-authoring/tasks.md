@@ -130,7 +130,7 @@
 
 - [ ] 4.5.1 接入C# Character State的只读typed projection；验证Skill只能读取Movement事实，不能直接写Velocity、BodyYaw或Control State，影响主线必须提交正式Command。
 
-  当前代码：`CharacterStateProviderFields`固定Position、Velocity、VerticalVelocity、BodyYaw、Grounded五个只读字段；Skill Graph提供按输出类型分开的Get节点，Document保存`fieldId + providerOwnerId`，Float32/Fixed的`CharacterStateRead`只从当前Tick `WorldBodyState`读取，没有Set端口。Tundra脚本编译通过；正式Character Build受既有Presentation Projection错误阻塞，运行证据待补。
+  当前代码：`CharacterStateProviderFields`固定Position、Velocity、VerticalVelocity、BodyYaw、Grounded五个只读字段；Skill Graph提供按输出类型分开的Get节点，Document保存`fieldId + providerOwnerId`，owner固定为`control-module:<id>`，Float32/Fixed的`CharacterStateRead`只从当前Tick `WorldBodyState`读取，没有Set端口。Tundra脚本编译通过；正式Character Build受既有Presentation Projection错误阻塞，运行证据待补。
 - [ ] 4.5.2 接入GAS式Ability Attribute、GameplayEffect、GameplayTag和ActivationData访问合同；验证跨GA状态不通过某个Skill Graph隐式共享。
 
   当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；跨Skill共享只经过Ability provider，Skill Local仍按图owner保存。正式Program运行与跨GA证据待补。

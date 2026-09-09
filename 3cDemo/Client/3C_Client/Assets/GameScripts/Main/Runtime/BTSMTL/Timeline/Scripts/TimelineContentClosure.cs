@@ -178,6 +178,29 @@ namespace BTSMTL.Timeline
         }
     }
 
+    public readonly struct TimelineContentSection
+    {
+        public TimelineContentSection(string authoringId, int frame, string nextSectionId)
+        {
+            AuthoringId = Require(authoringId, nameof(authoringId));
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            Frame = frame;
+            NextSectionId = nextSectionId?.Trim() ?? string.Empty;
+        }
+
+        public string AuthoringId { get; }
+        public int Frame { get; }
+        public string NextSectionId { get; }
+
+        static string Require(string value, string name)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new ArgumentException("Timeline section identity is required.", name)
+                : value.Trim();
+        }
+    }
+
     public sealed class TimelineContentUnit
     {
         internal TimelineContentUnit(
@@ -190,6 +213,7 @@ namespace BTSMTL.Timeline
             float scale,
             bool loop,
             IReadOnlyList<TimelineContentClip> clips,
+            IReadOnlyList<TimelineContentSection> sections,
             IReadOnlyList<TimelineBindingDeclaration> bindings,
             IReadOnlyList<TimelineContentDependency> dependencies)
         {
@@ -202,6 +226,7 @@ namespace BTSMTL.Timeline
             Scale = scale;
             Loop = loop;
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
+            Sections = new ReadOnlyCollection<TimelineContentSection>(new List<TimelineContentSection>(sections ?? Array.Empty<TimelineContentSection>()));
             Bindings = new ReadOnlyCollection<TimelineBindingDeclaration>(new List<TimelineBindingDeclaration>(bindings ?? Array.Empty<TimelineBindingDeclaration>()));
             Dependencies = new ReadOnlyCollection<TimelineContentDependency>(new List<TimelineContentDependency>(dependencies ?? Array.Empty<TimelineContentDependency>()));
         }
@@ -215,6 +240,7 @@ namespace BTSMTL.Timeline
         public float Scale { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
+        public IReadOnlyList<TimelineContentSection> Sections { get; }
         public IReadOnlyList<TimelineBindingDeclaration> Bindings { get; }
         public IReadOnlyList<TimelineContentDependency> Dependencies { get; }
         public bool IsValid => !string.IsNullOrEmpty(Identity) &&
@@ -257,6 +283,7 @@ namespace BTSMTL.Timeline
                 return new TimelineContentDiscoveryResult(null, errors);
 
             var clips = new List<TimelineContentClip>();
+            var sections = new List<TimelineContentSection>();
             var closure = new TimelineContentClosureBuilder();
             int maxFrame = 0;
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
@@ -276,6 +303,11 @@ namespace BTSMTL.Timeline
                 TimelineSection section = timeline.Sections[sectionIndex];
                 if (section != null && section.Frame > maxFrame)
                     maxFrame = section.Frame;
+                if (section != null)
+                    sections.Add(new TimelineContentSection(
+                        section.AuthoringId,
+                        section.Frame,
+                        section.NextSectionId));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -352,6 +384,11 @@ namespace BTSMTL.Timeline
                     binding.Lifetime));
             }
             clips.Sort((left, right) => string.CompareOrdinal(left.AuthoringId, right.AuthoringId));
+            sections.Sort((left, right) =>
+            {
+                int frame = left.Frame.CompareTo(right.Frame);
+                return frame != 0 ? frame : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
+            });
             bindings.Sort((left, right) => string.CompareOrdinal(left.BindingId, right.BindingId));
             errors.AddRange(closure.Errors);
             List<TimelineContentDependency> dependencies = new List<TimelineContentDependency>(closure.Dependencies);
@@ -382,6 +419,7 @@ namespace BTSMTL.Timeline
                     timeline.Scale,
                     timeline.Loop,
                     clips,
+                    sections,
                     bindings,
                     dependencies),
                 errors);

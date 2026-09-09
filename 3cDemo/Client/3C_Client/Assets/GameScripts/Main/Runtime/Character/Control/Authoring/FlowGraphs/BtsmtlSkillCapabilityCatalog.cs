@@ -171,11 +171,17 @@ namespace ThirdPersonCharacter.Control.Authoring
             "state-exit-cause" => new[] { "cause" },
             "character-input-bool" or "character-input-float" or
                 "character-input-vector2" or "character-input-vector2-magnitude" or
-                "character-action-request" => new[] { "inputId" },
+                "character-action-request" => new[] { "inputId", "providerOwnerId" },
             "action-context-active" => new[] { "actionContext" },
             "action-window-active" => new[] { "windowType" },
             "can-activate-action" => new[] { "actionProfile", "targetSnapshot" },
             "submit-action-lifecycle" => new[] { "actionContext", "transitionType", "reason" },
+            "gameplay-tag-has" => new[] { "tagId", "providerOwnerId" },
+            "gameplay-tag-query" => new[] { "query", "providerOwnerId" },
+            "gameplay-attribute-read" => new[] { "attributeId", "providerOwnerId" },
+            "gameplay-effect-apply" => new[] { "effect", "actionContext", "predicted", "providerOwnerId" },
+            "gameplay-effect-remove" => new[] { "selector", "handle", "effect", "query", "providerOwnerId" },
+            "character-move-facing-angle" => new[] { "providerOwnerId" },
             "pipeline-blackboard-bool" or "pipeline-blackboard-float" => new[] { "declarationId", "ownerId", "valueType" },
             "exposed-property" => new[] { "declarationId", "ownerId", "valueType", "accessMode", "factContext" },
             "state-machine" => new[] { "graphId" },

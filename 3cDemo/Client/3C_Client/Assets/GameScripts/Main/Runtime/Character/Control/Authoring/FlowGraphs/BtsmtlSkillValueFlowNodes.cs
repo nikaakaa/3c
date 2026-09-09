@@ -8,18 +8,25 @@ namespace ThirdPersonCharacter.Control.Authoring
     public interface IBtsmtlSkillInputNode
     {
         string InputId { get; }
+        string ProviderOwnerId { get; }
+        void SetInputId(string inputId, string providerOwnerId);
     }
 
     public abstract class BtsmtlSkillInputFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillInputNode
     {
         [SerializeField] string m_InputId = string.Empty;
+        [SerializeField] string m_ProviderOwnerId = string.Empty;
         public string InputId => m_InputId;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
 
-        public void SetInputId(string inputId)
+        public void SetInputId(string inputId, string providerOwnerId = "")
         {
             if (string.IsNullOrWhiteSpace(inputId))
                 throw new ArgumentException("A skill input requires its declared identity.", nameof(inputId));
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("A skill input requires its provider owner identity.", nameof(providerOwnerId));
             m_InputId = inputId;
+            m_ProviderOwnerId = providerOwnerId.Trim();
         }
 
         protected override void RegisterPorts() => AddValueOutput<T>("值", RejectAuthoringValue<T>, "m_Output");

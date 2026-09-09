@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
@@ -12,6 +13,8 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonGameplay.Effects;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -146,7 +149,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 foreach (AgentPackageSkillBlackboardDeclaration declaration in graph?.blackboardDeclarations ??
                          new List<AgentPackageSkillBlackboardDeclaration>())
                     if (declaration?.inputBinding != null &&
-                        !session.Resolver.TryResolveInputValue(declaration.inputBinding.inputValueId, out _))
+                        !session.Resolver.TryResolvePortableInputValue(
+                            declaration.inputBinding.inputValueId,
+                            ProgramInputValueKind.ActionTargetSnapshot))
                     {
                         session.Report.Error(path + ".graphs[" + graph.id + "].blackboardDeclarations[" + declaration.id + "].inputBinding",
                             "skill_input_binding_unresolved", "Skill Blackboard inputBinding的inputValueId无法解析。");
@@ -331,6 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 m_TargetLayouts.Add(layout.graphId, layout);
             ResolveGraphs();
             ResolveTimelines();
+            RehomeTimelineBodyGraphs();
             SyncBlackboards();
             SyncMacros();
             SyncNodes();
@@ -380,11 +386,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (target.ownership == AgentGraphOwnership.SharedAsset.ToString())
             {
-                FlowGraph shared = ResolveObject<FlowGraph>(target.asset);
-                if (shared == null || !MatchesGraphType(shared, target.role))
-                    throw new InvalidOperationException($"Skill Graph '{target.id}' shared asset无法解析。");
-                m_Graphs[target.id] = shared;
-                m_Session.Touch(shared);
+                if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                {
+                    FlowGraph shared = ResolveObject<FlowGraph>(target.asset);
+                    if (shared == null || !MatchesGraphType(shared, target.role))
+                        throw new InvalidOperationException($"Skill Graph '{target.id}' shared asset无法解析。");
+                    m_Graphs[target.id] = shared;
+                    m_Session.Touch(shared);
+                    return;
+                }
+                FlowGraph createdShared = CreateGraph(target);
+                m_Graphs[target.id] = createdShared;
+                m_LocalGraphs[target.id] = createdShared;
                 return;
             }
             if (!target.id.StartsWith("local:", StringComparison.Ordinal))
@@ -425,11 +438,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AssetDatabase.AddObjectToAsset(asset, ownerPath);
                     Undo.RegisterCreatedObjectUndo(asset, "创建技能Timeline");
                     asset.SetData(TimelineData.CreateDefault(asset.name));
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                        asset.Data.ConfigureAuthoringIdentity(target.id);
                 }
                 m_Timelines[target.id] = asset;
                 if (target.id.StartsWith("local:", StringComparison.Ordinal))
                     m_LocalTimelines[target.id] = asset;
                 m_Session.Touch(asset);
+            }
+        }
+
+        void RehomeTimelineBodyGraphs()
+        {
+            foreach (AgentPackageSkillFlowGraphFile target in m_Document.graphs)
+            {
+                if (target.role != BtsmtlSkillFlowGraphRole.TimelineBody.ToString() ||
+                    target.owner?.kind != "timeline-clip" ||
+                    !m_Graphs.TryGetValue(target.id, out FlowGraph graph) ||
+                    !m_Timelines.TryGetValue(target.owner.timelineId, out TimelineAsset timeline))
+                    continue;
+                string timelinePath = AssetDatabase.GetAssetPath(timeline);
+                if (string.IsNullOrEmpty(timelinePath))
+                    throw new InvalidOperationException($"TimelineBody '{target.id}'的Timeline owner没有正式资产路径。");
+                if (AssetDatabase.GetAssetPath(graph) == timelinePath)
+                    continue;
+                if (AssetDatabase.IsMainAsset(graph))
+                    continue;
+                if (AssetDatabase.IsSubAsset(graph))
+                    AssetDatabase.RemoveObjectFromAsset(graph);
+                AssetDatabase.AddObjectToAsset(graph, timelinePath);
             }
         }
 
@@ -444,6 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     graph,
                     "应用技能黑板",
                     () => SyncBlackboard(graph, skill, target),
+                    false,
                     false);
             }
         }
@@ -488,17 +526,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         variables[declaration.key] = variable;
                     }
                     variable.SetValueBoxed(ParseValue(declaration.defaultValue, type));
+                    AgentSnapshotBlackboardInputBinding inputBinding = declaration.inputBinding;
+                    if (inputBinding != null && string.IsNullOrWhiteSpace(inputBinding.inputValueId))
+                        inputBinding = null;
+                    AgentSnapshotBlackboardFactProjection factProjection = declaration.factProjection;
+                    if (factProjection != null &&
+                        (string.IsNullOrWhiteSpace(factProjection.kind) ||
+                         string.IsNullOrWhiteSpace(factProjection.windowType) ||
+                         string.IsNullOrWhiteSpace(factProjection.windowId)))
+                        factProjection = null;
                     metadata.Add(new BtsmtlSkillBlackboardDeclaration(
                         variable.ID,
                         Enum.Parse<PipelineBlackboardVariableScope>(declaration.scope, false),
                         Enum.Parse<PipelineBlackboardVariableLifetime>(declaration.lifetime, false),
                         declaration.category,
-                        declaration.inputBinding == null ? null : new PipelineBlackboardInputBinding(declaration.inputBinding.inputValueId),
-                        declaration.factProjection == null ? null : new PipelineBlackboardFactProjection(
-                            Enum.Parse<PipelineBlackboardFactProjectionKind>(declaration.factProjection.kind, false),
-                            declaration.factProjection.windowType,
-                            declaration.factProjection.windowId,
-                            declaration.factProjection.digest)));
+                        inputBinding == null ? null : new PipelineBlackboardInputBinding(inputBinding.inputValueId),
+                        factProjection == null ? null : new PipelineBlackboardFactProjection(
+                            Enum.Parse<PipelineBlackboardFactProjectionKind>(factProjection.kind, false),
+                            factProjection.windowType,
+                            factProjection.windowId,
+                            factProjection.digest)));
                     if (declaration.id.StartsWith("local:", StringComparison.Ordinal))
                         m_LocalDeclarations[declaration.id] = variable.ID;
                 }
@@ -515,6 +562,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     macro,
                     "应用技能Macro接口",
                     () => SyncMacro(macro, target),
+                    false,
                     false);
             }
         }
@@ -530,7 +578,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 macro.inputDefinitions.Clear();
                 foreach (AgentPackageSkillMacroParameter parameter in target.inputs ?? new List<AgentPackageSkillMacroParameter>())
                 {
-                    if (!parameter.id.StartsWith("local:", StringComparison.Ordinal) && !existingInputIds.Contains(parameter.id))
+                    if (!parameter.id.StartsWith("local:", StringComparison.Ordinal) &&
+                        !existingInputIds.Contains(parameter.id))
                         throw new InvalidOperationException($"Skill Macro input '{parameter.id}'无法创建新的formal identity。");
                     string inputId = parameter.id.StartsWith("local:", StringComparison.Ordinal)
                         ? Guid.NewGuid().ToString("N")
@@ -545,7 +594,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 macro.outputDefinitions.Clear();
                 foreach (AgentPackageSkillMacroParameter parameter in target.outputs ?? new List<AgentPackageSkillMacroParameter>())
                 {
-                    if (!parameter.id.StartsWith("local:", StringComparison.Ordinal) && !existingOutputIds.Contains(parameter.id))
+                    if (!parameter.id.StartsWith("local:", StringComparison.Ordinal) &&
+                        !existingOutputIds.Contains(parameter.id))
                         throw new InvalidOperationException($"Skill Macro output '{parameter.id}'无法创建新的formal identity。");
                     string outputId = parameter.id.StartsWith("local:", StringComparison.Ordinal)
                         ? Guid.NewGuid().ToString("N")
@@ -571,7 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 FlowGraph graph = ResolveGraph(target.id);
                 if (graph == null)
                     throw new InvalidOperationException($"Skill Graph '{target.id}'无法解析。");
-                m_Dispatcher.Apply(graph, "应用技能Graph", () => SyncGraph(graph, target), false);
+                m_Dispatcher.Apply(graph, "应用技能Graph", () => SyncGraph(graph, target), false, false);
             }
         }
 
@@ -586,6 +636,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         anchorNode = graph.allNodes.OfType<FlowNode>().FirstOrDefault(value =>
                             AgentSkillFlowAuthoringCapabilities.TryGetKind(value, out string kind) &&
                             kind == anchor.kind);
+                    if (anchorNode != null &&
+                        !anchor.nodeId.StartsWith("local:", StringComparison.Ordinal) &&
+                        anchorNode.UID != anchor.nodeId)
+                        throw new InvalidOperationException($"Skill Graph anchor '{anchor.nodeId}'的identity与正式节点不一致。");
                     if (anchorNode != null && anchor.nodeId.StartsWith("local:", StringComparison.Ordinal))
                         m_LocalNodes[NodeKey(target.id, anchor.nodeId)] = anchorNode;
                     if (anchorNode is BtsmtlSkillCompositeFlowNode composite)
@@ -611,6 +665,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             throw new InvalidOperationException($"Skill Node '{node.id}'无法创建新的formal identity。");
                         Type type = ResolveNodeType(node);
                         actual = (FlowNode)graph.AddNode(type, Vector2.zero);
+                        if (!node.id.StartsWith("local:", StringComparison.Ordinal))
+                            actual.ConfigureAuthoringIdentity(node.id);
                         if (node.id.StartsWith("local:", StringComparison.Ordinal))
                             m_LocalNodes[NodeKey(target.id, node.id)] = actual;
                     }
@@ -653,7 +709,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node is BtsmtlSkillStateExitCauseFlowNode cause && properties.Value<string>("cause") != null)
                 cause.SetCause(Enum.Parse<BtsmtlSkillStateExitCause>(properties.Value<string>("cause"), false));
             if (node is IBtsmtlSkillInputNode input && properties.Value<string>("inputId") != null)
-                SetInput(input, properties.Value<string>("inputId"));
+                SetInput(input, properties.Value<string>("inputId"), properties.Value<string>("providerOwnerId"));
+            if (node is BtsmtlSkillGameplayTagFlowNode tag)
+                tag.Configure(
+                    new GameplayTagId(properties.Value<string>("tagId")),
+                    RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
+                moveFacing.Configure(RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery)
+                tagQuery.Configure(
+                    ParseGameplayTagQuery(properties["query"]),
+                    RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillGameplayAttributeFlowNode attribute)
+                attribute.Configure(
+                    new ThirdPersonGameplay.Attributes.GameplayAttributeId(properties.Value<string>("attributeId")),
+                    RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillApplyGameplayEffectFlowNode applyEffect)
+                applyEffect.Configure(
+                    ResolveGameplayEffect(properties["effect"]),
+                    ResolveActionContext(properties["actionContext"]),
+                    properties.Value<bool>("predicted"),
+                    RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillRemoveGameplayEffectFlowNode removeEffect)
+            {
+                ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector selector =
+                    Enum.Parse<ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector>(properties.Value<string>("selector"), false);
+                removeEffect.Configure(
+                    selector,
+                    properties.Value<ulong>("handle"),
+                    selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId
+                        ? ResolveGameplayEffect(properties["effect"])
+                        : null,
+                    ParseGameplayTagQuery(properties["query"]),
+                    RequiredProviderOwner(properties));
+            }
             if (node is BtsmtlSkillActionContextActiveFlowNode contextActive)
                 contextActive.SetActionContext(ResolveActionContext(properties["actionContext"]));
             if (node is BtsmtlSkillActionWindowActiveFlowNode window)
@@ -765,8 +854,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     if (!edge.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Skill Edge '{edge.id}'无法创建新的formal identity。");
-                    if (graph.CreatePortConnection(source, destination) == null)
+                    BinderConnection created = graph.CreatePortConnection(source, destination);
+                    if (created == null)
                         throw new InvalidOperationException($"Skill Edge '{edge.id}'创建失败。");
+                    if (!edge.id.StartsWith("local:", StringComparison.Ordinal))
+                        created.ConfigureAuthoringIdentity(edge.id);
                     continue;
                 }
                 if (existing.sourcePort != source)
@@ -800,6 +892,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         Type type = TrackType(targetTrack.kind);
                         timeline.AddTrack(type, TimelineTreeContractComposition.Create());
                         track = timeline.Tracks.Last();
+                        if (!targetTrack.id.StartsWith("local:", StringComparison.Ordinal))
+                            track.ConfigureAuthoringIdentity(targetTrack.id);
                     }
                     else if (track.ContractKind != targetTrack.kind)
                         throw new InvalidOperationException($"Timeline Track '{targetTrack.id}'不能原位改变kind。");
@@ -821,7 +915,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void SyncTimelineBindings(
+        void SyncTimelineBindings(
             TimelineData timeline,
             IReadOnlyList<AgentPackageSkillTimelineExternalBinding> targets)
         {
@@ -846,6 +940,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         Enum.Parse<TimelineBindingAccess>(target.access, false),
                         Enum.Parse<TimelineBindingLifetime>(target.lifetime, false),
                         target.parameterId);
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                        binding.ConfigureAuthoringIdentity(target.id);
                 }
                 else
                     binding.Configure(
@@ -861,7 +957,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void SyncTimelineSections(TimelineData timeline, IReadOnlyList<AgentPackageSkillTimelineSection> targets)
+        void SyncTimelineSections(TimelineData timeline, IReadOnlyList<AgentPackageSkillTimelineSection> targets)
         {
             var targetIds = (targets ?? new List<AgentPackageSkillTimelineSection>())
                 .Select(value => value.id)
@@ -874,10 +970,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 TimelineSection section = timeline.Sections.FirstOrDefault(value => value.AuthoringId == target.id);
                 if (section == null)
                 {
-                    if (target.id.StartsWith("local:", StringComparison.Ordinal))
-                        timeline.AddSection(target.name ?? string.Empty, target.frame);
-                    else
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Timeline Section '{target.id}'无法保持稳定identity。");
+                    section = timeline.AddSection(target.name ?? string.Empty, target.frame);
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                        section.ConfigureAuthoringIdentity(target.id);
                 }
                 else
                     timeline.ConfigureSection(section, target.name ?? string.Empty, target.frame);
@@ -902,6 +999,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!target.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Timeline Clip '{target.id}'无法创建新的formal identity。");
                     clip = CreateClip(timeline, catalog, track, target);
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                        clip.ConfigureAuthoringIdentity(target.id);
                     if (target.id.StartsWith("local:", StringComparison.Ordinal))
                         m_LocalClips[TimelineKey(timeline.AuthoringId, target.id)] = clip;
                 }
@@ -927,9 +1026,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     if (target?.kind != TimelineContractKinds.MotionWarpClip)
                         continue;
-                    Clip clip = timeline.Tracks
-                        .SelectMany(value => value.Clips)
-                        .FirstOrDefault(value => value.AuthoringId == target.id);
+                    Clip clip = target.id.StartsWith("local:", StringComparison.Ordinal) &&
+                                 m_LocalClips.TryGetValue(TimelineKey(timeline.AuthoringId, target.id), out Clip local)
+                        ? local
+                        : timeline.Tracks
+                            .SelectMany(value => value.Clips)
+                            .FirstOrDefault(value => value.AuthoringId == target.id);
                     string sourceId = target.properties?.Value<string>("sourceMotionClipId");
                     if (clip is not MotionWarpClip warp || string.IsNullOrEmpty(sourceId) ||
                         !TryResolveMotionClip(timeline, sourceId, out MotionCurveClip source))
@@ -1025,22 +1127,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 var macro = ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>();
                 BtsmtlSkillMacroInterface.Initialize(macro);
-                macro.ConfigureIdentity(BtsmtlSkillGraphAssetFactory.StableIdentity(target.id));
+                macro.ConfigureIdentity(
+                    target.id.StartsWith("local:", StringComparison.Ordinal)
+                        ? BtsmtlSkillGraphAssetFactory.StableIdentity(target.id)
+                        : target.id);
                 graph = macro;
             }
             else
             {
                 var skill = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
+                string identity = target.id.StartsWith("local:", StringComparison.Ordinal)
+                    ? BtsmtlSkillGraphAssetFactory.StableIdentity(target.id)
+                    : target.id;
                 skill.ConfigureIdentity(
-                    BtsmtlSkillGraphAssetFactory.StableIdentity(target.id),
+                    identity,
                     Enum.Parse<BtsmtlSkillFlowGraphRole>(target.role, false));
                 graph = skill;
             }
             graph.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Graph" : target.name;
             if (target.ownership == AgentGraphOwnership.RootAsset.ToString())
             {
-                string assetPath = AgentSkillFlowAssetPaths.Root(m_Session.Definition, target.id);
+                string assetPath = target.id.StartsWith("local:", StringComparison.Ordinal)
+                    ? AgentSkillFlowAssetPaths.Root(m_Session.Definition, target.id)
+                    : target.asset?.assetPath;
+                if (string.IsNullOrEmpty(assetPath))
+                    throw new InvalidOperationException($"Skill Graph '{target.id}'缺少根资产路径。");
                 AgentSkillFlowAssetPaths.RequireAvailable(assetPath);
+                AssetDatabase.CreateAsset(graph, assetPath);
+            }
+            else if (target.ownership == AgentGraphOwnership.SharedAsset.ToString())
+            {
+                string assetPath = target.id.StartsWith("local:", StringComparison.Ordinal)
+                    ? SharedGraphAssetPath(target.id)
+                    : target.asset?.assetPath;
+                if (string.IsNullOrEmpty(assetPath))
+                    throw new InvalidOperationException($"共享技能Graph '{target.id}'缺少资产路径。");
+                if (File.Exists(assetPath) || File.Exists(assetPath + ".meta") ||
+                    AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath) != null)
+                    throw new InvalidOperationException($"共享技能Graph目标资产已存在：{assetPath}");
                 AssetDatabase.CreateAsset(graph, assetPath);
             }
             else
@@ -1056,6 +1180,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph);
             m_Session.Touch(graph);
             return graph;
+        }
+
+        string SharedGraphAssetPath(string identity)
+        {
+            string definitionPath = AssetDatabase.GetAssetPath(m_Session.Definition);
+            if (string.IsNullOrEmpty(definitionPath))
+                throw new InvalidOperationException("共享技能Graph需要持久化Definition。");
+            string directory = Path.GetDirectoryName(definitionPath)?.Replace('\\', '/');
+            string name = Path.GetFileNameWithoutExtension(definitionPath);
+            string suffix = BtsmtlSkillGraphAssetFactory.StableIdentity(identity);
+            return $"{directory}/{name}.SharedGraph.{suffix}.asset";
         }
 
         static bool MatchesGraphType(FlowGraph graph, string role)
@@ -1106,6 +1241,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (token is not JObject value)
                 return null;
             string id = value.Value<string>("id");
+            if (string.IsNullOrWhiteSpace(id))
+                return null;
             AgentPackageObjectReference reference = value["asset"]?.ToObject<AgentPackageObjectReference>();
             return m_Session.Resolver.TryResolveActionContext(new AgentAssetReference(id, reference?.assetPath, reference?.assetGuid), out ActionContextSlot context)
                 ? context
@@ -1119,25 +1256,61 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return profile;
         }
 
-        static void SetInput(IBtsmtlSkillInputNode node, string value)
+        static void SetInput(IBtsmtlSkillInputNode node, string value, string providerOwnerId)
         {
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new InvalidOperationException("Skill input Document缺少providerOwnerId。");
             switch (node)
             {
                 case BtsmtlSkillBooleanInputFlowNode boolean:
-                    boolean.SetInputId(value);
+                    boolean.SetInputId(value, providerOwnerId);
                     break;
                 case BtsmtlSkillScalarInputFlowNode scalar:
-                    scalar.SetInputId(value);
+                    scalar.SetInputId(value, providerOwnerId);
                     break;
                 case BtsmtlSkillVector2InputFlowNode vector:
-                    vector.SetInputId(value);
+                    vector.SetInputId(value, providerOwnerId);
                     break;
                 case BtsmtlSkillInputMagnitudeFlowNode magnitude:
-                    magnitude.SetInputId(value);
+                    magnitude.SetInputId(value, providerOwnerId);
                     break;
                 case BtsmtlSkillActionRequestFlowNode request:
-                    request.SetInputId(value);
+                    request.SetInputId(value, providerOwnerId);
                     break;
+            }
+        }
+
+        static string RequiredProviderOwner(JObject properties)
+        {
+            string value = properties.Value<string>("providerOwnerId");
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new InvalidOperationException("Skill Provider引用缺少providerOwnerId。")
+                : value;
+        }
+
+        GameplayEffectDefinition ResolveGameplayEffect(JToken token)
+        {
+            if (token is not JObject value)
+                throw new InvalidOperationException("Gameplay Effect引用缺失。");
+            string id = value.Value<string>("id");
+            GameplayEffectDefinition effect = m_Session.Definition.GameplayEffectProfile?.EffectDefinitions
+                .FirstOrDefault(candidate => candidate && candidate.EffectId.Value == id);
+            return effect ? effect : throw new InvalidOperationException($"Gameplay Effect无法解析：{id}");
+        }
+
+        static GameplayTagQuery ParseGameplayTagQuery(JToken token)
+        {
+            JObject value = token as JObject ?? new JObject();
+            return new GameplayTagQuery(
+                Tags(value["all"]),
+                Tags(value["any"]),
+                Tags(value["none"]));
+
+            static IReadOnlyList<GameplayTagId> Tags(JToken source)
+            {
+                return (source as JArray)?.Values<string>()
+                    .Select(item => new GameplayTagId(item))
+                    .ToArray() ?? Array.Empty<GameplayTagId>();
             }
         }
 
@@ -1467,7 +1640,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         bool TryResolveMotionClip(TimelineData timeline, string identity, out MotionCurveClip source)
         {
             source = null;
-            if (m_LocalClips.TryGetValue(TimelineKey(timeline.AuthoringId, identity), out Clip local))
+            string localKey = TimelineKey(timeline.AuthoringId, identity);
+            if (m_LocalClips.TryGetValue(localKey, out Clip local))
             {
                 source = local as MotionCurveClip;
                 return source != null;

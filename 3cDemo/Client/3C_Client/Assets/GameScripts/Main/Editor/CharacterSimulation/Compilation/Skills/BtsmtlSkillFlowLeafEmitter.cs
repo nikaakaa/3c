@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FlowCanvas;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -75,11 +76,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillSequenceFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Sequence),
             BtsmtlSkillSelectorFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Selector),
             BtsmtlSkillParallelFlowNode parallel => new CharacterSimulationNodeEmission(SimulationOperationCode.Parallel, integer0: (int)parallel.Mode),
-            BtsmtlSkillBooleanInputFlowNode input => Input(SimulationOperationCode.InputBoolean, input.InputId),
-            BtsmtlSkillScalarInputFlowNode input => Input(SimulationOperationCode.InputScalar, input.InputId),
-            BtsmtlSkillVector2InputFlowNode input => Input(SimulationOperationCode.InputVector2, input.InputId),
-            BtsmtlSkillInputMagnitudeFlowNode input => Input(SimulationOperationCode.InputVector2Magnitude, input.InputId),
-            BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, input.InputId),
+            BtsmtlSkillBooleanInputFlowNode input => Input(SimulationOperationCode.InputBoolean, input.InputId, input.ProviderOwnerId),
+            BtsmtlSkillScalarInputFlowNode input => Input(SimulationOperationCode.InputScalar, input.InputId, input.ProviderOwnerId),
+            BtsmtlSkillVector2InputFlowNode input => Input(SimulationOperationCode.InputVector2, input.InputId, input.ProviderOwnerId),
+            BtsmtlSkillInputMagnitudeFlowNode input => Input(SimulationOperationCode.InputVector2Magnitude, input.InputId, input.ProviderOwnerId),
+            BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, input.InputId, input.ProviderOwnerId),
             IBtsmtlSkillBlackboardReadNode blackboard => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.BlackboardGet, text0: blackboard.Variable.DeclarationId,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId))),
@@ -88,7 +89,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 integer0: blackboard.Writes ? 1 : 0, text0: blackboard.Variable.DeclarationId,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId),
                     ("FactContext", CharacterSimulationNodeEmitterContext.AssetIdentity(blackboard.FactContext)))),
-            BtsmtlSkillMoveFacingAngleFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle),
+            BtsmtlSkillMoveFacingAngleFlowNode move => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.MoveFacingAngle,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", move.ProviderOwnerId))),
             BtsmtlSkillLocomotionFlowNode motion => CharacterSimulationMotionNodeEmitterRegistration.Locomotion(motion, motion.UID),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),
@@ -107,15 +110,80 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 text0: lifecycle.Reason,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
                     ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(lifecycle.ActionContext)))),
-                _ => throw new InvalidOperationException($"Skill node '{node.GetType().Name}' has no leaf emission contract.")
+            BtsmtlSkillGameplayTagFlowNode tag => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.GameplayEffectHasTag,
+                text0: TagIdentity(tag.Tag.Value),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", tag.ProviderOwnerId))),
+            BtsmtlSkillGameplayTagQueryFlowNode query => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.GameplayEffectMatchTags,
+                constants: QueryFields(query.Query, "Query", query.ProviderOwnerId)),
+            BtsmtlSkillGameplayAttributeFlowNode attribute => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.GameplayAttributeRead,
+                text0: AttributeIdentity(attribute.Attribute.Value),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", attribute.ProviderOwnerId))),
+            BtsmtlSkillApplyGameplayEffectFlowNode apply => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.GameplayEffectApply,
+                text0: EffectIdentity(apply.Effect ? apply.Effect.EffectId.Value : string.Empty),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                    ("DefinitionRevision", apply.Effect ? apply.Effect.DefinitionRevision : 0U),
+                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(apply.ActionContext)),
+                    ("Predicted", apply.Predicted),
+                    ("ProviderOwner", apply.ProviderOwnerId))),
+            BtsmtlSkillRemoveGameplayEffectFlowNode remove => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.GameplayEffectRemove,
+                integer0: (int)remove.Selector,
+                constants: RemoveEffectFields(remove)),
+            _ => throw new InvalidOperationException($"Skill node '{node.GetType().Name}' has no leaf emission contract.")
             };
         }
 
-        static CharacterSimulationNodeEmission Input(SimulationOperationCode code, string identity)
+        static IReadOnlyList<KeyValuePair<string, object>> RemoveEffectFields(BtsmtlSkillRemoveGameplayEffectFlowNode node)
         {
-            if (string.IsNullOrWhiteSpace(identity))
-                throw new InvalidOperationException("A skill input node has no declared input identity.");
-            return new CharacterSimulationNodeEmission(code, text0: identity);
+            var fields = new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("Handle", node.Handle),
+                new KeyValuePair<string, object>("Effect", EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty)),
+                new KeyValuePair<string, object>("ProviderOwner", node.ProviderOwnerId)
+            };
+            fields.AddRange(QueryFields(node.EffectTagQuery, "Query", node.ProviderOwnerId));
+            return fields;
+        }
+
+        static IReadOnlyList<KeyValuePair<string, object>> QueryFields(
+            GameplayTagQuery query,
+            string prefix,
+            string providerOwnerId)
+        {
+            var fields = new List<KeyValuePair<string, object>>
+            {
+                new KeyValuePair<string, object>("ProviderOwner", providerOwnerId ?? string.Empty)
+            };
+            Add(query?.All, "All");
+            Add(query?.Any, "Any");
+            Add(query?.None, "None");
+            return fields;
+
+            void Add(IReadOnlyList<GameplayTagId> values, string kind)
+            {
+                if (values == null)
+                    return;
+                for (int i = 0; i < values.Count; i++)
+                    fields.Add(new KeyValuePair<string, object>($"{prefix}:{kind}:{i:D4}", TagIdentity(values[i].Value)));
+            }
+        }
+
+        static string TagIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"tag:{value.Trim()}";
+        static string AttributeIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"attribute:{value.Trim()}";
+        static string EffectIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"effect:{value.Trim()}";
+
+        static CharacterSimulationNodeEmission Input(SimulationOperationCode code, string identity, string providerOwnerId)
+        {
+            if (string.IsNullOrWhiteSpace(identity) || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new InvalidOperationException("A skill input node has no declared input identity or provider owner.");
+            return new CharacterSimulationNodeEmission(
+                code,
+                text0: identity,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
         }
 
         static SemanticValueKind Kind(Type type)

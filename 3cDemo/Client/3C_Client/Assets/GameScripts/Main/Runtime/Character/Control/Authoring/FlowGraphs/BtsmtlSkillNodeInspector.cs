@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using NodeCanvas.Editor;
@@ -8,6 +10,9 @@ using ParadoxNotion.Design;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonGameplay.Attributes;
+using ThirdPersonGameplay.Effects;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -32,6 +37,18 @@ namespace ThirdPersonCharacter.Control.Authoring
                 DrawAdmission(graph, admission);
             if (node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle)
                 DrawLifecycle(graph, lifecycle);
+            if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
+                DrawMoveFacing(graph, moveFacing);
+            if (node is BtsmtlSkillGameplayTagFlowNode tag)
+                DrawGameplayTag(graph, tag);
+            if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery)
+                DrawGameplayTagQuery(graph, tagQuery);
+            if (node is BtsmtlSkillGameplayAttributeFlowNode attribute)
+                DrawGameplayAttribute(graph, attribute);
+            if (node is BtsmtlSkillApplyGameplayEffectFlowNode applyEffect)
+                DrawApplyGameplayEffect(graph, applyEffect);
+            if (node is BtsmtlSkillRemoveGameplayEffectFlowNode removeEffect)
+                DrawRemoveGameplayEffect(graph, removeEffect);
             if (node is BtsmtlSkillStateMachineFlowNode stateMachine)
                 DrawStateMachine(graph, stateMachine);
             if (node is IBtsmtlSkillInputNode input)
@@ -48,6 +65,77 @@ namespace ThirdPersonCharacter.Control.Authoring
                 DrawLocomotion(graph, locomotion);
             DrawValueInputs(graph, node);
         }
+
+        static void DrawMoveFacing(FlowGraph graph, BtsmtlSkillMoveFacingAngleFlowNode node)
+        {
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (!string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(owner))
+                Change(graph, "修改Character State引用", () => node.Configure(owner));
+        }
+
+        static void DrawGameplayTag(FlowGraph graph, BtsmtlSkillGameplayTagFlowNode node)
+        {
+            string id = EditorGUILayout.DelayedTextField("Tag ID", node.Tag.Value);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (!string.Equals(id, node.Tag.Value, StringComparison.Ordinal) ||
+                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Tag引用", () => node.Configure(new GameplayTagId(id), owner));
+        }
+
+        static void DrawGameplayTagQuery(FlowGraph graph, BtsmtlSkillGameplayTagQueryFlowNode node)
+        {
+            string all = EditorGUILayout.DelayedTextField("All Tags", JoinTags(node.Query.All));
+            string any = EditorGUILayout.DelayedTextField("Any Tags", JoinTags(node.Query.Any));
+            string none = EditorGUILayout.DelayedTextField("None Tags", JoinTags(node.Query.None));
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (!string.Equals(all, JoinTags(node.Query.All), StringComparison.Ordinal) ||
+                !string.Equals(any, JoinTags(node.Query.Any), StringComparison.Ordinal) ||
+                !string.Equals(none, JoinTags(node.Query.None), StringComparison.Ordinal) ||
+                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Tag Query", () => node.Configure(
+                    new GameplayTagQuery(ParseTags(all), ParseTags(any), ParseTags(none)), owner));
+        }
+
+        static void DrawGameplayAttribute(FlowGraph graph, BtsmtlSkillGameplayAttributeFlowNode node)
+        {
+            string id = EditorGUILayout.DelayedTextField("Attribute ID", node.Attribute.Value);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (!string.Equals(id, node.Attribute.Value, StringComparison.Ordinal) ||
+                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Attribute引用", () => node.Configure(new GameplayAttributeId(id), owner));
+        }
+
+        static void DrawApplyGameplayEffect(FlowGraph graph, BtsmtlSkillApplyGameplayEffectFlowNode node)
+        {
+            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", node.Effect, typeof(GameplayEffectDefinition));
+            ActionContextSlot context = ObjectField("Action Context", node.ActionContext, typeof(ActionContextSlot));
+            bool predicted = EditorGUILayout.Toggle("Predicted", node.Predicted);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (effect != node.Effect || context != node.ActionContext || predicted != node.Predicted ||
+                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Effect应用", () => node.Configure(effect, context, predicted, owner));
+        }
+
+        static void DrawRemoveGameplayEffect(FlowGraph graph, BtsmtlSkillRemoveGameplayEffectFlowNode node)
+        {
+            GameplayEffectRemoveSelector selector = (GameplayEffectRemoveSelector)EditorGUILayout.EnumPopup("Selector", node.Selector);
+            long handleValue = EditorGUILayout.LongField("Handle", (long)node.Handle);
+            ulong handle = handleValue < 0 ? 0UL : (ulong)handleValue;
+            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", node.Effect, typeof(GameplayEffectDefinition));
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (selector != node.Selector || handle != node.Handle || effect != node.Effect ||
+                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Effect移除", () => node.Configure(selector, handle, effect, node.EffectTagQuery, owner));
+        }
+
+        static string JoinTags(IReadOnlyList<GameplayTagId> tags) =>
+            string.Join(",", tags?.Select(value => value.Value) ?? Array.Empty<string>());
+
+        static IReadOnlyList<GameplayTagId> ParseTags(string value) =>
+            (value ?? string.Empty).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(item => new GameplayTagId(item.Trim()))
+                .Where(item => item.IsValid)
+                .ToArray();
 
         static void DrawLoop(FlowGraph graph, BtsmtlSkillLoopFlowNode node)
         {
@@ -112,26 +200,30 @@ namespace ThirdPersonCharacter.Control.Authoring
         static void DrawInput(FlowGraph graph, IBtsmtlSkillInputNode node)
         {
             string value = EditorGUILayout.DelayedTextField("输入身份", node.InputId);
-            if (string.Equals(value, node.InputId, StringComparison.Ordinal))
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
+            if (string.Equals(value, node.InputId, StringComparison.Ordinal) &&
+                string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+                return;
+            if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(owner))
                 return;
             Change(graph, "修改技能输入", () =>
             {
                 switch (node)
                 {
                     case BtsmtlSkillBooleanInputFlowNode boolean:
-                        boolean.SetInputId(value);
+                        boolean.SetInputId(value, owner);
                         break;
                     case BtsmtlSkillScalarInputFlowNode scalar:
-                        scalar.SetInputId(value);
+                        scalar.SetInputId(value, owner);
                         break;
                     case BtsmtlSkillVector2InputFlowNode vector:
-                        vector.SetInputId(value);
+                        vector.SetInputId(value, owner);
                         break;
                     case BtsmtlSkillInputMagnitudeFlowNode magnitude:
-                        magnitude.SetInputId(value);
+                        magnitude.SetInputId(value, owner);
                         break;
                     case BtsmtlSkillActionRequestFlowNode request:
-                        request.SetInputId(value);
+                        request.SetInputId(value, owner);
                         break;
                     default:
                         throw new InvalidOperationException("技能输入节点类型未登记。");
@@ -258,6 +350,151 @@ namespace ThirdPersonCharacter.Control.Authoring
             try { BtsmtlSkillFlowEditorMutation.Apply(graph, title, mutation); }
             catch (InvalidOperationException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
             catch (ArgumentException error) { GraphEditor.current?.ShowNotification(new GUIContent(error.Message)); }
+        }
+    }
+
+    [Name("读取Gameplay Tag"), Category("BTSMTL/Ability")]
+    public sealed class BtsmtlSkillGameplayTagFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] GameplayTagId m_Tag;
+        [SerializeField] string m_ProviderOwnerId;
+
+        public override string CapabilityId => "gameplay-tag-has";
+        public GameplayTagId Tag => m_Tag;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(GameplayTagId tag, string providerOwnerId)
+        {
+            if (!tag.IsValid || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Gameplay Tag provider reference is incomplete.");
+            m_Tag = tag;
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts() =>
+            AddValueOutput<bool>("Has Tag", RejectAuthoringValue<bool>, "m_Result");
+    }
+
+    [Name("查询Gameplay Tags"), Category("BTSMTL/Ability")]
+    public sealed class BtsmtlSkillGameplayTagQueryFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] GameplayTagQuery m_Query = new GameplayTagQuery();
+        [SerializeField] string m_ProviderOwnerId;
+
+        public override string CapabilityId => "gameplay-tag-query";
+        public GameplayTagQuery Query => m_Query;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(GameplayTagQuery query, string providerOwnerId)
+        {
+            if (query == null || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Gameplay Tag Query provider reference is incomplete.");
+            m_Query = query;
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts() =>
+            AddValueOutput<bool>("Matches", RejectAuthoringValue<bool>, "m_Result");
+    }
+
+    [Name("读取Ability Attribute"), Category("BTSMTL/Ability")]
+    public sealed class BtsmtlSkillGameplayAttributeFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] GameplayAttributeId m_Attribute;
+        [SerializeField] string m_ProviderOwnerId;
+
+        public override string CapabilityId => "gameplay-attribute-read";
+        public GameplayAttributeId Attribute => m_Attribute;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(GameplayAttributeId attribute, string providerOwnerId)
+        {
+            if (!attribute.IsValid || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Gameplay Attribute provider reference is incomplete.");
+            m_Attribute = attribute;
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts()
+        {
+            AddValueOutput<bool>("Valid", RejectAuthoringValue<bool>, "m_Valid");
+            AddValueOutput<float>("Base Value", RejectAuthoringValue<float>, "m_BaseValue");
+            AddValueOutput<float>("Current Value", RejectAuthoringValue<float>, "m_CurrentValue");
+        }
+    }
+
+    [Name("应用Gameplay Effect"), Category("BTSMTL/Ability")]
+    public sealed class BtsmtlSkillApplyGameplayEffectFlowNode : BtsmtlSkillFlowNode
+    {
+        [SerializeField] GameplayEffectDefinition m_Effect;
+        [SerializeField] ActionContextSlot m_ActionContext;
+        [SerializeField] bool m_Predicted;
+        [SerializeField] string m_ProviderOwnerId;
+
+        public override string CapabilityId => "gameplay-effect-apply";
+        public GameplayEffectDefinition Effect => m_Effect;
+        public ActionContextSlot ActionContext => m_ActionContext;
+        public bool Predicted => m_Predicted;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(GameplayEffectDefinition effect, ActionContextSlot actionContext, bool predicted, string providerOwnerId)
+        {
+            if (!effect || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Gameplay Effect provider reference is incomplete.");
+            m_Effect = effect;
+            m_ActionContext = actionContext;
+            m_Predicted = predicted;
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts()
+        {
+            AddFlowInput("执行", RejectAuthoringExecution, "Input");
+            AddValueOutput<bool>("Applied", RejectAuthoringValue<bool>, "m_Applied");
+        }
+    }
+
+    [Name("移除Gameplay Effect"), Category("BTSMTL/Ability")]
+    public sealed class BtsmtlSkillRemoveGameplayEffectFlowNode : BtsmtlSkillFlowNode
+    {
+        [SerializeField] GameplayEffectRemoveSelector m_Selector = GameplayEffectRemoveSelector.EffectId;
+        [SerializeField] ulong m_Handle;
+        [SerializeField] GameplayEffectDefinition m_Effect;
+        [SerializeField] GameplayTagQuery m_EffectTagQuery = new GameplayTagQuery();
+        [SerializeField] string m_ProviderOwnerId;
+
+        public override string CapabilityId => "gameplay-effect-remove";
+        public GameplayEffectRemoveSelector Selector => m_Selector;
+        public ulong Handle => m_Handle;
+        public GameplayEffectDefinition Effect => m_Effect;
+        public GameplayTagQuery EffectTagQuery => m_EffectTagQuery;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(
+            GameplayEffectRemoveSelector selector,
+            ulong handle,
+            GameplayEffectDefinition effect,
+            GameplayTagQuery effectTagQuery,
+            string providerOwnerId)
+        {
+            if (!Enum.IsDefined(typeof(GameplayEffectRemoveSelector), selector) ||
+                string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Gameplay Effect removal provider reference is incomplete.");
+            if (selector == GameplayEffectRemoveSelector.EffectId && !effect)
+                throw new ArgumentException("EffectId removal requires an effect definition.");
+            if (selector == GameplayEffectRemoveSelector.EffectTagQuery && effectTagQuery == null)
+                throw new ArgumentException("EffectTagQuery removal requires a tag query.");
+            m_Selector = selector;
+            m_Handle = handle;
+            m_Effect = effect;
+            m_EffectTagQuery = effectTagQuery ?? new GameplayTagQuery();
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts()
+        {
+            AddFlowInput("执行", RejectAuthoringExecution, "Input");
+            AddValueOutput<bool>("Removed", RejectAuthoringValue<bool>, "m_Removed");
         }
     }
 }

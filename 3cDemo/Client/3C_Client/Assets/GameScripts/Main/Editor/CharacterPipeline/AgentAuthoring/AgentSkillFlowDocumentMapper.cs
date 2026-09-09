@@ -13,6 +13,8 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonGameplay.Effects;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -271,7 +273,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (LocalIdentity(graph.id) &&
                     (role == BtsmtlSkillFlowGraphRole.Skill && ownership != AgentGraphOwnership.RootAsset ||
-                     role != BtsmtlSkillFlowGraphRole.Skill && ownership != AgentGraphOwnership.Inline))
+                     role != BtsmtlSkillFlowGraphRole.Skill &&
+                     ownership != AgentGraphOwnership.Inline &&
+                     !(role == BtsmtlSkillFlowGraphRole.TimelineBody && ownership == AgentGraphOwnership.SharedAsset)))
                 {
                     report.Error(path + ".ownership", "skill_graph_local_ownership_invalid", "新增Skill Graph必须由RootAsset或Inline owner创建。");
                     valid = false;
@@ -707,6 +711,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path + ".properties.valueType", "skill_blackboard_node_type_invalid", "数值Skill Blackboard读取节点必须声明float类型。");
                 valid = false;
             }
+            if (node.capability == "character-input-bool" ||
+                node.capability == "character-input-float" ||
+                node.capability == "character-input-vector2" ||
+                node.capability == "character-input-vector2-magnitude" ||
+                node.capability == "character-action-request" ||
+                node.capability == "character-move-facing-angle" ||
+                node.capability == "gameplay-tag-has" ||
+                node.capability == "gameplay-tag-query" ||
+                node.capability == "gameplay-attribute-read" ||
+                node.capability == "gameplay-effect-apply" ||
+                node.capability == "gameplay-effect-remove")
+            {
+                if (string.IsNullOrWhiteSpace(properties.Value<string>("providerOwnerId")))
+                {
+                    report.Error(path + ".properties.providerOwnerId", "skill_provider_owner_missing", "Skill外部provider引用必须指定稳定owner。");
+                    valid = false;
+                }
+            }
+            if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||
+                (node.capability == "gameplay-attribute-read" && string.IsNullOrWhiteSpace(properties.Value<string>("attributeId"))))
+            {
+                report.Error(path + ".properties", "skill_provider_declaration_missing", "GameplayTag或Attribute provider引用缺少声明ID。");
+                valid = false;
+            }
             valid &= ValidateRequiredNodeProperties(node, properties, path, report);
             if (node.values != null && node.values.Type != JTokenType.Object)
             {
@@ -749,12 +777,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool ActionTarget(JToken value)
         {
-            return value is JObject target &&
-                   target.Properties().Select(property => property.Name).ToHashSet(StringComparer.Ordinal)
-                       .SetEquals(new[] { "targetId", "x", "y", "z", "rx", "ry", "rz", "rw" }) &&
-                   target.Value<string>("targetId") != null &&
-                   new[] { "x", "y", "z", "rx", "ry", "rz", "rw" }
-                       .All(field => target[field]?.Type == JTokenType.Integer || target[field]?.Type == JTokenType.Float);
+            if (value is not JObject target)
+                return false;
+            string[] coordinates = { "x", "y", "z", "rx", "ry", "rz", "rw" };
+            return target.Properties().All(property =>
+                       property.Name == "targetId" && property.Value.Type == JTokenType.String ||
+                       coordinates.Contains(property.Name) &&
+                       (property.Value.Type == JTokenType.Integer || property.Value.Type == JTokenType.Float)) &&
+                   coordinates.All(field => target[field] != null);
         }
 
         static bool Vector(JToken value, params string[] fields)
@@ -1380,26 +1410,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool ValidateCurve(AgentPackageCurve curve, string path, AgentCompileReport report)
         {
-            if (curve == null || string.IsNullOrWhiteSpace(curve.channelId) ||
-                !TimelineCurveChannelCatalog.TryGet(curve.channelId, out TimelineCurveChannelDescriptor descriptor) ||
-                curve.timeDomain != descriptor.TimeDomain.ToString() ||
-                curve.bounded != descriptor.ValueDomain.IsBounded ||
-                curve.minimum != descriptor.ValueDomain.Minimum ||
-                curve.maximum != descriptor.ValueDomain.Maximum ||
-                curve.zero != descriptor.ValueDomain.Zero ||
-                curve.unit != descriptor.ValueDomain.Unit ||
-                !Enum.TryParse(curve.preWrapMode, false, out WrapMode pre) ||
-                !Enum.IsDefined(typeof(WrapMode), pre) ||
-                !Enum.TryParse(curve.postWrapMode, false, out WrapMode post) ||
-                !Enum.IsDefined(typeof(WrapMode), post) ||
-                curve.keys == null || curve.keys.Count == 0)
+            TimelineCurveChannelDescriptor descriptor = null;
+            bool hasDescriptor = curve != null && !string.IsNullOrWhiteSpace(curve.channelId) &&
+                TimelineCurveChannelCatalog.TryGet(curve.channelId, out descriptor);
+            bool domainValid = hasDescriptor && curve.timeDomain == descriptor.TimeDomain.ToString();
+            bool boundedValid = hasDescriptor && curve.bounded == descriptor.ValueDomain.IsBounded;
+            bool minimumValid = hasDescriptor && curve.minimum == descriptor.ValueDomain.Minimum;
+            bool maximumValid = hasDescriptor && curve.maximum == descriptor.ValueDomain.Maximum;
+            bool zeroValid = hasDescriptor && curve.zero == descriptor.ValueDomain.Zero;
+            bool unitValid = hasDescriptor && string.Equals(curve.unit ?? string.Empty, descriptor.ValueDomain.Unit, StringComparison.Ordinal);
+            bool preValid = curve != null && Enum.TryParse(curve.preWrapMode, false, out WrapMode pre) && Enum.IsDefined(typeof(WrapMode), pre);
+            bool postValid = curve != null && Enum.TryParse(curve.postWrapMode, false, out WrapMode post) && Enum.IsDefined(typeof(WrapMode), post);
+            bool keysValid = curve?.keys != null && curve.keys.Count > 0;
+            bool invalid = curve == null || !hasDescriptor || !domainValid || !boundedValid || !minimumValid ||
+                !maximumValid || !zeroValid || !unitValid || !preValid || !postValid || !keysValid;
+            if (invalid)
             {
                 report.Error(path, "skill_timeline_curve_invalid", "Skill Timeline curve channel或keys无效。");
                 return false;
             }
             float previous = -1f;
-            foreach (AgentAnimationCurveKey key in curve.keys)
+            for (int index = 0; index < curve.keys.Count; index++)
             {
+                AgentAnimationCurveKey key = curve.keys[index];
                 if (key == null || key.time < 0f || key.time > 1f || key.time <= previous ||
                     !Finite(key.time) || !Finite(key.value) || !Finite(key.inTangent) ||
                     !Finite(key.outTangent) || !Finite(key.inWeight) || !Finite(key.outWeight) ||
@@ -2247,7 +2280,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node is BtsmtlSkillStateExitCauseFlowNode cause)
                 value["cause"] = cause.Cause.ToString();
             if (node is IBtsmtlSkillInputNode input)
+            {
                 value["inputId"] = input.InputId;
+                value["providerOwnerId"] = input.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillGameplayTagFlowNode tag)
+            {
+                value["tagId"] = tag.Tag.Value;
+                value["providerOwnerId"] = tag.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
+                value["providerOwnerId"] = moveFacing.ProviderOwnerId;
+            if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery)
+            {
+                value["providerOwnerId"] = tagQuery.ProviderOwnerId;
+                value["query"] = GameplayTagQueryToken(tagQuery.Query);
+            }
+            if (node is BtsmtlSkillGameplayAttributeFlowNode attribute)
+            {
+                value["attributeId"] = attribute.Attribute.Value;
+                value["providerOwnerId"] = attribute.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillApplyGameplayEffectFlowNode applyEffect)
+            {
+                value["effect"] = LogicalReference(applyEffect.Effect);
+                value["actionContext"] = LogicalReference(applyEffect.ActionContext);
+                value["predicted"] = applyEffect.Predicted;
+                value["providerOwnerId"] = applyEffect.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillRemoveGameplayEffectFlowNode removeEffect)
+            {
+                value["selector"] = removeEffect.Selector.ToString();
+                value["handle"] = removeEffect.Handle;
+                value["effect"] = LogicalReference(removeEffect.Effect);
+                value["query"] = GameplayTagQueryToken(removeEffect.EffectTagQuery);
+                value["providerOwnerId"] = removeEffect.ProviderOwnerId;
+            }
             if (node is BtsmtlSkillActionContextActiveFlowNode contextActive)
                 value["actionContext"] = LogicalReference(contextActive.ActionContext);
             if (node is BtsmtlSkillActionWindowActiveFlowNode window)
@@ -2304,6 +2372,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node is MacroNodeWrapper macro && macro.macro is BtsmtlSkillMacroGraph macroGraph)
                 value["graphId"] = ((IBtsmtlSkillFlowGraph)macroGraph).AuthoringId;
             return value;
+        }
+
+        static JObject GameplayTagQueryToken(GameplayTagQuery query)
+        {
+            return new JObject
+            {
+                ["all"] = new JArray((query?.All ?? Array.Empty<GameplayTagId>()).Select(value => value.Value)),
+                ["any"] = new JArray((query?.Any ?? Array.Empty<GameplayTagId>()).Select(value => value.Value)),
+                ["none"] = new JArray((query?.None ?? Array.Empty<GameplayTagId>()).Select(value => value.Value))
+            };
         }
 
         static AgentPackageSkillFlowStep ExportStep(BtsmtlSkillStepPort step)
@@ -2485,7 +2563,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 result.properties["targetOffsetSpace"] = warp.TargetOffsetSpace.ToString();
                 result.properties["rotationMode"] = warp.RotationMode.ToString();
                 result.properties["rotationMethod"] = warp.RotationMethod.ToString();
-                result.properties["targetPlanarOffset"] = AgentAuthoringDocumentCodec.ToToken(warp.TargetPlanarOffset);
+                result.properties["targetPlanarOffset"] = new JObject
+                {
+                    ["x"] = warp.TargetPlanarOffset.x,
+                    ["y"] = warp.TargetPlanarOffset.y
+                };
                 result.properties["targetYawOffsetDegrees"] = warp.TargetYawOffsetDegrees;
                 result.properties["maxTotalPositionCorrection"] = warp.MaxTotalPositionCorrection;
                 result.properties["maxTotalYawCorrectionDegrees"] = warp.MaxTotalYawCorrectionDegrees;
@@ -2635,7 +2717,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return new JObject();
             return new JObject
             {
-                ["id"] = value is ActionProfile profile ? profile.ActionId : value.name,
+                ["id"] = value switch
+                {
+                    ActionProfile profile => profile.ActionId,
+                    GameplayEffectDefinition effect => effect.EffectId.Value,
+                    _ => value.name
+                },
                 ["asset"] = AgentAuthoringDocumentCodec.ToToken(ObjectReference(value))
             };
         }

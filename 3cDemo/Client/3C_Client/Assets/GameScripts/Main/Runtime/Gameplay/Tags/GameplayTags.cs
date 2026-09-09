@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Tags
@@ -158,6 +159,18 @@ namespace ThirdPersonGameplay.Tags
         [SerializeField] GameplayTagId[] m_All = Array.Empty<GameplayTagId>();
         [SerializeField] GameplayTagId[] m_Any = Array.Empty<GameplayTagId>();
         [SerializeField] GameplayTagId[] m_None = Array.Empty<GameplayTagId>();
+
+        public GameplayTagQuery() { }
+
+        public GameplayTagQuery(
+            IEnumerable<GameplayTagId> all,
+            IEnumerable<GameplayTagId> any,
+            IEnumerable<GameplayTagId> none)
+        {
+            m_All = (all ?? Array.Empty<GameplayTagId>()).ToArray();
+            m_Any = (any ?? Array.Empty<GameplayTagId>()).ToArray();
+            m_None = (none ?? Array.Empty<GameplayTagId>()).ToArray();
+        }
 
         public IReadOnlyList<GameplayTagId> All => m_All ?? Array.Empty<GameplayTagId>();
         public IReadOnlyList<GameplayTagId> Any => m_Any ?? Array.Empty<GameplayTagId>();

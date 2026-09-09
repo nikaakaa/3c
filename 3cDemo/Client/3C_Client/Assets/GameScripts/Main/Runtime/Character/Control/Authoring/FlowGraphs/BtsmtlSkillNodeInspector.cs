@@ -222,7 +222,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 : new BtsmtlSkillBlackboardReference(declarationId, ownerId);
         }
 
-        static void DrawValueInputs(FlowGraph graph, BtsmtlSkillFlowNode node)
+        internal static void DrawValueInputs(FlowGraph graph, FlowNode node)
         {
             foreach (ValueInput input in node.GetInputValuePorts())
             {

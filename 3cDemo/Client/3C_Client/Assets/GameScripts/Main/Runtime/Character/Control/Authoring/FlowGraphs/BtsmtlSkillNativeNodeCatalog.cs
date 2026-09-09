@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
             void Add<T>(string kind, SimulationOperationCode code, IReadOnlyDictionary<string, string> inputs, int variant = 0) where T : SimplexNode
             {
-                Type type = typeof(SimplexNodeWrapper<T>);
+                Type type = typeof(BtsmtlSkillNativeNodeWrapper<T>);
                 nodes.Add(type, new BtsmtlSkillNativeNodeContract(type, kind, code, variant, inputs));
             }
         }

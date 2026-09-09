@@ -163,3 +163,15 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 实例入口代码：Host Inspector 增加“选择技能图／执行实例”，仅在点击后解析当前 Host 的 Definition 并生成菜单；Fixed Host 使用其正式 Program 的 DefinitionGuid。Play 菜单只列当前 Actor 已采集的 SkillExecution，显示 ActionInstance、释放代次、调用代次及路径，点击后锁定明确实例。原生图工具栏可再次选择当前页实例，不默认选第一条，也不创建预览执行器。事件来源导航同样支持 Fixed Host。Inspector 默认不订阅 Values，端口值由原生工具栏显式开启；完整交互、结束实例与多调用运行证据仍属于 7.2—7.5 和 8.1，未提前勾选。
 
 本轮提交：`8480a753e` 所有权统一，`71fb69c08` 目录与端口预检，`f0a6115ee` Host／原生实例选择。这三批提交前分别取得 Unity Console 的零 CS 错误结果。随后补充 Macro 共用参数校验和目录导出的示例 slot 清理；最新刷新返回 Presentation 的 `CharacterPresentationProjectionCompileContext.cs` 共 8 条 CS0246（Camera／Equipment Profile 与 TimelineData 类型不可见），该文件不属于本轮修改，按作者要求未处理。因此不能把更早的零错误结果当作最新整仓编译成功。OpenSpec strict 当前通过；任务 1.2.2 按源码盘点完成，其他执行证据项仍保持未完成。
+
+## 2026-09-09 本轮继续实施
+
+Capability与端口来源已收成唯一技能目录：
+
+- BtsmtlSkillCapabilityCatalog以BtsmtlSkillNodeCatalog、原生Simplex注册和技能节点CapabilityId生成节点kind、字段目录、anchor身份和固定端口Shape。
+- BtsmtlSkillFlowGraphRules、Document exporter/mapper/validator、Graph closure和创建菜单均从该目录解析类型或固定端口，不再各自维护固定字段与端口列表。
+- Macro参数、组合步骤、黑板声明和动态值端口仍由正式作者数据提供动态Shape；Document只投影其稳定身份、类型、方向和容量。
+- 技能节点字段、默认Value Input、Timeline、黑板、动作和移动配置通过同一BtsmtlSkillFlowEditorMutation进入Undo与闭包校验；共享Macro创建使用正式主资产路径，调用节点继续引用原生Macro。
+- Macro调用闭包现在核对接口参数的稳定ID、方向、Flow/Value类型和调用节点端口集合；接口变化若造成调用端口缺失，闭包校验拒绝继续保存。
+
+本节是源码实施记录，不替代Unity刷新、Document往返、精确根编译或Play观察证据；这些仍由tasks.md对应收口任务负责。

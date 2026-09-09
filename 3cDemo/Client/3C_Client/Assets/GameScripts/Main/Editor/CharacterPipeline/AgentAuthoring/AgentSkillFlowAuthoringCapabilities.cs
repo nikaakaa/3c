@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     kind = kind,
                     graphRoles = AllowedRoles(type).Select(value => value.ToString()).ToList(),
-                    properties = Properties(kind),
+                    properties = Properties(kind).ToList(),
                     flowPorts = Ports(prototype, true),
                     valuePorts = Ports(prototype, false),
                     canCreate = true,

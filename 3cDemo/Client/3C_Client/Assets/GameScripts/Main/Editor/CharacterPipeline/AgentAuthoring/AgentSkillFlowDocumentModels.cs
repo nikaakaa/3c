@@ -168,6 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string id;
         public string name;
         public int frame;
+        public string nextSectionId;
     }
 
     [Serializable]
@@ -190,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string kind;
         public string name;
         public string animationChannelId;
+        public string animationSlotId;
         public List<AgentPackageSkillTimelineClip> clips = new List<AgentPackageSkillTimelineClip>();
     }
 

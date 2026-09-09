@@ -898,8 +898,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     else if (track.ContractKind != targetTrack.kind)
                         throw new InvalidOperationException($"Timeline Track '{targetTrack.id}'不能原位改变kind。");
                     track.Name = targetTrack.name ?? track.Name;
-                    if (track is AnimationTrack animation && !string.IsNullOrEmpty(targetTrack.animationChannelId))
+                    if (track is AnimationTrack animation)
+                    {
                         animation.SetAnimationChannelId(new AnimationChannelId(targetTrack.animationChannelId));
+                        animation.SetAnimationSlotId(targetTrack.animationSlotId);
+                    }
                     SyncTimelineClips(timeline, catalog, track, targetTrack.clips);
                     resolvedTracks.Add(track);
                 }
@@ -978,6 +981,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 else
                     timeline.ConfigureSection(section, target.name ?? string.Empty, target.frame);
+            }
+            foreach (AgentPackageSkillTimelineSection target in targets ?? new List<AgentPackageSkillTimelineSection>())
+            {
+                TimelineSection section = timeline.Sections.FirstOrDefault(value => value.AuthoringId == target.id);
+                if (section == null)
+                    throw new InvalidOperationException($"Timeline Section '{target.id}'无法解析。");
+                timeline.ConfigureSectionNext(section, target.nextSectionId);
             }
         }
 
@@ -1495,7 +1505,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             JObject value = target.properties ?? new JObject();
             if (clip is BTSMTL.Timeline.AnimationClip animation)
-                animation.ExtraPolationMode = Enum.Parse<ExtraPolationMode>(value.Value<string>("extraPolationMode") ?? animation.ExtraPolationMode.ToString(), false);
+            {
+                animation.ExtraPolationMode = Enum.Parse<ExtraPolationMode>(value.Value<string>("extraPolationMode"), false);
+                animation.BlendProfileId = value.Value<string>("blendProfileId");
+            }
             if (clip is MotionCurveClip motion)
             {
                 motion.CurveId = value.Value<string>("curveId") ?? motion.CurveId;

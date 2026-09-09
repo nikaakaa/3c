@@ -1083,9 +1083,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 if (section == null || !IsIdentity(section.id) || !sectionIds.Add(section.id) ||
                     string.IsNullOrWhiteSpace(section.name) || section.name != section.name.Trim() ||
-                    !sectionNames.Add(section.name) || section.frame < 0)
+                    !sectionNames.Add(section.name) || section.frame < 0 ||
+                    !string.IsNullOrEmpty(section.nextSectionId) && !IsIdentity(section.nextSectionId))
                 {
                     report.Error(path + ".sections", "skill_timeline_section_invalid", "Skill Timeline Section必须有唯一identity、名称和非负frame。");
+                    valid = false;
+                }
+            }
+            foreach (AgentPackageSkillTimelineSection section in timeline.sections ??
+                         new List<AgentPackageSkillTimelineSection>())
+            {
+                if (section != null && !string.IsNullOrEmpty(section.nextSectionId) &&
+                    sectionIds.Contains(section.id) && !sectionIds.Contains(section.nextSectionId))
+                {
+                    report.Error(path + ".sections[" + section.id + "].nextSectionId", "skill_timeline_section_next_invalid", "Timeline Section的nextSectionId必须引用同一Timeline中的Section。");
                     valid = false;
                 }
             }
@@ -1128,6 +1139,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (track.kind == TimelineContractKinds.AnimationTrack && !IsIdentity(track.animationChannelId))
                 {
                     report.Error(path + ".tracks[" + track.id + "].animationChannelId", "skill_timeline_animation_channel_invalid", "AnimationTrack必须声明稳定AnimationChannel identity。");
+                    valid = false;
+                }
+                if (track.kind == TimelineContractKinds.AnimationTrack && !IsIdentity(track.animationSlotId))
+                {
+                    report.Error(path + ".tracks[" + track.id + "].animationSlotId", "skill_timeline_animation_slot_invalid", "AnimationTrack必须声明稳定AnimationSlot identity。");
                     valid = false;
                 }
                 var clipIds = new HashSet<string>(StringComparer.Ordinal);
@@ -1187,7 +1203,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             JObject properties = clip.properties ?? new JObject();
             string[] allowed = clip.kind switch
             {
-                TimelineContractKinds.AnimationClip => new[] { "extraPolationMode" },
+                TimelineContractKinds.AnimationClip => new[] { "extraPolationMode", "blendProfileId" },
                 TimelineContractKinds.MotionCurveClip => new[] { "curveId", "curveEndFrame", "space", "channel", "blendMode", "priority", "consumeLowerChannels" },
                 TimelineContractKinds.MotionWarpClip => new[]
                 {
@@ -1216,6 +1232,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case TimelineContractKinds.AnimationClip:
                     valid &= Asset(clip.animationClip);
                     valid &= EnumProperty(properties, "extraPolationMode", typeof(ExtraPolationMode), path, report);
+                    valid &= TextProperty(properties, "blendProfileId", path, report);
                     break;
                 case TimelineContractKinds.MotionCurveClip:
                     valid &= TextProperty(properties, "curveId", path, report);
@@ -2504,7 +2521,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         lifetime = binding.Lifetime.ToString()
                     });
                 foreach (TimelineSection section in data.Sections)
-                    file.sections.Add(new AgentPackageSkillTimelineSection { id = section.AuthoringId, name = section.Name, frame = section.Frame });
+                    file.sections.Add(new AgentPackageSkillTimelineSection
+                    {
+                        id = section.AuthoringId,
+                        name = section.Name,
+                        frame = section.Frame,
+                        nextSectionId = section.NextSectionId
+                    });
                 foreach (Track track in data.Tracks)
                 {
                     var trackFile = new AgentPackageSkillTimelineTrack
@@ -2512,7 +2535,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         id = track.AuthoringId,
                         kind = track.ContractKind,
                         name = track.Name,
-                        animationChannelId = track is AnimationTrack animation ? animation.AnimationChannelId.Value : string.Empty
+                        animationChannelId = track is AnimationTrack animation ? animation.AnimationChannelId.Value : string.Empty,
+                        animationSlotId = track is AnimationTrack animationTrack ? animationTrack.AnimationSlotId : string.Empty
                     };
                     foreach (Clip clip in track.Clips)
                         trackFile.clips.Add(ExportClip(clip, skillId, file.id, trackFile.id));
@@ -2545,6 +2569,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 result.animationClip = ObjectReference(animation.Clip);
                 result.properties["extraPolationMode"] = animation.ExtraPolationMode.ToString();
+                result.properties["blendProfileId"] = animation.BlendProfileId;
             }
             if (clip is MotionCurveClip motion)
             {

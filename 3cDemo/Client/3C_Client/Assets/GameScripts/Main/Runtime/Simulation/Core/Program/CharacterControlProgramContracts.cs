@@ -7,6 +7,7 @@ namespace ThirdPersonSimulation
 {
     public static class CharacterStateProviderFields
     {
+        public const string OwnerPrefix = "control-module:";
         public const string Position = "movement.position";
         public const string Velocity = "movement.velocity";
         public const string VerticalVelocity = "movement.vertical-velocity";
@@ -28,6 +29,11 @@ namespace ThirdPersonSimulation
 
         public static bool IsValid(string field) =>
             IsVector3(field) || IsScalar(field) || IsYaw(field) || IsBoolean(field);
+
+        public static bool IsOwner(string owner) =>
+            !string.IsNullOrWhiteSpace(owner) &&
+            owner.StartsWith(OwnerPrefix, StringComparison.Ordinal) &&
+            owner.Length > OwnerPrefix.Length;
 
         public static SemanticValueKind ValueKind(string field)
         {

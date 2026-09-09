@@ -112,7 +112,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (!CharacterStateProviderFields.IsValid(fieldId))
                 throw new ArgumentException("Character State field is not supported.", nameof(fieldId));
-            if (string.IsNullOrWhiteSpace(providerOwnerId))
+            if (!CharacterStateProviderFields.IsOwner(providerOwnerId))
                 throw new ArgumentException("Character State provider owner is incomplete.", nameof(providerOwnerId));
             m_FieldId = fieldId.Trim();
             m_ProviderOwnerId = providerOwnerId.Trim();

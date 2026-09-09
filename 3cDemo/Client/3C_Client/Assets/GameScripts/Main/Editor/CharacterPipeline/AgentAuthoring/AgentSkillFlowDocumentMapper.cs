@@ -741,6 +741,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path + ".properties.fieldId", "character_state_field_type_invalid", "Character State fieldId 与节点输出类型不匹配。");
                 valid = false;
             }
+            if ((node.capability == "character-state-vector3" ||
+                 node.capability == "character-state-scalar" ||
+                 node.capability == "character-state-yaw" ||
+                 node.capability == "character-state-bool") &&
+                !CharacterStateProviderFields.IsOwner(properties.Value<string>("providerOwnerId")))
+            {
+                report.Error(path + ".properties.providerOwnerId", "character_state_owner_invalid", "Character State provider owner 必须是 control-module:<id>。");
+                valid = false;
+            }
             if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||
                 (node.capability == "gameplay-attribute-read" && string.IsNullOrWhiteSpace(properties.Value<string>("attributeId"))))
             {

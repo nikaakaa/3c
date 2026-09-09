@@ -193,7 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static CharacterSimulationNodeEmission CharacterState(string fieldId, string providerOwnerId)
         {
-            if (!CharacterStateProviderFields.IsValid(fieldId) || string.IsNullOrWhiteSpace(providerOwnerId))
+            if (!CharacterStateProviderFields.IsValid(fieldId) || !CharacterStateProviderFields.IsOwner(providerOwnerId))
                 throw new InvalidOperationException("Character State provider reference is incomplete.");
             return new CharacterSimulationNodeEmission(
                 SimulationOperationCode.CharacterStateRead,

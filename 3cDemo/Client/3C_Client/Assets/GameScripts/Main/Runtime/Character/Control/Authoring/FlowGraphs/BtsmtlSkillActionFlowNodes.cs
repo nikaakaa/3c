@@ -3,6 +3,7 @@ using System;
 using BTSMTL.Timeline;
 using ParadoxNotion.Design;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -80,12 +81,69 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("移动与朝向夹角"), Category("BTSMTL/技能输入")]
     public sealed class BtsmtlSkillMoveFacingAngleFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
+        [SerializeField] string m_ProviderOwnerId;
+
         public override string CapabilityId => "character-move-facing-angle";
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(string providerOwnerId)
+        {
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Character State provider reference is incomplete.");
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
         protected override void RegisterPorts()
         {
             AddValueInput<Vector2>("移动输入", "m_MoveInput");
             AddValueOutput<float>("角度", RejectAuthoringValue<float>, "m_Output");
         }
     }
+
+    public abstract class BtsmtlSkillCharacterStateFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
+    {
+        [SerializeField] string m_FieldId = string.Empty;
+        [SerializeField] string m_ProviderOwnerId = string.Empty;
+
+        public string FieldId => m_FieldId ?? string.Empty;
+        public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
+
+        public void Configure(string fieldId, string providerOwnerId)
+        {
+            if (!CharacterStateProviderFields.IsValid(fieldId))
+                throw new ArgumentException("Character State field is not supported.", nameof(fieldId));
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new ArgumentException("Character State provider owner is incomplete.", nameof(providerOwnerId));
+            m_FieldId = fieldId.Trim();
+            m_ProviderOwnerId = providerOwnerId.Trim();
+        }
+
+        protected override void RegisterPorts() => AddValueOutput<T>("值", RejectAuthoringValue<T>, "m_Output");
+    }
+
+    [Name("读取Character State向量"), Category("BTSMTL/Character State")]
+    public sealed class BtsmtlSkillCharacterStateVector3FlowNode : BtsmtlSkillCharacterStateFlowNode<Vector3>
+    {
+        public override string CapabilityId => "character-state-vector3";
+    }
+
+    [Name("读取Character State数值"), Category("BTSMTL/Character State")]
+    public sealed class BtsmtlSkillCharacterStateScalarFlowNode : BtsmtlSkillCharacterStateFlowNode<float>
+    {
+        public override string CapabilityId => "character-state-scalar";
+    }
+
+    [Name("读取Character State朝向"), Category("BTSMTL/Character State")]
+    public sealed class BtsmtlSkillCharacterStateYawFlowNode : BtsmtlSkillCharacterStateFlowNode<float>
+    {
+        public override string CapabilityId => "character-state-yaw";
+    }
+
+    [Name("读取Character State布尔"), Category("BTSMTL/Character State")]
+    public sealed class BtsmtlSkillCharacterStateBooleanFlowNode : BtsmtlSkillCharacterStateFlowNode<bool>
+    {
+        public override string CapabilityId => "character-state-bool";
+    }
+
 }
 #endif

@@ -13,6 +13,7 @@ using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -155,6 +156,37 @@ namespace ThirdPersonCharacter.Control.Authoring
                 typeof(BtsmtlSkillMoveFacingAngleFlowNode),
                 node => ((BtsmtlSkillMoveFacingAngleFlowNode)node).Configure(
                     $"control-module:{definition.ControlModuleId}"));
+            string controlOwner = $"control-module:{definition.ControlModuleId}";
+            DrawProviderButton(
+                "Get Movement Position",
+                typeof(BtsmtlSkillCharacterStateVector3FlowNode),
+                node => ((BtsmtlSkillCharacterStateVector3FlowNode)node).Configure(
+                    CharacterStateProviderFields.Position,
+                    controlOwner));
+            DrawProviderButton(
+                "Get Movement Velocity",
+                typeof(BtsmtlSkillCharacterStateVector3FlowNode),
+                node => ((BtsmtlSkillCharacterStateVector3FlowNode)node).Configure(
+                    CharacterStateProviderFields.Velocity,
+                    controlOwner));
+            DrawProviderButton(
+                "Get Vertical Velocity",
+                typeof(BtsmtlSkillCharacterStateScalarFlowNode),
+                node => ((BtsmtlSkillCharacterStateScalarFlowNode)node).Configure(
+                    CharacterStateProviderFields.VerticalVelocity,
+                    controlOwner));
+            DrawProviderButton(
+                "Get Body Yaw",
+                typeof(BtsmtlSkillCharacterStateYawFlowNode),
+                node => ((BtsmtlSkillCharacterStateYawFlowNode)node).Configure(
+                    CharacterStateProviderFields.BodyYaw,
+                    controlOwner));
+            DrawProviderButton(
+                "Get Grounded",
+                typeof(BtsmtlSkillCharacterStateBooleanFlowNode),
+                node => ((BtsmtlSkillCharacterStateBooleanFlowNode)node).Configure(
+                    CharacterStateProviderFields.Grounded,
+                    controlOwner));
             EditorGUILayout.LabelField(
                 $"只读 C# ControlModule: {definition.ControlModuleId}",
                 EditorStyles.miniLabel);

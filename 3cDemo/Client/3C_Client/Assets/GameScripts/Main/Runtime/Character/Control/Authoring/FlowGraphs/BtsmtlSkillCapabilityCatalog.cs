@@ -182,6 +182,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             "gameplay-effect-apply" => new[] { "effect", "actionContext", "predicted", "providerOwnerId" },
             "gameplay-effect-remove" => new[] { "selector", "handle", "effect", "query", "providerOwnerId" },
             "character-move-facing-angle" => new[] { "providerOwnerId" },
+            "character-state-vector3" or "character-state-scalar" or
+                "character-state-yaw" or "character-state-bool" => new[] { "fieldId", "providerOwnerId" },
             "pipeline-blackboard-bool" or "pipeline-blackboard-float" => new[] { "declarationId", "ownerId", "valueType" },
             "exposed-property" => new[] { "declarationId", "ownerId", "valueType", "accessMode", "factContext" },
             "state-machine" => new[] { "graphId" },

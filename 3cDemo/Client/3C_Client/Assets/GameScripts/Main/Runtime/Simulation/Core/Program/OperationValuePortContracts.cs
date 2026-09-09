@@ -320,6 +320,7 @@ namespace ThirdPersonSimulation
 			Set(values, Both(SimulationOperationCode.MoveFacingAngle,
 				new[] { Fixed("m_MoveInput", 0, SemanticValueKind.Vector2) },
 				new[] { Fixed("m_Output", 0, SemanticValueKind.Number) }));
+			Set(values, Output(SimulationOperationCode.CharacterStateRead, Dynamic("m_Output", 0)));
 			Set(values, Output(SimulationOperationCode.ActivateActionInstance, Fixed("m_Activated", 0, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.ActionContextActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.SubmitActionLifecycle, Fixed("m_Submitted", 0, SemanticValueKind.Boolean)));

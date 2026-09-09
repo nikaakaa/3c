@@ -263,6 +263,7 @@ namespace ThirdPersonSimulation
         InputVector2Magnitude = 73,
         InputRequest = 74,
         MoveFacingAngle = 75,
+        CharacterStateRead = 76,
         ActivateActionInstance = 80,
         ActionContextActive = 81,
         SubmitActionLifecycle = 82,
@@ -354,7 +355,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/14");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/15");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -393,6 +394,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.InputVector2Magnitude,
                 SimulationOperationCode.InputRequest,
                 SimulationOperationCode.MoveFacingAngle,
+                SimulationOperationCode.CharacterStateRead,
                 SimulationOperationCode.ActivateActionInstance,
                 SimulationOperationCode.ActionContextActive,
                 SimulationOperationCode.SubmitActionLifecycle,

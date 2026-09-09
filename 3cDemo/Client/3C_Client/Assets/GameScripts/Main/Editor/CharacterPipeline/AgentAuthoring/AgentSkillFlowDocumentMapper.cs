@@ -717,6 +717,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 node.capability == "character-input-vector2-magnitude" ||
                 node.capability == "character-action-request" ||
                 node.capability == "character-move-facing-angle" ||
+                node.capability == "character-state-vector3" ||
+                node.capability == "character-state-scalar" ||
+                node.capability == "character-state-yaw" ||
+                node.capability == "character-state-bool" ||
                 node.capability == "gameplay-tag-has" ||
                 node.capability == "gameplay-tag-query" ||
                 node.capability == "gameplay-attribute-read" ||
@@ -728,6 +732,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(path + ".properties.providerOwnerId", "skill_provider_owner_missing", "Skill外部provider引用必须指定稳定owner。");
                     valid = false;
                 }
+            }
+            if ((node.capability == "character-state-vector3" && !CharacterStateProviderFields.IsVector3(properties.Value<string>("fieldId"))) ||
+                (node.capability == "character-state-scalar" && !CharacterStateProviderFields.IsScalar(properties.Value<string>("fieldId"))) ||
+                (node.capability == "character-state-yaw" && !CharacterStateProviderFields.IsYaw(properties.Value<string>("fieldId"))) ||
+                (node.capability == "character-state-bool" && !CharacterStateProviderFields.IsBoolean(properties.Value<string>("fieldId"))))
+            {
+                report.Error(path + ".properties.fieldId", "character_state_field_type_invalid", "Character State fieldId 与节点输出类型不匹配。");
+                valid = false;
             }
             if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||
                 (node.capability == "gameplay-attribute-read" && string.IsNullOrWhiteSpace(properties.Value<string>("attributeId"))))
@@ -2308,6 +2320,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
                 value["providerOwnerId"] = moveFacing.ProviderOwnerId;
+            if (node is BtsmtlSkillCharacterStateVector3FlowNode stateVector3)
+            {
+                value["fieldId"] = stateVector3.FieldId;
+                value["providerOwnerId"] = stateVector3.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillCharacterStateScalarFlowNode stateScalar)
+            {
+                value["fieldId"] = stateScalar.FieldId;
+                value["providerOwnerId"] = stateScalar.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillCharacterStateYawFlowNode stateYaw)
+            {
+                value["fieldId"] = stateYaw.FieldId;
+                value["providerOwnerId"] = stateYaw.ProviderOwnerId;
+            }
+            if (node is BtsmtlSkillCharacterStateBooleanFlowNode stateBoolean)
+            {
+                value["fieldId"] = stateBoolean.FieldId;
+                value["providerOwnerId"] = stateBoolean.ProviderOwnerId;
+            }
             if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery)
             {
                 value["providerOwnerId"] = tagQuery.ProviderOwnerId;

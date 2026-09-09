@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (node.graph is not IBtsmtlSkillFlowGraph graph)
                 throw new ArgumentException("A skill node must belong to its formal authoring graph.", nameof(node));
+            ValidateCharacterStateNode(node);
             CharacterSimulationNodeEmission emission = Describe(node);
             BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract native);
             OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(emission.Code);
@@ -92,6 +93,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillMoveFacingAngleFlowNode move => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.MoveFacingAngle,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", move.ProviderOwnerId))),
+            BtsmtlSkillCharacterStateVector3FlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
+            BtsmtlSkillCharacterStateScalarFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
+            BtsmtlSkillCharacterStateYawFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
+            BtsmtlSkillCharacterStateBooleanFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
             BtsmtlSkillLocomotionFlowNode motion => CharacterSimulationMotionNodeEmitterRegistration.Locomotion(motion, motion.UID),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),
@@ -184,6 +189,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 code,
                 text0: identity,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
+        }
+
+        static CharacterSimulationNodeEmission CharacterState(string fieldId, string providerOwnerId)
+        {
+            if (!CharacterStateProviderFields.IsValid(fieldId) || string.IsNullOrWhiteSpace(providerOwnerId))
+                throw new InvalidOperationException("Character State provider reference is incomplete.");
+            return new CharacterSimulationNodeEmission(
+                SimulationOperationCode.CharacterStateRead,
+                text0: fieldId,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
+        }
+
+        static void ValidateCharacterStateNode(FlowNode node)
+        {
+            string field = node switch
+            {
+                BtsmtlSkillCharacterStateVector3FlowNode value => value.FieldId,
+                BtsmtlSkillCharacterStateScalarFlowNode value => value.FieldId,
+                BtsmtlSkillCharacterStateYawFlowNode value => value.FieldId,
+                BtsmtlSkillCharacterStateBooleanFlowNode value => value.FieldId,
+                _ => string.Empty
+            };
+            if (string.IsNullOrEmpty(field))
+                return;
+            bool valid = node switch
+            {
+                BtsmtlSkillCharacterStateVector3FlowNode => CharacterStateProviderFields.IsVector3(field),
+                BtsmtlSkillCharacterStateScalarFlowNode => CharacterStateProviderFields.IsScalar(field),
+                BtsmtlSkillCharacterStateYawFlowNode => CharacterStateProviderFields.IsYaw(field),
+                BtsmtlSkillCharacterStateBooleanFlowNode => CharacterStateProviderFields.IsBoolean(field),
+                _ => false
+            };
+            if (!valid)
+                throw new InvalidOperationException($"Character State field '{field}' does not match node '{node.GetType().Name}'.");
         }
 
         static SemanticValueKind Kind(Type type)

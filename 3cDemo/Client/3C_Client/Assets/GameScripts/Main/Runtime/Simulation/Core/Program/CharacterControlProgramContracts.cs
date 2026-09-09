@@ -5,6 +5,44 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
+    public static class CharacterStateProviderFields
+    {
+        public const string Position = "movement.position";
+        public const string Velocity = "movement.velocity";
+        public const string VerticalVelocity = "movement.vertical-velocity";
+        public const string BodyYaw = "movement.body-yaw";
+        public const string Grounded = "movement.grounded";
+
+        public static bool IsVector3(string field) =>
+            string.Equals(field, Position, StringComparison.Ordinal) ||
+            string.Equals(field, Velocity, StringComparison.Ordinal);
+
+        public static bool IsScalar(string field) =>
+            string.Equals(field, VerticalVelocity, StringComparison.Ordinal);
+
+        public static bool IsYaw(string field) =>
+            string.Equals(field, BodyYaw, StringComparison.Ordinal);
+
+        public static bool IsBoolean(string field) =>
+            string.Equals(field, Grounded, StringComparison.Ordinal);
+
+        public static bool IsValid(string field) =>
+            IsVector3(field) || IsScalar(field) || IsYaw(field) || IsBoolean(field);
+
+        public static SemanticValueKind ValueKind(string field)
+        {
+            if (IsVector3(field))
+                return SemanticValueKind.Vector3;
+            if (IsScalar(field))
+                return SemanticValueKind.Number;
+            if (IsYaw(field))
+                return SemanticValueKind.Yaw;
+            if (IsBoolean(field))
+                return SemanticValueKind.Boolean;
+            throw new InvalidOperationException($"Character State field '{field}' is not supported.");
+        }
+    }
+
     public enum CharacterControlNumericComparison : byte
     {
         Less = 1,

@@ -224,6 +224,7 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.InputVector2Magnitude:
 				case SimulationOperationCode.InputRequest:
 				case SimulationOperationCode.MoveFacingAngle:
+				case SimulationOperationCode.CharacterStateRead:
 				case SimulationOperationCode.ActionContextActive:
 				case SimulationOperationCode.ActionWindowActive:
 				case SimulationOperationCode.CanActivateAction:

@@ -208,6 +208,9 @@ namespace ThirdPersonSimulation
 					case SimulationOperationCode.MoveFacingAngle:
 						result = CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
 						break;
+					case SimulationOperationCode.CharacterStateRead:
+						result = ReadCharacterState(operation.Text0);
+						break;
 					case SimulationOperationCode.Compare:
 						result = CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
 						break;
@@ -245,6 +248,7 @@ namespace ThirdPersonSimulation
 			    operation.Code != SimulationOperationCode.InputVector2 &&
 			    operation.Code != SimulationOperationCode.InputVector2Magnitude &&
 			    operation.Code != SimulationOperationCode.MoveFacingAngle &&
+			    operation.Code != SimulationOperationCode.CharacterStateRead &&
 			    operation.Code != SimulationOperationCode.Compare &&
 			    operation.Code != SimulationOperationCode.And &&
 			    operation.Code != SimulationOperationCode.Or &&
@@ -396,6 +400,19 @@ namespace ThirdPersonSimulation
                 return Float32Scalar.Zero;
             Float32Yaw desired = Float32Angle.FromPlanarDirection(inputs[0].Vector2);
             return Float32Scalar.Abs(Float32Angle.Delta(m_Frame.Body.Yaw, desired));
+        }
+
+        CharacterStateValue ReadCharacterState(string field)
+        {
+            return field switch
+            {
+                CharacterStateProviderFields.Position => CharacterStateValue.FromVector3(m_Frame.Body.Position),
+                CharacterStateProviderFields.Velocity => CharacterStateValue.FromVector3(m_Frame.Body.Velocity),
+                CharacterStateProviderFields.VerticalVelocity => CharacterStateValue.FromScalar(m_Frame.Body.VerticalVelocity),
+                CharacterStateProviderFields.BodyYaw => CharacterStateValue.FromYaw(m_Frame.Body.Yaw),
+                CharacterStateProviderFields.Grounded => CharacterStateValue.FromBoolean(m_Frame.Body.Grounded),
+                _ => throw new InvalidOperationException($"Character State field '{field}' is not supported by Float32 runtime.")
+            };
         }
 
         CharacterStateValue ReadCameraBasis(string outputPort)

@@ -38,6 +38,8 @@ namespace ThirdPersonSimulation.Fixed
                 return port.FixedKind;
             if (operation.Code == SimulationOperationCode.BlackboardGet)
                 return CharacterGameplayValuePortContracts.FromState(program.StateSlots[RequireStateReference(program, operation)].ValueKind);
+            if (operation.Code == SimulationOperationCode.CharacterStateRead)
+                return CharacterStateProviderFields.ValueKind(operation.Text0);
             if (operation.Code == SimulationOperationCode.Constant && operation.ConstantReferences.Count > 0)
                 return FromConstant(program.Constants[operation.ConstantReferences[0]].Kind);
             throw new InvalidOperationException($"Operation '{operation.Handle}' output '{port.Identity}' has no concrete Value kind.");
@@ -56,7 +58,9 @@ namespace ThirdPersonSimulation.Fixed
             if (port == null)
                 throw new ArgumentNullException(nameof(port));
             SemanticValueKind expected = port.Constraint == OperationValuePortConstraint.Dynamic
-                ? CharacterGameplayValuePortContracts.FromState(program.StateSlots[RequireStateReference(program, operation)].ValueKind)
+                ? operation.Code == SimulationOperationCode.CharacterStateRead
+                    ? CharacterStateProviderFields.ValueKind(operation.Text0)
+                    : CharacterGameplayValuePortContracts.FromState(program.StateSlots[RequireStateReference(program, operation)].ValueKind)
                 : port.Resolve(kind);
             if (!port.Accepts(kind) ||
                 (port.Constraint == OperationValuePortConstraint.Dynamic && expected != kind))

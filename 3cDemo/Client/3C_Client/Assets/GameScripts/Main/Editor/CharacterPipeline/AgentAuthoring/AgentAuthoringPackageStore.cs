@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using BTSMTL.Timeline;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Control.Authoring;

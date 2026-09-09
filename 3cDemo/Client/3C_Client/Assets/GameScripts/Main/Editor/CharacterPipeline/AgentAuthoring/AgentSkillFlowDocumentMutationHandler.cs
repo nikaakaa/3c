@@ -716,6 +716,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     RequiredProviderOwner(properties));
             if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
                 moveFacing.Configure(RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillCharacterStateVector3FlowNode stateVector3)
+                stateVector3.Configure(properties.Value<string>("fieldId"), RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillCharacterStateScalarFlowNode stateScalar)
+                stateScalar.Configure(properties.Value<string>("fieldId"), RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillCharacterStateYawFlowNode stateYaw)
+                stateYaw.Configure(properties.Value<string>("fieldId"), RequiredProviderOwner(properties));
+            if (node is BtsmtlSkillCharacterStateBooleanFlowNode stateBoolean)
+                stateBoolean.Configure(properties.Value<string>("fieldId"), RequiredProviderOwner(properties));
             if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery)
                 tagQuery.Configure(
                     ParseGameplayTagQuery(properties["query"]),

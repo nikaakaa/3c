@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         public static bool Allows(Type nodeType, BtsmtlSkillFlowGraphRole role, bool macro)
         {
-            if (!BtsmtlSkillNodeCatalog.Contains(nodeType))
+            if (!BtsmtlSkillCapabilityCatalog.TryGet(nodeType, out _))
                 return false;
             if (nodeType == typeof(MacroInputNode) || nodeType == typeof(MacroOutputNode))
                 return macro;

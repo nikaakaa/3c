@@ -15,14 +15,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     internal static class AgentSkillFlowAuthoringCapabilities
     {
 
-        static readonly IReadOnlyDictionary<string, Type> s_Types = CreateTypes();
-
         public static IReadOnlyList<AgentPackageSkillNodeKindDescriptor> ExportCatalog()
         {
             var result = new List<AgentPackageSkillNodeKindDescriptor>();
-            foreach (Type type in BtsmtlSkillNodeCatalog.All)
+            foreach (BtsmtlSkillNodeCapability capability in BtsmtlSkillCapabilityCatalog.All)
             {
-                if (!TryGetKind(type, out string kind) || IsAnchor(kind))
+                Type type = capability.NodeType;
+                string kind = capability.Kind;
+                if (type == typeof(BtsmtlSkillBlackboardSetFlowNode) || IsAnchor(kind))
                     continue;
                 FlowNode prototype = (FlowNode)Activator.CreateInstance(type);
                 if (prototype is BtsmtlSkillCompositeFlowNode composite)
@@ -49,77 +49,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static bool TryGetKind(FlowNode node, out string kind)
         {
             kind = null;
-            if (node is BtsmtlSkillFlowNode skill)
-            {
-                kind = skill.CapabilityId;
-                return !string.IsNullOrWhiteSpace(kind);
-            }
-            if (node is MacroNodeWrapper)
-            {
-                kind = "macro-call";
-                return true;
-            }
-            if (node is MacroInputNode)
-            {
-                kind = "@input";
-                return true;
-            }
-            if (node is MacroOutputNode)
-            {
-                kind = "@output";
-                return true;
-            }
-            if (BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract contract))
-            {
-                kind = contract.Kind;
-                return true;
-            }
-            return false;
+            return BtsmtlSkillCapabilityCatalog.TryGetKind(node, out kind);
         }
 
         public static bool TryGetKind(Type type, out string kind)
         {
             kind = null;
-            if (type == typeof(MacroNodeWrapper))
-            {
-                kind = "macro-call";
-                return true;
-            }
-            if (type == typeof(MacroInputNode))
-            {
-                kind = "@input";
-                return true;
-            }
-            if (type == typeof(MacroOutputNode))
-            {
-                kind = "@output";
-                return true;
-            }
-            if (BtsmtlSkillNativeNodeCatalog.TryGet(type, out BtsmtlSkillNativeNodeContract contract))
-            {
-                kind = contract.Kind;
-                return true;
-            }
-            if (!typeof(BtsmtlSkillFlowNode).IsAssignableFrom(type))
-                return false;
-            FlowNode node = (FlowNode)Activator.CreateInstance(type);
-            kind = ((BtsmtlSkillFlowNode)node).CapabilityId;
-            return !string.IsNullOrWhiteSpace(kind);
+            return BtsmtlSkillCapabilityCatalog.TryGetKind(type, out kind);
         }
 
         public static bool TryResolveType(string kind, out Type type)
         {
-            return s_Types.TryGetValue(kind ?? string.Empty, out type);
+            return BtsmtlSkillCapabilityCatalog.TryResolveType(kind, out type);
         }
 
-        public static bool IsAnchor(string kind)
-        {
-            return kind == "@root" || kind == "@enter" || kind == "@any" ||
-                   kind == "@exit" || kind == "@onEnter" || kind == "@onExit" ||
-                   kind == "@timelineEnable" || kind == "@timelineDisable" ||
-                   kind == "@timelineDestroy" || kind == "@result" ||
-                   kind == "@input" || kind == "@output";
-        }
+        public static bool IsAnchor(string kind) => BtsmtlSkillCapabilityCatalog.IsAnchor(kind);
 
         public static bool IsAllowed(string kind, BtsmtlSkillFlowGraphRole role)
         {
@@ -228,20 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return type != null;
         }
 
-        static IReadOnlyDictionary<string, Type> CreateTypes()
-        {
-            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
-            foreach (Type type in BtsmtlSkillNodeCatalog.All)
-            {
-                if (type == typeof(BtsmtlSkillBlackboardSetFlowNode))
-                    continue;
-                if (!TryGetKind(type, out string kind))
-                    throw new InvalidOperationException($"技能节点缺少Capability：{type.FullName}");
-                result.Add(kind, type);
-            }
-            return result;
-        }
-
         static IReadOnlyList<BtsmtlSkillFlowGraphRole> AllowedRoles(Type type)
         {
             return Enum.GetValues(typeof(BtsmtlSkillFlowGraphRole))
@@ -250,35 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .ToArray();
         }
 
-        static List<string> Properties(string kind)
-        {
-            return kind switch
-            {
-                "sequence" or "selector" => new List<string> { "steps" },
-                "loop" => new List<string> { "stopType" },
-                "parallel" => new List<string> { "mode", "steps" },
-                "state-exit-cause" => new List<string> { "cause" },
-                "character-input-bool" or "character-input-float" or
-                    "character-input-vector2" or "character-input-vector2-magnitude" or
-                    "character-action-request" => new List<string> { "inputId" },
-                "action-context-active" => new List<string> { "actionContext" },
-                "action-window-active" => new List<string> { "windowType" },
-                "can-activate-action" => new List<string> { "actionProfile", "targetSnapshot" },
-                "submit-action-lifecycle" => new List<string> { "actionContext", "transitionType", "reason" },
-                "pipeline-blackboard-bool" or "pipeline-blackboard-float" => new List<string> { "declarationId", "ownerId", "valueType" },
-                "exposed-property" => new List<string> { "declarationId", "ownerId", "valueType", "accessMode", "factContext" },
-                "state-machine" => new List<string> { "graphId" },
-                "state" => new List<string> { "bodyGraphId", "steps" },
-                "timeline" => new List<string> { "timelineId", "timelineOwnership", "actionContext", "playbackMode" },
-                "locomotion-input-motion" => new List<string>
-                {
-                    "moveSpeed", "displacementMode", "turnSpeedDegrees", "cameraRelative",
-                    "executionMode", "durationSeconds", "actionMotionCurve"
-                },
-                "macro-call" => new List<string> { "graphId" },
-                _ => new List<string>()
-            };
-        }
+        static IReadOnlyList<string> Properties(string kind) => BtsmtlSkillCapabilityCatalog.Properties(kind);
 
         static AgentPackagePortDescriptor ParameterPort(AgentPackageSkillMacroParameter parameter, bool input)
         {
@@ -314,19 +216,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static List<AgentPackagePortDescriptor> Ports(FlowNode node, bool flow)
         {
-            IEnumerable<Port> ports = flow
-                ? node.GetInputFlowPorts().Cast<Port>()
-                    .Concat(node.GetOutputFlowPorts().Cast<Port>())
-                : node.GetInputValuePorts().Cast<Port>()
-                    .Concat(node.GetOutputValuePorts().Cast<Port>());
-            return ports.OrderBy(value => value.ID, StringComparer.Ordinal)
+            return BtsmtlSkillCapabilityCatalog.ProjectPorts(node)
+                .Where(value => value.IsFlow == flow)
                 .Select(value => new AgentPackagePortDescriptor
                 {
-                    key = value.ID,
-                    direction = value.IsInputPort() ? "Input" : "Output",
-                    valueType = flow ? string.Empty : ValueType(value.type),
-                    capacity = value is FlowInput || value is ValueOutput ? "Multiple" : "Single",
-                    required = value is ValueInput input && input.isRequired
+                    key = value.Id,
+                    direction = value.IsInput ? "Input" : "Output",
+                    valueType = value.IsFlow ? string.Empty : ValueType(value.ValueType),
+                    capacity = value.Multiple ? "Multiple" : "Single",
+                    required = value.Required
                 })
                 .ToList();
         }

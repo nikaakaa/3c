@@ -52,6 +52,14 @@ namespace ThirdPersonCharacter.Control.Authoring
                         continue;
                     if (call.macro is not BtsmtlSkillMacroGraph macro)
                         throw Error(nodePath, "调用目标必须是正式技能 Macro。");
+                    try
+                    {
+                        BtsmtlSkillMacroInterface.ValidateCall(call, macro, nodePath);
+                    }
+                    catch (InvalidOperationException exception)
+                    {
+                        throw Error(nodePath, exception.Message);
+                    }
                     RequirePrivateOwnership(graph, macro, nodePath);
                     Visit(macro, nodePath, complete, active, identities, result);
                 }
@@ -129,6 +137,14 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 if (value is not FlowNode node || !graph.CanAuthorNodeType(node.GetType()))
                     throw Error(path, "页面包含未登记或不属于当前页面的节点。");
+                try
+                {
+                    BtsmtlSkillCapabilityCatalog.ProjectPorts(node);
+                }
+                catch (InvalidOperationException exception)
+                {
+                    throw Error(path + "/node:" + value.UID, exception.Message);
+                }
                 if (!nodes.Add(node.UID))
                     throw Error(path, "节点身份重复。");
                 bool anchor = node is IBtsmtlSkillSystemNode || node is MacroInputNode || node is MacroOutputNode;

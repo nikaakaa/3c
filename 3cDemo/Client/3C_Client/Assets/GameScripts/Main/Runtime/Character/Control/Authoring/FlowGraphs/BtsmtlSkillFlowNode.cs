@@ -17,6 +17,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         public abstract string CapabilityId { get; }
         public override bool ignoreSelfInstancePortAssignment => true;
 
+        protected override void OnNodeInspectorGUI() =>
+            BtsmtlSkillNodeInspector.Draw(this);
+
         protected static void RejectAuthoringExecution(Flow flow) =>
             throw new InvalidOperationException("Skill authoring nodes must execute through the compiled Skill Program.");
 

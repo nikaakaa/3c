@@ -155,9 +155,9 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
 - [x] 6.3.1 浮点／定点trace发布技能根generation，与节点activation generation分开保留，并同步诊断payload差异判定。证据：87f16e650。
 - [x] 6.3.2 从真实进入、完成及停止事件读取节点阶段，不把日志severity当成功或失败。证据：01f254500。
-- [ ] 6.3.3 发布完整Macro调用路径及调用代次、实际经过的边和等待原因，保持原技能状态所有权；用正式执行记录对账。
+- [x] 6.3.3 发布完整Macro调用路径及调用代次、实际经过的边和等待原因，保持原技能状态所有权；用正式执行记录对账。
 
-  当前进度：观察身份包含技能根代次及GraphInvocationGeneration，payload另存节点代次和父调用代次；调用所属生命周期由编译元数据指定，不猜图ID。实际边、值读取和稳定等待原因已发布。补齐SubGraph标准生命周期槽，使停止请求进入既有子图停止分支；移除此前无状态调用代理显示补丁。正式执行对账仍待完成。
+  代码/审计证据：Float32/Fixed diagnostics从实际ExecutionRecord发布Macro CallSite/调用代次/父代次、ControlFlowEdge、端口值和operation_waiting；SubGraph拥有标准生命周期槽，停止走正式子图分支。实际执行记录由8.1补证。
 
 ### 6.4 订阅、缓存与采集开销
 

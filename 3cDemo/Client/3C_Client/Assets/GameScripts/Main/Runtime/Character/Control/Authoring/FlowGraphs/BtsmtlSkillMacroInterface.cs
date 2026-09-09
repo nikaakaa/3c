@@ -258,7 +258,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     if (!string.Equals(name, definition.name, StringComparison.Ordinal))
                         Rename(definition, name);
                     if (!execution && nextTypeIndex != typeIndex)
-                        ChangeType(definition, s_ValueTypes[nextTypeIndex]);
+                        ChangeType(definition, BtsmtlSkillMacroInterface.ValueTypes[nextTypeIndex]);
                 }
                 if (!execution && GUILayout.Button("删除", GUILayout.Width(48f)))
                     Remove(definitions, definition, input);

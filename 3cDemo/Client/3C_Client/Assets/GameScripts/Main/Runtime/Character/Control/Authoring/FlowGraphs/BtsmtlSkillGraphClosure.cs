@@ -191,8 +191,17 @@ namespace ThirdPersonCharacter.Control.Authoring
                 _ => throw Error(path, "未知技能页面类型。")
             };
             foreach (Type type in required)
-                if (!anchors.Contains(type))
+                if (!HasAnchor(anchors, type))
                     throw Error(path, $"页面缺少 {type.Name} 系统入口。");
+        }
+
+        static bool HasAnchor(ISet<Type> anchors, Type required)
+        {
+            if (required == typeof(MacroInputNode))
+                return anchors.Any(value => typeof(MacroInputNode).IsAssignableFrom(value));
+            if (required == typeof(MacroOutputNode))
+                return anchors.Any(value => typeof(MacroOutputNode).IsAssignableFrom(value));
+            return anchors.Contains(required);
         }
 
         static void VisitEdges(Node node, string path, HashSet<Node> active, HashSet<Node> visited)

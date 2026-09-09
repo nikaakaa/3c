@@ -47,7 +47,9 @@ namespace ThirdPersonCharacter.Control.Authoring
             typeof(BtsmtlSkillTimelineDestroyFlowNode),
             typeof(MacroNodeWrapper),
             typeof(MacroInputNode),
-            typeof(MacroOutputNode)
+            typeof(MacroOutputNode),
+            typeof(BtsmtlSkillMacroInputNode),
+            typeof(BtsmtlSkillMacroOutputNode)
         }.Concat(BtsmtlSkillNativeNodeCatalog.All.Select(value => value.NodeType)).ToArray());
 
         static readonly HashSet<Type> s_Types = new(All);

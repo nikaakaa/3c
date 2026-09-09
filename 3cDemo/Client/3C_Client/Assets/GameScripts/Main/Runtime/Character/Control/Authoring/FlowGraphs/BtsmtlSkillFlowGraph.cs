@@ -36,7 +36,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (!BtsmtlSkillCapabilityCatalog.TryGet(nodeType, out _))
                 return false;
-            if (nodeType == typeof(MacroInputNode) || nodeType == typeof(MacroOutputNode))
+            if (typeof(MacroInputNode).IsAssignableFrom(nodeType) ||
+                typeof(MacroOutputNode).IsAssignableFrom(nodeType))
                 return macro;
             if (nodeType == typeof(MacroNodeWrapper))
                 return role != BtsmtlSkillFlowGraphRole.StateMachine && role != BtsmtlSkillFlowGraphRole.ConditionRule;

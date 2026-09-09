@@ -134,5 +134,25 @@ namespace ThirdPersonCharacter.Control.Authoring
             BtsmtlSkillFlowEditorMutation.AppendCreationItem(this, menu, category, type, position, context, instance);
 #endif
     }
+
+    public sealed class BtsmtlSkillMacroInputNode : MacroInputNode
+    {
+        protected override void OnNodeInspectorGUI()
+        {
+            EditorGUILayout.HelpBox("技能Macro接口由工具栏统一编辑。", MessageType.Info);
+            if (GUILayout.Button("打开接口编辑器"))
+                BtsmtlSkillMacroInterface.OpenEditor((BtsmtlSkillMacroGraph)graph);
+        }
+    }
+
+    public sealed class BtsmtlSkillMacroOutputNode : MacroOutputNode
+    {
+        protected override void OnNodeInspectorGUI()
+        {
+            EditorGUILayout.HelpBox("技能Macro接口由工具栏统一编辑。", MessageType.Info);
+            if (GUILayout.Button("打开接口编辑器"))
+                BtsmtlSkillMacroInterface.OpenEditor((BtsmtlSkillMacroGraph)graph);
+        }
+    }
 }
 #endif

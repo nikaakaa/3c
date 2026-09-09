@@ -104,8 +104,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     graph.AddNode<BtsmtlSkillConditionResultFlowNode>(new Vector2(600, 180));
                     break;
                 case BtsmtlSkillFlowGraphRole.Subgraph:
-                    graph.AddNode<MacroInputNode>(new Vector2(100, 180));
-                    graph.AddNode<MacroOutputNode>(new Vector2(650, 180));
+                    graph.AddNode<BtsmtlSkillMacroInputNode>(new Vector2(100, 180));
+                    graph.AddNode<BtsmtlSkillMacroOutputNode>(new Vector2(650, 180));
                     break;
                 case BtsmtlSkillFlowGraphRole.TimelineBody:
                     graph.AddNode<BtsmtlSkillTimelineEnableFlowNode>(new Vector2(120, 60));

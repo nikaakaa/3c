@@ -150,9 +150,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                     kind = native.Kind;
                 else if (type == typeof(MacroNodeWrapper))
                     kind = "macro-call";
-                else if (type == typeof(MacroInputNode))
+                else if (typeof(MacroInputNode).IsAssignableFrom(type))
                     kind = "@input";
-                else if (type == typeof(MacroOutputNode))
+                else if (typeof(MacroOutputNode).IsAssignableFrom(type))
                     kind = "@output";
                 else if (typeof(BtsmtlSkillFlowNode).IsAssignableFrom(type))
                     kind = ((BtsmtlSkillFlowNode)Activator.CreateInstance(type)).CapabilityId;

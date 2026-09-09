@@ -141,6 +141,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
                 m_Observation.CaptureValues = m_CaptureValues;
                 m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
+                m_Observation.SetInstanceSelection(() => BtsmtlSkillHostEntry.ShowInstances(
+                    m_Definition, graph, m_Session, scope.Root.CharacterRuntimeId, m_Observation.Instance));
             }
             catch (InvalidOperationException error)
             {

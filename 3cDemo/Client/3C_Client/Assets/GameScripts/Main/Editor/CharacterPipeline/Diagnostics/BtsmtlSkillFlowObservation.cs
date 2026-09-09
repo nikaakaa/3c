@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool m_CoverageGap;
         Func<bool> m_CanNavigateParent;
         Action m_NavigateParent;
+        Action m_SelectExecution;
         Action<BtsmtlSkillTimelineFlowNode> m_TimelineOpening;
         bool m_Dirty = true;
         bool m_Disposed;
@@ -82,6 +83,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             : "等待该调用执行";
         public bool CanNavigateParent => m_CanNavigateParent?.Invoke() == true;
         public void NavigateParent() => m_NavigateParent?.Invoke();
+        public void SelectInstance() => m_SelectExecution?.Invoke();
+        internal void SetInstanceSelection(Action select) => m_SelectExecution = select;
         public void NotifyTimelineOpening(BtsmtlSkillTimelineFlowNode node) => m_TimelineOpening?.Invoke(node);
         internal void SetParentNavigation(Func<bool> canNavigate, Action navigate, Action<BtsmtlSkillTimelineFlowNode> timelineOpening)
         {

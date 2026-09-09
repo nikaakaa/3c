@@ -153,3 +153,5 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 作者选择 A：技能根独立文件，私有子图与 Timeline 随技能根保存。Document 根创建改为主资产，取消 Definition 子资产创建路径；预检同时核对 RootAsset 实际类型、私有调用方文件及新文件冲突。新文件路径在 apply 前进入原事务的清理清单，失败时先回退 Undo，再删除本次预先确认不存在的根文件。没有执行资产迁移、Document apply 或内容 Build；完整保存与回滚执行证据仍待最终资产阶段，不据此勾选 5.3。
 
 后续代码对账：新增唯一 `BtsmtlSkillNodeCatalog`，原生创建规则和 Document 类型解析均读取同一注册表；Document 的页面角色限制复用原生规则。三个 Timeline Hook 直接声明各自 capability，删除 Document 的特殊名称翻译。固定端口形状直接读取原生节点声明，删除重复手写列表；修正 Flow 输出单连接、Flow 输入多连接的容量声明，并在整图 dry-run 拒绝超容量边。组合步骤、Macro 参数和黑板动态类型仍按 Document 中的显式声明投影；完整 typed 编辑接入和能力审计任务尚未据此标完成。
+
+实例入口代码：Host Inspector 增加“选择技能图／执行实例”，仅在点击后解析当前 Host 的 Definition 并生成菜单；Fixed Host 使用其正式 Program 的 DefinitionGuid。Play 菜单只列当前 Actor 已采集的 SkillExecution，显示 ActionInstance、释放代次、调用代次及路径，点击后锁定明确实例。原生图工具栏可再次选择当前页实例，不默认选第一条，也不创建预览执行器。事件来源导航同样支持 Fixed Host。Inspector 默认不订阅 Values，端口值由原生工具栏显式开启；完整交互、结束实例与多调用运行证据仍属于 7.2—7.5 和 8.1，未提前勾选。

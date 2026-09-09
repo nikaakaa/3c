@@ -28,10 +28,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ProgramRevision) ||
                 !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) || !entry.Source.Equals(eventView.Source))
                 return false;
-            CharacterPipelineHost host = EditorUtility.InstanceIDToObject(target.HostInstanceId) as CharacterPipelineHost;
-            if (!host || !RuntimeDebugSession.Shared.AttachToTarget(instance.CharacterRuntimeId))
+            CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(target.HostInstanceId));
+            if (!definition || !RuntimeDebugSession.Shared.AttachToTarget(instance.CharacterRuntimeId))
                 return false;
-            return Open(host.Definition, eventView.Source, instance);
+            return Open(definition, eventView.Source, instance);
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)

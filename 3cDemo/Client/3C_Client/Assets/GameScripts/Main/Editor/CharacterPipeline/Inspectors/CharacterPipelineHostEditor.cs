@@ -42,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeDebugViewModel view = session.ViewModel;
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Runtime Diagnostics", EditorStyles.boldLabel);
+            if (GUILayout.Button("选择技能图／执行实例"))
+                BtsmtlSkillHostEntry.ShowHostMenu(hostInstanceId);
             if (!view.Attached || view.Target.HostInstanceId != hostInstanceId)
             {
                 session.ReleaseLiveInterest(interestOwner);
@@ -54,8 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
 
             RuntimeTraceChannel liveChannels = mode == CharacterRuntimeDiagnosticsInspectorMode.FootPlacement
-                ? RuntimeTraceChannel.FootPlacement
-                : RuntimeTraceChannel.All;
+                ? RuntimeTraceChannel.FootPlacement | RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine
+                : RuntimeTraceChannel.All & ~RuntimeTraceChannel.Values;
             if (session.CanControlLiveTarget)
                 session.EnsureLiveInterest(interestOwner, liveChannels);
 

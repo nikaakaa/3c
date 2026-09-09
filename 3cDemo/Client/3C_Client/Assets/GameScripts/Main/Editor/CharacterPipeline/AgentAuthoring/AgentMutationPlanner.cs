@@ -528,8 +528,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureActionAdmission] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureActionAdmission, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerConfigureActionAdmission),
                 [AgentMutationKind.EnsureBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerEnsureBlackboardDeclaration),
                 [AgentMutationKind.MoveBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerMoveBlackboardDeclaration),
-                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.Both),
-                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.Both),
+                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureExposedPropertyNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureExposedPropertyNode, AgentMutationOutputKind.Node, AgentBlackboardMutationLowering.LowerEnsureExposedPropertyNode),
                 [AgentMutationKind.EnsureTimelineTreeClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineTreeClip, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureTimelineTreeClip),
                 [AgentMutationKind.EnsureMotionCurveTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveTrack, AgentMutationOutputKind.TimelineTrack, AgentTimelineMutationLowering.LowerEnsureMotionCurveTrack),
@@ -546,6 +546,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureTimelineClipEase] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineClipEase, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureTimelineClipEase),
                 [AgentMutationKind.ConfigureTimelineCurveChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineCurveChannel, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureTimelineCurveChannel),
                 [AgentMutationKind.ConfigureAnimationTrackChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackChannel, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureAnimationTrackChannel),
+                [AgentMutationKind.ConfigureAnimationTrackSlot] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackSlot, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureAnimationTrackSlot),
+                [AgentMutationKind.ConfigureAnimationClipBlendProfile] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationClipBlendProfile, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerConfigureAnimationClipBlendProfile),
                 [AgentMutationKind.EnsureAnimationClipSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationClipSegment, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureAnimationClipSegment),
                 [AgentMutationKind.DeleteTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineClip, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerDeleteTimelineClip),
                 [AgentMutationKind.EnsureTreeClipBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTreeClipBlackboardWrite, AgentMutationOutputKind.None, AgentTimelineMutationLowering.LowerEnsureTreeClipBlackboardWrite),
@@ -555,7 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.SetActionProfileCancelQuery] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileCancelQuery, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileCancelQuery),
                 [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileTargetRequirement),
                 [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionRequestTimingClass),
-                [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerConfigureControlConfiguration),
+                [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerConfigureControlConfiguration, AgentMutationDomainMask.CharacterController),
                 [AgentMutationKind.SetSkillFlowDocument] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillFlowDocument, AgentMutationOutputKind.None, AgentSkillFlowDocumentMutationLowering.LowerSetSkillFlowDocument, AgentMutationDomainMask.CharacterController),
                 [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
@@ -569,14 +571,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.EnsureAIActionTarget] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionTarget, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionTarget, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureAIActionRequest] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionRequest, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionRequest, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureBTConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBTConditionRule, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerEnsureBTConditionRule, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraphNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureGraphNode, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeleteGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteGraphNode, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteGraphNode, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeleteFlowEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteFlowEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteFlowEdge, AgentMutationDomainMask.Both),
-                [AgentMutationKind.DeletePropertyEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeletePropertyEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeletePropertyEdge, AgentMutationDomainMask.Both),
-                [AgentMutationKind.LinkFlow] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkFlow, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerLinkFlow, AgentMutationDomainMask.Both),
-                [AgentMutationKind.LinkProperty] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkProperty, AgentMutationOutputKind.PropertyEdge, AgentGraphMutationLowering.LowerLinkProperty, AgentMutationDomainMask.Both),
-                [AgentMutationKind.EnsureGraph] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraph, AgentMutationOutputKind.Graph, AgentGraphMutationLowering.LowerEnsureGraph, AgentMutationDomainMask.Both),
-                [AgentMutationKind.ConfigureGraphReference] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureGraphReference, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerConfigureGraphReference, AgentMutationDomainMask.Both)
+                [AgentMutationKind.EnsureGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraphNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureGraphNode, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.DeleteGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteGraphNode, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteGraphNode, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.DeleteFlowEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteFlowEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteFlowEdge, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.DeletePropertyEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeletePropertyEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeletePropertyEdge, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.LinkFlow] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkFlow, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerLinkFlow, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.LinkProperty] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkProperty, AgentMutationOutputKind.PropertyEdge, AgentGraphMutationLowering.LowerLinkProperty, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.EnsureGraph] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraph, AgentMutationOutputKind.Graph, AgentGraphMutationLowering.LowerEnsureGraph, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.ConfigureGraphReference] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureGraphReference, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerConfigureGraphReference, AgentMutationDomainMask.AIController)
             };
 
         public static bool TryGet(AgentMutationKind kind, out AgentMutationDraftDescriptor descriptor)
@@ -613,7 +615,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentMutationKind kind,
             AgentMutationOutputKind outputKind,
             Func<AgentMutationPlanningContext, AgentMutationDraft, AgentMutation> lower,
-            AgentMutationDomainMask domains = AgentMutationDomainMask.CharacterController)
+            AgentMutationDomainMask domains = AgentMutationDomainMask.AIController)
         {
             Kind = kind;
             OutputKind = outputKind;

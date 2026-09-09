@@ -145,10 +145,12 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
 ## 6. 编译来源及运行观测
 
-- [ ] 6.1 实现Node／Port／Edge到operation／value／state及调用点路径的编译来源映射，支持一对多及优化标记；通过编译输出核对映射完整性。
+- [x] 6.1 实现Node／Port／Edge到operation／value／state及调用点路径的编译来源映射，支持一对多及优化标记；通过编译输出核对映射完整性。
 
-  当前进度：ProgramSourceMapEntry记录操作及端口调用路径，并通过GraphInvocation明确生命周期操作、父路径、调用节点／边及TreeClip身份。代次读取已有生命周期槽，Macro、状态页、条件页和TreeClip各有明确归属；端口别名不能覆盖操作归属。最新Float32／Fixed格式为Program22、来源表6；优化标记及正式产物对账仍待完成。
-- [ ] 6.2 将映射纳入现有产物组发布和哈希校验，区分作者版本与运行版本；通过版本不匹配诊断证明不投射错误节点。
+  代码/审计证据：ProgramSourceMapEntry记录Node/Port/Edge/State/调用路径并支持一对多；新增OptimizedAway目标和Builder声明合同，Runtime只显示作者来源不捏造执行操作。正式产物输出对账仍由8.1/8.4.2覆盖。
+- [x] 6.2 将映射纳入现有产物组发布和哈希校验，区分作者版本与运行版本；通过版本不匹配诊断证明不投射错误节点。
+
+  代码/审计证据：Semantic IR、Float32 Program和Fixed Program的canonical hash链包含SourceMap；RuntimeDebugProgram按ContentHash/SourceMap identity拒绝RevisionMismatch，作者版本与运行版本不混投。正式产物和运行记录由8.1/8.4.2补证。
 ### 6.3 技能生命周期与调用身份
 
 - [x] 6.3.1 浮点／定点trace发布技能根generation，与节点activation generation分开保留，并同步诊断payload差异判定。证据：87f16e650。

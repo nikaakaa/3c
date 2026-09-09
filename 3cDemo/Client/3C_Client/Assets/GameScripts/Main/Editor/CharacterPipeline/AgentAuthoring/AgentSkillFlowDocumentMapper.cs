@@ -343,6 +343,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(GraphLayoutPath(graph.id) + ".nodes", "skill_graph_layout_incomplete", "Skill Graph layout必须完整覆盖普通节点，不能包含anchor或漏掉节点。");
                     valid = false;
                 }
+                var connectedOutputs = new HashSet<(string Node, string Port)>();
+                var connectedInputs = new HashSet<(string Node, string Port)>();
                 foreach (AgentPackageSkillFlowEdge edge in graph.edges ??
                              new List<AgentPackageSkillFlowEdge>())
                 {
@@ -359,6 +361,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                  graph,
                                  edge,
                                  document.macros,
+                                 connectedOutputs,
+                                 connectedInputs,
                                  edgePath,
                                  report))
                         valid = false;
@@ -1829,6 +1833,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentPackageSkillFlowGraphFile graph,
             AgentPackageSkillFlowEdge edge,
             IReadOnlyList<AgentPackageSkillMacroFile> macros,
+            ISet<(string Node, string Port)> connectedOutputs,
+            ISet<(string Node, string Port)> connectedInputs,
             string path,
             AgentCompileReport report)
         {
@@ -1842,6 +1848,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                            !string.Equals(from.valueType, to.valueType, StringComparison.Ordinal)))
             {
                 report.Error(path, "skill_edge_port_shape_invalid", "Skill Edge必须连接同一类型的合法输出与输入port。");
+                return false;
+            }
+            bool outputAvailable = connectedOutputs.Add((edge.from.node, edge.from.port));
+            bool inputAvailable = connectedInputs.Add((edge.to.node, edge.to.port));
+            if (from.capacity == "Single" && !outputAvailable || to.capacity == "Single" && !inputAvailable)
+            {
+                report.Error(path, "skill_edge_port_capacity_exceeded", "单连接端口不能重复接线：Flow输出与值输入必须各自只有一条连接。");
                 return false;
             }
             return true;
@@ -1870,17 +1883,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         key = step.id,
                         direction = "Output",
                         valueType = string.Empty,
-                        capacity = "Multiple"
+                        capacity = "Single"
                     }
                     : null;
             if (anchor.kind == "@root" || anchor.kind == "@onEnter" || anchor.kind == "@onExit" ||
                 anchor.kind == "@timelineEnable" || anchor.kind == "@timelineDisable" || anchor.kind == "@timelineDestroy")
                 return endpoint.port == "Output"
-                    ? new AgentPackagePortDescriptor { key = "Output", direction = "Output", capacity = "Multiple" }
+                    ? new AgentPackagePortDescriptor { key = "Output", direction = "Output", capacity = "Single" }
                     : null;
             if (anchor.kind == "@exit")
                 return endpoint.port == "StateIn"
-                    ? new AgentPackagePortDescriptor { key = "StateIn", direction = "Input", capacity = "Single" }
+                    ? new AgentPackagePortDescriptor { key = "StateIn", direction = "Input", capacity = "Multiple" }
                     : null;
             if (anchor.kind == "@result")
                 return endpoint.port == "m_Result"
@@ -1893,7 +1906,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentPackageSkillMacroParameter parameter = macro?.inputs?.FirstOrDefault(value => value?.id == endpoint.port);
                 return parameter == null || input ? null :
                     parameter.valueType == "flow"
-                        ? new AgentPackagePortDescriptor { key = parameter.id, direction = "Output", capacity = "Multiple" }
+                        ? new AgentPackagePortDescriptor { key = parameter.id, direction = "Output", capacity = "Single" }
                         : new AgentPackagePortDescriptor { key = parameter.id, direction = "Output", valueType = parameter.valueType, capacity = "Multiple" };
             }
             if (anchor.kind == "@output")
@@ -1903,7 +1916,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentPackageSkillMacroParameter parameter = macro?.outputs?.FirstOrDefault(value => value?.id == endpoint.port);
                 return parameter == null || !input ? null :
                     parameter.valueType == "flow"
-                        ? new AgentPackagePortDescriptor { key = parameter.id, direction = "Input", capacity = "Single" }
+                        ? new AgentPackagePortDescriptor { key = parameter.id, direction = "Input", capacity = "Multiple" }
                         : new AgentPackagePortDescriptor { key = parameter.id, direction = "Input", valueType = parameter.valueType, capacity = "Single" };
             }
             return null;

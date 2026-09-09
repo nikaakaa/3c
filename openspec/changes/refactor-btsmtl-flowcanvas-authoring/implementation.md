@@ -151,3 +151,5 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 # 2026-09-09 技能根资产所有权统一
 
 作者选择 A：技能根独立文件，私有子图与 Timeline 随技能根保存。Document 根创建改为主资产，取消 Definition 子资产创建路径；预检同时核对 RootAsset 实际类型、私有调用方文件及新文件冲突。新文件路径在 apply 前进入原事务的清理清单，失败时先回退 Undo，再删除本次预先确认不存在的根文件。没有执行资产迁移、Document apply 或内容 Build；完整保存与回滚执行证据仍待最终资产阶段，不据此勾选 5.3。
+
+后续代码对账：新增唯一 `BtsmtlSkillNodeCatalog`，原生创建规则和 Document 类型解析均读取同一注册表；Document 的页面角色限制复用原生规则。三个 Timeline Hook 直接声明各自 capability，删除 Document 的特殊名称翻译。固定端口形状直接读取原生节点声明，删除重复手写列表；修正 Flow 输出单连接、Flow 输入多连接的容量声明，并在整图 dry-run 拒绝超容量边。组合步骤、Macro 参数和黑板动态类型仍按 Document 中的显式声明投影；完整 typed 编辑接入和能力审计任务尚未据此标完成。

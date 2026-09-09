@@ -14,43 +14,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal static class AgentSkillFlowAuthoringCapabilities
     {
-        static readonly Type[] s_NodeTypes =
-        {
-            typeof(BtsmtlSkillSequenceFlowNode),
-            typeof(BtsmtlSkillSelectorFlowNode),
-            typeof(BtsmtlSkillLoopFlowNode),
-            typeof(BtsmtlSkillParallelFlowNode),
-            typeof(BtsmtlSkillSucceedFlowNode),
-            typeof(BtsmtlSkillStateMachineFlowNode),
-            typeof(BtsmtlSkillStateFlowNode),
-            typeof(BtsmtlSkillStateRootCompletedFlowNode),
-            typeof(BtsmtlSkillStateExitCauseFlowNode),
-            typeof(BtsmtlSkillTimelineFlowNode),
-            typeof(BtsmtlSkillBooleanInputFlowNode),
-            typeof(BtsmtlSkillScalarInputFlowNode),
-            typeof(BtsmtlSkillVector2InputFlowNode),
-            typeof(BtsmtlSkillInputMagnitudeFlowNode),
-            typeof(BtsmtlSkillActionRequestFlowNode),
-            typeof(BtsmtlSkillActionContextActiveFlowNode),
-            typeof(BtsmtlSkillActionWindowActiveFlowNode),
-            typeof(BtsmtlSkillCanActivateActionFlowNode),
-            typeof(BtsmtlSkillSubmitActionLifecycleFlowNode),
-            typeof(BtsmtlSkillMoveFacingAngleFlowNode),
-            typeof(BtsmtlSkillBlackboardBooleanFlowNode),
-            typeof(BtsmtlSkillBlackboardScalarFlowNode),
-            typeof(BtsmtlSkillBlackboardGetFlowNode),
-            typeof(BtsmtlSkillBlackboardSetFlowNode),
-            typeof(BtsmtlSkillLocomotionFlowNode)
-        };
 
         static readonly IReadOnlyDictionary<string, Type> s_Types = CreateTypes();
 
         public static IReadOnlyList<AgentPackageSkillNodeKindDescriptor> ExportCatalog()
         {
             var result = new List<AgentPackageSkillNodeKindDescriptor>();
-            foreach (Type type in s_NodeTypes
-                         .Concat(new[] { typeof(MacroNodeWrapper) })
-                         .Concat(BtsmtlSkillNativeNodeCatalog.All.Select(value => value.NodeType)))
+            foreach (Type type in BtsmtlSkillNodeCatalog.All)
             {
                 if (!TryGetKind(type, out string kind) || IsAnchor(kind))
                     continue;
@@ -77,21 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static bool TryGetKind(FlowNode node, out string kind)
         {
             kind = null;
-            if (node is BtsmtlSkillTimelineEnableFlowNode)
-            {
-                kind = "@timelineEnable";
-                return true;
-            }
-            if (node is BtsmtlSkillTimelineDisableFlowNode)
-            {
-                kind = "@timelineDisable";
-                return true;
-            }
-            if (node is BtsmtlSkillTimelineDestroyFlowNode)
-            {
-                kind = "@timelineDestroy";
-                return true;
-            }
             if (node is BtsmtlSkillFlowNode skill)
             {
                 kind = skill.CapabilityId;
@@ -123,21 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static bool TryGetKind(Type type, out string kind)
         {
             kind = null;
-            if (type == typeof(BtsmtlSkillTimelineEnableFlowNode))
-            {
-                kind = "@timelineEnable";
-                return true;
-            }
-            if (type == typeof(BtsmtlSkillTimelineDisableFlowNode))
-            {
-                kind = "@timelineDisable";
-                return true;
-            }
-            if (type == typeof(BtsmtlSkillTimelineDestroyFlowNode))
-            {
-                kind = "@timelineDestroy";
-                return true;
-            }
             if (type == typeof(MacroNodeWrapper))
             {
                 kind = "macro-call";
@@ -232,67 +172,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     result.Add(FlowPort(step.Value<string>("id"), "Output"));
                 return result;
             }
-            if (kind == "loop")
+            if (TryResolveType(kind, out Type type))
             {
-                result.Add(FlowPort("Input", "Input"));
-                result.Add(FlowPort("Output", "Output"));
-                return result;
+                FlowNode prototype = (FlowNode)Activator.CreateInstance(type);
+                prototype.GatherPorts();
+                result.AddRange(Ports(prototype, true));
+                result.AddRange(Ports(prototype, false));
             }
-            if (kind == "locomotion-input-motion")
-            {
-                result.Add(FlowPort("Input", "Input"));
-                result.Add(ValuePort("m_MoveInput", "Input", "vector2"));
-                return result;
-            }
-            if (kind == "submit-action-lifecycle")
-            {
-                result.Add(FlowPort("Input", "Input"));
-                result.Add(ValuePort("m_Submitted", "Output", "bool"));
-                return result;
-            }
-            if (kind == "character-move-facing-angle")
-            {
-                result.Add(ValuePort("m_MoveInput", "Input", "vector2"));
-                result.Add(ValuePort("m_Output", "Output", "float"));
-                return result;
-            }
-            if (kind == "pipeline-blackboard-bool")
-            {
-                result.Add(ValuePort("m_Output", "Output", "bool"));
-                return result;
-            }
-            if (kind == "pipeline-blackboard-float")
-            {
-                result.Add(ValuePort("m_Output", "Output", "float"));
-                return result;
-            }
-            if (kind == "character-input-bool" || kind == "character-action-request" ||
-                kind == "action-context-active" || kind == "action-window-active" ||
-                kind == "can-activate-action" || kind == "state-root-completed" ||
-                kind == "state-exit-cause")
-            {
-                result.Add(ValuePort("m_Output", "Output", "bool"));
-                return result;
-            }
-            if (kind == "character-input-float" || kind == "character-input-vector2-magnitude")
-            {
-                result.Add(ValuePort("m_Output", "Output", "float"));
-                return result;
-            }
-            if (kind == "character-input-vector2")
-            {
-                result.Add(ValuePort("m_Output", "Output", "vector2"));
-                return result;
-            }
-            if (kind == "state-machine" || kind == "timeline")
-            {
-                result.Add(FlowPort("Input", "Input"));
-                return result;
-            }
-            AgentPackageSkillNodeKindDescriptor descriptor = ExportCatalog()
-                .FirstOrDefault(value => value.kind == kind);
-            if (descriptor != null)
-                result.AddRange(descriptor.flowPorts.Concat(descriptor.valuePorts));
             return result;
         }
 
@@ -342,75 +228,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static IReadOnlyDictionary<string, Type> CreateTypes()
         {
-            var result = new Dictionary<string, Type>(StringComparer.Ordinal)
+            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
+            foreach (Type type in BtsmtlSkillNodeCatalog.All)
             {
-                ["sequence"] = typeof(BtsmtlSkillSequenceFlowNode),
-                ["selector"] = typeof(BtsmtlSkillSelectorFlowNode),
-                ["loop"] = typeof(BtsmtlSkillLoopFlowNode),
-                ["parallel"] = typeof(BtsmtlSkillParallelFlowNode),
-                ["succeed"] = typeof(BtsmtlSkillSucceedFlowNode),
-                ["state-machine"] = typeof(BtsmtlSkillStateMachineFlowNode),
-                ["state"] = typeof(BtsmtlSkillStateFlowNode),
-                ["state-root-completed"] = typeof(BtsmtlSkillStateRootCompletedFlowNode),
-                ["state-exit-cause"] = typeof(BtsmtlSkillStateExitCauseFlowNode),
-                ["timeline"] = typeof(BtsmtlSkillTimelineFlowNode),
-                ["character-input-bool"] = typeof(BtsmtlSkillBooleanInputFlowNode),
-                ["character-input-float"] = typeof(BtsmtlSkillScalarInputFlowNode),
-                ["character-input-vector2"] = typeof(BtsmtlSkillVector2InputFlowNode),
-                ["character-input-vector2-magnitude"] = typeof(BtsmtlSkillInputMagnitudeFlowNode),
-                ["character-action-request"] = typeof(BtsmtlSkillActionRequestFlowNode),
-                ["action-context-active"] = typeof(BtsmtlSkillActionContextActiveFlowNode),
-                ["action-window-active"] = typeof(BtsmtlSkillActionWindowActiveFlowNode),
-                ["can-activate-action"] = typeof(BtsmtlSkillCanActivateActionFlowNode),
-                ["submit-action-lifecycle"] = typeof(BtsmtlSkillSubmitActionLifecycleFlowNode),
-                ["character-move-facing-angle"] = typeof(BtsmtlSkillMoveFacingAngleFlowNode),
-                ["pipeline-blackboard-bool"] = typeof(BtsmtlSkillBlackboardBooleanFlowNode),
-                ["pipeline-blackboard-float"] = typeof(BtsmtlSkillBlackboardScalarFlowNode),
-                ["exposed-property"] = typeof(BtsmtlSkillBlackboardGetFlowNode),
-                ["locomotion-input-motion"] = typeof(BtsmtlSkillLocomotionFlowNode),
-                ["macro-call"] = typeof(MacroNodeWrapper)
-            };
-            foreach (BtsmtlSkillNativeNodeContract contract in BtsmtlSkillNativeNodeCatalog.All)
-                result[contract.Kind] = contract.NodeType;
+                if (type == typeof(BtsmtlSkillBlackboardSetFlowNode))
+                    continue;
+                if (!TryGetKind(type, out string kind))
+                    throw new InvalidOperationException($"技能节点缺少Capability：{type.FullName}");
+                result.Add(kind, type);
+            }
             return result;
         }
 
         static IReadOnlyList<BtsmtlSkillFlowGraphRole> AllowedRoles(Type type)
         {
-            if (type == typeof(MacroInputNode) || type == typeof(MacroOutputNode))
-                return new[] { BtsmtlSkillFlowGraphRole.Subgraph };
-            if (type == typeof(BtsmtlSkillStateEnterFlowNode) ||
-                type == typeof(BtsmtlSkillStateAnyFlowNode) ||
-                type == typeof(BtsmtlSkillStateExitFlowNode) ||
-                type == typeof(BtsmtlSkillStateFlowNode))
-                return new[] { BtsmtlSkillFlowGraphRole.StateMachine };
-            if (typeof(BtsmtlSkillTimelineHookFlowNode).IsAssignableFrom(type))
-                return new[] { BtsmtlSkillFlowGraphRole.TimelineBody };
-            if (typeof(BtsmtlSkillStateLifecycleFlowNode).IsAssignableFrom(type))
-                return new[] { BtsmtlSkillFlowGraphRole.StateBody };
-            if (type == typeof(BtsmtlSkillRootFlowNode))
-                return new[]
-                {
-                    BtsmtlSkillFlowGraphRole.Skill,
-                    BtsmtlSkillFlowGraphRole.StateBody,
-                    BtsmtlSkillFlowGraphRole.TimelineBody
-                };
-            if (type == typeof(BtsmtlSkillConditionResultFlowNode))
-                return new[] { BtsmtlSkillFlowGraphRole.ConditionRule };
-            if (BtsmtlSkillNativeNodeCatalog.TryGet(type, out _))
-                return Enum.GetValues(typeof(BtsmtlSkillFlowGraphRole))
-                    .Cast<BtsmtlSkillFlowGraphRole>()
-                    .Where(value => value != BtsmtlSkillFlowGraphRole.StateMachine)
-                    .ToArray();
-            if (typeof(IBtsmtlSkillPureValueNode).IsAssignableFrom(type))
-                return Enum.GetValues(typeof(BtsmtlSkillFlowGraphRole))
-                    .Cast<BtsmtlSkillFlowGraphRole>()
-                    .Where(value => value != BtsmtlSkillFlowGraphRole.StateMachine)
-                    .ToArray();
             return Enum.GetValues(typeof(BtsmtlSkillFlowGraphRole))
                 .Cast<BtsmtlSkillFlowGraphRole>()
-                .Where(value => value != BtsmtlSkillFlowGraphRole.StateMachine &&
-                                value != BtsmtlSkillFlowGraphRole.ConditionRule)
+                .Where(value => BtsmtlSkillFlowGraphRules.Allows(type, value, value == BtsmtlSkillFlowGraphRole.Subgraph))
                 .ToArray();
         }
 
@@ -418,8 +252,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             return kind switch
             {
+                "sequence" or "selector" => new List<string> { "steps" },
                 "loop" => new List<string> { "stopType" },
-                "parallel" => new List<string> { "mode" },
+                "parallel" => new List<string> { "mode", "steps" },
                 "state-exit-cause" => new List<string> { "cause" },
                 "character-input-bool" or "character-input-float" or
                     "character-input-vector2" or "character-input-vector2-magnitude" or
@@ -457,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 key = key,
                 direction = direction,
                 valueType = string.Empty,
-                capacity = direction == "Input" ? "Single" : "Multiple"
+                capacity = direction == "Input" ? "Multiple" : "Single"
             };
         }
 
@@ -488,7 +323,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     key = value.ID,
                     direction = value.IsInputPort() ? "Input" : "Output",
                     valueType = flow ? string.Empty : ValueType(value.type),
-                    capacity = value.IsInputPort() ? "Single" : "Multiple",
+                    capacity = value is FlowInput || value is ValueOutput ? "Multiple" : "Single",
                     required = value is ValueInput input && input.isRequired
                 })
                 .ToList();

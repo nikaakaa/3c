@@ -30,11 +30,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         List<Node> DuplicateStructure(List<Node> nodes, Vector2 position);
     }
 
-    static class BtsmtlSkillFlowGraphRules
+    public static class BtsmtlSkillFlowGraphRules
     {
-        internal static bool Allows(Type nodeType, BtsmtlSkillFlowGraphRole role, bool macro)
+        public static bool Allows(Type nodeType, BtsmtlSkillFlowGraphRole role, bool macro)
         {
-            if (nodeType == null || nodeType.IsAbstract)
+            if (!BtsmtlSkillNodeCatalog.Contains(nodeType))
                 return false;
             if (nodeType == typeof(MacroInputNode) || nodeType == typeof(MacroOutputNode))
                 return macro;

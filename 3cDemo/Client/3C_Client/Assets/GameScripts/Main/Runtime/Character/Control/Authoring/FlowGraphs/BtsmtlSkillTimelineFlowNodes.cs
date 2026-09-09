@@ -62,7 +62,6 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public abstract class BtsmtlSkillTimelineHookFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillSystemNode
     {
-        public override string CapabilityId => "@timelineEnter";
         public abstract BtsmtlSkillTimelineHook Hook { get; }
         protected override void RegisterPorts() => AddFlowOutput("执行", "Output");
     }
@@ -70,18 +69,21 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("片段启用"), Category("BTSMTL/Timeline"), DoNotList]
     public sealed class BtsmtlSkillTimelineEnableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
+        public override string CapabilityId => "@timelineEnable";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnEnable;
     }
 
     [Name("片段停用"), Category("BTSMTL/Timeline"), DoNotList]
     public sealed class BtsmtlSkillTimelineDisableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
+        public override string CapabilityId => "@timelineDisable";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDisable;
     }
 
     [Name("片段销毁"), Category("BTSMTL/Timeline"), DoNotList]
     public sealed class BtsmtlSkillTimelineDestroyFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
+        public override string CapabilityId => "@timelineDestroy";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDestroy;
     }
 }

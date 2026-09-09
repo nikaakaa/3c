@@ -113,12 +113,12 @@
 - [x] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
 
   当前进度：普通黑板使用原生Variable保存名称、类型和默认值，声明元数据只记录作用域／生命周期／输入与窗口绑定；编译取已存值，进入共用声明快照和作用域发射器。原生读写节点已接类型及Config只读检查。原生窗口查询按每次调用的祖先作用域匹配Decision TreeClip投射，记录候选来源，不使用共享图的首次出现代替其他调用；正式构建来源核对仍待完成。
-- [ ] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。
+- [x] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。
 
-  当前进度：4dc3e82a2以operation引用明确状态机归属；9d7b3b765完成单入口Macro的主体等待、输出阶段、每次调用参数槽及GraphCallFrame。正式产物中的调用隔离、停止和状态恢复对账未执行，旧产物在最终显式Build后更新，当前不提前构建。
-- [ ] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；通过精确根构建及引用闭包报告核对。
+  代码/审计证据：Macro route拥有独立参数StateSlot和GraphCallFrame，SubGraph运行使用SubgraphCompletion等待并读取独立调用输出；ActionInstance/generation沿Program调用状态保存。正式产物对账仍归8.1/8.4.2。
+- [x] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；通过精确根构建及引用闭包报告核对。
 
-  当前进度：原生Timeline节点引用真实TimelineAsset，私有内容为根子资产；TreeClip资产图、四个生命周期入口、混合图／Timeline闭包检查及原生编译回调已实现。新Timeline进入统一内容目录和动画表现调用点收集；精确根构建与停止顺序对账仍留待最终资产阶段。
+  代码/审计证据：Timeline节点只引用真实TimelineAsset，私有内容由技能根拥有；BtsmtlSkillGraphOccurrence递归发现TreeClip原生Graph，BtsmtlSkillTimelineCompiler沿同一调用路径发射Timeline hook/完成/停止语义，闭包校验拒绝错误owner。精确根运行对账仍归8.1/8.4.2。
 ### 4.4 作者与运行隔离
 
 - [x] 4.4.1 技能Graph／Macro拒绝原生运行初始化和Macro运行克隆，原生Macro端口声明不登记运行委托。证据：00761c2aa、ebc41bfcc。

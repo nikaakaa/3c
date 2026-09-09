@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             "layout.json"));
                 return presentationLayoutIncomplete ||
                        RequiresSkillProviderOwnerRefresh(packagePath, files) ||
+                       RequiresSkillTimelineRefresh(packagePath, files) ||
                        CanRefreshReadOnlyContext(packagePath, files);
             }
             catch (JsonException)
@@ -127,6 +128,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
                     if (string.IsNullOrWhiteSpace((node["properties"] as JObject)?.Value<string>("providerOwnerId")))
                         return true;
+                }
+            }
+            return false;
+        }
+
+        static bool RequiresSkillTimelineRefresh(
+            string packagePath,
+            IReadOnlyCollection<string> files)
+        {
+            foreach (string relativePath in files.Where(value =>
+                         value.StartsWith("editable/skills/timelines/", StringComparison.Ordinal) &&
+                         value.EndsWith("/timeline.json", StringComparison.Ordinal)))
+            {
+                string fullPath = ResolveInside(packagePath, relativePath);
+                if (!File.Exists(fullPath))
+                    return true;
+                JObject timeline = JObject.Parse(File.ReadAllText(fullPath, Encoding.UTF8));
+                foreach (JObject track in timeline["tracks"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                {
+                    if (track.Value<string>("kind") != TimelineContractKinds.AnimationTrack)
+                        continue;
+                    if (string.IsNullOrWhiteSpace(track.Value<string>("animationSlotId")))
+                        return true;
+                    foreach (JObject clip in track["clips"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                    {
+                        if (clip.Value<string>("kind") != TimelineContractKinds.AnimationClip)
+                            continue;
+                        if (string.IsNullOrWhiteSpace((clip["properties"] as JObject)?.Value<string>("blendProfileId")))
+                            return true;
+                    }
                 }
             }
             return false;

@@ -48,35 +48,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         graphs.Add(graph);
             }
 
-            var owners = new List<UnityEngine.Object> { definition };
-            owners.AddRange(graphs.Where(value => value));
-            Undo.RegisterCompleteObjectUndo(owners.ToArray(), "规范Skill Provider Owner");
             int changed = 0;
             string controlOwner = $"control-module:{definition.ControlModuleId}";
             for (int graphIndex = 0; graphIndex < graphs.Count; graphIndex++)
             {
                 FlowGraph graph = graphs[graphIndex];
-                foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
+                BtsmtlSkillFlowEditorMutation.Execute(graph, "规范Skill Provider Owner", () =>
                 {
-                    if (node is IBtsmtlSkillInputNode input && input.ProviderOwnerId != inputOwner)
+                    foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
                     {
-                        input.SetInputId(input.InputId, inputOwner);
-                        changed++;
+                        if (node is IBtsmtlSkillInputNode input && input.ProviderOwnerId != inputOwner)
+                        {
+                            input.SetInputId(input.InputId, inputOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillMoveFacingAngleFlowNode facing && facing.ProviderOwnerId != controlOwner)
+                        {
+                            facing.Configure(controlOwner);
+                            changed++;
+                        }
                     }
-                    if (node is BtsmtlSkillMoveFacingAngleFlowNode facing && facing.ProviderOwnerId != controlOwner)
-                    {
-                        facing.Configure(controlOwner);
-                        changed++;
-                    }
-                }
-                if (changed != 0)
-                    EditorUtility.SetDirty(graph);
+                });
             }
-            if (changed != 0)
-            {
-                EditorUtility.SetDirty(definition);
-                AssetDatabase.SaveAssets();
-            }
+            EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssets();
+            string[] graphPaths = graphs
+                .Select(graph => AssetDatabase.GetAssetPath(graph))
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (graphPaths.Length != 0)
+                AssetDatabase.ForceReserializeAssets(graphPaths);
+            AssetDatabase.SaveAssets();
             Debug.Log($"Skill Provider Owner规范完成：{changed}个节点。", definition);
         }
     }

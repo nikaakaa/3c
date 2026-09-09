@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using BTSMTL.Timeline;
+using FlowCanvas;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.ActionSystem;
@@ -16,14 +17,81 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
+    public static class BtsmtlSkillProviderOwnerMigration
+    {
+        [MenuItem("Tools/3C/Character/Normalize Skill Provider Owners")]
+        public static void NormalizeCorinSkillProviderOwners()
+        {
+            Normalize("Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset");
+        }
+
+        public static void Normalize(string definitionAssetPath)
+        {
+            CharacterPipelineDefinition definition =
+                AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(definitionAssetPath);
+            if (!definition)
+                throw new InvalidOperationException($"Character Definition不存在：{definitionAssetPath}");
+            if (!definition.InputProfile)
+                throw new InvalidOperationException("Character Definition缺少正式InputProfile。");
+
+            string inputGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.InputProfile));
+            if (string.IsNullOrWhiteSpace(inputGuid))
+                throw new InvalidOperationException("InputProfile没有稳定资产owner。");
+            string inputOwner = $"asset:{inputGuid}";
+            var graphs = new List<FlowGraph>();
+            foreach (BtsmtlSkillFlowGraph root in definition.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
+            {
+                if (!root)
+                    continue;
+                foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(root, true))
+                    if (!graphs.Contains(graph))
+                        graphs.Add(graph);
+            }
+
+            var owners = new List<UnityEngine.Object> { definition };
+            owners.AddRange(graphs.Where(value => value));
+            Undo.RegisterCompleteObjectUndo(owners.ToArray(), "规范Skill Provider Owner");
+            int changed = 0;
+            string controlOwner = $"control-module:{definition.ControlModuleId}";
+            for (int graphIndex = 0; graphIndex < graphs.Count; graphIndex++)
+            {
+                FlowGraph graph = graphs[graphIndex];
+                foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
+                {
+                    if (node is IBtsmtlSkillInputNode input && input.ProviderOwnerId != inputOwner)
+                    {
+                        input.SetInputId(input.InputId, inputOwner);
+                        changed++;
+                    }
+                    if (node is BtsmtlSkillMoveFacingAngleFlowNode facing && facing.ProviderOwnerId != controlOwner)
+                    {
+                        facing.Configure(controlOwner);
+                        changed++;
+                    }
+                }
+                if (changed != 0)
+                    EditorUtility.SetDirty(graph);
+            }
+            if (changed != 0)
+            {
+                EditorUtility.SetDirty(definition);
+                AssetDatabase.SaveAssets();
+            }
+            Debug.Log($"Skill Provider Owner规范完成：{changed}个节点。", definition);
+        }
+    }
+
     public static class BtsmtlSkillLegacyMigrationWorkflow
     {
         const string DefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string SharedAttack1TimelinePath = "Assets/Configs/Character/Corin/Pipeline/Graphs/SharedTimelines/CorinAttack1Timeline.asset";
-
         [MenuItem("Tools/3C/Character/Migrate Corin Skills to Skill Graph")]
         public static void MigrateCorinSkills()
         {
+            TimelineAsset sharedTimeline = AssetDatabase.LoadAssetAtPath<TimelineAsset>(SharedAttack1TimelinePath);
+            if (!sharedTimeline)
+                throw new InvalidOperationException($"Corin Attack1 Timeline不存在：{SharedAttack1TimelinePath}");
+            sharedTimeline.Data.Init();
             CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(DefinitionPath);
             if (!definition)
                 throw new InvalidOperationException($"Corin Definition不存在：{DefinitionPath}");
@@ -44,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             readonly Dictionary<string, string> m_TrackIds = new(StringComparer.Ordinal);
             readonly Dictionary<string, string> m_ClipIds = new(StringComparer.Ordinal);
             readonly Dictionary<string, AgentSnapshotTimeline> m_Timelines = new(StringComparer.Ordinal);
+            readonly List<AgentSnapshotTimelineTreeClip> m_LegacyTimelineTreeClips = new();
             readonly Dictionary<string, AgentSnapshotBlackboardDeclaration> m_Blackboards = new(StringComparer.Ordinal);
             readonly Dictionary<string, AgentSnapshotTimelineCallSite> m_TimelineCalls = new(StringComparer.Ordinal);
             readonly Dictionary<string, AgentSnapshotLifecycleSummary> m_Lifecycles = new(StringComparer.Ordinal);
@@ -55,6 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             readonly Dictionary<string, string> m_TimelineBodyTracks = new(StringComparer.Ordinal);
             readonly Dictionary<string, string> m_TimelineBodyClips = new(StringComparer.Ordinal);
             readonly Dictionary<string, RootAsset> m_Roots = new(StringComparer.Ordinal);
+            readonly HashSet<string> m_OriginalSharedGraphPaths = new(StringComparer.OrdinalIgnoreCase);
+            CharacterSkillAuthoringDefinition[] m_OriginalSkillDefinitions;
             AgentGraphSnapshot m_Snapshot;
             string m_LegacyPath;
 
@@ -62,20 +133,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             public void Run()
             {
-                if (m_Definition.SkillGraphs != null && m_Definition.SkillGraphs.Count > 0)
+                CaptureSharedGraphAssets();
+                bool hasPersistedSkillGraph = m_Definition.SkillGraphs != null &&
+                                              m_Definition.SkillGraphs.Any(graph =>
+                                                  graph &&
+                                                  !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(graph)) &&
+                                                  File.Exists(AssetDatabase.GetAssetPath(graph)));
+                if (hasPersistedSkillGraph)
                     throw new InvalidOperationException("Definition已经存在Skill Graph，迁移器拒绝覆盖现有作者资产。");
+                if (m_Definition.SkillGraphs != null && m_Definition.SkillGraphs.Count > 0)
+                {
+                    m_Definition.SetSkillGraphs(Array.Empty<BtsmtlSkillFlowGraph>());
+                    EditorUtility.SetDirty(m_Definition);
+                    AssetDatabase.SaveAssets();
+                }
                 m_LegacyPath = FindLegacyPackage();
                 LoadLegacyGraphs();
-                m_Snapshot = new AgentGraphSnapshotExporter().ExportFull(m_Definition);
+                m_OriginalSkillDefinitions = m_Definition.SkillDefinitions.ToArray();
+                RestoreInterruptedSkillDefinitions();
+                m_Snapshot = new AgentGraphSnapshotExporter().ExportFull(m_Definition, true);
                 IndexSnapshot();
                 PrepareIdentities();
-                CreateRoots();
                 try
                 {
+                    CreateRoots();
                     AgentPackageSkillFlowDocument document = BuildDocument();
                     ApplyDocument(document);
                     AssetDatabase.SaveAssets();
-                    AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
                     AgentAuthoringResponse response = new AgentAuthoringDocumentApplicationService().Execute(new AgentAuthoringRequest
                     {
                         action = AgentAuthoringAction.CheckoutDocument,
@@ -89,7 +173,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 catch
                 {
                     RollbackRoots();
+                    RollbackSharedGraphAssets();
+                    m_Definition.SetSkillGraphs(Array.Empty<BtsmtlSkillFlowGraph>());
+                    m_Definition.SetSkillDefinitions(m_OriginalSkillDefinitions);
+                    EditorUtility.SetDirty(m_Definition);
+                    AssetDatabase.SaveAssets();
                     throw;
+                }
+            }
+
+            void CaptureSharedGraphAssets()
+            {
+                string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? throw new InvalidOperationException("无法解析项目根目录。");
+                string directory = Path.Combine(projectRoot, Path.GetDirectoryName(DefinitionPath).Replace('/', Path.DirectorySeparatorChar));
+                foreach (string path in Directory.Exists(directory)
+                    ? Directory.GetFiles(directory, "*.SharedGraph.*.asset")
+                    : Array.Empty<string>())
+                    m_OriginalSharedGraphPaths.Add(path);
+            }
+
+            void RollbackSharedGraphAssets()
+            {
+                string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? throw new InvalidOperationException("无法解析项目根目录。");
+                string directory = Path.Combine(projectRoot, Path.GetDirectoryName(DefinitionPath).Replace('/', Path.DirectorySeparatorChar));
+                foreach (string path in Directory.Exists(directory)
+                    ? Directory.GetFiles(directory, "*.SharedGraph.*.asset")
+                    : Array.Empty<string>())
+                {
+                    if (m_OriginalSharedGraphPaths.Contains(path))
+                        continue;
+                    string relative = path.Substring(projectRoot.Length + 1).Replace(Path.DirectorySeparatorChar, '/');
+                    AssetDatabase.DeleteAsset(relative);
                 }
             }
 
@@ -130,6 +244,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         if (declaration != null && !string.IsNullOrEmpty(declaration.declarationId))
                             m_Blackboards[declaration.declarationId] = declaration;
                 }
+                string controllerPath = Path.Combine(m_LegacyPath, "editable", "controller.json");
+                if (File.Exists(controllerPath))
+                {
+                    JObject controller = JObject.Parse(File.ReadAllText(controllerPath, Encoding.UTF8));
+                    m_LegacyTimelineTreeClips.AddRange(
+                        controller["timelineTreeClips"]?.ToObject<List<AgentSnapshotTimelineTreeClip>>() ??
+                        new List<AgentSnapshotTimelineTreeClip>());
+                }
+            }
+
+            void RestoreInterruptedSkillDefinitions()
+            {
+                string root = Path.Combine(m_LegacyPath, "editable", "skills");
+                var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (string path in Directory.Exists(root)
+                    ? Directory.GetFiles(root, "definition.json", SearchOption.AllDirectories)
+                    : Array.Empty<string>())
+                {
+                    AgentSnapshotSkillDefinition source =
+                        JsonConvert.DeserializeObject<AgentSnapshotSkillDefinition>(File.ReadAllText(path, Encoding.UTF8));
+                    if (source == null ||
+                        string.IsNullOrEmpty(source.skillId) ||
+                        string.IsNullOrEmpty(source.entryGraphAuthoringId) ||
+                        !entries.TryAdd(source.skillId, source.entryGraphAuthoringId))
+                        throw new InvalidOperationException($"旧SkillDefinition identity无效或重复：{path}");
+                }
+
+                bool changed = false;
+                foreach (CharacterSkillAuthoringDefinition skill in m_Definition.SkillDefinitions)
+                {
+                    if (skill == null || m_Legacy.ContainsKey(skill.EntryGraphAuthoringId))
+                        continue;
+                    if (!entries.TryGetValue(skill.SkillId, out string entryGraphAuthoringId) ||
+                        !m_Legacy.ContainsKey(entryGraphAuthoringId))
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}'无法从v6 Document恢复旧入口Graph。");
+                    skill.ConfigureAuthoring(
+                        skill.SkillId,
+                        entryGraphAuthoringId,
+                        skill.ActionProfile,
+                        skill.ActionContext,
+                        skill.SourceInputRequestId,
+                        skill.ConsumeSourceInputRequest,
+                        skill.TargetInputValueId,
+                        skill.TargetKey);
+                    changed = true;
+                }
+                if (changed)
+                    EditorUtility.SetDirty(m_Definition);
             }
 
             void IndexSnapshot()
@@ -245,19 +407,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     string path = AgentSkillFlowAssetPaths.Root(m_Definition, "local:" + skill.SkillId);
                     bool ghostTarget = !File.Exists(path) && !File.Exists(path + ".meta") && !AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
                     if (ghostTarget && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)))
-                    {
                         AssetDatabase.DeleteAsset(path);
-                        AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-                    }
                     if (!ghostTarget)
                         AgentSkillFlowAssetPaths.RequireAvailable(path);
                     BtsmtlSkillFlowGraph graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
                     graph.name = skill.SkillId + "Skill";
                     graph.ConfigureIdentity(m_GraphIds[skill.EntryGraphAuthoringId], BtsmtlSkillFlowGraphRole.Skill);
                     AssetDatabase.CreateAsset(graph, path);
+                    m_Roots.Add(skill.SkillId, new RootAsset(graph, path));
                     Undo.RegisterCreatedObjectUndo(graph, "创建技能迁移根资产");
                     BtsmtlSkillFlowEditorMutation.Apply(graph, "初始化技能迁移根", () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph), false);
-                    m_Roots.Add(skill.SkillId, new RootAsset(graph, path));
                 }
                 AssetDatabase.SaveAssets();
             }
@@ -268,7 +427,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (root.Graph)
                         AssetDatabase.DeleteAsset(root.Path);
                 m_Roots.Clear();
-                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             }
 
             AgentPackageSkillFlowDocument BuildDocument()
@@ -338,7 +496,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     role = role.ToString(),
                     name = RequireSnapshotGraph(oldId).name ?? oldId,
                     contentRevision = "legacy:" + oldId,
-                    ownership = role == BtsmtlSkillFlowGraphRole.Skill ? AgentGraphOwnership.RootAsset.ToString() : AgentGraphOwnership.Inline.ToString(),
+                    ownership = role == BtsmtlSkillFlowGraphRole.Skill
+                        ? AgentGraphOwnership.RootAsset.ToString()
+                        : role == BtsmtlSkillFlowGraphRole.TimelineBody &&
+                          m_TimelineBodyTimelines.TryGetValue(oldId, out string timelineId) &&
+                          IsSharedTimeline(timelineId)
+                            ? AgentGraphOwnership.SharedAsset.ToString()
+                            : AgentGraphOwnership.Inline.ToString(),
                     owner = BuildOwner(oldId, role),
                     asset = role == BtsmtlSkillFlowGraphRole.Skill ? m_Roots[SkillForRoot(oldId)].Reference : null
                 };
@@ -382,6 +546,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     if (declaration == null || !ShouldIncludeDeclaration(declaration, oldId))
                         continue;
+                    AgentSnapshotBlackboardInputBinding inputBinding = string.IsNullOrWhiteSpace(declaration.inputBinding?.inputValueId) ? null : declaration.inputBinding;
+                    AgentSnapshotBlackboardFactProjection factProjection = declaration.factProjection == null ||
+                                                                             string.IsNullOrWhiteSpace(declaration.factProjection.kind) ||
+                                                                             string.IsNullOrWhiteSpace(declaration.factProjection.windowType) ||
+                                                                             string.IsNullOrWhiteSpace(declaration.factProjection.windowId)
+                        ? null
+                        : declaration.factProjection;
                     graph.blackboardDeclarations.Add(new AgentPackageSkillBlackboardDeclaration
                     {
                         id = LocalDeclaration(declaration.declarationId, oldId),
@@ -391,8 +562,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         lifetime = declaration.lifetime,
                         category = declaration.categoryPath,
                         defaultValue = DefaultValue(declaration),
-                        inputBinding = declaration.inputBinding,
-                        factProjection = declaration.factProjection
+                        inputBinding = inputBinding,
+                        factProjection = factProjection
                     });
                 }
             }
@@ -682,6 +853,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 };
                 if (source.typeName?.EndsWith("AnimationClip", StringComparison.Ordinal) == true)
                     result.properties["extraPolationMode"] = source.extraPolationMode;
+                if (source.typeName?.EndsWith("ActionCueClip", StringComparison.Ordinal) == true)
+                {
+                    result.properties["cueId"] = source.cueId;
+                    result.properties["cueType"] = source.cueType;
+                }
                 if (source.typeName?.EndsWith("MotionCurveClip", StringComparison.Ordinal) == true)
                 {
                     result.properties["curveId"] = source.curveId;
@@ -714,6 +890,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     result.treePhase = m_Snapshot.timelineTreeClips.FirstOrDefault(value => value != null && value.timelineAuthoringId == timelineId && value.trackAuthoringId == trackId && value.clipAuthoringId == source.clipAuthoringId)?.phase ?? TimelineTreeExecutionPhase.Commit.ToString();
                 }
                 foreach (AgentSnapshotTimelineCurveChannel curve in source.curveChannels ?? new List<AgentSnapshotTimelineCurveChannel>())
+                {
+                    TimelineCurveChannelCatalog.TryGet(curve.channelId, out TimelineCurveChannelDescriptor descriptor);
+                    bool invalid = descriptor == null ||
+                                   curve.timeDomain != descriptor.TimeDomain.ToString() ||
+                                   curve.bounded != descriptor.ValueDomain.IsBounded ||
+                                   curve.minimum != descriptor.ValueDomain.Minimum ||
+                                   curve.maximum != descriptor.ValueDomain.Maximum ||
+                                   curve.zero != descriptor.ValueDomain.Zero ||
+                                   curve.unit != descriptor.ValueDomain.Unit ||
+                                   curve.keys == null || curve.keys.Count == 0;
+                    if (invalid)
+                        throw new InvalidOperationException($"迁移曲线源无效：timeline={timelineId} clip={source.clipAuthoringId} channel={curve.channelId} actual={curve.timeDomain}/{curve.bounded}/{curve.minimum}/{curve.maximum}/{curve.zero}/{curve.unit}/{curve.preWrapMode}/{curve.postWrapMode}/{curve.keys?.Count ?? 0} expected={descriptor?.TimeDomain.ToString()}/{descriptor?.ValueDomain.IsBounded}/{descriptor?.ValueDomain.Minimum}/{descriptor?.ValueDomain.Maximum}/{descriptor?.ValueDomain.Zero}/{descriptor?.ValueDomain.Unit}");
                     result.curves.Add(new AgentPackageCurve
                     {
                         clipId = targetId,
@@ -728,6 +916,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         postWrapMode = curve.postWrapMode,
                         keys = curve.keys
                     });
+                }
                 return result;
             }
 
@@ -770,7 +959,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     rootIdentity = m_Snapshot.rootIdentity,
                     success = true
                 };
-                var session = new AgentMutationSession(m_Definition, m_Snapshot, plan, report, true);
+                var session = new AgentMutationSession(m_Definition, m_Snapshot, plan, report, true, null, true);
                 if (!session.Initialize())
                     throw new InvalidOperationException(string.Join(Environment.NewLine, report.messages.Select(value => value.message)));
                 var handler = new AgentSkillFlowDocumentMutationHandler();
@@ -779,6 +968,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 handler.Apply(session, mutation);
                 if (report.HasErrors())
                     throw new InvalidOperationException(string.Join(Environment.NewLine, report.messages.Select(value => value.message)));
+                foreach (UnityEngine.Object owner in session.TouchedOwners)
+                    if (owner)
+                        EditorUtility.SetDirty(owner);
             }
 
             AgentPackageSkillGraphOwner BuildOwner(string oldId, BtsmtlSkillFlowGraphRole role)
@@ -843,7 +1035,65 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 from = new AgentPackageSkillFlowEdgeEndpoint { node = from, port = fromPort },
                 to = new AgentPackageSkillFlowEdgeEndpoint { node = to, port = toPort }
             };
-            AgentSnapshotGraph RequireSnapshotGraph(string id) => m_SnapshotGraphs.TryGetValue(id, out AgentSnapshotGraph graph) ? graph : throw new InvalidOperationException($"旧Graph快照缺失：{id}");
+            AgentSnapshotGraph RequireSnapshotGraph(string id)
+            {
+                if (m_SnapshotGraphs.TryGetValue(id, out AgentSnapshotGraph graph))
+                    return graph;
+                if (!m_Legacy.ContainsKey(id))
+                    throw new InvalidOperationException($"旧Graph快照缺失：{id}");
+                return BuildMissingTimelineTreeSnapshot(id);
+            }
+
+            AgentSnapshotGraph BuildMissingTimelineTreeSnapshot(string id)
+            {
+                LegacyGraphFile legacy = m_Legacy[id];
+                string key = legacy.nodes?.FirstOrDefault(value => value != null)?.name ?? id;
+                if (key.StartsWith("Set ", StringComparison.Ordinal))
+                    key = key.Substring(4);
+                string owner = legacy.owner?.entityId ?? string.Empty;
+                List<AgentSnapshotTimelineTreeClip> candidates = m_LegacyTimelineTreeClips
+                    .Where(value => value != null &&
+                                    value.timelineNodePath?.Contains($"/node:{owner}/timeline", StringComparison.Ordinal) == true &&
+                                    (string.Equals(value.treeName, key, StringComparison.Ordinal) ||
+                                     string.Equals(value.treeName, "Decision " + key, StringComparison.Ordinal) ||
+                                     value.treeName?.EndsWith(key, StringComparison.Ordinal) == true))
+                    .ToList();
+                if (candidates.Count != 1)
+                    throw new InvalidOperationException($"旧Timeline Tree Graph无法唯一匹配：{id} owner={owner} key={key} candidates={candidates.Count}");
+                AgentSnapshotTimelineTreeClip clip = candidates[0];
+                var graph = new AgentSnapshotGraph
+                {
+                    graphAuthoringId = id,
+                    path = $"timeline:{clip.timelineAuthoringId}/track:{clip.trackAuthoringId}/clip:{clip.clipAuthoringId}",
+                    name = clip.treeName,
+                    kind = legacy.kind,
+                    ownership = AgentGraphOwnership.Inline.ToString(),
+                    ownerElementAuthoringId = owner
+                };
+                foreach (LegacyNode node in legacy.nodes ?? new List<LegacyNode>())
+                {
+                    var snapshot = new AgentSnapshotNode
+                    {
+                        elementAuthoringId = node.id,
+                        typeName = node.kind,
+                        displayName = node.name,
+                        nodeTypeDisplayName = node.kind,
+                        position = new AgentSnapshotVector2()
+                    };
+                    if (node.properties?["exposedProperty"] is JObject exposed)
+                        snapshot.exposedProperty = new AgentSnapshotExposedProperty
+                        {
+                            mode = exposed.Value<string>("mode"),
+                            declarationAuthoringId = exposed.Value<string>("declarationId"),
+                            valueType = exposed.Value<string>("valueType"),
+                            value = exposed["value"]
+                        };
+                    graph.nodes.Add(snapshot);
+                    m_SnapshotNodes[Key(id, node.id)] = snapshot;
+                }
+                m_SnapshotGraphs[id] = graph;
+                return graph;
+            }
             AgentSnapshotNode SnapshotNode(string graph, string node) => m_SnapshotNodes.TryGetValue(Key(graph, node), out AgentSnapshotNode value) ? value : throw new InvalidOperationException($"旧Node快照缺失：{graph}/{node}");
             string TargetName(string graph, string node) => node.StartsWith("@", StringComparison.Ordinal) ? node : m_Legacy[graph].nodes.FirstOrDefault(value => value != null && value.id == node)?.name ?? node;
             string StepId(string graph, string edge) => Local("step", graph + ":" + edge);
@@ -938,7 +1188,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             AgentPackageObjectReference SharedTimelineReference(string id)
             {
-                TimelineAsset asset = AssetDatabase.LoadAssetAtPath<TimelineAsset>(SharedAttack1TimelinePath);
+                TimelineAsset asset = AssetDatabase.LoadAssetAtPath<TimelineAsset>(BtsmtlSkillLegacyMigrationWorkflow.SharedAttack1TimelinePath);
                 if (!asset || asset.Data == null || asset.Data.AuthoringId != id)
                     throw new InvalidOperationException($"共享Timeline identity不匹配：{id}");
                 return ObjectReference(asset);

@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -98,12 +99,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 "state-machine.json".Length) +
                             "layout.json"));
                 return presentationLayoutIncomplete ||
+                       RequiresSkillProviderOwnerRefresh(packagePath, files) ||
                        CanRefreshReadOnlyContext(packagePath, files);
             }
             catch (JsonException)
             {
                 return false;
             }
+        }
+
+        static bool RequiresSkillProviderOwnerRefresh(
+            string packagePath,
+            IReadOnlyCollection<string> files)
+        {
+            foreach (string relativePath in files.Where(value =>
+                         value.StartsWith("editable/skills/graphs/", StringComparison.Ordinal) &&
+                         value.EndsWith("/graph.json", StringComparison.Ordinal)))
+            {
+                string fullPath = ResolveInside(packagePath, relativePath);
+                if (!File.Exists(fullPath))
+                    return true;
+                JObject graph = JObject.Parse(File.ReadAllText(fullPath, Encoding.UTF8));
+                foreach (JObject node in graph["nodes"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                {
+                    string capability = node.Value<string>("capability");
+                    if (!BtsmtlSkillCapabilityCatalog.Properties(capability).Contains("providerOwnerId"))
+                        continue;
+                    if (string.IsNullOrWhiteSpace((node["properties"] as JObject)?.Value<string>("providerOwnerId")))
+                        return true;
+                }
+            }
+            return false;
         }
 
         static bool CanRefreshReadOnlyContext(

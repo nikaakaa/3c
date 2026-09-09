@@ -6,7 +6,7 @@
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须是配置装配根
 
-`CharacterPipelineDefinition` MUST只保存RootTree、SimulationTickRate、InputProfile、GameplayEffectProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Definition MUST不内联保存Animation Channel、PoseStateMachine、AnimationSlot、Pose Graph、Policy、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
+`CharacterPipelineDefinition` MUST只保存SimulationTickRate、ControlModuleId、SkillDefinitions、SkillGraphs、InputProfile、GameplayEffectProfile、BodyMotionProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Character Skill的执行根 MUST由每个SkillDefinition的`EntryGraphAuthoringId`精确定位到Definition.SkillGraphs；Definition MUST不保存Character RootTree，也 MUST不内联保存Animation Channel、PoseStateMachine、AnimationSlot、Pose Graph、Policy、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
 
 #### Scenario: 打开角色Definition
 
@@ -65,7 +65,7 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
-`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、PoseStateMachine topology、node-local Blend/Inertialization Policy、角色Rig Definition与FullBodyIK Profile，保存Profile-owned typed Source Binding子资产、有限Action producer引用、显式Foot Placement Analysis Mode、Analysis Source对象引用与Locomotion Sync Group。Pose Graph MUST唯一拥有typed Source Slot子资产，并保存Presentation Fact Input、PoseStateMachine、ClipPlayer、BlendSpacePlayer、SelectedPosePlayer、ActionPlaybackInput、AnimationSlot、Player、Mask、Additive、Pose Parameter、LocalToComponentPose、Component Pose controls、FootPlacement、PoseBoneIKGoals、Goal Assembler、FullBodyIK、ComponentToLocalPose与Output topology。Clip Binding MUST直接引用AnimationClip；Blend Space和Timeline MAY只通过各自正式owner直接引用AnimationClip。Clip Binding、Action producer binding与Timeline MUST不复制素材注册Curve、角色Rig或Analysis identity；Action producer binding MUST只保存producer到Timeline/Track的正式引用。Blend Space与Motion Matching资源内部Artifact compatibility identity只用于校验与Profile角色配置一致，不得成为第二角色配置owner。Definition、Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些角色级装配配置的可写副本。
+`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、PoseStateMachine topology、Animation Layer／Control Rig接口、node-local Blend/Inertialization Policy、角色Rig Definition与FullBodyIK Profile，保存有限Action producer引用、显式Foot Placement Analysis Mode、Analysis Source对象引用与Locomotion Sync Group。Pose Graph MUST唯一拥有Presentation Fact Input、PoseStateMachine、直接资源Player、AnimationSlot、Mask、Additive、Pose Parameter、LocalToComponentPose、Component Pose controls、FootPlacement、PoseBoneIKGoals、Control Rig调用、FullBodyIK、ComponentToLocalPose与Output topology；Action Playback Input、Pose Parameter Resolve与Goal Assembler为Compiler内部步骤。Player与Timeline MUST直接引用原生AnimationClip；Action producer binding与Timeline MUST不复制素材注册Curve、角色Rig或Analysis identity。Blend Space与Motion Matching资源内部Artifact compatibility identity只用于校验与Profile角色配置一致，不得成为第二角色配置owner。Definition、Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些角色级装配配置的可写副本。
 
 #### Scenario: 一个Profile被一个Definition引用
 
@@ -113,7 +113,7 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Character authoring discovery必须支持显式composition roots
 
-Compiler discovery MUST从Definition的RootTree和Equipment Profile声明的全部Feature Persistent/Route graph建立一个canonical composition root集合，并递归解析各自正式Graph/Timeline引用。每个root MUST携带owner、role、Feature/Route identity和稳定source path。Compiler MUST不通过目录扫描、AssetDatabase全局查找、命名约定或运行时Loadout只发现部分Feature。
+Compiler discovery MUST从Definition.SkillGraphs按SkillDefinition.EntryGraphAuthoringId建立Character Skill canonical closure，并从Equipment Profile声明的全部Feature Persistent/Route graph建立其它composition roots，再递归解析各自正式Graph/Timeline引用。每个root MUST携带owner、role、Skill/Feature/Route identity和稳定source path。Compiler MUST不通过目录扫描、AssetDatabase全局查找、命名约定或运行时Loadout只发现部分Feature，也 MUST不回退到Character RootTree。
 
 #### Scenario: 发现未装备Gun Feature
 
@@ -125,7 +125,7 @@ Compiler discovery MUST从Definition的RootTree和Equipment Profile声明的全�
 
 - **WHEN** inline graph缺失serialized owner或owner identity不一致
 - **THEN** discovery MUST失败并定位Feature/Route
-- **AND** MUST不把它当作RootTree子图猜测owner
+- **AND** MUST不把它当作Skill Graph或其它composition root的子图猜测owner
 
 ### Requirement: Core与Feature ActionProfile必须合并为唯一catalog
 

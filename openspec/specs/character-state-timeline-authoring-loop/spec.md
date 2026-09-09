@@ -6,16 +6,16 @@
 
 ## Requirements
 
-### Requirement: Corin RootTree 必须只表达角色主流程层
+### Requirement: Corin Skill Graph必须表达角色Gameplay流程层
 
-Corin RootTree MUST作为角色每tick主流程编排层，包含输入、Gameplay移动控制、Locomotion Gameplay StateMachine和Action StateMachine等高层节点。RootTree MUST不平铺具体Attack Timeline、window、cue或lifecycle，也 MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State。持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
+Character Skill Graph MUST作为对应Skill的Gameplay执行层，包含输入、Gameplay移动控制、Action StateMachine、Action Timeline和有限生命周期节点。角色主线状态与Movement规则属于C# ControlModule和Program State；Skill Graph不得重新承载角色总RootTree。Skill Graph MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State，持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
 
-#### Scenario: 打开Corin RootTree
+#### Scenario: 打开Corin Skill Graph
 
-- **WHEN** 作者打开Corin RootTree
-- **THEN** 作者 SHOULD看到Gameplay Locomotion与Action控制入口
+- **WHEN** 作者从Definition的SkillId和EntryGraphAuthoringId打开Corin Skill Graph
+- **THEN** 作者 SHOULD看到该Skill的Gameplay执行入口
 - **AND** Attack1的Timeline细节 MUST位于Action State下钻图
-- **AND** Locomotion Pose State MUST通过Open Presentation导航查看而不成为RootTree节点
+- **AND** Locomotion Pose State MUST通过Open Presentation导航查看而不成为Skill Graph节点
 
 ### Requirement: Corin Locomotion StateMachine必须只控制Gameplay运动
 
@@ -120,7 +120,7 @@ Corin Presentation Pose Graph MUST以typed Presentation Fact驱动Locomotion Pos
 
 ### Requirement: Corin Pose source必须具有稳定binding与node-local policy
 
-Corin每个持续Locomotion Clip、Blend Space或Motion Matching source MUST拥有Graph-owned typed Source Slot与Profile-owned typed Binding子资产；Clip Binding MUST直接引用精确AnimationClip，Projection Compiler MUST把全部Binding降低为连续dense source index，不得保存作者source/provider字符串。每个有限Action Timeline producer MUST拥有稳定presentation identity、FullBodyAction channel binding与直接AnimationClip resource binding。PoseState transition与Slot transition MUST分别来自对应node-local Policy；Gameplay State edge和Timeline MUST不保存另一份表现transition策略。
+Corin每个持续Locomotion Clip、Blend Space或Motion Matching source MUST由Player直接保存类型匹配的原生资源或typed资源参数；Projection Compiler MUST把全部Player资源降低为连续dense source index，不得保存作者source/provider字符串。每个有限Action Timeline producer MUST拥有稳定presentation identity、FullBodyAction channel binding、Slot／Group与直接AnimationClip resource binding。PoseState transition与Slot transition MUST分别来自对应node-local Policy；Gameplay State edge和Timeline MUST不保存另一份表现transition策略。
 
 #### Scenario: 配置Run source
 
@@ -168,7 +168,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin资产迁移必须通过正式Agent Document事务
 
-有限Action Timeline、Gameplay Graph、Blackboard、Presentation Binding、Pose Graph、Locomotion Sync Group、AnimationClip注册Curve与旧Locomotion数据清理 MUST通过`btsmtl-agent-authoring-document.v4`的`checkout_document -> editable修改 -> dry_run_document -> apply_document(expected_document_hash) -> validate`唯一事务完成。Reconciler MUST把全部目标降低为同一immutable Mutation Plan和Undo事务。实现 MUST不直接修改Unity YAML、不恢复旧Patch链、不创建一次性migrator或第二mutation service。Document apply MUST只修改authoring并标记生成物Stale，不得自动Build。
+有限Action Timeline、Gameplay Graph、Blackboard、Presentation Binding、Pose Graph、Locomotion Sync Group、AnimationClip注册Curve与旧Locomotion数据清理 MUST通过`btsmtl-agent-authoring-document.v7`的`checkout_document -> editable修改 -> dry_run_document -> apply_document(expected_document_hash) -> validate`唯一事务完成。Reconciler MUST把全部目标降低为同一immutable Mutation Plan和Undo事务。实现 MUST不直接修改Unity YAML、不恢复旧Patch链、不创建一次性migrator或第二mutation service。Document apply MUST只修改authoring并标记生成物Stale，不得自动Build。
 
 #### Scenario: 应用Corin Document
 
@@ -179,7 +179,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin生成产物必须显式重建
 
-Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过Document v4写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。Document apply成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Clip plan或Phase relation。
+Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过Document v7写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。Document apply成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Clip plan或Phase relation。
 
 #### Scenario: 迁移后显式Build
 

@@ -50,7 +50,19 @@
 
 ### Requirement: 子图私有与共享所有权必须明确
 
+每个技能根 MUST保存为独立FlowGraph主资产，CharacterPipelineDefinition MUST只引用该技能根，MUST不把技能根保存为Definition子资产。技能根拥有的私有页面、Macro与Timeline MUST保存为同一技能文件内的子资产；共享Macro所拥有的私有内容 MUST归属该共享Macro文件。私有内容的保存、复制与回收 MUST依据实际文件owner，不得回退使用Definition作为私有内容容器。
+
 新建私有子图 MUST由当前根自动拥有，作者无需先创建独立资产。共享子图 MUST显式引用并显示共享属性。删除调用 MUST不删除仍被引用的共享定义；私有闭包回收、复制和保存 MUST归属根事务。MUST不同时保存私有子图的内联副本与资产副本。
+
+#### Scenario: 新建技能根与私有内容
+- **WHEN** 作者创建技能根及其私有Macro或Timeline
+- **THEN** 技能根 MUST成为独立主资产，私有内容 MUST保存在该技能文件中
+- **AND** Definition MUST只保存根引用，不持有这些私有子资产
+
+#### Scenario: 私有内容指向错误文件
+- **WHEN** 私有页面或Timeline的实际文件与其声明调用方的所属技能文件不一致
+- **THEN** 所有权预检 MUST拒绝该修改并指出调用方与资产位置
+- **AND** MUST不通过复制到Definition或建立第二份内容规避错误
 
 #### Scenario: 复制包含私有子图的技能
 - **WHEN** 作者复制完整技能定义

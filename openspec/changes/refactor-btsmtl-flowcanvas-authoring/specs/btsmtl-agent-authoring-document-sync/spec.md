@@ -36,3 +36,19 @@ Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner�
 
 非技能分片 MUST保持原有业务语义及正式作者模型；协议版本升级不得触发其他领域资产迁移。
 
+### Requirement: Document技能根必须遵守独立资产事务
+
+Document MUST把技能RootAsset解析或创建为独立FlowGraph主资产，Definition只持有根引用。根拥有的私有Graph、Macro与Timeline MUST保存于同一根文件，共享Macro拥有的私有内容 MUST保存于该共享Macro文件。预检 MUST核对声明ownership、实际资产类型及调用方文件归属，MUST拒绝Definition子资产形式的技能根。
+
+新增技能根的目标路径 MUST在apply写入前确定，并进入同一Document事务的创建计划；已存在的资产或meta MUST导致冲突，不得覆盖或自动改用另一条路径。apply后任一保存或反向导出失败，事务 MUST恢复已有owner及引用，并清理本次新建的技能根文件及其私有内容，MUST不删除事务开始前已经存在的资产。
+
+#### Scenario: 新技能根目标路径被占用
+- **WHEN** dry-run解析出的新技能根目标已有资产或meta
+- **THEN** 预检 MUST报告路径冲突并拒绝该计划
+- **AND** MUST不覆盖已有文件或将根改存为Definition子资产
+
+#### Scenario: 创建技能根后反向导出失败
+- **WHEN** apply已经创建技能根及部分私有内容，但后续保存或反向导出失败
+- **THEN** 同一事务 MUST恢复Definition及已有owner的修改，移除本次新建根文件及其私有内容
+- **AND** 事务开始前的共享资产 MUST保留，结果 MUST不得报告applied、saved或Clean成功
+

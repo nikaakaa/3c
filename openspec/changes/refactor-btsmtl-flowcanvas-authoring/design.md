@@ -6,7 +6,9 @@
 
 本设计只覆盖BTSMTL技能。PoseGraph由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)管理；两边均为编译执行加Editor观察，本文不实施Pose迁移。
 
-当前技能入口仍从旧图闭包发现，节点发射直接依赖BaseNode和PropertyPort；运行已有ActionInstance、generation、调用状态和Numeric Target。FlowCanvas已有原生Macro和端口，原生高亮依赖实际Flow／Value调用，不能直接观察项目编译执行器。原生Sequence是Flip Flop，不能替代技能等待完成的顺序语义。
+迁移前基线：技能入口从旧图闭包发现，节点发射直接依赖BaseNode和PropertyPort；运行已有ActionInstance、generation、调用状态和Numeric Target。FlowCanvas已有原生Macro和端口，原生高亮依赖实际Flow／Value调用，不能直接观察项目编译执行器。原生Sequence是Flip Flop，不能替代技能等待完成的顺序语义。
+
+当前代码已将技能发现与编译切到Definition.SkillGraphs及原生图遍历，并接入编译诊断、Host实例选择和父子调用导航。存量技能资产尚未迁移；上述代码存在不代表角色已完成新链运行验收。剩余代码集成与执行证据分别列在tasks.md，不再把迁移前基线作为当前实现描述。
 
 ## Goals / Non-Goals
 
@@ -80,9 +82,9 @@ v7增加技能Macro接口、owner和调用闭包，保持业务kind、typed字�
 
 协议升级不等于迁移其他领域：非技能分片保持现有业务模型，共用Codec须证明其无业务变化往返，不能借版本切换强制转换Pose。
 
-Document实现范围由作者指定的「agent工具」任务负责，修改仍归入本change，不新建交接文档。需要贯通的代码链是Document模型与Codec、Exporter、Mapper、Reconciler、现有Mutation dispatcher、资产resolver与索引、Validator及五生命周期说明；不能只修改版本号或只增加导出字段。
+Document基础曾由作者指定的「agent工具」任务实施，035057efd与a7a21da08已经提交；本任务继续集成，修改仍归入本change，不新建交接文档。需要贯通的代码链是Document模型与Codec、Exporter、Mapper、Reconciler、现有Mutation dispatcher、资产resolver与索引、Validator及五生命周期说明；不能只修改版本号或只增加导出字段。
 
-原生技能源与Document的对应合同如下。表内为本批必须完成的目标，不表示当前Document已经支持：
+原生技能源与Document的对应合同如下。模型、导出、映射和整包Mutation已有基础；A方案独立根创建及部分能力校验已接合。表内仍是完整完成标准，不表示所有人工编辑入口、资产往返及失败恢复已经验证：
 
 | 正式作者源 | Document必须表达和保持的内容 |
 |---|---|
@@ -118,8 +120,8 @@ v7完成标准包括严格拒绝v6及更早包、显式checkout、无业务变�
 1. 固定技能基线、能力清单及原BTSMTL／Scene Play任务归属。
 2. 完成原生作者、能力与事务入口，迁Macro及局部状态／规则页面。
 3. 直接编译新技能图，保持Numeric Target、ActionInstance及恢复合同。
-4. 完成v7与技能资产事务迁移，显式构建产物。
-5. 接入来源映射、Play生命周期、精确释放实例观察和子图导航，不新增运行控制器。
+4. 完成Document v7代码与统一事务接合，以及来源映射、Play生命周期、精确释放实例观察和子图导航，不新增运行控制器。
+5. 代码与编辑器完成后，执行精确技能资产事务迁移，并通过正式Build显式发布产物。
 6. 用现有CLI完成编译、Document往返、技能回放及诊断；不新增测试代码，不把手工验收写入tasks。
 7. 删除无消费者旧技能路径，安装规范和说明；不迁移Pose资产。
 

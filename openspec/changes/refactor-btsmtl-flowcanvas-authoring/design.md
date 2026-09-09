@@ -40,6 +40,8 @@
 
 ### 3. 原生Macro、局部状态与Timeline
 
+资产所有权采用作者确认的 A：每个技能根是独立 FlowGraph 主资产，Definition 只引用技能根；该根的私有页面、Macro 和 Timeline 保存在同一个技能文件。Document 新建根以 Definition 所在目录及 local identity 的固定摘要确定目标文件，dry-run 拒绝已占用路径，apply 失败后由同一个 Document 事务清理本次新建文件。既有 RootAsset 必须实际为主资产，私有引用必须与调用方处于同一个技能文件；不接受 Definition 子资产作为技能根。
+
 用户已确认：技能主要由节点组织流程、Timeline承载动作时序，不新增状态机来替代该主链。技能Macro采用单执行入口和多个值输入／输出；父节点跨帧等待子图主体完成，再获取返回值和Success／Failure，停止沿原技能中断协议传播。本批不提供多执行入口、多个控制出口或通过值读取启动技能调用；条件页继续使用纯值节点与条件结果。保留连招阶段属于业务黑板状态及重置规则，不依赖多入口，也不在本批额外实现连招业务。
 
 技能Timeline节点只引用TimelineAsset。私有Timeline自动保存为技能根文件内的子资产，共享Timeline引用独立资产；不在原生节点JSON中再保存一份TimelineData。这样Timeline编辑器仍通过TimelineAsset的真实序列化路径编辑、Undo和保存。TreeClip通过领域无关的节点图资产接口引用TimelineBody页面，保留Root及OnEnable／OnDisable／OnDestroy入口；设置资产图时清空旧内联／共享树来源。独立Timeline尚未迁移的旧树表示继续由其既有编译器负责，技能编译不回到旧树。

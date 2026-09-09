@@ -148,3 +148,6 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 - 尚未生成同输入前后回放比较，不能用脚本编译证明语义和性能完全一致。
 - 正式Validate job `4c215d1c6c344cf7a6b480324e81dcb9`已结束：success=true、compileSuccessCount=1、semanticValidCount=1，未apply或保存资产。sourceRevision=`5f692b49fd460f45732b1fb707a33afda75c4493c89bafeff7eeabe532577479`。用户要求停止编译后不再启动同类检查。
 - 未新增测试代码，未修改Unity YAML，未调用局部资产修复工具。
+# 2026-09-09 技能根资产所有权统一
+
+作者选择 A：技能根独立文件，私有子图与 Timeline 随技能根保存。Document 根创建改为主资产，取消 Definition 子资产创建路径；预检同时核对 RootAsset 实际类型、私有调用方文件及新文件冲突。新文件路径在 apply 前进入原事务的清理清单，失败时先回退 Undo，再删除本次预先确认不存在的根文件。没有执行资产迁移、Document apply 或内容 Build；完整保存与回滚执行证据仍待最终资产阶段，不据此勾选 5.3。

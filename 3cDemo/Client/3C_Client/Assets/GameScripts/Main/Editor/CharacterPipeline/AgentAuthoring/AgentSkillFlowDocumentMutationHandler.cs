@@ -33,6 +33,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool valid = AgentSkillFlowDocumentMapper.Validate(set.Document, session.Report);
             valid &= ValidateAssets(session, set.Document, command.Path);
             if (valid)
+            {
+                try
+                {
+                    AgentSkillFlowAssetPaths.PlannedRoots(session.Definition, set.Document);
+                }
+                catch (InvalidOperationException exception)
+                {
+                    session.Report.Error(command.Path, "skill_root_asset_path_conflict", exception.Message);
+                    valid = false;
+                }
+            }
+            if (valid)
                 session.AddPlanned(command, null, "Skill Flow Document", $"graphs={set.Document.graphs.Count}; macros={set.Document.macros.Count}; timelines={set.Document.timelines.Count}");
             return valid;
         }
@@ -64,11 +76,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (graph?.asset != null && string.IsNullOrEmpty(graph.asset.localId) &&
                     ResolveAsset<FlowGraph>(graph.asset, out FlowGraph graphAsset))
                 {
-                    bool shared = graph.ownership == AgentGraphOwnership.SharedAsset.ToString();
+                    bool mainOwner = graph.ownership == AgentGraphOwnership.SharedAsset.ToString() ||
+                        graph.ownership == AgentGraphOwnership.RootAsset.ToString();
                     bool main = AssetDatabase.IsMainAsset(graphAsset);
-                    if (shared && !main || graph.ownership == AgentGraphOwnership.Inline.ToString() && main)
+                    if (mainOwner != main)
                     {
                         session.Report.Error(path + ".graphs[" + graph.id + "].ownership", "skill_graph_asset_ownership_invalid", "Skill Graph ownership与正式资产类型不一致。");
+                        valid = false;
+                    }
+                    if (!mainOwner &&
+                        AssetDatabase.GetAssetPath(graphAsset) != OwnerPath(document, graph.owner?.graphId))
+                    {
+                        session.Report.Error(path + ".graphs[" + graph.id + "].owner", "skill_graph_owner_file_invalid", "私有Skill Graph必须保存在调用方所属的技能文件中。");
                         valid = false;
                     }
                 }
@@ -144,12 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
                     }
                     bool shared = timeline.ownership == BtsmtlSkillTimelineOwnership.Shared.ToString();
-                    AgentPackageSkillFlowGraphFile ownerGraph = document.graphs
-                        .FirstOrDefault(value => value != null && value.id == timeline.ownerGraphId);
-                    FlowGraph ownerGraphAsset = null;
-                    if (ownerGraph?.asset != null)
-                        ResolveAsset<FlowGraph>(ownerGraph.asset, out ownerGraphAsset);
-                    string ownerPath = AssetDatabase.GetAssetPath((UnityEngine.Object)ownerGraphAsset ?? session.Definition);
+                    string ownerPath = OwnerPath(document, timeline.ownerGraphId);
                     if (shared != AssetDatabase.IsMainAsset(timelineAsset) ||
                         !shared && (!AssetDatabase.IsSubAsset(timelineAsset) ||
                                     AssetDatabase.GetAssetPath(timelineAsset) != ownerPath))
@@ -188,6 +202,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             return valid;
+        }
+
+        static string OwnerPath(AgentPackageSkillFlowDocument document, string graphId)
+        {
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            while (!string.IsNullOrEmpty(graphId) && visited.Add(graphId))
+            {
+                AgentPackageSkillFlowGraphFile owner = document.graphs.FirstOrDefault(value => value?.id == graphId);
+                if (owner == null)
+                    return string.Empty;
+                if (ResolveAsset<FlowGraph>(owner.asset, out FlowGraph asset))
+                {
+                    string path = AssetDatabase.GetAssetPath(asset);
+                    return AssetDatabase.LoadMainAssetAtPath(path) is IBtsmtlSkillFlowGraph ? path : string.Empty;
+                }
+                graphId = owner.owner?.graphId;
+            }
+            return string.Empty;
         }
 
         static bool ResolveAsset<T>(AgentPackageObjectReference reference, out T asset)
@@ -333,11 +365,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     asset = ScriptableObject.CreateInstance<TimelineAsset>();
                     asset.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Timeline" : target.name;
-                    UnityEngine.Object owner = string.IsNullOrEmpty(target.ownerGraphId)
-                        ? m_Session.Definition
-                        : ResolveGraph(target.ownerGraphId);
+                    UnityEngine.Object owner = ResolveGraph(target.ownerGraphId);
                     string ownerPath = AssetDatabase.GetAssetPath(owner);
-                    if (string.IsNullOrEmpty(ownerPath))
+                    if (string.IsNullOrEmpty(ownerPath) ||
+                        AssetDatabase.LoadMainAssetAtPath(ownerPath) is not IBtsmtlSkillFlowGraph)
                         throw new InvalidOperationException($"Skill Timeline '{target.id}' owner资产无法解析。");
                     AssetDatabase.AddObjectToAsset(asset, ownerPath);
                     Undo.RegisterCreatedObjectUndo(asset, "创建技能Timeline");
@@ -952,13 +983,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 graph = skill;
             }
             graph.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Graph" : target.name;
-            UnityEngine.Object owner = string.IsNullOrEmpty(target.owner?.graphId)
-                ? m_Session.Definition
-                : ResolveGraph(target.owner.graphId);
-            string ownerPath = AssetDatabase.GetAssetPath(owner);
-            if (string.IsNullOrEmpty(ownerPath))
-                throw new InvalidOperationException($"Skill Graph '{target.id}' owner资产无法解析。");
-            AssetDatabase.AddObjectToAsset(graph, ownerPath);
+            if (target.ownership == AgentGraphOwnership.RootAsset.ToString())
+            {
+                string assetPath = AgentSkillFlowAssetPaths.Root(m_Session.Definition, target.id);
+                AgentSkillFlowAssetPaths.RequireAvailable(assetPath);
+                AssetDatabase.CreateAsset(graph, assetPath);
+            }
+            else
+            {
+                FlowGraph owner = ResolveGraph(target.owner?.graphId);
+                string ownerPath = owner ? AssetDatabase.GetAssetPath(owner) : string.Empty;
+                if (string.IsNullOrEmpty(ownerPath) ||
+                    AssetDatabase.LoadMainAssetAtPath(ownerPath) is not IBtsmtlSkillFlowGraph)
+                    throw new InvalidOperationException($"Skill Graph '{target.id}'需要技能图文件作为owner。");
+                AssetDatabase.AddObjectToAsset(graph, ownerPath);
+            }
             Undo.RegisterCreatedObjectUndo(graph, "创建技能Graph");
             BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph);
             m_Session.Touch(graph);

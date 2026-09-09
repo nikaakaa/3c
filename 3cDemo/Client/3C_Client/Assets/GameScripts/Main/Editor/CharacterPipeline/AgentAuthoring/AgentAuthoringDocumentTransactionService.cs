@@ -205,6 +205,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out UnityEngine.Object[] owners))
                 return FromReport(request, preparation.Report, projection, path, state);
 
+            var createdSkillRootPaths = new List<string>();
+            if (character)
+            {
+                foreach (AgentSetSkillFlowDocumentMutation mutation in preparation.Plan.Commands
+                             .OfType<AgentSetSkillFlowDocumentMutation>())
+                    createdSkillRootPaths.AddRange(AgentSkillFlowAssetPaths.PlannedRoots(character, mutation.Document));
+            }
             Undo.IncrementCurrentGroup();
             int undoGroup = Undo.GetCurrentGroup();
             const string undoName = "Apply BTSMTL Agent Document";
@@ -252,7 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         applied,
                         preparation.PresentationPlan);
                 if (applied.HasErrors())
-                    return RollbackResponse(request, projection, path, state, undoGroup, applied, "document_apply_failed");
+                    return RollbackResponse(request, projection, path, state, undoGroup, applied, "document_apply_failed", createdSkillRootPaths);
 
                 MarkTouchedOwnersDirty(result.TouchedOwners);
                 MarkPresentationOwnersDirty(preparation.PresentationPlan);
@@ -309,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 applied ??= CreateReport(request, projection.Target.rootIdentity);
                 applied.Error("apply", "apply_exception", exception.ToString());
-                return RollbackResponse(request, projection, path, state, undoGroup, applied, "apply_exception");
+                return RollbackResponse(request, projection, path, state, undoGroup, applied, "apply_exception", createdSkillRootPaths);
             }
         }
 
@@ -980,11 +987,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentAuthoringPackageState state,
             int undoGroup,
             AgentCompileReport report,
-            string code)
+            string code,
+            IReadOnlyList<string> createdSkillRootPaths)
         {
             try
             {
                 Undo.RevertAllDownToGroup(undoGroup);
+                foreach (string assetPath in createdSkillRootPaths)
+                {
+                    if (System.IO.File.Exists(assetPath) || System.IO.File.Exists(assetPath + ".meta"))
+                    {
+                        if (!AssetDatabase.DeleteAsset(assetPath))
+                            throw new InvalidOperationException($"无法清理本次事务创建的技能根：{assetPath}");
+                    }
+                }
                 AssetDatabase.SaveAssets();
             }
             catch (Exception exception)

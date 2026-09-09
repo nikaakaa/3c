@@ -1025,13 +1025,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 var macro = ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>();
                 BtsmtlSkillMacroInterface.Initialize(macro);
-                macro.ConfigureIdentity(Guid.NewGuid().ToString("N"));
+                macro.ConfigureIdentity(BtsmtlSkillGraphAssetFactory.StableIdentity(target.id));
                 graph = macro;
             }
             else
             {
                 var skill = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
-                skill.ConfigureIdentity(Guid.NewGuid().ToString("N"), Enum.Parse<BtsmtlSkillFlowGraphRole>(target.role, false));
+                skill.ConfigureIdentity(
+                    BtsmtlSkillGraphAssetFactory.StableIdentity(target.id),
+                    Enum.Parse<BtsmtlSkillFlowGraphRole>(target.role, false));
                 graph = skill;
             }
             graph.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Graph" : target.name;

@@ -1,5 +1,8 @@
 #if UNITY_EDITOR
 using System;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
@@ -10,6 +13,16 @@ namespace ThirdPersonCharacter.Control.Authoring
 {
     public static class BtsmtlSkillGraphAssetFactory
     {
+        public static string StableIdentity(string seed)
+        {
+            if (string.IsNullOrWhiteSpace(seed))
+                throw new ArgumentException("技能图稳定身份种子缺失。", nameof(seed));
+            byte[] hash;
+            using (SHA256 algorithm = SHA256.Create())
+                hash = algorithm.ComputeHash(Encoding.UTF8.GetBytes(seed));
+            return new Guid(hash.Take(16).ToArray()).ToString("N");
+        }
+
         public static BtsmtlSkillFlowGraph CreatePrivatePage(FlowGraph owner, BtsmtlSkillFlowGraphRole role, string name)
         {
             if (role == BtsmtlSkillFlowGraphRole.Skill || role == BtsmtlSkillFlowGraphRole.Subgraph)

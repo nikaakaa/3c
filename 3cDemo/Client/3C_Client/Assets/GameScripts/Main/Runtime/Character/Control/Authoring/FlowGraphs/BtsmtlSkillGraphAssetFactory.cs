@@ -30,6 +30,23 @@ namespace ThirdPersonCharacter.Control.Authoring
                 return graph;
             });
 
+        public static BtsmtlSkillMacroGraph CreateSharedMacroAsset(string path, string name)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+                throw new InvalidOperationException("共享技能Macro目标资产路径无效或已存在。");
+            var graph = ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>();
+            graph.name = name;
+            BtsmtlSkillMacroInterface.Initialize(graph);
+            graph.ConfigureIdentity(Guid.NewGuid().ToString("N"));
+            AssetDatabase.CreateAsset(graph, path);
+            Undo.RegisterCreatedObjectUndo(graph, "创建共享技能Macro");
+            BtsmtlSkillFlowEditorMutation.Apply(graph, "初始化共享技能Macro", () => PopulateAnchors(graph), false);
+            EditorUtility.SetDirty(graph);
+            AssetDatabase.SaveAssets();
+            return graph;
+        }
+
         public static TimelineAsset CreatePrivateTimeline(FlowGraph owner, string name)
         {
             string path = AssetDatabase.GetAssetPath(owner);

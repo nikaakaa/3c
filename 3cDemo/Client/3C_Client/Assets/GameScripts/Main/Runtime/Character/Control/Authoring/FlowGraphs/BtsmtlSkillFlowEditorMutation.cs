@@ -124,7 +124,15 @@ namespace ThirdPersonCharacter.Control.Authoring
                     ? "Skill connections must stay within their formal graph."
                     : source.type != target.type
                         ? "Skill ports require matching declared types; implicit conversions are not allowed."
-                        : null;
+                        : source.IsFlowPort() != target.IsFlowPort()
+                            ? "Skill flow and value ports cannot be mixed."
+                            : source is FlowOutput && source.connections != 0
+                                ? "Skill flow output already has a connection."
+                                : target is ValueInput && target.connections != 0
+                                    ? "Skill value input already has a connection."
+                                    : BinderConnection.CanBeBoundVerbosed(source, target, null, out string bindingReason)
+                                        ? null
+                                        : bindingReason;
             return reason == null;
         }
 
@@ -226,6 +234,42 @@ namespace ThirdPersonCharacter.Control.Authoring
                 }
                 catch (InvalidOperationException error)
                 {
+                    GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+                }
+            });
+            menu.AddItem(new GUIContent("BTSMTL/子图/新建共享Macro"), false, () =>
+            {
+                string path = EditorUtility.SaveFilePanelInProject(
+                    "创建共享技能Macro",
+                    "SharedSkillMacro",
+                    "asset",
+                    "选择共享技能Macro的正式资产路径。");
+                if (string.IsNullOrEmpty(path))
+                    return;
+                BtsmtlSkillMacroGraph shared = null;
+                try
+                {
+                    shared = BtsmtlSkillGraphAssetFactory.CreateSharedMacroAsset(path, "共享技能子图");
+                    MacroNodeWrapper call = Execute(graph, "引用共享技能子图", () =>
+                    {
+                        var created = (MacroNodeWrapper)graph.AddNode(typeof(MacroNodeWrapper), position);
+                        created.macro = shared;
+                        if (context != null)
+                        {
+                            Port source = context.parent.GetOutputPort(context.ID);
+                            Port target = created.GetInputPort(created.macro.inputDefinitions.Single(value => value.type == typeof(Flow)).ID);
+                            if (source == null || !CanConnect(graph, source, target, out _) ||
+                                BinderConnection.Create(source, target) == null)
+                                throw new InvalidOperationException("原执行端口已变化，无法连接共享技能子图。");
+                        }
+                        return created;
+                    });
+                    GraphEditorUtility.activeElement = call;
+                }
+                catch (Exception error) when (error is InvalidOperationException || error is ArgumentException)
+                {
+                    if (shared)
+                        AssetDatabase.DeleteAsset(path);
                     GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
                 }
             });

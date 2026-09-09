@@ -6,6 +6,7 @@ using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
 using UnityEngine;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
@@ -68,7 +69,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override bool usesExplicitPortSelection => true;
         public override bool HandleEditorCommand(string command, Vector2 position) =>
             BtsmtlSkillFlowEditorMutation.HandleCommand(this, command, position);
-        protected override void OnGraphEditorToolbar() => BtsmtlSkillObservationToolbar.Draw(this);
+        protected override void OnGraphEditorToolbar()
+        {
+            GUILayout.Label(AssetDatabase.IsMainAsset(this) ? "共享 Macro" : "私有 Macro", EditorStyles.miniLabel);
+            BtsmtlSkillObservationToolbar.Draw(this);
+        }
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);
         public override bool CanAuthorConnection(Port source, Port target, out string reason) =>
             BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out reason);
@@ -86,7 +91,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         public override BinderConnection CreatePortConnection(Port source, Port target) =>
-            BtsmtlSkillFlowEditorMutation.Execute(this, "连接技能端口", () => base.CreatePortConnection(source, target));
+            BtsmtlSkillFlowEditorMutation.Execute(this, "连接技能端口", () =>
+            {
+                if (!BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out string reason))
+                    throw new InvalidOperationException(reason);
+                return base.CreatePortConnection(source, target);
+            });
 
         public override List<Node> DuplicateNodes(List<Node> nodes, Vector2 position = default) =>
             BtsmtlSkillGraphCopy.Copy(this, nodes, position);

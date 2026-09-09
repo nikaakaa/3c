@@ -4,7 +4,7 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；旧通用Graph/State/Timeline/Blackboard Mutation已限制为AIController域，Character不再通过该入口访问RootTree。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式Character Build仍停在Presentation Projection耗时阶段，不能把此前的零错误检查当作当前整仓通过。
+尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；旧通用Graph/State/Timeline/Blackboard Mutation已限制为AIController域，Character不再通过该入口访问RootTree。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已通过，Provider owner 已写入三份 Skill 资产，`syncState=Clean`、`plannedDiff=[]`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -142,8 +142,8 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
 5.4—5.6属于最后的资产阶段。当前可实现迁移计划生成代码，不执行迁移、apply或Build；未获得对应执行证据的任务保持未勾选。
 
-- [ ] 5.1 定义v7图、Macro接口／调用／owner分片与manifest闭包，统一Exporter、Codec、Mapper和严格旧包拒绝；通过正式checkout及schema校验核对。
-- [ ] 5.2 同步Reconciler、Mutation、资产resolver、Validator及五生命周期说明，取消旧作者对象中转；通过无业务变化dry-run的零修改清单核对。
+- [x] 5.1 定义v7图、Macro接口／调用／owner分片与manifest闭包，统一Exporter、Codec、Mapper和严格旧包拒绝；通过正式checkout及schema校验核对。证据：2026-09-09正式CLI checkout 返回 v7、`success=true`、`syncState=Clean`，package 为精确 Character Definition。
+- [x] 5.2 同步Reconciler、Mutation、资产resolver、Validator及五生命周期说明，取消旧作者对象中转；通过无业务变化dry-run的零修改清单核对。证据：2026-09-09正式CLI dry-run 返回 `success=true`、`plannedDiff=[]`、`syncState=Clean`，并返回有效 plan/document hash。
 - [ ] 5.3 完成根、私有Macro及实际修改共享owner的保存／反向导出和完整回滚；交付事务owner与失败恢复证据。
 
   当前进度：8480a753e已把技能根创建改为独立主资产，Definition只引用根；私有图与Timeline核对调用方文件归属，新根路径冲突预检及apply失败文件清理已接原Document事务。完整owner集成、实际保存／反向导出／回滚证据仍未完成，尚未执行资产迁移。

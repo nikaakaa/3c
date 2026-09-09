@@ -105,6 +105,13 @@ namespace BTSMTL.Timeline
         {
             m_AuthoringId = AuthoringIdentity.Create();
         }
+
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline Track authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
+        }
 #endif
     }
 
@@ -167,6 +174,13 @@ namespace BTSMTL.Timeline
         public void RegenerateAuthoringIdentity()
         {
             m_AuthoringId = AuthoringIdentity.Create();
+        }
+
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline Clip authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
         }
 #endif
         public void FrameToTime()
@@ -391,6 +405,18 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException($"Timeline Section '{value}' already exists.");
             section.Configure(value, frame);
             SortSections();
+            Init();
+        }
+
+        public void ConfigureSectionNext(TimelineSection section, string nextSectionId)
+        {
+            if (section == null || !m_Sections.Contains(section))
+                throw new ArgumentException("Timeline Section is not owned by this Timeline.", nameof(section));
+            string value = nextSectionId?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(value) &&
+                !m_Sections.Exists(candidate => candidate != null && candidate.AuthoringId == value))
+                throw new InvalidOperationException($"Timeline Section '{section.Name}' references unknown next Section '{value}'.");
+            section.SetNextSection(value);
             Init();
         }
         public void RemoveSection(TimelineSection section)

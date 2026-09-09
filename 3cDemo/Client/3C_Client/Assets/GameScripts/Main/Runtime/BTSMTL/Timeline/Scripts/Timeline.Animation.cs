@@ -18,6 +18,8 @@ namespace BTSMTL.Timeline
             string trackName,
             UnityEngine.AnimationClip clip,
             AnimationChannelId animationChannelId,
+            string animationSlotId,
+            string blendProfileId,
             float clipTime,
             float normalizedTime,
             float weight,
@@ -38,6 +40,8 @@ namespace BTSMTL.Timeline
             AnimationChannelId = animationChannelId.IsValid
                 ? animationChannelId
                 : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
+            AnimationSlotId = animationSlotId?.Trim() ?? string.Empty;
+            BlendProfileId = blendProfileId?.Trim() ?? string.Empty;
             ClipTime = clipTime;
             NormalizedTime = normalizedTime;
             Weight = weight;
@@ -57,6 +61,8 @@ namespace BTSMTL.Timeline
         public string TrackName { get; }
         public UnityEngine.AnimationClip Clip { get; }
         public AnimationChannelId AnimationChannelId { get; }
+        public string AnimationSlotId { get; }
+        public string BlendProfileId { get; }
         public float ClipTime { get; }
         public float NormalizedTime { get; }
         public float Weight { get; }
@@ -73,10 +79,14 @@ namespace BTSMTL.Timeline
 
         [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
         string m_AnimationChannelId = string.Empty;
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        string m_AnimationSlotId = string.Empty;
 
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId)
             ? default
             : new AnimationChannelId(m_AnimationChannelId);
+
+        public string AnimationSlotId => m_AnimationSlotId ?? string.Empty;
 
 #if UNITY_EDITOR
         public void SetAnimationChannelId(AnimationChannelId animationChannelId)
@@ -86,6 +96,13 @@ namespace BTSMTL.Timeline
                 : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             RebindTimeline();
         }
+
+        public void SetAnimationSlotId(string animationSlotId)
+        {
+            m_AnimationSlotId = animationSlotId?.Trim() ?? string.Empty;
+            RebindTimeline();
+        }
+
 #endif
 
         public void Sample(float timelineTime, int trackIndex, string sourceId, string sourceName, ICollection<TimelineAnimationContribution> contributions)
@@ -137,6 +154,8 @@ namespace BTSMTL.Timeline
                     Name,
                     animationClip.Clip,
                     AnimationChannelId,
+                    AnimationSlotId,
+                    animationClip.BlendProfileId,
                     clipTime,
                     normalizedTime,
                     weight,
@@ -217,6 +236,8 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public string BlendProfileId = string.Empty;
 #if UNITY_EDITOR
 
         public override string Name => Clip ? Clip.name : base.Name;

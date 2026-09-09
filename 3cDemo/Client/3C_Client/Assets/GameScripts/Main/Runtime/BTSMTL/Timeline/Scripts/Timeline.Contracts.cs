@@ -206,6 +206,13 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline binding authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
+        }
+
         public bool EnsureAuthoringIdentity()
         {
             if (AuthoringIdentity.IsValid(m_AuthoringId))

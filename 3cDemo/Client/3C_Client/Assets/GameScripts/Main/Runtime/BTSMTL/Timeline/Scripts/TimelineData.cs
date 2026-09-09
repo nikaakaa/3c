@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Diagnostics;
 using UnityEngine;
 
@@ -69,6 +70,13 @@ namespace BTSMTL.Timeline
             TimelineData clone = Clone();
             clone.RegenerateAuthoringIdentities();
             return clone;
+        }
+
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
         }
 
         public bool EnsureAuthoringIdentities()
@@ -180,6 +188,12 @@ namespace BTSMTL.Timeline
                     errors?.Add($"Timeline '{Name}' section #{i} is invalid or duplicated.");
                     valid = false;
                 }
+                else if (!string.IsNullOrEmpty(section.NextSectionId) &&
+                         !m_Sections.Any(candidate => candidate != null && candidate.AuthoringId == section.NextSectionId))
+                {
+                    errors?.Add($"Timeline '{Name}' section '{section.Name}' references unknown next Section '{section.NextSectionId}'.");
+                    valid = false;
+                }
             }
             if (m_ExternalBindings == null)
             {
@@ -266,11 +280,22 @@ namespace BTSMTL.Timeline
         [SerializeField]
         int m_Frame;
 
+        [SerializeField]
+        string m_NextSectionId;
+
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public string Name => m_Name ?? string.Empty;
         public int Frame => m_Frame;
+        public string NextSectionId => m_NextSectionId ?? string.Empty;
 
 #if UNITY_EDITOR
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline section authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
+        }
+
         public static TimelineSection Create(string name, int frame)
         {
             return Create(AuthoringIdentity.Create(), name, frame);
@@ -297,6 +322,11 @@ namespace BTSMTL.Timeline
             m_Frame = frame;
         }
 
+        public void SetNextSection(string authoringId)
+        {
+            m_NextSectionId = authoringId?.Trim() ?? string.Empty;
+        }
+
         public bool EnsureAuthoringIdentity()
         {
             if (AuthoringIdentity.IsValid(m_AuthoringId))
@@ -309,6 +339,7 @@ namespace BTSMTL.Timeline
         {
             m_AuthoringId = AuthoringIdentity.Create();
         }
+
 #endif
 
         public bool RequireValid() =>

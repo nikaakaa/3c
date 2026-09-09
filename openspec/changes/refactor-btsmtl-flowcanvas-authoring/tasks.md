@@ -57,7 +57,9 @@
 - [ ] 2.3.3 实现批量复制、粘贴和删除的整包预检与原子写入，包括私有子图闭包；非法集合不得部分写入。
 
   当前进度：原生复制API已支持整批领域处理；技能快捷键与右键复制／删除进入同一事务，清空页面保留系统入口。复制计划捕获私有图、黑板元数据及Timeline，重新分配图／节点／连线／Timeline身份并重绑内部引用；剪切前保存私有内容快照，回收原资产后仍可粘贴。共享资源保持引用。完整typed Mutation预检、Document统一事务及实际Undo证据仍待接合，不以源码存在代替完成。
-- [ ] 2.3.4 将上述入口统一到真实owner及Document Mutation，审计并关闭遗漏的原生直接写入口。
+- [x] 2.3.4 将上述入口统一到真实owner及Document Mutation，审计并关闭遗漏的原生直接写入口。
+
+  代码证据：Skill Graph/Macro Graph结构入口、节点字段、默认值、Native Simplex、Macro接口锚点、复制/删除和Document Applier均通过真实FlowGraph owner与BtsmtlSkillFlowEditorMutation；旧通用锚点仅作为既有资产读取兼容，不作为新技能写入口。
 
 ### 2.4 Undo、保存与回滚
 

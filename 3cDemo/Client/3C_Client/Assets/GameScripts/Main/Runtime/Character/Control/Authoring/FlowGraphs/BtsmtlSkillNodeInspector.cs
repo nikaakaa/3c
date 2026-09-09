@@ -8,6 +8,7 @@ using ParadoxNotion.Design;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -225,7 +226,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             foreach (ValueInput input in node.GetInputValuePorts())
             {
-                input.EnsureCachedGUIContent();
                 if (input.isConnected)
                 {
                     EditorGUILayout.LabelField(input.displayName, "[CONNECTED]");

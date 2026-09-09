@@ -37,17 +37,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return;
             }
 
+            var inputKinds = new Dictionary<string, ProgramInputValueKind>(StringComparer.Ordinal);
             foreach (CharacterInputValueDefinition value in m_Model.InputValues)
             {
                 if (value == null || string.IsNullOrEmpty(value.InputValueId))
                     continue;
+                ProgramInputValueKind kind = MapInputValueKind(value.ValueType);
+                inputKinds.Add(value.InputValueId, kind);
                 m_Index.InputValues.Add(value.InputValueId);
                 CharacterSimulationSourceLocation source = AssetSource(profile, $"input:value:{value.InputValueId}");
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.InputValue,
                     $"input:value:{value.InputValueId}",
                     2,
-                    Fields(m_Builder.ConstantField(source, "ValueType", MapInputValueKind(value.ValueType))),
+                    Fields(m_Builder.ConstantField(source, "ValueType", kind)),
                     source);
             }
 
@@ -57,14 +60,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (declaration.InputBinding == null)
                     continue;
                 ProgramInputValueKind kind = MapInputValueKind(declaration.ValueType);
-                if (!m_Index.InputValues.Add(declaration.InputValueId))
+                if (inputKinds.TryGetValue(declaration.InputValueId, out ProgramInputValueKind existingKind))
                 {
-                    m_Report.Error(
-                        "input_value_identity_duplicate",
-                        item.Route,
-                        $"Blackboard Input Binding '{declaration.BlackboardKey}' duplicates input value '{declaration.InputValueId}'.");
+                    if (existingKind != kind)
+                        m_Report.Error(
+                            "input_value_type_conflict",
+                            item.Route,
+                            $"Blackboard Input Binding '{declaration.BlackboardKey}' uses input value '{declaration.InputValueId}' with a conflicting type.");
                     continue;
                 }
+                inputKinds.Add(declaration.InputValueId, kind);
+                m_Index.InputValues.Add(declaration.InputValueId);
                 CharacterSimulationSourceLocation source = AssetSource(
                     m_Model.Definition,
                     $"input:value:{declaration.InputValueId}/declaration:{declaration.DeclarationId}");

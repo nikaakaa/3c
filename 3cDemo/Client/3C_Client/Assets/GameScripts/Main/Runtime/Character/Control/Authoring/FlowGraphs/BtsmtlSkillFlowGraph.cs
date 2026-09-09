@@ -179,7 +179,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         public override BinderConnection CreatePortConnection(Port source, Port target) =>
-            BtsmtlSkillFlowEditorMutation.Execute(this, "连接技能端口", () => base.CreatePortConnection(source, target));
+            BtsmtlSkillFlowEditorMutation.Execute(this, "连接技能端口", () =>
+            {
+                if (!BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out string reason))
+                    throw new InvalidOperationException(reason);
+                return base.CreatePortConnection(source, target);
+            });
 
         public override List<Node> DuplicateNodes(List<Node> nodes, Vector2 position = default) =>
             BtsmtlSkillGraphCopy.Copy(this, nodes, position);

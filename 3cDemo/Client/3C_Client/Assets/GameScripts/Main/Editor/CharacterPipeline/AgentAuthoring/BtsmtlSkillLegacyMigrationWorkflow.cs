@@ -390,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         scope = declaration.scope,
                         lifetime = declaration.lifetime,
                         category = declaration.categoryPath,
-                        defaultValue = declaration.defaultValue?.DeepClone(),
+                        defaultValue = DefaultValue(declaration),
                         inputBinding = declaration.inputBinding,
                         factProjection = declaration.factProjection
                     });
@@ -450,7 +450,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!ValidTarget(legacy.id, edge.to?.node))
                         continue;
                     string stepId = Local("step", legacy.id + ":root:" + edge.id);
-                    ((JArray)parallel.properties["steps"]).Add(Step(stepId, edge.from.node.Substring(1), edge.conditionGraph, index++, edge.abortPolicy));
+                    ((JArray)parallel.properties["steps"]).Add(JObject.FromObject(Step(stepId, edge.from.node.Substring(1), edge.conditionGraph, index++, edge.abortPolicy)));
                     graph.edges.Add(FlowEdge(legacy.id, edge.id, parallelId, stepId, MapNode(legacy.id, edge.to.node), edge.to.port));
                 }
                 graph.nodes.Add(parallel);
@@ -863,9 +863,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "System.String" => "string",
                 "UnityEngine.Vector2" => "vector2",
                 "UnityEngine.Vector3" => "vector3",
+                "ThirdPersonCharacter.ActionSystem.ActionTargetSnapshot" => "action-target-snapshot",
                 "ThirdPersonSimulation.ActionTargetSnapshot" => "action-target-snapshot",
                 _ => throw new InvalidOperationException($"未登记技能值类型：{name}")
             };
+
+            JToken DefaultValue(AgentSnapshotBlackboardDeclaration declaration)
+            {
+                string valueType = ValueType(declaration.valueType);
+                if (valueType == "action-target-snapshot")
+                    return new JObject
+                    {
+                        ["targetId"] = declaration.defaultValue is JObject target ? target.Value<string>("targetId") ?? string.Empty : string.Empty,
+                        ["x"] = 0f,
+                        ["y"] = 0f,
+                        ["z"] = 0f,
+                        ["rx"] = 0f,
+                        ["ry"] = 0f,
+                        ["rz"] = 0f,
+                        ["rw"] = 1f
+                    };
+                return declaration.defaultValue?.DeepClone();
+            }
             string DeclarationOwner(string declaration, string fallback)
             {
                 AgentSnapshotBlackboardDeclaration value = m_Blackboards.TryGetValue(declaration ?? string.Empty, out AgentSnapshotBlackboardDeclaration declarationValue) ? declarationValue : null;

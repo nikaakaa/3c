@@ -75,9 +75,9 @@
 - [x] 3.1.2 完成作者可用的私有／共享Macro创建与引用入口、所有权显示及反向导出身份记录。
 
   代码证据：原生菜单支持创建私有Macro，新增共享Macro主资产创建入口与引用入口，Macro页面显示Inline/Shared所有权；调用节点、单入口接口及私有页面在同一编辑事务创建，Document继续导出Macro接口与owner身份。
-- [ ] 3.1.3 完成私有Macro闭包复制和删除回收，删除调用不得删除共享定义；形成正式创建、复制、删除计划并归入根事务。
+- [x] 3.1.3 完成私有Macro闭包复制和删除回收，删除调用不得删除共享定义；形成正式创建、复制、删除计划并归入根事务。
 
-  当前进度：编辑事务记录修改前的根内可达私有资产，修改后仅回收本次失去引用的子图与Timeline；保留共享资产及仍被引用的私有内容，删除纳入原Undo组。闭包复制已实现原生拓扑、Timeline、黑板owner及条件引用的重绑；Document整包计划接合仍待完成。
+  代码证据：BtsmtlSkillGraphCopy捕获Node、Macro、Timeline、黑板owner与条件引用闭包并在同一Undo事务重绑；BtsmtlSkillOwnedAssets只回收当前根失去引用的SubAsset，shared主资产永不进入回收集合；Document Applier对移除闭包沿同一事务删除。
 
 ### 3.2 Macro接口变化及引用校验
 

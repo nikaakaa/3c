@@ -55,8 +55,11 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public static IReadOnlyList<BtsmtlSkillNodeCapability> All => s_All;
 
-        public static bool TryGet(Type type, out BtsmtlSkillNodeCapability capability) =>
-            type != null && s_ByType.TryGetValue(type, out capability);
+        public static bool TryGet(Type type, out BtsmtlSkillNodeCapability capability)
+        {
+            capability = null;
+            return type != null && s_ByType.TryGetValue(type, out capability);
+        }
 
         public static bool TryGet(FlowNode node, out BtsmtlSkillNodeCapability capability) =>
             TryGet(node?.GetType(), out capability);

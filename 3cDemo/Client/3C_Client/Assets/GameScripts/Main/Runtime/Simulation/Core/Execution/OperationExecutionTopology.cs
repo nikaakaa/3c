@@ -38,12 +38,13 @@ namespace ThirdPersonSimulation
         Yaw = 29,
         TargetRequirement = 30,
         ValueType = 31,
-        InputValueId = 32
+        InputValueId = 32,
+        SectionCount = 33
     }
 
     public sealed class ProgramCatalogRuntimeIndex
     {
-        const int FieldCount = 33;
+        const int FieldCount = 34;
         readonly IReadOnlyList<ProgramCatalogEntry> m_Entries;
         readonly int m_KindCount;
         readonly int[] m_OperationEntries;

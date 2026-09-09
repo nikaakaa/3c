@@ -38,6 +38,59 @@ namespace BTSMTL.Timeline.Editor
 
         public event Action Evaluated;
 
+        public bool TryGetSection(string authoringId, out TimelineSection section)
+        {
+            string value = authoringId?.Trim() ?? string.Empty;
+            for (int i = 0; i < (m_SourceTimeline?.Sections.Count ?? 0); i++)
+            {
+                TimelineSection candidate = m_SourceTimeline.Sections[i];
+                if (candidate != null && string.Equals(candidate.AuthoringId, value, StringComparison.Ordinal))
+                {
+                    section = candidate;
+                    return true;
+                }
+            }
+            section = null;
+            return false;
+        }
+
+        public bool TryGetCurrentSection(out TimelineSection section)
+        {
+            section = null;
+            int currentFrame = Frame;
+            for (int i = 0; i < (m_SourceTimeline?.Sections.Count ?? 0); i++)
+            {
+                TimelineSection candidate = m_SourceTimeline.Sections[i];
+                if (candidate == null || candidate.Frame > currentFrame)
+                    continue;
+                if (section == null || candidate.Frame >= section.Frame)
+                    section = candidate;
+            }
+            return section != null;
+        }
+
+        public bool TryGetNextSection(out TimelineSection section)
+        {
+            section = null;
+            if (!TryGetCurrentSection(out TimelineSection current) ||
+                string.IsNullOrEmpty(current.NextSectionId))
+                return false;
+            return TryGetSection(current.NextSectionId, out section);
+        }
+
+        public void JumpToSection(string authoringId)
+        {
+            if (!TryGetSection(authoringId, out TimelineSection section))
+                throw new InvalidOperationException($"Timeline has no Section '{authoringId}'.");
+            SetTime(section.Frame / (float)TimelineUtility.FrameRate);
+        }
+
+        public void PlayFromSection(string authoringId)
+        {
+            JumpToSection(authoringId);
+            Play();
+        }
+
         public void SetTimeline(TimelineData timeline, bool resetTime = true)
         {
             if (m_SourceTimeline == timeline && !resetTime)

@@ -190,6 +190,44 @@ namespace ThirdPersonSimulation.Fixed
             return FixedScalar.FromInt64(maxFrame) / FixedScalar.FromInt64(frameRate);
         }
 
+        public int TimelineSectionCount(OperationHandle operation)
+        {
+            ProgramCatalogEntry timeline = RequireCatalog(Access.Operation(operation), ProgramCatalogEntryKind.Timeline);
+            if (!TryCatalogInt32(timeline, ProgramCatalogFieldId.SectionCount, out int count))
+                return 0;
+            if (count < 0)
+                throw new InvalidOperationException($"Timeline catalog '{timeline.Identity}' has a negative SectionCount.");
+            return count;
+        }
+
+        public TimelineSectionDescriptor TimelineSectionAt(OperationHandle operation, int index)
+        {
+            ProgramCatalogEntry timeline = RequireCatalog(Access.Operation(operation), ProgramCatalogEntryKind.Timeline);
+            int count = TimelineSectionCount(operation);
+            if ((uint)index >= (uint)count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            string identity = CatalogIdentity(timeline, TimelineSectionCatalog.IdentityField(index));
+            int frame = CatalogInt32(timeline, TimelineSectionCatalog.FrameField(index));
+            string next = TryCatalogIdentity(
+                timeline,
+                TimelineSectionCatalog.NextField(index),
+                out string nextIdentity)
+                ? nextIdentity
+                : string.Empty;
+            return new TimelineSectionDescriptor(identity, frame, next);
+        }
+
+        public FixedScalar TimelineFrameTime(OperationHandle operation, int frame)
+        {
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            ProgramCatalogEntry timeline = RequireCatalog(Access.Operation(operation), ProgramCatalogEntryKind.Timeline);
+            int frameRate = CatalogInt32(timeline, ProgramCatalogFieldId.FrameRate);
+            if (frameRate <= 0)
+                throw new InvalidOperationException($"Timeline catalog '{timeline.Identity}' has invalid FrameRate '{frameRate}'.");
+            return FixedScalar.FromInt64(frame) / FixedScalar.FromInt64(frameRate);
+        }
+
         public FixedScalar ClipTime(OperationHandle operation, TimelineClipTimePoint point)
         {
             ProgramCatalogFieldId field = point switch

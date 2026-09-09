@@ -507,17 +507,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 timelineRoute,
                 contentHash: content.ContentUnit.ContentHash);
+            var timelineFields = new List<ProgramCatalogField>
+            {
+                builder.ConstantField(timelineSource, "Name", timeline.Name),
+                builder.ConstantField(timelineSource, "Scale", timeline.Scale),
+                builder.ConstantField(timelineSource, "MaxFrame", content.MaxFrame),
+                builder.ConstantField(timelineSource, "FrameRate", content.ContentUnit.FrameRate),
+                builder.ConstantField(timelineSource, TimelineSectionCatalog.CountField, content.ContentUnit.Sections.Count)
+            };
+            for (int sectionIndex = 0; sectionIndex < content.ContentUnit.Sections.Count; sectionIndex++)
+            {
+                TimelineContentSection section = content.ContentUnit.Sections[sectionIndex];
+                timelineFields.Add(builder.IdentityField(
+                    TimelineSectionCatalog.IdentityField(sectionIndex),
+                    section.AuthoringId));
+                timelineFields.Add(builder.ConstantField(
+                    timelineSource,
+                    TimelineSectionCatalog.FrameField(sectionIndex),
+                    section.Frame));
+                if (!string.IsNullOrEmpty(section.NextSectionId))
+                    timelineFields.Add(builder.IdentityField(
+                        TimelineSectionCatalog.NextField(sectionIndex),
+                        section.NextSectionId));
+            }
             int timelineCatalog = builder.DeclareCatalogEntry(
                 ProgramCatalogEntryKind.Timeline,
                 $"timeline:{timeline.AuthoringId}",
                 1,
-                new[]
-                {
-                    builder.ConstantField(timelineSource, "Name", timeline.Name),
-                    builder.ConstantField(timelineSource, "Scale", timeline.Scale),
-                    builder.ConstantField(timelineSource, "MaxFrame", content.MaxFrame),
-                    builder.ConstantField(timelineSource, "FrameRate", content.ContentUnit.FrameRate)
-                },
+                timelineFields,
                 timelineSource);
             if (timelineCatalog >= 0)
             {

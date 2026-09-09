@@ -218,6 +218,24 @@ namespace BTSMTL.Timeline.Editor
                 _ => !m_LiveDebug && SessionContext.Selection.Kind == TimelineEditorSelectionKind.Section
                     ? DropdownMenuAction.Status.Normal
                     : DropdownMenuAction.Status.Disabled);
+            m_ToolMenu.menu.AppendAction(
+                "Jump to Selected Section",
+                _ => JumpToSelectedSection(),
+                _ => CanJumpToSelectedSection()
+                    ? DropdownMenuAction.Status.Normal
+                    : DropdownMenuAction.Status.Disabled);
+            m_ToolMenu.menu.AppendAction(
+                "Play from Selected Section",
+                _ => PlayFromSelectedSection(),
+                _ => CanPlayFromSelectedSection()
+                    ? DropdownMenuAction.Status.Normal
+                    : DropdownMenuAction.Status.Disabled);
+            m_ToolMenu.menu.AppendAction(
+                "Jump to Next Section",
+                _ => JumpToNextSection(),
+                _ => !m_LiveDebug && m_PreviewSession.TryGetNextSection(out _)
+                    ? DropdownMenuAction.Status.Normal
+                    : DropdownMenuAction.Status.Disabled);
             IReadOnlyList<ITimelineEditorToolProvider> providers = SessionContext?.ToolCatalog.Providers;
             m_ToolMenu.SetEnabled(true);
             if (providers == null || providers.Count == 0)
@@ -230,8 +248,39 @@ namespace BTSMTL.Timeline.Editor
                     _ => OpenToolPanel(provider),
                     _ => provider.Supports(SessionContext.Selection)
                         ? DropdownMenuAction.Status.Normal
-                        : DropdownMenuAction.Status.Disabled);
+                    : DropdownMenuAction.Status.Disabled);
             }
+        }
+        bool CanJumpToSelectedSection() =>
+            !m_LiveDebug &&
+            SessionContext?.Selection.Kind == TimelineEditorSelectionKind.Section &&
+            SessionContext.Selection.Section != null;
+
+        bool CanPlayFromSelectedSection() =>
+            CanJumpToSelectedSection() && m_PreviewSession.CanPreview;
+
+        void JumpToSelectedSection()
+        {
+            if (!CanJumpToSelectedSection())
+                return;
+            m_PreviewSession.JumpToSection(SessionContext.Selection.Section.AuthoringId);
+            UpdateBindState();
+        }
+
+        void PlayFromSelectedSection()
+        {
+            if (!CanPlayFromSelectedSection())
+                return;
+            m_PreviewSession.PlayFromSection(SessionContext.Selection.Section.AuthoringId);
+            UpdateBindState();
+        }
+
+        void JumpToNextSection()
+        {
+            if (m_LiveDebug || !m_PreviewSession.TryGetNextSection(out TimelineSection section))
+                return;
+            m_PreviewSession.JumpToSection(section.AuthoringId);
+            UpdateBindState();
         }
         void OpenToolPanel(ITimelineEditorToolProvider provider)
         {

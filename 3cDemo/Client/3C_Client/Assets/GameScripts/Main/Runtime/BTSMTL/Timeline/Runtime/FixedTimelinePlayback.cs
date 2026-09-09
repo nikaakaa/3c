@@ -239,6 +239,37 @@ namespace BTSMTL.Timeline.Runtime
             m_Status = FixedTimelinePlaybackStatus.Running;
         }
 
+        public bool TryGetCurrentSection(out TimelineSectionDescriptor section)
+        {
+            RequireNotDisposed();
+            return m_Timeline.TryGetCurrentTimelineSection(m_Program.TimelineOperation, out section);
+        }
+
+        public bool TryGetNextSection(out string sectionId)
+        {
+            RequireNotDisposed();
+            return m_Timeline.TryGetNextTimelineSection(m_Program.TimelineOperation, out sectionId);
+        }
+
+        public void JumpToSection(string sectionId)
+        {
+            RequireNotDisposed();
+            if (m_Status != FixedTimelinePlaybackStatus.Prepared &&
+                m_Status != FixedTimelinePlaybackStatus.Running)
+                throw new InvalidOperationException("Timeline must be prepared or running before it jumps to a Section.");
+            m_Target.BeginFrame();
+            try
+            {
+                m_Timeline.JumpToSection(m_Program.TimelineOperation, sectionId);
+                m_Target.CommitFrame();
+            }
+            catch
+            {
+                m_Target.DiscardFrame();
+                throw;
+            }
+        }
+
         public void Advance(FixedScalar delta)
         {
             RequireNotDisposed();
@@ -896,6 +927,45 @@ namespace BTSMTL.Timeline.Runtime
             return FixedScalar.FromInt64(maxFrame) / FixedScalar.FromInt64(frameRate);
         }
 
+        public int TimelineSectionCount(OperationHandle operation)
+        {
+            ProgramCatalogEntry timeline = RequireCatalog(operation, ProgramCatalogEntryKind.Timeline);
+            if (FindField(timeline, TimelineSectionCatalog.CountField) == null)
+                return 0;
+            int count = RequireConstant(timeline, TimelineSectionCatalog.CountField).Int32;
+            if (count < 0)
+                throw new InvalidDataException($"Timeline catalog '{timeline.Identity}' has a negative SectionCount.");
+            return count;
+        }
+
+        public TimelineSectionDescriptor TimelineSectionAt(OperationHandle operation, int index)
+        {
+            ProgramCatalogEntry timeline = RequireCatalog(operation, ProgramCatalogEntryKind.Timeline);
+            int count = TimelineSectionCount(operation);
+            if ((uint)index >= (uint)count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            string identity = RequireIdentity(timeline, TimelineSectionCatalog.IdentityField(index));
+            int frame = RequireConstant(timeline, TimelineSectionCatalog.FrameField(index)).Int32;
+            string next = TryGetIdentity(
+                timeline,
+                TimelineSectionCatalog.NextField(index),
+                out string nextIdentity)
+                ? nextIdentity
+                : string.Empty;
+            return new TimelineSectionDescriptor(identity, frame, next);
+        }
+
+        public FixedScalar TimelineFrameTime(OperationHandle operation, int frame)
+        {
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            ProgramCatalogEntry timeline = RequireCatalog(operation, ProgramCatalogEntryKind.Timeline);
+            int frameRate = RequireConstant(timeline, "FrameRate").Int32;
+            if (frameRate <= 0)
+                throw new InvalidDataException($"Timeline '{timeline.Identity}' has invalid FrameRate '{frameRate}'.");
+            return FixedScalar.FromInt64(frame) / FixedScalar.FromInt64(frameRate);
+        }
+
         public FixedScalar ClipTime(OperationHandle operation, TimelineClipTimePoint point)
         {
             ProgramCatalogEntry clip = RequireCatalog(operation, ProgramCatalogEntryKind.TimelineClip);
@@ -1200,15 +1270,30 @@ namespace BTSMTL.Timeline.Runtime
 
         FixedProgramConstant RequireConstant(ProgramCatalogEntry entry, string name)
         {
-            ProgramCatalogField field = entry.Fields.SingleOrDefault(value => string.Equals(value.Name, name, StringComparison.Ordinal));
+            ProgramCatalogField field = FindField(entry, name);
             if (field == null || field.Kind != ProgramCatalogFieldKind.Constant || field.ConstantIndex < 0 || field.ConstantIndex >= m_Program.Program.Constants.Count)
                 throw new InvalidDataException($"Timeline catalog '{entry.Identity}' has no constant field '{name}'.");
             return m_Program.Program.Constants[field.ConstantIndex];
         }
 
+        static ProgramCatalogField FindField(ProgramCatalogEntry entry, string name) =>
+            entry.Fields.SingleOrDefault(value => string.Equals(value.Name, name, StringComparison.Ordinal));
+
+        static bool TryGetIdentity(ProgramCatalogEntry entry, string name, out string identity)
+        {
+            ProgramCatalogField field = FindField(entry, name);
+            if (field != null && field.Kind == ProgramCatalogFieldKind.Identity)
+            {
+                identity = field.Identity;
+                return true;
+            }
+            identity = string.Empty;
+            return false;
+        }
+
         static string RequireIdentity(ProgramCatalogEntry entry, string name)
         {
-            ProgramCatalogField field = entry.Fields.SingleOrDefault(value => string.Equals(value.Name, name, StringComparison.Ordinal));
+            ProgramCatalogField field = FindField(entry, name);
             if (field == null || field.Kind != ProgramCatalogFieldKind.Identity)
                 throw new InvalidDataException($"Timeline catalog '{entry.Identity}' has no identity field '{name}'.");
             return field.Identity;

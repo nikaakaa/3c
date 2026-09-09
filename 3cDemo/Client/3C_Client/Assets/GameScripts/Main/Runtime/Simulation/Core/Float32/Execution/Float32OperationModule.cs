@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -135,6 +136,15 @@ namespace ThirdPersonSimulation
             return m_Program.Constants[value.ConstantIndex];
         }
 
+        protected ProgramConstant CatalogConstant(ProgramCatalogEntry entry, string fieldName)
+        {
+            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
+                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            if (value == null || value.Kind != ProgramCatalogFieldKind.Constant)
+                throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Constant.");
+            return m_Program.Constants[value.ConstantIndex];
+        }
+
         protected bool TryCatalogInt32(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out int value)
         {
             value = 0;
@@ -154,6 +164,14 @@ namespace ThirdPersonSimulation
             ProgramConstant constant = CatalogConstant(entry, field);
             if (constant.Kind != ProgramConstantKind.Int32)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Int32.");
+            return constant.Int32;
+        }
+
+        protected int CatalogInt32(ProgramCatalogEntry entry, string fieldName)
+        {
+            ProgramConstant constant = CatalogConstant(entry, fieldName);
+            if (constant.Kind != ProgramConstantKind.Int32)
+                throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Int32.");
             return constant.Int32;
         }
 
@@ -195,6 +213,28 @@ namespace ThirdPersonSimulation
             if (value.Kind != ProgramCatalogFieldKind.Identity)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Identity.");
             return value.Identity;
+        }
+
+        protected string CatalogIdentity(ProgramCatalogEntry entry, string fieldName)
+        {
+            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
+                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            if (value == null || value.Kind != ProgramCatalogFieldKind.Identity)
+                throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Identity.");
+            return value.Identity;
+        }
+
+        protected bool TryCatalogIdentity(ProgramCatalogEntry entry, string fieldName, out string identity)
+        {
+            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
+                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            if (value != null && value.Kind == ProgramCatalogFieldKind.Identity)
+            {
+                identity = value.Identity;
+                return true;
+            }
+            identity = string.Empty;
+            return false;
         }
     }
 }

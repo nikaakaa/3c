@@ -21,6 +21,94 @@ namespace ThirdPersonSimulation
             m_Segments = segments ?? throw new ArgumentNullException(nameof(segments));
         }
 
+        public bool TryGetTimelineSection(
+            OperationHandle timeline,
+            string sectionId,
+            out TimelineSectionDescriptor section)
+        {
+            string value = sectionId?.Trim() ?? string.Empty;
+            int count = m_Target.TimelineSectionCount(timeline);
+            for (int i = 0; i < count; i++)
+            {
+                TimelineSectionDescriptor candidate = m_Target.TimelineSectionAt(timeline, i);
+                if (string.Equals(candidate.AuthoringId, value, StringComparison.Ordinal))
+                {
+                    section = candidate;
+                    return true;
+                }
+            }
+            section = default;
+            return false;
+        }
+
+        public bool TryGetCurrentTimelineSection(
+            OperationHandle timeline,
+            out TimelineSectionDescriptor section)
+        {
+            TTime current = m_Target.ReadLogicTime(timeline);
+            bool found = false;
+            TimelineSectionDescriptor selected = default;
+            for (int i = 0; i < m_Target.TimelineSectionCount(timeline); i++)
+            {
+                TimelineSectionDescriptor candidate = m_Target.TimelineSectionAt(timeline, i);
+                if (Greater(m_Target.TimelineFrameTime(timeline, candidate.Frame), current))
+                    break;
+                if (!found || candidate.Frame >= selected.Frame)
+                {
+                    selected = candidate;
+                    found = true;
+                }
+            }
+            section = selected;
+            return found;
+        }
+
+        public bool TryGetNextTimelineSection(OperationHandle timeline, out string sectionId)
+        {
+            sectionId = string.Empty;
+            if (!TryGetCurrentTimelineSection(timeline, out TimelineSectionDescriptor current) ||
+                string.IsNullOrEmpty(current.NextSectionId))
+                return false;
+            if (!TryGetTimelineSection(timeline, current.NextSectionId, out TimelineSectionDescriptor next))
+                throw new InvalidOperationException(
+                    $"Timeline '{m_Target.SourcePath(timeline)}' Section '{current.AuthoringId}' references unknown next Section '{current.NextSectionId}'.");
+            sectionId = next.AuthoringId;
+            return true;
+        }
+
+        public void JumpToSection(OperationHandle timeline, string sectionId)
+        {
+            OperationExecutionDescriptor operation = m_Target.Operation(timeline);
+            if (operation.Code != SimulationOperationCode.Timeline)
+                throw new InvalidOperationException($"Operation '{timeline}' is not a Timeline operation.");
+            if (!TryGetTimelineSection(timeline, sectionId, out TimelineSectionDescriptor section))
+                throw new InvalidOperationException(
+                    $"Timeline '{m_Target.SourcePath(timeline)}' has no Section '{sectionId}'.");
+            TimelinePlaybackStatus playback = m_State.ReadPlayback(timeline);
+            if (playback != TimelinePlaybackStatus.Dormant && playback != TimelinePlaybackStatus.Running)
+                throw new InvalidOperationException(
+                    $"Timeline '{m_Target.SourcePath(timeline)}' cannot jump from playback status '{playback}'.");
+            if (playback == TimelinePlaybackStatus.Running)
+            {
+                EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
+                EmitTimelineCameraTerminal(timeline, m_Target.Zero, TimelinePresentationOutputKind.Camera);
+                m_Target.ReleaseTimeline(timeline);
+            }
+            IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
+            for (int i = 0; i < clips.Count; i++)
+            {
+                OperationExecutionDescriptor clip = m_Target.Operation(clips[i].Target);
+                if (clip.Code == SimulationOperationCode.TimelineTreeClip)
+                    m_Target.ResetTreeClipState(clip.Handle);
+            }
+            m_Target.WriteLogicTime(timeline, m_Target.TimelineFrameTime(timeline, section.Frame));
+            m_State.WriteCycle(timeline, 0);
+            m_State.WriteRetainedActionContext(default);
+            m_State.WritePlayback(timeline, TimelinePlaybackStatus.Dormant);
+            if (m_Target.DiagnosticsEnabled)
+                Trace(timeline, "timeline_section_jump", TimelineTraceSeverity.Information, section.AuthoringId);
+        }
+
         public void PrepareDecisionTimelines(OperationControlCursor<TOperationTarget> cursor)
         {
             for (int i = 0; i < m_Target.TimelineOperationCount; i++)

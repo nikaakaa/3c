@@ -278,6 +278,27 @@ namespace BTSMTL.Timeline
                     TimelineCapability.Animation,
                     true,
                     true)
-            });
+            },
+            ValidateAnimationContent);
+
+        static void ValidateAnimationContent(TimelineData timeline, List<string> errors)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is not AnimationTrack track)
+                    continue;
+                if (!track.AnimationChannelId.IsValid)
+                    errors?.Add($"Timeline '{timeline.Name}' AnimationTrack '{track.AuthoringId}' has no Animation Channel.");
+                if (string.IsNullOrWhiteSpace(track.AnimationSlotId) || track.AnimationSlotId != track.AnimationSlotId.Trim())
+                    errors?.Add($"Timeline '{timeline.Name}' AnimationTrack '{track.AuthoringId}' has no Animation Slot.");
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is not AnimationClip clip)
+                        continue;
+                    if (string.IsNullOrWhiteSpace(clip.BlendProfileId) || clip.BlendProfileId != clip.BlendProfileId.Trim())
+                        errors?.Add($"Timeline '{timeline.Name}' AnimationClip '{clip.AuthoringId}' has no Blend Profile.");
+                }
+            }
+        }
     }
 }

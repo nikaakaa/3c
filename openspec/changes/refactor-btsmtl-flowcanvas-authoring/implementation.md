@@ -175,3 +175,5 @@ Capability与端口来源已收成唯一技能目录：
 - Macro调用闭包现在核对接口参数的稳定ID、方向、Flow/Value类型和调用节点端口集合；接口变化若造成调用端口缺失，闭包校验拒绝继续保存。
 
 本节是源码实施记录，不替代Unity刷新、Document往返、精确根编译或Play观察证据；这些仍由tasks.md对应收口任务负责。
+
+最新脚本检查：主Unity Editor的Editor.log记录本轮修正后的Tundra build success，最新成功段没有CS错误，仅有MxM旧API、Renderer隐藏成员和Ref工具未使用字段三条警告。该结果只证明脚本编译，不证明Document checkout/dry-run/apply、资产迁移、Character Build或Play观察；Unity MCP在重载后当前未重新登记实例。

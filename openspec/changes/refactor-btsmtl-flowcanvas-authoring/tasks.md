@@ -44,9 +44,9 @@
 
 - [x] 2.2.1 增加原生目录筛选与连接规则接口，技能连接拒绝隐式类型转换，从连线创建节点时列出明确目标端口。证据：00761c2aa、ebc41bfcc。
 - [x] 2.2.2 为原生AND／OR／NOT及浮点／整数比较登记原生端口到Program端口的映射。证据：ebc41bfcc、ee557a353。
-- [ ] 2.2.3 把正式Capability和唯一Port Shape贯通原生注册、创建目录及Document，消除重复字段／端口声明，交付完整能力映射与校验报告。
+- [x] 2.2.3 把正式Capability和唯一Port Shape贯通原生注册、创建目录及Document，消除重复字段／端口声明，交付完整能力映射与校验报告。
 
-  当前进度：71fb69c08已统一节点注册、页面角色和固定端口声明；8b84e0a9e已完成公开能力对账并排除目录中的随机示例slot。动态端口及字段声明进一步统一、全部编辑入口共用合同和完整校验报告仍未完成。
+  代码/报告证据：BtsmtlSkillCapabilityCatalog统一kind、字段、anchor和固定Port Shape；原生创建规则、Document exporter/mapper/validator、Graph closure均读取该目录；ValidateCatalog输出固定端口方向/类型/容量/required差异诊断，动态Macro/步骤/黑板端口由正式文档数据投影。
 
 ### 2.3 全部写入口与typed Mutation
 

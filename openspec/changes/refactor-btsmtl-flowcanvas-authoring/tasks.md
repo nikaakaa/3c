@@ -137,7 +137,9 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 5.3 完成根、私有Macro及实际修改共享owner的保存／反向导出和完整回滚；交付事务owner与失败恢复证据。
 
   当前进度：8480a753e已把技能根创建改为独立主资产，Definition只引用根；私有图与Timeline核对调用方文件归属，新根路径冲突预检及apply失败文件清理已接原Document事务。完整owner集成、实际保存／反向导出／回滚证据仍未完成，尚未执行资产迁移。
-- [ ] 5.4 生成精确技能及其引用闭包迁移计划，核对stable identity、布局和资源引用；发生实际冲突按作者选择处理，不自动覆盖。
+- [x] 5.4 生成精确技能及其引用闭包迁移计划，核对stable identity、布局和资源引用；发生实际冲突按作者选择处理，不自动覆盖。
+
+  交付物：skill-migration-plan.md。计划固定Attack/DodgeBack/DodgeForward旧入口、闭包规模、共享Timeline GUID、确定性根路径、能力映射、identity/layout/owner核对和apply顺序；实际冲突仍必须在正式dry-run后由作者决定。
 - [ ] 5.5 显式应用迁移、发布v7工作包并通过同hash dry-run／apply／重新checkout；成功证据必须包含applied、saved和Clean。
 - [ ] 5.6 经唯一Character Build发布所需Numeric Target和Projection，核对产物组身份及依赖一致；不复用其他worktree生成资产冒充本批输出。
 

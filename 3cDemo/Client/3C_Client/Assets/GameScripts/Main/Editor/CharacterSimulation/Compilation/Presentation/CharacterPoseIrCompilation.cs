@@ -1156,7 +1156,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseCanvasNode output =
                 role != CharacterPoseIrGraphRole.Subgraph &&
                 role != CharacterPoseIrGraphRole.LinkedPoseEntry &&
-                role != CharacterPoseIrGraphRole.MotionMatchingEntry
+                role != CharacterPoseIrGraphRole.MotionMatchingEntry &&
+                role != CharacterPoseIrGraphRole.AnimationLayer &&
+                role != CharacterPoseIrGraphRole.ControlRig
                 ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
                 : ordered.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
             return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, loweredNodes, new CharacterPoseIrNodeId(output.NodeId.Value));

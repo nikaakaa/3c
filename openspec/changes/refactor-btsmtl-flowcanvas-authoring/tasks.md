@@ -4,18 +4,18 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：全部人工编辑的typed Mutation、共享Macro创建和接口发布闭包、Document与资产的完整往返执行、采样性能及运行观察对账。实例选择和调用导航已有代码，相关执行证据项仍保持未勾选。最新脚本编译受到其他Presentation领域报错阻塞，不能把此前的零错误检查当作当前整仓通过。
+尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；旧通用Graph/State/Timeline/Blackboard Mutation已限制为AIController域，Character不再通过该入口访问RootTree。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式Character Build仍停在Presentation Projection耗时阶段，不能把此前的零错误检查当作当前整仓通过。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
 | 缺口 | 对应工作 |
 |---|---|
-| 仍需补代码与集成 | 2.2.3动态字段／端口统一；2.3全部编辑写入预检；2.4完整owner事务；2.5遗漏入口清理；3.1—3.2共享Macro作者流程及调用方接口检查；6.1优化标记；8.2旧路径清理 |
-| 主链代码已有，仍需完成规定的执行核对 | 2.1.2身份保存／重载；3.3—3.4编译语义与页面导航；4.1.4—4.3正式构建；6.2—6.4版本、调用诊断与开销；7.2—7.5实例选择和观察生命周期 |
+| 仍需补代码与集成 | 2.2.3动态字段／端口统一；2.3全部编辑写入预检；2.3.5—2.3.6 provider Blackboard与GA导航；2.4完整owner事务；2.5遗漏入口清理；3.1—3.2共享Macro作者流程及调用方接口检查；4.1.5—4.1.7状态provider与Program State；4.5 Simulation Pipeline/网络Adapter；6.1优化标记；8.2旧路径清理 |
+| 主链代码已有，仍需完成规定的执行核对 | 2.1.2身份保存／重载；3.3—3.4编译语义与页面导航；4.1.4—4.3正式构建；6.2—6.4版本、调用诊断与开销；7.2—7.5实例选择和观察生命周期；8.5规范与Rootless残留核对 |
 | 基础已提交，集成及资产往返未完成 | 5.1—5.3的Document v7、根／私有／共享owner保存与失败恢复 |
-| 最后执行的资产与交付工作 | 5.4—5.6迁移计划、apply及产物发布；8.1运行对账；8.3—8.4规范安装与最终证据 |
+| 最后执行的资产与交付工作 | 5.4—5.6迁移计划、apply及产物发布；8.1运行对账；8.3—8.5规范安装、网络闭包与最终证据 |
 
-本表只解释缺口，不替代各任务的完整完成标准。任务勾选保持25/60；编译错误只影响对应验证，不作为停止独立代码或文档工作的理由。
+本表只解释缺口，不替代各任务的完整完成标准。任务总量随架构决策补充而变化，不再使用固定总数推算进度；编译错误只影响对应验证，不作为停止独立代码或文档工作的理由。
 
 维护规则：每次小步提交后同步本表中的对应项和提交证据；结束一项后继续下一项，不到最后再统一补记。
 
@@ -60,6 +60,8 @@
 - [x] 2.3.4 将上述入口统一到真实owner及Document Mutation，审计并关闭遗漏的原生直接写入口。
 
   代码证据：Skill Graph/Macro Graph结构入口、节点字段、默认值、Native Simplex、Macro接口锚点、复制/删除和Document Applier均通过真实FlowGraph owner与BtsmtlSkillFlowEditorMutation；旧通用锚点仅作为既有资产读取兼容，不作为新技能写入口。
+- [x] 2.3.5 实现provider-aware Blackboard面板、变量创建、Skill Local声明、外部provider引用和typed Get/Set拖拽；通过owner、声明ID、类型和读写权限的Mutation/Undo核对。证据：Skill Graph Authoring Panel、正式Skill Mutation、provider节点编译、Document Export/Apply已接通；Unity脚本编译通过。
+- [x] 2.3.6 从Definition的GA列表按SkillId和EntryGraphAuthoringId精确打开指定Skill Graph；通过入口路径核对不默认打开第一个Graph且不恢复Character RootTree。证据：Definition Editor逐Skill解析EntryGraphAuthoringId，导航工具按稳定GraphAuthoringId打开，未恢复Character RootTree入口。
 
 ### 2.4 Undo、保存与回滚
 
@@ -123,6 +125,14 @@
 
 - [x] 4.4.1 技能Graph／Macro拒绝原生运行初始化和Macro运行克隆，原生Macro端口声明不登记运行委托。证据：00761c2aa、ebc41bfcc。
 - [x] 4.4.2 审计完整正式运行装配不引用作者图、不启动FlowScript或原生委托／协程，交付运行工厂到Program执行器的依赖链。见implementation.md“技能作者与运行依赖审计”；此项为源码依赖审计，不代替8.1运行对账。
+
+### 4.5 状态Provider与Simulation Pipeline
+
+- [ ] 4.5.1 接入C# Character State的只读typed projection；验证Skill只能读取Movement事实，不能直接写Velocity、BodyYaw或Control State，影响主线必须提交正式Command。
+- [ ] 4.5.2 接入GAS式Ability Attribute、GameplayEffect、GameplayTag和ActivationData访问合同；验证跨GA状态不通过某个Skill Graph隐式共享。
+- [ ] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。
+- [ ] 4.5.4 将Character Program接入Session Composition和Simulation Pipeline；验证ProgramRuntime、ExecutionBackend、WorldSolver、Pipeline Pass和SessionSource通过正式兼容校验。
+- [ ] 4.5.5 接入Rollback与Server Authority的正式Pass/Adapter；验证网络只传Input、Canonical Request、Hash和Snapshot，不复制Graph、Blackboard名称、Timeline对象或最终Pose。
 
 ## 5. Document v7和资产迁移
 
@@ -196,10 +206,11 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.1 使用现有正式CLI完成技能启动／Timeline／正常结束及中断链的编译运行对账，记录业务差异；不新增测试代码或临时执行器。
 - [x] 8.2 核对各旧作者模型、窗口、端口和转换层的消费者，删除零消费者实现；交付残留清单并说明未迁移领域的合法保留原因。
 
-  残留清单见implementation.md“旧路径消费者审计”：保留项均有非Skill Character根图、AI、非技能Timeline或Document顶层元数据消费者；技能正式编译/观察没有旧作者对象中转。
+  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除；后续保留项只能有AI RootTree、非技能Timeline或Document顶层元数据消费者。技能正式编译/观察不得有旧作者对象中转。
 - [ ] 8.3 同步project、current specs、技能说明和原change替代记录，统一v7版本及作者／运行边界；运行OpenSpec严格校验并附规范冲突复核结论。
 ### 8.4 交付与真实进度
 
 - [x] 8.4.1 将当前代码拆成五个独立提交并记录盘点、脚本刷新事实、未接通及未验证项。证据：b3d066d12及implementation.md。
 - [ ] 8.4.2 最终汇总代码与资产提交、正式CLI证据及各项结论；编译成功不得代替交互、运行观察或性能完成，所有任务按真实证据收口。
+- [ ] 8.5 核对Character RootTree删除后的Definition、GA精确导航、provider Blackboard、Simulation Pipeline和Network Adapter规范一致性；运行OpenSpec严格校验并输出仍存在的非技能RootTree残留清单。
 

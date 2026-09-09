@@ -228,12 +228,12 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 if (input.isConnected)
                 {
-                    EditorGUILayout.LabelField(input.displayName, "[CONNECTED]");
+                    EditorGUILayout.LabelField(input.name, "[CONNECTED]");
                     continue;
                 }
                 object oldValue = input.serializedValue;
                 object newValue = EditorUtils.ReflectedFieldInspector(
-                    input.displayName,
+                    input.name,
                     oldValue,
                     input.type,
                     new InspectedFieldInfo(graph, null, null, null));

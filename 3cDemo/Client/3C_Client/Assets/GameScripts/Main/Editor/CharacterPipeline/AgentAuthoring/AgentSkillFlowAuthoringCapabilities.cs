@@ -46,6 +46,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .ToList();
         }
 
+        public static bool ValidateCatalog(AgentCompileReport report)
+        {
+            bool valid = true;
+            var descriptors = ExportCatalog()
+                .GroupBy(value => value.kind, StringComparer.Ordinal)
+                .ToDictionary(value => value.Key, value => value.First(), StringComparer.Ordinal);
+            foreach (BtsmtlSkillNodeCapability capability in BtsmtlSkillCapabilityCatalog.All)
+            {
+                if (capability.NodeType == typeof(BtsmtlSkillBlackboardSetFlowNode) || IsAnchor(capability.Kind))
+                    continue;
+                if (!descriptors.TryGetValue(capability.Kind, out AgentPackageSkillNodeKindDescriptor descriptor))
+                {
+                    report.Error("capabilities." + capability.Kind, "skill_capability_export_missing", "技能Capability没有进入Document目录。");
+                    valid = false;
+                    continue;
+                }
+                if (!typeof(BtsmtlSkillCompositeFlowNode).IsAssignableFrom(capability.NodeType) &&
+                    capability.NodeType != typeof(MacroNodeWrapper) &&
+                    capability.NodeType != typeof(BtsmtlSkillBlackboardAccessFlowNode))
+                {
+                    FlowNode prototype = (FlowNode)Activator.CreateInstance(capability.NodeType);
+                    prototype.GatherPorts();
+                    foreach (BtsmtlSkillPortShape shape in BtsmtlSkillCapabilityCatalog.ProjectPorts(prototype))
+                    {
+                        AgentPackagePortDescriptor port = (shape.IsFlow ? descriptor.flowPorts : descriptor.valuePorts)
+                            .FirstOrDefault(value =>
+                                value.key == shape.Id &&
+                                value.direction == (shape.IsInput ? "Input" : "Output"));
+                        if (port == null ||
+                            port.valueType != (shape.IsFlow ? string.Empty : ValueType(shape.ValueType)) ||
+                            port.capacity != (shape.Multiple ? "Multiple" : "Single") ||
+                            port.required != shape.Required)
+                        {
+                            report.Error("capabilities." + capability.Kind + ".ports." + shape.Id,
+                                "skill_capability_port_shape_mismatch",
+                                "技能Capability固定Port Shape与Document目录不一致。");
+                            valid = false;
+                        }
+                    }
+                }
+            }
+            return valid;
+        }
+
         public static bool TryGetKind(FlowNode node, out string kind)
         {
             kind = null;

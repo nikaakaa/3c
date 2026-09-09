@@ -221,6 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .GroupBy(value => value.graphId, StringComparer.Ordinal)
                 .ToDictionary(value => value.Key, value => value.First(), StringComparer.Ordinal);
             bool valid = true;
+            valid &= AgentSkillFlowAuthoringCapabilities.ValidateCatalog(report);
             if (document.skills == null || document.graphs == null || document.layouts == null ||
                 document.macros == null || document.timelines == null)
             {

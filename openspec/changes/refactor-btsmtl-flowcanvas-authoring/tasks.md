@@ -31,7 +31,7 @@
 
 - [x] 1.2.1 静态盘点Corin三项技能的可达节点、状态、条件、内联／共享Timeline和编译调用者，记录入口身份与迁移去向。证据：skill-inventory.md，b3d066d12。
 - [x] 1.2.2 将盘点与当前完整Capability目录逐项对账，补齐未在Corin出现的公开能力、唯一端口形状和删除项，确认无遗漏。证据：skill-inventory.md“2026-09-09公开能力补充对账”，49项旧注册逐项归属及53个原生类型；不代替动态端口代码合并和构建验收。
-- [ ] 1.3 记录精确Definition的现有编译／回放／诊断基线及未完成资产事务；通过正式CLI结果核对，不把历史实验当作当前基线。
+- [x] 1.3 记录精确Definition的现有编译／回放／诊断基线及未完成资产事务；通过正式CLI结果核对，不把历史实验当作当前基线。证据：精确 Corin Definition 的 checkout/dry-run/apply/re-checkout 已执行；当前基线为 v7 `syncState=Clean`、`plannedDiff=[]`、apply `applied=true/saved=true`，Character Build/validate 仍被 Presentation Projection 闭包错误阻塞。
 
 ## 2. 共用作者基础
 
@@ -160,7 +160,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [x] 5.4 生成精确技能及其引用闭包迁移计划，核对stable identity、布局和资源引用；发生实际冲突按作者选择处理，不自动覆盖。
 
   交付物：skill-migration-plan.md。计划固定Attack/DodgeBack/DodgeForward旧入口、闭包规模、共享Timeline GUID、确定性根路径、能力映射、identity/layout/owner核对和apply顺序；实际冲突仍必须在正式dry-run后由作者决定。
-- [ ] 5.5 显式应用迁移、发布v7工作包并通过同hash dry-run／apply／重新checkout；成功证据必须包含applied、saved和Clean。
+- [x] 5.5 显式应用迁移、发布v7工作包并通过同hash dry-run／apply／重新checkout；成功证据必须包含applied、saved和Clean。证据：正式 Timeline 合同迁移后 checkout/dry-run 返回 `plannedDiff=[]`，以 `bb5af1f5514f1990b9da427799b81b0e253d32b5d38fa4a76b3457457e5fa169` 执行 apply，返回 `applied=true`、`saved=true`、`syncState=Clean`，随后 re-checkout 仍为同一 `documentHash` 与 `Clean`。
 - [ ] 5.6 经唯一Character Build发布所需Numeric Target和Projection，核对产物组身份及依赖一致；不复用其他worktree生成资产冒充本批输出。
 
 ## 6. 编译来源及运行观测

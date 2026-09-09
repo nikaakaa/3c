@@ -50,42 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (nativeGraphs.Length != 0)
                     return nativeGraphs.Length == 1 && OpenSkillGraph(definition, nativeGraphs[0], source, instance);
             }
-            if (!definition.RootTreeAsset)
-                return false;
-
-            BaseTree root = definition.RootTreeAsset.Tree;
-            var topologyErrors = new List<string>();
-            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(root, topologyErrors);
-            if (!topology.IsValid)
-                return false;
-
-            if (!string.IsNullOrEmpty(source.GraphAuthoringId))
-            {
-                for (int graphIndex = 0; graphIndex < topology.Graphs.Count; graphIndex++)
-                {
-                    BaseTree graph = topology.Graphs[graphIndex].Graph;
-                    if (!string.Equals(graph.GraphAuthoringId, source.GraphAuthoringId, StringComparison.Ordinal))
-                        continue;
-                    graph.RebindReadOnlyViewReferences();
-                    return OpenGraph(graph, source, new CharacterPipelineAuthoringContext(definition, instance));
-                }
-                return false;
-            }
-
-            if (!string.IsNullOrEmpty(source.TimelineAuthoringId))
-            {
-                for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
-                {
-                    CharacterAuthoringTimelineEntry timeline = topology.Timelines[timelineIndex];
-                    if (!string.Equals(timeline.Timeline.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
-                        continue;
-                    timeline.Graph.RebindReadOnlyViewReferences();
-                    BaseTreeWindow graphWindow = TreeWindowUtility.TreeWindowUtilityInstance.OpenBaseTreeWindow();
-                    graphWindow.ReplaceNavigationRoot(timeline.Graph, new CharacterPipelineAuthoringContext(definition, instance));
-                    TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(graphWindow, timeline.Node);
-                    return timelineWindow != null && timelineWindow.FocusSource(source.TrackAuthoringId, source.ClipAuthoringId);
-                }
-            }
             return false;
         }
 
@@ -97,6 +61,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             else if (source.Kind == RuntimeSourceElementKind.Edge)
                 element = graph.allNodes.SelectMany(node => node.outConnections)
                     .SingleOrDefault(edge => edge.UID == source.ElementAuthoringId);
+            else if (source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
+            {
+                BtsmtlSkillTimelineFlowNode[] timelines = graph.allNodes
+                    .OfType<BtsmtlSkillTimelineFlowNode>()
+                    .Where(node => node.Timeline != null &&
+                                   string.Equals(node.Timeline.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
+                    .ToArray();
+                if (timelines.Length != 1)
+                    return false;
+                element = timelines[0];
+            }
             else if (source.Kind != RuntimeSourceElementKind.Graph)
                 return false;
             if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
@@ -112,6 +87,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             window.Focus();
             if (element != null)
                 GraphEditor.FocusElement(element, true);
+            if (element is BtsmtlSkillTimelineFlowNode timelineNode)
+            {
+                TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(timelineNode.TimelineAsset);
+                return timelineWindow != null && timelineWindow.FocusSource(
+                    source.Kind == RuntimeSourceElementKind.Timeline ? string.Empty : source.TrackAuthoringId,
+                    source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);
+            }
             if (UnityEngine.Application.isPlaying && instance.IsValid)
                 BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             return true;

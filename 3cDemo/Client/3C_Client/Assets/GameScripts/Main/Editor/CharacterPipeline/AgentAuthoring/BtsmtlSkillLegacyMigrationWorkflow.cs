@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -99,6 +100,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!definition)
                 throw new InvalidOperationException($"Corin Definition不存在：{DefinitionPath}");
             new Migration(definition).Run();
+        }
+
+        [MenuItem("Tools/3C/Character/Normalize Corin Skill Timeline Animation Contracts")]
+        public static void NormalizeCorinSkillTimelineAnimationContracts()
+        {
+            CharacterPipelineDefinition definition =
+                AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(DefinitionPath);
+            if (!definition)
+                throw new InvalidOperationException($"Corin Definition不存在：{DefinitionPath}");
+            CharacterAnimationPresentationProfile profile = definition.AnimationPresentationProfile;
+            if (!profile || !profile.RigDefinition)
+                throw new InvalidOperationException("Corin Definition缺少正式Animation Presentation Profile或Rig Definition。");
+            profile.RigDefinition.RequireAnimationSlot(new AnimationSlotId("corin.full-body-action"));
+            profile.RigDefinition.RequireBlendProfile("corin.animation-rig.action-blend-profile");
+
+            var timelines = new HashSet<TimelineAsset>();
+            foreach (BtsmtlSkillFlowGraph root in definition.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
+            {
+                if (!root)
+                    continue;
+                foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(root, true))
+                    foreach (BtsmtlSkillTimelineFlowNode node in graph.allNodes.OfType<BtsmtlSkillTimelineFlowNode>())
+                        if (node.TimelineAsset)
+                            timelines.Add(node.TimelineAsset);
+            }
+
+            int changedTracks = 0;
+            int changedClips = 0;
+            foreach (TimelineAsset asset in timelines)
+            {
+                asset.Data.Init();
+                foreach (AnimationTrack track in asset.Data.Tracks.OfType<AnimationTrack>())
+                {
+                    if (track.AnimationChannelId.Value != "FullBodyAction")
+                        throw new InvalidOperationException(
+                            $"Skill Timeline '{asset.name}'包含未登记Animation Channel：{track.AnimationChannelId.Value}");
+                    if (track.AnimationSlotId != "corin.full-body-action")
+                    {
+                        track.SetAnimationSlotId("corin.full-body-action");
+                        changedTracks++;
+                    }
+                    foreach (BTSMTL.Timeline.AnimationClip clip in track.Clips.OfType<BTSMTL.Timeline.AnimationClip>())
+                    {
+                        if (clip.BlendProfileId == "corin.animation-rig.action-blend-profile")
+                            continue;
+                        clip.BlendProfileId = "corin.animation-rig.action-blend-profile";
+                        changedClips++;
+                    }
+                }
+                EditorUtility.SetDirty(asset);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Corin Skill Timeline Animation Contract规范完成：timelines={timelines.Count}, tracks={changedTracks}, clips={changedClips}。", definition);
         }
 
         sealed class Migration

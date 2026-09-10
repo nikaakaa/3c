@@ -139,7 +139,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (!request.ReusedPoseResult.IsValid || request.ReusedPoseResult.Projection == null)
                     errors.Add("Character assembly received an invalid independent Pose compilation result.");
                 else
+                {
                     motionMatching = request.ReusedPoseResult.Projection.MotionMatching;
+                    RegisterReusedPoseAnimationCatalog(
+                        request.ReusedPoseResult,
+                        request.AnimationBuildInput);
+                }
             }
             long coreMs = 0;
             long catalogMs = 0;
@@ -285,6 +290,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add($"Animation Input Contract Movement Mode state '{required}' is not declared by the Control Module.");
             }
             return identities;
+        }
+
+        static void RegisterReusedPoseAnimationCatalog(
+            CharacterPresentationProjectionCompileResult poseResult,
+            CharacterAnimationBuildInput animationBuildInput)
+        {
+            for (int i = 0; i < poseResult.AnimationCatalog.Entries.Count; i++)
+            {
+                CharacterAnimationBuildCatalogEntry entry =
+                    poseResult.AnimationCatalog.Entries[i];
+                animationBuildInput.AnimationCatalog.RegisterReference(
+                    entry.AuthoringClip,
+                    entry.Backend,
+                    entry.NativeScalarPage,
+                    "pose-reused:" + entry.StableIdentity);
+            }
         }
 
         static CharacterPresentationAnimationPropertyBinding[] CompileAnimationProperties(

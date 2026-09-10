@@ -6,7 +6,6 @@ using BTSMTL.Timeline;
 using Cinemachine;
 using ThirdPerson.ProductStartup;
 using ThirdPersonCamera;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;

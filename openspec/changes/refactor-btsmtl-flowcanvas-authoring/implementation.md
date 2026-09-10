@@ -285,3 +285,11 @@ Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backen
 随后执行只读 `btsmtl.dry_run_document` job `2ab6784cf2a64d929c3b3997e5cb3871`，返回 `success=false`、`errorCode=document_sync_state_blocked`、`syncState=TreeDirty`，要求先 checkout 或 rebase。当前 package 与 Unity authoring 的差异包含外部窗口正在处理的 Pose/资产变化；本任务没有执行规避性 checkout、rebase、apply或最终技能资产迁移，避免把未经用户裁决的外部改动混入本变更。
 
 对同一根再次执行只读 dry-run job `e8d2d574a1dc45d49e566457cd710ddb`，仍返回 `success=false`、`errorCode=document_sync_state_blocked`、`syncState=TreeDirty`，没有产生新的计划或资产写入。该重复结果确认阻塞来自 authoring/package 事实差异而不是一次性连接失败；继续等待外部窗口完成并裁决其 Pose/资产变更。
+
+# 2026-09-10 Skill原生编辑器编译复核
+
+本轮刷新目标Unity实例 `3C_Client@e852139597e42532` 时，Skill原生Blackboard适配器、provider节点菜单和运行观察自动绑定器首次暴露了三个缺失using/类型解析问题；仅修正命名空间和 `Graph` 类型冲突，提交为 `8721e1d59`。明确暂存文件只有这三个Skill源码文件，没有带入Pose、Build或资产改动。
+
+清空控制台后执行目标实例脚本强制刷新，等待编译和Domain Reload完成，`read_console`返回0条C#编译错误；剩余的 `3C-parallel-test` 场景绝对路径报错来自并行窗口的外部状态，不属于本次Skill改动。
+
+随后正式执行 `btsmtl.checkout_document` job `80a3991233184265aeb0e0ee5eacbc98`。操作最终返回 `success=false`、`applied=false`、`saved=false`、`errorCode=presentation_pose_properties_invalid`，没有写入Document或Unity资产。失败原因是当前Pose Graph节点仍带旧 `animation` 属性而缺少当前唯一Capability要求的 `pose-source-slot`；这是外部Pose迁移现场，不能由Skill authoring绕过。2.4.2、5.3、5.6、7.4、8.1和8.4.2继续保留正式交互、Build、Play和最终聚合证据门槛。

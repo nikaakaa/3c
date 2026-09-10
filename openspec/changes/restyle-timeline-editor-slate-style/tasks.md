@@ -12,8 +12,8 @@
 
 - [x] 3.1 创建临时 Cutscene host、Groups、Tracks、ActionClip wrappers 和 Section projection；以 `HideFlags.HideAndDontSave`、无 SerializedObject 绑定、无 AssetDatabase 保存的代码检查确认生命周期隔离
 - [x] 3.2 建立 BTSMTL Timeline/Track/Clip/Section/TreeClip authoring identity 到 Slate proxy object 的双向 map；以 owner 切换、窗口关闭和重建都能释放旧 map 的生命周期检查确认不残留对象
-- [ ] 3.3 将 Timeline length、view range、Track 顺序、Clip start/end/blend、Section 和可显示的 Curve 摘要投影到 Slate；以不支持字段显示 unavailable、没有默认值覆盖的映射清单确认数据没有静默丢失
-- [ ] 3.4 将 Skill owner、TreeClip ownership、ActionContext 和 AnimationClip 导航信息保存在 adapter context；以 Slate UI 关闭后这些信息仍从 BTSMTL owner恢复确认 proxy 没有夺取领域所有权
+- [x] 3.3 将 Timeline length、view range、Track 顺序、Clip start/end/blend、Section 和可显示的 Curve 摘要投影到 Slate；以不支持字段显示 unavailable、没有默认值覆盖的映射清单确认数据没有静默丢失
+- [x] 3.4 将 Skill owner、TreeClip ownership、ActionContext 和 AnimationClip 导航信息保存在 adapter context；以 Slate UI 关闭后这些信息仍从 BTSMTL owner恢复确认 proxy 没有夺取领域所有权
 
 ## 4. 建立Slate到BTSMTL的正式写回
 

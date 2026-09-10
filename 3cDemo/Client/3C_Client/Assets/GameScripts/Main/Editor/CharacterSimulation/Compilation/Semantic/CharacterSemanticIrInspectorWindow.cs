@@ -614,11 +614,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!string.IsNullOrEmpty(source.EdgeId))
                 return RuntimeSourceElementKey.Edge(source.GraphId, source.EdgeId);
             if (!string.IsNullOrEmpty(source.ClipId))
-                return RuntimeSourceElementKey.Clip(source.TimelineId, source.TrackId, source.ClipId, string.Equals(source.SourceType, typeof(TreeClip).FullName, StringComparison.Ordinal));
+                return RuntimeSourceElementKey.Clip(source.TimelineId, source.TrackId, source.ClipId, string.Equals(source.SourceType, typeof(TreeClip).FullName, StringComparison.Ordinal), source.GraphId);
             if (!string.IsNullOrEmpty(source.TrackId))
-                return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId);
+                return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId, source.GraphId);
             if (!string.IsNullOrEmpty(source.TimelineId))
-                return RuntimeSourceElementKey.Timeline(source.TimelineId);
+                return RuntimeSourceElementKey.Timeline(source.TimelineId, source.GraphId);
             if (!string.IsNullOrEmpty(source.GraphId))
                 return RuntimeSourceElementKey.Graph(source.GraphId);
             return default;

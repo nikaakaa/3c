@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 var track = (AnimationTrack)context.Track;
                 context.DeclareTrackCatalog(context.Builder.ConstantField(context.TrackSource, "AnimationChannelId", track.AnimationChannelId));
+                context.DeclareTrackCatalog(context.Builder.ConstantField(context.TrackSource, "AnimationSlotId", track.AnimationSlotId));
                 context.Builder.DeclareProducer(
                     context.AnimationProducerIdentity,
                     track.AnimationChannelId,
@@ -40,6 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         context.Builder.ConstantField(source, "WeightCurve", context.BakeCurve(clip, "WeightCurve", clip.WeightCurve)),
                         context.Builder.ConstantField(source, "EaseInCurve", context.BakeCurve(clip, "EaseInCurve", clip.EaseInCurve)),
                         context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve)),
+                        context.Builder.ConstantField(source, "AnimationSlotId", ((AnimationTrack)context.Track).AnimationSlotId),
+                        context.Builder.ConstantField(source, "BlendProfileId", clip.BlendProfileId),
                         context.Builder.IdentityField("Producer", producer)
                     },
                     producer);

@@ -8,6 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class CharacterPresentationSemanticReader
     {
         readonly CharacterGameplaySemanticIr m_SemanticIr;
+        readonly IReadOnlyList<ProgramProducer> m_Producers;
 
         public CharacterPresentationSemanticReader(ValidatedSemanticIrArtifact artifact)
         {
@@ -19,10 +20,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 artifact.Header.SourceRevision,
                 artifact.Header.SemanticHash,
                 m_SemanticIr.Producers);
+            m_Producers = m_SemanticIr.Producers;
         }
 
         public CharacterPresentationSemanticContract Contract { get; }
-        public IReadOnlyList<ProgramProducer> Producers => m_SemanticIr.Producers;
+        public IReadOnlyList<ProgramProducer> Producers => m_Producers;
 
         public CharacterPresentationProducerKind? ResolveKind(ProgramProducer producer, List<string> errors)
         {

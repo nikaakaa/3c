@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
         {
             var report = new CharacterSimulationCompileReport();
-            if (!TryResolveRoot(definition, report, out string definitionPath, out string definitionGuid, out BaseTree root))
+            if (!TryResolveRoot(definition, report, out string definitionPath, out string definitionGuid))
                 return CharacterSemanticFrontendResult.Failed(report);
             ProgramRevision sourceRevision;
             try
@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return CharacterSemanticFrontendResult.Failed(report);
             }
 
-            CharacterAuthoringCompilationModel firstModel = Discover(definition, definitionPath, definitionGuid, sourceRevision, root, report);
+            CharacterAuthoringCompilationModel firstModel = Discover(definition, definitionPath, definitionGuid, sourceRevision, report);
             CharacterGameplaySemanticIr firstIr = Emit(firstModel, report);
             ValidatedSemanticIrArtifact firstArtifact = ValidateArtifact(firstIr, report, definitionPath);
             if (firstModel == null || firstArtifact == null || !report.IsValid)
@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return new CharacterSemanticFrontendResult(firstArtifact, firstModel, report);
 
             var verificationReport = new CharacterSimulationCompileReport();
-            CharacterAuthoringCompilationModel secondModel = Discover(definition, definitionPath, definitionGuid, sourceRevision, root, verificationReport);
+            CharacterAuthoringCompilationModel secondModel = Discover(definition, definitionPath, definitionGuid, sourceRevision, verificationReport);
             CharacterGameplaySemanticIr secondIr = Emit(secondModel, verificationReport);
             ValidatedSemanticIrArtifact secondArtifact = ValidateArtifact(secondIr, verificationReport, definitionPath);
             if (secondModel == null || secondArtifact == null || !verificationReport.IsValid)
@@ -71,12 +71,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string definitionPath,
             string definitionGuid,
             ProgramRevision sourceRevision,
-            BaseTree root,
             CharacterSimulationCompileReport report)
         {
             try
             {
-                return new CharacterAuthoringDiscovery(report).Discover(definition, definitionPath, definitionGuid, sourceRevision, root);
+                return new CharacterAuthoringDiscovery(report).Discover(definition, definitionPath, definitionGuid, sourceRevision);
             }
             catch (Exception exception)
             {
@@ -177,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     controlRoot.Value,
-                    root.EntryIdentity,
+                    controlSource.DisplayPath,
                     controlSource);
                 return builder.Build();
             }
@@ -368,12 +367,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPipelineDefinition definition,
             CharacterSimulationCompileReport report,
             out string definitionPath,
-            out string definitionGuid,
-            out BaseTree root)
+            out string definitionGuid)
         {
             definitionPath = string.Empty;
             definitionGuid = string.Empty;
-            root = null;
             if (!definition)
             {
                 report.DiscoveryError("definition_missing", "CharacterPipelineDefinition", "Frontend root is missing.");
@@ -384,17 +381,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (string.IsNullOrEmpty(definitionPath) || string.IsNullOrEmpty(definitionGuid))
             {
                 report.DiscoveryError("definition_identity_missing", definition.name, "CharacterPipelineDefinition must be a persisted asset with a GUID.");
-                return false;
-            }
-            if (!definition.RootTreeAsset)
-            {
-                report.DiscoveryError("root_tree_asset_missing", definitionPath, "CharacterPipelineDefinition RootTree asset is missing.");
-                return false;
-            }
-            root = definition.RootTreeAsset.Tree;
-            if (root is not RunnableTree)
-            {
-                report.DiscoveryError("root_tree_type_invalid", definitionPath, $"RootTree type '{root?.GetType().FullName}' is not RunnableTree.");
                 return false;
             }
             return true;

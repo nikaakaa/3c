@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string guid = asset ? model.GetAssetGuid(asset) : string.Empty;
             return new CharacterSimulationSourceLocation(
                 asset ? asset.GetType().FullName : "MissingAsset",
-                model.Root.Graph.GraphAuthoringId,
+                model.DefinitionGuid,
                 string.Empty,
                 string.Empty,
                 string.Empty,

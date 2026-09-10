@@ -80,10 +80,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterCompositionRoot[] stableRoots = (roots ?? throw new ArgumentNullException(nameof(roots)))
                 .OrderBy(value => value.Identity, StringComparer.Ordinal)
                 .ToArray();
-            if (stableRoots.Length == 0 || stableRoots.Count(value => value.Role == CharacterCompositionRootRole.Character) != 1)
-                throw new ArgumentException("Character compilation requires exactly one Character root.", nameof(roots));
+            if (stableRoots.Count(value => value.Role == CharacterCompositionRootRole.Character) > 1)
+                throw new ArgumentException("Character compilation allows at most one Character root.", nameof(roots));
             Roots = Array.AsReadOnly(stableRoots);
-            Root = stableRoots.Single(value => value.Role == CharacterCompositionRootRole.Character).Occurrence;
+            Root = stableRoots.SingleOrDefault(value => value.Role == CharacterCompositionRootRole.Character)?.Occurrence;
             SkillRecords = Array.AsReadOnly((skills ?? throw new ArgumentNullException(nameof(skills)))
                 .OrderBy(value => value.SkillId)
                 .ToArray());
@@ -436,22 +436,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPipelineDefinition definition,
             string definitionPath,
             string definitionGuid,
-            ProgramRevision sourceRevision,
-            BaseTree root)
+            ProgramRevision sourceRevision)
         {
-            ValidateDefinition(definition, definitionPath, definitionGuid, root);
+            ValidateDefinition(definition, definitionPath, definitionGuid);
             if (!m_Report.IsValid)
                 return null;
             var roots = new List<CharacterCompositionRoot>();
-            DiscoverCompositionRoot(
-                roots,
-                CharacterCompositionRootRole.Character,
-                $"asset:{definitionGuid}",
-                definitionPath,
-                root,
-                $"root:{root.GraphAuthoringId}");
-            if (roots.Count == 0 || !m_Report.IsValid)
-                return null;
             IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
                 definition.SkillDefinitions,
                 definition.SkillGraphs,
@@ -618,8 +608,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void ValidateSkillActionWindowQueries(BtsmtlSkillGraphOccurrence root)
         {
             var paths = new Dictionary<BtsmtlSkillGraphOccurrence, BtsmtlSkillGraphOccurrence[]>();
+            var visibleScopes = new Dictionary<BtsmtlSkillGraphOccurrence, HashSet<BtsmtlSkillGraphOccurrence>>();
             var phases = new Dictionary<BtsmtlSkillGraphOccurrence, TreeClip>();
-            Collect(root, Array.Empty<BtsmtlSkillGraphOccurrence>(), null);
+            Collect(root, Array.Empty<BtsmtlSkillGraphOccurrence>(), null, new HashSet<BtsmtlSkillGraphOccurrence>());
             var projections = new List<(string WindowType, BtsmtlSkillGraphOccurrence Owner, TreeClip Clip, string Route)>();
             foreach (var pair in phases)
                 foreach (IBtsmtlSkillBlackboardAccessNode setter in pair.Key.Nodes.OfType<IBtsmtlSkillBlackboardAccessNode>())
@@ -644,7 +635,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         continue;
                     }
                     var candidates = projections.Where(value => value.WindowType == query.WindowType).ToArray();
-                    if (candidates.Any(value => value.Clip.ExecutionPhase == TimelineTreeExecutionPhase.Decision && pair.Value.Contains(value.Owner)))
+                    if (candidates.Any(value => value.Clip.ExecutionPhase == TimelineTreeExecutionPhase.Decision &&
+                                                visibleScopes[pair.Key].Contains(value.Owner)))
                         continue;
                     string available = candidates.Length == 0 ? "无" : string.Join(";", candidates.Select(value =>
                         $"owner={value.Owner.Route},phase={value.Clip.ExecutionPhase},clip={value.Clip.AuthoringId},source={value.Route}"));
@@ -652,22 +644,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"窗口'{query.WindowType}'没有当前调用可见的Decision TreeClip投射。候选={available}。");
                 }
 
-            void Collect(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillGraphOccurrence[] ancestors, TreeClip phase)
+            void Collect(
+                BtsmtlSkillGraphOccurrence graph,
+                BtsmtlSkillGraphOccurrence[] ancestors,
+                TreeClip phase,
+                ISet<BtsmtlSkillGraphOccurrence> inheritedVisibleScopes)
             {
                 BtsmtlSkillGraphOccurrence[] path = ancestors.Append(graph).ToArray();
                 paths.Add(graph, path);
+                var visible = new HashSet<BtsmtlSkillGraphOccurrence>(inheritedVisibleScopes)
+                {
+                    graph
+                };
+                visibleScopes.Add(graph, visible);
                 if (phase != null)
                     phases.Add(graph, phase);
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
-                    Collect(reference.Child, path, phase);
+                    Collect(reference.Child, path, phase, visible);
                 foreach (BtsmtlSkillEdgeOccurrence edge in graph.Edges)
                     if (edge.Condition != null)
-                        Collect(edge.Condition, path, phase);
+                    {
+                        var conditionVisibleScopes = new HashSet<BtsmtlSkillGraphOccurrence>(visible);
+                        BtsmtlSkillGraphOccurrence sourceStateBody = graph.References
+                            .Where(reference => reference.Kind == BtsmtlSkillGraphReferenceKind.StateBody &&
+                                                ReferenceEquals(reference.Owner, edge.Edge.sourceNode))
+                            .Select(reference => reference.Child)
+                            .SingleOrDefault();
+                        if (sourceStateBody != null)
+                            conditionVisibleScopes.Add(sourceStateBody);
+                        Collect(edge.Condition, path, phase, conditionVisibleScopes);
+                    }
                 foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
                     foreach (TimelineSemanticTrackRecord track in timeline.Content.Tracks)
                         foreach (TimelineSemanticClipRecord clip in track.Clips)
                             if (clip.Clip is TreeClip tree)
-                                Collect(timeline.Trees[tree.AuthoringId], path, tree);
+                                Collect(timeline.Trees[tree.AuthoringId], path, tree, visible);
             }
         }
 
@@ -922,11 +933,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Declarations.Add(key, new CharacterAuthoringBlackboardDeclaration(graph, declaration, route));
         }
 
-        void ValidateDefinition(CharacterPipelineDefinition definition, string definitionPath, string definitionGuid, BaseTree root)
+        void ValidateDefinition(CharacterPipelineDefinition definition, string definitionPath, string definitionGuid)
         {
-            if (!definition || string.IsNullOrEmpty(definitionPath) || string.IsNullOrEmpty(definitionGuid) || root == null)
+            if (!definition || string.IsNullOrEmpty(definitionPath) || string.IsNullOrEmpty(definitionGuid))
             {
-                m_Report.DiscoveryError("definition_identity_missing", definitionPath, "CharacterPipelineDefinition, GUID and Root Tree are required.");
+                m_Report.DiscoveryError("definition_identity_missing", definitionPath, "CharacterPipelineDefinition and its GUID are required.");
                 return;
             }
             var errors = new List<string>();
@@ -941,7 +952,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < errors.Count; i++)
                 m_Report.DiscoveryError("definition_configuration_invalid", $"asset:{definitionGuid}", errors[i]);
             ValidateAssetIdentity(definition, "CharacterPipelineDefinition", definitionPath);
-            ValidateAssetIdentity(definition.RootTreeAsset, "RootTree", definitionPath);
             ValidateAssetIdentity(definition.InputProfile, "InputProfile", definitionPath);
             ValidateAssetIdentity(definition.GameplayEffectProfile, "GameplayEffectProfile", definitionPath);
             ValidateAssetIdentity(definition.BodyMotionProfile, "BodyMotionProfile", definitionPath);

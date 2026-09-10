@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly IReadOnlyList<ICharacterSemanticNodeBinding> m_Bindings;
         readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
         readonly CharacterSimulationCatalogIndex m_CatalogIndex;
+        readonly CharacterSimulationCompileReport m_Report;
 
         public CharacterSemanticDomainBindingEmitter(
             CharacterSimulationCatalogIndex catalogIndex,
@@ -39,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
+            m_Report = report;
             var catalog = new CharacterSemanticCatalogReferenceEmitter(catalogIndex, builder, report);
             m_Catalog = catalog;
             m_CatalogIndex = catalogIndex;
@@ -99,6 +101,57 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     break;
                 case IBtsmtlSkillBlackboardAccessNode blackboard:
                     m_Blackboard.Bind(operation, route, blackboard.Variable.OwnerId, blackboard.Variable.DeclarationId, blackboard.ValueType, source, blackboard.Writes);
+                    break;
+                case BtsmtlSkillGameplayTagFlowNode tag:
+                    m_Catalog.Bind(
+                        operation,
+                        route,
+                        source,
+                        ProgramCatalogEntryKind.GameplayTag,
+                        $"tag:{tag.Tag.Value}",
+                        m_CatalogIndex.GameplayTags.Contains(tag.Tag.Value));
+                    break;
+                case BtsmtlSkillGameplayTagQueryFlowNode query:
+                    m_Catalog.BindTagQuery(operation, route, source, query.Query);
+                    break;
+                case BtsmtlSkillGameplayAttributeFlowNode attribute:
+                    m_Catalog.Bind(
+                        operation,
+                        route,
+                        source,
+                        ProgramCatalogEntryKind.Attribute,
+                        $"attribute:{attribute.Attribute.Value}",
+                        m_CatalogIndex.Attributes.Contains(attribute.Attribute.Value));
+                    break;
+                case BtsmtlSkillApplyGameplayEffectFlowNode apply:
+                    string effectId = apply.Effect ? apply.Effect.EffectId.Value : string.Empty;
+                    m_Catalog.Bind(
+                        operation,
+                        route,
+                        source,
+                        ProgramCatalogEntryKind.GameplayEffect,
+                        $"effect:{effectId}",
+                        m_CatalogIndex.GameplayEffects.Contains(effectId));
+                    if (apply.Predicted && !apply.ActionContext)
+                        m_Report.Error(
+                            "gameplay_effect_prediction_context_missing",
+                            source.Identity,
+                            "Predicted Gameplay Effect application requires a formal Action Context.");
+                    break;
+                case BtsmtlSkillRemoveGameplayEffectFlowNode remove:
+                    if (remove.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
+                    {
+                        string removedEffectId = remove.Effect ? remove.Effect.EffectId.Value : string.Empty;
+                        m_Catalog.Bind(
+                            operation,
+                            route,
+                            source,
+                            ProgramCatalogEntryKind.GameplayEffect,
+                            $"effect:{removedEffectId}",
+                            m_CatalogIndex.GameplayEffects.Contains(removedEffectId));
+                    }
+                    else if (remove.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectTagQuery)
+                        m_Catalog.BindTagQuery(operation, route, source, remove.EffectTagQuery);
                     break;
                 case BtsmtlSkillCanActivateActionFlowNode action:
                     string actionId = action.ActionProfile ? action.ActionProfile.ActionId : string.Empty;

@@ -1534,7 +1534,7 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 ## 可复用Graph直接资源残留审计（POSE-EXEC-20260911-04）
 
-状态：当前Pose Graph的Source Slot与Resource Slot本身只表达抽象能力，Profile负责为它们提供具体资源；审计时Graph payload仍有两类直接资源引用尚未迁移。`CharacterPoseStateMachineAuthoringContracts`的Transition直接保存`CharacterAnimationBlendCurveAsset`与`CharacterAnimationBlendProfile`，Motion Matching payload直接保存`CharacterMotionMatchingBinding`与`CharacterAnimationBlendPolicy`。后者已在下一步迁移，前者当前存在用户未提交改动，本轮未触碰；24.1与24.2仍不能勾选，不能在Graph外加兼容读取或角色名推断。
+状态：当时的源码审计确认Graph payload仍有两类直接资源引用尚未迁移。`CharacterPoseStateMachineAuthoringContracts`的Transition直接保存`CharacterAnimationBlendCurveAsset`与`CharacterAnimationBlendProfile`，Motion Matching payload直接保存`CharacterMotionMatchingBinding`与`CharacterAnimationBlendPolicy`。这两类源码直连随后都已迁移为Graph-owned Slot；Corin旧序列化数据仍待正式Unity Mutation重写，因此24.1与24.2仍不能勾选，不能在Graph外加兼容读取或角色名推断。
 
 ## 正式Scene Play Pose观察入口（POSE-EXEC-20260911-05）
 
@@ -1547,3 +1547,11 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## 删除PoseGraph自定义GraphEditor面板扩展（POSE-EXEC-20260911-06）
 
 状态：提交`45acadc47`删除`GraphEditor`的`domainPanel`字段、挂载方法、画布尺寸预留与原生Inspector跳过分支，同时删除Pose Workspace的对应清理调用。Pose作者编辑表面不再存在项目自定义Domain Panel；FlowCanvas原生Inspector、Connection Inspector、Blackboard、breadcrumb和画布直接负责作者交互。Workspace仍作为非可视生命周期／Mutation／导航协调对象存在，未改变Pose节点数据、运行时或`CreatePoseOnlyInput()`链路。目标Unity MCP当前主线程仍返回`ping not answered`，因此本步尚未登记窗口重载后的视觉证据。
+
+## 完成StateMachine资源直连源码迁移（POSE-EXEC-20260911-08）
+
+状态：提交`e60c2ebfd`将StateMachine Transition的Custom Blend Curve与Blend Profile改为Graph-owned `CharacterPoseResourceSlot`，新增`BlendCurve`与`BlendProfile`资源种类；StateMachine合同只验证Slot kind，Blend Compiler与Family Payload Binding Pass再从精确Profile Resource Binding取得实际资产。人工创建、字段Mutation、Details和Graph Validator均已切换。带临时scheduler注入的完整Editor源码编译为0错误、93个既有警告；临时文件已删除并执行`dotnet build-server shutdown`。Corin旧Graph序列化数据尚未通过正式Unity Mutation迁移，当前不重建Projection。
+
+## StateMachine资源槽迁移后的当前边界
+
+状态：Pose Graph作者合同源码中已不存在`CharacterAnimationBlendCurveAsset`、`CharacterAnimationBlendProfile`、`CharacterMotionMatchingBinding`或`CharacterAnimationBlendPolicy`的直接字段；Agent文档仍按现行合同表达Curve/Profile asset identity，由Reconciler在精确Profile的`poseResources`中解析到Slot。Corin Graph asset与Profile仍是并行未提交改动，待目标Unity MCP恢复后创建／绑定新增Slot并保存，不能手改序列化JSON或把源码编译当作资产迁移完成。

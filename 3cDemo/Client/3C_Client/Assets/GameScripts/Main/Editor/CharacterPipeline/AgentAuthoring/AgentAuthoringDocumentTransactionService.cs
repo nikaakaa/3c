@@ -938,9 +938,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string code,
             IReadOnlyList<string> createdSkillRootPaths)
         {
+            Exception authoringRollbackFailure = null;
             try
             {
                 applyResult?.RollbackAuthoring();
+            }
+            catch (Exception exception)
+            {
+                authoringRollbackFailure = exception;
+                report.Error("transaction", "authoring_rollback_failed", exception.Message);
+            }
+            try
+            {
                 Undo.RevertAllDownToGroup(undoGroup);
                 foreach (string assetPath in createdSkillRootPaths)
                 {
@@ -957,6 +966,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error("transaction", "rollback_failed", exception.Message);
                 code = "rollback_failed";
             }
+            if (authoringRollbackFailure != null)
+                code = "rollback_failed";
             report.applied = false;
             report.success = false;
             LogRollbackFailure(report, code);

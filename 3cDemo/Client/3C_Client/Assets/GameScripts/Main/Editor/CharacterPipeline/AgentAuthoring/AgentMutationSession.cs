@@ -125,8 +125,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         internal void RollbackAuthoring()
         {
+            List<Exception> failures = null;
             for (int i = m_RollbackActions.Count - 1; i >= 0; i--)
-                m_RollbackActions[i]();
+            {
+                try
+                {
+                    m_RollbackActions[i]();
+                }
+                catch (Exception exception)
+                {
+                    failures ??= new List<Exception>();
+                    failures.Add(exception);
+                }
+            }
+            if (failures != null)
+                throw new AggregateException("技能authoring回滚动作未全部成功。", failures);
         }
 
         public void PlanGameplayTag(string tag)

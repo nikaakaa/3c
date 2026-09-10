@@ -1083,14 +1083,57 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return Array.Empty<GraphAuthoringReadOnlyDetail>();
             CharacterPoseCanvasNode node = ((CharacterPoseCanvasGraphDocument)document)
                 .Graph.Nodes.Single(value => value.NodeId.Value == selection.ElementId.Value);
-            CharacterPresentationPoseSourceSlot slot = node.PresentationPoseSourceSlot;
-            if (!slot)
-                return Array.Empty<GraphAuthoringReadOnlyDetail>();
-            var result = new List<GraphAuthoringReadOnlyDetail>
+            var result = new List<GraphAuthoringReadOnlyDetail>();
+            switch (node.Payload)
             {
-                new GraphAuthoringReadOnlyDetail("Source Slot", slot.name),
-                new GraphAuthoringReadOnlyDetail("Source Type", slot.SourceKind.ToString())
-            };
+                case CharacterAnimationSlotPosePayload animationSlot:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Slot", animationSlot.SlotId.Value));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Group", ResolveSlotGroup(animationSlot.SlotId)));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Animation Channel", animationSlot.AnimationChannelId.Value));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Availability", animationSlot.SelectionAvailability.ToString()));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy", animationSlot.BlendPolicy ? animationSlot.BlendPolicy.PolicyId : "Missing"));
+                    if (animationSlot.BlendPolicy)
+                    {
+                        result.Add(new GraphAuthoringReadOnlyDetail(
+                            "Default Transition",
+                            $"{animationSlot.BlendPolicy.DefaultTransition.BlendLogic} / {animationSlot.BlendPolicy.DefaultTransition.DurationSeconds:0.###} s"));
+                    }
+                    break;
+                case CharacterBlendStackPosePayload stack:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy", stack.BlendPolicy ? stack.BlendPolicy.PolicyId : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Max Entries", stack.BlendPolicy ? stack.BlendPolicy.StackPolicy.MaxActiveSourceEntries.ToString() : "Missing"));
+                    break;
+                case CharacterInertializationPosePayload inertialization:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Policy", inertialization.Policy ? inertialization.Policy.PolicyId : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Policy Revision", inertialization.Policy ? inertialization.Policy.Revision : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Parameter Filters", inertialization.Policy ? inertialization.Policy.Response.ParameterFilters.Count.ToString() : "Missing"));
+                    break;
+                case CharacterLayeredBoneBlendPosePayload layered:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Bone Mask", layered.BoneMask ? layered.BoneMask.MaskId : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Mask Rig", layered.BoneMask ? $"{layered.BoneMask.RigId}@{layered.BoneMask.RigRevision}" : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Pose Space", layered.BlendSpace.ToString()));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Alpha", layered.Weight.ToString("0.###")));
+                    break;
+                case CharacterClipPlayerPosePayload clip:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Animation", clip.Animation ? clip.Animation.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Play Rate", clip.PlayRate.ToString("0.###")));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Initial Time", clip.InitialTime.ToString("0.###")));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Loop", clip.LoopAnimation ? "Yes" : "No"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Clock", clip.ClockSource.ToString()));
+                    break;
+                case CharacterBlendSpacePlayerPosePayload blendSpace:
+                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Space", blendSpace.BlendSpace ? blendSpace.BlendSpace.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Input Range", blendSpace.InputRangePolicy.ToString()));
+                    break;
+            }
+            CharacterPresentationPoseSourceSlot sourceSlot = node.PresentationPoseSourceSlot;
+            if (!sourceSlot)
+                return result;
+            result.AddRange(new[]
+            {
+                new GraphAuthoringReadOnlyDetail("Source Slot", sourceSlot.name),
+                new GraphAuthoringReadOnlyDetail("Source Type", sourceSlot.SourceKind.ToString())
+            });
             if (!m_Profile)
             {
                 result.Add(new GraphAuthoringReadOnlyDetail(
@@ -1099,7 +1142,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return result;
             }
             CharacterPresentationPoseSourceBinding binding =
-                m_Profile.FindPoseSourceBinding(slot);
+                m_Profile.FindPoseSourceBinding(sourceSlot);
             if (!binding)
             {
                 result.Add(new GraphAuthoringReadOnlyDetail("Profile Binding", "Missing"));
@@ -1115,6 +1158,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             result.Add(new GraphAuthoringReadOnlyDetail("Foot Analysis", "Configured"));
             return result;
+        }
+
+        string ResolveSlotGroup(AnimationSlotId slotId)
+        {
+            if (!m_Rig || !slotId.IsValid)
+                return m_Rig ? "Missing" : "Unavailable: exact Rig context required";
+            try
+            {
+                return m_Rig.RequireAnimationSlot(slotId).GroupId.Value;
+            }
+            catch (InvalidOperationException)
+            {
+                return "Missing";
+            }
         }
 
         public bool TryGetFieldOptions(

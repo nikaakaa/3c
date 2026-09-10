@@ -92,6 +92,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         void RemovePoseWatchInterests(Guid ownerId);
     }
 
+    public interface IAnimationPresentationRuntimeResetController
+    {
+        void Reset();
+    }
+
     public sealed class AnimationPresentationRuntimeTarget
     {
         readonly IAnimationPresentationRuntimeSnapshotProvider m_Provider;
@@ -126,6 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Provider.DiagnosticsInterest;
+        public bool CanReset => m_Provider is IAnimationPresentationRuntimeResetController;
         public bool TryGetDebugView(
             out AnimationPresentationDebugView debugView)
         {
@@ -169,6 +175,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Provider.SetPoseWatchInterests(ownerId, interests);
 
         public void RemovePoseWatchInterests(Guid ownerId) => m_Provider.RemovePoseWatchInterests(ownerId);
+
+        public void Reset()
+        {
+            if (m_Provider is not IAnimationPresentationRuntimeResetController resetController)
+                throw new InvalidOperationException(
+                    "Animation Presentation runtime target does not expose a reset controller.");
+            resetController.Reset();
+        }
     }
 
     public static class AnimationPresentationRuntimeTargetRegistry

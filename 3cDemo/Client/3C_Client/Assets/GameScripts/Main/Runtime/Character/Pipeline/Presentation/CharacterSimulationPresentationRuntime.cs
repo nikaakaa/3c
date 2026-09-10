@@ -17,7 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterSimulationPresentationRuntime :
         ICharacterPresentationRuntime,
         ISimulationPresentationOutputPort,
-        IAnimationPresentationRuntimeSnapshotProvider
+        IAnimationPresentationRuntimeSnapshotProvider,
+        IAnimationPresentationRuntimeResetController
     {
         readonly ActorId m_ActorId;
         readonly CharacterPresentationProjection m_Projection;

@@ -4,7 +4,7 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；当前尚未为规避外部改动执行checkout、迁移、Character Build、Play、网络回放或性能采样。
+尚未完成：Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；只读 Document dry-run job `2ab6784cf2a64d929c3b3997e5cb3871` 返回`syncState=TreeDirty`，当前不能在未裁决外部 authoring 改动前执行checkout、迁移、Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -31,7 +31,7 @@
 
 - [x] 1.2.1 静态盘点Corin三项技能的可达节点、状态、条件、内联／共享Timeline和编译调用者，记录入口身份与迁移去向。证据：skill-inventory.md，b3d066d12。
 - [x] 1.2.2 将盘点与当前完整Capability目录逐项对账，补齐未在Corin出现的公开能力、唯一端口形状和删除项，确认无遗漏。证据：skill-inventory.md“2026-09-09公开能力补充对账”，49项旧注册逐项归属及53个原生类型；不代替动态端口代码合并和构建验收。
-- [x] 1.3 记录精确Definition的现有编译／回放／诊断基线及未完成资产事务；通过正式CLI结果核对，不把历史实验当作当前基线。证据：精确 Corin Definition 的 checkout/dry-run/apply/re-checkout 已执行；已记录v7 `syncState=Clean`、`plannedDiff=[]`、apply `applied=true/saved=true`基线，Character Build仍未执行。最新 Prediction/Authority Composition validate分别通过正式CLI；此前的外部Pose Projection阻塞已解除，但没有把外部资产重新checkout进本任务。
+- [x] 1.3 记录精确Definition的现有编译／回放／诊断基线及未完成资产事务；通过正式CLI结果核对，不把历史实验当作当前基线。证据：精确 Corin Definition 的 checkout/dry-run/apply/re-checkout 已执行；已记录v7 `syncState=Clean`、`plannedDiff=[]`、apply `applied=true/saved=true`基线，Character Build仍未执行。最新 Prediction/Authority Composition validate分别通过正式CLI；此前的外部Pose Projection阻塞已解除，但最新只读 dry-run 返回`TreeDirty`，没有把未裁决的外部资产改动重新checkout进本任务。
 
 ## 2. 共用作者基础
 

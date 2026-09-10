@@ -387,6 +387,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (ReferenceEquals(graph, asset.Graph))
                 return CharacterPoseGraphAuthoringCapabilities.RootGraph;
+            if (graph.Role != CharacterPoseAuthoringGraphRole.AnimGraph)
+                return CharacterPoseGraphAuthoringCapabilities.GetRole(graph.Role);
             bool stateOwned = asset.EnumerateGraphs()
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)

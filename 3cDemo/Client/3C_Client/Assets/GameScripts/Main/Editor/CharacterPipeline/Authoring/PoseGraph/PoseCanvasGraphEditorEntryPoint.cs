@@ -27,13 +27,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void Restore()
         {
+            DestroyTransientPoseGraphs();
             if (GraphEditor.current != null)
+            {
+                if (HasTransientPoseGraph(GraphEditor.rootGraph))
+                {
+                    GraphEditor.current.Close();
+                    return;
+                }
                 BindGraph(GraphEditor.currentGraph);
+            }
         }
 
         static void BindGraph(NodeCanvas.Framework.Graph value)
         {
             Detach();
+            if (GraphEditor.current != null &&
+                HasTransientPoseGraph(GraphEditor.rootGraph))
+            {
+                GraphEditor.current.Close();
+                return;
+            }
+            if (value is CharacterPoseCanvasGraph temporary &&
+                !EditorUtility.IsPersistent(temporary))
+            {
+                if (GraphEditor.current != null &&
+                    GraphEditor.currentGraph == temporary)
+                    GraphEditor.SetReferences((NodeCanvas.Framework.Graph)null);
+                return;
+            }
             if (value is not CharacterPoseCanvasGraph graph)
             {
                 CharacterPoseGraphWorkspace.HandleGraphSelection(value);
@@ -48,6 +70,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             graph.EditorWriteRouter = s_Session;
             PoseCanvasEditorBridge.VisualsRefresh?.Invoke(graph);
             CharacterPoseGraphWorkspace.HandleGraphSelection(graph);
+        }
+
+        static bool HasTransientPoseGraph(NodeCanvas.Framework.Graph root)
+        {
+            for (NodeCanvas.Framework.Graph current = root;
+                 current != null;
+                 current = current.GetCurrentChildGraph())
+            {
+                if (current is CharacterPoseCanvasGraph pose &&
+                    !EditorUtility.IsPersistent(pose))
+                    return true;
+            }
+            return false;
+        }
+
+        static void DestroyTransientPoseGraphs()
+        {
+            CharacterPoseCanvasGraph[] graphs =
+                Resources.FindObjectsOfTypeAll<CharacterPoseCanvasGraph>();
+            for (int i = 0; i < graphs.Length; i++)
+            {
+                CharacterPoseCanvasGraph graph = graphs[i];
+                if (!graph || EditorUtility.IsPersistent(graph))
+                    continue;
+                if (GraphEditor.currentGraph == graph)
+                    GraphEditor.current.Close();
+                UnityEngine.Object.DestroyImmediate(graph);
+            }
         }
 
         static void Detach()

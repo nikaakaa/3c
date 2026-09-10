@@ -1310,7 +1310,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_BottomDock = new BlendSpaceBottomDockAdapter(this);
             var commands = new[]
             {
-                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompileSemanticIr),
+                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection),
                 new GraphAuthoringToolbarCommandDescriptor("build", "Build", GraphAuthoringToolbarCommandKind.ExplicitOperation, BuildDefinition)
             };
             return new GraphAuthoringDomainAdapters(
@@ -1639,19 +1639,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_PreviewWeights[evaluation.Weights.GetSampleId(i)] = evaluation.Weights.GetWeight(i);
         }
 
-        void CompileSemanticIr()
+        void CompilePoseProjection()
         {
-            if (!m_Definition)
+            if (!m_Profile)
             {
-                m_BottomDock?.Report("Compile unavailable: the Blend Space has no unique Character Definition context.");
+                m_BottomDock?.Report("Compile unavailable: the Blend Space has no Presentation Profile context.");
                 return;
             }
             SetBuilding(true);
             string message;
             try
             {
-                CharacterSemanticFrontendResult result = CharacterSimulationBuildOrchestrator.CompileSemanticIr(m_Definition, true);
-                message = result.IsValid ? "Compile completed." : "Compile failed. Inspect the formal compile report.";
+                CharacterPresentationProjectionCompileResult result =
+                    CharacterSimulationBuildOrchestrator.CompilePoseOnly(m_Profile, m_Definition);
+                message = result.IsValid ? "Pose compile completed." : "Pose compile failed. Inspect the formal compile report.";
             }
             catch (Exception exception)
             {

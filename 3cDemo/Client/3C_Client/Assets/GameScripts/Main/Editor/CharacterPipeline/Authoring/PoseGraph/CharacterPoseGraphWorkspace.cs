@@ -148,11 +148,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .Select(guid => AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(guid)))
                 .Where(definition => definition && definition.AnimationPresentationProfile == profile).ToArray();
             if (definitions.Length != 1)
-                return OpenAuthoring(profile.PoseGraph);
+                return CreateWorkspace(profile.PoseGraph, profile, null, null);
             CharacterPipelineDefinition definition = definitions[0];
-            if (!definition.PresentationProjection)
-                throw new InvalidOperationException(
-                    $"Character Definition '{definition.name}' has no published Presentation Projection.");
             return Open(
                 profile.PoseGraph,
                 profile,
@@ -168,12 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!asset || asset.Graph == null || !asset.Graph.GraphId.IsValid)
                 throw new ArgumentException("Presentation Pose Graph is missing typed authoring data.", nameof(asset));
-            if (!profile || !projection || !definition || !profile.RigDefinition)
+            if (!profile || !definition || !profile.RigDefinition)
                 throw new InvalidOperationException(
-                    "Pose Graph requires one exact Definition, Presentation Profile, Rig Definition and published Projection context.");
+                    "Pose Graph requires one exact Definition, Presentation Profile and Rig Definition context.");
             if (definition.AnimationPresentationProfile != profile)
                 throw new InvalidOperationException("Character Definition does not own the selected Presentation Profile.");
-            if (definition.PresentationProjection != projection)
+            if (projection && definition.PresentationProjection != projection)
                 throw new InvalidOperationException("Character Definition does not own the selected Presentation Projection.");
             return CreateWorkspace(asset, profile, projection, definition);
         }
@@ -278,9 +275,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             toolbar.Add(new Button(() => NodeCanvas.Editor.GraphEditor.FocusReadableGraph()) { text = "100%" });
             toolbar.Add(new Button(ValidateAuthoring) { text = "Validate" });
             toolbar.Add(new Button(SaveAuthoring) { text = "保存" });
-            var compile = new Button(CompileSemanticIr) { text = "Compile" };
+            var compile = new Button(CompilePoseProjection) { text = "Compile" };
             var build = new Button(BuildDefinition) { text = "Build" };
-            compile.SetEnabled(m_Definition != null);
+            compile.SetEnabled(m_Profile != null);
             build.SetEnabled(m_Definition != null);
             toolbar.Add(compile);
             toolbar.Add(build);
@@ -501,6 +498,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (ReferenceEquals(graph, m_Asset.Graph))
                 return CharacterPoseGraphAuthoringCapabilities.RootGraph;
+            if (graph.Role != CharacterPoseAuthoringGraphRole.AnimGraph)
+                return CharacterPoseGraphAuthoringCapabilities.GetRole(graph.Role);
             bool stateOwned = m_Asset.EnumerateGraphs()
                 .SelectMany(value => value.Nodes)
                 .Select(value => value?.Payload)
@@ -515,6 +514,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (ReferenceEquals(graph, m_Asset.Graph))
                 return "Root Pose Graph";
+            if (graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer)
+                return $"{graph.GraphId} Animation Layer";
+            if (graph.Role == CharacterPoseAuthoringGraphRole.ControlRig)
+                return $"{graph.GraphId} Control Rig";
+            if (graph.Role == CharacterPoseAuthoringGraphRole.TransitionRule)
+                return $"{graph.GraphId} Transition Rule";
             string[] stateNames = m_Asset.EnumerateStateMachines()
                 .SelectMany(value => value.States)
                 .Where(value => value.PoseGraphId == graph.GraphId)
@@ -826,6 +831,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseCanvasNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == nodeId.Value);
+            if (typed.Payload is CharacterClipPlayerPosePayload directClip && directClip.Animation)
+            {
+                if (openSource)
+                    CharacterAnimationClipAuthoringService.Open(new CharacterAnimationClipOpenRequest(
+                        m_Definition,
+                        m_Profile,
+                        directClip.Animation,
+                        m_ObservationPanel?.AuthoringSceneTarget));
+                else
+                {
+                    Selection.activeObject = directClip.Animation;
+                    EditorGUIUtility.PingObject(directClip.Animation);
+                }
+                return true;
+            }
+            if (typed.Payload is CharacterBlendSpacePlayerPosePayload directBlendSpace && directBlendSpace.BlendSpace)
+            {
+                if (openSource)
+                    CharacterAnimationBlendSpaceEditorWindow.Open(directBlendSpace.BlendSpace);
+                else
+                {
+                    Selection.activeObject = directBlendSpace.BlendSpace;
+                    EditorGUIUtility.PingObject(directBlendSpace.BlendSpace);
+                }
+                return true;
+            }
             CharacterPresentationPoseSourceSlot slot =
                 typed.PresentationPoseSourceSlot;
             if (!slot)
@@ -1261,19 +1292,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
 
 
-        void CompileSemanticIr()
+        void CompilePoseProjection()
         {
-            if (!m_Definition)
+            if (!m_Profile)
             {
-                m_Status.text = "Compile unavailable: no Character Definition context.";
+                m_Status.text = "Compile unavailable: no Animation Presentation Profile context.";
                 return;
             }
             if (!ValidateAuthoringAndLocate())
                 return;
             try
             {
-                CharacterSemanticFrontendResult result = CharacterSimulationBuildOrchestrator.CompileSemanticIr(m_Definition, true);
-                m_Status.text = result.IsValid ? "Compile completed." : "Compile failed. Inspect the formal report.";
+                CharacterPresentationProjectionCompileResult result =
+                    CharacterSimulationBuildOrchestrator.CompilePoseOnly(m_Profile, m_Definition);
+                m_Status.text = result.IsValid ? "Pose compile completed." : "Pose compile failed. Inspect the formal report.";
             }
             catch (Exception exception)
             {

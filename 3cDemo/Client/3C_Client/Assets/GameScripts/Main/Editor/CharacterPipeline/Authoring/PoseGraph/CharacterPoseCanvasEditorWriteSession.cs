@@ -77,6 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (definition.CanvasCreation == CharacterPoseCanvasCreationKind.DedicatedSurface)
                 throw new InvalidOperationException(
                     $"Pose node '{definition.Capability.DisplayName}' is created from its dedicated authoring surface.");
+            if (definition.Capability.SystemOwned)
+                throw new InvalidOperationException(
+                    $"Pose node '{definition.Capability.DisplayName}' is compiler-owned and cannot be authored.");
             CharacterPoseGraphAuthoringCapabilities.Catalog.Require(definition.Capability.CapabilityId,
                 CharacterPoseGraphAuthoringCapabilities.Domain, ResolveRole());
             var node = new CharacterPoseCanvasNode(
@@ -282,6 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IEnumerable<CharacterPoseNodeDefinition> definitions =
                 CharacterPoseNodeDefinitionModule.Shared.All
                     .Where(value => value.CanvasCreation != CharacterPoseCanvasCreationKind.DedicatedSurface)
+                    .Where(value => !value.Capability.SystemOwned)
                     .Where(value => value.Capability.Allows(ResolveRole()))
                     .OrderBy(value => value.Capability.Category, StringComparer.Ordinal)
                     .ThenBy(value => value.Capability.DisplayName, StringComparer.Ordinal);
@@ -345,6 +349,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (m_Asset.Graph == m_Graph)
                 return CharacterPoseGraphAuthoringCapabilities.RootGraph;
+            if (m_Graph.Role != CharacterPoseAuthoringGraphRole.AnimGraph)
+                return CharacterPoseGraphAuthoringCapabilities.GetRole(m_Graph.Role);
             bool stateGraph = m_Asset.EnumerateStateMachines().Where(value => value != null)
                 .SelectMany(value => value.States).Any(value => value.PoseGraphId == m_Graph.GraphId);
             return stateGraph ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph : CharacterPoseGraphAuthoringCapabilities.Subgraph;

@@ -92,6 +92,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             IReadOnlyList<GraphAuthoringSelection> selection = Selection(graph);
             bool canCopy = binding.Clipboard != null && selection.Any(value => value.Kind == GraphAuthoringSelectionKind.Node);
+            if (canCopy && graph is CharacterPoseCanvasGraph pose)
+            {
+                var selected = selection.Where(value => value.Kind == GraphAuthoringSelectionKind.Node).Select(value => value.ElementId.Value).ToHashSet();
+                canCopy = pose.Nodes.Where(node => selected.Contains(node.NodeId.Value))
+                    .All(node => ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Copyable);
+            }
             if (command == "Copy") return canCopy;
             if (binding.Mutation.ReadOnly) return false;
             if (command == "Paste") return binding.Clipboard != null && binding.Clipboard.CanPaste(binding.Document, EditorGUIUtility.systemCopyBuffer);

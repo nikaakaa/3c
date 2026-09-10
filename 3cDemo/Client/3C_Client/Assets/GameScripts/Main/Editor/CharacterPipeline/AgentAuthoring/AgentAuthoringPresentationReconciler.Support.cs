@@ -587,12 +587,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!string.Equals(binding?.kind, kind.ToString(), StringComparison.Ordinal) ||
                     !string.Equals(binding.resource?.assetGuid, resource.assetGuid, StringComparison.Ordinal))
                     continue;
-                CharacterPoseResourceSlot slot = Resolve<CharacterPoseResourceSlot>(
-                    binding.slot,
-                    path + ".slot",
-                    report);
-                if (slot)
+                CharacterPoseResourceSlot slot;
+                if (!string.IsNullOrWhiteSpace(binding.slot?.localId))
+                {
+                    m_LocalAssets.TryGetValue(
+                        binding.slot.localId,
+                        out UnityEngine.Object localAsset);
+                    slot = localAsset as CharacterPoseResourceSlot;
+                    if (!slot)
+                    {
+                        report.Error(
+                            path + ".slot",
+                            "presentation_local_asset_unresolved",
+                            $"Local Pose Resource Slot '{binding.slot.localId}'没有解析到当前事务对象。");
+                        continue;
+                    }
+                }
+                else
+                {
+                    slot = Resolve<CharacterPoseResourceSlot>(
+                        binding.slot,
+                        path + ".slot",
+                        report);
+                }
+                if (slot && slot.Kind == kind)
                     matches.Add(slot);
+                else if (slot)
+                    report.Error(
+                        path + ".slot",
+                        "presentation_pose_resource_slot_kind_mismatch",
+                        "Blend资源对应的Resource Slot kind不匹配。");
             }
             if (matches.Count != 1)
             {

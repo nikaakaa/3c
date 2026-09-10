@@ -493,7 +493,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     plan.PoseGraph,
                     plan.GraphTransaction.Mutations
                         .OfType<CreatePoseSourceSlotMutation>()
-                        .Select(value => (UnityEngine.Object)value.Slot));
+                        .Select(value => (UnityEngine.Object)value.Slot)
+                        .Concat(plan.GraphTransaction.Mutations
+                            .OfType<CreatePoseResourceSlotMutation>()
+                            .Select(value => (UnityEngine.Object)value.Slot)));
             }
             foreach (AgentLinkedPoseGraphMutationPlan linked in
                      plan.LinkedPoseGraphs.Where(value =>

@@ -743,6 +743,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterRootOrientationWarpPosePayload value => value.YawCurveSlot == slot,
                 CharacterFootPlacementPosePayload value => value.ProfileSlot == slot || value.CalibrationSlot == slot,
                 CharacterMotionMatchingPosePayload value => value.BindingSlot == slot || value.JumpBlendPolicySlot == slot,
+                CharacterPoseStateMachineNodePayload value => value.StateMachine != null &&
+                    value.StateMachine.Transitions.Any(transition => transition != null &&
+                        (transition.CustomBlendCurveSlot == slot || transition.BlendProfileSlot == slot)),
                 _ => false
             };
 

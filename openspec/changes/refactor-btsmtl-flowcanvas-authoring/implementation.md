@@ -268,6 +268,8 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 
 异常路径继续收紧：`AgentDocumentMutationCompiler`现在把 Handler 异常收进 `AgentDocumentApplyResult`，并保留同一 `AgentMutationSession` 的逆序回滚委托；外层事务服务因此能统一恢复 owner 转移、Undo状态和新建根清理。提交 `7cc1e5c6b`只改变失败结果传递，不执行Document apply或资产迁移。
 
+`2bf887538`继续修正多 owner 失败恢复：`AgentMutationSession`逆序执行所有回滚动作并收集异常，`RollbackResponse`先记录 authoring rollback 失败，再继续原有 Undo、已创建根清理和 `SaveAssets`，最后统一返回 `rollback_failed`。该步没有执行资产迁移或失败注入。
+
 # 2026-09-10 外部Pose现场阻塞记录
 
 在上述事务代码提交后执行的只读 `btsmtl.validate` job `b842b799f8a14d358da74daabfd51bca` 返回失败，错误为 `presentation_projection_invalid`：当前另一窗口的 `corin.full-body-action.inertialization` AnimationSlot 没有 inertial route，随后报告 Presentation Projection 缺失；失败发生在本任务 Skill/Document 闭包进入可用编译结果之前。该错误对应外部 Pose 资产与代码改动，本任务不修改、不回滚，也不把当前live失败覆盖此前已成功的作者与Composition正式证据；因此没有执行checkout、资产迁移、Build或Play。

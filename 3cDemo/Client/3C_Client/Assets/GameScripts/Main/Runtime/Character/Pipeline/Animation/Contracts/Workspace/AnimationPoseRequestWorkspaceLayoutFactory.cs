@@ -82,12 +82,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationAnimationBinding animation =
                     producer.Animation;
                 if (animation == null ||
-                    !animation.Source ||
-                    !animation.Source.IsValid ||
                     animation.Clips.Count == 0)
                 {
                     throw new InvalidOperationException(
-                        $"Animation producer '{producer.ProgramProducerIdentity}' has an invalid source binding.");
+                        $"Animation producer '{producer.ProgramProducerIdentity}' has no compiled AnimationClip binding.");
                 }
                 capacity = Math.Max(capacity, animation.Clips.Count);
             }

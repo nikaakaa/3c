@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonSimulation;
 
@@ -35,7 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public PoseNodeId ActionPlayerNodeId =>
             Input?.ActionPlayerNodeId ?? default;
         public CharacterPresentationAnimationBinding Animation { get; }
-        public TransitionAssetBase Source => Animation?.Source;
         public int AuthoredClipCount => Animation?.Clips.Count ?? 0;
         public bool UsesMixer => AuthoredClipCount > 1;
         public bool IsValid =>
@@ -43,8 +41,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ProducerId.IsValid &&
             Enum.IsDefined(typeof(TimelinePlaybackMode), PlaybackMode) &&
             Animation != null &&
-            Source &&
-            Source.IsValid &&
             AuthoredClipCount > 0 &&
             float.IsFinite(Animation.DurationSeconds) &&
             Animation.DurationSeconds > 0f &&
@@ -144,8 +140,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationAnimationBinding animation =
                     producer.Animation;
                 if (animation == null ||
-                    !animation.Source ||
-                    !animation.Source.IsValid ||
                     animation.Clips.Count == 0 ||
                     !float.IsFinite(animation.DurationSeconds) ||
                     animation.DurationSeconds <= 0f ||

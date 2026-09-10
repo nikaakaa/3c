@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace TreeDesigner
 {
+    [Serializable]
     public class OneRootTree : RunnableTree
     {
         [SerializeField]

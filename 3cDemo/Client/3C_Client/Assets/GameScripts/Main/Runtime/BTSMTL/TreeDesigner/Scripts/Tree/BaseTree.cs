@@ -1,3 +1,5 @@
+using System;
+
 namespace TreeDesigner
 {
     public static class PipelineBlackboardAuthoringSchema
@@ -7,6 +9,7 @@ namespace TreeDesigner
 
     [TreeWindow("OpenBaseTreeWindow")]
     [AcceptableNodePaths("Base")]
+    [Serializable]
     public partial class BaseTree : BaseGraph
     {
         [UnityEngine.SerializeField]

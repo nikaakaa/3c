@@ -5,6 +5,7 @@ using TreeDesigner;
 namespace BTSMTL.Timeline
 {
     [AcceptableNodePaths("Base", "Timeline")]
+    [Serializable]
     public partial class TimelineRunningTree : OneRootTree
     {
         [SerializeField]

@@ -3,6 +3,7 @@ using System;
 namespace TreeDesigner
 {
     //[AcceptableSubTreeType(typeof(SubTree))]
+    [Serializable]
     public abstract partial class RunnableTree : BaseTree
     {
         [NonSerialized]

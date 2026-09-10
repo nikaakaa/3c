@@ -483,12 +483,35 @@ namespace BTSMTL.Timeline.Editor
                 if (frame.value != section.Frame)
                     ConfigureSection(section, section.Name, frame.value);
             });
+            var nextOptions = new List<string> { "<None>" };
+            nextOptions.AddRange(TimelineData.Sections
+                .Where(value => value != null && value != section)
+                .Select(value => value.AuthoringId));
+            string nextValue = string.IsNullOrEmpty(section.NextSectionId)
+                ? "<None>"
+                : section.NextSectionId;
+            if (!nextOptions.Contains(nextValue))
+                nextOptions.Add(nextValue);
+            var next = new PopupField<string>("Next Section", nextOptions, nextValue);
+            next.RegisterValueChangedCallback(change =>
+                ConfigureSectionNext(
+                    section,
+                    change.newValue == "<None>" ? string.Empty : change.newValue));
             var remove = new Button(() => RemoveSection(section)) { text = "Delete Section" };
             ClipInspector.Add(title);
             ClipInspector.Add(name);
             ClipInspector.Add(frame);
+            ClipInspector.Add(next);
             ClipInspector.Add(remove);
             ClipInspector.SetEnabled(!m_RuntimeReadOnly);
+        }
+
+        void ConfigureSectionNext(TimelineSection section, string nextSectionId)
+        {
+            CommitAuthoringMutation(
+                () => TimelineData.ConfigureSectionNext(section, nextSectionId),
+                "Configure Section Next Section");
+            PopulateInspector(section);
         }
         public void DrawProperties(SerializedProperty serializedProperty, object target)
         {

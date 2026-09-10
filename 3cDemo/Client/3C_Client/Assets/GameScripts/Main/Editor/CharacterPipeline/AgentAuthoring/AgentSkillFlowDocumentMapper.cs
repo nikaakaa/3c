@@ -202,7 +202,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     macros = editable.skillMacros,
                     timelines = editable.skillTimelines
                 },
-                report);
+                report,
+                editable.control?.moduleId);
             return valid;
         }
 

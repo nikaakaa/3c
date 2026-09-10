@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 string.Equals(node.ResolvedDisplayName, slot, StringComparison.Ordinal));
         }
 
-        internal static void RemoveOrphanLinks(BaseTree graph)
+        internal static void RemoveOrphanLinks(BaseGraph graph)
         {
             if (graph == null)
                 return;

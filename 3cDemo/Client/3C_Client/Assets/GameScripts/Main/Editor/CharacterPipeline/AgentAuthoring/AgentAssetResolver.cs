@@ -95,18 +95,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        public bool TryResolveTimelineAsset(AgentAssetReference reference, out TimelineAsset timelineAsset)
-        {
-            timelineAsset = null;
-            UnityEngine.Object asset = ResolveObject(reference.AssetGuid, reference.AssetPath, typeof(TimelineAsset));
-            if (asset is TimelineAsset directTimelineAsset)
-            {
-                timelineAsset = directTimelineAsset;
-                return true;
-            }
-            return false;
-        }
-
         public bool TryResolveActionContext(AgentAssetReference reference, out ActionContextSlot actionContext)
         {
             actionContext = null;

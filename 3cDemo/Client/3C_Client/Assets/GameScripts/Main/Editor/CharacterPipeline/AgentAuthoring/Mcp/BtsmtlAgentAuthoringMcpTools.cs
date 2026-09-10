@@ -262,15 +262,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
                     canonicalName = name;
                     return true;
                 case "job_id":
+                case "jobId":
                     canonicalName = "job_id";
                     return true;
                 case "root_asset_path":
+                case "rootAssetPath":
                     canonicalName = "root_asset_path";
                     return true;
                 case "expected_document_hash":
+                case "expectedDocumentHash":
                     canonicalName = "expected_document_hash";
                     return true;
                 case "confirm_rebase":
+                case "confirmRebase":
                     canonicalName = "confirm_rebase";
                     return true;
                 default:

@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 contract.RootPolicies,
                 contract.SourceResourceBindings,
                 contract.PropertyBindings,
-                contract.RootResolveNode.NodeId.Value,
+                contract.RootResolveNode?.NodeId.Value ?? string.Empty,
                 planHash);
         }
 

@@ -246,11 +246,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     pair.Key,
                     pair.Value.ToArray()));
             }
-            transaction.Add(new SetPoseNodeFieldMutation(
-                plan.PoseGraph.Graph.GraphId.Value,
-                new PoseNodeId(plan.RootResolveNodeId),
-                "parameter-policies",
-                plan.RootPolicies.ToArray()));
+            if (!string.IsNullOrWhiteSpace(plan.RootResolveNodeId))
+            {
+                transaction.Add(new SetPoseNodeFieldMutation(
+                    plan.PoseGraph.Graph.GraphId.Value,
+                    new PoseNodeId(plan.RootResolveNodeId),
+                    "parameter-policies",
+                    plan.RootPolicies.ToArray()));
+            }
             return transaction;
         }
 

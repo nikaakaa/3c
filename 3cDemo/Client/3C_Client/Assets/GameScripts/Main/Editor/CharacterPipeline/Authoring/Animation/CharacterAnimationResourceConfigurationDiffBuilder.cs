@@ -202,47 +202,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
 
-            CharacterPoseParameterResolvePayload currentPayload =
-                rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>();
-            var desiredPolicies = rootPolicies.ToDictionary(value => value.ParameterId);
-            foreach (CharacterPoseParameterPolicy desired in rootPolicies.Where(value => desiredPropertyIds.Contains(value.ParameterId)))
+            if (rootResolveNode != null)
             {
-                CharacterPoseParameterPolicy previous = currentPayload.Policies
-                    .FirstOrDefault(value => value != null && value.ParameterId.Equals(desired.ParameterId));
-                if (previous == null)
+                CharacterPoseParameterResolvePayload currentPayload =
+                    rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>();
+                foreach (CharacterPoseParameterPolicy desired in rootPolicies.Where(value => desiredPropertyIds.Contains(value.ParameterId)))
                 {
-                    AddDiff(
-                        diffs,
-                        CharacterAnimationPropertyImportDiffKind.Add,
+                    CharacterPoseParameterPolicy previous = currentPayload.Policies
+                        .FirstOrDefault(value => value != null && value.ParameterId.Equals(desired.ParameterId));
+                    if (previous == null)
+                    {
+                        AddDiff(
+                            diffs,
+                            CharacterAnimationPropertyImportDiffKind.Add,
                             $"poseGraph:{poseGraph.Graph.GraphId}.node:{rootResolveNode.NodeId}.parameter-policies:{desired.ParameterId}",
-                        "missing",
-                        PoseParameterResolvePolicy.Weighted.ToString(),
-                        "Declare the AnimatedProperty resolve policy explicitly.");
+                            "missing",
+                            PoseParameterResolvePolicy.Weighted.ToString(),
+                            "Declare the AnimatedProperty resolve policy explicitly.");
+                    }
+                    else if (previous.Policy != PoseParameterResolvePolicy.Weighted)
+                    {
+                        AddDiff(
+                            diffs,
+                            CharacterAnimationPropertyImportDiffKind.Update,
+                            $"poseGraph:{poseGraph.Graph.GraphId}.node:{rootResolveNode.NodeId}.parameter-policies:{desired.ParameterId}",
+                            previous.Policy.ToString(),
+                            PoseParameterResolvePolicy.Weighted.ToString(),
+                            "AnimatedProperty parameters require explicit Weighted resolution.");
+                    }
                 }
-                else if (previous.Policy != PoseParameterResolvePolicy.Weighted)
+                foreach (CharacterPoseParameterPolicy previous in currentPayload.Policies)
                 {
-                    AddDiff(
-                        diffs,
-                        CharacterAnimationPropertyImportDiffKind.Update,
-                        $"poseGraph:{poseGraph.Graph.GraphId}.node:{rootResolveNode.NodeId}.parameter-policies:{desired.ParameterId}",
-                        previous.Policy.ToString(),
-                        PoseParameterResolvePolicy.Weighted.ToString(),
-                        "AnimatedProperty parameters require explicit Weighted resolution.");
-                }
-            }
-            foreach (CharacterPoseParameterPolicy previous in currentPayload.Policies)
-            {
-                if (previous != null &&
-                    previous.ParameterId.Value.StartsWith("animation.blendshape.", StringComparison.Ordinal) &&
-                    !desiredPropertyIds.Contains(previous.ParameterId))
-                {
-                    AddDiff(
-                        diffs,
-                        CharacterAnimationPropertyImportDiffKind.Remove,
-                        $"poseGraph:{poseGraph.Graph.GraphId}.node:{rootResolveNode.NodeId}.parameter-policies:{previous.ParameterId}",
-                        previous.Policy.ToString(),
-                        "formal BlendShape policy",
-                        "Remove an AnimatedProperty policy outside the formal curve set.");
+                    if (previous != null &&
+                        previous.ParameterId.Value.StartsWith("animation.blendshape.", StringComparison.Ordinal) &&
+                        !desiredPropertyIds.Contains(previous.ParameterId))
+                    {
+                        AddDiff(
+                            diffs,
+                            CharacterAnimationPropertyImportDiffKind.Remove,
+                            $"poseGraph:{poseGraph.Graph.GraphId}.node:{rootResolveNode.NodeId}.parameter-policies:{previous.ParameterId}",
+                            previous.Policy.ToString(),
+                            "formal BlendShape policy",
+                            "Remove an AnimatedProperty policy outside the formal curve set.");
+                    }
                 }
             }
 

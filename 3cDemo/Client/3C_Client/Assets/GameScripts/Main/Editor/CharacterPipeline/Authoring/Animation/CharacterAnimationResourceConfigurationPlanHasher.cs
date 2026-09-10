@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 mesh.LocalFileId.ToString(CultureInfo.InvariantCulture),
                 mesh.DependencyHash,
                 mesh.ContentHash,
-                rootResolveNode.NodeId.Value
+                rootResolveNode?.NodeId.Value ?? string.Empty
             };
             foreach (CharacterAnimationPropertyImportClipTarget clip in clips)
             {

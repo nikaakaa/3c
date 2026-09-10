@@ -63,13 +63,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseCanvasNode[] resolveNodes = rootGraph.Nodes
                 .Where(value => value?.Payload is CharacterPoseParameterResolvePayload)
                 .ToArray();
-            if (resolveNodes.Length != 1)
+            if (resolveNodes.Length > 1)
                 throw new InvalidOperationException(
-                    $"Root Pose Graph must contain exactly one Pose Parameter Resolve node; found {resolveNodes.Length}.");
-            CharacterPoseCanvasNode rootResolveNode = resolveNodes[0];
-            CharacterPoseParameterPolicy[] rootPolicies = BuildRootPolicies(
-                rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>(),
-                propertyParameters);
+                    $"Root Pose Graph contains more than one Pose Parameter Resolve node; found {resolveNodes.Length}.");
+            CharacterPoseCanvasNode rootResolveNode = resolveNodes.SingleOrDefault();
+            CharacterPoseParameterPolicy[] rootPolicies = rootResolveNode != null
+                ? BuildRootPolicies(
+                    rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>(),
+                    propertyParameters)
+                : Array.Empty<CharacterPoseParameterPolicy>();
             var graphParameters = new Dictionary<string, CharacterPoseParameterDeclaration[]>(StringComparer.Ordinal);
             var poseGraphs = new List<CharacterAnimationPropertyImportPoseGraphTarget>();
             foreach (CharacterPoseCanvasGraph graph in poseGraph.EnumerateGraphs()
@@ -84,10 +86,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     graph.GraphId.Value,
                     graph.Parameters.Count,
                     desired.Length,
-                    graph == rootGraph
+                    graph == rootGraph && rootResolveNode != null
                         ? rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>().Policies.Count
                         : 0,
-                    graph == rootGraph ? rootPolicies.Length : 0)
+                    graph == rootGraph && rootResolveNode != null ? rootPolicies.Length : 0)
                 {
                     IsRoot = graph == rootGraph
                 });

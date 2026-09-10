@@ -1559,3 +1559,7 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## 收口通用Pose Source Slot（POSE-EXEC-20260911-09）
 
 状态：提交`e5928500a`将`Selected Pose Player`与`Blend Stack`的作者payload、Node Definition和FlowCanvas Capability从`CharacterMotionMatchingPoseSourceSlot`收窄为通用`CharacterPresentationPoseSourceSlot`。这两个节点不再因为运行实现而绑定 Motion Matching；Clip Player和Blend Space Player仍保留各自明确的源类型约束。当前工作区另有通用Resource Slot Create／Rename／Delete Mutation待与AgentAuthoring拆分提交合并。
+
+## 建立通用Pose Resource Slot Mutation链（POSE-EXEC-20260911-10）
+
+状态：提交`e3b9f81ab`新增`CharacterPoseResourceSlot.Create`以及Graph-owned Resource Slot的Create／Rename／Delete typed Mutation和唯一Graph owner执行入口。创建只写入指定Pose Graph asset的子资产目录，删除前验证节点引用和Profile绑定，未增加Corin专用分支或直接序列化路径。Profile的便捷创建服务仍属于当前未提交的AgentAuthoring改动，待其统一提交后再用于Corin数据迁移。

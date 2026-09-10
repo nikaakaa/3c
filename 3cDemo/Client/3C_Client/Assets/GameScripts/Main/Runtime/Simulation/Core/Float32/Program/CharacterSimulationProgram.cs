@@ -627,8 +627,61 @@ namespace ThirdPersonSimulation
                 int byIndex = left.TargetIndex.CompareTo(right.TargetIndex);
                 if (byIndex != 0)
                     return byIndex;
-                int byGraph = string.CompareOrdinal(left.GraphId, right.GraphId);
-                return byGraph != 0 ? byGraph : string.CompareOrdinal(left.NodeId, right.NodeId);
+                int comparison = string.CompareOrdinal(left.SourceType, right.SourceType);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.GraphId, right.GraphId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.NodeId, right.NodeId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.PortId, right.PortId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.EdgeId, right.EdgeId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.DeclarationId, right.DeclarationId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.TimelineId, right.TimelineId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.TrackId, right.TrackId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.ClipId, right.ClipId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.DisplayPath, right.DisplayPath);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.ContentHash, right.ContentHash);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.GraphInvocationPath, right.GraphInvocationPath);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.CompiledPortId, right.CompiledPortId);
+                if (comparison != 0)
+                    return comparison;
+                comparison = left.ValuePortDirection.CompareTo(right.ValuePortDirection);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.SourceInvocationPath, right.SourceInvocationPath);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.ParentInvocationPath, right.ParentInvocationPath);
+                if (comparison != 0)
+                    return comparison;
+                comparison = left.InvocationCallerKind.CompareTo(right.InvocationCallerKind);
+                if (comparison != 0)
+                    return comparison;
+                comparison = string.CompareOrdinal(left.InvocationCallerId, right.InvocationCallerId);
+                if (comparison != 0)
+                    return comparison;
+                return string.CompareOrdinal(left.InvocationCallerClipId, right.InvocationCallerClipId);
             });
             return values.AsReadOnly();
         }

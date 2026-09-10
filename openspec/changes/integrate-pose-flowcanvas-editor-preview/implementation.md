@@ -12,6 +12,8 @@
 
 本次正式Document apply由Unity MCP完成8个Presentation变更并成功回写；随后checkout返回syncState=Clean、plannedDiff=[]、sourceRevision=12bc98f1ef51448815991a2f31c7fc1d410c6445c7894ed33bb6fd34a9b56bee、documentHash=91e8785a6aa26a57f341fd82cdb54eb4236d7d4967f7ceaca668e7a51783825d。apply内部校验采样了7个ACL clip，但最终Corin Float32／Fixed／Projection产品仍需在当前authoring上重新发布，不能沿用旧SourceRevision证据。
 
+随后通过Unity MCP重新发布了Corin Float32与Fixed products，二者共享Projection revision `c5a79e3fef430da029c033d0f379efee2e5e625d950974e6cafbe74cb8d8af9c`，生成的Pose Program Image已写入`character-presentation-pose-plan/v29`与`character-presentation-pose-runtime/v29`。Float32 wrapper与Fixed wrapper均返回成功；生成资产属于Build输出，未进入本轮代码提交。
+
 现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经明确要求这些边界，本轮对账没有修改spec。没有新增测试代码；端到端行为仍由作者验收。
 
 ## 实施增量历史（2026-09-09）
@@ -141,7 +143,7 @@ Selected Pose旧入口退役后通过Unity实例`e852139597e42532`脚本编译�
 | And／Or短路 | 只有RequireBool实际读取时才记录输入位，保留原短路语义；UI显示本次未读取、未采集、False及0各自含义，边高亮来自ReadInput记录。 |
 | 修改子图或Linked图后继续观察 | Source Map保留每张图GraphRevision，窗口核对所有相关作者图版本、PlanHash和Rig版本，停止版本失配结果叠加。调参变化记录同时覆盖Linked作者图。 |
 
-运行算法仍属于现有Native／Job及状态机求值链。本轮运行层只增加诊断来源字段和读取标记，没有新播放器、假输入或Editor侧求值。Pose Program Image为v28，Transition Rule合同为v3；旧v27产物不会被当作新字段齐全的产物读取，等待最终统一Build。
+运行算法仍属于现有Native／Job及状态机求值链。本轮运行层只增加诊断来源字段和读取标记，没有新播放器、假输入或Editor侧求值。Pose Program Image为v29，Runtime ABI为v29，Transition Rule合同为v3；旧v28产物不会被当作新字段齐全的产物读取。
 
 共享请求和UI合同没有新增Agent Document版本：状态name和aliases原本已在v5中，Editor和Document最终进入相同Presentation Mutation owner。原生角色绑定、完成帧租约、Pose Watch容量、关闭／退出／重载解绑沿用既有实现。
 

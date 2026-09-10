@@ -43,7 +43,7 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 
 有限Action Timeline继续拥有原动画片段、窗口和动作时间，原资产已补Slot轨道、Sections及片段混合设置；没有复制Montage资产。Foot／目标／FBIK已进入Control Rig，Goal Assembler与默认参数汇总由编译器展开。资源绑定、类型和旧作者入口已收敛，Corin无消费者Source Slot／Binding内容已清理。
 
-当前代码的Pose Program Image为v28，Document为v7；精确Corin已有旧拓扑的Float32／Fixed／Projection产物，但不能作为修正后最终发布证据。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
+当前代码的Pose Program Image与Runtime ABI为v29，Document为v7；精确Corin已通过Unity MCP重新发布当前根图的Float32／Fixed／共享Projection。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
 
 ## 旧能力及新方案去向
 

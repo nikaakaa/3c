@@ -1555,3 +1555,7 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## StateMachine资源槽迁移后的当前边界
 
 状态：Pose Graph作者合同源码中已不存在`CharacterAnimationBlendCurveAsset`、`CharacterAnimationBlendProfile`、`CharacterMotionMatchingBinding`或`CharacterAnimationBlendPolicy`的直接字段；Agent文档仍按现行合同表达Curve/Profile asset identity，由Reconciler在精确Profile的`poseResources`中解析到Slot。Corin Graph asset与Profile仍是并行未提交改动，待目标Unity MCP恢复后创建／绑定新增Slot并保存，不能手改序列化JSON或把源码编译当作资产迁移完成。
+
+## 收口通用Pose Source Slot（POSE-EXEC-20260911-09）
+
+状态：提交`e5928500a`将`Selected Pose Player`与`Blend Stack`的作者payload、Node Definition和FlowCanvas Capability从`CharacterMotionMatchingPoseSourceSlot`收窄为通用`CharacterPresentationPoseSourceSlot`。这两个节点不再因为运行实现而绑定 Motion Matching；Clip Player和Blend Space Player仍保留各自明确的源类型约束。当前工作区另有通用Resource Slot Create／Rename／Delete Mutation待与AgentAuthoring拆分提交合并。

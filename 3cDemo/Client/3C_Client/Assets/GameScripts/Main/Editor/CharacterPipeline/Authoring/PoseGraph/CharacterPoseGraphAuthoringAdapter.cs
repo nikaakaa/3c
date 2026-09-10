@@ -1145,6 +1145,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             value.ParameterId.Value))
                         .ToArray();
                     return true;
+                case "pose-history":
+                    options = m_Profile?.PoseGraph?.EnumerateGraphs()
+                        .SelectMany(value => value?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
+                        .Select(value => (value.Payload as CharacterPoseHistoryCollectorPayload)?.HistoryId)
+                        .Where(value => value.HasValue && value.Value.IsValid)
+                        .Select(value => value.Value.Value)
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(value => value, StringComparer.Ordinal)
+                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
                 case "animation-channel":
                     options = m_Profile?.PoseGraph?.EnumerateGraphs()
                         .SelectMany(value => value?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())

@@ -1253,7 +1253,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AssetDatabase.AddObjectToAsset(graph, ownerPath);
             }
             Undo.RegisterCreatedObjectUndo(graph, "创建技能Graph");
-            BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph);
+            BtsmtlSkillFlowEditorMutation.Apply(
+                graph,
+                "初始化技能Graph",
+                () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph),
+                false,
+                Array.Empty<UnityEngine.Object>(),
+                false);
             m_Session.Touch(graph);
             return graph;
         }

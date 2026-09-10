@@ -128,6 +128,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             .StateMachineTransition;
                     inputOwnerIndex = stateMachineIndex;
                 }
+                else if (inputOwner.Code == CharacterPoseOperationCode.AnimationSlot)
+                {
+                    int animationSlotIndex = inputOwner.AnimationSlotIndex;
+                    if ((uint)animationSlotIndex >= (uint)payloads.AnimationSlots.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' AnimationSlot owner is invalid.");
+                    }
+                    CharacterAnimationSlotDescriptor animationSlot =
+                        payloads.AnimationSlots[animationSlotIndex];
+                    var endpoints = animationSlot.Endpoints.ToDictionary(
+                        value => value.EndpointId);
+                    CharacterAnimationSlotRequestRouteDescriptor[] transitions =
+                        animationSlot.RequestRoutes
+                            .Where(value => value.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
+                            .OrderBy(value => value.RuleId)
+                            .ToArray();
+                    if (transitions.Length == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' AnimationSlot has no inertial route.");
+                    }
+                    rules = new CharacterPresentationInertializationRuleDescriptor[transitions.Length];
+                    for (int transitionIndex = 0; transitionIndex < transitions.Length; transitionIndex++)
+                    {
+                        CharacterAnimationSlotRequestRouteDescriptor transition = transitions[transitionIndex];
+                        rules[transitionIndex] = new CharacterPresentationInertializationRuleDescriptor(
+                            EncodeAnimationSlotEndpoint(endpoints[transition.SourceEndpointId]),
+                            EncodeAnimationSlotEndpoint(endpoints[transition.TargetEndpointId]),
+                            PoseInertializationMode.Inertialize,
+                            transition.DurationSeconds,
+                            transition.CurveIndex,
+                            transition.BlendProfileIndex,
+                            parameterModes);
+                    }
+                    ownerKind = PoseInertializationTemporalOwnerKind.AnimationSlotTransition;
+                    inputOwnerIndex = animationSlotIndex;
+                }
                 else if (IsDirectPlayer(inputOwner.Code))
                 {
                     PresentationPoseSourceIndex sourceIndex =
@@ -259,6 +297,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             code == CharacterPoseOperationCode.SelectedPosePlayer ||
             code == CharacterPoseOperationCode.BlendSpacePlayer ||
             code == CharacterPoseOperationCode.ClipPlayer;
+
+        static int EncodeAnimationSlotEndpoint(
+            CharacterAnimationSlotEndpointDescriptor endpoint) =>
+            endpoint.SourcePose
+                ? 0
+                : checked(endpoint.ProgramProducerIndex + 1);
 
         static void CollectPolicies(
             CharacterPresentationPoseGraphAsset owner,

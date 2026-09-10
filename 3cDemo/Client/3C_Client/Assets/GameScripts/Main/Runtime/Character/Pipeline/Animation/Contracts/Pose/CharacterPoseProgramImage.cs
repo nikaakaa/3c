@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum PoseInertializationTemporalOwnerKind : byte
     {
         StateMachineTransition = 1,
-        DirectPlayerPolicy = 2
+        DirectPlayerPolicy = 2,
+        AnimationSlotTransition = 3
     }
 
     public enum CharacterPoseOperationCode : byte
@@ -1476,6 +1477,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         .Select(value => (value.SourceStateIndex, value.TargetStateIndex))
                         .ToHashSet();
                 }
+                else if (descriptor.TemporalOwnerKind == PoseInertializationTemporalOwnerKind.AnimationSlotTransition)
+                {
+                    if (inputOwner.Code != CharacterPoseOperationCode.AnimationSlot ||
+                        !((CharacterPoseAnimationSlotOperationPayload)
+                            OperationPages.RequirePayload(inputOwner))
+                        .AnimationSlotIndex.Equals(descriptor.InputOwnerIndex) ||
+                        (uint)descriptor.InputOwnerIndex >= (uint)AnimationSlots.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Plan Inertialization '{operation.NodeId}' declares a mismatched AnimationSlot temporal owner.");
+                    }
+                    CharacterAnimationSlotDescriptor slot =
+                        AnimationSlots[descriptor.InputOwnerIndex];
+                    expectedPairs = slot.RequestRoutes
+                        .Where(value => value.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
+                        .Select(value =>
+                        {
+                            CharacterAnimationSlotEndpointDescriptor source =
+                                slot.Endpoints.Single(endpoint => endpoint.EndpointId == value.SourceEndpointId);
+                            CharacterAnimationSlotEndpointDescriptor target =
+                                slot.Endpoints.Single(endpoint => endpoint.EndpointId == value.TargetEndpointId);
+                            return (EncodeAnimationSlotEndpoint(source), EncodeAnimationSlotEndpoint(target));
+                        })
+                        .ToHashSet();
+                }
                 else
                 {
                     if (!IsDirectInertializationPlayer(inputOwner.Code) ||
@@ -1527,6 +1553,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             code == CharacterPoseOperationCode.SelectedPosePlayer ||
             code == CharacterPoseOperationCode.BlendSpacePlayer ||
             code == CharacterPoseOperationCode.ClipPlayer;
+
+        static int EncodeAnimationSlotEndpoint(
+            CharacterAnimationSlotEndpointDescriptor endpoint) =>
+            endpoint.SourcePose
+                ? 0
+                : checked(endpoint.ProgramProducerIndex + 1);
 
         void RequireStagesValid()
         {

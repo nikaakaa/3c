@@ -290,7 +290,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_ValuePage,
                 m_StateMachineControls);
             m_InertializationOperations.BindFrame(
-                m_StateMachineControls);
+                m_StateMachineControls,
+                m_AnimationSlotControls);
             m_PlayerOperations.BindFrame(
                 binding,
                 m_AnimationSlotControls);

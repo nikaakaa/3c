@@ -319,10 +319,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (animationSlotIndex < 0)
                 throw new ArgumentOutOfRangeException(nameof(animationSlotIndex));
+            for (int nodeIndex = 0; nodeIndex < m_SlotNodeOffset; nodeIndex++)
+            {
+                if (m_Nodes[nodeIndex].TemporalOwnerKind ==
+                        PoseInertializationTemporalOwnerKind.AnimationSlotTransition &&
+                    m_Nodes[nodeIndex].ControlIndex == animationSlotIndex)
+                    return m_States[nodeIndex];
+            }
             int stateIndex = checked(m_SlotNodeOffset + animationSlotIndex);
             if ((uint)stateIndex >= (uint)m_States.Length)
                 throw new ArgumentOutOfRangeException(nameof(animationSlotIndex));
             return m_States[stateIndex];
+        }
+
+        internal bool HasExplicitAnimationSlotInertialization(
+            int animationSlotIndex)
+        {
+            if (animationSlotIndex < 0)
+                throw new ArgumentOutOfRangeException(nameof(animationSlotIndex));
+            for (int nodeIndex = 0; nodeIndex < m_SlotNodeOffset; nodeIndex++)
+            {
+                if (m_Nodes[nodeIndex].TemporalOwnerKind ==
+                        PoseInertializationTemporalOwnerKind.AnimationSlotTransition &&
+                    m_Nodes[nodeIndex].ControlIndex == animationSlotIndex)
+                    return true;
+            }
+            return false;
         }
 
         internal bool TryGetStateMachineState(
@@ -607,7 +629,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (descriptor.Index != node || descriptor.Rules.Count == 0)
                     throw new InvalidOperationException($"Pose Inertialization descriptor #{node} is incomplete.");
                 int controlIndex = descriptor.TemporalOwnerKind ==
-                                   PoseInertializationTemporalOwnerKind.StateMachineTransition
+                                       PoseInertializationTemporalOwnerKind.StateMachineTransition ||
+                                   descriptor.TemporalOwnerKind ==
+                                       PoseInertializationTemporalOwnerKind.AnimationSlotTransition
                     ? descriptor.InputOwnerIndex
                     : -1;
                 m_Nodes[node] = new PoseInertializationNativeNode(

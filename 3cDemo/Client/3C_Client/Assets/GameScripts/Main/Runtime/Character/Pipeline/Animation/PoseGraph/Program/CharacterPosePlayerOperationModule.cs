@@ -276,10 +276,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 else
                 {
-                    EvaluateAnimationSlotInertialization(
-                        in header,
-                        in operation,
-                        deltaSeconds);
+                    if (!m_Inertialization.HasExplicitAnimationSlotInertialization(
+                            operation.AnimationSlotIndex))
+                    {
+                        EvaluateAnimationSlotInertialization(
+                            in header,
+                            in operation,
+                            deltaSeconds);
+                    }
                 }
                 return;
             }
@@ -426,7 +430,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                     header.Index);
             }
-            if (m_Values.m_ValueAvailability[output] == AnimationPoseAvailability.Pose)
+            if (m_Values.m_ValueAvailability[output] == AnimationPoseAvailability.Pose &&
+                !m_Inertialization.HasExplicitAnimationSlotInertialization(
+                    operation.AnimationSlotIndex))
                 EvaluateAnimationSlotInertialization(
                     in header,
                     in operation,

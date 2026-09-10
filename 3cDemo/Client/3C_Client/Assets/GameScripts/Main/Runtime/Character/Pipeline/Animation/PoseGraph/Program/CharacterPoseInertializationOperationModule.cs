@@ -11,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseInertializationOperationModule
     {
         readonly CharacterPoseManagedValuePage m_Values;
+        readonly PoseInertializationNativeProgram m_InertializationProgram;
         readonly NativeArray<PoseInertializationNativeNode> m_Inertializations;
         readonly NativeArray<PoseInertializationNativeRule> m_InertialRules;
         readonly NativeArray<AnimationBlendCurveSegment> m_InertialCurveSegments;
@@ -73,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_AnimationSlotNodeOffset;
         NativeArray<CharacterPoseStateMachineNativeControl>
             m_StateMachineControls;
+        NativeArray<CharacterAnimationSlotNativeControl>
+            m_AnimationSlotControls;
 
         internal CharacterPoseInertializationOperationModule(
             CharacterPoseManagedValuePage values,
@@ -82,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(values));
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
+            m_InertializationProgram = program;
             m_Inertializations = program.Nodes;
             m_InertialRules = program.Rules;
             m_InertialCurveSegments = program.CurveSegments;
@@ -148,11 +152,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void BindFrame(
-            NativeArray<CharacterPoseStateMachineNativeControl> controls) =>
-            m_StateMachineControls = controls;
+            NativeArray<CharacterPoseStateMachineNativeControl> stateMachineControls,
+            NativeArray<CharacterAnimationSlotNativeControl> animationSlotControls)
+        {
+            m_StateMachineControls = stateMachineControls;
+            m_AnimationSlotControls = animationSlotControls;
+        }
 
         internal int AnimationSlotNodeOffset => m_AnimationSlotNodeOffset;
         internal int StateCount => m_InertialStates.Length;
+        internal bool HasExplicitAnimationSlotInertialization(
+            int animationSlotIndex) =>
+            m_InertializationProgram.HasExplicitAnimationSlotInertialization(
+                animationSlotIndex);
         internal PoseInertializationNativeRule Rule(int index) =>
             m_InertialRules[index];
         internal float DenseProfileWeight(
@@ -197,8 +209,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                      PoseInertializationTemporalOwnerKind.StateMachineTransition;
             bool directPlayerOwner = node.TemporalOwnerKind ==
                                      PoseInertializationTemporalOwnerKind.DirectPlayerPolicy;
-            if (!stateMachineOwner && !directPlayerOwner ||
+            bool animationSlotOwner = node.TemporalOwnerKind ==
+                                       PoseInertializationTemporalOwnerKind.AnimationSlotTransition;
+            if (!stateMachineOwner && !directPlayerOwner && !animationSlotOwner ||
                 stateMachineOwner && (uint)node.ControlIndex >= (uint)m_StateMachineControls.Length ||
+                animationSlotOwner && (uint)node.ControlIndex >= (uint)m_AnimationSlotControls.Length ||
                 directPlayerOwner && node.ControlIndex != -1)
             {
                 ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
@@ -211,6 +226,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             CharacterPoseStateMachineNativeControl control = stateMachineOwner
                 ? m_StateMachineControls[node.ControlIndex]
+                : default;
+            CharacterAnimationSlotNativeControl animationSlotControl = animationSlotOwner
+                ? m_AnimationSlotControls[node.ControlIndex]
                 : default;
             PoseDiscontinuityNative discontinuity = m_Values.m_ValueDiscontinuities[input];
             if (!m_Values.TryCopyValue(input, output, header.Index))
@@ -232,7 +250,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 state = default;
                 state.LastEventIdentity = stateMachineOwner
                     ? control.Generation
-                    : discontinuity.EventIdentity;
+                    : animationSlotOwner
+                        ? animationSlotControl.Generation
+                        : discontinuity.EventIdentity;
                 state.RuntimeState = PoseInertializationRuntimeState.Reset;
                 state.LastResetReason = discontinuity.ResetReason;
                 state.LastResetSequence = discontinuity.ResetSequence;
@@ -242,8 +262,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 ulong eventIdentity = stateMachineOwner
                     ? control.Generation
-                    : discontinuity.EventIdentity;
-                if (stateMachineOwner && eventIdentity == 0 ||
+                    : animationSlotOwner
+                        ? animationSlotControl.Generation
+                        : discontinuity.EventIdentity;
+                if ((stateMachineOwner || animationSlotOwner) && eventIdentity == 0 ||
                     eventIdentity != 0 && eventIdentity < state.LastEventIdentity)
                 {
                     ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
@@ -264,6 +286,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         sourceEndpointIndex = control.SourceStateIndex;
                         targetEndpointIndex = control.TargetStateIndex;
                         inertialize = control.BlendMode == CharacterPoseStateMachineBlendMode.Inertialization;
+                    }
+                    else if (animationSlotOwner)
+                    {
+                        sourceEndpointIndex = EncodeAnimationSlotEndpoint(animationSlotControl.SourceProducerIndex);
+                        targetEndpointIndex = EncodeAnimationSlotEndpoint(animationSlotControl.TargetProducerIndex);
+                        inertialize = animationSlotControl.Mode == CharacterAnimationSlotNativeTransitionMode.Inertialization;
                     }
                     else
                     {
@@ -382,6 +410,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             state.OutputCompletionIdentity = m_Values.m_CompletionIdentity;
             m_InertialStates[stateIndex] = state;
         }
+
+        static int EncodeAnimationSlotEndpoint(int producerIndex) =>
+            producerIndex < 0 ? 0 : checked(producerIndex + 1);
 
         internal void PrepareInertialNode(
             int stateIndex,

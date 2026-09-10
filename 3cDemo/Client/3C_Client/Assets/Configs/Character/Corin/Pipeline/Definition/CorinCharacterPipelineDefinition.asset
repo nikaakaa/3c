@@ -12,12 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1169b7aa14ca445f8161b946163ee6e9, type: 3}
   m_Name: CorinCharacterPipelineDefinition
   m_EditorClassIdentifier: 
-  m_RootTreeAsset: {fileID: 11400000, guid: ea4ccf43cafa4fe42aff8dfc08208d52, type: 2}
   m_ControlModuleId: character.corin.control
   m_ControlParameters: []
   m_SkillDefinitions:
   - m_SkillId: Attack
-    m_EntryGraphAuthoringId: 3ae19d5e-dd52-4f44-a80d-e32d2474e7ec
+    m_EntryGraphAuthoringId: 00ec42f6d5ede195dcf13e4e27fe7933
     m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
     m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
     m_SourceInputRequestId: Attack
@@ -27,7 +26,7 @@ MonoBehaviour:
     m_SubgraphDependencies: []
     m_AllowedFollowUpSkillIds: []
   - m_SkillId: DodgeBack
-    m_EntryGraphAuthoringId: ee909991-5be0-4961-838a-a2854baca30d
+    m_EntryGraphAuthoringId: 5d6c5b40e613e36a79c647152961ea33
     m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
     m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
     m_SourceInputRequestId: Dodge
@@ -37,7 +36,7 @@ MonoBehaviour:
     m_SubgraphDependencies: []
     m_AllowedFollowUpSkillIds: []
   - m_SkillId: DodgeForward
-    m_EntryGraphAuthoringId: b2328afd-40a8-467d-91f8-784c461f6137
+    m_EntryGraphAuthoringId: 12fd389b09dc017facc9250c3f9a4ff3
     m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
     m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
     m_SourceInputRequestId: Dodge
@@ -46,6 +45,10 @@ MonoBehaviour:
     m_TargetKey: 
     m_SubgraphDependencies: []
     m_AllowedFollowUpSkillIds: []
+  m_SkillGraphs:
+  - {fileID: 11400000, guid: 74963f9f9cb1efb4ba59ca2b40303357, type: 2}
+  - {fileID: 11400000, guid: 50613fe9e197fad40a9a418cb76d167d, type: 2}
+  - {fileID: 11400000, guid: 7d6df97d08e3a904f8857de9952456c7, type: 2}
   m_SimulationTickRate: 60
   m_SimulationProgram: {fileID: 11400000, guid: 5740a6cfbfb0fe542ad6a6cb66fe1a80,
     type: 2}
@@ -58,6 +61,7 @@ MonoBehaviour:
     type: 2}
   m_AnimationPresentationProfile: {fileID: 11400000, guid: 2fbcf34b8e3d4f46a91fd81d62b9241e,
     type: 2}
+  m_CameraProfile: {fileID: 11400000, guid: 7736f41e1b5846f685ce4cb049373532, type: 2}
   m_EquipmentCapabilityEnabled: 0
   m_EquipmentProfile: {fileID: 0}
   m_EquipmentPresentationProfile: {fileID: 0}

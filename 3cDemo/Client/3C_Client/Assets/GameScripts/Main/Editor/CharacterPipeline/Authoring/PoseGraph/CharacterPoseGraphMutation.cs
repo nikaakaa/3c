@@ -1422,10 +1422,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind == CharacterPresentationMutationKind.CreatePoseGraph ||
             value.Kind == CharacterPresentationMutationKind.DeletePoseGraph ||
             value.Kind == CharacterPresentationMutationKind.CreatePoseSourceSlot ||
-            value.Kind == CharacterPresentationMutationKind.RenamePoseSourceSlot;
+            value.Kind == CharacterPresentationMutationKind.RenamePoseSourceSlot ||
+            value.Kind == CharacterPresentationMutationKind.CreatePoseResourceSlot ||
+            value.Kind == CharacterPresentationMutationKind.RenamePoseResourceSlot;
 
         static bool IsGraphCatalogPostMutation(CharacterPresentationMutation value) =>
-            value.Kind == CharacterPresentationMutationKind.DeletePoseSourceSlot;
+            value.Kind == CharacterPresentationMutationKind.DeletePoseSourceSlot ||
+            value.Kind == CharacterPresentationMutationKind.DeletePoseResourceSlot;
 
         static bool IsPoseGraphMutation(CharacterPresentationMutation value) =>
             value.Kind >= CharacterPresentationMutationKind.CreatePoseNode &&

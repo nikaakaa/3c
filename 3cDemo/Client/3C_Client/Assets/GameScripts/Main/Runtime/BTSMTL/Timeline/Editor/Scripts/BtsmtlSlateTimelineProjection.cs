@@ -238,7 +238,10 @@ namespace BTSMTL.Timeline.Editor
             GameObject groupObject = CreateChild(m_Cutscene.groupsRoot, "BTSMTL Timeline");
             BtsmtlSlateGroup group = groupObject.AddComponent<BtsmtlSlateGroup>();
             group.hideFlags = HideFlags.HideAndDontSave;
-            group.name = m_Request.Timeline.Name;
+            string ownershipLabel = string.IsNullOrWhiteSpace(m_Request.OwnershipLabel)
+                ? string.Empty
+                : $" [{m_Request.OwnershipLabel}]";
+            group.name = $"{m_Request.Timeline.Name}{ownershipLabel}";
             m_Cutscene.groups.Add(group);
 
             for (int trackIndex = 0; trackIndex < m_Request.Timeline.Tracks.Count; trackIndex++)

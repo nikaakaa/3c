@@ -495,8 +495,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          !producerIdentities.Add(endpoint.ProgramProducerIdentity))
                     throw new InvalidOperationException($"Compiled Animation Slot producer endpoint #{i} is duplicated.");
             }
-            if (sourcePoseCount != 1 || Endpoints.Count < 2)
-                throw new InvalidOperationException("Compiled Animation Slot requires Source Pose and at least one Action endpoint.");
+            if (sourcePoseCount != 1 || Endpoints.Count == 0)
+                throw new InvalidOperationException("Compiled Animation Slot requires one Source Pose endpoint.");
 
             var routeIds = new HashSet<TransitionRuleId>();
             var routePairs = new HashSet<(TransitionEndpointId Source, TransitionEndpointId Target)>();

@@ -1063,9 +1063,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     transition.TargetOwnerIdentity,
                     producerIdentities);
             }
-            if (producerIdentities.Count == 0)
-                throw new InvalidOperationException($"Animation Slot '{scopedNodeId}' has no reachable Action producer.");
-
             var endpoints = new List<CharacterAnimationSlotEndpointDescriptor>
             {
                 new CharacterAnimationSlotEndpointDescriptor(

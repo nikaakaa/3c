@@ -1539,3 +1539,7 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## 正式Scene Play Pose观察入口（POSE-EXEC-20260911-05）
 
 状态：删除`character.pose_reset_observation`对`CharacterAnimationPreviewFixtureSession`的直接依赖，改为只观察正式Scene Play注册的`AnimationPresentationRuntimeTarget`。任务通过`start/status`异步等待已提交帧，使用统一Session Tick Drive暂停并单步；Reset经同一`CharacterSimulationPresentationRuntime`的target合同执行，完成后恢复原实时驱动。运行时Reset合同提交为`a777da720`，MCP观察实现提交为`14f9926d9`，scheduler依赖修正为`23e414871`。代码入口已经切换，但尚未用目标Unity MCP跑出成功观察结果，因此23.6仍不勾选。
+
+## 删除PoseGraph自定义GraphEditor面板扩展（POSE-EXEC-20260911-06）
+
+状态：提交`45acadc47`删除`GraphEditor`的`domainPanel`字段、挂载方法、画布尺寸预留与原生Inspector跳过分支，同时删除Pose Workspace的对应清理调用。Pose作者编辑表面不再存在项目自定义Domain Panel；FlowCanvas原生Inspector、Connection Inspector、Blackboard、breadcrumb和画布直接负责作者交互。Workspace仍作为非可视生命周期／Mutation／导航协调对象存在，未改变Pose节点数据、运行时或`CreatePoseOnlyInput()`链路。目标Unity MCP当前主线程仍返回`ping not answered`，因此本步尚未登记窗口重载后的视觉证据。

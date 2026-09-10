@@ -6,6 +6,8 @@
 
 FlowCanvas原生负责Pose作者的画布、breadcrumb、节点/连线Inspector、创建菜单、端口交互、子图下钻、selection、clipboard与编辑器Undo。`CharacterPoseGraphWorkspace`的自定义Details、Graph Navigator和Preview页不是Pose节点编辑真相；它们应逐步收窄为运行观察、诊断、跨Graph检索和正式Preview/Build状态，不得替代FlowCanvas原生作者面板。
 
+2026-09-11提交`45acadc47`删除了曾注入`GraphEditor`的`domainPanel`扩展及其画布尺寸／点击拦截分支。`CharacterPoseGraphWorkspace`不再挂载自定义可视面板，FlowCanvas原生Inspector、Connection Inspector、Blackboard、breadcrumb和画布重新拥有编辑表面；Workspace仅保留资产生命周期、Mutation桥接、导航恢复和运行观察协调职责。
+
 正式Preview不在FlowCanvas中重新实现。Preview使用精确Fixture/Definition和正式Projection内Program Image；Pose作者修改后只标记Stale，必须显式Build后才允许正式Preview消费新产物。Build使用精确Definition路径，Fixed入口同时发布Float32、Fixed与共享Presentation Projection；Pose-only编译只作为Build内部隔离步骤，继续保留`CreatePoseOnlyInput()`。
 
 ### 2026-09-10 正式Build证据

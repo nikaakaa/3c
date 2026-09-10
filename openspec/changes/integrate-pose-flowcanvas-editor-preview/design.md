@@ -49,23 +49,35 @@ serialized目录继续是flat catalog：State、Layer和Control Rig调用引用�
 
 ### 2. Corin根图和动画层的目标组织
 
-基础全身组织如下，Inertialization只在对应混合请求需要时出现：
+基础全身组织如下。Locomotion是持续基础姿势生产者，不是Animation Slot；BlendStack拥有基础姿势的连续选择历史，Locomotion Inertialization只处理基础姿势切换，Full Body Slot只接收基础姿势并插入有限Action，Action Inertialization单独处理动作进入、退出和打断。
 
 ```text
-Locomotion State Machine → Slot: FullBody → Inertialization → Control Rig: Body → Output Pose
+Locomotion State Machine
+    → BlendStack: Locomotion
+    → Inertialization: Locomotion
+    → Slot: FullBody Action
+    → Inertialization: Action
+    → Control Rig: Body
+    → Output Pose
 ```
+
+Full Body Slot接在Locomotion之后是UE允许的Full Body Action插入方式，但它不能把Locomotion的连续性、基础层惯性化和动作历史混成一个owner。Slot自己的Action Stack只管理Action endpoint；根图必须另外拥有可见的Locomotion BlendStack。Runtime不得因为存在Slot而自动创建Locomotion Stack或隐藏的Inertialization。
 
 分层动作采用以下语义，不强制把所有内容放进根图：
 
 ```text
-Locomotion Pose ───────────────────────────→ Base Pose
-UpperBody Layer〔State Machine → Slot〕────→ Blend Pose
+Locomotion Base〔State Machine → BlendStack → Inertialization〕
+    ──────────────────────────────────────→ Base Pose
+UpperBody Layer〔State Machine → Slot → Inertialization〕
+    ──────────────────────────────────────→ Layer Pose
                                               ↓
                                   Layered Blend Per Bone〔Mask、Alpha〕
                                               ↓
-                                    FullBody Slot（需要时）
+                              FullBody Action Slot（需要时）
                                               ↓
-                                       Control Rig → Output
+                               Action Inertialization
+                                              ↓
+                                  Control Rig → Output
 ```
 
 动画层有两种合法接口：只输出一份姿势，由调用者配置按骨骼混合；或显式接收Base Pose，在层内部完成按骨骼混合后输出。由接口和图中节点决定，不增加隐含的UpperBody／LowerBody运行类型。层名称、Slot名称都不会自动生成Mask；同一层不能在内部和外部不知情地重复应用Mask。

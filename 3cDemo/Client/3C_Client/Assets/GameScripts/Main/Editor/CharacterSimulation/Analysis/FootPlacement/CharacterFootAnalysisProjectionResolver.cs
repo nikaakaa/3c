@@ -596,15 +596,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
-                    if (node?.Payload is not CharacterClipPlayerPosePayload player || !player.Animation)
+                    CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
+                    CharacterPresentationPoseSourceBinding binding =
+                        slot ? profile.FindPoseSourceBinding(slot) : null;
+                    if (binding is not CharacterClipPoseSourceBinding clipBinding || !clipBinding.Clip)
                         continue;
                     CharacterAnimationClipContentIdentity identity =
-                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(player.Animation);
+                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clipBinding.Clip);
                     string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
                     if (directClipBindings.Add(clipIdentity))
                         result.Add(new ClipBinding(
                             clipIdentity,
-                            player.Animation,
+                            clipBinding.Clip,
                             AnimationFootContactSchedule.Inferred,
                             true));
                 }
@@ -712,46 +715,49 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
-                    if (node?.Payload is CharacterClipPlayerPosePayload clipPlayer && clipPlayer.Animation)
+                    CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
+                    CharacterPresentationPoseSourceBinding sourceBinding =
+                        slot ? profile.FindPoseSourceBinding(slot) : null;
+                    if (sourceBinding is not CharacterClipPoseSourceBinding clipBinding || !clipBinding.Clip)
                     {
-                        try
+                        if (sourceBinding is not CharacterBlendSpacePoseSourceBinding blendSpaceBinding ||
+                            !blendSpaceBinding.BlendSpace)
+                            continue;
+                        CharacterAnimationBlendSpaceAsset blendSpace = blendSpaceBinding.BlendSpace;
+                        for (int sampleIndex = 0; sampleIndex < blendSpace.Samples.Count; sampleIndex++)
                         {
-                            CharacterAnimationClipContentIdentity identity =
-                                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clipPlayer.Animation);
-                            string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
-                            if (directClipBindings.Add(clipIdentity))
-                                result.Add(new ClipBinding(
-                                    clipIdentity,
-                                    clipPlayer.Animation,
-                                    AnimationFootContactSchedule.Inferred,
-                                    true));
-                        }
-                        catch (Exception exception)
-                        {
-                            errors?.Add($"Pose-only Foot Analysis Clip Player '{node.NodeId}' is invalid: {exception.Message}");
+                            CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[sampleIndex];
+                            if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
+                            {
+                                errors?.Add(
+                                    $"Pose-only Foot Analysis Blend Space '{blendSpace.name}' Sample #{sampleIndex} is incomplete.");
+                                continue;
+                            }
+                            ClipBinding binding = new ClipBinding(
+                                blendSpace.BlendSpaceId,
+                                sample.SampleId,
+                                sample.Clip,
+                                AnimationFootContactSchedule.Inferred);
+                            if (blendSpaceBindings.Add(binding.BindingKey))
+                                result.Add(binding);
                         }
                         continue;
                     }
-                    if (node?.Payload is not CharacterBlendSpacePlayerPosePayload blendSpacePlayer ||
-                        !blendSpacePlayer.BlendSpace)
-                        continue;
-                    CharacterAnimationBlendSpaceAsset blendSpace = blendSpacePlayer.BlendSpace;
-                    for (int sampleIndex = 0; sampleIndex < blendSpace.Samples.Count; sampleIndex++)
+                    try
                     {
-                        CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[sampleIndex];
-                        if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
-                        {
-                            errors?.Add(
-                                $"Pose-only Foot Analysis Blend Space '{blendSpace.name}' Sample #{sampleIndex} is incomplete.");
-                            continue;
-                        }
-                        ClipBinding binding = new ClipBinding(
-                            blendSpace.BlendSpaceId,
-                            sample.SampleId,
-                            sample.Clip,
-                            AnimationFootContactSchedule.Inferred);
-                        if (blendSpaceBindings.Add(binding.BindingKey))
-                            result.Add(binding);
+                        CharacterAnimationClipContentIdentity identity =
+                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clipBinding.Clip);
+                        string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
+                        if (directClipBindings.Add(clipIdentity))
+                            result.Add(new ClipBinding(
+                                clipIdentity,
+                                clipBinding.Clip,
+                                AnimationFootContactSchedule.Inferred,
+                                true));
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add($"Pose-only Foot Analysis Clip Player '{node.NodeId}' is invalid: {exception.Message}");
                     }
                 }
             }

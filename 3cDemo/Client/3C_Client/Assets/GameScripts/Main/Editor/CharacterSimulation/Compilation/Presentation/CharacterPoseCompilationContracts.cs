@@ -127,8 +127,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             AnimationSourcePhasePlan[] sourcePhasePlans,
             AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
-            IReadOnlyDictionary<AnimationClip, PresentationPoseSourceIndex> directSourceIndices,
-            IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> directBlendSpaceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
@@ -150,10 +148,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Array.Empty<AnimationFootPhaseValidationDescriptor>();
             SourceIndices = sourceIndices ??
                 new Dictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex>();
-            DirectSourceIndices = directSourceIndices ??
-                new Dictionary<AnimationClip, PresentationPoseSourceIndex>();
-            DirectBlendSpaceIndices = directBlendSpaceIndices ??
-                new Dictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex>();
             CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
             ProfileIndicesByIdentity = profileIndicesByIdentity ??
                 throw new ArgumentNullException(nameof(profileIndicesByIdentity));
@@ -174,8 +168,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public AnimationSourcePhasePlan[] SourcePhasePlans { get; }
         public AnimationFootPhaseValidationDescriptor[] ClipPhaseValidations { get; }
         public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
-        public IReadOnlyDictionary<AnimationClip, PresentationPoseSourceIndex> DirectSourceIndices { get; }
-        public IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> DirectBlendSpaceIndices { get; }
         public IReadOnlyDictionary<string, int> CurveIndices { get; }
         public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
         public CharacterAnimationPresentationProfile Profile { get; }

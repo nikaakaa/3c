@@ -231,16 +231,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             {
                 CharacterPresentationPoseSourceCompilationEntry entry =
                     sourceCompilation.Catalog.Entries[i];
-                if (entry.DirectClip)
-                    clips.Add(entry.DirectClip);
-                if (!entry.DirectBlendSpace)
+                if (entry.Binding is CharacterClipPoseSourceBinding clipBinding &&
+                    clipBinding.Clip)
+                {
+                    clips.Add(clipBinding.Clip);
+                    continue;
+                }
+                if (entry.Binding is not CharacterBlendSpacePoseSourceBinding blendBinding ||
+                    !blendBinding.BlendSpace)
                     continue;
                 for (int sampleIndex = 0;
-                     sampleIndex < entry.DirectBlendSpace.Samples.Count;
+                     sampleIndex < blendBinding.BlendSpace.Samples.Count;
                      sampleIndex++)
                 {
-                    AnimationClip clip =
-                        entry.DirectBlendSpace.Samples[sampleIndex]?.Clip;
+                    AnimationClip clip = blendBinding.BlendSpace.Samples[sampleIndex]?.Clip;
                     if (clip)
                         clips.Add(clip);
                 }

@@ -831,32 +831,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseCanvasNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == nodeId.Value);
-            if (typed.Payload is CharacterClipPlayerPosePayload directClip && directClip.Animation)
-            {
-                if (openSource)
-                    CharacterAnimationClipAuthoringService.Open(new CharacterAnimationClipOpenRequest(
-                        m_Definition,
-                        m_Profile,
-                        directClip.Animation,
-                        m_ObservationPanel?.AuthoringSceneTarget));
-                else
-                {
-                    Selection.activeObject = directClip.Animation;
-                    EditorGUIUtility.PingObject(directClip.Animation);
-                }
-                return true;
-            }
-            if (typed.Payload is CharacterBlendSpacePlayerPosePayload directBlendSpace && directBlendSpace.BlendSpace)
-            {
-                if (openSource)
-                    CharacterAnimationBlendSpaceEditorWindow.Open(directBlendSpace.BlendSpace);
-                else
-                {
-                    Selection.activeObject = directBlendSpace.BlendSpace;
-                    EditorGUIUtility.PingObject(directBlendSpace.BlendSpace);
-                }
-                return true;
-            }
             CharacterPresentationPoseSourceSlot slot =
                 typed.PresentationPoseSourceSlot;
             if (!slot)

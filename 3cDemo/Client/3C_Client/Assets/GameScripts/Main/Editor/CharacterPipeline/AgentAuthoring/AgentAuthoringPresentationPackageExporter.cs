@@ -272,21 +272,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
                 {
-                    switch (graph.Nodes[nodeIndex]?.Payload)
-                    {
-                        case CharacterClipPlayerPosePayload clipPlayer:
-                            Add(clipPlayer.Animation);
-                            break;
-                        case CharacterBlendSpacePlayerPosePayload blendSpacePlayer
-                            when blendSpacePlayer.BlendSpace:
-                            for (int sampleIndex = 0;
-                                 sampleIndex < blendSpacePlayer.BlendSpace.Samples.Count;
-                                 sampleIndex++)
-                            {
-                                Add(blendSpacePlayer.BlendSpace.Samples[sampleIndex]?.Clip);
-                            }
-                            break;
-                    }
+                    CharacterPresentationPoseSourceSlot slot =
+                        graph.Nodes[nodeIndex]?.PresentationPoseSourceSlot;
+                    CharacterPresentationPoseSourceBinding binding =
+                        slot ? profile.FindPoseSourceBinding(slot) : null;
+                    if (binding is CharacterClipPoseSourceBinding clipBinding)
+                        Add(clipBinding.Clip);
+                    else if (binding is CharacterBlendSpacePoseSourceBinding blendBinding)
+                        for (int sampleIndex = 0;
+                             sampleIndex < blendBinding.BlendSpace.Samples.Count;
+                             sampleIndex++)
+                            Add(blendBinding.BlendSpace.Samples[sampleIndex]?.Clip);
                 }
             }
             IReadOnlyList<AnimationProducerAuthoringEntry> producers =

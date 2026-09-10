@@ -159,14 +159,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture,
                 systemOwned: true));
             catalog.Register(Node<CharacterBlendSpacePlayerPosePayload>(CharacterPoseNodeKind.BlendSpacePlayer, rootAndStateWithLinkedEntry, "Blend Space Player", "Sources", sourceColor,
-                Fields(AssetField("blend-space", "Blend Space", "animation-blend-space", typeof(CharacterAnimationBlendSpaceAsset)), EnumField("input-range-policy", "Input Range", typeof(CharacterAnimationBlendSpaceInputRangePolicy))),
+                Fields(SourceField(typeof(CharacterBlendSpacePoseSourceSlot)), EnumField("input-range-policy", "Input Range", typeof(CharacterAnimationBlendSpaceInputRangePolicy))),
                 Ports(In("x", "X", "pose.parameter"), OptionalIn("y", "Y", "pose.parameter"), Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
-                commands: DirectBlendSpaceCommands(),
+                commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterClipPlayerPosePayload>(CharacterPoseNodeKind.ClipPlayer, rootAndStateWithLinkedEntry, "Clip Player", "Sources", sourceColor,
-                Fields(AssetField("animation", "Animation", "animation-clip", typeof(UnityEngine.AnimationClip)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), EnumField("clock-source", "Clock Source", typeof(CharacterClipPlayerClockSource))),
+                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), EnumField("clock-source", "Clock Source", typeof(CharacterClipPlayerClockSource))),
                 Ports(Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
-                commands: DirectClipCommands(),
+                commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterPoseStateMachineNodePayload>(CharacterPoseNodeKind.PoseStateMachine, rootAndLinkedEntry, "Animation State Machine", "State Machine", blendColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),

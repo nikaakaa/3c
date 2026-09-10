@@ -493,8 +493,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourcePhasePlans,
                 clipPhaseValidations,
                 sourceCatalog.SourceIndices,
-                sourceCatalog.DirectClipIndices,
-                sourceCatalog.DirectBlendSpaceIndices,
                 blendCatalogs?.CurveIndices,
                 blendCatalogs?.ProfileIndicesByIdentity,
                 profile,

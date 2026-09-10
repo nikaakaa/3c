@@ -1115,14 +1115,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     result.Add(new GraphAuthoringReadOnlyDetail("Alpha", layered.Weight.ToString("0.###")));
                     break;
                 case CharacterClipPlayerPosePayload clip:
-                    result.Add(new GraphAuthoringReadOnlyDetail("Animation", clip.Animation ? clip.Animation.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Source Slot", clip.SourceSlot ? clip.SourceSlot.name : "Missing"));
                     result.Add(new GraphAuthoringReadOnlyDetail("Play Rate", clip.PlayRate.ToString("0.###")));
                     result.Add(new GraphAuthoringReadOnlyDetail("Initial Time", clip.InitialTime.ToString("0.###")));
                     result.Add(new GraphAuthoringReadOnlyDetail("Loop", clip.LoopAnimation ? "Yes" : "No"));
                     result.Add(new GraphAuthoringReadOnlyDetail("Clock", clip.ClockSource.ToString()));
                     break;
                 case CharacterBlendSpacePlayerPosePayload blendSpace:
-                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Space", blendSpace.BlendSpace ? blendSpace.BlendSpace.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Source Slot", blendSpace.SourceSlot ? blendSpace.SourceSlot.name : "Missing"));
                     result.Add(new GraphAuthoringReadOnlyDetail("Input Range", blendSpace.InputRangePolicy.ToString()));
                     break;
             }

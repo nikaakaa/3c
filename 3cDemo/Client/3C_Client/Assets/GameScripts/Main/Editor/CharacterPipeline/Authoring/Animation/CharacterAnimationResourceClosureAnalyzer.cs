@@ -53,18 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
-                    if (node?.Payload is CharacterClipPlayerPosePayload clipPlayer && clipPlayer.Animation)
-                    {
-                        AddCategory(categories, clipPlayer.Animation, "pose-source");
-                        continue;
-                    }
-                    if (node?.Payload is CharacterBlendSpacePlayerPosePayload blendSpacePlayer && blendSpacePlayer.BlendSpace)
-                    {
-                        foreach (CharacterAnimationBlendSpaceSample sample in blendSpacePlayer.BlendSpace.Samples)
-                            if (sample?.Clip)
-                                AddCategory(categories, sample.Clip, "pose-source");
-                        continue;
-                    }
                     CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
                     if (!slot)
                         continue;

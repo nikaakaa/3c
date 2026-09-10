@@ -360,12 +360,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterBlendSpacePlayerPosePayload payload) =>
             payload.SourceSlot;
 
-        public override CharacterAnimationBlendSpaceAsset DirectBlendSpace(
-            CharacterPoseNodePayload payload) =>
-            payload is CharacterBlendSpacePlayerPosePayload value
-                ? value.BlendSpace
-                : null;
-
         protected override
             CharacterAnimationBlendSpaceInputRangePolicy
             GetInputRange(
@@ -384,7 +378,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterBlendSpacePlayerPosePayload(
-                input.Require<CharacterAnimationBlendSpaceAsset>("blend-space"),
+                input.Require<CharacterBlendSpacePoseSourceSlot>("pose-source-slot"),
                 Enum.Parse<
                     CharacterAnimationBlendSpaceInputRangePolicy>(
                     input.Require<string>(
@@ -396,7 +390,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             field switch
             {
-                "blend-space" => payload.BlendSpace,
                 "pose-source-slot" => payload.SourceSlot,
                 "input-range-policy" =>
                     payload.InputRangePolicy.ToString(),
@@ -408,13 +401,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.BlendSpace || payload.SourceSlot,
+                payload.SourceSlot,
                 sourcePath,
-                "Blend Space source identity is missing.");
-            CharacterPoseNodeDefinitionValidation.Require(
-                !(payload.BlendSpace && payload.SourceSlot),
-                sourcePath,
-                "Blend Space Player cannot contain both direct Blend Space and legacy Source Slot references.");
+                "Blend Space source slot is missing.");
         }
     }
 
@@ -435,12 +424,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterClipPlayerPosePayload payload) =>
             payload.SourceSlot;
 
-        public override UnityEngine.AnimationClip DirectClip(
-            CharacterPoseNodePayload payload) =>
-            payload is CharacterClipPlayerPosePayload value
-                ? value.Animation
-                : null;
-
         protected override
             AnimationSelectionAvailabilityPolicy GetAvailability(
                 CharacterClipPlayerPosePayload payload,
@@ -453,7 +436,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterClipPlayerPosePayload(
-                input.Require<UnityEngine.AnimationClip>("animation"),
+                input.Require<CharacterClipPoseSourceSlot>("pose-source-slot"),
                 input.Require<float>("play-rate"),
                 input.Require<float>("initial-time"),
                 input.Require<bool>("loop-animation"),
@@ -466,7 +449,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             field switch
             {
-                "animation" => payload.Animation,
                 "pose-source-slot" => payload.SourceSlot,
                 "play-rate" => payload.PlayRate,
                 "initial-time" => payload.InitialTime,
@@ -480,13 +462,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.Animation || payload.SourceSlot,
+                payload.SourceSlot,
                 sourcePath,
-                "Clip Animation reference is missing.");
-            CharacterPoseNodeDefinitionValidation.Require(
-                !(payload.Animation && payload.SourceSlot),
-                sourcePath,
-                "Clip Player cannot contain both direct Animation and legacy Source Slot references.");
+                "Clip source slot is missing.");
             CharacterPoseNodeDefinitionValidation.Require(
                 float.IsFinite(payload.PlayRate) &&
                 payload.PlayRate > 0f,

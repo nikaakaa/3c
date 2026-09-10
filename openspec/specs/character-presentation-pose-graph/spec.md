@@ -86,7 +86,7 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 ### Requirement: State-local source必须由Profile binding和provider解析
 
-`ClipPlayer`、`BlendSpacePlayer`与`SelectedPosePlayer` MUST直接引用类型匹配的原生资源或明确typed资源参数。Projection Compiler MUST从唯一Player引用生成dense source usage；ClipPlayer MUST保存AnimationClip、Play Rate、Initial Time、Loop与Clock Source，不得保存Source Slot、Profile Binding或Topology副本。Provider MUST发布带dense source index、generation、Projection revision与frame lease的`PresentationPoseSourceSample`。Pose Graph MUST不保存Sequence包装资产、作者source字符串或Gameplay producer。
+`ClipPlayer`、`BlendSpacePlayer`与`SelectedPosePlayer` MUST声明类型匹配的Graph-owned Source Slot，原生资源由Character Presentation Profile Binding提供。Projection Compiler MUST从Graph Slot与Profile Binding生成dense source usage；ClipPlayer MUST保存Source Slot、Play Rate、Initial Time、Loop与Clock Source，不得保存Character资源、Profile Binding或Topology副本。Provider MUST发布带dense source index、generation、Projection revision与frame lease的`PresentationPoseSourceSample`。Pose Graph MUST不保存Sequence包装资产、作者source字符串或Gameplay producer。
 
 #### Scenario: ClipPlayer首次采样Idle
 
@@ -217,7 +217,7 @@ Goal对求解要求权威，Solved Pose对本次Solver输出权威，Physical Re
 #### Scenario: 查看Locomotion State
 
 - **WHEN** 作者选中Locomotion State的Clip或BlendSpace Player
-- **THEN** Authoring MUST显示类型匹配的原生AnimationClip或Blend Space资源选择器
+- **THEN** Authoring MUST显示类型匹配的Source Slot，并在精确Profile上下文中显示其原生AnimationClip或Blend Space Binding
 - **AND** References MUST显示实际资源、Slot／Group、owner与Open Resource命令
 - **AND** MUST不显示BaseLocomotion Gameplay producer或可编辑Source Id
 
@@ -287,7 +287,7 @@ UI MUST使用Clip Player、Blend Space Player、Selected Pose Player、Animation
 
 #### Scenario: 作者添加单Clip播放器
 
-- **WHEN** 作者在Pose Graph添加单AnimationClip state-local player
+- **WHEN** 作者在Pose Graph添加单Clip state-local player并选择类型匹配的Source Slot
 - **THEN** Capability、节点标题、Document kind和编译诊断 MUST统一显示Clip Player
 - **AND** MUST不存在Clip Player兼容名称
 

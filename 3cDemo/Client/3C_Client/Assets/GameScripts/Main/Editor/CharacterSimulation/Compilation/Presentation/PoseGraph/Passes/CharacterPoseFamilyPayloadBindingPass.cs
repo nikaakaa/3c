@@ -74,8 +74,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 AnimationSourcePhasePlan[] sourcePhasePlans,
                 AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
                 IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
-                IReadOnlyDictionary<UnityAnimationClip, PresentationPoseSourceIndex> directSourceIndices,
-                IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> directBlendSpaceIndices,
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
@@ -108,8 +106,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Select((value, index) => new KeyValuePair<PresentationPoseSourceIndex, int>(value.SourceIndex, index))
                     .ToDictionary(value => value.Key, value => value.Value);
                 SourceIndices = sourceIndices ?? throw new ArgumentNullException(nameof(sourceIndices));
-                DirectSourceIndices = directSourceIndices ?? throw new ArgumentNullException(nameof(directSourceIndices));
-                DirectBlendSpaceIndices = directBlendSpaceIndices ?? throw new ArgumentNullException(nameof(directBlendSpaceIndices));
                 CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
                 ProfileIndicesByIdentity = profileIndicesByIdentity ??
                     throw new ArgumentNullException(nameof(profileIndicesByIdentity));
@@ -137,8 +133,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyList<AnimationFootPhaseValidationDescriptor> ClipPhaseValidations { get; }
             public Dictionary<PresentationPoseSourceIndex, int> SourcePhasePlanIndices { get; }
             public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
-            public IReadOnlyDictionary<UnityAnimationClip, PresentationPoseSourceIndex> DirectSourceIndices { get; }
-            public IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> DirectBlendSpaceIndices { get; }
             public IReadOnlyDictionary<string, int> CurveIndices { get; }
             public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
             public CharacterAnimationPresentationProfile Profile { get; }
@@ -221,8 +215,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.SourcePhasePlans,
                 request.ClipPhaseValidations,
                 request.SourceIndices,
-                request.DirectSourceIndices,
-                request.DirectBlendSpaceIndices,
                 request.CurveIndices,
                 request.ProfileIndicesByIdentity,
                 request.Profile,
@@ -638,20 +630,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (!state.SourceIndices.TryGetValue(sourceSlot, out sourceIndex))
                         throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
                 }
-                else if (handler.DirectClip(irNode.Payload) &&
-                         !state.DirectSourceIndices.TryGetValue(
-                             handler.DirectClip(irNode.Payload),
-                             out sourceIndex))
-                {
-                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' direct AnimationClip is outside the compiled source catalog.");
-                }
-                else if (handler.DirectBlendSpace(irNode.Payload) &&
-                         !state.DirectBlendSpaceIndices.TryGetValue(
-                             handler.DirectBlendSpace(irNode.Payload),
-                             out sourceIndex))
-                {
-                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' direct Blend Space is outside the compiled source catalog.");
-                }
+                else if (handler.Requires(CharacterPoseNodeRuntimeRequirement.Player))
+                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' has no Source Slot.");
                 operationIndex = state.Operations.Count;
                 state.Operations.Add(new CharacterPoseBoundOperation(
                     operationIndex,
@@ -1833,15 +1813,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             BindingBuilder state)
         {
             PresentationPoseSourceIndex sourceIndex;
-            if (payload.Animation)
+            if (!payload.SourceSlot ||
+                !state.SourceIndices.TryGetValue(payload.SourceSlot, out sourceIndex))
             {
-                if (!state.DirectSourceIndices.TryGetValue(payload.Animation, out sourceIndex))
-                    throw new InvalidOperationException($"Clip Player '{scopedNodeId}' direct AnimationClip is outside the compiled source catalog.");
-            }
-            else if (!payload.SourceSlot ||
-                     !state.SourceIndices.TryGetValue(payload.SourceSlot, out sourceIndex))
-            {
-                throw new InvalidOperationException($"Clip Player '{scopedNodeId}' source reference is outside the compiled source catalog.");
+                throw new InvalidOperationException($"Clip Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
             }
             int index = state.ClipPlayers.Count;
             state.ClipPlayers.Add(CharacterPresentationClipPlayerCompiler.Compile(

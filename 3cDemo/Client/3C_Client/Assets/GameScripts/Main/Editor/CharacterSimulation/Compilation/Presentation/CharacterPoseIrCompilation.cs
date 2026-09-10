@@ -564,7 +564,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     input.Require<string>(
                         "selection-availability"),
                     false),
-                input.Require<CharacterAnimationBlendPolicy>(
+                input.Require<CharacterPoseResourceSlot>(
                     "blend-policy"));
 
         protected override object ReadField(
@@ -577,7 +577,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     payload.AnimationChannelId.Value,
                 "selection-availability" =>
                     payload.SelectionAvailability.ToString(),
-                "blend-policy" => payload.BlendPolicy,
+                "blend-policy" => payload.BlendPolicySlot,
                 _ => base.ReadField(payload, field)
             };
 
@@ -589,7 +589,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.AnimationChannelId.IsValid &&
                 payload.SelectionAvailability ==
                 AnimationSelectionAvailabilityPolicy.AllowEmpty &&
-                payload.BlendPolicy,
+                payload.BlendPolicySlot,
                 sourcePath,
                 "Animation Slot requires identity, channel, AllowEmpty and one Blend Policy.");
 
@@ -601,7 +601,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             try
             {
                 rig.RequireAnimationSlot(payload.SlotId);
-                payload.BlendPolicy.RequireValid(rig);
             }
             catch (Exception exception)
             {
@@ -634,7 +633,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             new CharacterBlendStackPosePayload(
                 input.Require<CharacterMotionMatchingPoseSourceSlot>(
                     "pose-source-slot"),
-                input.Require<CharacterAnimationBlendPolicy>(
+                input.Require<CharacterPoseResourceSlot>(
                     "blend-policy"));
 
         protected override object ReadField(
@@ -643,7 +642,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             field switch
             {
                 "pose-source-slot" => payload.SourceSlot,
-                "blend-policy" => payload.BlendPolicy,
+                "blend-policy" => payload.BlendPolicySlot,
                 _ => base.ReadField(payload, field)
             };
 
@@ -652,7 +651,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath) =>
             CharacterPoseNodeDefinitionValidation.Require(
                 payload.SourceSlot &&
-                payload.BlendPolicy,
+                payload.BlendPolicySlot,
                 sourcePath,
                 "Blend Stack source binding or Blend Policy is incomplete.");
 
@@ -661,16 +660,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             string sourcePath)
         {
-            try
-            {
-                payload.BlendPolicy.RequireValid(rig);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
         }
     }
 
@@ -690,21 +679,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterInertializationPosePayload(
-                input.Require<CharacterPoseInertializationPolicy>(
+                input.Require<CharacterPoseResourceSlot>(
                     "inertialization-policy"));
 
         protected override object ReadField(
             CharacterInertializationPosePayload payload,
             string field) =>
             field == "inertialization-policy"
-                ? payload.Policy
+                ? payload.PolicySlot
                 : base.ReadField(payload, field);
 
         protected override void Validate(
             CharacterInertializationPosePayload payload,
             string sourcePath) =>
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.Policy,
+                payload.PolicySlot,
                 sourcePath,
                 "Inertialization Policy is missing.");
 
@@ -713,16 +702,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             string sourcePath)
         {
-            try
-            {
-                payload.Policy.RequireValid(rig);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
         }
     }
 
@@ -775,12 +754,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override CharacterAnimationBoneMaskAsset
             GetBoneMask(
                 CharacterLayeredBoneBlendPosePayload payload) =>
-            payload.BoneMask;
+            null;
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterLayeredBoneBlendPosePayload(
-                input.Require<CharacterAnimationBoneMaskAsset>(
+                input.Require<CharacterPoseResourceSlot>(
                     "bone-mask"),
                 input.Require<CharacterLayeredBoneBlendSpace>(
                     "blend-space"),
@@ -791,7 +770,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             field switch
             {
-                "bone-mask" => payload.BoneMask,
+                "bone-mask" => payload.BoneMaskSlot,
                 "blend-space" => payload.BlendSpace,
                 "weight" => payload.Weight,
                 _ => base.ReadField(payload, field)
@@ -805,7 +784,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.Weight,
                 sourcePath);
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.BoneMask,
+                payload.BoneMaskSlot,
                 sourcePath,
                 "Layered Bone Blend mask is missing.");
             CharacterPoseNodeDefinitionValidation.Require(
@@ -821,16 +800,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             string sourcePath)
         {
-            try
-            {
-                payload.BoneMask.BuildDense(rig);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
         }
     }
 
@@ -1024,13 +993,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterRootOrientationWarpPosePayload(
-                input.Require<RootMotionCurveAsset>("yaw-curve"));
+                input.Require<CharacterPoseResourceSlot>("yaw-curve"));
 
         protected override object ReadField(
             CharacterRootOrientationWarpPosePayload payload,
             string field) =>
             field == "yaw-curve"
-                ? payload.YawCurve
+                ? payload.YawCurveSlot
                 : base.ReadField(payload, field);
 
         protected override void Validate(
@@ -1038,15 +1007,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.YawCurve &&
-                payload.YawCurve.TryValidate(out _) &&
-                payload.YawCurve.Duration > 0f &&
-                payload.YawCurve.LocalYaw != null &&
-                payload.YawCurve.LocalYaw.length >= 2 &&
-                float.IsFinite(payload.YawCurve.TotalYaw) &&
-                Math.Abs(payload.YawCurve.TotalYaw) > 0.001f,
+                payload.YawCurveSlot,
                 sourcePath,
-                "Root Orientation Warp Yaw profile is invalid.");
+                "Root Orientation Warp Yaw Resource Slot is missing.");
         }
     }
 

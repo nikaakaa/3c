@@ -15,9 +15,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static void SaveReferencedOwners(CharacterPresentationPoseGraphAsset asset, CharacterAnimationPresentationProfile profile)
         {
             if (profile?.FullBodyIkProfile) AssetDatabase.SaveAssetIfDirty(profile.FullBodyIkProfile);
-            var owners = FindNodeAssets<CharacterFootPlacementProfile>(asset).Cast<UnityEngine.Object>()
-                .Concat(FindNodeAssets<CharacterAnimationBlendPolicy>(asset))
-                .Concat(FindNodeAssets<CharacterPoseInertializationPolicy>(asset));
+            var owners = profile.PoseResourceBindings
+                .Where(value => value?.Resource)
+                .Select(value => value.Resource)
+                .Where(value => value is CharacterFootPlacementProfile ||
+                                value is CharacterAnimationBlendPolicy ||
+                                value is CharacterPoseInertializationPolicy);
             foreach (UnityEngine.Object owner in owners.Distinct()) AssetDatabase.SaveAssetIfDirty(owner);
         }
 
@@ -152,19 +155,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (entry.OwnerId.StartsWith("foot-placement-profile:", StringComparison.Ordinal))
             {
-                CharacterFootPlacementProfile owner = FindFootPlacementProfile(asset, entry.OwnerId);
+                CharacterFootPlacementProfile owner = FindFootPlacementProfile(profile, entry.OwnerId);
                 ApplyProfile(owner, entry, value);
                 return;
             }
             if (entry.OwnerId.StartsWith("animation-blend-policy:", StringComparison.Ordinal))
             {
-                CharacterAnimationBlendPolicy owner = FindBlendPolicy(asset, entry.OwnerId);
+                CharacterAnimationBlendPolicy owner = FindBlendPolicy(profile, entry.OwnerId);
                 ApplyPolicy(owner, entry, value);
                 return;
             }
             if (entry.OwnerId.StartsWith("pose-inertialization-policy:", StringComparison.Ordinal))
             {
-                CharacterPoseInertializationPolicy owner = FindInertializationPolicy(asset, entry.OwnerId);
+                CharacterPoseInertializationPolicy owner = FindInertializationPolicy(profile, entry.OwnerId);
                 ApplyPolicy(owner, entry, value);
                 return;
             }
@@ -189,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparison.Ordinal))
             {
                 return ReadFootPlacementValue(
-                    FindFootPlacementProfile(asset, entry.OwnerId),
+                    FindFootPlacementProfile(profile, entry.OwnerId),
                     entry.FieldId.Substring(entry.OwnerId.Length + 1));
             }
             if (entry.OwnerId.StartsWith(
@@ -197,7 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparison.Ordinal))
             {
                 CharacterAnimationBlendPolicy policy =
-                    FindBlendPolicy(asset, entry.OwnerId);
+                    FindBlendPolicy(profile, entry.OwnerId);
                 string fieldId = entry.FieldId.Substring(
                     entry.OwnerId.Length + 1);
                 return fieldId switch
@@ -223,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparison.Ordinal))
             {
                 CharacterPoseInertializationPolicy policy =
-                    FindInertializationPolicy(asset, entry.OwnerId);
+                    FindInertializationPolicy(profile, entry.OwnerId);
                 if (!entry.FieldId.EndsWith(
                         "/duration-seconds",
                         StringComparison.Ordinal) ||
@@ -507,61 +510,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static CharacterFootPlacementProfile FindFootPlacementProfile(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             string ownerId)
         {
-            return FindNodeAssets<CharacterFootPlacementProfile>(asset)
-                .Where(profile =>
-                    profile &&
-                    $"foot-placement-profile:{profile.ProfileId}" == ownerId)
-                .Distinct()
-                .SingleOrDefault();
+            return profile?.PoseResourceBindings
+                .Select(value => value?.Resource)
+                .OfType<CharacterFootPlacementProfile>()
+                .SingleOrDefault(value => $"foot-placement-profile:{value.ProfileId}" == ownerId);
         }
 
         static CharacterAnimationBlendPolicy FindBlendPolicy(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             string ownerId)
         {
-            return FindNodeAssets<CharacterAnimationBlendPolicy>(asset)
-                .Where(policy => policy &&
-                    $"animation-blend-policy:{policy.PolicyId}" == ownerId)
-                .Distinct()
-                .SingleOrDefault();
+            return profile?.PoseResourceBindings
+                .Select(value => value?.Resource)
+                .OfType<CharacterAnimationBlendPolicy>()
+                .SingleOrDefault(value => $"animation-blend-policy:{value.PolicyId}" == ownerId);
         }
 
         static CharacterPoseInertializationPolicy FindInertializationPolicy(
-            CharacterPresentationPoseGraphAsset asset,
+            CharacterAnimationPresentationProfile profile,
             string ownerId)
         {
-            return FindNodeAssets<CharacterPoseInertializationPolicy>(asset)
-                .Where(policy => policy &&
-                    $"pose-inertialization-policy:{policy.PolicyId}" == ownerId)
-                .Distinct()
-                .SingleOrDefault();
-        }
-
-        static System.Collections.Generic.IEnumerable<T> FindNodeAssets<T>(
-            CharacterPresentationPoseGraphAsset asset)
-            where T : UnityEngine.Object
-        {
-            foreach (CharacterPoseCanvasNode node in asset.EnumerateGraphs()
-                         .Where(graph => graph != null)
-                         .SelectMany(graph => graph.Nodes)
-                         .Where(node => node?.Payload != null))
-            {
-                CharacterPoseNodeDefinition definition =
-                    CharacterPoseNodeDefinitionModule.Shared.Require(
-                        node.Kind);
-                foreach (GraphAuthoringFieldDescriptor field in
-                         definition.Capability.Fields.Where(value =>
-                             value.ObjectType == typeof(T)))
-                {
-                    if (definition.ReadField(
-                            node.Payload,
-                            field.FieldId.Value) is T value)
-                        yield return value;
-                }
-            }
+            return profile?.PoseResourceBindings
+                .Select(value => value?.Resource)
+                .OfType<CharacterPoseInertializationPolicy>()
+                .SingleOrDefault(value => $"pose-inertialization-policy:{value.PolicyId}" == ownerId);
         }
 
         static object ToAuthoringValue(CharacterPoseTuningValue value) => value.Kind switch

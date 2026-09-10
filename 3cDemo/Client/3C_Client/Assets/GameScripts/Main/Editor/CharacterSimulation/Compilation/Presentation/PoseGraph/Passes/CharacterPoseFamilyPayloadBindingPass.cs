@@ -5,6 +5,7 @@ using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
@@ -76,6 +77,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
+                CharacterPresentationPoseResourceCompilationCatalog resources,
                 CharacterAnimationPresentationProfile profile,
                 CharacterLinkedPoseProjectionPayload linkedPose,
                 CharacterFootPlacementAnalysisCompilation footAnalysis,
@@ -109,6 +111,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
                 ProfileIndicesByIdentity = profileIndicesByIdentity ??
                     throw new ArgumentNullException(nameof(profileIndicesByIdentity));
+                Resources = resources ?? throw new ArgumentNullException(nameof(resources));
                 Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
                 LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
                 FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
@@ -135,6 +138,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
             public IReadOnlyDictionary<string, int> CurveIndices { get; }
             public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
+            public CharacterPresentationPoseResourceCompilationCatalog Resources { get; }
             public CharacterAnimationPresentationProfile Profile { get; }
             public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
             public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
@@ -217,6 +221,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.SourceIndices,
                 request.CurveIndices,
                 request.ProfileIndicesByIdentity,
+                request.Resources,
                 request.Profile,
                 request.LinkedPose,
                 request.FootAnalysis,
@@ -1025,9 +1030,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     $"Animation Slot '{scopedNodeId}' requires one exact AllowEmpty Action Playback binding on channel '{payload.AnimationChannelId}'.");
             }
             AnimationBlendNodePayload blendNode = state.BlendNodes[blendNodeIndex];
+            CharacterAnimationBlendPolicy blendPolicy = state.Resources.BlendPolicy(
+                payload.BlendPolicySlot,
+                scopedNodeId.Value);
             if (blendNode == null || blendNode.NodeId != scopedNodeId || blendNode.StackPolicy == null ||
-                !payload.BlendPolicy ||
-                blendNode.StackPolicy.MaxActiveSourceEntries != payload.BlendPolicy.StackPolicy.MaxActiveSourceEntries)
+                blendNode.StackPolicy.MaxActiveSourceEntries != blendPolicy.StackPolicy.MaxActiveSourceEntries)
             {
                 throw new InvalidOperationException(
                     $"Animation Slot '{scopedNodeId}' has no exact BlendStack workspace payload.");
@@ -1304,8 +1311,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new CharacterPresentationFootPlacementDescriptor(
                     index,
                     scopedNodeId,
-                    payload.Profile,
-                    payload.Calibration,
+                    state.Resources.FootProfile(payload.ProfileSlot, scopedNodeId.Value),
+                    state.Resources.FootCalibration(payload.CalibrationSlot, scopedNodeId.Value),
                     goalOffset));
             return index;
         }
@@ -1849,8 +1856,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.ClipPlayers[source.ClipPlayerIndex];
             CharacterPresentationPoseSourcePlan poseSource =
                 state.PoseSources[clipPlayer.PresentationPoseSourceIndex];
+            RootMotionCurveAsset yawCurve = state.Resources.RootMotionCurve(
+                payload.YawCurveSlot,
+                scopedNodeId.Value);
             if (poseSource.Clip.isLooping ||
-                Math.Abs(poseSource.Clip.length - payload.YawCurve.Duration) >
+                Math.Abs(poseSource.Clip.length - yawCurve.Duration) >
                 0.0001f)
             {
                 throw new InvalidOperationException(
@@ -1863,9 +1873,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     scopedNodeId,
                     source.ClipPlayerIndex,
                     state.Rig.RequireRootBoneIndex(),
-                    payload.YawCurve.Duration,
-                    payload.YawCurve.TotalYaw,
-                    payload.YawCurve.LocalYaw));
+                    yawCurve.Duration,
+                    yawCurve.TotalYaw,
+                    yawCurve.LocalYaw));
             return index;
         }
 

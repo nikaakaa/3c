@@ -89,6 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal static Compilation CompileCatalog(
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             List<string> errors)
         {
             if (!graphAsset || graphAsset.Graph == null || !rig)
@@ -101,7 +102,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CollectBlendAuthoringNodes(graphAsset);
             for (int i = 0; i < blendNodes.Count; i++)
             {
-                CharacterAnimationBlendPolicy policy = blendNodes[i].Node.BlendPolicy;
+                CharacterAnimationBlendPolicy policy = resources.BlendPolicy(
+                    RequireBlendPolicySlot(blendNodes[i].Node),
+                    blendNodes[i].NodeId.Value);
                 if (!policy)
                     continue;
                 CollectBlendRule(policy.DefaultTransition, rig, curves, profiles, profileIdentityKeys, errors);
@@ -166,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             List<CharacterPoseInertializationPolicy> inertialPolicies =
-                CollectInertializationPolicies(graphAsset);
+                CollectInertializationPolicies(graphAsset, resources);
             for (int i = 0; i < inertialPolicies.Count; i++)
             {
                 CharacterPoseInertializationPolicy policy = inertialPolicies[i];
@@ -263,6 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal static AnimationBlendNodePayload[] CompileNodes(
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             IReadOnlyList<CharacterPresentationProducerEntry> producers,
             Compilation catalogs,
             List<string> errors,
@@ -278,7 +282,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int nodeIndex = 0; nodeIndex < authoredNodes.Count; nodeIndex++)
             {
                 CompiledBlendAuthoringNode authored = authoredNodes[nodeIndex];
-                CharacterAnimationBlendPolicy policy = authored.Node.BlendPolicy;
+                CharacterAnimationBlendPolicy policy = resources.BlendPolicy(
+                    RequireBlendPolicySlot(authored.Node),
+                    authored.NodeId.Value);
                 try
                 {
                     policy.RequireValid(rig);
@@ -691,33 +697,48 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static List<CharacterPoseInertializationPolicy> CollectInertializationPolicies(
-            CharacterPresentationPoseGraphAsset graphAsset)
+            CharacterPresentationPoseGraphAsset graphAsset,
+            CharacterPresentationPoseResourceCompilationCatalog resources)
         {
             var result = new List<CharacterPoseInertializationPolicy>();
             CollectInertializationPolicies(
                 graphAsset,
                 graphAsset.Graph,
+                resources,
                 result);
             return result;
         }
 
+        static CharacterPoseResourceSlot RequireBlendPolicySlot(
+            CharacterPoseCanvasNode node) =>
+            node.Payload switch
+            {
+                CharacterAnimationSlotPosePayload value => value.BlendPolicySlot,
+                CharacterBlendStackPosePayload value => value.BlendPolicySlot,
+                _ => throw new InvalidOperationException(
+                    $"Pose node '{node.NodeId}' does not own a Blend Policy Slot.")
+            };
+
         static void CollectInertializationPolicies(
             CharacterPresentationPoseGraphAsset owner,
             CharacterPoseCanvasGraph graph,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             List<CharacterPoseInertializationPolicy> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
                 CharacterPoseCanvasNode node = graph.Nodes[i];
-                if (node.Kind == CharacterPoseNodeKind.Inertialization && node.InertializationPolicy)
-                    result.Add(node.InertializationPolicy);
+                if (node.Kind == CharacterPoseNodeKind.Inertialization)
+                    result.Add(resources.InertializationPolicy(
+                        node.RequirePayload<CharacterInertializationPosePayload>().PolicySlot,
+                        node.NodeId.Value));
                 if (node.Kind != CharacterPoseNodeKind.PoseSubgraph ||
                     node.Subgraph == null ||
                     !node.Subgraph.PoseGraphId.IsValid)
                     continue;
                 CharacterPoseCanvasGraph child =
                     owner.RequireGraph(node.Subgraph.PoseGraphId);
-                CollectInertializationPolicies(owner, child, result);
+                CollectInertializationPolicies(owner, child, resources, result);
             }
         }
 

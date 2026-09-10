@@ -140,6 +140,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 payloadPlan,
                                 request.AuthoringView.OwnerAsset,
                                 request.Rig,
+                                request.Resources,
                                 request.CurveIndices,
                                 request.ProfileIndicesByIdentity);
                 CharacterPoseFamilyPayloadBinding binding =

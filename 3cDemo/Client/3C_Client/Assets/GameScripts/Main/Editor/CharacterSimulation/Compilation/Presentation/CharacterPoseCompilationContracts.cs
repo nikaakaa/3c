@@ -129,6 +129,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
             MotionMatchingProjectionPayload motionMatching,
@@ -151,6 +152,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
             ProfileIndicesByIdentity = profileIndicesByIdentity ??
                 throw new ArgumentNullException(nameof(profileIndicesByIdentity));
+            Resources = resources ?? throw new ArgumentNullException(nameof(resources));
             Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
             MotionMatching = motionMatching;
@@ -170,6 +172,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
         public IReadOnlyDictionary<string, int> CurveIndices { get; }
         public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
+        public CharacterPresentationPoseResourceCompilationCatalog Resources { get; }
         public CharacterAnimationPresentationProfile Profile { get; }
         public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
         public MotionMatchingProjectionPayload MotionMatching { get; }

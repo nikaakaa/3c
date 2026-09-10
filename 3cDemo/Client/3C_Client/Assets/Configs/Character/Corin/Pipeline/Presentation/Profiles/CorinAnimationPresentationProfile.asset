@@ -73,6 +73,19 @@ MonoBehaviour:
   - {fileID: 51165433380949522}
   - {fileID: -3088765152812931864}
   - {fileID: 8667777657623053410}
+  m_PoseResourceBindings:
+  - m_Slot: {fileID: 2850603217141939071, guid: 00531e79abbeb524ebc08428efbd0a88,
+      type: 2}
+    m_Resource: {fileID: 11400000, guid: e66d749fe12369343a053c527dbf5aaa, type: 2}
+  - m_Slot: {fileID: 2984832841761431571, guid: 00531e79abbeb524ebc08428efbd0a88,
+      type: 2}
+    m_Resource: {fileID: 11400000, guid: 0c091f82b87df624b9df65e821e52c38, type: 2}
+  - m_Slot: {fileID: 3749830543330439033, guid: 00531e79abbeb524ebc08428efbd0a88,
+      type: 2}
+    m_Resource: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}
+  - m_Slot: {fileID: 1686801183818744215, guid: 00531e79abbeb524ebc08428efbd0a88,
+      type: 2}
+    m_Resource: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69, type: 2}
   m_SourceResourceBindings:
   - m_AuthoringClip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
     m_Backend: 2

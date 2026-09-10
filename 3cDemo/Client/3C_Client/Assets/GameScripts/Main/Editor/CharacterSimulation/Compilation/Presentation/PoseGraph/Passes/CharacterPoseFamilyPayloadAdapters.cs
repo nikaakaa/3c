@@ -121,7 +121,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseFamilyPayloadBindingRequest request)
         {
             CharacterAnimationBoneMaskAsset boneMask =
-                request.Handler.BoneMask(request.IrNode.Payload);
+                request.IrNode.Payload is CharacterLayeredBoneBlendPosePayload layered
+                    ? request.State.Resources.BoneMask(
+                        layered.BoneMaskSlot,
+                        request.ScopedNodeId.Value)
+                    : null;
             return boneMask
                 ? CharacterPoseFamilyPayloadPlanPass.CompileMask(
                     boneMask,
@@ -386,7 +390,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!m_Adapters.TryGetValue(family, out ICharacterPoseFamilyPayloadAdapter adapter))
             {
                 CharacterAnimationBoneMaskAsset boneMask =
-                    request.Handler.BoneMask(request.IrNode.Payload);
+                    request.IrNode.Payload is CharacterLayeredBoneBlendPosePayload layered
+                        ? request.State.Resources.BoneMask(
+                            layered.BoneMaskSlot,
+                            request.ScopedNodeId.Value)
+                        : null;
                 return new CharacterPoseFamilyPayloadBindingResult(
                     boneMaskIndex: boneMask
                         ? CharacterPoseFamilyPayloadPlanPass.CompileMask(

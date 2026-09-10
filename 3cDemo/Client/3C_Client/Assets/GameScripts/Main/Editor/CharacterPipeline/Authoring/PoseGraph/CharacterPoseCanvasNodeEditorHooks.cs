@@ -34,8 +34,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (node.Payload is CharacterAnimationSlotPosePayload slot)
             {
                 GUILayout.Label($"Slot: {slot.SlotId.Value}", EditorStyles.miniLabel);
-                if (slot.BlendPolicy)
-                    GUILayout.Label($"默认混合: {slot.BlendPolicy.DefaultTransition.BlendLogic} · {slot.BlendPolicy.DefaultTransition.DurationSeconds:0.###} s", EditorStyles.miniLabel);
+                GUILayout.Label(
+                    $"Blend Policy Slot: {(slot.BlendPolicySlot ? slot.BlendPolicySlot.name : "Missing")}",
+                    EditorStyles.miniLabel);
             }
 
             if (CharacterPoseGraphWorkspace.TryGetNodeObservation(node, out GraphAuthoringRuntimeTraceProjection trace))

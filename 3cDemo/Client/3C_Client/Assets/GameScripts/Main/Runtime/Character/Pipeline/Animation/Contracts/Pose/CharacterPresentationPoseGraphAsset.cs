@@ -98,6 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterPoseStateMachineLayout>();
         [SerializeField] CharacterPresentationPoseSourceSlot[] m_SourceSlots =
             Array.Empty<CharacterPresentationPoseSourceSlot>();
+        [SerializeField] CharacterPoseResourceSlot[] m_ResourceSlots =
+            Array.Empty<CharacterPoseResourceSlot>();
 #if UNITY_EDITOR
         [Serializable]
         internal sealed class LegacyPoseNode
@@ -278,6 +280,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_StateMachineLayouts ?? Array.Empty<CharacterPoseStateMachineLayout>();
         public IReadOnlyList<CharacterPresentationPoseSourceSlot> SourceSlots =>
             m_SourceSlots ?? Array.Empty<CharacterPresentationPoseSourceSlot>();
+        public IReadOnlyList<CharacterPoseResourceSlot> ResourceSlots =>
+            m_ResourceSlots ?? Array.Empty<CharacterPoseResourceSlot>();
 
         internal void SetGraph(CharacterPoseCanvasGraph graph)
         {
@@ -302,6 +306,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException($"Pose Source Slot name '{slot.name}' is duplicated.");
             }
             m_SourceSlots = values;
+        }
+
+        internal void SetResourceSlots(CharacterPoseResourceSlot[] slots)
+        {
+            CharacterPoseResourceSlot[] values = slots ??
+                Array.Empty<CharacterPoseResourceSlot>();
+            var references = new HashSet<CharacterPoseResourceSlot>();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < values.Length; i++)
+            {
+                CharacterPoseResourceSlot slot = values[i];
+                if (!slot || !references.Add(slot))
+                    throw new InvalidOperationException($"Pose Resource Slot #{i} is missing or duplicated.");
+                slot.RequireValid();
+                if (!names.Add(slot.name.Trim()))
+                    throw new InvalidOperationException($"Pose Resource Slot name '{slot.name}' is duplicated.");
+            }
+            m_ResourceSlots = values;
         }
 
         public CharacterPoseCanvasGraph RequireGraph(PoseGraphId graphId)

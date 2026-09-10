@@ -44,6 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<AnimationProducerPresentationBinding>();
         [SerializeField] CharacterPresentationPoseSourceBinding[] m_PoseSourceBindings =
             Array.Empty<CharacterPresentationPoseSourceBinding>();
+        [SerializeField] CharacterPoseResourceBinding[] m_PoseResourceBindings =
+            Array.Empty<CharacterPoseResourceBinding>();
         [SerializeField] CharacterAnimationSourceResourceBinding[] m_SourceResourceBindings =
             Array.Empty<CharacterAnimationSourceResourceBinding>();
         [SerializeField] CharacterAnimationPropertyAuthoringBinding[] m_AnimationPropertyBindings =
@@ -69,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ProducerBindings ?? Array.Empty<AnimationProducerPresentationBinding>();
         public IReadOnlyList<CharacterPresentationPoseSourceBinding> PoseSourceBindings =>
             m_PoseSourceBindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        public IReadOnlyList<CharacterPoseResourceBinding> PoseResourceBindings =>
+            m_PoseResourceBindings ?? Array.Empty<CharacterPoseResourceBinding>();
         public IReadOnlyList<CharacterAnimationSourceResourceBinding> SourceResourceBindings =>
             m_SourceResourceBindings ?? Array.Empty<CharacterAnimationSourceResourceBinding>();
         public IReadOnlyList<CharacterAnimationPropertyAuthoringBinding> AnimationPropertyBindings =>
@@ -111,6 +115,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void SetPoseSourceBindings(CharacterPresentationPoseSourceBinding[] bindings)
         {
             m_PoseSourceBindings = bindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        }
+
+        public CharacterPoseResourceBinding FindPoseResourceBinding(
+            CharacterPoseResourceSlot slot)
+        {
+            for (int i = 0; i < PoseResourceBindings.Count; i++)
+            {
+                CharacterPoseResourceBinding binding = PoseResourceBindings[i];
+                if (binding?.Slot == slot)
+                    return binding;
+            }
+            return null;
+        }
+
+        public void SetPoseResourceBindings(CharacterPoseResourceBinding[] bindings)
+        {
+            m_PoseResourceBindings = bindings ?? Array.Empty<CharacterPoseResourceBinding>();
         }
 
         public CharacterAnimationSourceResourceBinding FindSourceResourceBinding(AnimationClip clip)

@@ -106,17 +106,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             foreach (CharacterPresentationPoseSourceSlot slot in SourceSlots)
                 if (slot)
                     yield return slot;
-            foreach (CharacterPoseCanvasNode node in m_Graphs.SelectMany(value => value.Nodes))
-            {
-                if (node.BoneMask)
-                    yield return node.BoneMask;
-                if (node.FootPlacementProfile)
-                    yield return node.FootPlacementProfile;
-                if (node.FootPlacementCalibration)
-                    yield return node.FootPlacementCalibration;
-                if (node.RootOrientationYawCurve)
-                    yield return node.RootOrientationYawCurve;
-            }
+            foreach (CharacterPoseResourceSlot slot in m_Owner.ResourceSlots)
+                if (slot)
+                    yield return slot;
         }
     }
 }

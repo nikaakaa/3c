@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseFamilyPayloadPlan binding,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndices)
         {
@@ -33,6 +34,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CollectPolicies(
                 graphAsset,
                 graphAsset.Graph,
+                resources,
                 string.Empty,
                 policies);
             int inertializationCount = operations.Count(value =>
@@ -307,6 +309,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static void CollectPolicies(
             CharacterPresentationPoseGraphAsset owner,
             CharacterPoseCanvasGraph graph,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             string scope,
             Dictionary<PoseNodeId, CharacterPoseInertializationPolicy> result)
         {
@@ -317,7 +320,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
                 if (node.Kind == CharacterPoseNodeKind.Inertialization)
-                    result.Add(scopedNodeId, node.InertializationPolicy);
+                    result.Add(
+                        scopedNodeId,
+                        resources.InertializationPolicy(
+                            node.RequirePayload<CharacterInertializationPosePayload>().PolicySlot,
+                            scopedNodeId.Value));
                 if (node.Kind != CharacterPoseNodeKind.PoseSubgraph ||
                     node.Subgraph == null ||
                     !node.Subgraph.PoseGraphId.IsValid)
@@ -327,6 +334,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CollectPolicies(
                     owner,
                     child,
+                    resources,
                     scopedNodeId.Value + "/" + child.GraphId,
                     result);
             }

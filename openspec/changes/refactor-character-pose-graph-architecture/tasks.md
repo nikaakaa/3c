@@ -272,6 +272,7 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 ## 24. PoseGraph复用与Character Binding分离（2026-09-10当前决定）
 
 - [x] 24.0 先收口持续动画源：Clip Player与Blend Space Player只保存Graph-owned Source Slot，实际AnimationClip／BlendSpace由Presentation Profile绑定；删除Compiler、Source Plan、Build Input和Authoring中的direct source索引与直连路径，并完成Corin现有7个Clip Player的Source Slot/Profile Binding迁移。其余Policy、Rig、Mask、IK和Foot资源仍待24.2继续迁移，不能把本步描述为完整复用。
+- [x] 24.0b 将Pose节点的Blend Policy、Inertialization Policy、Bone Mask、Foot Profile／Calibration与Root Curve迁入Graph-owned Resource Slot和Profile Resource Binding，并让Projection的Blend、Inertialization、Foot、Mask与Root lowering从Binding目录解析；Motion Matching专属资源、Rig/Bone合同和Linked Pose映射仍待24.2继续收口。
 - [ ] 24.1 将Pose Graph资产收敛为可复用Graph：只保存稳定拓扑、参数、StateMachine、Transition、Graph Role和抽象能力合同，不保存Corin/Character资源引用。
 - [ ] 24.2 将Pose Source Slot、AnimationClip/BlendSpace/Motion Matching、Rig/Bone/Mask、IK/Foot、Slot/Channel、Blend/Inertialization Policy、Action producer和Linked Pose映射收归Profile或独立PoseGraph Binding。
 - [ ] 24.3 将Compiler输入固定为`Reusable PoseGraph + Character PoseGraph Binding + Rig/Profile + exact Definition`，Projection、Program Image和资源目录按具体Character实例化。

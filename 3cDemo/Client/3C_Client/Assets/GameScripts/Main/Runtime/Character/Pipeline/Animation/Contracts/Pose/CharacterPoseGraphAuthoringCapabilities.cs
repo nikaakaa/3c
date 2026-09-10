@@ -175,16 +175,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new[] { Child("open-state-machine", "Open State Machine", StateMachine) },
                 executionDomain: CharacterPoseExecutionDomain.ManagedControl));
             catalog.Register(Node<CharacterAnimationSlotPosePayload>(CharacterPoseNodeKind.AnimationSlot, rootAndStateWithLinkedEntry, "Slot", "Action", blendColor,
-                Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
+                Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), ResourceField("blend-policy", "Blend Policy")),
                 Ports(In("source-pose", "Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local")),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, rootAndStateWithLinkedEntry, "Blend Stack", "Blend", blendColor,
-                Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot)), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
+                Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot)), ResourceField("blend-policy", "Blend Policy")),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, allPoseGraphsWithLinkedEntry, "Inertialization", "Blend", blendColor,
-                Fields(AssetField("inertialization-policy", "Policy", "pose-inertialization-policy", typeof(CharacterPoseInertializationPolicy))),
+                Fields(ResourceField("inertialization-policy", "Policy")),
                 UnaryLocalPosePorts(),
                 executionDomain: CharacterPoseExecutionDomain.ManagedControl));
             catalog.Register(Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, allPoseGraphsWithLinkedEntry, "Blend Pose", "Blend", blendColor,
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BinaryLocalPoseWithWeight("Base", "Overlay"),
                 GraphAuthoringDynamicPortPolicy.OrderedInputs));
             catalog.Register(Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, allPoseGraphsWithLinkedEntry, "Layered Blend Per Bone", "Blend", blendColor,
-                Fields(AssetField("bone-mask", "Bone Mask", "animation-bone-mask", typeof(CharacterAnimationBoneMaskAsset)), EnumField("blend-space", "Pose Space", typeof(CharacterLayeredBoneBlendSpace)), FloatField("weight", "Weight", 1f, 0f, 1f)),
+                Fields(ResourceField("bone-mask", "Bone Mask"), EnumField("blend-space", "Pose Space", typeof(CharacterLayeredBoneBlendSpace)), FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Overlay")));
             catalog.Register(Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, allPoseGraphsWithLinkedEntry, "Additive Pose", "Blend", blendColor,
                 Fields(StringField("reference-pose-id", "Reference Pose", "RigReference"), EnumField("reference-space", "Reference Space", typeof(AdditiveReferenceSpace)), EnumField("scale-policy", "Scale Policy", typeof(AdditiveScalePolicy)), FloatField("weight", "Weight", 1f, 0f, 1f)),
@@ -206,10 +206,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
                 UnaryComponentPoseWithWeight()));
             catalog.Register(Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, rootAndStateWithLinkedEntry, "Root Orientation Warp", "Constraints", constraintColor,
-                Fields(AssetField("yaw-curve", "Yaw Profile", "root-motion-curve", typeof(RootMotionCurveAsset))),
+                Fields(ResourceField("yaw-curve", "Yaw Profile")),
                 UnaryLocalPosePorts()));
             catalog.Register(Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, allPoseGraphs, "Foot Placement", "Goal Sources", constraintColor,
-                Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration))),
+                Fields(ResourceField("profile", "Profile"), ResourceField("calibration", "Calibration")),
                 Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
                 executionDomain: CharacterPoseExecutionDomain.WorldAwareValue));
             catalog.Register(Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, allPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", constraintColor,
@@ -564,6 +564,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static GraphAuthoringFieldDescriptor SourceField(Type slotType) =>
             Field("pose-source-slot", "Pose Source", GraphAuthoringFieldValueKind.AssetReference, "pose-source-slot", slotType);
+        static GraphAuthoringFieldDescriptor ResourceField(string id, string name) =>
+            AssetField(id, name, "pose-resource-slot", typeof(CharacterPoseResourceSlot));
         static GraphAuthoringFieldDescriptor OptionalIdentityField(string id, string name, string pickerKind) =>
             new GraphAuthoringFieldDescriptor(
                 new GraphAuthoringFieldId(id),

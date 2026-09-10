@@ -92,10 +92,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     if (node?.Payload is CharacterFootPlacementPosePayload foot &&
-                        foot.Profile)
+                        m_Profile?.FindPoseResourceBinding(foot.ProfileSlot)?.Resource
+                            is CharacterFootPlacementProfile footProfile)
                     {
-                        profiles[$"foot-placement:{foot.Profile.ProfileId}"] =
-                            foot.Profile.Revision;
+                        profiles[$"foot-placement:{footProfile.ProfileId}"] =
+                            footProfile.Revision;
                     }
                 }
             }

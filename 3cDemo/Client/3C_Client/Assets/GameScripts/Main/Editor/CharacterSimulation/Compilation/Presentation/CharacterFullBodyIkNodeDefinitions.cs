@@ -15,31 +15,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterFootPlacementPosePayload(
-                input.Require<CharacterFootPlacementProfile>("profile"),
-                input.Require<CharacterFootPlacementRigCalibration>("calibration"));
+                input.Require<CharacterPoseResourceSlot>("profile"),
+                input.Require<CharacterPoseResourceSlot>("calibration"));
 
         protected override object ReadField(CharacterFootPlacementPosePayload payload, string field) =>
             field switch
             {
-                "profile" => payload.Profile,
-                "calibration" => payload.Calibration,
+                "profile" => payload.ProfileSlot,
+                "calibration" => payload.CalibrationSlot,
                 _ => base.ReadField(payload, field)
             };
 
         protected override void Validate(CharacterFootPlacementPosePayload payload, string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.Profile && payload.Calibration,
+                payload.ProfileSlot && payload.CalibrationSlot,
                 sourcePath,
                 "Foot Placement profile or calibration is missing.");
-            payload.Profile.RequireValid();
-            CharacterPoseNodeDefinitionValidation.Require(
-                string.Equals(
-                    payload.Profile.Revision,
-                    payload.Profile.ComputeRevision(),
-                    StringComparison.Ordinal),
-                sourcePath,
-                "Foot Placement profile revision is stale.");
         }
 
         protected override void ValidateRig(
@@ -47,14 +39,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             string sourcePath)
         {
-            try
-            {
-                payload.Calibration.RequireRig(rig);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException($"{sourcePath}: {exception.Message}", exception);
-            }
         }
     }
 

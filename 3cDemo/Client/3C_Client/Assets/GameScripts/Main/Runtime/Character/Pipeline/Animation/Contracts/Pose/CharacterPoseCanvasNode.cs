@@ -99,16 +99,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterAnimationBlendSpaceInputRangePolicy BlendSpaceInputRangePolicy =>
             (m_Payload as CharacterBlendSpacePlayerPosePayload)?.InputRangePolicy ??
             CharacterAnimationBlendSpaceInputRangePolicy.Clamp;
-        public CharacterAnimationBlendPolicy BlendPolicy => m_Payload switch
+        public CharacterPoseResourceSlot BlendPolicySlot => m_Payload switch
         {
-            CharacterAnimationSlotPosePayload value => value.BlendPolicy,
-            CharacterBlendStackPosePayload value => value.BlendPolicy,
+            CharacterAnimationSlotPosePayload value => value.BlendPolicySlot,
+            CharacterBlendStackPosePayload value => value.BlendPolicySlot,
             _ => null
         };
-        public CharacterPoseInertializationPolicy InertializationPolicy =>
-            (m_Payload as CharacterInertializationPosePayload)?.Policy;
-        public CharacterAnimationBoneMaskAsset BoneMask =>
-            (m_Payload as CharacterLayeredBoneBlendPosePayload)?.BoneMask;
+        public CharacterPoseResourceSlot InertializationPolicySlot =>
+            (m_Payload as CharacterInertializationPosePayload)?.PolicySlot;
+        public CharacterPoseResourceSlot BoneMaskSlot =>
+            (m_Payload as CharacterLayeredBoneBlendPosePayload)?.BoneMaskSlot;
         public float Weight => m_Payload switch
         {
             CharacterBlendPosePayload value => value.Weight,
@@ -141,15 +141,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (m_Payload as CharacterModifyBonePosePayload)?.Rotation ?? Quaternion.identity;
         public Vector3 ModifyScale =>
             (m_Payload as CharacterModifyBonePosePayload)?.Scale ?? Vector3.one;
-        public RootMotionCurveAsset RootOrientationYawCurve =>
-            (m_Payload as CharacterRootOrientationWarpPosePayload)?.YawCurve;
+        public CharacterPoseResourceSlot RootOrientationYawCurveSlot =>
+            (m_Payload as CharacterRootOrientationWarpPosePayload)?.YawCurveSlot;
         public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
             (m_Payload as CharacterPoseBoneIkGoalsPayload)?.Bindings ??
             Array.Empty<CharacterPoseBoneIkGoalBinding>();
-        public CharacterFootPlacementProfile FootPlacementProfile =>
-            (m_Payload as CharacterFootPlacementPosePayload)?.Profile;
-        public CharacterFootPlacementRigCalibration FootPlacementCalibration =>
-            (m_Payload as CharacterFootPlacementPosePayload)?.Calibration;
+        public CharacterPoseResourceSlot FootPlacementProfileSlot =>
+            (m_Payload as CharacterFootPlacementPosePayload)?.ProfileSlot;
+        public CharacterPoseResourceSlot FootPlacementCalibrationSlot =>
+            (m_Payload as CharacterFootPlacementPosePayload)?.CalibrationSlot;
         public LinkedPoseGroupId LinkedPoseGroupId =>
             (m_Payload as CharacterLinkedPoseCallPayload)?.GroupId ?? default;
         public LinkedPoseInterfaceId LinkedPoseInterfaceId =>
@@ -182,10 +182,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool AnimationSlotAllowEmpty =>
             m_Payload is CharacterAnimationSlotPosePayload value &&
             value.SelectionAvailability == AnimationSelectionAvailabilityPolicy.AllowEmpty;
-        public int AnimationSlotBlendStackCapacity =>
-            m_Payload is CharacterAnimationSlotPosePayload value && value.BlendPolicy
-                ? value.BlendPolicy.StackPolicy.MaxActiveSourceEntries
-                : 0;
 
         public CharacterPoseCanvasNode() { }
 

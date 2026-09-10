@@ -119,9 +119,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             long poseSourceMs = 0;
             long motionMatchingMs = 0;
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog = null;
+            CharacterPresentationPoseResourceCompilationCatalog resourceCatalog = null;
             MotionMatchingProjectionPayload motionMatching = null;
             if (!reusePoseResult)
             {
+                var resourceDiagnostics = new List<string>();
+                resourceCatalog = CharacterPresentationPoseResourceCompiler.Compile(
+                    context.AnimationPresentationProfile,
+                    resourceDiagnostics);
+                errors.AddRange(resourceDiagnostics);
                 CharacterPresentationPoseSourceCompilationResult sourceCompilation =
                     CharacterPresentationPoseSourceCompiler.Compile(
                         context.AnimationPresentationProfile);
@@ -170,6 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         request.FootAnalysis,
                         motionMatching,
                         sourceCatalog,
+                        resourceCatalog,
                         request.AnimationBuildInput,
                         movementModeStateIdentities,
                         errors,
@@ -359,13 +366,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             MotionMatchingProjectionPayload motionMatching,
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
+            CharacterPresentationPoseResourceCompilationCatalog resourceCatalog,
             CharacterAnimationBuildInput animationBuildInput,
             IReadOnlyList<string> movementModeStateIdentities,
             List<string> errors,
             CharacterPresentationProjectionCompileResult reusedPoseResult = null)
         {
             if (context == null || profile == null ||
-                (reusedPoseResult == null && sourceCatalog == null) ||
+                (reusedPoseResult == null && (sourceCatalog == null || resourceCatalog == null)) ||
                 animationBuildInput == null)
             {
                 errors?.Add("Character Presentation Projection build input is incomplete.");
@@ -434,12 +442,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterPresentationAnimationBlendCompiler.CompileCatalog(
                     profile.PoseGraph,
                     profile.RigDefinition,
+                    resourceCatalog,
                     errors);
             AnimationBlendNodePayload[] blendNodes = blendCatalogs == null
                 ? Array.Empty<AnimationBlendNodePayload>()
                 : CharacterPresentationAnimationBlendCompiler.CompileNodes(
                     profile.PoseGraph,
                     profile.RigDefinition,
+                    resourceCatalog,
                     entries,
                     blendCatalogs,
                     errors,
@@ -495,6 +505,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourceCatalog.SourceIndices,
                 blendCatalogs?.CurveIndices,
                 blendCatalogs?.ProfileIndicesByIdentity,
+                resourceCatalog,
                 profile,
                 linkedPose,
                 motionMatching,

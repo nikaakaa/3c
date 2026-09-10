@@ -1087,30 +1087,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             switch (node.Payload)
             {
                 case CharacterAnimationSlotPosePayload animationSlot:
+                    CharacterAnimationBlendPolicy slotPolicy =
+                        m_Profile?.FindPoseResourceBinding(animationSlot.BlendPolicySlot)?.Resource as CharacterAnimationBlendPolicy;
                     result.Add(new GraphAuthoringReadOnlyDetail("Slot", animationSlot.SlotId.Value));
                     result.Add(new GraphAuthoringReadOnlyDetail("Group", ResolveSlotGroup(animationSlot.SlotId)));
                     result.Add(new GraphAuthoringReadOnlyDetail("Animation Channel", animationSlot.AnimationChannelId.Value));
                     result.Add(new GraphAuthoringReadOnlyDetail("Availability", animationSlot.SelectionAvailability.ToString()));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy", animationSlot.BlendPolicy ? animationSlot.BlendPolicy.PolicyId : "Missing"));
-                    if (animationSlot.BlendPolicy)
+                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy Slot", animationSlot.BlendPolicySlot ? animationSlot.BlendPolicySlot.name : "Missing"));
+                    if (slotPolicy)
                     {
                         result.Add(new GraphAuthoringReadOnlyDetail(
                             "Default Transition",
-                            $"{animationSlot.BlendPolicy.DefaultTransition.BlendLogic} / {animationSlot.BlendPolicy.DefaultTransition.DurationSeconds:0.###} s"));
+                            $"{slotPolicy.DefaultTransition.BlendLogic} / {slotPolicy.DefaultTransition.DurationSeconds:0.###} s"));
                     }
                     break;
                 case CharacterBlendStackPosePayload stack:
-                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy", stack.BlendPolicy ? stack.BlendPolicy.PolicyId : "Missing"));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Max Entries", stack.BlendPolicy ? stack.BlendPolicy.StackPolicy.MaxActiveSourceEntries.ToString() : "Missing"));
+                    CharacterAnimationBlendPolicy stackPolicy =
+                        m_Profile?.FindPoseResourceBinding(stack.BlendPolicySlot)?.Resource as CharacterAnimationBlendPolicy;
+                    result.Add(new GraphAuthoringReadOnlyDetail("Blend Policy Slot", stack.BlendPolicySlot ? stack.BlendPolicySlot.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Max Entries", stackPolicy ? stackPolicy.StackPolicy.MaxActiveSourceEntries.ToString() : "Unavailable"));
                     break;
                 case CharacterInertializationPosePayload inertialization:
-                    result.Add(new GraphAuthoringReadOnlyDetail("Policy", inertialization.Policy ? inertialization.Policy.PolicyId : "Missing"));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Policy Revision", inertialization.Policy ? inertialization.Policy.Revision : "Missing"));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Parameter Filters", inertialization.Policy ? inertialization.Policy.Response.ParameterFilters.Count.ToString() : "Missing"));
+                    CharacterPoseInertializationPolicy inertializationPolicy =
+                        m_Profile?.FindPoseResourceBinding(inertialization.PolicySlot)?.Resource as CharacterPoseInertializationPolicy;
+                    result.Add(new GraphAuthoringReadOnlyDetail("Policy Slot", inertialization.PolicySlot ? inertialization.PolicySlot.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Policy Revision", inertializationPolicy ? inertializationPolicy.Revision : "Unavailable"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Parameter Filters", inertializationPolicy ? inertializationPolicy.Response.ParameterFilters.Count.ToString() : "Unavailable"));
                     break;
                 case CharacterLayeredBoneBlendPosePayload layered:
-                    result.Add(new GraphAuthoringReadOnlyDetail("Bone Mask", layered.BoneMask ? layered.BoneMask.MaskId : "Missing"));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Mask Rig", layered.BoneMask ? $"{layered.BoneMask.RigId}@{layered.BoneMask.RigRevision}" : "Missing"));
+                    CharacterAnimationBoneMaskAsset boneMask =
+                        m_Profile?.FindPoseResourceBinding(layered.BoneMaskSlot)?.Resource as CharacterAnimationBoneMaskAsset;
+                    result.Add(new GraphAuthoringReadOnlyDetail("Bone Mask Slot", layered.BoneMaskSlot ? layered.BoneMaskSlot.name : "Missing"));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Mask Rig", boneMask ? $"{boneMask.RigId}@{boneMask.RigRevision}" : "Unavailable"));
                     result.Add(new GraphAuthoringReadOnlyDetail("Pose Space", layered.BlendSpace.ToString()));
                     result.Add(new GraphAuthoringReadOnlyDetail("Alpha", layered.Weight.ToString("0.###")));
                     break;

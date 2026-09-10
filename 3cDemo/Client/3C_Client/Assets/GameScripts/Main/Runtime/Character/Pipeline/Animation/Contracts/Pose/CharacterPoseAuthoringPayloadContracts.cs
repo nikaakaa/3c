@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ThirdPersonCharacter.Pipeline.Presentation;
-using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -200,19 +198,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_SlotId = string.Empty;
         [SerializeField] string m_AnimationChannelId = string.Empty;
         [SerializeField] AnimationSelectionAvailabilityPolicy m_SelectionAvailability = AnimationSelectionAvailabilityPolicy.RequireSelection;
-        [SerializeField] CharacterAnimationBlendPolicy m_BlendPolicy;
+        [SerializeField] CharacterPoseResourceSlot m_BlendPolicySlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.AnimationSlot;
         public AnimationSlotId SlotId => string.IsNullOrWhiteSpace(m_SlotId) ? default : new AnimationSlotId(m_SlotId);
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId) ? default : new AnimationChannelId(m_AnimationChannelId);
         public AnimationSelectionAvailabilityPolicy SelectionAvailability => m_SelectionAvailability;
-        public CharacterAnimationBlendPolicy BlendPolicy => m_BlendPolicy;
+        public CharacterPoseResourceSlot BlendPolicySlot => m_BlendPolicySlot;
         public CharacterAnimationSlotPosePayload() { }
-        public CharacterAnimationSlotPosePayload(AnimationSlotId slotId, AnimationChannelId animationChannelId, AnimationSelectionAvailabilityPolicy availability, CharacterAnimationBlendPolicy blendPolicy)
+        public CharacterAnimationSlotPosePayload(AnimationSlotId slotId, AnimationChannelId animationChannelId, AnimationSelectionAvailabilityPolicy availability, CharacterPoseResourceSlot blendPolicySlot)
         {
             m_SlotId = slotId.IsValid ? slotId.Value : throw new ArgumentException("Animation Slot identity is invalid.", nameof(slotId));
             m_AnimationChannelId = animationChannelId.IsValid ? animationChannelId.Value : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             m_SelectionAvailability = availability;
-            m_BlendPolicy = blendPolicy;
+            m_BlendPolicySlot = blendPolicySlot ? blendPolicySlot : throw new ArgumentNullException(nameof(blendPolicySlot));
         }
     }
 
@@ -220,26 +218,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterBlendStackPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterMotionMatchingPoseSourceSlot m_SourceSlot;
-        [SerializeField] CharacterAnimationBlendPolicy m_BlendPolicy;
+        [SerializeField] CharacterPoseResourceSlot m_BlendPolicySlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.BlendStack;
         public CharacterMotionMatchingPoseSourceSlot SourceSlot => m_SourceSlot;
-        public CharacterAnimationBlendPolicy BlendPolicy => m_BlendPolicy;
+        public CharacterPoseResourceSlot BlendPolicySlot => m_BlendPolicySlot;
         public CharacterBlendStackPosePayload() { }
-        public CharacterBlendStackPosePayload(CharacterMotionMatchingPoseSourceSlot sourceSlot, CharacterAnimationBlendPolicy blendPolicy)
+        public CharacterBlendStackPosePayload(CharacterMotionMatchingPoseSourceSlot sourceSlot, CharacterPoseResourceSlot blendPolicySlot)
         {
             m_SourceSlot = sourceSlot ? sourceSlot : throw new ArgumentNullException(nameof(sourceSlot));
-            m_BlendPolicy = blendPolicy;
+            m_BlendPolicySlot = blendPolicySlot ? blendPolicySlot : throw new ArgumentNullException(nameof(blendPolicySlot));
         }
     }
 
     [Serializable]
     public sealed class CharacterInertializationPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterPoseInertializationPolicy m_Policy;
+        [SerializeField] CharacterPoseResourceSlot m_PolicySlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.Inertialization;
-        public CharacterPoseInertializationPolicy Policy => m_Policy;
+        public CharacterPoseResourceSlot PolicySlot => m_PolicySlot;
         public CharacterInertializationPosePayload() { }
-        public CharacterInertializationPosePayload(CharacterPoseInertializationPolicy policy) => m_Policy = policy;
+        public CharacterInertializationPosePayload(CharacterPoseResourceSlot policySlot) =>
+            m_PolicySlot = policySlot ? policySlot : throw new ArgumentNullException(nameof(policySlot));
     }
 
     [Serializable]
@@ -256,20 +255,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterLayeredBoneBlendPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterAnimationBoneMaskAsset m_BoneMask;
+        [SerializeField] CharacterPoseResourceSlot m_BoneMaskSlot;
         [SerializeField] CharacterLayeredBoneBlendSpace m_BlendSpace = CharacterLayeredBoneBlendSpace.Local;
         [SerializeField, Range(0f, 1f)] float m_Weight = 1f;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.LayeredBoneBlend;
-        public CharacterAnimationBoneMaskAsset BoneMask => m_BoneMask;
+        public CharacterPoseResourceSlot BoneMaskSlot => m_BoneMaskSlot;
         public CharacterLayeredBoneBlendSpace BlendSpace => m_BlendSpace;
         public float Weight => m_Weight;
         public CharacterLayeredBoneBlendPosePayload() { }
         public CharacterLayeredBoneBlendPosePayload(
-            CharacterAnimationBoneMaskAsset boneMask,
+            CharacterPoseResourceSlot boneMaskSlot,
             CharacterLayeredBoneBlendSpace blendSpace,
             float weight)
         {
-            m_BoneMask = boneMask;
+            m_BoneMaskSlot = boneMaskSlot ? boneMaskSlot : throw new ArgumentNullException(nameof(boneMaskSlot));
             m_BlendSpace = blendSpace;
             m_Weight = CharacterBlendPosePayload.RequireWeight(weight);
         }
@@ -338,12 +337,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterRootOrientationWarpPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] RootMotionCurveAsset m_YawCurve;
+        [SerializeField] CharacterPoseResourceSlot m_YawCurveSlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.RootOrientationWarp;
-        public RootMotionCurveAsset YawCurve => m_YawCurve;
+        public CharacterPoseResourceSlot YawCurveSlot => m_YawCurveSlot;
         public CharacterRootOrientationWarpPosePayload() { }
-        public CharacterRootOrientationWarpPosePayload(RootMotionCurveAsset yawCurve) =>
-            m_YawCurve = yawCurve ? yawCurve : throw new ArgumentNullException(nameof(yawCurve));
+        public CharacterRootOrientationWarpPosePayload(CharacterPoseResourceSlot yawCurveSlot) =>
+            m_YawCurveSlot = yawCurveSlot ? yawCurveSlot : throw new ArgumentNullException(nameof(yawCurveSlot));
     }
 
     [Serializable]
@@ -405,16 +404,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterFootPlacementPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterFootPlacementProfile m_Profile;
-        [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
+        [SerializeField] CharacterPoseResourceSlot m_ProfileSlot;
+        [SerializeField] CharacterPoseResourceSlot m_CalibrationSlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
-        public CharacterFootPlacementProfile Profile => m_Profile;
-        public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
+        public CharacterPoseResourceSlot ProfileSlot => m_ProfileSlot;
+        public CharacterPoseResourceSlot CalibrationSlot => m_CalibrationSlot;
         public CharacterFootPlacementPosePayload() { }
-        public CharacterFootPlacementPosePayload(CharacterFootPlacementProfile profile, CharacterFootPlacementRigCalibration calibration)
+        public CharacterFootPlacementPosePayload(
+            CharacterPoseResourceSlot profileSlot,
+            CharacterPoseResourceSlot calibrationSlot)
         {
-            m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
-            m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
+            m_ProfileSlot = profileSlot ? profileSlot : throw new ArgumentNullException(nameof(profileSlot));
+            m_CalibrationSlot = calibrationSlot ? calibrationSlot : throw new ArgumentNullException(nameof(calibrationSlot));
         }
     }
 

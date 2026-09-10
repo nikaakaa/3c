@@ -1,10 +1,10 @@
 ## 当前执行位置
 
-当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、黑板、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。本任务继续接合全部编辑写入口、共享Macro作者流程与执行证据；资产迁移和正式产物对账仍在最后。
+当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、黑板、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；本任务剩余是Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已通过，Provider owner 已写入三份 Skill 资产，`syncState=Clean`、`plannedDiff=[]`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
+尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=81651f92321288d500de8ab90496663f12089b4159d7b139bbf5edebd533e508`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 

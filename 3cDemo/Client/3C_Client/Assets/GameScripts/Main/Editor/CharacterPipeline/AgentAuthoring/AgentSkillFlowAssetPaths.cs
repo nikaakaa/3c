@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static void RequireAvailable(string path)
         {
             if (File.Exists(path) || File.Exists(path + ".meta") ||
-                !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)))
+                AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
                 throw new InvalidOperationException($"技能根目标资产已存在，不能覆盖：{path}");
         }
     }

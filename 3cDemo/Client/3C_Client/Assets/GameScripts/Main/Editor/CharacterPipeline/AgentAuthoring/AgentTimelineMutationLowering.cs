@@ -6,6 +6,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -286,7 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 context.Error("startFrame", "timeline_section_frame_invalid", "Timeline Section frame不能小于0。");
             var target = new AgentTimelineTargetReference(timeline, timelineOutput, string.Empty, default, string.Empty, default);
             return context.IsValid
-                ? new AgentEnsureTimelineSectionMutation(operation.id, context.Path, target, section, displayName, operation.startFrame)
+                ? new AgentEnsureTimelineSectionMutation(operation.id, context.Path, target, section, displayName, operation.startFrame, operation.nextSectionId)
                 : null;
         }
 
@@ -432,6 +433,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : null;
         }
 
+        internal static AgentMutation LowerConfigureAnimationTrackSlot(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
+            string value = (operation.animationSlotId ?? string.Empty).Trim();
+            if (!string.IsNullOrEmpty(value))
+            {
+                try
+                {
+                    _ = new AnimationSlotId(value);
+                }
+                catch (Exception exception)
+                {
+                    context.Error("animationSlotId", "animation_slot_id_invalid", exception.Message);
+                }
+            }
+            return context.IsValid
+                ? new AgentConfigureAnimationTrackSlotMutation(operation.id, context.Path, target, value)
+                : null;
+        }
+
+        internal static AgentMutation LowerConfigureAnimationClipBlendProfile(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            AgentTimelineTargetReference target = LowerTimelineClipTarget(context, operation);
+            string value = (operation.blendProfileId ?? string.Empty).Trim();
+            return context.IsValid
+                ? new AgentConfigureAnimationClipBlendProfileMutation(operation.id, context.Path, target, value)
+                : null;
+        }
+
         internal static AgentMutation LowerEnsureAnimationClipSegment(
             AgentMutationPlanningContext context,
             AgentMutationDraft operation)
@@ -479,6 +513,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (string.IsNullOrEmpty(track) == !trackOutput.IsValid)
                 context.Error("track", "animation_track_reference_invalid", $"{operation.kind} 必须且只能提供 trackAuthoringId 或 trackPlannedIdentity。");
             return new AgentTimelineTargetReference(timeline, track, trackOutput, string.Empty, default);
+        }
+
+        static AgentTimelineTargetReference LowerTimelineClipTarget(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            ReadTimelineReference(context, operation, "configure_animation_clip_blend_profile", out string timeline, out AgentPlannedIdentityReference timelineOutput);
+            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
+            AgentPlannedIdentityReference trackOutput = context.OptionalPlannedIdentity(operation.trackPlannedIdentity, "trackPlannedIdentity", AgentMutationOutputKind.TimelineTrack);
+            if (string.IsNullOrEmpty(track) == !trackOutput.IsValid)
+                context.Error("track", "timeline_track_reference_invalid", $"{operation.kind} 必须且只能提供 trackAuthoringId 或 trackPlannedIdentity。");
+            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
+            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
+            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
+                context.Error("clip", "timeline_clip_reference_invalid", $"{operation.kind} 必须且只能提供 clipAuthoringId 或 clipPlannedIdentity。");
+            return new AgentTimelineTargetReference(
+                timeline,
+                timelineOutput,
+                track,
+                trackOutput,
+                clip,
+                clipOutput);
         }
 
         internal static AgentMutation LowerEnsureTreeClipBlackboardWrite(AgentMutationPlanningContext context, AgentMutationDraft operation)

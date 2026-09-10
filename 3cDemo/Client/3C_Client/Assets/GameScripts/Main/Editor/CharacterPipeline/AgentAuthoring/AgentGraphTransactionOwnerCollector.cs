@@ -21,31 +21,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             errorMessage = string.Empty;
             m_Owners.Clear();
 
-            if (!definition || !definition.RootTreeAsset || definition.RootTreeAsset.Tree == null)
-                return Fail("transaction_root_missing", "无法为缺少 RootTreeAsset 的 Definition 建立 authoring 事务。", out errorCode, out errorMessage);
-
             if (!TryAddOwner(definition, out errorCode, out errorMessage) ||
-                !TryAddOwner(definition.RootTreeAsset, out errorCode, out errorMessage) ||
-                !TryAddOwner(definition.InputProfile, out errorCode, out errorMessage))
+                !TryAddOwner(definition.InputProfile, out errorCode, out errorMessage) ||
+                !TryAddOwner(definition.GameplayEffectProfile, out errorCode, out errorMessage) ||
+                !TryAddOwner(definition.BodyMotionProfile, out errorCode, out errorMessage) ||
+                !TryAddOwner(definition.AnimationPresentationProfile, out errorCode, out errorMessage))
                 return false;
-
-            var projectionErrors = new List<string>();
-            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(
-                definition.RootTreeAsset.Tree,
-                projectionErrors);
-            if (!projection.IsValid)
-                return Fail("transaction_topology_invalid", string.Join("\n", projectionErrors), out errorCode, out errorMessage);
-
-            for (int i = 0; i < projection.Graphs.Count; i++)
-            {
-                if (!TryAddOwner(projection.Graphs[i].Graph.SerializedOwner, out errorCode, out errorMessage))
-                    return false;
-            }
-            for (int i = 0; i < projection.Timelines.Count; i++)
-            {
-                if (!TryAddOwner(projection.Timelines[i].Timeline.SerializedOwner, out errorCode, out errorMessage))
-                    return false;
-            }
 
             for (int i = 0; i < definition.ActionProfiles.Count; i++)
             {

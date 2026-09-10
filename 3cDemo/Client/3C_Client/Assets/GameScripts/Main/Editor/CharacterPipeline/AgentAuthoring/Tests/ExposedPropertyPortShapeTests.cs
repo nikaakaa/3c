@@ -13,11 +13,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Tests
 {
     public sealed class ExposedPropertyPortShapeTests
     {
-        const string CorinRootTreePath =
-            "Assets/Configs/Character/Corin/Pipeline/Graphs/CorinPlayableRootTree.asset";
-        const string AttackStateBodyGraphId =
-            "3ae19d5e-dd52-4f44-a80d-e32d2474e7ec";
-
         [Test]
         public void SetNodeTypeMaintainsValueDirection()
         {
@@ -107,104 +102,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Tests
 
             Assert.That(AgentMutationPortShapePreflight.Validate(snapshot, plan, report), Is.True);
             Assert.That(report.HasErrors(), Is.False);
-        }
-
-        [Test]
-        public void CorinAttackStateBodyOpensThroughRootTreeNavigation()
-        {
-            BaseTreeAsset asset = AssetDatabase.LoadAssetAtPath<BaseTreeAsset>(
-                CorinRootTreePath);
-            Assert.That(asset, Is.Not.Null);
-            IReadOnlyList<NodeGraphReference> route = FindGraphRoute(
-                asset.Tree,
-                AttackStateBodyGraphId);
-            Assert.That(route, Is.Not.Null);
-            Assert.That(route.Count, Is.GreaterThan(0));
-            BaseTree attackStateBody = route[route.Count - 1].Tree;
-            Assert.That(attackStateBody.name, Is.EqualTo("Attack State Body"));
-
-            ExposedPropertyNode setter = attackStateBody.Nodes
-                .OfType<ExposedPropertyNode>()
-                .Single();
-            Assert.That(setter.NodeType, Is.EqualTo(ExposedPropertyNodeType.Set));
-            Assert.That(setter.Value.Direction, Is.EqualTo(PortDirection.Input));
-
-            BaseTreeWindow window = null;
-            try
-            {
-                Assert.DoesNotThrow(() =>
-                {
-                    window = EditorWindow.CreateWindow<BaseTreeWindow>();
-                    window.ReplaceNavigationRoot(asset);
-                    window.Show();
-                    foreach (NodeGraphReference reference in route)
-                        window.PushReferencedTree(reference.OwnerNode, reference);
-                });
-                Assert.That(window.Tree, Is.SameAs(attackStateBody));
-                Assert.That(window.TreeView.NodeViews.Count,
-                    Is.EqualTo(attackStateBody.Nodes.Count));
-
-                BaseNodeView setterView = window.TreeView.FindNodeView(setter);
-                Assert.That(setterView, Is.Not.Null);
-                Assert.That(setterView.InputPorts.ContainsKey(
-                    ExposedPropertyNode.FlowInputPortName), Is.True);
-                Assert.That(setterView.InputPropertyPorts.ContainsKey("m_Value"),
-                    Is.True);
-                Assert.That(setterView.OutputPropertyPorts.ContainsKey("m_Value"),
-                    Is.False);
-            }
-            finally
-            {
-                if (window)
-                    window.Close();
-            }
-        }
-
-        static IReadOnlyList<NodeGraphReference> FindGraphRoute(
-            BaseTree root,
-            string graphAuthoringId)
-        {
-            var route = new List<NodeGraphReference>();
-            var visited = new HashSet<BaseTree>();
-            return TryFindGraphRoute(
-                root,
-                graphAuthoringId,
-                route,
-                visited)
-                ? route
-                : null;
-        }
-
-        static bool TryFindGraphRoute(
-            BaseTree graph,
-            string graphAuthoringId,
-            List<NodeGraphReference> route,
-            HashSet<BaseTree> visited)
-        {
-            if (graph == null || !visited.Add(graph))
-                return false;
-            if (string.Equals(
-                    graph.GraphAuthoringId,
-                    graphAuthoringId,
-                    StringComparison.Ordinal))
-                return true;
-            foreach (BaseNode node in graph.Nodes.Where(value => value != null))
-            {
-                foreach (NodeGraphReference reference in node.GetGraphReferences())
-                {
-                    if (reference.Tree == null)
-                        continue;
-                    route.Add(reference);
-                    if (TryFindGraphRoute(
-                            reference.Tree,
-                            graphAuthoringId,
-                            route,
-                            visited))
-                        return true;
-                    route.RemoveAt(route.Count - 1);
-                }
-            }
-            return false;
         }
 
         static AgentGraphSnapshot CreateGetSnapshot()

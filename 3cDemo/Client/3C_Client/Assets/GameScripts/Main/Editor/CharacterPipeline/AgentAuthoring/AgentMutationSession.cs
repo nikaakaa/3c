@@ -28,7 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentMutationPlan plan,
             AgentCompileReport report,
             bool apply,
-            AgentPresentationMutationPlan presentationPlan = null)
+            AgentPresentationMutationPlan presentationPlan = null,
+            bool allowMissingTimelineTrees = false)
         {
             Definition = definition;
             Domain = AgentAuthoringSchema.CharacterControllerDomain;
@@ -37,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Report = report;
             IsApply = apply;
             PresentationPlan = presentationPlan;
+            AllowMissingTimelineTrees = allowMissingTimelineTrees;
             Resolver = new AgentAssetResolver(definition, snapshot);
             Index = new AgentGraphAuthoringIndex();
             foreach (CharacterSkillAuthoringDefinition skill in definition?.SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
@@ -71,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentCompileReport Report { get; }
         public bool IsApply { get; }
         public AgentPresentationMutationPlan PresentationPlan { get; }
+        public bool AllowMissingTimelineTrees { get; }
         public AgentAssetResolver Resolver { get; }
         public AgentGraphAuthoringIndex Index { get; }
         public BaseTree RootTree { get; private set; }
@@ -123,24 +126,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Report.Error("snapshot.domain", "domain_root_mismatch", "Snapshot、Mutation Plan与加载的root domain不一致。");
                 return false;
             }
-            BaseTree rootTree;
-            if (Definition)
-            {
-                if (!Resolver.TryGetRootTree(out rootTree, Report, "definition"))
-                    return false;
-            }
-            else if (AIDefinition.RootTreeAsset?.Tree is AIControllerTree aiRoot)
+            BaseTree rootTree = null;
+            if (!Definition && AIDefinition.RootTreeAsset?.Tree is AIControllerTree aiRoot)
             {
                 rootTree = aiRoot;
             }
-            else
+            else if (!Definition)
             {
                 Report.Error("definition", "missing_ai_root_tree", "AIControllerDefinition 缺少正式 AIControllerTree。");
                 return false;
             }
 
             RootTree = rootTree;
-            UnityEngine.Object rootAsset = Definition ? Definition.RootTreeAsset : AIDefinition.RootTreeAsset;
+            UnityEngine.Object rootAsset = Definition ? null : AIDefinition.RootTreeAsset;
             UnityEngine.Object rootDefinition = Definition ? Definition : AIDefinition;
             string definitionPath = AssetDatabase.GetAssetPath(rootDefinition);
             string rootPath = AssetDatabase.GetAssetPath(rootAsset);
@@ -150,9 +148,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 !string.Equals(Plan.RootIdentity, rootIdentity, StringComparison.Ordinal) ||
                 !string.Equals(Plan.SourceRevision, Snapshot.sourceRevision, StringComparison.Ordinal) ||
                 !string.Equals(Snapshot.rootTreeAssetPath, rootPath, StringComparison.Ordinal) ||
-                !string.Equals(Snapshot.rootGraphAuthoringId, RootTree.GraphAuthoringId, StringComparison.Ordinal))
+                !string.Equals(Snapshot.rootGraphAuthoringId, RootTree?.GraphAuthoringId ?? string.Empty, StringComparison.Ordinal))
             {
-                Report.Error("snapshot", "snapshot_source_changed", "Snapshot与Mutation Plan的root identity或source revision与当前Definition不一致，请重新执行Document dry-run。");
+                Report.Error(
+                    "snapshot",
+                    "snapshot_source_changed",
+                    $"Snapshot与Mutation Plan的source不一致：snapshotRoot={Snapshot.rootAssetPath}, definitionRoot={definitionPath}, snapshotIdentity={Snapshot.rootIdentity}, planIdentity={Plan.RootIdentity}, snapshotRevision={Snapshot.sourceRevision}, planRevision={Plan.SourceRevision}。");
                 return false;
             }
             return RefreshIndex("definition");
@@ -162,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             try
             {
-                Index.Rebuild(RootTree);
+                Index.Rebuild(RootTree, AllowMissingTimelineTrees);
                 if (Definition)
                     Index.RebuildSkills(Definition);
                 return true;
@@ -662,6 +663,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             reference = default;
             declaration = null;
+            if (RootTree == null)
+            {
+                Report.Error(path, "blackboard_declaration_missing", "当前Character authoring不再通过RootTree提供Blackboard声明。");
+                return false;
+            }
             List<BaseExposedProperty> matches = RootTree.ExposedProperties
                 .Where(value => string.Equals(value.BlackboardKey, key, StringComparison.Ordinal))
                 .ToList();
@@ -869,7 +875,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static AgentDocumentBoundaryIdentity Capture(AgentMutationSession session)
         {
             UnityEngine.Object definition = session.Definition ? session.Definition : session.AIDefinition;
-            UnityEngine.Object rootTreeAsset = session.Definition ? session.Definition.RootTreeAsset : session.AIDefinition.RootTreeAsset;
+            UnityEngine.Object rootTreeAsset = session.Definition ? null : session.AIDefinition.RootTreeAsset;
             string definitionPath = AssetDatabase.GetAssetPath(definition);
             string rootPath = AssetDatabase.GetAssetPath(rootTreeAsset);
             var graphs = new Dictionary<string, BaseTree>(StringComparer.Ordinal);
@@ -903,23 +909,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool Validate(UnityEngine.Object definition, AgentMutationSession session, AgentCompileReport report)
         {
             string definitionPath = AssetDatabase.GetAssetPath(definition);
-            UnityEngine.Object rootTreeAsset = definition switch
-            {
-                CharacterPipelineDefinition character => character.RootTreeAsset,
-                ThirdPersonCharacter.AI.AIControllerDefinition ai => ai.RootTreeAsset,
-                _ => null
-            };
+            UnityEngine.Object rootTreeAsset = definition is ThirdPersonCharacter.AI.AIControllerDefinition ai
+                ? ai.RootTreeAsset
+                : null;
             string rootPath = rootTreeAsset ? AssetDatabase.GetAssetPath(rootTreeAsset) : string.Empty;
-            if (definition != Definition ||
-                rootTreeAsset != RootTreeAsset ||
-                session.RootTree != RootTree ||
-                !string.Equals(definitionPath, DefinitionPath, StringComparison.Ordinal) ||
-                !string.Equals(AssetDatabase.AssetPathToGUID(definitionPath), DefinitionGuid, StringComparison.Ordinal) ||
-                !string.Equals(rootPath, RootPath, StringComparison.Ordinal) ||
-                !string.Equals(AssetDatabase.AssetPathToGUID(rootPath), RootGuid, StringComparison.Ordinal) ||
-                !string.Equals(session.RootTree?.GraphAuthoringId, RootGraphAuthoringId, StringComparison.Ordinal))
+            bool sourceUnchanged =
+                definition == Definition &&
+                string.Equals(definitionPath, DefinitionPath, StringComparison.Ordinal) &&
+                string.Equals(AssetDatabase.AssetPathToGUID(definitionPath), DefinitionGuid, StringComparison.Ordinal);
+            if (!Definition)
             {
-                report.Error("transaction", "authoring_source_changed", "Definition 或 RootTree identity 在 dry-run 与 apply 之间发生变化。");
+                sourceUnchanged = sourceUnchanged &&
+                    rootTreeAsset == RootTreeAsset &&
+                    session.RootTree == RootTree &&
+                    string.Equals(rootPath, RootPath, StringComparison.Ordinal) &&
+                    string.Equals(AssetDatabase.AssetPathToGUID(rootPath), RootGuid, StringComparison.Ordinal) &&
+                    string.Equals(session.RootTree?.GraphAuthoringId, RootGraphAuthoringId, StringComparison.Ordinal);
+            }
+            if (!sourceUnchanged)
+            {
+                report.Error(
+                    "transaction",
+                    "authoring_source_changed",
+                    "Character Definition或AI RootTree identity在dry-run与apply之间发生变化。");
                 return false;
             }
 

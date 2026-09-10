@@ -124,7 +124,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                     if (oldSection != null &&
                         string.Equals(oldSection.name, section.name, StringComparison.Ordinal) &&
-                        oldSection.frame == section.frame)
+                        oldSection.frame == section.frame &&
+                        SameOptionalText(oldSection.nextSectionId, section.nextSectionId))
                         continue;
                     Add(mutations, sectionPath, AgentMutationKind.EnsureTimelineSection, operation =>
                     {
@@ -135,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         SetTimelineReference(operation, timeline.timelineAuthoringId, localTimelineIdentities);
                         operation.displayName = section.name;
                         operation.startFrame = section.frame;
+                        operation.nextSectionId = section.nextSectionId;
                     });
                 }
 
@@ -273,11 +275,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         operation.animationChannelId = target.animationChannelId;
                     });
                 }
+                if (current == null || !string.Equals(current.animationSlotId, target.animationSlotId, StringComparison.Ordinal))
+                {
+                    Add(mutations, path + ".animationSlotId", AgentMutationKind.ConfigureAnimationTrackSlot, operation =>
+                    {
+                        operation.timelineAuthoringId = timelineId;
+                        SetTimelineTrackReference(operation, target.trackAuthoringId, localTrackIdentities);
+                        operation.animationSlotId = target.animationSlotId;
+                    });
+                }
             }
             else if (current != null &&
-                     !SameOptionalText(current.animationChannelId, target.animationChannelId))
+                     (!SameOptionalText(current.animationChannelId, target.animationChannelId) ||
+                      !SameOptionalText(current.animationSlotId, target.animationSlotId)))
             {
-                report.Error(path, "timeline_track_animation_fields_invalid", "非AnimationTrack不能携带Animation channel配置。");
+                report.Error(path, "timeline_track_animation_fields_invalid", "非AnimationTrack不能携带Animation channel或Slot配置。");
             }
 
             var oldClips = Index(current?.clips, value => value.clipAuthoringId, path + ".clips", report);
@@ -444,6 +456,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         operation.endFrame = target.endFrame;
                         operation.clipInFrame = target.clipInFrame;
                         operation.extraPolationMode = target.extraPolationMode;
+                    });
+                }
+                if (current == null || !SameOptionalText(current.blendProfileId, target.blendProfileId))
+                {
+                    Add(mutations, path + ".blendProfileId", AgentMutationKind.ConfigureAnimationClipBlendProfile, operation =>
+                    {
+                        SetTimelineReference(operation, timelineId, localTimelineIdentities);
+                        SetTimelineClipReference(operation, track.trackAuthoringId, target.clipAuthoringId, localClipIdentities);
+                        operation.blendProfileId = target.blendProfileId;
                     });
                 }
             }

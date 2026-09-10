@@ -171,6 +171,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path + ".sections", "timeline_section_duplicate", "Timeline内Section identity或名称重复。");
                 return false;
             }
+            var sectionIds = result.sections
+                .Select(section => section.sectionAuthoringId)
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (AgentSnapshotTimelineSection section in result.sections)
+            {
+                if (!string.IsNullOrEmpty(section.nextSectionId) &&
+                    !sectionIds.Contains(section.nextSectionId))
+                {
+                    report.Error(
+                        path + $".sections[{section.sectionAuthoringId}].nextSectionId",
+                        "timeline_section_next_not_found",
+                        "Timeline Section nextSectionId必须引用同一Timeline内存在的Section。");
+                    return false;
+                }
+            }
             List<AgentSnapshotTimelineClip> allClips = result.tracks
                 .SelectMany(track => track.clips ?? new List<AgentSnapshotTimelineClip>())
                 .Where(clip => clip != null && !string.IsNullOrEmpty(clip.clipAuthoringId))

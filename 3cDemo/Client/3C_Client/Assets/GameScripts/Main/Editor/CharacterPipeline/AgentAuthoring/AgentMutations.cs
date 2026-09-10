@@ -51,6 +51,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         ConfigureTimelineClipEase,
         ConfigureTimelineCurveChannel,
         ConfigureAnimationTrackChannel,
+        ConfigureAnimationTrackSlot,
+        ConfigureAnimationClipBlendProfile,
         EnsureAnimationClipSegment,
         DeleteTimelineClip,
         EnsureTreeClipBlackboardWrite,
@@ -1146,19 +1148,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentTimelineTargetReference target,
             string sectionAuthoringId,
             string displayName,
-            int frame)
+            int frame,
+            string nextSectionId = null)
             : base(id, AgentMutationKind.EnsureTimelineSection, "ensure_timeline_section", AgentMutationOutputKind.TimelineSection, path, target.TimelineIdentity, Vector2.zero)
         {
             Target = target;
             SectionAuthoringId = sectionAuthoringId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
             Frame = frame;
+            NextSectionId = nextSectionId?.Trim() ?? string.Empty;
         }
 
         public AgentTimelineTargetReference Target { get; }
         public string SectionAuthoringId { get; }
         public string DisplayName { get; }
         public int Frame { get; }
+        public string NextSectionId { get; }
     }
 
     public sealed class AgentDeleteTimelineSectionMutation : AgentMutation
@@ -1339,6 +1344,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public AnimationChannelId AnimationChannelId { get; }
+    }
+
+    public sealed class AgentConfigureAnimationTrackSlotMutation : AgentAnimationTrackMutation
+    {
+        public AgentConfigureAnimationTrackSlotMutation(
+            string id,
+            string path,
+            AgentTimelineTargetReference target,
+            string animationSlotId)
+            : base(id, AgentMutationKind.ConfigureAnimationTrackSlot, "configure_animation_track_slot", AgentMutationOutputKind.None, path, target)
+        {
+            AnimationSlotId = animationSlotId?.Trim() ?? string.Empty;
+        }
+
+        public string AnimationSlotId { get; }
+    }
+
+    public sealed class AgentConfigureAnimationClipBlendProfileMutation : AgentTimelineClipMutation
+    {
+        public AgentConfigureAnimationClipBlendProfileMutation(
+            string id,
+            string path,
+            AgentTimelineTargetReference target,
+            string blendProfileId)
+            : base(id, AgentMutationKind.ConfigureAnimationClipBlendProfile, "configure_animation_clip_blend_profile", AgentMutationOutputKind.None, path, target)
+        {
+            BlendProfileId = blendProfileId?.Trim() ?? string.Empty;
+        }
+
+        public string BlendProfileId { get; }
     }
 
     public sealed class AgentEnsureAnimationClipSegmentMutation : AgentTimelineClipMutation

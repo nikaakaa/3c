@@ -45,14 +45,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         AssetDatabase.GetAssetPath(definition.GameplayEffectProfile)))) ||
                 skillReport.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, skillReport.messages.Select(value => value.message)));
+            AddSkillInputBindings(snapshot, skillDocument);
             snapshot.skillGraphs = skillDocument.graphs;
             snapshot.skillGraphLayouts = skillDocument.layouts;
             snapshot.skillMacros = skillDocument.macros;
             snapshot.skillTimelines = skillDocument.timelines;
             var editableGraphs = new List<AgentSnapshotGraph>();
             var editableStateMachines = new List<AgentSnapshotStateMachineSummary>();
-            var editableTimelines = new List<AgentSnapshotTimeline>();
-            var editableTimelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
+            HashSet<string> skillTimelineIds =
+                skillDocument.timelines
+                    .Where(value => value != null && !string.IsNullOrWhiteSpace(value.id))
+                    .Select(value => value.id)
+                    .ToHashSet(StringComparer.Ordinal);
+            List<AgentSnapshotTimeline> editableTimelines =
+                AgentAuthoringDocumentCodec.Clone(
+                    snapshot.timelines
+                        .Where(value => value != null && !skillTimelineIds.Contains(value.timelineAuthoringId))
+                        .ToList()) ??
+                new List<AgentSnapshotTimeline>();
+            List<AgentSnapshotTimelineTreeClip> editableTimelineTreeClips =
+                AgentAuthoringDocumentCodec.Clone(snapshot.timelineTreeClips) ??
+                new List<AgentSnapshotTimelineTreeClip>();
+            editableTimelineTreeClips = editableTimelineTreeClips
+                .Where(value => value != null && !skillTimelineIds.Contains(value.timelineAuthoringId))
+                .ToList();
             var editable = new AgentDocumentEditable
             {
                 control = new AgentDocumentControlConfiguration
@@ -198,6 +214,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.schemaVersion = AgentAuthoringSchema.Version;
             snapshot.sourceRevision = sourceRevision;
             return new AgentAuthoringPackageProjection(snapshot, target, sourceRevision, editableHash, contextHash);
+        }
+
+        static void AddSkillInputBindings(
+            AgentGraphSnapshot snapshot,
+            AgentPackageSkillFlowDocument document)
+        {
+            var inputIds = new HashSet<string>(
+                snapshot.inputValues.Select(value => value.inputValueId),
+                StringComparer.Ordinal);
+            foreach (AgentPackageSkillFlowGraphFile graph in document.graphs)
+                foreach (AgentPackageSkillBlackboardDeclaration declaration in graph.blackboardDeclarations)
+                {
+                    string inputValueId = declaration.inputBinding?.inputValueId;
+                    if (string.IsNullOrWhiteSpace(inputValueId) || !inputIds.Add(inputValueId))
+                        continue;
+                    snapshot.inputValues.Add(new AgentSnapshotInputValue
+                    {
+                        inputValueId = inputValueId,
+                        valueType = ProgramInputValueKind.ActionTargetSnapshot.ToString()
+                    });
+                }
         }
 
         static string ComputeSourceRevision(AgentDocumentEditable editable)

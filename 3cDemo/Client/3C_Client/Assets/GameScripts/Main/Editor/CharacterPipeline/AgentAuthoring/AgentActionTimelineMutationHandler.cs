@@ -143,6 +143,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     session.AddPlanned(value, null, channelTrack.AuthoringId,
                         $"configure animation channel {channelTrack.AnimationChannelId} -> {value.AnimationChannelId}");
                     return true;
+                case AgentConfigureAnimationTrackSlotMutation value:
+                    if (!TryResolveAnimationTrack(session, value.Target, value.Path, out _, out AnimationTrack slotTrack)) return false;
+                    if (!string.IsNullOrEmpty(value.AnimationSlotId))
+                    {
+                        try
+                        {
+                            session.Definition.AnimationPresentationProfile.RigDefinition.RequireAnimationSlot(
+                                new AnimationSlotId(value.AnimationSlotId));
+                        }
+                        catch (Exception exception)
+                        {
+                            session.Report.Error(value.Path, "animation_slot_not_found", exception.Message);
+                            return false;
+                        }
+                    }
+                    session.AddPlanned(value, null, slotTrack.AuthoringId,
+                        $"configure animation slot {slotTrack.AnimationSlotId} -> {value.AnimationSlotId}");
+                    return true;
+                case AgentConfigureAnimationClipBlendProfileMutation value:
+                    if (!TryResolveTimelineClip(session, value.Target, value.Path, out _, out Clip blendClip)) return false;
+                    if (!string.IsNullOrEmpty(value.BlendProfileId))
+                    {
+                        try
+                        {
+                            session.Definition.AnimationPresentationProfile.RigDefinition.RequireBlendProfile(value.BlendProfileId);
+                        }
+                        catch (Exception exception)
+                        {
+                            session.Report.Error(value.Path, "animation_blend_profile_not_found", exception.Message);
+                            return false;
+                        }
+                    }
+                    if (blendClip != null && blendClip is not BTSMTL.Timeline.AnimationClip)
+                    {
+                        session.Report.Error(value.Path, "animation_blend_profile_owner_invalid", "Blend Profile只能由AnimationClip Segment拥有。");
+                        return false;
+                    }
+                    session.AddPlanned(value, null, blendClip?.AuthoringId ?? value.Target.ClipPlannedIdentity.Value,
+                        $"configure animation blend profile {value.BlendProfileId}");
+                    return true;
                 case AgentEnsureAnimationClipSegmentMutation value:
                     if (!ValidateAnimationClipSegment(session, value)) return false;
                     session.AddPlanned(value, null, value.Target.ClipAuthoringId,
@@ -212,6 +252,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentConfigureTimelineClipEaseMutation value: ApplyConfigureTimelineClipEase(session, value); break;
                 case AgentConfigureTimelineCurveChannelMutation value: ApplyConfigureTimelineCurveChannel(session, value); break;
                 case AgentConfigureAnimationTrackChannelMutation value: ApplyConfigureAnimationTrackChannel(session, value); break;
+                case AgentConfigureAnimationTrackSlotMutation value: ApplyConfigureAnimationTrackSlot(session, value); break;
+                case AgentConfigureAnimationClipBlendProfileMutation value: ApplyConfigureAnimationClipBlendProfile(session, value); break;
                 case AgentEnsureAnimationClipSegmentMutation value: ApplyEnsureAnimationClipSegment(session, value); break;
                 case AgentDeleteTimelineClipMutation value: ApplyDeleteTimelineClip(session, value); break;
                 case AgentEnsureTreeClipBlackboardWriteMutation value: ApplyEnsureTreeClipWrite(session, value); break;
@@ -586,6 +628,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             TimelineSection section = string.IsNullOrEmpty(command.SectionAuthoringId)
                 ? timeline.AddSection(command.DisplayName, command.Frame)
                 : timeline.EnsureSection(command.SectionAuthoringId, command.DisplayName, command.Frame);
+            timeline.ConfigureSectionNext(section, command.NextSectionId);
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, section, section.AuthoringId, "ensure Timeline Section");
         }
 
@@ -642,6 +685,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             track.SetAnimationChannelId(command.AnimationChannelId);
             timeline.Init();
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, $"configure animation channel {command.AnimationChannelId}");
+        }
+
+        static void ApplyConfigureAnimationTrackSlot(
+            AgentMutationSession session,
+            AgentConfigureAnimationTrackSlotMutation command)
+        {
+            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out TimelineData timeline, out AnimationTrack track))
+                return;
+            track.SetAnimationSlotId(command.AnimationSlotId);
+            timeline.Init();
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, $"configure animation slot {command.AnimationSlotId}");
+        }
+
+        static void ApplyConfigureAnimationClipBlendProfile(
+            AgentMutationSession session,
+            AgentConfigureAnimationClipBlendProfileMutation command)
+        {
+            if (!TryResolveTimelineClip(session, command.Target, command.Path, out TimelineData timeline, out Clip clip))
+                return;
+            if (clip is not BTSMTL.Timeline.AnimationClip animationClip)
+                return;
+            animationClip.BlendProfileId = command.BlendProfileId;
+            timeline.Init();
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, animationClip, animationClip.AuthoringId, $"configure animation blend profile {command.BlendProfileId}");
         }
 
         static void ApplyEnsureAnimationClipSegment(
@@ -1611,7 +1678,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             TimelineSection duplicate = timeline.Sections.SingleOrDefault(value =>
                 !ReferenceEquals(value, existing) && string.Equals(value.Name, command.DisplayName, StringComparison.Ordinal));
             if (duplicate == null)
+            {
+                if (!string.IsNullOrEmpty(command.NextSectionId) &&
+                    timeline.Sections.All(value => value.AuthoringId != command.NextSectionId))
+                {
+                    session.Report.Error(command.Path, "timeline_section_next_not_found", $"Timeline Section next identity无法解析：{command.NextSectionId}");
+                    return false;
+                }
                 return true;
+            }
             session.Report.Error(command.Path, "timeline_section_name_duplicate", $"Timeline Section名称重复：{command.DisplayName}");
             return false;
         }

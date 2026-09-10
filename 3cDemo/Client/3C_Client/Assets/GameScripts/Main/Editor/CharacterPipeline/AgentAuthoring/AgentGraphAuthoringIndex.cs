@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly Dictionary<string, FlowGraph> m_SkillGraphs = new Dictionary<string, FlowGraph>(StringComparer.Ordinal);
         readonly Dictionary<FlowGraph, string> m_SkillGraphPaths = new Dictionary<FlowGraph, string>();
 
-        public void Rebuild(BaseTree root)
+        public void Rebuild(BaseTree root, bool allowMissingTimelineTrees = false)
         {
             m_Graphs.Clear();
             m_GraphPaths.Clear();
@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
 
             var errors = new List<string>();
-            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(root, errors);
+            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(root, errors, allowMissingTimelineTrees);
             if (!projection.IsValid)
                 throw new InvalidOperationException(string.Join("\n", errors));
 

@@ -7,7 +7,7 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
-using TreeDesigner;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,25 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             m_Definition = definition;
             m_Snapshot = snapshot;
-        }
-
-        public bool TryGetRootTree(out BaseTree rootTree, AgentCompileReport report, string path)
-        {
-            rootTree = null;
-            if (!m_Definition)
-            {
-                report?.Error(path, "missing_definition", "CharacterPipelineDefinition 缺失。", "从当前角色 Definition 打开 Agent authoring。");
-                return false;
-            }
-
-            if (!m_Definition.RootTreeAsset)
-            {
-                report?.Error(path, "missing_root_tree", "CharacterPipelineDefinition.RootTreeAsset 缺失。", "先配置 RootTreeAsset。");
-                return false;
-            }
-
-            rootTree = m_Definition.RootTreeAsset.Tree;
-            return rootTree != null;
         }
 
         public bool TryResolveInputValue(string inputValueId, out CharacterInputValueDefinition value)
@@ -61,6 +42,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             return false;
+        }
+
+        public bool TryResolvePortableInputValue(
+            string inputValueId,
+            ProgramInputValueKind expectedKind)
+        {
+            if (string.IsNullOrEmpty(inputValueId) || m_Snapshot?.inputValues == null)
+                return false;
+            return m_Snapshot.inputValues.Any(value =>
+                value != null &&
+                string.Equals(value.inputValueId, inputValueId, StringComparison.Ordinal) &&
+                string.Equals(value.valueType, expectedKind.ToString(), StringComparison.Ordinal));
         }
 
         public bool TryResolveActionRequest(string requestId, out CharacterActionRequestDefinition request)

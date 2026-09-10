@@ -349,6 +349,20 @@ namespace Slate
             window.Show();
         }
 
+        public static void ClearCutscene(Cutscene target)
+        {
+            if (current == null || !ReferenceEquals(current.cutscene, target))
+                return;
+            current.CancelEditTransaction();
+            if (!Application.isPlaying)
+                current.Stop(true);
+            current.cutscene = null;
+            current.clipWrappers = null;
+            current.clipWrappersMap = null;
+            CutsceneUtility.selectedObject = null;
+            current.willRepaint = true;
+        }
+
         //...
         void OnEnable() {
             Styles.Load();

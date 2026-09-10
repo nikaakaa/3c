@@ -546,8 +546,8 @@ namespace BTSMTL.Timeline.Editor
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))
                 CutsceneEditor.RecordUndoForCutscene = null;
-            if (!m_EditorClosed && CutsceneEditor.current != null && ReferenceEquals(CutsceneEditor.current.cutscene, m_Cutscene))
-                CutsceneEditor.ShowWindow(null);
+            if (!m_EditorClosed)
+                CutsceneEditor.ClearCutscene(m_Cutscene);
             m_Session.Dispose();
             if (m_Host != null)
                 UnityEngine.Object.DestroyImmediate(m_Host);

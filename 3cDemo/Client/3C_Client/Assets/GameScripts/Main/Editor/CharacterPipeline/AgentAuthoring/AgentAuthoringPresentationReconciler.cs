@@ -162,6 +162,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (report.HasErrors())
                 return false;
 
+            PreparePoseResourceSlots(
+                current.profile,
+                normalized.profile,
+                poseGraph,
+                poseGraphGuid,
+                builder,
+                report);
+            if (report.HasErrors())
+                return false;
+
             PreparePoseSourceSlots(
                 current.profile,
                 normalized.profile,

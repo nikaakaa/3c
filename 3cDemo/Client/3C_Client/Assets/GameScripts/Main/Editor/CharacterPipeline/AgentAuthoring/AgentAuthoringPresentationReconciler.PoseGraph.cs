@@ -96,6 +96,77 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
+        void PreparePoseResourceSlots(
+            AgentPackagePresentationProfileFile current,
+            AgentPackagePresentationProfileFile target,
+            CharacterPresentationPoseGraphAsset poseGraph,
+            string poseGraphOwnerId,
+            PlanBuilder builder,
+            AgentCompileReport report)
+        {
+            Dictionary<string, AgentPackagePoseResourceBinding> targetBySlot =
+                Index(target.poseResources, value => ReferenceIdentity(value.slot));
+            foreach (AgentPackagePoseResourceBinding removed in current.poseResources
+                         .Where(value => !targetBySlot.ContainsKey(ReferenceIdentity(value.slot))))
+            {
+                CharacterPoseResourceSlot slot = Resolve<CharacterPoseResourceSlot>(
+                    removed.slot,
+                    $"editable/presentation/profile.json.poseResources[{ReferenceIdentity(removed.slot)}].slot",
+                    report);
+                if (slot)
+                {
+                    builder.Graph(
+                        $"editable/presentation/profile.json.poseResources[{ReferenceIdentity(removed.slot)}]",
+                        new DeletePoseResourceSlotMutation(poseGraphOwnerId, slot));
+                }
+            }
+
+            foreach (AgentPackagePoseResourceBinding resource in target.poseResources)
+            {
+                string path =
+                    $"editable/presentation/profile.json.poseResources[{ReferenceIdentity(resource.slot)}]";
+                CharacterPoseResourceKind kind = Enum.Parse<CharacterPoseResourceKind>(
+                    resource.kind,
+                    false);
+                if (!string.IsNullOrWhiteSpace(resource.slot.localId))
+                {
+                    CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
+                    string displayName = Path.GetFileNameWithoutExtension(
+                        resource.resource?.assetPath ?? string.Empty);
+                    slot.name = string.IsNullOrWhiteSpace(displayName)
+                        ? kind.ToString()
+                        : displayName + " " + kind;
+                    if (!m_LocalAssets.TryAdd(resource.slot.localId, slot))
+                    {
+                        report.Error(
+                            path + ".slot.localId",
+                            "presentation_local_asset_identity_duplicate",
+                            "Pose Resource Slot local identity重复。");
+                        UnityEngine.Object.DestroyImmediate(slot);
+                        continue;
+                    }
+                    builder.Graph(
+                        path + ".slot",
+                        new CreatePoseResourceSlotMutation(poseGraphOwnerId, slot));
+                    continue;
+                }
+
+                CharacterPoseResourceSlot existing =
+                    Resolve<CharacterPoseResourceSlot>(
+                        resource.slot,
+                        path + ".slot",
+                        report);
+                if (!existing || !poseGraph.ResourceSlots.Contains(existing) ||
+                    existing.Kind != kind)
+                {
+                    report.Error(
+                        path + ".slot",
+                        "presentation_pose_resource_slot_owner_mismatch",
+                        "Resource Slot必须属于当前Pose Graph且类型匹配。");
+                }
+            }
+        }
+
         void BuildGraphPlan(
             AgentDocumentPresentationEditable current,
             AgentDocumentPresentationEditable target,

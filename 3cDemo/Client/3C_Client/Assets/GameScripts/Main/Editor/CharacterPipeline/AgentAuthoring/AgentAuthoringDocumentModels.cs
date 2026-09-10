@@ -48,12 +48,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentDocumentEditable
     {
         public AgentDocumentControlConfiguration control = new AgentDocumentControlConfiguration();
-        public int blackboardSchemaRevision;
-        public List<AgentSnapshotGraph> graphs = new List<AgentSnapshotGraph>();
-        public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
-        public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
-        public List<AgentSnapshotTimeline> timelines = new List<AgentSnapshotTimeline>();
-        public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
         public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
@@ -263,112 +257,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentPackageGraphFile
-    {
-        public string id;
-        public string kind;
-        public string ownership;
-        public AgentPackageGraphOwner owner;
-        public string sharedAssetPath;
-        public List<AgentPackageNode> nodes = new List<AgentPackageNode>();
-        public List<AgentPackageFlowEdge> flowEdges = new List<AgentPackageFlowEdge>();
-        public List<AgentPackagePropertyEdge> propertyEdges = new List<AgentPackagePropertyEdge>();
-    }
-
-    [Serializable]
-    public sealed class AgentPackageGraphOwner
-    {
-        public string entityId;
-        public string slot;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageNode
-    {
-        public string id;
-        public string kind;
-        public string name;
-        public JObject properties;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageGraphReference
-    {
-        public string key;
-        public string graphId;
-        public string ownership;
-        public string sharedAssetPath;
-        public List<AgentSnapshotGraphParameterBinding> inputBindings = new List<AgentSnapshotGraphParameterBinding>();
-        public List<AgentSnapshotGraphParameterBinding> outputBindings = new List<AgentSnapshotGraphParameterBinding>();
-    }
-
-    [Serializable]
     public sealed class AgentPackageAssetReference
     {
         public string key;
         public string assetPath;
         public string assetGuid;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageExposedProperty
-    {
-        public string mode;
-        public string declarationId;
-        public string valueType;
-        public JToken value;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageEdgeEndpoint
-    {
-        public string node;
-        public string port;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageFlowEdge
-    {
-        public string id;
-        public AgentPackageEdgeEndpoint from;
-        public AgentPackageEdgeEndpoint to;
-        public int flowOrder;
-        public int transitionPriority;
-        public string abortPolicy;
-        public string conditionGraph;
-    }
-
-    [Serializable]
-    public sealed class AgentPackagePropertyEdge
-    {
-        public string id;
-        public AgentPackageEdgeEndpoint from;
-        public AgentPackageEdgeEndpoint to;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageLayoutFile
-    {
-        public string graphId;
-        public List<AgentPackageNodeLayout> nodes = new List<AgentPackageNodeLayout>();
-    }
-
-    [Serializable]
-    public sealed class AgentPackageNodeLayout
-    {
-        public string id;
-        public float x;
-        public float y;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageTimelineFile
-    {
-        public string id;
-        public string name;
-        public List<AgentSnapshotTimelineCallSite> callSites = new List<AgentSnapshotTimelineCallSite>();
-        public List<AgentSnapshotTimelineSection> sections = new List<AgentSnapshotTimelineSection>();
-        public List<AgentSnapshotTimelineTrack> tracks = new List<AgentSnapshotTimelineTrack>();
     }
 
     [Serializable]

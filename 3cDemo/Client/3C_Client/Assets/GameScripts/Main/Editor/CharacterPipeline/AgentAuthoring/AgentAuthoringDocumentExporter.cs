@@ -154,11 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelines = editable?.skillTimelines
             });
             AgentDocumentEditable semantic = AgentAuthoringDocumentCodec.Clone(editable);
-            foreach (AgentSnapshotGraph graph in semantic.graphs ?? new List<AgentSnapshotGraph>())
-            {
-                foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())
-                    node.position = null;
-            }
             if (semantic.presentation != null)
             {
                 semantic.presentation.poseGraphLayouts =

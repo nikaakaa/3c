@@ -85,7 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawPresentationAssetSummary();
             DrawConfigurationErrors();
             DrawLinkedPoseBindings();
-            DrawPoseSourceBindings();
             DrawContext();
             DrawProducerBindings();
         }

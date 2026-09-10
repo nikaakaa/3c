@@ -4,7 +4,7 @@
 
 2026-09-09 本轮已落实作者选择A：技能根独立文件，私有内容同文件保存，Document预检及失败文件清理统一。节点目录和角色规则由原生与Document共用，固定端口不再重复声明，Macro参数共用校验。Host与原生工具栏已接实际执行实例选择，Fixed Host按Program来源定位作者。公开能力盘点完成；剩余编辑事务、共享Macro作者流程及资产／运行执行证据见tasks.md。
 
-当前Document源码及现行规范为v7；本change的目标版本随之同步，不回退成旧v6包。此前目标Unity实例脚本刷新后的`error CS=0`及正式validate双Target、State/Snapshot codec和Provider owner合同核对均已记录；最新live validate被另一窗口的Pose Projection错误阻塞，未以外部改动覆盖Document或资产迁移基线。技能资产迁移已完成，内容Build、网络产品和回放本轮仍未执行。
+当前Document源码及现行规范为v7；本change的目标版本随之同步，不回退成旧v6包。此前目标Unity实例脚本刷新后的`error CS=0`及正式validate双Target、State/Snapshot codec和Provider owner合同核对均已记录；外部Pose Projection阻塞曾短暂出现，随后最新live validate已恢复成功，未以外部改动覆盖Document或资产迁移基线。技能资产迁移已完成，内容Build、网络产品和回放本轮仍未执行。
 
 2026-09-10 最新收口刷新：目标Unity实例`3C_Client@e852139597e42532`经MCP完整刷新后按`error CS`读取返回0条。随后精确 Corin Definition 的正式`btsmtl.validate` job `a526919107ac46a597619dc06d0d666e`成功，`compileSuccessCount=1`、`semanticValidCount=1`，Float32与Fixed均为1127个StateSlot，State/Snapshot codec round-trip通过。最终 Pose 资产变更后，正式`btsmtl.checkout_document` job `4a00532477194a7c9847016490abc639`与`btsmtl.dry_run_document` job `a12155d2dd7f4785900c117f9561e2d6`均返回`success=true`、`syncState=Clean`、`plannedDiff=[]`；当前包路径为`3cDemo/Client/3C_Client/AgentAuthoring/Documents/CharacterController/c7a7c1e3-001dd30a08d99da6.btsmtl`，`sourceRevision=12bc98f1ef51448815991a2f31c7fc1d410c6445c7894ed33bb6fd34a9b56bee`，`editableHash=ed5797b6a7066dc411dfb50b0a3c782a4a1bee458f7f962d0091cd5b35aee244`，`contextHash=f5d18a6758276b6050f74a6da19e9b13824926251601cbbf947f2d29a242e27e`，`documentHash=91e8785a6aa26a57f341fd82cdb54eb4236d7d4967f7ceaca668e7a51783825d`，`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`。本轮没有再次apply、Character Build、Play、网络回放或性能采样。
 
@@ -271,3 +271,9 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 # 2026-09-10 外部Pose现场阻塞记录
 
 在上述事务代码提交后执行的只读 `btsmtl.validate` job `b842b799f8a14d358da74daabfd51bca` 返回失败，错误为 `presentation_projection_invalid`：当前另一窗口的 `corin.full-body-action.inertialization` AnimationSlot 没有 inertial route，随后报告 Presentation Projection 缺失；失败发生在本任务 Skill/Document 闭包进入可用编译结果之前。该错误对应外部 Pose 资产与代码改动，本任务不修改、不回滚，也不把当前live失败覆盖此前已成功的作者与Composition正式证据；因此没有执行checkout、资产迁移、Build或Play。
+
+# 2026-09-10 Server Authority最新正式复核
+
+外部 Pose 现场恢复后，重新执行同一只读 `btsmtl.validate`：Prediction job `47e95ec20624444095dd875df57f3f44` 和 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均返回 `success=true`、`compileSuccessCount=1`、`compileFailureCount=0`、`semanticValidCount=1`、`semanticInvalidCount=0`，两次均 `plannedDiff=[]`、`applied=false`、`saved=false`。当前两次使用同一 `sourceRevision=e674554c9c9cff6542ddb960f87e216ab0785c27c016d69c1fae77bea576f7b0`，Float32/Fixed 各为1127个StateSlot，State与World Snapshot canonical round-trip通过。
+
+Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backend、Unity CharacterController Solver、`RequiredPasses=10`、`SourcePorts=5`和`thirdperson.network-model.server-authoritative-hybrid`；Authority结果返回 Server-Authoritative Authority Pipeline、同一 Backend/Solver、`RequiredPasses=6`、`SourcePorts=4`和同一 NetworkModel。该结果补齐当前 Composition 兼容性复核，但仍不关闭4.5.5的网络产品运行与载荷限制证据，也没有执行Character Build、Play或资产迁移。

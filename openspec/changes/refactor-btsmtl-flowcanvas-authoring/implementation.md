@@ -263,3 +263,5 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 发现Document Applier创建新Skill Graph后直接调用 `PopulateAnchors`，系统入口的原生 `AddNode` 会因此打开独立Undo组。`8f087298a`将这段初始化加入现有 `BtsmtlSkillFlowEditorMutation` 活动深度，并关闭该内部步骤自己的Undo记录；这样节点、私有闭包创建和外层Document owner注册继续归同一整包事务，失败时由外层Undo与新根清理共同恢复。目标Unity脚本刷新后的 `error CS` 为0。2.4.2仍保留人工单操作、跨owner Undo回退及保存／重载交互的正式执行证据门槛。
 
 随后补齐跨文件 owner 转移的失败恢复。`RehomeTimelineBodyGraphs` 现在把每次 TimelineBody 从原技能文件迁到 Timeline 文件的操作登记到 `AgentMutationSession`；`AgentDocumentMutationCompiler`把回滚动作交给 `AgentDocumentApplyResult`，事务服务在 `Undo.RevertAllDownToGroup` 前逆序恢复原文件归属。提交 `64395b1d4` 只改变事务代码，不执行迁移；它解决了失败后字段回滚但子图仍留在错误 owner 文件中的缺口。2.4.2与5.3仍需实际跨 owner Undo、保存／反向导出和失败注入的正式执行记录。
+
+另外，`AgentSkillFlowDocumentOwnerCollector`原先只收当前 Definition 已经可达的 Macro；当 Document 目标新接入一个已有的共享 Macro 时，`SyncMacros`可能修改该主资产却没有进入外层 Undo owner。`61ce6d9ba`将带正式资产引用的目标 Macro加入 owner 集合，`local:*`新Macro仍由创建记录管理。该步不修改资产内容，目标 Unity 最新脚本编译成功；2.4.2与5.3的人工和失败执行证据仍未提前宣称完成。

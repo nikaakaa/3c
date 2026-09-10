@@ -142,7 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     solver,
                     snapshotCodec,
                     source.Source.ExecutionSupport,
-                    false);
+                    program.Deterministic);
             }
 
             return new SimulationSessionCompositionCompatibilityReport(

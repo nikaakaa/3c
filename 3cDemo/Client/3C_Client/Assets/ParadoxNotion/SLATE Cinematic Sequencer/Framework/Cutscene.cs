@@ -1098,10 +1098,13 @@ namespace Slate
                 return directorGroup;
             }
 
-            var newGroup = new GameObject(type.Name).AddComponent(type) as CutsceneGroup;
-            UnityEditor.Undo.RegisterCreatedObjectUndo(newGroup.gameObject, "Add Group");
-            UnityEditor.Undo.SetTransformParent(newGroup.transform, groupsRoot, "Add Group");
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Add Group");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(this);
+            var newGroupObject = new GameObject(type.Name);
+            var newGroup = newGroupObject.AddComponent(type) as CutsceneGroup;
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCreatedObjectUndo(newGroup.gameObject, "Add Group"); }
+            if ( recordUndo ) { UnityEditor.Undo.SetTransformParent(newGroup.transform, groupsRoot, "Add Group"); }
+            else { newGroup.transform.SetParent(groupsRoot, false); }
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Add Group"); }
             newGroup.transform.localPosition = Vector3.zero;
             newGroup.actor = targetActor;
             groups.Add(newGroup);
@@ -1133,10 +1136,12 @@ namespace Slate
                 return;
             }
 
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Delete Group");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(this);
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Delete Group"); }
             groups.Remove(group);
-            UnityEditor.Undo.DestroyObjectImmediate(group.gameObject);
-            UnityEditor.EditorUtility.SetDirty(this);
+            if ( recordUndo ) { UnityEditor.Undo.DestroyObjectImmediate(group.gameObject); }
+            else { UnityEngine.Object.DestroyImmediate(group.gameObject); }
+            if ( recordUndo ) { UnityEditor.EditorUtility.SetDirty(this); }
             Validate();
         }
 
@@ -1147,10 +1152,12 @@ namespace Slate
                 return null;
             }
 
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(this);
             var newGroup = (CutsceneGroup)Instantiate(group);
-            UnityEditor.Undo.RegisterCreatedObjectUndo(newGroup.gameObject, "Duplicate Group");
-            UnityEditor.Undo.SetTransformParent(newGroup.transform, groupsRoot, "Duplicate Group");
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Duplicate Group");
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCreatedObjectUndo(newGroup.gameObject, "Duplicate Group"); }
+            if ( recordUndo ) { UnityEditor.Undo.SetTransformParent(newGroup.transform, groupsRoot, "Duplicate Group"); }
+            else { newGroup.transform.SetParent(groupsRoot, false); }
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Duplicate Group"); }
             newGroup.actor = targetActor;
             newGroup.transform.localPosition = Vector3.zero;
             groups.Add(newGroup);

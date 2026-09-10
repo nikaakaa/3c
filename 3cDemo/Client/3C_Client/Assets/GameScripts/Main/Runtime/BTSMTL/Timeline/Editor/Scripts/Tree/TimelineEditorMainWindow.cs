@@ -78,7 +78,8 @@ namespace BTSMTL.Timeline.Editor
         Vector2 m_NavigationViewport;
 
         TimelineNode m_SourceNode;
-        TimelineEditorView m_View;
+        BtsmtlSlateTimelineProjection m_SlateProjection;
+        TimelineData m_Timeline;
 
         [SerializeField]
         TimelineWindowMode m_Mode;
@@ -104,12 +105,12 @@ namespace BTSMTL.Timeline.Editor
         long m_LastDebugMenuTargetRevision = -1;
         long m_LastDebugTimelinePlaybackRevision = -1;
 
-        public TimelineData Timeline => m_View?.Timeline;
+        public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
-            return m_View != null && m_View.FocusSource(trackAuthoringId, clipAuthoringId);
+            return false;
         }
 
         public static TimelineEditorWindow Open(BaseTreeWindow sourceGraphWindow, TimelineNode node)
@@ -163,7 +164,7 @@ namespace BTSMTL.Timeline.Editor
         public void CreateGUI()
         {
             TryRestoreBinding();
-            if (m_View == null)
+            if (m_SlateProjection == null)
                 BuildUnboundView();
         }
 
@@ -176,7 +177,7 @@ namespace BTSMTL.Timeline.Editor
         public static void OpenStandalone()
         {
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            if (window.m_View == null)
+            if (window.m_SlateProjection == null)
                 window.BuildUnboundView();
             window.Show();
             window.Focus();
@@ -224,15 +225,13 @@ namespace BTSMTL.Timeline.Editor
                 m_SourceGraphOwner = null;
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
-            m_View = new TimelineEditorView();
-            m_View.SetContractCatalog(TimelineTreeContractComposition.Create());
+            m_Timeline = timeline;
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
             ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
             ownership.style.paddingLeft = 8f;
             ownership.style.paddingTop = 4f;
             ownership.style.paddingBottom = 4f;
-            m_View.OpenClipRequested += OpenClip;
-            m_View.Init(TimelineEditorOpenRequestComposition.Create(
+            m_SlateProjection = BtsmtlSlateTimelineProjection.Open(TimelineEditorOpenRequestComposition.Create(
                 timeline,
                 serializedOwner,
                 serializedPropertyPath,
@@ -243,7 +242,6 @@ namespace BTSMTL.Timeline.Editor
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());
             rootVisualElement.Add(ownership);
-            rootVisualElement.Add(m_View);
             m_DebugDetails = new ScrollView();
             m_DebugDetails.style.maxHeight = 150;
             m_DebugDetails.style.minHeight = 80;
@@ -280,7 +278,7 @@ namespace BTSMTL.Timeline.Editor
 
         void TryRestoreBinding()
         {
-            if (m_View != null)
+            if (m_SlateProjection != null)
                 return;
 
             if (!m_SerializedOwner || string.IsNullOrEmpty(m_SerializedPropertyPath))
@@ -372,12 +370,9 @@ namespace BTSMTL.Timeline.Editor
 
         void DisposeView()
         {
-            if (m_View == null)
-                return;
-            m_View.OpenClipRequested -= OpenClip;
-            m_View.Dispose();
-            m_View.RemoveFromHierarchy();
-            m_View = null;
+            m_SlateProjection?.Dispose();
+            m_SlateProjection = null;
+            m_Timeline = null;
         }
 
         VisualElement CreateModeToolbar()
@@ -477,7 +472,7 @@ namespace BTSMTL.Timeline.Editor
 
         void CaptureTimelineNavigation(AnimationClip clip)
         {
-            if (m_View == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
+            if (m_SlateProjection == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
                 throw new InvalidOperationException("Sequence navigation requires a bound Action Timeline.");
             m_NavigationOwner = m_SerializedOwner;
             m_NavigationPropertyPath = m_SerializedPropertyPath;
@@ -487,7 +482,7 @@ namespace BTSMTL.Timeline.Editor
             m_NavigationSourceNodeGuid = m_SourceNodeGuid;
             m_NavigationSourceGraphWindow = m_SourceGraphWindow;
             m_NavigationSourceGraphOwner = m_SourceGraphOwner;
-            m_NavigationViewport = m_View.ViewportOffset;
+            m_NavigationViewport = Vector2.zero;
         }
 
         void ReturnToTimeline()
@@ -509,8 +504,8 @@ namespace BTSMTL.Timeline.Editor
             ClearNavigation();
             Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
             m_SourceGraphOwner = sourceGraphOwner;
-            m_View.FocusSource(trackAuthoringId, clipAuthoringId);
-            m_View.RestoreViewport(viewport);
+            if (m_SlateProjection == null)
+                return;
         }
 
         void ClearNavigation()
@@ -546,10 +541,10 @@ namespace BTSMTL.Timeline.Editor
 
         string CurrentSourceSummary()
         {
-            if (m_View?.Timeline == null)
+            if (m_Timeline == null)
                 return "Source: None";
             string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
-            return $"Source: {ownership} / {m_View.Timeline.Name}";
+            return $"Source: {ownership} / {m_Timeline.Name}";
         }
 
         void SetMode(TimelineWindowMode mode)
@@ -568,7 +563,7 @@ namespace BTSMTL.Timeline.Editor
             m_Status?.SetDisplay(liveDebug);
             if (m_DebugDetails != null)
                 m_DebugDetails.style.display = liveDebug ? DisplayStyle.Flex : DisplayStyle.None;
-            m_View?.SetLiveDebug(liveDebug);
+            m_SlateProjection?.SetRuntimeReadOnly(liveDebug);
             if (liveDebug)
             {
                 m_HasDebugRequest = false;
@@ -577,14 +572,14 @@ namespace BTSMTL.Timeline.Editor
             else
             {
                 m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
-                m_View?.ClearRuntimeOverlay();
+                m_SlateProjection?.ClearRuntimeOverlay();
                 InvalidateLiveDebugOverlay();
             }
         }
 
         void RefreshLiveDebug()
         {
-            if (Timeline == null || m_View == null || m_TargetMenu == null)
+            if (Timeline == null || m_SlateProjection == null || m_TargetMenu == null)
                 return;
 
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
@@ -601,7 +596,7 @@ namespace BTSMTL.Timeline.Editor
 
             if (!resolution.CanReadSnapshot)
             {
-                m_View.ClearRuntimeOverlay();
+                m_SlateProjection.ClearRuntimeOverlay();
                 m_DebugDetails.Clear();
                 InvalidateLiveDebugOverlay();
                 SetStatus(resolution.Message);
@@ -610,7 +605,7 @@ namespace BTSMTL.Timeline.Editor
 
             if (!view.Valid)
             {
-                m_View.ClearRuntimeOverlay();
+                m_SlateProjection.ClearRuntimeOverlay();
                 m_DebugDetails.Clear();
                 InvalidateLiveDebugOverlay();
                 SetStatus(!string.IsNullOrEmpty(view.Error) ? view.Error : binding.StatusMessage);
@@ -620,7 +615,7 @@ namespace BTSMTL.Timeline.Editor
             RuntimeInstanceKey playback = binding.SelectedInstance;
             if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
             {
-                m_View.ClearRuntimeOverlay();
+                m_SlateProjection.ClearRuntimeOverlay();
                 m_DebugDetails.Clear();
                 InvalidateLiveDebugOverlay();
                 SetStatus(binding.StatusMessage);
@@ -629,7 +624,7 @@ namespace BTSMTL.Timeline.Editor
 
             if (!view.TryGetTimelinePlaybackSummary(Timeline.AuthoringId, playback, out RuntimeTimelinePlaybackDebugSummary summary))
             {
-                m_View.ClearRuntimeOverlay();
+                m_SlateProjection.ClearRuntimeOverlay();
                 m_DebugDetails.Clear();
                 InvalidateLiveDebugOverlay();
                 SetStatus("The selected Timeline playback has no formal Trace summary.");
@@ -666,7 +661,7 @@ namespace BTSMTL.Timeline.Editor
                     if (eventView.Event.Kind == RuntimeTraceEventKind.ClipActive || eventView.Event.Kind is RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated)
                         clips[eventView.Source.ClipAuthoringId] = $"{eventView.Event.Kind}: {eventView.Event.Payload.Status}";
                 }
-                m_View.ApplyRuntimeOverlay(visualTime, tracks, clips);
+                m_SlateProjection.ApplyRuntimeOverlay(visualTime, tracks, clips);
                 m_DebugDetails.Clear();
                 PopulateDebugDetails(
                     timelineEvents,

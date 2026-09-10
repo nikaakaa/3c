@@ -32,6 +32,16 @@ namespace Slate
 
         public static CutsceneEditor current;
         public static event System.Action OnStopInEditor;
+        public static event System.Action<Cutscene, string> OnEditTransactionBegin;
+        public static event System.Action<Cutscene> OnEditTransactionCommit;
+        public static event System.Action<Cutscene> OnEditTransactionCancel;
+        public static event System.Action OnEditorClosed;
+        public static System.Func<Cutscene, bool> RecordUndoForCutscene;
+
+        public static bool ShouldRecordUndoFor(Cutscene target)
+        {
+            return RecordUndoForCutscene == null || RecordUndoForCutscene(target);
+        }
 
         private Cutscene _cutscene;
 #if UNITY_6000_5_OR_NEWER
@@ -93,6 +103,8 @@ namespace Slate
         [System.NonSerialized] private bool willRepaint;
         [System.NonSerialized] private bool willDirty;
         [System.NonSerialized] private bool willResample;
+        [System.NonSerialized] private bool editTransactionActive;
+        [System.NonSerialized] private int editTransactionButton = -1;
         [System.NonSerialized] private System.Action onDoPopup;
         [System.NonSerialized] private bool isResizingLeftMargin;
         [System.NonSerialized] private bool isAboutButtonPressed;
@@ -233,6 +245,31 @@ namespace Slate
             cutscene.currentTime = time;
         }
 
+        bool ShouldRecordUndo() {
+            return ShouldRecordUndoFor(cutscene);
+        }
+
+        void BeginEditTransaction(string undoName, int button) {
+            if ( editTransactionActive ) { return; }
+            editTransactionActive = true;
+            editTransactionButton = button;
+            OnEditTransactionBegin?.Invoke(cutscene, undoName);
+        }
+
+        void CommitEditTransaction() {
+            if ( !editTransactionActive ) { return; }
+            editTransactionActive = false;
+            editTransactionButton = -1;
+            OnEditTransactionCommit?.Invoke(cutscene);
+        }
+
+        void CancelEditTransaction() {
+            if ( !editTransactionActive ) { return; }
+            editTransactionActive = false;
+            editTransactionButton = -1;
+            OnEditTransactionCancel?.Invoke(cutscene);
+        }
+
         //Is directable filtered out by search string?
         bool IsFilteredOutBySearch(IDirectable directable, string search) {
             if ( string.IsNullOrEmpty(search) ) { return false; }
@@ -346,6 +383,7 @@ namespace Slate
         //...
         void OnDisable() {
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
+            CancelEditTransaction();
 
 #pragma warning disable 618
             EditorApplication.playmodeStateChanged -= InitializeAll;
@@ -357,6 +395,7 @@ namespace Slate
             if ( cutscene != null && !Application.isPlaying ) {
                 Stop(true);
             }
+            OnEditorClosed?.Invoke();
             current = null;
         }
 
@@ -752,9 +791,12 @@ namespace Slate
             var doRecordUndo = e.rawType == EventType.MouseDown && ( e.button == 0 || e.button == 1 );
             doRecordUndo |= e.type == EventType.DragPerform;
             if ( doRecordUndo ) {
-                Undo.RegisterFullObjectHierarchyUndo(cutscene.groupsRoot.gameObject, "Cutscene Change");
-                Undo.RecordObject(cutscene, "Cutscene Change");
-                willDirty = true;
+                BeginEditTransaction("Cutscene Change", e.button);
+                if ( ShouldRecordUndo() ) {
+                    Undo.RegisterFullObjectHierarchyUndo(cutscene.groupsRoot.gameObject, "Cutscene Change");
+                    Undo.RecordObject(cutscene, "Cutscene Change");
+                    willDirty = true;
+                }
             }
 
             //reorder clips lists for better UI. This is strictly a UI thing.
@@ -781,13 +823,6 @@ namespace Slate
             DoZoomAndPan();
 
 
-            //Dirty and Resample flags?
-            if ( e.rawType == EventType.MouseUp && e.button == 0 ) {
-                willDirty = true;
-                willResample = true;
-            }
-
-
             //Timelines
             var scrollRect1 = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, screenHeight - 5);
             var scrollRect2 = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, totalHeight + 150);
@@ -799,6 +834,15 @@ namespace Slate
 
             DrawGuides();
             AcceptDrops();
+
+            if ( e.rawType == EventType.MouseUp && editTransactionActive &&
+                 (editTransactionButton < 0 || e.button == editTransactionButton) ) {
+                if ( ShouldRecordUndo() ) {
+                    willDirty = true;
+                    willResample = true;
+                }
+                CommitEditTransaction();
+            }
 
 
             //Final stuff...
@@ -828,7 +872,7 @@ namespace Slate
             }
 
             //dirty?
-            if ( willDirty ) {
+            if ( willDirty && ShouldRecordUndo() ) {
                 willDirty = false;
                 EditorUtility.SetDirty(cutscene);
                 foreach ( var o in cutscene.GetComponentsInChildren(typeof(IDirectable), true).Cast<Object>() ) {

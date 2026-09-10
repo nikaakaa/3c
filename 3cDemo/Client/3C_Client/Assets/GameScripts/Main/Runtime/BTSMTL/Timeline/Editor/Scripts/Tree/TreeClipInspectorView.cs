@@ -114,7 +114,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OpenTree()
         {
-            EditorView?.OpenClip(m_TreeClip);
+            OpenClipAction?.Invoke(m_TreeClip);
         }
 
         void ExtractShared()

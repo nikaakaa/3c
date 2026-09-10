@@ -9,11 +9,11 @@ namespace BTSMTL.Timeline.Editor
 {
     public abstract class TimelineClipInspectorView : VisualElement
     {
-        protected TimelineEditorView EditorView { get; private set; }
+        protected Action<Clip> OpenClipAction { get; private set; }
 
-        public void Initialize(TimelineEditorView editorView)
+        public void Initialize(Action<Clip> openClipAction)
         {
-            EditorView = editorView;
+            OpenClipAction = openClipAction;
         }
     }
 

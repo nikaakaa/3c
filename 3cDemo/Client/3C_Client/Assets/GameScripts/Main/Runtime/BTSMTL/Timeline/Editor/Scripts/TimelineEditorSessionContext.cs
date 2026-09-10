@@ -92,20 +92,6 @@ namespace BTSMTL.Timeline.Editor
         public bool HasCurve =>
             Kind == TimelineEditorSelectionKind.Curve;
 
-        internal static TimelineEditorSelection FromCurve(AnimationCurveSelection selection)
-        {
-            if (selection == null || selection.Binding is not TimelineCurveLaneBinding binding || selection.Owner is not Clip owner)
-                return default;
-            return new TimelineEditorSelection(
-                TimelineEditorSelectionKind.Curve,
-                owner.Track,
-                owner,
-                selection.OwnerAuthoringId,
-                binding.Descriptor.ChannelId.Value,
-                selection.KeyIndices,
-                selection.Revision);
-        }
-
     }
 
     public interface ITimelineEditorSelectionPort
@@ -256,7 +242,6 @@ namespace BTSMTL.Timeline.Editor
         {
             TimelineEditorSelection selection = target switch
             {
-                AnimationCurveSelection curveSelection => TimelineEditorSelection.FromCurve(curveSelection),
                 Clip clip => new TimelineEditorSelection(clip.Track, clip),
                 Track track => new TimelineEditorSelection(track, null),
                 TimelineSection section => new TimelineEditorSelection(section),

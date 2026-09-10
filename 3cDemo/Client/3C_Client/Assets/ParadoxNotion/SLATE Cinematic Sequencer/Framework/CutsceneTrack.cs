@@ -320,8 +320,11 @@ namespace Slate
                 name = catAtt.category + " Track";
             }
 
-            var newAction = UnityEditor.Undo.AddComponent(gameObject, type) as ActionClip;
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "New Action");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(root as Cutscene);
+            var newAction = recordUndo
+                ? UnityEditor.Undo.AddComponent(gameObject, type) as ActionClip
+                : gameObject.AddComponent(type) as ActionClip;
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "New Action"); }
             newAction.startTime = time;
             clips.Add(newAction);
             newAction.PostCreate(this);
@@ -338,12 +341,14 @@ namespace Slate
 
         ///<summary>Remove an ActionClip from this Track</summary>
         public void DeleteAction(ActionClip action) {
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Remove Action");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(root as Cutscene);
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Remove Action"); }
             clips.Remove(action);
             if ( ReferenceEquals(CutsceneUtility.selectedObject, action) ) {
                 CutsceneUtility.selectedObject = null;
             }
-            UnityEditor.Undo.DestroyObjectImmediate(action);
+            if ( recordUndo ) { UnityEditor.Undo.DestroyObjectImmediate(action); }
+            else { UnityEngine.Object.DestroyImmediate(action); }
             root.Validate();
         }
 

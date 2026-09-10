@@ -787,6 +787,10 @@ namespace Slate
         void RecordUndo() {
 #if UNITY_EDITOR
             {
+                if ( keyable is IDirectable directable && directable.root is Cutscene cutscene &&
+                     !CutsceneEditor.ShouldRecordUndoFor(cutscene) ) {
+                    return;
+                }
                 UnityEngine.Object obj = null;
                 obj = keyable as UnityEngine.Object;
                 if ( obj != null ) { UnityEditor.Undo.RecordObject(obj, "Parameter Change"); }

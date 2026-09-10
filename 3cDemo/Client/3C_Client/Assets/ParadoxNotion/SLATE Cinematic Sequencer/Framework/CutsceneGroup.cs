@@ -482,10 +482,14 @@ namespace Slate
             }
 
             var go = new GameObject(type.Name.SplitCamelCase());
-            UnityEditor.Undo.RegisterCreatedObjectUndo(go, "New Track");
-            var newTrack = UnityEditor.Undo.AddComponent(go, type) as CutsceneTrack;
-            UnityEditor.Undo.SetTransformParent(newTrack.transform, this.transform, "New Track");
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "New Track");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(root as Cutscene);
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCreatedObjectUndo(go, "New Track"); }
+            var newTrack = recordUndo
+                ? UnityEditor.Undo.AddComponent(go, type) as CutsceneTrack
+                : go.AddComponent(type) as CutsceneTrack;
+            if ( recordUndo ) { UnityEditor.Undo.SetTransformParent(newTrack.transform, this.transform, "New Track"); }
+            else { newTrack.transform.SetParent(this.transform, false); }
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "New Track"); }
             newTrack.transform.localPosition = Vector3.zero;
             if ( name != null ) { newTrack.name = name; }
 
@@ -507,12 +511,14 @@ namespace Slate
                 return;
             }
 
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Delete Track");
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(root as Cutscene);
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Delete Track"); }
             tracks.Remove(track);
             if ( ReferenceEquals(CutsceneUtility.selectedObject, track) ) {
                 CutsceneUtility.selectedObject = null;
             }
-            UnityEditor.Undo.DestroyObjectImmediate(track.gameObject);
+            if ( recordUndo ) { UnityEditor.Undo.DestroyObjectImmediate(track.gameObject); }
+            else { UnityEngine.Object.DestroyImmediate(track.gameObject); }
             root.Validate();
         }
 
@@ -523,10 +529,12 @@ namespace Slate
                 return null;
             }
 
+            bool recordUndo = CutsceneEditor.ShouldRecordUndoFor(root as Cutscene);
             var newTrack = (CutsceneTrack)Instantiate(track);
-            UnityEditor.Undo.RegisterCreatedObjectUndo(newTrack.gameObject, "Duplicate Track");
-            UnityEditor.Undo.SetTransformParent(newTrack.transform, this.transform, "Duplicate Track");
-            UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Duplicate Track");
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCreatedObjectUndo(newTrack.gameObject, "Duplicate Track"); }
+            if ( recordUndo ) { UnityEditor.Undo.SetTransformParent(newTrack.transform, this.transform, "Duplicate Track"); }
+            else { newTrack.transform.SetParent(this.transform, false); }
+            if ( recordUndo ) { UnityEditor.Undo.RegisterCompleteObjectUndo(this, "Duplicate Track"); }
             newTrack.transform.localPosition = Vector3.zero;
             tracks.Add(newTrack);
             root.Validate();

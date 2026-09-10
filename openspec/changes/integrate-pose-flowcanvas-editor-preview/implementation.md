@@ -14,6 +14,8 @@
 
 随后通过Unity MCP重新发布了Corin Float32与Fixed products，二者共享Projection revision `c5a79e3fef430da029c033d0f379efee2e5e625d950974e6cafbe74cb8d8af9c`，生成的Pose Program Image已写入`character-presentation-pose-plan/v29`与`character-presentation-pose-runtime/v29`。Float32 wrapper与Fixed wrapper均返回成功；生成资产属于Build输出，未进入本轮代码提交。
 
+曾尝试把FullBody Action Slot后的动作请求接入第二个通用Inertialization节点。正式Build证明当前`CreatePoseOnlyInput()`不携带完整Character的ACL Action producer endpoint，导致Action Slot route matrix在Pose-only阶段没有可用惯性route；继续硬接会破坏Pose-only与完整Character的隔离。该拓扑已通过Document dry-run/apply正式回滚，Slot-owner compiler/runtime扩展保留为后续独立Action route contract的实现基础，当前Corin仍由Slot内部Action route处理。
+
 现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经明确要求这些边界，本轮对账没有修改spec。没有新增测试代码；端到端行为仍由作者验收。
 
 ## 实施增量历史（2026-09-09）

@@ -4,6 +4,8 @@
 
 本轮已完成的增量：根图通过Document v7正式事务接入通用Inertialization，Locomotion↔Turn两条过渡选择该逻辑；Layered Blend Per Bone已把Local／Component Pose Space贯通到Program与Worker；Pose详情已接入Animation Channel、Slot、Graph、Linked Pose、Presentation Fact、Gameplay State和Pose History候选。Corin没有Motion Matching或其它多源Selection source，也没有真实UpperBody Overlay，因此当前不伪造BlendStack或Layered节点；剩余任务继续围绕真实Overlay、观察和最终产品发布推进。
 
+Action Slot外接通用Inertialization的尝试已被正式Build拒绝并回滚：当前Pose-only输入不携带完整Character的ACL Action producer endpoint，不能凭空生成Action route。保留Slot-owner的通用编译/runtime扩展，待独立Action route contract完成后再接入，不改变现有Pose-only Build隔离。
+
 ## 1. 保留现有基础
 
 - [x] 1.1 保留已接入的FlowCanvas原生图编辑、typed端口及统一作者交互基础。

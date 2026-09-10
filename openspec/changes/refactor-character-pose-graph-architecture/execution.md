@@ -1531,3 +1531,7 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## 删除Pose Graph旧迁移路径（POSE-EXEC-20260911-03）
 
 状态：当前Canvas Graph已经是唯一Pose Graph作者数据后，删除`CharacterPresentationPoseGraphAsset`中未再被调用的`LegacyPoseGraph`序列化字段、迁移状态对象、旧Graph转换器和混合迁移校验入口；Graph、Graph Catalog、Source Slot和Resource Slot的正式作者数据与Profile绑定入口保持不变。提交为`4b1673e60`。这一步只清理旧路径，没有改动Corin Graph资产或用户未提交的Profile／Document文件。
+
+## 可复用Graph直接资源残留审计（POSE-EXEC-20260911-04）
+
+状态：当前Pose Graph的Source Slot与Resource Slot本身只表达抽象能力，Profile负责为它们提供具体资源；但Graph payload仍有两类直接资源引用尚未迁移。`CharacterPoseStateMachineAuthoringContracts`的Transition直接保存`CharacterAnimationBlendCurveAsset`与`CharacterAnimationBlendProfile`，`MotionMatchingPoseNodeContracts`的Motion Matching payload直接保存`CharacterMotionMatchingBinding`与`CharacterAnimationBlendPolicy`。因此24.1与24.2仍不能勾选；下一步必须在对应作者合同与同一Mutation／Compiler链中迁移，不能在Graph外再加兼容读取或角色名推断。前者当前存在用户未提交改动，本轮未触碰。

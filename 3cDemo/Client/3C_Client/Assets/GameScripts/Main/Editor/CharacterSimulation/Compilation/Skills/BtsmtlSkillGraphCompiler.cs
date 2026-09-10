@@ -41,12 +41,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public BtsmtlSkillGraphCompiler(CharacterSimulationProgramBuilder builder,
             Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain,
-            TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard)
+            TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard,
+            string controlModuleId)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_BindDomain = bindDomain ?? throw new ArgumentNullException(nameof(bindDomain));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
-            m_Leaves = new BtsmtlSkillFlowLeafEmitter(builder);
+            m_Leaves = new BtsmtlSkillFlowLeafEmitter(builder, controlModuleId);
             m_Flow = new BtsmtlSkillGraphFlowEmitter(builder);
             m_Timelines = new BtsmtlSkillTimelineCompiler(timelineEmitters, builder, Compile);
         }

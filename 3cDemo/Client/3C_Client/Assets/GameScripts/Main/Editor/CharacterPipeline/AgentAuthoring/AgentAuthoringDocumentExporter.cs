@@ -35,7 +35,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             AgentPackageSkillFlowDocument skillDocument =
                 AgentSkillFlowDocumentExporter.Export(definition, skillReport);
-            if (!AgentSkillFlowDocumentMapper.Validate(skillDocument, skillReport) || skillReport.HasErrors())
+            if (!AgentSkillFlowDocumentMapper.Validate(
+                    skillDocument,
+                    skillReport,
+                    definition.ControlModuleId) ||
+                skillReport.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, skillReport.messages.Select(value => value.message)));
             snapshot.skillGraphs = skillDocument.graphs;
             snapshot.skillGraphLayouts = skillDocument.layouts;

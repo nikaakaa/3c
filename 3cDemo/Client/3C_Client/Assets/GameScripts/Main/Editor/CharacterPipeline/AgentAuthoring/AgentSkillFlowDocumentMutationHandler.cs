@@ -33,7 +33,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(command.Path, "skill_flow_definition_missing", "Skill Flow Document mutation只能作用于CharacterController。");
                 return false;
             }
-            bool valid = AgentSkillFlowDocumentMapper.Validate(set.Document, session.Report);
+            bool valid = AgentSkillFlowDocumentMapper.Validate(
+                set.Document,
+                session.Report,
+                session.Definition.ControlModuleId);
             valid &= ValidateAssets(session, set.Document, command.Path);
             if (valid)
             {

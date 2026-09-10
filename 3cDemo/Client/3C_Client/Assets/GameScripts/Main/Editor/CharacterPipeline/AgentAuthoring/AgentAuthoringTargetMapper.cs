@@ -362,7 +362,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         macros = target.editable.skillMacros,
                         timelines = target.editable.skillTimelines
                     },
-                    report);
+                    report,
+                    target.editable.control?.moduleId);
             valid &= AgentTimelineDocumentMapper.ValidateTimelineRelationships(target.editable, report);
             valid &= AgentPackageMappingSupport.ValidatePrimaryIdentities(target.editable, report);
             if (packageAI != null && valid)

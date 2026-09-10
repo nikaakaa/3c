@@ -85,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_RootScope = scope;
             EditorApplication.update += Update;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            GraphEditor.onEditorClosed += OnEditorClosed;
             GraphEditor.onEditorNavigationChanged += OnNavigationChanged;
             TimelineEditorWindow.AssetOpened += OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened += OnTimelineTreeOpened;
@@ -242,6 +243,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Dispose();
         }
 
+        void OnEditorClosed() => Dispose();
+
         public void Dispose()
         {
             if (m_Disposed)
@@ -250,6 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Observation?.Dispose();
             EditorApplication.update -= Update;
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            GraphEditor.onEditorClosed -= OnEditorClosed;
             GraphEditor.onEditorNavigationChanged -= OnNavigationChanged;
             TimelineEditorWindow.AssetOpened -= OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened -= OnTimelineTreeOpened;

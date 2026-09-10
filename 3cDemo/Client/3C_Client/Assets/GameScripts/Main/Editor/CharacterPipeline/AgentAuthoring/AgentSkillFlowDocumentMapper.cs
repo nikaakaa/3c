@@ -208,7 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static bool Validate(
             AgentPackageSkillFlowDocument document,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            string controlModuleId)
         {
             if (document == null)
             {
@@ -324,7 +325,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         valid = false;
                         continue;
                     }
-                    valid &= ValidateNodeProperties(node, graph, document.macros, role, nodePath, report);
+                    valid &= ValidateNodeProperties(
+                        node,
+                        graph,
+                        document.macros,
+                        role,
+                        nodePath,
+                        report,
+                        controlModuleId);
                     valid &= RejectInternalFields(node.properties, nodePath + ".properties", report);
                 }
                 var layoutNodes = new HashSet<string>(StringComparer.Ordinal);
@@ -431,7 +439,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 AgentPackageSkillFlowDocument document =
                     AgentSkillFlowDocumentExporter.Export(definition, report);
-                return !report.HasErrors() && Validate(document, report);
+                return !report.HasErrors() && Validate(document, report, definition.ControlModuleId);
             }
             catch (Exception exception)
             {
@@ -620,7 +628,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             IReadOnlyList<AgentPackageSkillMacroFile> macros,
             BtsmtlSkillFlowGraphRole role,
             string path,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            string controlModuleId)
         {
             bool valid = true;
             if (node.properties == null || node.values == null)
@@ -745,9 +754,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                  node.capability == "character-state-scalar" ||
                  node.capability == "character-state-yaw" ||
                  node.capability == "character-state-bool") &&
-                !CharacterStateProviderFields.IsOwner(properties.Value<string>("providerOwnerId")))
+                !CharacterStateProviderFields.IsOwnerForModule(
+                    properties.Value<string>("providerOwnerId"),
+                    controlModuleId))
             {
-                report.Error(path + ".properties.providerOwnerId", "character_state_owner_invalid", "Character State provider owner 必须是 control-module:<id>。");
+                report.Error(
+                    path + ".properties.providerOwnerId",
+                    "character_state_owner_invalid",
+                    $"Character State provider owner 必须是 control-module:{controlModuleId}。");
                 valid = false;
             }
             if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||

@@ -12,17 +12,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillFlowLeafEmitter
     {
         readonly CharacterSimulationOperationEmitter m_Emitter;
+        readonly string m_ControlModuleId;
 
-        public BtsmtlSkillFlowLeafEmitter(CharacterSimulationProgramBuilder builder)
+        public BtsmtlSkillFlowLeafEmitter(CharacterSimulationProgramBuilder builder, string controlModuleId)
         {
             m_Emitter = new CharacterSimulationOperationEmitter(builder);
+            m_ControlModuleId = controlModuleId ?? string.Empty;
         }
 
         public OperationHandle Emit(FlowNode node, string route, string contentHash)
         {
             if (node.graph is not IBtsmtlSkillFlowGraph graph)
                 throw new ArgumentException("A skill node must belong to its formal authoring graph.", nameof(node));
-            ValidateCharacterStateNode(node);
+            ValidateCharacterStateNode(node, m_ControlModuleId);
             CharacterSimulationNodeEmission emission = Describe(node);
             BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract native);
             OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(emission.Code);
@@ -201,7 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
         }
 
-        static void ValidateCharacterStateNode(FlowNode node)
+        static void ValidateCharacterStateNode(FlowNode node, string controlModuleId)
         {
             string field = node switch
             {
@@ -213,6 +215,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             if (string.IsNullOrEmpty(field))
                 return;
+            string owner = node switch
+            {
+                BtsmtlSkillCharacterStateVector3FlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateScalarFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateYawFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateBooleanFlowNode value => value.ProviderOwnerId,
+                _ => string.Empty
+            };
+            if (!CharacterStateProviderFields.IsOwnerForModule(owner, controlModuleId))
+                throw new InvalidOperationException($"Character State provider owner '{owner}' does not match control module '{controlModuleId}'.");
             bool valid = node switch
             {
                 BtsmtlSkillCharacterStateVector3FlowNode => CharacterStateProviderFields.IsVector3(field),

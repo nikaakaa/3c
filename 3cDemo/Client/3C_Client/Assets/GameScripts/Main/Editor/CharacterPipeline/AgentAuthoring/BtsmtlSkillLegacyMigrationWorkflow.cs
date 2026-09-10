@@ -1005,7 +1005,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     rootIdentity = m_Snapshot.rootIdentity,
                     success = true
                 };
-                if (!AgentSkillFlowDocumentMapper.Validate(document, validation) || validation.HasErrors())
+                if (!AgentSkillFlowDocumentMapper.Validate(
+                        document,
+                        validation,
+                        m_Definition.ControlModuleId) ||
+                    validation.HasErrors())
                     throw new InvalidOperationException(string.Join(Environment.NewLine, validation.messages.Select(value => value.message)));
                 var mutation = new AgentSetSkillFlowDocumentMutation("legacy-skill-migration", "editable.skills", document);
                 var plan = new AgentMutationPlan(new AgentMutation[] { mutation }, AgentAuthoringSchema.CharacterControllerDomain, m_Snapshot.rootIdentity, m_Snapshot.sourceRevision ?? string.Empty);

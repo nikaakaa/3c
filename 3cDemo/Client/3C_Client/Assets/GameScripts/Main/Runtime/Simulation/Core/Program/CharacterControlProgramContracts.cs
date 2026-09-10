@@ -14,6 +14,11 @@ namespace ThirdPersonSimulation
         public const string BodyYaw = "movement.body-yaw";
         public const string Grounded = "movement.grounded";
 
+        public static string Owner(string controlModuleId) =>
+            string.IsNullOrWhiteSpace(controlModuleId)
+                ? string.Empty
+                : OwnerPrefix + controlModuleId.Trim();
+
         public static bool IsVector3(string field) =>
             string.Equals(field, Position, StringComparison.Ordinal) ||
             string.Equals(field, Velocity, StringComparison.Ordinal);
@@ -34,6 +39,11 @@ namespace ThirdPersonSimulation
             !string.IsNullOrWhiteSpace(owner) &&
             owner.StartsWith(OwnerPrefix, StringComparison.Ordinal) &&
             owner.Length > OwnerPrefix.Length;
+
+        public static bool IsOwnerForModule(string owner, string controlModuleId) =>
+            IsOwner(owner) &&
+            !string.IsNullOrWhiteSpace(controlModuleId) &&
+            string.Equals(owner, Owner(controlModuleId), StringComparison.Ordinal);
 
         public static SemanticValueKind ValueKind(string field)
         {

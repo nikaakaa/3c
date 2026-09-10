@@ -288,6 +288,39 @@ namespace ThirdPersonCharacter.Control.Authoring
             }
         }
 
+        internal static void AppendConfiguredCreationItem(
+            FlowGraph graph,
+            GenericMenu menu,
+            string category,
+            Type type,
+            Vector2 position,
+            Port context,
+            Action<FlowNode> configure)
+        {
+            if (!graph.CanAuthorNodeType(type) || graph.isEditorReadOnly)
+                return;
+            if (context == null)
+            {
+                menu.AddItem(new GUIContent(category), false, () => CreateConfigured(graph, type, position, null, -1, configure));
+                return;
+            }
+
+            var prototype = (FlowNode)Activator.CreateInstance(type);
+            prototype.GatherPorts();
+            bool input = context.IsOutputPort();
+            Port[] ports = Ports(prototype, input);
+            for (int i = 0; i < ports.Length; i++)
+            {
+                if (ports[i].type != context.type || ports[i].IsFlowPort() != context.IsFlowPort())
+                    continue;
+                int index = i;
+                menu.AddItem(
+                    new GUIContent(category + "/" + ports[i].name),
+                    false,
+                    () => CreateConfigured(graph, type, position, context, index, configure));
+            }
+        }
+
         public static void AppendPrivateMacroCreationItem(FlowGraph graph, GenericMenu menu, Vector2 position, Port context)
         {
             if (graph.isEditorReadOnly || !graph.CanAuthorNodeType(typeof(MacroNodeWrapper)) ||
@@ -359,6 +392,45 @@ namespace ThirdPersonCharacter.Control.Authoring
         static Port[] Ports(FlowNode node, bool input) => input
             ? node.GetInputFlowPorts().Cast<Port>().Concat(node.GetInputValuePorts()).ToArray()
             : node.GetOutputFlowPorts().Cast<Port>().Concat(node.GetOutputValuePorts()).ToArray();
+
+        static void CreateConfigured(
+            FlowGraph graph,
+            Type type,
+            Vector2 position,
+            Port context,
+            int index,
+            Action<FlowNode> configure)
+        {
+            FlowNode created = null;
+            try
+            {
+                Apply(graph, "创建技能Provider节点", () =>
+                {
+                    created = (FlowNode)graph.AddNode(type, position);
+                    BtsmtlSkillGraphAssetFactory.CreateOwnedContent(graph, created);
+                    configure(created);
+                    if (context == null)
+                        return;
+                    Port endpoint = context.IsInputPort()
+                        ? context.parent.GetInputPort(context.ID)
+                        : context.parent.GetOutputPort(context.ID);
+                    Port port = Ports(created, context.IsOutputPort())[index];
+                    Port source = context.IsOutputPort() ? endpoint : port;
+                    Port target = context.IsOutputPort() ? port : endpoint;
+                    if (source == null || target == null || source.parent.graph != graph || target.parent.graph != graph ||
+                        !graph.allNodes.Contains(source.parent) || !graph.allNodes.Contains(target.parent) ||
+                        source.type != target.type || !BinderConnection.CanBeBoundVerbosed(source, target, null, out _))
+                        throw new InvalidOperationException("The selected provider port is no longer compatible.");
+                    if (BinderConnection.Create(source, target) == null)
+                        throw new InvalidOperationException("The native provider connection could not be created.");
+                });
+                GraphEditorUtility.activeElement = created;
+            }
+            catch (Exception error) when (error is InvalidOperationException || error is ArgumentException)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+            }
+        }
 
         internal static void CreateBlackboardAccessNode(
             FlowGraph graph,

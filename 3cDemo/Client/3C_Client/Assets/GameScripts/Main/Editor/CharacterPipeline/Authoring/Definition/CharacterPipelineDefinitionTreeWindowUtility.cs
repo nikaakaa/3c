@@ -14,10 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 BtsmtlSkillFlowGraph graph = definition.SkillGraphs[i];
                 if (graph && string.Equals(graph.AuthoringId, graphAuthoringId, System.StringComparison.Ordinal))
-                {
-                    BtsmtlSkillGraphAuthoringPanel.SetDefinitionContext(definition);
                     return AssetDatabase.OpenAsset(graph);
-                }
             }
             return false;
         }

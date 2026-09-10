@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,6 +71,7 @@ namespace NodeCanvas.Editor
 
             this.contextObject = overrideContextObject != null ? overrideContextObject : bb.unityContextObject;
             this.bb = bb;
+            var adapter = contextObject as IBlackboardEditorAdapter;
 
             this.variablesProperty = null;
             if ( contextObject != null && PrefabUtility.IsPartOfPrefabInstance(contextObject) && bb.independantVariablesFieldName != null ) {
@@ -77,12 +79,14 @@ namespace NodeCanvas.Editor
                 this.variablesProperty = serializedContext.FindProperty(bb.independantVariablesFieldName);
             }
 
+            adapter?.DrawBlackboardExtensions(bb, contextObject);
+
 
             //Add variable button
             GUI.backgroundColor = Colors.lightBlue;
-            GUI.enabled = !isPrefab;
+            GUI.enabled = !isPrefab && (adapter == null || !adapter.IsReadOnly);
             if ( GUILayout.Button("Add Variable") ) {
-                GetAddVariableMenu(bb, contextObject).ShowAsBrowser("Add Variable");
+                (adapter != null ? adapter.GetAddVariableMenu(bb, contextObject) : GetAddVariableMenu(bb, contextObject)).ShowAsBrowser("Add Variable");
                 Event.current.Use();
             }
             GUI.enabled = true;
@@ -111,27 +115,48 @@ namespace NodeCanvas.Editor
             //The actual variables reorderable list
             var options = new EditorUtils.ReorderableListOptions();
             options.blockReorder = isPrefab;
+            options.blockReorder |= adapter != null && adapter.IsReadOnly;
             options.unityObjectContext = contextObject;
-            options.customItemMenu = (i) => { return GetVariableMenu(tempVariablesList[i], i); };
-            EditorUtils.ReorderableList(tempVariablesList, options, (i, isPicked) =>
+            options.customItemMenu = (i) => adapter != null
+                ? adapter.GetVariableMenu(bb, contextObject, tempVariablesList[i], i)
+                : GetVariableMenu(tempVariablesList[i], i);
+            using (new EditorGUI.DisabledScope(adapter != null && adapter.IsReadOnly))
             {
-                var data = tempVariablesList[i] as Variable;
-                if ( data == null ) { GUILayout.Label("NULL Variable!"); return; }
-                GUILayout.Space(data.varType == typeof(VariableSeperator) ? 5 : 0);
-                GUILayout.BeginHorizontal();
-                DoVariableGUI(data, i, isPicked);
-                GUILayout.EndHorizontal();
-                GUI.color = Color.white;
-                GUI.backgroundColor = Color.white;
-                if ( elementDefinedParameterIDs != null && elementDefinedParameterIDs.Contains(data.ID) ) { EditorUtils.HighlightLastField(); }
-            });
+                EditorUtils.ReorderableList(tempVariablesList, options, (i, isPicked) =>
+                {
+                    var data = tempVariablesList[i] as Variable;
+                    if ( data == null ) { GUILayout.Label("NULL Variable!"); return; }
+                    GUILayout.Space(data.varType == typeof(VariableSeperator) ? 5 : 0);
+                    GUILayout.BeginHorizontal();
+                    DoVariableGUI(data, i, isPicked);
+                    GUILayout.EndHorizontal();
+                    GUI.color = Color.white;
+                    GUI.backgroundColor = Color.white;
+                    if ( elementDefinedParameterIDs != null && elementDefinedParameterIDs.Contains(data.ID) ) { EditorUtils.HighlightLastField(); }
+                });
+            }
 
             //apply temp list reconstruct the dictionary
             if ( GUI.changed || Event.current.rawType == EventType.MouseUp ) {
                 EditorApplication.delayCall += () => { ResetPick(); };
-                try { bb.variables = tempVariablesList.ToDictionary(d => d.name, d => d); }
+                try {
+                    if (adapter != null)
+                        adapter.ApplyVariableList(bb, tempVariablesList);
+                    else
+                        bb.variables = tempVariablesList.ToDictionary(d => d.name, d => d);
+                }
                 catch { ParadoxNotion.Services.Logger.LogError("Blackboard has duplicate names!", LogTag.EDITOR, bb); }
             }
+        }
+
+        void ExecuteMutation(string title, Action mutation) {
+            if (contextObject is IBlackboardEditorAdapter adapter) {
+                adapter.ExecuteMutation(title, mutation);
+                return;
+            }
+            UndoUtility.RecordObject(contextObject, title);
+            mutation();
+            UndoUtility.SetDirty(contextObject);
         }
 
         //...
@@ -192,9 +217,7 @@ namespace NodeCanvas.Editor
                 if ( separator.isEditingName ) {
                     var newName = EditorGUILayout.DelayedTextField(data.name, LAYOUT);
                     if ( data.name != newName ) {
-                        UndoUtility.RecordObject(contextObject, "Separator Rename");
-                        data.name = newName;
-                        UndoUtility.SetDirty(contextObject);
+                        ExecuteMutation("Separator Rename", () => data.name = newName);
                     }
 
                     if ( ( e.isKey && e.keyCode == KeyCode.Return ) || ( e.rawType == EventType.MouseUp && !GUILayoutUtility.GetLastRect().Contains(e.mousePosition) ) ) {
@@ -211,9 +234,7 @@ namespace NodeCanvas.Editor
                 GUI.skin.textField.fontStyle = isVariablePrefabInstanceModified ? FontStyle.Bold : FontStyle.Normal;
                 var newName = EditorGUILayout.DelayedTextField(data.name, LAYOUT);
                 if ( data.name != newName ) {
-                    UndoUtility.RecordObject(contextObject, "Variable Name Change");
-                    data.name = newName;
-                    UndoUtility.SetDirty(contextObject);
+                    ExecuteMutation("Variable Name Change", () => data.name = newName);
                 }
 
                 GUI.skin.textField.fontStyle = wasFontStyle;
@@ -246,9 +267,7 @@ namespace NodeCanvas.Editor
             var newVal = VariableField(data, contextObject, LAYOUT);
             EditorGUIUtility.labelWidth = 0;
             if ( !Equals(data.value, newVal) ) {
-                UndoUtility.RecordObject(contextObject, "Variable Value Change");
-                data.value = newVal;
-                UndoUtility.SetDirty(contextObject);
+                ExecuteMutation("Variable Value Change", () => data.value = newVal);
             }
             GUI.color = Color.white;
         }
@@ -465,7 +484,7 @@ namespace NodeCanvas.Editor
             //allow creation of derived classes for abstract classes via button
             if ( o == null && t.IsAbstract && !typeof(UnityEngine.Object).IsAssignableFrom(t) && !t.IsInterface && t != typeof(System.Type) ) {
                 if ( GUILayout.Button("(null) Create", layoutOptions) ) {
-                    EditorUtils.GetTypeSelectionMenu(t, (derived) => { data.value = System.Activator.CreateInstance(derived); }).ShowAsBrowser("Select Derived Type");
+                    EditorUtils.GetTypeSelectionMenu(t, (derived) => ExecuteMutation("Create Variable Value", () => data.value = System.Activator.CreateInstance(derived))).ShowAsBrowser("Select Derived Type");
                 }
                 return o;
             }
@@ -479,7 +498,7 @@ namespace NodeCanvas.Editor
             t = o != null ? o.GetType() : t;
             if ( GUILayout.Button(string.Format("{0} {1}", t.FriendlyName(), ( o is IList list ) ? list.Count.ToString() : string.Empty), layoutOptions) ) {
                 //we use bb.GetVariableByID to avoid undo creating new instance of variable, and thus generic inspector left inspecting something else
-                GenericInspectorWindow.Show(data.name, t, contextParent, () => { return bb.GetVariableByID(data.ID).value; }, (newValue) => { bb.GetVariableByID(data.ID).value = newValue; });
+                GenericInspectorWindow.Show(data.name, t, contextParent, () => { return bb.GetVariableByID(data.ID).value; }, (newValue) => ExecuteMutation("Variable Value Change", () => bb.GetVariableByID(data.ID).value = newValue));
             }
 
             return o;

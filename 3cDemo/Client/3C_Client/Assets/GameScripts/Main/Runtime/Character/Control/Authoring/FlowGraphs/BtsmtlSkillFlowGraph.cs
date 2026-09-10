@@ -5,8 +5,10 @@ using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
+using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ParadoxNotion;
+using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -72,7 +74,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 
-    public sealed class BtsmtlSkillFlowGraph : FlowGraph, IBtsmtlSkillFlowGraph, ITimelineTreeGraphAsset
+    public sealed class BtsmtlSkillFlowGraph : FlowGraph, IBtsmtlSkillFlowGraph, ITimelineTreeGraphAsset, IBlackboardEditorAdapter
     {
         [Serializable]
         sealed class AuthoringData
@@ -160,6 +162,17 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override bool usesDomainAuthoring => true;
         public override bool isEditorReadOnly => Application.isPlaying;
         public override bool usesExplicitPortSelection => true;
+        public bool IsReadOnly => isEditorReadOnly;
+        public void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject) =>
+            BtsmtlSkillBlackboardEditorAdapter.Draw(this, blackboard);
+        public GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject) =>
+            BtsmtlSkillBlackboardEditorAdapter.GetAddVariableMenu(this, blackboard);
+        public GenericMenu GetVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject, Variable variable, int index) =>
+            BtsmtlSkillBlackboardEditorAdapter.GetVariableMenu(this, blackboard, variable);
+        public void ExecuteMutation(string title, Action mutation) =>
+            BtsmtlSkillBlackboardEditorAdapter.ExecuteMutation(this, title, mutation);
+        public void ApplyVariableList(IBlackboard blackboard, IReadOnlyList<Variable> variables) =>
+            BtsmtlSkillBlackboardEditorAdapter.ApplyVariableList(this, blackboard, variables);
         public override bool HandleEditorCommand(string command, Vector2 position) =>
             BtsmtlSkillFlowEditorMutation.HandleCommand(this, command, position);
         protected override void OnGraphEditorToolbar() => BtsmtlSkillObservationToolbar.Draw(this);
@@ -217,6 +230,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             var menu = AppendFlowNodesMenu(new UnityEditor.GenericMenu(), string.Empty, position, context, instance);
             BtsmtlSkillFlowEditorMutation.AppendPrivateMacroCreationItem(this, menu, position, context);
+            BtsmtlSkillProviderNodeMenu.Append(this, menu, position, context, instance);
             return this.AppendSimplexNodesMenu(menu, "原生逻辑", position, context, instance);
         }
 

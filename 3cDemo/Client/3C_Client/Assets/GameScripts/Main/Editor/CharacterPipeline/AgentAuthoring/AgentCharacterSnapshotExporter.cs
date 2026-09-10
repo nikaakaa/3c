@@ -18,7 +18,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    public sealed class AgentGraphSnapshotExporter
+    public sealed class AgentCharacterSnapshotExporter
     {
         public AgentGraphSnapshot Export(CharacterPipelineDefinition definition)
         {
@@ -448,3 +448,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
     }
 }
+

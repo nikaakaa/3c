@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool generatedProductStale =
                 CharacterSimulationProgramBuildService
                     .EvaluateExactArtifactStaleness(definition);
-            AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(definition);
+            AgentGraphSnapshot snapshot = new AgentCharacterSnapshotExporter().ExportFull(definition);
             snapshot.controlModuleId = definition.ControlModuleId;
             List<AgentSnapshotSkillDefinition> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
             snapshot.skills = skills;

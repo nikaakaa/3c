@@ -4,16 +4,16 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=c3b5e7ab89750c40a1f9b9ad17348e8c1fe215400006d59b813237ef0c9da2ff`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
+尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter正式接合证据、Document与owner的完整Undo/保存往返、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`；未执行Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
 | 缺口 | 对应工作 |
 |---|---|
-| 仍需补代码与集成 | 2.2.3动态字段／端口统一；2.3全部编辑写入预检；2.3.5—2.3.6 provider Blackboard与GA导航；2.4完整owner事务；2.5遗漏入口清理；3.1—3.2共享Macro作者流程及调用方接口检查；4.1.5—4.1.7状态provider与Program State；4.5 Simulation Pipeline/网络Adapter；6.1优化标记；8.2旧路径清理 |
+| 仍需补代码与集成 | 2.1.2导入／复制身份合同核对；2.4完整owner事务；4.5 Simulation Pipeline、State、GAS与网络正式接合 |
 | 主链代码已有，仍需完成规定的执行核对 | 2.1.2身份保存／重载；3.3—3.4编译语义与页面导航；4.1.4—4.3正式构建；6.2—6.4版本、调用诊断与开销；7.2—7.5实例选择和观察生命周期；8.5规范与Rootless残留核对 |
-| 基础已提交，集成及资产往返未完成 | 5.1—5.3的Document v7、根／私有／共享owner保存与失败恢复 |
-| 最后执行的资产与交付工作 | 5.4—5.6迁移计划、apply及产物发布；8.1运行对账；8.3—8.5规范安装、网络闭包与最终证据 |
+| 基础已提交，集成及资产往返未完成 | 5.3的根／私有／共享owner保存与失败恢复证据 |
+| 最后执行的资产与交付工作 | 5.6产物发布；8.1运行对账；8.4.2最终代码／资产／CLI证据汇总 |
 
 本表只解释缺口，不替代各任务的完整完成标准。任务总量随架构决策补充而变化，不再使用固定总数推算进度；编译错误只影响对应验证，不作为停止独立代码或文档工作的理由。
 

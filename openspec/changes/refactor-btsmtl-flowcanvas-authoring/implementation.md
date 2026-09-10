@@ -211,3 +211,9 @@ Rollback单帧Input、Server Authority底层Input和Baseline读取在字段解�
 技能FlowCanvas的变量拖放现在只接受当前图自己的原生Blackboard。作者拖入变量后显示Get/Set选择；创建的节点保存变量稳定ID、当前图owner和值类型，Set节点经`BtsmtlSkillFlowEditorMutation`写入，外部Blackboard、无稳定身份或不支持类型直接拒绝。状态页、Timeline页和Macro页共用同一入口，变量默认值仍由原生Variable保存，运行时不执行原生绑定getter。
 
 Document侧补齐v7技能输入绑定、Skill Timeline与非技能Timeline分离，以及Animation Slot、Animation Clip Blend Profile和Timeline Section next的typed Mutation。Character Agent事务不再从Character RootTree建立索引或解析黑板；Skill Graph/Macro/Timeline和Input、GameplayEffect、BodyMotion、Animation Presentation owner分别进入正式owner集合。旧Character RootTree依赖测试和导航入口随本步删除，旧自研AI RootTree域也已由`b012bf211`退役，没有新增兼容路径。
+
+# 2026-09-10 快照模型收口与正式文档对账
+
+`b0d4704fa`进一步收缩Character Agent快照模型。`AgentGraphSnapshotExporter`现在只导出Control、Input、Action、Skill Flow和Presentation/Blend只读上下文；删除旧Graph/StateMachine/RootTree Timeline摘要、顶层Blackboard声明、旧动画Producer投影及其路线模型。`AgentAuthoringDocumentModels`、`AgentAuthoringTargetMapper`和`AgentAuthoringDocumentExporter`不再生成顶层Blackboard或Timeline/ActionContext资产目录；`AgentAssetResolver`只接受Skill文档提供的明确GUID/路径，不再从快照资产目录猜测资源。共享Graph端口预检保留的最小`AgentSnapshotNode`只服务现有能力目录，不代表Character技能入口恢复旧图。
+
+目标Unity实例`3C_Client@e852139597e42532`刷新后按`error CS`读取为0条。随后正式`btsmtl.checkout_document` job `924622bab9dd43998971a4f03d7e9c93`和`btsmtl.dry_run_document` job `e24ea918efb3442bbf83ac7f75e5836d`均完成成功：v7包`syncState=Clean`、`plannedDiff=[]`，`sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8`，`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`，`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`。这证明快照模型清理没有改变当前正式包；没有执行Document apply、Character Build、Play、网络回放或性能采样。

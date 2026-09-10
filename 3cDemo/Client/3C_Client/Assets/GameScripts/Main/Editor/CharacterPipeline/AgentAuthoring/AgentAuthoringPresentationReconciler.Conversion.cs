@@ -333,10 +333,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 try
                 {
-                    CharacterPoseResourceSlot slot = Resolve<CharacterPoseResourceSlot>(
-                        value.slot,
-                        path + $"[{ReferenceIdentity(value.slot)}].slot",
-                        report);
+                    string slotPath =
+                        path + $"[{ReferenceIdentity(value.slot)}].slot";
+                    CharacterPoseResourceSlot slot;
+                    bool local = !string.IsNullOrWhiteSpace(value.slot?.localId);
+                    if (local)
+                    {
+                        m_LocalAssets.TryGetValue(
+                            value.slot.localId,
+                            out UnityEngine.Object localAsset);
+                        slot = localAsset as CharacterPoseResourceSlot;
+                        if (!slot)
+                        {
+                            report.Error(
+                                slotPath,
+                                "presentation_local_asset_unresolved",
+                                $"Local Pose Resource Slot '{value.slot.localId}'没有解析到当前事务对象。");
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        slot = Resolve<CharacterPoseResourceSlot>(
+                            value.slot,
+                            slotPath,
+                            report);
+                    }
                     UnityEngine.Object resource = Resolve<UnityEngine.Object>(
                         value.resource,
                         path + $"[{ReferenceIdentity(value.slot)}].resource",
@@ -344,8 +366,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     CharacterPoseResourceKind kind = Enum.Parse<CharacterPoseResourceKind>(
                         value.kind,
                         false);
-                    CharacterPoseResourceBinding binding =
-                        CharacterAnimationPresentationAuthoringService
+                    CharacterPoseResourceBinding binding = local
+                        ? CreateTransientResourceBinding(slot, kind, resource)
+                        : CharacterAnimationPresentationAuthoringService
                             .CreateResourceBinding(
                                 poseGraph,
                                 slot,
@@ -362,6 +385,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             return result.ToArray();
+        }
+
+        static CharacterPoseResourceBinding CreateTransientResourceBinding(
+            CharacterPoseResourceSlot slot,
+            CharacterPoseResourceKind kind,
+            UnityEngine.Object resource)
+        {
+            if (!slot || slot.Kind != kind || !slot.Accepts(resource))
+                throw new ArgumentException("Pose resource binding inputs are incomplete.");
+            var binding = new CharacterPoseResourceBinding();
+            binding.Configure(slot, resource);
+            return binding;
         }
 
         CharacterPresentationPoseSourceSlot ResolveSourceSlot(

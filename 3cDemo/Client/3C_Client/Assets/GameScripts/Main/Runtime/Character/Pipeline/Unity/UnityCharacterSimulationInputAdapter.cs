@@ -176,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             StableHash committedObservationCapability)
         {
             if (actorId != new ActorId(m_Owner.ActorId) || roster == null ||
-                !committedObservationCapability.Equals(CommittedActorObservationSchema.CapabilityHash))
+                !committedObservationCapability.Equals(CommittedActorPoseSchema.CapabilityHash))
             {
                 throw new InvalidOperationException("Unity player Control Source roster or committed observation capability is incompatible.");
             }

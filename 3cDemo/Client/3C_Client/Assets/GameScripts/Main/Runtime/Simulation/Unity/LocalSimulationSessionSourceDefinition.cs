@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     rosterRuntime.ValidateRoster(
                         registration.ActorId,
                         roster,
-                        CommittedActorObservationSchema.CapabilityHash);
+                        CommittedActorPoseSchema.CapabilityHash);
                 }
                 inputBindings[i] = new LocalSimulationInputBinding(registration.ActorId, controlSource);
                 string stateIdentity = controlSource is ICharacterControlSourceStateRuntime stateful

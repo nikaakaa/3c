@@ -8,7 +8,7 @@
 
 Pose独立入口只接收Animation Input Contract、Pose Graph、Rig和直接动画资源，通过`animationBuildInput.CreatePoseOnlyInput()`调用唯一Pose Compiler；Character总Build在Gameplay装配层复用同一Pose结果，不再用Skill Graph发现动画输入。用户指定的`CharacterAnimationBuildContracts.CreatePoseOnlyInput()`和`CharacterSimulationBuildOrchestrator`调用点均保留。
 
-精确Corin Definition的Document v7 checkout与未修改正文dry-run均已由Unity MCP完成，结果为`syncState=Clean`、`success=true`、`plannedDiff=[]`。正式Unity MCP Character Build job `49ebed9733a84002891b37ebcf07bfaf`成功发布Float32、Fixed与共享Presentation Projection；Program／Projection生成资产已分别提交。此次过程没有新增测试代码，运行端到端验收仍由作者按项目规则执行。
+精确Corin Definition的Document v7 checkout与未修改正文dry-run均已由Unity MCP完成，当前基线为`syncState=Clean`、`success=true`、`plannedDiff=[]`、`contextHash=f5d18a6758276b6050f74a6da19e9b13824926251601cbbf947f2d29a242e27e`、`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`。最终 Unity MCP Character Build job `756b84459b4b44c4aa0be94bca307bff`成功发布 Float32、Fixed 与共享 Presentation Projection；最终 `SourceRevision=e6c605afd9e22f2ac181636bc6210e7941edccd84bdf11c1f7a1746a12e5e89b`、`SemanticHash=179589428cf53570f396de7a9748ad0728aad1e75a788f1fbbe75c3ff4e1bd04`、`ProgramHash=9cc7c8865a927c3dc5b627ab67a49af1eb955c98aa772d5f6d883b1f8d3153e1`、`ProjectionRevision=eb1030b68f82dbb5f0a7aa094f1ad7d935350d1e74aa30f371fdaf9947d9e53f`。已用完的 Corin Pose 迁移器和旧 Canvas 迁移器已删除，分别见提交 `1de77112d`、`4eb342be4`。此次过程没有新增测试代码，运行端到端验收仍由作者按项目规则执行。
 
 ## 实施增量历史（2026-09-09）
 

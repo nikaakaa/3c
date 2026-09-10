@@ -57,14 +57,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             s_Dirty = false;
             if (!Application.isPlaying || GraphEditor.current == null ||
-                GraphEditor.currentGraph is not FlowGraph graph ||
-                graph is not IBtsmtlSkillFlowGraph authoring)
+                GraphEditor.rootGraph is not BtsmtlSkillFlowGraph graph ||
+                graph.Role != BtsmtlSkillFlowGraphRole.Skill)
             {
                 ReleaseInterest();
                 s_Graph = null;
                 s_Request = default;
                 return;
             }
+
+            var authoring = (IBtsmtlSkillFlowGraph)graph;
 
             if (!ReferenceEquals(s_Graph, graph))
             {

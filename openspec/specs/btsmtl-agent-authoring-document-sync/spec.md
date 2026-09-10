@@ -81,16 +81,16 @@ CharacterController Document MUST不生成或读取`editable/blackboard.json`、
 - **THEN** strict parser MUST在mutation前拒绝该Graph
 - **AND** MUST不忽略字段或转换为SerializedProperty写入
 
-### Requirement: 状态摘要必须复用正式节点身份
+### Requirement: Skill Graph状态与变量身份必须直接表达
 
-系统 MUST区分状态摘要引用与实体声明，并按所属Graph核对摘要身份。
+CharacterController Document MUST把状态、节点关系和Blackboard声明放在所属Skill Graph闭包内，复用正式FlowNode、Flow Edge和稳定声明identity。系统 MUST不再通过controller摘要、顶层Graph摘要或独立状态摘要复制这些实体；非技能领域保留的通用Graph摘要不属于Character Skill Document合同。
 
-#### Scenario: 状态摘要引用同一Graph中的状态节点
+#### Scenario: Skill Graph同时表达状态与变量
 
-- **WHEN** controller状态摘要和editable Graph同时表达同一个状态节点
-- **THEN** identity校验 MUST将摘要视为所属StateMachine Graph中State节点的引用，不得将其再次登记为独立实体
-- **AND** MUST拒绝摘要内重复状态、重复状态机摘要、跨Graph引用及非State节点引用；Graph自身的实体identity仍须全局唯一
-- **AND** 对只以摘要提供的组合状态机，摘要身份 MUST继续参与全局唯一校验
+- **WHEN** Document包含状态节点、状态主体调用和Skill Local Blackboard声明
+- **THEN** identity校验 MUST以所属Skill Graph中的正式Node、Edge和声明为唯一来源
+- **AND** MUST拒绝顶层状态摘要、顶层Blackboard声明或跨Skill Graph复制变量
+- **AND** 状态、Macro、Timeline和TreeClip的引用 MUST沿Skill Flow闭包的owner与调用路径校验
 
 ### Requirement: 系统Node必须通过只读anchor参与Graph连接
 

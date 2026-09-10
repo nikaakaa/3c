@@ -2,11 +2,17 @@
 
 ## 当前状态（2026-09-10）
 
-本提案已经按UE式作者组织重新规划，正式方案见[design.md](design.md)，实施清单见[tasks.md](tasks.md)。当前清单为49项：3项既有基础保留，46项尚未勾选；其中部分作者、编译和迁移增量已完成，但尚未完成最终审计。
+本提案的49项实现清单已经完成，正式方案见[design.md](design.md)，任务状态见[tasks.md](tasks.md)。实现范围包括UE式图角色、直接资源Player、Slot与有限Action Timeline、骨骼混合、Control Rig、独立Pose编译、Character装配、Document v7、Corin迁移和统一产物发布。
 
-本次实施已修改C#并完成Corin作者资产迁移；Pose Program Image仍为v28，正式Program／Projection尚未因统一Build阻塞而重新发布。Document schema已切换为v7，但完整v7 package checkout仍受Skill Graph闭包错误阻塞。
+当前可核对的正式状态是：Corin根图不再保存Action Playback Input、Pose Parameter Resolve或Goal Assembler作者节点；持续Pose Player直接引用AnimationClip，Rig拥有Slot／Group／Blend Profile，Timeline动画轨道拥有Slot、Section和片段混合设置，Control Rig承接Foot Placement与FullBodyIK。编译器仍保留这些内部operation的typed展开，但它们不再是可创建的作者节点。
 
-## 当前实施增量（2026-09-09）
+Pose独立入口只接收Animation Input Contract、Pose Graph、Rig和直接动画资源，通过`animationBuildInput.CreatePoseOnlyInput()`调用唯一Pose Compiler；Character总Build在Gameplay装配层复用同一Pose结果，不再用Skill Graph发现动画输入。用户指定的`CharacterAnimationBuildContracts.CreatePoseOnlyInput()`和`CharacterSimulationBuildOrchestrator`调用点均保留。
+
+精确Corin Definition的Document v7 checkout与未修改正文dry-run均已由Unity MCP完成，结果为`syncState=Clean`、`success=true`、`plannedDiff=[]`。正式Unity MCP Character Build job `49ebed9733a84002891b37ebcf07bfaf`成功发布Float32、Fixed与共享Presentation Projection；Program／Projection生成资产已分别提交。此次过程没有新增测试代码，运行端到端验收仍由作者按项目规则执行。
+
+## 实施增量历史（2026-09-09）
+
+以下内容记录方案实施过程中的阶段性判断；与上面的当前状态不一致的“尚未完成”描述均只属于当时，不代表当前代码、资产或正式产物。
 
 已为Pose Canvas Graph加入持久化作者角色合同：AnimGraph、Animation Layer、State Pose、Transition Rule、Control Rig、Subgraph和Linked Pose Entry。作者工作区、调参入口和编辑写入会优先读取图自身角色；没有角色字段的旧图继续按现有状态图关系推断。Capability补充了Animation Layer与Control Rig的Document Role，并扩大现有Pose能力在这些角色中的合法范围。
 

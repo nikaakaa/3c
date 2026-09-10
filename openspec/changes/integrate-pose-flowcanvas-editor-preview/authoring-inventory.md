@@ -1,6 +1,6 @@
 # Pose作者基线与UE式组织去向
 
-本文件保留2026-09-08对精确Corin作者资产的只读盘点，并列出新方案中的去向。它不是新作者模型的完成清单；新模型以design.md和tasks.md为准。本轮只整理文档，没有重新采集Unity布局或修改作者资产。原始盘点为`.codex-tmp/canvas-core/pose-flowcanvas-author-inventory.json`。
+本文件保留2026-09-08对精确Corin作者资产的只读盘点，并列出新方案中的去向。历史盘点不是完成证据；当前实现以design.md、implementation.md和tasks.md为准。2026-09-10已完成Corin作者重组、Document v7 checkout/dry-run与正式统一Build，原始盘点仍保留在`.codex-tmp/canvas-core/pose-flowcanvas-author-inventory.json`供对照。
 
 | 图 | 节点数 | 连线数 |
 |---|---:|---:|
@@ -15,7 +15,7 @@
 
 ## 已有数据链（待重组基线）
 
-正式资产仍保存 `CharacterPoseCanvasGraph / CharacterPoseCanvasNode / CharacterPoseCanvasConnection`，旧阶段只改变原生编辑基类，保留GraphCatalog、Payload、资源引用和identity。新方案将进一步修改作者角色、引用和节点职责；可保留的GraphId、NodeId、StateId沿用，内部化节点的旧作者identity退役并记录对应关系。
+正式资产仍保存 `CharacterPoseCanvasGraph / CharacterPoseCanvasNode / CharacterPoseCanvasConnection`，当前图已使用AnimGraph、State Pose与Control Rig角色，直接资源引用和稳定identity由同一Graph Catalog承载；可保留的GraphId、NodeId、StateId沿用，内部化节点的旧作者identity已退役。
 
 端口从 `CharacterPoseGraphAuthoringCapabilities` 经 `CharacterPoseAuthoringPortProjection.Get` 投影到原生端口。Compiler 仍直接读取同一 Graph、Node、Payload；`CharacterPoseFamilyPayloadPlanPass` 生成正式 Program Image，Native/Job 继续执行。
 
@@ -31,11 +31,11 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 
 ## 新组织中的迁移边界
 
-旧阶段只换编辑基类，没有必要迁移作者数据。2026-09-09的新方案改变图职责、Player资源来源、Slot、Curve处理和Control Rig接口，因此需要在代码完成后进行真实作者迁移；不能把旧阶段结论延续成“现在只需Build”。
+旧阶段只换编辑基类，没有迁移作者数据。2026-09-09的新方案改变图职责、Player资源来源、Slot、Curve处理和Control Rig接口；当前迁移已完成并通过正式产物发布。
 
-有限Action Timeline继续拥有原动画片段、窗口和动作时间，在原资产中补Slot轨道、Sections及动画混合设置；不会迁出或复制为另一份Montage资产。Foot／目标／FBIK进入Control Rig，Goal Assembler与默认参数汇总改为编译展开。资源绑定、类型和old kind按正式事务收敛，成功后删除无消费者数据。
+有限Action Timeline继续拥有原动画片段、窗口和动作时间，原资产已补Slot轨道、Sections及片段混合设置；没有复制Montage资产。Foot／目标／FBIK已进入Control Rig，Goal Assembler与默认参数汇总由编译器展开。资源绑定、类型和旧作者入口已收敛，Corin无消费者Source Slot／Binding内容已清理。
 
-当前代码的Pose Program Image为v28，Document为v6；新方案计划统一升级Document v7及所需产物schema，当前还没有完成对应迁移或发布。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
+当前代码的Pose Program Image为v28，Document为v7；精确Corin范围已完成迁移和正式Float32／Fixed／Projection发布。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
 
 ## 旧能力及新方案去向
 
@@ -73,4 +73,4 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 | `EntryPoseInput` | `CharacterEntryPoseInputPayload` | 归入对应层／控制图的显式Pose输入 |
 | `OutputPose` | `CharacterOutputPosePayload` | 根图最终输出或相应图返回，仅最终根进入Publication |
 
-历史Document盘点为1个Pose状态机、7个状态、21条转换。其零差异往返记录仅对应当时作者格式，见implementation.md；本次没有执行新组织的作者迁移。
+历史Document盘点为1个Pose状态机、7个状态、21条转换。当前v7 package已包含同一状态机、Pose Graph闭包、Control Rig、直接AnimationClip和Skill Flow闭包；checkout与未修改正文dry-run均为Clean，详细正式结果见implementation.md。

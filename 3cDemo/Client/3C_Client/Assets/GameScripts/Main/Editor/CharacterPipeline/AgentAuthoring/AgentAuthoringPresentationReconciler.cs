@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Presentation Reconciler缺少Definition、Profile或目标状态。");
                 return false;
             }
-            ValidateCrossOwnerReferences(editable, report);
+            ValidateCrossOwnerReferences(editable, context, report);
             if (report.HasErrors())
                 return false;
 
@@ -231,7 +231,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static void ValidateCrossOwnerReferences(
             AgentDocumentEditable editable,
+            AgentDocumentContext context,
             AgentCompileReport report) =>
-            AgentAuthoringPresentationCrossOwnerValidator.Validate(editable, report);
+            AgentAuthoringPresentationCrossOwnerValidator.Validate(editable, context, report);
     }
 }

@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         internal static void Validate(
             AgentDocumentEditable editable,
+            AgentDocumentContext context,
             AgentCompileReport report)
         {
             AgentDocumentPresentationEditable presentation =
@@ -75,6 +76,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation.profile.poseResources.Select(value =>
                     AgentAuthoringPresentationPackageValidator.ReferenceIdentity(value.slot)),
                 StringComparer.Ordinal);
+            ValidateStateMachineResourceBindings(
+                presentation,
+                context?.presentation,
+                report);
             var graphs = new HashSet<string>(
                 presentation.poseGraphs.Select(value => value.id),
                 StringComparer.Ordinal);
@@ -185,6 +190,91 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         "presentation_action_producer_unresolved",
                         "Action producer必须引用Timeline目标状态中的现有track。");
                 }
+            }
+        }
+
+        static void ValidateStateMachineResourceBindings(
+            AgentDocumentPresentationEditable presentation,
+            AgentDocumentPresentationContext context,
+            AgentCompileReport report)
+        {
+            IReadOnlyList<AgentPackagePoseResourceBinding> resources =
+                presentation?.profile?.poseResources ??
+                new List<AgentPackagePoseResourceBinding>();
+            foreach (AgentPackagePoseStateMachineFile machine in
+                     presentation?.poseStateMachines ??
+                     new List<AgentPackagePoseStateMachineFile>())
+            {
+                foreach (AgentPackagePoseTransition transition in
+                         machine?.transitions ??
+                         new List<AgentPackagePoseTransition>())
+                {
+                    string path =
+                        AgentAuthoringPresentationPackageCodec.StateMachineDirectory(
+                            machine?.id) +
+                        "/state-machine.json.transitions[" +
+                        transition?.id + "]";
+                    ValidateBlendResourceBinding(
+                        transition?.blendProfileAssetId,
+                        "BlendProfile",
+                        context?.blendProfiles,
+                        resources,
+                        path + ".blendProfileAssetId",
+                        report);
+                    ValidateBlendResourceBinding(
+                        transition?.customBlendCurveAssetId,
+                        "BlendCurve",
+                        context?.blendCurves,
+                        resources,
+                        path + ".customBlendCurveAssetId",
+                        report);
+                }
+            }
+        }
+
+        static void ValidateBlendResourceBinding(
+            string resourceId,
+            string expectedKind,
+            IReadOnlyList<AgentDocumentBlendAssetContext> catalog,
+            IReadOnlyList<AgentPackagePoseResourceBinding> resources,
+            string path,
+            AgentCompileReport report)
+        {
+            if (string.IsNullOrWhiteSpace(resourceId))
+                return;
+            AgentDocumentBlendAssetContext asset =
+                catalog?.FirstOrDefault(value =>
+                    string.Equals(value?.id, resourceId, StringComparison.Ordinal));
+            if (asset == null)
+            {
+                report.Error(
+                    path,
+                    "presentation_blend_resource_unresolved",
+                    $"Blend资源身份'{resourceId}'不在当前Definition的Asset Catalog中。");
+                return;
+            }
+            AgentPackagePoseResourceBinding[] matches =
+                resources.Where(value =>
+                        string.Equals(
+                            value?.resource?.assetGuid,
+                            asset.assetGuid,
+                            StringComparison.Ordinal))
+                    .ToArray();
+            if (matches.Length == 0)
+            {
+                report.Error(
+                    path,
+                    "presentation_pose_resource_binding_missing",
+                    $"Transition引用的Blend资源'{resourceId}'必须绑定一个kind为'{expectedKind}'的Pose Resource Slot。");
+                return;
+            }
+            if (!matches.Any(value =>
+                    string.Equals(value.kind, expectedKind, StringComparison.Ordinal)))
+            {
+                report.Error(
+                    path,
+                    "presentation_pose_resource_kind_mismatch",
+                    $"Transition引用的Blend资源'{resourceId}'没有kind为'{expectedKind}'的Pose Resource Slot。");
             }
         }
     }

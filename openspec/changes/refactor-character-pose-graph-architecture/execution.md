@@ -1582,6 +1582,12 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 状态：提交`b8f898126`把Pose Graph的`Validate`、`保存`、`Compile`和`Build`接入FlowCanvas原生`GraphEditor` Toolbar回调。按钮只在作者明确点击时执行；直接打开可复用Graph时仍可编辑拓扑和抽象字段，缺少Profile或Definition的动作按精确上下文禁用。没有恢复旧右侧Domain Panel，也没有改变`CreatePoseOnlyInput()`链路。Editor源码编译为0错误、93个既有警告，临时targets已删除并执行`dotnet build-server shutdown`。
 
+## Transition Blend资源跨资产门禁（POSE-EXEC-20260911-13）
+
+状态：提交`1533d3010`让Agent Presentation Reconciler在生成Mutation Plan前核对每条Pose StateMachine Transition的`blendProfileAssetId`与`customBlendCurveAssetId`。资源必须同时存在于当前Definition Asset Catalog，并由Profile的`poseResources`以对应`BlendProfile`或`BlendCurve` kind绑定；缺失、kind冲突和Catalog缺失现在都落在具体`state-machine.json.transitions[...].<field>`路径。该门禁不创建隐式资源、不恢复兼容读取，Corin当前缺少Blend Profile Slot会被准确拒绝，等待正式Document补齐后再apply。
+
+Editor源码编译为0错误、93个既有警告，targets已删除并执行`dotnet build-server shutdown`。
+
 ## Corin正式Resource Slot迁移检查（POSE-EXEC-20260911-11）
 
 状态：静态核对当前v7 Document确认，`editable/presentation/pose-state-machines/corin-locomotion-7a67665368fb/state-machine.json`的21条Transition仍使用现行Document字段`blendProfileAssetId=corin.animation-rig.locomotion-blend-profile`，但`editable/presentation/profile.json.poseResources`只有BlendPolicy、FootPlacementCalibration、FootPlacementProfile和InertializationPolicy四项，没有该Blend Profile的Graph-owned Slot。当前Reconciler会按精确Profile Resource Slot查找，因此正式dry-run会在`blendProfileAssetId`路径拒绝，不能把源码已迁移误报为Corin资产已完成。目标槽应由同一Document的Pose Resource Binding声明，再经过`checkout -> dry-run -> apply`由正式Mutation创建并绑定；不手改Unity YAML或Document包。

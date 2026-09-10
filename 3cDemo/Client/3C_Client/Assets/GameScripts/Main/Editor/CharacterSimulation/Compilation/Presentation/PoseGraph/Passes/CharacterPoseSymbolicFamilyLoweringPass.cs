@@ -690,7 +690,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 GraphResult result = CompileGraph(
                     owner,
                     child,
-                    CharacterPoseIrGraphRole.Subgraph,
+                    child.Role == CharacterPoseAuthoringGraphRole.ControlRig
+                        ? CharacterPoseIrGraphRole.ControlRig
+                        : child.Role == CharacterPoseAuthoringGraphRole.AnimationLayer
+                            ? CharacterPoseIrGraphRole.AnimationLayer
+                            : CharacterPoseIrGraphRole.Subgraph,
                     imports,
                     scopedCall.Value + "/" + child.GraphId,
                     fragmentIdentity);

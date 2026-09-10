@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Animancer;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
@@ -398,27 +397,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationAnimationBinding
     {
-        [SerializeField] TransitionAssetBase m_Source;
         [SerializeField] string m_TrackName = string.Empty;
         [SerializeField] float m_DurationSeconds;
         [SerializeField] float m_LastSampleTimeSeconds;
         [SerializeField] CharacterPresentationAnimationClipBinding[] m_Clips = Array.Empty<CharacterPresentationAnimationClipBinding>();
 
         public CharacterPresentationAnimationBinding(
-            TransitionAssetBase source,
             string trackName,
             float durationSeconds,
             float lastSampleTimeSeconds,
             CharacterPresentationAnimationClipBinding[] clips)
         {
-            m_Source = source;
             m_TrackName = trackName ?? string.Empty;
             m_DurationSeconds = durationSeconds;
             m_LastSampleTimeSeconds = lastSampleTimeSeconds;
             m_Clips = clips ?? Array.Empty<CharacterPresentationAnimationClipBinding>();
         }
 
-        public TransitionAssetBase Source => m_Source;
         public string TrackName => m_TrackName;
         public float DurationSeconds => m_DurationSeconds;
         public float LastSampleTimeSeconds => m_LastSampleTimeSeconds;
@@ -530,6 +525,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterPresentationAnimationClipBinding
     {
         [SerializeField] string m_ClipAuthoringId = string.Empty;
+        [SerializeField] string m_AnimationSlotId = string.Empty;
+        [SerializeField] string m_BlendProfileId = string.Empty;
         [SerializeField] UnityEngine.AnimationClip m_Clip;
         [SerializeField] CharacterAnimationSamplingBackendKind m_Backend = CharacterAnimationSamplingBackendKind.NativeClip;
         [SerializeField] int m_ResourceCatalogIndex = -1;
@@ -557,6 +554,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeReference] CharacterAnimationScalarCurvePage m_ScalarPage;
 
         public string ClipAuthoringId => m_ClipAuthoringId;
+        public AnimationSlotId AnimationSlotId => string.IsNullOrWhiteSpace(m_AnimationSlotId) ? default : new AnimationSlotId(m_AnimationSlotId);
+        public string BlendProfileId => m_BlendProfileId ?? string.Empty;
         public UnityEngine.AnimationClip Clip => m_Clip;
         public CharacterAnimationSamplingBackendKind Backend => m_Backend;
         public int ResourceCatalogIndex => m_ResourceCatalogIndex;
@@ -580,6 +579,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPresentationAnimationClipBinding(
             string clipAuthoringId,
+            AnimationSlotId animationSlotId,
+            string blendProfileId,
             string clipIdentity,
             string fullClipDependencyHash,
             string analysisInputHash,
@@ -605,6 +606,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int groupClipIndex = -1)
         {
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_AnimationSlotId = animationSlotId.IsValid ? animationSlotId.Value : string.Empty;
+            m_BlendProfileId = blendProfileId?.Trim() ?? string.Empty;
             m_ClipIdentity = clipIdentity ?? string.Empty;
             m_FullClipDependencyHash = fullClipDependencyHash ?? string.Empty;
             m_AnalysisInputHash = analysisInputHash ?? string.Empty;

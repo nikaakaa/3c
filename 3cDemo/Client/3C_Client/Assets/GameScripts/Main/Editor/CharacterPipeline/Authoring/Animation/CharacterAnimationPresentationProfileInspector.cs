@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Animancer;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
@@ -304,6 +303,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationPresentationProfile profile = Profile;
             if (!profile)
                 return;
+            if (profile.PoseGraph &&
+                profile.PoseGraph.SourceSlots.Count == 0 &&
+                profile.PoseSourceBindings.Count == 0)
+            {
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.LabelField("Continuous Pose Resources", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox("Sequence Player、Blend Space Player和Motion Matching节点直接拥有资源；这里不再重复配置Source Slot或Profile Binding。", MessageType.Info);
+                return;
+            }
 
             EditorGUILayout.Space(4f);
             m_ShowLinkedPoseBindings = EditorGUILayout.Foldout(
@@ -982,20 +990,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Presentation Binding",
                 binding == null ? "Unbound" : "Action Timeline");
 
-            TransitionAssetBase currentSource = binding?.Source;
-            TransitionAssetBase sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
-                "Action Timeline Source",
-                currentSource,
-                typeof(TransitionAssetBase),
-                false);
-            if (sourceAsset != currentSource)
+            EditorGUILayout.BeginHorizontal();
+            if (binding == null && GUILayout.Button("Register Producer Binding"))
             {
                 try
                 {
-                    if (sourceAsset)
-                        CharacterAnimationPresentationAuthoringService.ConfigureTimelineProducerBinding(profile, context, producer.ProducerId, sourceAsset);
-                    else if (binding != null)
-                        CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
+                    CharacterAnimationPresentationAuthoringService.EnsureProducerBinding(
+                        profile,
+                        context,
+                        producer.ProducerId);
                     m_BindingError = string.Empty;
                     InvalidateDiagnostics();
                     binding = profile.FindProducerBinding(producer.ProducerId);
@@ -1005,22 +1008,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_BindingError = exception.Message;
                 }
             }
-
-            EditorGUILayout.BeginHorizontal();
+            if (binding != null && GUILayout.Button("Remove Producer Binding"))
+            {
+                try
+                {
+                    CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(
+                        profile,
+                        context,
+                        producer.ProducerId);
+                    m_BindingError = string.Empty;
+                    InvalidateDiagnostics();
+                    binding = null;
+                }
+                catch (Exception exception)
+                {
+                    m_BindingError = exception.Message;
+                }
+            }
             if (GUILayout.Button("Open Graph"))
-                OpenGraph(context, producer.Timeline);
+                OpenGraph(producer);
             if (GUILayout.Button("Open Action Timeline"))
                 OpenTimeline(context, producer);
             if (GUILayout.Button("Open Action Curves / Analysis"))
                 OpenTimeline(context, producer);
-            UnityEngine.Object sourceObject = binding?.Source;
-            using (new EditorGUI.DisabledScope(!sourceObject))
-            {
-                if (GUILayout.Button("Open Source"))
-                {
-                    OpenAsset(sourceObject);
-                }
-            }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
         }
@@ -1059,17 +1069,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ProducerInspectionError = string.Empty;
         }
 
-        static BaseTreeWindow OpenGraph(
-            CharacterPipelineDefinition definition,
-            CharacterAuthoringTimelineEntry source)
+        static void OpenGraph(AnimationProducerAuthoringEntry producer)
         {
-            BaseTreeWindow window = CharacterPipelineDefinitionTreeWindowUtility.OpenRootTree(definition);
-            BaseTree rootTree = definition && definition.RootTreeAsset ? definition.RootTreeAsset.Tree : null;
-            if (!window || ReferenceEquals(source.Graph, rootTree))
-                return window;
-            if (source.Graph is BaseTree tree)
-                window.PushTreePage(tree, null, tree.name, source.Node.GUID, "animationPresentation");
-            return window;
+            if (!producer.OwnerGraph)
+                return;
+            NodeCanvas.Editor.GraphEditor window =
+                NodeCanvas.Editor.GraphEditor.OpenWindow(producer.OwnerGraph);
+            if (!window)
+                return;
+            window.Show();
+            window.Focus();
+            if (producer.OwnerNode != null)
+                NodeCanvas.Editor.GraphEditor.FocusElement(producer.OwnerNode, true);
         }
 
         static void OpenTimeline(
@@ -1077,8 +1088,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnimationProducerAuthoringEntry producer,
             string clipAuthoringId = "")
         {
-            BaseTreeWindow graphWindow = OpenGraph(definition, producer.Timeline);
-            TimelineEditorWindow.Open(graphWindow, producer.Timeline.Node)?.FocusSource(
+            TimelineEditorWindow.Open(producer.TimelineAsset)?.FocusSource(
                 producer.ProducerId.TrackAuthoringId,
                 clipAuthoringId);
         }

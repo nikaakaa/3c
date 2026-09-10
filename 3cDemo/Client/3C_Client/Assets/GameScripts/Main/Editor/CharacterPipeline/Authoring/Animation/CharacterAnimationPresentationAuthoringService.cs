@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Animancer;
 using BTSMTL.Timeline;
+using FlowCanvas;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
-using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
-using TreeDesigner;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -40,12 +39,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public AnimationProducerAuthoringEntry(
             AnimationProducerId producerId,
             ThirdPersonSimulation.AnimationChannelId animationChannelId,
-            CharacterAuthoringTimelineEntry timeline,
+            FlowGraph ownerGraph,
+            FlowNode ownerNode,
+            TimelineAsset timelineAsset,
+            TimelineData timeline,
             AnimationTrack track,
             AnimationProducerSourceClipAuthoringEntry[] sourceClips)
         {
             ProducerId = producerId;
             AnimationChannelId = animationChannelId;
+            OwnerGraph = ownerGraph;
+            OwnerNode = ownerNode;
+            TimelineAsset = timelineAsset;
             Timeline = timeline;
             Track = track;
             SourceClips = sourceClips ?? Array.Empty<AnimationProducerSourceClipAuthoringEntry>();
@@ -54,10 +59,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public AnimationProducerId ProducerId { get; }
         public string ProgramProducerIdentity => ProducerId.ProgramProducerIdentity;
         public ThirdPersonSimulation.AnimationChannelId AnimationChannelId { get; }
-        public CharacterAuthoringTimelineEntry Timeline { get; }
+        public FlowGraph OwnerGraph { get; }
+        public FlowNode OwnerNode { get; }
+        public TimelineAsset TimelineAsset { get; }
+        public TimelineData Timeline { get; }
         public AnimationTrack Track { get; }
         public IReadOnlyList<AnimationProducerSourceClipAuthoringEntry> SourceClips { get; }
-        public string DisplayName => $"{Timeline.Graph.name} / {Timeline.Timeline.Name} / {Track.Name}";
+        public string DisplayName => $"{OwnerGraph.name} / {Timeline.Name} / {Track.Name}";
     }
 
     public static class CharacterAnimationPresentationAuthoringService
@@ -379,38 +387,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPipelineDefinition definitionContext,
             bool requireAnimationChannel)
         {
-            var topologyErrors = new List<string>();
-            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
-                CollectCompositionRoots(definitionContext),
-                topologyErrors);
-            if (!topology.IsValid)
-                throw new InvalidOperationException(string.Join("\n", topologyErrors));
-
             var entries = new Dictionary<AnimationProducerId, AnimationProducerAuthoringEntry>();
-            for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
+            foreach (BtsmtlSkillFlowGraph root in definitionContext.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
             {
-                CharacterAuthoringTimelineEntry timeline = topology.Timelines[timelineIndex];
-                for (int trackIndex = 0; trackIndex < timeline.Timeline.Tracks.Count; trackIndex++)
+                foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(root, true))
                 {
-                    if (timeline.Timeline.Tracks[trackIndex] is not AnimationTrack track)
-                        continue;
-                    var producerId = new AnimationProducerId(timeline.Timeline.AuthoringId, track.AuthoringId);
-                    if (!producerId.IsValid || requireAnimationChannel && !track.AnimationChannelId.IsValid)
-                        throw new InvalidOperationException($"Animation Track at '{timeline.Route}' has no stable producer or Animation Channel identity.");
-                    AnimationProducerSourceClipAuthoringEntry[] clips = CollectSourceClips(producerId, track);
-                    var entry = new AnimationProducerAuthoringEntry(
-                        producerId,
-                        track.AnimationChannelId,
-                        timeline,
-                        track,
-                        clips);
-                    if (entries.TryGetValue(producerId, out AnimationProducerAuthoringEntry existing))
+                    foreach (BtsmtlSkillTimelineFlowNode timelineNode in graph.allNodes.OfType<BtsmtlSkillTimelineFlowNode>())
                     {
-                        if (!ReferenceEquals(existing.Timeline.Timeline, timeline.Timeline) || !ReferenceEquals(existing.Track, track))
-                            throw new InvalidOperationException($"Animation producer identity '{producerId}' resolves to multiple Timeline Track owners.");
-                        continue;
+                        TimelineData timeline = timelineNode.Timeline;
+                        if (timeline == null)
+                            throw new InvalidOperationException($"Skill Timeline node '{timelineNode.UID}' has no Timeline asset.");
+                        for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                        {
+                            if (timeline.Tracks[trackIndex] is not AnimationTrack track)
+                                continue;
+                            var producerId = new AnimationProducerId(timeline.AuthoringId, track.AuthoringId);
+                            if (!producerId.IsValid || requireAnimationChannel && !track.AnimationChannelId.IsValid)
+                                throw new InvalidOperationException($"Animation Track at '{graph.name}/{timeline.Name}' has no stable producer or Animation Channel identity.");
+                            AnimationProducerSourceClipAuthoringEntry[] clips = CollectSourceClips(producerId, track);
+                            var entry = new AnimationProducerAuthoringEntry(
+                                producerId,
+                                track.AnimationChannelId,
+                                graph,
+                                timelineNode,
+                                timelineNode.TimelineAsset,
+                                timeline,
+                                track,
+                                clips);
+                            if (entries.TryGetValue(producerId, out AnimationProducerAuthoringEntry existing))
+                            {
+                                if (!ReferenceEquals(existing.Timeline, timeline) || !ReferenceEquals(existing.Track, track))
+                                    throw new InvalidOperationException($"Animation producer identity '{producerId}' resolves to multiple Timeline Track owners.");
+                                continue;
+                            }
+                            entries.Add(producerId, entry);
+                        }
                     }
-                    entries.Add(producerId, entry);
                 }
             }
 
@@ -419,18 +431,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return result;
         }
 
-        public static void ConfigureTimelineProducerBinding(
+        public static void EnsureProducerBinding(
             CharacterAnimationPresentationProfile profile,
             CharacterPipelineDefinition definitionContext,
-            AnimationProducerId producerId,
-            TransitionAssetBase source)
+            AnimationProducerId producerId)
         {
             RequireProducer(profile, definitionContext, producerId);
-            if (!source || !source.IsValid)
-                throw new ArgumentException("A valid Animancer source asset is required.", nameof(source));
             Undo.RecordObject(profile, "Configure Timeline Animation Producer Binding");
             AnimationProducerPresentationBinding binding = RequireBinding(profile, producerId);
-            binding.ConfigureTimeline(producerId, source);
+            binding.ConfigureTimeline(producerId);
             EditorUtility.SetDirty(profile);
         }
 
@@ -517,14 +526,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     clip.Clip));
             }
             return clips.ToArray();
-        }
-
-        static IReadOnlyList<BaseTree> CollectCompositionRoots(CharacterPipelineDefinition definition)
-        {
-            var roots = new List<BaseTree>();
-            if (definition.RootTreeAsset && definition.RootTreeAsset.Tree)
-                roots.Add(definition.RootTreeAsset.Tree);
-            return roots;
         }
 
         static void RequireContext(

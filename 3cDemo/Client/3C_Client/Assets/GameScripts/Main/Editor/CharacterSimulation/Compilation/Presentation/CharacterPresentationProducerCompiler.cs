@@ -54,8 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
-            CharacterAnimationBuildInput animationBuildInput,
-            List<string> errors)
+            CharacterAnimationBuildInput animationBuildInput)
         {
             var diagnostics = new List<string>();
             CharacterPresentationProducerEntry entry = BuildProducer(
@@ -72,13 +71,42 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 diagnostics);
         }
 
+        internal static IReadOnlyList<CharacterPresentationProducerEntry> CompileEntries(
+            CharacterPresentationSemanticReader reader,
+            CharacterAnimationPresentationProfile profile,
+            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            IReadOnlyDictionary<string, TimelineData> timelines,
+            IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
+            CharacterAnimationBuildInput animationBuildInput,
+            List<string> errors)
+        {
+            var entries = new List<CharacterPresentationProducerEntry>(reader.Producers.Count);
+            for (int i = 0; i < reader.Producers.Count; i++)
+            {
+                CharacterPresentationProducerCompilationResult compilation =
+                    Compile(
+                        reader,
+                        reader.Producers[i],
+                        profile,
+                        footAnalysisCompilation,
+                        timelines,
+                        timelineCallSites,
+                        animationBuildInput);
+                if (compilation.Diagnostics.Count > 0)
+                    errors?.AddRange(compilation.Diagnostics);
+                if (compilation.Entry != null)
+                    entries.Add(compilation.Entry);
+            }
+            entries.Sort((left, right) => left.ProgramProducerIndex.CompareTo(right.ProgramProducerIndex));
+            return entries.ToArray();
+        }
+
         internal static IReadOnlyDictionary<string,
             IReadOnlyList<CharacterPresentationTimelineCallSite>>
             CollectTimelineCallSites(CharacterAuthoringCompilationModel model)
         {
             var result = new Dictionary<string,
                 List<CharacterPresentationTimelineCallSite>>(StringComparer.Ordinal);
-            CollectTimelineCallSites(model.Root, result);
             foreach (CharacterSkillCompilationRecord skill in model.SkillRecords)
                 foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
@@ -180,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationProducerPresentationBinding authoringBinding = profile.FindProducerBinding(producerId);
             if (authoringBinding == null)
             {
-                errors?.Add($"Animation producer '{producerId}' has no Presentation source binding.");
+                errors?.Add($"Animation producer '{producerId}' has no Presentation producer binding.");
                 return null;
             }
             if (footAnalysis == null)
@@ -188,13 +216,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add($"Animation producer '{producerId}' has no compiled Profile Foot Analysis source.");
                 return null;
             }
-            if (!authoringBinding.Source || !authoringBinding.Source.IsValid)
-            {
-                errors?.Add(
-                    $"Animation producer '{producerId}' is not a finite Timeline Action source. Continuous Pose sources must be bound through a PoseState provider.");
-                return null;
-            }
-
             var clips = new List<CharacterPresentationAnimationClipBinding>();
             for (int i = 0; i < track.Clips.Count; i++)
             {
@@ -206,6 +227,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add($"Animation producer '{producerId}' segment '{clip.AuthoringId}' has no AnimationClip.");
                     continue;
                 }
+                if (!string.IsNullOrWhiteSpace(clip.BlendProfileId))
+                    profile.RigDefinition.RequireBlendProfile(clip.BlendProfileId);
+                if (!string.IsNullOrWhiteSpace(track.AnimationSlotId))
+                    profile.RigDefinition.RequireAnimationSlot(
+                        new AnimationSlotId(track.AnimationSlotId));
                 try
                 {
                     _ = CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sourceClip);
@@ -229,7 +255,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterAnimationClipContentIdentity clipIdentity =
                     CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sourceClip);
                 CharacterAnimationSourceResourceBinding resourceBinding =
-                    profile.FindSourceResourceBinding(sourceClip);
+                    animationBuildInput.SourceResourceBindings.SingleOrDefault(
+                        value => value?.AuthoringClip == sourceClip);
                 CharacterAnimationSamplingBackendKind backend =
                     resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
                 resourceBinding?.RequireValid();
@@ -257,6 +284,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     $"producer:{producerId}:{clip.AuthoringId}");
                 clips.Add(new CharacterPresentationAnimationClipBinding(
                     clip.AuthoringId,
+                    string.IsNullOrWhiteSpace(track.AnimationSlotId)
+                        ? default
+                        : new AnimationSlotId(track.AnimationSlotId),
+                    clip.BlendProfileId,
                     $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",
                     clipIdentity.FullDependencyHash,
                     clipIdentity.AnalysisInputHash,
@@ -295,7 +326,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             }
             var animation = new CharacterPresentationAnimationBinding(
-                authoringBinding.Source,
                 track.Name,
                 timeline.Duration,
                 lastSampleTimeSeconds,

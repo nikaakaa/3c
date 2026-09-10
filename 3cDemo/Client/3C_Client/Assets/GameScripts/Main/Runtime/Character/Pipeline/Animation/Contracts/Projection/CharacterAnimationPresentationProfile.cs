@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEngine;
 
@@ -12,23 +11,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_TimelineAuthoringId;
         [SerializeField] string m_TrackAuthoringId;
-        [SerializeField] TransitionAssetBase m_Source;
 
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
-        public TransitionAssetBase Source => m_Source;
 
-        public void ConfigureTimeline(
-            AnimationProducerId producerId,
-            TransitionAssetBase source)
+        public void ConfigureTimeline(AnimationProducerId producerId)
         {
             if (!producerId.IsValid)
                 throw new ArgumentException("Animation producer id is invalid.", nameof(producerId));
-            if (!source || !source.IsValid)
-                throw new ArgumentException("Animation source is invalid.", nameof(source));
 
             m_TimelineAuthoringId = producerId.TimelineAuthoringId;
             m_TrackAuthoringId = producerId.TrackAuthoringId;
-            m_Source = source;
         }
 
     }
@@ -227,6 +219,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public bool CollectConfigurationErrors(List<string> errors)
         {
+            return CollectConfigurationErrors(errors, true);
+        }
+
+        internal bool CollectPoseConfigurationErrors(List<string> errors)
+        {
+            return CollectConfigurationErrors(errors, false);
+        }
+
+        bool CollectConfigurationErrors(List<string> errors, bool includeActionResources)
+        {
             bool valid = true;
             if (!m_PoseGraph)
             {
@@ -255,17 +257,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     valid = false;
                 }
             }
-            var producerIds = new HashSet<AnimationProducerId>();
-            IReadOnlyList<AnimationProducerPresentationBinding> bindings = ProducerBindings;
-            for (int i = 0; i < bindings.Count; i++)
+            if (includeActionResources)
             {
-                AnimationProducerPresentationBinding binding = bindings[i];
-                if (binding == null || !binding.ProducerId.IsValid ||
-                    !producerIds.Add(binding.ProducerId) ||
-                    !binding.Source || !binding.Source.IsValid)
+                var producerIds = new HashSet<AnimationProducerId>();
+                IReadOnlyList<AnimationProducerPresentationBinding> bindings = ProducerBindings;
+                for (int i = 0; i < bindings.Count; i++)
                 {
-                    errors?.Add($"{name}: Animation producer binding #{i} is invalid or duplicated.");
-                    valid = false;
+                    AnimationProducerPresentationBinding binding = bindings[i];
+                    if (binding == null || !binding.ProducerId.IsValid ||
+                        !producerIds.Add(binding.ProducerId))
+                    {
+                        errors?.Add($"{name}: Animation producer binding #{i} is invalid or duplicated.");
+                        valid = false;
+                    }
                 }
             }
 
@@ -311,20 +315,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
 
-            var sourceResourceClips = new HashSet<AnimationClip>();
-            for (int i = 0; i < SourceResourceBindings.Count; i++)
+            if (includeActionResources)
             {
-                CharacterAnimationSourceResourceBinding binding = SourceResourceBindings[i];
-                try
+                var sourceResourceClips = new HashSet<AnimationClip>();
+                for (int i = 0; i < SourceResourceBindings.Count; i++)
                 {
-                    if (binding == null || !sourceResourceClips.Add(binding.AuthoringClip))
-                        throw new InvalidOperationException("authoring Clip is missing or duplicated.");
-                    binding.RequireValid();
-                }
-                catch (Exception exception)
-                {
-                    errors?.Add($"{name}: Animation source resource binding #{i} is invalid: {exception.Message}");
-                    valid = false;
+                    CharacterAnimationSourceResourceBinding binding = SourceResourceBindings[i];
+                    try
+                    {
+                        if (binding == null || !sourceResourceClips.Add(binding.AuthoringClip))
+                            throw new InvalidOperationException("authoring Clip is missing or duplicated.");
+                        binding.RequireValid();
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add($"{name}: Animation source resource binding #{i} is invalid: {exception.Message}");
+                        valid = false;
+                    }
                 }
             }
 

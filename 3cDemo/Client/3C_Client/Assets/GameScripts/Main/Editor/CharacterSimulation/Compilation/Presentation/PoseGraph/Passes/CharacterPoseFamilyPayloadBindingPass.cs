@@ -349,6 +349,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ? CharacterPoseIrGraphRole.Root
                 : stateOutput != null
                     ? CharacterPoseIrGraphRole.StateLocal
+                    : graph.Role == CharacterPoseAuthoringGraphRole.ControlRig
+                        ? CharacterPoseIrGraphRole.ControlRig
+                        : graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer
+                            ? CharacterPoseIrGraphRole.AnimationLayer
                     : CharacterPoseIrGraphRole.Subgraph;
             CharacterPoseIrGraph ir = state.Topology.RequireGraph(
                 ownerAsset,

@@ -21,6 +21,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         SerializedProperty m_Pipeline;
         SerializedProperty m_SessionSource;
         SerializedProperty m_WorldSolver;
+        SimulationSessionCompositionDefinition m_Definition;
+        SimulationSessionCompositionCompatibilityReport m_Compatibility;
+        string m_CompatibilityError;
+        bool m_CompatibilityRefreshQueued;
 
         void OnEnable()
         {
@@ -35,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Pipeline = serializedObject.FindProperty("m_Pipeline");
             m_SessionSource = serializedObject.FindProperty("m_SessionSource");
             m_WorldSolver = serializedObject.FindProperty("m_WorldSolver");
+            m_Definition = target as SimulationSessionCompositionDefinition;
         }
 
         public override void OnInspectorGUI()
@@ -55,61 +60,104 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             EditorGUILayout.PropertyField(m_Pipeline, new GUIContent("Pipeline"));
             EditorGUILayout.PropertyField(m_SessionSource, new GUIContent("Session Source"));
             EditorGUILayout.PropertyField(m_WorldSolver, new GUIContent("World Solver"));
+            bool modified = serializedObject.hasModifiedProperties;
             serializedObject.ApplyModifiedProperties();
+            if (modified)
+            {
+                m_Compatibility = null;
+                m_CompatibilityError = null;
+            }
 
             EditorGUILayout.Space(8f);
-            DrawCompatibility(target as SimulationSessionCompositionDefinition);
+            DrawCompatibility();
         }
 
-        static void DrawCompatibility(SimulationSessionCompositionDefinition definition)
+        void DrawCompatibility()
         {
             EditorGUILayout.LabelField("Compatibility", EditorStyles.boldLabel);
-            if (!definition)
+            if (!m_Definition)
+                return;
+            using (new EditorGUI.DisabledScope(m_CompatibilityRefreshQueued))
+            {
+                if (GUILayout.Button("刷新兼容性"))
+                {
+                    m_CompatibilityRefreshQueued = true;
+                    EditorApplication.delayCall += RefreshCompatibility;
+                }
+            }
+            if (m_CompatibilityRefreshQueued)
+            {
+                EditorGUILayout.HelpBox("正在刷新兼容性……", MessageType.Info);
+                return;
+            }
+            if (!string.IsNullOrEmpty(m_CompatibilityError))
+            {
+                EditorGUILayout.HelpBox(m_CompatibilityError, MessageType.Error);
+                return;
+            }
+            if (m_Compatibility == null)
+            {
+                EditorGUILayout.HelpBox("尚未执行兼容性检查。", MessageType.Info);
+                return;
+            }
+            if (m_Compatibility.Issues.Count > 0)
+            {
+                for (int i = 0; i < m_Compatibility.Issues.Count; i++)
+                    EditorGUILayout.HelpBox(m_Compatibility.Issues[i].ToString(), MessageType.Error);
+                return;
+            }
+            if (m_Compatibility.Compilation == null)
+            {
+                EditorGUILayout.HelpBox("Pipeline compilation did not produce a result.", MessageType.Error);
+                return;
+            }
+            if (!m_Compatibility.Compilation.IsValid)
+            {
+                for (int i = 0; i < m_Compatibility.Compilation.Errors.Count; i++)
+                {
+                    SimulationPipelineCompileError error = m_Compatibility.Compilation.Errors[i];
+                    EditorGUILayout.HelpBox(
+                        $"{error.Code}\n{error.Message}\n{error.ComponentIdentity}",
+                        MessageType.Error);
+                }
+                return;
+            }
+
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.TextField("Program Runtime ABI", $"{m_Compatibility.ProgramRuntime.NumericProfileId} / {m_Compatibility.ProgramRuntime.TargetAbiVersion}");
+                EditorGUILayout.TextField("Backend", $"{m_Compatibility.Backend.BackendId}@{m_Compatibility.Backend.SemanticVersion}");
+                EditorGUILayout.TextField("Pipeline ID", m_Compatibility.PipelineIdentity.Id.Value);
+                EditorGUILayout.TextField("Pipeline Revision", m_Compatibility.PipelineIdentity.Revision.Value);
+                EditorGUILayout.TextField("Pipeline Hash", m_Compatibility.PipelineIdentity.Hash.ToString());
+                EditorGUILayout.TextField("Plan Hash", m_Compatibility.PlanHash.ToString());
+                EditorGUILayout.TextField("Source", m_Compatibility.Source.Source.Identity.ToString());
+                EditorGUILayout.TextField("Solver", m_Compatibility.Solver.Identity.ToString());
+            }
+            EditorGUILayout.HelpBox("Composition is compatible.", MessageType.Info);
+        }
+
+        void RefreshCompatibility()
+        {
+            m_CompatibilityRefreshQueued = false;
+            if (!this || !m_Definition)
                 return;
             try
             {
-                SimulationSessionCompositionCompatibilityReport report =
-                    SimulationSessionCompositionCompatibility.Evaluate(definition);
-                if (report.Issues.Count > 0)
-                {
-                    for (int i = 0; i < report.Issues.Count; i++)
-                        EditorGUILayout.HelpBox(report.Issues[i].ToString(), MessageType.Error);
-                    return;
-                }
-                if (report.Compilation == null)
-                {
-                    EditorGUILayout.HelpBox("Pipeline compilation did not produce a result.", MessageType.Error);
-                    return;
-                }
-                if (!report.Compilation.IsValid)
-                {
-                    for (int i = 0; i < report.Compilation.Errors.Count; i++)
-                    {
-                        SimulationPipelineCompileError error = report.Compilation.Errors[i];
-                        EditorGUILayout.HelpBox(
-                            $"{error.Code}\n{error.Message}\n{error.ComponentIdentity}",
-                            MessageType.Error);
-                    }
-                    return;
-                }
-
-                using (new EditorGUI.DisabledScope(true))
-                {
-                    EditorGUILayout.TextField("Program Runtime ABI", $"{report.ProgramRuntime.NumericProfileId} / {report.ProgramRuntime.TargetAbiVersion}");
-                    EditorGUILayout.TextField("Backend", $"{report.Backend.BackendId}@{report.Backend.SemanticVersion}");
-                    EditorGUILayout.TextField("Pipeline ID", report.PipelineIdentity.Id.Value);
-                    EditorGUILayout.TextField("Pipeline Revision", report.PipelineIdentity.Revision.Value);
-                    EditorGUILayout.TextField("Pipeline Hash", report.PipelineIdentity.Hash.ToString());
-                    EditorGUILayout.TextField("Plan Hash", report.PlanHash.ToString());
-                    EditorGUILayout.TextField("Source", report.Source.Source.Identity.ToString());
-                    EditorGUILayout.TextField("Solver", report.Solver.Identity.ToString());
-                }
-                EditorGUILayout.HelpBox("Composition is compatible.", MessageType.Info);
+                m_Compatibility = SimulationSessionCompositionCompatibility.Evaluate(m_Definition);
+                m_CompatibilityError = null;
             }
             catch (Exception exception)
             {
-                EditorGUILayout.HelpBox(exception.Message, MessageType.Error);
+                m_Compatibility = null;
+                m_CompatibilityError = exception.Message;
             }
+            Repaint();
+        }
+
+        void OnDisable()
+        {
+            EditorApplication.delayCall -= RefreshCompatibility;
         }
     }
 

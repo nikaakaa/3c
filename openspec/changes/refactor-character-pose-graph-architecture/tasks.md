@@ -264,8 +264,8 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 
 - [x] 23.1 确认PoseGraph使用FlowCanvas原生`GraphEditor`、`FlowGraph`、`FlowNode`、`Port`、`BinderConnection`、breadcrumb、Node/Connection Inspector、创建菜单与子图下钻；FlowCanvas只承担Editor交互，不进入Pose Runtime。
 - [x] 23.2 确认`CharacterPoseCanvasNode.OnNodeInspectorGUI`与`CharacterPoseCanvasNodeEditorHooks`已接入节点Inspector；字段选项仍由Pose Capability、Profile和Rig上下文提供，不把Unavailable归因于FlowCanvas能力。
-- [ ] 23.3 删除或关闭Pose authoring默认的自定义`domainPanel`、重复Details和Graph Navigator，让FlowCanvas原生Inspector/Connection Inspector成为作者字段入口；项目面板只保留Runtime Observation、诊断、跨Graph检索和正式Preview/Build状态。
-- [ ] 23.4 将复杂数组字段（Parameter Policy、IK Goal Binding等）从项目右侧UI Toolkit Details迁入FlowCanvas节点Inspector，仍复用同一typed Mutation，不创建第二写入链。
+- [x] 23.3 删除或关闭Pose authoring默认的自定义`domainPanel`、重复Details和Graph Navigator，让FlowCanvas原生Inspector/Connection Inspector成为作者字段入口；项目面板只保留Runtime Observation、诊断、跨Graph检索和正式Preview/Build状态。
+- [x] 23.4 将复杂数组字段（Parameter Policy、IK Goal Binding等）从项目右侧UI Toolkit Details迁入FlowCanvas节点Inspector，仍复用同一typed Mutation，不创建第二写入链。
 - [x] 23.5 通过精确Definition的`character.build_fixed_products`发布Float32、Fixed和共享Presentation Projection；Corin产物已生成7条`FullBodyAction` Action Playback input。正式入口：`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`与`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。
 - [ ] 23.6 正式Preview继续使用`CharacterAnimationPreviewFixture`与统一Preview/Scene Session链；PoseGraph作者窗口不创建第二Preview UI、第二时钟、临时Program或简化Executor。当前Pose reset observation仍需先完成ACL资源加载/提交，不能登记为Preview通过。
 

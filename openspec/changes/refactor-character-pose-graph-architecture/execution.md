@@ -1511,3 +1511,9 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 状态：修复了诊断窗口在Play／编译状态变化后不重绘，以及Unity域重载后丢失最近产物路径的问题。采样Workflow现在从持久化的最近manifest或`Diagnostics/GeneratedFootSampling`下最新有效manifest恢复Full／Core CSV、manifest和目录；分析Workflow恢复最近报告。Launcher的`Reveal Sample Folder`、`Analyze Last Capture`和`Open Last Report`因此不再依赖本次域生命周期内的静态字段；不在Play时仍明确提示“先点击Play Selected Variant”，但已完成产物可在编辑模式打开和分析。
 
 通过3C MCP验证：编辑模式下状态为`capture_compilation=true`、`sampling_available=true`，最近恢复的有效采样位于`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260903-080624-395d5f0538484f499eb8fc3ff436b6d8`（199帧）；直接执行`analyze_last`成功生成对应报告，随后`open_report`入口成功。此前本轮1044帧Diagnostic Replay仍保存在`20260903-074709-8b00a2b85c07406a9e693727ec0690e7`，两者都在同一`Diagnostics/GeneratedFootSampling`根目录下。
+
+## FlowCanvas原生Pose Inspector收口（POSE-EXEC-20260911-01）
+
+状态：提交`73433946f`移除Pose Workspace对自定义`domainPanel`的挂载，FlowCanvas原生Node／Connection Inspector恢复为可见作者入口；提交`d52641f4e`把Parameter Policy和IK Goal Binding的数组编辑迁入`CharacterPoseCanvasNode.OnNodeInspectorGUI`，增删、枚举、骨骼、偏移和权重修改均通过同一`SetNodeField` typed Mutation提交。IK骨骼选项只从当前精确Profile的Rig上下文取得，缺少上下文时明确显示Unavailable，不接受自由文本。
+
+Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，仅有既有Package／AssetDatabase warning。自定义Details presenter仍作为未挂载的历史实现保留，23.3与23.4已按当前可见入口完成；23.5正式Build、23.6 Scene Play Preview、24.1–24.5可复用Graph Binding和22.5交互验收继续保持未完成，不以编译替代窗口操作证据。

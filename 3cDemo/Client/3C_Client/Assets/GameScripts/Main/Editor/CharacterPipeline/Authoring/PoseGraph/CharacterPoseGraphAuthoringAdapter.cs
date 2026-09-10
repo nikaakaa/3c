@@ -1125,6 +1125,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             switch (field.PickerKind)
             {
+                case "presentation-fact":
+                    options = CharacterPresentationFactSchema.OrderedDeclarations
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.FactId.Value,
+                            value.FactId.Value))
+                        .ToArray();
+                    return true;
+                case "gameplay-state":
+                    options = EnumerateIdentityLiterals()
+                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .ToArray();
+                    return true;
                 case "pose-parameter":
                     options = ((CharacterPoseCanvasGraphDocument)document).Graph.Parameters
                         .Where(value => value != null && value.ParameterId.IsValid)
@@ -1248,6 +1260,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             options = result;
             return true;
+        }
+
+        IEnumerable<string> EnumerateIdentityLiterals()
+        {
+            if (!m_Profile?.PoseGraph)
+                return Array.Empty<string>();
+            return m_Profile.PoseGraph.EnumerateGraphs()
+                .Where(value => value != null)
+                .SelectMany(value => value.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
+                .Where(value => value?.PoseStateMachine != null)
+                .SelectMany(value => value.PoseStateMachine.Transitions ?? Array.Empty<CharacterPoseStateTransition>())
+                .Where(value => value?.Rule != null)
+                .SelectMany(value => value.Rule.Operations ?? Array.Empty<CharacterPoseTransitionRuleOperation>())
+                .Where(value => value.Kind == PoseTransitionRuleOperationKind.IdentityLiteral &&
+                                !string.IsNullOrWhiteSpace(value.IdentityLiteral))
+                .Select(value => value.IdentityLiteral)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal);
         }
     }
 

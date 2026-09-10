@@ -243,3 +243,11 @@ Document侧补齐v7技能输入绑定、Skill Timeline与非技能Timeline分离
 Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d1f413382db19b8fe43090b`和正确路径的`btsmtl.dry_run_document` job `9cf20e5da46e499f8920eda042bf1399`均成功返回`syncState=Clean`、`plannedDiff=[]`。当前 live editable hash 为`0ebf47b1097a261d573bcba366e5181007d49ef7d4decfcf6c317cc265fdd34f`，document hash 为`803c4a6d47212f1a458e88717a6675e66569a88e2b9b40c04ced258b9345e88d`，context hash仍为`f5d18a6758276b6050f74a6da19e9b13824926251601cbbf947f2d29a242e27e`。这是当前正式作者导出的新基线，不是迁移或Build产物；本轮没有执行apply、资产迁移、Build或Play。
 
 `1969a55e6`修正Session Composition作者入口：`SimulationSessionCompositionDefinitionEditor.OnInspectorGUI`只绘制缓存的兼容性结果，不再在每次Inspector重绘时执行`SimulationSessionCompositionCompatibility.Evaluate`和Pipeline编译；作者点击“刷新兼容性”后才由`EditorApplication.delayCall`执行同一正式API，配置发生变化会清空旧结果。该代码刷新后目标Unity实例`error CS`为0。由于当前执行阶段未通过独立Composition验证入口取得Corin的实际兼容性结果，4.5.4仍保持未完成。
+
+# 2026-09-10 Server Authority Composition正式校验
+
+在七个 Server Authority Prediction Pass 资产仍为实现版本2时，正式 Composition 校验按代码合同拒绝了 `ServerAuthoritativeOwnerInputIngressPass`。通过正式 Unity MCP 将 `ServerAuthoritativeCorrectionSchedulePass`、`InputCommandEgressPass`、`ObservationIngressPass`、`OwnerInputIngressPass`、`PredictionHistoryEgressPass`、`PredictionOutputDispositionPass` 和 `RemotePresentationEgressPass` 的 `m_ImplementationVersion` 统一刷新为代码合同版本3，提交为 `6b2c4a0b4`；没有改动 Pass ID、Model 或其他字段。
+
+刷新后重新执行正式 `btsmtl.validate`：Prediction Composition job `51afaacb6da94212b97b57f68f5aabf8` 返回 `success=true`、`compileSuccessCount=1`、`semanticValidCount=1`、`session_composition_compatible`，核对 `RequiredPasses=10`、`SourcePorts=5`、Server-Authoritative Prediction Pipeline、Float32 Backend、Unity CharacterController Solver 和 `NetworkModel=thirdperson.network-model.server-authoritative-hybrid`；Authority Composition job `d0321f3f81a64022840711be33092697` 同样返回 `success=true`、`compileSuccessCount=1`、`semanticValidCount=1`、`session_composition_compatible`，核对 `RequiredPasses=6`、`SourcePorts=4` 和 Authority Pipeline。两次都是只读验证，没有 checkout、apply、Character Build、Play 或网络回放。
+
+这次结果关闭了 4.5.4 遗留的 Server Authority Composition 兼容性缺口，但不提前关闭 4.5.5：Rollback/Server Authority 的 canonical 编解码字段审计已完成，仍需要正式网络产品运行记录和实际网络载荷的产品级限制证据，证明不会复制 Graph、Blackboard 名称、Timeline 对象或最终 Pose。

@@ -474,25 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             AgentDocumentPresentationEditable presentation =
                 editable.presentation;
-            var timelines = (editable.timelines ??
-                             new List<AgentSnapshotTimeline>())
-                .Where(value =>
-                    value != null &&
-                    !string.IsNullOrWhiteSpace(value.timelineAuthoringId))
-                .ToDictionary(
-                    value => value.timelineAuthoringId,
-                    StringComparer.Ordinal);
-            var channels = new HashSet<string>(
-                timelines.Values
-                    .SelectMany(value =>
-                        value.tracks ??
-                        new List<AgentSnapshotTimelineTrack>())
-                    .Where(value =>
-                        value != null &&
-                        !string.IsNullOrWhiteSpace(
-                            value.animationChannelId))
-                    .Select(value => value.animationChannelId),
-                StringComparer.Ordinal);
+            var channels = new HashSet<string>(StringComparer.Ordinal);
             var skillTimelineTracks = new HashSet<string>(StringComparer.Ordinal);
             foreach (AgentPackageSkillTimelineFile timeline in
                      editable.skillTimelines ?? new List<AgentPackageSkillTimelineFile>())
@@ -510,21 +492,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation.animationClips.Select(value =>
                     ReferenceIdentity(value.clip)),
                 StringComparer.Ordinal);
-            foreach (AgentSnapshotTimeline timeline in timelines.Values)
-            {
-                foreach (AgentSnapshotTimelineClip clip in timeline.tracks
-                             .SelectMany(value => value.clips)
-                             .Where(value => value.typeName?.EndsWith(
-                                 "AnimationClip",
-                                 StringComparison.Ordinal) == true))
-                {
-                    if (!animationClips.Contains(ReferenceIdentity(clip.animationClip)))
-                        report.Error(
-                            $"editable/timelines/{timeline.timelineAuthoringId}/clips/{clip.clipAuthoringId}.animationClip",
-                            "presentation_animation_clip_unresolved",
-                            "Timeline Animation Segment引用不在AnimationClip目标闭包中。");
-                }
-            }
             foreach (AgentPackageSkillTimelineFile timeline in
                      editable.skillTimelines ?? new List<AgentPackageSkillTimelineFile>())
             {
@@ -628,17 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         "presentation_action_producer_local_reference_invalid",
                         "Action producer只允许绑定已存在的Timeline与Animation track；当前正式Timeline Mutation不创建这两类owner。");
                 }
-                else if (!(timelines.TryGetValue(
-                              producer.timelineId,
-                              out AgentSnapshotTimeline timeline) &&
-                          (timeline.tracks ??
-                           new List<AgentSnapshotTimelineTrack>()).Any(value =>
-                              value != null &&
-                              string.Equals(
-                                  value.trackAuthoringId,
-                                  producer.trackId,
-                                  StringComparison.Ordinal))) &&
-                         !skillTimelineTracks.Contains(producer.timelineId + "\0" + producer.trackId))
+                else if (!skillTimelineTracks.Contains(producer.timelineId + "\0" + producer.trackId))
                 {
                     report.Error(
                         path,

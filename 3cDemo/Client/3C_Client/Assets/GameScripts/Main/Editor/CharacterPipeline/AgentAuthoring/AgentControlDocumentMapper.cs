@@ -27,9 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         valueType = value.valueType,
                         numericValue = value.numericValue
                     })
-                    .ToList(),
-                stateMachines = editable?.stateMachines ?? new List<AgentSnapshotStateMachineSummary>(),
-                timelineTreeClips = editable?.timelineTreeClips ?? new List<AgentSnapshotTimelineTreeClip>()
+                    .ToList()
             };
         }
 

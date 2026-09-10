@@ -84,6 +84,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .ToHashSet(StringComparer.Ordinal) ??
                     new HashSet<string>(StringComparer.Ordinal);
+                if (files.Any(value =>
+                        string.Equals(value, "editable/blackboard.json", StringComparison.Ordinal) ||
+                        value.StartsWith("editable/graphs/", StringComparison.Ordinal) ||
+                        value.StartsWith("editable/timelines/", StringComparison.Ordinal)))
+                    return true;
                 bool presentationLayoutIncomplete = files
                     .Where(value =>
                         value.StartsWith(
@@ -373,16 +378,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 var poseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var linkedPoseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
-                var graphCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
-                var timelineCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
-                var skillCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
+                 var skillCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var skillFlowCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 foreach (string relativePath in unknownPaths.Where(path =>
                              AgentAuthoringPresentationPackageCodec.IsDiscoverablePoseGraphFragment(path) ||
                              AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(path) ||
-                             AgentGraphDocumentFragments.IsDefinitionFragment(path) ||
-                             AgentTimelineDocumentFragments.IsDefinitionFragment(path) ||
-                             AgentSkillDocumentMapper.IsDefinitionPath(path) ||
+                              AgentSkillDocumentMapper.IsDefinitionPath(path) ||
                              AgentSkillFlowDocumentMapper.IsFragmentPath(path)))
                 {
                     string fullPath = ResolveInside(packagePath, relativePath);
@@ -396,10 +397,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         poseCandidates.Add(relativePath, raw);
                     else if (AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(relativePath))
                         linkedPoseCandidates.Add(relativePath, raw);
-                    else if (AgentGraphDocumentFragments.IsDefinitionFragment(relativePath))
-                        graphCandidates.Add(relativePath, raw);
-                    else if (AgentTimelineDocumentFragments.IsDefinitionFragment(relativePath))
-                        timelineCandidates.Add(relativePath, raw);
                     else if (AgentSkillFlowDocumentMapper.IsFragmentPath(relativePath))
                         skillFlowCandidates.Add(relativePath, raw);
                     else if (AgentSkillDocumentMapper.IsDefinitionPath(relativePath))
@@ -415,15 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             linkedPoseCandidates,
                              report,
                              out IReadOnlyCollection<string> discoveredLinkedPose) ||
-                     !AgentGraphDocumentFragments.TryDiscoverNew(
-                             graphCandidates,
-                             report,
-                             out IReadOnlyCollection<string> discoveredGraphs) ||
-                     !AgentTimelineDocumentFragments.TryDiscoverNew(
-                            timelineCandidates,
-                            report,
-                            out IReadOnlyCollection<string> discoveredTimelines) ||
-                     !AgentSkillDocumentMapper.TryDiscoverNewFragments(
+                      !AgentSkillDocumentMapper.TryDiscoverNewFragments(
                             skillCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredSkills) ||
@@ -434,8 +423,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     return false;
                 discovered = discoveredPoseGraphs
                     .Concat(discoveredLinkedPose)
-                    .Concat(discoveredGraphs)
-                    .Concat(discoveredTimelines)
                     .Concat(discoveredSkills)
                     .Concat(discoveredSkillFlow)
                     .ToArray();
@@ -488,8 +475,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             raw = null;
             if (string.Equals(relativePath, "editable/controller.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageControllerFile _, out raw);
-            if (string.Equals(relativePath, "editable/blackboard.json", StringComparison.Ordinal))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageBlackboardFile _, out raw);
             if (string.Equals(relativePath, "editable/actions.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageActionsFile _, out raw);
             if (relativePath.StartsWith("editable/skills/", StringComparison.Ordinal) &&
@@ -504,14 +489,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (AgentSkillFlowDocumentMapper.IsTimelinePath(relativePath))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageSkillTimelineFile _, out raw);
             if (AgentSkillFlowDocumentMapper.IsTimelineCurvesPath(relativePath))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageCurvesFile _, out raw);
-            if (relativePath.StartsWith("editable/graphs/", StringComparison.Ordinal) && relativePath.EndsWith("/graph.json", StringComparison.Ordinal))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageGraphFile _, out raw);
-            if (relativePath.StartsWith("editable/graphs/", StringComparison.Ordinal) && relativePath.EndsWith("/layout.json", StringComparison.Ordinal))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageLayoutFile _, out raw);
-            if (relativePath.StartsWith("editable/timelines/", StringComparison.Ordinal) && relativePath.EndsWith("/timeline.json", StringComparison.Ordinal))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageTimelineFile _, out raw);
-            if (relativePath.StartsWith("editable/timelines/", StringComparison.Ordinal) && relativePath.EndsWith("/curves.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageCurvesFile _, out raw);
             if (string.Equals(relativePath, "context/node-catalog.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageNodeCatalogFile _, out raw);

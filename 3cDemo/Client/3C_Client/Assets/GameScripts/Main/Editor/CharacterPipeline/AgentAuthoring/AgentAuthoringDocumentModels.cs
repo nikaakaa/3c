@@ -500,8 +500,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentDocumentPresentationContext presentation;
         public AgentDocumentGeneratedProduct generatedProduct;
         public List<string> capabilities = new List<string>();
-        public List<AgentPackageDependency> graphDependencies = new List<AgentPackageDependency>();
-        public List<AgentPackageDependency> timelineDependencies = new List<AgentPackageDependency>();
     }
 
     [Serializable]

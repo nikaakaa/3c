@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Motion;
-using TreeDesigner;
-using TreeDesigner.Editor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -81,11 +79,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error("document.rootIdentity", "document_root_mismatch", "Document rootIdentity与当前root不一致。");
             if (target.editable == null)
                 report.Error("document.editable", "editable_missing", "Document editable正文缺失。");
-            else if (target.editable.blackboardSchemaRevision != PipelineBlackboardAuthoringSchema.CurrentRevision)
-                report.Error(
-                    "document.editable.blackboardSchemaRevision",
-                    "blackboard_schema_revision_outdated",
-                    $"Blackboard schema revision必须是{PipelineBlackboardAuthoringSchema.CurrentRevision}；请重新checkout Document后再apply。");
             if (string.Equals(
                     target.domain,
                     AgentAuthoringSchema.CharacterControllerDomain,
@@ -101,38 +94,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
         {
-            AgentGraphDocumentMutationModule.BuildStateMachineCreationMutations(
-                current.stateMachines,
-                target.stateMachines,
-                target.graphs,
-                mutations,
-                report);
-            AgentGraphDocumentMutationModule.BuildGraphCreationMutations(
-                current.graphs,
-                target.graphs,
-                mutations,
-                report);
-            bool normalizeBlackboard =
-                current.blackboardSchemaRevision != target.blackboardSchemaRevision;
-            AgentBlackboardDocumentMutationModule.BuildCharacterBlackboardMutations(
-                current.blackboardDeclarations,
-                target.blackboardDeclarations,
-                target.graphs,
-                mutations,
-                report,
-                normalizeBlackboard);
-            AgentBlackboardDocumentMutationModule.BuildBlackboardSchemaRevisionMutation(current, target, mutations, normalizeBlackboard);
-            AgentGraphDocumentMutationModule.BuildStateMachineMutations(
-                string.Empty,
-                current.stateMachines,
-                target.stateMachines,
-                current.graphs,
-                target.graphs,
-                mutations,
-                report,
-                false);
-            AgentGraphDocumentMutationModule.BuildCharacterGraphMutations(current.graphs, target.graphs, target.stateMachines, mutations, report);
-            AgentTimelineDocumentMutationModule.BuildTimelineMutations(current, target, mutations, report);
             AgentActionDocumentMutationModule.BuildActionMutations(current, target, mutations, report);
             AgentSkillFlowDocumentMutationModule.Build(
                 current,

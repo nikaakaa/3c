@@ -49,25 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.skillGraphLayouts = skillDocument.layouts;
             snapshot.skillMacros = skillDocument.macros;
             snapshot.skillTimelines = skillDocument.timelines;
-            var editableGraphs = new List<AgentSnapshotGraph>();
-            var editableStateMachines = new List<AgentSnapshotStateMachineSummary>();
-            HashSet<string> skillTimelineIds =
-                skillDocument.timelines
-                    .Where(value => value != null && !string.IsNullOrWhiteSpace(value.id))
-                    .Select(value => value.id)
-                    .ToHashSet(StringComparer.Ordinal);
-            List<AgentSnapshotTimeline> editableTimelines =
-                AgentAuthoringDocumentCodec.Clone(
-                    snapshot.timelines
-                        .Where(value => value != null && !skillTimelineIds.Contains(value.timelineAuthoringId))
-                        .ToList()) ??
-                new List<AgentSnapshotTimeline>();
-            List<AgentSnapshotTimelineTreeClip> editableTimelineTreeClips =
-                AgentAuthoringDocumentCodec.Clone(snapshot.timelineTreeClips) ??
-                new List<AgentSnapshotTimelineTreeClip>();
-            editableTimelineTreeClips = editableTimelineTreeClips
-                .Where(value => value != null && !skillTimelineIds.Contains(value.timelineAuthoringId))
-                .ToList();
             var editable = new AgentDocumentEditable
             {
                 control = new AgentDocumentControlConfiguration
@@ -76,12 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     semanticVersion = snapshot.controlSemanticVersion,
                     parameters = snapshot.controlParameters
                 },
-                blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
-                graphs = editableGraphs,
-                stateMachines = editableStateMachines,
-                blackboardDeclarations = snapshot.blackboardDeclarations,
-                timelines = editableTimelines,
-                timelineTreeClips = editableTimelineTreeClips,
                 actionRequests = snapshot.actionRequests,
                 actionProfiles = snapshot.actionProfiles,
                 skills = skills,
@@ -108,10 +83,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 capabilities = CharacterCapabilities()
             };
             AgentGraphSnapshot projectionSnapshot = AgentAuthoringDocumentCodec.Clone(snapshot);
-            projectionSnapshot.graphs = editableGraphs;
-            projectionSnapshot.stateMachines = editableStateMachines;
-            projectionSnapshot.timelines = editableTimelines;
-            projectionSnapshot.timelineTreeClips = editableTimelineTreeClips;
             projectionSnapshot.skills = skills;
             projectionSnapshot.skillGraphs = skillDocument.graphs;
             projectionSnapshot.skillGraphLayouts = skillDocument.layouts;

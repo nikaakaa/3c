@@ -265,3 +265,5 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 随后补齐跨文件 owner 转移的失败恢复。`RehomeTimelineBodyGraphs` 现在把每次 TimelineBody 从原技能文件迁到 Timeline 文件的操作登记到 `AgentMutationSession`；`AgentDocumentMutationCompiler`把回滚动作交给 `AgentDocumentApplyResult`，事务服务在 `Undo.RevertAllDownToGroup` 前逆序恢复原文件归属。提交 `64395b1d4` 只改变事务代码，不执行迁移；它解决了失败后字段回滚但子图仍留在错误 owner 文件中的缺口。2.4.2与5.3仍需实际跨 owner Undo、保存／反向导出和失败注入的正式执行记录。
 
 另外，`AgentSkillFlowDocumentOwnerCollector`原先只收当前 Definition 已经可达的 Macro；当 Document 目标新接入一个已有的共享 Macro 时，`SyncMacros`可能修改该主资产却没有进入外层 Undo owner。`61ce6d9ba`将带正式资产引用的目标 Macro加入 owner 集合，`local:*`新Macro仍由创建记录管理。该步不修改资产内容，目标 Unity 最新脚本编译成功；2.4.2与5.3的人工和失败执行证据仍未提前宣称完成。
+
+异常路径继续收紧：`AgentDocumentMutationCompiler`现在把 Handler 异常收进 `AgentDocumentApplyResult`，并保留同一 `AgentMutationSession` 的逆序回滚委托；外层事务服务因此能统一恢复 owner 转移、Undo状态和新建根清理。提交 `7cc1e5c6b`只改变失败结果传递，不执行Document apply或资产迁移。

@@ -209,5 +209,3 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
     }
 }
-
-

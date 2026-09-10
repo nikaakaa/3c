@@ -465,8 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
                 OpenDetailsCommand,
                 true,
-                authoringOnly: true,
-                fieldEditor: new CharacterPoseDetailsFieldEditors(() => m_Asset, () => m_Profile?.RigDefinition)));
+                authoringOnly: true));
             m_Details.style.display = DisplayStyle.Flex;
             m_LinkedPoseDetails.style.display = DisplayStyle.None;
             m_Navigator.Bind(m_Document, new NavigatorDataSource(this));

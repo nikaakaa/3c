@@ -4,7 +4,7 @@
 
 2026-09-09 本轮已落实作者选择A：技能根独立文件，私有内容同文件保存，Document预检及失败文件清理统一。节点目录和角色规则由原生与Document共用，固定端口不再重复声明，Macro参数共用校验。Host与原生工具栏已接实际执行实例选择，Fixed Host按Program来源定位作者。公开能力盘点完成；剩余编辑事务、共享Macro作者流程及资产／运行执行证据见tasks.md。
 
-当前Document源码及现行规范为v7；本change的目标版本随之同步，不回退成旧v6包。目标Unity实例最新刷新后`error CS=0`，正式validate已通过双Target、State/Snapshot codec和Provider owner合同核对。资产迁移已完成，当前无差异所以没有再次执行Document apply；内容Build、网络产品和回放本轮仍未执行。
+当前Document源码及现行规范为v7；本change的目标版本随之同步，不回退成旧v6包。此前目标Unity实例脚本刷新后的`error CS=0`及正式validate双Target、State/Snapshot codec和Provider owner合同核对均已记录；最新live validate被另一窗口的Pose Projection错误阻塞，未以外部改动覆盖Document或资产迁移基线。技能资产迁移已完成，内容Build、网络产品和回放本轮仍未执行。
 
 2026-09-10 最新收口刷新：目标Unity实例`3C_Client@e852139597e42532`经MCP完整刷新后按`error CS`读取返回0条。随后精确 Corin Definition 的正式`btsmtl.validate` job `a526919107ac46a597619dc06d0d666e`成功，`compileSuccessCount=1`、`semanticValidCount=1`，Float32与Fixed均为1127个StateSlot，State/Snapshot codec round-trip通过。最终 Pose 资产变更后，正式`btsmtl.checkout_document` job `4a00532477194a7c9847016490abc639`与`btsmtl.dry_run_document` job `a12155d2dd7f4785900c117f9561e2d6`均返回`success=true`、`syncState=Clean`、`plannedDiff=[]`；当前包路径为`3cDemo/Client/3C_Client/AgentAuthoring/Documents/CharacterController/c7a7c1e3-001dd30a08d99da6.btsmtl`，`sourceRevision=12bc98f1ef51448815991a2f31c7fc1d410c6445c7894ed33bb6fd34a9b56bee`，`editableHash=ed5797b6a7066dc411dfb50b0a3c782a4a1bee458f7f962d0091cd5b35aee244`，`contextHash=f5d18a6758276b6050f74a6da19e9b13824926251601cbbf947f2d29a242e27e`，`documentHash=91e8785a6aa26a57f341fd82cdb54eb4236d7d4967f7ceaca668e7a51783825d`，`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`。本轮没有再次apply、Character Build、Play、网络回放或性能采样。
 

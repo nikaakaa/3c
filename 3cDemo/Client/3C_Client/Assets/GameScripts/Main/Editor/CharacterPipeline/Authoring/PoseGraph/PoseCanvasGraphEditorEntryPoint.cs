@@ -117,23 +117,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Open(asset, asset.Graph);
             return true;
         }
-        const string CorinPoseGraphPath =
-            "Assets/Configs/Character/Corin/Pipeline/Presentation/PoseGraphs/CorinPresentationPoseGraph.asset";
-
-        [MenuItem("Tools/3C/Pose Canvas/Open Corin in CanvasCore Graph Editor")]
-        public static void OpenCorin()
+        [MenuItem("Tools/3C/Pose Canvas/Open Selected Pose Graph")]
+        public static void OpenSelectedPoseGraph()
         {
             CharacterPresentationPoseGraphAsset asset =
-                AssetDatabase.LoadAssetAtPath<CharacterPresentationPoseGraphAsset>(CorinPoseGraphPath);
-            if (asset == null || asset.Graph == null)
+                Selection.activeObject as CharacterPresentationPoseGraphAsset;
+            if (asset == null)
                 throw new InvalidOperationException(
-                    $"Corin Pose Graph asset '{CorinPoseGraphPath}' is missing or not migrated.");
-            const string definitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
-            CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(definitionPath);
-            if (definition == null || definition.AnimationPresentationProfile == null || definition.AnimationPresentationProfile.PoseGraph != asset)
-                throw new InvalidOperationException("Corin Definition does not own this Pose Graph.");
-            CharacterPoseGraphWorkspace.Open(asset, definition.AnimationPresentationProfile, definition.PresentationProjection, definition);
+                    "Select a shared Presentation Pose Graph asset before opening the Pose Canvas.");
+            if (asset.Graph == null)
+                throw new InvalidOperationException(
+                    $"Pose Graph asset '{AssetDatabase.GetAssetPath(asset)}' has no migrated authoring graph.");
+            Open(asset, asset.Graph);
         }
+
+        [MenuItem("Tools/3C/Pose Canvas/Open Selected Pose Graph", true)]
+        static bool ValidateOpenSelectedPoseGraph() =>
+            Selection.activeObject is CharacterPresentationPoseGraphAsset;
 
         internal static void Open(
             CharacterPresentationPoseGraphAsset asset,

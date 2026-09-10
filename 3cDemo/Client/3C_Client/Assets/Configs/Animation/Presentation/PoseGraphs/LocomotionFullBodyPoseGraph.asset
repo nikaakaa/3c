@@ -1526,7 +1526,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
-  m_Name: CorinPresentationPoseGraph
+  m_Name: LocomotionFullBodyPoseGraph
   m_EditorClassIdentifier: 
   m_Graph: {fileID: -5505920895708642616}
   m_GraphCatalog:

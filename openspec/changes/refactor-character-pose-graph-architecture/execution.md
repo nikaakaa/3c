@@ -1525,3 +1525,5 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 当时生成Projection仍保存`m_ProfileRevision: e83001…`，因此必须在Agent并发重构恢复可编译后重新执行唯一Character Build，不能手改Projection或以旧产物继续观察。当前Unity Console阻塞来自Agent未提交文件中的字段迁移错误，不属于Pose代码；Pose作者入口本身没有新增编译错误。
 
 随后按当前Profile字段完成正式Character Build，Unity MCP返回Float32、Fixed与共享Presentation Projection发布成功，ProjectionRevision为`7fd5162562a8292210661579963a92822664db5d1b2f0fa67ff098fcebd71089`。Pose-only观察继续推进到资源加载入口，内层错误变为`YooAssets not initialize !`；已在Preview统一`Present`入口补齐`CharacterAnimationResourceScope.AdvancePreparation()`，但编辑模式Fixture没有正式Scene资源包初始化。此处不添加AssetDatabase fallback loader，等待正式Scene Play／资源启动链后再登记Pose reset观察通过。
+
+正式Build之后执行只读`btsmtl.validate`，job `25b186b21478421981fd5bbf6e458954`完成且`success=true`；报告为`compileSuccessCount=1`、`semanticValidCount=1`、`compileFailureCount=0`、`semanticInvalidCount=0`，`plannedDiff`与`appliedDiff`均为空。验证覆盖当前CharacterController Document闭包与两种Numeric Target，未改变作者资产。

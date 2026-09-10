@@ -68,7 +68,7 @@
 - [x] 2.4.1 实现单图编辑事务中子操作复用外层Undo、异常回滚及重新反序列化的代码。证据：ebc41bfcc；尚无完整交互验收证据。
 - [ ] 2.4.2 完成人工单操作与Document整包Undo的统一边界，覆盖根、私有页及实际修改的共享owner，核对保存／重载身份，交付owner链说明及正式执行证据，不新增测试代码。
 
-  当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图写入。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度；`64395b1d4`补齐TimelineBody跨文件owner转移的事务回滚记录；`61ce6d9ba`补齐Document目标中原本未被当前闭包引用的共享Macro owner收集；`7cc1e5c6b`让Handler异常以带回滚委托的失败结果返回，`2bf887538`让多个回滚动作继续执行并汇总失败，避免异常提前退出丢失owner恢复。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
+  当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图和原生Blackboard写入，`BlackboardEditor`通过通用domain adapter把变量增删、改名、值、类型、作用域和顺序交给该Mutation链。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度；`64395b1d4`补齐TimelineBody跨文件owner转移的事务回滚记录；`61ce6d9ba`补齐Document目标中原本未被当前闭包引用的共享Macro owner收集；`7cc1e5c6b`让Handler异常以带回滚委托的失败结果返回，`2bf887538`让多个回滚动作继续执行并汇总失败，避免异常提前退出丢失owner恢复。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
 - [x] 2.5 将技能目录、Toolbar、画布、导航及观察区域接到同一原生GraphEditor，删除第二画布和独立选择集合；通过源码搜索核对无第二技能GraphView或Workbench。
 
   代码/审计证据：技能Graph/Macro使用FlowCanvas原生GraphEditor，节点Inspector、原生创建目录、Timeline Open、Macro接口Toolbar和BtsmtlSkillObservationToolbar均挂在同一GraphEditor；RuntimeDebugSourceNavigator与ObservationSession直接打开该GraphEditor，技能目录未发现第二技能GraphView、Workbench或独立selection集合。

@@ -21,6 +21,12 @@ Pose Graph MUST只表达可复用的表现拓扑和抽象能力合同；Characte
 - **THEN** Definition Build MUST报告精确Graph/Node/Slot路径
 - **AND** MUST不使用角色名匹配、数组位置、默认资源或旧Projection作为fallback
 
+#### Scenario: 未使用的Resource Slot保持可选
+
+- **WHEN** shared Pose Graph声明了Resource Slot，但当前可达Graph拓扑没有任何节点消费该Slot
+- **THEN** Profile可以不提供该Slot的Binding，Pose Resource Catalog MUST不因此失败
+- **AND** 当可达节点实际消费该Slot时，缺失或类型不匹配的Binding MUST按Graph/Node/Field路径使Build失败
+
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
 `CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Contributions -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Contribution，Compiler MUST在唯一FullBodyIK前生成唯一Goal Assembler与Goal Set。

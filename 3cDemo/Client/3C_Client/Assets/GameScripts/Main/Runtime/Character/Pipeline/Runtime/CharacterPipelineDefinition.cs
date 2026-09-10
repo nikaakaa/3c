@@ -47,7 +47,6 @@ namespace ThirdPersonCharacter.Pipeline
     [CreateAssetMenu(fileName = "CharacterPipelineDefinition", menuName = "3C/Character/Pipeline Definition")]
     public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
-        [SerializeField] BaseTreeAsset m_RootTreeAsset;
         [SerializeField] string m_ControlModuleId;
         [SerializeField] CharacterControlParameterConfiguration[] m_ControlParameters = Array.Empty<CharacterControlParameterConfiguration>();
         [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
@@ -68,7 +67,6 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] ActionProfile[] m_ActionProfiles = Array.Empty<ActionProfile>();
         [SerializeField] GameplayBehaviorProfile[] m_BehaviorProfiles = Array.Empty<GameplayBehaviorProfile>();
 
-        public BaseTreeAsset RootTreeAsset => m_RootTreeAsset;
         public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
             ? string.Empty
             : m_ControlModuleId.Trim();

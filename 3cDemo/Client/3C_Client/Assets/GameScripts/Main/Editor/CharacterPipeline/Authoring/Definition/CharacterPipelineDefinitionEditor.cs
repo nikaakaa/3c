@@ -24,7 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         readonly List<string> m_ConfigurationErrors = new List<string>();
-        SerializedProperty m_RootTreeAsset;
         SerializedProperty m_ControlModuleId;
         SerializedProperty m_ControlParameters;
         SerializedProperty m_SkillDefinitions;
@@ -54,7 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void OnEnable()
         {
-            m_RootTreeAsset = serializedObject.FindProperty("m_RootTreeAsset");
             m_ControlModuleId = serializedObject.FindProperty("m_ControlModuleId");
             m_ControlParameters = serializedObject.FindProperty("m_ControlParameters");
             m_SkillDefinitions = serializedObject.FindProperty("m_SkillDefinitions");
@@ -94,7 +92,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void DrawPipeline()
         {
             EditorGUILayout.LabelField("Pipeline", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(m_RootTreeAsset, new GUIContent("Root Tree"));
             EditorGUILayout.PropertyField(m_SimulationTickRate, new GUIContent("Simulation Tick Rate"));
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("Control", EditorStyles.boldLabel);
@@ -330,12 +327,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             EditorGUILayout.LabelField("Navigation", EditorStyles.boldLabel);
+            DrawSkillNavigation(definition);
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!definition.RootTreeAsset))
-            {
-                if (GUILayout.Button("Open Root Tree"))
-                    CharacterPipelineDefinitionTreeWindowUtility.OpenRootTree(definition);
-            }
             using (new EditorGUI.DisabledScope(!definition.AnimationPresentationProfile))
             {
                 if (GUILayout.Button("Open Animation Profile"))
@@ -352,6 +345,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.HelpBox(m_ConfigurationErrors[i], MessageType.Error);
             if (m_ConfigurationValidated && m_ConfigurationValid)
                 EditorGUILayout.HelpBox("Configuration is valid.", MessageType.Info);
+        }
+
+        static void DrawSkillNavigation(CharacterPipelineDefinition definition)
+        {
+            EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
+            IReadOnlyList<CharacterSkillAuthoringDefinition> skills = definition.SkillDefinitions;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                CharacterSkillAuthoringDefinition skill = skills[i];
+                if (skill == null)
+                    continue;
+                BtsmtlSkillFlowGraph graph = FindSkillGraph(definition, skill.EntryGraphAuthoringId);
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(skill.SkillId, GUILayout.MinWidth(120f));
+                using (new EditorGUI.DisabledScope(!graph))
+                {
+                    if (GUILayout.Button("Open Skill Graph", GUILayout.Width(120f)))
+                        CharacterPipelineDefinitionTreeWindowUtility.OpenSkillGraph(definition, skill.EntryGraphAuthoringId);
+                }
+                EditorGUILayout.EndHorizontal();
+                if (!graph)
+                    EditorGUILayout.HelpBox($"Entry Graph not found: {skill.EntryGraphAuthoringId}", MessageType.Warning);
+            }
+        }
+
+        static BtsmtlSkillFlowGraph FindSkillGraph(
+            CharacterPipelineDefinition definition,
+            string graphAuthoringId)
+        {
+            IReadOnlyList<BtsmtlSkillFlowGraph> graphs = definition.SkillGraphs;
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                BtsmtlSkillFlowGraph graph = graphs[i];
+                if (graph && string.Equals(graph.AuthoringId, graphAuthoringId, System.StringComparison.Ordinal))
+                    return graph;
+            }
+            return null;
         }
 
         void ValidateConfiguration(CharacterPipelineDefinition definition)

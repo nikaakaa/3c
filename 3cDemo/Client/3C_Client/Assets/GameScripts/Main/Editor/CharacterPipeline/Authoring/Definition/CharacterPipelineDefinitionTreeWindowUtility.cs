@@ -1,15 +1,25 @@
-using TreeDesigner.Editor;
+using ThirdPersonCharacter.Control.Authoring;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
     public static class CharacterPipelineDefinitionTreeWindowUtility
     {
-        public static BaseTreeWindow OpenRootTree(CharacterPipelineDefinition definition)
+        public static bool OpenSkillGraph(CharacterPipelineDefinition definition, string graphAuthoringId)
         {
-            if (!definition || !definition.RootTreeAsset)
-                return null;
+            if (!definition || definition.SkillGraphs == null || definition.SkillGraphs.Count == 0)
+                return false;
 
-            return TreeWindowUtility.OpenTree(definition.RootTreeAsset, new CharacterPipelineAuthoringContext(definition));
+            for (int i = 0; i < definition.SkillGraphs.Count; i++)
+            {
+                BtsmtlSkillFlowGraph graph = definition.SkillGraphs[i];
+                if (graph && string.Equals(graph.AuthoringId, graphAuthoringId, System.StringComparison.Ordinal))
+                {
+                    BtsmtlSkillGraphAuthoringPanel.SetDefinitionContext(definition);
+                    return AssetDatabase.OpenAsset(graph);
+                }
+            }
+            return false;
         }
     }
 }

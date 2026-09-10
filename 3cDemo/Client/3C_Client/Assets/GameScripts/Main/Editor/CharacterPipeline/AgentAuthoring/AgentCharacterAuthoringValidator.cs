@@ -63,6 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     CharacterSimulationTargetCatalog.DefaultValidation(definition));
                 AppendFormalCompileReport(report, result);
                 AppendTargetStateLayoutReport(report, result);
+                AppendTargetStateCodecReport(report, result);
                 bool semanticValid = result.Artifact != null && result.Report.IsValid;
                 report.metrics.semanticValidCount = semanticValid ? 1 : 0;
                 report.metrics.semanticInvalidCount = semanticValid ? 0 : 1;
@@ -146,6 +147,152 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 FixedCharacterSimulationTargetBuildProduct fixedTarget => fixedTarget.Program.LayoutHash.ToString(),
                 _ => string.Empty
             };
+        }
+
+        static void AppendTargetStateCodecReport(
+            AgentCompileReport report,
+            CharacterSimulationBuildResult result)
+        {
+            if (result?.TargetProducts == null)
+                return;
+            for (int targetIndex = 0; targetIndex < result.TargetProducts.Count; targetIndex++)
+            {
+                CharacterSimulationTargetBuildProduct target = result.TargetProducts[targetIndex];
+                try
+                {
+                    string stateHash;
+                    string snapshotHash;
+                    if (target is Float32CharacterSimulationTargetBuildProduct float32)
+                        ValidateFloat32StateCodecs(float32.Program, out stateHash, out snapshotHash);
+                    else if (target is FixedCharacterSimulationTargetBuildProduct fixedTarget)
+                        ValidateFixedStateCodecs(fixedTarget.Program, out stateHash, out snapshotHash);
+                    else
+                        continue;
+                    report.Info(
+                        $"compiler/TargetLowering/{target.NumericProfileId.Value}",
+                        "state_codec_round_trip",
+                        $"StateHash={stateHash} WorldSnapshotHash={snapshotHash}.");
+                }
+                catch (Exception exception)
+                {
+                    report.Error(
+                        $"compiler/TargetLowering/{target.NumericProfileId.Value}",
+                        "state_codec_round_trip_failed",
+                        exception.Message);
+                }
+            }
+        }
+
+        static void ValidateFloat32StateCodecs(
+            ThirdPersonSimulation.CharacterSimulationProgram program,
+            out string stateHash,
+            out string snapshotHash)
+        {
+            ThirdPersonSimulation.ActorId actorId = new ThirdPersonSimulation.ActorId("validation-actor");
+            ThirdPersonSimulation.CharacterSimulationState state =
+                ThirdPersonSimulation.CharacterSimulationState.CreateInitial(program);
+            byte[] stateBytes = ThirdPersonSimulation.CharacterSimulationStateCodec.Write(state);
+            ThirdPersonSimulation.CharacterSimulationState restoredState =
+                ThirdPersonSimulation.CharacterSimulationStateCodec.Read(stateBytes, program);
+            ThirdPersonSimulation.CharacterStateHash hash =
+                ThirdPersonSimulation.CharacterSimulationStateCodec.ComputeHash(restoredState);
+            if (!hash.Equals(ThirdPersonSimulation.CharacterSimulationStateCodec.ComputeHash(state)))
+                throw new InvalidOperationException("Float32 Character State hash changed after canonical round-trip.");
+            stateHash = hash.ToString();
+
+            ThirdPersonSimulation.WorldSimulationState world =
+                new ThirdPersonSimulation.WorldSimulationState(
+                    program.Manifest.NumericProfile,
+                    new ThirdPersonSimulation.SolverImplementationId("validation.solver"),
+                    "1",
+                    new ThirdPersonSimulation.WorldRevision("validation.world"),
+                    ThirdPersonSimulation.WorldStatePersistenceMode.Snapshot,
+                    new[]
+                    {
+                        new ThirdPersonSimulation.WorldBodyState(
+                            actorId,
+                            ThirdPersonSimulation.Float32Vector3.Zero,
+                            ThirdPersonSimulation.Float32Yaw.Zero,
+                            ThirdPersonSimulation.Float32Vector3.Zero,
+                            ThirdPersonSimulation.Float32Scalar.Zero,
+                            false,
+                            ThirdPersonSimulation.WorldCollisionSummary.None)
+                    },
+                    Array.Empty<byte>());
+            var catalog = new ThirdPersonSimulation.SimulationProgramCatalog(new[] { program });
+            ThirdPersonSimulation.SimulationWorldSnapshot snapshot =
+                ThirdPersonSimulation.SimulationWorldSnapshotFactory.Capture(
+                    catalog,
+                    new ThirdPersonSimulation.SimulationTick(1),
+                    new[]
+                    {
+                        new ThirdPersonSimulation.SimulationActorState(actorId, state)
+                    },
+                    world,
+                    ThirdPersonSimulation.WorldCapability.None);
+            byte[] snapshotBytes = ThirdPersonSimulation.SimulationWorldSnapshotCodec.Write(snapshot);
+            ThirdPersonSimulation.SimulationWorldSnapshot restoredSnapshot =
+                ThirdPersonSimulation.SimulationWorldSnapshotCodec.Read(snapshotBytes);
+            _ = restoredSnapshot.Actors[0].Decode(program);
+            if (!restoredSnapshot.WorldHash.Equals(snapshot.WorldHash))
+                throw new InvalidOperationException("Float32 World Snapshot hash changed after canonical round-trip.");
+            snapshotHash = restoredSnapshot.WorldHash.ToString();
+        }
+
+        static void ValidateFixedStateCodecs(
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
+            out string stateHash,
+            out string snapshotHash)
+        {
+            ThirdPersonSimulation.ActorId actorId = new ThirdPersonSimulation.ActorId("validation-actor");
+            ThirdPersonSimulation.Fixed.CharacterSimulationState state =
+                ThirdPersonSimulation.Fixed.CharacterSimulationState.CreateInitial(program);
+            byte[] stateBytes = ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.Write(state);
+            ThirdPersonSimulation.Fixed.CharacterSimulationState restoredState =
+                ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.Read(stateBytes, program);
+            ThirdPersonSimulation.CharacterStateHash hash =
+                ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.ComputeHash(restoredState);
+            if (!hash.Equals(ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.ComputeHash(state)))
+                throw new InvalidOperationException("Fixed Character State hash changed after canonical round-trip.");
+            stateHash = hash.ToString();
+
+            ThirdPersonSimulation.Fixed.WorldSimulationState world =
+                new ThirdPersonSimulation.Fixed.WorldSimulationState(
+                    program.Manifest.NumericProfile,
+                    new ThirdPersonSimulation.SolverImplementationId("validation.solver"),
+                    "1",
+                    new ThirdPersonSimulation.WorldRevision("validation.world"),
+                    ThirdPersonSimulation.Fixed.WorldStatePersistenceMode.Snapshot,
+                    new[]
+                    {
+                        new ThirdPersonSimulation.Fixed.WorldBodyState(
+                            actorId,
+                            ThirdPersonSimulation.Fixed.FixedVector3.Zero,
+                            ThirdPersonSimulation.Fixed.FixedYaw.Zero,
+                            ThirdPersonSimulation.Fixed.FixedVector3.Zero,
+                            ThirdPersonSimulation.Fixed.FixedScalar.Zero,
+                            false,
+                            ThirdPersonSimulation.Fixed.WorldCollisionSummary.None)
+                    },
+                    Array.Empty<byte>());
+            var catalog = new ThirdPersonSimulation.Fixed.SimulationProgramCatalog(new[] { program });
+            ThirdPersonSimulation.Fixed.SimulationWorldSnapshot snapshot =
+                ThirdPersonSimulation.Fixed.SimulationWorldSnapshotFactory.Capture(
+                    catalog,
+                    new ThirdPersonSimulation.SimulationTick(1),
+                    new[]
+                    {
+                        new ThirdPersonSimulation.Fixed.SimulationActorState(actorId, state)
+                    },
+                    world,
+                    ThirdPersonSimulation.WorldCapability.None);
+            byte[] snapshotBytes = ThirdPersonSimulation.Fixed.SimulationWorldSnapshotCodec.Write(snapshot);
+            ThirdPersonSimulation.Fixed.SimulationWorldSnapshot restoredSnapshot =
+                ThirdPersonSimulation.Fixed.SimulationWorldSnapshotCodec.Read(snapshotBytes);
+            _ = restoredSnapshot.Actors[0].Decode(program);
+            if (!restoredSnapshot.WorldHash.Equals(snapshot.WorldHash))
+                throw new InvalidOperationException("Fixed World Snapshot hash changed after canonical round-trip.");
+            snapshotHash = restoredSnapshot.WorldHash.ToString();
         }
 
         static void AppendFormalCompileReport(AgentCompileReport report, CharacterSimulationBuildResult result)

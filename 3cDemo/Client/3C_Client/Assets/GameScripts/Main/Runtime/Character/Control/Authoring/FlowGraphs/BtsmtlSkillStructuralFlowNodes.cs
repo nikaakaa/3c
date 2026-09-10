@@ -120,7 +120,15 @@ namespace ThirdPersonCharacter.Control.Authoring
         Graph IGraphAssignable.subGraph { get => m_StateMachine; set => SetStateMachine((BtsmtlSkillFlowGraph)value); }
         Graph IGraphAssignable.currentInstance { get => null; set => throw new InvalidOperationException("Skill state machines execute as compiled data."); }
         BBParameter IGraphAssignable.subGraphParameter => null;
-        List<BBMappingParameter> IGraphAssignable.variablesMap { get => null; set => throw new InvalidOperationException("Skill parameters use their declared compilation contract."); }
+        List<BBMappingParameter> IGraphAssignable.variablesMap
+        {
+            get => null;
+            set
+            {
+                if (value != null)
+                    throw new InvalidOperationException("Skill parameters use their declared compilation contract.");
+            }
+        }
         Dictionary<Graph, Graph> IGraphAssignable.instances { get => new(); set => throw new InvalidOperationException("Skill state machines do not create authoring graph runtime instances."); }
     }
 
@@ -142,7 +150,15 @@ namespace ThirdPersonCharacter.Control.Authoring
         Graph IGraphAssignable.subGraph { get => m_Body; set => SetBody((BtsmtlSkillFlowGraph)value); }
         Graph IGraphAssignable.currentInstance { get => null; set => throw new InvalidOperationException("Skill states execute as compiled data."); }
         BBParameter IGraphAssignable.subGraphParameter => null;
-        List<BBMappingParameter> IGraphAssignable.variablesMap { get => null; set => throw new InvalidOperationException("Skill parameters use their declared compilation contract."); }
+        List<BBMappingParameter> IGraphAssignable.variablesMap
+        {
+            get => null;
+            set
+            {
+                if (value != null)
+                    throw new InvalidOperationException("Skill parameters use their declared compilation contract.");
+            }
+        }
         Dictionary<Graph, Graph> IGraphAssignable.instances { get => new(); set => throw new InvalidOperationException("Skill states do not create authoring graph runtime instances."); }
     }
 }

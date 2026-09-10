@@ -82,9 +82,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                     }
                     else
                     {
+                        string timelinePath = AssetDatabase.GetAssetPath(timeline.TimelineAsset);
+                        string graphPath = AssetDatabase.GetAssetPath(graph);
                         if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Private &&
-                            (!AssetDatabase.IsSubAsset(timeline.TimelineAsset) ||
-                             AssetDatabase.GetAssetPath(timeline.TimelineAsset) != AssetDatabase.GetAssetPath(graph)))
+                            (timelinePath != graphPath ||
+                             AssetDatabase.LoadMainAssetAtPath(timelinePath) == timeline.TimelineAsset))
                             throw Error(nodePath, "私有Timeline必须是当前技能根中的子资产。");
                         if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Shared && !AssetDatabase.IsMainAsset(timeline.TimelineAsset))
                             throw Error(nodePath, "共享Timeline必须是明确的独立资产。");

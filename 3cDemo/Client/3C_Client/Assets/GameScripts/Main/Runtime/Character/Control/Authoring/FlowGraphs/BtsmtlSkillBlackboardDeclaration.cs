@@ -38,8 +38,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         public PipelineBlackboardVariableScope Scope => m_Scope;
         public PipelineBlackboardVariableLifetime Lifetime => m_Lifetime;
         public string Category => m_Category;
-        public PipelineBlackboardInputBinding InputBinding => m_InputBinding;
-        public PipelineBlackboardFactProjection FactProjection => m_FactProjection;
+        public PipelineBlackboardInputBinding InputBinding => m_InputBinding != null && m_InputBinding.IsDefined ? m_InputBinding : null;
+        public PipelineBlackboardFactProjection FactProjection => m_FactProjection != null && m_FactProjection.IsDefined ? m_FactProjection : null;
 
         public void Validate(Variable variable)
         {
@@ -53,13 +53,15 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (m_Scope is PipelineBlackboardVariableScope.AIController or PipelineBlackboardVariableScope.AITick ||
                 !PipelineBlackboardVariablePolicy.IsValid(m_Scope, m_Lifetime))
                 throw new InvalidOperationException("技能黑板作用域与生命周期不匹配。");
-            if (m_InputBinding != null && (!m_InputBinding.IsDefined || m_Scope != PipelineBlackboardVariableScope.Character ||
+            PipelineBlackboardInputBinding inputBinding = InputBinding;
+            PipelineBlackboardFactProjection factProjection = FactProjection;
+            if (inputBinding != null && (m_Scope != PipelineBlackboardVariableScope.Character ||
                 m_Lifetime != PipelineBlackboardVariableLifetime.Spawn || type != typeof(ActionTargetSnapshot)))
                 throw new InvalidOperationException("黑板输入绑定必须使用有效输入ID、ActionTargetSnapshot类型和Character／Spawn作用域。");
-            if (m_FactProjection != null && (m_FactProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
+            if (factProjection != null && (factProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
                 type != typeof(bool) || m_Scope != PipelineBlackboardVariableScope.Frame ||
-                m_Lifetime != PipelineBlackboardVariableLifetime.Frame || string.IsNullOrWhiteSpace(m_FactProjection.ActionWindowType) ||
-                string.IsNullOrWhiteSpace(m_FactProjection.ActionWindowId)))
+                m_Lifetime != PipelineBlackboardVariableLifetime.Frame || string.IsNullOrWhiteSpace(factProjection.ActionWindowType) ||
+                string.IsNullOrWhiteSpace(factProjection.ActionWindowId)))
                 throw new InvalidOperationException("动作窗口投射必须使用Frame布尔声明并指定窗口类型与ID。");
         }
     }

@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public string AuthoringId => m_AuthoringId;
         public BtsmtlSkillFlowGraphRole Role => BtsmtlSkillFlowGraphRole.Subgraph;
         public IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations => m_BlackboardDeclarations;
-        public override bool canAcceptVariableDrops => false;
+        public override bool canAcceptVariableDrops => true;
         public override bool allowsPortIdentityAliases => false;
         public override bool usesExternalExecution => true;
         public override bool CanAuthorNodeType(Type nodeType) => BtsmtlSkillFlowGraphRules.Allows(nodeType, Role, true);
@@ -79,6 +79,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);
         public override bool CanAuthorConnection(Port source, Port target, out string reason) =>
             BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out reason);
+
+        protected override void OnVariableDropInGraph(IBlackboard blackboard, Variable variable, Vector2 mousePos) =>
+            BtsmtlSkillFlowEditorMutation.HandleBlackboardVariableDrop(this, blackboard, variable, mousePos);
 
         public override Node AddNode(Type nodeType, Vector2 position = default)
         {

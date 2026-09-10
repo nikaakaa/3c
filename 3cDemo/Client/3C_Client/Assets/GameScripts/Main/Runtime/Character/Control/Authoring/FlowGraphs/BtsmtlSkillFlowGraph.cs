@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public BtsmtlSkillFlowGraphRole Role => m_Role;
         public IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations => m_BlackboardDeclarations;
         public bool IsTimelineTree => m_Role == BtsmtlSkillFlowGraphRole.TimelineBody;
-        public override bool canAcceptVariableDrops => false;
+        public override bool canAcceptVariableDrops => true;
         public override bool allowsPortIdentityAliases => false;
         public override bool allowBlackboardOverrides => false;
         public override bool requiresAgent => false;
@@ -166,6 +166,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override UnityEngine.Object EditorUndoTarget => BtsmtlSkillFlowEditorMutation.UndoTarget(this);
         public override bool CanAuthorConnection(Port source, Port target, out string reason) =>
             BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out reason);
+
+        protected override void OnVariableDropInGraph(IBlackboard blackboard, Variable variable, Vector2 mousePos) =>
+            BtsmtlSkillFlowEditorMutation.HandleBlackboardVariableDrop(this, blackboard, variable, mousePos);
 
         public override Node AddNode(Type nodeType, Vector2 position = default)
         {

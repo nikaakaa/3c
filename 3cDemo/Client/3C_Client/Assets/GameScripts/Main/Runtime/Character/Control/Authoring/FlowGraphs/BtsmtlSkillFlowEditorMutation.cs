@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         sealed class Depth { internal int Value; }
         static readonly ConditionalWeakTable<FlowGraph, Depth> s_Depth = new();
+        static int s_BinderValidationDepth;
 
         public static void RequireActive(FlowGraph graph)
         {
@@ -118,23 +119,71 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public static bool CanConnect(FlowGraph graph, Port source, Port target, out string reason)
         {
-            reason = graph.isEditorReadOnly
-                ? "Skill authoring is read-only while observing Play Mode."
-                : source.parent.graph != graph || target.parent.graph != graph ||
-                  !graph.allNodes.Contains(source.parent) || !graph.allNodes.Contains(target.parent)
-                    ? "Skill connections must stay within their formal graph."
-                    : source.type != target.type
-                        ? "Skill ports require matching declared types; implicit conversions are not allowed."
-                        : source.IsFlowPort() != target.IsFlowPort()
-                            ? "Skill flow and value ports cannot be mixed."
-                            : source is FlowOutput && source.connections != 0
-                                ? "Skill flow output already has a connection."
-                                : target is ValueInput && target.connections != 0
-                                    ? "Skill value input already has a connection."
-                                    : BinderConnection.CanBeBoundVerbosed(source, target, null, out string bindingReason)
-                                        ? null
-                                        : bindingReason;
+            reason = null;
+            if (graph.isEditorReadOnly)
+                reason = "Skill authoring is read-only while observing Play Mode.";
+            else if (source.parent.graph != graph || target.parent.graph != graph ||
+                     !graph.allNodes.Contains(source.parent) || !graph.allNodes.Contains(target.parent))
+                reason = "Skill connections must stay within their formal graph.";
+            else if (source.type != target.type)
+                reason = "Skill ports require matching declared types; implicit conversions are not allowed.";
+            else if (source.IsFlowPort() != target.IsFlowPort())
+                reason = "Skill flow and value ports cannot be mixed.";
+            else if (source is FlowOutput && source.connections != 0)
+                reason = "Skill flow output already has a connection.";
+            else if (target is ValueInput && target.connections != 0)
+                reason = "Skill value input already has a connection.";
+            else if (s_BinderValidationDepth == 0)
+            {
+                s_BinderValidationDepth++;
+                try
+                {
+                    if (!BinderConnection.CanBeBoundVerbosed(
+                            source,
+                            target,
+                            null,
+                            out string bindingReason))
+                        reason = bindingReason;
+                }
+                finally
+                {
+                    s_BinderValidationDepth--;
+                }
+            }
             return reason == null;
+        }
+
+        public static void HandleBlackboardVariableDrop(
+            FlowGraph graph,
+            IBlackboard blackboard,
+            Variable variable,
+            Vector2 position)
+        {
+            if (variable == null)
+                return;
+            if (graph.isEditorReadOnly)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent("Play观察期间不能创建技能黑板节点。"));
+                return;
+            }
+            if (blackboard != graph.blackboard)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent("技能图暂不允许引用外部Blackboard变量。"));
+                return;
+            }
+            if (!variable.hasStableIdentity || !TryGetBlackboardValueType(variable.varType, out BtsmtlSkillBlackboardValueType valueType))
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent("该Blackboard变量没有稳定身份或类型不受技能合同支持。"));
+                return;
+            }
+
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Get " + variable.name), false, () =>
+                CreateBlackboardAccessNode(graph, variable, valueType, position, false));
+            menu.AddItem(new GUIContent("Set " + variable.name), false, () =>
+                CreateBlackboardAccessNode(graph, variable, valueType, position, true));
+            menu.ShowAsContext();
+            Event.current.Use();
         }
 
         public static void Apply(FlowGraph graph, string title, Action mutation, bool recordUndo = true) =>
@@ -145,7 +194,16 @@ namespace ThirdPersonCharacter.Control.Authoring
             string title,
             Action mutation,
             bool recordUndo,
-            IEnumerable<UnityEngine.Object> additionalOwners)
+            IEnumerable<UnityEngine.Object> additionalOwners) =>
+            Apply(graph, title, mutation, recordUndo, additionalOwners, true);
+
+        public static void Apply(
+            FlowGraph graph,
+            string title,
+            Action mutation,
+            bool recordUndo,
+            IEnumerable<UnityEngine.Object> additionalOwners,
+            bool validateClosure)
         {
             if (graph is not IBtsmtlSkillFlowGraph || graph.isEditorReadOnly)
                 throw new InvalidOperationException("The skill authoring graph is not writable.");
@@ -160,7 +218,9 @@ namespace ThirdPersonCharacter.Control.Authoring
             foreach (UnityEngine.Object owner in undoOwners)
                 if (owner is FlowGraph ownerGraph)
                     ownerGraph.SelfSerialize();
-            var previousOwnedAssets = BtsmtlSkillOwnedAssets.Collect(graph);
+            HashSet<UnityEngine.Object> previousOwnedAssets = validateClosure
+                ? BtsmtlSkillOwnedAssets.Collect(graph)
+                : null;
             int group = -1;
             if (recordUndo)
             {
@@ -173,8 +233,10 @@ namespace ThirdPersonCharacter.Control.Authoring
             try
             {
                 mutation();
-                BtsmtlSkillGraphClosure.Validate(graph, false);
-                BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
+                if (validateClosure)
+                    BtsmtlSkillGraphClosure.Validate(graph, false);
+                if (validateClosure)
+                    BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
                 graph.SelfSerialize();
                 foreach (UnityEngine.Object owner in undoOwners)
                     EditorUtility.SetDirty(owner);
@@ -297,6 +359,63 @@ namespace ThirdPersonCharacter.Control.Authoring
         static Port[] Ports(FlowNode node, bool input) => input
             ? node.GetInputFlowPorts().Cast<Port>().Concat(node.GetInputValuePorts()).ToArray()
             : node.GetOutputFlowPorts().Cast<Port>().Concat(node.GetOutputValuePorts()).ToArray();
+
+        internal static void CreateBlackboardAccessNode(
+            FlowGraph graph,
+            Variable variable,
+            BtsmtlSkillBlackboardValueType valueType,
+            Vector2 position,
+            bool writes)
+        {
+            try
+            {
+                FlowNode created = Execute(graph, writes ? "创建技能黑板写入" : "创建技能黑板读取", () =>
+                {
+                    Type nodeType = writes
+                        ? typeof(BtsmtlSkillBlackboardSetFlowNode)
+                        : typeof(BtsmtlSkillBlackboardGetFlowNode);
+                    var node = (BtsmtlSkillBlackboardAccessFlowNode)graph.AddNode(nodeType, position);
+                    node.Configure(
+                        new BtsmtlSkillBlackboardReference(
+                            variable.ID,
+                            ((IBtsmtlSkillFlowGraph)graph).AuthoringId),
+                        valueType,
+                        null);
+                    return node;
+                });
+                GraphEditorUtility.activeElement = created;
+            }
+            catch (InvalidOperationException error)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+            }
+            catch (ArgumentException error)
+            {
+                GraphEditor.current?.ShowNotification(new GUIContent(error.Message));
+            }
+        }
+
+        internal static bool TryGetBlackboardValueType(Type type, out BtsmtlSkillBlackboardValueType valueType)
+        {
+            if (type == typeof(bool))
+                valueType = BtsmtlSkillBlackboardValueType.Boolean;
+            else if (type == typeof(int))
+                valueType = BtsmtlSkillBlackboardValueType.Integer;
+            else if (type == typeof(float))
+                valueType = BtsmtlSkillBlackboardValueType.Number;
+            else if (type == typeof(string))
+                valueType = BtsmtlSkillBlackboardValueType.Identity;
+            else if (type == typeof(Vector2))
+                valueType = BtsmtlSkillBlackboardValueType.Vector2;
+            else if (type == typeof(Vector3))
+                valueType = BtsmtlSkillBlackboardValueType.Vector3;
+            else
+            {
+                valueType = default;
+                return false;
+            }
+            return true;
+        }
 
         static void Create(FlowGraph graph, Type type, Vector2 position, Port context, int index)
         {

@@ -325,7 +325,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterSelectedPosePlayerPayload(
-                input.Require<CharacterMotionMatchingPoseSourceSlot>(
+                input.Require<CharacterPresentationPoseSourceSlot>(
                     "pose-source-slot"));
 
         protected override object ReadField(
@@ -631,7 +631,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterBlendStackPosePayload(
-                input.Require<CharacterMotionMatchingPoseSourceSlot>(
+                input.Require<CharacterPresentationPoseSourceSlot>(
                     "pose-source-slot"),
                 input.Require<CharacterPoseResourceSlot>(
                     "blend-policy"));

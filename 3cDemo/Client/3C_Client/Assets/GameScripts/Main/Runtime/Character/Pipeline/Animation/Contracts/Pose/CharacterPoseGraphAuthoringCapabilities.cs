@@ -153,7 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 executionDomain: CharacterPoseExecutionDomain.FactAndDemand,
                 systemOwned: true));
             catalog.Register(Node<CharacterSelectedPosePlayerPayload>(CharacterPoseNodeKind.SelectedPosePlayer, rootAndStateWithLinkedEntry, "Selected Pose Player", "Sources", sourceColor,
-                Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot))),
+                Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot))),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture,
@@ -179,7 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Ports(In("source-pose", "Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local")),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, rootAndStateWithLinkedEntry, "Blend Stack", "Blend", blendColor,
-                Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot)), ResourceField("blend-policy", "Blend Policy")),
+                Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot)), ResourceField("blend-policy", "Blend Policy")),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));

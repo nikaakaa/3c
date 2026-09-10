@@ -115,11 +115,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterSelectedPosePlayerPayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterMotionMatchingPoseSourceSlot m_SourceSlot;
+        [SerializeField] CharacterPresentationPoseSourceSlot m_SourceSlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.SelectedPosePlayer;
-        public CharacterMotionMatchingPoseSourceSlot SourceSlot => m_SourceSlot;
+        public CharacterPresentationPoseSourceSlot SourceSlot => m_SourceSlot;
         public CharacterSelectedPosePlayerPayload() { }
-        public CharacterSelectedPosePlayerPayload(CharacterMotionMatchingPoseSourceSlot sourceSlot) =>
+        public CharacterSelectedPosePlayerPayload(CharacterPresentationPoseSourceSlot sourceSlot) =>
             m_SourceSlot = sourceSlot ? sourceSlot : throw new ArgumentNullException(nameof(sourceSlot));
     }
 
@@ -217,13 +217,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterBlendStackPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterMotionMatchingPoseSourceSlot m_SourceSlot;
+        [SerializeField] CharacterPresentationPoseSourceSlot m_SourceSlot;
         [SerializeField] CharacterPoseResourceSlot m_BlendPolicySlot;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.BlendStack;
-        public CharacterMotionMatchingPoseSourceSlot SourceSlot => m_SourceSlot;
+        public CharacterPresentationPoseSourceSlot SourceSlot => m_SourceSlot;
         public CharacterPoseResourceSlot BlendPolicySlot => m_BlendPolicySlot;
         public CharacterBlendStackPosePayload() { }
-        public CharacterBlendStackPosePayload(CharacterMotionMatchingPoseSourceSlot sourceSlot, CharacterPoseResourceSlot blendPolicySlot)
+        public CharacterBlendStackPosePayload(CharacterPresentationPoseSourceSlot sourceSlot, CharacterPoseResourceSlot blendPolicySlot)
         {
             m_SourceSlot = sourceSlot ? sourceSlot : throw new ArgumentNullException(nameof(sourceSlot));
             m_BlendPolicySlot = blendPolicySlot ? blendPolicySlot : throw new ArgumentNullException(nameof(blendPolicySlot));

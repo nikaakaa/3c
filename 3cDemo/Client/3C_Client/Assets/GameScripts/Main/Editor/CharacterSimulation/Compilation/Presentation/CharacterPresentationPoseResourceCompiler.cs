@@ -121,9 +121,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
             }
 
-            foreach (CharacterPoseResourceSlot slot in ownedSlots)
-                if (!boundSlots.Contains(slot))
-                    diagnostics.Add($"Pose Resource Slot '{slot.name}' has no Profile binding.");
             foreach (CharacterPoseResourceBinding binding in profile.PoseResourceBindings)
                 if (binding?.Slot && !ownedSlots.Contains(binding.Slot))
                     diagnostics.Add($"Pose Resource binding '{binding.Slot.name}' is orphaned from the Profile Pose Graph.");

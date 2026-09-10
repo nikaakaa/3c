@@ -119,26 +119,26 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     return EnsureContainer(
                         map,
                         containers,
-                        RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
+                        RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId),
                         default,
                         source.TimelineAuthoringId,
-                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId), contentHashes, programHash));
                 case RuntimeSourceElementKind.Clip:
                 case RuntimeSourceElementKind.TreeClip:
                     RuntimeSourceElementHandle timeline = EnsureContainer(
                         map,
                         containers,
-                        RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
+                        RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId),
                         default,
                         source.TimelineAuthoringId,
-                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
+                         ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId), contentHashes, programHash));
                     return EnsureContainer(
                         map,
                         containers,
-                        RuntimeSourceElementKey.Track(source.TimelineAuthoringId, source.TrackAuthoringId),
+                        RuntimeSourceElementKey.Track(source.TimelineAuthoringId, source.TrackAuthoringId, source.GraphAuthoringId),
                         timeline,
                         source.TrackAuthoringId,
-                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId), contentHashes, programHash));
                 default:
                     return default;
             }
@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 if (string.IsNullOrEmpty(entry.ContentHash))
                     continue;
                 RuntimeSourceElementKey container = !string.IsNullOrEmpty(entry.TimelineId)
-                    ? RuntimeSourceElementKey.Timeline(entry.TimelineId)
+                    ? RuntimeSourceElementKey.Timeline(entry.TimelineId, entry.GraphId)
                     : !string.IsNullOrEmpty(entry.GraphId)
                         ? RuntimeSourceElementKey.Graph(entry.GraphId)
                         : default;
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             RuntimeSourceElementKey container = source.Kind switch
             {
                 RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port or RuntimeSourceElementKind.Edge or RuntimeSourceElementKind.BlackboardDeclaration => RuntimeSourceElementKey.Graph(source.GraphAuthoringId),
-                RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip => RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
+                RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip => RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId, source.GraphAuthoringId),
                 _ => default
             };
             return ResolveContainerContentHash(container, containerContentHashes, programHash);
@@ -226,12 +226,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!string.IsNullOrEmpty(source.ClipId))
             {
                 bool treeClip = string.Equals(source.SourceType, typeof(TreeClip).FullName, StringComparison.Ordinal);
-                return RuntimeSourceElementKey.Clip(source.TimelineId, source.TrackId, source.ClipId, treeClip);
+                return RuntimeSourceElementKey.Clip(source.TimelineId, source.TrackId, source.ClipId, treeClip, source.GraphId);
             }
             if (!string.IsNullOrEmpty(source.TrackId))
-                return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId);
+                return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId, source.GraphId);
             if (!string.IsNullOrEmpty(source.TimelineId))
-                return RuntimeSourceElementKey.Timeline(source.TimelineId);
+                return RuntimeSourceElementKey.Timeline(source.TimelineId, source.GraphId);
             if (!string.IsNullOrEmpty(source.DeclarationId))
                 return RuntimeSourceElementKey.Declaration(source.GraphId, source.DeclarationId);
             if (!string.IsNullOrEmpty(source.NodeId))

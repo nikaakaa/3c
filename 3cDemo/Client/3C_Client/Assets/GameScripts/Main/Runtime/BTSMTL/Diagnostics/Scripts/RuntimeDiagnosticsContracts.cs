@@ -160,10 +160,13 @@ namespace BTSMTL.Diagnostics
             new RuntimeSourceElementKey(RuntimeSourceElementKind.Port, graphId, nodeId, portAuthoringId: portId);
         public static RuntimeSourceElementKey Edge(string graphId, string edgeId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Edge, graphId, edgeId);
         public static RuntimeSourceElementKey Declaration(string graphId, string declarationId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.BlackboardDeclaration, graphId, declarationId);
-        public static RuntimeSourceElementKey Timeline(string timelineId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Timeline, timelineAuthoringId: timelineId);
-        public static RuntimeSourceElementKey Track(string timelineId, string trackId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Track, timelineAuthoringId: timelineId, trackAuthoringId: trackId);
-        public static RuntimeSourceElementKey Clip(string timelineId, string trackId, string clipId, bool treeClip = false) =>
-            new RuntimeSourceElementKey(treeClip ? RuntimeSourceElementKind.TreeClip : RuntimeSourceElementKind.Clip, timelineAuthoringId: timelineId, trackAuthoringId: trackId, clipAuthoringId: clipId);
+        public static RuntimeSourceElementKey Timeline(string timelineId, string graphId = "") =>
+            new RuntimeSourceElementKey(RuntimeSourceElementKind.Timeline, graphAuthoringId: graphId, timelineAuthoringId: timelineId);
+        public static RuntimeSourceElementKey Track(string timelineId, string trackId, string graphId = "") =>
+            new RuntimeSourceElementKey(RuntimeSourceElementKind.Track, graphAuthoringId: graphId, timelineAuthoringId: timelineId, trackAuthoringId: trackId);
+        public static RuntimeSourceElementKey Clip(string timelineId, string trackId, string clipId, bool treeClip = false, string graphId = "") =>
+            new RuntimeSourceElementKey(treeClip ? RuntimeSourceElementKind.TreeClip : RuntimeSourceElementKind.Clip,
+                graphAuthoringId: graphId, timelineAuthoringId: timelineId, trackAuthoringId: trackId, clipAuthoringId: clipId);
         public static RuntimeSourceElementKey BodyMotionProfile(string assetPath) =>
             new RuntimeSourceElementKey(RuntimeSourceElementKind.BodyMotionProfile, elementAuthoringId: assetPath);
     }

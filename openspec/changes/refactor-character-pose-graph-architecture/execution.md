@@ -1538,4 +1538,4 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 ## 正式Scene Play Pose观察入口（POSE-EXEC-20260911-05）
 
-状态：删除`character.pose_reset_observation`对`CharacterAnimationPreviewFixtureSession`的直接依赖，改为只观察正式Scene Play注册的`AnimationPresentationRuntimeTarget`。任务通过`start/status`异步等待已提交帧，使用统一Session Tick Drive暂停并单步；Reset经同一`CharacterSimulationPresentationRuntime`的target合同执行，完成后恢复原实时驱动。运行时Reset合同提交为`a777da720`，MCP观察实现提交为`14f9926d9`。代码入口已经切换，但尚未用目标Unity MCP跑出成功观察结果，因此23.6仍不勾选。
+状态：删除`character.pose_reset_observation`对`CharacterAnimationPreviewFixtureSession`的直接依赖，改为只观察正式Scene Play注册的`AnimationPresentationRuntimeTarget`。任务通过`start/status`异步等待已提交帧，使用统一Session Tick Drive暂停并单步；Reset经同一`CharacterSimulationPresentationRuntime`的target合同执行，完成后恢复原实时驱动。运行时Reset合同提交为`a777da720`，MCP观察实现提交为`14f9926d9`，scheduler依赖修正为`23e414871`。代码入口已经切换，但尚未用目标Unity MCP跑出成功观察结果，因此23.6仍不勾选。

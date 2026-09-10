@@ -69,7 +69,7 @@
 - [x] 2.4.1 实现单图编辑事务中子操作复用外层Undo、异常回滚及重新反序列化的代码。证据：ebc41bfcc；尚无完整交互验收证据。
 - [ ] 2.4.2 完成人工单操作与Document整包Undo的统一边界，覆盖根、私有页及实际修改的共享owner，核对保存／重载身份，交付owner链说明及正式执行证据，不新增测试代码。
 
-  当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图写入。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
+  当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图写入。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度；`64395b1d4`又补齐TimelineBody跨文件owner转移的事务回滚记录。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
 - [x] 2.5 将目录、Details、Toolbar及观察区域接到同一原生GraphEditor，删除被替代的技能图交互入口；通过源码搜索核对无第二画布或独立选择集合。
 
   代码/审计证据：技能Graph/Macro使用FlowCanvas原生GraphEditor，节点Inspector、原生创建目录、Timeline Open、Macro接口Toolbar和BtsmtlSkillObservationToolbar均挂在同一GraphEditor；RuntimeDebugSourceNavigator与ObservationSession直接打开该GraphEditor，技能目录未发现第二技能GraphView、Workbench或独立selection集合。
@@ -159,7 +159,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [x] 5.2 同步Reconciler、Mutation、资产resolver、Validator及五生命周期说明，取消旧作者对象中转；通过无业务变化dry-run的零修改清单核对。证据：2026-09-09正式CLI dry-run 返回 `success=true`、`plannedDiff=[]`、`syncState=Clean`，并返回有效 plan/document hash。
 - [ ] 5.3 完成根、私有Macro及实际修改共享owner的保存／反向导出和完整回滚；交付事务owner与失败恢复证据。
 
-  当前进度：8480a753e已把技能根创建改为独立主资产，Definition只引用根；私有图与Timeline核对调用方文件归属，新根路径冲突预检及apply失败文件清理已接原Document事务。完整owner集成、实际保存／反向导出／回滚证据仍未完成；Corin三项Skill根、四项SharedGraph和Definition RootTree已由`b28cbd1ae`完成最终迁移并删除旧根资产。
+  当前进度：8480a753e已把技能根创建改为独立主资产，Definition只引用根；私有图与Timeline核对调用方文件归属，新根路径冲突预检及apply失败文件清理已接原Document事务；`64395b1d4`补齐TimelineBody从原技能文件迁入Timeline文件时的失败回滚。完整owner集成、实际保存／反向导出／回滚执行证据仍未完成；Corin三项Skill根、四项SharedGraph和Definition RootTree已由`b28cbd1ae`完成最终迁移并删除旧根资产。
 - [x] 5.4 生成精确技能及其引用闭包迁移计划，核对stable identity、布局和资源引用；发生实际冲突按作者选择处理，不自动覆盖。
 
   交付物：skill-migration-plan.md。计划固定Attack/DodgeBack/DodgeForward旧入口、闭包规模、共享Timeline GUID、确定性根路径、能力映射、identity/layout/owner核对和apply顺序；实际冲突已按正式dry-run结果处理，拒绝的旧工作包已整体删除并由当前v7包重建。

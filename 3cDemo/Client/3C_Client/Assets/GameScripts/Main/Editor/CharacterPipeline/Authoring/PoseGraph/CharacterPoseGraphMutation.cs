@@ -1101,6 +1101,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (CharacterPresentationMutation mutation in
                      transaction.Mutations.Where(IsProfileMutation))
                 owner.ApplyProfileMutation(mutation);
+            foreach (CharacterPresentationMutation mutation in
+                     transaction.Mutations.Where(IsPoseResourceCatalogPostMutation))
+                owner.ApplyGraphCatalogMutation(mutation);
         }
 
         internal void ApplyGraphMutationsInPlace(
@@ -1427,7 +1430,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind == CharacterPresentationMutationKind.RenamePoseResourceSlot;
 
         static bool IsGraphCatalogPostMutation(CharacterPresentationMutation value) =>
-            value.Kind == CharacterPresentationMutationKind.DeletePoseSourceSlot ||
+            value.Kind == CharacterPresentationMutationKind.DeletePoseSourceSlot;
+
+        static bool IsPoseResourceCatalogPostMutation(CharacterPresentationMutation value) =>
             value.Kind == CharacterPresentationMutationKind.DeletePoseResourceSlot;
 
         static bool IsPoseGraphMutation(CharacterPresentationMutation value) =>

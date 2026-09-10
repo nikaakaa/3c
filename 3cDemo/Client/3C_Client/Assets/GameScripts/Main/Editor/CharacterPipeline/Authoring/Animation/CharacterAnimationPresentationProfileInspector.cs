@@ -308,7 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 EditorGUILayout.Space(4f);
                 EditorGUILayout.LabelField("Continuous Pose Resources", EditorStyles.boldLabel);
-                EditorGUILayout.HelpBox("Sequence Player、Blend Space Player和Motion Matching节点直接拥有资源；这里不再重复配置Source Slot或Profile Binding。", MessageType.Info);
+                EditorGUILayout.HelpBox("Pose Graph拥有抽象Source Slot，Profile为每个Slot装配类型匹配的资源Binding；Motion Matching也是可选的同一条Binding链。", MessageType.Info);
                 return;
             }
 

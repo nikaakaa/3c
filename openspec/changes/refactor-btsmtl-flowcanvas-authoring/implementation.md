@@ -257,3 +257,7 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 2.1.2的实现链已完成并按已有正式事务结果收口。Document读取先要求 `graph.json` 与 `layout.json` 成对存在，并核对目录、Graph id与layout graphId；已有正式 Node、Edge、Anchor和Port只能按原稳定身份原位解析，缺失的正式身份直接拒绝，新增对象只允许使用 `local:*` 计划身份。`BtsmtlSkillGraphCopy`复制节点时同时捕获私有Graph、Macro、Timeline和TreeClip闭包，副本生成新的Graph身份并重绑引用，原节点和原Edge身份不被复用。
 
 反向应用由 `AgentSkillFlowDocumentMutationHandler` 完成：`ValidateExistingGraphIdentity`先核对已有正式身份，`SyncGraph`与`SyncEdges`只对local对象创建并记录映射，最后 `ValidateAppliedIdentityContracts`逐Graph回读Anchor、Node、Edge及两端Port。此前正式Document apply保存后重新checkout/dry-run返回`success=true`、`syncState=Clean`、`plannedDiff=[]`，精确 `btsmtl.validate` 返回`compileSuccessCount=1`、`semanticValidCount=1`，因此2.1.2已完成。该结论不扩展到2.4.2的人工Undo交互，也不扩展到Character Build或Play运行证据。
+
+# 2026-09-10 Document Undo边界修正
+
+发现Document Applier创建新Skill Graph后直接调用 `PopulateAnchors`，系统入口的原生 `AddNode` 会因此打开独立Undo组。`8f087298a`将这段初始化加入现有 `BtsmtlSkillFlowEditorMutation` 活动深度，并关闭该内部步骤自己的Undo记录；这样节点、私有闭包创建和外层Document owner注册继续归同一整包事务，失败时由外层Undo与新根清理共同恢复。目标Unity脚本刷新后的 `error CS` 为0。2.4.2仍保留人工单操作、跨owner Undo回退及保存／重载交互的正式执行证据门槛。

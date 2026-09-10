@@ -68,6 +68,8 @@
 
 - [x] 2.4.1 实现单图编辑事务中子操作复用外层Undo、异常回滚及重新反序列化的代码。证据：ebc41bfcc；尚无完整交互验收证据。
 - [ ] 2.4.2 完成人工单操作与Document整包Undo的统一边界，覆盖根、私有页及实际修改的共享owner，核对保存／重载身份，交付owner链说明及正式执行证据，不新增测试代码。
+
+  当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图写入。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
 - [x] 2.5 将目录、Details、Toolbar及观察区域接到同一原生GraphEditor，删除被替代的技能图交互入口；通过源码搜索核对无第二画布或独立选择集合。
 
   代码/审计证据：技能Graph/Macro使用FlowCanvas原生GraphEditor，节点Inspector、原生创建目录、Timeline Open、Macro接口Toolbar和BtsmtlSkillObservationToolbar均挂在同一GraphEditor；RuntimeDebugSourceNavigator与ObservationSession直接打开该GraphEditor，技能目录未发现第二技能GraphView、Workbench或独立selection集合。

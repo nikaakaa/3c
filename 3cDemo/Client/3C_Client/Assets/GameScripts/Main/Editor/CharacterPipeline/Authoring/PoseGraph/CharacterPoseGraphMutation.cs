@@ -1455,8 +1455,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnimationTransitionBlendLogic blendLogic = current.BlendLogic;
             float durationSeconds = current.DurationSeconds;
             CharacterAnimationBlendMode blendMode = current.BlendMode;
-            CharacterAnimationBlendCurveAsset customBlendCurve = current.CustomBlendCurve;
-            CharacterAnimationBlendProfile blendProfile = current.BlendProfile;
+            CharacterPoseResourceSlot customBlendCurveSlot = current.CustomBlendCurveSlot;
+            CharacterPoseResourceSlot blendProfileSlot = current.BlendProfileSlot;
             switch (fieldId)
             {
                 case "source":
@@ -1486,16 +1486,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case "blend-mode":
                     blendMode = EnumValue<CharacterAnimationBlendMode>(value);
                     if (blendMode != CharacterAnimationBlendMode.Custom)
-                        customBlendCurve = null;
+                        customBlendCurveSlot = null;
                     break;
                 case "custom-blend-curve":
-                    customBlendCurve = value as CharacterAnimationBlendCurveAsset ??
+                    customBlendCurveSlot = value as CharacterPoseResourceSlot ??
                         throw new InvalidOperationException(
-                            "Pose Transition Custom Curve requires a CharacterAnimationBlendCurveAsset.");
+                            "Pose Transition Custom Curve requires a CharacterPoseResourceSlot.");
                     blendMode = CharacterAnimationBlendMode.Custom;
                     break;
                 case "blend-profile":
-                    blendProfile = value as CharacterAnimationBlendProfile;
+                    blendProfileSlot = value as CharacterPoseResourceSlot;
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -1510,8 +1510,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 blendLogic,
                 durationSeconds,
                 blendMode,
-                customBlendCurve,
-                blendProfile);
+                customBlendCurveSlot,
+                blendProfileSlot);
         }
 
         static T Value<T>(object value, Func<string, T> create) =>

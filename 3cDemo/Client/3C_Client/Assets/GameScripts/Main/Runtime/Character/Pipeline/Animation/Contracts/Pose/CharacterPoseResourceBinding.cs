@@ -14,7 +14,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         RootMotionCurve = 4,
         FootPlacementProfile = 5,
         FootPlacementCalibration = 6,
-        MotionMatchingBinding = 7
+        MotionMatchingBinding = 7,
+        BlendCurve = 8,
+        BlendProfile = 9
     }
 
     public sealed class CharacterPoseResourceSlot : ScriptableObject
@@ -40,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseResourceKind.FootPlacementProfile => resource is CharacterFootPlacementProfile,
                 CharacterPoseResourceKind.FootPlacementCalibration => resource is CharacterFootPlacementRigCalibration,
                 CharacterPoseResourceKind.MotionMatchingBinding => resource is CharacterMotionMatchingBinding,
+                CharacterPoseResourceKind.BlendCurve => resource is CharacterAnimationBlendCurveAsset,
+                CharacterPoseResourceKind.BlendProfile => resource is CharacterAnimationBlendProfile,
                 _ => false
             };
 

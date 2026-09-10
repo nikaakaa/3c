@@ -802,7 +802,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 CharacterPoseStateTransition applied = machine.Transitions.Single(value =>
                     value.TransitionId.Equals(created.Transition.TransitionId));
-                if (applied.BlendProfile != created.Transition.BlendProfile)
+                if (applied.BlendProfileSlot != created.Transition.BlendProfileSlot)
                     throw new InvalidOperationException(
                         $"Pose Transition '{applied.TransitionId}' did not retain its Blend Profile during mutation.");
             }

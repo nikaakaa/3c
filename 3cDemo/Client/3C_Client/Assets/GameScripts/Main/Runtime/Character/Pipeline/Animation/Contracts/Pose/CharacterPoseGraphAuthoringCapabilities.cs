@@ -290,11 +290,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ConditionalAssetField(
                         "custom-blend-curve",
                         "Custom Blend Curve",
-                        "animation-blend-curve",
-                        typeof(CharacterAnimationBlendCurveAsset),
+                        "pose-resource-slot",
+                        typeof(CharacterPoseResourceSlot),
                         "blend-mode",
-                    CharacterAnimationBlendMode.Custom.ToString()),
-                    AssetField("blend-profile", "Blend Profile", "animation-blend-profile", typeof(CharacterAnimationBlendProfile)),
+                        CharacterAnimationBlendMode.Custom.ToString()),
+                    ResourceField("blend-profile", "Blend Profile"),
                     ReadOnlyField("source-readiness", "Source Readiness", GraphAuthoringFieldValueKind.Enum),
                     ReadOnlyField("pose-rule-id", "Pose Rule", GraphAuthoringFieldValueKind.IdentityReference))));
             foreach (PoseTransitionRuleOperationKind kind in

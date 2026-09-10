@@ -50,6 +50,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath) =>
             Require<CharacterMotionMatchingBinding>(slot, CharacterPoseResourceKind.MotionMatchingBinding, sourcePath);
 
+        internal CharacterAnimationBlendCurveAsset BlendCurve(
+            CharacterPoseResourceSlot slot,
+            string sourcePath) =>
+            Require<CharacterAnimationBlendCurveAsset>(slot, CharacterPoseResourceKind.BlendCurve, sourcePath);
+
+        internal CharacterAnimationBlendProfile BlendProfile(
+            CharacterPoseResourceSlot slot,
+            string sourcePath) =>
+            Require<CharacterAnimationBlendProfile>(slot, CharacterPoseResourceKind.BlendProfile, sourcePath);
+
         internal CharacterAnimationBoneMaskAsset BoneMask(
             CharacterPoseResourceSlot slot,
             string sourcePath) =>
@@ -160,6 +170,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     break;
                 case CharacterPoseResourceKind.MotionMatchingBinding:
                     ((CharacterMotionMatchingBinding)binding.Resource).RequireValid(rig);
+                    break;
+                case CharacterPoseResourceKind.BlendCurve:
+                    ((CharacterAnimationBlendCurveAsset)binding.Resource).RequireValid();
+                    break;
+                case CharacterPoseResourceKind.BlendProfile:
+                    ((CharacterAnimationBlendProfile)binding.Resource).BuildDense(rig);
                     break;
             }
         }

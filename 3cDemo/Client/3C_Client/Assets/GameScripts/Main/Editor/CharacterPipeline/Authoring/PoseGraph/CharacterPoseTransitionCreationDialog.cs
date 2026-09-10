@@ -19,8 +19,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         float m_DurationSeconds = 0.1f;
         CharacterAnimationBlendMode m_BlendMode =
             CharacterAnimationBlendMode.Linear;
-        CharacterAnimationBlendCurveAsset m_CustomBlendCurve;
-        CharacterAnimationBlendProfile m_BlendProfile;
+        CharacterPoseResourceSlot m_CustomBlendCurveSlot;
+        CharacterPoseResourceSlot m_BlendProfileSlot;
         bool m_InitialCondition;
         CharacterPoseStateTransition m_Result;
 
@@ -45,10 +45,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 window.m_DurationSeconds =
                     template.DurationSeconds;
                 window.m_BlendMode = template.BlendMode;
-                window.m_CustomBlendCurve =
-                    template.CustomBlendCurve;
-                window.m_BlendProfile =
-                    template.BlendProfile;
+                window.m_CustomBlendCurveSlot =
+                    template.CustomBlendCurveSlot;
+                window.m_BlendProfileSlot =
+                    template.BlendProfileSlot;
             }
             window.titleContent =
                 new GUIContent("Create Pose Transition");
@@ -78,22 +78,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_BlendMode);
             if (m_BlendMode == CharacterAnimationBlendMode.Custom)
             {
-                m_CustomBlendCurve =
-                    (CharacterAnimationBlendCurveAsset)EditorGUILayout.ObjectField(
+                m_CustomBlendCurveSlot =
+                    (CharacterPoseResourceSlot)EditorGUILayout.ObjectField(
                         "Custom Blend Curve",
-                        m_CustomBlendCurve,
-                        typeof(CharacterAnimationBlendCurveAsset),
+                        m_CustomBlendCurveSlot,
+                        typeof(CharacterPoseResourceSlot),
                         false);
             }
             else
             {
-                m_CustomBlendCurve = null;
+                m_CustomBlendCurveSlot = null;
             }
-            m_BlendProfile =
-                (CharacterAnimationBlendProfile)EditorGUILayout.ObjectField(
+            m_BlendProfileSlot =
+                (CharacterPoseResourceSlot)EditorGUILayout.ObjectField(
                     "Blend Profile",
-                    m_BlendProfile,
-                    typeof(CharacterAnimationBlendProfile),
+                    m_BlendProfileSlot,
+                    typeof(CharacterPoseResourceSlot),
                     false);
             m_InitialCondition = EditorGUILayout.Toggle(
                 "Initial Rule Result",
@@ -128,8 +128,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_BlendLogic,
                     m_DurationSeconds,
                     m_BlendMode,
-                    m_CustomBlendCurve,
-                    m_BlendProfile);
+                    m_CustomBlendCurveSlot,
+                    m_BlendProfileSlot);
                 return true;
             }
             catch
@@ -176,8 +176,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_BlendLogic,
                 m_DurationSeconds,
                 m_BlendMode,
-                m_CustomBlendCurve,
-                m_BlendProfile);
+                m_CustomBlendCurveSlot,
+                m_BlendProfileSlot);
         }
     }
 }

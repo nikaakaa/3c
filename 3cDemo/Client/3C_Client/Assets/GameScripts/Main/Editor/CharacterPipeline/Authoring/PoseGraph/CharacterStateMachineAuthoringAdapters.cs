@@ -94,8 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             BlendLogic = transition.BlendLogic;
             DurationSeconds = transition.DurationSeconds;
             BlendMode = transition.BlendMode;
-            CustomBlendCurve = transition.CustomBlendCurve;
-            BlendProfile = transition.BlendProfile;
+            CustomBlendCurveSlot = transition.CustomBlendCurveSlot;
+            BlendProfileSlot = transition.BlendProfileSlot;
         }
 
         public GraphAuthoringStateMachineSemanticKind SemanticKind =>
@@ -104,8 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public AnimationTransitionBlendLogic BlendLogic { get; }
         public float DurationSeconds { get; }
         public CharacterAnimationBlendMode BlendMode { get; }
-        public CharacterAnimationBlendCurveAsset CustomBlendCurve { get; }
-        public CharacterAnimationBlendProfile BlendProfile { get; }
+        public CharacterPoseResourceSlot CustomBlendCurveSlot { get; }
+        public CharacterPoseResourceSlot BlendProfileSlot { get; }
         public CharacterPoseTransitionReadinessRequirement Readiness =>
             CharacterPoseTransitionReadinessRequirement.TargetPoseSourceReady;
     }
@@ -1415,8 +1415,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "blend-logic" => payload.BlendLogic.ToString(),
                 "duration-seconds" => payload.DurationSeconds,
                 "blend-mode" => payload.BlendMode.ToString(),
-                "custom-blend-curve" => payload.CustomBlendCurve,
-                "blend-profile" => payload.BlendProfile,
+                "custom-blend-curve" => payload.CustomBlendCurveSlot,
+                "blend-profile" => payload.BlendProfileSlot,
                 "source-readiness" => payload.Readiness.ToString(),
                 "pose-rule-id" => "Configured Transition Rule",
                 _ => throw new InvalidOperationException(

@@ -1446,10 +1446,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (sourceStateIndex == targetStateIndex)
                     throw new InvalidOperationException(
                         $"Pose State transition '{authored.TransitionId}' cannot target its source State.");
+                CharacterAnimationBlendCurveAsset customBlendCurve =
+                    authored.CustomBlendCurveSlot
+                        ? state.Resources.BlendCurve(
+                            authored.CustomBlendCurveSlot,
+                            authored.TransitionId.Value)
+                        : null;
                 AnimationBlendCurvePayload curve =
                     CharacterAnimationBlendCurveCompiler.Compile(
                         authored.BlendMode,
-                        authored.CustomBlendCurve);
+                        customBlendCurve);
                 string curveKey = AnimationBlendCanonicalPayload.CurveKey(curve);
                 if (!state.CurveIndices.TryGetValue(curveKey, out int curveIndex))
                 {
@@ -1458,21 +1464,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 int blendProfileIndex = -1;
                 float completionDurationSeconds = authored.DurationSeconds;
-                if (authored.BlendProfile &&
+                CharacterAnimationBlendProfile blendProfile =
+                    authored.BlendProfileSlot
+                        ? state.Resources.BlendProfile(
+                            authored.BlendProfileSlot,
+                            authored.TransitionId.Value)
+                        : null;
+                if (blendProfile &&
                     !state.ProfileIndicesByIdentity.TryGetValue(
-                        authored.BlendProfile.ProfileId,
+                        blendProfile.ProfileId,
                         out blendProfileIndex))
                 {
                     throw new InvalidOperationException(
-                        $"Pose State transition '{authored.TransitionId}' Blend Profile '{authored.BlendProfile.ProfileId}' is missing from the Projection catalog.");
+                        $"Pose State transition '{authored.TransitionId}' Blend Profile '{blendProfile.ProfileId}' is missing from the Projection catalog.");
                 }
-                if (authored.BlendProfile)
+                if (blendProfile)
                 {
                     float maxMultiplier = Math.Max(
                         1f,
-                        authored.BlendProfile.BuildDense(state.Rig).Max());
+                        blendProfile.BuildDense(state.Rig).Max());
                     completionDurationSeconds = authored.DurationSeconds *
-                                                authored.BlendProfile.GlobalDurationMultiplier *
+                                                blendProfile.GlobalDurationMultiplier *
                                                 maxMultiplier;
                 }
                 TransitionRuleId routingRuleId = RoutingRuleId(authored.TransitionId, expandedTransition.SourceStateId);

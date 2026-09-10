@@ -220,8 +220,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationTransitionBlendLogic m_BlendLogic = AnimationTransitionBlendLogic.StandardBlend;
         [SerializeField] float m_DurationSeconds = 0.1f;
         [SerializeField] CharacterAnimationBlendMode m_BlendMode = CharacterAnimationBlendMode.Linear;
-        [SerializeField] CharacterAnimationBlendCurveAsset m_CustomBlendCurve;
-        [SerializeField] CharacterAnimationBlendProfile m_BlendProfile;
+        [SerializeField] CharacterPoseResourceSlot m_CustomBlendCurveSlot;
+        [SerializeField] CharacterPoseResourceSlot m_BlendProfileSlot;
 
         public PoseStateTransitionId TransitionId => string.IsNullOrWhiteSpace(m_TransitionId)
             ? default
@@ -235,8 +235,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationTransitionBlendLogic BlendLogic => m_BlendLogic;
         public float DurationSeconds => m_DurationSeconds;
         public CharacterAnimationBlendMode BlendMode => m_BlendMode;
-        public CharacterAnimationBlendCurveAsset CustomBlendCurve => m_CustomBlendCurve;
-        public CharacterAnimationBlendProfile BlendProfile => m_BlendProfile;
+        public CharacterPoseResourceSlot CustomBlendCurveSlot => m_CustomBlendCurveSlot;
+        public CharacterPoseResourceSlot BlendProfileSlot => m_BlendProfileSlot;
 
         public CharacterPoseStateTransition() { }
 
@@ -249,8 +249,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationTransitionBlendLogic blendLogic,
             float durationSeconds,
             CharacterAnimationBlendMode blendMode,
-            CharacterAnimationBlendCurveAsset customBlendCurve,
-            CharacterAnimationBlendProfile blendProfile)
+            CharacterPoseResourceSlot customBlendCurveSlot,
+            CharacterPoseResourceSlot blendProfileSlot)
         {
             if (!transitionId.IsValid || source == null || !targetStateId.IsValid || priority < 0 ||
                 rule == null || !Enum.IsDefined(typeof(AnimationTransitionBlendLogic), blendLogic) ||
@@ -258,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Pose State Transition is invalid.");
             }
-            RequireBlendSettings(blendLogic, durationSeconds, blendMode, customBlendCurve, blendProfile);
+            RequireBlendSettings(blendLogic, durationSeconds, blendMode, customBlendCurveSlot, blendProfileSlot);
             m_TransitionId = transitionId.Value;
             m_Source = source;
             m_TargetStateId = targetStateId.Value;
@@ -267,16 +267,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendLogic = blendLogic;
             m_DurationSeconds = durationSeconds;
             m_BlendMode = blendMode;
-            m_CustomBlendCurve = customBlendCurve;
-            m_BlendProfile = blendProfile;
+            m_CustomBlendCurveSlot = customBlendCurveSlot;
+            m_BlendProfileSlot = blendProfileSlot;
         }
 
         public static void RequireBlendSettings(
             AnimationTransitionBlendLogic blendLogic,
             float durationSeconds,
             CharacterAnimationBlendMode blendMode,
-            CharacterAnimationBlendCurveAsset customBlendCurve,
-            CharacterAnimationBlendProfile blendProfile)
+            CharacterPoseResourceSlot customBlendCurveSlot,
+            CharacterPoseResourceSlot blendProfileSlot)
         {
             if (!Enum.IsDefined(typeof(AnimationTransitionBlendLogic), blendLogic) ||
                 !float.IsFinite(durationSeconds) || durationSeconds < 0f ||
@@ -284,16 +284,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException("Pose State Transition blend duration is invalid.");
             }
-            CharacterAnimationBlendCurveCompiler.RequireConfiguration(blendMode, customBlendCurve);
+            bool hasCustomBlendCurve = customBlendCurveSlot;
+            if ((blendMode == CharacterAnimationBlendMode.Custom) != hasCustomBlendCurve ||
+                hasCustomBlendCurve && customBlendCurveSlot.Kind != CharacterPoseResourceKind.BlendCurve)
+                throw new InvalidOperationException("Pose State Transition Custom Blend Curve Resource Slot is invalid.");
             bool hardCut = blendLogic == AnimationTransitionBlendLogic.StandardBlend && durationSeconds == 0f;
-            if (!hardCut && !blendProfile)
-                throw new InvalidOperationException("Pose State Transition requires a Blend Profile.");
-            if (blendProfile &&
-                (!string.Equals(blendProfile.Schema, CharacterAnimationBlendProfile.SchemaVersion, StringComparison.Ordinal) ||
-                 string.IsNullOrWhiteSpace(blendProfile.ProfileId)))
-            {
-                throw new InvalidOperationException("Pose State Transition Blend Profile is invalid.");
-            }
+            bool hasBlendProfile = blendProfileSlot;
+            if (hasBlendProfile && blendProfileSlot.Kind != CharacterPoseResourceKind.BlendProfile)
+                throw new InvalidOperationException("Pose State Transition Blend Profile Resource Slot is invalid.");
+            if (hardCut && hasBlendProfile || !hardCut && !hasBlendProfile)
+                throw new InvalidOperationException("Pose State Transition Blend Profile requirement is invalid.");
         }
     }
 
@@ -563,8 +563,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         transition.BlendLogic,
                         transition.DurationSeconds,
                         transition.BlendMode,
-                        transition.CustomBlendCurve,
-                        transition.BlendProfile);
+                        transition.CustomBlendCurveSlot,
+                        transition.BlendProfileSlot);
                 }
                 catch (Exception exception)
                 {

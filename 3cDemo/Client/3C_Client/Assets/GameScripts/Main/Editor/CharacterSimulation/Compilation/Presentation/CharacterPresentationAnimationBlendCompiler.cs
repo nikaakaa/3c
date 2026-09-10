@@ -162,6 +162,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             stateMachine,
                             stateMachine.Transitions[transitionIndex],
                             rig,
+                            resources,
                             curves,
                             profiles,
                             profileIdentityKeys,
@@ -457,6 +458,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPoseStateMachineDefinition stateMachine,
             CharacterPoseStateTransition transition,
             CharacterAnimationRigDefinition rig,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             SortedDictionary<string, AnimationBlendCurvePayload> curves,
             SortedDictionary<string, AnimationBlendProfilePayload> profiles,
             Dictionary<string, string> profileIdentityKeys,
@@ -470,19 +472,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     transition.BlendLogic,
                     transition.DurationSeconds,
                     transition.BlendMode,
-                    transition.CustomBlendCurve,
-                    transition.BlendProfile);
+                    transition.CustomBlendCurveSlot,
+                    transition.BlendProfileSlot);
+                CharacterAnimationBlendCurveAsset customBlendCurve =
+                    transition.CustomBlendCurveSlot
+                        ? resources.BlendCurve(
+                            transition.CustomBlendCurveSlot,
+                            transition.TransitionId.Value)
+                        : null;
+                CharacterAnimationBlendProfile blendProfile =
+                    transition.BlendProfileSlot
+                        ? resources.BlendProfile(
+                            transition.BlendProfileSlot,
+                            transition.TransitionId.Value)
+                        : null;
                 AnimationBlendCurvePayload curve =
                     CharacterAnimationBlendCurveCompiler.Compile(
                         transition.BlendMode,
-                        transition.CustomBlendCurve);
+                        customBlendCurve);
                 string curveKey = AnimationBlendCanonicalPayload.CurveKey(curve);
                 if (!curves.ContainsKey(curveKey))
                     curves.Add(curveKey, curve);
-                if (!transition.BlendProfile)
+                if (!blendProfile)
                     return;
                 var profile = new AnimationBlendProfilePayload(
-                    transition.BlendProfile,
+                    blendProfile,
                     rig);
                 string profileKey = AnimationBlendCanonicalPayload.ProfileKey(profile);
                 if (profileIdentityKeys.TryGetValue(profile.ProfileId, out string existingKey) &&

@@ -43,6 +43,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             foreach (AgentPackageSkillTimelineFile timeline in document.timelines ?? new List<AgentPackageSkillTimelineFile>())
                 if (timeline?.asset != null && string.IsNullOrEmpty(timeline.asset.localId))
                     valid &= TryAdd(Resolve(timeline.asset), owners, report, "target-timeline");
+            foreach (AgentPackageSkillMacroFile macro in document.macros ?? new List<AgentPackageSkillMacroFile>())
+                if (macro?.asset != null && string.IsNullOrEmpty(macro.asset.localId))
+                    valid &= TryAdd(Resolve(macro.asset), owners, report, "target-macro");
             return valid;
         }
 

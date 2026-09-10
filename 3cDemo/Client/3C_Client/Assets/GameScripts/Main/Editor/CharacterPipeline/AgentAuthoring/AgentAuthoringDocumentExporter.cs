@@ -38,7 +38,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!AgentSkillFlowDocumentMapper.Validate(
                     skillDocument,
                     skillReport,
-                    definition.ControlModuleId) ||
+                    definition.ControlModuleId,
+                    CharacterSkillProviderOwners.Asset(AssetDatabase.AssetPathToGUID(
+                        AssetDatabase.GetAssetPath(definition.InputProfile))),
+                    CharacterSkillProviderOwners.Asset(AssetDatabase.AssetPathToGUID(
+                        AssetDatabase.GetAssetPath(definition.GameplayEffectProfile)))) ||
                 skillReport.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, skillReport.messages.Select(value => value.message)));
             snapshot.skillGraphs = skillDocument.graphs;

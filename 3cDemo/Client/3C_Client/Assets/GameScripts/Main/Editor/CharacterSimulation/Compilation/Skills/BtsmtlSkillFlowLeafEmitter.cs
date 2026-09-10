@@ -13,11 +13,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly CharacterSimulationOperationEmitter m_Emitter;
         readonly string m_ControlModuleId;
+        readonly string m_InputProviderOwnerId;
+        readonly string m_GameplayProviderOwnerId;
 
-        public BtsmtlSkillFlowLeafEmitter(CharacterSimulationProgramBuilder builder, string controlModuleId)
+        public BtsmtlSkillFlowLeafEmitter(
+            CharacterSimulationProgramBuilder builder,
+            string controlModuleId,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
         {
             m_Emitter = new CharacterSimulationOperationEmitter(builder);
             m_ControlModuleId = controlModuleId ?? string.Empty;
+            m_InputProviderOwnerId = inputProviderOwnerId ?? string.Empty;
+            m_GameplayProviderOwnerId = gameplayProviderOwnerId ?? string.Empty;
         }
 
         public OperationHandle Emit(FlowNode node, string route, string contentHash)
@@ -25,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (node.graph is not IBtsmtlSkillFlowGraph graph)
                 throw new ArgumentException("A skill node must belong to its formal authoring graph.", nameof(node));
             ValidateCharacterStateNode(node, m_ControlModuleId);
+            ValidateProviderOwner(node, m_ControlModuleId, m_InputProviderOwnerId, m_GameplayProviderOwnerId);
             CharacterSimulationNodeEmission emission = Describe(node);
             BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract native);
             OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(emission.Code);
@@ -235,6 +244,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             if (!valid)
                 throw new InvalidOperationException($"Character State field '{field}' does not match node '{node.GetType().Name}'.");
+        }
+
+        static void ValidateProviderOwner(
+            FlowNode node,
+            string controlModuleId,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
+        {
+            string owner = node switch
+            {
+                BtsmtlSkillMoveFacingAngleFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateVector3FlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateScalarFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateYawFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateBooleanFlowNode value => value.ProviderOwnerId,
+                IBtsmtlSkillInputNode value => value.ProviderOwnerId,
+                BtsmtlSkillGameplayTagFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillGameplayTagQueryFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillGameplayAttributeFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillApplyGameplayEffectFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillRemoveGameplayEffectFlowNode value => value.ProviderOwnerId,
+                _ => string.Empty
+            };
+            if (string.IsNullOrEmpty(owner))
+                return;
+            if (node is BtsmtlSkillMoveFacingAngleFlowNode ||
+                node is BtsmtlSkillCharacterStateVector3FlowNode ||
+                node is BtsmtlSkillCharacterStateScalarFlowNode ||
+                node is BtsmtlSkillCharacterStateYawFlowNode ||
+                node is BtsmtlSkillCharacterStateBooleanFlowNode)
+            {
+                if (!CharacterStateProviderFields.IsOwnerForModule(owner, controlModuleId))
+                    throw new InvalidOperationException($"Character State provider owner '{owner}' does not match control module '{controlModuleId}'.");
+                return;
+            }
+            string expected = node is IBtsmtlSkillInputNode
+                ? inputProviderOwnerId
+                : gameplayProviderOwnerId;
+            if (!CharacterSkillProviderOwners.IsAssetOwner(owner, expected))
+                throw new InvalidOperationException($"Skill provider owner '{owner}' does not match the active provider asset.");
         }
 
         static SemanticValueKind Kind(Type type)

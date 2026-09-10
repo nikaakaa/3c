@@ -40,7 +40,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_DomainBindings.Bind,
                 model.TimelineEmitters,
                 m_Blackboard,
-                model.Definition.ControlModuleId);
+                model.Definition.ControlModuleId,
+                AssetProviderOwner(model, model.InputProfile),
+                AssetProviderOwner(model, model.GameplayEffectProfile));
             m_SkillPrograms = new CharacterSemanticSkillProgramEmitter(model.SkillRecords, builder, report);
             m_NodeEmitters = model.NodeEmitters;
             m_Timelines = new CharacterSemanticTimelineEmitter(
@@ -360,6 +362,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return operation;
             m_Report.EmissionError("graph_entry_missing", occurrence.Route, $"Discovered entry Node '{occurrence.EntryNodeId}' was not emitted.");
             return OperationHandle.Invalid;
+        }
+
+        static string AssetProviderOwner(CharacterAuthoringCompilationModel model, UnityEngine.Object asset)
+        {
+            return asset
+                ? CharacterSkillProviderOwners.Asset(model.GetAssetGuid(asset))
+                : string.Empty;
         }
     }
 }

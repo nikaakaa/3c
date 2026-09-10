@@ -36,7 +36,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool valid = AgentSkillFlowDocumentMapper.Validate(
                 set.Document,
                 session.Report,
-                session.Definition.ControlModuleId);
+                session.Definition.ControlModuleId,
+                AssetProviderOwner(session.Definition.InputProfile),
+                AssetProviderOwner(session.Definition.GameplayEffectProfile));
             valid &= ValidateAssets(session, set.Document, command.Path);
             if (valid)
             {
@@ -61,6 +63,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 throw new InvalidOperationException($"Unsupported Skill Flow command: {command.Kind}");
             new AgentSkillFlowDocumentApplier().Apply(session, set.Document);
             session.AddAppliedAuthoring(command, session.Definition, session.Definition, "Skill Flow Document", "native Skill Graph closure");
+        }
+
+        static string AssetProviderOwner(UnityEngine.Object asset)
+        {
+            string path = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
+            return CharacterSkillProviderOwners.Asset(
+                string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
         }
 
         static bool ValidateAssets(AgentMutationSession session, AgentPackageSkillFlowDocument document, string path)

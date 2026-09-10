@@ -133,7 +133,7 @@
   当前代码：`CharacterStateProviderFields`固定Position、Velocity、VerticalVelocity、BodyYaw、Grounded五个只读字段；Skill Graph提供按输出类型分开的Get节点，Document保存`fieldId + providerOwnerId`，owner必须等于当前Definition的`control-module:<ControlModuleId>`，Float32/Fixed的`CharacterStateRead`只从当前Tick `WorldBodyState`读取，没有Set端口。作者校验、Document Apply和原生技能编译都执行同一owner约束。Tundra脚本编译通过；正式Character Build受既有Presentation Projection错误阻塞，运行证据待补。
 - [ ] 4.5.2 接入GAS式Ability Attribute、GameplayEffect、GameplayTag和ActivationData访问合同；验证跨GA状态不通过某个Skill Graph隐式共享。
 
-  当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；跨Skill共享只经过Ability provider，Skill Local仍按图owner保存。正式Program运行与跨GA证据待补。
+  当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；Input/TargetData provider owner必须指向当前InputProfile，Ability Attribute/GameplayTag/GameplayEffect provider owner必须指向当前GameplayEffectProfile，Skill Local仍按图owner保存，跨Skill共享不经过某个Skill Graph。正式Program运行与跨GA证据待补。
 - [ ] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。
 
   当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec已经共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；需要精确Definition Build后再做双Target/Snapshot对账。

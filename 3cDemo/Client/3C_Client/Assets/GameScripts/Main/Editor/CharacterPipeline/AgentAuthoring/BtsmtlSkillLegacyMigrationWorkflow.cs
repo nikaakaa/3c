@@ -38,7 +38,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string inputGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.InputProfile));
             if (string.IsNullOrWhiteSpace(inputGuid))
                 throw new InvalidOperationException("InputProfile没有稳定资产owner。");
-            string inputOwner = $"asset:{inputGuid}";
+            string inputOwner = CharacterSkillProviderOwners.Asset(inputGuid);
+            string gameplayOwner = string.Empty;
+            if (definition.GameplayEffectProfile)
+            {
+                string gameplayGuid = AssetDatabase.AssetPathToGUID(
+                    AssetDatabase.GetAssetPath(definition.GameplayEffectProfile));
+                if (string.IsNullOrWhiteSpace(gameplayGuid))
+                    throw new InvalidOperationException("GameplayEffectProfile没有稳定资产owner。");
+                gameplayOwner = CharacterSkillProviderOwners.Asset(gameplayGuid);
+            }
             var graphs = new List<FlowGraph>();
             foreach (BtsmtlSkillFlowGraph root in definition.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
             {
@@ -66,6 +75,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         if (node is BtsmtlSkillMoveFacingAngleFlowNode facing && facing.ProviderOwnerId != controlOwner)
                         {
                             facing.Configure(controlOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillGameplayTagFlowNode tag && tag.ProviderOwnerId != gameplayOwner)
+                        {
+                            tag.Configure(tag.Tag, gameplayOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillGameplayTagQueryFlowNode tagQuery && tagQuery.ProviderOwnerId != gameplayOwner)
+                        {
+                            tagQuery.Configure(tagQuery.Query, gameplayOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillGameplayAttributeFlowNode attribute && attribute.ProviderOwnerId != gameplayOwner)
+                        {
+                            attribute.Configure(attribute.Attribute, gameplayOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillApplyGameplayEffectFlowNode applyEffect && applyEffect.ProviderOwnerId != gameplayOwner)
+                        {
+                            applyEffect.Configure(
+                                applyEffect.Effect,
+                                applyEffect.ActionContext,
+                                applyEffect.Predicted,
+                                gameplayOwner);
+                            changed++;
+                        }
+                        if (node is BtsmtlSkillRemoveGameplayEffectFlowNode removeEffect && removeEffect.ProviderOwnerId != gameplayOwner)
+                        {
+                            removeEffect.Configure(
+                                removeEffect.Selector,
+                                removeEffect.Handle,
+                                removeEffect.Effect,
+                                removeEffect.EffectTagQuery,
+                                gameplayOwner);
                             changed++;
                         }
                     }
@@ -1008,7 +1051,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!AgentSkillFlowDocumentMapper.Validate(
                         document,
                         validation,
-                        m_Definition.ControlModuleId) ||
+                        m_Definition.ControlModuleId,
+                        CharacterSkillProviderOwners.Asset(AssetDatabase.AssetPathToGUID(
+                            AssetDatabase.GetAssetPath(m_Definition.InputProfile))),
+                        CharacterSkillProviderOwners.Asset(AssetDatabase.AssetPathToGUID(
+                            AssetDatabase.GetAssetPath(m_Definition.GameplayEffectProfile)))) ||
                     validation.HasErrors())
                     throw new InvalidOperationException(string.Join(Environment.NewLine, validation.messages.Select(value => value.message)));
                 var mutation = new AgentSetSkillFlowDocumentMutation("legacy-skill-migration", "editable.skills", document);

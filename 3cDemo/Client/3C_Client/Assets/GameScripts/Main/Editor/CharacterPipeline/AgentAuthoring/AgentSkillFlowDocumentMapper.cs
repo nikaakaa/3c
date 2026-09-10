@@ -209,7 +209,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static bool Validate(
             AgentPackageSkillFlowDocument document,
             AgentCompileReport report,
-            string controlModuleId)
+            string controlModuleId,
+            string inputProviderOwnerId = null,
+            string gameplayProviderOwnerId = null)
         {
             if (document == null)
             {
@@ -332,7 +334,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         role,
                         nodePath,
                         report,
-                        controlModuleId);
+                        controlModuleId,
+                        inputProviderOwnerId,
+                        gameplayProviderOwnerId);
                     valid &= RejectInternalFields(node.properties, nodePath + ".properties", report);
                 }
                 var layoutNodes = new HashSet<string>(StringComparer.Ordinal);
@@ -439,7 +443,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 AgentPackageSkillFlowDocument document =
                     AgentSkillFlowDocumentExporter.Export(definition, report);
-                return !report.HasErrors() && Validate(document, report, definition.ControlModuleId);
+                return !report.HasErrors() && Validate(
+                    document,
+                    report,
+                    definition.ControlModuleId,
+                    AssetProviderOwner(definition.InputProfile),
+                    AssetProviderOwner(definition.GameplayEffectProfile));
             }
             catch (Exception exception)
             {
@@ -629,7 +638,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BtsmtlSkillFlowGraphRole role,
             string path,
             AgentCompileReport report,
-            string controlModuleId)
+            string controlModuleId,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
         {
             bool valid = true;
             if (node.properties == null || node.values == null)
@@ -764,6 +775,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     $"Character State provider owner 必须是 control-module:{controlModuleId}。");
                 valid = false;
             }
+            if (node.capability == "character-move-facing-angle" &&
+                !CharacterStateProviderFields.IsOwnerForModule(
+                    properties.Value<string>("providerOwnerId"),
+                    controlModuleId))
+            {
+                report.Error(
+                    path + ".properties.providerOwnerId",
+                    "character_state_owner_invalid",
+                    $"Character State provider owner 必须是 control-module:{controlModuleId}。");
+                valid = false;
+            }
+            if (IsInputProvider(node.capability) &&
+                !CharacterSkillProviderOwners.IsAssetOwner(
+                    properties.Value<string>("providerOwnerId"),
+                    inputProviderOwnerId))
+            {
+                report.Error(
+                    path + ".properties.providerOwnerId",
+                    "skill_input_provider_owner_invalid",
+                    "Skill Input provider owner必须是当前CharacterInputProfile资产。");
+                valid = false;
+            }
+            if (IsGameplayProvider(node.capability) &&
+                !CharacterSkillProviderOwners.IsAssetOwner(
+                    properties.Value<string>("providerOwnerId"),
+                    gameplayProviderOwnerId))
+            {
+                report.Error(
+                    path + ".properties.providerOwnerId",
+                    "skill_ability_provider_owner_invalid",
+                    "Ability provider owner必须是当前CharacterGameplayEffectProfile资产。");
+                valid = false;
+            }
             if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||
                 (node.capability == "gameplay-attribute-read" && string.IsNullOrWhiteSpace(properties.Value<string>("attributeId"))))
             {
@@ -794,6 +838,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return valid;
         }
+
+        static bool IsInputProvider(string capability) =>
+            capability == "character-input-bool" ||
+            capability == "character-input-float" ||
+            capability == "character-input-vector2" ||
+            capability == "character-input-vector2-magnitude" ||
+            capability == "character-action-request";
+
+        static bool IsGameplayProvider(string capability) =>
+            capability == "gameplay-tag-has" ||
+            capability == "gameplay-tag-query" ||
+            capability == "gameplay-attribute-read" ||
+            capability == "gameplay-effect-apply" ||
+            capability == "gameplay-effect-remove";
 
         static bool ValueTokenMatches(JToken value, string type)
         {
@@ -2096,6 +2154,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                    !value.assetPath.Contains("\\") && value.assetGuid?.Length == 32 &&
                    value.assetGuid.All(character => character >= '0' && character <= '9' || character >= 'a' && character <= 'f') &&
                    value.localFileId != 0;
+        }
+
+        static string AssetProviderOwner(UnityEngine.Object asset)
+        {
+            string path = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
+            return CharacterSkillProviderOwners.Asset(
+                string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
         }
     }
 

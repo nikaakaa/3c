@@ -59,6 +59,26 @@ namespace ThirdPersonSimulation
         }
     }
 
+    public static class CharacterSkillProviderOwners
+    {
+        public const string AssetPrefix = "asset:";
+
+        public static string Asset(string assetGuid) =>
+            string.IsNullOrWhiteSpace(assetGuid)
+                ? string.Empty
+                : AssetPrefix + assetGuid.Trim();
+
+        public static bool IsAssetOwner(string owner) =>
+            !string.IsNullOrWhiteSpace(owner) &&
+            owner.StartsWith(AssetPrefix, StringComparison.Ordinal) &&
+            owner.Length > AssetPrefix.Length;
+
+        public static bool IsAssetOwner(string owner, string expectedOwner) =>
+            IsAssetOwner(owner) &&
+            IsAssetOwner(expectedOwner) &&
+            string.Equals(owner, expectedOwner, StringComparison.Ordinal);
+    }
+
     public enum CharacterControlNumericComparison : byte
     {
         Less = 1,

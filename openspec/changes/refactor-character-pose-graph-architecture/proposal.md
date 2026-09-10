@@ -14,6 +14,8 @@ Pose作者界面直接使用FlowCanvas原生`GraphEditor`。画布、breadcrumb�
 
 正式Preview已经由独立Preview Fixture/Scene Session链负责，PoseGraph窗口不创建第二Preview播放器、时钟、临时Program或简化Executor。Build继续使用精确Character Definition的正式生命周期；Fixed入口同时发布Float32、Fixed和共享Presentation Projection，Pose-only输入只是Build内部的隔离输入，不是另一套Build路径。
 
+PoseGraph的作者图必须可复用。`CharacterPresentationPoseGraphAsset`/FlowCanvas Graph只拥有稳定拓扑、参数、状态机和抽象能力合同；Character Animation Presentation Profile或独立Binding拥有Rig、Source、Slot、Policy、IK、Foot与Action资源。Graph不再把Corin资源、Character Definition或角色Profile当作自身所有者；Projection和Program仍按具体Definition生成角色实例化产物。
+
 ## Why
 
 当前Pose Graph的作者拓扑、typed端口、单次PlayableGraph Evaluate、唯一Goal Assembler、唯一FullBodyIK和唯一Final Writer方向正确，但运行与编译实现没有形成同等清晰的所有权。

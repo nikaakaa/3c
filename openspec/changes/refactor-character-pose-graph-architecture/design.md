@@ -18,6 +18,34 @@ FlowCanvas图对象只属于Editor authoring surface，不进入Runtime执行。
 
 正式Preview继续使用现有Character Preview/Scene Session链，消费显式Build后的Projection内Program Image和Committed Result；Pose作者窗口不创建第二播放时钟、临时Program或简化Executor。Build继续通过精确Character Definition的正式生命周期发布Float32/Fixed产品和共享Presentation Projection。
 
+### PoseGraph可复用性与Character绑定
+
+PoseGraph本身必须是可复用作者图，不得把完整图内容绑定到某个Character、Definition或Presentation Profile。可复用Graph拥有：
+
+- 稳定Graph／Node／Port／Edge身份；
+- Pose参数、StateMachine、Transition、Graph Role与节点拓扑；
+- 节点所需的抽象Source／Slot／Rig能力合同；
+- 不依赖具体角色资源的Node Definition与typed payload。
+
+Character-specific内容必须由Profile或独立的Pose Graph Binding拥有，并按稳定Graph identity解析：
+
+- AnimationClip、BlendSpace、Motion Matching和Pose Source资源；
+- Rig、Pose Bone、Virtual Bone、Bone Mask、FullBodyIK与Foot Placement；
+- Animation Slot／Channel、Blend Policy、Inertialization Policy与Action producer；
+- Linked Pose、Equipment和角色表现资源。
+
+正式编译输入变为：
+
+```text
+Reusable PoseGraph
+  + Character PoseGraph Binding
+  + Character Rig / Presentation Profile
+  + exact Character Definition
+  -> Character-specific Projection / Program Image
+```
+
+同一PoseGraph可以被多个角色复用；当某个Binding缺少Graph声明的能力或发生Rig/Slot/Policy冲突时，Build必须定位稳定Graph／Node／Field并失败，不得按角色名、默认资源或数组位置补齐。FlowCanvas打开可复用Graph时不要求Character运行上下文；只有Binding编辑、Preview和Build才要求精确Definition/Profile/Rig上下文。
+
 ## Context
 
 Pose Graph的正式业务链已经明确：

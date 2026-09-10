@@ -1,10 +1,10 @@
 ## 当前执行位置
 
-当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、provider合同、黑板声明、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；当前编辑器仍把Skill provider authoring挂在自定义面板宿主，尚未收敛到FlowCanvas原生Blackboard/Inspector/菜单；本任务还剩该编辑器收口，以及Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
+当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、provider合同、黑板声明、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；Skill provider authoring已经收敛到FlowCanvas原生Blackboard、Inspector和菜单，旧自定义右侧面板已删除；本任务还剩Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：Skill provider原生Blackboard/Inspector/菜单接入及自定义面板删除、Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider合同、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；只读 Document dry-run job `2ab6784cf2a64d929c3b3997e5cb3871` 和重试 job `e8d2d574a1dc45d49e566457cd710ddb` 均返回`syncState=TreeDirty`，当前不能在未裁决外部 authoring 改动前执行checkout、迁移、Character Build、Play、网络回放或性能采样。
+尚未完成：Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider合同、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；只读 Document dry-run job `2ab6784cf2a64d929c3b3997e5cb3871` 和重试 job `e8d2d574a1dc45d49e566457cd710ddb` 均返回`syncState=TreeDirty`，当前不能在未裁决外部 authoring 改动前执行checkout、迁移、Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 

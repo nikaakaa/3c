@@ -2,16 +2,16 @@
 
 ## Purpose
 
-定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、state-local Pose source、有限Action producer、node-local Policy、Rig、FullBodyIK Profile与Foot Analysis，Profile Inspector和Pose Graph Workspace提供各自唯一入口，并由编译链生成CharacterPresentationProjection。
+定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile引用可复用Pose Graph并装配其Character-specific Binding、Animation Layer、Control Rig、有限Action producer、node-local Policy、Rig与Foot Analysis，Player直接拥有原生动画资源，Profile Inspector和FlowCanvas Pose Graph Workspace提供各自唯一入口，并由编译链生成CharacterPresentationProjection。
 ## Requirements
 ### Requirement: Presentation Profile必须唯一绑定Pose source
 
-Pose Graph MUST唯一拥有typed Source Slot，`CharacterAnimationPresentationProfile` MUST为每个Slot拥有唯一类型匹配Binding。Clip Binding MUST直接引用精确AnimationClip；Blend Space与Motion Matching Binding MUST继续引用各自正式资源。Profile MUST唯一引用角色Rig Definition、FullBodyIK Profile、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Clip Binding与Action producer binding MUST不保存旧包装资产、Rig副本、Analysis identity副本或素材注册Curve副本。Blend Space与Motion Matching资源内部为各自Artifact保存的Rig/Analysis compatibility identity MAY保留，但只能作为Profile选择的准入约束，不得成为第二角色配置owner。
+Pose Graph MUST只声明可复用的Source/Slot/Rig能力合同，不直接拥有角色资源；Character-specific Binding或`CharacterAnimationPresentationProfile` MUST唯一装配类型匹配的原生AnimationClip、Blend Space或Motion Matching资源、角色Rig Definition、FullBodyIK Profile、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Rig MUST拥有稳定Animation Slot、Slot Group与Blend Profile目录。Player不得保存Source Slot或Profile Binding重复选择；资源引用与Timeline Segment MUST不保存旧包装资产、Rig副本、Analysis identity副本或素材注册Curve副本。
 
 #### Scenario: ClipPlayer解析RunLoop
 
-- **WHEN** ClipPlayer引用RunLoop Source Slot
-- **THEN** Projection Compiler MUST从Profile唯一Clip Binding解析AnimationClip并分配dense source index
+- **WHEN** ClipPlayer直接引用RunLoop原生AnimationClip
+- **THEN** Projection Compiler MUST从Player唯一资源引用生成dense source index
 - **AND** MUST不经过Sequence资产或作者字符串查找
 
 ### Requirement: PoseStateMachine工作区必须对齐UE作者口径
@@ -26,12 +26,12 @@ Pose Graph Workspace MUST显示State Machine、State、Transition Rule、State A
 
 ### Requirement: Action producer authoring必须只允许有限Timeline Action
 
-`AnimationProducerPresentationBinding`、Profile Inspector与正式authoring mutation MUST只允许有限Action Timeline producer。Motion Matching、Blend Space与Clip source MUST只通过Graph-owned Source Slot对象、Profile-owned typed binding子资产和PoseState source provider配置，MUST不作为Gameplay producer、AnimationChannel candidate或Action Playback Input。Projection Compiler MUST分别建立Action-only binding index与Pose source/provider dense binding index。
+`AnimationProducerPresentationBinding`、Profile Inspector与正式authoring mutation MUST只允许有限Action Timeline producer。Motion Matching、Blend Space与Clip source MUST只通过Player的typed原生资源引用和PoseState source provider配置，MUST不作为Gameplay producer或AnimationChannel candidate。Projection Compiler MUST分别建立Action-only binding index与Pose source/provider dense binding index。
 
 #### Scenario: 作者配置Locomotion Blend Space
 
-- **WHEN** PoseState Pose Graph中的BlendSpacePlayer引用一个Blend Space Source Slot
-- **THEN** Profile MUST为该Slot建立类型匹配的Blend Space binding子资产
+- **WHEN** PoseState Pose Graph中的BlendSpacePlayer直接引用一个Blend Space
+- **THEN** Player MUST保存唯一类型匹配的Blend Space资源引用
 - **AND** Inspector MUST不提供Gameplay producer或Action channel选项
 
 ### Requirement: Foot Analysis Source必须是显式可验证的表现作者输入
@@ -62,24 +62,24 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Profile-owned Pose source binding子资产、有限Action producer source binding、node-local Policy、Rig、FullBodyIK Profile与Foot Analysis配置。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、Graph-owned Source Slot子资产、ClipPlayer、BlendSpacePlayer、SelectedPosePlayer、AnimationSlot、composition、Local/Component Pose转换、FootPlacement、PoseBoneIKGoals、Goal Assembler、FullBodyIK与Output topology。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Animation Layer／Control Rig接口与Implementation、有限Action producer binding、node-local Policy、Rig、FullBodyIK Profile与Foot Analysis配置。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、直接资源Player、AnimationSlot、composition、Local/Component Pose转换、FootPlacement、PoseBoneIKGoals、Control Rig调用、FullBodyIK与Output topology；Goal Assembly由Compiler展开。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置。
 
 #### Scenario: Corin配置动画表现
 
 - **WHEN** Corin Definition引用正式Animation Presentation Profile
-- **THEN** Profile MUST为PoseStateMachine Source Slot和Action Slot producer提供唯一资源绑定
+- **THEN** Profile MUST为PoseStateMachine、Animation Slot和Action producer提供唯一Rig／Timeline装配
 - **AND** Definition MUST不内联Run Clip、State transition或Slot policy
 
 #### Scenario: shared Graph被多个角色使用
 
 - **WHEN** 两个CharacterPipelineDefinition引用同一个shared Graph/Timeline
 - **THEN** 两个角色 MAY引用不同CharacterAnimationPresentationProfile和Analysis Source
-- **AND** 每个Profile MUST为shared Source Slot对象提供自己的binding子资产
+- **AND** 每个Profile MUST为shared Graph提供自己的Rig、Analysis和Slot装配引用
 - **AND** shared Graph/Timeline MUST不保存角色级资源、分析Rig或校准
 
 ### Requirement: Animation producer 必须拥有稳定 presentation identity
 
-每个有限Action Timeline animation producer MUST拥有稳定authoring producer identity。每个持续Pose source在authoring层 MUST由稳定Unity Source Slot对象和Profile binding对象精确表达，不得保存作者可编辑Source Id字符串。Projection Compiler MUST把Action identity写入Program source map与Projection binding，并把Pose source对象关系降低为Projection-local dense source index与只读source map。Runtime MUST只在匹配Projection revision内使用dense source index、Player identity和generation，不得使用显示名、数组index、asset path或当前State名称作为fallback。
+每个有限Action Timeline animation producer MUST拥有稳定authoring producer identity。每个持续Pose source在authoring层 MUST由Player直接引用原生资源或typed资源参数表达，不得保存作者可编辑Source Slot、Profile Binding或Source Id字符串。Projection Compiler MUST把Action identity写入Program source map与Projection binding，并把Pose source对象关系降低为Projection-local dense source index与只读source map。Runtime MUST只在匹配Projection revision内使用dense source index、Player identity和generation，不得使用显示名、数组index、asset path或当前State名称作为fallback。
 
 #### Scenario: Timeline Track 重排
 
@@ -87,16 +87,16 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 - **THEN** 原 producer identity MUST 保持
 - **AND** Program 与 Projection binding MUST 不因列表 index 变化而 orphan
 
-#### Scenario: Source binding重排
+#### Scenario: Slot与资源重排
 
-- **WHEN** 作者重排Profile中的Pose source binding卡片
-- **THEN** Source Slot与binding对象引用 MUST保持
+- **WHEN** 作者重排Pose Player或Rig Slot目录
+- **THEN** Player资源引用与Slot／Group identity MUST保持
 - **AND** Compiler MUST重新确定性生成dense index而不改变任何作者引用
 
-#### Scenario: binding 指向未知Source Slot
+#### Scenario: Player指向未知资源
 
-- **WHEN** Profile binding引用不属于当前Pose Graph闭包的Source Slot对象
-- **THEN** Compiler/Validator MUST报告orphan binding并定位对象owner
+- **WHEN** Player引用不属于当前Definition闭包的原生资源
+- **THEN** Compiler/Validator MUST报告资源引用错误并定位Player owner
 - **AND** Runtime MUST拒绝Program/Projection组合，不能按名称或Clip猜测目标
 
 ### Requirement: Blend Policy必须属于明确transition owner
@@ -128,7 +128,7 @@ Blend Policy MUST属于明确的transition owner：PoseState Transition edge、A
 
 ### Requirement: CharacterAnimationPresentationProfile Inspector必须是唯一Presentation配置入口
 
-Profile Inspector MUST唯一编辑Pose Graph、Profile-owned Pose source binding子资产、Blend Policy、Inertialization Policy、Rig Definition、FullBodyIK Profile、有限Action producer source binding、Foot Analysis Mode与Analysis Source。Timeline Editor继续唯一编辑Action producer-local Clip Segment、Window、Motion、Cue和Timeline-local Curve。持续Locomotion Clip的骨骼与注册曲线归属原生AnimationClip，角色Rig、FullBodyIK Profile、Analysis Source与Locomotion Sync Group归属Profile；系统 MUST不要求为该source创建Timeline。Inspector MUST通过类型受限Unity对象选择器和可读业务名编辑资源，不得要求作者输入Source Id、Provider Id、GUID、local file id、revision或hash。
+Profile Inspector MUST唯一编辑Pose Graph、Animation Layer／Control Rig引用、Blend Policy、Inertialization Policy、Rig Definition、FullBodyIK Profile、有限Action producer binding、Foot Analysis Mode与Analysis Source。Timeline Editor继续唯一编辑Action producer-local Clip Segment、Slot、Section、Blend设置、Window、Motion、Cue和Timeline-local Curve。持续Locomotion Clip的骨骼与注册曲线归属原生AnimationClip，角色Rig、FullBodyIK Profile、Analysis Source与Locomotion Sync Group归属Profile；系统 MUST不要求为该source创建Timeline。Inspector MUST通过类型受限Unity对象选择器和可读业务名编辑资源，不得要求作者输入Source Id、Provider Id、GUID、local file id、revision或hash。
 
 #### Scenario: 从Profile打开Timeline Analysis
 
@@ -144,12 +144,12 @@ Profile Inspector MUST唯一编辑Pose Graph、Profile-owned Pose source binding
 
 ### Requirement: Profile Inspector 必须按正式 identity 显示 producer binding
 
-Profile Inspector MUST在显式Definition context下分别显示持续Pose source与有限Action producer。Pose source MUST按Source Slot业务名与实际Unity资源显示消费它的PoseState/Clip/BlendSpace/MM节点、resource、注册Curve状态与Profile Analysis装配；Action producer MUST按Timeline、Track与资源业务名显示AnimationChannel、ActionPlaybackInput/AnimationSlot consumer与resource binding。稳定identity、revision、GUID、local file id、hash与compiled index MUST默认隐藏，只能在显式Diagnostics区域只读显示。服务 MUST不从显示名、目录、旧BaseLocomotion channel或generated产物反推authoring。
+Profile Inspector MUST在显式Definition context下分别显示持续Pose source与有限Action producer。Pose source MUST按Player业务名与实际Unity资源显示消费它的PoseState/Clip/BlendSpace/MM节点、resource、注册Curve状态与Profile Analysis装配；Action producer MUST按Timeline、Track与资源业务名显示AnimationChannel、AnimationSlot consumer与resource binding。稳定identity、revision、GUID、local file id、hash与compiled index MUST默认隐藏，只能在显式Diagnostics区域只读显示。服务 MUST不从显示名、目录、旧BaseLocomotion channel或generated产物反推authoring。
 
 #### Scenario: 查看Run Pose source
 
 - **WHEN** 作者从Corin Definition展开Locomotion PoseStateMachine
-- **THEN** Inspector MUST显示Run Source Slot、实际动画资源、consumer和Profile binding owner
+- **THEN** Inspector MUST显示Run Player、实际动画资源、consumer和资源owner
 - **AND** MUST不要求RunLoop Timeline producer或显示可编辑Source Id
 
 #### Scenario: 查看 Action 覆盖 Locomotion
@@ -213,12 +213,12 @@ Equipment Feature authoring MUST不保存LayerId、BlendMode、OutputPolicy或Pr
 
 ### Requirement: Pose Graph Producer Navigator必须从显式Definition上下文投影
 
-Pose Graph Navigator MUST要求精确Definition context，并从Profile、Pose Graph和Gameplay composition roots分别投影Pose source与有限Action producer。Locomotion分组 MUST显示PoseState、Clip/BlendSpace/MM consumer、Source Slot业务名、Profile binding与实际资源名；Action分组 MUST显示Timeline、Track、AnimationChannel与AnimationSlot业务名。Navigator MUST不读取generated Program/Projection完成bootstrap，不按显示名猜测，不显示机器identity作为项目项名称，也不得保存第二份binding。
+Pose Graph作者下钻 MUST使用FlowCanvas原生GraphEditor breadcrumb与Child Graph导航；它必须要求精确Definition/Profile context来显示可用的Pose source与有限Action producer引用。跨Graph检索目录 MAY作为独立命令或可选诊断面板存在，但不是节点作者字段编辑入口。Locomotion分组 MUST显示PoseState、Clip/BlendSpace/MM consumer与实际资源名；Action分组 MUST显示Timeline、Track、AnimationChannel与AnimationSlot业务名。该检索能力 MUST不读取generated Program/Projection完成bootstrap，不按显示名猜测，不显示机器identity作为项目项名称，也不得保存第二份binding。
 
 #### Scenario: 查看Locomotion sources
 
 - **WHEN** 作者从Corin Definition展开Locomotion
-- **THEN** Navigator MUST列出Idle、Start、Move、Stop、Turn的Source Slot及其实际资源
+- **THEN** Navigator MUST列出Idle、Start、Move、Stop、Turn的Player及其实际资源
 - **AND** MUST不列出BaseLocomotion Timeline producer或Source Id字符串
 
 #### Scenario: 缺少Definition上下文
@@ -229,7 +229,7 @@ Pose Graph Navigator MUST要求精确Definition context，并从Profile、Pose G
 
 ### Requirement: 跨资产表现配置必须保持唯一写入口
 
-Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segment、Profile direct Clip Binding、Locomotion Sync Group、Clip注册Curve、Policy、Rig与Analysis状态。修改Action Segment编排 MUST导航到Timeline Editor；修改Clip骨骼或注册Curve MUST打开Unity Animation Window中的精确Clip与Preview Target；修改Profile Binding或Sync Group MUST导航到Profile；修改State transition与Slot Policy MUST导航到Pose Graph/Policy owner。人工入口与Document v4 Reconciler MUST分别调用同一正式Mutation和资产事务，系统 MUST不复制字段、提供第二mutation命令、按窗口类型分叉写链或保留字符串binding镜像。
+Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segment、Player直接资源、Locomotion Sync Group、Clip注册Curve、Policy、Rig与Analysis状态。修改Action Segment编排 MUST导航到Timeline Editor；修改Clip骨骼或注册Curve MUST打开Unity Animation Window中的精确Clip与Preview Target；修改Sync Group MUST导航到Profile；修改State transition与Slot Policy MUST导航到Pose Graph/Policy owner。人工入口与Document v7 Reconciler MUST分别调用同一正式Mutation和资产事务，系统 MUST不复制字段、提供第二mutation命令、按窗口类型分叉写链或保留字符串binding镜像。
 
 #### Scenario: 从Pose Graph调整Run Phase
 

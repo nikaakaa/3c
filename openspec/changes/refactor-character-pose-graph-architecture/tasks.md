@@ -268,3 +268,11 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 - [ ] 23.4 将复杂数组字段（Parameter Policy、IK Goal Binding等）从项目右侧UI Toolkit Details迁入FlowCanvas节点Inspector，仍复用同一typed Mutation，不创建第二写入链。
 - [x] 23.5 通过精确Definition的`character.build_fixed_products`发布Float32、Fixed和共享Presentation Projection；Corin产物已生成7条`FullBodyAction` Action Playback input。正式入口：`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`与`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。
 - [ ] 23.6 正式Preview继续使用`CharacterAnimationPreviewFixture`与统一Preview/Scene Session链；PoseGraph作者窗口不创建第二Preview UI、第二时钟、临时Program或简化Executor。当前Pose reset observation仍需先完成ACL资源加载/提交，不能登记为Preview通过。
+
+## 24. PoseGraph复用与Character Binding分离（2026-09-10当前决定）
+
+- [ ] 24.1 将Pose Graph资产收敛为可复用Graph：只保存稳定拓扑、参数、StateMachine、Transition、Graph Role和抽象能力合同，不保存Corin/Character资源引用。
+- [ ] 24.2 将Pose Source Slot、AnimationClip/BlendSpace/Motion Matching、Rig/Bone/Mask、IK/Foot、Slot/Channel、Blend/Inertialization Policy、Action producer和Linked Pose映射收归Profile或独立PoseGraph Binding。
+- [ ] 24.3 将Compiler输入固定为`Reusable PoseGraph + Character PoseGraph Binding + Rig/Profile + exact Definition`，Projection、Program Image和资源目录按具体Character实例化。
+- [ ] 24.4 让FlowCanvas直接打开Reusable PoseGraph；没有Character上下文时仍可编辑拓扑和抽象字段，只有Binding/Preview/Build页面要求精确Profile、Rig和Definition。
+- [ ] 24.5 为同一PoseGraph建立至少两个合法Binding的结构化对账入口，并验证缺失能力、Rig冲突和Slot/Policy冲突都按稳定Graph/Node/Field路径失败，不保留fallback或角色名猜测。

@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Motion;
 using TreeDesigner;
 using TreeDesigner.Editor;

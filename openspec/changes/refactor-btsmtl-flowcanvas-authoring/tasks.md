@@ -4,7 +4,7 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：跨 GA 状态隔离、双 Target/Snapshot 与 Simulation Pipeline/网络Adapter正式接合证据、Document与owner的完整Undo/保存往返、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection已由正式validate核对；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`；未执行Character Build、Play、网络回放或性能采样。
+尚未完成：跨 GA 状态隔离、Simulation Pipeline/网络Adapter正式接合证据、Document与owner的完整Undo/保存往返、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection以及双 Target/Snapshot State Layout 与 codec 已由正式validate核对；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`；未执行Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -134,9 +134,9 @@
 - [ ] 4.5.2 接入GAS式Ability Attribute、GameplayEffect、GameplayTag和ActivationData访问合同；验证跨GA状态不通过某个Skill Graph隐式共享。
 
   当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；Input/TargetData provider owner必须指向当前InputProfile，Ability Attribute/GameplayTag/GameplayEffect provider owner必须指向当前GameplayEffectProfile，Skill Local仍按图owner保存，跨Skill共享不经过某个Skill Graph。正式Program运行与跨GA证据待补。
-- [ ] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。
+- [x] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。证据：正式validate以Float32+Fixed逐槽核对1127个StateSlot，并对两种Target执行State、StateHash、World Snapshot canonical写回读回和Program/Layout绑定校验。
 
-  当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec已经共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；正式`btsmtl.validate`已用Float32+Fixed DryRun逐槽核对1127个StateSlot，并记录两种Target的ProgramHash/LayoutHash。World Snapshot与State Hash codec的实际回放仍需补证，整项暂不关闭。
+  当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；正式`btsmtl.validate`已用Float32+Fixed DryRun逐槽核对1127个StateSlot，并对两种Target执行State、StateHash和World Snapshot canonical round-trip，验证Actor Snapshot按对应Program/Layout解码。两种数值Target继续保留各自的ProgramHash、LayoutHash和状态Hash。
 - [ ] 4.5.4 将Character Program接入Session Composition和Simulation Pipeline；验证ProgramRuntime、ExecutionBackend、WorldSolver、Pipeline Pass和SessionSource通过正式兼容校验。
 
   当前代码：`SimulationSessionCompositionDefinition`、`SimulationPipelineCompiler`、Float32/Fixed Composer及Pass Factory已形成唯一组合链，兼容检查覆盖NumericProfile、Target ABI、Backend、Solver、Source Pass/Port和ExecutionSupport；正式 Corin 组合证据待补。

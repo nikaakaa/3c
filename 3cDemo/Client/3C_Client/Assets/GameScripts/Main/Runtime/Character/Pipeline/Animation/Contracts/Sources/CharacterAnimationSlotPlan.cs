@@ -323,11 +323,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterAnimationSlotDescriptor
     {
-        public const string SchemaVersion = "character-animation-slot/v3";
+        public const string SchemaVersion = "character-animation-slot/v4";
 
         [SerializeField] int m_Index = -1;
         [SerializeField] string m_NodeId = string.Empty;
         [SerializeField] string m_SlotId = string.Empty;
+        [SerializeField] string m_SlotGroupId = string.Empty;
         [SerializeField] string m_AnimationChannelId = string.Empty;
         [SerializeField] string m_RoutingOwnerId = string.Empty;
         [SerializeField] CompiledTransitionRoutingPlanPayload m_RoutingPlan;
@@ -344,6 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index,
             PoseNodeId nodeId,
             AnimationSlotId slotId,
+            AnimationSlotGroupId slotGroupId,
             AnimationChannelId animationChannelId,
             TransitionRouteOwnerId routingOwnerId,
             CompiledTransitionRoutingPlanPayload routingPlan,
@@ -357,6 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Index = index;
             m_NodeId = nodeId.Value ?? string.Empty;
             m_SlotId = slotId.Value ?? string.Empty;
+            m_SlotGroupId = slotGroupId.Value ?? string.Empty;
             m_AnimationChannelId = animationChannelId.Value ?? string.Empty;
             m_RoutingOwnerId = routingOwnerId.Value ?? string.Empty;
             m_RoutingPlan = routingPlan ??
@@ -373,6 +376,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int Index => m_Index;
         public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId) ? default : new PoseNodeId(m_NodeId);
         public AnimationSlotId SlotId => string.IsNullOrWhiteSpace(m_SlotId) ? default : new AnimationSlotId(m_SlotId);
+        public AnimationSlotGroupId SlotGroupId => string.IsNullOrWhiteSpace(m_SlotGroupId) ? default : new AnimationSlotGroupId(m_SlotGroupId);
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId)
             ? default
             : new AnimationChannelId(m_AnimationChannelId);
@@ -456,7 +460,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequireValid()
         {
-            if (Index < 0 || !NodeId.IsValid || !SlotId.IsValid || !AnimationChannelId.IsValid ||
+            if (Index < 0 || !NodeId.IsValid || !SlotId.IsValid || !SlotGroupId.IsValid || !AnimationChannelId.IsValid ||
                 !RoutingOwnerId.IsValid || m_RoutingPlan == null ||
                 string.IsNullOrWhiteSpace(RoutingPlanId) ||
                 string.IsNullOrWhiteSpace(RoutingDefinitionRevision) ||

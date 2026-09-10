@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -227,6 +228,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterAnimationLegChainDefinition m_LeftLeg = new CharacterAnimationLegChainDefinition();
         [SerializeField] CharacterAnimationLegChainDefinition m_RightLeg = new CharacterAnimationLegChainDefinition();
         [SerializeField] string m_HeadBoneId = string.Empty;
+        [SerializeField] CharacterAnimationSlotDefinition[] m_AnimationSlots = Array.Empty<CharacterAnimationSlotDefinition>();
+        [SerializeField] CharacterAnimationBlendProfile[] m_BlendProfiles = Array.Empty<CharacterAnimationBlendProfile>();
 
         public string Schema => m_Schema ?? string.Empty;
         public string RigId => m_RigId ?? string.Empty;
@@ -246,6 +249,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterAnimationLegChainDefinition LeftLeg => m_LeftLeg;
         public CharacterAnimationLegChainDefinition RightLeg => m_RightLeg;
         public AnimationBoneId HeadBoneId => ToOptionalBoneId(m_HeadBoneId);
+        public IReadOnlyList<CharacterAnimationSlotDefinition> AnimationSlots => m_AnimationSlots ?? Array.Empty<CharacterAnimationSlotDefinition>();
+        public IReadOnlyList<CharacterAnimationBlendProfile> BlendProfiles => m_BlendProfiles ?? Array.Empty<CharacterAnimationBlendProfile>();
+
+        public CharacterAnimationSlotDefinition RequireAnimationSlot(AnimationSlotId slotId) =>
+            AnimationSlots.SingleOrDefault(value => value != null && value.SlotId == slotId) ??
+            throw new InvalidOperationException($"Animation Rig '{name}' does not contain Slot '{slotId}'.");
+
+        public CharacterAnimationBlendProfile RequireBlendProfile(string profileId) =>
+            BlendProfiles.SingleOrDefault(value => value != null && value.ProfileId == profileId) ??
+            throw new InvalidOperationException($"Animation Rig '{name}' does not contain Blend Profile '{profileId}'.");
+
+        public void SetAnimationSlots(CharacterAnimationSlotDefinition[] slots)
+        {
+            m_AnimationSlots = slots ?? throw new ArgumentNullException(nameof(slots));
+            RequireValid();
+        }
+
+        public void SetBlendProfiles(CharacterAnimationBlendProfile[] profiles)
+        {
+            m_BlendProfiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
+            RequireValid();
+        }
 
         public AnimationBoneId GetSpineBoneId(int index)
         {
@@ -268,7 +293,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationArmChainDefinition rightArm,
             CharacterAnimationLegChainDefinition leftLeg,
             CharacterAnimationLegChainDefinition rightLeg,
-            AnimationBoneId headBoneId)
+            AnimationBoneId headBoneId,
+            CharacterAnimationSlotDefinition[] animationSlots = null,
+            CharacterAnimationBlendProfile[] blendProfiles = null)
         {
             m_Schema = SchemaVersion;
             m_RigId = PoseNodeId.Require(rigId, nameof(rigId));
@@ -291,6 +318,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LeftLeg = leftLeg ?? throw new ArgumentNullException(nameof(leftLeg));
             m_RightLeg = rightLeg ?? throw new ArgumentNullException(nameof(rightLeg));
             m_HeadBoneId = headBoneId.IsValid ? headBoneId.Value : string.Empty;
+            m_AnimationSlots = animationSlots ?? Array.Empty<CharacterAnimationSlotDefinition>();
+            m_BlendProfiles = blendProfiles ?? Array.Empty<CharacterAnimationBlendProfile>();
             RequireValid();
         }
 
@@ -338,6 +367,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Animation Rig '{name}' has incomplete full-biped semantics.");
             }
             RequireSemanticBonesUnique();
+            var slotIds = new HashSet<AnimationSlotId>();
+            for (int i = 0; i < AnimationSlots.Count; i++)
+            {
+                CharacterAnimationSlotDefinition slot = AnimationSlots[i];
+                if (slot == null)
+                    throw new CharacterAnimationRigValidationException(
+                        CharacterAnimationRigValidationCode.ContractInvalid,
+                        $"Animation Rig '{name}' Slot #{i} is missing.");
+                slot.RequireValid();
+                if (!slotIds.Add(slot.SlotId))
+                    throw new CharacterAnimationRigValidationException(
+                        CharacterAnimationRigValidationCode.ContractInvalid,
+                        $"Animation Rig '{name}' contains duplicate Slot or Slot Group '{slot.SlotId}'.");
+            }
+            var blendProfileIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < BlendProfiles.Count; i++)
+            {
+                CharacterAnimationBlendProfile profile = BlendProfiles[i];
+                if (profile == null || !blendProfileIds.Add(profile.ProfileId) ||
+                    !string.Equals(profile.RigId, RigId, StringComparison.Ordinal) ||
+                    !string.Equals(profile.RigRevision, Revision, StringComparison.Ordinal) ||
+                    !float.IsFinite(profile.GlobalDurationMultiplier) ||
+                    profile.GlobalDurationMultiplier <= 0f)
+                    throw new CharacterAnimationRigValidationException(
+                        CharacterAnimationRigValidationCode.ContractInvalid,
+                        $"Animation Rig '{name}' contains duplicate or missing Blend Profile #{i}.");
+            }
             int pelvisIndex = RequirePhysicalBoneIndex(PelvisBoneId);
             int[] spineIndices = RequireSpineValid(pelvisIndex);
             RequireSolverRootValid(pelvisIndex, spineIndices);

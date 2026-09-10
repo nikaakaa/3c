@@ -1430,6 +1430,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                        out pair) && pair.IsValid;
         }
 
+        public bool TryGetPoseSourceClip(
+            string clipIdentity,
+            out AnimationFootFeaturePair pair)
+        {
+            return m_Features.TryGetValue(
+                       PoseSourceClipKey(clipIdentity),
+                       out pair) && pair.IsValid;
+        }
+
         public static string BindingKey(
             string timelineAuthoringId,
             string trackAuthoringId,
@@ -1456,6 +1465,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (string.IsNullOrWhiteSpace(bindingAssetIdentity))
                 throw new ArgumentException("Foot Analysis Presentation Pose source identity is invalid.");
             return string.Concat("pose-source-object\n", bindingAssetIdentity.Trim());
+        }
+
+        public static string PoseSourceClipKey(string clipIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(clipIdentity))
+                throw new ArgumentException("Animation Clip source identity is invalid.");
+            return string.Concat("pose-source-clip\n", clipIdentity.Trim());
         }
     }
 }

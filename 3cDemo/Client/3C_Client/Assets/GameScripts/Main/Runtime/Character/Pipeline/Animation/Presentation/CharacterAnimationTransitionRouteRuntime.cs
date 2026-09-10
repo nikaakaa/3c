@@ -259,6 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             };
             return new AnimationSlotRuntimeSnapshot(
                 m_Slot.SlotId,
+                m_Slot.SlotGroupId,
                 NodeId,
                 m_Slot.AnimationChannelId,
                 m_CurrentEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner,

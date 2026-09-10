@@ -781,6 +781,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal AnimationSlotRuntimeSnapshot(
             AnimationSlotId slotId,
+            AnimationSlotGroupId slotGroupId,
             PoseNodeId nodeId,
             AnimationChannelId animationChannelId,
             bool hasCurrentAction,
@@ -795,6 +796,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             TransitionRoutingRuntimeSnapshot routing)
         {
             SlotId = slotId;
+            SlotGroupId = slotGroupId;
             NodeId = nodeId;
             AnimationChannelId = animationChannelId;
             HasCurrentAction = hasCurrentAction;
@@ -810,6 +812,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         public AnimationSlotId SlotId { get; }
+        public AnimationSlotGroupId SlotGroupId { get; }
         public PoseNodeId NodeId { get; }
         public AnimationChannelId AnimationChannelId { get; }
         public bool HasCurrentAction { get; }

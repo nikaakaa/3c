@@ -212,6 +212,8 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
   当前进度：观察会话沿原生导航来源与编译父路径逐层解析，限定同一Actor／Session／ActionInstance／技能根代次并核对父调用代次；重复进入按最近真实记录解析，未执行时只订阅等待。父调用返回使用已记录父代次；Timeline打开带明确调用上下文，TreeClip前进／返回保留节点及clip位置。实例选择已有7.2.2所述代码；结束实例保留终态、不混入新释放及导航一致性的运行证据仍未完成。
 - [ ] 7.4 接入Unity Play状态、真实角色及ActionInstance的注册／结束／generation变化，自动发现并绑定明确目标；交付生命周期与目标选择记录，证明不创建预览实例或独立场景。
+
+  当前代码：`BtsmtlSkillRuntimeObservationAutoBinder`监听GraphEditor、真实`RuntimeDiagnosticsTargetRegistry`、`RuntimeDebugSession`和PlayMode状态；只有正式Skill Graph来源、真实Host诊断目标和唯一SkillExecution同时匹配时，才打开既有`BtsmtlSkillObservationSession`，多目标或多释放保持人工选择，不创建预览实例、私有时钟或独立场景。仍缺Unity Play中的注册、结束、generation变化和目标选择正式执行记录。
 ### 7.5 观察生命周期
 
 - [x] 7.5.1 实现适配器换页、关窗和退出Play时解绑及释放缓存的代码，不驱动播放、单步或私有时钟。证据：01f254500。

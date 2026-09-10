@@ -130,6 +130,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal CharacterPipelineDefinition DefinitionContext => m_Definition;
         internal CharacterAnimationPresentationProfile ProfileContext => m_Profile;
+        internal static CharacterAnimationRigDefinition CurrentRigDefinition =>
+            s_Current?.m_Profile?.RigDefinition;
         internal CharacterPresentationProjectionAsset ProjectionContext => m_Projection;
         internal CharacterPresentationPoseGraphAsset AssetContext => m_Asset;
         internal string CurrentStateMachineId => m_StateMachineDocument?.DocumentId ?? string.Empty;

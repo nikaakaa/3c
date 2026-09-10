@@ -100,6 +100,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             string fieldId = field.FieldId.Value;
             object current = definition.ReadField(node.Payload, fieldId);
+            if (field.PickerKind == "pose-parameter-policy")
+                return DrawParameterPolicies(
+                    node,
+                    graph,
+                    field,
+                    current as CharacterPoseParameterPolicy[] ?? Array.Empty<CharacterPoseParameterPolicy>());
+            if (field.PickerKind == "full-body-ik-goal-binding")
+                return DrawGoalBindings(
+                    node,
+                    graph,
+                    field,
+                    current as CharacterPoseBoneIkGoalBinding[] ?? Array.Empty<CharacterPoseBoneIkGoalBinding>());
             object next = current;
             EditorGUI.BeginChangeCheck();
             using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
@@ -170,6 +182,185 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Pose Canvas field edits require the Pose Canvas editor session.");
             CharacterPoseCanvasInteraction.Apply(() => poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next));
             return false;
+        }
+
+        static bool DrawParameterPolicies(
+            CharacterPoseCanvasNode node,
+            NodeCanvas.Framework.Graph graph,
+            GraphAuthoringFieldDescriptor field,
+            CharacterPoseParameterPolicy[] policies)
+        {
+            EditorGUILayout.LabelField(field.DisplayName, EditorStyles.boldLabel);
+            using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
+            {
+                for (int index = 0; index < policies.Length; index++)
+                {
+                    CharacterPoseParameterPolicy policy = policies[index];
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField(policy.ParameterId.Value, GUILayout.MinWidth(120f));
+                    EditorGUI.BeginChangeCheck();
+                    PoseParameterResolvePolicy nextPolicy = (PoseParameterResolvePolicy)EditorGUILayout.EnumPopup(policy.Policy);
+                    bool remove = GUILayout.Button("−", GUILayout.Width(24f));
+                    bool changed = EditorGUI.EndChangeCheck();
+                    EditorGUILayout.EndHorizontal();
+                    if (remove)
+                    {
+                        ApplyNodeField(node, graph, field.FieldId.Value,
+                            policies.Where((_, itemIndex) => itemIndex != index).ToArray());
+                        return false;
+                    }
+                    if (changed && nextPolicy != policy.Policy)
+                    {
+                        CharacterPoseParameterPolicy[] next = policies.ToArray();
+                        next[index] = new CharacterPoseParameterPolicy(policy.ParameterId, nextPolicy);
+                        ApplyNodeField(node, graph, field.FieldId.Value, next);
+                        return false;
+                    }
+                }
+
+                CharacterPoseCanvasGraph poseGraph = graph as CharacterPoseCanvasGraph;
+                if (poseGraph != null)
+                {
+                    var used = new HashSet<string>(policies.Select(value => value.ParameterId.Value), StringComparer.Ordinal);
+                    string[] choices = poseGraph.Parameters
+                        .Select(value => value.ParameterId.Value)
+                        .Where(value => !used.Contains(value))
+                        .ToArray();
+                    if (choices.Length > 0)
+                    {
+                        int selected = EditorGUILayout.Popup("参数", 0, choices);
+                        PoseParameterResolvePolicy policy = (PoseParameterResolvePolicy)EditorGUILayout.EnumPopup(
+                            "混合策略",
+                            PoseParameterResolvePolicy.Weighted);
+                        if (GUILayout.Button("添加参数策略"))
+                        {
+                            ApplyNodeField(node, graph, field.FieldId.Value, policies.Append(
+                                new CharacterPoseParameterPolicy(
+                                    new PoseParameterId(choices[selected]),
+                                    policy)).ToArray());
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField("没有可添加的参数");
+                    }
+                }
+            }
+            return true;
+        }
+
+        static bool DrawGoalBindings(
+            CharacterPoseCanvasNode node,
+            NodeCanvas.Framework.Graph graph,
+            GraphAuthoringFieldDescriptor field,
+            CharacterPoseBoneIkGoalBinding[] bindings)
+        {
+            EditorGUILayout.LabelField(field.DisplayName, EditorStyles.boldLabel);
+            CharacterAnimationRigDefinition rig = CharacterPoseGraphWorkspace.CurrentRigDefinition;
+            if (!rig)
+            {
+                EditorGUILayout.HelpBox("Unavailable: exact Rig context required.", MessageType.Info);
+                return true;
+            }
+
+            string[] bones = rig.PhysicalBones
+                .Select(value => value.BoneId.Value)
+                .Concat(rig.VirtualBones.Select(value => value.VirtualBoneId.Value))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (bones.Length == 0)
+            {
+                EditorGUILayout.HelpBox("Unavailable: Rig has no pose bones.", MessageType.Info);
+                return true;
+            }
+
+            using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
+            {
+                for (int index = 0; index < bindings.Length; index++)
+                {
+                    CharacterPoseBoneIkGoalBinding binding = bindings[index];
+                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                    EditorGUI.BeginChangeCheck();
+                    CharacterFullBodyIkEffectorSlot effector = (CharacterFullBodyIkEffectorSlot)EditorGUILayout.EnumPopup(
+                        "效应器",
+                        binding.EffectorSlot);
+                    int boneIndex = Array.IndexOf(bones, binding.TargetPoseBoneId.Value);
+                    int nextBoneIndex = EditorGUILayout.Popup(
+                        "目标骨骼",
+                        Mathf.Max(0, boneIndex),
+                        bones);
+                    Vector3 position = EditorGUILayout.Vector3Field("位置偏移", binding.PositionOffset);
+                    Vector3 rotation = EditorGUILayout.Vector3Field("旋转偏移", binding.RotationOffset.eulerAngles);
+                    float positionWeight = EditorGUILayout.Slider("位置权重", binding.PositionWeight, 0f, 1f);
+                    float rotationWeight = EditorGUILayout.Slider("旋转权重", binding.RotationWeight, 0f, 1f);
+                    bool remove = GUILayout.Button("删除绑定");
+                    bool changed = EditorGUI.EndChangeCheck();
+                    EditorGUILayout.EndVertical();
+                    if (remove)
+                    {
+                        ApplyNodeField(node, graph, field.FieldId.Value,
+                            bindings.Where((_, itemIndex) => itemIndex != index).ToArray());
+                        return false;
+                    }
+                    if (changed)
+                    {
+                        CharacterPoseBoneIkGoalBinding[] next = bindings.ToArray();
+                        next[index] = new CharacterPoseBoneIkGoalBinding(
+                            effector,
+                            new AnimationBoneId(bones[nextBoneIndex]),
+                            position,
+                            rotation,
+                            positionWeight,
+                            rotationWeight);
+                        ApplyNodeField(node, graph, field.FieldId.Value, next);
+                        return false;
+                    }
+                }
+
+                CharacterFullBodyIkEffectorSlot[] availableSlots = Enum.GetValues(
+                        typeof(CharacterFullBodyIkEffectorSlot))
+                    .Cast<CharacterFullBodyIkEffectorSlot>()
+                    .Where(value => value >= CharacterFullBodyIkEffectorSlot.Body &&
+                                   value <= CharacterFullBodyIkEffectorSlot.RightFoot &&
+                                   bindings.All(binding => binding.EffectorSlot != value))
+                    .ToArray();
+                if (availableSlots.Length > 0)
+                {
+                    int selectedSlot = EditorGUILayout.Popup(
+                        "新效应器",
+                        0,
+                        availableSlots.Select(value => value.ToString()).ToArray());
+                    int selectedBone = EditorGUILayout.Popup("目标骨骼", 0, bones);
+                    if (GUILayout.Button("添加效应器绑定"))
+                    {
+                        ApplyNodeField(node, graph, field.FieldId.Value, bindings.Append(
+                            new CharacterPoseBoneIkGoalBinding(
+                                availableSlots[selectedSlot],
+                                new AnimationBoneId(bones[selectedBone]),
+                                Vector3.zero,
+                                Vector3.zero,
+                                1f,
+                                1f)).ToArray());
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        static void ApplyNodeField(
+            CharacterPoseCanvasNode node,
+            NodeCanvas.Framework.Graph graph,
+            string fieldId,
+            object value)
+        {
+            CharacterPoseCanvasGraph poseGraph = graph as CharacterPoseCanvasGraph;
+            if (poseGraph?.EditorWriteRouter == null)
+                throw new InvalidOperationException(
+                    "Pose Canvas field edits require the Pose Canvas editor session.");
+            CharacterPoseCanvasInteraction.Apply(() =>
+                poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, value));
         }
 
         static object DrawEnum(GraphAuthoringFieldDescriptor field, object current)

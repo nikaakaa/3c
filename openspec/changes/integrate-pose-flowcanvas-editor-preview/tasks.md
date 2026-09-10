@@ -1,6 +1,6 @@
 ## 当前对账（2026-09-10）
 
-此前将Capability注册、Compiler内部operation支持和一次旧拓扑Build误判为完整作者架构。对照当前Corin根图、Projection和面板代码后，以下任务重新打开：2.5、4.2、4.4、7.3、7.5、9.2、9.4。现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经要求显式BlendStack、独立Inertialization、Layered Blend Per Bone及正式详情选项源，本次不修改spec，只按spec修正实现。
+此前将Capability注册、Compiler内部operation支持和一次旧拓扑Build误判为完整作者架构。对照当前Corin根图、Projection和面板代码后，以下任务重新打开：2.5、4.2、4.4、7.3、7.5、9.2；9.4已通过当前v29 Float32／Fixed／共享Projection正式发布完成。现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经要求显式BlendStack、独立Inertialization、Layered Blend Per Bone及正式详情选项源，本次不修改spec，只按spec修正实现。
 
 本轮已完成的增量：根图通过Document v7正式事务接入通用Inertialization，Locomotion↔Turn两条过渡选择该逻辑；Layered Blend Per Bone已把Local／Component Pose Space贯通到Program与Worker；Pose详情已接入Animation Channel、Slot、Graph、Linked Pose、Presentation Fact、Gameplay State和Pose History候选。Corin没有Motion Matching或其它多源Selection source，也没有真实UpperBody Overlay，因此当前不伪造BlendStack或Layered节点；剩余任务继续围绕真实Overlay、观察和最终产品发布推进。
 
@@ -78,4 +78,4 @@
 - [x] 9.1 生成精确Corin作者目标，保留可保留的图／状态identity、动画资源、时间、过渡与IK配置，列明无法无损表达的旧规则。
 - [ ] 9.2 通过正式事务把Corin根图与身体控制重组为新层次，直接资源写回Player，Timeline原位补齐Slot／Section／Blend设置。
 - [x] 9.3 在成功反向导出后删除退役作者节点、无消费者Source Slot／Binding及迁移专用旧读写代码。
-- [ ] 9.4 通过唯一Character Build统一发布Corin所需Float32、Fixed与共享Projection，删除过期产物读取路径。
+- [x] 9.4 通过唯一Character Build统一发布Corin所需Float32、Fixed与共享Projection，删除过期产物读取路径。

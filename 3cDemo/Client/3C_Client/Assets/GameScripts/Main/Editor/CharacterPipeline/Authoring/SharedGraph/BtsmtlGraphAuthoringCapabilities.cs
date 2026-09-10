@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -98,18 +97,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register<NotNode>("not");
             Register<CompareNode>("compare", "compareType");
             RegisterExposedProperty();
-            Register<ReadSelfObservationNode>("ai-read-self");
-            Register<EnumerateConfiguredCandidatesNode>("ai-enumerate-candidates");
-            Register<SelectNearestCandidateNode>("ai-select-nearest-candidate");
-            Register<ReadTargetDistanceNode>("ai-read-target-distance");
-            Register<ReadTargetDirectionNode>("ai-read-target-direction");
-            Register<ReadSelectedTargetSnapshotNode>("ai-read-target-snapshot");
-            Register<ReadAIMemoryNode>("ai-read-memory");
-            Register<WriteAIMemoryNode>("ai-write-memory");
-            Register<WriteContinuousInputNode>("ai-write-continuous-input");
-            Register<WriteActionTargetSnapshotNode>("ai-write-action-target");
-            Register<SubmitActionRequestNode>("ai-submit-action-request");
-            Register<AIWaitTicksNode>("ai-wait-ticks");
             EnsureSharedRegistered(m_RegistrationDescriptors);
             m_RegistrationDescriptors.Clear();
         }
@@ -1249,8 +1236,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return "Values";
             if (type == typeof(StateMachineNode) || type == typeof(StateNode))
                 return "State Machine";
-            if (type.Namespace != null && type.Namespace.IndexOf("AI", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "AI";
             return "Gameplay";
         }
 
@@ -1334,18 +1319,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case "not":
                 case "compare":
                 case "exposed-property":
-                case "ai-read-self":
-                case "ai-enumerate-candidates":
-                case "ai-select-nearest-candidate":
-                case "ai-read-target-distance":
-                case "ai-read-target-direction":
-                case "ai-read-target-snapshot":
-                case "ai-read-memory":
-                case "ai-write-memory":
-                case "ai-write-continuous-input":
-                case "ai-write-action-target":
-                case "ai-submit-action-request":
-                case "ai-wait-ticks":
                     return true;
                 default:
                     return false;
@@ -1402,10 +1375,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             if (string.Equals(domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
                 return true;
-            if (!string.Equals(domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal))
-                return false;
-            return string.Equals(graphKind, AgentGraphKind.BaseTree.ToString(), StringComparison.Ordinal) ||
-                   string.Equals(graphKind, AgentGraphKind.ConditionRuleGraph.ToString(), StringComparison.Ordinal);
+            return false;
         }
 
         public bool IsOwnerSlotAllowed(string graphKind, string slot)
@@ -1444,9 +1414,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (descriptor == null)
                 return false;
-            if (string.Equals(domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal))
-                return NodeAuthoringCapabilityPolicy.TryGetCapability(descriptor.Type, out NodeAuthoringCapability aiCapability) &&
-                       NodeAuthoringCapabilityPolicy.Allows(GraphAuthoringRole.AIController, aiCapability);
             if (string.Equals(domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
                 return !NodeAuthoringCapabilityPolicy.TryGetCapability(descriptor.Type, out NodeAuthoringCapability characterCapability) ||
                        NodeAuthoringCapabilityPolicy.Allows(GraphAuthoringRole.Character, characterCapability);
@@ -1593,8 +1560,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 anchors.Add("@result");
             else if (string.Equals(graphKind, AgentGraphKind.StateBehaviorSubTree.ToString(), StringComparison.Ordinal))
                 anchors.AddRange(new[] { "@root", "@onEnter", "@onExit" });
-            else if (string.Equals(domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal))
-                anchors.Add("@root");
             else
                 anchors.AddRange(new[] { "@root", "@timelineEnter" });
             var catalog =

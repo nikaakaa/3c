@@ -126,6 +126,7 @@ namespace BTSMTL.Timeline.Editor
             new Dictionary<string, Slate.Section>(StringComparer.Ordinal);
         ProjectionSnapshot m_BeginSnapshot;
         readonly Func<Cutscene, bool> m_UndoPolicy;
+        readonly Func<Cutscene, bool> m_PlaybackPolicy;
         GameObject m_Host;
         Cutscene m_Cutscene;
         bool m_Disposed;
@@ -177,6 +178,7 @@ namespace BTSMTL.Timeline.Editor
             m_Session = new TimelineEditorSessionContext(request);
             m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
+            m_PlaybackPolicy = cutscene => !ReferenceEquals(cutscene, m_Cutscene);
             BuildProjection();
             CutsceneEditor.OnEditTransactionBegin += OnEditTransactionBegin;
             CutsceneEditor.OnEditTransactionCommit += OnEditTransactionCommit;
@@ -184,6 +186,7 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditorClosed += OnEditorClosed;
             CutsceneEditor.OnActionDoubleClick += OnActionDoubleClick;
             CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
+            CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
             m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
             Undo.undoRedoEvent += OnUndoRedoEvent;
         }
@@ -587,6 +590,8 @@ namespace BTSMTL.Timeline.Editor
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))
                 CutsceneEditor.RecordUndoForCutscene = null;
+            if (ReferenceEquals(CutsceneEditor.AllowPlaybackForCutscene, m_PlaybackPolicy))
+                CutsceneEditor.AllowPlaybackForCutscene = null;
             if (!m_EditorClosed)
                 CutsceneEditor.ClearCutscene(m_Cutscene);
             m_Session.Dispose();

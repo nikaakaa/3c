@@ -38,10 +38,16 @@ namespace Slate
         public static event System.Action OnEditorClosed;
         public static event System.Action<ActionClip> OnActionDoubleClick;
         public static System.Func<Cutscene, bool> RecordUndoForCutscene;
+        public static System.Func<Cutscene, bool> AllowPlaybackForCutscene;
 
         public static bool ShouldRecordUndoFor(Cutscene target)
         {
             return RecordUndoForCutscene == null || RecordUndoForCutscene(target);
+        }
+
+        public static bool IsPlaybackAllowedFor(Cutscene target)
+        {
+            return AllowPlaybackForCutscene == null || AllowPlaybackForCutscene(target);
         }
 
         private Cutscene _cutscene;
@@ -831,7 +837,10 @@ namespace Slate
 
             //...
             DoKeyboardShortcuts();
+            bool guiEnabled = GUI.enabled;
+            GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
             ShowPlaybackControls(topLeftRect);
+            GUI.enabled = guiEnabled;
             ShowTimeInfo(topMiddleRect);
             ShowToolbar();
             DoScrubControls();
@@ -1214,6 +1223,10 @@ namespace Slate
 
         //Scrubing....
         void DoScrubControls() {
+
+            if ( !IsPlaybackAllowedFor(cutscene) ) {
+                return;
+            }
 
             if ( cutscene.isActive ) { //no scrubbing if playing in runtime
                 return;

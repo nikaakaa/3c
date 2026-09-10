@@ -25,7 +25,7 @@
 ## 5. 接入正式Timeline入口与运行状态
 
 - [x] 5.1 将正式 Skill/Shared Timeline 打开入口切换到 Slate `CutsceneEditor.ShowWindow`；以打开调用链和窗口 owner 检查确认不再创建旧 UI Toolkit Timeline窗口
-- [ ] 5.2 保留 BTSMTL Authoring Preview、Live Debug、Follow/Pin overlay、TreeClip 下钻和 Character Preview Target；以 Slate 播放控件不启动第二个正式时钟、Live Debug只读的代码检查确认运行时链唯一
+- [x] 5.2 保留 BTSMTL Authoring Preview、Live Debug、Follow/Pin overlay、TreeClip 下钻和 Character Preview Target；以 Slate 播放控件不启动第二个正式时钟、Live Debug只读的代码检查确认运行时链唯一
 - [ ] 5.3 Slate 插件缺失或版本不兼容时显示 typed Unavailable；以不回退到旧 UI、不创建默认数据、不写 Slate 资产的路径检查确认没有 fallback 分裂实现
 
 ## 6. 文档与变更收口

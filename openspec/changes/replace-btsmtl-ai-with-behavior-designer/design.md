@@ -1,6 +1,8 @@
 ## Context
 
-动机和范围见 [proposal.md](proposal.md)。本设计依据 2026-09-05 的实际工作区和 current specs；当前主重构、Pose、Timeline 独立化等工作并行进行，未提交文件不等于已安装规范。
+动机和范围见 [proposal.md](proposal.md)。本设计依据 2026-09-10 的实际工作区和 current specs；当前主重构、Pose、Timeline 独立化等工作并行进行，未提交文件不等于已安装规范。
+
+截至当前执行位置，旧BTSMTL AI作者/运行链已经形成两个独立提交：`b012bf211`删除自研AI代码、Document分支、能力注册和专用operation，`9e98cb5bf`删除旧AI资产与TreeLocations注册。Unity目标实例已完成脚本刷新；本批没有由AI删除引起的Console编译错误，现有无关Pose错误仍单独记录。当前只保留Opsive Behavior Designer 3.0.3包，插件任务、角色Source接线、网络Bot装配和运行证据仍未完成，不能把本次退役误写成插件AI已闭环。
 
 已核对的事实：
 
@@ -208,21 +210,21 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 
 Input/Action 的共同输出仍是 ActorId、RequestId、capture sequence 到排队/过期/拒绝、实际 ActionInstance 与完成/中断的只读关联；本提案负责尚缺的观察接入，不要求主重构先为旧 AI 实现一套。插件不读取 Action 私有地址。共享的角色输入目录和 Tree/Timeline 编译基础不得随旧 AI 一并删除。
 
-Document 的规范安装必须与唯一 schema owner 合并 v5 基础及 Timeline 增量，不能单独安装本提案的局部 v5 条款而留下 current spec 中的 v4-only 要求，也不能重复应用已完成的 requirement rename。合并依据实际已安装条款，最终删除 AI、保留其余正式领域；这项文档发布顺序不要求其它无关主重构任务全部完成。
+Document 的规范安装必须与唯一 schema owner 合并 v7 基础及 Timeline 增量，不能单独安装本提案的局部条款而留下 current spec 中的旧版本要求，也不能重复应用已完成的 requirement rename。合并依据实际已安装条款，最终删除 AI、保留其余正式领域；这项文档发布顺序不要求其它无关主重构任务全部完成。
 
 已从实际 delta 核对的三组安装冲突：
 
 | 条款迁移 | 当前重复/交叉位置 | 安装规则 |
 |---|---|---|
-| `Document v4必须原子替代v3` → `Document v5必须原子替代v4` | 主重构和 Timeline 的 `btsmtl-agent-authoring-document-sync` 都声明 RENAMED | 由 v5/schema owner 执行一次；后安装的 delta 必须对齐已安装标题，不能重复旧 FROM |
-| `Document v4失败恢复必须同时覆盖Unity owner与正式package` → `Document v5失败恢复必须同时覆盖Unity owner与正式package` | 主重构和 Timeline 的同一能力都声明 RENAMED | 同样只执行一次；保留完整 Unity owner/package 失败恢复正文 |
+| `Document v4必须原子替代v3` → `Document v7必须原子替代旧版本` | 主重构和 Timeline 的 `btsmtl-agent-authoring-document-sync` 都曾声明 RENAMED | 由 v7/schema owner 执行一次；后安装的 delta 必须对齐已安装标题，不能重复旧 FROM |
+| `Document v4失败恢复必须同时覆盖Unity owner与正式package` → `Document v7失败恢复必须同时覆盖Unity owner与正式package` | 主重构和 Timeline 的同一能力都曾声明 RENAMED | 同样只执行一次；保留完整 Unity owner/package 失败恢复正文 |
 | `MCP bridge必须透传同一Document Character与AI事务` → `MCP bridge必须透传同一Document整包事务` | 主重构仍 MODIFIED 旧标题，本提案 RENAMED 后提供完整正文 | 整包标题只改一次；之后所有相关 MODIFIED 都对齐实际新标题 |
 
 规范安装时先读取当时的 installed 标题和完整正文，再合并主重构的 Skill/控制配置、Timeline 的独立根增量和本提案的 AI 退役语义。同标题 MODIFIED 不能按文件先后整段覆盖，否则会丢失另一变更的有效字段/场景或恢复旧 AI。已完成改名必须从后安装的待应用 delta 中消除重复操作；这是作者阶段对齐实际规范，不是运行时保留两种名称或 reader。
 
 组合安装的检查记录必须包含安装前标题、每组只执行一次的改名、逐条合并后的正文/场景，以及安装后仍保留 Skill 和 Timeline、已移除游戏 AI domain 的结果。三个 change 分别通过严格校验只能证明各自 delta 的校验结果，不能替代上述组合检查。截至本次规划，本提案独立严格校验已通过，三份变更的组合安装尚未执行或验证。该责任属于规范安装/对账，不要求三份实现一起完成，也不扩大本提案仅规划的授权。
 
-2026-09-05 已按主规划 owner 的明确要求，将以上接口交接发送给主实现任务 `01a06b30-aa8c-7cf3-8e05-cedfbfbbee2f`，限定为规划协调，不授权本提案实施或删除代码。Timeline 的 AIController 保留文字由其规划 owner 对齐。本轮不修改这些 current/active 文件；上表指出的是安装本提案时必须合并的语义，不把仍然存在的旧文本当作已完成迁移。
+2026-09-10 已按当前主规划执行顺序完成旧AI代码和资产退役；插件任务与网络接线仍由本change剩余任务负责。本段交接记录只用于说明规范合并边界，不授权恢复旧AI路径，也不把未完成插件运行证据当作已交付。
 
 ## Risks / Trade-offs
 

@@ -17,7 +17,7 @@
 导航接合：BtsmtlSkillObservationSession沿原生调用源和编译父路径建立只读观察范围，逐层要求相同释放身份与正确父调用代次。未执行的页面等待真实记录，不创建虚构实例。原生Macro／状态下钻可在编译执行的只读Play图中打开；返回父调用沿记录中的代次定位。Timeline通过明确打开上下文关联TreeClip，回退恢复调用节点及clip位置。此处是代码及编译检查结论，运行交互证据仍未完成。
 
 - 已提交：5f700e6b8接通Definition.SkillGraphs到原生技能编译；da820d615接通Timeline／TreeClip及表现调用点；2e0bd1e9a接通原生黑板声明快照、作用域和读写节点。
-- 尚未完成：完整公开能力对账、编辑器全部写入的统一Mutation、实例选择入口、Macro完整运行调用定位、实际经过边的采集、采样开销与运行对账、Document v6及最终资产迁移。tasks.md中的对应集成任务保持未勾选。
+- 尚未完成：完整公开能力对账、编辑器全部写入的统一Mutation、实例选择入口、Macro完整运行调用定位、实际经过边的采集、采样开销与运行对账、Document v7闭环及最终资产迁移。tasks.md中的对应集成任务保持未勾选。
 - 原生窗口查询已接入发现阶段：逐次遍历Macro、状态、条件和TreeClip调用，按实际祖先声明owner匹配Decision阶段投射。共享定义的不同调用分别校验；缺少窗口类型或只有不可见／其他阶段投射时返回明确诊断和候选路径。该检查确认静态阶段与作用域合法性，不代替运行中窗口实际开放的记录。
 - Timeline基础导航已接通现有AssetDatabase.OpenAsset链：原生技能节点打开TimelineAsset，Timeline窗口区分私有子资产与共享主资产，TreeClip.AssetTree直接打开原生图并显示身份。没有复制窗口或另建画布；父调用返回和运行breadcrumb仍未接通。
 - 私有Macro增加原生菜单创建入口，调用节点与私有页面在同一编辑事务生成；拖线创建只连接唯一执行入口。BtsmtlSkillOwnedAssets以实际资产文件为边界比较修改前后的可达私有内容，只回收本次失去引用的图和Timeline；外部共享资产、仍可达私有资产及此前孤立内容不删除。回收使用现有Undo组，未另建Mutation服务；闭包复制及Document统一接入仍待完成。
@@ -34,7 +34,7 @@
 - 本轮小步提交：0e7798c1a（移动节点与运动编译合同）、f9cd29bbe（窗口查询阶段与调用作用域）、ab505e08c（Timeline及TreeClip原生资产打开）。新增脚本meta由Unity生成。
 - 刷新等待期间发生插件重载断连和HTTP 503；最后一次恢复连接后，Console按error CS查询返回0条。OpenSpec严格校验通过。该结果不代替编辑器交互、内容构建或运行对账，也不表示其他领域Console没有错误。
 - 调用路径改动后的刷新请求完成并返回idle，随后Console出现2条Document任务的CS0246：AgentSkillFlowDocumentMapper.cs第439、539行缺少AgentPackageSkillFlowGraph类型。本任务未修改这些文件；本批未取得整体编译通过结果，前述0条记录只对应此前检查。
-- Document v6由作者指定的「agent工具」任务负责，范围和正式合同直接记在design.md第6节、tasks.md第5节。没有新增独立交接文档；未经作者明确允许，不向其他窗口发送消息。
+- Document v7由作者指定的Agent任务负责，范围和正式合同直接记在design.md第6节、tasks.md第5节。没有新增独立交接文档；未经作者明确允许，不向其他窗口发送消息。
 - 资产迁移、Document apply、内容Build和回放均未因本次整理而执行。
 
 ## 实施基线与归属
@@ -79,9 +79,9 @@
 
 输入为来源位置、操作描述及有序常量输入；输出为OperationHandle及同一Builder中的常量／端口binding。常量声明顺序仍为输入默认值在前、节点附加常量在后，operation及binding发布顺序保持原实现。
 
-这是后续FlowCanvas直接编译入口的正式内部边界，已由现有调用者使用，不是旧图转换器。但FlowCanvas图闭包、领域节点、Macro、Document v6和原生观察尚未接入，不能关闭4.1或其他整项任务。
+这是后续FlowCanvas直接编译入口的正式内部边界，已由现有调用者使用，不是旧图转换器。但FlowCanvas图闭包、领域节点、Macro、Document v7和原生观察尚未完成全部收口，不能关闭4.1或其他整项任务。
 
-当前改动不改变Document字段、identity、ownership、Reconciler或Validator；Agent合同仍为实际v5，不能只因提案目标为v6就修改运行schema。
+当前改动不改变Document字段、identity、ownership、Reconciler或Validator；Agent合同以实际v7为准，不能因历史记录中的旧版本号恢复旧schema。
 
 ## 验证事实
 
@@ -117,7 +117,7 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 
 最新决定及入口接续：用户确认节点＋Timeline是技能主链，单入口Macro提供多个值参数，父节点等待主体完成后再读取输出与结束状态。8542cf521固定接口与端口ID合同，45beb5032补原生黑板读取和类型核对，9d7b3b765实现原生图递归编译、Macro参数槽、GraphCallFrame及输出写入阶段。
 
-正式发现现读取Definition的Editor专用SkillGraphs引用，SkillDefinition仍使用稳定入口ID；CharacterSemanticEmitter已将技能交给BtsmtlSkillGraphCompiler，不再从旧树出现位置中寻找或编译技能。作者图类型及根引用不进入Player编译。Character编译器版本更新为26，独立Timeline版本更新为2，以区分新发射合同。存量资产未迁移，缺少原生根时报告错误而不回到旧路径。普通黑板局部声明、Timeline／TreeClip、Document v6及正式窗口接入仍未完成。
+正式发现现读取Definition的Editor专用SkillGraphs引用，SkillDefinition仍使用稳定入口ID；CharacterSemanticEmitter已将技能交给BtsmtlSkillGraphCompiler，不再从旧树出现位置中寻找或编译技能。作者图类型及根引用不进入Player编译。Character编译器版本更新为26，独立Timeline版本更新为2，以区分新发射合同。存量资产未迁移，缺少原生根时报告错误而不回到旧路径。普通黑板局部声明、Timeline／TreeClip、Document v7及正式窗口接入仍未完成。
 
 当前验证：脚本刷新后按`error CS`筛选返回0条；Console另有Pose工作区的Graph.UpdateNodeBBFields空引用、StateMachine details未绑定及GUI布局异常，调用栈属于CharacterPoseCanvasBinding／CharacterPoseGraphWorkspace，按范围未处理。没有运行内容Build、回放或资产迁移。
 
@@ -133,7 +133,7 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 | 87f16e650 | 浮点／定点技能根诊断generation |
 | 01f254500 | 节点生命周期读取及原生观察适配器 |
 
-共享编辑器文件只提交本任务的接口与绘制改动；其他任务的页面导航、连线下钻和Pose改动保留。后续按独立功能块及时提交，不再累计到完整迁移结束。以上提交不表示OpenSpec整项全部完成，正式图发现、Macro调用编译、完整实例定位、Document v6和最终迁移仍按任务表收口。
+共享编辑器文件只提交本任务的接口与绘制改动；其他任务的页面导航、连线下钻和Pose改动保留。后续按独立功能块及时提交，不再累计到完整迁移结束。以上提交不表示OpenSpec整项全部完成，正式图发现、Macro调用编译、完整实例定位、Document v7和最终迁移仍按任务表收口。
 
 浮点和定点SimulationTraceRecord新增SkillExecutionGeneration。现有Action trace作用域携带技能入口operation；写trace时从当前技能实例的根激活状态读取generation，退出作用域恢复之前的入口。该值与原操作Activation.Generation分别保留，不替换Gameplay状态或凭操作编号推测释放代次。两条诊断adapter均发布该字段；RuntimeDiagnosticsStore的payload差异判定同步包含技能身份、动作实例、调用点及两个generation。完整Macro调用范围仍须由编译来源补齐。
 
@@ -147,7 +147,7 @@ BtsmtlSkillTimelineCompiler复用TimelineSemanticEmitter，TreeClip回调进入�
 
 目前底层来源资源解析仍读取现有作者存储，不能据此宣布FlowCanvas技能图已迁移；后续正式图和编译入口完成后替换该资源解析，不能再增加旧图镜像。Timeline独立页面、Macro调用导航及完整原生图观察仍待接入，7.2等整项不勾选。
 
-本小步只做调用者搜索和diff静态检查；按用户要求未编译、未Build、未运行验证。运行状态及来源导航不改变Document可写字段或实际v5协议。
+本小步只做调用者搜索和diff静态检查；按用户要求未编译、未Build、未运行验证。运行状态及来源导航不改变Document可写字段或实际v7协议。
 
 - 正式RunHost基线编译返回`WorkspaceEditorInUse`，没有RunId；保留主验收Editor，没有另建临时运行器。
 - 同实例`e852139597e42532`完成脚本refresh／重载后，Console返回0条错误。重载期间CLI断开后原实例已恢复。
@@ -202,4 +202,4 @@ Rollback单帧Input、Server Authority底层Input和Baseline读取在字段解�
 
 技能FlowCanvas的变量拖放现在只接受当前图自己的原生Blackboard。作者拖入变量后显示Get/Set选择；创建的节点保存变量稳定ID、当前图owner和值类型，Set节点经`BtsmtlSkillFlowEditorMutation`写入，外部Blackboard、无稳定身份或不支持类型直接拒绝。状态页、Timeline页和Macro页共用同一入口，变量默认值仍由原生Variable保存，运行时不执行原生绑定getter。
 
-Document侧补齐v7技能输入绑定、Skill Timeline与非技能Timeline分离，以及Animation Slot、Animation Clip Blend Profile和Timeline Section next的typed Mutation。Character Agent事务不再从Character RootTree建立索引或解析黑板；Skill Graph/Macro/Timeline和Input、GameplayEffect、BodyMotion、Animation Presentation owner分别进入正式owner集合，AIController仍保留自己的RootTree域。旧RootTree依赖测试和导航入口随本步删除，没有新增兼容路径。
+Document侧补齐v7技能输入绑定、Skill Timeline与非技能Timeline分离，以及Animation Slot、Animation Clip Blend Profile和Timeline Section next的typed Mutation。Character Agent事务不再从Character RootTree建立索引或解析黑板；Skill Graph/Macro/Timeline和Input、GameplayEffect、BodyMotion、Animation Presentation owner分别进入正式owner集合。旧Character RootTree依赖测试和导航入口随本步删除，旧自研AI RootTree域也已由`b012bf211`退役，没有新增兼容路径。

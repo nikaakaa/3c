@@ -4,7 +4,7 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；旧通用Graph/State/Timeline/Blackboard Mutation已限制为AIController域，Character不再通过该入口访问RootTree。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已通过，Provider owner 已写入三份 Skill 资产，`syncState=Clean`、`plannedDiff=[]`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
+尚未完成：C# Character State完整typed projection、Simulation Pipeline/网络Adapter接合证据、Document与资产的完整往返执行、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。正式 Character checkout 与 dry-run 已通过，Provider owner 已写入三份 Skill 资产，`syncState=Clean`、`plannedDiff=[]`；正式 Character Build/validate 当前停在既有 Presentation Projection 的 Pose/ACL 闭包错误，不能把它记为 Skill 链失败，也不能把此前的零错误检查当作当前整仓通过。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -98,7 +98,7 @@
 - [x] 3.3.1 实现状态机／状态／条件结构节点、进入与退出入口，以及顺序、选择、并行、循环和结束节点的作者代码；步骤采用独立Flow输出，未把Flip Flop作为Sequence。证据：ebc41bfcc。
 - [x] 3.3.2 补齐剩余公开业务能力，并将新状态页及组合节点进入完整编译；按能力与语义发射清单逐项核对等待、转换、完成及停止语义。
 
-  代码/语义证据：公开能力补充对账覆盖37项非AI技能kind、53个原生类型；SkillLeafEmitter、GraphFlowEmitter、MacroCompilation和TimelineCompiler分别覆盖叶节点、状态/组合边、Macro等待/完成和Timeline生命周期。ActivateActionInstance不再重复发射，AI专用kind保持域隔离；正式产物运行证据仍归8.1。
+  代码/语义证据：公开能力补充对账覆盖37项技能kind、53个原生类型；SkillLeafEmitter、GraphFlowEmitter、MacroCompilation和TimelineCompiler分别覆盖叶节点、状态/组合边、Macro等待/完成和Timeline生命周期。ActivateActionInstance不再重复发射，旧AI专用kind已经删除；正式产物运行证据仍归8.1。
 - [x] 3.4 接入原生下钻、breadcrumb及私有／共享标识，保留Timeline独立编辑和TreeClip返回关系；交付页面来源身份及生命周期对账记录。
 
   当前进度：技能Timeline节点及TreeClip.AssetTree已接现有资产打开入口。932421b16已接原生父子页面导航、父调用返回和Timeline调用上下文，沿明确调用路径绑定观察；不是尚未编写。完整私有／共享标识与页面来源、生命周期运行核对仍未完成，此项不勾选。
@@ -216,13 +216,13 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.1 使用现有正式CLI完成技能启动／Timeline／正常结束及中断链的编译运行对账，记录业务差异；不新增测试代码或临时执行器。
 - [x] 8.2 核对各旧作者模型、窗口、端口和转换层的消费者，删除零消费者实现；交付残留清单并说明未迁移领域的合法保留原因。
 
-  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除；后续保留项只能有AI RootTree、非技能Timeline或Document顶层元数据消费者。技能正式编译/观察不得有旧作者对象中转。
-- [x] 8.3 同步project、current specs、技能说明和原change替代记录，统一v7版本及作者／运行边界；运行OpenSpec严格校验并附规范冲突复核结论。证据：`595e09dc8`同步Character无RootTree规范，`5fb20d1e0`同步Skill FlowCanvas规范，change严格校验通过；已复核旧Character RootTree条款并改为SkillDefinitions/SkillGraphs入口，AI RootTree保留在AI域。
+  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除；AI不再由BTSMTL拥有，Behavior Designer插件是后续AI唯一作者入口。保留项只能是非技能Timeline或Document顶层元数据消费者。技能正式编译/观察不得有旧作者对象中转。
+- [x] 8.3 同步project、current specs、技能说明和原change替代记录，统一v7版本及作者／运行边界；运行OpenSpec严格校验并附规范冲突复核结论。证据：`595e09dc8`同步Character无RootTree规范，`5fb20d1e0`同步Skill FlowCanvas规范，`b012bf211`删除旧自研AI链，current spec改为Behavior Designer边界；change严格校验通过。Character入口为SkillDefinitions/SkillGraphs，AI不再保留BTSMTL RootTree、AI Program或AI Document。
 ### 8.4 交付与真实进度
 
 - [x] 8.4.1 将当前代码拆成五个独立提交并记录盘点、脚本刷新事实、未接通及未验证项。证据：b3d066d12及implementation.md。
 - [ ] 8.4.2 最终汇总代码与资产提交、正式CLI证据及各项结论；编译成功不得代替交互、运行观察或性能完成，所有任务按真实证据收口。
 - [ ] 8.5 核对Character RootTree删除后的Definition、GA精确导航、provider Blackboard、Simulation Pipeline和Network Adapter规范一致性；运行OpenSpec严格校验并输出仍存在的非技能RootTree残留清单。
 
-  当前残留清单：`AgentAIControllerSnapshotExporter`、`AgentAIMutationLowering`、`AgentAIControllerMutationHandler`及AI事务owner仍使用AIController RootTree，属于保留的非技能领域；旧通用Graph/State/Timeline/Blackboard Mutation已由域掩码限制为AIController。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口。Character State只读projection已接入并升级Gameplay operation set到`/15`；正式 Float32 Build 已确认新增 Skill 链无诊断，当前仍被既有 Presentation direct Clip resource binding 与 Control Rig Graph closure 阻塞，正式运行一致性核对仍待收口。
+  当前残留清单：旧`AgentAI*`导出器、lowering、handler、AI事务owner和BTSMTL AI operation均已删除；`AIController` domain已不再被Document schema、MCP或Validator接收。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口。Behavior Designer插件尚未在本change中接入角色任务和网络Source，后续由`replace-btsmtl-ai-with-behavior-designer`独立change负责；不在此处建立第二套AI路径。Character State只读projection已接入并升级Gameplay operation set到`/15`；正式 Float32 Build 已确认新增 Skill 链无诊断，当前仍被既有 Presentation direct Clip resource binding 与 Control Rig Graph closure 阻塞，正式运行一致性核对仍待收口。
 

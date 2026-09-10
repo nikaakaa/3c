@@ -1,11 +1,11 @@
 ## 1. 共同接口与迁移范围
 
 - [ ] 1.1 核对当前工作区的 AI 调用者、资产引用和共享输入/Tree/Timeline 依赖，交付按“删除、职责迁移、保护”分类的精确清单，确认不覆盖其它任务改动。
-- [ ] 1.2 按 design 的逐条交接表对齐主重构、Timeline 和本变更的输入/Action 结果/Document v5 合同，交付唯一 schema owner 的实际 installed 标题、两组 v5 改名及 MCP 整包改名各执行一次的映射和正文/场景合并记录，不整段覆盖有效增量、不新增旧 AI 功能。
+- [ ] 1.2 按 design 的逐条交接表对齐主重构、Timeline 和本变更的输入/Action 结果/Document v7 合同，交付唯一 schema owner 的实际 installed 标题、改名及 MCP 整包改名各执行一次的映射和正文/场景合并记录，不整段覆盖有效增量、不新增旧 AI 功能。
 
 ## 2. 正式观察与输入生产合同
 
-- [ ] 2.1 将旧 AI 文件内仍被使用的角色输入目录、typed 输入构造和目标筛选迁回对应业务模块并按职责命名，以调用者清单及剩余引用检查证明只有一份实现。
+- [x] 2.1 将旧 AI 文件内仍被使用的角色输入目录、typed 输入构造和目标筛选迁回对应业务模块并按职责命名，以调用者清单及剩余引用检查证明只有一份实现。证据：`f13fa36e8`将CommittedActorObservation迁为通用CommittedActorPose/Ingress，Local/Authority/Rollback只依赖正式输入观察合同；旧AI源删除后GameScripts中无旧观察类型引用。
 - [ ] 2.2 从正式 Input/Action 状态及已提交结果提供请求身份到排队、过期、拒绝和释放终态的只读关联，交付可被玩家/插件共用的观察合同与权限校验，不复制请求 buffer 或 Action 生命周期。
 - [ ] 2.3 为现有 Source 增加显式批量准备能力，按同一观察完成全部本端输入后再交付唯一输入 writer，以 Local/Authority/Rollback 装配和编译结果证明公共 Host/Composer 不依赖插件类型。
 - [ ] 2.4 在现有 Source 存储中分离不可改写的捕获/冻结输入事实、生产 frontier 与可恢复消费状态，交付字段所有权和 checkpoint/restore 对照，覆盖已冻结后模拟失败、重发及同 Tick 重读。
@@ -43,10 +43,10 @@
 
 ## 7. 旧AI实现与作者链退役
 
-- [ ] 7.1 删除自研 AI Definition/Tree/节点、Frontend、Semantic IR、Program/Asset、State/codec、专用 operation/执行器与仅供旧能力使用的测试/fixture，交付删除及引用扫描清单，保留技能和输入仍使用的公共基础。
-- [ ] 7.2 删除 AI 专用窗口、Graph Role/Capability、菜单导航和旧运行诊断装配，交付剩余作者入口检查，确认技能/Timeline/TreeClip/Pose 的编辑与编译入口仍完整。
-- [ ] 7.3 从唯一 Document schema、DTO、根解析、Exporter、Reconciler、Mutation、Validator 和 MCP 路由中删除游戏 AIController，交付旧领域拒绝与其它正式领域的既有 Validator/引用结果，不建立插件 AI Document。
-- [ ] 7.4 同步 BTSMTL Agent 技能、MCP 描述与代码地图，交付文档字段/路径检查；保留主重构技能/控制与 Timeline 独立领域，不恢复旧 reader、双写或兼容类型。
+- [x] 7.1 删除自研 AI Definition/Tree/节点、Frontend、Semantic IR、Program/Asset、State/codec、专用 operation/执行器与仅供旧能力使用的测试/fixture，交付删除及引用扫描清单，保留技能和输入仍使用的公共基础。证据：`b012bf211`删除73个AI作者/运行链文件；`9e98cb5bf`删除18个旧AI资产与注册；`rg`对GameScripts、Character配置和TreeLocations扫描无旧AI符号。
+- [x] 7.2 删除 AI 专用窗口、Graph Role/Capability、菜单导航和旧运行诊断装配，交付剩余作者入口检查，确认技能/Timeline/TreeClip/Pose 的编辑与编译入口仍完整。证据：`b012bf211`删除AI Editor与AI Graph能力/菜单注册；TreeLocations中的AI注册由`9e98cb5bf`移除；保留Skill Flow、Timeline、TreeClip和Pose入口。
+- [x] 7.3 从唯一 Document schema、DTO、根解析、Exporter、Reconciler、Mutation、Validator 和 MCP 路由中删除游戏 AIController，交付旧领域拒绝与其它正式领域的既有 Validator/引用结果，不建立插件 AI Document。证据：`b012bf211`移除AI DTO、Exporter、Reconciler、Mutation、Validator和MCP分支；当前Document只接受CharacterController，`editable/ai/perception.json`明确拒绝，Behavior Designer不进入BTSMTL Document。
+- [x] 7.4 同步 BTSMTL Agent 技能、MCP 描述与代码地图，交付文档字段/路径检查；保留主重构技能/控制与 Timeline 独立领域，不恢复旧 reader、双写或兼容类型。证据：`.codex/skills/btsmtl-agent-authoring/SKILL.md`及`references/current-contract.md`已删除AI Document/AIProgram流程并改为Character v7；current specs、`project.md`和MCP描述已对齐插件AI边界。
 
 ## 8. 内容与产品发布
 

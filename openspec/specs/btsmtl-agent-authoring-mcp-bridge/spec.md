@@ -16,23 +16,23 @@
 
 ### Requirement: Bridge 必须复用正式 Agent compiler 与 BTSMTL authoring API
 
-MCP bridge MUST复用v4 package exporter、Document Reconciler、Mutation Compiler、domain Validator和Compile Report。全部Graph、Timeline、AnimationClip Curve与Presentation修改 MUST继续由typed handler通过正式BTSMTL、Timeline、Clip Curve、Presentation与AI authoring API执行。Bridge MUST不直接写Unity YAML、AnimationClip serialized curve、Node集合、Edge集合、GUID映射或建立第二套authoring数据。
+MCP bridge MUST复用v7 package exporter、Document Reconciler、Mutation Compiler、Character Validator和Compile Report。全部Graph、Timeline、AnimationClip Curve与Presentation修改 MUST继续由typed handler通过正式BTSMTL、Timeline、Clip Curve与Presentation authoring API执行。Bridge MUST不直接写Unity YAML、AnimationClip serialized curve、Node集合、Edge集合、GUID映射或建立第二套authoring数据。
 
 #### Scenario: Bridge应用Clip Curve变化
 
-- **WHEN** v4 Character package包含合法Clip注册Curve变化
+- **WHEN** v7 Character package包含合法Clip注册Curve变化
 - **THEN** Bridge MUST把整包交给统一Application Service和Clip Curve handler
 - **AND** MCP handler MUST不直接调用AnimationUtility或编辑`.anim`文本
 
 #### Scenario: Bridge应用Graph变化
 
-- **WHEN** v4 package包含合法Graph目标变化
+- **WHEN** v7 package包含合法Graph目标变化
 - **THEN** handler MUST继续调用正式Graph authoring API
 - **AND** MUST不创建Node级MCP工具
 
 ### Requirement: Definition 目标必须由调用上下文显式提供
 
-MCP与Window请求 MUST通过`domain`和`root_asset_path`显式选择已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`。路径 MUST是`Assets/`下能精确解析为对应domain根类型的资产。文档包路径 MUST由service从调用上下文确定。系统 MUST不通过selection、目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找root或文档包。
+MCP与Window请求 MUST通过`domain`和`root_asset_path`显式选择已有合法`CharacterPipelineDefinition`。仅接受`CharacterController` domain；Behavior Designer AI不使用BTSMTL lifecycle。路径 MUST是`Assets/`下能精确解析为Character Definition的资产。文档包路径 MUST由service从调用上下文确定。系统 MUST不通过selection、目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找root或文档包。
 
 #### Scenario: Definition路径合法
 
@@ -48,7 +48,7 @@ MCP与Window请求 MUST通过`domain`和`root_asset_path`显式选择已有合�
 
 ### Requirement: 临时剪贴板和快捷键入口必须删除
 
-系统 MUST不保留Patch clipboard、快捷键、Patch inbox、任意Document path、文件watcher或隐藏菜单作为MCP不可用时的fallback。AI MUST通过宿主已有通用文件能力直接编辑正式文档包；BTSMTL MCP MUST只负责生命周期。人工authoring继续使用正式Graph、Timeline和Profile入口。
+系统 MUST不保留Patch clipboard、快捷键、Patch inbox、任意Document path、文件watcher或隐藏菜单作为MCP不可用时的fallback。Agent MUST通过宿主已有通用文件能力直接编辑正式文档包；BTSMTL MCP MUST只负责生命周期。人工authoring继续使用正式Graph、Timeline和Profile入口。
 
 #### Scenario: JSON文件被保存
 
@@ -74,7 +74,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 #### Scenario: 用户只选中Definition
 
-- **WHEN** Project selection变为Character或AI root
+- **WHEN** Project selection变为Character root或Behavior Designer行为资源
 - **THEN** 系统 MUST不自动checkout、validate、compile或build
 - **AND** MUST等待明确工具调用
 
@@ -96,7 +96,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 ### Requirement: Agent authoring 必须通过现有 Unity MCP 暴露固定生命周期工具集
 
-系统 MUST在现有`unityMCP`连接中注册`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`与`btsmtl.validate`五个editor-only工具。工具 MUST使用当前MCP package正式发现与分发机制，MUST不启动第二个server、终端常驻进程、文件watcher或Unity batchmode。系统 MUST删除`manage_btsmtl_agent_authoring`及其`action`multiplexer，MUST不注册Node、Edge、Timeline、字段或JSON patch领域工具。
+系统 MUST在现有`unityMCP`连接中注册`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`与`btsmtl.validate`五个editor-only工具。工具 MUST使用当前MCP package正式发现与分发机制，MUST不启动第二个server、终端常驻进程、文件watcher或Unity batchmode。系统 MUST删除`manage_btsmtl_agent_authoring`及其`action`multiplexer，MUST不注册Node、Edge、Timeline、字段或JSON patch领域工具，也 MUST不为Behavior Designer增加BTSMTL专用工具。
 
 #### Scenario: Unity Editor完成domain reload
 
@@ -107,7 +107,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 #### Scenario: Agent需要创建Graph节点
 
 - **WHEN** AI需要在文档包中创建Node与Edge
-- **THEN** AI MUST直接修改对应JSON目标状态
+- **THEN** Agent MUST直接修改对应JSON目标状态
 - **AND** MCP MUST不暴露`create_node`、`link_edge`或等价局部工具
 
 ### Requirement: MCP bridge 必须提供完整且受限的生命周期工具集合
@@ -150,7 +150,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 ### Requirement: Document Apply必须执行hash门禁、预检和资产级事务
 
-`btsmtl.apply_document` MUST重新读取确定性文档包，校验expected document hash、live source revision、current context hash、root identity和同步状态，再执行无副作用reconcile与preflight。全部门禁成功后，系统 MUST对Definition和全部可达serialized owner建立单一Undo事务，调用Mutation Compiler、domain Validator、save与最终文档包反向发布。AI domain MAY在事务内发布AIIntentProgram；Character domain MUST不在Document apply内Build。任一错误或异常 MUST回滚，MUST不保存半成品或报告Clean。
+`btsmtl.apply_document` MUST重新读取确定性v7文档包，校验expected document hash、live source revision、current context hash、root identity和同步状态，再执行无副作用reconcile与preflight。全部门禁成功后，系统 MUST对Definition和全部可达serialized owner建立单一Undo事务，调用Mutation Compiler、Character Validator、save与最终文档包反向发布。Behavior Designer AI不进入Document事务。Character domain MUST不在Document apply内Build。任一错误或异常 MUST回滚，MUST不保存半成品或报告Clean。
 
 #### Scenario: Document hash变化
 
@@ -170,9 +170,9 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 - **THEN** response MUST明确`applied=true`、`saved=true`与`syncState=Clean`
 - **AND** 最终package MUST来自最终正式Unity树
 
-### Requirement: MCP bridge必须透传同一Document Character与AI事务
+### Requirement: MCP bridge必须只透传Character Document事务
 
-五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v4`同步与validation结果，并通过显式domain透传CharacterController或AIController generic事务。Character package MUST覆盖State、Action、Timeline、Timeline-local Curve、AnimationClip注册Curve、Node、Edge、direct Clip Binding、Locomotion Sync Group与Presentation owner可写语义；AI package MUST继续覆盖Definition、Graph、Blackboard、Perception、Observation、Memory与Character input/request intent binding。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Clip级tool、Pose专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
+五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v7`同步与validation结果，并只透传CharacterController整包事务。Character package MUST覆盖State、Action、Skill Graph、Macro、Timeline、Timeline-local Curve、AnimationClip注册Curve、Node、Edge、direct Clip Binding、Animation Slot／Group、Locomotion Sync Group与Presentation owner可写语义。Behavior Designer AI不进入BTSMTL package。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Clip级tool、Pose专用tool、插件AI专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
 
 #### Scenario: dry-run发现Clip Curve分片
 
@@ -181,14 +181,14 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 - **AND** apply MUST只接受该exact hash，并在成功reverse export后发布canonical package
 - **AND** Bridge MUST不增加Clip路径或curve key参数
 
-#### Scenario: AI Document修改Intent binding
+#### Scenario: Agent Document修改Input binding
 
-- **WHEN** AI package增加合法Character input/request binding
-- **THEN** bridge MUST把同一v4整包交给统一service
+- **WHEN** Character package增加合法Character input/request binding
+- **THEN** bridge MUST把同一v7整包交给统一service
 - **AND** response MUST返回Mutation Plan、事务与Validator机器报告
 
 #### Scenario: bridge收到旧schema
 
-- **WHEN** 调用方提交v1/v2/v3、v15-v17 Snapshot/Patch、operation或`patch_json`
+- **WHEN** 调用方提交v1-v6、v15-v17 Snapshot/Patch、operation或`patch_json`
 - **THEN** bridge MUST返回unsupported schema或unsupported parameter
-- **AND** MUST不转换为v4文档包
+- **AND** MUST不转换为v7文档包

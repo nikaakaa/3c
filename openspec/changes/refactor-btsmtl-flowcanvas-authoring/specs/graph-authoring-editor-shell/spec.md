@@ -12,6 +12,12 @@
 - **THEN** Shell MUST在Navigator装配当前Skill Graph Data Catalog、在Graph Canvas装配唯一原生Skill Graph editor、在Details装配BTSMTL capability presenter
 - **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
 
+#### Scenario: 打开BTSMTL Gameplay Graph
+
+- **WHEN** 作者通过正式入口打开非Skill的BTSMTL Gameplay Graph
+- **THEN** Shell MUST在Navigator装配当前Graph Data Catalog、在Graph Canvas装配唯一BTSMTL domain adapter、在Details装配BTSMTL capability presenter
+- **AND** MUST不同时创建旧RootTree入口或第二Inspector
+
 #### Scenario: 打开BTSMTL RootTree
 
 - **WHEN** 未迁移领域通过正式入口打开Legacy RootTree
@@ -46,7 +52,7 @@ Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、�
 
 本要求对BTSMTL技能 MUST由原生GraphEditor及技能区域装配履行，不再指定旧GraphView作为技能画布。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。
 
-Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Program、Projection、Foot Analysis、Motion Matching Database或AI Program构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。
+Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Program、Projection、Foot Analysis或Motion Matching Database构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。Behavior Designer内容由插件自己的生命周期管理。
 
 #### Scenario: 修改Pose Graph连线
 

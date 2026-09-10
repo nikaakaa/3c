@@ -12,6 +12,12 @@ Local Session Preparation MUST为完整Actor roster显式生成不可变Control 
 - **THEN** Preparation MUST把其AI Control Source作为锁定Actor entry写入Launch Plan
 - **AND** Standard Runtime Launcher MUST沿现有target-specific Composer创建唯一Session runtime
 
+#### Scenario: Local插件AI Actor准备完成
+
+- **WHEN** AI Actor的Behavior Designer内容、Character Program、输入所有权与Committed Observation capability全部匹配
+- **THEN** Preparation MUST把其插件AI Control Source作为锁定Actor entry写入Launch Plan
+- **AND** Standard Runtime Launcher MUST沿现有target-specific Composer创建唯一Session runtime
+
 #### Scenario: Composition缺少Observation capability
 
 - **WHEN** Actor绑定AI Control Source但当前Source、Pipeline或Execution Backend没有声明匹配Committed Observation schema

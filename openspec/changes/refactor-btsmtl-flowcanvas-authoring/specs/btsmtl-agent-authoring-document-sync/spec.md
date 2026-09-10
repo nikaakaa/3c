@@ -2,12 +2,19 @@
 
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v7`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v7`文档包。Behavior Designer AI不以BTSMTL Document为根。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/CharacterController/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: AI首次编辑现有Character Controller
 
 - **WHEN** Agent对已有合法Character root显式checkout
 - **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline、Presentation与可达Clip Curve生成规范目录包
+- **AND** response MUST返回唯一文档包绝对路径
+- **AND** 系统 MUST不修改或保存Unity资产
+
+#### Scenario: Agent首次编辑现有Character Controller
+
+- **WHEN** Agent对已有合法Character root显式checkout
+- **THEN** 系统 MUST从当前正式Skill Graph、Macro、Timeline、Presentation与可达Clip Curve生成v7规范目录包
 - **AND** response MUST返回唯一文档包绝对路径
 - **AND** 系统 MUST不修改或保存Unity资产
 

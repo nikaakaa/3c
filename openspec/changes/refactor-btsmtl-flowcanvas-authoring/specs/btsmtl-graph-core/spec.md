@@ -416,21 +416,21 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。系统 MUST为后续自动authoring暴露同一只读policy查询，但本change MUST NOT修改Agent schema。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
 
-#### Scenario: AI Graph创建Character动作节点
+#### Scenario: 已退役AI图尝试进入BTSMTL
 
-- **WHEN** 搜索、粘贴、脚本或Compiler尝试在AIControllerTree创建CharacterExecution节点
-- **THEN** 统一Graph policy MUST拒绝该节点
+- **WHEN** 搜索、粘贴、脚本或Compiler尝试打开旧AIControllerTree或创建旧AI节点
+- **THEN** 统一Graph policy MUST拒绝该图和节点
 - **AND** Graph数据 MUST不发生修改
 
-#### Scenario: AI Graph创建共享纯值节点
+#### Scenario: Behavior Designer图不注册为BTSMTL Graph
 
-- **WHEN** 作者在AIControllerTree创建声明为SharedPureValue的Compare节点
-- **THEN** 统一Graph policy MUST允许该节点
-- **AND** Editor与Compiler MUST读取同一capability identity
+- **WHEN** 作者从BTSMTL Graph入口选择Behavior Designer行为资源
+- **THEN** 入口 MUST明确说明该资源由插件编辑器拥有
+- **AND** BTSMTL MUST不为其创建Graph role、节点或编译镜像
 
-#### Scenario: AI节点缺少能力声明
+#### Scenario: 退役AI节点缺少能力声明
 
-- **WHEN** 未声明authoring capability的新节点尝试进入AIControllerTree
+- **WHEN** 未声明authoring capability的旧AI节点尝试进入任一BTSMTL Graph
 - **THEN** 创建与发布 MUST失败并报告节点类型和Graph Role
 - **AND** 系统 MUST不按默认Base节点处理
 

@@ -917,15 +917,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string inputId;
         public string conditionValueConfiguration;
         public string stateExitCause;
-        public string controllerId;
-        public string rootTreeAssetPath;
-        public string controlledCharacterAssetPath;
-        public string controlledCharacterAssetGuid;
-        public string perceptionProfileAssetPath;
-        public string perceptionProfileAssetGuid;
-        public string candidateOrdering;
-        public List<string> candidateActorIds = new List<string>();
-        public string aiNodeKind;
         public string loopStopType;
         public string compareType;
         public float moveSpeed;
@@ -938,10 +929,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string executionMode;
         public float durationSeconds;
         public string abortPolicy;
-        public string aiMemoryValueKind;
-        public string aiRequestRepeatPolicy;
-        public float requestBufferSeconds;
-        public int requestPriority;
         public int transitionPriority;
         public Vector2 position;
     }

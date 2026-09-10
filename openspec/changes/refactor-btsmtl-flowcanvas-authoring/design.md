@@ -1,6 +1,6 @@
 ## Context
 
-本变更的正式对象是Character技能，不是AI Controller，也不是PoseGraph本体。Character RootTree已经从正式资产和Definition合同中删除；Character主线由C# ControlModule、编译后的Character Program以及Simulation Pipeline执行。AIController RootTree仍由AI领域单独拥有。
+本变更的正式对象是Character技能，不是AI Controller，也不是PoseGraph本体。Character RootTree已经从正式资产和Definition合同中删除；Character主线由C# ControlModule、编译后的Character Program以及Simulation Pipeline执行。AI自研RootTree已由独立`replace-btsmtl-ai-with-behavior-designer` change退役，Behavior Designer不进入本Skill Document或BTSMTL Graph。
 
 当前角色技能作者源由`CharacterPipelineDefinition.SkillGraphs`和`CharacterSkillAuthoringDefinition.EntryGraphAuthoringId`组成。Skill Graph由FlowCanvas保存，运行时只消费Semantic IR和Numeric Program，不启动FlowCanvas委托、协程或自动Update。Character Program进入`SimulationSessionCompositionDefinition`，再由ProgramRuntime、ExecutionBackend、WorldSolver、SimulationPipeline和SessionSource组成正式Session。
 
@@ -23,7 +23,7 @@
 - 不把Character ControlModule、Movement Runtime或PoseGraph改造成Skill Graph。
 - 不直接移植UE GAS运行时；只采用Ability、Attribute、Tag、Effect、ActivationData和Montage式Timeline的职责划分。
 - 不让Skill直接写Velocity、BodyYaw、最终Pose、网络传输对象或任意C#字段；这些必须通过typed contract或正式Command。
-- 不在本文实现AI RootTree迁移、Pose Graph拓扑迁移、IK算法重写或具体网络传输实现。
+- 不在本文实现Behavior Designer任务接入、Pose Graph拓扑迁移、IK算法重写或具体网络传输实现。
 
 ## Decisions
 
@@ -130,7 +130,7 @@ Blackboard面板提供provider分组。当前图内创建变量只创建Skill Lo
 
 ## Migration Plan
 
-1. 保留CharacterPipelineDefinition作为角色Program装配边界，删除Character RootTree字段、资产、入口、旧测试和零消费者Character路径；AI RootTree保持不动。
+1. 保留CharacterPipelineDefinition作为角色Program装配边界，删除Character RootTree字段、资产、入口、旧测试和零消费者Character路径；AI自研RootTree不保留，Behavior Designer接入由独立change管理。
 2. 将C# ControlModule、Movement Runtime、Skill Program、GameplayEffect、GameplayTag和Presentation Projection的依赖整理为正式Program State和SourceMap合同。
 3. 建立provider化Blackboard合同：Character State只读投影、Ability Attribute/GameplayEffect、GameplayTag、Input/TargetData、Skill Local Blackboard、State/ActionInstance/Frame Scope。
 4. 在原生GraphEditor中提供Blackboard provider面板、变量创建、Get/Set拖拽和外部provider显式引用；所有写入复用真实owner Mutation和Undo。

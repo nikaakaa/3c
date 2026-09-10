@@ -1,7 +1,7 @@
 # agent-character-controller-synthesis Specification
 
 ## Purpose
-定义Agent在编辑器内通过Document v4目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
+定义Agent在编辑器内通过Document v7目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
 ## Requirements
 ### Requirement: Agent必须保持Generated Foot Analysis只读
 
@@ -45,12 +45,12 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Agent Snapshot 必须是只读投影
 
-系统 MUST从当前`CharacterPipelineDefinition`和BTSMTL树生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、Graph-owned typed Source Slot、Profile-owned direct Clip/BlendSpace/MM Binding、Locomotion Sync Group、AnimationSlot、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v4 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含旧Sequence同步数据、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
+系统 MUST从当前`CharacterPipelineDefinition`和正式Character Skill/Presentation authoring资产生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、直接资源Player、Animation Slot／Group、Locomotion Sync Group、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v7 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含旧Sequence同步数据、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
 
 #### Scenario: checkout生成Character Document package
 
 - **WHEN** Agent对已有Character root显式checkout
-- **THEN** exporter MUST从当前树建立canonical Snapshot并写出v4目录包
+- **THEN** exporter MUST从当前Character authoring资产建立canonical Snapshot并写出v7目录包
 - **AND** snapshot/export MUST不修改Graph、Clip或触发Program/Projection Build
 
 #### Scenario: Presentation能力进入正式Document
@@ -81,7 +81,7 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: 资产解析必须来自当前角色 authoring context
 
-系统 MUST通过当前`CharacterPipelineDefinition`、canonical Snapshot与Document只读catalog解析Input、ActionProfile、Timeline和RootTree引用。Resolver MUST使用稳定identity或明确正式引用，MUST不扫描场景、目录、同名asset、旧配置或全局单例作为fallback。
+系统 MUST通过当前`CharacterPipelineDefinition`、canonical Snapshot与Document只读catalog解析Input、ActionProfile、Skill Graph、Timeline和Presentation引用。Resolver MUST使用稳定identity或明确正式引用，MUST不扫描场景、目录、同名asset、旧配置或全局单例作为fallback。
 
 #### Scenario: Document引用ActionProfile
 
@@ -107,7 +107,7 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 #### Scenario: inline Timeline owner path 断裂
 
-- **WHEN** TimelineNode inline TimelineData 无法绑定到 RootTree serialized owner/path
+- **WHEN** TimelineNode inline TimelineData 无法绑定到正式 Skill/Timeline owner path
 - **THEN** validator MUST报告稳定 node path 与断裂字段
 - **AND** 系统 MUST NOT把数据保存到临时 Timeline asset
 
@@ -125,13 +125,13 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Compile Report 必须支持 Agent 自修复
 
-系统 MUST输出`AgentCompileReport`，包含Document package schema、sync、引用、reconcile、preflight、apply、语义错误、planned/applied diff、metrics和建议修复。Report MUST使用机器可读文件路径与entity path定位Graph、Node、Edge、Timeline或asset，并 MUST返回同步状态与整包document hash。Report MUST不再要求AI生成下一轮Patch operation。
+系统 MUST输出`AgentCompileReport`，包含Document package schema、sync、引用、reconcile、preflight、apply、语义错误、planned/applied diff、metrics和建议修复。Report MUST使用机器可读文件路径与entity path定位Graph、Node、Edge、Timeline或asset，并 MUST返回同步状态与整包document hash。Report MUST不再要求生成下一轮Patch operation。
 
 #### Scenario: Document reconcile失败
 
 - **WHEN** Reconciler拒绝一个Timeline entity
 - **THEN** report MUST标出package文件与entity路径、错误code、原因和建议
-- **AND** AI MUST能直接修改同一文件后重新dry-run
+- **AND** Agent MUST能直接修改同一文件后重新dry-run
 
 ### Requirement: Agent 评估必须区分结构、语义和业务覆盖
 
@@ -139,13 +139,13 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 #### Scenario: 评估二连击Document
 
-- **WHEN** 样例要求AI生成二连击
+- **WHEN** 样例要求Agent生成二连击
 - **THEN** evaluator MUST检查Document含外层Attack、内层状态机、两个攻击状态、Action、Timeline与条件
 - **AND** MUST检查Reconciler和Validator接受最终结构
 
 ### Requirement: 正式资产必须仍由人类可微调
 
-系统 MUST保持apply后的正式结果为普通BTSMTL Graph、Timeline、ActionProfile及其正式Definition引用。作者可以继续使用Graph Editor、Timeline Editor和各正式Profile Inspector。人工编辑只使live authoring revision变化；系统 MUST不自动刷新Document package或build。AI再次编辑时 MUST显式checkout或处理Conflict，MUST不覆盖未合并的人工变化。
+系统 MUST保持apply后的正式结果为普通BTSMTL Skill Graph、Timeline、ActionProfile及其正式Definition引用。作者可以继续使用Graph Editor、Timeline Editor和各正式Profile Inspector。人工编辑只使live authoring revision变化；系统 MUST不自动刷新Document package或build。Agent再次编辑时 MUST显式checkout或处理Conflict，MUST不覆盖未合并的人工变化。
 
 #### Scenario: 作者微调后AI继续编辑
 
@@ -156,7 +156,7 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Agent Snapshot 与 Validator 必须递归理解嵌套 StateMachine
 
-Agent Snapshot MUST递归输出Gameplay RootTree、Runnable、inline/shared Graph、BTSMTL nested StateMachine、logical transition、Action activation、有限Action Timeline与稳定producer identity。Presentation editable section MUST递归输出Pose Graph、PoseStateMachine/State/Transition、Pose source binding、AnimationSlot、node-local Policy与Action channel binding；Rig identity及generated产品只作为只读context。Validator MUST区分Gameplay StateMachine与PoseStateMachine，MUST不把持续Pose source伪装为Timeline producer，也不得接受旧Patch写入路径。
+Agent Snapshot MUST递归输出Skill FlowGraph、Macro、inline/shared Timeline、nested StateMachine、logical transition、Action activation、有限Action Timeline与稳定producer identity。Presentation editable section MUST递归输出Pose Graph、PoseStateMachine/State/Transition、Pose source binding、AnimationSlot、node-local Policy与Action channel binding；Rig identity及generated产品只作为只读context。Validator MUST区分Skill StateMachine与PoseStateMachine，MUST不把持续Pose source伪装为Timeline producer，也不得接受旧Patch写入路径。
 
 #### Scenario: Corin Snapshot
 
@@ -197,7 +197,7 @@ Document package editable分片与Mutation Compiler MUST只编辑正式Graph、S
 
 #### Scenario: Document配置Pose Graph
 
-- **WHEN** AI修改Document v4中Capability已登记的Pose Graph业务字段
+- **WHEN** Agent修改Document v7中Capability已登记的Pose Graph业务字段
 - **THEN** Reconciler MUST生成与人工编辑相同的typed Presentation Mutation
 - **AND** 未登记字段、Rig正文、generated payload或能力私有mutation MUST被拒绝
 
@@ -233,13 +233,13 @@ Character Document context MUST从显式Definition只读输出Body Motion Profil
 
 ### Requirement: Agent Authoring Document必须是声明式控制器结构
 
-系统 MUST使用`btsmtl-agent-authoring-document.v4`目录包作为CharacterController与AIController唯一AI-facing编辑合同，并通过显式domain区分根。Character editable分片 MUST按Graph、StateMachine、State、Transition、Condition、Action、Timeline、Blackboard、Presentation和AnimationClip注册Curve描述目标结构；AI editable分片 MUST继续表达Perception和Character input/request intent binding。Graph MUST使用稳定kind、typed properties、逻辑port、系统anchor、正式owner和Flow/Property Edge完整目标集合，MUST不暴露C# type name、重复port metadata、`operations[]`、内部handler、创建顺序、前序operation output、Unity YAML或任意SerializedProperty写入。Document Reconciler MUST只把正式支持的整包变化降低为内部typed Mutation。
+系统 MUST使用`btsmtl-agent-authoring-document.v7`目录包作为CharacterController唯一Agent-facing编辑合同。Character editable分片 MUST按Skill Graph、Macro、StateMachine、State、Transition、Condition、Action、Timeline、Blackboard、Presentation和AnimationClip注册Curve描述目标结构；Behavior Designer AI不进入该Document。Graph MUST使用稳定kind、typed properties、逻辑port、系统anchor、正式owner和Flow/Property Edge完整目标集合，MUST不暴露C# type name、重复port metadata、`operations[]`、内部handler、创建顺序、前序operation output、Unity YAML或任意SerializedProperty写入。Document Reconciler MUST只把正式支持的整包变化降低为内部typed Mutation。
 
 #### Scenario: 添加状态和Transition
 
 - **WHEN** package增加带local identity的Attack状态、owner body Graph及其到现有状态的Transition
 - **THEN** Reconciler MUST生成有序State、Transition和Condition typed Mutation
-- **AND** AI MUST不填写`ensure_state`、`ensure_transition`、`link_flow`或调用节点级工具
+- **AND** Agent MUST不填写`ensure_state`、`ensure_transition`、`link_flow`或调用节点级工具
 
 #### Scenario: 请求未知结构字段
 
@@ -249,7 +249,7 @@ Character Document context MUST从显式Definition只读输出Body Motion Profil
 
 ### Requirement: Agent Document reconcile必须维护 identity 生命周期
 
-Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable authoring identity，在`local:<meaningful-id>`创建时生成新identity，在复制entity时生成新identity。系统 MUST只接受Document package v4，不得保留v1/v2/v3、v16/v17 Patch parser或按path、display name、Actor名称、Tag和列表index猜identity。Node kind与Graph kind MUST不可原地改变。AnimationClip不能由Document创建或复制，只能通过结构化对象引用选择现有原生`.anim`。Apply成功后的整包反向导出 MUST把可创建entity的新local identity替换为正式stable identity。
+Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable authoring identity，在`local:<meaningful-id>`创建时生成新identity，在复制entity时生成新identity。系统 MUST只接受Document package v7，不得保留v1-v6、v16/v17 Patch parser或按path、display name、Actor名称、Tag和列表index猜identity。Node kind与Graph kind MUST不可原地改变。AnimationClip不能由Document创建或复制，只能通过结构化对象引用选择现有原生`.anim`。Apply成功后的整包反向导出 MUST把可创建entity的新local identity替换为正式stable identity。
 
 #### Scenario: 更新现有Timeline Segment
 
@@ -265,7 +265,7 @@ Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable
 
 ### Requirement: Agent Document必须降低为唯一类型化Mutation计划
 
-系统 MUST让strict multi-file parser与`AgentDocumentReconciler`从整个package一次生成immutable typed`AgentMutationPlan`。CharacterController与AIController MUST复用同一planning symbol、preflight、资产事务和handler catalog基础；domain handler只消费正式authoring API。Dry-run与apply MUST基于同一整包document hash生成等价plan，后续handler不得读取原始JSON discriminator或建立AI专用compiler和第二事务。
+系统 MUST让strict multi-file parser与`AgentDocumentReconciler`从整个package一次生成immutable typed`AgentMutationPlan`。CharacterController MUST使用唯一planning symbol、preflight、资产事务和handler catalog基础；domain handler只消费正式authoring API。Dry-run与apply MUST基于同一整包document hash生成等价plan，后续handler不得读取原始JSON discriminator或建立第二事务。
 
 #### Scenario: 同一Document执行dry-run和apply
 
@@ -275,7 +275,7 @@ Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable
 
 ### Requirement: Agent Document必须输出稳定 authoring identity
 
-Document package v4与其canonical Snapshot MUST按显式domain输出Graph、Node、Flow Edge、Property Edge、Timeline、Track、Segment、Curve owner、AnimationClip对象引用、Blackboard declaration、Presentation owner、Input request timing和domain正式producer的stable identity。物理文件路径与列表index MAY用于阅读但不得取代identity。Document MUST不输出Sequence identity、Marker identity、runtime mutable state、C# type name或重复port metadata。Document checkout MUST成为AI编辑的唯一领域上下文，不提供v1/v2/v3、v16/v17 Patch或Snapshot镜像。
+Document package v7与其canonical Snapshot MUST按显式Character domain输出Graph、Node、Flow Edge、Property Edge、Timeline、Track、Segment、Curve owner、AnimationClip对象引用、Blackboard declaration、Presentation owner、Input request timing和domain正式producer的stable identity。物理文件路径与列表index MAY用于阅读但不得取代identity。Document MUST不输出Sequence identity、Marker identity、runtime mutable state、C# type name或重复port metadata。Document checkout MUST成为Agent编辑的唯一领域上下文，不提供v1-v6、v16/v17 Patch或Snapshot镜像。
 
 #### Scenario: Timeline元素重排后checkout
 
@@ -305,7 +305,7 @@ Character Document package MUST表达`ActionTargetSnapshot` Blackboard declarati
 
 ### Requirement: Agent Document必须通过正式类型化Mutation配置 Animation Channel
 
-Character Document MUST按有限Action Timeline与AnimationTrack stable identity表达当前`AnimationChannelId`。AI修改该字段时，Reconciler MUST生成只调用`AnimationTrack.SetAnimationChannelId`的typed Mutation，并把真实Timeline owner纳入同一事务、Validator与Report。持续Locomotion Pose source MUST不拥有可写AnimationChannel字段。该变化 MUST不修改Pose Graph、PoseStateMachine、AnimationSlot、Blend、Rig、producer source或Motion Matching Profile。
+Character Document MUST按有限Action Timeline与AnimationTrack stable identity表达当前`AnimationChannelId`。Agent修改该字段时，Reconciler MUST生成只调用`AnimationTrack.SetAnimationChannelId`的typed Mutation，并把真实Timeline owner纳入同一事务、Validator与Report。持续Locomotion Pose source MUST不拥有可写AnimationChannel字段。该变化 MUST不修改Pose Graph、PoseStateMachine、AnimationSlot、Blend、Rig、producer source或Motion Matching Profile。
 
 #### Scenario: 修改AnimationTrack channel
 
@@ -315,7 +315,7 @@ Character Document MUST按有限Action Timeline与AnimationTrack stable identity
 
 ### Requirement: Agent Document必须完整读写Clip注册Curve与Timeline本地Curve
 
-Character Document v4 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的秒域注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Clip channel MUST按完整`EditorCurveBinding(path + type + property)`识别；Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation、仅propertyName匹配或字段名目标。
+Character Document v7 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的秒域注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Clip channel MUST按完整`EditorCurveBinding(path + type + property)`识别；Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation、仅propertyName匹配或字段名目标。
 
 #### Scenario: 修改weighted Clip Curve
 

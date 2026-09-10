@@ -10,6 +10,24 @@
 - **THEN** 统一 policy MUST拒绝该节点
 - **AND** 正式图数据 MUST不发生部分修改
 
+#### Scenario: 已退役AI图尝试进入BTSMTL
+
+- **WHEN** 搜索、粘贴、脚本或Compiler尝试打开旧AIControllerTree或创建旧AI节点
+- **THEN** 统一Graph policy MUST拒绝该图和节点
+- **AND** Graph数据 MUST不发生修改
+
+#### Scenario: Behavior Designer图不注册为BTSMTL Graph
+
+- **WHEN** 作者从BTSMTL Graph入口选择Behavior Designer行为资源
+- **THEN** 入口 MUST明确说明该资源由插件编辑器拥有
+- **AND** BTSMTL MUST不为其创建Graph role、节点或编译镜像
+
+#### Scenario: 退役AI节点缺少能力声明
+
+- **WHEN** 未声明authoring capability的旧AI节点尝试进入任一BTSMTL Graph
+- **THEN** 创建与发布 MUST失败并报告节点类型和Graph Role
+- **AND** 系统 MUST不按默认Base节点处理
+
 #### Scenario: 正式Graph创建共享纯值节点
 
 - **WHEN** 作者在允许 SharedPureValue 的正式 Graph 中创建已登记纯值节点

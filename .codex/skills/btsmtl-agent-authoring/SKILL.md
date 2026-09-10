@@ -1,15 +1,15 @@
 ---
 name: btsmtl-agent-authoring
-description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账和验证CharacterController与AIController的Graph、StateMachine、Timeline、Blackboard、Perception和Intent关系，并在authoring语义变化时同步Document schema、exporter、reconciler、Mutation、validator和MCP bridge。
+description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账和验证CharacterController的Skill Graph、Macro、StateMachine、Timeline、Blackboard与Presentation关系，并在authoring语义变化时同步Document schema、exporter、reconciler、Mutation、validator和MCP bridge。
 ---
 
 # BTSMTL Agent Authoring
 
 ## 核心边界
 
-AI通过五个生命周期工具管理一个显式Document v6 JSON package，控制配置、SkillDefinition、Skill FlowGraph、Macro、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+Agent通过五个生命周期工具管理一个显式Document v7 JSON package，控制配置、SkillDefinition、Skill FlowGraph、Macro、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
 
-只接受v6目录包；v1-v5及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
+只接受v7目录包；v1-v6及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
 
 ```text
 btsmtl.checkout_document
@@ -21,7 +21,7 @@ btsmtl.checkout_document
   -> btsmtl.validate
 ```
 
-Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和AI工作副本。Document不在`Assets/`内，不进入Player、Bundle或generated product。禁止使用BTSMTL局部节点/边编辑工具、直接编辑Unity YAML、`execute_code`、反射、剪贴板、临时菜单、文件监听器、Patch inbox或第二套mutation service。
+Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和Agent工作副本。Document不在`Assets/`内，不进入Player、Bundle或generated product。禁止使用BTSMTL局部节点/边编辑工具、直接编辑Unity YAML、`execute_code`、反射、剪贴板、临时菜单、文件监听器、Patch inbox或第二套mutation service。
 
 Document不会自动编译或自动apply。Unity树变化和Document变化只计算同步状态；只有显式`apply_document`才修改Unity authoring资产。Character Presentation Profile、Pose Graph与PoseStateMachine属于同一Document目标、Reconciler和资产级apply事务；Character Program、Presentation Projection与Native Pose Program不属于Document事务，必须在apply成功后通过精确Definition的Character Build生命周期显式发布。
 
@@ -29,22 +29,20 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 ## 资产修改流程
 
-1. 明确`CharacterController`或`AIController` domain，并确定对应Definition的精确`Assets/...`路径。不得按目录、显示名、selection或场景猜root。
+1. 明确`CharacterController` domain，并确定对应Definition的精确`Assets/...`路径。Behavior Designer AI不进入BTSMTL Document。不得按目录、显示名、selection或场景猜root。
 2. 确认Unity不在编译、更新AssetDatabase、Play Mode或切换Play Mode。
 3. 调用`btsmtl.checkout_document`。读取返回的绝对`packagePath`、`syncState`、`sourceRevision`、`editableHash`和`contextHash`。
 4. 先读`manifest.json`以及`context/node-catalog.json`、`context/graph-kinds.json`、`context/asset-catalog.json`、`context/dependencies.json`和`readonly/presentation/linked-pose-interfaces/*/interface.json`，再用通用文件工具修改`editable/**/*.json`。Character Presentation目标位于`editable/presentation/profile.json`、`editable/presentation/pose-graphs/*/{graph,layout}.json`、`editable/presentation/pose-state-machines/*/{state-machine,layout}.json`与`editable/presentation/linked-pose-implementations/*`完整闭包。不得修改`manifest.json`、`.sync.json`、`context/**/*.json`或`readonly/**/*.json`。
    - 新增Pose State Graph或Subgraph时，graph id必须是`local:<meaningful-id>`，并一次创建同目录`graph.json`和`layout.json`。目录segment由完整local id确定：把非字母数字、`-`、`_`字符替换为`-`，去掉首尾`-`，截取前48字符，再追加`-`和完整local id的SHA-256前12位小写十六进制。
    - 新增Graph-owned Inline Timeline时，timeline id、唯一TimelineNode调用点、Track与Clip都必须使用`local:<meaningful-id>`；一次创建同目录`timeline.json`与`curves.json`，目录使用相同canonical segment算法。controller Timeline摘要、Graph节点、callSite和文件对必须指向同一local TimelineNode与Timeline。
    - Graph、Node、Edge等新实体使用`local:*`；`contentRevision`是版本值而不是实体identity，不得使用带冒号的`local:*`，应提交合法非空revision。
-   - dry-run只会把合法的local Pose Graph文件对与graph-owned Inline Timeline文件对加入服务端有效manifest。缺少配对、非canonical目录、非local id、非法role、非唯一调用点或其它manifest外文件仍会严格失败。AI不得直接修改manifest。
+   - dry-run只会把合法的local Pose Graph文件对与graph-owned Inline Timeline文件对加入服务端有效manifest。缺少配对、非canonical目录、非local id、非法role、非唯一调用点或其它manifest外文件仍会严格失败。Agent不得直接修改manifest。
    - dry-run返回的document hash已经锁定扩展后的完整文件闭包；apply成功后reverse export把local identity替换为stable identity，并由service发布新的canonical manifest。
 5. Graph文件只表达stable capability、typed properties、逻辑port和system anchor。Pose Graph节点必须使用共享Capability提供的typed payload字段、port与role约束。已有实体保持stable authoring identity；新实体使用`local:<meaningful-id>`，不得写C#类型名、序列化field、compiler index、generated payload、冗余port镜像或系统节点正文。
    - 节点端口随typed property变化时，Capability必须声明严格`portVariants`。唯一Node Port Shape Projector把固定端口、唯一命中的条件端口和作者拥有的动态端口合成完整形状；Canvas、Document、Reconciler、Mutation与Validator不得各自判断mode或从默认构造节点推断端口。
 6. 调用`btsmtl.dry_run_document`。必须处理机器可读`path/code/message/suggestion`，并确认`plannedDiff`符合业务目标。
 7. 仅当dry-run成功时，把其返回的精确`documentHash`原样作为`expected_document_hash`调用`btsmtl.apply_document`；任一editable文件变化后都必须重新dry-run。
 8. apply成功必须同时满足`success=true`、`applied=true`、`saved=true`和`syncState=Clean`。Character的Gameplay、Timeline与Presentation owner进入同一资产级事务，Document从最终Unity树反向导出，local identity被真实stable identity替换。任一Mutation、Validator、保存或反向发布失败都必须完整回滚并返回`syncState=ApplyFailed`。
-   - AI schema normalization未改变AI authoring语义且受控Character Program已过期时，apply只验证并保存AI authoring，`AIIntentProgram`保持stale；不得加载旧Numeric Target或自动Build Character。
-   - AI authoring语义真实变化时仍必须通过当前Character Program的正式AI Compiler校验。Character Program过期时必须先按精确Definition重新发布Character产物，不能用authoring catalog代替generated identity发布AIIntentProgram。
 9. Character authoring语义变化且需要正式产物时，显式调用`character.build_float32_products(definition_asset_path)`；需要Fixed wrapper时再调用`character.build_fixed_products(definition_asset_path, wrapper_asset_path)`。两个工具都只接受精确路径，不读取selection、不扫描目录、不自动触发。
 10. Character Build后重新checkout刷新generated context，再调用`btsmtl.validate`确认正式authoring与compiler约束。
 
@@ -59,10 +57,10 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 ## 可写与只读边界
 
-Character Document v6正式可写：
+Character Document v7正式可写：
 
 - `editable/controller.json`中的已登记控制模块binding、语义版本和作者参数覆盖，以及`editable/skills/<canonical-id>/definition.json`中的SkillDefinition、ActionProfile、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能。控制模块代码、参数schema、默认值、状态schema和运行状态只读；参数必须经过正式Control Module合同校验并由Build采用。
-- Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
+- Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或Behavior Designer内部payload。
 - Pose Graph-owned typed Source Slot、Profile-owned direct Clip/Blend Space/Motion Matching Binding、Locomotion Sync Group、policy与有限Action producer binding。`editable/animation-clips/**/curves.json`只允许修改当前Definition可达原生AnimationClip的注册表现Curve；从目标分片移除已有channel表达正式删除，删除必填Foot Weight或仍为Group成员的Phase必须被Validator拒绝。Timeline Animation Segment直接引用AnimationClip。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
 - Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。
@@ -74,8 +72,8 @@ Character Document v6正式可写：
 
 - Rig Definition、Bone、Virtual Bone及其绑定和生成数据。
 - Body Motion、Foot Analysis、Motion Matching索引与其它算法生成内容。
-- generated Character Program、Presentation Projection、Native Pose Program和AIIntentProgram身份与stale状态。
-- AI受控Character的Input/Request合同与capability catalog。
+- generated Character Program、Presentation Projection和Native Pose Program身份与stale状态。
+- Behavior Designer行为资源、任务程序集、插件版本与其运行状态；这些由插件与独立AI接入change拥有，不进入BTSMTL Document。
 
 Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Clip Binding直接引用现有原生AnimationClip，Profile唯一装配Rig、Analysis Source与Locomotion Sync Group。Document只可完整替换或删除注册Curve，不得创建Clip、修改骨骼曲线、AnimationEvent、import设置、Foot Analysis或generated payload。Clip Curve变化必须进入planned/applied diff与同一Undo owner；reverse export必须从最终Clip省略已删除channel。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
 
@@ -93,10 +91,10 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
 | Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
-| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v6 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
+| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v7 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
-| AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
-| Presentation Profile、Pose Graph或PoseStateMachine | Document v6模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Behavior Designer行为、任务或AI输入接入 | 独立插件接入程序集、正式Character Input/TargetData/Action结果合同；不进入BTSMTL Document |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v7模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
 | Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
 | MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
 | Skill FlowGraph、Macro、native Timeline或locomotion capability | Skill Flow模型、Codec/Store、Exporter/Mapper、唯一Mutation dispatcher、AssetResolver/Index、Validator与五工具说明 |
@@ -130,13 +128,13 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 - BTSMTL MCP和Window只暴露`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`、`btsmtl.validate`。
 - 旧Pose State inline Graph只通过`character.migrate_legacy_pose_state_graphs(definition_asset_path)`一次性迁入GraphCatalog；该工具不读取selection、不扫描、不build。
 - Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
-- 不存在BTSMTL局部节点/边/属性修改工具；AI直接修改package文件。
+- 不存在BTSMTL局部节点/边/属性修改工具；Agent直接修改package文件。
 - Package严格拒绝清单外文件、未知字段、重复属性、非法数值、`.sync.json`语义改动和read-only context改动；Character必须包含完整Presentation目标文件闭包，每个Pose StateMachine必须同时具有`state-machine.json`与`layout.json`。
-- v6 Character Skill Flow必须包含入口Skill Graph、完整Macro接口、Graph owner闭包、稳定Step Port、原生Variable元数据、Timeline/TreeClip引用；所有变化必须通过唯一typed Mutation dispatcher进入同一事务。
+- v7 Character Skill Flow必须包含入口Skill Graph、完整Macro接口、Graph owner闭包、稳定Step Port、原生Variable元数据、Timeline/TreeClip引用；所有变化必须通过唯一typed Mutation dispatcher进入同一事务。
 - manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`、Skill FlowGraph的`graph.json + layout.json`、Skill Macro的`macro.json`和Skill Timeline的`timeline.json + curves.json`创建闭包；它们都属于同一Store、hash和apply生命周期，不是未知文件fallback。
 - dry-run不dirty、不保存、不build；apply使用同一Document hash，Character apply不build。
 - apply失败必须同时恢复Unity owner与正式package并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。
-- 没有watcher、selection/focus自动执行、第二套graph/timeline/AI mutation service。
+- 没有watcher、selection/focus自动执行或第二套graph/timeline mutation service。
 - 不运行Unity batchmode，不新增测试，除非用户明确要求。
 - dotnet build使用`--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后立即`dotnet build-server shutdown`。
 

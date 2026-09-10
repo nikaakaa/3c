@@ -1,3 +1,7 @@
+## 当前对账（2026-09-10）
+
+此前将Capability注册、Compiler内部operation支持和一次旧拓扑Build误判为完整作者架构。对照当前Corin根图、Projection和面板代码后，以下任务重新打开：2.5、4.2、4.4、7.3、7.5、9.2、9.4。现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经要求显式BlendStack、独立Inertialization、Layered Blend Per Bone及正式详情选项源，本次不修改spec，只按spec修正实现。
+
 ## 1. 保留现有基础
 
 - [x] 1.1 保留已接入的FlowCanvas原生图编辑、typed端口及统一作者交互基础。
@@ -10,7 +14,7 @@
 - [x] 2.2 将Player改为直接动画资源或typed资源参数，提供速率、起始位置、Loop和进入行为。
 - [x] 2.3 从作者Player移除Source Slot／Profile重复binding，统一由编译生成source usage与dense资源绑定。
 - [x] 2.4 基于既有Linked Pose实现层接口、Implementation／Group与调用状态归属，统一Layer作者命名。
-- [x] 2.5 接通层内状态机、Slot与骨骼混合，明确姿势生产层和接收Base Pose的组合层接口。
+- [ ] 2.5 接通层内状态机、Slot与骨骼混合，明确姿势生产层和接收Base Pose的组合层接口。
 - [x] 2.6 接入同帧Cached Pose及调用内值复用，消除重复状态推进与source采样。
 
 ## 3. Slot与Action Timeline的Montage职责
@@ -25,9 +29,9 @@
 ## 4. 骨骼混合曲线与惯性化
 
 - [x] 4.1 统一Rig关联Blend Mask、Branch Filter和Blend Profile作者设置及真实资产owner。
-- [x] 4.2 完成Layered Blend Per Bone的层顺序、Alpha、空间选项和dense骨骼混合展开。
+- [ ] 4.2 完成Layered Blend Per Bone的层顺序、Alpha、空间选项和dense骨骼混合展开。
 - [x] 4.3 将Curve Blend Options归入实际组合节点，提供明确Curve修改能力，删除必接Pose Parameter Resolve作者路径。
-- [x] 4.4 保留显式Inertialization并接入状态／Timeline动画混合请求、有界请求选择与局部history。
+- [ ] 4.4 保留显式Inertialization并接入状态／Timeline动画混合请求、有界请求选择与局部history。
 - [x] 4.5 将Player有效播放策略接入现有Phase／同步编译，保持Corin原有限与循环用法。
 
 ## 5. Control Rig作者与求解展开
@@ -54,9 +58,9 @@
 
 - [x] 7.1 按图角色组织目录、节点、端口和连接外观，状态转换采用独立命中、箭头与详情。
 - [x] 7.2 统一目录、双击、Details及运行定位的调用路径和面包屑，保持状态、层与控制图往返选择。
-- [x] 7.3 提供Player资源、Slot／Group、Mask、转换策略、Rig目标与求解的作者详情及就地失败反馈。
+- [ ] 7.3 提供Player资源、Slot／Group、Mask、转换策略、Rig目标与求解的作者详情及就地失败反馈。
 - [x] 7.4 在原Timeline表面展示Slot轨道、Sections和动画混合设置，保持技能窗口及Clip曲线各自既有入口。
-- [x] 7.5 接通新Slot、层、骨骼权重和Rig目标的已完成观察，内部operation只在需要时展开。
+- [ ] 7.5 接通新Slot、层、骨骼权重和Rig目标的已完成观察，内部operation只在需要时展开。
 
 ## 8. Document与规范同步
 
@@ -70,6 +74,6 @@
 ## 9. 最后迁移与发布
 
 - [x] 9.1 生成精确Corin作者目标，保留可保留的图／状态identity、动画资源、时间、过渡与IK配置，列明无法无损表达的旧规则。
-- [x] 9.2 通过正式事务把Corin根图与身体控制重组为新层次，直接资源写回Player，Timeline原位补齐Slot／Section／Blend设置。
+- [ ] 9.2 通过正式事务把Corin根图与身体控制重组为新层次，直接资源写回Player，Timeline原位补齐Slot／Section／Blend设置。
 - [x] 9.3 在成功反向导出后删除退役作者节点、无消费者Source Slot／Binding及迁移专用旧读写代码。
-- [x] 9.4 通过唯一Character Build统一发布Corin所需Float32、Fixed与共享Projection，删除过期产物读取路径。
+- [ ] 9.4 通过唯一Character Build统一发布Corin所需Float32、Fixed与共享Projection，删除过期产物读取路径。

@@ -1,14 +1,18 @@
 # Pose UE式作者组织：实施状态与历史记录
 
-## 当前状态（2026-09-10）
+## 当前状态（2026-09-10，对账修正）
 
-本提案的49项实现清单已经完成，正式方案见[design.md](design.md)，任务状态见[tasks.md](tasks.md)。实现范围包括UE式图角色、直接资源Player、Slot与有限Action Timeline、骨骼混合、Control Rig、独立Pose编译、Character装配、Document v7、Corin迁移和统一产物发布。
+本提案不能按49项全部完成验收。此前把Capability注册、Compiler内部operation支持和一次旧作者拓扑的Character Build误判为完整UE式作者架构；当前任务状态见tasks.md，其中2.5、4.2、4.4、7.3、7.5、9.2、9.4已重新打开。
 
-当前可核对的正式状态是：Corin根图不再保存Action Playback Input、Pose Parameter Resolve或Goal Assembler作者节点；持续Pose Player直接引用AnimationClip，Rig拥有Slot／Group／Blend Profile，Timeline动画轨道拥有Slot、Section和片段混合设置，Control Rig承接Foot Placement与FullBodyIK。编译器仍保留这些内部operation的typed展开，但它们不再是可创建的作者节点。
+已经完成的边界仍然有效：直接AnimationClip Player、Animation Slot与Slot Group、有限Action Timeline的Slot／Section／片段混合字段、Control Rig输入与FBIK展开、独立Pose输入合同、CharacterAnimationBuildContracts.CreatePoseOnlyInput()、CharacterSimulationBuildOrchestrator的animationBuildInput.CreatePoseOnlyInput()、Document v7闭包以及旧迁移器删除。
 
-Pose独立入口只接收Animation Input Contract、Pose Graph、Rig和直接动画资源，通过`animationBuildInput.CreatePoseOnlyInput()`调用唯一Pose Compiler；Character总Build在Gameplay装配层复用同一Pose结果，不再用Skill Graph发现动画输入。用户指定的`CharacterAnimationBuildContracts.CreatePoseOnlyInput()`和`CharacterSimulationBuildOrchestrator`调用点均保留。
+当前精确Corin根图实际只有Locomotion Pose State Machine → Full Body Action Slot → Control Rig → Output Pose。这条串联可以表达Full Body Action Slot接在Locomotion之后，但不能代替完整分层。根图没有显式Locomotion BlendStack、独立Inertialization或Layered Blend Per Bone；生成Projection的m_Inertializations为空，m_BlendNodes中的StackPolicy只是Full Body Action Slot的内部运行workspace。Action Slot仍有内部Transition Routing和Slot惯性处理，但这不等于作者可单独调节的Locomotion Inertialization。
 
-精确Corin Definition的Document v7 checkout与未修改正文dry-run均已由Unity MCP完成，当前基线为`syncState=Clean`、`success=true`、`plannedDiff=[]`、`contextHash=f5d18a6758276b6050f74a6da19e9b13824926251601cbbf947f2d29a242e27e`、`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`。最终 Unity MCP Character Build job `756b84459b4b44c4aa0be94bca307bff`成功发布 Float32、Fixed 与共享 Presentation Projection；最终 `SourceRevision=e6c605afd9e22f2ac181636bc6210e7941edccd84bdf11c1f7a1746a12e5e89b`、`SemanticHash=179589428cf53570f396de7a9748ad0728aad1e75a788f1fbbe75c3ff4e1bd04`、`ProgramHash=9cc7c8865a927c3dc5b627ab67a49af1eb955c98aa772d5f6d883b1f8d3153e1`、`ProjectionRevision=eb1030b68f82dbb5f0a7aa094f1ad7d935350d1e74aa30f371fdaf9947d9e53f`。已用完的 Corin Pose 迁移器和旧 Canvas 迁移器已删除，分别见提交 `1de77112d`、`4eb342be4`。此次过程没有新增测试代码，运行端到端验收仍由作者按项目规则执行。
+当前面板还存在两个不同问题：IdentityReference详情之前缺少Animation Channel、Animation Slot、Pose Graph和Linked Pose的正式选项源，已由提交ad8f4ae1e补齐并通过Unity MCP脚本编译；Applied Values在没有Play／Preview target时仍会等待运行角色，这是运行观察状态，不应被误写成作者资源缺失。
+
+本次重新checkout的精确Corin Document v7由Unity MCP返回syncState=Clean、plannedDiff=[]、sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8、documentHash=803c4a6d47212f1a458e88717a6675e66569a88e2b9b40c04ced258b9345e88d。此前Character Build job 756b84459b4b44c4aa0be94bca307bff确实成功，但它对应旧作者拓扑和旧SourceRevision，不作为修正后最终发布证据；完成根图分层、BlendStack、Inertialization、Layered Blend和面板验证后必须重新Build。
+
+现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经明确要求这些边界，本轮对账没有修改spec。没有新增测试代码；端到端行为仍由作者验收。
 
 ## 实施增量历史（2026-09-09）
 

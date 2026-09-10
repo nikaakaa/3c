@@ -1,6 +1,14 @@
 # Pose作者基线与UE式组织去向
 
-本文件保留2026-09-08对精确Corin作者资产的只读盘点，并列出新方案中的去向。历史盘点不是完成证据；当前实现以design.md、implementation.md和tasks.md为准。2026-09-10已完成Corin作者重组、Document v7 checkout/dry-run与正式统一Build，原始盘点仍保留在`.codex-tmp/canvas-core/pose-flowcanvas-author-inventory.json`供对照。
+## 2026-09-10 对账结果
+
+此前“已完成Corin作者重组与正式统一Build”的记录已经被本次对账覆盖。直接资源、Timeline字段、Control Rig、Document v7和独立Pose入口已完成，但根图分层、显式BlendStack、独立Inertialization、Layered Blend Per Bone和面板可用性仍未完成。
+
+Unity MCP checkout返回当前Document v7为Clean且未计划变更。Corin根图当前只有Locomotion Pose State Machine、Full Body Action Slot、Control Rig和Output；没有显式BlendStack、Inertialization或Layered Blend Per Bone节点。Projection的m_Inertializations为空，Slot内部StackPolicy与Slot惯性运行状态不能替代独立作者节点。
+
+因此本文件后续的“新方案去向”是目标映射，不是已完成证明。此前统一Build只证明旧作者拓扑能够生成产物；根图修正后需要新的正式Build和新的Projection证据。
+
+本文件保留2026-09-08对精确Corin作者资产的只读盘点，并列出新方案中的去向。历史盘点不是完成证据；当前实现以design.md、implementation.md和tasks.md为准。此前关于Corin作者重组、Document v7 checkout/dry-run与正式统一Build的完成记录已被2026-09-10对账修正覆盖，原始盘点仍保留在`.codex-tmp/canvas-core/pose-flowcanvas-author-inventory.json`供对照。
 
 | 图 | 节点数 | 连线数 |
 |---|---:|---:|
@@ -31,11 +39,11 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 
 ## 新组织中的迁移边界
 
-旧阶段只换编辑基类，没有迁移作者数据。2026-09-09的新方案改变图职责、Player资源来源、Slot、Curve处理和Control Rig接口；当前迁移已完成并通过正式产物发布。
+旧阶段只换编辑基类，没有迁移作者数据。2026-09-09的新方案改变图职责、Player资源来源、Slot、Curve处理和Control Rig接口；直接资源、Timeline字段、Control Rig与Document迁移已经完成，但根图的完整分层仍需继续实施。
 
 有限Action Timeline继续拥有原动画片段、窗口和动作时间，原资产已补Slot轨道、Sections及片段混合设置；没有复制Montage资产。Foot／目标／FBIK已进入Control Rig，Goal Assembler与默认参数汇总由编译器展开。资源绑定、类型和旧作者入口已收敛，Corin无消费者Source Slot／Binding内容已清理。
 
-当前代码的Pose Program Image为v28，Document为v7；精确Corin范围已完成迁移和正式Float32／Fixed／Projection发布。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
+当前代码的Pose Program Image为v28，Document为v7；精确Corin已有旧拓扑的Float32／Fixed／Projection产物，但不能作为修正后最终发布证据。实际范围只包括Corin及其明确引用owner，不包括TrainingEnemy。
 
 ## 旧能力及新方案去向
 
@@ -50,10 +58,10 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 | `ClipPlayer` | `CharacterClipPlayerPosePayload` | Sequence Player作者表面，直接引用原生AnimationClip |
 | `PoseStateMachine` | `CharacterPoseStateMachineNodePayload` | 用于AnimGraph或动画层，状态／规则各自下钻 |
 | `AnimationSlot` | `CharacterAnimationSlotPosePayload` | 根图、层或State Pose使用，消费原Timeline的播放结果 |
-| `BlendStack` | `CharacterBlendStackPosePayload` | 保留明确的局部混合历史能力，不恢复固定每Slot私有Stack |
-| `Inertialization` | `CharacterInertializationPosePayload` | 保留显式节点，扩展UE式上游请求处理 |
+| BlendStack | CharacterBlendStackPosePayload | Capability和Runtime已存在；Corin当前根图尚未实例化Locomotion显式Stack，Slot内部StackPolicy不能代替它 |
+| Inertialization | CharacterInertializationPosePayload | Capability和Runtime已存在；Corin当前Projection没有显式Inertialization，需恢复独立作者owner |
 | `BlendPose` | `CharacterBlendPosePayload` | 普通姿势混合并拥有相应Curve设置 |
-| `LayeredBoneBlend` | `CharacterLayeredBoneBlendPosePayload` | Layered Blend Per Bone，明确Mask／Branch Filter和Alpha |
+| LayeredBoneBlend | CharacterLayeredBoneBlendPosePayload | Capability和Runtime已存在；Corin当前根图没有实例，需补齐Mask／Branch Filter和Alpha层次 |
 | `AdditivePose` | `CharacterAdditivePosePayload` | 保留明确的Additive姿势组合 |
 | `PoseParameterResolve` | `CharacterPoseParameterResolvePayload` | 删除必接作者节点，迁入实际组合节点的Curve策略 |
 | `ModifyBone` | `CharacterModifyBonePosePayload` | 按空间合同作为骨骼控制或Rig步骤使用 |

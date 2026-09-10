@@ -68,12 +68,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
                 return new AgentDocumentApplyResult(report, session.TouchedOwners.ToArray(), session.RollbackAuthoring);
 
-            for (int i = 0; i < preparation.Plan.Commands.Count; i++)
+            try
             {
-                AgentMutation command = preparation.Plan.Commands[i];
-                m_Handlers.Get(command.Kind).Apply(session, command);
-                if (report.HasErrors())
-                    break;
+                for (int i = 0; i < preparation.Plan.Commands.Count; i++)
+                {
+                    AgentMutation command = preparation.Plan.Commands[i];
+                    m_Handlers.Get(command.Kind).Apply(session, command);
+                    if (report.HasErrors())
+                        break;
+                }
+            }
+            catch (Exception exception)
+            {
+                report.Error("apply", "apply_exception", exception.ToString());
             }
 
             report.metrics.diffSize = report.appliedDiff.Count;

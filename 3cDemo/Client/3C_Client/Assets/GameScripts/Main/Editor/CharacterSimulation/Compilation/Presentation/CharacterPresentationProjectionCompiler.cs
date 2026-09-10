@@ -147,8 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ResolveMovementModeStateIdentities(context, errors);
             CharacterPresentationProjection projection = null;
             string projectionRevision = string.Empty;
-            CharacterAnimationBuildCatalog animationCatalog =
-                request.AnimationBuildInput.AnimationCatalog;
+            CharacterAnimationBuildCatalog animationCatalog = null;
             if (errors.Count == 0)
             {
                 phaseWatch.Restart();
@@ -196,6 +195,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 phaseWatch.Stop();
                 catalogMs = phaseWatch.ElapsedMilliseconds;
             }
+            if (animationCatalog == null)
+                animationCatalog = request.AnimationBuildInput.AnimationCatalog.Complete(errors);
             phaseWatch.Restart();
             CharacterPresentationProjectionValidationResult validation =
                 CharacterPoseGraphProjectionValidator.Validate(

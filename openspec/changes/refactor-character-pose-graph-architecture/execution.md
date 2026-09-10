@@ -1563,3 +1563,5 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 ## 建立通用Pose Resource Slot Mutation链（POSE-EXEC-20260911-10）
 
 状态：提交`e3b9f81ab`新增`CharacterPoseResourceSlot.Create`以及Graph-owned Resource Slot的Create／Rename／Delete typed Mutation和唯一Graph owner执行入口。创建只写入指定Pose Graph asset的子资产目录，删除前验证节点引用和Profile绑定，未增加Corin专用分支或直接序列化路径。提交`368f71cda`再将创建入口收窄为独立的`CharacterPoseResourceAuthoringService`，不混入Animation Service或角色专用逻辑；该入口只生成Slot并提交同一Graph Mutation。
+
+随后发现资源槽Mutation虽已有Owner实现，却未进入Mutation Service的Graph Catalog分发条件；提交`0f31c2f33`补齐Create／Rename的前置分发与Delete的后置分发。现在通用资源槽入口会实际落到Pose Graph唯一Owner，不再出现调用成功但资产未变化的静默路径。

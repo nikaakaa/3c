@@ -1,0 +1,112 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1db7d9c134c44714a63ec97ecb76d8b9, type: 3}
+  m_Name: CorinActionInertializationPolicy
+  m_EditorClassIdentifier: 
+  m_Schema: character-pose-inertialization-policy/v4
+  m_PolicyId: corin.pose.action-inertialization
+  m_Revision: 1fae9d1f072d9ca91ec562667b4e4f2e9d50db55d70e2b701328700aae623997
+  m_Response:
+    m_ParameterFilters:
+    - m_ParameterId: animation.action-weight
+      m_Mode: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EB_Angry_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EB_Relax_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EB_u2191_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EB_u2193_Corin
+      m_Mode: 1
+    - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Eye_Angry_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Eye_Close_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
+      m_Mode: 1
+    - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
+      m_Mode: 1
+    - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
+      m_Mode: 1
+    - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
+      m_Mode: 1
+    - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
+      m_Mode: 1
+    - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
+      m_Mode: 1
+  m_DirectPlayerRule:
+    rid: -2
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

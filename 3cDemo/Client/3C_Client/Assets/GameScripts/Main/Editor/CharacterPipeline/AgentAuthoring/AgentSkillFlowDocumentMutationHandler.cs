@@ -309,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly Dictionary<string, FlowNode> m_LocalNodes = new Dictionary<string, FlowNode>(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_LocalDeclarations = new Dictionary<string, string>(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_LocalPorts = new Dictionary<string, string>(StringComparer.Ordinal);
+        readonly Dictionary<string, BinderConnection> m_LocalEdges = new Dictionary<string, BinderConnection>(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_LocalParameters = new Dictionary<string, string>(StringComparer.Ordinal);
         readonly Dictionary<string, Clip> m_LocalClips = new Dictionary<string, Clip>(StringComparer.Ordinal);
         readonly Dictionary<string, AgentPackageSkillFlowGraphFile> m_TargetGraphs = new Dictionary<string, AgentPackageSkillFlowGraphFile>(StringComparer.Ordinal);
@@ -329,6 +330,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             m_TargetLayouts.Clear();
             m_LocalDeclarations.Clear();
             m_LocalPorts.Clear();
+            m_LocalEdges.Clear();
             m_LocalParameters.Clear();
             m_LocalClips.Clear();
             foreach (AgentPackageSkillFlowGraphFile graph in document.graphs ?? new List<AgentPackageSkillFlowGraphFile>())
@@ -349,6 +351,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             DeleteRemovedGraphs();
             foreach (BtsmtlSkillFlowGraph root in m_Session.Definition.SkillGraphs)
                 BtsmtlSkillGraphClosure.Validate(root, true);
+            ValidateAppliedIdentityContracts();
         }
 
         void ResolveGraphs()
@@ -868,6 +871,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     BinderConnection created = graph.CreatePortConnection(source, destination);
                     if (created == null)
                         throw new InvalidOperationException($"Skill Edge '{edge.id}'创建失败。");
+                    m_LocalEdges[EdgeKey(target.id, edge.id)] = created;
                     if (!edge.id.StartsWith("local:", StringComparison.Ordinal))
                         created.ConfigureAuthoringIdentity(edge.id);
                     continue;
@@ -877,6 +881,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (existing.targetPort != destination)
                     existing.SetTargetPort(destination);
             }
+        }
+
+        void ValidateAppliedIdentityContracts()
+        {
+            foreach (AgentPackageSkillFlowGraphFile target in m_Document.graphs)
+            {
+                FlowGraph graph = ResolveGraph(target.id);
+                if (graph == null)
+                    throw new InvalidOperationException($"Skill Graph '{target.id}'应用后无法回读。");
+                foreach (AgentPackageSkillGraphAnchor anchor in target.anchors ?? new List<AgentPackageSkillGraphAnchor>())
+                {
+                    FlowNode node = ResolveNode(target.id, anchor.nodeId);
+                    if (node == null)
+                        throw new InvalidOperationException($"Skill Graph '{target.id}' anchor '{anchor.kind}'的Node identity应用后无法回读。");
+                }
+                foreach (AgentPackageSkillFlowNode targetNode in target.nodes ?? new List<AgentPackageSkillFlowNode>())
+                {
+                    FlowNode node = ResolveNode(target.id, targetNode.id);
+                    if (node == null || NodeKind(node) != targetNode.capability)
+                        throw new InvalidOperationException($"Skill Graph '{target.id}' Node '{targetNode.id}'的identity或Capability应用后无法回读。");
+                }
+                foreach (AgentPackageSkillFlowEdge targetEdge in target.edges ?? new List<AgentPackageSkillFlowEdge>())
+                {
+                    BinderConnection edge = ResolveEdge(target.id, graph, targetEdge.id);
+                    if (edge == null)
+                        throw new InvalidOperationException($"Skill Graph '{target.id}' Edge '{targetEdge.id}'的identity应用后无法回读。");
+                    Port source = ResolvePort(graph, target.id, targetEdge.from, false);
+                    Port destination = ResolvePort(graph, target.id, targetEdge.to, true);
+                    if (source == null || destination == null || edge.sourcePort != source || edge.targetPort != destination)
+                        throw new InvalidOperationException($"Skill Graph '{target.id}' Edge '{targetEdge.id}'的Port identity应用后无法回读。");
+                }
+            }
+        }
+
+        BinderConnection ResolveEdge(string graphId, FlowGraph graph, string identity)
+        {
+            if (identity.StartsWith("local:", StringComparison.Ordinal) &&
+                m_LocalEdges.TryGetValue(EdgeKey(graphId, identity), out BinderConnection local))
+                return local;
+            return graph.allNodes.OfType<FlowNode>()
+                .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                .FirstOrDefault(value => value.UID == identity);
         }
 
         void SyncTimelines()
@@ -1410,6 +1456,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static string NodeKey(string graphId, string nodeId) => graphId + "\0" + nodeId;
+        static string EdgeKey(string graphId, string edgeId) => graphId + "\0" + edgeId;
         static string TimelineKey(string timelineId, string itemId) => timelineId + "\0" + itemId;
         static string ParameterKey(string graphId, string parameterId) => graphId + "\0" + parameterId;
         static string StepKey(string graphId, string nodeId, string portId) => graphId + "\0" + nodeId + "\0" + portId;

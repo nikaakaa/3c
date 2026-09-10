@@ -246,10 +246,15 @@ namespace BTSMTL.Timeline.Editor
                 Track sourceTrack = m_Request.Timeline.Tracks[trackIndex];
                 if (sourceTrack == null)
                     continue;
-                GameObject trackObject = CreateChild(group.transform, sourceTrack.Name);
+                var curveChannels = new List<TimelineCurveChannelDescriptor>();
+                TimelineCurveChannelCatalog.CollectForTrack(sourceTrack, curveChannels);
+                string trackDisplayName = curveChannels.Count == 0
+                    ? sourceTrack.Name
+                    : $"{sourceTrack.Name}  [Curves: {curveChannels.Count}]";
+                GameObject trackObject = CreateChild(group.transform, trackDisplayName);
                 BtsmtlSlateTrack proxyTrack = trackObject.AddComponent<BtsmtlSlateTrack>();
                 proxyTrack.hideFlags = HideFlags.HideAndDontSave;
-                proxyTrack.name = sourceTrack.Name;
+                proxyTrack.name = trackDisplayName;
                 proxyTrack.Configure(sourceTrack.AuthoringId);
                 group.tracks.Add(proxyTrack);
                 m_SourceTracks[sourceTrack.AuthoringId] = sourceTrack;

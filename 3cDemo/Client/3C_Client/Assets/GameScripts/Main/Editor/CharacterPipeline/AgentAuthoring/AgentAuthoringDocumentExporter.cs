@@ -425,7 +425,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "PoseTransitionRule",
                 "LinkedPoseInterfaceRuntime"
             };
-            foreach (AgentPackageSkillNodeKindDescriptor descriptor in AgentSkillFlowAuthoringCapabilities.ExportCatalog())
+            foreach (AgentPackageSkillNodeKindDescriptor descriptor in AgentSkillPackageProjection.ExportCatalog())
                 capabilities.Add(descriptor.kind);
             return capabilities.OrderBy(value => value, StringComparer.Ordinal).ToList();
         }

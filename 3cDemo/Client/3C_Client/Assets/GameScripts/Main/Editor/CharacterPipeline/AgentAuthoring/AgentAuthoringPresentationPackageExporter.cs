@@ -35,9 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 profile = ExportProfile(profile)
             };
             ExportAnimationClips(definition, profile, result);
-            AppendPoseGraph(result, poseAsset);
+            AppendPoseGraph(result, poseAsset, profile);
             result.linkedPoseImplementations = profile.LinkedPoseImplementations
-                .Select(ExportLinkedPoseImplementation)
+                .Select(value => ExportLinkedPoseImplementation(value, profile))
                 .OrderBy(value => value.implementationId, StringComparer.Ordinal)
                 .ToList();
             return result;
@@ -50,13 +50,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 throw new ArgumentNullException(nameof(poseAsset));
             CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
             var result = new AgentDocumentPresentationEditable();
-            AppendPoseGraph(result, poseAsset);
+            AppendPoseGraph(result, poseAsset, null);
+            return result;
+        }
+
+        public AgentDocumentPresentationEditable ExportPoseGraph(
+            CharacterPresentationPoseGraphAsset poseAsset,
+            CharacterAnimationPresentationProfile profile)
+        {
+            if (!poseAsset)
+                throw new ArgumentNullException(nameof(poseAsset));
+            if (!profile)
+                throw new ArgumentNullException(nameof(profile));
+            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            var result = new AgentDocumentPresentationEditable();
+            AppendPoseGraph(result, poseAsset, profile);
             return result;
         }
 
         static void AppendPoseGraph(
             AgentDocumentPresentationEditable result,
-            CharacterPresentationPoseGraphAsset poseAsset)
+            CharacterPresentationPoseGraphAsset poseAsset,
+            CharacterAnimationPresentationProfile profile)
         {
             AppendPoseGraph(
                 result.poseGraphs,
@@ -64,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 result.poseStateMachines,
                 result.poseStateMachineLayouts,
                 poseAsset,
+                profile,
                 new HashSet<PoseGraphId>());
         }
 
@@ -73,35 +89,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ICollection<AgentPackagePoseStateMachineFile> stateMachines,
             ICollection<AgentPackagePoseStateMachineLayoutFile> stateMachineLayouts,
             CharacterPresentationPoseGraphAsset poseAsset,
+            CharacterAnimationPresentationProfile profile,
             ISet<PoseGraphId> linkedEntryGraphs)
         {
-            HashSet<PoseGraphId> stateGraphs = poseAsset.EnumerateGraphs()
-                .Where(value => value != null)
-                .SelectMany(value => value.Nodes)
-                .Select(value => value?.Payload)
-                .OfType<CharacterPoseStateMachineNodePayload>()
-                .Where(value => value.StateMachine != null)
-                .SelectMany(value => value.StateMachine.States)
-                .Where(value => value != null && value.PoseGraphId.IsValid)
-                .Select(value => value.PoseGraphId)
-                .ToHashSet();
             foreach (CharacterPoseCanvasGraph graph in poseAsset.EnumerateGraphs())
             {
                 if (graph == null)
                     throw new InvalidOperationException(
                         "Pose Graph root-owned catalog contains a missing record.");
                 GraphAuthoringDocumentRoleId role =
-                    linkedEntryGraphs.Contains(graph.GraphId)
-                        ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
-                        : ReferenceEquals(graph, poseAsset.Graph)
-                        ? CharacterPoseGraphAuthoringCapabilities.RootGraph
-                        : graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer
-                            ? CharacterPoseGraphAuthoringCapabilities.AnimationLayer
-                            : graph.Role == CharacterPoseAuthoringGraphRole.ControlRig
-                                ? CharacterPoseGraphAuthoringCapabilities.ControlRig
-                        : stateGraphs.Contains(graph.GraphId)
-                            ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph
-                            : CharacterPoseGraphAuthoringCapabilities.Subgraph;
+                    CharacterPoseGraphAuthoringCapabilities.ResolveGraphRole(
+                        poseAsset,
+                        graph,
+                        linkedEntryGraphs);
                 graphs.Add(ExportGraph(graph, role));
                 layouts.Add(ExportLayout(graph));
             }
@@ -116,14 +116,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                          .Where(value => value != null)
                          .OrderBy(value => value.StateMachineId))
             {
-                stateMachines.Add(ExportStateMachine(machine));
+                stateMachines.Add(ExportStateMachine(machine, profile));
                 stateMachineLayouts.Add(
                     ExportStateMachineLayout(poseAsset, machine));
             }
         }
 
         static AgentPackageLinkedPoseImplementationFile ExportLinkedPoseImplementation(
-            CharacterLinkedPoseImplementationAsset implementation)
+            CharacterLinkedPoseImplementationAsset implementation,
+            CharacterAnimationPresentationProfile profile)
         {
             implementation?.RequireValid();
             if (!implementation)
@@ -174,6 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 result.poseStateMachines,
                 result.poseStateMachineLayouts,
                 graphOwner,
+                profile,
                 entryGraphs);
             return result;
         }
@@ -198,6 +200,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 },
                 poseSources = profile.PoseSourceBindings
                     .Select(ExportPoseSource)
+                    .OrderBy(value => ReferenceIdentity(value.slot), StringComparer.Ordinal)
+                    .ToList(),
+                poseResources = profile.PoseResourceBindings
+                    .Select(ExportPoseResource)
                     .OrderBy(value => ReferenceIdentity(value.slot), StringComparer.Ordinal)
                     .ToList(),
                 actionProducers = profile.ProducerBindings
@@ -252,6 +258,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .ToList();
             }
             return result;
+        }
+
+        static AgentPackagePoseResourceBinding ExportPoseResource(
+            CharacterPoseResourceBinding binding)
+        {
+            if (binding == null)
+                throw new InvalidOperationException(
+                    "Presentation Profile contains a missing Pose Resource Binding.");
+            binding.RequireValid();
+            return new AgentPackagePoseResourceBinding
+            {
+                kind = binding.Slot.Kind.ToString(),
+                slot = Asset(binding.Slot, true),
+                resource = Asset(binding.Resource, true)
+            };
         }
 
         static AgentPackageLinkedPoseSelectorBinding ExportLinkedPoseSelector(
@@ -525,7 +546,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
 
         static AgentPackagePoseStateMachineFile ExportStateMachine(
-            CharacterPoseStateMachineDefinition machine)
+            CharacterPoseStateMachineDefinition machine,
+            CharacterAnimationPresentationProfile profile)
         {
             return new AgentPackagePoseStateMachineFile
             {
@@ -565,13 +587,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         durationSeconds = value.DurationSeconds,
                         blendMode = value.BlendMode.ToString(),
                         customBlendCurveAssetId = value.BlendMode == CharacterAnimationBlendMode.Custom
-                            ? value.CustomBlendCurve.CurveId
+                            ? ResolveBlendCurveId(profile, value.CustomBlendCurveSlot)
                             : null,
-                        blendProfileAssetId = value.BlendProfile
-                            ? value.BlendProfile.ProfileId
+                        blendProfileAssetId = value.BlendProfileSlot
+                            ? ResolveBlendProfileId(profile, value.BlendProfileSlot)
                             : null
                     }).ToList()
             };
+        }
+
+        static string ResolveBlendCurveId(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPoseResourceSlot slot)
+        {
+            if (!profile || !slot ||
+                profile.FindPoseResourceBinding(slot)?.Resource
+                    is not CharacterAnimationBlendCurveAsset curve)
+            {
+                throw new InvalidOperationException(
+                    $"Pose State Transition Blend Curve Slot '{slot?.name ?? "<missing>"}' has no exact Profile resource binding.");
+            }
+            curve.RequireValid();
+            return curve.CurveId;
+        }
+
+        static string ResolveBlendProfileId(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPoseResourceSlot slot)
+        {
+            if (!profile || !slot ||
+                profile.FindPoseResourceBinding(slot)?.Resource
+                    is not CharacterAnimationBlendProfile blendProfile)
+            {
+                throw new InvalidOperationException(
+                    $"Pose State Transition Blend Profile Slot '{slot?.name ?? "<missing>"}' has no exact Profile resource binding.");
+            }
+            return blendProfile.ProfileId;
         }
 
         static AgentPackagePoseStateMachineLayoutFile ExportStateMachineLayout(

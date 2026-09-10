@@ -55,9 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        internal static string First(string value, string fallback)
-        {
-            return !string.IsNullOrEmpty(value) ? value : fallback ?? string.Empty;
-        }
+
     }
 }

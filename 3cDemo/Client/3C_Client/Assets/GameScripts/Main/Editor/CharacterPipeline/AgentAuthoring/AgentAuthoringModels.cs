@@ -431,7 +431,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int semanticInvalidCount;
         public int assetResolvedCount;
         public int assetResolveFailureCount;
-        public int repairIterations;
         public int diffSize;
         public int businessCoverageCount;
         public int businessCoverageMissingCount;

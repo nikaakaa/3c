@@ -203,7 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var skillGraphs = new Dictionary<string, string>(StringComparer.Ordinal);
             if (session.Definition)
             {
-                var native = new AgentSkillFlowDocumentRuntimeIndex();
+                var native = new BtsmtlSkillGraphClosureIndex();
                 native.Build(session.Definition);
                 var fingerprint = new BtsmtlSkillGraphFingerprint();
                 foreach (KeyValuePair<string, FlowGraph> pair in native.Graphs)
@@ -235,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             try
             {
-                var native = new AgentSkillFlowDocumentRuntimeIndex();
+                var native = new BtsmtlSkillGraphClosureIndex();
                 native.Build(session.Definition);
                 if (native.Graphs.Count != m_SkillGraphs.Count)
                 {

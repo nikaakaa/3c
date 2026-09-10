@@ -4,7 +4,8 @@ using System.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    internal static class AgentSkillFlowDocumentMutationModule
+
+    internal static class BtsmtlSkillDocumentDiffModule
     {
         public static void Build(
             AgentGraphSnapshot current,

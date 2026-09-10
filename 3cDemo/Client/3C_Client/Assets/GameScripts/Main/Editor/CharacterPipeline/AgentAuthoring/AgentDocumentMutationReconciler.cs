@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentCompileReport report)
         {
             AgentActionDocumentMutationModule.BuildActionMutations(current, target, mutations, report);
-            AgentSkillFlowDocumentMutationModule.Build(
+            BtsmtlSkillDocumentDiffModule.Build(
                 current,
                 target,
                 mutations,

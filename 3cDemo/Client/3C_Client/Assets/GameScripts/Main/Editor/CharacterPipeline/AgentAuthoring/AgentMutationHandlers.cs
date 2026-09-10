@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.SetActionProfileCancelQuery,
                 AgentMutationKind.SetActionProfileTargetRequirement,
                 AgentMutationKind.SetActionRequestTimingClass);
-            Register(new AgentSkillFlowDocumentMutationHandler(),
+            Register(new BtsmtlSkillAuthoringMutationAdapter(),
                 AgentMutationKind.SetSkillFlowDocument);
             Register(new AgentControlConfigurationMutationHandler(),
                 AgentMutationKind.ConfigureControlConfiguration);

@@ -43,6 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPackagePresentationPolicy policy;
         public List<AgentPackagePoseSourceBinding> poseSources =
             new List<AgentPackagePoseSourceBinding>();
+        public List<AgentPackagePoseResourceBinding> poseResources =
+            new List<AgentPackagePoseResourceBinding>();
         public List<AgentPackageAnimationProducerBinding> actionProducers =
             new List<AgentPackageAnimationProducerBinding>();
         public List<AgentPackageLocomotionSyncGroup> locomotionSyncGroups =
@@ -180,6 +182,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
+    public sealed class AgentPackagePoseResourceBinding
+    {
+        public string kind;
+        public AgentPackageObjectReference slot;
+        public AgentPackageObjectReference resource;
+    }
+
+    [Serializable]
     public sealed class AgentPackageAnimationClipCurvesFile
     {
         public string id;
@@ -238,13 +248,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentPackagePoseDynamicPort> dynamicPorts =
             new List<AgentPackagePoseDynamicPort>();
         public string childDocumentId;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageAnimationSlotBinding
-    {
-        public string slotId;
-        public string animationChannelId;
     }
 
     [Serializable]

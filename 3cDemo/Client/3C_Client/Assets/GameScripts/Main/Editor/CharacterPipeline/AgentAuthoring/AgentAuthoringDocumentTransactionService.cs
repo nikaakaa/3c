@@ -132,7 +132,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 projection.Snapshot,
                 sync,
                 report,
-                false,
                 out string editableHash,
                 out string contextHash);
             AgentDocumentSyncState syncState = string.Equals(editableHash, projection.EditableHash, StringComparison.Ordinal)
@@ -203,8 +202,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var createdSkillRootPaths = new List<string>();
             if (character)
             {
-                foreach (AgentSetSkillFlowDocumentMutation mutation in preparation.Plan.Commands
-                             .OfType<AgentSetSkillFlowDocumentMutation>())
+                foreach (BtsmtlSetSkillDocumentMutation mutation in preparation.Plan.Commands
+                             .OfType<BtsmtlSetSkillDocumentMutation>())
                     createdSkillRootPaths.AddRange(AgentSkillFlowAssetPaths.PlannedRoots(character, mutation.Document));
             }
             Undo.IncrementCurrentGroup();
@@ -251,7 +250,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     finalProjection.Snapshot,
                     finalSync,
                     applied,
-                    false,
                     out string finalEditableHash,
                     out string finalContextHash);
                 Undo.CollapseUndoOperations(undoGroup);
@@ -288,7 +286,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 projection.Snapshot,
                 sync,
                 report,
-                true,
                 out string editableHash,
                 out string contextHash);
             return Success(request, projection, path, AgentDocumentSyncState.Clean, documentHash, report, editableHash, contextHash);
@@ -360,8 +357,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         out string message))
                     return FailOwner(report, code, message, out owners);
                 var allOwners = new HashSet<UnityEngine.Object>(graphOwners);
-                AgentSetSkillFlowDocumentMutation skillFlow = preparation?.Plan?.Commands
-                    .OfType<AgentSetSkillFlowDocumentMutation>()
+                BtsmtlSetSkillDocumentMutation skillFlow = preparation?.Plan?.Commands
+                    .OfType<BtsmtlSetSkillDocumentMutation>()
                     .FirstOrDefault();
                 if (skillFlow != null &&
                     !AgentSkillFlowDocumentOwnerCollector.TryCollect(
@@ -703,7 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!applied.TryGetValue(
                         mutation.Transition.TransitionId.Value,
                         out CharacterPoseStateTransition transition) ||
-                    transition.BlendProfile != mutation.Transition.BlendProfile)
+                    transition.BlendProfileSlot != mutation.Transition.BlendProfileSlot)
                 {
                     throw new InvalidOperationException(
                         $"Pose Transition '{mutation.Transition.TransitionId}' did not retain its reconciled Blend Profile.");
@@ -730,7 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!transitions.TryGetValue(
                             mutation.Transition.TransitionId.Value,
                             out CharacterPoseStateTransition transition) ||
-                        transition.BlendProfile != mutation.Transition.BlendProfile)
+                        transition.BlendProfileSlot != mutation.Transition.BlendProfileSlot)
                         throw new InvalidOperationException(
                             $"Linked Pose Transition '{mutation.Transition.TransitionId}' did not retain its reconciled Blend Profile.");
                 }

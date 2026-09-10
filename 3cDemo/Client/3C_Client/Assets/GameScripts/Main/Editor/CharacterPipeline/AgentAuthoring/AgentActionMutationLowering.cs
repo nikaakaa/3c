@@ -12,7 +12,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         internal static AgentMutation LowerEnsureGameplayTag(AgentMutationPlanningContext context, AgentMutationDraft operation)
         {
             string tag = context.RequiredText(operation.gameplayTag, string.Empty, "gameplayTag", "ensure_gameplay_tag 缺少 tag id。");
-            return context.IsValid ? new AgentEnsureGameplayTagMutation(operation.id, context.Path, tag, operation.parentGameplayTag, First(operation.displayName, tag), operation.debugCategory) : null;
+            return context.IsValid
+                ? new AgentEnsureGameplayTagMutation(
+                    operation.id,
+                    context.Path,
+                    tag,
+                    operation.parentGameplayTag,
+                    string.IsNullOrEmpty(operation.displayName) ? tag : operation.displayName,
+                    operation.debugCategory)
+                : null;
         }
 
         internal static AgentMutation LowerSetActionProfileGrantedTags(AgentMutationPlanningContext context, AgentMutationDraft operation)

@@ -101,7 +101,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             target.metrics.semanticInvalidCount = source.metrics.semanticInvalidCount;
             target.metrics.assetResolvedCount = source.metrics.assetResolvedCount;
             target.metrics.assetResolveFailureCount = source.metrics.assetResolveFailureCount;
-            target.metrics.repairIterations = source.metrics.repairIterations;
             target.metrics.businessCoverageCount = source.metrics.businessCoverageCount;
             target.metrics.businessCoverageMissingCount = source.metrics.businessCoverageMissingCount;
         }

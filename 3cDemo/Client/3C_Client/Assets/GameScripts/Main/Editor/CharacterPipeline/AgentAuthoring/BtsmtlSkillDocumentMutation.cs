@@ -3,9 +3,10 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    public sealed class AgentSetSkillFlowDocumentMutation : AgentMutation
+
+    public sealed class BtsmtlSetSkillDocumentMutation : AgentMutation
     {
-        public AgentSetSkillFlowDocumentMutation(
+        public BtsmtlSetSkillDocumentMutation(
             string id,
             string path,
             AgentPackageSkillFlowDocument document)
@@ -22,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPackageSkillFlowDocument Document { get; }
     }
 
-    internal static class AgentSkillFlowDocumentMutationLowering
+    internal static class BtsmtlSkillDocumentMutationLowering
     {
         public static AgentMutation LowerSetSkillFlowDocument(
             AgentMutationPlanningContext context,
@@ -33,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 context.Error(string.Empty, "skill_flow_document_missing", "Skill Flow Document mutation正文缺失。");
                 return null;
             }
-            return new AgentSetSkillFlowDocumentMutation(
+            return new BtsmtlSetSkillDocumentMutation(
                 operation.id,
                 context.Path,
                 AgentSkillFlowDocumentClone.Clone(operation.skillFlowDocument));

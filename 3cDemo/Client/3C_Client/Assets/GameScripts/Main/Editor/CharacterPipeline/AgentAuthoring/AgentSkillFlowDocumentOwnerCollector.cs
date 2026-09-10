@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             }
             bool valid = TryAdd(definition, owners, report, "definition");
-            var current = new AgentSkillFlowDocumentRuntimeIndex();
+            var current = new BtsmtlSkillGraphClosureIndex();
             try
             {
                 current.Build(definition);

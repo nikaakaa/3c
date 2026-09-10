@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
@@ -118,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             graph = null;
             if (!m_Definition || string.IsNullOrWhiteSpace(identity))
                 return false;
-            var index = new AgentSkillFlowDocumentRuntimeIndex();
+            var index = new BtsmtlSkillGraphClosureIndex();
             index.Build(m_Definition);
             return index.Graphs.TryGetValue(identity, out graph);
         }
@@ -128,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             timeline = null;
             if (!m_Definition || string.IsNullOrWhiteSpace(identity))
                 return false;
-            var index = new AgentSkillFlowDocumentRuntimeIndex();
+            var index = new BtsmtlSkillGraphClosureIndex();
             index.Build(m_Definition);
             return index.Timelines.TryGetValue(identity, out timeline);
         }

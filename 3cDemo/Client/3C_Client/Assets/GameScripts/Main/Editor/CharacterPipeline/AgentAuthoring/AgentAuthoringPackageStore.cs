@@ -45,185 +45,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 JObject manifest = JObject.Parse(File.ReadAllText(manifestPath, Encoding.UTF8));
                 string schemaVersion = manifest.Value<string>("schemaVersion");
-                if (!string.IsNullOrWhiteSpace(schemaVersion) &&
-                    !string.Equals(schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
-                    return true;
-                string controllerPath = Path.Combine(packagePath, "editable", "controller.json");
-                if (File.Exists(controllerPath))
-                {
-                    JObject controller = JObject.Parse(
-                        File.ReadAllText(controllerPath, Encoding.UTF8));
-                    if (string.IsNullOrWhiteSpace(controller.Value<string>("controlModuleId")))
-                        return true;
-                }
-                string profilePath = Path.Combine(
-                    packagePath,
-                    "editable",
-                    "presentation",
-                    "profile.json");
-                if (File.Exists(profilePath))
-                {
-                    JObject profile = JObject.Parse(
-                        File.ReadAllText(profilePath, Encoding.UTF8));
-                    if (profile["poseSources"] is JArray sources &&
-                        sources.OfType<JObject>().Any(value =>
-                            value["id"] != null ||
-                            value["slot"] == null ||
-                            value["binding"] == null ||
-                            value["timeMapping"] == null) ||
-                        profile.Descendants().OfType<JObject>().Any(value =>
-                            value["assetGuid"] != null &&
-                            value["assetPath"] != null &&
-                            value["localFileId"] == null))
-                    {
-                        return true;
-                    }
-                }
-                var files = manifest["files"]?.Values<string>()
-                    .Select(value => value?.Replace('\\', '/'))
-                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                    .ToHashSet(StringComparer.Ordinal) ??
-                    new HashSet<string>(StringComparer.Ordinal);
-                if (files.Any(value =>
-                        string.Equals(value, "editable/blackboard.json", StringComparison.Ordinal) ||
-                        value.StartsWith("editable/graphs/", StringComparison.Ordinal) ||
-                        value.StartsWith("editable/timelines/", StringComparison.Ordinal)))
-                    return true;
-                bool presentationLayoutIncomplete = files
-                    .Where(value =>
-                        value.StartsWith(
-                            "editable/presentation/pose-state-machines/",
-                            StringComparison.Ordinal) &&
-                        value.EndsWith(
-                            "/state-machine.json",
-                            StringComparison.Ordinal))
-                    .Any(value =>
-                        !files.Contains(
-                            value.Substring(
-                                0,
-                                value.Length -
-                                "state-machine.json".Length) +
-                            "layout.json"));
-                return presentationLayoutIncomplete ||
-                       RequiresSkillProviderOwnerRefresh(packagePath, files) ||
-                       RequiresSkillTimelineRefresh(packagePath, files) ||
-                       CanRefreshReadOnlyContext(packagePath, files);
+                return !string.IsNullOrWhiteSpace(schemaVersion) &&
+                       !string.Equals(schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal);
             }
             catch (JsonException)
             {
                 return false;
             }
-        }
-
-        static bool RequiresSkillProviderOwnerRefresh(
-            string packagePath,
-            IReadOnlyCollection<string> files)
-        {
-            foreach (string relativePath in files.Where(value =>
-                         value.StartsWith("editable/skills/graphs/", StringComparison.Ordinal) &&
-                         value.EndsWith("/graph.json", StringComparison.Ordinal)))
-            {
-                string fullPath = ResolveInside(packagePath, relativePath);
-                if (!File.Exists(fullPath))
-                    return true;
-                JObject graph = JObject.Parse(File.ReadAllText(fullPath, Encoding.UTF8));
-                foreach (JObject node in graph["nodes"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
-                {
-                    string capability = node.Value<string>("capability");
-                    if (!BtsmtlSkillCapabilityCatalog.Properties(capability).Contains("providerOwnerId"))
-                        continue;
-                    if (string.IsNullOrWhiteSpace((node["properties"] as JObject)?.Value<string>("providerOwnerId")))
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        static bool RequiresSkillTimelineRefresh(
-            string packagePath,
-            IReadOnlyCollection<string> files)
-        {
-            foreach (string relativePath in files.Where(value =>
-                         value.StartsWith("editable/skills/timelines/", StringComparison.Ordinal) &&
-                         value.EndsWith("/timeline.json", StringComparison.Ordinal)))
-            {
-                string fullPath = ResolveInside(packagePath, relativePath);
-                if (!File.Exists(fullPath))
-                    return true;
-                JObject timeline = JObject.Parse(File.ReadAllText(fullPath, Encoding.UTF8));
-                foreach (JObject track in timeline["tracks"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
-                {
-                    if (track.Value<string>("kind") != TimelineContractKinds.AnimationTrack)
-                        continue;
-                    if (string.IsNullOrWhiteSpace(track.Value<string>("animationSlotId")))
-                        return true;
-                    foreach (JObject clip in track["clips"]?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
-                    {
-                        if (clip.Value<string>("kind") != TimelineContractKinds.AnimationClip)
-                            continue;
-                        if (string.IsNullOrWhiteSpace((clip["properties"] as JObject)?.Value<string>("blendProfileId")))
-                            return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        static bool CanRefreshReadOnlyContext(
-            string packagePath,
-            IReadOnlyCollection<string> files)
-        {
-            var validation = new AgentCompileReport { success = true };
-            bool contextInvalid = files
-                .Where(IsReadOnlyPath)
-                .Any(relativePath =>
-                    !TryReadContent(
-                        relativePath,
-                        ResolveInside(packagePath, relativePath),
-                        validation,
-                        out _));
-            if (!contextInvalid)
-                return false;
-            string syncPath = Path.Combine(packagePath, ".sync.json");
-            if (!AgentAuthoringDocumentCodec.TryReadFile(
-                    syncPath,
-                    validation,
-                    out AgentAuthoringPackageSync sync,
-                    out _) ||
-                string.IsNullOrWhiteSpace(sync.baseEditableHash))
-                return false;
-            var editable = new Dictionary<string, JToken>(StringComparer.Ordinal);
-            try
-            {
-                foreach (string relativePath in files.Where(value =>
-                             value.StartsWith("editable/", StringComparison.Ordinal)))
-                {
-                    string fullPath = ResolveInside(packagePath, relativePath);
-                    editable.Add(
-                        relativePath,
-                        JToken.Parse(
-                            File.ReadAllText(fullPath, Encoding.UTF8),
-                            new JsonLoadSettings
-                            {
-                                DuplicatePropertyNameHandling =
-                                    DuplicatePropertyNameHandling.Error,
-                                LineInfoHandling = LineInfoHandling.Load,
-                                CommentHandling = CommentHandling.Load
-                            }));
-                }
-            }
-            catch (JsonException)
-            {
-                return false;
-            }
-            catch (IOException)
-            {
-                return false;
-            }
-            return string.Equals(
-                AgentAuthoringDocumentCodec.HashFiles(editable),
-                sync.baseEditableHash,
-                StringComparison.Ordinal);
         }
 
         public string Write(
@@ -232,7 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentGraphSnapshot snapshot,
             AgentAuthoringPackageSync sync,
             AgentCompileReport report,
-            bool allowIncompletePresentationRepair,
             out string editableHash,
             out string contextHash)
         {
@@ -257,8 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 snapshot,
                 documentHash,
                 editableHash,
-                contextHash,
-                allowIncompletePresentationRepair);
+                contextHash);
             return documentHash;
         }
 
@@ -519,8 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentGraphSnapshot snapshot,
             string expectedDocumentHash,
             string expectedEditableHash,
-            string expectedContextHash,
-            bool allowIncompletePresentationRepair)
+            string expectedContextHash)
         {
             string parent = Path.GetDirectoryName(packagePath) ?? throw new InvalidOperationException("Document package缺少父目录。");
             Directory.CreateDirectory(parent);
@@ -567,23 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     stagedDocumentHash,
                     expectedDocumentHash,
                     StringComparison.Ordinal);
-                bool repairablePresentationState =
-                    allowIncompletePresentationRepair &&
-                    validation.messages.Any(value =>
-                        string.Equals(
-                            value.severity,
-                            AgentReportSeverity.Error.ToString(),
-                            StringComparison.Ordinal)) &&
-                    validation.messages
-                        .Where(value => string.Equals(
-                            value.severity,
-                            AgentReportSeverity.Error.ToString(),
-                            StringComparison.Ordinal))
-                        .All(value =>
-                            value.code == "presentation_pose_properties_invalid" ||
-                            value.code == "presentation_pose_property_value_invalid" ||
-                            value.code == "presentation_pose_state_machine_invalid");
-                if (!reread && !repairablePresentationState ||
+                if (!reread ||
                     !editableHashMatches ||
                     !contextHashMatches ||
                     !documentHashMatches)

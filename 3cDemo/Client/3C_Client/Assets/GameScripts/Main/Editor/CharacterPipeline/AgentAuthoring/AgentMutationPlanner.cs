@@ -122,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AgentControlMutationLowering.LowerConfigureControlConfiguration),
                 [AgentMutationKind.SetSkillFlowDocument] = new AgentMutationDraftDescriptor(
                     AgentMutationKind.SetSkillFlowDocument,
-                    AgentSkillFlowDocumentMutationLowering.LowerSetSkillFlowDocument)
+                    BtsmtlSkillDocumentMutationLowering.LowerSetSkillFlowDocument)
             };
 
         public static bool TryGet(AgentMutationKind kind, out AgentMutationDraftDescriptor descriptor)

@@ -17,8 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
     public sealed class AgentAuthoringPackageMapper
     {
-        readonly BtsmtlGraphAuthoringCapabilities m_Catalog =
-            new BtsmtlGraphAuthoringCapabilities();
+        readonly AgentGraphPackageProjection m_GraphPackage =
+            new AgentGraphPackageProjection();
 
         public Dictionary<string, JToken> ToFiles(
             AgentAuthoringTarget target,
@@ -48,16 +48,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             var nodeCatalog = new AgentPackageNodeCatalogFile
             {
-                kinds = m_Catalog.ExportNodeKinds(target.domain).ToList(),
+                kinds = m_GraphPackage.ExportNodeKinds(target.domain).ToList(),
                 skillKinds = string.Equals(target.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal)
-                    ? AgentSkillFlowAuthoringCapabilities.ExportCatalog().ToList()
+                    ? AgentSkillPackageProjection.ExportCatalog().ToList()
                     : new List<AgentPackageSkillNodeKindDescriptor>()
             };
             AgentPackageNodeCatalogValidator.Validate(nodeCatalog, report);
             files["context/node-catalog.json"] = AgentAuthoringDocumentCodec.ToToken(nodeCatalog);
             files["context/graph-kinds.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageGraphKindsFile
             {
-                kinds = m_Catalog.ExportGraphKinds(target.domain).ToList()
+                kinds = m_GraphPackage.ExportGraphKinds(target.domain).ToList()
             });
             files["context/asset-catalog.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageAssetCatalogFile
             {

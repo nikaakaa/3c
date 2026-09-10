@@ -736,25 +736,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path + ".properties.valueType", "skill_blackboard_node_type_invalid", "数值Skill Blackboard读取节点必须声明float类型。");
                 valid = false;
             }
-            if (node.capability == "character-input-bool" ||
-                node.capability == "character-input-float" ||
-                node.capability == "character-input-vector2" ||
-                node.capability == "character-input-vector2-magnitude" ||
-                node.capability == "character-action-request" ||
-                node.capability == "character-move-facing-angle" ||
-                node.capability == "character-state-vector3" ||
-                node.capability == "character-state-scalar" ||
-                node.capability == "character-state-yaw" ||
-                node.capability == "character-state-bool" ||
-                node.capability == "gameplay-tag-has" ||
-                node.capability == "gameplay-tag-query" ||
-                node.capability == "gameplay-attribute-read" ||
-                node.capability == "gameplay-effect-apply" ||
-                node.capability == "gameplay-effect-remove")
+            BtsmtlSkillProviderKind providerKind = BtsmtlSkillProviderContract.Resolve(node.capability);
+            if (providerKind != BtsmtlSkillProviderKind.None)
             {
-                if (string.IsNullOrWhiteSpace(properties.Value<string>("providerOwnerId")))
+                string providerOwnerId = properties.Value<string>("providerOwnerId");
+                if (string.IsNullOrWhiteSpace(providerOwnerId))
                 {
-                    report.Error(path + ".properties.providerOwnerId", "skill_provider_owner_missing", "Skill外部provider引用必须指定稳定owner。");
+                    report.Error(
+                        path + ".properties.providerOwnerId",
+                        BtsmtlSkillProviderContract.MissingCode(providerKind),
+                        "Skill外部provider引用必须指定稳定owner。");
+                    valid = false;
+                }
+                else if (!BtsmtlSkillProviderContract.Matches(
+                             providerKind,
+                             providerOwnerId,
+                             controlModuleId,
+                             inputProviderOwnerId,
+                             gameplayProviderOwnerId))
+                {
+                    report.Error(
+                        path + ".properties.providerOwnerId",
+                        BtsmtlSkillProviderContract.InvalidCode(providerKind),
+                        BtsmtlSkillProviderContract.InvalidMessage(providerKind));
                     valid = false;
                 }
             }
@@ -764,53 +768,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 (node.capability == "character-state-bool" && !CharacterStateProviderFields.IsBoolean(properties.Value<string>("fieldId"))))
             {
                 report.Error(path + ".properties.fieldId", "character_state_field_type_invalid", "Character State fieldId 与节点输出类型不匹配。");
-                valid = false;
-            }
-            if ((node.capability == "character-state-vector3" ||
-                 node.capability == "character-state-scalar" ||
-                 node.capability == "character-state-yaw" ||
-                 node.capability == "character-state-bool") &&
-                !CharacterStateProviderFields.IsOwnerForModule(
-                    properties.Value<string>("providerOwnerId"),
-                    controlModuleId))
-            {
-                report.Error(
-                    path + ".properties.providerOwnerId",
-                    "character_state_owner_invalid",
-                    $"Character State provider owner 必须是 control-module:{controlModuleId}。");
-                valid = false;
-            }
-            if (node.capability == "character-move-facing-angle" &&
-                !CharacterStateProviderFields.IsOwnerForModule(
-                    properties.Value<string>("providerOwnerId"),
-                    controlModuleId))
-            {
-                report.Error(
-                    path + ".properties.providerOwnerId",
-                    "character_state_owner_invalid",
-                    $"Character State provider owner 必须是 control-module:{controlModuleId}。");
-                valid = false;
-            }
-            if (IsInputProvider(node.capability) &&
-                !CharacterSkillProviderOwners.IsAssetOwner(
-                    properties.Value<string>("providerOwnerId"),
-                    inputProviderOwnerId))
-            {
-                report.Error(
-                    path + ".properties.providerOwnerId",
-                    "skill_input_provider_owner_invalid",
-                    "Skill Input provider owner必须是当前CharacterInputProfile资产。");
-                valid = false;
-            }
-            if (IsGameplayProvider(node.capability) &&
-                !CharacterSkillProviderOwners.IsAssetOwner(
-                    properties.Value<string>("providerOwnerId"),
-                    gameplayProviderOwnerId))
-            {
-                report.Error(
-                    path + ".properties.providerOwnerId",
-                    "skill_ability_provider_owner_invalid",
-                    "Ability provider owner必须是当前CharacterGameplayEffectProfile资产。");
                 valid = false;
             }
             if ((node.capability == "gameplay-tag-has" && string.IsNullOrWhiteSpace(properties.Value<string>("tagId"))) ||
@@ -843,20 +800,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return valid;
         }
-
-        static bool IsInputProvider(string capability) =>
-            capability == "character-input-bool" ||
-            capability == "character-input-float" ||
-            capability == "character-input-vector2" ||
-            capability == "character-input-vector2-magnitude" ||
-            capability == "character-action-request";
-
-        static bool IsGameplayProvider(string capability) =>
-            capability == "gameplay-tag-has" ||
-            capability == "gameplay-tag-query" ||
-            capability == "gameplay-attribute-read" ||
-            capability == "gameplay-effect-apply" ||
-            capability == "gameplay-effect-remove";
 
         static bool ValueTokenMatches(JToken value, string type)
         {

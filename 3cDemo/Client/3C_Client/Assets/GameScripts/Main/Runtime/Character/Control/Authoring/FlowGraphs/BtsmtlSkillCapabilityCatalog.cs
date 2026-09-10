@@ -6,6 +6,7 @@ using FlowCanvas;
 using FlowCanvas.Macros;
 using FlowCanvas.Nodes;
 using NodeCanvas.Framework;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
@@ -42,6 +43,93 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool IsInput { get; }
         public bool Multiple { get; }
         public bool Required { get; }
+    }
+
+    public enum BtsmtlSkillProviderKind : byte
+    {
+        None,
+        CharacterControlModule,
+        InputProfile,
+        GameplayEffectProfile
+    }
+
+    public static class BtsmtlSkillProviderContract
+    {
+        public static BtsmtlSkillProviderKind Resolve(string capability) => capability switch
+        {
+            "character-move-facing-angle" or
+                "character-state-vector3" or
+                "character-state-scalar" or
+                "character-state-yaw" or
+                "character-state-bool" => BtsmtlSkillProviderKind.CharacterControlModule,
+            "character-input-bool" or
+                "character-input-float" or
+                "character-input-vector2" or
+                "character-input-vector2-magnitude" or
+                "character-action-request" => BtsmtlSkillProviderKind.InputProfile,
+            "gameplay-tag-has" or
+                "gameplay-tag-query" or
+                "gameplay-attribute-read" or
+                "gameplay-effect-apply" or
+                "gameplay-effect-remove" => BtsmtlSkillProviderKind.GameplayEffectProfile,
+            _ => BtsmtlSkillProviderKind.None
+        };
+
+        public static bool Matches(
+            string capability,
+            string owner,
+            string controlModuleId,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
+        {
+            return Matches(
+                Resolve(capability),
+                owner,
+                controlModuleId,
+                inputProviderOwnerId,
+                gameplayProviderOwnerId);
+        }
+
+        public static bool Matches(
+            BtsmtlSkillProviderKind kind,
+            string owner,
+            string controlModuleId,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
+        {
+            return kind switch
+            {
+                BtsmtlSkillProviderKind.None => true,
+                BtsmtlSkillProviderKind.CharacterControlModule =>
+                    CharacterStateProviderFields.IsOwnerForModule(owner, controlModuleId),
+                BtsmtlSkillProviderKind.InputProfile =>
+                    CharacterSkillProviderOwners.IsAssetOwner(owner, inputProviderOwnerId),
+                BtsmtlSkillProviderKind.GameplayEffectProfile =>
+                    CharacterSkillProviderOwners.IsAssetOwner(owner, gameplayProviderOwnerId),
+                _ => false
+            };
+        }
+
+        public static string MissingCode(BtsmtlSkillProviderKind kind) =>
+            kind == BtsmtlSkillProviderKind.CharacterControlModule
+                ? "character_state_owner_missing"
+                : "skill_provider_owner_missing";
+
+        public static string InvalidCode(BtsmtlSkillProviderKind kind) => kind switch
+        {
+            BtsmtlSkillProviderKind.CharacterControlModule => "character_state_owner_invalid",
+            BtsmtlSkillProviderKind.InputProfile => "skill_input_provider_owner_invalid",
+            BtsmtlSkillProviderKind.GameplayEffectProfile => "skill_ability_provider_owner_invalid",
+            _ => "skill_provider_owner_invalid"
+        };
+
+        public static string InvalidMessage(BtsmtlSkillProviderKind kind) => kind switch
+        {
+            BtsmtlSkillProviderKind.CharacterControlModule => "Character State provider owner必须是当前ControlModule。",
+            BtsmtlSkillProviderKind.InputProfile => "Skill Input provider owner必须是当前CharacterInputProfile资产。",
+            BtsmtlSkillProviderKind.GameplayEffectProfile => "Ability provider owner必须是当前CharacterGameplayEffectProfile资产。",
+            _ => "Skill外部provider owner无效。"
+        };
     }
 
     public static class BtsmtlSkillCapabilityCatalog

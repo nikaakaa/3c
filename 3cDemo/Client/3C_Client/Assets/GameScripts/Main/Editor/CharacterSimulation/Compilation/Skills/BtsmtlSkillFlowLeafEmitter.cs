@@ -232,8 +232,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BtsmtlSkillCharacterStateBooleanFlowNode value => value.ProviderOwnerId,
                 _ => string.Empty
             };
-            if (!CharacterStateProviderFields.IsOwnerForModule(owner, controlModuleId))
-                throw new InvalidOperationException($"Character State provider owner '{owner}' does not match control module '{controlModuleId}'.");
             bool valid = node switch
             {
                 BtsmtlSkillCharacterStateVector3FlowNode => CharacterStateProviderFields.IsVector3(field),
@@ -269,21 +267,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             if (string.IsNullOrEmpty(owner))
                 return;
-            if (node is BtsmtlSkillMoveFacingAngleFlowNode ||
-                node is BtsmtlSkillCharacterStateVector3FlowNode ||
-                node is BtsmtlSkillCharacterStateScalarFlowNode ||
-                node is BtsmtlSkillCharacterStateYawFlowNode ||
-                node is BtsmtlSkillCharacterStateBooleanFlowNode)
-            {
-                if (!CharacterStateProviderFields.IsOwnerForModule(owner, controlModuleId))
-                    throw new InvalidOperationException($"Character State provider owner '{owner}' does not match control module '{controlModuleId}'.");
-                return;
-            }
-            string expected = node is IBtsmtlSkillInputNode
-                ? inputProviderOwnerId
-                : gameplayProviderOwnerId;
-            if (!CharacterSkillProviderOwners.IsAssetOwner(owner, expected))
-                throw new InvalidOperationException($"Skill provider owner '{owner}' does not match the active provider asset.");
+            BtsmtlSkillProviderKind providerKind = BtsmtlSkillProviderContract.Resolve(
+                node is BtsmtlSkillFlowNode skill ? skill.CapabilityId : string.Empty);
+            if (!BtsmtlSkillProviderContract.Matches(
+                    providerKind,
+                    owner,
+                    controlModuleId,
+                    inputProviderOwnerId,
+                    gameplayProviderOwnerId))
+                throw new InvalidOperationException($"Skill provider owner '{owner}' does not match {providerKind}.");
         }
 
         static SemanticValueKind Kind(Type type)

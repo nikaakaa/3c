@@ -482,19 +482,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             ApplyAnimationClipCurves(plan.AnimationClips);
             var service = new CharacterPresentationMutationService();
-            if (plan.GraphTransaction.Mutations.Count > 0)
+            var resourceDeleteTransaction =
+                new CharacterPresentationMutationTransaction(
+                    "document-presentation-resource-delete",
+                    "Delete Presentation Resource Slots");
+            var graphTransaction =
+                new CharacterPresentationMutationTransaction(
+                    plan.GraphTransaction.TransactionId,
+                    plan.GraphTransaction.DisplayName);
+            foreach (CharacterPresentationMutation mutation in
+                     plan.GraphTransaction.Mutations)
+            {
+                if (mutation is DeletePoseResourceSlotMutation)
+                    resourceDeleteTransaction.Add(mutation);
+                else
+                    graphTransaction.Add(mutation);
+            }
+            if (graphTransaction.Mutations.Count > 0)
             {
                 service.ApplyWithoutUndo(
                     new CharacterPoseGraphAssetMutationOwner(
                         plan.PoseGraph,
                         plan.Profile),
-                    plan.GraphTransaction);
+                    graphTransaction);
                 SaveCreatedSubassets(
                     plan.PoseGraph,
-                    plan.GraphTransaction.Mutations
+                    graphTransaction.Mutations
                         .OfType<CreatePoseSourceSlotMutation>()
                         .Select(value => (UnityEngine.Object)value.Slot)
-                        .Concat(plan.GraphTransaction.Mutations
+                        .Concat(graphTransaction.Mutations
                             .OfType<CreatePoseResourceSlotMutation>()
                             .Select(value => (UnityEngine.Object)value.Slot)));
             }
@@ -534,8 +550,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 (UnityEngine.Object)value.Interface))
                         .Concat(plan.ProfileTransaction.Mutations
                             .OfType<CreateEquipmentLinkedPoseSelectorMutation>()
-                            .Select(value =>
+                        .Select(value =>
                                  (UnityEngine.Object)value.Selector)));
+            }
+            if (resourceDeleteTransaction.Mutations.Count > 0)
+            {
+                service.ApplyWithoutUndo(
+                    new CharacterPoseGraphAssetMutationOwner(
+                        plan.PoseGraph,
+                        plan.Profile),
+                    resourceDeleteTransaction);
             }
             if (plan.SetLocomotionSyncGroups)
             {

@@ -1569,3 +1569,5 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 当前工作区源码核对：`ThirdPersonClient.Runtime.csproj`按规定参数编译为0错误、34个既有警告；`ThirdPersonClient.Editor.csproj`在临时仅对Editor工程注入已跟踪但未被生成工程列出的`CharacterPoseResetObservationMcpJobScheduler.cs`后编译为0错误、93个既有警告。临时注入文件已删除，生成csproj未被修改，Build Server已关闭。
 
 提交`966e705c0`补齐Document `poseResources.slot.localId`的计划链：Reconciler现在会创建Graph-owned Resource Slot、把transient Slot解析进同一Profile binding，并对稳定Slot继续执行归属与kind校验；提交`38bf4b42c`把Resource Slot删除放到StateMachine与Profile清理之后。Corin正式资产仍需目标Unity MCP恢复后由该链实际apply。
+
+提交`0cdab8a94`补上同一事务的两个收口点：Transition的Blend Curve／Blend Profile查找支持local Resource Slot，Document apply后的新建子资产持久化检查同时覆盖Source Slot与Resource Slot。这样新增槽不会在计划转换或保存阶段落回“找不到资源”的旧路径。

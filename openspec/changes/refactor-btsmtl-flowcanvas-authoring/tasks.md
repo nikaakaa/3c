@@ -136,7 +136,7 @@
   当前代码：Attribute、GameplayTag、GameplayEffect节点与`GameplayEffectStateAggregate`、Program catalog及ActionContext合同已接入；Input/TargetData provider owner必须指向当前InputProfile，Ability Attribute/GameplayTag/GameplayEffect provider owner必须指向当前GameplayEffectProfile，Skill Local仍按图owner保存，跨Skill共享不经过某个Skill Graph。正式Program运行与跨GA证据待补。
 - [ ] 4.5.3 将Skill Local、State、ActionInstance、Frame和Ability provider映射到统一Program State Layout；验证Float32、Fixed、Snapshot和State Hash使用同一稳定身份。
 
-  当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec已经共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；需要精确Definition Build后再做双Target/Snapshot对账。
+  当前代码：`CharacterSemanticBlackboardEmitter`、`ProgramExecutionLayout`、Action/SkillExecution、GameplayEffect aggregate和Float32/Fixed StateCodec已经共用Program State slot、LayoutHash、ProgramHash与CharacterStateHash；Float32/Fixed的Character state、World state及World Snapshot读取均执行canonical round-trip，仍需要精确Definition Build后再做双Target/Snapshot对账。
 - [ ] 4.5.4 将Character Program接入Session Composition和Simulation Pipeline；验证ProgramRuntime、ExecutionBackend、WorldSolver、Pipeline Pass和SessionSource通过正式兼容校验。
 
   当前代码：`SimulationSessionCompositionDefinition`、`SimulationPipelineCompiler`、Float32/Fixed Composer及Pass Factory已形成唯一组合链，兼容检查覆盖NumericProfile、Target ABI、Backend、Solver、Source Pass/Port和ExecutionSupport；正式 Corin 组合证据待补。

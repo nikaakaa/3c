@@ -195,3 +195,5 @@ Provider owner审计：Character State和MoveFacing只接受当前Definition的C
 # 2026-09-10 网络载荷canonical入口
 
 Rollback单帧Input、Server Authority底层Input和Baseline读取在字段解析及完整消费后，统一重新编码并逐字节比较原始载荷。非canonical但可被解析的网络数据在进入Simulation Session前直接拒绝；上层Authority Replication、Remote Presentation和Owner Input继续复用同一规则。此步只收紧网络输入边界，不改变Skill Program、Blackboard、Timeline或最终Pose的网络内容，也未运行Unity、Build或网络回放。
+
+同一规则继续覆盖Float32与Fixed的Character state、World state和Simulation World Snapshot读取。读取时先核对Program、Layout、Numeric Profile、Solver、World Revision及State Hash，再要求重编码字节与输入完全一致；两种Target不各自接受另一种布局或重排后的状态。此步只统一恢复载荷入口，不代表双Target正式Build或运行对账已经完成。

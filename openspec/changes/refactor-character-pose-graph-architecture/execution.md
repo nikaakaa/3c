@@ -1534,11 +1534,15 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 ## 可复用Graph直接资源残留审计（POSE-EXEC-20260911-04）
 
-状态：当前Pose Graph的Source Slot与Resource Slot本身只表达抽象能力，Profile负责为它们提供具体资源；但Graph payload仍有两类直接资源引用尚未迁移。`CharacterPoseStateMachineAuthoringContracts`的Transition直接保存`CharacterAnimationBlendCurveAsset`与`CharacterAnimationBlendProfile`，`MotionMatchingPoseNodeContracts`的Motion Matching payload直接保存`CharacterMotionMatchingBinding`与`CharacterAnimationBlendPolicy`。因此24.1与24.2仍不能勾选；下一步必须在对应作者合同与同一Mutation／Compiler链中迁移，不能在Graph外再加兼容读取或角色名推断。前者当前存在用户未提交改动，本轮未触碰。
+状态：当前Pose Graph的Source Slot与Resource Slot本身只表达抽象能力，Profile负责为它们提供具体资源；审计时Graph payload仍有两类直接资源引用尚未迁移。`CharacterPoseStateMachineAuthoringContracts`的Transition直接保存`CharacterAnimationBlendCurveAsset`与`CharacterAnimationBlendProfile`，Motion Matching payload直接保存`CharacterMotionMatchingBinding`与`CharacterAnimationBlendPolicy`。后者已在下一步迁移，前者当前存在用户未提交改动，本轮未触碰；24.1与24.2仍不能勾选，不能在Graph外加兼容读取或角色名推断。
 
 ## 正式Scene Play Pose观察入口（POSE-EXEC-20260911-05）
 
 状态：删除`character.pose_reset_observation`对`CharacterAnimationPreviewFixtureSession`的直接依赖，改为只观察正式Scene Play注册的`AnimationPresentationRuntimeTarget`。任务通过`start/status`异步等待已提交帧，使用统一Session Tick Drive暂停并单步；Reset经同一`CharacterSimulationPresentationRuntime`的target合同执行，完成后恢复原实时驱动。运行时Reset合同提交为`a777da720`，MCP观察实现提交为`14f9926d9`，scheduler依赖修正为`23e414871`。代码入口已经切换，但尚未用目标Unity MCP跑出成功观察结果，因此23.6仍不勾选。
+
+## 将Motion Matching资源迁入Pose Resource Slot（POSE-EXEC-20260911-07）
+
+状态：提交`7a53e62e8`将`CharacterMotionMatchingPosePayload`的Binding与Jump Blend Policy改为Graph-owned `CharacterPoseResourceSlot`，新增`MotionMatchingBinding`资源种类；作者Definition、Mutation、Input Contract、Projection Resource Catalog、Motion Matching Projection、Blend Catalog、Pose Plan和Graph Validator全部从Profile Resource Binding解析，不再从节点读取角色资源。资源仍由精确Profile按Slot提供，节点只保留稳定Slot身份和规则字段。使用临时仅限`ThirdPersonClient.Editor`的MSBuild注入编译，Editor产物0错误；临时注入已删除并执行`dotnet build-server shutdown`。当前StateMachine Transition的Blend Curve／Blend Profile直连仍未迁移，24.2保持未完成。
 
 ## 删除PoseGraph自定义GraphEditor面板扩展（POSE-EXEC-20260911-06）
 

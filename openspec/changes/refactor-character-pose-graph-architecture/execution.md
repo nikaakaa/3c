@@ -1588,6 +1588,10 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 Editor源码编译为0错误、93个既有警告，targets已删除并执行`dotnet build-server shutdown`。
 
+## 修正Profile资源绑定说明（POSE-EXEC-20260911-14）
+
+状态：提交`88d599fcc`修正Profile Inspector中残留的“Player直接拥有资源”说明，统一为`Pose Graph抽象Source Slot -> Profile类型匹配资源Binding`，并明确Motion Matching也遵循同一条可选Binding链。只改作者提示文本，不改变字段、Mutation或资产。
+
 ## Corin正式Resource Slot迁移检查（POSE-EXEC-20260911-11）
 
 状态：静态核对当前v7 Document确认，`editable/presentation/pose-state-machines/corin-locomotion-7a67665368fb/state-machine.json`的21条Transition仍使用现行Document字段`blendProfileAssetId=corin.animation-rig.locomotion-blend-profile`，但`editable/presentation/profile.json.poseResources`只有BlendPolicy、FootPlacementCalibration、FootPlacementProfile和InertializationPolicy四项，没有该Blend Profile的Graph-owned Slot。当前Reconciler会按精确Profile Resource Slot查找，因此正式dry-run会在`blendProfileAssetId`路径拒绝，不能把源码已迁移误报为Corin资产已完成。目标槽应由同一Document的Pose Resource Binding声明，再经过`checkout -> dry-run -> apply`由正式Mutation创建并绑定；不手改Unity YAML或Document包。

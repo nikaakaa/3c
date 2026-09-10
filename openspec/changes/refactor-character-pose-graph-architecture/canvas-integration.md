@@ -1,8 +1,23 @@
-# CanvasCore 接入记录
+# FlowCanvas Pose作者表面接入记录
+
+## 2026-09-10 当前口径
+
+本页早期提交和历史证据使用“CanvasCore”统称ParadoxNotion图编辑源码；当前代码层的Pose编辑表面明确是FlowCanvas：`GraphEditor`、`FlowGraph`、`FlowNode`、`Port`与`BinderConnection`。后续文档和代码说明以FlowCanvas为准确名称，历史提交标题不回写。
+
+FlowCanvas原生负责Pose作者的画布、breadcrumb、节点/连线Inspector、创建菜单、端口交互、子图下钻、selection、clipboard与编辑器Undo。`CharacterPoseGraphWorkspace`的自定义Details、Graph Navigator和Preview页不是Pose节点编辑真相；它们应逐步收窄为运行观察、诊断、跨Graph检索和正式Preview/Build状态，不得替代FlowCanvas原生作者面板。
+
+正式Preview不在FlowCanvas中重新实现。Preview使用精确Fixture/Definition和正式Projection内Program Image；Pose作者修改后只标记Stale，必须显式Build后才允许正式Preview消费新产物。Build使用精确Definition路径，Fixed入口同时发布Float32、Fixed与共享Presentation Projection；Pose-only编译只作为Build内部隔离步骤，继续保留`CreatePoseOnlyInput()`。
+
+### 2026-09-10 正式Build证据
+
+- `character.build_fixed_products`在目标Unity实例`e852139597e42532`成功返回`success=true`，发布Float32、Fixed与共享Presentation Projection。
+- 本次发布的SourceRevision为`17f8802ccc3f6cd8b3ef9f16ad976146814370aaf7c03439bff6e192cb878de9`，SemanticHash为`9bc2aa05c373b4af85abdb728342707c7648977f57d2e14edf2555aac052830b`，ProjectionRevision为`6a1e48073be74c6de14fd8c48999a59002328da269c08e83bc826a7a14f39a22`。
+- 生成Projection的`m_ActionPlaybackInputs`已包含7条`FullBodyAction`输入；这证明完整Character路径没有复用缺少Action producer的Pose-only Projection。
+- `character.pose_reset_observation`当前仍返回`Pose Preview has no committed frame while animation resources are pending`。这是Preview资源加载/提交证据未完成，不登记为Pose Graph或Build失败，也不创建第二套Preview UI绕过它。
 
 ## 当前状态补充（2026-09-08）
 
-本页保留此前CanvasCore接入证据。当前方向为[原生作者UI与普通运行观察](../integrate-pose-flowcanvas-editor-preview/proposal.md)，保留已有编译和Native运行；原生runtime实验已撤回，历史见[决策记录](flowcanvas-experiment.md)。
+本页保留此前ParadoxNotion图编辑源码接入证据。当前方向为[FlowCanvas原生作者UI与正式运行观察](../integrate-pose-flowcanvas-editor-preview/proposal.md)，保留已有编译和Native运行；原生runtime实验已撤回，历史见[决策记录](flowcanvas-experiment.md)。
 
 - `6aede211a`修正状态摘要重复登记，正式checkout已成功返回Clean；下文五处identity错误为修复前记录。
 - `a52cdc534`修正节点拖动与端口排版，用户实际确认“能拖动了”；端口完整视觉和连续Undo仍未验收。
@@ -17,7 +32,7 @@
 
 ```text
 Pose Graph 资产／Profile／精确 Definition 入口
-  → CanvasCore GraphEditor
+  → FlowCanvas GraphEditor
   → CharacterPoseGraphWorkspace（导航、详情、状态机、规则、既有观察面板）
   → Definition／Port Shape
   → typed Presentation Mutation
@@ -36,7 +51,7 @@ Pose Graph 资产／Profile／精确 Definition 入口
 | 节点与连线 | 创建菜单按Definition及Graph Role过滤；显式端口索引解析到实际端口身份；禁止默选第一个不明确输入 |
 | 从端口创建 | 菜单按源端口类型列出兼容目标输入，多个目标输入分别可选；不使用默认输入掩盖歧义 |
 | 端口显示 | 固定／条件／动态端口读取正式投影，显示名称与类型，连接线锚定实际端口；保留类型／Pose空间校验 |
-| 复制粘贴与删除 | 键盘、节点／多选菜单进入既有Document clipboard和批量Mutation；不靠CanvasCore原始JSON写入Pose资产 |
+| 复制粘贴与删除 | 键盘、节点／多选菜单进入既有Document clipboard和批量Mutation；不靠FlowCanvas原始序列化绕过Pose Mutation写入资产 |
 | 移动与名称 | 经正式Mutation修改；布局／重绘误差不写作者位置；仅实际拖动移动节点，选择和普通MouseUp不统一改整图布局 |
 | 字段 | 字段、可见性、约束来自Definition；仅真实输入变更提交，普通重绘不把默认显示值写回；只读观察禁用作者写入 |
 | 撤销与对象身份 | 图修改保留仍存在的节点／边编辑对象，避免选中对象失效；序列化前后进入Canvas Undo；状态机内容的实际Canvas子资产也纳入原事务 |

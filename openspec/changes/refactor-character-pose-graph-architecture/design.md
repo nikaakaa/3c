@@ -8,6 +8,16 @@
 
 current Pose spec的固定Program Image及Native执行要求保留。具体画布、作者模型与窗口观察的旧要求通过新提案delta更新；本设计中的旧专用Canvas目标不再决定后续UI实现。没有运行切换或全部验收完成的声明。
 
+## 2026-09-10 当前决定：FlowCanvas作者表面、正式Preview与正式Build
+
+Pose Graph作者交互直接使用FlowCanvas原生`GraphEditor`。FlowCanvas负责画布、节点、端口、连线、原生breadcrumb、Node Inspector、Connection Inspector、创建菜单、子图下钻、selection、clipboard与编辑器Undo；Pose领域代码只提供typed Node Definition、字段/端口投影、业务菜单和Mutation路由。
+
+FlowCanvas图对象只属于Editor authoring surface，不进入Runtime执行。`FlowCanvas.FlowGraph`、`FlowNode`、`BinderConnection`不得被当成Flow运行图、委托执行器、第二Runtime Program或第二作者真相。正式Pose Document、Mutation、Compiler和Program Image仍是业务真相。
+
+项目自定义Details、Graph Navigator和常驻Preview面板不再是Pose节点编辑的必需入口。它们只能承载FlowCanvas原生表面没有的内容：正式Preview启动状态、Runtime Observation、Build/Validate报告、诊断与跨Graph检索；不得重复绘制节点字段、breadcrumb、连线Inspector或第二selection集合。
+
+正式Preview继续使用现有Character Preview/Scene Session链，消费显式Build后的Projection内Program Image和Committed Result；Pose作者窗口不创建第二播放时钟、临时Program或简化Executor。Build继续通过精确Character Definition的正式生命周期发布Float32/Fixed产品和共享Presentation Projection。
+
 ## Context
 
 Pose Graph的正式业务链已经明确：
@@ -65,7 +75,7 @@ CharacterPresentationPosePlanCompiler.CompilationState
 
 本change以删除测试作为Module深度标准：删除一个Module后，如果其复杂度只是消失而不会重新散到调用方，它是浅包装；如果删除后调用方必须重新实现大量顺序、不变量和业务知识，它才提供足够Depth。本change不以文件数或类数作为架构结果。
 
-项目现已导入ParadoxNotion CanvasCore、NodeCanvas与FlowCanvas源码。当前Pose作者入口仍由项目自建`GraphAuthoringCanvasView`、Pose节点／端口View、独立StateMachine表面和`CharacterTypedPoseGraph`存储组成；Canvas源码尚未进入Pose作者、Mutation或Compiler链。用户将本次新增范围限定为Pose Graph接入Canvas，BTSMTL与AI继续使用各自现行作者实现。共享边界因此只统一Capability、Document、Mutation、事务、Clipboard、Selection和Diagnostics合同，不再统一具体Canvas类型。`TrainingEnemy`当前同时拥有未闭合的Gameplay、AI、Character Pipeline、Presentation、PoseGraph、Prefab和生成资产，且已不具备正式构建闭环；用户2026-09-05决定整套删除，不让该半成品进入Canvas资产迁移。
+项目已导入ParadoxNotion CanvasCore源码，其中Pose作者实际使用其FlowCanvas/NodeCanvas `GraphEditor`与FlowGraph表面。当前Pose作者入口已经从项目自建CanvasView切换为FlowCanvas GraphEditor；`CharacterPoseGraphWorkspace`仍提供过渡期的Definition上下文、观察和Build状态，但不拥有第二图模型。BTSMTL与AI继续使用各自现行作者实现。共享边界统一Capability、Document、Mutation、事务、Clipboard、Selection和Diagnostics合同，不要求所有领域使用同一具体Canvas类型。`TrainingEnemy`当前同时拥有未闭合的Gameplay、AI、Character Pipeline、Presentation、PoseGraph、Prefab和生成资产，且已不具备正式构建闭环；用户2026-09-05决定整套删除，不让该半成品进入Canvas资产迁移。
 
 ## Current Implementation Baseline
 
@@ -92,7 +102,7 @@ Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实
 - 序列化Program Image是唯一语义真相；可选Native执行存储只能是同identity、共享、只读的物理View。
 - 每个Operation在每帧只有一个执行Owner，每个业务结果只有一个写入Owner。
 - Node authoring、Document、Clipboard、Validation、Graph Closure与Lowering共享一个Node Definition真相，并继续通过唯一Capability与Port Shape Projector投影作者端口。
-- Pose Graph只使用一份基于CanvasCore的作者资产和一个具体Canvas，旧`CharacterTypedPoseGraph`存储与旧Pose Canvas在迁移后删除。
+- Pose Graph只使用一份基于FlowCanvas作者对象的作者资产和一个具体GraphEditor表面，旧`CharacterTypedPoseGraph`存储与旧Pose Canvas在迁移后删除。
 - Canvas迁移清单只包含保留的正式Corin内容；`TrainingEnemy`在迁移前整套删除，不生成Canvas资产或占位配置。
 - Pose Canvas的创建、连线、删除、复制粘贴、Undo和Details编辑全部进入现有typed Presentation Mutation与Document事务。
 - Compiler每个Pass具有不可变输入输出，错误可以定位到明确阶段。
@@ -865,7 +875,7 @@ Reset、Projection Replacement与Dispose必须先经唯一Scheduler fence完成�
 
 Program Image封存`Kernel Set`、`Execution Policy`、Rig执行布局与平台能力identity。Preview与Player消费相同Program语义和Kernel Set；缺少Kernel、Burst/AOT闭包或身份不匹配时，Runtime创建直接失败并要求正式Character Build，不保留串行Executor、Managed重算或按平台隐式fallback。
 
-## Decision 21: Pose作者资产使用CanvasCore，保持唯一业务数据
+## Decision 21: Pose作者资产使用FlowCanvas，保持唯一业务数据
 
 Pose作者资产结构固定为：
 
@@ -874,7 +884,7 @@ CharacterPresentationPoseGraphAsset
 ├─ RootGraph -> CharacterPoseCanvasGraph
 └─ GraphCatalog[] -> CharacterPoseCanvasGraph
 
-CharacterPoseCanvasGraph : CanvasCore Graph
+CharacterPoseCanvasGraph : FlowCanvas.FlowGraph
 ├─ CharacterPoseCanvasNode[]
 │  ├─ PoseNodeId
 │  ├─ CharacterPoseNodeKind
@@ -887,7 +897,7 @@ CharacterPoseCanvasGraph : CanvasCore Graph
 
 `CharacterPresentationPoseGraphAsset`继续作为Profile引用和Graph catalog所有者，但不再保存`CharacterTypedPoseGraph`副本。Canvas Graph／Node／Connection是唯一可编辑拓扑；PoseStateMachine定义、状态元素和布局继续作为匹配节点的typed作者数据，由同一Pose Canvas显示，不建立独立可写状态机资产。
 
-Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础（编辑表面按Decision 25采用CanvasCore `GraphEditor`），不以FlowCanvas的`FlowScript`、`FlowNode`、`BinderConnection`或自动TypeConverter作为正式Pose模型。原因是Pose需要Local／Component、Goal Contribution、Goal Set等严格业务类型，而FlowCanvas允许面向通用C#值和调用的连接与转换。代价是项目需要实现Pose专用Port与Connection外观；收益是Canvas不会携带第二运行语义，也不会放宽现有拓扑合同。
+Pose使用FlowCanvas的`GraphEditor`、`FlowGraph`、`FlowNode`、`Port`与`BinderConnection`作为作者交互表面，但不使用FlowCanvas的Flow／Value委托、事件、反射方法、自动TypeConverter或Graph Update作为Pose Runtime。Pose需要Local／Component、Goal Contribution、Goal Set等严格业务类型，因此所有字段、端口形状、连接合法性和写入动作必须由Pose Definition与typed Mutation控制；FlowCanvas只负责显示与交互。
 
 ## Decision 22: Node Definition投影Canvas，Mutation拥有全部写入
 
@@ -897,14 +907,14 @@ Pose使用CanvasCore的Graph、Node、Connection和编辑器交互基础（编�
 
 ```text
 Canvas gesture
--> CharacterPoseCanvasMutationAdapter（编辑器表面为CanvasCore GraphEditor时经由Graph原生API入口路由，见Decision 25）
+-> CharacterPoseCanvasMutationAdapter（编辑器表面为FlowCanvas GraphEditor时经由Graph原生API入口路由，见Decision 25）
 -> CharacterPresentationMutation
--> Document Transaction / Undo（编辑器会话内CanvasCore Undo唯一，见Decision 25）
+-> Document Transaction / Undo（编辑器会话内FlowCanvas Undo唯一，见Decision 25）
 -> mutate the sole CharacterPoseCanvasGraph
 -> refresh affected Canvas projection
 ```
 
-Pose Graph子类必须关闭CanvasCore直接添加、删除、连接、复制或字段写入的默认命令入口，并把右键菜单、拖线、Delete、Paste、Details与StateMachine编辑转交上述Adapter。Mutation preflight使用同一Capability与`GraphAuthoringNodePortShapeProjector`判断端口和字段合法性；Canvas不得先改Graph再回滚，也不得让Graph自身Undo与Document Transaction各记录一次。
+Pose Graph子类必须关闭FlowCanvas直接添加、删除、连接、复制或字段写入的默认命令入口，并把右键菜单、拖线、Delete、Paste、Details与StateMachine编辑转交上述Adapter。Mutation preflight使用同一Capability与`GraphAuthoringNodePortShapeProjector`判断端口和字段合法性；Canvas不得先改Graph再回滚，也不得让Graph自身Undo与Document Transaction各记录一次。
 
 ## Decision 23: Compiler通过只读Authoring View消费Canvas，不执行Canvas
 
@@ -935,19 +945,19 @@ Canvas中没有唯一Pose Node Definition的节点在进入IR前直接失败；C
 
 删除顺序固定为先清除外部引用和场景组合，再删除资产与专用工具，最后按名称、路径、ActorId和GUID做引用闭包检查。这样不会留下Missing Script、Missing Asset或仍被collector打包的孤儿内容。
 
-## Decision 25: Pose编辑表面采用CanvasCore GraphEditor，Mutation路由保唯一写入
+## Decision 25: Pose编辑表面采用FlowCanvas GraphEditor，Mutation路由保唯一写入
 
 接入补充（2026-09-08）：根图与Pose子图直接使用正式Canvas作者对象。StateMachine和TransitionRule仍保存原typed作者数据；同一GraphEditor中的`CharacterPoseDocumentCanvas`只持有稳定identity与显示投影，不保存、不进入Document或Compiler、不独立运行，修改仍提交原Document Mutation。这是编辑视图，不是第二套可写状态机资产。窗口导航、详情和既有观察界面由`CharacterPoseGraphWorkspace`组合，不再创建第二个Pose EditorWindow。
 
 图操作先对完整候选preflight，再在实际Canvas owner上记录Undo及序列化；仍存在的节点对象保持身份，减少拖动和选择失效。状态机内容的Undo必须包含其实际Canvas子资产，布局仍归原布局owner；撤销后按Graph／Node稳定identity重新读取定义，不复用撤销前对象。重绘、选择和全图吸附不得偷偷写入作者布局，运行高亮只保留在视图状态中。当前实现与尚未通过的验收见`canvas-integration.md`。
 
-（2026-09-08新增，取代execution记录21.7"保留自建GraphView"的旧取舍。）Pose作者编辑表面从877行自建`CharacterPoseCanvasView`切换为CanvasCore `GraphEditor`（`OpenWindow(graph)`入口），自建View随22.x完成后退役删除。CanvasCore以vendored源码形式取得第一方地位：允许在其源码内加最小钩子，全部改动点以`// 3C`标记，便于将来与上游版本手工对账。
+（2026-09-08新增，2026-09-10校正术语，取代execution记录21.7"保留自建GraphView"的旧取舍。）Pose作者编辑表面从877行自建`CharacterPoseCanvasView`切换为FlowCanvas `GraphEditor`（`OpenWindow(graph)`入口），自建View随22.x完成后退役删除。FlowCanvas以Editor-only vendored UI取得第一方地位：允许在其GraphEditor生命周期上加最小领域钩子，但不得把Flow执行能力接入Character Runtime。
 
-写入路径：`CharacterPoseCanvasGraph`的8个写方法（AddNode/AddNode<T>/RemoveNode/ConnectNodes/RemoveConnection等）从抛异常改为把CanvasCore编辑器的原语调用翻译成typed Mutation——端口索引反查端口ID、粘贴时重建NodeId、经`CharacterPoseCanvasMutationPreflight`校验后应用。Mutation合同（17.2/17.3）不变，硬锁变正门。节点位置与名称这类CanvasCore直接写字段的操作，在CanvasCore侧加变更事件钩子路由进Document记录，保持Layout进Undo与迁移对账。
+写入路径：`CharacterPoseCanvasGraph`的8个写方法（AddNode/AddNode<T>/RemoveNode/ConnectNodes/RemoveConnection等）把FlowCanvas编辑器的原语调用翻译成typed Mutation——端口索引反查端口ID、粘贴时重建NodeId、经`CharacterPoseCanvasMutationPreflight`校验后应用。Mutation合同（17.2/17.3）不变，硬锁变正门。节点位置与名称等FlowCanvas直接写字段的操作，通过领域写入路由进入Document记录，保持Layout进Undo与迁移对账。
 
-Undo owner定界：编辑器会话内CanvasCore Undo唯一（Mutation应用后不双记Document），外部入口（MCP、Inspector、Clipboard、正式写入命令）Document Transaction唯一。创建菜单只放行`CharacterPoseNodeDefinition`注册的类型（16.3禁令不变），菜单文案、分组与颜色继续由Definition投影提供；命名端口视觉与Pose Watch、StateMachine子图导航、Preview Dock挂进GraphEditor面板体系属于后续增量，不阻塞画布编辑可用性。
+Undo owner定界：编辑器会话内FlowCanvas Undo唯一（Mutation应用后不双记Document），外部入口（MCP、Inspector、Clipboard、正式写入命令）Document Transaction唯一。创建菜单只放行`CharacterPoseNodeDefinition`注册的类型（16.3禁令不变），菜单文案、分组与颜色继续由Definition投影提供；FlowCanvas原生breadcrumb负责父子图返回。Pose Watch、正式Preview和Build不伪装成节点编辑器功能，分别由诊断/Preview/Build入口拥有。
 
-代价：CanvasCore升级需人工diff对账（改动点已标记）；NodeCanvas默认端口视觉在命名端口适配完成前降级显示（数据与编译不受影响）。收益：编辑器交互、连线渲染、Undo、复制粘贴、小地图等由成熟框架承载，项目不再自养GraphView。
+代价：FlowCanvas/NodeCanvas升级需人工diff对账（改动点已标记）；默认端口视觉在命名端口适配完成前降级显示（数据与编译不受影响）。收益：编辑器交互、连线渲染、Undo、复制粘贴、小地图、breadcrumb和Inspector由成熟框架承载，项目不再自养GraphView。
 
 
 ## Migration
@@ -970,7 +980,7 @@ Undo owner定界：编辑器会话内CanvasCore Undo唯一（Mutation应用后�
 14. 迁移Preview到同一Factory、Program Image、Worker Batch Plan、Kernel Set、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化、串行或重复执行路径；完成Reset、Replacement与Dispose的Outstanding Job fence。
 15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，使用既有Replay对账行为并执行正式IL2CPP Performance Capture，更新project truth并完成编译与严格校验。
 16. 从GameplayLab composition、Session roster、玩家target provider、AssetBundle collector、默认目录和构建入口清除TrainingEnemy引用，随后删除其完整配置目录、运行／表现Prefab、专用作者／构建脚本和生成产物；不得把其中PoseGraph转换为Canvas资产。
-17. 在独立Pose作者程序集建立CanvasCore依赖和`CharacterPoseCanvasGraph/Node/Connection`，固定Canvas只承担作者数据与交互，禁止FlowCanvas运行入口进入Character装配。
+17. 在独立Pose作者程序集建立FlowCanvas作者UI依赖和`CharacterPoseCanvasGraph/Node/Connection`，固定Graph只承担作者数据与交互，禁止FlowCanvas运行入口进入Character装配。
 18. 实现Definition Projection与Canvas Mutation Adapter，把创建、连线、删除、复制粘贴、Undo、Details和StateMachine表面切到唯一typed Mutation链。
 19. 实现只读Canvas Authoring View并在同一次切换中让Graph Closure与Typed Lowering直接读取新资产；只迁移明确保留的Corin Pose Graph、状态机、节点、端口、边、布局、子图、identity和资源引用，然后通过正式Character Build重建Projection。
 20. 新资产与新Compiler输入闭合后删除`CharacterTypedPoseGraph`存储、旧Pose `GraphAuthoringCanvasView`、旧StateMachine画布、旧codec和所有镜像／双写／反向同步路径。
@@ -1038,9 +1048,9 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 
 每Actor独立Job最容易接到现有Runtime，但小规模骨骼工作很可能在`Schedule -> Complete`之间没有足够并行窗口，调度成本反而更明显。会话级Scheduler需要显式Actor Batch Key、跨Actor隔离与生命周期fence，但能够把相同Program／Rig／Family工作组合为足够大的批次。项目有2v2vE多个角色压力场景，因此选择会话级批次；Actor根事务、Fault和Final Publication仍完全独立。
 
-### 14. CanvasCore作者基础与FlowCanvas运行语言
+### 14. FlowCanvas作者UI与Flow运行语言隔离
 
-直接使用FlowCanvas可以立即得到泛型Value端口、自动转换和委托执行，但这些能力同时引入Pose不允许的隐式类型转换、Flow生命周期和第二执行入口。本change选择CanvasCore作为交互与序列化基础，由Pose Definition投影严格端口并继续编译到现有Program Image。
+直接使用FlowCanvas的Flow/Value运行能力可以得到泛型Value端口、自动转换和委托执行，但这些能力同时引入Pose不允许的隐式类型转换、Flow生命周期和第二执行入口。本change只使用FlowCanvas的Editor UI与GraphEditor交互，由Pose Definition投影严格端口并继续编译到现有Program Image。
 
 代价是Pose需要自己的Port／Connection表现和Mutation接线；收益是Local／Component与Goal类型保持严格，运行时仍只有一套Pose Program。
 
@@ -1091,7 +1101,7 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - current `character-presentation-pose-graph`仍写明`compiler handler`，而current `graph-authoring-domain-framework`已经要求唯一Pose Node Definition并禁止第二Handler；现行代码仍保留Handler Registry。本change以Framework current requirement为方向修改Pose Graph requirement并删除旧实现，明确这是current specs之间的冲突，不把代码现状误写成current truth。
 - current `graph-authoring-domain-framework`已经固定Definition、共享Capability、Reconciler与Document Transaction Service边界。本change补足唯一`GraphAuthoringNodePortShapeProjector`、Document v4 Exporter/strict parser/Target Mapper/Mutation preflight调用链，以及Graph Closure读取Definition dependency的边界；Definition不得接管Document事务或五个MCP生命周期。
 - current `graph-authoring-domain-framework`要求BTSMTL、AI和Pose复用同一具体Canvas。本次用户明确只迁移Pose，因此delta把统一边界收窄为Capability、Document、Mutation、事务、Clipboard、Selection和Diagnostics合同，并要求每个领域内部只有一个具体Canvas和一套作者资产。不得保留旧Pose Canvas作为兼容入口。
-- current `character-presentation-pose-graph`以`CharacterTypedPoseGraph`和项目自建Canvas表达唯一作者图。本change以CanvasCore Graph／Node／Connection直接替换该存储，保留稳定identity、typed payload和Node Definition语义，并要求迁移完成后删除旧数据模型。
+- current `character-presentation-pose-graph`以`CharacterTypedPoseGraph`和项目自建Canvas表达唯一作者图。本change以FlowCanvas Graph／Node／Connection作者表面替换该存储，保留稳定identity、typed payload和Node Definition语义，并要求迁移完成后删除旧数据模型。
 - current Pose Preview仍允许独立Adapter持有Preview Runtime和非连续Seek。已确认的Scene Play方向要求正式Session拥有Scene、时钟、输入推进和重建；本change只保留Pose窗口的命令与Committed观察职责，实际预览生命周期由`rebuild-btsmtl-preview-with-scene-play`负责。
 - current `character-targeted-motion-warp-demo`明确要求Standalone注册玩家与`corin-training-enemy`两个Actor，并把玩家target provider绑定训练敌人。用户2026-09-05已改为整套删除TrainingEnemy；删除后GameplayLab只保留Corin，target input为None，五段攻击按`OptionalSnapshot`继续运行原始MotionCurve。该capability需要删除训练敌人、显式绑定和训练敌人范围三组现行Requirement，但当前change没有该capability的delta文件；实施前必须先补齐该delta，不能声称current spec已经同步。
 - current `btsmtl-compiled-simulation-program`与`project.md`并存`CharacterPresentationPoseProgram`、Native Pose Program称呼。本change统一为Projection内部唯一`CharacterPoseProgramImage`，每个Program Runtime只可建立一份同identity的actor-local只读Execution View，不生成第二语义程序。

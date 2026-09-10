@@ -8,6 +8,12 @@ BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanva
 
 原生FlowCanvas runtime实验与替换计划已撤回，历史见[决策记录](flowcanvas-experiment.md)。以下正式运行重构成果继续保留；旧专用画布目标由新提案替代，不自动完成未验收项或归档本change。
 
+## 2026-09-10 UI、Preview与Build口径修正
+
+Pose作者界面直接使用FlowCanvas原生`GraphEditor`。画布、breadcrumb、节点/连线Inspector、创建菜单、子图下钻、selection、clipboard和编辑器Undo均属于FlowCanvas作者表面；Pose Adapter只负责Capability、typed字段/端口、Mutation和诊断数据，不再设计第二套Pose画布或常驻Details作者面板。
+
+正式Preview已经由独立Preview Fixture/Scene Session链负责，PoseGraph窗口不创建第二Preview播放器、时钟、临时Program或简化Executor。Build继续使用精确Character Definition的正式生命周期；Fixed入口同时发布Float32、Fixed和共享Presentation Projection，Pose-only输入只是Build内部的隔离输入，不是另一套Build路径。
+
 ## Why
 
 当前Pose Graph的作者拓扑、typed端口、单次PlayableGraph Evaluate、唯一Goal Assembler、唯一FullBodyIK和唯一Final Writer方向正确，但运行与编译实现没有形成同等清晰的所有权。
@@ -26,7 +32,7 @@ BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanva
 
 本change不重新设计动画效果，而是把已批准的动画行为放入最终PoseGraph架构：用唯一Node Definition、固定Compiler Pass、不可变Program Image、每Actor状态、每帧事务、深Runtime Module、单一Operation执行Owner和Committed Result诊断链，取代当前巨型协调器、中央黑板、万能Operation与跨Module内部页读取。
 
-当前Pose Graph作者入口仍由项目自建Canvas、节点View、端口View、状态机表面和预览面板共同承载。项目已经导入ParadoxNotion CanvasCore、NodeCanvas与FlowCanvas源码，但Pose作者数据、typed端口、Document、Mutation和Compiler尚未接入。继续在自建Pose Canvas上补齐节点交互，会让通用图编辑能力和Pose业务语义继续混在同一实现中。
+当前Pose Graph作者入口已经切换为ParadoxNotion的FlowCanvas/NodeCanvas `GraphEditor`，Pose节点、端口、连接、breadcrumb和Inspector均由该作者表面承载；项目自己的Adapter只负责typed Projection和Mutation。正式Preview与Build不由作者画布执行，分别走正式Preview Fixture/Scene Session和精确Definition Build生命周期。
 
 本次新增范围只迁移Pose Graph作者层：ParadoxNotion Canvas成为Pose Graph唯一具体画布和唯一作者资产模型，BTSMTL与AI作者实现不在本change范围。各领域继续共享Capability、Document、Mutation、事务和诊断合同，但不再要求使用同一个具体Canvas实现。Pose Compiler与Runtime继续消费唯一Pose作者数据并生成现有Program Image，不建立Canvas执行路径、第二Pose资产或双向同步。尚未形成正式闭环的`TrainingEnemy`不进入迁移清单；用户已决定将其整套内容退役，避免Canvas迁移继续背负不可构建、不可验收的半成品资产。
 
@@ -34,7 +40,7 @@ BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanva
 
 - **BREAKING**：将Pose Graph唯一作者资产和编辑表面迁移为ParadoxNotion Canvas Graph／Node／Connection。迁移器一次性把保留的正式Pose Graph、PoseStateMachine、节点、端口、边、布局与子图写入新资产；迁移完成后删除旧`CharacterTypedPoseGraph`作者存储、Pose专用`GraphAuthoringCanvasView`入口和旧状态机画布，不保留镜像资产、双写、反向同步或兼容读取。
 - **BREAKING**：在作者资产迁移前整套删除`TrainingEnemy`内容，包括`Assets/Configs/Character/TrainingEnemy`、运行与表现Prefab、GameplayLab嵌套实例、`corin-training-enemy` roster与玩家target-provider绑定、AssetBundle collector、默认目录注册、专用作者／构建脚本和生成产物。该内容不转换到Canvas、不保留空Profile或占位配置；未来训练敌人或中立怪物必须在正式Gameplay、AI、Character Pipeline和Presentation链准备完成后重新建立。
-- 将共享Graph Authoring边界收窄为领域无关的Capability、Document、Mutation、Clipboard、Selection、Undo、事务与Diagnostics合同。Pose通过唯一Canvas Adapter把Node Definition的字段、固定／条件／动态typed端口、Pose空间、创建菜单和Details投影到ParadoxNotion Canvas；BTSMTL与AI继续使用各自当前具体画布，本change不迁移其资产或编辑器。
+- 将共享Graph Authoring边界收窄为领域无关的Capability、Document、Mutation、Clipboard、Selection、Undo、事务与Diagnostics合同。Pose通过唯一FlowCanvas Adapter把Node Definition的字段、固定／条件／动态typed端口、Pose空间和创建菜单投影到FlowCanvas原生GraphEditor；BTSMTL与AI继续使用各自当前具体画布，本change不迁移其资产或编辑器。
 - 新增唯一`CharacterPoseNodeDefinitionModule`。每种Pose节点通过一个Definition Adapter集中声明Payload类型、字段合同、固定/条件/动态端口、允许Graph Role、Execution Domain、Authoring codec、Graph dependency投影、局部校验、typed lowering和Operation Family。Definition先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把固定端口、条件`portVariants`与node-local动态端口投影给Canvas、Document v4、Clipboard、Reconciler、Mutation preflight与Validator；Compiler只从同一Definition读取Graph dependency与typed lowering。删除旧Compiler Handler布尔矩阵和重复node-kind switch。
 - 将Pose Plan Compiler重构为固定不可逆Pass：`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Worker Batch Plan -> Bind Family Payload -> Seal Program Image`。Graph Closure通过Node Definition的结构化Graph dependency投影展开Subgraph与Linked Pose call，不直接解释具体Payload；先固定Operation及调度，再计算Value寿命与Workspace容量，然后按Execution Domain、Rig执行布局、typed read/write range与平台Kernel能力生成固定Worker Batch，最后绑定物理handle。每个Pass只消费明确前置的不可变Result并产生结构化诊断，删除中央可变`CompilationState`。
 - 用不可变`CharacterPoseProgramImage`替换当前混合状态的`CharacterPoseGraphNativeProgram`。Program Image作为`CharacterPresentationProjection`内部唯一Pose程序保存Projection identity、`PoseProgramImageHash`、Rig、typed stage schedule、operation headers、family payload pages、常量页、value layout、workspace layout、Worker Batch Plan、Kernel Set、Rig执行布局、Execution Policy、source map与容量，不保存Actor状态、Pending/Committed页、平台线程对象或当前Frame结果。Runtime如需NativeArray等执行存储，每个`CharacterPoseProgramRuntime`只能建立一份actor-local、只读、identity精确匹配的`CharacterPoseProgramExecutionView`；该View只做逐值物理materialization，不得编译、重排、拆批、补字段或成为第二语义程序，并由对应Program Runtime唯一Dispose。

@@ -6,19 +6,19 @@
 ## Requirements
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
-`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Contributions -> Goal Assembler -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Contribution，唯一Goal Assembler MUST形成一个Goal Set，唯一FullBodyIK MUST消费原始Component Pose与该Goal Set。
+`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Contributions -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Contribution，Compiler MUST在唯一FullBodyIK前生成唯一Goal Assembler与Goal Set。
 
 Runtime MUST不在图外补建Goal Assembler、Foot Placement、FBBIK、空间转换、第二Goal Set、第二Pose Graph或第二Output路径。
 
 #### Scenario: 查看完整Foot Placement拓扑
 
 - **WHEN** 作者查看包含FootPlacement与PoseBone Goal来源的正式Pose Graph
-- **THEN** 图 MUST明确显示两个Goal Contribution进入唯一Assembler，再进入唯一FullBodyIK
+- **THEN** 图 MUST明确显示两个Goal Contribution进入Control Rig中的FullBodyIK typed输入，Compiler MUST展开唯一Assembler，再进入唯一FullBodyIK
 - **AND** MUST不存在多个Goal Set并行汇入FBBIK的隐藏拓扑
 
 ### Requirement: Pose端口必须显式区分空间并允许typed控制目标
 
-Pose Graph MUST使用`pose.local`、`pose.component`、`component.full-body-ik-goal-contribution`与`component.full-body-ik-goals`稳定端口类型。FootPlacement与PoseBoneIKGoals只读Component Pose并输出Goal Contribution；Goal Assembler接收固定typed Contribution集合并输出唯一Goal Set；FullBodyIK接收一个Component Pose和一个Goal Set并输出Component Pose。
+Pose Graph MUST使用`pose.local`、`pose.component`与`component.full-body-ik-goal-contribution`稳定端口类型；`component.full-body-ik-goals`只属于Compiler生成的内部 operation。FootPlacement与PoseBoneIKGoals只读Component Pose并输出Goal Contribution；Control Rig中的FullBodyIK可接收有序typed Contribution输入，Compiler负责生成唯一Goal Set并输出Component Pose。
 
 Goal Contribution、Goal Set与Pose空间不得隐式cast、复用同一端口或通过Skeleton可写IK骨伪装。Goal Assembler MUST拒绝重复Effector Slot、错误Application、不同Frame/Completion/Rig lineage和超过编译容量的Contribution。
 
@@ -32,12 +32,12 @@ Goal Contribution、Goal Set与Pose空间不得隐式cast、复用同一端口�
 
 唯一Pose Compiler Module MUST通过`Graph Closure -> Typed IR -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`固定Pass链，把同一Pose DAG编译为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph/Linked Pose call。Program Image MUST按typed依赖、Pose空间与Execution Domain保存有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并使用公共Operation Header、typed Value Reference和分段Operation Family Payload；MUST不保存万能Operation可选字段、Actor State、Frame Pending页或运行时Tuning。Runtime MUST不构造第二语义Program，每个Program Runtime只可建立最多一份同identity、actor-local、只读Execution View。
 
-Goal Contribution收集、唯一Goal Assembler、唯一Goal Set、FBBIK和OutputPose MUST进入固定阶段，Projection MUST静态证明每条正式路径最多一个Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Publication requirement。每个Constraint Family Operation MUST在自己的Stage位置通过typed编译Handle调用Constraint Module一次，Constraint不得扫描Program或维护第二Schedule。Output Family MUST只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不得保存Actor页指针或分配第二Final Pose buffer。具体Final Publication、Physical Bone binding与Writer唯一性 MUST由Runtime Factory和Final Publication构造验证，Compiler不得创建Writer Graph节点。每个source每帧 MUST最多capture一次，每个Operation MUST恰好执行一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由Final Publication中的唯一Writer写一次。Runtime MUST不重新编译、重排、补执行或解释authoring Graph。
+Goal Contribution收集、编译生成的唯一Goal Assembler、唯一Goal Set、FBBIK和OutputPose MUST进入固定阶段，Projection MUST静态证明每条正式路径最多一个Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Publication requirement。每个Constraint Family Operation MUST在自己的Stage位置通过typed编译Handle调用Constraint Module一次，Constraint不得扫描Program或维护第二Schedule。Output Family MUST只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不得保存Actor页指针或分配第二Final Pose buffer。具体Final Publication、Physical Bone binding与Writer唯一性 MUST由Runtime Factory和Final Publication构造验证，Compiler不得创建Writer Graph节点。每个source每帧 MUST最多capture一次，每个Operation MUST恰好执行一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由Final Publication中的唯一Writer写一次。Runtime MUST不重新编译、重排、补执行或解释authoring Graph。
 
 #### Scenario: Foot Placement后执行FullBodyIK
 
 - **WHEN** Foot Placement与其它Goal Source完成同Frame Goal Contribution
-- **THEN** Stage Schedule MUST在其后执行唯一Goal Assembler和唯一FullBodyIK
+- **THEN** Stage Schedule MUST在其后执行编译生成的唯一Goal Assembler和唯一FullBodyIK
 - **AND** 后续节点 MUST消费FBBIK输出而不是输入Pose或外层Runtime预先生成的副本
 
 #### Scenario: 编译无Goal贡献的角色
@@ -86,7 +86,7 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 ### Requirement: State-local source必须由Profile binding和provider解析
 
-`ClipPlayer`、`BlendSpacePlayer`与`SelectedPosePlayer` MUST引用类型匹配的Graph-owned Source Slot对象。Projection Compiler MUST从精确Definition/Profile解析唯一Binding；Clip Binding MUST直接提供AnimationClip。ClipPlayer MUST只保存Source Slot、Play Rate、Initial Time与Clock Source，不得保存Loop或Topology副本；Finite/Cyclic MUST只从AnimationClip正式Loop设置编译。Provider MUST发布带dense source index、generation、Projection revision与frame lease的`PresentationPoseSourceSample`。Pose Graph MUST不保存Sequence、AnimationClip副本、作者source字符串或Gameplay producer。
+`ClipPlayer`、`BlendSpacePlayer`与`SelectedPosePlayer` MUST直接引用类型匹配的原生资源或明确typed资源参数。Projection Compiler MUST从唯一Player引用生成dense source usage；ClipPlayer MUST保存AnimationClip、Play Rate、Initial Time、Loop与Clock Source，不得保存Source Slot、Profile Binding或Topology副本。Provider MUST发布带dense source index、generation、Projection revision与frame lease的`PresentationPoseSourceSample`。Pose Graph MUST不保存Sequence包装资产、作者source字符串或Gameplay producer。
 
 #### Scenario: ClipPlayer首次采样Idle
 
@@ -96,9 +96,9 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 #### Scenario: ClipPlayer提交Loop字段
 
-- **WHEN** 人工Capability或Document v4为ClipPlayer提供Loop、Topology或等价override
-- **THEN** typed parser或Validator MUST在Compiler前拒绝该字段
-- **AND** MUST不覆盖AnimationClip正式Loop设置
+- **WHEN** 人工Capability或Document v7为ClipPlayer提供合法Loop策略
+- **THEN** Compiler MUST按该Player usage编译Finite或Cyclic时间行为
+- **AND** MUST不复制素材曲线或创建Sequence包装资产
 
 ### Requirement: PoseState target必须经过readiness barrier
 
@@ -122,7 +122,7 @@ PoseStateMachine MUST先选择候选target并向其provider提交demand。只有
 
 ### Requirement: AnimationSlot必须是有限Action的唯一Pose插入口
 
-`ActionPlaybackInput` MUST只读取`CharacterActionPlaybackRuntime`发布的有限Action frame。`AnimationSlot` MUST拥有Source Pose输入、Action Playback输入、稳定SlotId与AnimationChannelId以及node-local Routing Plan。无Action时Slot MUST透传同帧Source Pose；Action Ready时 MUST插入Action Pose；Action release时 MUST过渡回持续更新的`SourcePoseEndpoint`。Slot MUST不判断Action admission、不推进Timeline、不控制Locomotion PoseState、不拥有Bone Mask，也 MUST不把NoPose和SourcePoseEndpoint混为一谈。
+`AnimationSlot` MUST拥有Source Pose输入、稳定SlotId、Slot Group与AnimationChannelId以及node-local Routing Plan；Action Playback读取由Compiler展开，不要求作者连接Action Playback Input。无Action时Slot MUST透传同帧Source Pose；Action Ready时 MUST插入Action Pose；Action release时 MUST过渡回持续更新的`SourcePoseEndpoint`。Slot MUST不判断Action admission、不推进Timeline、不控制Locomotion PoseState、不拥有Bone Mask，也 MUST不把NoPose和SourcePoseEndpoint混为一谈。
 
 #### Scenario: FullBodyAction为空
 
@@ -210,13 +210,15 @@ Goal对求解要求权威，Solved Pose对本次Solver输出权威，Physical Re
 
 ### Requirement: Pose Graph工作区必须准确映射Authoring、Live与References
 
-正式窗口 MUST提供Definition-scoped Navigator、唯一`GraphAuthoringCanvasView`、Details和可折叠Bottom Dock。Details MUST分离Authoring、Live与References：Authoring只通过正式Presentation Mutation修改当前owner字段；Live只读取匹配PoseGraphId、PoseGraphRevision与ProjectionRevision的snapshot；References只读显示Source Slot、Profile binding子资产、实际资源对象、source map、Action producer、Rig、Policy和call site。稳定identity、GUID、revision、hash与compiled index MUST默认隐藏。Live Debug模式下mutation MUST禁用，revision不匹配 MUST显示Stale并清空旧值。
+正式窗口 MUST以FlowCanvas原生`GraphEditor`作为Pose作者宿主，使用原生画布、breadcrumb、节点/连线Inspector、创建菜单、子图下钻、selection、clipboard与编辑器Undo。Pose领域Adapter只向这些扩展点提供Capability、typed字段、端口形状、业务命令和Mutation路由；MUST不通过自定义domain panel替换FlowCanvas原生Inspector，也不得建立第二套节点字段编辑器或独立selection集合。
+
+项目自定义面板 MAY提供Definition-scoped跨Graph检索、Runtime Observation、References、Preview状态、Build/Validate报告和诊断；这些内容不得成为Pose节点作者字段的第二入口。Authoring修改 MUST只通过正式Presentation Mutation修改当前owner字段；Live只读取匹配PoseGraphId、PoseGraphRevision与ProjectionRevision的snapshot；References只读显示直接资源、Action producer、Slot／Group、Rig、Policy和call site。稳定identity、GUID、revision、hash与compiled index MUST默认隐藏。Live Debug模式下mutation MUST禁用，revision不匹配 MUST显示Stale并清空旧值。
 
 #### Scenario: 查看Locomotion State
 
 - **WHEN** 作者选中Locomotion State的Clip或BlendSpace Player
-- **THEN** Authoring MUST显示类型匹配的Source Slot对象选择器
-- **AND** References MUST显示解析后的Profile binding、实际资源、owner与Open Source命令
+- **THEN** Authoring MUST显示类型匹配的原生AnimationClip或Blend Space资源选择器
+- **AND** References MUST显示实际资源、Slot／Group、owner与Open Resource命令
 - **AND** MUST不显示BaseLocomotion Gameplay producer或可编辑Source Id
 
 #### Scenario: Runtime revision不匹配
@@ -249,7 +251,7 @@ Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许Goal
 
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
 
-Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配actor-local Execution View、`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`、根Frame Transaction和actor-local Tuning Snapshot。正式Runtime与Preview MUST直接读取同一Projection内Program Image并让各自Program Runtime遵守同一Execution View materialization/Dispose规则，不得创建第二语义Program；二者 MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。每帧每个source、Player、Action lifecycle、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
+Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配actor-local Execution View、`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`、根Frame Transaction和actor-local Tuning Snapshot。正式Runtime与正式Preview MUST直接读取同一Projection内Program Image并让各自Program Runtime遵守同一Execution View materialization/Dispose规则，不得创建第二语义Program；二者 MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。Preview入口 MUST使用正式Preview Fixture/Scene Session，不得由PoseGraph作者窗口创建第二播放时钟、临时Program或简化Executor。每帧每个source、Player、Action lifecycle、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
 
 #### Scenario: Graph修改后继续Preview
 
@@ -265,12 +267,12 @@ Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`�
 
 ### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
 
-Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed domain document。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v4 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering与Source Map。系统 MUST不保留第二节点目录、重复字段switch、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。跨节点拓扑规则 MUST只属于唯一Topology Pass。
+Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed domain document。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v7 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering与Source Map。系统 MUST不保留第二节点目录、重复字段switch、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。跨节点拓扑规则 MUST只属于唯一Topology Pass。
 
 #### Scenario: 新增Pose节点能力
 
 - **WHEN** 新Pose节点注册唯一Definition Adapter
-- **THEN** 人工创建菜单、Document v4、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
+- **THEN** 人工创建菜单、Document v7、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
 - **AND** MUST不要求在多个Catalog、Handler或NodeKind switch中重复声明同一字段和端口
 
 #### Scenario: Node Definition缺少Document投影

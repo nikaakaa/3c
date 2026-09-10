@@ -231,14 +231,27 @@ namespace BTSMTL.Timeline.Editor
             ownership.style.paddingLeft = 8f;
             ownership.style.paddingTop = 4f;
             ownership.style.paddingBottom = 4f;
-            m_SlateProjection = BtsmtlSlateTimelineProjection.Open(TimelineEditorOpenRequestComposition.Create(
+            TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
                 timeline,
                 serializedOwner,
                 serializedPropertyPath,
                 ownershipLabel,
                 sourceGraphWindow,
-                new TimelineRuntimeDebugBinding(timeline.AuthoringId)),
-                OpenClip);
+                new TimelineRuntimeDebugBinding(timeline.AuthoringId));
+            if (!BtsmtlSlateTimelineProjection.TryOpen(
+                    openRequest,
+                    OpenClip,
+                    out m_SlateProjection,
+                    out string unavailableReason))
+            {
+                rootVisualElement.Clear();
+                rootVisualElement.Add(CreateModeToolbar());
+                rootVisualElement.Add(new HelpBox(
+                    $"Slate Timeline unavailable: {unavailableReason}",
+                    HelpBoxMessageType.Error));
+                m_DebugDetails = null;
+                return;
+            }
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());

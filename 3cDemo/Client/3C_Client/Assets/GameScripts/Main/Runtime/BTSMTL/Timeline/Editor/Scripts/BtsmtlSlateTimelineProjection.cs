@@ -222,6 +222,30 @@ namespace BTSMTL.Timeline.Editor
             return s_Current;
         }
 
+        public static bool TryOpen(
+            TimelineEditorOpenRequest request,
+            Action<Clip> openSourceClip,
+            out BtsmtlSlateTimelineProjection projection,
+            out string unavailableReason)
+        {
+            try
+            {
+                projection = Open(request, openSourceClip);
+                unavailableReason = string.Empty;
+                return true;
+            }
+            catch (Exception exception) when (
+                exception is TypeLoadException ||
+                exception is MissingMethodException ||
+                exception is InvalidOperationException)
+            {
+                DisposeCurrent();
+                projection = null;
+                unavailableReason = exception.Message;
+                return false;
+            }
+        }
+
         public static void DisposeCurrent()
         {
             s_Current?.Dispose();

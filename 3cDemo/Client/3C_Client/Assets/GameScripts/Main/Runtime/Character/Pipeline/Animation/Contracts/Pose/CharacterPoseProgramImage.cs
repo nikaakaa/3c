@@ -636,7 +636,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPoseProgramImage
     {
-        public const string SchemaVersion = "character-presentation-pose-plan/v28";
+        public const string SchemaVersion = "character-presentation-pose-plan/v29";
         public const string RuntimeAbi = "character-presentation-pose-runtime/v28";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;

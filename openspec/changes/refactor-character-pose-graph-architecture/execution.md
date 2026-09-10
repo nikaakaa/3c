@@ -1522,4 +1522,6 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 状态：通过Unity MCP执行`character.pose_reset_observation`时，正式运行链在`CharacterPresentationFullBodyIkDescriptor.RequireValid`处报告`Full Body IK descriptor is invalid`。对照当前工作区发现`CorinFullBodyIkProfile.asset`的左右腿`Pull`已由`0`改为`1`，但`m_Revision`仍为旧值`e83001…`；未回退这两个作者字段，已通过正式ScriptableObject属性写入同步当前派生revision `c88bb920961075b08561c03e92a16d70f06fad08560267e1516f4fd76c9adbb2`。
 
-当前生成Projection仍保存`m_ProfileRevision: e83001…`，因此必须在Agent并发重构恢复可编译后重新执行唯一Character Build，不能手改Projection或以旧产物继续观察。当前Unity Console阻塞来自Agent未提交文件中的字段迁移错误，不属于Pose代码；Pose作者入口本身没有新增编译错误。
+当时生成Projection仍保存`m_ProfileRevision: e83001…`，因此必须在Agent并发重构恢复可编译后重新执行唯一Character Build，不能手改Projection或以旧产物继续观察。当前Unity Console阻塞来自Agent未提交文件中的字段迁移错误，不属于Pose代码；Pose作者入口本身没有新增编译错误。
+
+随后按当前Profile字段完成正式Character Build，Unity MCP返回Float32、Fixed与共享Presentation Projection发布成功，ProjectionRevision为`7fd5162562a8292210661579963a92822664db5d1b2f0fa67ff098fcebd71089`。Pose-only观察继续推进到资源加载入口，内层错误变为`YooAssets not initialize !`；已在Preview统一`Present`入口补齐`CharacterAnimationResourceScope.AdvancePreparation()`，但编辑模式Fixture没有正式Scene资源包初始化。此处不添加AssetDatabase fallback loader，等待正式Scene Play／资源启动链后再登记Pose reset观察通过。

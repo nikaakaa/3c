@@ -142,7 +142,7 @@
   当前代码：`SimulationSessionCompositionDefinition`、`SimulationPipelineCompiler`、Float32/Fixed Composer及Pass Factory已形成唯一组合链，兼容检查覆盖NumericProfile、Target ABI、Backend、Solver、Source Pass/Port和ExecutionSupport；正式 Corin 组合证据待补。
 - [ ] 4.5.5 接入Rollback与Server Authority的正式Pass/Adapter；验证网络只传Input、Canonical Request、Hash和Snapshot，不复制Graph、Blackboard名称、Timeline对象或最终Pose。
 
-  当前代码：Rollback与Server Authority各自通过Session Source、Pipeline Pass、Snapshot/Canonical Codec和Network Adapter接入同一Program；现有网络编解码只保存Input、Request、Program/Layout/State Hash、Snapshot与Output disposition，尚缺本变更的正式网络产品运行记录。
+  当前代码：Rollback与Server Authority各自通过Session Source、Pipeline Pass、Snapshot/Canonical Codec和Network Adapter接入同一Program；网络编解码只保存Input、Request、Program/Layout/State Hash、Snapshot与Output disposition。`RollbackInputCodec.ReadInput`、`ServerAuthoritativeCanonicalCodec.ReadInput/ReadBaseline`及其上层Egress入口均要求解码后重新编码与原字节完全一致；仍尚缺本变更的正式网络产品运行记录。
 
 ## 5. Document v7和资产迁移
 

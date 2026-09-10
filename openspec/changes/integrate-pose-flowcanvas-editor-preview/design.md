@@ -49,19 +49,21 @@ serialized目录继续是flat catalog：State、Layer和Control Rig调用引用�
 
 ### 2. Corin根图和动画层的目标组织
 
-基础全身组织如下。Locomotion是持续基础姿势生产者，不是Animation Slot；BlendStack拥有基础姿势的连续选择历史，Locomotion Inertialization只处理基础姿势切换，Full Body Slot只接收基础姿势并插入有限Action，Action Inertialization单独处理动作进入、退出和打断。
+基础全身组织不是固定必经链。Locomotion是持续基础姿势生产者，不是Animation Slot；BlendStack只在该分支确实需要多源选择历史时使用；Inertialization是一个通用Pose节点，只在对应Transition Rule选择该逻辑时经过。Action与Locomotion可以在不同图边界放置同一种Inertialization节点，但不能创建两个按业务命名的专用Node Kind。
 
 ```text
 Locomotion State Machine
-    → BlendStack: Locomotion
-    → Inertialization: Locomotion
-    → Slot: FullBody Action
-    → Inertialization: Action
+    → [BlendStack：需要多源选择历史时]
+    → [Inertialization：转换规则选择时]
+    → Base Pose
+    → FullBody Action Slot
+    → [Layered Blend Per Bone：局部身体层需要时]
+    → [Inertialization：对应规则选择时]
     → Control Rig: Body
     → Output Pose
 ```
 
-Full Body Slot接在Locomotion之后是UE允许的Full Body Action插入方式，但它不能把Locomotion的连续性、基础层惯性化和动作历史混成一个owner。Slot自己的Action Stack只管理Action endpoint；根图必须另外拥有可见的Locomotion BlendStack。Runtime不得因为存在Slot而自动创建Locomotion Stack或隐藏的Inertialization。
+Full Body Slot接在Locomotion之后是UE允许的Full Body Action插入方式，但它不能把Locomotion连续性、Action历史和惯性化混成一个owner。Slot自己的Action Stack只管理Action endpoint；Runtime不得因为存在Slot而自动创建BlendStack或Inertialization。图中是否出现这些节点，必须由实际作者拓扑和对应规则决定。
 
 分层动作采用以下语义，不强制把所有内容放进根图：
 

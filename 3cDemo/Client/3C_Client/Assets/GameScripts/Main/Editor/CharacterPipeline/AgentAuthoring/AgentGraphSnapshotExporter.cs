@@ -74,6 +74,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.rootIdentity = AssetDatabase.AssetPathToGUID(snapshot.definitionAssetPath);
             snapshot.rootTreeAssetPath = string.Empty;
             snapshot.rootGraphAuthoringId = string.Empty;
+            snapshot.inputProviderOwnerId = CharacterSkillProviderOwners.Asset(
+                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.InputProfile)));
+            snapshot.gameplayProviderOwnerId = CharacterSkillProviderOwners.Asset(
+                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.GameplayEffectProfile)));
             snapshot.controlModuleId = definition.ControlModuleId;
             if (!string.IsNullOrEmpty(snapshot.controlModuleId))
             {

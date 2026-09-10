@@ -300,7 +300,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         timelines = target.editable.skillTimelines
                     },
                     report,
-                    target.editable.control?.moduleId);
+                    target.editable.control?.moduleId,
+                    current?.inputProviderOwnerId,
+                    current?.gameplayProviderOwnerId);
             valid &= AgentTimelineDocumentMapper.ValidateTimelineRelationships(target.editable, report);
             valid &= AgentPackageMappingSupport.ValidatePrimaryIdentities(target.editable, report);
 

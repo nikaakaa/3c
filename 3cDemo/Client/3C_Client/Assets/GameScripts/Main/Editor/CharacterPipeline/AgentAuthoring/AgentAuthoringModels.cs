@@ -83,6 +83,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotGraph> graphs = new List<AgentSnapshotGraph>();
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
+        public string inputProviderOwnerId;
+        public string gameplayProviderOwnerId;
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
         public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
         public List<AgentPackageSkillFlowGraphFile> skillGraphs = new List<AgentPackageSkillFlowGraphFile>();

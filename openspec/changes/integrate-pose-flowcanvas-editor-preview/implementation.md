@@ -1,10 +1,78 @@
 # Pose UE式作者组织：实施状态与历史记录
 
-## 当前状态（2026-09-09）
+## 当前状态（2026-09-10）
 
-本提案已经按UE式作者组织重新规划，正式方案见[design.md](design.md)，实施清单见[tasks.md](tasks.md)。当前为44项任务：3项既有基础保留，41项待实施。新作者组织尚未实现；此前“代码完成、只剩Build”的结论已撤回，不能继续用于本提案。
+本提案已经按UE式作者组织重新规划，正式方案见[design.md](design.md)，实施清单见[tasks.md](tasks.md)。当前清单为49项：3项既有基础保留，46项尚未勾选；其中部分作者、编译和迁移增量已完成，但尚未完成最终审计。
 
-本次文档整理没有修改C#、Unity作者资产、编译产物或场景，没有执行Build或迁移。源代码当前的Document常量仍是v6，Pose Program Image仍是v28；Document v7及新的作者组织是计划目标，不是已交付状态。
+本次实施已修改C#并完成Corin作者资产迁移；Pose Program Image仍为v28，正式Program／Projection尚未因统一Build阻塞而重新发布。Document schema已切换为v7，但完整v7 package checkout仍受Skill Graph闭包错误阻塞。
+
+## 当前实施增量（2026-09-09）
+
+已为Pose Canvas Graph加入持久化作者角色合同：AnimGraph、Animation Layer、State Pose、Transition Rule、Control Rig、Subgraph和Linked Pose Entry。作者工作区、调参入口和编辑写入会优先读取图自身角色；没有角色字段的旧图继续按现有状态图关系推断。Capability补充了Animation Layer与Control Rig的Document Role，并扩大现有Pose能力在这些角色中的合法范围。
+
+这只是作者角色基础，不代表Player直接资源、Timeline Slot／Section、Control Rig展开、Document v7、Corin迁移或最终Build已经完成；tasks仍按49项实施清单统计。
+
+随后将Action Playback Input、Pose Parameter Resolve和Goal Assembler标记为编译器拥有的Capability。它们仍可被旧资产和唯一Compiler识别，但不再出现在新作者节点创建菜单；编辑写入入口也会拒绝直接创建这些内部节点。Pose Bone IK Goals没有被误标为内部节点，仍是Control Rig目标作者能力。
+
+已在Animation Rig Definition中增加正式Animation Slot目录。每个Slot拥有独立Slot identity、Slot Group identity和作者显示名；同一Group允许多个Slot，共用Group只表达动作互斥，不与IK Effector或内部AnimationChannel混用。Rig校验会拒绝缺失或重复Slot identity，后续Corin迁移时把现有动作入口写入该目录。
+
+Pose Slot节点的Rig校验已接入该目录：Slot identity不再只依赖Pose节点字符串和编译期路由，必须能在当前Rig的正式Slot目录中解析；现有Corin旧资产在完成迁移前会被明确判为未迁移，而不是自动补默认Slot。
+
+编译后的Animation Slot descriptor已携带Slot Group identity，Program Image seal会把Group纳入产物身份，运行观察也会返回Slot与Group的分离结果。这样动作互斥组不会再只能从Slot名称或AnimationChannel反推。
+
+Clip Player的有效播放策略已进入作者Payload、编译Descriptor和运行时Clip Player：`Loop Animation`不再读取导入资源的循环标记，运行时按该次Player usage决定有限或循环时间。该字段仍暂时与旧Source Slot共存，直接AnimationClip引用和Source Catalog去重尚未完成，因此不能勾选2.2或2.3。
+
+同时将该策略纳入Clip Player编译器版本和Program Image seal identity，避免只改运行时字段而复用旧产物。旧v4 Clip Player产物会因版本不一致进入Stale，等待后续统一迁移与重新发布。
+
+Clip Player作者字段已改为直接`AnimationClip`资产引用，Source Compiler增加了按结构化Clip引用分配独立source index的入口，Pose Binding Pass也能消费该direct index；旧Source Slot只作为待迁移旧Payload保留。直接Clip的Foot Analysis键和Corin资源迁移尚未完成，当前不能宣称2.2、2.3已完成。
+
+Direct Clip source已经贯通唯一Source Compiler、Foot Analysis binding key、Pose Compilation Request、Family Binding Pass和Clip Player source plan。直接资源不再通过Profile Pose Source binding查找；其分析键使用Clip的GUID与local file id。当前还需要在Corin迁移前完成已有分析artifact的对应重生成，并移除旧Source Slot分支。
+
+2026-09-09通过Unity实例`e852139597e42532`请求脚本编译。首次编译发现Direct Clip字典的`AnimationClip`类型歧义和Foot Analysis解析器缺少Editor命名空间，已修复；Domain Reload完成后同一实例重新注册，Console错误数为0。该结果只证明当前脚本可编译，不证明新作者资产和Build已完成。
+
+随后扩展Direct Blend Space与Animation Layer图角色，Unity实例`e852139597e42532`再次完成脚本编译；Domain Reload期间连接暂时断开，恢复后Console错误数为0。当前仍未执行资产迁移，故编译成功不等于Corin产物可发布。
+
+Timeline动画轨道增加了可选外部Slot identity。BTSMTL只保存稳定字符串，避免通用Timeline反向依赖Character模块；Character Semantic IR和Projection编译阶段将其解析为typed `AnimationSlotId`。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline的Slot identity已进入`TimelineAnimationContribution`与`CharacterPresentationAnimationClipBinding`，使原Action Timeline的动画片段能够在同一owner中携带Slot来源；仍未添加第二Montage资产或第二时钟。Unity实例`e852139597e42532`在Domain Reload后编译通过，Console错误数为0。
+
+有限Action Timeline的Section增加了`NextSectionId`及owner内目标校验，并提供同一Timeline上的Section跳转配置入口；Section仍复用原Timeline时钟和生命周期，没有新增Montage游标。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline字段扩展后再次通过Unity实例`e852139597e42532`脚本编译，Console错误数为0。当前Section的运行时跳转命令、Montage混合Profile和Corin动作轨道迁移仍未完成。
+
+Blend Profile identity已归入Timeline Animation Clip而非Track，动画贡献和Presentation Clip Binding各自携带片段级设置；这是Montage式Blend设置的正式owner。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline Animation Clip的Blend Profile identity已继续写入Semantic动画operation字段；Slot identity和Blend Profile identity保持两个独立设置owner。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Linked Pose调用已正式开放到Animation Layer，Layer图也进入Pose IR的图角色和边界校验；Layer仍复用现有Implementation／Group／call-site运行状态，不创建独立Layer Executor。Layer图按GraphInput／GraphOutput边界编译，内部状态机、Slot和骨骼混合仍走同一Pose计划。
+
+Direct Clip Player的作者命令已改为直接打开／定位AnimationClip，不再提供Profile Source Binding入口；旧Source Player仍使用旧命令，直到剩余Player类型完成同样的资源合同迁移。
+
+Direct Blend Space Player的作者命令也已改为直接打开／定位Blend Space资产；Blend Space source plan可由直接资源生成，旧Profile binding仅保留为迁移输入。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Direct Blend Space source编译已去除临时ScriptableObject Slot／Binding，Source Catalog直接保存Blend Space引用并分配source index，避免编译重复执行时泄漏Unity对象。Unity实例`e852139597e42532`再次编译通过，Console错误数为0。
+
+Control Rig现在是独立的Pose IR图角色，拥有自己的GraphInput／GraphOutput边界和Document Role；Control Rig图内的Foot Placement、Pose Bone IK Goals与Full Body IK仍交给原唯一Compiler和FBBIK后端展开。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline动画片段增加了独立的Blend Profile外部identity，并将其写入Timeline贡献、Presentation Clip Binding和Semantic动画operation；该identity仍等待Rig/Blend Profile正式目录解析，尚未进入动作运行时混合计算。
+
+Rig Definition现拥有Blend Profile目录，并按ProfileId、RigId和RigRevision严格校验Timeline片段的Blend Profile identity；Producer不会按显示名或AssetDatabase猜测Profile。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline动画片段的Blend Profile identity已进入Semantic动画operation的字段集合，作为动作片段自己的混合设置来源；当前动作运行时仍需把该identity接入既有Transition Routing的请求选择，不能在Slot中新增一份Policy。
+
+Timeline Track inspector已显示可编辑Slot identity；Section inspector已显示Next Section选择，并通过TimelineData的owner mutation保存和校验。Unity实例`e852139597e42532`编译通过，Console错误数为0。
+
+Timeline动画片段带有Slot identity时，Producer编译会严格向Rig Slot目录解析并拒绝悬空引用；Slot与Blend Profile仍各自保留在对应owner。Unity实例`e852139597e42532`脚本编译通过，Console错误数为0。
+
+盘点确认当前Assets没有`SelectedPosePlayer`作者节点；该旧Source Slot入口已标记为Compiler-owned并从新作者创建菜单隐藏，避免继续生成重复Profile Source Binding。已有Motion Matching Pose直接能力和旧资产读取定义保留到最终迁移清理。
+
+Selected Pose旧入口退役后通过Unity实例`e852139597e42532`脚本编译核验，Domain Reload完成后Console错误数为0。
+
+新增一次性Editor迁移入口`CharacterPoseDirectPlayerMigration`：它从精确Corin Definition解析旧Clip Player的Source Slot→Clip关系，准备直接AnimationClip Payload，并为Rig写入`corin.full-body-action` Slot/Group及现有两个Blend Profile引用。入口仅由显式菜单触发，使用Undo事务回滚；尚未执行，等待全部作者代码和Document v7完成。迁移代码已通过Unity实例`e852139597e42532`编译，Console错误数为0。
+
+2026-09-09执行该一次性菜单后，Corin的7个Clip Player已实际写入直接AnimationClip；随后重跑同一菜单完成旧Source Slot与Profile Pose Source Binding清理，当前Pose资产和Profile均为空旧Source目录，Rig包含`corin.full-body-action` Slot/Group以及两个现有Blend Profile。动作根图的旧Action Playback Input、Parameter Resolve、Goal Assembler尚未重组，故9.2和最终发布仍未完成。
+
+在Timeline、Rig Profile目录、Direct Player和Control Rig角色增量后，Unity实例`e852139597e42532`完成一次完整脚本编译，Domain Reload恢复后Console错误数为0。当前验证仍限于脚本编译，未把资产迁移或Character Build写成完成证据。
 
 ## 本轮确认的作者分工
 
@@ -95,7 +163,7 @@
 | Pose Compiler及Source Map | 直接消费同一作者图、增加必要观察映射 | 技能Semantic IR／发射仍归技能侧 |
 | 共享作者合同 | 复用已分离的TreeDesigner.Authoring类型及唯一Port Shape | 不复制第二份合同，不改变技能业务 |
 | FlowCanvas／CanvasCore钩子 | 最小领域无关的原生创建／改接和外部观察接入；修改前核对文件 | 技能侧复用同一钩子，实际同段冲突交给作者决定 |
-| Document | Pose owner与现行业务分片适配 | 技能Macro／v6协议迁移仍归技能侧；此处不创建协议分支 |
+| Document | Pose owner与现行业务分片适配 | 技能Macro正文继续由统一v7协议承接；不创建协议分支 |
 | Runtime | 保留Program Image、Native页、Worker、Source／Constraint／Final Publication | 不启用FlowCanvas角色执行，不改技能runtime |
 
 该历史阶段的用户指令允许刷新Unity检查当时的接入。只修复Pose／FlowCanvas接入造成的错误，其它领域错误记录但不修改；若阻止程序集加载，明确报告验证受阻。整根Build与回放仍按收口阶段实际条件执行，未执行不勾选通过。
@@ -222,4 +290,66 @@ Editor 在程序集重载期间曾无响应并导致 CLI 超时，随后自行�
 
 本批小步提交曾被仓库已有.git/index.lock阻止；未删除锁或终止其它git进程。锁正常释放后，5个代码文件已提交为`5b529238a`（补齐Pose目录导航与属性编辑反馈）。149273005不包含本批新增修正。
 
-该阶段收口了原能力盘点和旧UI消费者清理，其它部分当时仍未闭环；旧统计已被新作者组织的44项实施清单替代。
+该阶段收口了原能力盘点和旧UI消费者清理，其它部分当时仍未闭环；旧统计已被新作者组织的49项实施清单替代。
+
+#### 2026-09-09：Corin 身体链进入 Control Rig 子图
+
+在直接资源迁移成功后，使用一次性 Editor 入口将 Corin 根图中的 Local／Component 空间转换、Foot Placement、Full Body IK 和输出转换迁入 `corin.control-rig.body.graph`。该图声明 `entry.pose.input`、`foot-placement-weight` 输入和 `entry.pose.output` 输出，根图改为 `Locomotion State Machine → Full Body Action Slot → Control Rig: Body → Output Pose`，Foot Placement 权重通过同一调用边界传入。
+
+迁移入口为 `Tools/3C/Pose/Migrate Corin Body Chain to Control Rig`。首次端口接口试验在 `AddGraph` 后抛错并留下孤立子资产，随后使用 `Tools/3C/Pose/Clean Corin Control Rig Graph Duplicates` 从该资产全部子资产枚举并清理重复 GraphId，当前只保留一份有效 Control Rig 图。当前 Pose 资产实际为 9 张图；根图不再包含旧身体链节点，唯一 Goal Assembler 和 Full Body IK 位于 Control Rig 图内。
+
+当前仍未完成的结构项是 Action Playback Input、Pose Parameter Resolve 和 Goal Assembler 的作者节点完全内部化；本次只完成了身体链的正式图边界，没有把现有运行 operation 改成未经验证的隐式合成。统一 Character Build 仍被 Attack、DodgeBack、DodgeForward 缺少正式 Skill Graph Entry 阻塞。
+
+随后通过 `Tools/3C/Pose/Clean Corin Root Parameter Resolver` 删除了迁移后无下游消费者的根图 `Pose Parameter Resolve`。当前 Corin 作者资产中该节点不存在；`Action Playback Input` 仍保留且仍连接 Slot，因为现有 Slot family binding 还要求其作为内部动作播放控制 operation 的作者来源，待 Slot 内部化实现后再删除。
+
+#### 2026-09-09：Slot 内部动作控制
+
+Slot 的作者 Capability 已移除 `action-playback` 输入端口。Family Binding 在处理 Slot 时生成同一 `ActionPlaybackInput` operation，使用 Slot 的 Animation Channel、AllowEmpty 选择策略和现有 Action Playback／Transition owner；生成 operation 的 SourceMap 归属 Slot call-site，不改变运行时播放器、时钟或 Action Timeline owner。随后通过 `Tools/3C/Pose/Clean Corin Root Action Playback Input` 删除 Corin 根图旧节点及连接。
+
+当前 Corin Pose Graph YAML 核对结果：`CharacterActionPlaybackInputPosePayload`、`CharacterPoseParameterResolvePayload`、旧身体链节点和 `action-playback` 端口均为 0；Control Rig 图唯一且角色为 ControlRig。正式 Float32 Build 已重新发起，但仍在 AuthoringDiscovery 阶段被 Attack、DodgeBack、DodgeForward 缺少 Definition 正式 Skill Graph Entry 阻塞，因此尚未产生新的 Program／Projection 产物。
+
+#### 2026-09-09：Control Rig 内部 Goal Assembly
+
+Control Rig 的 Full Body IK 作者节点新增有序 typed `FullBodyIkGoalContribution` 输入，Foot Placement 直接连接该输入；作者 `Goal Assembler` 节点、其固定 Full Body IK Goals 连接和对应 Capability 已删除。Topology 允许直接 Goal Contribution，并仍检查贡献源与 Full Body IK 使用同一 Component Pose 分支；Binding 在 Full Body IK 前生成唯一 `FullBodyIkGoalAssembler` operation、Goal Set workspace 和 SourceMap owner，运行时边界与原 Goal Assembly 保持一致。
+
+通过统一入口 `Tools/3C/Pose/Migrate Corin to UE Authoring` 按固定顺序完成写回后，Corin 资产核对为作者 Goal Assembler 0、作者 Action Playback Input 0、作者 Pose Parameter Resolve 0。原先用于分步恢复的菜单已取消，只保留一个一次性迁移入口。Unity Tundra build success，清空 Console 后错误数为 0。统一 Character Build 的外部 Skill Graph Entry 阻塞仍未绕过。
+
+这三个旧作者 Capability 映射保留为 `systemOwned` 编译注册，以满足统一 Node Definition 与 Capability Catalog 的一一绑定；它们不能从作者目录创建。当前作者图节点已全部清理，仓库 `.asset` 扫描未发现其它资产仍序列化这三类作者 payload。
+
+#### 2026-09-09：Corin Action Timeline Slot 写回
+
+Corin 原有 `CorinAttack1Timeline.asset` 的 `FullBodyAction` 动画轨道原先没有 Slot 归属，且没有 Section。通过一次性入口 `Tools/3C/Pose/Migrate Corin Action Timeline Slot` 原位写入 `corin.full-body-action`，两个原生动画片段写入 `corin.animation-rig.action-blend-profile`，并补充 `Attack` Section；没有创建 Montage 副本、第二时钟或复制动画曲线。资产 YAML 已确认轨道、片段和 Section 字段实际保存，清空 Console 后错误数为 0。
+
+#### 2026-09-09：角色图导出与严格解析
+
+Presentation Exporter 不再把所有非根图默认为 Subgraph，而是优先按持久化 `CharacterPoseAuthoringGraphRole` 导出 `Animation Layer` 与 `Control Rig` role；Presentation Codec 同步接受这两个正式 role。Codec 在节点校验阶段拒绝 `Action Playback Input`、`Pose Parameter Resolve` 和 `Goal Assembler` 退役作者 capability，仍保留其 system-owned 编译注册以维持 Definition／Capability 一一绑定。Unity 编译成功并清空 Console 验证为 0 错误。
+
+#### 2026-09-09：Timeline 字段进入 Document Mutation
+
+Timeline snapshot、Document timeline 分片和 mutation draft 现在保存 `AnimationTrack.animationSlotId`、`TimelineSection.nextSectionId` 与 `AnimationClip.blendProfileId`。Document mapper 严格拒绝悬空的 next Section；Reconciler 会为 Track Slot 和 AnimationClip Blend Profile 生成独立 typed Mutation，统一 handler 分别调用 `SetAnimationSlotId` 与原生 Timeline AnimationClip 的 `BlendProfileId`，并按 Corin Rig 目录校验身份。该链仍使用既有 Timeline owner 与资产事务，没有文件级写入入口。Unity 编译验证通过。
+
+#### 2026-09-09：Document schema 切换到 v7
+
+`AgentAuthoringSchema.Version` 已从 `btsmtl-agent-authoring-document.v6` 切换为 `btsmtl-agent-authoring-document.v7`，现有 manifest、sync、snapshot、mutation draft、Store 和 codec 的版本比较统一读取该常量，因此旧 v6 工作包会被拒绝。v7 Presentation Codec 已接受 Animation Layer／Control Rig role，并拒绝非空旧 `poseSources` 与退役作者节点。当前精确 Corin checkout 仍在 AuthoringDiscovery 前被 Attack、DodgeBack、DodgeForward 缺少正式 Skill Graph Entry 阻塞，尚未生成新 v7 package；这不是用旧 package 冒充完成。
+
+MCP 五生命周期工具描述已同步为 Document v7；Timeline 的 Slot、Section next 和 Clip Blend Profile 字段同时进入 snapshot、draft、lowering、handler 与 strict mapper。Unity Tundra 编译成功。当前 v7 的完整 checkout 仍需先解决 Definition 外部 Skill Graph Entry 闭包错误，未执行 apply 或生成 package。
+
+Presentation Snapshot 的 Animation Slot 记录现在从 Rig Definition 解析并携带独立 `animationSlotGroupId`；观察与 Document context 不再只能从 SlotId 或 AnimationChannel 推断互斥 Group。该字段使用正式 Rig owner 的 GroupId，未新增运行时路由或第二份组配置。
+
+现行规范对账已完成一轮：`openspec/project.md`、`character-presentation-pose-graph` 和 `character-animation-presentation-authoring` 已同步直接资源 Player、Slot／Group、Control Rig 内部 Goal Assembly、Animation Layer／Control Rig role 和 Document v7 术语；`btsmtl-agent-authoring-document-sync` 已同步 v7 package、退役 Source Slot 语义和严格拒绝规则。未修改 archive 历史文件，也未为规范冲突保留兼容路径。
+
+进一步修正了隐藏 operation 的编译顺序：Symbolic Lowering 现在显式插入 Slot 的内部 Action Playback Input 和 Full Body IK 的内部 Goal Assembler，Binding Pass 按相同 sequence 消费并生成 bound operation；Stage Schedule 的 operation 数量、typed dependency 与 SourceMap 不再出现“只在Binding补 operation”的索引错位风险。Unity 编译成功。
+
+本轮继续把通用 Controller synthesis、AI synthesis 和 MCP bridge 的现行规范口径同步为 Document v7，并将 Character Presentation 的旧 Source Slot／Profile Binding描述改为直接资源 Player与Slot／Group owner。运行时仍保留 Action Input 与 Goal Assembler operation 名称，因为它们是内部 ABI，不是作者节点。
+
+又同步了 `agent-character-controller-synthesis`、`agent-ai-controller-synthesis`、`btsmtl-agent-authoring-mcp-bridge`、`character-pose-plan-compilation`、`character-state-timeline-authoring-loop`、`character-animation-blend-space`、`character-pipeline-definition-authoring` 与 `graph-authoring-domain-framework` 的旧版本或旧 Source Slot 表述，保持当前 spec 与 v7代码链一致。仅修改现行规范，未改变历史 archive。
+
+补齐了直接资源迁移后的两个编译消费者：Animation Blend Compiler 的 Slot 选择端点现在由 Slot 自身合法 AnimationChannel 与 AllowEmpty 合同生成，不再寻找已删除的 Action Playback 作者端口；Animation Resource Closure Analyzer 现在收集直接 AnimationClip 与 Blend Space sample，不再依赖旧 Source Slot 扫描。Unity 编译成功。
+
+Profile Inspector 的连续Pose区域已按新owner整理：当Pose Graph没有Source Slot／Profile Binding时，不再显示旧绑定编辑面板，改为提示Sequence Player、Blend Space Player和Motion Matching节点直接拥有资源。修改只影响作者窗口显示，不在Inspector重建图或触发Build。
+
+本轮最新正式 Float32 Character Build（job `284f5c1165a64fae9b995d8ee664ec7e`）仍只在 AuthoringDiscovery 阶段报告三个 `skill_entry_graph_missing`：Attack、DodgeBack、DodgeForward。没有进入Pose编译、没有修改wrapper、没有发布新Program或Projection；依照统一链约束未修技能字段、未绕过入口校验。
+
+对阻塞输入的只读核对显示：三个入口 identity 在 `CorinPlayableRootTree.asset` 中对应的是 `StateBehaviorSubTree`，而 `CharacterPipelineDefinition.SkillGraphs` 要求正式 `BtsmtlSkillFlowGraph` 根图；当前 Definition 的 `m_SkillGraphs` 为空。因此它不是 Pose 迁移可以自行修复的名称或路径问题。
+
+由于该外部闭包阻塞尚未变化，后续代码复核重点转向直接资源链的潜在旧消费者：Slot Blend Compiler 已不再读取 `action-playback` 作者端口，Resource Closure Analyzer 已收集直接 Clip／Blend Space；这两处会在 Skill Graph 闭包恢复后直接进入正式 Build，而不会重新走旧 Source Slot 路径。

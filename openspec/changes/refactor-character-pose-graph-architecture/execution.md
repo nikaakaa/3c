@@ -1575,3 +1575,5 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 提交`b2ce42532`修正跨Graph/Profile事务的删除时序：Agent apply先执行Graph与StateMachine变更，再执行Profile绑定更新，最后单独提交Resource Slot删除；因此删除槽时既不会被旧StateMachine引用拦截，也不会被旧Profile绑定拦截。
 
 当前 Pose change 严格 OpenSpec 校验通过：`refactor-character-pose-graph-architecture` 为 `valid=true`、0 issue。该校验只验证变更文档，不替代 Corin 的 Unity MCP apply、Character Build 或 Scene Play 证据。
+
+提交`5a2b4adc6`补齐Resource Slot删除前的引用扫描：除普通Pose payload与Profile绑定外，Pose StateMachine内部Transition的Blend Curve/Profile也纳入占用检查，避免资源槽删除后形成悬空状态机引用；Editor源码再次编译为0错误、93个既有警告。

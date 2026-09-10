@@ -181,7 +181,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
                 target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
                 valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
-                valid &= AgentSkillFlowDocumentMapper.TryRead(files, target.editable, report);
+                valid &= AgentSkillFlowDocumentMapper.TryRead(
+                    files,
+                    target.editable,
+                    report,
+                    current?.inputProviderOwnerId,
+                    current?.gameplayProviderOwnerId);
             }
             if (string.Equals(
                     manifest.domain,

@@ -119,7 +119,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static bool TryRead(
             IReadOnlyDictionary<string, JToken> files,
             AgentDocumentEditable editable,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
         {
             bool valid = true;
             foreach (string path in files.Keys.Where(IsGraphPath).OrderBy(value => value, StringComparer.Ordinal))
@@ -203,7 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     timelines = editable.skillTimelines
                 },
                 report,
-                editable.control?.moduleId);
+                editable.control?.moduleId,
+                inputProviderOwnerId,
+                gameplayProviderOwnerId);
             return valid;
         }
 

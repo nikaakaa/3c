@@ -210,8 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string controlModuleId;
         public int controlSemanticVersion;
         public List<AgentPackageControlParameter> controlParameters = new List<AgentPackageControlParameter>();
-        public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
-        public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
     }
 
     [Serializable]
@@ -236,13 +234,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string id;
         public string valueType;
         public double numericValue;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageBlackboardFile
-    {
-        public int schemaRevision;
-        public List<AgentSnapshotBlackboardDeclaration> declarations = new List<AgentSnapshotBlackboardDeclaration>();
     }
 
     [Serializable]

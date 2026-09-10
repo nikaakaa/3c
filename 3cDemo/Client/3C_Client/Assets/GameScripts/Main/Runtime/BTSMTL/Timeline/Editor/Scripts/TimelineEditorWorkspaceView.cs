@@ -233,7 +233,7 @@ namespace BTSMTL.Timeline.Editor
             m_ToolMenu.menu.AppendAction(
                 "Jump to Next Section",
                 _ => JumpToNextSection(),
-                _ => !m_LiveDebug && m_PreviewSession.TryGetNextSection(out _)
+                _ => !m_LiveDebug && m_PreviewSession.TryGetNextSection(out TimelineSection nextSection)
                     ? DropdownMenuAction.Status.Normal
                     : DropdownMenuAction.Status.Disabled);
             IReadOnlyList<ITimelineEditorToolProvider> providers = SessionContext?.ToolCatalog.Providers;

@@ -196,6 +196,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     footPlacementAnalysisSourceAssetGuid =
                         profile.FootPlacementAnalysisSourceAssetGuid
                 },
+                poseSources = profile.PoseSourceBindings
+                    .Select(ExportPoseSource)
+                    .OrderBy(value => ReferenceIdentity(value.slot), StringComparer.Ordinal)
+                    .ToList(),
                 actionProducers = profile.ProducerBindings
                     .Select(ExportProducer)
                     .OrderBy(value => value.timelineId, StringComparer.Ordinal)
@@ -223,6 +227,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .OrderBy(value => value.selectorId, StringComparer.Ordinal)
                     .ToList()
             };
+        }
+
+        static AgentPackagePoseSourceBinding ExportPoseSource(
+            CharacterPresentationPoseSourceBinding binding)
+        {
+            if (!binding || !binding.Slot || !binding.SourceAsset)
+                throw new InvalidOperationException("Presentation Profile contains an invalid Pose Source Binding.");
+            var result = new AgentPackagePoseSourceBinding
+            {
+                name = binding.name,
+                kind = binding.SourceKind.ToString(),
+                slot = Asset(binding.Slot, true),
+                binding = Asset(binding, true),
+                source = Asset(binding.SourceAsset, true),
+                footAnalysisIdentity = binding.FootAnalysisIdentity,
+                contentRevision = binding.ContentRevision
+            };
+            if (binding is CharacterMotionMatchingPoseSourceBinding motionMatching)
+            {
+                result.searchDomainId = motionMatching.SearchDomainId.Value;
+                result.databases = motionMatching.Databases
+                    .Select(value => Asset(value, true))
+                    .ToList();
+            }
+            return result;
         }
 
         static AgentPackageLinkedPoseSelectorBinding ExportLinkedPoseSelector(

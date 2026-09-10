@@ -1718,14 +1718,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             }
             bool valid = true;
-            if (profile.poseSources != null && profile.poseSources.Count > 0)
-            {
-                report.Error(
-                    ProfilePath + ".poseSources",
-                    "presentation_pose_sources_retired",
-                    "Document v7不再接受Source Slot与Profile Pose Source Binding，Player必须直接引用原生资源。");
-                valid = false;
-            }
             var slots = new HashSet<string>(StringComparer.Ordinal);
             var bindings = new HashSet<string>(StringComparer.Ordinal);
             foreach (AgentPackagePoseSourceBinding source in profile.poseSources ??

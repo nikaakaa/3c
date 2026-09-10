@@ -1517,3 +1517,9 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 状态：提交`73433946f`移除Pose Workspace对自定义`domainPanel`的挂载，FlowCanvas原生Node／Connection Inspector恢复为可见作者入口；提交`d52641f4e`把Parameter Policy和IK Goal Binding的数组编辑迁入`CharacterPoseCanvasNode.OnNodeInspectorGUI`，增删、枚举、骨骼、偏移和权重修改均通过同一`SetNodeField` typed Mutation提交。IK骨骼选项只从当前精确Profile的Rig上下文取得，缺少上下文时明确显示Unavailable，不接受自由文本。
 
 Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，仅有既有Package／AssetDatabase warning。自定义Details presenter仍作为未挂载的历史实现保留，23.3与23.4已按当前可见入口完成；23.5正式Build、23.6 Scene Play Preview、24.1–24.5可复用Graph Binding和22.5交互验收继续保持未完成，不以编译替代窗口操作证据。
+
+## Pose-only观察发现Profile派生版本待重建（POSE-EXEC-20260911-02）
+
+状态：通过Unity MCP执行`character.pose_reset_observation`时，正式运行链在`CharacterPresentationFullBodyIkDescriptor.RequireValid`处报告`Full Body IK descriptor is invalid`。对照当前工作区发现`CorinFullBodyIkProfile.asset`的左右腿`Pull`已由`0`改为`1`，但`m_Revision`仍为旧值`e83001…`；未回退这两个作者字段，已通过正式ScriptableObject属性写入同步当前派生revision `c88bb920961075b08561c03e92a16d70f06fad08560267e1516f4fd76c9adbb2`。
+
+当前生成Projection仍保存`m_ProfileRevision: e83001…`，因此必须在Agent并发重构恢复可编译后重新执行唯一Character Build，不能手改Projection或以旧产物继续观察。当前Unity Console阻塞来自Agent未提交文件中的字段迁移错误，不属于Pose代码；Pose作者入口本身没有新增编译错误。

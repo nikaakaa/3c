@@ -43,18 +43,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationProjectionCompileContext context,
             CharacterFootPlacementAnalysisCompilation footAnalysis,
             CharacterAnimationBuildInput animationBuildInput,
-            CharacterPresentationProjectionCompileResult reusedPoseResult = null)
+            CharacterPresentationProjectionCompileResult reusedPoseResult = null,
+            bool bindPoseProjectionIdentity = true)
         {
             Context = context ?? throw new ArgumentNullException(nameof(context));
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
             AnimationBuildInput = animationBuildInput ?? throw new ArgumentNullException(nameof(animationBuildInput));
             ReusedPoseResult = reusedPoseResult;
+            BindPoseProjectionIdentity = bindPoseProjectionIdentity;
         }
 
         public CharacterPresentationProjectionCompileContext Context { get; }
         public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
         public CharacterAnimationBuildInput AnimationBuildInput { get; }
         public CharacterPresentationProjectionCompileResult ReusedPoseResult { get; }
+        public bool BindPoseProjectionIdentity { get; }
     }
 
     internal sealed class CharacterPresentationProjectionDiagnostic
@@ -187,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         animationCatalog.AnimationResources.ToArray(),
                         projectionRevision);
                     projection.RequireContract(context.SemanticContract);
-                    projection.RequirePosePayload();
+                    projection.RequirePosePayload(request.BindPoseProjectionIdentity);
                     CharacterPoseTuningCompilationResult tuning =
                         CharacterPoseTuningLayoutCompiler.Compile(
                             context.SemanticContract.ProgramId.Value,

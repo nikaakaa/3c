@@ -234,11 +234,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireTuningPayload();
         }
 
-        public void RequirePosePayload()
+        public void RequirePosePayload(bool bindProjectionIdentity = true)
         {
-            PosePlan?.BindProjectionIdentity(
-                ProgramId,
-                ProjectionRevision);
+            if (bindProjectionIdentity)
+                PosePlan?.BindProjectionIdentity(
+                    ProgramId,
+                    ProjectionRevision);
             PosePlan?.RequireValid();
             Rig?.RequireValid();
             BlendCurveCatalog?.RequireValid();

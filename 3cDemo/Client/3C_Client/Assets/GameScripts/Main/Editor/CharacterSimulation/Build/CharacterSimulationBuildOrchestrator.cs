@@ -278,7 +278,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new CharacterPresentationProjectionCompileRequest(
                     context,
                     footAnalysis,
-                    animationBuildInput.CreatePoseOnlyInput()));
+                    animationBuildInput.CreatePoseOnlyInput(),
+                    null,
+                    false));
         }
 
         static CharacterPresentationProjectionCompileContext CreatePoseOnlyContext(

@@ -2,7 +2,7 @@
 
 ## 当前状态（2026-09-10，对账修正）
 
-本提案不能按49项全部完成验收。此前把Capability注册、Compiler内部operation支持和一次旧作者拓扑的Character Build误判为完整UE式作者架构；当前任务状态见tasks.md，其中2.5、4.2、4.4、7.3、7.5、9.2仍按实际缺口跟踪，9.4已由当前v29正式产物发布完成。
+本提案不能按49项全部完成验收。此前把Capability注册、Compiler内部operation支持和一次旧作者拓扑的Character Build误判为完整UE式作者架构；当前任务状态见tasks.md，其中2.5、4.4、7.5仍按实际缺口跟踪，4.2、7.3、9.2、9.4已由当前代码、Document和v29正式产物发布完成。
 
 已经完成的边界仍然有效：直接AnimationClip Player、Animation Slot与Slot Group、有限Action Timeline的Slot／Section／片段混合字段、Control Rig输入与FBIK展开、独立Pose输入合同、CharacterAnimationBuildContracts.CreatePoseOnlyInput()、CharacterSimulationBuildOrchestrator的animationBuildInput.CreatePoseOnlyInput()、Document v7闭包以及旧迁移器删除。
 

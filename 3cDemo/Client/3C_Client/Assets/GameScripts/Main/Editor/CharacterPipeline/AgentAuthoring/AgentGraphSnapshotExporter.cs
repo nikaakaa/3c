@@ -39,10 +39,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentGraphSnapshot ExportFull(CharacterPipelineDefinition definition)
         {
-            return Export(definition, AgentSnapshotExportMode.Full);
+            return Export(definition, AgentSnapshotExportMode.Full, false);
+        }
+
+        public AgentGraphSnapshot ExportFull(CharacterPipelineDefinition definition, bool allowMissingTimelineTrees)
+        {
+            return Export(definition, AgentSnapshotExportMode.Full, allowMissingTimelineTrees);
         }
 
         public AgentGraphSnapshot Export(CharacterPipelineDefinition definition, AgentSnapshotExportMode mode)
+        {
+            return Export(definition, mode, false);
+        }
+
+        AgentGraphSnapshot Export(CharacterPipelineDefinition definition, AgentSnapshotExportMode mode, bool allowMissingTimelineTrees)
         {
             m_GraphIds.Clear();
             m_ExportedGraphs.Clear();
@@ -63,7 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.definitionAssetPath = AssetDatabase.GetAssetPath(definition);
             snapshot.rootAssetPath = snapshot.definitionAssetPath;
             snapshot.rootIdentity = AssetDatabase.AssetPathToGUID(snapshot.definitionAssetPath);
-            snapshot.rootTreeAssetPath = definition.RootTreeAsset ? AssetDatabase.GetAssetPath(definition.RootTreeAsset) : string.Empty;
+            snapshot.rootTreeAssetPath = string.Empty;
+            snapshot.rootGraphAuthoringId = string.Empty;
             snapshot.controlModuleId = definition.ControlModuleId;
             if (!string.IsNullOrEmpty(snapshot.controlModuleId))
             {
@@ -86,44 +97,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ExportInputs(definition.InputProfile, snapshot);
             ExportActionProfiles(definition.ActionProfiles, snapshot);
 
-            BaseTree root = definition.RootTreeAsset ? definition.RootTreeAsset.Tree : null;
-            if (root != null)
+            snapshot.blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision;
+            var program = definition.SimulationProgram;
+            if (program)
             {
-                snapshot.rootGraphAuthoringId = GraphId("root", root);
-                snapshot.blackboardSchemaRevision = root.BlackboardAuthoringSchemaRevision;
-                var program = definition.SimulationProgram;
-                if (program)
-                {
-                    snapshot.programId = program.ProgramId;
-                    snapshot.sourceRevision = program.SourceRevision;
-                    snapshot.semanticHash = program.SemanticHash;
-                    snapshot.numericProfileId = program.NumericProfileId;
-                    snapshot.targetAbiVersion = program.TargetAbiVersion;
-                    snapshot.programHash = program.ProgramHash;
-                    snapshot.layoutHash = program.LayoutHash;
-                }
-                var projectionErrors = new List<string>();
-                CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(root, projectionErrors);
-                if (!projection.IsValid)
-                    throw new InvalidOperationException(string.Join("\n", projectionErrors));
-                IndexBlackboardDeclarations(projection);
-                ExportPresentation(definition, projection, snapshot);
-                IndexProjectedGraphPaths(projection);
-                if (mode == AgentSnapshotExportMode.Full)
-                {
-                    ExportCompactGraph(root, "root", AgentGraphOwnership.RootAsset, string.Empty, string.Empty, snapshot);
-                    ExportProjectedGraphs(projection, AgentSnapshotExportMode.Compact, snapshot);
-                    m_ExportedGraphs.Clear();
-                    ExportGraph(root, "root", AgentGraphOwnership.RootAsset, string.Empty, string.Empty, string.Empty, snapshot);
-                    ExportProjectedGraphs(projection, AgentSnapshotExportMode.Full, snapshot);
-                }
-                else
-                {
-                    ExportCompactGraph(root, "root", AgentGraphOwnership.RootAsset, string.Empty, string.Empty, snapshot);
-                    ExportProjectedGraphs(projection, AgentSnapshotExportMode.Compact, snapshot);
-                }
-                AttachAuthoringRoutes(projection, snapshot);
+                snapshot.programId = program.ProgramId;
+                snapshot.sourceRevision = program.SourceRevision;
+                snapshot.semanticHash = program.SemanticHash;
+                snapshot.numericProfileId = program.NumericProfileId;
+                snapshot.targetAbiVersion = program.TargetAbiVersion;
+                snapshot.programHash = program.ProgramHash;
+                snapshot.layoutHash = program.LayoutHash;
             }
+            ExportPresentation(definition, null, snapshot);
 
             return snapshot;
         }
@@ -289,6 +275,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             ExportBlendSpaces(definition, presentation, snapshot.presentation);
 
+            if (topology == null)
+                return;
+
             var exportedProducers = new HashSet<AnimationProducerId>();
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
             {
@@ -303,9 +292,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!producerId.IsValid || !exportedProducers.Add(producerId))
                         continue;
 
-                    AnimationProducerPresentationBinding binding = presentation.FindProducerBinding(producerId);
-                    UnityEngine.Object sourceAsset = binding?.Source;
-                    string sourceAssetPath = sourceAsset ? AssetDatabase.GetAssetPath(sourceAsset) : string.Empty;
                     snapshot.presentation.producers.Add(new AgentSnapshotAnimationProducer
                     {
                         route = ExportRoute(source.Route),
@@ -315,12 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         timelineName = source.Timeline.Name,
                         trackName = track.Name,
                         actionContextId = AssetIdentity(source.Node.ActionContext),
-                        animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty,
-                        sourceAssetPath = sourceAssetPath,
-                        sourceAssetGuid = string.IsNullOrEmpty(sourceAssetPath)
-                            ? string.Empty
-                            : AssetDatabase.AssetPathToGUID(sourceAssetPath),
-                        sourceAssetType = sourceAsset ? sourceAsset.GetType().FullName : string.Empty
+                        animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty
                     });
                 }
             }
@@ -473,6 +454,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         ownerKind = "ActionAnimationChannel",
                         animationSlotId = node.AnimationSlotId.IsValid
                             ? node.AnimationSlotId.Value
+                            : string.Empty,
+                        animationSlotGroupId = node.AnimationSlotId.IsValid
+                            ? profile.RigDefinition.RequireAnimationSlot(node.AnimationSlotId).GroupId.Value
                             : string.Empty,
                         animationChannelId = node.AnimationChannelId.IsValid
                             ? node.AnimationChannelId.Value
@@ -1011,7 +995,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     sectionAuthoringId = section.AuthoringId,
                     name = section.Name,
-                    frame = section.Frame
+                    frame = section.Frame,
+                    nextSectionId = section.NextSectionId
                 });
             }
 
@@ -1031,6 +1016,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     animationChannelId = animationTrack != null && animationTrack.AnimationChannelId.IsValid
                         ? animationTrack.AnimationChannelId.Value
                         : string.Empty,
+                    animationSlotId = animationTrack?.AnimationSlotId ?? string.Empty,
                     motionWarpTrack = track is MotionWarpTrack
                 };
                 timelineSnapshot.tracks.Add(trackSnapshot);
@@ -1058,10 +1044,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         easeOutFrame = clip.EaseOutFrame,
                         clipInFrame = clip.ClipInFrame,
                         extraPolationMode = animationClip?.ExtraPolationMode.ToString() ?? string.Empty,
+                        blendProfileId = animationClip?.BlendProfileId ?? string.Empty,
                         animationClip = animationClip != null && animationClip.Clip
                             ? AssetReference(animationClip.Clip)
                             : null
                     };
+                    if (clip is ActionCueClip actionCue)
+                    {
+                        clipSnapshot.cueId = actionCue.CueId;
+                        clipSnapshot.cueType = actionCue.CueType;
+                    }
                     if (clip is MotionCurveClip motionCurve)
                     {
                         clipSnapshot.curveId = motionCurve.CurveId;

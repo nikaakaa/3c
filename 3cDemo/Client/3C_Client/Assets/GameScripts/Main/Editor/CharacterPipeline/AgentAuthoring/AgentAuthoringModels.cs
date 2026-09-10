@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "btsmtl-agent-authoring-document.v6";
+        public const string Version = "btsmtl-agent-authoring-document.v7";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -368,6 +368,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string sectionAuthoringId;
         public string name;
         public int frame;
+        public string nextSectionId;
     }
 
     [Serializable]
@@ -386,6 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string name;
         public int index;
         public string animationChannelId;
+        public string animationSlotId;
         public bool motionWarpTrack;
         public List<AgentSnapshotTimelineClip> clips = new List<AgentSnapshotTimelineClip>();
     }
@@ -406,6 +408,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int easeOutFrame;
         public int clipInFrame;
         public string extraPolationMode;
+        public string blendProfileId;
+        public string cueId;
+        public string cueType;
         public AgentPackageObjectReference animationClip;
         public string curveId;
         public int curveEndFrame;
@@ -707,6 +712,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string nodeId;
         public string ownerKind;
         public string animationSlotId;
+        public string animationSlotGroupId;
         public string animationChannelId;
     }
 
@@ -771,9 +777,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string trackName;
         public string actionContextId;
         public string animationChannelId;
-        public string sourceAssetPath;
-        public string sourceAssetGuid;
-        public string sourceAssetType;
     }
 
     [Serializable]
@@ -858,6 +861,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string timelineAuthoringId;
         public string timelinePlannedIdentity;
         public string sectionAuthoringId;
+        public string nextSectionId;
         public string trackAuthoringId;
         public string trackPlannedIdentity;
         public string clipAuthoringId;
@@ -925,6 +929,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int clipInFrame;
         public string extraPolationMode;
         public string animationChannelId;
+        public string animationSlotId;
+        public string blendProfileId;
         public AgentPackageObjectReference animationClip;
         public int frameOffset;
         public int selfEaseInFrame;

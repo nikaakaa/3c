@@ -635,7 +635,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (!state.SourceIndices.TryGetValue(sourceSlot, out sourceIndex))
                         throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
                 }
-                else if (handler.Requires(CharacterPoseNodeRuntimeRequirement.Player))
+                else if (handler.Kind == CharacterPoseNodeKind.ClipPlayer ||
+                         handler.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+                         handler.Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
+                         handler.Kind == CharacterPoseNodeKind.BlendStack)
                     throw new InvalidOperationException($"Pose Player '{scopedNodeId}' has no Source Slot.");
                 operationIndex = state.Operations.Count;
                 state.Operations.Add(new CharacterPoseBoundOperation(

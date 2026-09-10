@@ -195,18 +195,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     binding.RequireValid(rig);
                     if (binding is CharacterClipPoseSourceBinding directClip)
                     {
-                        string bindingIdentity = CharacterPresentationAssetObjectIdentity.Require(directClip);
+                        CharacterAnimationClipContentIdentity clipIdentity =
+                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                        string clipIdentityKey = $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}";
                         if (footAnalysis == null ||
-                            !footAnalysis.TryGetPoseSource(bindingIdentity, out AnimationFootFeaturePair directFeatures))
+                            !footAnalysis.TryGetPoseSourceClip(clipIdentityKey, out AnimationFootFeaturePair directFeatures))
                         {
                             throw new InvalidOperationException("Foot Analysis artifact binding is missing.");
                         }
                         AnimationFootAnalysisArtifact directArtifact =
                             footAnalysisCompilation.RequireArtifact(
                                 AnimationFootAnalysisProjectionBuildData
-                                    .PoseSourceBindingKey(bindingIdentity));
-                        CharacterAnimationClipContentIdentity clipIdentity =
-                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                                    .PoseSourceClipKey(clipIdentityKey));
                         CharacterAnimationSourceResourceBinding resourceBinding =
                             animationBuildInput.SourceResourceBindings.SingleOrDefault(
                                 value => value?.AuthoringClip == directClip.Clip);
@@ -223,14 +223,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             directClip.Clip,
                             backend,
                             scalarPage,
-                            $"pose-source:{bindingIdentity}:{clipIdentity.AssetGuid}");
+                            $"pose-source:{clipIdentityKey}");
                         CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(directClip.Clip);
                         AnimationCurve secondsCurve = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
                             directClip.Clip,
                             CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
                         result.Add(new CharacterPresentationPoseSourcePlan(
                             entry.SourceIndex,
-                            bindingIdentity,
+                            $"clip:{clipIdentityKey}",
                             directClip,
                             rig,
                             footAnalysis.Identity.AnalysisSourceId,

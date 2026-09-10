@@ -625,10 +625,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     if (!directClip.Clip)
                         errors?.Add($"Foot Analysis Clip Pose source binding #{bindingIndex} has no AnimationClip.");
                     else
-                        result.Add(new ClipBinding(
-                            CharacterPresentationAssetObjectIdentity.Require(directClip),
-                            directClip.Clip,
-                            AnimationFootContactSchedule.Inferred));
+                    {
+                        CharacterAnimationClipContentIdentity identity =
+                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
+                        string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
+                        if (directClipBindings.Add(clipIdentity))
+                            result.Add(new ClipBinding(
+                                clipIdentity,
+                                directClip.Clip,
+                                AnimationFootContactSchedule.Inferred,
+                                true));
+                    }
                     continue;
                 }
                 CharacterAnimationBlendSpaceAsset blendSpace =

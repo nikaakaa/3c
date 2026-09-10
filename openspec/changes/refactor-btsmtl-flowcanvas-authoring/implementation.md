@@ -219,3 +219,9 @@ Document侧补齐v7技能输入绑定、Skill Timeline与非技能Timeline分离
 目标Unity实例`3C_Client@e852139597e42532`刷新后按`error CS`读取为0条。随后最新正式`btsmtl.checkout_document` job `1c02ba6291844e14a89bdee3f7a03607`和`btsmtl.dry_run_document` job `3801244df16e42cf83a5cc73b485bb58`均完成成功：v7包`syncState=Clean`、`plannedDiff=[]`，`sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8`，`documentHash=38dc0f066285164c544531e926b869bcaf083c208c7dff1a834a9facbd9b5bde`，`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`。这证明快照模型清理和文件重命名没有改变当前正式包；没有执行Document apply、Character Build、Play、网络回放或性能采样。
 
 `18cf59f22`删除零消费者的通用Timeline资产解析方法，Skill Timeline仍由自身闭包的显式资源identity解析，ActionContext仍由Skill Definition携带的GUID与路径直接解析。`6e4abfb91`将Action eligibility handler、Character owner collector、Character validator和Character snapshot exporter的文件名与类名统一，保留Unity脚本GUID。该轮刷新后目标实例`error CS`仍为0；未改变资产、Document内容或运行链。
+
+# 2026-09-10 正式作者验证与Character State收口
+
+目标实例`3C_Client@e852139597e42532`通过`btsmtl.validate` job `74f837ccb89a4a76832201242dded22f`完成精确 Corin Definition 的作者闭包与正式编译验证。结果为`success=true`、`compileSuccessCount=1`、`compileFailureCount=0`、`semanticValidCount=1`、`semanticInvalidCount=0`，没有写入资产或运行状态。报告同时记录`Character State ABI=8`、`Codec=character-state/float32/v15`、`StateSlots=1127`、`TypedPartitions=16`和`GameplayEffectAggregateSlots=1`。
+
+4.5.1据此收口：`CharacterStateProviderFields`只声明Position、Velocity、VerticalVelocity、BodyYaw、Grounded；Skill State节点只有typed value output，`BtsmtlSkillFlowLeafEmitter`只发射`CharacterStateRead`，C#层没有对应Set节点或Velocity/BodyYaw写入口，owner必须匹配当前ControlModule。4.5.2—4.5.5仍分别需要跨GA运行隔离、Float32/Fixed/Snapshot双Target、Session Composition和网络产品的更强证据，不能由本次validate替代。

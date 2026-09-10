@@ -293,3 +293,5 @@ Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backen
 清空控制台后执行目标实例脚本强制刷新，等待编译和Domain Reload完成，`read_console`返回0条C#编译错误；剩余的 `3C-parallel-test` 场景绝对路径报错来自并行窗口的外部状态，不属于本次Skill改动。
 
 随后正式执行 `btsmtl.checkout_document` job `80a3991233184265aeb0e0ee5eacbc98`。操作最终返回 `success=false`、`applied=false`、`saved=false`、`errorCode=presentation_pose_properties_invalid`，没有写入Document或Unity资产。失败原因是当前Pose Graph节点仍带旧 `animation` 属性而缺少当前唯一Capability要求的 `pose-source-slot`；这是外部Pose迁移现场，不能由Skill authoring绕过。2.4.2、5.3、5.6、7.4、8.1和8.4.2继续保留正式交互、Build、Play和最终聚合证据门槛。
+
+同一目标随后通过重连后的正式 custom tool 入口再次 checkout，job `136bba4591bc44c29f5c03da7be0f6fb` 返回相同的 `presentation_pose_properties_invalid`，`applied=false`、`saved=false`、`plannedDiff=[]`，错误仍集中在六个 Pose Graph 节点的旧 `animation` 属性与缺失 `pose-source-slot`。这次复核排除了前一次 MCP 会话断开造成的假失败；当前不能进入Document dry-run、apply、Character Build或最终资产迁移。

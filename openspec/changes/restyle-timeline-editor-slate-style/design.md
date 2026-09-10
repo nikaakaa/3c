@@ -63,6 +63,7 @@ Slate pointer edit
 ### 4. 能力映射必须显式处理
 
 - Timeline length、time range、Track 顺序、Clip start/end、Section frame 映射到 Slate 对应字段。
+- Timeline Curve Channel 只投影当前 Clip 实际拥有的 typed channel。BTSMTL 的 normalized curve 在 proxy 中转换为 Slate ActionClip 的 local seconds，Slate 修改提交时再转换回 normalized curve，并保留 wrap mode、key、tangent、weight 与 WeightedMode。
 - BTSMTL Clip 的正式类型、TreeClip、ActionContext、Curve channel 和 owner identity保存在 projection map，不伪装成 Slate runtime 语义。
 - Slate 不支持的 BTSMTL 字段显示为只读或 unavailable；不得静默写入默认值。
 - 双击 Clip、TreeClip 下钻、AnimationClip 导航和 BTSMTL Details 由 adapter 处理，不依赖 Slate 的 runtime player。

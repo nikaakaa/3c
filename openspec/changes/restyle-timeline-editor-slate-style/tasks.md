@@ -12,12 +12,12 @@
 
 - [x] 3.1 创建临时 Cutscene host、Groups、Tracks、ActionClip wrappers 和 Section projection；以 `HideFlags.HideAndDontSave`、无 SerializedObject 绑定、无 AssetDatabase 保存的代码检查确认生命周期隔离
 - [x] 3.2 建立 BTSMTL Timeline/Track/Clip/Section/TreeClip authoring identity 到 Slate proxy object 的双向 map；以 owner 切换、窗口关闭和重建都能释放旧 map 的生命周期检查确认不残留对象
-- [x] 3.3 将 Timeline length、view range、Track 顺序、Clip start/end/blend、Section 和可显示的 Curve 摘要投影到 Slate；以不支持字段显示 unavailable、没有默认值覆盖的映射清单确认数据没有静默丢失
+- [x] 3.3 将 Timeline length、view range、Track 顺序、Clip start/end/blend、Section 和每个 Clip 的 Timeline-local Curve Channel 投影到 Slate；proxy ActionClip 通过 Slate 原生 Curve/DopeSheet 显示当前 Clip 的曲线和关键帧，并将 normalized authoring time 转换为 Slate local seconds，未支持字段显示 unavailable且不覆盖默认值
 - [x] 3.4 将 Skill owner、TreeClip ownership、ActionContext 和 AnimationClip 导航信息保存在 adapter context；以 Slate UI 关闭后这些信息仍从 BTSMTL owner恢复确认 proxy 没有夺取领域所有权
 
 ## 4. 建立Slate到BTSMTL的正式写回
 
-- [x] 4.1 为 projection 建立初始 snapshot、临时 snapshot 和 identity diff；以一次 Slate Clip 拖动只生成一条 BTSMTL mutation 命令的代码路径确认不会逐帧写入
+- [x] 4.1 为 projection 建立初始 snapshot、临时 snapshot 和 identity diff；Clip 时间与 Curve Channel 都按 authoring identity比较，以一次 Slate Clip/Curve 手势只生成一条 BTSMTL mutation 命令的代码路径确认不会逐帧写入
 - [x] 4.2 将 diff 转换为 `TimelineEditorSessionContext` / `ITimelineEditorMutationPort` 操作，并在提交后从 BTSMTL owner 重建 projection；以正式 owner、Source Map 和单次 BTSMTL Undo 调用链确认写回唯一
 - [x] 4.3 处理 Pointer Cancel、窗口关闭、owner 切换、Undo/Redo、外部 Timeline 刷新和 stale identity；以未提交 proxy 改动被丢弃且不写半成品 TimelineData 的状态路径确认取消安全
 - [x] 4.4 处理 Slate 原生 `Undo.RecordObject`、`Undo.RegisterFullObjectHierarchyUndo` 和 `EditorUtility.SetDirty`；以 transaction/Undo sink 扩展或明确隔离策略证明 proxy Undo 不会冒充 BTSMTL 正式 Undo

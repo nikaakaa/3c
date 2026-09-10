@@ -9,7 +9,7 @@ Slate 的 `CutsceneEditor` 是独立的 IMGUI `EditorWindow`，它直接要求 `
 ## What Changes
 
 - 正式 Timeline 打开入口改为调用 Slate `CutsceneEditor.ShowWindow(Cutscene)`，使用 Slate 的真实 IMGUI Timeline UI。
-- 增加 Editor-only BTSMTL-to-Slate projection，将 Timeline owner、Track、Clip、Section、Curve 摘要和稳定 authoring identity映射到临时 Slate Cutscene 层级。
+- 增加 Editor-only BTSMTL-to-Slate projection，将 Timeline owner、Track、Clip、Section、Timeline-local Curve Channel、完整关键帧和稳定 authoring identity映射到临时 Slate Cutscene 层级。
 - 增加 Slate-to-BTSMTL mutation bridge：Slate UI 的移动、裁剪、删除、添加、Section 和时间编辑先转换成 BTSMTL 编辑命令，再经 `TimelineEditorSessionContext`、正式 owner、Mutation 和 Undo 写回。
 - 明确 proxy 的双写边界：BTSMTL 是唯一持久化真相，但 Slate 原生 UI 会先修改临时 proxy；若要一个动作只有一个正式 Undo，必须提供 Slate transaction/Undo sink 扩展，不能假设原生窗口自动完成同步。
 - Slate 临时层级关闭、Timeline owner 变化、Undo/Redo 或外部刷新时重新建立投影，禁止把临时 Slate 对象保存成资产或进入运行时编译链。

@@ -15,23 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string CorinPolicyPath =
             "Assets/Configs/Character/Corin/Pipeline/Presentation/Blend/Locomotion/CorinPoseInertializationPolicy.asset";
         const string CorinPolicyId = "corin.pose.locomotion-inertialization";
-        const string CorinActionPolicyPath =
-            "Assets/Configs/Character/Corin/Pipeline/Presentation/Blend/Action/CorinActionInertializationPolicy.asset";
-        const string CorinActionPolicyId = "corin.pose.action-inertialization";
 
         [MenuItem("Tools/3C/Pose Canvas/Create Corin Locomotion Inertialization Policy")]
         static void CreateCorinLocomotionInertializationPolicy()
-        {
-            CreateCorinPolicy(CorinPolicyPath, CorinPolicyId);
-        }
-
-        [MenuItem("Tools/3C/Pose Canvas/Create Corin Action Inertialization Policy")]
-        static void CreateCorinActionInertializationPolicy()
-        {
-            CreateCorinPolicy(CorinActionPolicyPath, CorinActionPolicyId);
-        }
-
-        static void CreateCorinPolicy(string policyPath, string policyId)
         {
             CharacterPipelineDefinition definition =
                 AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
@@ -45,23 +31,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Corin Definition requires one Animation Presentation Profile, Pose Graph and Rig Definition.");
             }
             if (AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(
-                    policyPath))
+                    CorinPolicyPath))
             {
                 throw new InvalidOperationException(
-                    $"Inertialization Policy already exists at '{policyPath}'.");
+                    $"Inertialization Policy already exists at '{CorinPolicyPath}'.");
             }
 
             Create(
-                policyPath,
-                policyId,
-                StableHash.Compute(policyId + ":" + CharacterPoseInertializationPolicy.SchemaVersion).ToString(),
+                CorinPolicyPath,
+                CorinPolicyId,
+                StableHash.Compute(CorinPolicyId + ":" + CharacterPoseInertializationPolicy.SchemaVersion).ToString(),
                 definition.AnimationPresentationProfile.RigDefinition,
                 definition.AnimationPresentationProfile.PoseGraph.Graph.Parameters
                     .Select(value => value.ParameterId)
                     .ToArray());
             Selection.activeObject =
                 AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(
-                    policyPath);
+                    CorinPolicyPath);
         }
 
         internal static CharacterPoseInertializationPolicy Create(

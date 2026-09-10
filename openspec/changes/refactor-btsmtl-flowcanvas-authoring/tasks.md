@@ -4,7 +4,7 @@
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：Simulation Pipeline/网络Adapter正式接合证据、Document与owner的完整Undo/保存往返、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离以及双 Target/Snapshot State Layout 与 codec 已由正式validate核对；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=803c4a6d47212f1a458e88717a6675e66569a88e2b9b40c04ced258b9345e88d`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`；未执行Character Build、Play、网络回放或性能采样。
+尚未完成：Simulation Pipeline/网络Adapter正式接合证据、Document与owner的完整Undo/保存往返、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离以及双 Target/Snapshot State Layout 与 codec 已由正式validate核对；Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，Character Document也不再生成顶层Blackboard、旧Graph或旧Timeline分片。旧自研AI作者与运行链已删除，Behavior Designer的正式任务接入归独立`replace-btsmtl-ai-with-behavior-designer` change，不在本change恢复AI图或AI Document。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新正式 Character checkout 与 dry-run 已重新通过，当前v7包为`syncState=Clean`、`plannedDiff=[]`、`documentHash=17271f8622b4dbf68823b95976ea928feb55d32a235799c0b87e07b93450e1d5`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`、`editableHash=1d88461ecbe8377c601bc51f9c85564038ff885ef41695793792667a859a7e9b`；未执行Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -111,7 +111,7 @@
 - [x] 4.1.2 实现原生逻辑、已支持结构节点及输入／动作节点的叶节点发射器；读取serializedValue并校验Program端口合同，不调用getter。证据：ee557a353；后续已通过4.1.3接入正式技能发现，构建证据仍按对应任务核对。
 - [x] 4.1.3 替换技能入口的旧图发现：Definition.SkillGraphs提供明确原生根，CharacterSkillCompilationDiscovery按SkillDefinition稳定入口ID解析并生成原生调用记录，CharacterSemanticEmitter通过BtsmtlSkillGraphCompiler调用叶节点／Macro／边发射器进入唯一Semantic IR。源码审计无旧图对象中转；脚本检查无CS编译错误。资产赋值与构建验收仍在5及8，不由此项代替。
 
-  代码入口已切换；存量资产尚未填入SkillGraphs，缺失时明确报错，不回到旧RootTree查找技能。SkillDefinition的入口ID保持稳定业务身份，不增加另一份技能定义。
+  代码入口已切换；Corin存量资产已填入Definition.SkillGraphs，缺失时明确报错，不回到旧RootTree查找技能。SkillDefinition的入口ID保持稳定业务身份，不增加另一份技能定义。
 - [x] 4.1.4 完成控制边、值边、条件页、状态页及黑板作用域发射；通过构建来源与依赖审计确认没有旧BaseGraph转换。
 
   当前进度：普通黑板使用原生Variable保存名称、类型和默认值，声明元数据只记录作用域／生命周期／输入与窗口绑定；编译取已存值，进入共用声明快照和作用域发射器。原生读写节点已接类型及Config只读检查。原生窗口查询按每次调用的祖先作用域匹配Decision TreeClip投射，记录候选来源，不使用共享图的首次出现代替其他调用；正式构建来源核对仍待完成。

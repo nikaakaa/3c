@@ -488,6 +488,7 @@ namespace ThirdPersonSimulation.Fixed
                 deterministicValidity);
             if (!snapshot.WorldHash.Equals(expectedHash))
                 throw new InvalidDataException($"Simulation World Snapshot hash mismatch. Expected '{expectedHash}', actual '{snapshot.WorldHash}'.");
+            RequireCanonical(bytes, Write(snapshot), "Simulation World Snapshot");
             return snapshot;
         }
 
@@ -512,6 +513,17 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(snapshot.WorldRevision.Value);
             writer.WriteUInt64(snapshot.Tick.Value);
             writer.WriteBoolean(snapshot.DeterministicValidity);
+        }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+            }
         }
 
         static void WriteActorIdentity(CanonicalWriter writer, SimulationActorSnapshot actor)

@@ -76,7 +76,9 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidDataException($"Character state slot '{i}' kind does not match Program layout.");
             }
             reader.RequireComplete();
-            return CharacterSimulationState.Create(program, layout, lastCompletedTick, values);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values);
+            RequireCanonical(bytes, Write(result), "Character state");
+            return result;
         }
 
         public static CharacterStateHash ComputeHash(CharacterSimulationState state)
@@ -503,6 +505,17 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"Enum value '{value}' is invalid for {typeof(T).Name}.");
             return (T)candidate;
         }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+            }
+        }
     }
 
     [Flags]
@@ -672,7 +685,9 @@ namespace ThirdPersonSimulation.Fixed
             reader.RequireComplete();
             if (numericProfile != expectedNumericProfile || !solverId.Equals(expectedSolverId) || !string.Equals(solverVersion, expectedSolverVersion, StringComparison.Ordinal) || !worldRevision.Equals(expectedWorldRevision))
                 throw new InvalidDataException("World state Numeric Profile, Solver, or revision binding is stale or mismatched.");
-            return new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload);
+            var result = new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload);
+            RequireCanonical(bytes, Write(result), "World state");
+            return result;
         }
 
         static WorldStatePersistenceMode ReadPersistenceMode(byte value)
@@ -681,6 +696,16 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"World persistence mode '{value}' is invalid.");
             return (WorldStatePersistenceMode)value;
         }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+            }
+        }
     }
 }
-

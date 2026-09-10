@@ -381,6 +381,7 @@ namespace ThirdPersonSimulation
             var snapshot = new SimulationWorldSnapshot(numericProfile, catalogHash, solverId, solverVersion, worldRevision, tick, actors, worldStateBytes, deterministicValidity);
             if (!snapshot.WorldHash.Equals(expectedHash))
                 throw new InvalidDataException($"Simulation World Snapshot hash mismatch. Expected '{expectedHash}', actual '{snapshot.WorldHash}'.");
+            RequireCanonical(bytes, Write(snapshot), "Simulation World Snapshot");
             return snapshot;
         }
 
@@ -413,6 +414,17 @@ namespace ThirdPersonSimulation
                 writer.WriteBytes(actor.StateBytesBuffer);
             }
             writer.WriteBytes(snapshot.WorldStateBytesBuffer);
+        }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+            }
         }
     }
 }

@@ -95,6 +95,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
                         : ReferenceEquals(graph, poseAsset.Graph)
                         ? CharacterPoseGraphAuthoringCapabilities.RootGraph
+                        : graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer
+                            ? CharacterPoseGraphAuthoringCapabilities.AnimationLayer
+                            : graph.Role == CharacterPoseAuthoringGraphRole.ControlRig
+                                ? CharacterPoseGraphAuthoringCapabilities.ControlRig
                         : stateGraphs.Contains(graph.GraphId)
                             ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph
                             : CharacterPoseGraphAuthoringCapabilities.Subgraph;
@@ -232,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (selector is not CharacterEquipmentLinkedPoseSelectionBinding equipment)
                 throw new InvalidOperationException(
-                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v6 codec.");
+                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v7 codec.");
             AgentPackageObjectReference asset = Asset(equipment, true);
             return new AgentPackageLinkedPoseSelectorBinding
             {
@@ -382,8 +386,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return new AgentPackageAnimationProducerBinding
             {
                 timelineId = binding.ProducerId.TimelineAuthoringId,
-                trackId = binding.ProducerId.TrackAuthoringId,
-                source = Asset(binding.Source, true)
+                trackId = binding.ProducerId.TrackAuthoringId
             };
         }
 

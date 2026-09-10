@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(
                     ProfilePath,
                     "presentation_profile_missing",
-                    "Character Document v6缺少Presentation Profile目标状态。");
+                    "Character Document v7缺少Presentation Profile目标状态。");
                 return;
             }
             files.Add(
@@ -591,7 +591,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             report.Error(
                 relativePath,
                 "presentation_file_unknown",
-                "Document v6包含未知Presentation文件。");
+                    "Document v7包含未知Presentation文件。");
             return false;
         }
 
@@ -867,7 +867,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report.Error(
                             pair.Key,
                             "presentation_readonly_file_unknown",
-                            "Document v6包含未知Presentation readonly文件。");
+                    "Document v7包含未知Presentation readonly文件。");
                         valid = false;
                     }
                     valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -896,7 +896,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(
                         pair.Key,
                         "presentation_file_unknown",
-                        "Document v6包含未知Presentation文件。");
+                    "Document v7包含未知Presentation文件。");
                     valid = false;
                 }
                 valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -1718,6 +1718,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             }
             bool valid = true;
+            if (profile.poseSources != null && profile.poseSources.Count > 0)
+            {
+                report.Error(
+                    ProfilePath + ".poseSources",
+                    "presentation_pose_sources_retired",
+                    "Document v7不再接受Source Slot与Profile Pose Source Binding，Player必须直接引用原生资源。");
+                valid = false;
+            }
             var slots = new HashSet<string>(StringComparer.Ordinal);
             var bindings = new HashSet<string>(StringComparer.Ordinal);
             foreach (AgentPackagePoseSourceBinding source in profile.poseSources ??
@@ -1755,8 +1763,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 string id = $"{producer?.timelineId}:{producer?.trackId}";
                 if (producer == null || !Identity(producer.timelineId) ||
-                    !Identity(producer.trackId) || !producers.Add(id) ||
-                    !Asset(producer.source))
+                    !Identity(producer.trackId) || !producers.Add(id))
                 {
                     report.Error(
                         ProfilePath + ".actionProducers",
@@ -1794,8 +1801,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 role = new GraphAuthoringDocumentRoleId(graph.role);
                 if (!role.Equals(CharacterPoseGraphAuthoringCapabilities.RootGraph) &&
+                    !role.Equals(CharacterPoseGraphAuthoringCapabilities.AnimationLayer) &&
                     !role.Equals(CharacterPoseGraphAuthoringCapabilities.StatePoseGraph) &&
                     !role.Equals(CharacterPoseGraphAuthoringCapabilities.Subgraph) &&
+                    !role.Equals(CharacterPoseGraphAuthoringCapabilities.ControlRig) &&
                     !role.Equals(CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry))
                     throw new InvalidOperationException();
             }
@@ -1895,6 +1904,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             bool valid = true;
             portShape = Array.Empty<GraphAuthoringDynamicPortProjection>();
+            string[] retiredCapabilities =
+            {
+                CharacterPoseGraphAuthoringCapabilities.Get(CharacterPoseNodeKind.ActionPlaybackInput).Value,
+                CharacterPoseGraphAuthoringCapabilities.Get(CharacterPoseNodeKind.PoseParameterResolve).Value,
+                CharacterPoseGraphAuthoringCapabilities.Get(CharacterPoseNodeKind.FullBodyIkGoalAssembler).Value
+            };
+            if (retiredCapabilities.Contains(node.capability, StringComparer.Ordinal))
+            {
+                report.Error(
+                    GraphDirectory(graphId) + $"/graph.json.nodes[{node.id}].capability",
+                    "presentation_pose_retired_author_node",
+                    "v7作者图不能包含Action Playback Input、Pose Parameter Resolve或Goal Assembler作者节点。");
+                valid = false;
+            }
             var fields = capability.Fields
                 .Where(value => value.AuthoringWritable)
                 .ToDictionary(

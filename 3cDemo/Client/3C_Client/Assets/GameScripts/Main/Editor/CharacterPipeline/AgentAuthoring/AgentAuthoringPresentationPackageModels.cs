@@ -203,7 +203,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string timelineId;
         public string trackId;
-        public AgentPackageObjectReference source;
     }
 
     [Serializable]

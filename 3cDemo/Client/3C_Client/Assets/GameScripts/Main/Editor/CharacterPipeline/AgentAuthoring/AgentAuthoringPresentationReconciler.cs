@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Animancer;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
@@ -494,6 +493,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             value.animationChannelId))
                     .Select(value => value.animationChannelId),
                 StringComparer.Ordinal);
+            var skillTimelineTracks = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageSkillTimelineFile timeline in
+                     editable.skillTimelines ?? new List<AgentPackageSkillTimelineFile>())
+            {
+                foreach (AgentPackageSkillTimelineTrack track in
+                         timeline?.tracks ?? new List<AgentPackageSkillTimelineTrack>())
+                {
+                    if (!string.IsNullOrWhiteSpace(track?.animationChannelId))
+                        channels.Add(track.animationChannelId);
+                    if (timeline != null && track != null)
+                        skillTimelineTracks.Add(timeline.id + "\0" + track.id);
+                }
+            }
             var animationClips = new HashSet<string>(
                 presentation.animationClips.Select(value =>
                     ReferenceIdentity(value.clip)),
@@ -511,6 +523,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             $"editable/timelines/{timeline.timelineAuthoringId}/clips/{clip.clipAuthoringId}.animationClip",
                             "presentation_animation_clip_unresolved",
                             "Timeline Animation Segment引用不在AnimationClip目标闭包中。");
+                }
+            }
+            foreach (AgentPackageSkillTimelineFile timeline in
+                     editable.skillTimelines ?? new List<AgentPackageSkillTimelineFile>())
+            {
+                foreach (AgentPackageSkillTimelineClip clip in
+                         (timeline?.tracks ?? new List<AgentPackageSkillTimelineTrack>())
+                             .SelectMany(value => value?.clips ?? new List<AgentPackageSkillTimelineClip>())
+                             .Where(value => value?.kind == TimelineContractKinds.AnimationClip))
+                {
+                    if (!animationClips.Contains(ReferenceIdentity(clip.animationClip)))
+                        report.Error(
+                            $"editable/skills/timelines/{timeline.id}/clips/{clip.id}.animationClip",
+                            "presentation_animation_clip_unresolved",
+                            "Skill Timeline Animation Segment引用不在AnimationClip目标闭包中。");
                 }
             }
             var sources = new HashSet<string>(
@@ -601,16 +628,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         "presentation_action_producer_local_reference_invalid",
                         "Action producer只允许绑定已存在的Timeline与Animation track；当前正式Timeline Mutation不创建这两类owner。");
                 }
-                else if (!timelines.TryGetValue(
-                        producer.timelineId,
-                        out AgentSnapshotTimeline timeline) ||
-                    !(timeline.tracks ??
-                      new List<AgentSnapshotTimelineTrack>()).Any(value =>
-                        value != null &&
-                        string.Equals(
-                            value.trackAuthoringId,
-                            producer.trackId,
-                            StringComparison.Ordinal)))
+                else if (!(timelines.TryGetValue(
+                              producer.timelineId,
+                              out AgentSnapshotTimeline timeline) &&
+                          (timeline.tracks ??
+                           new List<AgentSnapshotTimelineTrack>()).Any(value =>
+                              value != null &&
+                              string.Equals(
+                                  value.trackAuthoringId,
+                                  producer.trackId,
+                                  StringComparison.Ordinal))) &&
+                         !skillTimelineTracks.Contains(producer.timelineId + "\0" + producer.trackId))
                 {
                     report.Error(
                         path,
@@ -2450,20 +2478,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             string path =
                 $"editable/presentation/profile.json.actionProducers[{ProducerKey(value)}]";
-            TransitionAssetBase source = Resolve<TransitionAssetBase>(
-                value.source,
-                path + ".source",
-                report);
-            if (!source)
-                return null;
             try
             {
                 var binding = new AnimationProducerPresentationBinding();
                 binding.ConfigureTimeline(
                     new AnimationProducerId(
                         value.timelineId,
-                        value.trackId),
-                    source);
+                        value.trackId));
                 return binding;
             }
             catch (Exception exception)

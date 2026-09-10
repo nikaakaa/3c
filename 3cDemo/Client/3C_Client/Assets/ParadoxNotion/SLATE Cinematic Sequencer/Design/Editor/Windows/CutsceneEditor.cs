@@ -246,10 +246,16 @@ namespace Slate
 
         //Do action safely (stop cutscene, do, resample)
         void SafeDoAction(System.Action call) {
+            bool ownsTransaction = !editTransactionActive;
+            if ( ownsTransaction ) { BeginEditTransaction("Cutscene Change", 0); }
             var time = cutscene.currentTime;
-            Stop(true);
-            call();
-            cutscene.currentTime = time;
+            try {
+                Stop(true);
+                call();
+                cutscene.currentTime = time;
+            } finally {
+                if ( ownsTransaction ) { CommitEditTransaction(); }
+            }
         }
 
         bool ShouldRecordUndo() {
@@ -973,7 +979,8 @@ namespace Slate
 
                 //key at scrubber
                 if ( e.keyCode == KeyCode.K ) {
-                    if ( CutsceneUtility.selectedObject is IKeyable keyable ) { keyable.TryAddIdentityKey(keyable.RootTimeToLocalTime()); }
+                    if ( CutsceneUtility.selectedObject is IKeyable keyable )
+                        SafeDoAction(() => keyable.TryAddIdentityKey(keyable.RootTimeToLocalTime()));
                     e.Use();
                 }
 
@@ -982,7 +989,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        wrapper?.Split(cutscene.currentTime);
+                        SafeDoAction(() => wrapper?.Split(cutscene.currentTime));
                     }
                     e.Use();
                 }
@@ -992,7 +999,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        wrapper?.StretchFit();
+                        SafeDoAction(() => wrapper?.StretchFit());
                     }
                     e.Use();
                 }
@@ -1002,7 +1009,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        wrapper?.CleanKeysOffRange();
+                        SafeDoAction(() => wrapper?.CleanKeysOffRange());
                     }
                     e.Use();
                 }

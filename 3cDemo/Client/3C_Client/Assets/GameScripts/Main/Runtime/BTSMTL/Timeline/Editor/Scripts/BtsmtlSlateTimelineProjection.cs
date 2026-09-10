@@ -76,6 +76,8 @@ namespace BTSMTL.Timeline.Editor
     {
         [SerializeField] string m_DisplayName = "Clip";
         [SerializeField] float m_Length = 1f;
+        [SerializeField] float m_BlendIn;
+        [SerializeField] float m_BlendOut;
         [SerializeField] string m_SourceAuthoringId;
         string m_RuntimeStatus = string.Empty;
 
@@ -89,12 +91,26 @@ namespace BTSMTL.Timeline.Editor
             ? m_DisplayName
             : $"{m_DisplayName} [{m_RuntimeStatus}]";
 
+        public override float blendIn
+        {
+            get => Mathf.Clamp(m_BlendIn, 0f, length);
+            set => m_BlendIn = Mathf.Clamp(value, 0f, length);
+        }
+
+        public override float blendOut
+        {
+            get => Mathf.Clamp(m_BlendOut, 0f, length);
+            set => m_BlendOut = Mathf.Clamp(value, 0f, length);
+        }
+
         public string SourceAuthoringId => m_SourceAuthoringId ?? string.Empty;
 
-        public void Configure(string displayName, float duration)
+        public void Configure(string displayName, float duration, float blendIn = 0f, float blendOut = 0f)
         {
             m_DisplayName = string.IsNullOrEmpty(displayName) ? "Clip" : displayName;
             length = duration;
+            this.blendIn = blendIn;
+            this.blendOut = blendOut;
             name = m_DisplayName;
         }
 
@@ -138,15 +154,24 @@ namespace BTSMTL.Timeline.Editor
 
         readonly struct ProxyClipSnapshot
         {
-            public ProxyClipSnapshot(float startTime, float endTime, string trackAuthoringId)
+            public ProxyClipSnapshot(
+                float startTime,
+                float endTime,
+                float blendIn,
+                float blendOut,
+                string trackAuthoringId)
             {
                 StartTime = startTime;
                 EndTime = endTime;
+                BlendIn = blendIn;
+                BlendOut = blendOut;
                 TrackAuthoringId = trackAuthoringId ?? string.Empty;
             }
 
             public float StartTime { get; }
             public float EndTime { get; }
+            public float BlendIn { get; }
+            public float BlendOut { get; }
             public string TrackAuthoringId { get; }
         }
 
@@ -306,7 +331,11 @@ namespace BTSMTL.Timeline.Editor
                     string displayName = sourceClip.Name;
                     if (sourceClip is ITimelineOwnedAuthoringIdentity)
                         displayName = $"{displayName} [{sourceClip.ContractKind}]";
-                    proxyClip.Configure(displayName, sourceClip.Duration / (float)TimelineUtility.FrameRate);
+                    proxyClip.Configure(
+                        displayName,
+                        sourceClip.Duration / (float)TimelineUtility.FrameRate,
+                        sourceClip.SelfEaseInFrame / (float)TimelineUtility.FrameRate,
+                        sourceClip.SelfEaseOutFrame / (float)TimelineUtility.FrameRate);
                     proxyClip.ConfigureSource(sourceClip.AuthoringId);
                     proxyClip.startTime = sourceClip.StartFrame / (float)TimelineUtility.FrameRate;
                     proxyTrack.clips.Add(proxyClip);
@@ -417,6 +446,8 @@ namespace BTSMTL.Timeline.Editor
                             new ProxyClipSnapshot(
                                 proxyClip.startTime,
                                 proxyClip.endTime,
+                                proxyClip.blendIn,
+                                proxyClip.blendOut,
                                 proxyTrack.SourceAuthoringId);
                     }
                 }
@@ -444,7 +475,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_ReadOnly || end.Unsupported)
                 return;
-            var changes = new List<(Clip Clip, int StartFrame, int EndFrame)>();
+            var changes = new List<(Clip Clip, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
             foreach (KeyValuePair<string, ProxyClipSnapshot> pair in end.Clips)
             {
                 if (!begin.Clips.TryGetValue(pair.Key, out ProxyClipSnapshot before) ||
@@ -456,8 +487,19 @@ namespace BTSMTL.Timeline.Editor
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(pair.Value.EndTime * TimelineUtility.FrameRate));
                 int beforeStartFrame = Mathf.RoundToInt(before.StartTime * TimelineUtility.FrameRate);
                 int beforeEndFrame = Mathf.RoundToInt(before.EndTime * TimelineUtility.FrameRate);
-                if (startFrame != beforeStartFrame || endFrame != beforeEndFrame)
-                    changes.Add((sourceClip, startFrame, endFrame));
+                int easeInFrame = Mathf.Clamp(
+                    Mathf.RoundToInt(pair.Value.BlendIn * TimelineUtility.FrameRate),
+                    0,
+                    Mathf.Max(0, endFrame - startFrame - 1));
+                int easeOutFrame = Mathf.Clamp(
+                    Mathf.RoundToInt(pair.Value.BlendOut * TimelineUtility.FrameRate),
+                    0,
+                    Mathf.Max(0, endFrame - startFrame - easeInFrame - 1));
+                int beforeEaseInFrame = Mathf.RoundToInt(before.BlendIn * TimelineUtility.FrameRate);
+                int beforeEaseOutFrame = Mathf.RoundToInt(before.BlendOut * TimelineUtility.FrameRate);
+                if (startFrame != beforeStartFrame || endFrame != beforeEndFrame ||
+                    easeInFrame != beforeEaseInFrame || easeOutFrame != beforeEaseOutFrame)
+                    changes.Add((sourceClip, startFrame, endFrame, easeInFrame, easeOutFrame));
             }
 
             var sectionChanges = new List<(TimelineSection Section, string Name, int Frame)>();
@@ -501,9 +543,11 @@ namespace BTSMTL.Timeline.Editor
                     m_Request.Timeline.RemoveSection(removedSections[index]);
                 for (int index = 0; index < changes.Count; index++)
                 {
-                    (Clip clip, int startFrame, int endFrame) = changes[index];
+                    (Clip clip, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
                     clip.StartFrame = startFrame;
                     clip.EndFrame = endFrame;
+                    clip.SelfEaseInFrame = easeInFrame;
+                    clip.SelfEaseOutFrame = easeOutFrame;
                     clip.Track.UpdateMix();
                 }
                 for (int index = 0; index < sectionChanges.Count; index++)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEditor;
@@ -224,6 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BlendSpaceId = default;
                 SampleId = default;
                 PoseSourceBindingIdentity = string.Empty;
+                PoseSourceClipIdentity = string.Empty;
             }
 
             public ClipBinding(
@@ -242,6 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BlendSpaceId = blendSpaceId;
                 SampleId = sampleId;
                 PoseSourceBindingIdentity = string.Empty;
+                PoseSourceClipIdentity = string.Empty;
             }
 
             public ClipBinding(
@@ -259,6 +262,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BlendSpaceId = default;
                 SampleId = default;
                 PoseSourceBindingIdentity = poseSourceBindingIdentity.Trim();
+                PoseSourceClipIdentity = string.Empty;
+            }
+
+            public ClipBinding(
+                string poseSourceClipIdentity,
+                UnityEngine.AnimationClip clip,
+                AnimationFootContactSchedule contactSchedule,
+                bool directClip)
+            {
+                if (!directClip || string.IsNullOrWhiteSpace(poseSourceClipIdentity))
+                    throw new ArgumentException("Direct Animation Clip Foot Analysis binding identity is invalid.");
+                TimelineAuthoringId = string.Empty;
+                TrackAuthoringId = string.Empty;
+                ClipAuthoringId = string.Empty;
+                Clip = clip;
+                ContactSchedule = contactSchedule ?? throw new ArgumentNullException(nameof(contactSchedule));
+                BlendSpaceId = default;
+                SampleId = default;
+                PoseSourceBindingIdentity = string.Empty;
+                PoseSourceClipIdentity = poseSourceClipIdentity.Trim();
             }
 
             public string TimelineAuthoringId { get; }
@@ -269,9 +292,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public CharacterAnimationBlendSpaceId BlendSpaceId { get; }
             public CharacterAnimationBlendSpaceSampleId SampleId { get; }
             public string PoseSourceBindingIdentity { get; }
+            public string PoseSourceClipIdentity { get; }
             public bool IsBlendSpace => BlendSpaceId.IsValid;
             public bool IsPoseSource => !string.IsNullOrWhiteSpace(PoseSourceBindingIdentity);
-            public string BindingKey => IsPoseSource
+            public bool IsPoseSourceClip => !string.IsNullOrWhiteSpace(PoseSourceClipIdentity);
+            public string BindingKey => IsPoseSourceClip
+                ? AnimationFootAnalysisProjectionBuildData.PoseSourceClipKey(PoseSourceClipIdentity)
+                : IsPoseSource
                 ? AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(PoseSourceBindingIdentity)
                 : IsBlendSpace
                     ? AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(BlendSpaceId, SampleId)
@@ -279,16 +306,49 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         TimelineAuthoringId,
                         TrackAuthoringId,
                         ClipAuthoringId);
-            public string DisplayIdentity => IsPoseSource
+            public string DisplayIdentity => IsPoseSourceClip
+                ? $"Direct Animation Clip '{PoseSourceClipIdentity}'"
+                : IsPoseSource
                 ? $"Presentation Pose source binding '{PoseSourceBindingIdentity}'"
                 : IsBlendSpace
                     ? $"Blend Space '{BlendSpaceId}' Sample '{SampleId}'"
                     : $"Timeline '{TimelineAuthoringId}' Track '{TrackAuthoringId}' Clip '{ClipAuthoringId}'";
         }
 
+        public static CharacterFootPlacementAnalysisCompilation ResolvePoseOnly(
+            CharacterAnimationPresentationProfile profile,
+            bool generateMissingOrStale,
+            List<CharacterFootAnalysisArtifactDiagnostic> diagnostics,
+            List<string> errors)
+        {
+            errors ??= new List<string>();
+            return ResolveBindings(
+                profile,
+                CollectPoseOnlyAuthoringBindings(profile, errors),
+                generateMissingOrStale,
+                diagnostics,
+                errors);
+        }
+
         public static CharacterFootPlacementAnalysisCompilation Resolve(
             CharacterAnimationPresentationProfile profile,
             IReadOnlyDictionary<string, TimelineData> timelines,
+            bool generateMissingOrStale,
+            List<CharacterFootAnalysisArtifactDiagnostic> diagnostics,
+            List<string> errors)
+        {
+            errors ??= new List<string>();
+            return ResolveBindings(
+                profile,
+                CollectAuthoringBindings(profile, timelines, errors),
+                generateMissingOrStale,
+                diagnostics,
+                errors);
+        }
+
+        static CharacterFootPlacementAnalysisCompilation ResolveBindings(
+            CharacterAnimationPresentationProfile profile,
+            List<ClipBinding> bindings,
             bool generateMissingOrStale,
             List<CharacterFootAnalysisArtifactDiagnostic> diagnostics,
             List<string> errors)
@@ -309,7 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!TryResolveSource(profile, errors, out CharacterFootPlacementAnalysisSource source))
                 return null;
 
-            List<ClipBinding> bindings = CollectAuthoringBindings(profile, timelines, errors);
+            bindings ??= new List<ClipBinding>();
             if (bindings.Count == 0)
             {
                 errors?.Add("Foot Analysis found no reachable Animation Clip binding.");
@@ -522,6 +582,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             var result = new List<ClipBinding>();
             var blendSpaceBindings = new HashSet<string>(StringComparer.Ordinal);
+            var directClipBindings = new HashSet<string>(StringComparer.Ordinal);
+            IEnumerable<CharacterPoseCanvasGraph> poseGraphs =
+                profile.PoseGraph.EnumerateGraphs()
+                    .Concat(profile.LinkedPoseImplementations
+                        .Where(value => value != null)
+                        .SelectMany(value => value.Entries)
+                        .Where(value => value?.GraphOwner != null)
+                        .SelectMany(value => value.GraphOwner.EnumerateGraphs()))
+                    .Where(value => value != null)
+                    .Distinct();
+            foreach (CharacterPoseCanvasGraph graph in poseGraphs)
+            {
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
+                {
+                    if (node?.Payload is not CharacterClipPlayerPosePayload player || !player.Animation)
+                        continue;
+                    CharacterAnimationClipContentIdentity identity =
+                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(player.Animation);
+                    string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
+                    if (directClipBindings.Add(clipIdentity))
+                        result.Add(new ClipBinding(
+                            clipIdentity,
+                            player.Animation,
+                            AnimationFootContactSchedule.Inferred,
+                            true));
+                }
+            }
             for (int bindingIndex = 0; bindingIndex < profile.PoseSourceBindings.Count; bindingIndex++)
             {
                 CharacterPresentationPoseSourceBinding binding = profile.PoseSourceBindings[bindingIndex];
@@ -603,6 +690,75 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result;
         }
 
+        static List<ClipBinding> CollectPoseOnlyAuthoringBindings(
+            CharacterAnimationPresentationProfile profile,
+            List<string> errors)
+        {
+            var result = new List<ClipBinding>();
+            if (!profile || !profile.PoseGraph)
+                return result;
+            var directClipBindings = new HashSet<string>(StringComparer.Ordinal);
+            var blendSpaceBindings = new HashSet<string>(StringComparer.Ordinal);
+            IEnumerable<CharacterPoseCanvasGraph> poseGraphs =
+                profile.PoseGraph.EnumerateGraphs()
+                    .Concat(profile.LinkedPoseImplementations
+                        .Where(value => value != null)
+                        .SelectMany(value => value.Entries)
+                        .Where(value => value?.GraphOwner != null)
+                        .SelectMany(value => value.GraphOwner.EnumerateGraphs()))
+                    .Where(value => value != null)
+                    .Distinct();
+            foreach (CharacterPoseCanvasGraph graph in poseGraphs)
+            {
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
+                {
+                    if (node?.Payload is CharacterClipPlayerPosePayload clipPlayer && clipPlayer.Animation)
+                    {
+                        try
+                        {
+                            CharacterAnimationClipContentIdentity identity =
+                                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clipPlayer.Animation);
+                            string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
+                            if (directClipBindings.Add(clipIdentity))
+                                result.Add(new ClipBinding(
+                                    clipIdentity,
+                                    clipPlayer.Animation,
+                                    AnimationFootContactSchedule.Inferred,
+                                    true));
+                        }
+                        catch (Exception exception)
+                        {
+                            errors?.Add($"Pose-only Foot Analysis Clip Player '{node.NodeId}' is invalid: {exception.Message}");
+                        }
+                        continue;
+                    }
+                    if (node?.Payload is not CharacterBlendSpacePlayerPosePayload blendSpacePlayer ||
+                        !blendSpacePlayer.BlendSpace)
+                        continue;
+                    CharacterAnimationBlendSpaceAsset blendSpace = blendSpacePlayer.BlendSpace;
+                    for (int sampleIndex = 0; sampleIndex < blendSpace.Samples.Count; sampleIndex++)
+                    {
+                        CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[sampleIndex];
+                        if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
+                        {
+                            errors?.Add(
+                                $"Pose-only Foot Analysis Blend Space '{blendSpace.name}' Sample #{sampleIndex} is incomplete.");
+                            continue;
+                        }
+                        ClipBinding binding = new ClipBinding(
+                            blendSpace.BlendSpaceId,
+                            sample.SampleId,
+                            sample.Clip,
+                            AnimationFootContactSchedule.Inferred);
+                        if (blendSpaceBindings.Add(binding.BindingKey))
+                            result.Add(binding);
+                    }
+                }
+            }
+            SortBindings(result);
+            return result;
+        }
+
         static List<ClipBinding> CollectProjectionBindings(
             CharacterPresentationProjection projection,
             List<string> errors)
@@ -617,10 +773,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add($"Projection Presentation Pose source #{sourceIndex} is incomplete.");
                     continue;
                 }
-                result.Add(new ClipBinding(
-                    source.BindingAssetIdentity,
-                    source.Clip,
-                    AnimationFootContactSchedule.Inferred));
+                result.Add(source.BindingAssetIdentity.StartsWith("clip:", StringComparison.Ordinal)
+                    ? new ClipBinding(
+                        source.BindingAssetIdentity.Substring("clip:".Length),
+                        source.Clip,
+                        AnimationFootContactSchedule.Inferred,
+                        true)
+                    : new ClipBinding(
+                        source.BindingAssetIdentity,
+                        source.Clip,
+                        AnimationFootContactSchedule.Inferred));
             }
             for (int producerIndex = 0; producerIndex < projection.Producers.Count; producerIndex++)
             {

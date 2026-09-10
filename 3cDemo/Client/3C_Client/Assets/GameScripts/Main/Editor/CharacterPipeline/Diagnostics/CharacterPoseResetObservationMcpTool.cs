@@ -17,10 +17,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     [McpForUnityTool(
         "character.pose_reset_observation",
-        Description = "Run an isolated Pose Graph Preview sequence and compare new, history-used, and reset FBBIK pose, goals, outputs, bend-history entry facts, and reset generation.",
+        Description = "Observe one explicit Scene Play Actor across two committed Pose frames and a formal Scene Play reset, then compare its FBBIK pose, goals, outputs, bend-history facts, runtime identity and scene generation.",
         StructuredOutput = true,
         AutoRegister = true,
-        RequiresPolling = false,
+        RequiresPolling = true,
+        BackgroundPollingStatus = true,
+        PollAction = "status",
+        MaxPollSeconds = 120,
         HasBehaviorAnnotations = true,
         ReadOnlyHint = false,
         DestructiveHint = false,
@@ -30,168 +33,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Exact Assets/... CharacterAnimationPreviewFixture path. Omitted requires exactly one project fixture.", Required = false)]
-            public string fixture_asset_path { get; set; }
+            [ToolParameter("Action: start or status. Defaults to start.", Required = false)]
+            public string action { get; set; }
 
-            [ToolParameter("Absolute preview time in seconds. Defaults to 0.5.", Required = false)]
-            public double? presentation_time { get; set; }
+            [ToolParameter("Exact Scene Play Actor identity. Defaults to gameplay-lab-player.", Required = false)]
+            public string actor_id { get; set; }
 
-            [ToolParameter("Grounded moving speed in metres per second. Defaults to 3.", Required = false)]
-            public float? horizontal_speed { get; set; }
+            [ToolParameter("Stable caller context identity echoed in the result.", Required = false)]
+            public string context_id { get; set; }
+
+            [ToolParameter("Stable job identity returned by start; required for status.", Required = false)]
+            public string job_id { get; set; }
+
+            [ToolParameter("Exact active Scene Play scene path. Defaults to Assets/Scenes/GameplayLab/GameplayLab.unity.", Required = false)]
+            public string scene_path { get; set; }
         }
 
-        public static object HandleCommand(JObject @params)
-        {
-            string fixturePath = @params?["fixture_asset_path"]?.Value<string>() ?? string.Empty;
-            double presentationTime = @params?["presentation_time"]?.Value<double?>() ?? 0.5d;
-            float horizontalSpeed = @params?["horizontal_speed"]?.Value<float?>() ?? 3f;
-            try
-            {
-                using CharacterAnimationPreviewFixtureSession fixtureSession =
-                    CreateFixtureSession(fixturePath);
-                CharacterPipelineHost host = fixtureSession.Target;
-                IReadOnlyList<AnimationPoseWatchIdentity> watches =
-                    DiscoverWatches(host, presentationTime, horizontalSpeed);
-                Guid ownerId = Guid.NewGuid();
-                Guid sessionId = Guid.NewGuid();
-                try
-                {
-                    Evaluate(host, sessionId, ownerId, watches, presentationTime, horizontalSpeed, 1, false);
-                    Observation created = Capture(host);
-                    Evaluate(host, sessionId, ownerId, watches, presentationTime, horizontalSpeed, 2, false);
-                    Observation used = Capture(host);
-                    Evaluate(host, sessionId, ownerId, watches, presentationTime, horizontalSpeed, 3, true);
-                    Observation reset = Capture(host);
-                    RequireEquivalent(created, used, reset);
-                    return new
-                    {
-                        success = true,
-                        data = new
-                        {
-                            definition = AssetDatabase.GetAssetPath(
-                                fixtureSession.Target.Definition),
-                            target = host.name,
-                            presentation_time = presentationTime,
-                            horizontal_speed = horizontalSpeed,
-                            watch_count = watches.Count,
-                            pose_value_count = created.PoseValueCount,
-                            goal_count = created.GoalCount,
-                            applied_goal_count = created.AppliedGoalCount,
-                            effector_count = created.EffectorCount,
-                            pose_hash = created.PoseHash,
-                            goal_hash = created.GoalHash,
-                            output_hash = created.OutputHash,
-                            created = created.ToResult(),
-                            used = used.ToResult(),
-                            reset = reset.ToResult(),
-                            pose_equal = created.PoseHash == reset.PoseHash,
-                            goals_equal = created.GoalHash == reset.GoalHash,
-                            output_equal = created.OutputHash == reset.OutputHash
-                        }
-                    };
-                }
-                finally
-                {
-                    host.RemovePreviewPoseWatchInterests(ownerId);
-                    host.ClearPoseGraphPreview(sessionId);
-                }
-            }
-            catch (Exception exception)
-            {
-                return new ErrorResponse(
-                    "pose_reset_observation_failed",
-                    new
-                    {
-                        fixture_asset_path = fixturePath,
-                        message = exception.ToString()
-                    });
-            }
-        }
+        public static object HandleCommand(JObject @params) =>
+            CharacterPoseResetObservationMcpJobScheduler.Handle(@params);
 
-        static CharacterAnimationPreviewFixtureSession CreateFixtureSession(
-            string fixturePath)
+        internal static Observation Capture(
+            AnimationPresentationRuntimeSnapshot snapshot)
         {
-            CharacterAnimationPreviewFixture fixture;
-            if (!string.IsNullOrWhiteSpace(fixturePath))
-            {
-                fixture = AssetDatabase.LoadAssetAtPath<CharacterAnimationPreviewFixture>(
-                    fixturePath.Trim());
-                if (!fixture)
-                    throw new InvalidOperationException(
-                        $"Preview fixture '{fixturePath}' is unavailable.");
-            }
-            else
-            {
-                IReadOnlyList<CharacterAnimationPreviewFixture> fixtures =
-                    CharacterAnimationPreviewFixtureCatalog.Load();
-                if (fixtures.Count != 1)
-                    throw new InvalidOperationException(
-                        $"Expected exactly one Animation Preview Fixture; found {fixtures.Count}.");
-                fixture = fixtures[0];
-            }
-            return CharacterAnimationPreviewFixtureSession.Create(fixture);
-        }
-
-        static IReadOnlyList<AnimationPoseWatchIdentity> DiscoverWatches(
-            CharacterPipelineHost host,
-            double presentationTime,
-            float horizontalSpeed)
-        {
-            Guid sessionId = Guid.NewGuid();
-            try
-            {
-                Evaluate(host, sessionId, default, null, presentationTime, horizontalSpeed, 1, false);
-                if (!host.HasPreviewAnimationDebugView)
-                    throw new InvalidOperationException("Preview debug view was not published.");
-                IReadOnlyList<AnimationPoseWatchIdentity> watches =
-                    CharacterFootPoseWatchDiscovery.Build(
-                        host.PreviewAnimationDebugView.PosePlan);
-                if (watches.Count == 0)
-                    throw new InvalidOperationException("Preview contains no Foot Placement or Full Body IK watches.");
-                return watches.ToArray();
-            }
-            finally
-            {
-                host.ClearPoseGraphPreview(sessionId);
-            }
-        }
-
-        static void Evaluate(
-            CharacterPipelineHost host,
-            Guid sessionId,
-            Guid ownerId,
-            IReadOnlyList<AnimationPoseWatchIdentity> watches,
-            double presentationTime,
-            float horizontalSpeed,
-            ulong tick,
-            bool reset)
-        {
-            host.EvaluatePoseGraphPreview(
-                sessionId,
-                presentationTime,
-                tick,
-                0f,
-                reset,
-                true,
-                horizontalSpeed,
-                0f,
-                0f,
-                Vector2.up,
-                Vector2.up,
-                0f,
-                CharacterPresentationMotionPhase.GroundedMoving,
-                null,
-                null,
-                ownerId,
-                watches);
-        }
-
-        static Observation Capture(CharacterPipelineHost host)
-        {
-            if (!host.HasPreviewAnimationDebugView)
-                throw new InvalidOperationException("Preview debug view is unavailable.");
-            AnimationPresentationRuntimeSnapshot snapshot =
-                host.PreviewAnimationDebugView.PosePlan;
             AnimationReadOnlyBuffer<AnimationPoseWatchSnapshot> watches =
                 snapshot.PoseWatches;
             var pose = new StringBuilder(16384);
@@ -254,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 resetGeneration, left, right);
         }
 
-        static void RequireEquivalent(
+        internal static void RequireEquivalent(
             Observation created,
             Observation used,
             Observation reset)
@@ -382,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return result.ToString();
         }
 
-        readonly struct BendFact
+        internal readonly struct BendFact
         {
             BendFact(
                 bool available,
@@ -417,7 +280,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
-        sealed class Observation
+        internal sealed class Observation
         {
             internal Observation(
                 string poseHash,

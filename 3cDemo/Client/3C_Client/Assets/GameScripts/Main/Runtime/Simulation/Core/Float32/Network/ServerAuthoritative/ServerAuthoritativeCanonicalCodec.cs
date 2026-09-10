@@ -53,13 +53,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < requestCount; i++)
                 requests[i] = ReadInputRequest(reader);
             reader.RequireComplete();
-            return new CharacterSimulationInput(
+            var result = new CharacterSimulationInput(
                 profile,
                 new SimulationTickSourceIdentity(sourceKind, clockId, sourceTick),
                 inputSource,
                 sequence,
                 values,
                 requests);
+            RequireCanonical(bytes, WriteInput(result), "ServerAuthoritative canonical input");
+            return result;
         }
 
         public static byte[] WriteBaseline(AuthoritativeActorBaseline baseline)
@@ -122,7 +124,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (!actualBodyHash.Equals(encodedBodyHash))
                 throw new InvalidDataException("Authoritative baseline body hash does not match its canonical body.");
             EventId eventId = string.IsNullOrEmpty(eventHash) ? default : new EventId(new StableHash(eventHash));
-            return new AuthoritativeActorBaseline(
+            var result = new AuthoritativeActorBaseline(
                 actorId,
                 tick,
                 numericProfile,
@@ -140,6 +142,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 body,
                 confirmedInputSequence,
                 new ServerAuthoritativeEventHorizon(eventSequence, eventId));
+            RequireCanonical(bytes, WriteBaseline(result), "ServerAuthoritative baseline");
+            return result;
         }
 
         public static StableHash ComputeBodyHash(WorldBodyState body)
@@ -266,6 +270,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (!Enum.IsDefined(typeof(T), typed))
                 throw new InvalidDataException($"Canonical {label} '{value}' is invalid.");
             return typed;
+        }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+            }
         }
     }
 }

@@ -25,6 +25,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             RollbackActorInputFrame frame = ReadInput(reader);
             reader.RequireComplete();
+            if (!BytesEqual(bytes, WriteInput(frame)))
+                throw new InvalidDataException("Rollback Actor input is not canonical.");
             return frame;
         }
 

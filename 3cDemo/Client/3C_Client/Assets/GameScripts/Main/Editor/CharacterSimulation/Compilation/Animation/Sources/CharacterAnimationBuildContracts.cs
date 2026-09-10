@@ -217,7 +217,45 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 SourceRig,
                 ParameterLayout,
                 Compression,
-                Array.Empty<CharacterAnimationSourceResourceBinding>());
+                CreatePoseOnlySourceResourceBindings(Profile));
+
+        static IReadOnlyList<CharacterAnimationSourceResourceBinding>
+            CreatePoseOnlySourceResourceBindings(
+                CharacterAnimationPresentationProfile profile)
+        {
+            CharacterPresentationPoseSourceCompilationResult sourceCompilation =
+                CharacterPresentationPoseSourceCompiler.Compile(profile);
+            var clips = new HashSet<AnimationClip>();
+            for (int i = 0; i < sourceCompilation.Catalog.Entries.Count; i++)
+            {
+                CharacterPresentationPoseSourceCompilationEntry entry =
+                    sourceCompilation.Catalog.Entries[i];
+                if (entry.DirectClip)
+                    clips.Add(entry.DirectClip);
+                if (!entry.DirectBlendSpace)
+                    continue;
+                for (int sampleIndex = 0;
+                     sampleIndex < entry.DirectBlendSpace.Samples.Count;
+                     sampleIndex++)
+                {
+                    AnimationClip clip =
+                        entry.DirectBlendSpace.Samples[sampleIndex]?.Clip;
+                    if (clip)
+                        clips.Add(clip);
+                }
+            }
+
+            return clips
+                .OrderBy(value => AssetDatabase.GetAssetPath(value), StringComparer.Ordinal)
+                .ThenBy(value => value.name, StringComparer.Ordinal)
+                .Select(value =>
+                {
+                    var binding = new CharacterAnimationSourceResourceBinding();
+                    binding.ConfigureAcl(value);
+                    return binding;
+                })
+                .ToArray();
+        }
     }
 
     internal sealed class CharacterAnimationAuthoringReadRequest

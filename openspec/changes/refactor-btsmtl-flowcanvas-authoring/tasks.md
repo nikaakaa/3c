@@ -216,7 +216,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.1 使用现有正式CLI完成技能启动／Timeline／正常结束及中断链的编译运行对账，记录业务差异；不新增测试代码或临时执行器。
 - [x] 8.2 核对各旧作者模型、窗口、端口和转换层的消费者，删除零消费者实现；交付残留清单并说明未迁移领域的合法保留原因。
 
-  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除，Character Document不再生成顶层Blackboard、旧Graph或旧Timeline分片；AI不再由BTSMTL拥有，Behavior Designer插件是后续AI唯一作者入口。源码仍保留的`OneRootTree`、`SubTree`和`TimelineRunningTree`只服务TreeDesigner/Skill Timeline内部通用作者模型，不是Character Definition入口。技能正式编译/观察不得有旧作者对象中转。
+  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除，Character Document不再生成顶层Blackboard、旧Graph或旧Timeline分片；零消费者的一次性迁移工作流和顶层Blackboard模型已删除。AI不再由BTSMTL拥有，Behavior Designer插件是后续AI唯一作者入口。源码仍保留的`OneRootTree`、`SubTree`和`TimelineRunningTree`只服务TreeDesigner/Skill Timeline内部通用作者模型，不是Character Definition入口。技能正式编译/观察不得有旧作者对象中转。
 - [x] 8.3 同步project、current specs、技能说明和原change替代记录，统一v7版本及作者／运行边界；运行OpenSpec严格校验并附规范冲突复核结论。证据：`595e09dc8`同步Character无RootTree规范，`5fb20d1e0`同步Skill FlowCanvas规范，`b012bf211`删除旧自研AI链，current spec改为Behavior Designer边界；change严格校验通过。Character入口为SkillDefinitions/SkillGraphs，AI不再保留BTSMTL RootTree、AI Program或AI Document。
 ### 8.4 交付与真实进度
 

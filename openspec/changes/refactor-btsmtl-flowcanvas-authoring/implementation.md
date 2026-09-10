@@ -12,6 +12,8 @@
 
 2026-09-10 Mutation入口收紧：`dc98db8b4`从Character正式Mutation Catalog与typed lowering移除旧StateMachine、普通Graph、顶层Blackboard和顶层Timeline命令；当前Document只会把Skill Flow、Action、Control交给对应handler，旧命令进入规划阶段即被拒绝。目标Unity刷新后`error CS`为0。残留的`OneRootTree`、`SubTree`和`TimelineRunningTree`只属于TreeDesigner/Skill Timeline内部的通用作者类型，不是Character Definition入口；当前Skill Document和Character Definition源码未再出现RootTree字段或路径。
 
+2026-09-10 迁移后清理：Corin Skill根与SharedGraph已完成最终迁移后，`2dd98c9cc`删除零消费者的一次性迁移工作流；`aa5b99a56`删除顶层Blackboard包模型；`7db4072ed`与`8cb636099`将Character事务owner收集器和正式校验器改为准确的Character命名。删除后目标Unity完整refresh的`error CS`为0。当前没有新增资产修改，旧迁移入口不再可调用；后续只保留Skill Graph/Macro/Skill Timeline正式作者链。
+
 ## 此前增量记录
 
 本节保留此前各次检查与实施事实，旧的“尚未完成”和旧版本号不代表当前状态。

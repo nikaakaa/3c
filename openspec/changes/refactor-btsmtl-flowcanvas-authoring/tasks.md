@@ -11,8 +11,8 @@
 
 | 缺口 | 对应工作 |
 |---|---|
-| 仍需补代码与集成 | 2.1.2导入／复制身份合同核对；2.4完整owner事务；4.5 Simulation Pipeline与网络正式接合 |
-| 主链代码已有，仍需完成规定的执行核对 | 2.1.2身份保存／重载；3.3—3.4编译语义与页面导航；4.1.4—4.3正式构建；6.2—6.4版本、调用诊断与开销；7.2—7.5实例选择和观察生命周期；8.5规范与Rootless残留核对 |
+| 仍需补代码与集成 | 2.4完整owner事务；4.5 Simulation Pipeline与网络正式接合 |
+| 主链代码已有，仍需完成规定的执行核对 | 3.3—3.4编译语义与页面导航；4.1.4—4.3正式构建；6.2—6.4版本、调用诊断与开销；7.2—7.5实例选择和观察生命周期；8.5规范与Rootless残留核对 |
 | 基础已提交，集成及资产往返未完成 | 5.3的根／私有／共享owner保存与失败恢复证据 |
 | 最后执行的资产与交付工作 | 5.6产物发布；8.1运行对账；8.4.2最终代码／资产／CLI证据汇总 |
 
@@ -39,7 +39,7 @@
 ### 2.1 正式图与稳定身份
 
 - [x] 2.1.1 实现直接保存原生拓扑的技能FlowGraph、状态／条件页面及FlowNode基础，使用原生Node／Edge UID和稳定步骤Port ID，不创建旧图镜像。证据：ebc41bfcc。
-- [ ] 2.1.2 完成Document导入及复制时的Node／Port／Edge身份写入合同，并核对保存／重载后的身份和正式编译输入。
+- [x] 2.1.2 完成Document导入及复制时的Node／Port／Edge身份写入合同，并核对保存／重载后的身份和正式编译输入。证据：`BtsmtlSkillGraphCopy`、`AgentSkillFlowDocumentMutationHandler.ValidateExistingGraphIdentity`、`SyncGraph`、`SyncEdges`和`ValidateAppliedIdentityContracts`；正式apply后保存并重新checkout/dry-run返回`success=true`、`syncState=Clean`、`plannedDiff=[]`，精确`btsmtl.validate`同时完成正式编译输入核对。
 
 ### 2.2 唯一能力和端口目录
 

@@ -251,3 +251,9 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 刷新后重新执行正式 `btsmtl.validate`：Prediction Composition job `51afaacb6da94212b97b57f68f5aabf8` 返回 `success=true`、`compileSuccessCount=1`、`semanticValidCount=1`、`session_composition_compatible`，核对 `RequiredPasses=10`、`SourcePorts=5`、Server-Authoritative Prediction Pipeline、Float32 Backend、Unity CharacterController Solver 和 `NetworkModel=thirdperson.network-model.server-authoritative-hybrid`；Authority Composition job `d0321f3f81a64022840711be33092697` 同样返回 `success=true`、`compileSuccessCount=1`、`semanticValidCount=1`、`session_composition_compatible`，核对 `RequiredPasses=6`、`SourcePorts=4` 和 Authority Pipeline。两次都是只读验证，没有 checkout、apply、Character Build、Play 或网络回放。
 
 这次结果关闭了 4.5.4 遗留的 Server Authority Composition 兼容性缺口，但不提前关闭 4.5.5：Rollback/Server Authority 的 canonical 编解码字段审计已完成，仍需要正式网络产品运行记录和实际网络载荷的产品级限制证据，证明不会复制 Graph、Blackboard 名称、Timeline 对象或最终 Pose。
+
+# 2026-09-10 Document Graph身份闭包收口
+
+2.1.2的实现链已完成并按已有正式事务结果收口。Document读取先要求 `graph.json` 与 `layout.json` 成对存在，并核对目录、Graph id与layout graphId；已有正式 Node、Edge、Anchor和Port只能按原稳定身份原位解析，缺失的正式身份直接拒绝，新增对象只允许使用 `local:*` 计划身份。`BtsmtlSkillGraphCopy`复制节点时同时捕获私有Graph、Macro、Timeline和TreeClip闭包，副本生成新的Graph身份并重绑引用，原节点和原Edge身份不被复用。
+
+反向应用由 `AgentSkillFlowDocumentMutationHandler` 完成：`ValidateExistingGraphIdentity`先核对已有正式身份，`SyncGraph`与`SyncEdges`只对local对象创建并记录映射，最后 `ValidateAppliedIdentityContracts`逐Graph回读Anchor、Node、Edge及两端Port。此前正式Document apply保存后重新checkout/dry-run返回`success=true`、`syncState=Clean`、`plannedDiff=[]`，精确 `btsmtl.validate` 返回`compileSuccessCount=1`、`semanticValidCount=1`，因此2.1.2已完成。该结论不扩展到2.4.2的人工Undo交互，也不扩展到Character Build或Play运行证据。

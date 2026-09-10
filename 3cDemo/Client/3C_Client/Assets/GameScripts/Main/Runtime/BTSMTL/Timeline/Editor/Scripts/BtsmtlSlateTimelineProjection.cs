@@ -187,6 +187,25 @@ namespace BTSMTL.Timeline.Editor
 
         public Cutscene Cutscene => m_Cutscene;
 
+        public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
+        {
+            if (!string.IsNullOrEmpty(clipAuthoringId) &&
+                m_ProxyClips.TryGetValue(clipAuthoringId, out BtsmtlSlateActionClip clip))
+            {
+                CutsceneUtility.selectedObject = clip;
+                CutsceneEditor.current?.Repaint();
+                return true;
+            }
+            if (!string.IsNullOrEmpty(trackAuthoringId) &&
+                m_ProxyTracks.TryGetValue(trackAuthoringId, out BtsmtlSlateTrack track))
+            {
+                CutsceneUtility.selectedObject = track;
+                CutsceneEditor.current?.Repaint();
+                return true;
+            }
+            return false;
+        }
+
         public static BtsmtlSlateTimelineProjection Open(TimelineEditorOpenRequest request)
         {
             DisposeCurrent();

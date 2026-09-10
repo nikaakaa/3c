@@ -110,7 +110,7 @@ namespace BTSMTL.Timeline.Editor
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
-            return false;
+            return m_SlateProjection != null && m_SlateProjection.FocusSource(trackAuthoringId, clipAuthoringId);
         }
 
         public static TimelineEditorWindow Open(BaseTreeWindow sourceGraphWindow, TimelineNode node)
@@ -506,6 +506,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceGraphOwner = sourceGraphOwner;
             if (m_SlateProjection == null)
                 return;
+            m_SlateProjection.FocusSource(trackAuthoringId, clipAuthoringId);
         }
 
         void ClearNavigation()

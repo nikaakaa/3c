@@ -32,4 +32,4 @@
 
 - [x] 6.1 对照当前 `btsmtl-timeline-editor-preview` spec、proposal 和 design，确认“真实Slate UI、Editor-only projection、BTSMTL唯一持久化真相、proxy双写边界”术语一致
 - [x] 6.2 运行 `openspec validate "restyle-timeline-editor-slate-style" --type change --strict`，并以 change 状态显示所有规划任务完成作为文档交付证据
-- [ ] 6.3 交付 handoff，列出 Slate 实际入口、projection host、identity map、snapshot/diff、Undo boundary、旧 UI 删除范围和未包含的 Character Build/runtime 范围
+- [x] 6.3 交付 handoff，列出 Slate 实际入口、projection host、identity map、snapshot/diff、Undo boundary、旧 UI 删除范围和未包含的 Character Build/runtime 范围

@@ -64,8 +64,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string exportMode = AgentSnapshotExportMode.Compact.ToString();
         public string definitionName;
         public string definitionAssetPath;
-        public string rootTreeAssetPath;
-        public string rootGraphAuthoringId;
         public string controlModuleId;
         public int controlSemanticVersion;
         public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();

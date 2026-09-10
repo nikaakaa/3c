@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     session.AddPlanned(value, deleteGraph, declaration.BlackboardKey, "delete declaration");
                     return true;
                 case AgentSetBlackboardSchemaRevisionMutation value:
-                    if (!session.TryResolveGraph(value.Graph, value.Path, out BaseTree schemaRoot) || !ReferenceEquals(schemaRoot, session.RootTree)) return false;
+                    if (!session.TryResolveGraph(value.Graph, value.Path, out BaseTree schemaRoot)) return false;
                     if (value.Revision != PipelineBlackboardAuthoringSchema.CurrentRevision)
                     {
                         session.Report.Error(value.Path, "blackboard_schema_revision_invalid", $"Blackboard schema revision 必须是 {PipelineBlackboardAuthoringSchema.CurrentRevision}。");
@@ -512,7 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static void ApplyBlackboardSchemaRevision(AgentMutationSession session, AgentSetBlackboardSchemaRevisionMutation command)
         {
-            if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree root) || !ReferenceEquals(root, session.RootTree))
+            if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree root))
                 return;
             root.SetBlackboardAuthoringSchemaRevision(command.Revision);
             session.AddAppliedAuthoring(command, root.SerializedOwner, null, command.Revision.ToString(), "set Blackboard schema revision");
@@ -1134,7 +1134,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             declaration = null;
             if (reference.PlannedIdentity.IsValid)
                 return session.TryResolvePlannedIdentity(reference.PlannedIdentity, path, out declaration);
-            if (TryResolveDeclaration(session.RootTree, reference.AuthoringId, out declaration))
+            if (session.TryResolveDeclaration(reference.AuthoringId, out declaration))
                 return true;
             session.Report.Error(path, "blackboard_declaration_missing", $"Blackboard declaration 无法解析：{reference.Identity}");
             return false;
@@ -1157,7 +1157,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     return true;
             }
             var errors = new List<string>();
-            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.RootTree, errors);
+            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.Index.Graphs, errors);
             if (!projection.IsValid)
             {
                 session.Report.Error(path, "blackboard_topology_invalid", string.Join("\n", errors));
@@ -1209,7 +1209,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             timeline = null;
             var errors = new List<string>();
-            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.RootTree, errors);
+            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.Index.Graphs, errors);
             if (!projection.IsValid)
             {
                 session.Report.Error(path, "timeline_topology_invalid", string.Join("\n", errors));
@@ -1742,7 +1742,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static bool ValidateMotionWarpActionRequirement(AgentMutationSession session, TimelineData timeline, string path)
         {
             var errors = new List<string>();
-            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.RootTree, errors);
+            CharacterAuthoringTopologyProjection projection = CharacterAuthoringTopologyProjection.Build(session.Index.Graphs, errors);
             if (!projection.IsValid)
             {
                 session.Report.Error(path, "motion_warp_topology_invalid", string.Join("\n", errors));

@@ -103,8 +103,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 definitionName = target.context.definitionName,
                 definitionAssetPath = target.context.definitionAssetPath,
-                rootTreeAssetPath = target.context.rootTreeAssetPath,
-                rootGraphAuthoringId = target.context.rootGraphAuthoringId,
                 bodyMotion = target.context.bodyMotion,
                 presentation = target.context.presentation,
                 generatedProduct = target.context.generatedProduct,
@@ -315,8 +313,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 definitionName = dependencies.definitionName,
                 definitionAssetPath = dependencies.definitionAssetPath,
-                rootTreeAssetPath = dependencies.rootTreeAssetPath,
-                rootGraphAuthoringId = dependencies.rootGraphAuthoringId,
                 inputValues = assets.inputValues ?? new List<AgentSnapshotInputValue>(),
                 actionRequests = assets.actionRequests ?? new List<AgentSnapshotActionRequest>(),
                 timelineAssets = assets.timelineAssets ?? new List<AgentSnapshotAsset>(),

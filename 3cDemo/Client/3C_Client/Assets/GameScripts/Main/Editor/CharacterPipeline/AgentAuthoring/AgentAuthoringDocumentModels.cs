@@ -69,8 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string definitionName;
         public string definitionAssetPath;
-        public string rootTreeAssetPath;
-        public string rootGraphAuthoringId;
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public AgentSnapshotBodyMotionProfile bodyMotion = new AgentSnapshotBodyMotionProfile();
@@ -498,8 +496,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string definitionName;
         public string definitionAssetPath;
-        public string rootTreeAssetPath;
-        public string rootGraphAuthoringId;
         public AgentSnapshotBodyMotionProfile bodyMotion;
         public AgentDocumentPresentationContext presentation;
         public AgentDocumentGeneratedProduct generatedProduct;

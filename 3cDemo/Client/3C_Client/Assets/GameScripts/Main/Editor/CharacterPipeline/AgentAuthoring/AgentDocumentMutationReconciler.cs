@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 normalizeBlackboard);
             AgentBlackboardDocumentMutationModule.BuildBlackboardSchemaRevisionMutation(current, target, mutations, normalizeBlackboard);
             AgentGraphDocumentMutationModule.BuildStateMachineMutations(
-                current.rootGraphAuthoringId,
+                string.Empty,
                 current.stateMachines,
                 target.stateMachines,
                 current.graphs,

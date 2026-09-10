@@ -57,7 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool AllowMissingTimelineTrees { get; }
         public AgentAssetResolver Resolver { get; }
         public AgentGraphAuthoringIndex Index { get; }
-        public BaseTree RootTree { get; private set; }
         public IReadOnlyCollection<UnityEngine.Object> TouchedOwners => m_TouchedOwners;
         public IReadOnlyCollection<string> InitialSkillIds => m_InitialSkillIds;
 
@@ -107,15 +106,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Report.Error("snapshot.domain", "domain_root_mismatch", "Snapshot、Mutation Plan与加载的root domain不一致。");
                 return false;
             }
-            RootTree = null;
             string definitionPath = AssetDatabase.GetAssetPath(Definition);
             string rootIdentity = AssetDatabase.AssetPathToGUID(definitionPath);
             if (!string.Equals(Snapshot.rootAssetPath, definitionPath, StringComparison.Ordinal) ||
                 !string.Equals(Snapshot.rootIdentity, rootIdentity, StringComparison.Ordinal) ||
                 !string.Equals(Plan.RootIdentity, rootIdentity, StringComparison.Ordinal) ||
-                !string.Equals(Plan.SourceRevision, Snapshot.sourceRevision, StringComparison.Ordinal) ||
-                !string.IsNullOrEmpty(Snapshot.rootTreeAssetPath) ||
-                !string.Equals(Snapshot.rootGraphAuthoringId, RootTree?.GraphAuthoringId ?? string.Empty, StringComparison.Ordinal))
+                !string.Equals(Plan.SourceRevision, Snapshot.sourceRevision, StringComparison.Ordinal))
             {
                 Report.Error(
                     "snapshot",
@@ -130,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             try
             {
-                Index.Rebuild(RootTree, AllowMissingTimelineTrees);
+                Index.Rebuild(null, AllowMissingTimelineTrees);
                 if (Definition)
                     Index.RebuildSkills(Definition);
                 return true;
@@ -630,12 +626,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             reference = default;
             declaration = null;
-            if (RootTree == null)
-            {
-                Report.Error(path, "blackboard_declaration_missing", "当前Character authoring不再通过RootTree提供Blackboard声明。");
-                return false;
-            }
-            List<BaseExposedProperty> matches = RootTree.ExposedProperties
+            List<BaseExposedProperty> matches = Index.Graphs
+                .SelectMany(graph => graph.ExposedProperties)
                 .Where(value => string.Equals(value.BlackboardKey, key, StringComparison.Ordinal))
                 .ToList();
             if (matches.Count == 0 && !IsApply)
@@ -660,6 +652,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             reference = declaration.CreateBlackboardReference();
             return true;
+        }
+
+        public bool TryResolveDeclaration(string declarationId, out BaseExposedProperty declaration)
+        {
+            return Index.TryFindDeclaration(declarationId, out declaration);
+        }
+
+        public bool TryResolveDeclaration(
+            AgentAuthoringReference reference,
+            string path,
+            out BaseExposedProperty declaration)
+        {
+            declaration = null;
+            if (reference.PlannedIdentity.IsValid)
+                return TryResolvePlannedIdentity(reference.PlannedIdentity, path, out declaration);
+            if (TryResolveDeclaration(reference.AuthoringId, out declaration))
+                return true;
+            Report.Error(path, "blackboard_declaration_missing", $"Blackboard declaration 无法解析：{reference.Identity}");
+            return false;
         }
 
         bool TryResolveGraph(AgentAuthoringReference reference, string path, out BaseTree graph)

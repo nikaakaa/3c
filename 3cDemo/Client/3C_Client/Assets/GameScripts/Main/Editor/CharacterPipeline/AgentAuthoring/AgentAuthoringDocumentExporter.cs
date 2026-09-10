@@ -95,8 +95,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 definitionName = snapshot.definitionName,
                 definitionAssetPath = snapshot.definitionAssetPath,
-                rootTreeAssetPath = snapshot.rootTreeAssetPath,
-                rootGraphAuthoringId = snapshot.rootGraphAuthoringId,
                 inputValues = snapshot.inputValues,
                 bodyMotion = snapshot.bodyMotion,
                 presentation = ExportPresentationContext(

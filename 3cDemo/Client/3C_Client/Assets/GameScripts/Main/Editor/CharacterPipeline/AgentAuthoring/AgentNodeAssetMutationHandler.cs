@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ActionProfile actionProfile = null;
             PipelineBlackboardVariableReference targetSnapshot = default;
             if (command.ConfigurationKind == AgentConditionValueNodeConfigurationKind.BlackboardDeclaration &&
-                !session.TryResolveDeclaration(session.RootTree, command.BlackboardDeclaration, command.Path, out declaration))
+                !session.TryResolveDeclaration(graph, command.BlackboardDeclaration, command.Path, out declaration))
                 return;
             if (command.ConfigurationKind == AgentConditionValueNodeConfigurationKind.ActionContext &&
                 !session.Resolver.TryResolveActionContext(command.ActionContext, out actionContext))
@@ -237,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (command.TargetSnapshotDeclaration.IsValid)
                 {
-                    if (!session.TryResolveDeclaration(session.RootTree, command.TargetSnapshotDeclaration, command.Path, out BaseExposedProperty targetDeclaration))
+                    if (!session.TryResolveDeclaration(graph, command.TargetSnapshotDeclaration, command.Path, out BaseExposedProperty targetDeclaration))
                         return;
                     if (targetDeclaration.ValueType != typeof(ActionTargetSnapshot))
                     {
@@ -277,7 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentConditionValueNodeConfigurationKind.BlackboardDeclaration:
                     if (!typeof(PipelineBlackboardValueInfoNode).IsAssignableFrom(nodeType))
                         return FailConfiguration(session, command, nodeType);
-                    if (!session.TryResolveDeclaration(session.RootTree, command.BlackboardDeclaration, command.Path, out BaseExposedProperty declaration))
+                    if (!session.TryResolveDeclaration(command.BlackboardDeclaration, command.Path, out BaseExposedProperty declaration))
                         return false;
                     if (declaration != null)
                     {
@@ -310,7 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                     if (!command.TargetSnapshotDeclaration.IsValid)
                         return true;
-                    if (!session.TryResolveDeclaration(session.RootTree, command.TargetSnapshotDeclaration, command.Path, out BaseExposedProperty target))
+                    if (!session.TryResolveDeclaration(command.TargetSnapshotDeclaration, command.Path, out BaseExposedProperty target))
                         return false;
                     if (target == null || target.ValueType == typeof(ActionTargetSnapshot))
                         return true;

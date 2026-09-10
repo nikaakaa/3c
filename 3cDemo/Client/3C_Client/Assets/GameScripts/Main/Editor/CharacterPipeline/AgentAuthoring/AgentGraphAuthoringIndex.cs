@@ -17,6 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly Dictionary<string, FlowGraph> m_SkillGraphs = new Dictionary<string, FlowGraph>(StringComparer.Ordinal);
         readonly Dictionary<FlowGraph, string> m_SkillGraphPaths = new Dictionary<FlowGraph, string>();
 
+        public IReadOnlyCollection<BaseTree> Graphs => m_Graphs.Values;
+
         public void Rebuild(BaseTree root, bool allowMissingTimelineTrees = false)
         {
             m_Graphs.Clear();
@@ -67,6 +69,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             graph = null;
             return !string.IsNullOrEmpty(key) && m_Graphs.TryGetValue(key, out graph);
+        }
+
+        public bool TryFindDeclaration(string declarationId, out BaseExposedProperty declaration)
+        {
+            declaration = null;
+            if (string.IsNullOrEmpty(declarationId))
+                return false;
+
+            foreach (BaseTree graph in m_Graphs.Values)
+            {
+                declaration = graph.ExposedProperties.FirstOrDefault(value =>
+                    value != null && string.Equals(value.DeclarationId, declarationId, StringComparison.Ordinal));
+                if (declaration != null)
+                    return true;
+            }
+            return false;
         }
 
         public string GetGraphPath(BaseGraph graph)

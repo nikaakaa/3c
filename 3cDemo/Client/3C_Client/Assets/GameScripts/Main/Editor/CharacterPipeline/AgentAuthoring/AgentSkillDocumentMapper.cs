@@ -302,7 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (graphById.ContainsKey(skill.entryGraphAuthoringId) &&
                     !string.Equals(
                         skill.entryGraphAuthoringId,
-                        snapshot?.rootGraphAuthoringId,
+                        string.Empty,
                         StringComparison.Ordinal))
                     selected.Add(skill.entryGraphAuthoringId);
                 foreach (AgentSnapshotSkillSubgraphDependency dependency in
@@ -312,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         graphById.ContainsKey(dependency.subgraphIdentity) &&
                         !string.Equals(
                             dependency.subgraphIdentity,
-                            snapshot?.rootGraphAuthoringId,
+                            string.Empty,
                             StringComparison.Ordinal))
                         selected.Add(dependency.subgraphIdentity);
                 }
@@ -349,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (selected.Contains(candidate.graphAuthoringId) ||
                         string.Equals(
                             candidate.graphAuthoringId,
-                            snapshot?.rootGraphAuthoringId,
+                            string.Empty,
                             StringComparison.Ordinal))
                         continue;
                     bool ownedBySelectedEntity = !string.IsNullOrEmpty(candidate.ownerElementAuthoringId) &&

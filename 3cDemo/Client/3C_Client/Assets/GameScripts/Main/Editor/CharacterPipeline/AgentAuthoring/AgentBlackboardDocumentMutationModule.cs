@@ -71,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.SetBlackboardSchemaRevision,
                 operation =>
                 {
-                    SetGraph(operation, current.rootGraphAuthoringId);
+                    SetGraph(operation, string.Empty);
                     operation.blackboardSchemaRevision = target.blackboardSchemaRevision;
                 });
         }

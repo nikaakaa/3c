@@ -124,6 +124,57 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValid();
         }
 
+        internal CharacterPresentationPoseSourcePlan(
+            PresentationPoseSourceIndex sourceIndex,
+            string sourceIdentity,
+            AnimationClip clip,
+            CharacterAnimationRigDefinition rig,
+            string footAnalysisIdentity,
+            string clipIdentity,
+            string fullClipDependencyHash,
+            string analysisInputHash,
+            string registeredCurveHash,
+            float sourceDurationSeconds,
+            AnimationCurve normalizedFootPlacementWeightCurve,
+            AnimationFootStepObservationCurvePair footStepObservation,
+            AnimationFootFeaturePair footFeatures,
+            CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip,
+            CharacterAnimationScalarCurvePage scalarPage = null,
+            int resourceCatalogIndex = -1,
+            int groupClipIndex = -1)
+        {
+            if (!sourceIndex.IsValid || string.IsNullOrWhiteSpace(sourceIdentity) || !clip || !rig ||
+                string.IsNullOrWhiteSpace(footAnalysisIdentity) || string.IsNullOrWhiteSpace(clipIdentity) ||
+                string.IsNullOrWhiteSpace(fullClipDependencyHash) || string.IsNullOrWhiteSpace(analysisInputHash) ||
+                string.IsNullOrWhiteSpace(registeredCurveHash) || !float.IsFinite(sourceDurationSeconds) ||
+                sourceDurationSeconds <= 0f || normalizedFootPlacementWeightCurve == null ||
+                normalizedFootPlacementWeightCurve.length < 2 || footStepObservation == null || !footFeatures.IsValid)
+                throw new ArgumentException("Presentation direct Clip source compile input is incomplete.");
+            m_SourceIndex = sourceIndex.Value;
+            m_BindingAssetIdentity = sourceIdentity.Trim();
+            m_DisplayName = clip.name;
+            m_Backend = backend;
+            m_Clip = backend == CharacterAnimationSamplingBackendKind.Acl ? null : clip;
+            m_ResourceCatalogIndex = backend == CharacterAnimationSamplingBackendKind.Acl ? resourceCatalogIndex : -1;
+            m_GroupClipIndex = backend == CharacterAnimationSamplingBackendKind.Acl ? groupClipIndex : -1;
+            m_Looping = clip.isLooping;
+            m_ClipIdentity = clipIdentity.Trim();
+            m_FullClipDependencyHash = fullClipDependencyHash.Trim();
+            m_AnalysisInputHash = analysisInputHash.Trim();
+            m_RegisteredCurveHash = registeredCurveHash.Trim();
+            m_RigId = rig.RigId;
+            m_RigRevision = rig.Revision;
+            m_SourceDurationSeconds = sourceDurationSeconds;
+            m_FootPlacementWeightCurve = normalizedFootPlacementWeightCurve;
+            m_FootStepObservation = footStepObservation;
+            m_FootAnalysisIdentity = footAnalysisIdentity.Trim();
+            m_LeftFootFeatures = footFeatures.Left;
+            m_RightFootFeatures = footFeatures.Right;
+            m_ScalarPage = scalarPage;
+            m_ContentRevision = $"{m_BindingAssetIdentity}:{m_RegisteredCurveHash}";
+            RequireValid();
+        }
+
         public string SchemaVersion => m_SchemaVersion ?? string.Empty;
         public PresentationPoseSourceIndex SourceIndex =>
             m_SourceIndex < 0 ? default : new PresentationPoseSourceIndex(m_SourceIndex);

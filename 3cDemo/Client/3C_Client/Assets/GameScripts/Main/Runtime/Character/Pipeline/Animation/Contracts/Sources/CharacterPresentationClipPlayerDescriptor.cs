@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationClipPlayerDescriptor
     {
-        public const string SchemaVersion = "character-presentation-clip-player/v4";
+        public const string SchemaVersion = "character-presentation-clip-player/v5";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] int m_Index;
@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_PresentationPoseSourceIndex = -1;
         [SerializeField] float m_PlayRate = 1f;
         [SerializeField] float m_InitialTime;
+        [SerializeField] bool m_LoopAnimation;
         [SerializeField] CharacterClipPlayerClockSource m_ClockSource;
         [SerializeField] int m_PlayerIndex = -1;
 
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationPoseSourceIndex presentationPoseSourceIndex,
             float playRate,
             float initialTime,
+            bool loopAnimation,
             CharacterClipPlayerClockSource clockSource,
             int playerIndex)
         {
@@ -38,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PresentationPoseSourceIndex = presentationPoseSourceIndex.Value;
             m_PlayRate = playRate;
             m_InitialTime = initialTime;
+            m_LoopAnimation = loopAnimation;
             m_ClockSource = clockSource;
             m_PlayerIndex = playerIndex;
         }
@@ -51,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : new PresentationPoseSourceIndex(m_PresentationPoseSourceIndex);
         public float PlayRate => m_PlayRate;
         public float InitialTime => m_InitialTime;
+        public bool LoopAnimation => m_LoopAnimation;
         public CharacterClipPlayerClockSource ClockSource => m_ClockSource;
         public int PlayerIndex => m_PlayerIndex;
 

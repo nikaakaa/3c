@@ -11,7 +11,7 @@ using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    public sealed class AgentGraphValidator
+    public sealed class AgentCharacterAuthoringValidator
     {
         public AgentCompileReport Validate(
             CharacterPipelineDefinition definition,

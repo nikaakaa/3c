@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentAuthoringAction.RebaseDocument => Rebase(request, projection),
                 AgentAuthoringAction.DryRunDocument => DryRun(request, projection, definition),
                 AgentAuthoringAction.ApplyDocument => Apply(request, projection, definition),
-                AgentAuthoringAction.Validate => FromReport(request, new AgentGraphValidator().Validate(definition), projection, null),
+                AgentAuthoringAction.Validate => FromReport(request, new AgentCharacterAuthoringValidator().Validate(definition), projection, null),
                 _ => Failure(request.action, request.domain, request.rootAssetPath, "unsupported_action", "不支持的Agent Document action。")
             };
         }
@@ -209,7 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     AppendValidation(
                         applied,
-                        new AgentGraphValidator().Validate(character, false));
+                        new AgentCharacterAuthoringValidator().Validate(character, false));
                 }
                 if (!applied.HasErrors() && character)
                     AppendPresentationValidation(

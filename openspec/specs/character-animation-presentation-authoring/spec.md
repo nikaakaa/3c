@@ -4,6 +4,26 @@
 
 定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile引用可复用Pose Graph并装配其Character-specific Binding、Animation Layer、Control Rig、有限Action producer、node-local Policy、Rig与Foot Analysis；Pose Graph的Player只声明抽象Source Slot，原生AnimationClip与Blend Space由Profile Binding提供。Profile Inspector和FlowCanvas Pose Graph Workspace提供各自唯一入口，并由编译链生成CharacterPresentationProjection。
 ## Requirements
+### Requirement: Pose Graph资产与Character Binding必须分离
+
+`CharacterPresentationPoseGraphAsset` MUST是可被多个`CharacterAnimationPresentationProfile`引用的共享作者资产；它的owner只能是Pose Graph自身的拓扑、参数、StateMachine、Transition、抽象Source Slot、Resource Slot与Graph Role，不得保存角色、Pipeline Definition、Rig实例、AnimationClip、Blend Space、Foot Analysis、IK Profile或其它Character-specific对象引用。`CharacterPipelineDefinition` MUST不直接拥有Pose Graph，唯一装配关系必须是`CharacterPipelineDefinition -> CharacterAnimationPresentationProfile -> shared Pose Graph`。
+
+`CharacterAnimationPresentationProfile` MUST是Character Binding：它为所引用的shared Pose Graph提供Source Slot、Resource Slot、Rig、IK、Foot、Action producer、Locomotion Sync Group与其它角色资源的具体绑定。多个Profile可以引用同一个Pose Graph；修改一个Profile的Binding不得修改shared Pose Graph或其它Profile的Binding。资产目录、菜单和Editor入口不得用Character名称作为shared Pose Graph的owner语义，也不得用固定角色路径定位Pose Graph。
+
+#### Scenario: 两个角色复用同一Pose Graph
+
+- **WHEN** 两个`CharacterPipelineDefinition`通过各自Profile引用同一个shared Pose Graph
+- **THEN** 两个Profile MUST各自提供完整且独立的Character Binding
+- **AND** Projection MUST按各自的Profile、Rig与Definition实例化
+- **AND** 任一Profile的Clip、Rig、Policy或Foot Binding变化 MUST不改变另一个Profile的Binding
+
+#### Scenario: 只有Graph上下文打开作者窗口
+
+- **WHEN** 作者从Project窗口或shared asset打开Pose Graph
+- **THEN** Editor MUST允许编辑拓扑、参数、抽象Slot和Graph-owned字段
+- **AND** 需要解析资源、Preview或Build时才要求显式选择精确Profile与Definition
+- **AND** Editor MUST不偷偷选择Corin或其它角色作为默认Binding
+
 ### Requirement: Presentation Profile必须唯一绑定Pose source
 
 Pose Graph MUST只声明可复用的Source/Slot/Rig能力合同，不直接拥有角色资源；Character-specific Binding或`CharacterAnimationPresentationProfile` MUST唯一装配类型匹配的原生AnimationClip、Blend Space或Motion Matching资源、角色Rig Definition、FullBodyIK Profile、Foot Analysis Source、有限Action producer binding和Locomotion Sync Group。Rig MUST拥有稳定Animation Slot、Slot Group与Blend Profile目录。Player不得保存Source Slot或Profile Binding重复选择；资源引用与Timeline Segment MUST不保存旧包装资产、Rig副本、Analysis identity副本或素材注册Curve副本。

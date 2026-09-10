@@ -4,6 +4,23 @@
 
 定义Character Presentation Pose Graph的正式数据模型、编译边界、作者工作区、Preview、Live Debug和Pose Watch。
 ## Requirements
+### Requirement: Pose Graph运行输入必须通过显式Character Binding装配
+
+Pose Graph MUST只表达可复用的表现拓扑和抽象能力合同；Character-specific资源、Rig、Policy、Foot/IK配置、Action producer与资源解析目录 MUST来自显式的`CharacterAnimationPresentationProfile` Binding。`CharacterPresentationPoseGraphAsset` MUST不得反向引用Profile、CharacterPipelineDefinition、Character实例或生成Projection。编译输入必须明确区分`Reusable PoseGraph`与`Character PoseGraph Binding`，不得从资产路径、角色名、当前Selection或默认Profile推断Binding。
+
+#### Scenario: 同一Graph实例化两个Profile
+
+- **WHEN** 同一shared Pose Graph被两个不同Profile引用
+- **THEN** Compiler MUST为每个Profile分别创建Projection-local source/resource dense binding
+- **AND** Graph revision与Graph topology MUST保持同一份共享输入
+- **AND** 任一Profile的资源替换 MUST不回写Graph-owned拓扑或另一个Profile
+
+#### Scenario: Binding缺失
+
+- **WHEN** Graph声明了需要Binding的Source Slot或Resource Slot但Profile没有合法匹配项
+- **THEN** Definition Build MUST报告精确Graph/Node/Slot路径
+- **AND** MUST不使用角色名匹配、数组位置、默认资源或旧Projection作为fallback
+
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
 `CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> Goal Contributions -> FullBodyIK -> ComponentToLocalPose -> OutputPose`。FootPlacement与PoseBoneIKGoals MUST从同一Component Pose扇出typed Goal Contribution，Compiler MUST在唯一FullBodyIK前生成唯一Goal Assembler与Goal Set。

@@ -52,6 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             throw new InvalidOperationException("Pose authoring graphs compile to the formal Pose Program; they cannot execute as FlowCanvas graphs.");
 
 #if UNITY_EDITOR
+        protected override void OnGraphEditorToolbar() =>
+            PoseCanvasEditorBridge.Toolbar?.Invoke(this);
+
         public override FlowCanvas.BinderConnection CreatePortConnection(FlowCanvas.Port source, FlowCanvas.Port target) =>
             (FlowCanvas.BinderConnection)EditorWriteRouter.Connect(
                 source.parent, target.parent,
@@ -312,6 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static System.Action<CharacterPoseCanvasNode> InspectorOverride;
         internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
+        internal static System.Action<CharacterPoseCanvasGraph> Toolbar;
         internal static System.Action<CharacterPoseCanvasNode> BodyGUI;
         internal static Func<CharacterPoseCanvasNode, IReadOnlyList<CharacterPosePortDefinition>> PortShape;
         internal static Func<CharacterPoseCanvasNode, GenericMenu> ContextMenu;

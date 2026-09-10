@@ -132,6 +132,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterAnimationPresentationProfile ProfileContext => m_Profile;
         internal static CharacterAnimationRigDefinition CurrentRigDefinition =>
             s_Current?.m_Profile?.RigDefinition;
+
+        internal static void DrawNativeToolbar(CharacterPoseCanvasGraph graph)
+        {
+            CharacterPoseGraphWorkspace workspace = s_Current;
+            if (workspace == null || !workspace.m_Asset ||
+                !workspace.m_Asset.EnumerateGraphs().Contains(graph))
+                return;
+
+            if (GUILayout.Button("Validate", EditorStyles.toolbarButton))
+                workspace.ValidateAuthoring();
+            if (GUILayout.Button("保存", EditorStyles.toolbarButton))
+                workspace.SaveAuthoring();
+            using (new EditorGUI.DisabledScope(!workspace.m_Profile))
+            {
+                if (GUILayout.Button("Compile", EditorStyles.toolbarButton))
+                    workspace.CompilePoseProjection();
+            }
+            using (new EditorGUI.DisabledScope(!workspace.m_Definition))
+            {
+                if (GUILayout.Button("Build", EditorStyles.toolbarButton))
+                    workspace.BuildDefinition();
+            }
+        }
+
         internal CharacterPresentationProjectionAsset ProjectionContext => m_Projection;
         internal CharacterPresentationPoseGraphAsset AssetContext => m_Asset;
         internal string CurrentStateMachineId => m_StateMachineDocument?.DocumentId ?? string.Empty;

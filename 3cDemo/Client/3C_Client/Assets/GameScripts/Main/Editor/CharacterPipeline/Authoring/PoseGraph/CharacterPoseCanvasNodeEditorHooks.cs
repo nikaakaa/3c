@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             PoseCanvasEditorBridge.InspectorOverride = DrawInspector;
             PoseCanvasEditorBridge.VisualsRefresh = RefreshVisuals;
+            PoseCanvasEditorBridge.Toolbar = CharacterPoseGraphWorkspace.DrawNativeToolbar;
             PoseCanvasEditorBridge.PortShape = CharacterPoseAuthoringPortProjection.Get;
             PoseCanvasEditorBridge.BodyGUI = DrawBody;
             PoseCanvasEditorBridge.ContextMenu = node => ((CharacterPoseCanvasGraph)node.graph).EditorWriteRouter.BuildSelectionMenu(node.position);

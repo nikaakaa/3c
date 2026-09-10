@@ -113,12 +113,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException("Animation build input Profile does not match the compilation model.");
             if (!context.AnimationInputContract.Matches(context.AnimationPresentationProfile))
                 throw new InvalidOperationException("Animation Input Contract does not match the Animation Presentation Profile.");
+            bool reusePoseResult = request.ReusedPoseResult != null &&
+                                   !context.HasGameplayProducerContract;
             var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
             long poseSourceMs = 0;
             long motionMatchingMs = 0;
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog = null;
             MotionMatchingProjectionPayload motionMatching = null;
-            if (request.ReusedPoseResult == null)
+            if (!reusePoseResult)
             {
                 CharacterPresentationPoseSourceCompilationResult sourceCompilation =
                     CharacterPresentationPoseSourceCompiler.Compile(
@@ -171,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         request.AnimationBuildInput,
                         movementModeStateIdentities,
                         errors,
-                        request.ReusedPoseResult);
+                        reusePoseResult ? request.ReusedPoseResult : null);
                 phaseWatch.Stop();
                 coreMs = phaseWatch.ElapsedMilliseconds;
                 phaseWatch.Restart();

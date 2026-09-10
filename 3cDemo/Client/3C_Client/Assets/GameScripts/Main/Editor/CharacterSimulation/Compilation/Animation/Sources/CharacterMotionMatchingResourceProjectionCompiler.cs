@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -14,18 +15,32 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
         internal static MotionMatchingProjectionPayload Compile(
             CharacterAnimationPresentationProfile profile,
             CharacterAnimationBuildInput animationBuildInput,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             List<string> errors)
         {
-            if (!profile || animationBuildInput == null)
+            if (!profile || animationBuildInput == null || resources == null)
                 return null;
-            CharacterMotionMatchingBinding[] bindings = profile.PoseGraph.EnumerateGraphs()
+            CharacterPoseResourceSlot[] bindingSlots = profile.PoseGraph.EnumerateGraphs()
                 .SelectMany(value => value.Nodes)
-                .Select(value => (value?.Payload as CharacterMotionMatchingPosePayload)?.Binding)
+                .Select(value => (value?.Payload as CharacterMotionMatchingPosePayload)?.BindingSlot)
                 .Where(value => value)
                 .Distinct()
                 .ToArray();
-            if (bindings.Length == 0)
+            if (bindingSlots.Length == 0)
                 return null;
+            CharacterMotionMatchingBinding[] bindings;
+            try
+            {
+                bindings = bindingSlots
+                    .Select(value => resources.MotionMatchingBinding(value, "Motion Matching Pose"))
+                    .Distinct()
+                    .ToArray();
+            }
+            catch (Exception exception)
+            {
+                errors?.Add(exception.Message);
+                return null;
+            }
             CharacterMotionMatchingProfile[] profiles = bindings
                 .Select(value => value.Profile)
                 .Where(value => value)
@@ -57,7 +72,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     profile.PoseGraph,
                     profile.RigDefinition,
                     analysisSource,
-                    AnimationClipMotionMatchingParameterCurveResolver.Instance);
+                    AnimationClipMotionMatchingParameterCurveResolver.Instance,
+                    resources);
                 var databases = new MotionMatchingDatabasePayload[compiled.DatabaseCount];
                 for (int databaseIndex = 0; databaseIndex < databases.Length; databaseIndex++)
                 {

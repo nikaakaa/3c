@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
@@ -43,6 +44,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseResourceSlot slot,
             string sourcePath) =>
             Require<CharacterPoseInertializationPolicy>(slot, CharacterPoseResourceKind.InertializationPolicy, sourcePath);
+
+        internal CharacterMotionMatchingBinding MotionMatchingBinding(
+            CharacterPoseResourceSlot slot,
+            string sourcePath) =>
+            Require<CharacterMotionMatchingBinding>(slot, CharacterPoseResourceKind.MotionMatchingBinding, sourcePath);
 
         internal CharacterAnimationBoneMaskAsset BoneMask(
             CharacterPoseResourceSlot slot,
@@ -151,6 +157,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     break;
                 case CharacterPoseResourceKind.FootPlacementCalibration:
                     ((CharacterFootPlacementRigCalibration)binding.Resource).RequireRig(rig);
+                    break;
+                case CharacterPoseResourceKind.MotionMatchingBinding:
+                    ((CharacterMotionMatchingBinding)binding.Resource).RequireValid(rig);
                     break;
             }
         }

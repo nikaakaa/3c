@@ -115,14 +115,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 for (int nodeIndex = 0; nodeIndex < authoredGraph.Nodes.Count; nodeIndex++)
                 {
-                    if (authoredGraph.Nodes[nodeIndex]?.Payload is not CharacterMotionMatchingPosePayload motionMatching ||
-                        !motionMatching.JumpBlendPolicy)
+                    if (authoredGraph.Nodes[nodeIndex]?.Payload is not CharacterMotionMatchingPosePayload motionMatching)
                     {
                         continue;
                     }
-                    CharacterAnimationBlendPolicy policy = motionMatching.JumpBlendPolicy;
                     try
                     {
+                        CharacterAnimationBlendPolicy policy = resources.BlendPolicy(
+                            motionMatching.JumpBlendPolicySlot,
+                            authoredGraph.Nodes[nodeIndex].NodeId.Value);
                         policy.RequireValid(rig);
                         RequireStandardBlendOnly(policy.DefaultTransition, authoredGraph.Nodes[nodeIndex].NodeId);
                         if (policy.StackPolicy.StoredPosePolicy != AnimationStoredPosePolicy.CompressOldest ||

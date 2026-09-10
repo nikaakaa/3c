@@ -14,8 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PoseGraphId stateGraphId,
             PoseNodeId nodeId,
             PoseGraphId entryGraphId,
-            CharacterMotionMatchingBinding binding,
-            CharacterAnimationBlendPolicy jumpBlendPolicy,
+            CharacterPoseResourceSlot bindingSlot,
+            CharacterPoseResourceSlot jumpBlendPolicySlot,
             CharacterMotionMatchingRelevanceResetPolicy relevanceResetPolicy,
             CharacterMotionMatchingSearchCadencePolicy searchCadencePolicy,
             Vector2 position)
@@ -33,8 +33,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     nodeId,
                     "Motion Matching Pose",
                     new CharacterMotionMatchingPosePayload(
-                        binding,
-                        jumpBlendPolicy,
+                        bindingSlot,
+                        jumpBlendPolicySlot,
                         entryGraphId,
                         relevanceResetPolicy,
                         searchCadencePolicy)),
@@ -64,16 +64,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static CharacterPresentationMutationTransaction ConfigurePose(
             PoseGraphId stateGraphId,
             PoseNodeId nodeId,
-            CharacterMotionMatchingBinding binding,
-            CharacterAnimationBlendPolicy jumpBlendPolicy,
+            CharacterPoseResourceSlot bindingSlot,
+            CharacterPoseResourceSlot jumpBlendPolicySlot,
             CharacterMotionMatchingRelevanceResetPolicy relevanceResetPolicy,
             CharacterMotionMatchingSearchCadencePolicy searchCadencePolicy)
         {
             var transaction = new CharacterPresentationMutationTransaction(
                 $"configure-motion-matching-pose/{nodeId.Value}",
                 "Configure Motion Matching Pose");
-            transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "binding", binding));
-            transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "jump-blend-policy", jumpBlendPolicy));
+            transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "binding", bindingSlot));
+            transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "jump-blend-policy", jumpBlendPolicySlot));
             transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "relevance-reset-policy", relevanceResetPolicy));
             transaction.Add(new SetPoseNodeFieldMutation(stateGraphId.Value, nodeId, "search-cadence-policy", searchCadencePolicy));
             return transaction;
@@ -120,8 +120,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     targetNodeId,
                     sourceNode.DisplayName,
                     new CharacterMotionMatchingPosePayload(
-                        source.Binding,
-                        source.JumpBlendPolicy,
+                        source.BindingSlot,
+                        source.JumpBlendPolicySlot,
                         targetEntryGraphId,
                         source.RelevanceResetPolicy,
                         source.SearchCadencePolicy),
@@ -209,8 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         internal static CharacterPoseNodePayload Set(CharacterMotionMatchingPosePayload current, string field, object value) =>
             new CharacterMotionMatchingPosePayload(
-                field == "binding" ? Require<CharacterMotionMatchingBinding>(value, field) : current.Binding,
-                field == "jump-blend-policy" ? Require<CharacterAnimationBlendPolicy>(value, field) : current.JumpBlendPolicy,
+                field == "binding" ? Require<CharacterPoseResourceSlot>(value, field) : current.BindingSlot,
+                field == "jump-blend-policy" ? Require<CharacterPoseResourceSlot>(value, field) : current.JumpBlendPolicySlot,
                 field == "entry-graph-id" ? new PoseGraphId(Convert.ToString(value)) : current.EntryGraph.PoseGraphId,
                 field == "relevance-reset-policy" ? EnumValue<CharacterMotionMatchingRelevanceResetPolicy>(value) : current.RelevanceResetPolicy,
                 field == "search-cadence-policy" ? EnumValue<CharacterMotionMatchingSearchCadencePolicy>(value) : current.SearchCadencePolicy);

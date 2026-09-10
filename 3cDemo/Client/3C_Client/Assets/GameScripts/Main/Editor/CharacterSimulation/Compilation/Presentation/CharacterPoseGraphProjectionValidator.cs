@@ -1058,12 +1058,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 if (node.Payload is CharacterMotionMatchingPosePayload motionMatching &&
                     collector.Payload is CharacterPoseHistoryCollectorPayload history &&
-                    (!motionMatching.Binding || !history.HistoryId.IsValid))
+                    (!motionMatching.BindingSlot ||
+                     motionMatching.BindingSlot.Kind != CharacterPoseResourceKind.MotionMatchingBinding ||
+                     !motionMatching.JumpBlendPolicySlot ||
+                     motionMatching.JumpBlendPolicySlot.Kind != CharacterPoseResourceKind.BlendPolicy ||
+                     !history.HistoryId.IsValid))
                 {
                     Report(
                         report,
                         CharacterPoseGraphValidationCode.MotionMatchingInvalid,
-                        $"Motion Matching Pose '{node.NodeId}' Binding or Collector history identity is incomplete.",
+                        $"Motion Matching Pose '{node.NodeId}' resource slots or Collector history identity are incomplete.",
                         graph.GraphId,
                         node.NodeId);
                 }

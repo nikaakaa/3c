@@ -102,9 +102,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterMotionMatchingPosePlanCompilation motionMatching =
                     CharacterMotionMatchingPosePlanCompiler.Compile(
                         payloadPlan,
-                         request.AuthoringView.OwnerAsset,
+                        request.AuthoringView.OwnerAsset,
                         request.Rig,
                         request.MotionMatching,
+                        request.Resources,
                         request.CurveIndices,
                         request.ProfileIndicesByIdentity);
                 CharacterPoseWorkspacePlan workspace =

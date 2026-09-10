@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
@@ -12,7 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         BoneMask = 3,
         RootMotionCurve = 4,
         FootPlacementProfile = 5,
-        FootPlacementCalibration = 6
+        FootPlacementCalibration = 6,
+        MotionMatchingBinding = 7
     }
 
     public sealed class CharacterPoseResourceSlot : ScriptableObject
@@ -37,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseResourceKind.RootMotionCurve => resource is RootMotionCurveAsset,
                 CharacterPoseResourceKind.FootPlacementProfile => resource is CharacterFootPlacementProfile,
                 CharacterPoseResourceKind.FootPlacementCalibration => resource is CharacterFootPlacementRigCalibration,
+                CharacterPoseResourceKind.MotionMatchingBinding => resource is CharacterMotionMatchingBinding,
                 _ => false
             };
 

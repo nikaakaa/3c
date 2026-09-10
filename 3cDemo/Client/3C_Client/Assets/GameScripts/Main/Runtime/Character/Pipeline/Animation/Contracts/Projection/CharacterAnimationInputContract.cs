@@ -151,10 +151,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         }
                     }
                     if (node?.Payload is CharacterMotionMatchingPosePayload motionMatching &&
-                        motionMatching.Binding?.Chooser != null)
+                        profile.FindPoseResourceBinding(motionMatching.BindingSlot)?.Resource
+                            is CharacterMotionMatchingBinding motionMatchingBinding &&
+                        motionMatchingBinding.Chooser != null)
                     {
                         foreach (CharacterMotionMatchingDatabaseChooserRule rule in
-                                 motionMatching.Binding.Chooser.Rules)
+                                 motionMatchingBinding.Chooser.Rules)
                         {
                             foreach (CharacterMotionMatchingFactPredicate predicate in rule.Predicates)
                                 AddFact(facts, predicate.FactId);

@@ -79,10 +79,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             MotionMatchingProjectionPayload motionMatching,
+            CharacterPresentationPoseResourceCompilationCatalog resources,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity)
         {
-            if (pose == null || !graphAsset || !rig)
+            if (pose == null || !graphAsset || !rig || resources == null)
                 throw new ArgumentException("Motion Matching Pose plan compilation input is incomplete.");
             ScopedNode[] nodes = Enumerate(graphAsset)
                 .Where(value => value.Node.Payload is CharacterMotionMatchingPosePayload)
@@ -116,7 +117,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 ScopedNode scoped = nodes[nodeIndex];
                 var payload = (CharacterMotionMatchingPosePayload)scoped.Node.Payload;
-                payload.RequireValid(rig);
+                payload.RequireValid();
                 MotionMatchingNodeBindingPayload binding = RequireBinding(
                     motionMatching,
                     scoped.ScopedNodeId);
@@ -171,7 +172,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         value.Kind != CharacterPoseNodeKind.GraphOutput),
                     CountEntryStateCapacity(entryGraph)));
 
-                CharacterAnimationBlendPolicy blendPolicy = payload.JumpBlendPolicy;
+                CharacterAnimationBlendPolicy blendPolicy = resources.BlendPolicy(
+                    payload.JumpBlendPolicySlot,
+                    scoped.ScopedNodeId.Value);
                 CharacterAnimationBlendTransitionRule transition = blendPolicy.DefaultTransition;
                 string curveKey = AnimationBlendCanonicalPayload.CurveKey(transition.CompileCurve());
                 if (!curveIndices.TryGetValue(curveKey, out int curveIndex) ||

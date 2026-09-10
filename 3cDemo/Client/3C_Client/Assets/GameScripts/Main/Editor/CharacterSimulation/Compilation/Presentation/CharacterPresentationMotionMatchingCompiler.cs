@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -26,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static CharacterPresentationMotionMatchingCompilationResult Compile(
             CharacterAnimationPresentationProfile profile,
-            CharacterAnimationBuildInput animationBuildInput)
+            CharacterAnimationBuildInput animationBuildInput,
+            CharacterPresentationPoseResourceCompilationCatalog resources)
         {
             var diagnostics = new List<string>();
             if (!profile || !profile.PoseGraph)
@@ -37,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterMotionMatchingResourceProjectionCompiler.Compile(
                     profile,
                     animationBuildInput,
+                    resources,
                     diagnostics);
             return new CharacterPresentationMotionMatchingCompilationResult(
                 payload,

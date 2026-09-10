@@ -139,7 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterPresentationMotionMatchingCompilationResult motionMatchingCompilation =
                     CharacterPresentationMotionMatchingCompiler.Compile(
                         context.AnimationPresentationProfile,
-                        request.AnimationBuildInput);
+                        request.AnimationBuildInput,
+                        resourceCatalog);
                 phaseWatch.Stop();
                 motionMatchingMs = phaseWatch.ElapsedMilliseconds;
                 errors.AddRange(motionMatchingCompilation.Diagnostics);

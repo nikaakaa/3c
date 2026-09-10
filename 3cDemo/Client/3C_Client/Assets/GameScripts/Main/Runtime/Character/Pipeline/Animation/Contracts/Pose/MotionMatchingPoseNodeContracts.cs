@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -50,15 +49,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterMotionMatchingPosePayload : CharacterPoseNodePayload
     {
-        [SerializeField] CharacterMotionMatchingBinding m_Binding;
-        [SerializeField] CharacterAnimationBlendPolicy m_JumpBlendPolicy;
+        [SerializeField] CharacterPoseResourceSlot m_BindingSlot;
+        [SerializeField] CharacterPoseResourceSlot m_JumpBlendPolicySlot;
         [SerializeField] CharacterPoseSubgraphReference m_EntryGraph = new CharacterPoseSubgraphReference();
         [SerializeField] CharacterMotionMatchingRelevanceResetPolicy m_RelevanceResetPolicy;
         [SerializeField] CharacterMotionMatchingSearchCadencePolicy m_SearchCadencePolicy;
 
         public override CharacterPoseNodeKind Kind => CharacterMotionMatchingPoseNodeKinds.MotionMatchingPose;
-        public CharacterMotionMatchingBinding Binding => m_Binding;
-        public CharacterAnimationBlendPolicy JumpBlendPolicy => m_JumpBlendPolicy;
+        public CharacterPoseResourceSlot BindingSlot => m_BindingSlot;
+        public CharacterPoseResourceSlot JumpBlendPolicySlot => m_JumpBlendPolicySlot;
         public CharacterPoseSubgraphReference EntryGraph => m_EntryGraph;
         public CharacterMotionMatchingRelevanceResetPolicy RelevanceResetPolicy => m_RelevanceResetPolicy;
         public CharacterMotionMatchingSearchCadencePolicy SearchCadencePolicy => m_SearchCadencePolicy;
@@ -66,28 +65,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterMotionMatchingPosePayload() { }
 
         public CharacterMotionMatchingPosePayload(
-            CharacterMotionMatchingBinding binding,
-            CharacterAnimationBlendPolicy jumpBlendPolicy,
+            CharacterPoseResourceSlot bindingSlot,
+            CharacterPoseResourceSlot jumpBlendPolicySlot,
             PoseGraphId entryGraphId,
             CharacterMotionMatchingRelevanceResetPolicy relevanceResetPolicy,
             CharacterMotionMatchingSearchCadencePolicy searchCadencePolicy)
         {
-            m_Binding = binding;
-            m_JumpBlendPolicy = jumpBlendPolicy;
+            m_BindingSlot = bindingSlot ? bindingSlot : throw new ArgumentNullException(nameof(bindingSlot));
+            m_JumpBlendPolicySlot = jumpBlendPolicySlot ? jumpBlendPolicySlot : throw new ArgumentNullException(nameof(jumpBlendPolicySlot));
             m_EntryGraph = new CharacterPoseSubgraphReference();
             m_EntryGraph.Assign(entryGraphId);
             m_RelevanceResetPolicy = RequireDefined(relevanceResetPolicy, nameof(relevanceResetPolicy));
             m_SearchCadencePolicy = RequireDefined(searchCadencePolicy, nameof(searchCadencePolicy));
         }
 
-        public void RequireValid(CharacterAnimationRigDefinition rig)
+        public void RequireValid()
         {
-            if (!m_Binding || !m_JumpBlendPolicy || m_EntryGraph == null || !m_EntryGraph.PoseGraphId.IsValid)
+            if (!m_BindingSlot || m_BindingSlot.Kind != CharacterPoseResourceKind.MotionMatchingBinding ||
+                !m_JumpBlendPolicySlot || m_JumpBlendPolicySlot.Kind != CharacterPoseResourceKind.BlendPolicy ||
+                m_EntryGraph == null || !m_EntryGraph.PoseGraphId.IsValid)
                 throw new InvalidOperationException("Motion Matching Pose payload is incomplete.");
             RequireDefined(m_RelevanceResetPolicy, nameof(RelevanceResetPolicy));
             RequireDefined(m_SearchCadencePolicy, nameof(SearchCadencePolicy));
-            m_Binding.RequireValid(rig);
-            m_JumpBlendPolicy.RequireValid(rig);
         }
 
         static T RequireDefined<T>(T value, string parameterName) where T : struct, Enum

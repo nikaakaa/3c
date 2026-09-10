@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -16,12 +17,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     public static class MotionMatchingProjectionPayloadCompiler
     {
-        public static MotionMatchingProjectionPayload Compile(
+        internal static MotionMatchingProjectionPayload Compile(
             CharacterMotionMatchingProfile profile,
             CharacterPresentationPoseGraphAsset poseGraphAsset,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisSource analysisSource,
-            IMotionMatchingProjectionParameterCurveResolver parameterCurveResolver)
+            IMotionMatchingProjectionParameterCurveResolver parameterCurveResolver,
+            CharacterPresentationPoseResourceCompilationCatalog resources)
         {
             if (!profile)
                 throw new ArgumentNullException(nameof(profile));
@@ -31,6 +33,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(poseGraphAsset));
             if (parameterCurveResolver == null)
                 throw new ArgumentNullException(nameof(parameterCurveResolver));
+            if (resources == null)
+                throw new ArgumentNullException(nameof(resources));
             CharacterMotionMatchingAuthoringValidator.RequireProfile(profile);
             profile.RequireRigClosure(rig);
             MotionMatchingNodeAuthoringBinding[] nodeBindings = ResolveNodeBindings(poseGraphAsset).ToArray();
@@ -44,7 +48,9 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                  bindingIndex++)
             {
                 MotionMatchingNodeAuthoringBinding nodeBinding = nodeBindings[bindingIndex];
-                CharacterMotionMatchingBinding binding = nodeBinding.Payload.Binding;
+                CharacterMotionMatchingBinding binding = resources.MotionMatchingBinding(
+                    nodeBinding.Payload.BindingSlot,
+                    nodeBinding.ScopedNodeId.Value);
                 binding.RequireValid(rig);
                 if (binding.Profile != profile)
                     throw new InvalidOperationException($"Motion Matching node binding '{binding.name}' is outside the compiled Profile.");

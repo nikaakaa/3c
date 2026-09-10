@@ -648,6 +648,14 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.current?.Repaint();
         }
 
+        public void ApplyAuthoringPreviewTime(float time)
+        {
+            if (m_Cutscene == null)
+                return;
+            m_Cutscene.currentTime = Mathf.Clamp(time, 0f, m_Cutscene.length);
+            CutsceneEditor.current?.Repaint();
+        }
+
         void QueueRebuildProjection()
         {
             if (m_RebuildQueued || m_Disposed)

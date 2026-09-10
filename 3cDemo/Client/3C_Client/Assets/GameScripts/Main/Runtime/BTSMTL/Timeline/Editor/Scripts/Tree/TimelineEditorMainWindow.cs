@@ -80,6 +80,10 @@ namespace BTSMTL.Timeline.Editor
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         TimelineData m_Timeline;
+        TimelinePreviewSession m_PreviewSession;
+
+        [SerializeField]
+        TimelinePreviewTarget m_PreviewTarget;
 
         [SerializeField]
         TimelineWindowMode m_Mode;
@@ -87,6 +91,11 @@ namespace BTSMTL.Timeline.Editor
         ToolbarToggle m_LiveDebugToggle;
         ToolbarButton m_BackButton;
         ObjectField m_SharedTimelineField;
+        ObjectField m_PreviewTargetField;
+        ToolbarButton m_PreviewPlayButton;
+        ToolbarButton m_PreviewPauseButton;
+        Slider m_PreviewTimeSlider;
+        Label m_PreviewStatus;
         Label m_SourceSummary;
         ToolbarMenu m_TargetMenu;
         ToolbarMenu m_PlaybackMenu;
@@ -104,6 +113,8 @@ namespace BTSMTL.Timeline.Editor
         long m_LastDebugRevision = -1;
         long m_LastDebugMenuTargetRevision = -1;
         long m_LastDebugTimelinePlaybackRevision = -1;
+        double m_LastEditorUpdateTime;
+        bool m_HasEditorUpdateTime;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
@@ -171,6 +182,9 @@ namespace BTSMTL.Timeline.Editor
         void OnEnable()
         {
             RuntimeDebugSession.Shared.Changed += OnRuntimeDebugSessionChanged;
+            EditorApplication.update += OnEditorUpdate;
+            m_LastEditorUpdateTime = EditorApplication.timeSinceStartup;
+            m_HasEditorUpdateTime = true;
         }
 
         [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
@@ -226,6 +240,12 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
+            m_Timeline.OnValueChanged += OnTimelineValueChanged;
+            m_PreviewSession = new TimelinePreviewSession();
+            m_PreviewSession.Evaluated += OnPreviewEvaluated;
+            m_PreviewSession.SetTimeline(timeline);
+            if (m_PreviewTarget)
+                m_PreviewSession.SetTarget(m_PreviewTarget);
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
             ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
             ownership.style.paddingLeft = 8f;
@@ -284,6 +304,7 @@ namespace BTSMTL.Timeline.Editor
             m_SerializedPropertyPath = string.Empty;
             m_OwnershipLabel = string.Empty;
             m_SourceNodeGuid = string.Empty;
+            m_PreviewTarget = null;
             m_SourceGraphWindow = null;
             m_SourceGraphOwner = null;
             m_SourceNode = null;
@@ -378,12 +399,21 @@ namespace BTSMTL.Timeline.Editor
         void OnDisable()
         {
             RuntimeDebugSession.Shared.Changed -= OnRuntimeDebugSessionChanged;
+            EditorApplication.update -= OnEditorUpdate;
             m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
             DisposeView();
         }
 
         void DisposeView()
         {
+            if (m_Timeline != null)
+                m_Timeline.OnValueChanged -= OnTimelineValueChanged;
+            if (m_PreviewSession != null)
+            {
+                m_PreviewSession.Evaluated -= OnPreviewEvaluated;
+                m_PreviewSession.Dispose();
+            }
+            m_PreviewSession = null;
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_Timeline = null;
@@ -405,6 +435,31 @@ namespace BTSMTL.Timeline.Editor
             m_SharedTimelineField.label = "Document";
             m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
             m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
+            m_PreviewTargetField = new ObjectField("Preview Target")
+            {
+                objectType = typeof(TimelinePreviewTarget),
+                allowSceneObjects = true
+            };
+            m_PreviewTargetField.style.width = 240f;
+            m_PreviewTargetField.SetValueWithoutNotify(m_PreviewTarget);
+            m_PreviewTargetField.RegisterValueChangedCallback(evt =>
+            {
+                m_PreviewTarget = evt.newValue as TimelinePreviewTarget;
+                if (m_Mode == TimelineWindowMode.AuthoringPreview)
+                    m_PreviewSession?.SetTarget(m_PreviewTarget);
+                RefreshPreviewControls();
+            });
+            m_PreviewPlayButton = new ToolbarButton(() => m_PreviewSession?.Play()) { text = "Play Preview" };
+            m_PreviewPauseButton = new ToolbarButton(() => m_PreviewSession?.Pause()) { text = "Pause Preview" };
+            m_PreviewTimeSlider = new Slider(0f, 1f);
+            m_PreviewTimeSlider.style.width = 160f;
+            m_PreviewTimeSlider.RegisterValueChangedCallback(evt =>
+            {
+                if (m_Mode == TimelineWindowMode.AuthoringPreview)
+                    m_PreviewSession?.SetTime(evt.newValue);
+            });
+            m_PreviewStatus = new Label();
+            m_PreviewStatus.style.minWidth = 160f;
             m_SourceSummary = new Label(CurrentSourceSummary());
             m_SourceSummary.style.minWidth = 180f;
             m_SourceSummary.style.marginLeft = 6f;
@@ -471,6 +526,11 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(m_AuthoringToggle);
             toolbar.Add(m_LiveDebugToggle);
             toolbar.Add(m_SharedTimelineField);
+            toolbar.Add(m_PreviewTargetField);
+            toolbar.Add(m_PreviewPlayButton);
+            toolbar.Add(m_PreviewPauseButton);
+            toolbar.Add(m_PreviewTimeSlider);
+            toolbar.Add(m_PreviewStatus);
             toolbar.Add(m_SourceSummary);
             toolbar.Add(m_TargetMenu);
             toolbar.Add(m_PlaybackMenu);
@@ -576,20 +636,86 @@ namespace BTSMTL.Timeline.Editor
             m_CaptureButton?.SetDisplay(liveDebug);
             m_HistorySlider?.SetDisplay(false);
             m_Status?.SetDisplay(liveDebug);
+            m_PreviewTargetField?.SetDisplay(!liveDebug);
+            m_PreviewPlayButton?.SetDisplay(!liveDebug);
+            m_PreviewPauseButton?.SetDisplay(!liveDebug);
+            m_PreviewTimeSlider?.SetDisplay(!liveDebug);
+            m_PreviewStatus?.SetDisplay(!liveDebug);
             if (m_DebugDetails != null)
                 m_DebugDetails.style.display = liveDebug ? DisplayStyle.Flex : DisplayStyle.None;
             m_SlateProjection?.SetRuntimeReadOnly(liveDebug);
             if (liveDebug)
             {
+                m_PreviewSession?.Pause();
+                m_PreviewSession?.SetTarget(null);
                 m_HasDebugRequest = false;
                 RefreshLiveDebug();
             }
             else
             {
+                m_PreviewSession?.SetTarget(m_PreviewTarget);
+                m_PreviewSession?.RefreshTimeline(false);
                 m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
                 m_SlateProjection?.ClearRuntimeOverlay();
                 InvalidateLiveDebugOverlay();
             }
+            RefreshPreviewControls();
+        }
+
+        void OnEditorUpdate()
+        {
+            double now = EditorApplication.timeSinceStartup;
+            if (!m_HasEditorUpdateTime)
+            {
+                m_LastEditorUpdateTime = now;
+                m_HasEditorUpdateTime = true;
+                return;
+            }
+            float deltaTime = Mathf.Clamp((float)(now - m_LastEditorUpdateTime), 0f, 0.1f);
+            m_LastEditorUpdateTime = now;
+            if (m_Mode == TimelineWindowMode.AuthoringPreview && m_PreviewSession != null)
+                m_PreviewSession.Tick(deltaTime);
+        }
+
+        void OnPreviewEvaluated()
+        {
+            if (m_Mode == TimelineWindowMode.AuthoringPreview)
+                m_SlateProjection?.ApplyAuthoringPreviewTime(m_PreviewSession?.Time ?? 0f);
+            RefreshPreviewControls();
+        }
+
+        void OnTimelineValueChanged()
+        {
+            if (m_Mode == TimelineWindowMode.AuthoringPreview)
+                m_PreviewSession?.RefreshTimeline(false);
+            RefreshPreviewControls();
+        }
+
+        void RefreshPreviewControls()
+        {
+            if (m_PreviewSession == null)
+            {
+                m_PreviewPlayButton?.SetEnabled(false);
+                m_PreviewPauseButton?.SetEnabled(false);
+                m_PreviewTimeSlider?.SetEnabled(false);
+                if (m_PreviewStatus != null)
+                    m_PreviewStatus.text = "Preview session unavailable";
+                return;
+            }
+            float duration = Mathf.Max(0.001f, m_Timeline?.Duration ?? 0f);
+            if (m_PreviewTimeSlider != null)
+            {
+                m_PreviewTimeSlider.highValue = duration;
+                m_PreviewTimeSlider.SetValueWithoutNotify(Mathf.Clamp(m_PreviewSession.Time, 0f, duration));
+                m_PreviewTimeSlider.SetEnabled(m_Mode == TimelineWindowMode.AuthoringPreview);
+            }
+            bool canPreview = m_Mode == TimelineWindowMode.AuthoringPreview && m_PreviewSession.CanPreview;
+            m_PreviewPlayButton?.SetEnabled(canPreview && !m_PreviewSession.IsPlaying);
+            m_PreviewPauseButton?.SetEnabled(canPreview && m_PreviewSession.IsPlaying);
+            if (m_PreviewStatus != null)
+                m_PreviewStatus.text = string.IsNullOrEmpty(m_PreviewSession.Status)
+                    ? (canPreview ? "Ready" : "Preview target unavailable")
+                    : m_PreviewSession.Status;
         }
 
         void RefreshLiveDebug()

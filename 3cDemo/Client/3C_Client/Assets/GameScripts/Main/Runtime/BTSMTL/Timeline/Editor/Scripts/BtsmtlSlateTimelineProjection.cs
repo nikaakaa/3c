@@ -181,6 +181,8 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditTransactionCancel += OnEditTransactionCancel;
             CutsceneEditor.OnEditorClosed += OnEditorClosed;
             CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
+            m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
+            Undo.undoRedoEvent += OnUndoRedoEvent;
         }
 
         public Cutscene Cutscene => m_Cutscene;
@@ -310,6 +312,16 @@ namespace BTSMTL.Timeline.Editor
             Dispose();
             if (ReferenceEquals(s_Current, this))
                 s_Current = null;
+        }
+
+        void OnSourceTimelineChanged()
+        {
+            QueueRebuildProjection();
+        }
+
+        void OnUndoRedoEvent(in UndoRedoInfo info)
+        {
+            QueueRebuildProjection();
         }
 
         ProjectionSnapshot CaptureSnapshot()
@@ -530,6 +542,8 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditTransactionCommit -= OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;
             CutsceneEditor.OnEditorClosed -= OnEditorClosed;
+            m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
+            Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))
                 CutsceneEditor.RecordUndoForCutscene = null;
             if (!m_EditorClosed && CutsceneEditor.current != null && ReferenceEquals(CutsceneEditor.current.cutscene, m_Cutscene))

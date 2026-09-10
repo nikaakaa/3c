@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
             var reads = new LocalInputIngressReadPorts(
                 context.BindSourcePort<IFloat32LocalInputSourcePort>(Float32LocalInputSourcePortContract.PortId),
                 context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
-                context.BindTargetPort<IFloat32CommittedActorObservationReadPort>(Float32PipelineRuntimePortIds.CommittedObservation));
+                context.BindTargetPort<ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw>>(Float32PipelineRuntimePortIds.CommittedObservation));
             var writes = new LocalInputIngressWritePorts(
                 context.Products.BindExclusiveWriter<Float32CanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
                 context.Products.BindExclusiveWriter<Float32TypedIngressBatch>(SimulationPipelineProducts.TypedIngress));
@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation
         public LocalInputIngressReadPorts(
             IFloat32LocalInputSourcePort source,
             IFloat32ProgramRuntimePort programRuntime,
-            IFloat32CommittedActorObservationReadPort committedObservation)
+            ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> committedObservation)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
             ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation
 
         public IFloat32LocalInputSourcePort Source { get; }
         public IFloat32ProgramRuntimePort ProgramRuntime { get; }
-        public IFloat32CommittedActorObservationReadPort CommittedObservation { get; }
+        public ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> CommittedObservation { get; }
     }
 
     public sealed class LocalInputIngressWritePorts : ISimulationPipelineWritePortSet

@@ -36,7 +36,7 @@ namespace ThirdPersonSimulation.Fixed
             int tickRate,
             int offensiveRequestDelayTicks,
             int maximumPendingRequests,
-            FixedCommittedActorObservationSnapshot committedObservation)
+            CommittedActorPoseSnapshot<FixedVector3, FixedYaw> committedObservation)
         {
             if (!actorId.IsValid || !simulationTick.IsValid || string.IsNullOrEmpty(source.ClockId) ||
                 source.Kind != SimulationTickSourceKind.LocalLogic ||
@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.Fixed
         public int TickRate { get; }
         public int OffensiveRequestDelayTicks { get; }
         public int MaximumPendingRequests { get; }
-        public FixedCommittedActorObservationSnapshot CommittedObservation { get; }
+        public CommittedActorPoseSnapshot<FixedVector3, FixedYaw> CommittedObservation { get; }
     }
 
     public enum FixedCharacterControlSourceStateDisposition : byte
@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationTick simulationTick,
             int tickRate,
             IReadOnlyList<SimulationActorBinding> roster,
-            FixedCommittedActorObservationSnapshot committedObservation);
+            CommittedActorPoseSnapshot<FixedVector3, FixedYaw> committedObservation);
         byte[] CaptureState();
         void RestoreState(byte[] state);
         void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition);
@@ -214,7 +214,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationTick simulationTick,
             int tickRate,
             IReadOnlyList<SimulationActorBinding> roster,
-            FixedCommittedActorObservationSnapshot committedObservation)
+            CommittedActorPoseSnapshot<FixedVector3, FixedYaw> committedObservation)
         {
             if (source.Kind != SimulationTickSourceKind.LocalLogic || source.SourceTick <= m_LastReadSourceTick)
                 throw new InvalidOperationException("Fixed Local input Source requires a new LocalLogic source Tick.");

@@ -108,7 +108,7 @@ namespace ThirdPersonSimulation
                     request.ProgramRuntime);
                 var workingStatePort = new Float32WorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new Float32CompletedStepPort(request.Backend.Identity);
-                var committedObservationPort = new Float32CommittedActorObservationReadPort(
+                var committedObservationPort = new Float32CommittedActorPoseReadPort(
                     request.Backend.Identity,
                     stateStore);
                 var solverPort = new Float32WorldSolverRuntimePort(request.Descriptor.WorldSolver, request.Solver);

@@ -14,7 +14,7 @@ namespace ThirdPersonSimulation
             SimulationTickSourceIdentity source,
             ulong inputSequence,
             int tickRate,
-            CommittedActorObservationSnapshot committedObservation)
+            CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation)
         {
             if (!actorId.IsValid || !numericProfile.IsValid || !simulationTick.IsValid ||
                 string.IsNullOrEmpty(source.ClockId) || inputSequence == 0 || tickRate <= 0)
@@ -34,7 +34,7 @@ namespace ThirdPersonSimulation
         public SimulationTickSourceIdentity Source { get; }
         public ulong InputSequence { get; }
         public int TickRate { get; }
-        public CommittedActorObservationSnapshot CommittedObservation { get; }
+        public CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> CommittedObservation { get; }
     }
 
     [Flags]
@@ -135,7 +135,7 @@ namespace ThirdPersonSimulation
             SimulationNumericProfile numericProfile,
             int tickRate,
             IReadOnlyList<SimulationActorBinding> roster,
-            CommittedActorObservationSnapshot committedObservation);
+            CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation);
         byte[] CaptureState();
         void RestoreState(byte[] state);
         void NotifyStateDisposition(CharacterControlSourceStateDisposition disposition);
@@ -196,7 +196,7 @@ namespace ThirdPersonSimulation
             SimulationNumericProfile numericProfile,
             int tickRate,
             IReadOnlyList<SimulationActorBinding> roster,
-            CommittedActorObservationSnapshot committedObservation)
+            CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation)
         {
             if (source.Kind != SimulationTickSourceKind.LocalLogic || source.SourceTick <= m_LastReadSourceTick)
                 throw new InvalidOperationException("Local input Source requires a new LocalLogic source Tick.");

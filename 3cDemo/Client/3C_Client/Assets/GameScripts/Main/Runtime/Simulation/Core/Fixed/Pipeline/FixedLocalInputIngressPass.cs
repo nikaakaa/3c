@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation.Fixed
             var reads = new FixedLocalInputIngressReadPorts(
                 context.BindSourcePort<IFixedLocalInputSourcePort>(FixedLocalInputSourcePortContract.PortId),
                 context.BindTargetPort<IFixedProgramRuntimePort>(FixedPipelineRuntimePortIds.ProgramRuntime),
-                context.BindTargetPort<IFixedCommittedActorObservationReadPort>(FixedPipelineRuntimePortIds.CommittedObservation));
+                context.BindTargetPort<ICommittedActorPoseReadPort<FixedVector3, FixedYaw>>(FixedPipelineRuntimePortIds.CommittedObservation));
             var writes = new FixedLocalInputIngressWritePorts(
                 context.Products.BindExclusiveWriter<FixedCanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
                 context.Products.BindExclusiveWriter<FixedTypedIngressBatch>(SimulationPipelineProducts.TypedIngress));
@@ -105,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedLocalInputIngressReadPorts(
             IFixedLocalInputSourcePort source,
             IFixedProgramRuntimePort programRuntime,
-            IFixedCommittedActorObservationReadPort committedObservation)
+            ICommittedActorPoseReadPort<FixedVector3, FixedYaw> committedObservation)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
             ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public IFixedLocalInputSourcePort Source { get; }
         public IFixedProgramRuntimePort ProgramRuntime { get; }
-        public IFixedCommittedActorObservationReadPort CommittedObservation { get; }
+        public ICommittedActorPoseReadPort<FixedVector3, FixedYaw> CommittedObservation { get; }
     }
 
     public sealed class FixedLocalInputIngressWritePorts : ISimulationPipelineWritePortSet

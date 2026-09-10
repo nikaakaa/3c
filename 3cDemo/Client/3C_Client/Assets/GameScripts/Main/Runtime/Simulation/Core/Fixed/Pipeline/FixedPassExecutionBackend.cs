@@ -109,7 +109,7 @@ namespace ThirdPersonSimulation.Fixed
                     request.ProgramRuntime);
                 var workingStatePort = new FixedWorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new FixedCompletedStepPort(request.Backend.Identity);
-                var committedObservationPort = new FixedCommittedActorObservationReadPort(
+                var committedObservationPort = new FixedCommittedActorPoseReadPort(
                     request.Backend.Identity,
                     stateStore);
                 var solverPort = new FixedWorldSolverRuntimePort(request.Descriptor.WorldSolver, request.Solver);

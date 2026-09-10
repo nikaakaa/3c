@@ -16,15 +16,47 @@ namespace ThirdPersonSimulation
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
-            if (committedObservation is not CommittedActorObservationSnapshot float32Observation)
-                throw new InvalidOperationException("Float32 Local Input requires the committed Float32 World Body observation projection.");
             return source.Read(
                 tickSource,
                 simulationTick,
                 numericProfile,
                 tickRate,
                 roster,
-                float32Observation);
+                committedObservation);
+        }
+    }
+
+    public sealed class Float32CommittedActorPoseReadPort : ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw>
+    {
+        readonly SimulationWorldStateStore m_StateStore;
+
+        public Float32CommittedActorPoseReadPort(
+            SimulationComponentIdentity backend,
+            SimulationWorldStateStore stateStore)
+        {
+            if (!backend.IsValid || backend.Role != SimulationComponentRole.ExecutionBackend)
+                throw new ArgumentException("Execution Backend identity is invalid.", nameof(backend));
+            m_StateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
+            Descriptor = Float32PipelineRuntimePortDescriptor.Create(
+                Float32PipelineRuntimePortIds.CommittedObservation,
+                Float32PipelineRuntimePortIds.CommittedObservationSchema,
+                backend.ComponentId,
+                CommittedActorPoseSchema.CapabilityHash,
+                SimulationPortDirection.Input);
+        }
+
+        public SimulationPortDescriptor Descriptor { get; }
+
+        public CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> Read()
+        {
+            SimulationWorldStateSet state = m_StateStore.Current;
+            var observations = new CommittedActorPose<Float32Vector3, Float32Yaw>[state.WorldState.Bodies.Count];
+            for (int i = 0; i < observations.Length; i++)
+            {
+                WorldBodyState body = state.WorldState.Bodies[i];
+                observations[i] = new CommittedActorPose<Float32Vector3, Float32Yaw>(body.ActorId, body.Position, body.Yaw);
+            }
+            return new CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw>(state.LastCompletedTick, observations);
         }
     }
 }

@@ -526,6 +526,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             fullBodyIkGoalContributionInputStart,
                             fullBodyIkGoalContributionInputs.Length,
                             state);
+                    fullBodyIkGoalContributionInputStart = -1;
+                    fullBodyIkGoalContributionInputs = Array.Empty<int>();
                 }
                 int controlInputOperationIndex = -1;
                 int parameterIndex = -1;
@@ -930,7 +932,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 -1,
                 -1,
                 -1,
-                -1,
+                0,
                 -1,
                 -1,
                 -1,

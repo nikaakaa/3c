@@ -113,6 +113,7 @@ namespace BTSMTL.Timeline.Editor
     {
         readonly TimelineEditorOpenRequest m_Request;
         readonly TimelineEditorSessionContext m_Session;
+        readonly Action<Clip> m_OpenSourceClip;
         readonly Dictionary<string, Clip> m_SourceClips = new Dictionary<string, Clip>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlSlateActionClip> m_ProxyClips =
             new Dictionary<string, BtsmtlSlateActionClip>(StringComparer.Ordinal);
@@ -170,16 +171,18 @@ namespace BTSMTL.Timeline.Editor
             public bool Unsupported;
         }
 
-        BtsmtlSlateTimelineProjection(TimelineEditorOpenRequest request)
+        BtsmtlSlateTimelineProjection(TimelineEditorOpenRequest request, Action<Clip> openSourceClip)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Session = new TimelineEditorSessionContext(request);
+            m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
             BuildProjection();
             CutsceneEditor.OnEditTransactionBegin += OnEditTransactionBegin;
             CutsceneEditor.OnEditTransactionCommit += OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel += OnEditTransactionCancel;
             CutsceneEditor.OnEditorClosed += OnEditorClosed;
+            CutsceneEditor.OnActionDoubleClick += OnActionDoubleClick;
             CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
             m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
             Undo.undoRedoEvent += OnUndoRedoEvent;
@@ -206,10 +209,12 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
-        public static BtsmtlSlateTimelineProjection Open(TimelineEditorOpenRequest request)
+        public static BtsmtlSlateTimelineProjection Open(
+            TimelineEditorOpenRequest request,
+            Action<Clip> openSourceClip = null)
         {
             DisposeCurrent();
-            s_Current = new BtsmtlSlateTimelineProjection(request);
+            s_Current = new BtsmtlSlateTimelineProjection(request, openSourceClip);
             CutsceneEditor.ShowWindow(s_Current.m_Cutscene);
             return s_Current;
         }
@@ -339,6 +344,14 @@ namespace BTSMTL.Timeline.Editor
             Dispose();
             if (ReferenceEquals(s_Current, this))
                 s_Current = null;
+        }
+
+        void OnActionDoubleClick(ActionClip action)
+        {
+            if (!(action is BtsmtlSlateActionClip proxyClip) || string.IsNullOrEmpty(proxyClip.SourceAuthoringId))
+                return;
+            if (m_SourceClips.TryGetValue(proxyClip.SourceAuthoringId, out Clip sourceClip))
+                m_OpenSourceClip?.Invoke(sourceClip);
         }
 
         void OnSourceTimelineChanged()
@@ -569,6 +582,7 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditTransactionCommit -= OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;
             CutsceneEditor.OnEditorClosed -= OnEditorClosed;
+            CutsceneEditor.OnActionDoubleClick -= OnActionDoubleClick;
             m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))

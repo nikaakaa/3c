@@ -36,6 +36,7 @@ namespace Slate
         public static event System.Action<Cutscene> OnEditTransactionCommit;
         public static event System.Action<Cutscene> OnEditTransactionCancel;
         public static event System.Action OnEditorClosed;
+        public static event System.Action<ActionClip> OnActionDoubleClick;
         public static System.Func<Cutscene, bool> RecordUndoForCutscene;
 
         public static bool ShouldRecordUndoFor(Cutscene target)
@@ -2794,6 +2795,7 @@ namespace Slate
                     }
 
                     if ( e.clickCount == 2 ) {
+                        OnActionDoubleClick?.Invoke(action);
                         //do this with reflection to get the declaring actor in case action has 'new' declaration. This is only done in Shot right now.
                         Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
                     }

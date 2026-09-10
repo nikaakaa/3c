@@ -237,7 +237,8 @@ namespace BTSMTL.Timeline.Editor
                 serializedPropertyPath,
                 ownershipLabel,
                 sourceGraphWindow,
-                new TimelineRuntimeDebugBinding(timeline.AuthoringId)));
+                new TimelineRuntimeDebugBinding(timeline.AuthoringId)),
+                OpenClip);
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());

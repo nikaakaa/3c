@@ -646,6 +646,7 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterLinkedPoseRuntimeSession linkedPose,
             RuntimeDiagnosticsContext diagnostics)
         {
+            m_AnimationResources.AdvancePreparation();
             bool animationStarted = m_Playback.BeginPresentation(
                 presentationFrame,
                 latestSimulationTick,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -32,7 +33,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     if (!TryLoadRoot(request.rootAssetPath, out CharacterPipelineDefinition definition, out string code, out string message))
                         return Failure(request.action, request.domain, request.rootAssetPath, code, message);
-                    return ExecuteCharacter(request, definition);
+                    SimulationSessionCompositionDefinition composition = null;
+                    if (request.action == AgentAuthoringAction.Validate &&
+                        !string.IsNullOrWhiteSpace(request.compositionAssetPath) &&
+                        !TryLoadExactAsset(
+                            request.compositionAssetPath,
+                            "composition",
+                            out composition,
+                            out code,
+                            out message))
+                    {
+                        return Failure(request.action, request.domain, request.compositionAssetPath, code, message);
+                    }
+                    return ExecuteCharacter(request, definition, composition);
                 }
                 return Failure(
                     request.action,
@@ -59,7 +72,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        AgentAuthoringResponse ExecuteCharacter(AgentAuthoringRequest request, CharacterPipelineDefinition definition)
+        AgentAuthoringResponse ExecuteCharacter(
+            AgentAuthoringRequest request,
+            CharacterPipelineDefinition definition,
+            SimulationSessionCompositionDefinition composition)
         {
             AgentAuthoringPackageProjection projection = m_Exporter.Export(definition);
             return request.action switch
@@ -68,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentAuthoringAction.RebaseDocument => Rebase(request, projection),
                 AgentAuthoringAction.DryRunDocument => DryRun(request, projection, definition),
                 AgentAuthoringAction.ApplyDocument => Apply(request, projection, definition),
-                AgentAuthoringAction.Validate => FromReport(request, new AgentCharacterAuthoringValidator().Validate(definition), projection, null),
+                AgentAuthoringAction.Validate => FromReport(request, new AgentCharacterAuthoringValidator().Validate(definition, composition), projection, null),
                 _ => Failure(request.action, request.domain, request.rootAssetPath, "unsupported_action", "不支持的Agent Document action。")
             };
         }
@@ -975,19 +991,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static bool TryLoadRoot<T>(string path, out T definition, out string code, out string message)
             where T : UnityEngine.Object
         {
-            definition = null;
+            return TryLoadExactAsset(path, "definition", out definition, out code, out message);
+        }
+
+        static bool TryLoadExactAsset<T>(
+            string path,
+            string label,
+            out T asset,
+            out string code,
+            out string message)
+            where T : UnityEngine.Object
+        {
+            asset = null;
             code = string.Empty;
             message = string.Empty;
             if (string.IsNullOrEmpty(path) || !path.StartsWith("Assets/", StringComparison.Ordinal) || path.Contains("\\") || path.Contains("/../"))
             {
-                code = "definition_path_invalid";
-                message = "root_asset_path必须是精确的Assets/...项目资产路径。";
+                code = label + "_path_invalid";
+                message = label + "路径必须是精确的Assets/...项目资产路径。";
                 return false;
             }
-            definition = AssetDatabase.LoadAssetAtPath<T>(path);
-            if (!definition || !string.Equals(AssetDatabase.GetAssetPath(definition), path, StringComparison.Ordinal))
+            asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (!asset || !string.Equals(AssetDatabase.GetAssetPath(asset), path, StringComparison.Ordinal))
             {
-                code = "definition_not_found";
+                code = label + "_not_found";
                 message = $"无法在指定路径加载{typeof(T).Name}：{path}";
                 return false;
             }

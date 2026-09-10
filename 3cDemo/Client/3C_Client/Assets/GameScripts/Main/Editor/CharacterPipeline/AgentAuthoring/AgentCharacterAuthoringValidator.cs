@@ -4,6 +4,7 @@ using System.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Graph;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
@@ -15,6 +16,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentCompileReport Validate(
             CharacterPipelineDefinition definition,
+            bool includeExactCompile = true)
+        {
+            return Validate(definition, null, includeExactCompile);
+        }
+
+        public AgentCompileReport Validate(
+            CharacterPipelineDefinition definition,
+            SimulationSessionCompositionDefinition composition,
             bool includeExactCompile = true)
         {
             string definitionPath = definition ? AssetDatabase.GetAssetPath(definition) : string.Empty;
@@ -70,8 +79,61 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.metrics.compileSuccessCount = result.IsValid ? 1 : 0;
                 report.metrics.compileFailureCount = result.IsValid ? 0 : 1;
             }
+            if (composition)
+                AppendCompositionCompatibilityReport(report, composition);
             report.success = !report.HasErrors();
             return report;
+        }
+
+        static void AppendCompositionCompatibilityReport(
+            AgentCompileReport report,
+            SimulationSessionCompositionDefinition composition)
+        {
+            string path = AssetDatabase.GetAssetPath(composition);
+            try
+            {
+                SimulationSessionCompositionCompatibilityReport compatibility =
+                    SimulationSessionCompositionCompatibility.Evaluate(composition);
+                for (int i = 0; i < compatibility.Issues.Count; i++)
+                {
+                    SimulationSessionCompatibilityIssue issue = compatibility.Issues[i];
+                    report.Error(
+                        $"composition/{path}/{issue.Code}",
+                        issue.Code,
+                        issue.Message);
+                }
+                if (compatibility.Compilation == null)
+                {
+                    if (compatibility.Issues.Count == 0)
+                        report.Error(
+                            "composition/" + path,
+                            "session_pipeline_compile_missing",
+                            "Session Composition兼容检查没有生成正式Pipeline编译结果。");
+                    return;
+                }
+                for (int i = 0; i < compatibility.Compilation.Errors.Count; i++)
+                {
+                    SimulationPipelineCompileError error = compatibility.Compilation.Errors[i];
+                    report.Error(
+                        $"composition/{path}/pipeline/{error.Code}",
+                        error.Code.ToString(),
+                        $"{error.Message} Component={error.ComponentIdentity} Pass={error.PassId} Product={error.ProductId}。");
+                }
+                if (!compatibility.IsValid)
+                    return;
+                SimulationSessionSourceDescriptor source = compatibility.Source.Source;
+                report.Info(
+                    "composition/" + path,
+                    "session_composition_compatible",
+                    $"ProgramRuntime={compatibility.ProgramRuntime.Identity}; Backend={compatibility.Backend.Identity}; Pipeline={compatibility.PipelineIdentity}; PlanHash={compatibility.PlanHash}; Source={source.Identity}; Solver={compatibility.Solver.Identity}; RequiredPasses={source.RequiredPipelinePasses.Count}; SourcePorts={source.RequiredPipelineSourcePorts.Count}; NetworkModel={(source.Model.HasValue ? source.Model.Value.ToString() : "Local")}.");
+            }
+            catch (Exception exception)
+            {
+                report.Error(
+                    "composition/" + path,
+                    "session_composition_validation_failed",
+                    exception.Message);
+            }
         }
 
         static void AppendTargetStateLayoutReport(

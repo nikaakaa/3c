@@ -4,7 +4,7 @@
 
 Schema：`btsmtl-agent-authoring-document.v7`
 
-controller状态摘要若对应editable StateMachine Graph，其State identity引用该图内的正式State节点，不是第二个实体声明。重复摘要、跨Graph引用和非State节点引用必须拒绝；未作为editable Graph提供的组合状态机摘要继续参与全局identity登记。此规则不改变导出identity或Mutation owner。
+`editable/controller.json`只保存已登记Control Module及作者参数覆盖。Skill的State、Node、Edge和Blackboard declaration只从所属Skill Flow Graph闭包读取，不再通过controller摘要或独立状态摘要复制。
 
 StateMachine及State body的Graph ownership对账中，未指定共享资产路径的null与空字符串表示相同的无共享资产引用，不得因目录包省略空字段产生ConfigureGraphReference；非空路径与ownership变化仍须正常对账。
 
@@ -23,25 +23,15 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
   manifest.json
   .sync.json
   editable/
-    controller.json               # controlModuleId、controlSemanticVersion、controlParameters、state summaries
-    blackboard.json
-    actions.json
+    controller.json               # controlModuleId、controlSemanticVersion、controlParameters
+    actions.json                  # requests、ActionProfile引用
     skills/<canonical-id>/
       definition.json
-    skills/graphs/<stable-segment>/
-      graph.json
-      layout.json
-    skills/macros/<stable-segment>/
-      macro.json
-    skills/timelines/<stable-segment>/
-      timeline.json
-      curves.json
-    graphs/<stable-segment>/
-      graph.json
-      layout.json
-    timelines/<stable-segment>/
-      timeline.json
-      curves.json
+    skills/graphs/<stable-segment>/graph.json
+    skills/graphs/<stable-segment>/layout.json
+    skills/macros/<stable-segment>/macro.json
+    skills/timelines/<stable-segment>/timeline.json
+    skills/timelines/<stable-segment>/curves.json
     animation-clips/<stable-segment>/
       curves.json
     presentation/
@@ -104,9 +94,11 @@ Pose根图与子图由CanvasCore `GraphEditor`直接显示正式`CharacterPoseCa
 | `btsmtl.rebase_document` | `confirm_rebase=true` | 无 | 新基线、保留editable后的同步状态，以及service正式发布的已发现local Pose Graph/Inline Timeline文件闭包 |
 | `btsmtl.dry_run_document` | 无 | 无 | 包含service发现文件闭包的精确Document hash、plan hash、完整planned diff、诊断 |
 | `btsmtl.apply_document` | 最新dry-run返回的精确`expected_document_hash` | Gameplay、Timeline与Presentation进入同一资产级Undo事务；成功后保存authoring并反向发布stable identity与canonical manifest | applied diff、新revision/hash、`Clean`；失败完整回滚并返回`ApplyFailed` |
-| `btsmtl.validate` | 无 | 无 | domain正式Validator报告；Character包含Presentation ownership与Pose Graph约束 |
+| `btsmtl.validate` | 可选精确`composition_asset_path` | 无 | domain正式Validator报告；Character可附带Session Composition兼容性结果 |
 
 五个工具各自拥有独立严格输入schema。不存在action multiplexer，不存在BTSMTL节点、边、property或timeline局部编辑MCP。Agent使用通用文件读取和编辑工具修改JSON。
+
+`btsmtl.validate`的`composition_asset_path`只接受精确的`Assets/.../SimulationSessionCompositionDefinition.asset`路径，只调用正式`SimulationSessionCompositionCompatibility.Evaluate`并把结果加入只读报告；不扫描目录、不修改资产、不执行Build或Play。省略该参数时保持原有Character authoring与compiler验证。
 
 Character generated product使用独立生命周期，不混入BTSMTL Document事务。Character `apply_document`只提交正式authoring，不自动Build：
 

@@ -126,6 +126,7 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 
 - 外部不存在Intent、Macro、Patch IR、operation catalog、bootstrap action或旧action alias。
 - BTSMTL MCP和Window只暴露`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`、`btsmtl.validate`。
+- `btsmtl.validate`可选接收一个精确`composition_asset_path`，只读取并报告正式Session Composition兼容性；不得扫描目录、修改资产、Build或Play。
 - 旧Pose State inline Graph只通过`character.migrate_legacy_pose_state_graphs(definition_asset_path)`一次性迁入GraphCatalog；该工具不读取selection、不扫描、不build。
 - Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
 - 不存在BTSMTL局部节点/边/属性修改工具；Agent直接修改package文件。

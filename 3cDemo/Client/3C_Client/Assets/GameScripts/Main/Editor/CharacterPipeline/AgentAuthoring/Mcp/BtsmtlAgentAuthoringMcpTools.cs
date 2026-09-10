@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.validate", Description = "Validate the current Unity authoring root through the formal domain validators, including Linked Interface/Implementation Entry coverage, Graph capability context, Group selector uniqueness and Equipment candidate closure, without editing, checking out a package or building Character products. Returns identity-preserving structured diagnostics.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.validate", Description = "Validate the current Unity authoring root through the formal domain validators, including optional exact Session Composition compatibility, Linked Interface/Implementation Entry coverage, Graph capability context, Group selector uniqueness and Equipment candidate closure, without editing, checking out a package or building Character products. Returns identity-preserving structured diagnostics.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class ValidateBtsmtlAgentMcpTool
     {
         public sealed class Parameters
@@ -141,6 +141,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
             public string root_asset_path { get; set; }
+
+            [ToolParameter("Optional exact Assets/... SimulationSessionCompositionDefinition path. Only used by validate; no directory scanning.", Required = false)]
+            public string composition_asset_path { get; set; }
         }
 
         public static object HandleCommand(JObject @params)
@@ -212,6 +215,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             if (parameters == null)
                 return new ErrorResponse("request_missing");
             var allowed = new HashSet<string>(StringComparer.Ordinal) { "domain", "root_asset_path" };
+            if (action == AgentAuthoringAction.Validate)
+                allowed.Add("composition_asset_path");
             if (requiresHash)
                 allowed.Add("expected_document_hash");
             if (requiresConfirmation)
@@ -238,11 +243,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
                 confirmRebase = true;
             }
 
+            string compositionAssetPath = null;
+            if (parameters["composition_asset_path"] != null &&
+                !TryGetString(parameters, "composition_asset_path", out compositionAssetPath))
+                return new ErrorResponse("composition_asset_path_invalid", new { domain, rootAssetPath });
+
             AgentAuthoringResponse response = new AgentAuthoringDocumentApplicationService().Execute(new AgentAuthoringRequest
             {
                 action = action,
                 domain = domain,
                 rootAssetPath = rootAssetPath,
+                compositionAssetPath = compositionAssetPath,
                 expectedDocumentHash = expectedDocumentHash,
                 confirmRebase = confirmRebase
             });
@@ -268,6 +279,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
                 case "root_asset_path":
                 case "rootAssetPath":
                     canonicalName = "root_asset_path";
+                    return true;
+                case "composition_asset_path":
+                case "compositionAssetPath":
+                    canonicalName = "composition_asset_path";
                     return true;
                 case "expected_document_hash":
                 case "expectedDocumentHash":

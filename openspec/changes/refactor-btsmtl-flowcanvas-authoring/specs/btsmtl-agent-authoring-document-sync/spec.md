@@ -77,3 +77,13 @@ Document MUST不保存PredictionKey、ActionInstance当前值、Rollback Snapsho
 - **THEN** 文档 MUST只导出作者源和只读编译上下文
 - **AND** MUST不把运行时状态写入editable内容或反向导出目标
 
+### Requirement: Validate可以显式核对Session Composition兼容性
+
+`btsmtl.validate` MAY 接收一个精确的 `composition_asset_path`。当提供该路径时，Validator MUST 直接调用现有 `SimulationSessionCompositionCompatibility.Evaluate`，核对 ProgramRuntime、ExecutionBackend、Pipeline、SessionSource、WorldSolver、Required Pass、Source Port、ExecutionSupport 与确定性合同，并把结果加入同一只读诊断报告。该参数 MUST 不扫描目录、不修改资产、不执行Build或Play，也 MUST 不增加第二个Composition Mutation或MCP入口。
+
+#### Scenario: Agent校验指定Local Composition
+
+- **WHEN** Agent在Character `btsmtl.validate`中提供一个精确的 `SimulationSessionCompositionDefinition` 资产路径
+- **THEN** Validator MUST 返回该Composition的正式兼容结果、Pipeline plan identity与Source/网络身份
+- **AND** MUST不从Selection、第一个资产或目录扫描推断Composition
+

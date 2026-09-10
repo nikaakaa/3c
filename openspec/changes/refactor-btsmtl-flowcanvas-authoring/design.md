@@ -104,6 +104,8 @@ Character Pipeline负责从Definition和Skill Graph生成Program与Actor Registr
 
 网络适配发生在SessionSource、Pipeline Pass和Runtime Adapter层。Rollback使用InputIngress、Schedule、History、HashEgress、Snapshot和OutputDisposition等Pass；Server Authority使用自己的Authority、Prediction、Correction和Egress Pass。Skill和Character Program不绑定具体Transport或UE网络对象。
 
+正式兼容检查沿用同一`SimulationSessionCompositionCompatibility.Evaluate`。`btsmtl.validate`可选接受一个精确`composition_asset_path`，把ProgramRuntime、ExecutionBackend、Pipeline、SessionSource、WorldSolver、Required Pass/Source Port及Network Model identity的结果加入只读报告；该参数只服务校验，不扫描目录、不修改Composition、不Build或Play。
+
 ### 7. 网络同步策略
 
 网络同步输入、Canonical Request、Prediction身份、确定性Program State、State Hash和Snapshot，不复制FlowCanvas图、Blackboard名称、Timeline对象、AnimationClip对象或最终Pose。

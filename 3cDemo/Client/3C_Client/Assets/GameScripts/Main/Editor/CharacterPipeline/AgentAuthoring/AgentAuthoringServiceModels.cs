@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentAuthoringAction action;
         public string domain;
         public string rootAssetPath;
+        public string compositionAssetPath;
         public string expectedDocumentHash;
         public bool confirmRebase;
     }

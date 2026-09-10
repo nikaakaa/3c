@@ -1,4 +1,5 @@
 using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using ThirdPersonSimulation;
@@ -50,7 +51,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ulong inputSequence = reader.ReadUInt64();
             CharacterSimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
             reader.RequireComplete();
-            return new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
+            var result = new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
+            RequireCanonical(bytes, WriteOwnerInput(result), "owner input");
+            return result;
         }
 
         public static byte[] WriteAuthorityReplication(AuthorityReplicationBatch batch)
@@ -90,7 +93,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < remoteCount; i++)
                 remote[i] = ReadRemotePresentation(reader.ReadBytes());
             reader.RequireComplete();
-            return new AuthorityReplicationBatch(tick, acks, baselines, remote);
+            var result = new AuthorityReplicationBatch(tick, acks, baselines, remote);
+            RequireCanonical(bytes, WriteAuthorityReplication(result), "authority replication");
+            return result;
         }
 
         static void WriteAck(CanonicalWriter writer, AuthoritativeInputAck ack)
@@ -158,7 +163,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < eventCount; i++)
                 events[i] = ReadReliableEvent(reader);
             reader.RequireComplete();
-            return new RemotePresentationBatch(actorId, bodies, samples, events, resetBodyStream);
+            var result = new RemotePresentationBatch(actorId, bodies, samples, events, resetBodyStream);
+            RequireCanonical(bytes, WriteRemotePresentation(result), "remote presentation");
+            return result;
         }
 
         static void WriteReliableEvent(CanonicalWriter writer, ServerAuthoritativeReliableEvent value)
@@ -471,6 +478,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (count < 0 || count > MaximumCount)
                 throw new InvalidDataException($"ServerAuthoritative {label} count '{count}' is invalid.");
             return count;
+        }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source == null || canonical == null || source.Length != canonical.Length)
+                throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
         }
 
         static T ReadEnum<T>(byte value, string label) where T : struct, Enum

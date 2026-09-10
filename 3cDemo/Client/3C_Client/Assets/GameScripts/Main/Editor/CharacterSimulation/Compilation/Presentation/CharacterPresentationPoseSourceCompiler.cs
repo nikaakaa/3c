@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -18,9 +19,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Binding = binding;
         }
 
+        public CharacterPresentationPoseSourceCompilationEntry(
+            PresentationPoseSourceIndex sourceIndex,
+            AnimationClip directClip)
+        {
+            SourceIndex = sourceIndex;
+            DirectClip = directClip ? directClip :
+                throw new ArgumentNullException(nameof(directClip));
+        }
+
+        public CharacterPresentationPoseSourceCompilationEntry(
+            PresentationPoseSourceIndex sourceIndex,
+            CharacterAnimationBlendSpaceAsset directBlendSpace)
+        {
+            SourceIndex = sourceIndex;
+            DirectBlendSpace = directBlendSpace ? directBlendSpace :
+                throw new ArgumentNullException(nameof(directBlendSpace));
+        }
+
         public PresentationPoseSourceIndex SourceIndex { get; }
         public CharacterPresentationPoseSourceSlot Slot { get; }
         public CharacterPresentationPoseSourceBinding Binding { get; }
+        public AnimationClip DirectClip { get; }
+        public CharacterAnimationBlendSpaceAsset DirectBlendSpace { get; }
     }
 
     internal sealed class CharacterPresentationPoseSourceCompilationCatalog
@@ -33,7 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             Entries = entries ??
                 Array.Empty<CharacterPresentationPoseSourceCompilationEntry>();
-            m_BySlot = Entries.ToDictionary(value => value.Slot);
+            m_BySlot = Entries
+                .Where(value => value.Slot)
+                .ToDictionary(value => value.Slot);
         }
 
         public IReadOnlyList<CharacterPresentationPoseSourceCompilationEntry> Entries { get; }
@@ -41,10 +64,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             SourceIndices =>
             m_BySlot.ToDictionary(value => value.Key, value => value.Value.SourceIndex);
 
+        public IReadOnlyDictionary<AnimationClip, PresentationPoseSourceIndex>
+            DirectClipIndices => Entries
+                .Where(value => value.DirectClip)
+                .ToDictionary(value => value.DirectClip, value => value.SourceIndex);
+
+        public IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex>
+            DirectBlendSpaceIndices => Entries
+                .Where(value => value.DirectBlendSpace)
+                .ToDictionary(
+                    value => value.DirectBlendSpace,
+                    value => value.SourceIndex);
+
         public bool TryGet(
             CharacterPresentationPoseSourceSlot slot,
             out CharacterPresentationPoseSourceCompilationEntry entry) =>
             m_BySlot.TryGetValue(slot, out entry);
+
+        public bool TryGetDirectClip(
+            AnimationClip clip,
+            out CharacterPresentationPoseSourceCompilationEntry entry)
+        {
+            entry = Entries.FirstOrDefault(value => value.DirectClip == clip);
+            return entry != null;
+        }
     }
 
     internal sealed class CharacterPresentationPoseSourceCompilationResult
@@ -135,6 +178,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     .Select(value => value.PresentationPoseSourceSlot)
                     .Distinct()
                     .ToArray();
+            AnimationClip[] directClips =
+                EnumerateReachablePoseGraphs(profile)
+                    .SelectMany(value => value.Nodes)
+                    .Select(value => value?.Payload)
+                    .OfType<CharacterClipPlayerPosePayload>()
+                    .Where(value => value.Animation)
+                    .Select(value => value.Animation)
+                    .Distinct()
+                    .OrderBy(value => value.name, StringComparer.Ordinal)
+                    .ToArray();
+            CharacterAnimationBlendSpaceAsset[] directBlendSpaces =
+                EnumerateReachablePoseGraphs(profile)
+                    .SelectMany(value => value.Nodes)
+                    .Select(value => value?.Payload)
+                    .OfType<CharacterBlendSpacePlayerPosePayload>()
+                    .Where(value => value.BlendSpace)
+                    .Select(value => value.BlendSpace)
+                    .Distinct()
+                    .OrderBy(value => value.BlendSpaceId)
+                    .ToArray();
             Array.Sort(
                 reachable,
                 (left, right) => string.CompareOrdinal(
@@ -177,7 +240,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
 
             var entries =
-                new CharacterPresentationPoseSourceCompilationEntry[reachable.Length];
+                new List<CharacterPresentationPoseSourceCompilationEntry>(
+                    reachable.Length + directClips.Length);
             for (int i = 0; i < reachable.Length; i++)
             {
                 CharacterPresentationPoseSourceSlot slot = reachable[i];
@@ -191,10 +255,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     diagnostics.Add(
                         $"Pose Source Slot '{slot.name}' has no Profile binding.");
                 }
-                entries[i] = new CharacterPresentationPoseSourceCompilationEntry(
+                entries.Add(new CharacterPresentationPoseSourceCompilationEntry(
                     new PresentationPoseSourceIndex(i),
                     slot,
-                    binding);
+                    binding));
+            }
+
+            for (int i = 0; i < directClips.Length; i++)
+            {
+                entries.Add(new CharacterPresentationPoseSourceCompilationEntry(
+                    new PresentationPoseSourceIndex(reachable.Length + i),
+                    directClips[i]));
+            }
+
+            for (int i = 0; i < directBlendSpaces.Length; i++)
+            {
+                entries.Add(new CharacterPresentationPoseSourceCompilationEntry(
+                    new PresentationPoseSourceIndex(reachable.Length + directClips.Length + i),
+                    directBlendSpaces[i]));
             }
 
             foreach (KeyValuePair<CharacterPresentationPoseSourceSlot,
@@ -204,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     diagnostics.Add(
                         $"Pose Source binding '{pair.Value.name}' is orphaned from every reachable Pose Player.");
             }
-            return new CharacterPresentationPoseSourceCompilationCatalog(entries);
+            return new CharacterPresentationPoseSourceCompilationCatalog(entries.ToArray());
         }
 
         static IEnumerable<CharacterPresentationPoseGraphAsset>

@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         internal static string Compute(
             CharacterAnimationPresentationProfile animationProfile,
+            IReadOnlyList<CharacterAnimationSourceResourceBinding> sourceResourceBindings,
             UnityEngine.Object equipmentPresentationProfile,
             StableHash contractHash,
             IReadOnlyList<string> footAnalysisTokens,
@@ -27,13 +28,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             AddAssetRevision(animationProfile, values);
             AddAssetRevision(equipmentPresentationProfile, values);
-            if (animationProfile != null)
+            if (sourceResourceBindings != null)
             {
-                for (int i = 0; i < animationProfile.SourceResourceBindings.Count; i++)
+                for (int i = 0; i < sourceResourceBindings.Count; i++)
                 {
-                    CharacterAnimationSourceResourceBinding binding = animationProfile.SourceResourceBindings[i];
+                    CharacterAnimationSourceResourceBinding binding = sourceResourceBindings[i];
                     values.Add($"source-resource:{binding?.AuthoringClip?.name}:{binding?.Backend}");
                 }
+            }
+            if (animationProfile != null)
+            {
                 for (int i = 0; i < animationProfile.AnimationPropertyBindings.Count; i++)
                 {
                     CharacterAnimationPropertyAuthoringBinding binding = animationProfile.AnimationPropertyBindings[i];

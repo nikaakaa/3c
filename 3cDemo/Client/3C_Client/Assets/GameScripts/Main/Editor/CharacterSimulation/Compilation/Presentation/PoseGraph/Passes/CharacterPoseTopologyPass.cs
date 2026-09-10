@@ -4,6 +4,7 @@ using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -120,6 +121,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 var graphs = new List<CharacterPoseTopologyGraph>();
                 var diagnostics =
                     new List<CharacterPoseCompilationDiagnostic>();
+                AnimationChannelId[] reachableAnimationChannels =
+                    request.AnimationInputContract.Slots
+                        .Select(value => value.AnimationChannelId)
+                        .Distinct()
+                        .OrderBy(value => value)
+                        .ToArray();
                 CharacterPresentationPoseSourceSlot[] reachableSources =
                     request.SourceIndices.Keys.ToArray();
                 for (int entryIndex = 0;
@@ -156,7 +163,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                     closure,
                                     role,
                                     role == CharacterPoseIrGraphRole.Root
-                                        ? request.ReachableAnimationChannels
+                                        ? reachableAnimationChannels
                                         : null,
                                     role ==
                                     CharacterPoseIrGraphRole.MotionMatchingEntry
@@ -234,12 +241,34 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     rootOwner,
                     request.AuthoringView.RootGraph.GraphId),
                 CharacterPoseIrGraphRole.Root);
+            foreach (CharacterPoseGraphClosureEntry entry in closure.Entries)
+            {
+                if (entry.Graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer)
+                    Add(
+                        CharacterPoseGraphClosure.Key(
+                            entry.OwnerIdentity,
+                            entry.Graph.GraphId),
+                        CharacterPoseIrGraphRole.AnimationLayer);
+                else if (entry.Graph.Role == CharacterPoseAuthoringGraphRole.ControlRig)
+                    Add(
+                        CharacterPoseGraphClosure.Key(
+                            entry.OwnerIdentity,
+                            entry.Graph.GraphId),
+                        CharacterPoseIrGraphRole.ControlRig);
+            }
             for (int referenceIndex = 0;
                  referenceIndex < closure.References.Count;
                  referenceIndex++)
             {
                 CharacterPoseGraphClosureReference reference =
                     closure.References[referenceIndex];
+                CharacterPoseGraphClosureEntry explicitTarget =
+                    closure.Entries.FirstOrDefault(value =>
+                        value.OwnerIdentity == reference.TargetOwnerIdentity &&
+                        value.Graph.GraphId == reference.TargetGraphId);
+                if (explicitTarget != null &&
+                    explicitTarget.Graph.Role != CharacterPoseAuthoringGraphRole.AnimGraph)
+                    continue;
                 CharacterPoseIrGraphRole role = reference.Kind switch
                 {
                     CharacterPoseGraphDependencyKind.StatePose =>
@@ -283,10 +312,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.AuthoringView.RootGraph.GraphId);
             int finalPublicationCount = root.AuthoredNodes.Values.Count(
                 value => value.Kind == CharacterPoseNodeKind.OutputPose);
-            int assemblerCount = typedIr.Graphs.Sum(graph =>
-                graph.AuthoredNodes.Values.Count(value =>
-                    value.Kind ==
-                    CharacterPoseNodeKind.FullBodyIkGoalAssembler));
             int fullBodyIkCount = typedIr.Graphs.Sum(graph =>
                 graph.AuthoredNodes.Values.Count(value =>
                     value.Kind == CharacterPoseNodeKind.FullBodyIK));
@@ -295,10 +320,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException(
                     "Pose Program requires exactly one root Final Publication boundary.");
             }
-            if (assemblerCount != 1 || fullBodyIkCount != 1)
+            if (fullBodyIkCount != 1)
             {
                 throw new InvalidOperationException(
-                    "Pose Program requires exactly one Goal Assembler and one Full Body IK node.");
+                    "Pose Program requires exactly one Full Body IK node.");
             }
         }
     }

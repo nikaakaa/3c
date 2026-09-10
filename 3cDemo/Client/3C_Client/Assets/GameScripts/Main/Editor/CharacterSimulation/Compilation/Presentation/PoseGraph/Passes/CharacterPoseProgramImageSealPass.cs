@@ -227,7 +227,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationClipPlayerDescriptor descriptor =
                     payloads.ClipPlayers[i];
                 values.Add(FormattableString.Invariant(
-                    $"clip-player:{descriptor.Index}:{descriptor.NodeId}:{descriptor.PresentationPoseSourceIndex.Value}:{descriptor.PlayRate:R}:{descriptor.InitialTime:R}:{(int)descriptor.ClockSource}:{descriptor.PlayerIndex}"));
+                    $"clip-player:{descriptor.Index}:{descriptor.NodeId}:{descriptor.PresentationPoseSourceIndex.Value}:{descriptor.PlayRate:R}:{descriptor.InitialTime:R}:{descriptor.LoopAnimation}:{(int)descriptor.ClockSource}:{descriptor.PlayerIndex}"));
             }
             for (int i = 0;
                  i < payloads.RootOrientationWarps.Length;
@@ -278,7 +278,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterAnimationSlotDescriptor descriptor =
                     payloads.AnimationSlots[i];
                 values.Add(
-                    $"animation-slot:{descriptor.Index}:{descriptor.NodeId}:{descriptor.SlotId}:{descriptor.AnimationChannelId}:" +
+                    $"animation-slot:{descriptor.Index}:{descriptor.NodeId}:{descriptor.SlotId}:{descriptor.SlotGroupId}:{descriptor.AnimationChannelId}:" +
                     $"{descriptor.RoutingOwnerId}:{descriptor.RoutingPlanId}:{descriptor.RoutingDefinitionRevision}:" +
                     $"{descriptor.ActionPlayer.PlayerNodeId}:{descriptor.ActionPlayer.ActionPlaybackOperationIndex}:" +
                     $"{descriptor.ActionPlayer.PlayerIndex}:{descriptor.BlendStackWorkspace.BlendNodeIndex}:" +

@@ -5,7 +5,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class CharacterPresentationClipPlayerCompiler
     {
-        internal const string CompilerVersion = "clip-player-compiler/v4";
+        internal const string CompilerVersion = "clip-player-compiler/v5";
 
         internal static CharacterPresentationClipPlayerDescriptor Compile(
             int index,
@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 sourceIndex,
                 payload.PlayRate,
                 payload.InitialTime,
+                payload.LoopAnimation,
                 payload.ClockSource,
                 playerIndex);
         }

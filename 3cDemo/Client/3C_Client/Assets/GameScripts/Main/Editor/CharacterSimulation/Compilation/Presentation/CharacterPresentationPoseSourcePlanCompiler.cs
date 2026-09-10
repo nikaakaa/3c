@@ -81,12 +81,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 CharacterPresentationPoseSourceCompilationEntry entry =
                     sourceCatalog.Entries[bindingIndex];
-                if (!(entry.Binding is CharacterBlendSpacePoseSourceBinding binding))
+                CharacterBlendSpacePoseSourceBinding binding = entry.Binding as CharacterBlendSpacePoseSourceBinding;
+                CharacterAnimationBlendSpaceAsset directBlendSpace = entry.DirectBlendSpace;
+                if (!binding && !directBlendSpace)
                     continue;
                 try
                 {
-                    binding.RequireValid(rig);
-                    CharacterAnimationBlendSpaceAsset blendSpace = binding.BlendSpace;
+                    if (binding)
+                        binding.RequireValid(rig);
+                    CharacterAnimationBlendSpaceAsset blendSpace = directBlendSpace ?? binding.BlendSpace;
                     if (!blendSpaceIndices.TryGetValue(blendSpace, out int planIndex))
                     {
                         var samples = new CharacterAnimationBlendSpaceSamplePlan[blendSpace.Samples.Count];
@@ -109,7 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip;
                             CharacterAnimationScalarCurvePage scalarPage = null;
                             CharacterAnimationSourceResourceBinding resourceBinding =
-                                profile.FindSourceResourceBinding(sample.Clip);
+                                animationBuildInput.SourceResourceBindings.SingleOrDefault(
+                                    value => value?.AuthoringClip == sample.Clip);
                             if (resourceBinding != null)
                             {
                                 resourceBinding.RequireValid();
@@ -185,6 +189,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 CharacterPresentationPoseSourceCompilationEntry entry =
                     sourceCatalog.Entries[i];
+                if (entry.DirectClip)
+                {
+                    try
+                    {
+                        if (!sourceIndices.Add(entry.SourceIndex))
+                            throw new InvalidOperationException("source index is duplicated.");
+                        result.Add(CompileDirectClipSource(
+                            entry.SourceIndex,
+                            entry.DirectClip,
+                            profile,
+                            rig,
+                            footAnalysisCompilation,
+                            footAnalysis,
+                            animationBuildInput,
+                            errors));
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add($"Presentation direct Clip source #{i} failed to compile: {exception.Message}");
+                    }
+                    continue;
+                }
                 CharacterPresentationPoseSourceBinding binding = entry.Binding;
                 try
                 {
@@ -206,7 +232,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         CharacterAnimationClipContentIdentity clipIdentity =
                             CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(directClip.Clip);
                         CharacterAnimationSourceResourceBinding resourceBinding =
-                            profile.FindSourceResourceBinding(directClip.Clip);
+                            animationBuildInput.SourceResourceBindings.SingleOrDefault(
+                                value => value?.AuthoringClip == directClip.Clip);
                         CharacterAnimationSamplingBackendKind backend =
                             resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
                         resourceBinding?.RequireValid();
@@ -255,6 +282,72 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             return result.ToArray();
+        }
+
+        static CharacterPresentationPoseSourcePlan CompileDirectClipSource(
+            PresentationPoseSourceIndex sourceIndex,
+            AnimationClip clip,
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationRigDefinition rig,
+            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
+            AnimationFootAnalysisProjectionBuildData footAnalysis,
+            CharacterAnimationBuildInput animationBuildInput,
+            List<string> errors)
+        {
+            CharacterAnimationClipContentIdentity clipIdentity =
+                CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clip);
+            string sourceIdentity = $"clip:{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}";
+            if (footAnalysis == null ||
+                !footAnalysis.TryGetPoseSourceClip(
+                    $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",
+                    out AnimationFootFeaturePair features))
+                throw new InvalidOperationException("Foot Analysis artifact binding is missing for direct Clip.");
+            AnimationFootAnalysisArtifact artifact =
+                footAnalysisCompilation.RequireArtifact(
+                    AnimationFootAnalysisProjectionBuildData.PoseSourceClipKey(
+                        $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}"));
+            CharacterAnimationSourceResourceBinding resourceBinding =
+                animationBuildInput.SourceResourceBindings.SingleOrDefault(
+                    value => value?.AuthoringClip == clip);
+            CharacterAnimationSamplingBackendKind backend =
+                resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
+            resourceBinding?.RequireValid();
+            CharacterAnimationScalarCurvePage scalarPage = null;
+            if (backend == CharacterAnimationSamplingBackendKind.NativeClip)
+                scalarPage = animationBuildInput.AnimationCatalog.BuildNativeScalarPage(clip, errors);
+            CharacterAnimationBuildCatalogEntry catalogEntry =
+                animationBuildInput.AnimationCatalog.RegisterReference(
+                    clip,
+                    backend,
+                    scalarPage,
+                    $"pose-direct-clip:{sourceIdentity}");
+            CharacterAnimationClipRegisteredCurveCatalog.ValidateFootMotionGroupRequired(clip);
+            AnimationCurve footWeight = CharacterAnimationClipRegisteredCurveCatalog.ReadRequired(
+                clip,
+                CharacterAnimationClipRegisteredCurveChannels.FootPlacementWeight);
+            return new CharacterPresentationPoseSourcePlan(
+                sourceIndex,
+                sourceIdentity,
+                clip,
+                rig,
+                footAnalysis.Identity.AnalysisSourceId,
+                $"{clipIdentity.AssetGuid}:{clipIdentity.LocalFileId}",
+                clipIdentity.FullDependencyHash,
+                clipIdentity.AnalysisInputHash,
+                clipIdentity.RegisteredCurveHash,
+                clipIdentity.SourceDurationSeconds,
+                CharacterPresentationFootEventCompiler.NormalizeRegisteredCurve(
+                    footWeight,
+                    clipIdentity.SourceDurationSeconds),
+                CharacterPresentationFootEventCompiler.CompileFootStepObservation(
+                    clip,
+                    clipIdentity.SourceDurationSeconds,
+                    artifact.MotionData),
+                features,
+                backend,
+                scalarPage,
+                catalogEntry.ResourceCatalogIndex,
+                catalogEntry.GroupClipIndex);
         }
 
         internal static void ValidateClipPlayers(

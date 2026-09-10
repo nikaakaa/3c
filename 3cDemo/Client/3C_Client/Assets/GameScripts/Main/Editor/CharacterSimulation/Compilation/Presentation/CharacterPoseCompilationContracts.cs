@@ -5,6 +5,7 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -118,14 +119,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public CharacterPoseCompilationRequest(
             CharacterPoseCanvasAuthoringView authoringView,
+            CharacterAnimationInputContract animationInputContract,
             CharacterAnimationRigDefinition rig,
-            IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
             AnimationBlendNodePayload[] blendNodes,
             CharacterPresentationPoseSourcePlan[] poseSources,
             AnimationClipPhasePlan[] clipPhasePlans,
             AnimationSourcePhasePlan[] sourcePhasePlans,
             AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
             IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
+            IReadOnlyDictionary<AnimationClip, PresentationPoseSourceIndex> directSourceIndices,
+            IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> directBlendSpaceIndices,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
@@ -136,9 +139,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             AuthoringView = authoringView ??
                 throw new ArgumentNullException(nameof(authoringView));
+            AnimationInputContract = animationInputContract ??
+                throw new ArgumentNullException(nameof(animationInputContract));
             Rig = rig ? rig : throw new ArgumentNullException(nameof(rig));
-            ReachableAnimationChannels = reachableAnimationChannels ??
-                Array.Empty<AnimationChannelId>();
             BlendNodes = blendNodes ?? Array.Empty<AnimationBlendNodePayload>();
             PoseSources = poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
             ClipPhasePlans = clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>();
@@ -147,6 +150,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Array.Empty<AnimationFootPhaseValidationDescriptor>();
             SourceIndices = sourceIndices ??
                 new Dictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex>();
+            DirectSourceIndices = directSourceIndices ??
+                new Dictionary<AnimationClip, PresentationPoseSourceIndex>();
+            DirectBlendSpaceIndices = directBlendSpaceIndices ??
+                new Dictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex>();
             CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
             ProfileIndicesByIdentity = profileIndicesByIdentity ??
                 throw new ArgumentNullException(nameof(profileIndicesByIdentity));
@@ -159,14 +166,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         public CharacterPoseCanvasAuthoringView AuthoringView { get; }
+        public CharacterAnimationInputContract AnimationInputContract { get; }
         public CharacterAnimationRigDefinition Rig { get; }
-        public IReadOnlyCollection<AnimationChannelId> ReachableAnimationChannels { get; }
         public AnimationBlendNodePayload[] BlendNodes { get; }
         public CharacterPresentationPoseSourcePlan[] PoseSources { get; }
         public AnimationClipPhasePlan[] ClipPhasePlans { get; }
         public AnimationSourcePhasePlan[] SourcePhasePlans { get; }
         public AnimationFootPhaseValidationDescriptor[] ClipPhaseValidations { get; }
         public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
+        public IReadOnlyDictionary<AnimationClip, PresentationPoseSourceIndex> DirectSourceIndices { get; }
+        public IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> DirectBlendSpaceIndices { get; }
         public IReadOnlyDictionary<string, int> CurveIndices { get; }
         public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
         public CharacterAnimationPresentationProfile Profile { get; }

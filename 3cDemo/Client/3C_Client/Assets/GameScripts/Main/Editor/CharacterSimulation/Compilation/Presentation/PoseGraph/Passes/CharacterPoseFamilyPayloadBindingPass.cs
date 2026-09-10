@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -10,6 +9,7 @@ using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using UnityEngine;
+using UnityAnimationClip = UnityEngine.AnimationClip;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -74,6 +74,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 AnimationSourcePhasePlan[] sourcePhasePlans,
                 AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
                 IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
+                IReadOnlyDictionary<UnityAnimationClip, PresentationPoseSourceIndex> directSourceIndices,
+                IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> directBlendSpaceIndices,
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
@@ -106,6 +108,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Select((value, index) => new KeyValuePair<PresentationPoseSourceIndex, int>(value.SourceIndex, index))
                     .ToDictionary(value => value.Key, value => value.Value);
                 SourceIndices = sourceIndices ?? throw new ArgumentNullException(nameof(sourceIndices));
+                DirectSourceIndices = directSourceIndices ?? throw new ArgumentNullException(nameof(directSourceIndices));
+                DirectBlendSpaceIndices = directBlendSpaceIndices ?? throw new ArgumentNullException(nameof(directBlendSpaceIndices));
                 CurveIndices = curveIndices ?? throw new ArgumentNullException(nameof(curveIndices));
                 ProfileIndicesByIdentity = profileIndicesByIdentity ??
                     throw new ArgumentNullException(nameof(profileIndicesByIdentity));
@@ -133,6 +137,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyList<AnimationFootPhaseValidationDescriptor> ClipPhaseValidations { get; }
             public Dictionary<PresentationPoseSourceIndex, int> SourcePhasePlanIndices { get; }
             public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices { get; }
+            public IReadOnlyDictionary<UnityAnimationClip, PresentationPoseSourceIndex> DirectSourceIndices { get; }
+            public IReadOnlyDictionary<CharacterAnimationBlendSpaceAsset, PresentationPoseSourceIndex> DirectBlendSpaceIndices { get; }
             public IReadOnlyDictionary<string, int> CurveIndices { get; }
             public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
             public CharacterAnimationPresentationProfile Profile { get; }
@@ -184,7 +190,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             AnimationBlendNodePayload[] blendNodes = request.BlendNodes;
             CharacterPoseCanvasGraph graph = asset.Graph;
             CharacterAnimationParameterLayout parameterLayout =
-                CharacterAnimationParameterLayoutCompiler.Build(graph);
+                CharacterAnimationParameterLayoutCompiler.Build(
+                    request.AnimationInputContract);
             CharacterPoseParameterDeclaration[] authoredParameters = parameterLayout.Declarations;
             var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
             var parameterIndices = new Dictionary<PoseParameterId, int>();
@@ -214,6 +221,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.SourcePhasePlans,
                 request.ClipPhaseValidations,
                 request.SourceIndices,
+                request.DirectSourceIndices,
+                request.DirectBlendSpaceIndices,
                 request.CurveIndices,
                 request.ProfileIndicesByIdentity,
                 request.Profile,
@@ -424,6 +433,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     expectedCode == CharacterPoseOperationCode.StatePoseOutput
                         ? CharacterPoseExecutionDomain.ManagedControl
                         : linkedPoseCall.ExecutionDomain;
+                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
+                    ConsumeInternalSymbolicOperation(
+                        state,
+                        new PoseNodeId(scopedNodeId.Value + "/action-playback-input"),
+                        CharacterPoseOperationCode.ActionPlaybackInput,
+                        CharacterPoseOperationFamily.ActionInput,
+                        CharacterPoseExecutionDomain.FactAndDemand,
+                        CharacterPoseSpace.None,
+                        CharacterPoseSpace.None);
+                if (node.Kind == CharacterPoseNodeKind.FullBodyIK &&
+                    irNode.Inputs.Any(value =>
+                        value.ValueKind == CharacterPosePortKind.FullBodyIkGoalContribution))
+                    ConsumeInternalSymbolicOperation(
+                        state,
+                        new PoseNodeId(scopedNodeId.Value + "/goal-assembler"),
+                        CharacterPoseOperationCode.FullBodyIkGoalAssembler,
+                        CharacterPoseOperationFamily.GoalAssembler,
+                        CharacterPoseExecutionDomain.ManagedConstraint,
+                        CharacterPoseSpace.None,
+                        CharacterPoseSpace.None);
                 CharacterPoseSymbolicOperation symbolic =
                     RequireNextSymbolicOperation(
                         state,
@@ -434,7 +463,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         ResolveInputPoseSpace(node),
                         ResolveOutputPoseSpace(node, expectedCode),
                         linkedPoseFragmentIdentity);
-                int operationIndex = state.Operations.Count;
+                int operationIndex;
                 CharacterPoseOperationCode code = symbolic.OperationCode;
                 int outputValueIndex = HasPoseOutput(node) ||
                                        handler.NativeRole ==
@@ -481,6 +510,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     fullBodyIkGoalSetInputs.Length == 1
                         ? fullBodyIkGoalSetInputs[0]
                         : -1;
+                if (node.Kind == CharacterPoseNodeKind.FullBodyIK &&
+                    inputFullBodyIkGoalSetValueIndex < 0 &&
+                    fullBodyIkGoalContributionInputs.Length > 0)
+                {
+                    inputFullBodyIkGoalSetValueIndex =
+                        CompileInternalGoalAssembler(
+                            scopedNodeId,
+                            graph,
+                            callChain,
+                            fullBodyIkGoalContributionInputStart,
+                            fullBodyIkGoalContributionInputs.Length,
+                            state);
+                }
                 int controlInputOperationIndex = -1;
                 int parameterIndex = -1;
                 int parameterIndexB = TryGetInputIndex(
@@ -494,14 +536,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (handler.Requires(
                         CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl))
                 {
-                    CompiledValue selection = RequireInput(
-                        node,
-                        CharacterPosePortKind.ActionPlayback,
-                        0,
-                        incoming,
-                        scope,
-                        values);
-                    controlInputOperationIndex = selection.ProducerOperationIndex;
+                    if (handler.Kind == CharacterPoseNodeKind.AnimationSlot)
+                    {
+                        controlInputOperationIndex = CompileInternalActionPlaybackInput(
+                            (CharacterAnimationSlotPosePayload)irNode.Payload,
+                            scopedNodeId,
+                            state,
+                            graph,
+                            callChain);
+                    }
+                    else
+                    {
+                        CompiledValue selection = RequireInput(
+                            node,
+                            CharacterPosePortKind.ActionPlayback,
+                            0,
+                            incoming,
+                            scope,
+                            values);
+                        controlInputOperationIndex = selection.ProducerOperationIndex;
+                    }
                 }
                 if (handler.Requires(
                         CharacterPoseNodeRuntimeRequirement.Player))
@@ -573,8 +627,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     : default;
                 CharacterPresentationPoseSourceSlot sourceSlot = handler.Source(irNode.Payload);
                 PresentationPoseSourceIndex sourceIndex = default;
-                if (sourceSlot && !state.SourceIndices.TryGetValue(sourceSlot, out sourceIndex))
-                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
+                if (sourceSlot)
+                {
+                    if (!state.SourceIndices.TryGetValue(sourceSlot, out sourceIndex))
+                        throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
+                }
+                else if (handler.DirectClip(irNode.Payload) &&
+                         !state.DirectSourceIndices.TryGetValue(
+                             handler.DirectClip(irNode.Payload),
+                             out sourceIndex))
+                {
+                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' direct AnimationClip is outside the compiled source catalog.");
+                }
+                else if (handler.DirectBlendSpace(irNode.Payload) &&
+                         !state.DirectBlendSpaceIndices.TryGetValue(
+                             handler.DirectBlendSpace(irNode.Payload),
+                             out sourceIndex))
+                {
+                    throw new InvalidOperationException($"Pose Player '{scopedNodeId}' direct Blend Space is outside the compiled source catalog.");
+                }
+                operationIndex = state.Operations.Count;
                 state.Operations.Add(new CharacterPoseBoundOperation(
                     operationIndex,
                     symbolic.ExecutionDomain,
@@ -811,6 +883,134 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
+        static int CompileInternalActionPlaybackInput(
+            CharacterAnimationSlotPosePayload payload,
+            PoseNodeId scopedNodeId,
+            BindingBuilder state,
+            CharacterPoseCanvasGraph graph,
+            string callChain)
+        {
+            int operationIndex = state.Operations.Count;
+            PoseNodeId internalNodeId = new PoseNodeId(
+                scopedNodeId.Value + "/action-playback-input");
+            state.Operations.Add(new CharacterPoseBoundOperation(
+                operationIndex,
+                CharacterPoseExecutionDomain.FactAndDemand,
+                CharacterPoseSpace.None,
+                CharacterPoseSpace.None,
+                CharacterPoseOperationCode.ActionPlaybackInput,
+                CharacterPoseOperationFamily.ActionInput,
+                internalNodeId,
+                default,
+                default,
+                -1,
+                -1,
+                -1,
+                -1,
+                payload.AnimationChannelId,
+                AnimationSelectionAvailabilityPolicy.AllowEmpty,
+                -1,
+                -1,
+                CharacterAnimationBlendSpaceInputRangePolicy.Clamp,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                1f,
+                Array.Empty<PoseParameterResolvePolicy>()));
+            state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(
+                operationIndex,
+                graph.GraphId.Value,
+                graph.ContentRevision,
+                internalNodeId,
+                scopedNodeId,
+                callChain,
+                string.Empty,
+                Array.Empty<CharacterPoseOutputPortSource>()));
+            return operationIndex;
+        }
+
+        static int CompileInternalGoalAssembler(
+            PoseNodeId scopedNodeId,
+            CharacterPoseCanvasGraph graph,
+            string callChain,
+            int contributionInputStart,
+            int contributionInputCount,
+            BindingBuilder state)
+        {
+            int operationIndex = state.Operations.Count;
+            int outputGoalSetIndex = state.FullBodyIkGoalSetValueCount++;
+            PoseNodeId internalNodeId = new PoseNodeId(
+                scopedNodeId.Value + "/goal-assembler");
+            state.Operations.Add(new CharacterPoseBoundOperation(
+                operationIndex,
+                CharacterPoseExecutionDomain.ManagedConstraint,
+                CharacterPoseSpace.None,
+                CharacterPoseSpace.None,
+                CharacterPoseOperationCode.FullBodyIkGoalAssembler,
+                CharacterPoseOperationFamily.GoalAssembler,
+                internalNodeId,
+                default,
+                default,
+                -1,
+                -1,
+                -1,
+                -1,
+                default,
+                AnimationSelectionAvailabilityPolicy.RequireSelection,
+                -1,
+                -1,
+                CharacterAnimationBlendSpaceInputRangePolicy.Clamp,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                outputGoalSetIndex,
+                -1,
+                contributionInputStart,
+                contributionInputCount,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                1f,
+                Array.Empty<PoseParameterResolvePolicy>()));
+            state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(
+                operationIndex,
+                graph.GraphId.Value,
+                graph.ContentRevision,
+                internalNodeId,
+                scopedNodeId,
+                callChain,
+                string.Empty,
+                Array.Empty<CharacterPoseOutputPortSource>()));
+            return outputGoalSetIndex;
+        }
+
         internal static int CompileAnimationSlot(
             CharacterAnimationSlotPosePayload payload,
             PoseNodeId scopedNodeId,
@@ -977,6 +1177,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 descriptorIndex,
                 scopedNodeId,
                 payload.SlotId,
+                state.Rig.RequireAnimationSlot(payload.SlotId).GroupId,
                 payload.AnimationChannelId,
                 new TransitionRouteOwnerId($"animation-slot/{payload.SlotId}"),
                 new CompiledTransitionRoutingPlanPayload(
@@ -1625,8 +1826,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int playerIndex,
             BindingBuilder state)
         {
-            if (!payload.SourceSlot || !state.SourceIndices.TryGetValue(payload.SourceSlot, out PresentationPoseSourceIndex sourceIndex))
-                throw new InvalidOperationException($"Clip Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
+            PresentationPoseSourceIndex sourceIndex;
+            if (payload.Animation)
+            {
+                if (!state.DirectSourceIndices.TryGetValue(payload.Animation, out sourceIndex))
+                    throw new InvalidOperationException($"Clip Player '{scopedNodeId}' direct AnimationClip is outside the compiled source catalog.");
+            }
+            else if (!payload.SourceSlot ||
+                     !state.SourceIndices.TryGetValue(payload.SourceSlot, out sourceIndex))
+            {
+                throw new InvalidOperationException($"Clip Player '{scopedNodeId}' source reference is outside the compiled source catalog.");
+            }
             int index = state.ClipPlayers.Count;
             state.ClipPlayers.Add(CharacterPresentationClipPlayerCompiler.Compile(
                 index,
@@ -2041,6 +2251,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .RequireCapability(node.CapabilityIdentity);
             handler.RequirePayload(node.Payload);
             return handler;
+        }
+
+        static void ConsumeInternalSymbolicOperation(
+            BindingBuilder state,
+            PoseNodeId nodeId,
+            CharacterPoseOperationCode operationCode,
+            CharacterPoseOperationFamily family,
+            CharacterPoseExecutionDomain executionDomain,
+            CharacterPoseSpace inputPoseSpace,
+            CharacterPoseSpace outputPoseSpace)
+        {
+            int sequence = state.SymbolicOperationCursor;
+            if ((uint)sequence >= (uint)state.SymbolicProgram.Operations.Count)
+                throw new InvalidOperationException($"Pose binding produced an unexpected internal Operation '{nodeId}'.");
+            CharacterPoseSymbolicOperation operation = state.SymbolicProgram.Operations[sequence];
+            if (operation.Sequence != sequence ||
+                operation.NodeId != nodeId ||
+                operation.OperationCode != operationCode ||
+                operation.Family != family ||
+                operation.ExecutionDomain != executionDomain ||
+                operation.InputPoseSpace != inputPoseSpace ||
+                operation.OutputPoseSpace != outputPoseSpace)
+                throw new InvalidOperationException($"Pose binding internal Operation '{nodeId}' does not match Symbolic Family Lowering sequence #{sequence}.");
+            state.SymbolicOperationCursor++;
         }
 
         static CharacterPoseSymbolicOperation RequireNextSymbolicOperation(

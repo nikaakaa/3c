@@ -15,7 +15,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         Root = 1,
         StatePose = 2,
         Subgraph = 3,
-        LinkedPoseEntry = 4
+        LinkedPoseEntry = 4,
+        AnimationLayer = 5,
+        TransitionRule = 6,
+        ControlRig = 7
     }
 
     internal sealed class CharacterPoseCanvasAuthoringView
@@ -73,6 +76,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             if (ReferenceEquals(graph, RootGraph))
                 return CharacterPoseCanvasGraphRole.Root;
+            switch (graph.Role)
+            {
+                case CharacterPoseAuthoringGraphRole.AnimationLayer:
+                    return CharacterPoseCanvasGraphRole.AnimationLayer;
+                case CharacterPoseAuthoringGraphRole.TransitionRule:
+                    return CharacterPoseCanvasGraphRole.TransitionRule;
+                case CharacterPoseAuthoringGraphRole.ControlRig:
+                    return CharacterPoseCanvasGraphRole.ControlRig;
+                case CharacterPoseAuthoringGraphRole.LinkedPoseEntry:
+                    return CharacterPoseCanvasGraphRole.LinkedPoseEntry;
+                case CharacterPoseAuthoringGraphRole.StatePose:
+                    return CharacterPoseCanvasGraphRole.StatePose;
+                case CharacterPoseAuthoringGraphRole.Subgraph:
+                    return CharacterPoseCanvasGraphRole.Subgraph;
+            }
             return m_StatePoseGraphs.Contains(graph.GraphId)
                 ? CharacterPoseCanvasGraphRole.StatePose
                 : CharacterPoseCanvasGraphRole.Subgraph;

@@ -265,7 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationRigDefinition rig,
             IReadOnlyList<CharacterPresentationProducerEntry> producers,
             Compilation catalogs,
-            List<string> errors)
+            List<string> errors,
+            bool hasGameplayProducerContract)
         {
             if (!graphAsset || graphAsset.Graph == null || !rig || catalogs == null)
                 return Array.Empty<AnimationBlendNodePayload>();
@@ -346,9 +347,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             $"Animation transition owner '{authored.NodeId}' duplicates source identity '{source.Identity}'.");
                     }
                 }
-                if (nodeSources.Length == 0)
+                if (nodeSources.Length == 0 && hasGameplayProducerContract)
                     errors?.Add($"Animation transition owner '{authored.NodeId}' has no reachable producer on Animation Channel '{authored.Selection.ChannelId}'.");
-                ValidateTransitionOverrides(policy, authored, identities, errors);
+                if (hasGameplayProducerContract)
+                    ValidateTransitionOverrides(policy, authored, identities, errors);
 
                 var transitions = new List<AnimationBlendTransitionPayload>();
                 AnimationBlendTransitionEndpointKind initialEndpointKind =
@@ -970,17 +972,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         default));
                     continue;
                 }
-                CharacterPosePortDefinition selectionPort =
-                    CharacterPoseAuthoringPortProjection.Get(node).Single(port =>
-                    port.Kind == CharacterPosePortKind.ActionPlayback &&
-                    port.Direction == CharacterPosePortDirection.Input);
-                if (!TryResolveSelection(node, selectionPort, incoming, scope, values, out SelectionEndpoint selection))
-                    throw new InvalidOperationException($"Animation transition owner '{node.NodeId}' has no resolvable selection endpoint.");
-                if (node.AnimationChannelId != selection.ChannelId)
-                {
-                    throw new InvalidOperationException(
-                        $"Animation Slot '{node.NodeId}' channel '{node.AnimationChannelId}' does not match Action Playback channel '{selection.ChannelId}'.");
-                }
+                if (!node.AnimationChannelId.IsValid)
+                    throw new InvalidOperationException($"Animation Slot '{node.NodeId}' has no Animation Channel identity.");
+                SelectionEndpoint selection = new SelectionEndpoint(
+                    node.AnimationChannelId,
+                    string.Empty,
+                    AnimationSelectionAvailabilityPolicy.AllowEmpty);
                 result.Add(new CompiledBlendAuthoringNode(ScopePoseNodeId(node.NodeId, scope), node, selection));
             }
             return exports;

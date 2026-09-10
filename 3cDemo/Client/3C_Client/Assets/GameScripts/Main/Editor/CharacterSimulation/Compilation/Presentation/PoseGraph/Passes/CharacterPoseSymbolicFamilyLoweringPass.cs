@@ -431,8 +431,38 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         domain = CharacterPoseExecutionDomain.ManagedControl;
                     CharacterPoseOperationFamily family =
                         code == CharacterPoseOperationCode.StatePoseOutput
-                            ? CharacterPoseOperationFamily.StateMachine
-                            : definition.OperationFamily;
+                        ? CharacterPoseOperationFamily.StateMachine
+                        : definition.OperationFamily;
+                    if (definition.Kind == CharacterPoseNodeKind.AnimationSlot)
+                    {
+                        PoseNodeId internalNodeId = new PoseNodeId(
+                            scopedNodeId.Value + "/action-playback-input");
+                        var actionPlayback = new CharacterPoseSymbolicValueReference(
+                            "action-playback/" + scopedNodeId.Value,
+                            CharacterPosePortKind.ActionPlayback);
+                        m_Operations.Add(new CharacterPoseSymbolicOperation(
+                            m_Operations.Count,
+                            graph.GraphId,
+                            role,
+                            internalNodeId,
+                            CharacterPoseNodeKind.ActionPlaybackInput,
+                            CharacterPoseOperationCode.ActionPlaybackInput,
+                            CharacterPoseOperationFamily.ActionInput,
+                            CharacterPoseExecutionDomain.FactAndDemand,
+                            CharacterPoseSpace.None,
+                            CharacterPoseSpace.None,
+                            Array.Empty<CharacterPoseSymbolicValueReference>(),
+                            new[] { actionPlayback },
+                            CharacterPoseSymbolicActorStateRequirement.ActionPlayback,
+                            CharacterPoseSymbolicFrameRequirement.NodeControl |
+                            CharacterPoseSymbolicFrameRequirement.Completion |
+                            CharacterPoseSymbolicFrameRequirement.Diagnostics,
+                            CharacterPoseSymbolicWorkspaceRequirement.FrameCache |
+                            CharacterPoseSymbolicWorkspaceRequirement.Diagnostics,
+                            fragmentIdentity,
+                            irNode.SourcePath + "/internal/action-playback"));
+                        hiddenInputs.Add(actionPlayback);
+                    }
                     var inputs = new List<
                         CharacterPoseSymbolicValueReference>(
                         irNode.Inputs.Count + hiddenInputs.Count);
@@ -454,6 +484,39 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 input.ValueKind));
                     }
                     inputs.AddRange(hiddenInputs);
+                    if (definition.Kind == CharacterPoseNodeKind.FullBodyIK &&
+                        inputs.Any(value => value.Kind == CharacterPosePortKind.FullBodyIkGoalContribution))
+                    {
+                        PoseNodeId internalNodeId = new PoseNodeId(
+                            scopedNodeId.Value + "/goal-assembler");
+                        var goalSet = new CharacterPoseSymbolicValueReference(
+                            "goal-set/" + scopedNodeId.Value,
+                            CharacterPosePortKind.FullBodyIkGoals);
+                        m_Operations.Add(new CharacterPoseSymbolicOperation(
+                            m_Operations.Count,
+                            graph.GraphId,
+                            role,
+                            internalNodeId,
+                            CharacterPoseNodeKind.FullBodyIkGoalAssembler,
+                            CharacterPoseOperationCode.FullBodyIkGoalAssembler,
+                            CharacterPoseOperationFamily.GoalAssembler,
+                            CharacterPoseExecutionDomain.ManagedConstraint,
+                            CharacterPoseSpace.None,
+                            CharacterPoseSpace.None,
+                            inputs.Where(value => value.Kind == CharacterPosePortKind.FullBodyIkGoalContribution).ToArray(),
+                            new[] { goalSet },
+                            CharacterPoseSymbolicActorStateRequirement.None,
+                            CharacterPoseSymbolicFrameRequirement.GoalContribution |
+                            CharacterPoseSymbolicFrameRequirement.GoalSet |
+                            CharacterPoseSymbolicFrameRequirement.Completion |
+                            CharacterPoseSymbolicFrameRequirement.Diagnostics,
+                            CharacterPoseSymbolicWorkspaceRequirement.Constraint |
+                            CharacterPoseSymbolicWorkspaceRequirement.FrameCache |
+                            CharacterPoseSymbolicWorkspaceRequirement.Diagnostics,
+                            fragmentIdentity,
+                            irNode.SourcePath + "/internal/goal-assembler"));
+                        inputs.Add(goalSet);
+                    }
                     IReadOnlyList<CharacterPoseSymbolicValueReference> outputs =
                         BindOperationOutputs(
                             node,

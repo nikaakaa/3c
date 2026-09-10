@@ -6,6 +6,17 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public enum CharacterPoseAuthoringGraphRole : byte
+    {
+        AnimGraph = 1,
+        AnimationLayer = 2,
+        StatePose = 3,
+        TransitionRule = 4,
+        ControlRig = 5,
+        Subgraph = 6,
+        LinkedPoseEntry = 7
+    }
+
     static class PoseIdentity
     {
         internal static string Require(string value, string parameterName)
@@ -64,6 +75,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override string ToString() => Value ?? string.Empty;
         public static bool operator ==(AnimationSlotId left, AnimationSlotId right) => left.Equals(right);
         public static bool operator !=(AnimationSlotId left, AnimationSlotId right) => !left.Equals(right);
+    }
+
+    public readonly struct AnimationSlotGroupId : IEquatable<AnimationSlotGroupId>, IComparable<AnimationSlotGroupId>
+    {
+        public AnimationSlotGroupId(string value) => Value = PoseIdentity.Require(value, nameof(value));
+        public string Value { get; }
+        public bool IsValid => !string.IsNullOrEmpty(Value);
+        public int CompareTo(AnimationSlotGroupId other) => string.CompareOrdinal(Value, other.Value);
+        public bool Equals(AnimationSlotGroupId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
+        public override bool Equals(object obj) => obj is AnimationSlotGroupId other && Equals(other);
+        public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Value ?? string.Empty);
+        public override string ToString() => Value ?? string.Empty;
+        public static bool operator ==(AnimationSlotGroupId left, AnimationSlotGroupId right) => left.Equals(right);
+        public static bool operator !=(AnimationSlotGroupId left, AnimationSlotGroupId right) => !left.Equals(right);
     }
 
     public readonly struct PosePortId : IEquatable<PosePortId>, IComparable<PosePortId>

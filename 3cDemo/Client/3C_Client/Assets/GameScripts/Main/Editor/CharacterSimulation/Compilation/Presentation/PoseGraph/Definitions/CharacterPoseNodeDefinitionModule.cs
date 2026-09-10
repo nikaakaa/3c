@@ -8,6 +8,7 @@ using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using TreeDesigner.Editor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -206,6 +207,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public abstract CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload);
+
+        public virtual AnimationClip DirectClip(
+            CharacterPoseNodePayload payload) => null;
+
+        public virtual CharacterAnimationBlendSpaceAsset DirectBlendSpace(
+            CharacterPoseNodePayload payload) => null;
 
         public abstract AnimationChannelId Channel(
             CharacterPoseNodePayload payload);

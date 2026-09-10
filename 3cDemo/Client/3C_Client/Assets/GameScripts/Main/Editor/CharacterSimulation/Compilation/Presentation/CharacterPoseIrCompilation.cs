@@ -17,7 +17,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         StateLocal = 2,
         Subgraph = 3,
         LinkedPoseEntry = 4,
-        MotionMatchingEntry = 5
+        MotionMatchingEntry = 5,
+        AnimationLayer = 6,
+        ControlRig = 7
     }
 
     internal enum CharacterPoseNativeNodeRole : byte
@@ -314,7 +316,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.SelectedPosePlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
                 CharacterPoseNodeRuntimeRequirement.Player;
 
         protected override CharacterPresentationPoseSourceSlot GetSource(
@@ -354,11 +355,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.BlendSpacePlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
                 CharacterPoseNodeRuntimeRequirement.Player;
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterBlendSpacePlayerPosePayload payload) =>
             payload.SourceSlot;
+
+        public override CharacterAnimationBlendSpaceAsset DirectBlendSpace(
+            CharacterPoseNodePayload payload) =>
+            payload is CharacterBlendSpacePlayerPosePayload value
+                ? value.BlendSpace
+                : null;
 
         protected override
             CharacterAnimationBlendSpaceInputRangePolicy
@@ -378,8 +384,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterBlendSpacePlayerPosePayload(
-                input.Require<CharacterBlendSpacePoseSourceSlot>(
-                    "pose-source-slot"),
+                input.Require<CharacterAnimationBlendSpaceAsset>("blend-space"),
                 Enum.Parse<
                     CharacterAnimationBlendSpaceInputRangePolicy>(
                     input.Require<string>(
@@ -391,6 +396,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             field switch
             {
+                "blend-space" => payload.BlendSpace,
                 "pose-source-slot" => payload.SourceSlot,
                 "input-range-policy" =>
                     payload.InputRangePolicy.ToString(),
@@ -399,11 +405,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         protected override void Validate(
             CharacterBlendSpacePlayerPosePayload payload,
-            string sourcePath) =>
+            string sourcePath)
+        {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.SourceSlot,
+                payload.BlendSpace || payload.SourceSlot,
                 sourcePath,
                 "Blend Space source identity is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(
+                !(payload.BlendSpace && payload.SourceSlot),
+                sourcePath,
+                "Blend Space Player cannot contain both direct Blend Space and legacy Source Slot references.");
+        }
     }
 
     internal sealed class
@@ -417,12 +429,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.ClipPlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
                 CharacterPoseNodeRuntimeRequirement.Player |
                 CharacterPoseNodeRuntimeRequirement.ClipPlayer;
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterClipPlayerPosePayload payload) =>
             payload.SourceSlot;
+
+        public override UnityEngine.AnimationClip DirectClip(
+            CharacterPoseNodePayload payload) =>
+            payload is CharacterClipPlayerPosePayload value
+                ? value.Animation
+                : null;
 
         protected override
             AnimationSelectionAvailabilityPolicy GetAvailability(
@@ -436,10 +453,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterClipPlayerPosePayload(
-                input.Require<CharacterClipPoseSourceSlot>(
-                    "pose-source-slot"),
+                input.Require<UnityEngine.AnimationClip>("animation"),
                 input.Require<float>("play-rate"),
                 input.Require<float>("initial-time"),
+                input.Require<bool>("loop-animation"),
                 Enum.Parse<CharacterClipPlayerClockSource>(
                     input.Require<string>("clock-source"),
                     false));
@@ -449,9 +466,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             field switch
             {
+                "animation" => payload.Animation,
                 "pose-source-slot" => payload.SourceSlot,
                 "play-rate" => payload.PlayRate,
                 "initial-time" => payload.InitialTime,
+                "loop-animation" => payload.LoopAnimation,
                 "clock-source" => payload.ClockSource.ToString(),
                 _ => base.ReadField(payload, field)
             };
@@ -461,9 +480,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string sourcePath)
         {
             CharacterPoseNodeDefinitionValidation.Require(
-                payload.SourceSlot,
+                payload.Animation || payload.SourceSlot,
                 sourcePath,
-                "Clip source identity is missing.");
+                "Clip Animation reference is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(
+                !(payload.Animation && payload.SourceSlot),
+                sourcePath,
+                "Clip Player cannot contain both direct Animation and legacy Source Slot references.");
             CharacterPoseNodeDefinitionValidation.Require(
                 float.IsFinite(payload.PlayRate) &&
                 payload.PlayRate > 0f,
@@ -599,6 +622,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             try
             {
+                rig.RequireAnimationSlot(payload.SlotId);
                 payload.BlendPolicy.RequireValid(rig);
             }
             catch (Exception exception)
@@ -1225,7 +1249,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool graphBoundary =
                 role == CharacterPoseIrGraphRole.Subgraph ||
                 role == CharacterPoseIrGraphRole.LinkedPoseEntry ||
-                role == CharacterPoseIrGraphRole.MotionMatchingEntry;
+                role == CharacterPoseIrGraphRole.MotionMatchingEntry ||
+                role == CharacterPoseIrGraphRole.AnimationLayer ||
+                role == CharacterPoseIrGraphRole.ControlRig;
             if (!graphBoundary && (rootOutputs != 1 || graphOutputs != 0))
                 throw new InvalidOperationException("Root and state-local Pose Graphs must contain exactly one Output Pose and no Graph Output.");
             if (graphBoundary && (graphOutputs != 1 || rootOutputs != 0))

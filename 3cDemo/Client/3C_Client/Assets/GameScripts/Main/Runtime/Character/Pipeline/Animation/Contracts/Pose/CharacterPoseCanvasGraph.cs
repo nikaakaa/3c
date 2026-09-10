@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_ContentRevision = string.Empty;
+        [SerializeField] CharacterPoseAuthoringGraphRole m_Role = CharacterPoseAuthoringGraphRole.AnimGraph;
         [SerializeField] CharacterPoseParameterDeclaration[] m_Parameters =
             Array.Empty<CharacterPoseParameterDeclaration>();
 
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ? default
             : new PoseGraphId(m_GraphId);
         public string ContentRevision => m_ContentRevision ?? string.Empty;
+        public CharacterPoseAuthoringGraphRole Role => m_Role;
         public IReadOnlyList<CharacterPoseParameterDeclaration> Parameters =>
             m_Parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
         public IReadOnlyList<CharacterPoseCanvasNode> Nodes =>
@@ -138,12 +140,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string contentRevision,
             CharacterPoseParameterDeclaration[] parameters,
             CharacterPoseCanvasNode[] nodes,
-            CharacterPoseCanvasConnection[] connections)
+            CharacterPoseCanvasConnection[] connections,
+            CharacterPoseAuthoringGraphRole role = CharacterPoseAuthoringGraphRole.AnimGraph)
         {
             m_GraphId = graphId.IsValid
                 ? graphId.Value
                 : throw new ArgumentException("Pose Canvas graph identity is invalid.", nameof(graphId));
             m_ContentRevision = PoseIdentity.Require(contentRevision, nameof(contentRevision));
+            if (!Enum.IsDefined(typeof(CharacterPoseAuthoringGraphRole), role))
+                throw new ArgumentOutOfRangeException(nameof(role));
+            m_Role = role;
             m_Parameters = parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
             CharacterPoseCanvasNode[] nodeValues = nodes ?? Array.Empty<CharacterPoseCanvasNode>();
             CharacterPoseCanvasConnection[] connectionValues =
@@ -187,7 +193,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseParameterDeclaration[] parameters,
             CharacterPoseCanvasNode[] nodes,
             CharacterPoseCanvasConnection[] connections,
-            IReadOnlyList<CharacterPoseGraphLayoutEntry> layout = null)
+            IReadOnlyList<CharacterPoseGraphLayoutEntry> layout = null,
+            CharacterPoseAuthoringGraphRole role = CharacterPoseAuthoringGraphRole.AnimGraph)
         {
             CharacterPoseCanvasGraph graph = CreateInstance<CharacterPoseCanvasGraph>();
             CharacterPoseCanvasNode[] values = (nodes ?? Array.Empty<CharacterPoseCanvasNode>())
@@ -204,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         connection.TargetNodeId,
                         connection.TargetPortId))
                 .ToArray();
-            graph.SetAuthoring(graphId, contentRevision, parameters, values, edges);
+            graph.SetAuthoring(graphId, contentRevision, parameters, values, edges, role);
             foreach (CharacterPoseGraphLayoutEntry entry in layout ?? Array.Empty<CharacterPoseGraphLayoutEntry>())
                 graph.SetNodePosition(entry.NodeId, entry.Position);
             return graph;
@@ -238,13 +245,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     nodesById[value.TargetNodeId], value.TargetPortId);
                 return current;
             }).ToArray();
-            SetAuthoring(candidate.GraphId, candidate.ContentRevision, candidate.Parameters.ToArray(), nodes, edges);
+            SetAuthoring(candidate.GraphId, candidate.ContentRevision, candidate.Parameters.ToArray(), nodes, edges, candidate.Role);
         }
 
         public void RequireValid()
         {
             if (!GraphId.IsValid || string.IsNullOrWhiteSpace(ContentRevision))
                 throw new InvalidOperationException("Pose Canvas graph identity or revision is invalid.");
+            if (!Enum.IsDefined(typeof(CharacterPoseAuthoringGraphRole), Role))
+                throw new InvalidOperationException($"Pose Canvas graph '{GraphId}' has an invalid authoring role.");
             CharacterPoseCanvasNode[] nodes = Nodes.ToArray();
             if (allNodes == null || allNodes.Count != nodes.Length)
                 throw new InvalidOperationException(

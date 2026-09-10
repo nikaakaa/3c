@@ -129,14 +129,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterBlendSpacePlayerPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterBlendSpacePoseSourceSlot m_SourceSlot;
+        [SerializeField] CharacterAnimationBlendSpaceAsset m_BlendSpace;
         [SerializeField] CharacterAnimationBlendSpaceInputRangePolicy m_InputRangePolicy = CharacterAnimationBlendSpaceInputRangePolicy.Clamp;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.BlendSpacePlayer;
         public CharacterBlendSpacePoseSourceSlot SourceSlot => m_SourceSlot;
+        public CharacterAnimationBlendSpaceAsset BlendSpace => m_BlendSpace;
         public CharacterAnimationBlendSpaceInputRangePolicy InputRangePolicy => m_InputRangePolicy;
         public CharacterBlendSpacePlayerPosePayload() { }
         public CharacterBlendSpacePlayerPosePayload(CharacterBlendSpacePoseSourceSlot sourceSlot, CharacterAnimationBlendSpaceInputRangePolicy inputRangePolicy)
         {
             m_SourceSlot = sourceSlot ? sourceSlot : throw new ArgumentNullException(nameof(sourceSlot));
+            m_InputRangePolicy = inputRangePolicy;
+        }
+
+        public CharacterBlendSpacePlayerPosePayload(
+            CharacterAnimationBlendSpaceAsset blendSpace,
+            CharacterAnimationBlendSpaceInputRangePolicy inputRangePolicy)
+        {
+            m_BlendSpace = blendSpace ? blendSpace : throw new ArgumentNullException(nameof(blendSpace));
             m_InputRangePolicy = inputRangePolicy;
         }
     }
@@ -151,19 +161,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterClipPlayerPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterClipPoseSourceSlot m_SourceSlot;
+        [SerializeField] AnimationClip m_Animation;
         [SerializeField] float m_PlayRate = 1f;
         [SerializeField] float m_InitialTime;
+        [SerializeField] bool m_LoopAnimation = true;
         [SerializeField] CharacterClipPlayerClockSource m_ClockSource;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ClipPlayer;
         public CharacterClipPoseSourceSlot SourceSlot => m_SourceSlot;
+        public AnimationClip Animation => m_Animation;
         public float PlayRate => m_PlayRate;
         public float InitialTime => m_InitialTime;
+        public bool LoopAnimation => m_LoopAnimation;
         public CharacterClipPlayerClockSource ClockSource => m_ClockSource;
         public CharacterClipPlayerPosePayload() { }
         public CharacterClipPlayerPosePayload(
             CharacterClipPoseSourceSlot sourceSlot,
             float playRate,
             float initialTime,
+            bool loopAnimation,
             CharacterClipPlayerClockSource clockSource)
         {
             if (!sourceSlot)
@@ -175,6 +190,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceSlot = sourceSlot;
             m_PlayRate = playRate;
             m_InitialTime = initialTime;
+            m_LoopAnimation = loopAnimation;
+            m_ClockSource = clockSource;
+        }
+
+        public CharacterClipPlayerPosePayload(
+            AnimationClip animation,
+            float playRate,
+            float initialTime,
+            bool loopAnimation,
+            CharacterClipPlayerClockSource clockSource)
+        {
+            m_Animation = animation ? animation : throw new ArgumentNullException(nameof(animation));
+            if (!float.IsFinite(playRate) || playRate <= 0f || !float.IsFinite(initialTime) || initialTime < 0f)
+                throw new ArgumentOutOfRangeException(nameof(playRate));
+            if (!Enum.IsDefined(typeof(CharacterClipPlayerClockSource), clockSource))
+                throw new ArgumentException("Clip clock binding is invalid.");
+            m_PlayRate = playRate;
+            m_InitialTime = initialTime;
+            m_LoopAnimation = loopAnimation;
             m_ClockSource = clockSource;
         }
     }

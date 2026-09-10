@@ -1,10 +1,10 @@
 ## 当前执行位置
 
-当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、黑板、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；本任务剩余是Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
+当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、provider合同、黑板声明、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；当前编辑器仍把Skill provider authoring挂在自定义面板宿主，尚未收敛到FlowCanvas原生Blackboard/Inspector/菜单；本任务还剩该编辑器收口，以及Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。
 
-尚未完成：Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider面板、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；只读 Document dry-run job `2ab6784cf2a64d929c3b3997e5cb3871` 和重试 job `e8d2d574a1dc45d49e566457cd710ddb` 均返回`syncState=TreeDirty`，当前不能在未裁决外部 authoring 改动前执行checkout、迁移、Character Build、Play、网络回放或性能采样。
+尚未完成：Skill provider原生Blackboard/Inspector/菜单接入及自定义面板删除、Document与owner的人工Undo/保存往返、网络产品运行与实际载荷限制证据、采样性能及运行观察对账。Skill provider合同、Skill Local声明、输入/Tag/Attribute/GameplayEffect引用节点及其Document导出/Apply代码已通过脚本编译；Character State只读typed projection、GAS provider owner隔离、双Target State Layout与codec，以及Local、Fixed Rollback、Server Authority Prediction/Authority Composition兼容性已由正式validate核对。Character不再通过旧通用Graph/State/Timeline/Blackboard入口访问RootTree，旧自研AI作者与运行链已删除；Behavior Designer后续接入归独立`replace-btsmtl-ai-with-behavior-designer` change。实例选择和调用导航已有代码，相关运行证据项仍保持未勾选。最新 Prediction job `47e95ec20624444095dd875df57f3f44` 与 Authority job `b576158c5d6e46bcb9ccd84e6ed79e21` 均通过；只读 Document dry-run job `2ab6784cf2a64d929c3b3997e5cb3871` 和重试 job `e8d2d574a1dc45d49e566457cd710ddb` 均返回`syncState=TreeDirty`，当前不能在未裁决外部 authoring 改动前执行checkout、迁移、Character Build、Play、网络回放或性能采样。
 
 未完成项按缺口阅读，不能一律理解为尚未编写：
 
@@ -60,7 +60,7 @@
 - [x] 2.3.4 将上述入口统一到真实owner及Document Mutation，审计并关闭遗漏的原生直接写入口。
 
   代码证据：Skill Graph/Macro Graph结构入口、节点字段、默认值、Native Simplex、Macro接口锚点、复制/删除和Document Applier均通过真实FlowGraph owner与BtsmtlSkillFlowEditorMutation；旧通用锚点仅作为既有资产读取兼容，不作为新技能写入口。
-- [x] 2.3.5 实现provider-aware Blackboard面板、变量创建、Skill Local声明、外部provider引用和typed Get/Set拖拽；通过owner、声明ID、类型和读写权限的Mutation/Undo核对。证据：Skill Graph Authoring Panel、正式Skill Mutation、provider节点编译、Document Export/Apply已接通；Unity脚本编译通过。
+- [x] 2.3.5 实现provider-aware Blackboard数据合同、变量创建、Skill Local声明、外部provider引用和typed Get/Set拖拽的Mutation/Undo链；通过owner、声明ID、类型和读写权限核对。证据：provider合同、正式Skill Mutation、provider节点编译、Document Export/Apply已接通；Unity脚本编译通过。UI宿主收口另见2.5.1。
 - [x] 2.3.6 从Definition的GA列表按SkillId和EntryGraphAuthoringId精确打开指定Skill Graph；通过入口路径核对不默认打开第一个Graph且不恢复Character RootTree。证据：Definition Editor逐Skill解析EntryGraphAuthoringId，导航工具按稳定GraphAuthoringId打开，未恢复Character RootTree入口。
 
 ### 2.4 Undo、保存与回滚
@@ -69,9 +69,13 @@
 - [ ] 2.4.2 完成人工单操作与Document整包Undo的统一边界，覆盖根、私有页及实际修改的共享owner，核对保存／重载身份，交付owner链说明及正式执行证据，不新增测试代码。
 
   当前代码：`AgentAuthoringDocumentTransactionService`先收集Definition、Skill Graph闭包、Skill Timeline、共享Macro及Presentation实际owner，再注册唯一整包Undo组；`BtsmtlSkillFlowEditorMutation`负责人工单图写入。`8f087298a`修复了Document创建新Skill Graph时系统入口初始化脱离外层Undo组的问题，`PopulateAnchors`现在加入现有Mutation活动深度；`64395b1d4`补齐TimelineBody跨文件owner转移的事务回滚记录；`61ce6d9ba`补齐Document目标中原本未被当前闭包引用的共享Macro owner收集；`7cc1e5c6b`让Handler异常以带回滚委托的失败结果返回，`2bf887538`让多个回滚动作继续执行并汇总失败，避免异常提前退出丢失owner恢复。人工单操作、跨owner Undo回退和窗口交互保存／重载的正式执行证据仍未完成。
-- [x] 2.5 将目录、Details、Toolbar及观察区域接到同一原生GraphEditor，删除被替代的技能图交互入口；通过源码搜索核对无第二画布或独立选择集合。
+- [x] 2.5 将技能目录、Toolbar、画布、导航及观察区域接到同一原生GraphEditor，删除第二画布和独立选择集合；通过源码搜索核对无第二技能GraphView或Workbench。
 
   代码/审计证据：技能Graph/Macro使用FlowCanvas原生GraphEditor，节点Inspector、原生创建目录、Timeline Open、Macro接口Toolbar和BtsmtlSkillObservationToolbar均挂在同一GraphEditor；RuntimeDebugSourceNavigator与ObservationSession直接打开该GraphEditor，技能目录未发现第二技能GraphView、Workbench或独立selection集合。
+
+- [x] 2.5.1 将Skill provider-aware Blackboard、Details、变量创建、Get/Set、外部provider菜单接入FlowCanvas原生GraphEditor扩展点；删除Skill对`BtsmtlSkillGraphAuthoringPanel`与`GraphEditor.SetDomainPanel`的调用，恢复原生Blackboard/Inspector Panels，并通过源码核对所有写入口仍进入统一Skill Mutation。
+
+  代码证据：已删除`BtsmtlSkillGraphAuthoringPanel`及其入口引用；FlowCanvas原生`BlackboardEditor`通过通用adapter扩展Skill provider与黑板Mutation，Skill Graph/Macro的provider节点通过原生GraphEditor创建菜单生成。源码中Skill authoring不再调用`SetDomainPanel`，原生Panels恢复执行；Pose独立工作区使用的domain panel不属于本项。
 
 ## 3. Macro及状态页面
 
@@ -120,7 +124,7 @@
 - [x] 4.2 完成Macro参数、嵌套调用和调用实例布局降低，保持ActionInstance、generation及状态恢复；用现有编译报告核对同定义不同调用的独立状态范围。
 
   代码/审计证据：Macro route拥有独立参数StateSlot和GraphCallFrame，SubGraph运行使用SubgraphCompletion等待并读取独立调用输出；ActionInstance/generation沿Program调用状态保存。正式产物对账仍归8.1/8.4.2。
-- [x] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；通过精确根构建及引用闭包报告核对。
+- [x] 4.3 将Timeline与TreeClip正式引用接入新作者遍历，保持调用方、完成和停止顺序；Timeline由原生Timeline编辑器维护，Skill只发Montage式播放/窗口合同；通过精确根构建及引用闭包报告核对。
 
   代码/审计证据：Timeline节点只引用真实TimelineAsset，私有内容由技能根拥有；BtsmtlSkillGraphOccurrence递归发现TreeClip原生Graph，BtsmtlSkillTimelineCompiler沿同一调用路径发射Timeline hook/完成/停止语义，闭包校验拒绝错误owner。精确根运行对账仍归8.1/8.4.2。
 ### 4.4 作者与运行隔离

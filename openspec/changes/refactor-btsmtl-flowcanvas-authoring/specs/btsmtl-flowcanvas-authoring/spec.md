@@ -13,6 +13,25 @@
 - **THEN** 编译 MUST直接消费该正式图的业务含义并生成唯一运行产物
 - **AND** MUST不创建另一份旧作者图参与编译
 
+### Requirement: Skill Graph作者交互必须使用FlowCanvas原生表面
+
+Skill Graph MUST以FlowCanvas原生`GraphEditor`作为唯一作者UI宿主。画布、Toolbar、Blackboard、节点与连线Inspector、创建菜单、变量拖拽、selection、clipboard、Undo和Graph下钻 MUST继续使用原生交互；Skill domain adapter只提供provider目录、typed payload、业务命令和只读诊断，不得创建第二个Skill画布、Blackboard、Inspector或旁路编辑面板。
+
+#### Scenario: 在原生Blackboard中使用Skill provider
+- **WHEN** 作者打开Skill Graph并查看Skill Local或外部provider
+- **THEN** 原生GraphEditor的Blackboard/Inspector表面 MUST显示当前Skill Local声明及可引用的Character State、Ability Attribute、GameplayTag、Input/TargetData和Frame Fact
+- **AND** provider引用、变量创建、Get/Set和外部节点创建 MUST进入同一Capability、Mutation和Undo
+
+#### Scenario: Skill Graph不替换原生面板
+- **WHEN** Skill Graph绑定Skill domain adapter
+- **THEN** adapter MUST扩展原生GraphEditor的面板和菜单能力
+- **AND** MUST不通过自定义UI Toolkit右栏、`SetDomainPanel`或等价旁路使原生Blackboard/Inspector失效
+
+#### Scenario: Timeline保持Montage式动作边界
+- **WHEN** 作者从Skill Graph打开Skill Timeline
+- **THEN** Timeline MUST由原生Timeline编辑器维护Track、Clip、Action Slot和动作窗口
+- **AND** Timeline MUST只向Program/Presentation发出播放与窗口合同，不得直接混合Locomotion、IK或最终Pose
+
 ### Requirement: 所有作者入口必须遵守同一能力与事务合同
 
 节点创建、字段修改、连线、改接、粘贴、删除、子图接口修改和撤销 MUST采用同一领域能力和端口规则。合法操作 MUST进入真实资产owner的一次事务；非法操作 MUST在正式数据被部分写入前拒绝。跨领域粘贴、未经声明的类型转换及未提供编译合同的节点 MUST拒绝。

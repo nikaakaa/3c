@@ -11,10 +11,10 @@ Character RootTree已经不是有效的角色主线入口。角色主线由C# Co
 - 技能编译继续沿`Skill Graph -> Semantic IR -> Numeric Program -> Simulation Session`执行，禁止启动FlowCanvas委托、协程或自动Update；ActionInstance、generation、PredictionKey和中断恢复保持唯一运行链。
 - Skill Timeline保留类似Montage/AbilityTask的动作时序，可拥有AnimationTrack、AnimationClip、Action Slot、混合进入退出请求、命中窗口和取消窗口；Presentation/PoseGraph负责Locomotion混合、Layer、IK和最终Pose，不由GA直接写Pose。
 - Blackboard不再被定义为一个万能共享字典。C# Character State作为只读typed projection；会被GameplayEffect修改的数值进入Ability Attribute；状态准入进入GameplayTag；输入与目标进入Input/TargetData；GA私有值进入Skill Local Blackboard；State、ActionInstance和Frame值按生命周期隔离。
-- 统一Blackboard面板可以投影多个正式provider，但每个provider保留自己的owner、稳定ID、读写权限、生命周期、预测和回滚合同；不得把跨GA状态隐藏到某个Skill Graph，也不得通过变量名或反射猜测owner。
+- FlowCanvas原生`GraphEditor`是Skill authoring的唯一UI宿主：画布、Toolbar、原生Blackboard、Inspector、创建菜单、变量拖拽、selection、Undo和下钻均由原生表面承载；Skill domain adapter只提供provider catalog、typed payload、Mutation和diagnostics，不新增Skill专用UI Toolkit右栏或旁路编辑器。统一Blackboard视图可以投影多个正式provider，但每个provider保留自己的owner、稳定ID、读写权限、生命周期、预测和回滚合同；不得把跨GA状态隐藏到某个Skill Graph，也不得通过变量名或反射猜测owner。
 - Character Program与Simulation Pipeline分离。Character Pipeline只提供Program和Actor注册；Session Composition选择ProgramRuntime、ExecutionBackend、WorldSolver、SimulationPipeline和SessionSource；网络通过Rollback或Server Authority Pass/Adapter接入，不绑定UE或单一传输。
 - 网络同步输入、canonical request、预测身份、确定性Program State、Hash和Snapshot，不复制FlowCanvas图、Blackboard名字、Timeline对象或最终Pose，不为每个技能变量增加独立RPC。
-- 复用原生端口、节点交互、Macro接口、调用节点和导航。Capability统一提供字段、类型、role及编译合同，未登记能力不开放；所有写入口进入真实owner事务和Document v7。
+- Skill Graph复用FlowCanvas原生端口、节点交互、Macro接口、调用节点和导航。Capability统一提供字段、类型、role及编译合同，未登记能力不开放；所有写入口进入真实owner事务和Document v7。
 - Document v7直接读写正式Skill Graph、Macro、Timeline、TreeClip和声明闭包；独立根资产、私有内容、共享owner、接口变化和失败回滚保持一套整包事务。
 - 原子迁移精确技能闭包，删除被替代且无消费者的Character RootTree入口；Pose和未迁移的非AI领域保留各自合法模型，Behavior Designer不通过兼容开关恢复旧BTSMTL AI路径。
 
@@ -29,7 +29,7 @@ Character RootTree已经不是有效的角色主线入口。角色主线由C# Co
 
 - `btsmtl-graph-core`：技能退出旧BaseGraph与TreeWindow作者链；未迁移领域继续原合同。
 - `graph-authoring-domain-framework`：技能采用原生作者基础、provider化变量访问和统一Mutation，保持能力、事务与领域隔离。
-- `graph-authoring-editor-shell`：技能正式入口改为Skill Graph和provider-aware Blackboard区域，其他领域不随之迁移。
+- `graph-authoring-editor-shell`：技能正式入口改为Skill Graph和FlowCanvas原生provider-aware Blackboard/Inspector表面，其他领域不随之迁移。
 - `btsmtl-agent-authoring-document-sync`：v7直接读写正式技能图、Macro、Timeline、TreeClip和声明owner；不写入网络运行状态，非技能分片不改变业务语义。
 
 ## Impact

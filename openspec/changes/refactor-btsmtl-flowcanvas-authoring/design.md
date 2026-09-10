@@ -66,11 +66,11 @@ Skill可以读取Velocity、BodyYaw、Grounded、MovementMode和CurrentMoveDirec
 
 ### 4. Timeline是Montage式动作合同
 
-Skill Timeline可以拥有AnimationTrack、AnimationClip、Action Slot、播放模式、Blend In/Out请求、动作窗口和取消/停止时序。这是GA内部的有限动作时间轴，类似UE AbilityTask播放Montage并等待完成、混出、打断或取消。
+Skill Timeline可以拥有AnimationTrack、AnimationClip、Action Slot、播放模式、Blend In/Out请求、动作窗口和取消/停止时序。这是GA内部的有限动作时序合同，职责类似UE AbilityTask播放Montage并等待完成、混出、打断或取消；它不是第二个PoseGraph或通用Sequencer，不拥有Locomotion、IK或最终Pose混合。AnimationTrack和AnimationClip是动作播放请求的作者输入，不能被解释为Skill直接写骨骼。
 
 Timeline编译为Program Operation和Animation Producer/Playback Request。Presentation Projection和PoseGraph负责Locomotion混合、Animation Layer、Mask、IK和最终Output Pose。Skill不得直接执行Pose混合或写骨骼。
 
-作者层继续使用Timeline、Track、Clip和Producer的稳定身份；编译层使用TimelineAuthoringId、Track/Clip identity、Producer identity和Program SourceMap，不额外制造没有消费者的播放ID。
+作者层继续使用原生Timeline编辑器维护Timeline、Track、Clip和Producer的稳定身份；编译层使用TimelineAuthoringId、Track/Clip identity、Producer identity和Program SourceMap，不额外制造没有消费者的播放ID。GraphEditor只保存和打开Timeline引用，Timeline页面不进入Graph breadcrumb。
 
 ### 5. 直接编译和运行隔离
 
@@ -118,14 +118,19 @@ Character Pipeline负责从Definition和Skill Graph生成Program与Actor Registr
 
 Skill Graph、Macro、Timeline、TreeClip、Blackboard declaration、Attribute/Tag provider引用和调用闭包均进入Document v7的稳定owner、hash和Mutation合同。人工编辑和Document apply必须使用同一能力目录、类型校验、真实owner、Undo和失败回滚。
 
-Blackboard面板提供provider分组。当前图内创建变量只创建Skill Local declaration；Character State、Attribute、Tag、Input和Target provider由其正式schema提供，Skill只能引用或提交明确Command。拖拽变量创建Get/Set时必须写入ownerId和declarationId，不得只写显示名。
+#### 8.1 Skill Graph使用FlowCanvas原生作者表面
+
+Skill Graph的唯一UI宿主是FlowCanvas原生`GraphEditor`。原生canvas、Toolbar、Blackboard、节点/连线Inspector、创建菜单、变量拖拽、selection、clipboard、Undo和Graph下钻保持启用；Skill domain adapter只向这些原生扩展点提供provider目录、typed字段、业务命令和只读诊断。adapter不得通过旁路UI重新实现Blackboard、Inspector、selection或创建流程，也不得设置自定义domain panel使原生Panels提前退出。
+
+Blackboard和Inspector中的provider分组必须来自同一Capability与provider schema。当前图内创建变量只创建Skill Local declaration；Character State、Attribute、Tag、Input和Target provider由其正式schema提供，Skill只能引用或提交明确Command。拖拽变量创建Get/Set时必须写入ownerId和declarationId，不得只写显示名。该UI决策不改变真实owner、Mutation、Undo和Document v7合同。
 
 ## Risks / Trade-offs
 
 - [Skill作者想直接改主线状态] -> 只开放Character State Get和正式Control Command，拒绝直接字段写入。
 - [Ability共享状态变成新的万能黑板] -> 先按Attribute、Tag、Effect、ActivationData分类，复杂结构必须是显式typed provider。
 - [Rollback和Server Authority共用一套状态但确认时机不同] -> 将确认、Restore、Hash和Egress放进各自Pipeline Pass，Program语义保持唯一。
-- [Timeline动画与PoseGraph职责重叠] -> Timeline只发有限动作播放/窗口合同，最终混合、IK和Pose输出只由Presentation/PoseGraph处理。
+- [Timeline动画与PoseGraph职责重叠] -> Timeline只通过原生Timeline编辑器维护类似Montage的有限动作播放/窗口合同，最终混合、IK和Pose输出只由Presentation/PoseGraph处理。
+- [原生FlowCanvas不理解Skill provider] -> 由Skill domain adapter向原生Blackboard、Inspector和菜单注入provider目录与typed Mutation，不保留第二个Skill专用面板。
 - [C#投影依赖反射导致网络不可重放] -> 使用稳定typed descriptor、State Layout、Serialize/Hash合同，不允许任意字段反射读写。
 - [旧文档或旧测试继续引用Character RootTree] -> v7 checkout和正式入口拒绝旧RootTree路径；AI和未迁移领域保留自己的合法RootTree语义。
 - [多网络Adapter产生分裂行为] -> 通过SimulationPipelineCompiler统一检查Program、Backend、Solver、Snapshot和Pass Contract，Adapter只实现接入策略。
@@ -135,7 +140,7 @@ Blackboard面板提供provider分组。当前图内创建变量只创建Skill Lo
 1. 保留CharacterPipelineDefinition作为角色Program装配边界，删除Character RootTree字段、资产、入口、旧测试和零消费者Character路径；AI自研RootTree不保留，Behavior Designer接入由独立change管理。
 2. 将C# ControlModule、Movement Runtime、Skill Program、GameplayEffect、GameplayTag和Presentation Projection的依赖整理为正式Program State和SourceMap合同。
 3. 建立provider化Blackboard合同：Character State只读投影、Ability Attribute/GameplayEffect、GameplayTag、Input/TargetData、Skill Local Blackboard、State/ActionInstance/Frame Scope。
-4. 在原生GraphEditor中提供Blackboard provider面板、变量创建、Get/Set拖拽和外部provider显式引用；所有写入复用真实owner Mutation和Undo。
+4. 在FlowCanvas原生GraphEditor的Blackboard、Inspector和创建菜单扩展点中提供provider分组、变量创建、Get/Set拖拽和外部provider显式引用；删除旁路Skill面板及其对原生Panels的替换，所有写入复用真实owner Mutation和Undo。
 5. 将Skill Timeline的动作AnimationTrack/Clip、Action Window、停止和混出语义编译为Presentation Producer/Playback合同，PoseGraph继续拥有最终混合和IK。
 6. 让Character Program通过Session Composition进入SimulationPipeline；Rollback、Server Authority和本地Pipeline分别接入正式Pass/Adapter，不能新增Skill专用网络分支。
 7. 完成Document v7 checkout、dry-run、apply、反向导出和完整owner回滚；迁移只处理精确Skill闭包，旧Character RootTree不恢复。

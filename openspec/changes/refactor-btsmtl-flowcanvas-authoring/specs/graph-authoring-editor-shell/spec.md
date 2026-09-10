@@ -2,15 +2,25 @@
 
 ### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
 
-本要求对BTSMTL技能 MUST由原生GraphEditor及技能区域装配履行，不再指定旧GraphView作为技能画布。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。
+本要求对BTSMTL技能 MUST由FlowCanvas原生GraphEditor的canvas、panel和command表面及显式domain adapter履行，不再指定旧GraphView作为技能画布。Skill domain adapter只能向原生表面提供业务数据与Mutation，不得用自定义面板替换原生Panels。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。
 
 唯一`GraphAuthoringEditorShell` MUST提供Toolbar、Navigator、Graph Canvas、Details与可折叠Bottom Dock五个通用区域。Shell MUST继续通过显式domain adapter取得各区域内容，不得按BTSMTL Node、AI Node、Pose Node、AnimationChannel、Blackboard或Runtime Trace类型构造领域UI。Graph Canvas MUST继续承载唯一GraphView、selection、breadcrumb、搜索、clipboard和Undo链路；其它区域 MUST不保存第二份node、edge或selection集合。
 
 #### Scenario: 打开正式BTSMTL Skill Graph
 
 - **WHEN** 作者通过正式入口打开Skill Graph
-- **THEN** Shell MUST在Navigator装配当前Skill Graph Data Catalog、在Graph Canvas装配唯一原生Skill Graph editor、在Details装配BTSMTL capability presenter
+- **THEN** Shell MUST在Navigator装配当前Skill Graph Data Catalog、在Graph Canvas装配唯一原生Skill Graph editor，并在原生Blackboard/Inspector/菜单扩展点装配BTSMTL provider-aware capability presenter
 - **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
+
+#### Scenario: Skill Graph使用原生Blackboard和Inspector
+- **WHEN** 作者在Skill Graph中创建Skill Local变量、拖出Get/Set或引用外部provider
+- **THEN** Shell MUST保持FlowCanvas原生Blackboard、节点/连线Inspector、变量拖拽和创建菜单可用
+- **AND** 所有provider引用与写操作 MUST进入Skill domain Mutation和真实owner Undo
+
+#### Scenario: Skill Graph禁止旁路右侧面板
+- **WHEN** Skill domain adapter绑定到GraphEditor
+- **THEN** Shell MUST不挂接自定义UI Toolkit Skill右栏或调用`SetDomainPanel`替换原生Panels
+- **AND** 原生Blackboard、Inspector、selection、clipboard和GraphEditor菜单 MUST继续由同一宿主提供
 
 #### Scenario: 打开BTSMTL Gameplay Graph
 
@@ -70,7 +80,7 @@ Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Ins
 
 本要求对BTSMTL技能 MUST由原生GraphEditor及技能区域装配履行，不再指定旧GraphView作为技能画布。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。
 
-Tree、AI与Pose Graph正式窗口 MUST迁移到同一Workspace region合同。系统 MUST删除旧固定`left-panel Inspector + right-panel Graph`装配、旧Data/Inspector互斥页签和重复selection projection；不得保留旧UXML入口、布局兼容开关、Pose Graph专用Shell或临时reparent桥接。
+Tree、AI与Pose Graph正式窗口 MUST迁移到同一Workspace region合同。系统 MUST删除旧固定`left-panel Inspector + right-panel Graph`装配、Skill专用固定右侧UI Toolkit面板、旧Data/Inspector互斥页签和重复selection projection；不得保留旧UXML入口、布局兼容开关、Pose Graph专用Shell或临时reparent桥接。Skill Graph不得通过`SetDomainPanel`或等价接口绕过FlowCanvas原生Panels。
 
 #### Scenario: 迁移后直接打开旧BTSMTL资产
 

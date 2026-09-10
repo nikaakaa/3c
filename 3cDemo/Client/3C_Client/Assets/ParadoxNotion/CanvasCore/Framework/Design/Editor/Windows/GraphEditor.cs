@@ -15,25 +15,6 @@ namespace NodeCanvas.Editor
 
     public partial class GraphEditor : EditorWindow
     {
-        UnityEngine.UIElements.VisualElement domainPanel; // 3C: domain authoring tools share this editor's canvas.
-        float domainPanelWidth;
-
-        public void SetDomainPanel(UnityEngine.UIElements.VisualElement panel, float width) {
-            if (domainPanel == panel) { return; }
-            domainPanel?.RemoveFromHierarchy();
-            domainPanel = panel;
-            domainPanelWidth = panel != null ? width : 0;
-            if (panel != null) {
-                panel.style.position = UnityEngine.UIElements.Position.Absolute;
-                panel.style.right = 0;
-                panel.style.top = TOP_MARGIN;
-                panel.style.bottom = 0;
-                panel.style.width = width;
-                rootVisualElement.Add(panel);
-            }
-            Repaint();
-        }
-
         //the root graph that was first opened in the editor
         [System.NonSerialized]
         private Graph _rootGraph;
@@ -490,8 +471,7 @@ namespace NodeCanvas.Editor
             GraphEditorUtility.realMousePosition = e.mousePosition;
 
             //canvas and minimap rects
-            canvasRect = Rect.MinMaxRect(SIDE_MARGIN, TOP_MARGIN, position.width - SIDE_MARGIN - domainPanelWidth, position.height - BOTTOM_MARGIN); // 3C: reserve the domain panel outside the native canvas.
-            if (domainPanel != null) { GraphEditorUtility.allowClick = canvasRect.Contains(e.mousePosition); } // 3C: do not inherit another graph's inspector hit state.
+            canvasRect = Rect.MinMaxRect(SIDE_MARGIN, TOP_MARGIN, position.width - SIDE_MARGIN, position.height - BOTTOM_MARGIN);
             var aspect = canvasRect.width / canvasRect.height;
             minimapRect = Rect.MinMaxRect(canvasRect.xMax - ( Prefs.minimapSize * aspect ), canvasRect.yMax - Prefs.minimapSize, canvasRect.xMax - 2, canvasRect.yMax - 2);
             //canvas bg

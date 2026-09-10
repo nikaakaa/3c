@@ -309,7 +309,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             NodeCanvas.Editor.GraphEditor.onEditorNavigationChanged -= SaveWorkspace;
             NodeCanvas.Editor.GraphEditor.onEditorClosed -= Dispose;
             EditorApplication.projectChanged -= OnAuthoringAssetsChanged;
-            m_Editor?.SetDomainPanel(null, 0f);
             m_Canvas?.Dispose();
             m_StateMachineSurface?.Dispose();
             rootVisualElement.RemoveFromHierarchy();

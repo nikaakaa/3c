@@ -53,7 +53,6 @@ namespace NodeCanvas.Editor
 
         //This is called outside of windows
         static void ShowPanels(Graph graph, Vector2 canvasMousePos) {
-            if (current.domainPanel != null) { return; } // 3C: the domain panel owns inspector and authoring controls.
             ShowGraphCommentsGUI(graph, canvasMousePos);
             var panel1 = ShowInspectorGUIPanel(graph, canvasMousePos).ExpandBy(14);
             var panel2 = ShowBlackboardGUIPanel(graph, canvasMousePos).ExpandBy(14);

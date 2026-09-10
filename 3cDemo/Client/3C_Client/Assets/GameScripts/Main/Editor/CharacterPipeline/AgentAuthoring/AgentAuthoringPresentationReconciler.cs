@@ -2141,7 +2141,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     return new CharacterPoseGraphLayoutEntry(
                         new PoseNodeId(value.id),
                         new Vector2(position.x, position.y));
-                }).ToArray());
+                }).ToArray(),
+                ResolveAuthoringRole(graph.role));
+        }
+
+        static CharacterPoseAuthoringGraphRole ResolveAuthoringRole(string role)
+        {
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.RootGraph.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.AnimGraph;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.AnimationLayer.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.AnimationLayer;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.StatePoseGraph.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.StatePose;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.TransitionRule.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.TransitionRule;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.ControlRig.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.ControlRig;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.Subgraph.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.Subgraph;
+            if (string.Equals(role, CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry.Value, StringComparison.Ordinal))
+                return CharacterPoseAuthoringGraphRole.LinkedPoseEntry;
+            throw new InvalidOperationException($"Pose Graph role '{role}' has no typed authoring mapping.");
         }
 
         CharacterPoseCanvasNode ConvertNode(

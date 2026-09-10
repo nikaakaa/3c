@@ -336,7 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (character)
             {
-                if (!new AgentGraphTransactionOwnerCollector().TryCollect(
+                if (!new AgentCharacterTransactionOwnerCollector().TryCollect(
                         character,
                         out UnityEngine.Object[] graphOwners,
                         out string code,

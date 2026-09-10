@@ -1,12 +1,10 @@
 using System.Collections.Generic;
-using ThirdPersonCharacter.Pipeline.Graph;
-using TreeDesigner;
 using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    public sealed class AgentGraphTransactionOwnerCollector
+    public sealed class AgentCharacterTransactionOwnerCollector
     {
         readonly HashSet<Object> m_Owners = new HashSet<Object>();
 

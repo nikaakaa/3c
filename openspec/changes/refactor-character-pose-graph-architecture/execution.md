@@ -1578,6 +1578,10 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 
 提交`5a2b4adc6`补齐Resource Slot删除前的引用扫描：除普通Pose payload与Profile绑定外，Pose StateMachine内部Transition的Blend Curve/Profile也纳入占用检查，避免资源槽删除后形成悬空状态机引用；Editor源码再次编译为0错误、93个既有警告。
 
+## FlowCanvas原生Toolbar入口（POSE-EXEC-20260911-12）
+
+状态：提交`b8f898126`把Pose Graph的`Validate`、`保存`、`Compile`和`Build`接入FlowCanvas原生`GraphEditor` Toolbar回调。按钮只在作者明确点击时执行；直接打开可复用Graph时仍可编辑拓扑和抽象字段，缺少Profile或Definition的动作按精确上下文禁用。没有恢复旧右侧Domain Panel，也没有改变`CreatePoseOnlyInput()`链路。Editor源码编译为0错误、93个既有警告，临时targets已删除并执行`dotnet build-server shutdown`。
+
 ## Corin正式Resource Slot迁移检查（POSE-EXEC-20260911-11）
 
 状态：静态核对当前v7 Document确认，`editable/presentation/pose-state-machines/corin-locomotion-7a67665368fb/state-machine.json`的21条Transition仍使用现行Document字段`blendProfileAssetId=corin.animation-rig.locomotion-blend-profile`，但`editable/presentation/profile.json.poseResources`只有BlendPolicy、FootPlacementCalibration、FootPlacementProfile和InertializationPolicy四项，没有该Blend Profile的Graph-owned Slot。当前Reconciler会按精确Profile Resource Slot查找，因此正式dry-run会在`blendProfileAssetId`路径拒绝，不能把源码已迁移误报为Corin资产已完成。目标槽应由同一Document的Pose Resource Binding声明，再经过`checkout -> dry-run -> apply`由正式Mutation创建并绑定；不手改Unity YAML或Document包。

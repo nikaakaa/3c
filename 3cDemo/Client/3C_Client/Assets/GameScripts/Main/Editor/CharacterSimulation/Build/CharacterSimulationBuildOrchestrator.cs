@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonSimulation;
@@ -203,6 +202,113 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new CharacterSemanticFrontendResult(persisted, result.CompilationModel, result.Report);
         }
 
+        internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
+            CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            return CompilePoseOnly(
+                definition.AnimationPresentationProfile ??
+                throw new InvalidOperationException("Animation Presentation Profile is missing."),
+                definition);
+        }
+
+        internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPipelineDefinition definition)
+        {
+            if (!profile)
+                throw new ArgumentNullException(nameof(profile));
+            if (definition && definition.AnimationPresentationProfile != profile)
+                throw new InvalidOperationException("Character Definition does not own the Animation Presentation Profile.");
+            string profilePath = AssetDatabase.GetAssetPath(profile);
+            string ownerGuid = AssetDatabase.AssetPathToGUID(profilePath);
+            if (string.IsNullOrEmpty(ownerGuid))
+                throw new InvalidOperationException("Pose-only compilation requires a persisted Animation Presentation Profile.");
+            return CompilePoseOnly(
+                profile,
+                definition,
+                CreateAnimationBuildInput(ownerGuid, profile),
+                true);
+        }
+
+        internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPipelineDefinition definition,
+            CharacterAnimationBuildInput animationBuildInput)
+        {
+            return CompilePoseOnly(
+                profile,
+                definition,
+                animationBuildInput,
+                true);
+        }
+
+        internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPipelineDefinition definition,
+            CharacterAnimationBuildInput animationBuildInput,
+            bool generateMissingOrStaleArtifacts)
+        {
+            if (!profile)
+                throw new ArgumentNullException(nameof(profile));
+            if (definition && definition.AnimationPresentationProfile != profile)
+                throw new InvalidOperationException("Character Definition does not own the Animation Presentation Profile.");
+            if (animationBuildInput == null || animationBuildInput.Profile != profile)
+                throw new InvalidOperationException("Pose-only compilation received an unrelated Animation Build Input.");
+            string profilePath = AssetDatabase.GetAssetPath(profile);
+            string ownerGuid = AssetDatabase.AssetPathToGUID(profilePath);
+            if (string.IsNullOrEmpty(ownerGuid))
+                throw new InvalidOperationException("Pose-only compilation requires a persisted Animation Presentation Profile.");
+            var errors = new List<string>();
+            var diagnostics = new List<CharacterFootAnalysisArtifactDiagnostic>();
+            CharacterAnimationInputContract animationInputContract =
+                CharacterAnimationInputContract.Create(profile);
+            CharacterFootPlacementAnalysisCompilation footAnalysis =
+                CharacterProjectionFootAnalysisResolver.ResolvePoseOnly(
+                    profile,
+                    generateMissingOrStaleArtifacts,
+                    diagnostics,
+                    errors);
+            if (errors.Count > 0 || footAnalysis == null)
+                throw new InvalidOperationException(string.Join("\n", errors));
+            CharacterPresentationProjectionCompileContext context =
+                CreatePoseOnlyContext(ownerGuid, profile, animationInputContract);
+            return CharacterPresentationProjectionCompiler.Compile(
+                new CharacterPresentationProjectionCompileRequest(
+                    context,
+                    footAnalysis,
+                    animationBuildInput.CreatePoseOnlyInput()));
+        }
+
+        static CharacterPresentationProjectionCompileContext CreatePoseOnlyContext(
+            string ownerGuid,
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationInputContract animationInputContract)
+        {
+            StableHash semanticHash = StableHash.Compute(
+                "character-presentation-pose-only",
+                ownerGuid,
+                profile.PoseGraph.Graph.GraphId.Value,
+                profile.PoseGraph.Graph.ContentRevision);
+            var contract = new CharacterPresentationSemanticContract(
+                new ProgramId($"pose:{ownerGuid}"),
+                new ProgramRevision($"pose:{semanticHash}"),
+                new SemanticHash(semanticHash),
+                Array.Empty<ProgramProducer>());
+            return new CharacterPresentationProjectionCompileContext(
+                ownerGuid,
+                profile,
+                null,
+                null,
+                null,
+                string.Empty,
+                animationInputContract,
+                contract,
+                Array.Empty<CharacterPresentationProducerEntry>(),
+                false);
+        }
+
         public static TimelineSemanticFrontendResult CompileTimelineSemanticIr(TimelineAsset timeline, bool persistCache)
         {
             TimelineSemanticFrontendResult result = TimelineSemanticFrontendCompiler.Compile(timeline);
@@ -224,12 +330,52 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             semanticArtifact = null;
             CharacterPipelineDefinition definition = request.Definition;
+            string definitionGuid = AssetDatabase.AssetPathToGUID(
+                AssetDatabase.GetAssetPath(definition));
             var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
+            CharacterAnimationBuildInput animationBuildInput = null;
+            CharacterPresentationProjectionCompileResult poseResult = null;
+            string poseError = null;
+            try
+            {
+                animationBuildInput = CreateAnimationBuildInput(
+                    definitionGuid,
+                    definition.AnimationPresentationProfile);
+                poseResult = CompilePoseOnly(
+                    definition.AnimationPresentationProfile,
+                    definition,
+                    animationBuildInput,
+                    request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish);
+            }
+            catch (Exception exception)
+            {
+                poseError = exception.Message;
+            }
+            long animationInputMs = phaseWatch.ElapsedMilliseconds;
+            phaseWatch.Restart();
             CharacterSemanticFrontendResult frontend = CharacterSemanticFrontendCompiler.Compile(definition);
             phaseWatch.Stop();
             long frontendMs = phaseWatch.ElapsedMilliseconds;
             CharacterSimulationCompileReport report = frontend.Report;
-            if (!frontend.IsValid)
+            if (!string.IsNullOrEmpty(poseError))
+            {
+                report.PresentationError(
+                    "pose_compilation_failed",
+                    definitionGuid,
+                    poseError);
+            }
+            if (poseResult != null && !poseResult.IsValid)
+            {
+                for (int i = 0; i < poseResult.Diagnostics.Count; i++)
+                {
+                    CharacterPresentationProjectionDiagnostic diagnostic = poseResult.Diagnostics[i];
+                    report.PresentationError(
+                        diagnostic.Code,
+                        definitionGuid,
+                        diagnostic.Message);
+                }
+            }
+            if (!frontend.IsValid || poseResult == null || !poseResult.IsValid)
                 return Failed(report);
 
             ValidatedSemanticIrArtifact artifact;
@@ -254,28 +400,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             semanticArtifact = artifact;
 
-            CharacterAnimationBuildInput animationBuildInput;
-            try
-            {
-                phaseWatch.Restart();
-                animationBuildInput = CreateAnimationBuildInput(frontend.CompilationModel);
-                phaseWatch.Stop();
-            }
-            catch (Exception exception)
-            {
-                report.PresentationError(
-                    "animation_build_input_invalid",
-                    AssetDatabase.AssetPathToGUID(
-                        AssetDatabase.GetAssetPath(definition)),
-                    exception.Message);
-                return Failed(report);
-            }
-            long animationInputMs = phaseWatch.ElapsedMilliseconds;
-
             CharacterPresentationProjection projection = CompileProjection(
                 frontend.CompilationModel,
                 artifact,
                 animationBuildInput,
+                poseResult,
                 request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish,
                 report,
                 out CharacterPresentationSemanticContract frontendContract,
@@ -406,6 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAuthoringCompilationModel model,
             ValidatedSemanticIrArtifact artifact,
             CharacterAnimationBuildInput animationBuildInput,
+            CharacterPresentationProjectionCompileResult poseResult,
             bool generateMissingOrStaleArtifacts,
             CharacterSimulationCompileReport report,
             out CharacterPresentationSemanticContract contract,
@@ -444,13 +574,47 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!report.IsValid)
                 return null;
             phaseWatch.Restart();
+            CharacterPresentationSemanticReader reader = new CharacterPresentationSemanticReader(artifact);
+            CharacterAnimationInputContract animationInputContract =
+                CharacterAnimationInputContract.Create(model.AnimationPresentationProfile);
+            IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites =
+                CharacterPresentationProducerCompiler.CollectTimelineCallSites(model);
+            var producerErrors = new List<string>();
+            IReadOnlyList<CharacterPresentationProducerEntry> producerEntries =
+                CharacterPresentationProducerCompiler.CompileEntries(
+                    reader,
+                    model.AnimationPresentationProfile,
+                    footAnalysis,
+                    model.Timelines,
+                    timelineCallSites,
+                    animationBuildInput,
+                    producerErrors);
+            for (int i = 0; i < producerErrors.Count; i++)
+                report.PresentationError(
+                    "presentation_producer_invalid",
+                    artifact.Header.ProgramId.Value,
+                    producerErrors[i]);
+            if (!report.IsValid)
+                return null;
+            CharacterPresentationProjectionCompileContext context =
+                new CharacterPresentationProjectionCompileContext(
+                    model.DefinitionGuid,
+                    model.AnimationPresentationProfile,
+                    model.Definition.CameraProfile,
+                    model.Definition.EquipmentProfile,
+                    model.Definition.EquipmentPresentationProfile,
+                    model.Definition.ControlModuleId,
+                    animationInputContract,
+                    reader.Contract,
+                    producerEntries,
+                    true);
             CharacterPresentationProjectionCompileResult compileResult =
                 CharacterPresentationProjectionCompiler.Compile(
                     new CharacterPresentationProjectionCompileRequest(
-                        artifact,
-                        model,
+                        context,
                         footAnalysis,
-                        animationBuildInput));
+                        animationBuildInput,
+                        poseResult));
             phaseWatch.Stop();
             Debug.Log(
                 $"[计时] 投影编译 足部分析 {footAnalysisMs}ms | 投影 {phaseWatch.ElapsedMilliseconds}ms");
@@ -468,29 +632,73 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static CharacterAnimationBuildInput CreateAnimationBuildInput(
-            CharacterAuthoringCompilationModel model)
+            string definitionGuid,
+            CharacterAnimationPresentationProfile profile)
         {
-            CharacterAnimationPresentationProfile profile =
-                model.AnimationPresentationProfile ??
+            CharacterAnimationInputContract animationInputContract =
+                CharacterAnimationInputContract.Create(profile);
+            return CreateAnimationBuildInput(
+                definitionGuid,
+                profile,
+                profile?.SourceResourceBindings ??
+                throw new InvalidOperationException("Animation Presentation Profile is missing."),
+                CreatePoseSourceRig(profile),
+                animationInputContract);
+        }
+
+        static CharacterAnimationBuildInput CreateAnimationBuildInput(
+            string definitionGuid,
+            CharacterAnimationPresentationProfile profile,
+            IReadOnlyList<CharacterAnimationSourceResourceBinding> sourceResourceBindings,
+            CharacterAnimationSourceRig sourceRig,
+            CharacterAnimationInputContract animationInputContract)
+        {
+            if (string.IsNullOrEmpty(definitionGuid))
+                throw new ArgumentException("Definition identity is required.", nameof(definitionGuid));
+            profile = profile ??
                 throw new InvalidOperationException("Animation Presentation Profile is missing.");
+            animationInputContract = animationInputContract ??
+                throw new ArgumentNullException(nameof(animationInputContract));
+            if (!animationInputContract.Matches(profile))
+                throw new InvalidOperationException("Animation Input Contract does not match the Animation Presentation Profile.");
             CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(
                 profile.RigDefinition ??
                 throw new InvalidOperationException("Animation Rig Definition is missing."));
             CharacterAnimationParameterLayout layout =
-                CharacterAnimationParameterLayoutCompiler.Build(profile.PoseGraph.Graph);
-            CharacterAnimationRigBinding sourceRigBinding =
-                CharacterRuntimeProfileRootHierarchyBuilder
-                    .RequireLocalCorinAnimationRigBinding(rig);
-            CharacterAnimationSourceRig sourceRig =
-                CharacterAnimationSourceRig.FromRuntimeRig(rig, sourceRigBinding);
+                CharacterAnimationParameterLayoutCompiler.Build(animationInputContract);
             return new CharacterAnimationBuildInput(
-                model.DefinitionGuid,
+                definitionGuid,
                 CharacterAnimationBuildInput.RequireNativeArtifactIdentity(),
                 profile,
                 sourceRig,
                 layout,
                 profile.AnimationCompression ??
-                throw new InvalidOperationException("Animation compression settings are missing."));
+                throw new InvalidOperationException("Animation compression settings are missing."),
+                sourceResourceBindings);
+        }
+
+        static CharacterAnimationSourceRig CreatePoseSourceRig(
+            CharacterAnimationPresentationProfile profile)
+        {
+            string sourcePath = AssetDatabase.GUIDToAssetPath(
+                profile.FootPlacementAnalysisSourceAssetGuid);
+            CharacterFootPlacementAnalysisSource source =
+                AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(sourcePath);
+            if (!source)
+                throw new InvalidOperationException("Pose-only compilation requires a persisted Foot Analysis Source.");
+            source.RequireCalibrationAuthoringInput();
+            string rigPath = AssetDatabase.GUIDToAssetPath(source.SamplingRigAssetGuid);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(rigPath);
+            if (!prefab)
+                throw new InvalidOperationException("Pose-only compilation requires a persisted sampling Rig Prefab.");
+            CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(
+                profile.RigDefinition ??
+                throw new InvalidOperationException("Animation Rig Definition is missing."));
+            CharacterAnimationRigBinding binding =
+                prefab.GetComponentInChildren<CharacterAnimationRigBinding>(true);
+            if (!binding)
+                throw new InvalidOperationException("Pose-only sampling Rig Prefab has no Animation Rig Binding.");
+            return CharacterAnimationSourceRig.FromRuntimeRig(rig, binding);
         }
 
         static string ArtifactDiagnosticCode(AnimationFootAnalysisArtifactStatus status)

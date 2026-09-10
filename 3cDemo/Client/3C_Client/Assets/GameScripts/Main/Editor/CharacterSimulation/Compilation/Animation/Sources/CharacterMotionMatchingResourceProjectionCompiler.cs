@@ -67,7 +67,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     {
                         MotionMatchingClipBindingPayload binding = database.GetClipBinding(clipIndex);
                         CharacterAnimationSourceResourceBinding resourceBinding =
-                            profile.FindSourceResourceBinding(binding.Clip);
+                            animationBuildInput.SourceResourceBindings.SingleOrDefault(
+                                value => value?.AuthoringClip == binding.Clip);
                         CharacterAnimationSamplingBackendKind backend =
                             resourceBinding?.Backend ?? CharacterAnimationSamplingBackendKind.NativeClip;
                         resourceBinding?.RequireValid();

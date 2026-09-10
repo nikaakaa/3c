@@ -150,6 +150,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
 
     internal static class CharacterAnimationParameterLayoutCompiler
     {
+        internal static CharacterAnimationParameterLayout Build(
+            CharacterAnimationInputContract contract)
+        {
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            return new CharacterAnimationParameterLayout(
+                contract.Parameters.ToArray());
+        }
+
         internal static CharacterAnimationParameterLayout Build(CharacterPoseCanvasGraph graph)
         {
             if (graph == null)
@@ -173,7 +182,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             CharacterAnimationPresentationProfile profile,
             CharacterAnimationSourceRig sourceRig,
             CharacterAnimationParameterLayout parameterLayout,
-            CharacterAclCompressionSettings compression)
+            CharacterAclCompressionSettings compression,
+            IReadOnlyList<CharacterAnimationSourceResourceBinding> sourceResourceBindings)
         {
             OwnerAssetGuid = ownerAssetGuid ?? throw new ArgumentNullException(nameof(ownerAssetGuid));
             Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
@@ -182,6 +192,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             Compression = compression ?? throw new ArgumentNullException(nameof(compression));
             NativeArtifactIdentity = nativeArtifactIdentity ??
                 throw new ArgumentNullException(nameof(nativeArtifactIdentity));
+            SourceResourceBindings = sourceResourceBindings ??
+                throw new ArgumentNullException(nameof(sourceResourceBindings));
             SourceRig.RequireValid();
             Compression.RequireValid();
             AnimationCatalog = new CharacterAnimationBuildCatalogCompiler(this);
@@ -193,8 +205,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
         internal CharacterAnimationSourceRig SourceRig { get; }
         internal CharacterAnimationParameterLayout ParameterLayout { get; }
         internal CharacterAclCompressionSettings Compression { get; }
+        internal IReadOnlyList<CharacterAnimationSourceResourceBinding> SourceResourceBindings { get; }
         internal bool HasSourceRig => SourceRig != null;
         internal CharacterAnimationBuildCatalogCompiler AnimationCatalog { get; }
+
+        internal CharacterAnimationBuildInput CreatePoseOnlyInput() =>
+            new CharacterAnimationBuildInput(
+                OwnerAssetGuid,
+                NativeArtifactIdentity,
+                Profile,
+                SourceRig,
+                ParameterLayout,
+                Compression,
+                Array.Empty<CharacterAnimationSourceResourceBinding>());
     }
 
     internal sealed class CharacterAnimationAuthoringReadRequest

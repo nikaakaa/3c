@@ -99,10 +99,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
         Dictionary<string, int> BuildAclGroupClipIndices()
         {
             var stableIdentities = new List<string>();
-            for (int i = 0; i < m_Input.Profile.SourceResourceBindings.Count; i++)
+            for (int i = 0; i < m_Input.SourceResourceBindings.Count; i++)
             {
                 CharacterAnimationSourceResourceBinding binding =
-                    m_Input.Profile.SourceResourceBindings[i];
+                    m_Input.SourceResourceBindings[i];
                 if (binding == null ||
                     binding.Backend != CharacterAnimationSamplingBackendKind.Acl)
                     continue;

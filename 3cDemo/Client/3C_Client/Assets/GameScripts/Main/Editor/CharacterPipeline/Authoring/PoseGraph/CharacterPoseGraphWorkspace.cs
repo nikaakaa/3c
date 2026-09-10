@@ -192,7 +192,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Current = workspace;
             workspace.SetDocument(asset, profile, projection, definition);
             workspace.CreateGUI();
-            editor.SetDomainPanel(workspace.rootVisualElement, 320f);
             NodeCanvas.Editor.GraphEditorUtility.onSelectionChanged += workspace.PublishSelection;
             NodeCanvas.Editor.GraphEditor.onEditorNavigationChanged += workspace.SaveWorkspace;
             NodeCanvas.Editor.GraphEditor.onEditorClosed += workspace.Dispose;

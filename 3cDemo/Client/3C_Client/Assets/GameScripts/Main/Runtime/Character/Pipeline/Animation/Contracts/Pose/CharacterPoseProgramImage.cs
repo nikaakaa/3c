@@ -637,7 +637,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed partial class CharacterPoseProgramImage
     {
         public const string SchemaVersion = "character-presentation-pose-plan/v29";
-        public const string RuntimeAbi = "character-presentation-pose-runtime/v28";
+        public const string RuntimeAbi = "character-presentation-pose-runtime/v29";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_RuntimeAbi = RuntimeAbi;
@@ -725,6 +725,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!rig)
                 throw new ArgumentNullException(nameof(rig));
+            m_SchemaVersion = SchemaVersion;
+            m_RuntimeAbi = RuntimeAbi;
             rig.RequireValid();
             m_PoseGraphId = PoseIdentity.Require(poseGraphId, nameof(poseGraphId));
             m_ContentRevision = PoseIdentity.Require(contentRevision, nameof(contentRevision));

@@ -100,7 +100,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return new ErrorResponse(
                     "pose_reset_observation_failed",
-                    new { fixture_asset_path = fixturePath, message = exception.Message });
+                    new
+                    {
+                        fixture_asset_path = fixturePath,
+                        message = exception.ToString()
+                    });
             }
         }
 

@@ -10,6 +10,8 @@
 
 2026-09-10 根无关文档清理：`559c476b9`移除Character Document snapshot/context/dependencies中的RootTree字段与Mutation Session持有的RootTree；`63d0ccfe3`收紧Document写出、读取和对账入口，不再生成顶层Blackboard、旧Graph或旧Timeline分片，并让Presentation Animation Channel只从Skill Timeline闭包核对。随后目标Unity实例`3C_Client@e852139597e42532`完成正式checkout和dry-run：两次均为`success=true`、`syncState=Clean`、`plannedDiff=[]`，`documentHash=c3b5e7ab89750c40a1f9b9ad17348e8c1fe215400006d59b813237ef0c9da2ff`、`planHash=4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`、`sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8`。包根editable文件仅保留`actions.json`和`controller.json`，没有`editable/blackboard.json`、`editable/graphs/**`或`editable/timelines/**`。未执行Build、运行回放或资产迁移。
 
+2026-09-10 Mutation入口收紧：`dc98db8b4`从Character正式Mutation Catalog与typed lowering移除旧StateMachine、普通Graph、顶层Blackboard和顶层Timeline命令；当前Document只会把Skill Flow、Action、Control交给对应handler，旧命令进入规划阶段即被拒绝。目标Unity刷新后`error CS`为0。残留的`OneRootTree`、`SubTree`和`TimelineRunningTree`只属于TreeDesigner/Skill Timeline内部的通用作者类型，不是Character Definition入口；当前Skill Document和Character Definition源码未再出现RootTree字段或路径。
+
 ## 此前增量记录
 
 本节保留此前各次检查与实施事实，旧的“尚未完成”和旧版本号不代表当前状态。

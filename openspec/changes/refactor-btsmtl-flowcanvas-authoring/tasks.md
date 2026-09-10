@@ -216,7 +216,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.1 使用现有正式CLI完成技能启动／Timeline／正常结束及中断链的编译运行对账，记录业务差异；不新增测试代码或临时执行器。
 - [x] 8.2 核对各旧作者模型、窗口、端口和转换层的消费者，删除零消费者实现；交付残留清单并说明未迁移领域的合法保留原因。
 
-  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除；AI不再由BTSMTL拥有，Behavior Designer插件是后续AI唯一作者入口。保留项只能是非技能Timeline或Document顶层元数据消费者。技能正式编译/观察不得有旧作者对象中转。
+  残留清单见implementation.md“旧路径消费者审计”：Character RootTree已删除，Character Document不再生成顶层Blackboard、旧Graph或旧Timeline分片；AI不再由BTSMTL拥有，Behavior Designer插件是后续AI唯一作者入口。源码仍保留的`OneRootTree`、`SubTree`和`TimelineRunningTree`只服务TreeDesigner/Skill Timeline内部通用作者模型，不是Character Definition入口。技能正式编译/观察不得有旧作者对象中转。
 - [x] 8.3 同步project、current specs、技能说明和原change替代记录，统一v7版本及作者／运行边界；运行OpenSpec严格校验并附规范冲突复核结论。证据：`595e09dc8`同步Character无RootTree规范，`5fb20d1e0`同步Skill FlowCanvas规范，`b012bf211`删除旧自研AI链，current spec改为Behavior Designer边界；change严格校验通过。Character入口为SkillDefinitions/SkillGraphs，AI不再保留BTSMTL RootTree、AI Program或AI Document。
 ### 8.4 交付与真实进度
 
@@ -224,5 +224,5 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [ ] 8.4.2 最终汇总代码与资产提交、正式CLI证据及各项结论；编译成功不得代替交互、运行观察或性能完成，所有任务按真实证据收口。
 - [ ] 8.5 核对Character RootTree删除后的Definition、GA精确导航、provider Blackboard、Simulation Pipeline和Network Adapter规范一致性；运行OpenSpec严格校验并输出仍存在的非技能RootTree残留清单。
 
-  当前残留清单：旧`AgentAI*`导出器、lowering、handler、AI事务owner和BTSMTL AI operation均已删除；`AIController` domain已不再被Document schema、MCP或Validator接收。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口。Behavior Designer插件尚未在本change中接入角色任务和网络Source，后续由`replace-btsmtl-ai-with-behavior-designer`独立change负责；不在此处建立第二套AI路径。Character State只读projection已接入并升级Gameplay operation set到`/15`；正式 Float32 Build 已确认新增 Skill 链无诊断，当前仍被既有 Presentation direct Clip resource binding 与 Control Rig Graph closure 阻塞，正式运行一致性核对仍待收口。
+  当前残留清单：旧`AgentAI*`导出器、lowering、handler、AI事务owner和BTSMTL AI operation均已删除；`AIController` domain已不再被Document schema、MCP或Validator接收。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口；正式v7 checkout/dry-run已核对`Clean`且包内无顶层旧分片。源码中的`OneRootTree`、`SubTree`和`TimelineRunningTree`是TreeDesigner/Skill Timeline的非技能通用类型，不属于Character Definition入口。Behavior Designer插件尚未在本change中接入角色任务和网络Source，后续由`replace-btsmtl-ai-with-behavior-designer`独立change负责；不在此处建立第二套AI路径。Character State只读projection已接入并升级Gameplay operation set到`/15`；正式运行一致性和网络产品证据仍待收口。
 

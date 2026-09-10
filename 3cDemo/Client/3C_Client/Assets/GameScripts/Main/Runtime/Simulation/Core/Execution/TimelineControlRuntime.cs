@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
             }
             m_Target.WriteLogicTime(timeline, m_Target.TimelineFrameTime(timeline, section.Frame));
             m_State.WriteCycle(timeline, 0);
-            m_State.WriteRetainedActionContext(default);
+            m_State.WriteRetainedActionContext(timeline, default);
             m_State.WritePlayback(timeline, TimelinePlaybackStatus.Dormant);
             if (m_Target.DiagnosticsEnabled)
                 Trace(timeline, "timeline_section_jump", TimelineTraceSeverity.Information, section.AuthoringId);

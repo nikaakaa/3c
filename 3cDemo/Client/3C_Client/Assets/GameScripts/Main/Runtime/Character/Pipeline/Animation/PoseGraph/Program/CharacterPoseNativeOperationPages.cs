@@ -209,7 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int boneMaskOffset,
             int additiveReferenceOffset,
             AdditiveReferenceSpace additiveReferenceSpace,
-            AdditiveScalePolicy additiveScalePolicy)
+            AdditiveScalePolicy additiveScalePolicy,
+            CharacterLayeredBoneBlendSpace layeredBoneBlendSpace)
         {
             if ((code != CharacterPoseOperationCode.LayeredBoneBlend &&
                  code != CharacterPoseOperationCode.AdditivePose) ||
@@ -218,7 +219,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 code == CharacterPoseOperationCode.LayeredBoneBlend &&
                     additiveReferenceOffset != -1 ||
                 code == CharacterPoseOperationCode.AdditivePose &&
-                    additiveReferenceOffset < 0)
+                    additiveReferenceOffset < 0 ||
+                code == CharacterPoseOperationCode.LayeredBoneBlend &&
+                    !Enum.IsDefined(
+                        typeof(CharacterLayeredBoneBlendSpace),
+                        layeredBoneBlendSpace) ||
+                code == CharacterPoseOperationCode.AdditivePose &&
+                    layeredBoneBlendSpace != CharacterLayeredBoneBlendSpace.Local)
             {
                 throw new ArgumentException("Native Pose Composition operation is invalid.");
             }
@@ -229,6 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AdditiveReferenceOffset = additiveReferenceOffset;
             AdditiveReferenceSpace = additiveReferenceSpace;
             AdditiveScalePolicy = additiveScalePolicy;
+            LayeredBoneBlendSpace = layeredBoneBlendSpace;
         }
 
         internal int OutputPoseValueIndex { get; }
@@ -238,6 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int AdditiveReferenceOffset { get; }
         internal AdditiveReferenceSpace AdditiveReferenceSpace { get; }
         internal AdditiveScalePolicy AdditiveScalePolicy { get; }
+        internal CharacterLayeredBoneBlendSpace LayeredBoneBlendSpace { get; }
     }
 
     internal readonly struct CharacterPoseNativeParameterResolveOperation

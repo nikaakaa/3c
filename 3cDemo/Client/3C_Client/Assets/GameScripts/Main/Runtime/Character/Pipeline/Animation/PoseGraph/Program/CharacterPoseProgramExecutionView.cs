@@ -804,6 +804,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 int poseBoneIkGoalsIndex = -1;
                 int footPlacementIndex = -1;
                 int fullBodyIkIndex = -1;
+                CharacterLayeredBoneBlendSpace layeredBoneBlendSpace = CharacterLayeredBoneBlendSpace.Local;
                 AnimationSelectionAvailabilityPolicy outputPolicy = default;
                 CharacterPoseOperationPayload payload =
                     program.OperationPages.RequirePayload(operation);
@@ -850,6 +851,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     boneMaskIndex = composition.BoneMaskIndex;
                     additiveReferenceIndex = composition.AdditiveReferenceIndex;
+                    layeredBoneBlendSpace = composition.LayeredBoneBlendSpace;
                 }
                 else if (payload is CharacterPoseComponentControlOperationPayload control)
                 {
@@ -1041,7 +1043,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 maskOffset,
                                 additiveOffset,
                                 referenceSpace,
-                                scalePolicy);
+                                scalePolicy,
+                                layeredBoneBlendSpace);
                         break;
                     case CharacterPoseOperationFamily.SpaceConversion:
                         m_SpaceConversionOperations[operation.FamilyPayloadIndex] =

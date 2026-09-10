@@ -690,10 +690,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     familyPayload.ClipPlayerIndex,
                     familyPayload.StateMachineIndex,
                     familyPayload.AnimationSlotIndex,
-                    linkedPoseCall.CallIndex,
-                    linkedPoseFragmentIndex,
-                    handler.Weight(irNode.Payload),
-                    policies));
+                     linkedPoseCall.CallIndex,
+                     linkedPoseFragmentIndex,
+                     handler.Weight(irNode.Payload),
+                     policies,
+                     irNode.Payload is CharacterLayeredBoneBlendPosePayload layered
+                         ? layered.BlendSpace
+                         : CharacterLayeredBoneBlendSpace.Local));
 
                 BindOperationOutputs(
                     node,

@@ -47,7 +47,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int linkedPoseCallIndex,
             int linkedPoseFragmentIndex,
             float weight,
-            PoseParameterResolvePolicy[] parameterPolicies)
+            PoseParameterResolvePolicy[] parameterPolicies,
+            CharacterLayeredBoneBlendSpace layeredBoneBlendSpace = CharacterLayeredBoneBlendSpace.Local)
         {
             if (index < 0 ||
                 !Enum.IsDefined(typeof(CharacterPoseExecutionDomain), executionDomain) ||
@@ -69,7 +70,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 (fullBodyIkGoalContributionInputStart == -1) ||
                 !Enum.IsDefined(
                     typeof(CharacterAnimationBlendSpaceInputRangePolicy),
-                    blendSpaceInputRangePolicy))
+                    blendSpaceInputRangePolicy) ||
+                !Enum.IsDefined(
+                    typeof(CharacterLayeredBoneBlendSpace),
+                    layeredBoneBlendSpace))
             {
                 throw new ArgumentException(
                     "Bound Pose operation is invalid.");
@@ -121,6 +125,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Weight = weight;
             ParameterPolicies = parameterPolicies ??
                 Array.Empty<PoseParameterResolvePolicy>();
+            LayeredBoneBlendSpace = layeredBoneBlendSpace;
         }
 
         internal int Index { get; }
@@ -163,6 +168,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal int LinkedPoseFragmentIndex { get; }
         internal float Weight { get; }
         internal PoseParameterResolvePolicy[] ParameterPolicies { get; }
+        internal CharacterLayeredBoneBlendSpace LayeredBoneBlendSpace { get; }
     }
 
     internal sealed class CharacterPoseBoundFamilyPayloads

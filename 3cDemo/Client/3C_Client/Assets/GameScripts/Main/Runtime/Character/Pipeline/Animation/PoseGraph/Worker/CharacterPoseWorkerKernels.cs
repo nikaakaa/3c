@@ -350,7 +350,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.InputPoseValueIndexB,
                         operation.BoneMaskOffset,
                         header.Weight,
-                        BoneMasks);
+                        BoneMasks,
+                        operation.LayeredBoneBlendSpace,
+                        ParentIndices);
                 }
                 else
                 {
@@ -375,7 +377,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int overlayValue,
             int maskOffset,
             float weight,
-            NativeArray<float> masks)
+            NativeArray<float> masks,
+            CharacterLayeredBoneBlendSpace blendSpace = CharacterLayeredBoneBlendSpace.Local,
+            NativeArray<int> parentIndices = default)
         {
             if (!values.TryRequireInputs(
                     in header,
@@ -453,11 +457,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         bone) * weight);
                 AnimationLocalBonePose from = values.Pose(baseValue, bone);
                 AnimationLocalBonePose to = values.Pose(overlayValue, bone);
-                if (!CharacterPosePureMath.TryBlendPose(
-                        in from,
-                        in to,
-                        overlay,
-                        out AnimationLocalBonePose pose))
+                AnimationLocalBonePose pose;
+                if (blendSpace == CharacterLayeredBoneBlendSpace.Component)
+                {
+                    if (!values.TryResolveModelPose(
+                            baseValue,
+                            bone,
+                            parentIndices,
+                            out AnimationLocalBonePose baseModel) ||
+                        !values.TryResolveModelPose(
+                            overlayValue,
+                            bone,
+                            parentIndices,
+                            out AnimationLocalBonePose overlayModel) ||
+                        !CharacterPosePureMath.TryBlendPose(
+                            in baseModel,
+                            in overlayModel,
+                            overlay,
+                            out AnimationLocalBonePose componentPose))
+                    {
+                        values.SetInvalid(
+                            output,
+                            values.Continuity(output),
+                            AnimationPoseNativeInvalidReason
+                                .PoseGraphOperationInvalid,
+                            header.Index);
+                        return;
+                    }
+                    int parent = parentIndices[bone];
+                    if (parent < 0)
+                    {
+                        pose = componentPose;
+                    }
+                    else if (!values.TryResolveModelPose(
+                                 output,
+                                 parent,
+                                 parentIndices,
+                                 out AnimationLocalBonePose outputParent) ||
+                             !CharacterPosePureMath.TryToLocal(
+                                 outputParent,
+                                 componentPose,
+                                 out pose))
+                    {
+                        values.SetInvalid(
+                            output,
+                            values.Continuity(output),
+                            AnimationPoseNativeInvalidReason
+                                .PoseGraphOperationInvalid,
+                            header.Index);
+                        return;
+                    }
+                }
+                else if (!CharacterPosePureMath.TryBlendPose(
+                             in from,
+                             in to,
+                             overlay,
+                             out pose))
                 {
                     values.SetInvalid(
                         output,

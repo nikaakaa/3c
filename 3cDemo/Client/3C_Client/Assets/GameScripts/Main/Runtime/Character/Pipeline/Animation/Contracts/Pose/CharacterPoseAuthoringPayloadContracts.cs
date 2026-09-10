@@ -286,14 +286,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterLayeredBoneBlendPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterAnimationBoneMaskAsset m_BoneMask;
+        [SerializeField] CharacterLayeredBoneBlendSpace m_BlendSpace = CharacterLayeredBoneBlendSpace.Local;
         [SerializeField, Range(0f, 1f)] float m_Weight = 1f;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.LayeredBoneBlend;
         public CharacterAnimationBoneMaskAsset BoneMask => m_BoneMask;
+        public CharacterLayeredBoneBlendSpace BlendSpace => m_BlendSpace;
         public float Weight => m_Weight;
         public CharacterLayeredBoneBlendPosePayload() { }
-        public CharacterLayeredBoneBlendPosePayload(CharacterAnimationBoneMaskAsset boneMask, float weight)
+        public CharacterLayeredBoneBlendPosePayload(
+            CharacterAnimationBoneMaskAsset boneMask,
+            CharacterLayeredBoneBlendSpace blendSpace,
+            float weight)
         {
             m_BoneMask = boneMask;
+            m_BlendSpace = blendSpace;
             m_Weight = CharacterBlendPosePayload.RequireWeight(weight);
         }
     }

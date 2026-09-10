@@ -371,20 +371,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] int m_BoneMaskIndex = -1;
         [SerializeField] int m_AdditiveReferenceIndex = -1;
+        [SerializeField] CharacterLayeredBoneBlendSpace m_LayeredBoneBlendSpace = CharacterLayeredBoneBlendSpace.Local;
 
         public CharacterPoseCompositionOperationPayload(
             int operationIndex,
             int boneMaskIndex,
-            int additiveReferenceIndex) : base(operationIndex)
+            int additiveReferenceIndex,
+            CharacterLayeredBoneBlendSpace layeredBoneBlendSpace) : base(operationIndex)
         {
-            if (boneMaskIndex < -1 || additiveReferenceIndex < -1)
+            if (boneMaskIndex < -1 || additiveReferenceIndex < -1 ||
+                !Enum.IsDefined(
+                    typeof(CharacterLayeredBoneBlendSpace),
+                    layeredBoneBlendSpace))
                 throw new ArgumentOutOfRangeException(nameof(boneMaskIndex));
             m_BoneMaskIndex = boneMaskIndex;
             m_AdditiveReferenceIndex = additiveReferenceIndex;
+            m_LayeredBoneBlendSpace = layeredBoneBlendSpace;
         }
 
         public int BoneMaskIndex => m_BoneMaskIndex;
         public int AdditiveReferenceIndex => m_AdditiveReferenceIndex;
+        public CharacterLayeredBoneBlendSpace LayeredBoneBlendSpace => m_LayeredBoneBlendSpace;
     }
 
     [Serializable]

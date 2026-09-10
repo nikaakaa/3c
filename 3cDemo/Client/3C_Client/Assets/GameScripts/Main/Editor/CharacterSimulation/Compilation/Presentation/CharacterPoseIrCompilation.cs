@@ -804,6 +804,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             new CharacterLayeredBoneBlendPosePayload(
                 input.Require<CharacterAnimationBoneMaskAsset>(
                     "bone-mask"),
+                input.Require<CharacterLayeredBoneBlendSpace>(
+                    "blend-space"),
                 input.Require<float>("weight"));
 
         protected override object ReadField(
@@ -812,6 +814,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             field switch
             {
                 "bone-mask" => payload.BoneMask,
+                "blend-space" => payload.BlendSpace,
                 "weight" => payload.Weight,
                 _ => base.ReadField(payload, field)
             };
@@ -827,6 +830,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.BoneMask,
                 sourcePath,
                 "Layered Bone Blend mask is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(
+                Enum.IsDefined(
+                    typeof(CharacterLayeredBoneBlendSpace),
+                    payload.BlendSpace),
+                sourcePath,
+                "Layered Bone Blend pose space is invalid.");
         }
 
         protected override void ValidateRig(

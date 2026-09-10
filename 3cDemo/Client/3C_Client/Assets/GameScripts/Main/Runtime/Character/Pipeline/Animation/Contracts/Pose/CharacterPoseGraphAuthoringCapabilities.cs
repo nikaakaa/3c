@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BinaryLocalPoseWithWeight("Base", "Overlay"),
                 GraphAuthoringDynamicPortPolicy.OrderedInputs));
             catalog.Register(Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, allPoseGraphsWithLinkedEntry, "Layered Blend Per Bone", "Blend", blendColor,
-                Fields(AssetField("bone-mask", "Bone Mask", "animation-bone-mask", typeof(CharacterAnimationBoneMaskAsset)), FloatField("weight", "Weight", 1f, 0f, 1f)),
+                Fields(AssetField("bone-mask", "Bone Mask", "animation-bone-mask", typeof(CharacterAnimationBoneMaskAsset)), EnumField("blend-space", "Pose Space", typeof(CharacterLayeredBoneBlendSpace)), FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Overlay")));
             catalog.Register(Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, allPoseGraphsWithLinkedEntry, "Additive Pose", "Blend", blendColor,
                 Fields(StringField("reference-pose-id", "Reference Pose", "RigReference"), EnumField("reference-space", "Reference Space", typeof(AdditiveReferenceSpace)), EnumField("scale-policy", "Scale Policy", typeof(AdditiveScalePolicy)), FloatField("weight", "Weight", 1f, 0f, 1f)),

@@ -196,12 +196,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     footPlacementAnalysisSourceAssetGuid =
                         profile.FootPlacementAnalysisSourceAssetGuid
                 },
-                poseSources = PoseSourceBindings(profile)
-                    .Where(binding => binding && binding.Slot)
-                    .Select(ExportPoseSource)
-                    .OrderBy(value => value.slot.assetGuid, StringComparer.Ordinal)
-                    .ThenBy(value => value.slot.localFileId)
-                    .ToList(),
                 actionProducers = profile.ProducerBindings
                     .Select(ExportProducer)
                     .OrderBy(value => value.timelineId, StringComparer.Ordinal)
@@ -261,32 +255,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
         }
 
-        static AgentPackagePoseSourceBinding ExportPoseSource(
-            CharacterPresentationPoseSourceBinding binding)
-        {
-            if (!binding || !binding.Slot)
-                throw new InvalidOperationException(
-                    "Presentation Profile contains a missing Pose source binding.");
-            CharacterMotionMatchingPoseSourceBinding motionMatching =
-                binding as CharacterMotionMatchingPoseSourceBinding;
-            UnityEngine.Object source = binding.SourceAsset;
-            return new AgentPackagePoseSourceBinding
-            {
-                name = binding.Slot.name,
-                kind = binding.SourceKind.ToString(),
-                slot = Asset(binding.Slot, true),
-                binding = Asset(binding, true),
-                source = Asset(source, true),
-                searchDomainId = motionMatching?.SearchDomainId.Value ??
-                                 string.Empty,
-                databases = motionMatching?.Databases
-                    .Select(value => Asset(value, true))
-                    .ToList() ?? new List<AgentPackageObjectReference>(),
-                footAnalysisIdentity = binding.FootAnalysisIdentity,
-                contentRevision = binding.ContentRevision
-            };
-        }
-
         static void ExportAnimationClips(
             CharacterPipelineDefinition definition,
             CharacterAnimationPresentationProfile profile,
@@ -300,15 +268,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 clips.Add(clip);
             }
 
-            IReadOnlyList<CharacterPresentationPoseSourceBinding> poseBindings = PoseSourceBindings(profile);
-            for (int i = 0; i < poseBindings.Count; i++)
+            foreach (CharacterPoseCanvasGraph graph in EnumeratePoseGraphs(profile))
             {
-                if (poseBindings[i] is CharacterClipPoseSourceBinding direct)
-                    Add(direct.Clip);
-                else if (poseBindings[i] is CharacterBlendSpacePoseSourceBinding blend && blend.BlendSpace)
+                for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
                 {
-                    for (int sampleIndex = 0; sampleIndex < blend.BlendSpace.Samples.Count; sampleIndex++)
-                        Add(blend.BlendSpace.Samples[sampleIndex]?.Clip);
+                    switch (graph.Nodes[nodeIndex]?.Payload)
+                    {
+                        case CharacterClipPlayerPosePayload clipPlayer:
+                            Add(clipPlayer.Animation);
+                            break;
+                        case CharacterBlendSpacePlayerPosePayload blendSpacePlayer
+                            when blendSpacePlayer.BlendSpace:
+                            for (int sampleIndex = 0;
+                                 sampleIndex < blendSpacePlayer.BlendSpace.Samples.Count;
+                                 sampleIndex++)
+                            {
+                                Add(blendSpacePlayer.BlendSpace.Samples[sampleIndex]?.Clip);
+                            }
+                            break;
+                    }
                 }
             }
             IReadOnlyList<AnimationProducerAuthoringEntry> producers =
@@ -371,10 +349,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static IReadOnlyList<CharacterPresentationPoseSourceBinding> PoseSourceBindings(
+        static IEnumerable<CharacterPoseCanvasGraph> EnumeratePoseGraphs(
             CharacterAnimationPresentationProfile profile)
         {
-            return profile.PoseSourceBindings.Where(value => value).ToArray();
+            var owners = new List<CharacterPresentationPoseGraphAsset>();
+            if (profile.PoseGraph)
+                owners.Add(profile.PoseGraph);
+            for (int implementationIndex = 0;
+                 implementationIndex < profile.LinkedPoseImplementations.Count;
+                 implementationIndex++)
+            {
+                CharacterLinkedPoseImplementationAsset implementation =
+                    profile.LinkedPoseImplementations[implementationIndex];
+                if (implementation == null)
+                    continue;
+                for (int entryIndex = 0;
+                     entryIndex < implementation.Entries.Count;
+                     entryIndex++)
+                {
+                    CharacterPresentationPoseGraphAsset owner =
+                        implementation.Entries[entryIndex]?.GraphOwner;
+                    if (owner && !owners.Contains(owner))
+                        owners.Add(owner);
+                }
+            }
+
+            var graphIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int ownerIndex = 0; ownerIndex < owners.Count; ownerIndex++)
+            {
+                foreach (CharacterPoseCanvasGraph graph in owners[ownerIndex].EnumerateGraphs())
+                {
+                    if (graph != null && graphIds.Add(graph.GraphId.Value))
+                        yield return graph;
+                }
+            }
         }
 
         static AgentPackageAnimationProducerBinding ExportProducer(

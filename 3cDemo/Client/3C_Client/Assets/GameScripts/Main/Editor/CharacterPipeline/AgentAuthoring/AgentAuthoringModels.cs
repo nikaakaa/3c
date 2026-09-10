@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -67,7 +66,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string controlModuleId;
         public int controlSemanticVersion;
         public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
-        public int blackboardSchemaRevision;
         public string programId;
         public string sourceRevision;
         public string semanticHash;
@@ -76,9 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string programHash;
         public string layoutHash;
         public AgentSnapshotBodyMotionProfile bodyMotion = new AgentSnapshotBodyMotionProfile();
-        public List<AgentSnapshotGraphSummary> graphSummaries = new List<AgentSnapshotGraphSummary>();
-        public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
-        public List<AgentSnapshotGraph> graphs = new List<AgentSnapshotGraph>();
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public string inputProviderOwnerId;
@@ -90,11 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
         public List<AgentPackageSkillTimelineFile> skillTimelines = new List<AgentPackageSkillTimelineFile>();
         public AgentSnapshotAnimationPresentation presentation = new AgentSnapshotAnimationPresentation();
-        public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
-        public List<AgentSnapshotTimeline> timelines = new List<AgentSnapshotTimeline>();
-        public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
-        public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
-        public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
     }
 
     [Serializable]
@@ -111,124 +101,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotGraphSummary
-    {
-        public string graphAuthoringId;
-        public string path;
-        public string name;
-        public string kind;
-        public string ownership;
-        public string ownerNode;
-        public string referenceKey;
-        public List<AgentSnapshotAuthoringRoute> routes = new List<AgentSnapshotAuthoringRoute>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotStateMachineSummary
-    {
-        public string graphAuthoringId;
-        public string graphPath;
-        public string name;
-        public string ownerNode;
-        public List<AgentSnapshotAuthoringRoute> routes = new List<AgentSnapshotAuthoringRoute>();
-        public List<AgentSnapshotStateSummary> states = new List<AgentSnapshotStateSummary>();
-        public List<AgentSnapshotTransitionSummary> transitions = new List<AgentSnapshotTransitionSummary>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotStateSummary
-    {
-        public string stateAuthoringId;
-        public string state;
-        public string behaviorGraphAuthoringId;
-        public string behaviorGraphPath;
-        public List<AgentSnapshotNestedStateMachineSummary> nestedStateMachines = new List<AgentSnapshotNestedStateMachineSummary>();
-        public List<AgentSnapshotActionActivationSummary> actionActivations = new List<AgentSnapshotActionActivationSummary>();
-        public List<AgentSnapshotTimelineBindingSummary> timelines = new List<AgentSnapshotTimelineBindingSummary>();
-        public List<AgentSnapshotLifecycleSummary> lifecycleTransitions = new List<AgentSnapshotLifecycleSummary>();
-        public List<AgentSnapshotBlackboardWriteSummary> blackboardWrites = new List<AgentSnapshotBlackboardWriteSummary>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotBlackboardWriteSummary
-    {
-        public string nodeAuthoringId;
-        public string declarationAuthoringId;
-        public string declarationOwnerId;
-        public string key;
-        public string valueType;
-        public bool boolValue;
-        public string lifecyclePhase;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotNestedStateMachineSummary
-    {
-        public string nodeAuthoringId;
-        public string node;
-        public string graphAuthoringId;
-        public string graphPath;
-        public string ownership;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTransitionSummary
-    {
-        public string edgeAuthoringId;
-        public string fromElementAuthoringId;
-        public string toElementAuthoringId;
-        public string from;
-        public string to;
-        public int priority;
-        public List<string> requests = new List<string>();
-        public List<AgentSnapshotConditionTerm> conditionTerms = new List<AgentSnapshotConditionTerm>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotConditionTerm
-    {
-        public string kind;
-        public bool negate;
-        public string request;
-        public string blackboardKey;
-        public string windowType;
-        public string actionProfile;
-        public string actionProfileAssetPath;
-        public string actionProfileAssetGuid;
-        public string targetSnapshotBlackboardKey;
-        public string compareType;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotActionActivationSummary
-    {
-        public string nodeAuthoringId;
-        public string displayName;
-        public string actionProfile;
-        public string sourceRequest;
-        public string actionContext;
-        public string targetKey;
-        public string targetSnapshotBlackboardKey;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineBindingSummary
-    {
-        public string nodeAuthoringId;
-        public string timelineAuthoringId;
-        public string displayName;
-        public string timeline;
-        public string ownership;
-        public string graphPath;
-        public string timelineAssetPath;
-        public string timelineAssetGuid;
-        public string actionContext;
-        public string playbackMode;
-        public int trackCount;
-        public int clipCount;
-    }
-
-    [Serializable]
     public sealed class AgentSnapshotBlackboardInputBinding
     {
         public string inputValueId;
@@ -241,151 +113,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string windowType;
         public string windowId;
         public ulong digest;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotBlackboardDeclaration
-    {
-        public string declarationId;
-        public string ownerId;
-        public string graphPath;
-        public string key;
-        public string valueType;
-        public JToken defaultValue;
-        public string scope;
-        public string lifetime;
-        public AgentSnapshotBlackboardInputBinding inputBinding;
-        public AgentSnapshotBlackboardFactProjection factProjection;
-        public string categoryPath;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineTreeClip
-    {
-        public string timelineAuthoringId;
-        public string trackAuthoringId;
-        public string clipAuthoringId;
-        public string timeline;
-        public string timelineNodePath;
-        public string timelineOwnership;
-        public string timelineAssetPath;
-        public int trackIndex;
-        public int clipIndex;
-        public int startFrame;
-        public int endFrame;
-        public int clipInFrame;
-        public string extraPolationMode;
-        public string phase;
-        public string ownership;
-        public string treeName;
-        public List<AgentSnapshotTreeClipWrite> writes = new List<AgentSnapshotTreeClipWrite>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTreeClipWrite
-    {
-        public string declarationId;
-        public string declarationOwnerId;
-        public string blackboardKey;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimeline
-    {
-        public string timelineAuthoringId;
-        public string name;
-        public List<AgentSnapshotTimelineCallSite> callSites = new List<AgentSnapshotTimelineCallSite>();
-        public List<AgentSnapshotTimelineSection> sections = new List<AgentSnapshotTimelineSection>();
-        public List<AgentSnapshotTimelineTrack> tracks = new List<AgentSnapshotTimelineTrack>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineSection
-    {
-        public string sectionAuthoringId;
-        public string name;
-        public int frame;
-        public string nextSectionId;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineCallSite
-    {
-        public string nodeAuthoringId;
-        public string graphPath;
-        public string playbackMode;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineTrack
-    {
-        public string trackAuthoringId;
-        public string typeName;
-        public string name;
-        public int index;
-        public string animationChannelId;
-        public string animationSlotId;
-        public bool motionWarpTrack;
-        public List<AgentSnapshotTimelineClip> clips = new List<AgentSnapshotTimelineClip>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineClip
-    {
-        public string clipAuthoringId;
-        public string typeName;
-        public int index;
-        public int startFrame;
-        public int endFrame;
-        public int otherEaseInFrame;
-        public int otherEaseOutFrame;
-        public int selfEaseInFrame;
-        public int selfEaseOutFrame;
-        public int easeInFrame;
-        public int easeOutFrame;
-        public int clipInFrame;
-        public string extraPolationMode;
-        public string blendProfileId;
-        public string cueId;
-        public string cueType;
-        public AgentPackageObjectReference animationClip;
-        public string curveId;
-        public int curveEndFrame;
-        public string motionSpace;
-        public string motionChannel;
-        public string motionBlendMode;
-        public int motionPriority;
-        public bool consumeLowerChannels;
-        public bool motionWarpClip;
-        public string sourceMotionClipAuthoringId;
-        public string sourceMotionClipPath;
-        public string translationMode;
-        public string targetOffsetSpace;
-        public string rotationMode;
-        public string rotationMethod;
-        public AgentSnapshotVector2 targetPlanarOffset;
-        public float targetYawOffsetDegrees;
-        public float maxTotalPositionCorrection;
-        public float maxTotalYawCorrectionDegrees;
-        public float maximumYawRateDegreesPerSecond;
-        public string limitPolicy;
-        public List<AgentSnapshotTimelineCurveChannel> curveChannels = new List<AgentSnapshotTimelineCurveChannel>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotTimelineCurveChannel
-    {
-        public string channelId;
-        public string displayName;
-        public string timeDomain;
-        public bool bounded;
-        public float minimum;
-        public float maximum;
-        public float zero;
-        public string unit;
-        public string preWrapMode;
-        public string postWrapMode;
-        public List<AgentAnimationCurveKey> keys = new List<AgentAnimationCurveKey>();
     }
 
     [Serializable]
@@ -409,148 +136,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotLifecycleSummary
-    {
-        public string nodeAuthoringId;
-        public string displayName;
-        public string transitionType;
-        public string reason;
-        public string actionContext;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotGraph
-    {
-        public string graphAuthoringId;
-        public string path;
-        public string name;
-        public string kind;
-        public string ownership;
-        public string ownerElementAuthoringId;
-        public string referenceKey;
-        public string sharedAssetPath;
-        public List<AgentSnapshotAuthoringRoute> routes = new List<AgentSnapshotAuthoringRoute>();
-        public List<AgentSnapshotNode> nodes = new List<AgentSnapshotNode>();
-        public List<AgentSnapshotFlowEdge> flowEdges = new List<AgentSnapshotFlowEdge>();
-        public List<AgentSnapshotPropertyEdge> propertyEdges = new List<AgentSnapshotPropertyEdge>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotVector2
-    {
-        public float x;
-        public float y;
-    }
-
-    [Serializable]
     public sealed class AgentSnapshotNode
     {
         public string elementAuthoringId;
         public string typeName;
-        public string displayName;
-        public string nodeTypeDisplayName;
-        public AgentSnapshotVector2 position;
-        public List<AgentSnapshotGraphReference> graphReferences = new List<AgentSnapshotGraphReference>();
-        public List<AgentSnapshotAssetReference> assetReferences = new List<AgentSnapshotAssetReference>();
-        public List<AgentSnapshotPropertyPort> propertyPorts = new List<AgentSnapshotPropertyPort>();
         public AgentSnapshotExposedProperty exposedProperty;
-        public string loopStopType;
-        public string compareType;
-        public float moveSpeed;
-        public string displacementMode;
-        public float turnSpeedDegrees;
-        public bool cameraRelative;
-        public string executionMode;
-        public float durationSeconds;
-        public string inputId;
-        public string requestId;
-        public string blackboardDeclarationId;
-        public string stateExitCause;
-        public string actionContextId;
-        public string windowType;
-        public string actionProfileId;
-        public string targetSnapshotBlackboardDeclarationId;
     }
 
     [Serializable]
     public sealed class AgentSnapshotExposedProperty
     {
         public string mode;
-        public string declarationAuthoringId;
-        public string declarationOwnerId;
-        public string key;
-        public string valueType;
-        public JToken value;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotGraphReference
-    {
-        public string key;
-        public string label;
-        public string graphAuthoringId;
-        public string graphPath;
-        public string graphKind;
-        public string ownership;
-        public string scopeId;
-        public string sharedAssetPath;
-        public bool required;
-        public List<AgentSnapshotGraphParameterBinding> inputBindings = new List<AgentSnapshotGraphParameterBinding>();
-        public List<AgentSnapshotGraphParameterBinding> outputBindings = new List<AgentSnapshotGraphParameterBinding>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotGraphParameterBinding
-    {
-        public string parameterName;
-        public string declarationId;
-        public string portId;
-        public string valueType;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAssetReference
-    {
-        public string key;
-        public string label;
-        public string assetPath;
-        public string assetGuid;
-        public string assetType;
-        public bool required;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotPropertyPort
-    {
-        public string portId;
-        public string displayName;
-        public string direction;
-        public string valueType;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotFlowEdge
-    {
-        public string elementAuthoringId;
-        public string startElementAuthoringId;
-        public string endElementAuthoringId;
-        public string startPort;
-        public string endPort;
-        public int flowOrder;
-        public int transitionPriority;
-        public string abortPolicy;
-        public string conditionRuleGraphAuthoringId;
-        public string conditionRuleGraphPath;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotPropertyEdge
-    {
-        public string elementAuthoringId;
-        public string startElementAuthoringId;
-        public string endElementAuthoringId;
-        public string startPortId;
-        public string endPortId;
     }
 
     [Serializable]
@@ -677,7 +273,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentSnapshotActionPlaybackInput>();
         public List<AgentSnapshotAnimationSlot> animationSlots =
             new List<AgentSnapshotAnimationSlot>();
-        public List<AgentSnapshotAnimationProducer> producers = new List<AgentSnapshotAnimationProducer>();
         public List<AgentSnapshotAnimationBlendSpace> blendSpaces = new List<AgentSnapshotAnimationBlendSpace>();
     }
 
@@ -704,52 +299,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotAnimationProducer
-    {
-        public AgentSnapshotAuthoringRoute route = new AgentSnapshotAuthoringRoute();
-        public string ownerKind;
-        public string timelineAuthoringId;
-        public string trackAuthoringId;
-        public string timelineName;
-        public string trackName;
-        public string actionContextId;
-        public string animationChannelId;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAuthoringRoute
-    {
-        public string rootGraphAuthoringId;
-        public List<AgentSnapshotAuthoringRouteSegment> segments = new List<AgentSnapshotAuthoringRouteSegment>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAuthoringRouteSegment
-    {
-        public string kind;
-        public string ownerElementKind;
-        public string ownerGraphAuthoringId;
-        public string ownerElementAuthoringId;
-        public string referenceKey;
-        public string scopeId;
-        public string childGraphAuthoringId;
-        public string ownership;
-        public string timelineAuthoringId;
-        public string trackAuthoringId;
-        public string clipAuthoringId;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAsset
-    {
-        public string id;
-        public string name;
-        public string assetPath;
-        public string assetGuid;
-        public string assetType;
-    }
-
-    [Serializable]
     public sealed class AgentMutationDraftSet
     {
         public string schemaVersion = AgentAuthoringSchema.Version;
@@ -766,130 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         [NonSerialized]
         public string sourcePath;
         public AgentMutationKind kind;
-        public string graphAuthoringId;
-        public string graphPlannedIdentity;
-        public string graphKind;
-        public string graphOwnership;
-        public string graphReferenceKey;
-        public string graphReferenceSharedAssetPath;
-        public string graphOwnerElementAuthoringId;
-        public string graphOwnerElementPlannedIdentity;
-        public string graphReferenceGraphAuthoringId;
-        public string graphReferenceGraphPlannedIdentity;
-        public string entryGraphPlannedIdentity;
-        public List<AgentSnapshotGraphParameterBinding> graphReferenceInputBindings = new List<AgentSnapshotGraphParameterBinding>();
-        public List<AgentSnapshotGraphParameterBinding> graphReferenceOutputBindings = new List<AgentSnapshotGraphParameterBinding>();
-        public string targetGraphAuthoringId;
-        public string targetGraphPlannedIdentity;
-        public string stateMachineGraphAuthoringId;
-        public string stateMachinePlannedIdentity;
-        public string stateAuthoringId;
-        public string statePlannedIdentity;
-        public string fromElementAuthoringId;
-        public string fromPlannedIdentity;
-        public string toElementAuthoringId;
-        public string toPlannedIdentity;
-        public string sourceElementAuthoringId;
-        public string sourcePlannedIdentity;
-        public string targetElementAuthoringId;
-        public string targetPlannedIdentity;
-        public string flowEdgeAuthoringId;
-        public string flowEdgePlannedIdentity;
-        public string timelineAuthoringId;
-        public string timelinePlannedIdentity;
-        public string sectionAuthoringId;
-        public string nextSectionId;
-        public string trackAuthoringId;
-        public string trackPlannedIdentity;
-        public string clipAuthoringId;
-        public string clipPlannedIdentity;
-        public string sourceMotionClipAuthoringId;
-        public string declarationAuthoringId;
-        public string declarationPlannedIdentity;
-        public string graph;
-        public string targetGraph;
-        public string stateMachine;
-        public string state;
         public string displayName;
-        public string nodeType;
-        public string exposedPropertyMode;
-        public string from;
-        public string to;
-        public string sourceNode;
-        public string targetNode;
-        public string startPort;
-        public string endPort;
-        public string startPropertyPort;
-        public string endPropertyPort;
-        public string lifecycleSlot;
-        public string timeline;
-        public string timelineOwnership = AgentTimelineOwnership.Inline.ToString();
-        public string timelineAssetPath;
-        public string timelineAssetGuid;
-        public string actionProfile;
-        public string skillId;
-        public string entryGraphAuthoringId;
-        public string actionProfileAssetPath;
-        public string actionProfileAssetGuid;
-        public string controlModuleId;
-        public int controlSemanticVersion;
-        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
-        public string targetRequirement;
-        public string actionContext;
-        public string actionContextAssetPath;
-        public string actionContextAssetGuid;
-        public string request;
-        public string requestTimingClass;
-        public string blackboardKey;
-        public string blackboardValueType;
-        public JToken blackboardDefaultValue;
-        public string blackboardScope;
-        public string blackboardLifetime;
-        public int blackboardSchemaRevision;
-        public AgentSnapshotBlackboardInputBinding inputBinding;
-        public AgentSnapshotBlackboardFactProjection factProjection;
-        public string windowType;
-        public string windowId;
-        public ulong digest;
-        public string categoryPath;
-        public bool blackboardBoolValue;
-        public int blackboardIntValue;
-        public float blackboardFloatValue;
-        public Vector2 blackboardVector2Value;
-        public Vector3 blackboardVector3Value;
-        public int startFrame;
-        public int endFrame;
-        public int clipInFrame;
-        public string extraPolationMode;
-        public string animationChannelId;
-        public string animationSlotId;
-        public string blendProfileId;
-        public AgentPackageObjectReference animationClip;
-        public int frameOffset;
-        public int selfEaseInFrame;
-        public int selfEaseOutFrame;
-        public string timelinePhase;
-        public string translationMode;
-        public string targetOffsetSpace;
-        public string rotationMode;
-        public string rotationMethod;
-        public Vector2 targetPlanarOffset;
-        public float targetYawOffsetDegrees;
-        public float maxTotalPositionCorrection;
-        public float maxTotalYawCorrectionDegrees;
-        public float maximumYawRateDegreesPerSecond;
-        public string limitPolicy;
-        public List<AgentAnimationCurveKey> positionProgressCurve = new List<AgentAnimationCurveKey>();
-        public List<AgentAnimationCurveKey> yawProgressCurve = new List<AgentAnimationCurveKey>();
-        public string curveChannelId;
-        public string curveId;
-        public int curveEndFrame;
-        public string motionSpace;
-        public string motionChannel;
-        public string motionBlendMode;
-        public int motionPriority;
-        public bool consumeLowerChannels;
-        public AgentAnimationCurvePayload curve = new AgentAnimationCurvePayload();
         public string gameplayTag;
         public string parentGameplayTag;
         public string debugCategory;
@@ -897,63 +323,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<string> queryAll = new List<string>();
         public List<string> queryAny = new List<string>();
         public List<string> queryNone = new List<string>();
-        public List<AgentConditionGroup> conditionGroups = new List<AgentConditionGroup>();
-        public List<AgentConditionGroup> cancelConditionGroups = new List<AgentConditionGroup>();
-        public string sourceInputRequestId;
-        public bool consumeSourceInputRequest = true;
-        public string targetInputValueId;
-        public string targetKey;
-        public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
-        public List<string> allowedFollowUpSkillIds = new List<string>();
-        public AgentPackageSkillFlowDocument skillFlowDocument;
-        public string targetSnapshotBlackboardKey;
-        public string targetSnapshotBlackboardDeclarationId;
-        public string targetSnapshotBlackboardDeclarationPlannedIdentity;
-        public string lifecycleType;
-        public string reason;
-        public string completeReason;
-        public string interruptReason;
-        public string abortReason;
-        public string inputId;
-        public string conditionValueConfiguration;
-        public string stateExitCause;
-        public string loopStopType;
-        public string compareType;
-        public float moveSpeed;
-        public string displacementMode;
-        public string actionMotionCurve;
-        public string actionMotionCurveAssetPath;
-        public string actionMotionCurveAssetGuid;
-        public float turnSpeedDegrees;
-        public bool cameraRelative;
-        public string executionMode;
-        public float durationSeconds;
-        public string abortPolicy;
-        public int transitionPriority;
-        public Vector2 position;
-    }
-
-    [Serializable]
-    public sealed class AgentConditionGroup
-    {
-        public List<AgentConditionTerm> terms = new List<AgentConditionTerm>();
-    }
-
-    [Serializable]
-    public sealed class AgentConditionTerm
-    {
-        public string kind;
-        public string blackboardKey;
-        public bool negate;
-        public string from;
-        public string to;
-        public string request;
-        public string windowType;
         public string actionProfile;
-        public string actionProfileAssetPath;
-        public string actionProfileAssetGuid;
-        public string targetSnapshotBlackboardKey;
-        public string compareType;
+        public string targetRequirement;
+        public string request;
+        public string requestTimingClass;
+        public string controlModuleId;
+        public int controlSemanticVersion;
+        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
+        public AgentPackageSkillFlowDocument skillFlowDocument;
     }
 
     [Serializable]

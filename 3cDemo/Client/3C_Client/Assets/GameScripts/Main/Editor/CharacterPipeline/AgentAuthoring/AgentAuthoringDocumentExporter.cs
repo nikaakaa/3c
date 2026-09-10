@@ -75,8 +75,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation = ExportPresentationContext(
                     definition,
                     snapshot.presentation),
-                timelineAssets = snapshot.timelineAssets,
-                actionContextAssets = snapshot.actionContextAssets,
                 generatedProduct = ExportGeneratedProduct(
                     snapshot,
                     generatedProductStale),
@@ -270,7 +268,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 actionPlaybackInputs =
                     snapshot.actionPlaybackInputs,
                 animationSlots = snapshot.animationSlots,
-                producers = snapshot.producers,
                 blendSpaces = snapshot.blendSpaces,
                 blendCurves = ExportBlendCurves(),
                 blendProfiles = ExportBlendProfiles(

@@ -104,8 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelineAsset = directTimelineAsset;
                 return true;
             }
-
-            return TryResolveTimelineFromSnapshot(reference.LogicalId, out timelineAsset);
+            return false;
         }
 
         public bool TryResolveActionContext(AgentAssetReference reference, out ActionContextSlot actionContext)
@@ -117,8 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 actionContext = directContext;
                 return true;
             }
-
-            return TryResolveActionContextFromSnapshot(reference.LogicalId, out actionContext);
+            return false;
         }
 
         public bool TryResolveRootMotionCurve(AgentAssetReference reference, out RootMotionCurveAsset curve)
@@ -160,58 +158,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .OfType<T>()
                 .FirstOrDefault(candidate => AssetDatabase.TryGetGUIDAndLocalFileIdentifier(candidate, out _, out long localFileId) && localFileId == reference.localFileId);
             return value;
-        }
-
-        bool TryResolveTimelineFromSnapshot(string key, out TimelineAsset timelineAsset)
-        {
-            timelineAsset = null;
-            if (m_Snapshot == null || string.IsNullOrEmpty(key))
-                return false;
-
-            AgentSnapshotAsset match = FindSnapshotAsset(m_Snapshot.timelineAssets, key);
-            if (match == null)
-                return false;
-
-            timelineAsset = AssetDatabase.LoadAssetAtPath<TimelineAsset>(match.assetPath);
-            return timelineAsset;
-        }
-
-        bool TryResolveActionContextFromSnapshot(string key, out ActionContextSlot actionContext)
-        {
-            actionContext = null;
-            if (m_Snapshot == null || string.IsNullOrEmpty(key))
-                return false;
-
-            AgentSnapshotAsset match = FindSnapshotAsset(m_Snapshot.actionContextAssets, key);
-            if (match == null)
-                return false;
-
-            actionContext = AssetDatabase.LoadAssetAtPath<ActionContextSlot>(match.assetPath);
-            return actionContext;
-        }
-
-        static AgentSnapshotAsset FindSnapshotAsset(List<AgentSnapshotAsset> assets, string key)
-        {
-            AgentSnapshotAsset match = null;
-            for (int i = 0; i < assets.Count; i++)
-            {
-                AgentSnapshotAsset asset = assets[i];
-                if (asset == null)
-                    continue;
-
-                bool same = string.Equals(asset.id, key, StringComparison.Ordinal) ||
-                            string.Equals(asset.assetGuid, key, StringComparison.Ordinal) ||
-                            string.Equals(asset.assetPath, key, StringComparison.Ordinal) ||
-                            string.Equals(asset.name, key, StringComparison.Ordinal);
-                if (!same)
-                    continue;
-
-                if (match != null)
-                    return null;
-
-                match = asset;
-            }
-            return match;
         }
 
         static UnityEngine.Object ResolveObject(string guid, string path, Type expectedType)

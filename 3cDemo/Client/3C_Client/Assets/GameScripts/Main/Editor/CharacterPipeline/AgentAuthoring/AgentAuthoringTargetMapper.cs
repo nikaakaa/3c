@@ -63,9 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 inputValues = target.context.inputValues,
                 actionRequests = target.context.actionRequests,
-                blackboardDeclarations = snapshot?.blackboardDeclarations ?? new List<AgentSnapshotBlackboardDeclaration>(),
-                timelineAssets = target.context.timelineAssets,
-                actionContextAssets = target.context.actionContextAssets,
                 animationBlendCurves = target.context.presentation?.blendCurves ??
                     new List<AgentDocumentBlendAssetContext>(),
                 animationBlendProfiles = target.context.presentation?.blendProfiles ??
@@ -178,8 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 definitionAssetPath = dependencies.definitionAssetPath,
                 inputValues = assets.inputValues ?? new List<AgentSnapshotInputValue>(),
                 actionRequests = assets.actionRequests ?? new List<AgentSnapshotActionRequest>(),
-                timelineAssets = assets.timelineAssets ?? new List<AgentSnapshotAsset>(),
-                actionContextAssets = assets.actionContextAssets ?? new List<AgentSnapshotAsset>(),
                 bodyMotion = dependencies.bodyMotion ?? new AgentSnapshotBodyMotionProfile(),
                 presentation = dependencies.presentation ??
                                new AgentDocumentPresentationContext(),

@@ -68,8 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentSnapshotBodyMotionProfile bodyMotion = new AgentSnapshotBodyMotionProfile();
         public AgentDocumentPresentationContext presentation =
             new AgentDocumentPresentationContext();
-        public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
-        public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
         public AgentDocumentGeneratedProduct generatedProduct = new AgentDocumentGeneratedProduct();
         public List<string> capabilities = new List<string>();
     }
@@ -100,8 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentSnapshotActionPlaybackInput>();
         public List<AgentSnapshotAnimationSlot> animationSlots =
             new List<AgentSnapshotAnimationSlot>();
-        public List<AgentSnapshotAnimationProducer> producers =
-            new List<AgentSnapshotAnimationProducer>();
         public List<AgentSnapshotAnimationBlendSpace> blendSpaces =
             new List<AgentSnapshotAnimationBlendSpace>();
         public List<AgentDocumentBlendAssetContext> blendCurves =
@@ -364,9 +360,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
-        public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
-        public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
-        public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
         public List<AgentDocumentBlendAssetContext> animationBlendCurves =
             new List<AgentDocumentBlendAssetContext>();
         public List<AgentDocumentBlendAssetContext> animationBlendProfiles =

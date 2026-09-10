@@ -1573,3 +1573,5 @@ Unity MCP目标实例`3C_Client@e852139597e42532`刷新后Console为0 error，�
 提交`0cdab8a94`补上同一事务的两个收口点：Transition的Blend Curve／Blend Profile查找支持local Resource Slot，Document apply后的新建子资产持久化检查同时覆盖Source Slot与Resource Slot。这样新增槽不会在计划转换或保存阶段落回“找不到资源”的旧路径。
 
 提交`b2ce42532`修正跨Graph/Profile事务的删除时序：Agent apply先执行Graph与StateMachine变更，再执行Profile绑定更新，最后单独提交Resource Slot删除；因此删除槽时既不会被旧StateMachine引用拦截，也不会被旧Profile绑定拦截。
+
+当前 Pose change 严格 OpenSpec 校验通过：`refactor-character-pose-graph-architecture` 为 `valid=true`、0 issue。该校验只验证变更文档，不替代 Corin 的 Unity MCP apply、Character Build 或 Scene Play 证据。

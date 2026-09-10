@@ -4,6 +4,7 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using FlowCanvas;
 using NodeCanvas.Editor;
+using NodeCanvas.Framework;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 using UnityEngine;
@@ -31,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update += Update;
         }
 
-        static void OnCurrentGraphChanged(Graph graph) => MarkDirty();
+        static void OnCurrentGraphChanged(NodeCanvas.Framework.Graph graph) => MarkDirty();
 
         static void OnEditorClosed()
         {

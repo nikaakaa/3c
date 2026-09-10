@@ -5,6 +5,7 @@ using System.Linq;
 using FlowCanvas;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
+using ParadoxNotion;
 using ParadoxNotion.Design;
 using TreeDesigner;
 using UnityEditor;

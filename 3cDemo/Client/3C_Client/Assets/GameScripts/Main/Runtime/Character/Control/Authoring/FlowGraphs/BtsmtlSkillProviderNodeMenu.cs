@@ -10,6 +10,7 @@ using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 

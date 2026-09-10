@@ -2,15 +2,15 @@
 
 ## 当前状态（2026-09-10，对账修正）
 
-本提案不能按49项全部完成验收。此前把Capability注册、Compiler内部operation支持和一次旧作者拓扑的Character Build误判为完整UE式作者架构；当前任务状态见tasks.md，其中2.5、4.2、4.4、7.3、7.5、9.2、9.4已重新打开。
+本提案不能按49项全部完成验收。此前把Capability注册、Compiler内部operation支持和一次旧作者拓扑的Character Build误判为完整UE式作者架构；当前任务状态见tasks.md，其中2.5、4.2、4.4、7.3、7.5、9.2、9.4仍按实际缺口跟踪。
 
 已经完成的边界仍然有效：直接AnimationClip Player、Animation Slot与Slot Group、有限Action Timeline的Slot／Section／片段混合字段、Control Rig输入与FBIK展开、独立Pose输入合同、CharacterAnimationBuildContracts.CreatePoseOnlyInput()、CharacterSimulationBuildOrchestrator的animationBuildInput.CreatePoseOnlyInput()、Document v7闭包以及旧迁移器删除。
 
-当前精确Corin根图实际只有Locomotion Pose State Machine → Full Body Action Slot → Control Rig → Output Pose。这条串联可以表达Full Body Action Slot接在Locomotion之后，但不能代替完整分层。根图没有显式Locomotion BlendStack、独立Inertialization或Layered Blend Per Bone；生成Projection的m_Inertializations为空，m_BlendNodes中的StackPolicy只是Full Body Action Slot的内部运行workspace。Action Slot仍有内部Transition Routing和Slot惯性处理，但这不等于作者可单独调节的Locomotion Inertialization。
+当前精确Corin根图已通过正式Document事务变为Locomotion Pose State Machine → 通用 Inertialization → Full Body Action Slot → Control Rig → Output Pose，共6个节点、5条Pose边；Locomotion↔Turn两条转换使用Inertialization，其余转换保持StandardBlend。Corin没有Motion Matching或其它多源Selection source，因此没有强行创建显式BlendStack；Full Body Action Slot的内部StackPolicy只负责Action endpoint，不能冒充Locomotion BlendStack。Corin也没有真实UpperBody Overlay，所以暂不实例化Layered Blend Per Bone；Layered capability与Local／Component空间编译链已补齐。
 
-当前面板还存在两个不同问题：IdentityReference详情之前缺少Animation Channel、Animation Slot、Pose Graph和Linked Pose的正式选项源，已由提交ad8f4ae1e补齐并通过Unity MCP脚本编译；Applied Values在没有Play／Preview target时仍会等待运行角色，这是运行观察状态，不应被误写成作者资源缺失。
+当前面板的IdentityReference详情已接入Animation Channel、Animation Slot、Pose Graph、Linked Pose、Presentation Fact、Gameplay State和Pose History的正式选项源，提交ad8f4ae1e、8f961a9c4和c60d12591均已通过Unity MCP脚本编译；Applied Values在没有Play／Preview target时仍会等待运行角色，这是运行观察状态，不应被误写成作者资源缺失。
 
-本次重新checkout的精确Corin Document v7由Unity MCP返回syncState=Clean、plannedDiff=[]、sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8、documentHash=803c4a6d47212f1a458e88717a6675e66569a88e2b9b40c04ced258b9345e88d。此前Character Build job 756b84459b4b44c4aa0be94bca307bff确实成功，但它对应旧作者拓扑和旧SourceRevision，不作为修正后最终发布证据；完成根图分层、BlendStack、Inertialization、Layered Blend和面板验证后必须重新Build。
+本次正式Document apply由Unity MCP完成8个Presentation变更并成功回写；随后checkout返回syncState=Clean、plannedDiff=[]、sourceRevision=12bc98f1ef51448815991a2f31c7fc1d410c6445c7894ed33bb6fd34a9b56bee、documentHash=91e8785a6aa26a57f341fd82cdb54eb4236d7d4967f7ceaca668e7a51783825d。apply内部校验采样了7个ACL clip，但最终Corin Float32／Fixed／Projection产品仍需在当前authoring上重新发布，不能沿用旧SourceRevision证据。
 
 现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经明确要求这些边界，本轮对账没有修改spec。没有新增测试代码；端到端行为仍由作者验收。
 

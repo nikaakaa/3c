@@ -65,24 +65,22 @@ Locomotion State Machine
 
 Full Body Slot接在Locomotion之后是UE允许的Full Body Action插入方式，但它不能把Locomotion连续性、Action历史和惯性化混成一个owner。Slot自己的Action Stack只管理Action endpoint；Runtime不得因为存在Slot而自动创建BlendStack或Inertialization。图中是否出现这些节点，必须由实际作者拓扑和对应规则决定。
 
-分层动作采用以下语义，不强制把所有内容放进根图：
+分层动作采用以下语义，不强制把所有内容放进根图；直接Clip State Machine没有多源选择时不创建BlendStack，只有Selection／Motion Matching分支确实拥有多源历史时才放置显式BlendStack：
 
 ```text
-Locomotion Base〔State Machine → BlendStack → Inertialization〕
-    ──────────────────────────────────────→ Base Pose
-UpperBody Layer〔State Machine → Slot → Inertialization〕
-    ──────────────────────────────────────→ Layer Pose
-                                              ↓
-                                  Layered Blend Per Bone〔Mask、Alpha〕
-                                              ↓
-                              FullBody Action Slot（需要时）
-                                              ↓
-                               Action Inertialization
-                                              ↓
-                                  Control Rig → Output
+Locomotion State Machine
+    → [BlendStack：Selection／Motion Matching需要多源历史时]
+    → [通用 Inertialization：对应转换规则选择时]
+    → FullBody Action Slot
+    → Base Pose ───────────────────────────────┐
+Upper Body Layer → Slot → [通用 Inertialization] → Overlay Pose
+                                                 ↓
+                                  Layered Blend Per Bone〔Mask、Alpha、Pose Space〕
+                                                 ↓
+                                      Control Rig → Output
 ```
 
-动画层有两种合法接口：只输出一份姿势，由调用者配置按骨骼混合；或显式接收Base Pose，在层内部完成按骨骼混合后输出。由接口和图中节点决定，不增加隐含的UpperBody／LowerBody运行类型。层名称、Slot名称都不会自动生成Mask；同一层不能在内部和外部不知情地重复应用Mask。
+动画层有两种合法接口：只输出一份姿势，由调用者配置按骨骼混合；或显式接收Base Pose，在层内部完成按骨骼混合后输出。由接口和图中节点决定，不增加隐含的UpperBody／LowerBody运行类型。层名称、Slot名称都不会自动生成Mask；同一层不能在内部和外部不知情地重复应用Mask。当前Layered Blend Per Bone支持Local与Component Pose Space，Corin只有在存在真实Overlay Pose时才实例化该节点。
 
 Animation Layer复用现有Linked Pose Interface、Implementation、Group和selector体系，统一作者名称和职责，不再创建第二套Layer runtime。组用于明确的Implementation／实例共享，默认调用状态按Actor、implementation generation和call-site隔离。共享组也不能把两个角色的状态合并。
 

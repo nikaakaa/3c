@@ -2,9 +2,9 @@
 
 ## 2026-09-10 对账结果
 
-此前“已完成Corin作者重组与正式统一Build”的记录已经被本次对账覆盖。直接资源、Timeline字段、Control Rig、Document v7和独立Pose入口已完成，但根图分层、显式BlendStack、独立Inertialization、Layered Blend Per Bone和面板可用性仍未完成。
+此前“已完成Corin作者重组与正式统一Build”的记录已经被本次对账覆盖。直接资源、Timeline字段、Control Rig、Document v7和独立Pose入口已完成；根图已补入独立通用Inertialization，Layered Blend的空间编译链与面板选项源已补齐，但Corin暂无真实UpperBody Overlay，显式BlendStack也因没有多源Selection／Motion Matching分支而不应伪造。
 
-Unity MCP checkout返回当前Document v7为Clean且未计划变更。Corin根图当前只有Locomotion Pose State Machine、Full Body Action Slot、Control Rig和Output；没有显式BlendStack、Inertialization或Layered Blend Per Bone节点。Projection的m_Inertializations为空，Slot内部StackPolicy与Slot惯性运行状态不能替代独立作者节点。
+Unity MCP apply与checkout均已完成。Corin根图当前是Locomotion Pose State Machine、通用Inertialization、Full Body Action Slot、Control Rig和Output，加Foot Placement Weight参数输入；没有显式BlendStack或Layered Blend Per Bone节点。前者因缺少多源选择输入，后者因缺少真实Overlay，均不由Runtime隐式补建；FullBody Slot内部StackPolicy与Slot惯性运行状态不能替代独立作者节点。
 
 因此本文件后续的“新方案去向”是目标映射，不是已完成证明。此前统一Build只证明旧作者拓扑能够生成产物；根图修正后需要新的正式Build和新的Projection证据。
 
@@ -58,10 +58,10 @@ Unity作者资产是唯一真相。状态机和规则通过Document投影到不�
 | `ClipPlayer` | `CharacterClipPlayerPosePayload` | Sequence Player作者表面，直接引用原生AnimationClip |
 | `PoseStateMachine` | `CharacterPoseStateMachineNodePayload` | 用于AnimGraph或动画层，状态／规则各自下钻 |
 | `AnimationSlot` | `CharacterAnimationSlotPosePayload` | 根图、层或State Pose使用，消费原Timeline的播放结果 |
-| BlendStack | CharacterBlendStackPosePayload | Capability和Runtime已存在；Corin当前根图尚未实例化Locomotion显式Stack，Slot内部StackPolicy不能代替它 |
-| Inertialization | CharacterInertializationPosePayload | Capability和Runtime已存在；Corin当前Projection没有显式Inertialization，需恢复独立作者owner |
+| BlendStack | CharacterBlendStackPosePayload | Capability和Runtime按多源Selection／Motion Matching source工作；Corin没有该分支，不创建假Stack，FullBody Slot内部Stack仅管理Action endpoint |
+| Inertialization | CharacterInertializationPosePayload | Corin根图已实例化通用节点，State Machine两条Turn转换进入该节点并保留局部history |
 | `BlendPose` | `CharacterBlendPosePayload` | 普通姿势混合并拥有相应Curve设置 |
-| LayeredBoneBlend | CharacterLayeredBoneBlendPosePayload | Capability和Runtime已存在；Corin当前根图没有实例，需补齐Mask／Branch Filter和Alpha层次 |
+| LayeredBoneBlend | CharacterLayeredBoneBlendPosePayload | Runtime已支持dense Mask、Alpha与Local／Component Pose Space；Corin当前没有真实Overlay，暂不创建无业务意义的实例 |
 | `AdditivePose` | `CharacterAdditivePosePayload` | 保留明确的Additive姿势组合 |
 | `PoseParameterResolve` | `CharacterPoseParameterResolvePayload` | 删除必接作者节点，迁入实际组合节点的Curve策略 |
 | `ModifyBone` | `CharacterModifyBonePosePayload` | 按空间合同作为骨骼控制或Rig步骤使用 |

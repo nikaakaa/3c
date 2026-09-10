@@ -136,14 +136,16 @@ namespace BTSMTL.Timeline.Editor
 
         readonly struct ProxyClipSnapshot
         {
-            public ProxyClipSnapshot(float startTime, float endTime)
+            public ProxyClipSnapshot(float startTime, float endTime, string trackAuthoringId)
             {
                 StartTime = startTime;
                 EndTime = endTime;
+                TrackAuthoringId = trackAuthoringId ?? string.Empty;
             }
 
             public float StartTime { get; }
             public float EndTime { get; }
+            public string TrackAuthoringId { get; }
         }
 
         readonly struct ProxySectionSnapshot
@@ -164,6 +166,8 @@ namespace BTSMTL.Timeline.Editor
                 new Dictionary<string, ProxyClipSnapshot>(StringComparer.Ordinal);
             public readonly Dictionary<string, ProxySectionSnapshot> Sections =
                 new Dictionary<string, ProxySectionSnapshot>(StringComparer.Ordinal);
+            public readonly HashSet<string> Tracks = new HashSet<string>(StringComparer.Ordinal);
+            public bool Unsupported;
         }
 
         BtsmtlSlateTimelineProjection(TimelineEditorOpenRequest request)
@@ -238,7 +242,10 @@ namespace BTSMTL.Timeline.Editor
                     GameObject clipObject = CreateChild(trackObject.transform, sourceClip.Name);
                     BtsmtlSlateActionClip proxyClip = clipObject.AddComponent<BtsmtlSlateActionClip>();
                     proxyClip.hideFlags = HideFlags.HideAndDontSave;
-                    proxyClip.Configure(sourceClip.Name, sourceClip.Duration / (float)TimelineUtility.FrameRate);
+                    string displayName = sourceClip.Name;
+                    if (sourceClip is ITimelineOwnedAuthoringIdentity)
+                        displayName = $"{displayName} [{sourceClip.ContractKind}]";
+                    proxyClip.Configure(displayName, sourceClip.Duration / (float)TimelineUtility.FrameRate);
                     proxyClip.ConfigureSource(sourceClip.AuthoringId);
                     proxyClip.startTime = sourceClip.StartFrame / (float)TimelineUtility.FrameRate;
                     proxyTrack.clips.Add(proxyClip);
@@ -308,10 +315,47 @@ namespace BTSMTL.Timeline.Editor
         ProjectionSnapshot CaptureSnapshot()
         {
             var snapshot = new ProjectionSnapshot();
-            foreach (KeyValuePair<string, BtsmtlSlateActionClip> pair in m_ProxyClips)
-                snapshot.Clips[pair.Key] = new ProxyClipSnapshot(pair.Value.startTime, pair.Value.endTime);
-            foreach (KeyValuePair<string, Slate.Section> pair in m_ProxySections)
-                snapshot.Sections[pair.Key] = new ProxySectionSnapshot(pair.Value.name, pair.Value.time);
+            foreach (CutsceneGroup group in m_Cutscene.groups)
+            {
+                for (int trackIndex = 0; trackIndex < group.tracks.Count; trackIndex++)
+                {
+                    if (!(group.tracks[trackIndex] is BtsmtlSlateTrack proxyTrack) ||
+                        string.IsNullOrEmpty(proxyTrack.SourceAuthoringId))
+                    {
+                        snapshot.Unsupported = true;
+                        continue;
+                    }
+                    snapshot.Tracks.Add(proxyTrack.SourceAuthoringId);
+                    for (int clipIndex = 0; clipIndex < proxyTrack.clips.Count; clipIndex++)
+                    {
+                        if (!(proxyTrack.clips[clipIndex] is BtsmtlSlateActionClip proxyClip) ||
+                            string.IsNullOrEmpty(proxyClip.SourceAuthoringId))
+                        {
+                            snapshot.Unsupported = true;
+                            continue;
+                        }
+                        snapshot.Clips[proxyClip.SourceAuthoringId] =
+                            new ProxyClipSnapshot(
+                                proxyClip.startTime,
+                                proxyClip.endTime,
+                                proxyTrack.SourceAuthoringId);
+                    }
+                }
+            }
+            foreach (CutsceneGroup group in m_Cutscene.groups)
+            {
+                for (int sectionIndex = 0; sectionIndex < group.sections.Count; sectionIndex++)
+                {
+                    Slate.Section proxySection = group.sections[sectionIndex];
+                    string sourceId = m_ProxySections.FirstOrDefault(pair => ReferenceEquals(pair.Value, proxySection)).Key;
+                    if (string.IsNullOrEmpty(sourceId))
+                    {
+                        snapshot.Unsupported = true;
+                        continue;
+                    }
+                    snapshot.Sections[sourceId] = new ProxySectionSnapshot(proxySection.name, proxySection.time);
+                }
+            }
             return snapshot;
         }
 
@@ -319,7 +363,7 @@ namespace BTSMTL.Timeline.Editor
             ProjectionSnapshot begin,
             ProjectionSnapshot end)
         {
-            if (m_ReadOnly)
+            if (m_ReadOnly || end.Unsupported)
                 return;
             var changes = new List<(Clip Clip, int StartFrame, int EndFrame)>();
             foreach (KeyValuePair<string, ProxyClipSnapshot> pair in end.Clips)
@@ -327,6 +371,8 @@ namespace BTSMTL.Timeline.Editor
                 if (!begin.Clips.TryGetValue(pair.Key, out ProxyClipSnapshot before) ||
                     !m_SourceClips.TryGetValue(pair.Key, out Clip sourceClip))
                     continue;
+                if (!string.Equals(before.TrackAuthoringId, FindProxyTrackAuthoringId(pair.Key), StringComparison.Ordinal))
+                    return;
                 int startFrame = Mathf.Max(0, Mathf.RoundToInt(pair.Value.StartTime * TimelineUtility.FrameRate));
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(pair.Value.EndTime * TimelineUtility.FrameRate));
                 int beforeStartFrame = Mathf.RoundToInt(before.StartTime * TimelineUtility.FrameRate);
@@ -347,10 +393,33 @@ namespace BTSMTL.Timeline.Editor
                     sectionChanges.Add((sourceSection, pair.Value.Name, frame));
             }
 
-            if (changes.Count == 0 && sectionChanges.Count == 0)
+            var removedTracks = m_SourceTracks
+                .Where(pair => !end.Tracks.Contains(pair.Key))
+                .Select(pair => pair.Value)
+                .ToArray();
+            var removedClips = m_SourceClips
+                .Where(pair => !end.Clips.ContainsKey(pair.Key))
+                .Select(pair => pair.Value)
+                .ToArray();
+            var removedSections = m_SourceSections
+                .Where(pair => !end.Sections.ContainsKey(pair.Key))
+                .Select(pair => pair.Value)
+                .ToArray();
+
+            if (changes.Count == 0 && sectionChanges.Count == 0 &&
+                removedTracks.Length == 0 && removedClips.Length == 0 && removedSections.Length == 0)
                 return;
             m_Session.Apply(() =>
             {
+                for (int index = 0; index < removedTracks.Length; index++)
+                    m_Request.Timeline.RemoveTrack(removedTracks[index]);
+                for (int index = 0; index < removedClips.Length; index++)
+                {
+                    if (!removedTracks.Contains(removedClips[index].Track))
+                        m_Request.Timeline.RemoveClip(removedClips[index]);
+                }
+                for (int index = 0; index < removedSections.Length; index++)
+                    m_Request.Timeline.RemoveSection(removedSections[index]);
                 for (int index = 0; index < changes.Count; index++)
                 {
                     (Clip clip, int startFrame, int endFrame) = changes[index];
@@ -364,6 +433,25 @@ namespace BTSMTL.Timeline.Editor
                     m_Request.Timeline.ConfigureSection(section, name, frame);
                 }
             }, "Slate Timeline Edit");
+        }
+
+        string FindProxyTrackAuthoringId(string clipAuthoringId)
+        {
+            foreach (CutsceneGroup group in m_Cutscene.groups)
+            {
+                for (int trackIndex = 0; trackIndex < group.tracks.Count; trackIndex++)
+                {
+                    if (!(group.tracks[trackIndex] is BtsmtlSlateTrack track))
+                        continue;
+                    for (int clipIndex = 0; clipIndex < track.clips.Count; clipIndex++)
+                    {
+                        if (track.clips[clipIndex] is BtsmtlSlateActionClip clip &&
+                            string.Equals(clip.SourceAuthoringId, clipAuthoringId, StringComparison.Ordinal))
+                            return track.SourceAuthoringId;
+                    }
+                }
+            }
+            return string.Empty;
         }
 
         public void SetRuntimeReadOnly(bool readOnly)

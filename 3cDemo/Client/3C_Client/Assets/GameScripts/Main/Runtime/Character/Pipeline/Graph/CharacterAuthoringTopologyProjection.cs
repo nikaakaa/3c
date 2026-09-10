@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.Control.Authoring;
 using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Graph
@@ -16,21 +17,21 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         public IReadOnlyList<CharacterAuthoringGraphEntry> Graphs => m_Graphs;
         public IReadOnlyList<CharacterAuthoringTimelineEntry> Timelines => m_Timelines;
 
-        public static CharacterAuthoringTopologyProjection Build(BaseTree rootTree, List<string> errors)
+        public static CharacterAuthoringTopologyProjection Build(BaseTree graph, List<string> errors, bool allowMissingTimelineTrees = false)
         {
-            return Build(rootTree == null ? Array.Empty<BaseTree>() : new[] { rootTree }, errors);
+            return Build(graph == null ? Array.Empty<BaseTree>() : new[] { graph }, errors, allowMissingTimelineTrees);
         }
 
-        public static CharacterAuthoringTopologyProjection Build(IEnumerable<BaseTree> rootTrees, List<string> errors)
+        public static CharacterAuthoringTopologyProjection Build(IEnumerable<BaseTree> compositionGraphs, List<string> errors, bool allowMissingTimelineTrees = false)
         {
             var projection = new CharacterAuthoringTopologyProjection();
-            BaseTree[] roots = (rootTrees ?? Array.Empty<BaseTree>())
+            BaseTree[] roots = (compositionGraphs ?? Array.Empty<BaseTree>())
                 .Where(value => value != null)
                 .OrderBy(value => value.GraphAuthoringId, StringComparer.Ordinal)
                 .ToArray();
             if (roots.Length == 0)
             {
-                errors?.Add("Character authoring topology requires a RootTree with a GraphAuthoringId.");
+                errors?.Add("Character authoring topology requires an explicit composition graph with a GraphAuthoringId.");
                 return projection;
             }
             var rootIds = new HashSet<string>(StringComparer.Ordinal);
@@ -50,7 +51,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                     null,
                     new List<BaseGraph>(),
                     new HashSet<BaseGraph>(),
-                    errors);
+                    errors,
+                    allowMissingTimelineTrees);
             }
             return projection;
         }
@@ -61,7 +63,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             object parentOwner,
             IReadOnlyList<BaseGraph> ancestors,
             HashSet<BaseGraph> recursionPath,
-            List<string> errors)
+            List<string> errors,
+            bool allowMissingTimelineTrees)
         {
             if (graph == null || route == null || !route.IsValid ||
                 !string.Equals(route.LeafGraphAuthoringId, graph.GraphAuthoringId, StringComparison.Ordinal))
@@ -101,7 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         timeline,
                         visibleGraphs,
                         recursionPath,
-                        errors);
+                        errors,
+                        allowMissingTimelineTrees);
                 }
 
                 var references = new List<NodeGraphReference>(node.GetGraphReferences());
@@ -132,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         reference.ScopeId,
                         reference.Tree.GraphAuthoringId,
                         reference.Inline ? TreeGraphReferenceOwnership.Inline : TreeGraphReferenceOwnership.Shared));
-                    valid &= Visit(reference.Tree, childRoute, node, visibleGraphs, recursionPath, errors);
+                    valid &= Visit(reference.Tree, childRoute, node, visibleGraphs, recursionPath, errors, allowMissingTimelineTrees);
                 }
             }
 
@@ -151,7 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                     conditionGraph.GraphAuthoringId,
                     ownership));
                 IReadOnlyList<BaseGraph> conditionVisibleGraphs = BuildConditionVisibleGraphs(edge, visibleGraphs);
-                valid &= Visit(conditionGraph, conditionRoute, edge, conditionVisibleGraphs, recursionPath, errors);
+                valid &= Visit(conditionGraph, conditionRoute, edge, conditionVisibleGraphs, recursionPath, errors, allowMissingTimelineTrees);
             }
 
             recursionPath.Remove(graph);
@@ -165,7 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             TimelineData timeline,
             IReadOnlyList<BaseGraph> ancestors,
             HashSet<BaseGraph> recursionPath,
-            List<string> errors)
+            List<string> errors,
+            bool allowMissingTimelineTrees)
         {
             bool valid = true;
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
@@ -176,11 +181,23 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                 {
                     if (treeTrack.Clips[clipIndex] is not TreeClip treeClip)
                         continue;
+                    if (treeClip.Ownership == TimelineTreeOwnership.AssetGraph)
+                    {
+                        if (treeClip.AssetTree is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
+                        {
+                            errors?.Add($"Timeline '{timeline.Name}' TreeClip '{treeClip.AuthoringId}' has an invalid asset graph.");
+                            valid = false;
+                        }
+                        continue;
+                    }
                     TimelineRunningTree tree = treeClip.ResolvedTree;
                     if (tree == null || treeClip.Ownership == TimelineTreeOwnership.Missing)
                     {
-                        errors?.Add($"Timeline '{timeline.Name}' TreeClip '{treeClip.AuthoringId}' is missing its graph.");
-                        valid = false;
+                        if (!allowMissingTimelineTrees)
+                        {
+                            errors?.Add($"Timeline '{timeline.Name}' TreeClip '{treeClip.AuthoringId}' is missing its graph.");
+                            valid = false;
+                        }
                         continue;
                     }
                     TreeAuthoringRouteId childRoute = ownerRoute.Append(TreeAuthoringRouteSegment.TimelineTreeClip(
@@ -194,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         timeline.AuthoringId,
                         treeTrack.AuthoringId,
                         treeClip.AuthoringId));
-                    valid &= Visit(tree, childRoute, treeClip, ancestors, recursionPath, errors);
+                    valid &= Visit(tree, childRoute, treeClip, ancestors, recursionPath, errors, allowMissingTimelineTrees);
                 }
             }
             return valid;

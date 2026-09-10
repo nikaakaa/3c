@@ -194,6 +194,7 @@ namespace BTSMTL.Timeline.Editor
             public readonly Dictionary<string, ProxySectionSnapshot> Sections =
                 new Dictionary<string, ProxySectionSnapshot>(StringComparer.Ordinal);
             public readonly HashSet<string> Tracks = new HashSet<string>(StringComparer.Ordinal);
+            public readonly List<string> TrackOrder = new List<string>();
             public bool Unsupported;
         }
 
@@ -433,11 +434,21 @@ namespace BTSMTL.Timeline.Editor
                         snapshot.Unsupported = true;
                         continue;
                     }
-                    snapshot.Tracks.Add(proxyTrack.SourceAuthoringId);
+                    if (!snapshot.Tracks.Add(proxyTrack.SourceAuthoringId))
+                    {
+                        snapshot.Unsupported = true;
+                        continue;
+                    }
+                    snapshot.TrackOrder.Add(proxyTrack.SourceAuthoringId);
                     for (int clipIndex = 0; clipIndex < proxyTrack.clips.Count; clipIndex++)
                     {
                         if (!(proxyTrack.clips[clipIndex] is BtsmtlSlateActionClip proxyClip) ||
                             string.IsNullOrEmpty(proxyClip.SourceAuthoringId))
+                        {
+                            snapshot.Unsupported = true;
+                            continue;
+                        }
+                        if (snapshot.Clips.ContainsKey(proxyClip.SourceAuthoringId))
                         {
                             snapshot.Unsupported = true;
                             continue;
@@ -459,6 +470,11 @@ namespace BTSMTL.Timeline.Editor
                     Slate.Section proxySection = group.sections[sectionIndex];
                     string sourceId = m_ProxySections.FirstOrDefault(pair => ReferenceEquals(pair.Value, proxySection)).Key;
                     if (string.IsNullOrEmpty(sourceId))
+                    {
+                        snapshot.Unsupported = true;
+                        continue;
+                    }
+                    if (snapshot.Sections.ContainsKey(sourceId))
                     {
                         snapshot.Unsupported = true;
                         continue;
@@ -526,9 +542,11 @@ namespace BTSMTL.Timeline.Editor
                 .Where(pair => !end.Sections.ContainsKey(pair.Key))
                 .Select(pair => pair.Value)
                 .ToArray();
+            bool trackOrderChanged = !begin.TrackOrder.SequenceEqual(end.TrackOrder);
 
             if (changes.Count == 0 && sectionChanges.Count == 0 &&
-                removedTracks.Length == 0 && removedClips.Length == 0 && removedSections.Length == 0)
+                removedTracks.Length == 0 && removedClips.Length == 0 && removedSections.Length == 0 &&
+                !trackOrderChanged)
                 return;
             m_Session.Apply(() =>
             {
@@ -554,6 +572,20 @@ namespace BTSMTL.Timeline.Editor
                 {
                     (TimelineSection section, string name, int frame) = sectionChanges[index];
                     m_Request.Timeline.ConfigureSection(section, name, frame);
+                }
+                if (trackOrderChanged)
+                {
+                    var orderedTracks = new List<Track>(end.TrackOrder.Count);
+                    for (int index = 0; index < end.TrackOrder.Count; index++)
+                    {
+                        if (m_SourceTracks.TryGetValue(end.TrackOrder[index], out Track track) &&
+                            !removedTracks.Contains(track))
+                            orderedTracks.Add(track);
+                    }
+                    if (orderedTracks.Count != m_Request.Timeline.Tracks.Count)
+                        throw new InvalidOperationException("Slate Timeline track identity is stale.");
+                    m_Request.Timeline.Tracks.Clear();
+                    m_Request.Timeline.Tracks.AddRange(orderedTracks);
                 }
                 m_Request.Timeline.Init();
             }, "Slate Timeline Edit");

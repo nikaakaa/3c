@@ -333,6 +333,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
         }
 
+        public static IReadOnlyList<ICharacterSimulationTargetBuildAdapter> DefaultValidation(CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            string definitionPath = AssetDatabase.GetAssetPath(definition);
+            string directory = Path.GetDirectoryName(definitionPath)?.Replace('\\', '/') ?? "Assets";
+            return new ICharacterSimulationTargetBuildAdapter[]
+            {
+                Float32(definition),
+                new FixedCharacterSimulationTargetBuildAdapter(
+                    $"{directory}/Generated/{definition.name}.FixedSimulationProgram.asset")
+            };
+        }
+
         public static ICharacterSimulationTargetBuildAdapter Float32(TimelineAsset timeline)
         {
             if (!timeline)

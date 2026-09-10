@@ -281,3 +281,5 @@ Provider合同重新加载后，正式`btsmtl.checkout_document` job `bf3f0a531d
 Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backend、Unity CharacterController Solver、`RequiredPasses=10`、`SourcePorts=5`和`thirdperson.network-model.server-authoritative-hybrid`；Authority结果返回 Server-Authoritative Authority Pipeline、同一 Backend/Solver、`RequiredPasses=6`、`SourcePorts=4`和同一 NetworkModel。该结果补齐当前 Composition 兼容性复核，但仍不关闭4.5.5的网络产品运行与载荷限制证据，也没有执行Character Build、Play或资产迁移。
 
 随后执行只读 `btsmtl.dry_run_document` job `2ab6784cf2a64d929c3b3997e5cb3871`，返回 `success=false`、`errorCode=document_sync_state_blocked`、`syncState=TreeDirty`，要求先 checkout 或 rebase。当前 package 与 Unity authoring 的差异包含外部窗口正在处理的 Pose/资产变化；本任务没有执行规避性 checkout、rebase、apply或最终技能资产迁移，避免把未经用户裁决的外部改动混入本变更。
+
+对同一根再次执行只读 dry-run job `e8d2d574a1dc45d49e566457cd710ddb`，仍返回 `success=false`、`errorCode=document_sync_state_blocked`、`syncState=TreeDirty`，没有产生新的计划或资产写入。该重复结果确认阻塞来自 authoring/package 事实差异而不是一次性连接失败；继续等待外部窗口完成并裁决其 Pose/资产变更。

@@ -77,6 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case SetProfileSourceResourceBindingsMutation resources:
                     m_Profile.SetSourceResourceBindings(resources.Bindings.ToArray());
                     break;
+                case SetProfilePoseResourceBindingsMutation resources:
+                    m_Profile.SetPoseResourceBindings(resources.Bindings.ToArray());
+                    break;
                 case SetProfileAnimationCompressionMutation compression:
                     m_Profile.SetAnimationCompression(compression.Compression);
                     break;

@@ -67,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SetProfileSourceResourceBindings = 51,
         SetProfileAnimationCompression = 52,
         SetProfileAnimationPropertyBindings = 53,
+        SetProfilePoseResourceBindings = 54,
         CreatePoseResourceSlot = 55,
         RenamePoseResourceSlot = 56,
         DeletePoseResourceSlot = 57
@@ -582,6 +583,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public IReadOnlyList<CharacterAnimationSourceResourceBinding> Bindings { get; }
+    }
+
+    public sealed class SetProfilePoseResourceBindingsMutation : CharacterPresentationMutation
+    {
+        public SetProfilePoseResourceBindingsMutation(
+            string profileId,
+            CharacterPoseResourceBinding[] bindings)
+            : base(
+                CharacterPresentationMutationKind.SetProfilePoseResourceBindings,
+                profileId)
+        {
+            Bindings = bindings ?? Array.Empty<CharacterPoseResourceBinding>();
+        }
+
+        public IReadOnlyList<CharacterPoseResourceBinding> Bindings { get; }
     }
 
     public sealed class SetProfileAnimationCompressionMutation : CharacterPresentationMutation
@@ -1434,6 +1450,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind == CharacterPresentationMutationKind.CreateProfileSourceBinding ||
             value.Kind == CharacterPresentationMutationKind.RenameProfileSourceBinding ||
             value.Kind == CharacterPresentationMutationKind.SetProfileSourceResourceBindings ||
+            value.Kind == CharacterPresentationMutationKind.SetProfilePoseResourceBindings ||
             value.Kind == CharacterPresentationMutationKind.SetProfileAnimationCompression ||
             value.Kind == CharacterPresentationMutationKind.SetProfileAnimationPropertyBindings ||
             value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseImplementation &&

@@ -70,6 +70,116 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public static class CharacterAnimationPresentationAuthoringService
     {
+        public static Type SourceType(PresentationPoseSourceKind kind) =>
+            kind switch
+            {
+                PresentationPoseSourceKind.Clip => typeof(UnityEngine.AnimationClip),
+                PresentationPoseSourceKind.BlendSpace => typeof(CharacterAnimationBlendSpaceAsset),
+                PresentationPoseSourceKind.MotionMatching => typeof(CharacterMotionMatchingProfile),
+                _ => throw new InvalidOperationException($"Pose source kind '{kind}' has no formal source type.")
+            };
+
+        public static CharacterPresentationPoseSourceSlot CreateSourceSlot(
+            PresentationPoseSourceKind kind) =>
+            kind switch
+            {
+                PresentationPoseSourceKind.Clip =>
+                    UnityEngine.ScriptableObject.CreateInstance<CharacterClipPoseSourceSlot>(),
+                PresentationPoseSourceKind.BlendSpace =>
+                    UnityEngine.ScriptableObject.CreateInstance<CharacterBlendSpacePoseSourceSlot>(),
+                PresentationPoseSourceKind.MotionMatching =>
+                    UnityEngine.ScriptableObject.CreateInstance<CharacterMotionMatchingPoseSourceSlot>(),
+                _ => throw new InvalidOperationException($"Pose source kind '{kind}' has no formal source slot.")
+            };
+
+        public static CharacterPresentationPoseSourceBinding CreateSourceBinding(
+            PresentationPoseSourceKind kind,
+            CharacterPresentationPoseSourceSlot slot,
+            UnityEngine.Object source,
+            CharacterAnimationRigDefinition rig,
+            string footAnalysisIdentity,
+            string searchDomainId,
+            CharacterMotionMatchingDatabaseDefinition[] databases)
+        {
+            if (!slot || !source || slot.SourceKind != kind)
+                throw new ArgumentException("Pose source binding inputs are incomplete.");
+            CharacterPresentationPoseSourceBinding binding;
+            switch (kind)
+            {
+                case PresentationPoseSourceKind.Clip when
+                    slot is CharacterClipPoseSourceSlot clipSlot &&
+                    source is UnityEngine.AnimationClip clip:
+                    var clipBinding = UnityEngine.ScriptableObject.CreateInstance<CharacterClipPoseSourceBinding>();
+                    clipBinding.name = slot.name + " Binding";
+                    clipBinding.Configure(clipSlot, clip);
+                    binding = clipBinding;
+                    break;
+                case PresentationPoseSourceKind.BlendSpace when
+                    slot is CharacterBlendSpacePoseSourceSlot blendSpaceSlot &&
+                    source is CharacterAnimationBlendSpaceAsset blendSpace:
+                    var blendSpaceBinding = UnityEngine.ScriptableObject.CreateInstance<CharacterBlendSpacePoseSourceBinding>();
+                    blendSpaceBinding.name = slot.name + " Binding";
+                    blendSpaceBinding.Configure(blendSpaceSlot, blendSpace, rig, footAnalysisIdentity);
+                    binding = blendSpaceBinding;
+                    break;
+                case PresentationPoseSourceKind.MotionMatching when
+                    slot is CharacterMotionMatchingPoseSourceSlot motionMatchingSlot &&
+                    source is CharacterMotionMatchingProfile motionMatching:
+                    var motionMatchingBinding = UnityEngine.ScriptableObject.CreateInstance<CharacterMotionMatchingPoseSourceBinding>();
+                    motionMatchingBinding.name = slot.name + " Binding";
+                    motionMatchingBinding.Configure(
+                        motionMatchingSlot,
+                        motionMatching,
+                        rig,
+                        new CharacterMotionMatchingSearchDomainId(searchDomainId),
+                        databases,
+                        footAnalysisIdentity);
+                    binding = motionMatchingBinding;
+                    break;
+                default:
+                    throw new ArgumentException("Pose source slot and source asset do not match formal metadata.");
+            }
+            return binding;
+        }
+
+        public static CharacterPoseResourceBinding CreateResourceBinding(
+            CharacterPresentationPoseGraphAsset graph,
+            CharacterPoseResourceSlot slot,
+            CharacterPoseResourceKind kind,
+            UnityEngine.Object resource)
+        {
+            if (!graph || !slot || slot.Kind != kind ||
+                !graph.ResourceSlots.Contains(slot) || !slot.Accepts(resource))
+            {
+                throw new ArgumentException("Pose resource binding inputs are incomplete.");
+            }
+            var binding = new CharacterPoseResourceBinding();
+            binding.Configure(slot, resource);
+            return binding;
+        }
+
+        public static CharacterPoseResourceSlot CreateResourceSlot(
+            CharacterPresentationPoseGraphAsset graph,
+            string displayName,
+            CharacterPoseResourceKind kind)
+        {
+            if (!graph || string.IsNullOrWhiteSpace(displayName) ||
+                !Enum.IsDefined(typeof(CharacterPoseResourceKind), kind))
+                throw new ArgumentException("Pose Resource Slot creation inputs are incomplete.");
+            CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
+            slot.name = displayName.Trim();
+            var transaction = new CharacterPresentationMutationTransaction(
+                Guid.NewGuid().ToString("N"),
+                "Create Pose Resource Slot");
+            transaction.Add(new CreatePoseResourceSlotMutation(
+                RequireAssetOwnerId(graph),
+                slot));
+            new CharacterPresentationMutationService().Apply(
+                new CharacterPoseGraphAssetMutationOwner(graph),
+                transaction);
+            return slot;
+        }
+
         public static CharacterClipPoseSourceSlot CreateClipPoseSource(
             CharacterAnimationPresentationProfile profile,
             string displayName,
@@ -441,6 +551,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnimationProducerPresentationBinding binding = RequireBinding(profile, producerId);
             binding.ConfigureTimeline(producerId);
             EditorUtility.SetDirty(profile);
+        }
+
+        public static AnimationProducerPresentationBinding CreateProducerBinding(
+            AnimationProducerId producerId)
+        {
+            var binding = new AnimationProducerPresentationBinding();
+            binding.ConfigureTimeline(producerId);
+            return binding;
         }
 
         internal static string ResolveFootAnalysisIdentity(CharacterAnimationPresentationProfile profile)

@@ -602,6 +602,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case DeletePoseSourceSlotMutation delete:
                     DeleteSourceSlot(delete.Slot);
                     break;
+                case CreatePoseResourceSlotMutation create:
+                    CreateResourceSlot(create.Slot);
+                    break;
+                case RenamePoseResourceSlotMutation rename:
+                    RenameResourceSlot(rename.Slot, rename.DisplayName);
+                    break;
+                case DeletePoseResourceSlotMutation deleteResource:
+                    DeleteResourceSlot(deleteResource.Slot);
+                    break;
                 default:
                     throw new InvalidOperationException(
                         $"Mutation '{mutation?.Kind}' is not a Pose Graph catalog command.");
@@ -672,6 +681,67 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Asset.SetSourceSlots(m_Asset.SourceSlots.Where(value => value != slot).ToArray());
             Undo.DestroyObjectImmediate(slot);
         }
+
+        void CreateResourceSlot(CharacterPoseResourceSlot slot)
+        {
+            if (m_Asset.ResourceSlots.Contains(slot))
+                throw new InvalidOperationException($"Pose Resource Slot '{slot.name}' already exists.");
+            slot.RequireValid();
+            CharacterPoseResourceSlot[] replaced = m_Asset.ResourceSlots
+                .Where(value => value && string.Equals(value.name, slot.name, StringComparison.Ordinal))
+                .ToArray();
+            string ownerPath = AssetDatabase.GetAssetPath(m_Asset);
+            if (string.IsNullOrWhiteSpace(ownerPath))
+                throw new InvalidOperationException("Pose Graph asset must be saved before adding a Resource Slot.");
+            if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(slot)))
+                throw new InvalidOperationException($"Pose Resource Slot '{slot.name}' already belongs to an asset.");
+            Undo.RegisterCreatedObjectUndo(slot, "Create Pose Resource Slot");
+            AssetDatabase.AddObjectToAsset(slot, m_Asset);
+            m_Asset.SetResourceSlots(m_Asset.ResourceSlots
+                .Where(value => value && !replaced.Contains(value))
+                .Append(slot)
+                .ToArray());
+            for (int i = 0; i < replaced.Length; i++)
+                Undo.DestroyObjectImmediate(replaced[i]);
+            EditorUtility.SetDirty(slot);
+        }
+
+        void RenameResourceSlot(CharacterPoseResourceSlot slot, string displayName)
+        {
+            if (!m_Asset.ResourceSlots.Contains(slot))
+                throw new InvalidOperationException("Pose Resource Slot does not belong to this Pose Graph.");
+            Undo.RegisterCompleteObjectUndo(slot, "Rename Pose Resource Slot");
+            slot.name = displayName;
+            slot.RequireValid();
+            EditorUtility.SetDirty(slot);
+        }
+
+        void DeleteResourceSlot(CharacterPoseResourceSlot slot)
+        {
+            if (!m_Asset.ResourceSlots.Contains(slot))
+                throw new InvalidOperationException("Pose Resource Slot does not belong to this Pose Graph.");
+            if (m_Asset.EnumerateGraphs()
+                    .SelectMany(value => value.Nodes)
+                    .Any(value => value != null && OwnsResourceSlot(value.Payload, slot)))
+                throw new InvalidOperationException($"Pose Resource Slot '{slot.name}' is still used by a Pose node.");
+            if (m_Profile?.PoseResourceBindings.Any(value => value?.Slot == slot) == true)
+                throw new InvalidOperationException($"Pose Resource Slot '{slot.name}' is still bound by a Profile.");
+            m_Asset.SetResourceSlots(m_Asset.ResourceSlots.Where(value => value != slot).ToArray());
+            Undo.DestroyObjectImmediate(slot);
+        }
+
+        static bool OwnsResourceSlot(CharacterPoseNodePayload payload, CharacterPoseResourceSlot slot) =>
+            payload switch
+            {
+                CharacterAnimationSlotPosePayload value => value.BlendPolicySlot == slot,
+                CharacterBlendStackPosePayload value => value.BlendPolicySlot == slot,
+                CharacterInertializationPosePayload value => value.PolicySlot == slot,
+                CharacterLayeredBoneBlendPosePayload value => value.BoneMaskSlot == slot,
+                CharacterRootOrientationWarpPosePayload value => value.YawCurveSlot == slot,
+                CharacterFootPlacementPosePayload value => value.ProfileSlot == slot || value.CalibrationSlot == slot,
+                CharacterMotionMatchingPosePayload value => value.BindingSlot == slot || value.JumpBlendPolicySlot == slot,
+                _ => false
+            };
 
         static bool SameAssetIdentity(UnityEngine.Object left, UnityEngine.Object right)
         {

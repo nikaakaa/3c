@@ -23,6 +23,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] CharacterPoseResourceKind m_Kind;
 
+        public static CharacterPoseResourceSlot Create(CharacterPoseResourceKind kind)
+        {
+            if (!Enum.IsDefined(typeof(CharacterPoseResourceKind), kind))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            CharacterPoseResourceSlot slot = CreateInstance<CharacterPoseResourceSlot>();
+            slot.m_Kind = kind;
+            return slot;
+        }
+
         public CharacterPoseResourceKind Kind => m_Kind;
 
         internal void Configure(CharacterPoseResourceKind kind)

@@ -66,7 +66,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         ConfigureLinkedPoseCall = 50,
         SetProfileSourceResourceBindings = 51,
         SetProfileAnimationCompression = 52,
-        SetProfileAnimationPropertyBindings = 53
+        SetProfileAnimationPropertyBindings = 53,
+        CreatePoseResourceSlot = 55,
+        RenamePoseResourceSlot = 56,
+        DeletePoseResourceSlot = 57
     }
 
     public abstract class CharacterPresentationMutation

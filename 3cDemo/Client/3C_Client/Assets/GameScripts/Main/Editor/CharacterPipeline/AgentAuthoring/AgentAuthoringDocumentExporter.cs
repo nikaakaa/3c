@@ -4,7 +4,6 @@ using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
@@ -123,68 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return Finish(projectionSnapshot, editable, context);
         }
 
-        public AgentAuthoringPackageProjection Export(AIControllerDefinition definition)
-        {
-            if (!definition)
-                throw new ArgumentNullException(nameof(definition));
-
-            AgentGraphSnapshot characterSnapshot = definition.ControlledCharacter
-                ? new AgentGraphSnapshotExporter().ExportFull(definition.ControlledCharacter)
-                : new AgentGraphSnapshot();
-            AgentGraphSnapshot snapshot = new AgentAIControllerSnapshotExporter().Export(
-                definition,
-                AgentSnapshotExportMode.Full,
-                characterSnapshot);
-            AgentSnapshotAIController controller = snapshot.aiController ?? new AgentSnapshotAIController();
-            var editable = new AgentDocumentEditable
-            {
-                blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
-                graphs = snapshot.graphs,
-                aiController = new AgentDocumentAIEditable
-                {
-                    controllerId = controller.controllerId,
-                    definitionAssetPath = controller.definitionAssetPath,
-                    definitionAssetGuid = controller.definitionAssetGuid,
-                    treeAssetPath = controller.treeAssetPath,
-                    treeAssetGuid = controller.treeAssetGuid,
-                    graphAuthoringId = controller.graphAuthoringId,
-                    authoringRole = controller.authoringRole,
-                    perceptionAssetPath = controller.perceptionAssetPath,
-                    perceptionAssetGuid = controller.perceptionAssetGuid,
-                    candidateOrdering = controller.candidateOrdering,
-                    candidateActorIds = controller.candidateActorIds,
-                    controlledCharacterAssetPath = controller.controlledCharacterAssetPath,
-                    controlledCharacterAssetGuid = controller.controlledCharacterAssetGuid,
-                    blackboardDeclarations = controller.blackboardDeclarations,
-                    nodes = controller.nodes
-                }
-            };
-            var context = new AgentDocumentContext
-            {
-                definitionName = snapshot.definitionName,
-                definitionAssetPath = snapshot.definitionAssetPath,
-                rootTreeAssetPath = snapshot.rootTreeAssetPath,
-                rootGraphAuthoringId = snapshot.rootGraphAuthoringId,
-                inputValues = characterSnapshot.inputValues,
-                actionRequests = characterSnapshot.actionRequests,
-                generatedProduct = ExportGeneratedProduct(snapshot),
-                aiController = new AgentDocumentAIContext
-                {
-                    characterProgramId = controller.characterProgramId,
-                    characterProgramHash = controller.characterProgramHash,
-                    characterProgramStale = controller.characterProgramStale,
-                    intentProgramAssetPath = controller.intentProgramAssetPath,
-                    intentProgramAssetGuid = controller.intentProgramAssetGuid,
-                    intentProgramId = controller.intentProgramId,
-                    intentProgramHash = controller.intentProgramHash,
-                    intentProgramSourceRevision = controller.intentProgramSourceRevision,
-                    intentProgramStale = controller.intentProgramStale
-                },
-                capabilities = AICapabilities()
-            };
-            return Finish(snapshot, editable, context);
-        }
-
         static AgentAuthoringPackageProjection Finish(
             AgentGraphSnapshot snapshot,
             AgentDocumentEditable editable,
@@ -295,14 +232,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return new AgentDocumentGeneratedProduct
             {
                 programId = snapshot.programId,
-                sourceRevision = snapshot.aiController?.intentProgramSourceRevision ?? snapshot.sourceRevision,
+                sourceRevision = snapshot.sourceRevision,
                 semanticHash = snapshot.semanticHash,
                 numericProfileId = snapshot.numericProfileId,
                 targetAbiVersion = snapshot.targetAbiVersion,
-                programHash = snapshot.aiController?.intentProgramHash ?? snapshot.programHash,
+                programHash = snapshot.programHash,
                 layoutHash = snapshot.layoutHash,
                 stale = stale ??
-                        snapshot.aiController?.intentProgramStale ??
                         string.IsNullOrEmpty(snapshot.programHash)
             };
         }
@@ -569,18 +505,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
         }
 
-        static List<string> AICapabilities()
-        {
-            return new List<string>
-            {
-                "Graph",
-                "Blackboard",
-                "Perception",
-                "Observation",
-                "Memory",
-                "Intent",
-                "BTConditionRule"
-            };
-        }
     }
 }

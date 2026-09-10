@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Motion;
 using TreeDesigner;
 using TreeDesigner.Editor;
@@ -49,20 +48,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 preparation.Boundary,
                 preparation.Report,
                 presentationPlan);
-        }
-
-        public AgentDocumentPreparation Prepare(
-            AIControllerDefinition definition,
-            AgentGraphSnapshot current,
-            AgentAuthoringTarget target)
-        {
-            AgentMutationDraftSet mutations = CreateMutationSet(current, target);
-            var report = ValidateEnvelope(current, target);
-            if (!report.HasErrors())
-                AgentAIDocumentMutationModule.BuildAIMutations(current, target.editable, mutations, report);
-            if (report.HasErrors())
-                return new AgentDocumentPreparation(null, current, null, report);
-            return new AgentDocumentMutationCompiler().Prepare(definition, current, mutations);
         }
 
         static AgentMutationDraftSet CreateMutationSet(AgentGraphSnapshot current, AgentAuthoringTarget target)

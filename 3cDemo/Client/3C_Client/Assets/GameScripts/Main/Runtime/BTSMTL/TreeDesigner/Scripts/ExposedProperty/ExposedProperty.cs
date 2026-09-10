@@ -11,9 +11,7 @@ namespace TreeDesigner
         State,
         ActionInstance,
         Character,
-        Frame,
-        AIController,
-        AITick
+        Frame
     }
 
     public enum PipelineBlackboardVariableLifetime
@@ -24,9 +22,7 @@ namespace TreeDesigner
         ActionInstance,
         Frame,
         ManualClear,
-        GraphInstance,
-        AIController,
-        AITick
+        GraphInstance
     }
 
     public enum PipelineBlackboardFactProjectionKind
@@ -163,10 +159,6 @@ namespace TreeDesigner
                     return lifetime == PipelineBlackboardVariableLifetime.ActionInstance;
                 case PipelineBlackboardVariableScope.Frame:
                     return lifetime == PipelineBlackboardVariableLifetime.Frame;
-                case PipelineBlackboardVariableScope.AIController:
-                    return lifetime == PipelineBlackboardVariableLifetime.AIController;
-                case PipelineBlackboardVariableScope.AITick:
-                    return lifetime == PipelineBlackboardVariableLifetime.AITick;
                 default:
                     return false;
             }
@@ -186,10 +178,6 @@ namespace TreeDesigner
                     return PipelineBlackboardVariableLifetime.ActionInstance;
                 case PipelineBlackboardVariableScope.Frame:
                     return PipelineBlackboardVariableLifetime.Frame;
-                case PipelineBlackboardVariableScope.AIController:
-                    return PipelineBlackboardVariableLifetime.AIController;
-                case PipelineBlackboardVariableScope.AITick:
-                    return PipelineBlackboardVariableLifetime.AITick;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(scope), scope, null);
             }

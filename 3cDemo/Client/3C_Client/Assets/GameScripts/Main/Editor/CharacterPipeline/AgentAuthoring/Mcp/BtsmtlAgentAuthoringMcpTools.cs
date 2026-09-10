@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Root domain required for start: CharacterController or AIController.", Required = false)]
+            [ToolParameter("Root domain required for start: CharacterController.", Required = false)]
             public string domain { get; set; }
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Root domain required for start: CharacterController or AIController.", Required = false)]
+            [ToolParameter("Root domain required for start: CharacterController.", Required = false)]
             public string domain { get; set; }
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
@@ -77,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Root domain required for start: CharacterController or AIController.", Required = false)]
+            [ToolParameter("Root domain required for start: CharacterController.", Required = false)]
             public string domain { get; set; }
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
@@ -105,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Root domain required for start: CharacterController or AIController.", Required = false)]
+            [ToolParameter("Root domain required for start: CharacterController.", Required = false)]
             public string domain { get; set; }
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]
@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Root domain required for start: CharacterController or AIController.", Required = false)]
+            [ToolParameter("Root domain required for start: CharacterController.", Required = false)]
             public string domain { get; set; }
 
             [ToolParameter("Exact Assets/... root Definition path required for start.", Required = false)]

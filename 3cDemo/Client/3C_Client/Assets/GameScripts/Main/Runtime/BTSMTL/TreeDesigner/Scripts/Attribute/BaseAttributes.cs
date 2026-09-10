@@ -11,10 +11,7 @@ namespace TreeDesigner
         SharedBlackboard = 3,
         CharacterExecution = 4,
         TimelineDecision = 5,
-        AIObservation = 6,
-        AIMemory = 7,
-        AIIntent = 8,
-        EditorOnlyDebug = 9
+        EditorOnlyDebug = 6
     }
 
     public enum GraphAuthoringRole : byte
@@ -22,8 +19,7 @@ namespace TreeDesigner
         Character = 1,
         StateMachine = 2,
         ConditionRule = 3,
-        Timeline = 4,
-        AIController = 5
+        Timeline = 4
     }
 
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
@@ -56,20 +52,8 @@ namespace TreeDesigner
 
         public static bool Allows(GraphAuthoringRole role, NodeAuthoringCapability capability)
         {
-            if (role == GraphAuthoringRole.AIController)
-            {
-                return capability == NodeAuthoringCapability.SharedFlow ||
-                       capability == NodeAuthoringCapability.SharedPureValue ||
-                       capability == NodeAuthoringCapability.SharedBlackboard ||
-                       capability == NodeAuthoringCapability.AIObservation ||
-                       capability == NodeAuthoringCapability.AIMemory ||
-                       capability == NodeAuthoringCapability.AIIntent ||
-                       capability == NodeAuthoringCapability.EditorOnlyDebug;
-            }
-
-            return capability != NodeAuthoringCapability.AIObservation &&
-                   capability != NodeAuthoringCapability.AIMemory &&
-                   capability != NodeAuthoringCapability.AIIntent;
+            return Enum.IsDefined(typeof(GraphAuthoringRole), role) &&
+                   Enum.IsDefined(typeof(NodeAuthoringCapability), capability);
         }
     }
 

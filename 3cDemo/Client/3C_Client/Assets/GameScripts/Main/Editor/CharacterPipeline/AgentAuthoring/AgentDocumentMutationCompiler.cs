@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ThirdPersonCharacter.AI;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -69,77 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report,
                 true,
                 preparation.PresentationPlan);
-            if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
-                return new AgentDocumentApplyResult(report, session.TouchedOwners.ToArray());
-
-            for (int i = 0; i < preparation.Plan.Commands.Count; i++)
-            {
-                AgentMutation command = preparation.Plan.Commands[i];
-                m_Handlers.Get(command.Kind).Apply(session, command);
-                if (report.HasErrors())
-                    break;
-            }
-
-            report.metrics.diffSize = report.appliedDiff.Count;
-            report.applied = !report.HasErrors();
-            report.success = !report.HasErrors();
-            return new AgentDocumentApplyResult(report, session.TouchedOwners.ToArray());
-        }
-
-        public AgentDocumentPreparation Prepare(
-            AIControllerDefinition definition,
-            AgentGraphSnapshot snapshot,
-            AgentMutationDraftSet drafts)
-        {
-            var report = new AgentCompileReport
-            {
-                success = true,
-                applied = false,
-                domain = AgentAuthoringSchema.AIControllerDomain,
-                rootIdentity = definition ? definition.ControllerId : string.Empty
-            };
-            if (!m_Planner.TryCreatePlan(drafts, report, out AgentMutationPlan plan))
-                return new AgentDocumentPreparation(null, snapshot, null, report);
-            if (!AgentMutationPortShapePreflight.Validate(snapshot, plan, report))
-                return new AgentDocumentPreparation(plan, snapshot, null, report);
-
-            var session = new AgentMutationSession(definition, snapshot, plan, report, false);
-            if (!session.Initialize())
-                return new AgentDocumentPreparation(plan, snapshot, null, report);
-
-            for (int i = 0; i < plan.Commands.Count; i++)
-            {
-                AgentMutation command = plan.Commands[i];
-                bool valid = m_Handlers.Get(command.Kind).Preflight(session, command);
-                if (!valid && !report.HasErrors())
-                    report.Error(command.Path, "mutation_preflight_failed", "typed Mutation preflight未通过。");
-            }
-
-            report.metrics.diffSize = report.plannedDiff.Count;
-            report.success = !report.HasErrors();
-            AgentDocumentBoundaryIdentity boundary = report.HasErrors() ? null : AgentDocumentBoundaryIdentity.Capture(session);
-            return new AgentDocumentPreparation(plan, snapshot, boundary, report);
-        }
-
-        public AgentDocumentApplyResult Apply(
-            AIControllerDefinition definition,
-            AgentDocumentPreparation preparation)
-        {
-            var report = new AgentCompileReport
-            {
-                success = true,
-                applied = false,
-                domain = AgentAuthoringSchema.AIControllerDomain,
-                rootIdentity = definition ? definition.ControllerId : string.Empty
-            };
-            if (preparation == null || !preparation.IsValid)
-            {
-                report.Error("document.editable", "document_not_prepared", "Document必须先完成无错误的Mutation Plan preflight。");
-                return new AgentDocumentApplyResult(report, Array.Empty<UnityEngine.Object>());
-            }
-
-            CopyPreparationReport(preparation.Report, report);
-            var session = new AgentMutationSession(definition, preparation.Snapshot, preparation.Plan, report, true);
             if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
                 return new AgentDocumentApplyResult(report, session.TouchedOwners.ToArray());
 

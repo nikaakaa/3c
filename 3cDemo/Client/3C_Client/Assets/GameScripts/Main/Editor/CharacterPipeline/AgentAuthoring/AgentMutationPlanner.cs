@@ -4,7 +4,6 @@ using System.Linq;
 using BTSMTL.Timeline;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Tags;
@@ -435,50 +434,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     foreach (string dependency in Planned(deleteSection.Target.TimelinePlannedIdentity))
                         yield return dependency;
                     break;
-                case AgentEnsureAIObservationNodeMutation aiObservation:
-                    foreach (string dependency in Planned(aiObservation.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiObservation.ExistingNode.Value))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAISharedNodeMutation aiShared:
-                    foreach (string dependency in Planned(aiShared.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiShared.ExistingNode.Value))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAIMemoryNodeMutation aiMemory:
-                    foreach (string dependency in Planned(aiMemory.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiMemory.ExistingNode.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiMemory.Declaration))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAIContinuousInputMutation aiInput:
-                    foreach (string dependency in Planned(aiInput.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiInput.ExistingNode.Value))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAIActionTargetMutation aiTarget:
-                    foreach (string dependency in Planned(aiTarget.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiTarget.ExistingNode.Value))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAIActionRequestMutation aiRequest:
-                    foreach (string dependency in Planned(aiRequest.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiRequest.ExistingNode.Value))
-                        yield return dependency;
-                    break;
-                case AgentEnsureAIBlackboardDeclarationMutation aiDeclaration:
-                    foreach (string dependency in Planned(aiDeclaration.Graph.Value))
-                        yield return dependency;
-                    foreach (string dependency in Planned(aiDeclaration.ExistingDeclaration.Value))
-                        yield return dependency;
-                    break;
                 case AgentEnsureBTConditionRuleMutation btCondition:
                     foreach (string dependency in Planned(btCondition.Graph.Value))
                         yield return dependency;
@@ -528,8 +483,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureActionAdmission] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureActionAdmission, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerConfigureActionAdmission),
                 [AgentMutationKind.EnsureBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerEnsureBlackboardDeclaration),
                 [AgentMutationKind.MoveBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentBlackboardMutationLowering.LowerMoveBlackboardDeclaration),
-                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.AIController),
+                [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.CharacterController),
+                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, AgentBlackboardMutationLowering.LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.CharacterController),
                 [AgentMutationKind.EnsureExposedPropertyNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureExposedPropertyNode, AgentMutationOutputKind.Node, AgentBlackboardMutationLowering.LowerEnsureExposedPropertyNode),
                 [AgentMutationKind.EnsureTimelineTreeClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineTreeClip, AgentMutationOutputKind.TimelineClip, AgentTimelineMutationLowering.LowerEnsureTimelineTreeClip),
                 [AgentMutationKind.EnsureMotionCurveTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveTrack, AgentMutationOutputKind.TimelineTrack, AgentTimelineMutationLowering.LowerEnsureMotionCurveTrack),
@@ -558,27 +513,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionProfileTargetRequirement),
                 [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, AgentActionMutationLowering.LowerSetActionRequestTimingClass),
                 [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, AgentControlMutationLowering.LowerConfigureControlConfiguration, AgentMutationDomainMask.CharacterController),
-                [AgentMutationKind.SetSkillFlowDocument] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillFlowDocument, AgentMutationOutputKind.None, AgentSkillFlowDocumentMutationLowering.LowerSetSkillFlowDocument, AgentMutationDomainMask.CharacterController),
-                [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.BindAIControllerAssets] = new AgentMutationDraftDescriptor(AgentMutationKind.BindAIControllerAssets, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerBindAIControllerAssets, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.ConfigureAICandidates] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAICandidates, AgentMutationOutputKind.None, AgentAIMutationLowering.LowerConfigureAICandidates, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, AgentAIMutationLowering.LowerEnsureAIBlackboardDeclaration, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAISharedNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAISharedNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAISharedNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIObservationNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIObservationNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIObservationNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIMemoryNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIMemoryNode, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIMemoryNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIContinuousInput] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIContinuousInput, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIContinuousInput, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIActionTarget] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionTarget, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionTarget, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureAIActionRequest] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIActionRequest, AgentMutationOutputKind.Node, AgentAIMutationLowering.LowerEnsureAIActionRequest, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureBTConditionRule] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBTConditionRule, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerEnsureBTConditionRule, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraphNode, AgentMutationOutputKind.Node, AgentGraphMutationLowering.LowerEnsureGraphNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.DeleteGraphNode] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteGraphNode, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteGraphNode, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.DeleteFlowEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteFlowEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeleteFlowEdge, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.DeletePropertyEdge] = new AgentMutationDraftDescriptor(AgentMutationKind.DeletePropertyEdge, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerDeletePropertyEdge, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.LinkFlow] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkFlow, AgentMutationOutputKind.FlowEdge, AgentGraphMutationLowering.LowerLinkFlow, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.LinkProperty] = new AgentMutationDraftDescriptor(AgentMutationKind.LinkProperty, AgentMutationOutputKind.PropertyEdge, AgentGraphMutationLowering.LowerLinkProperty, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.EnsureGraph] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureGraph, AgentMutationOutputKind.Graph, AgentGraphMutationLowering.LowerEnsureGraph, AgentMutationDomainMask.AIController),
-                [AgentMutationKind.ConfigureGraphReference] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureGraphReference, AgentMutationOutputKind.None, AgentGraphMutationLowering.LowerConfigureGraphReference, AgentMutationDomainMask.AIController)
+                [AgentMutationKind.SetSkillFlowDocument] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillFlowDocument, AgentMutationOutputKind.None, AgentSkillFlowDocumentMutationLowering.LowerSetSkillFlowDocument, AgentMutationDomainMask.CharacterController)
             };
 
         public static bool TryGet(AgentMutationKind kind, out AgentMutationDraftDescriptor descriptor)
@@ -602,9 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Flags]
     public enum AgentMutationDomainMask
     {
-        CharacterController = 1,
-        AIController = 2,
-        Both = CharacterController | AIController
+        CharacterController = 1
     }
 
     public sealed class AgentMutationDraftDescriptor
@@ -615,7 +548,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentMutationKind kind,
             AgentMutationOutputKind outputKind,
             Func<AgentMutationPlanningContext, AgentMutationDraft, AgentMutation> lower,
-            AgentMutationDomainMask domains = AgentMutationDomainMask.AIController)
+            AgentMutationDomainMask domains = AgentMutationDomainMask.CharacterController)
         {
             Kind = kind;
             OutputKind = outputKind;
@@ -628,10 +561,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentMutationDomainMask Domains { get; }
         public bool Allows(string domain)
         {
-            return string.Equals(domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal)
-                ? (Domains & AgentMutationDomainMask.CharacterController) != 0
-                : string.Equals(domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal) &&
-                  (Domains & AgentMutationDomainMask.AIController) != 0;
+            return string.Equals(domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal) &&
+                   (Domains & AgentMutationDomainMask.CharacterController) != 0;
         }
         internal AgentMutation Lower(AgentMutationPlanningContext context, AgentMutationDraft operation) => m_Lower(context, operation);
     }
@@ -650,8 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ["state_root_completed"] = AgentConditionTermKind.StateRootCompleted,
                 ["action_request"] = AgentConditionTermKind.ActionRequest,
                 ["action_window_active"] = AgentConditionTermKind.ActionWindowActive,
-                ["action_can_activate"] = AgentConditionTermKind.CanActivateAction,
-                ["ai_target_distance_compare_blackboard"] = AgentConditionTermKind.AITargetDistanceCompareBlackboard
+                ["action_can_activate"] = AgentConditionTermKind.CanActivateAction
             };
 
         readonly AgentCompileReport m_Report;
@@ -856,20 +786,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     Error($"{termField}.actionProfile", "action_profile_missing", "action_can_activate condition 缺少 ActionProfile identity。");
                     continue;
                 }
-                CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
-                if (kind == AgentConditionTermKind.AITargetDistanceCompareBlackboard)
-                {
-                    if (!HasValue(blackboardKey))
-                    {
-                        Error($"{termField}.blackboardKey", "blackboard_key_missing", "ai_target_distance_compare_blackboard condition 缺少 blackboardKey。");
-                        continue;
-                    }
-                    if (!Enum.TryParse(source.compareType, true, out compareType))
-                    {
-                        Error($"{termField}.compareType", "compare_type_invalid", $"CompareType 无效：{source.compareType}");
-                        continue;
-                    }
-                }
                 result.Add(new AgentConditionTermMutation(
                     kind,
                     blackboardKey,
@@ -878,7 +794,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     source.windowType,
                     new AgentAssetReference(source.actionProfile, source.actionProfileAssetPath, source.actionProfileAssetGuid),
                     source.targetSnapshotBlackboardKey,
-                    compareType));
+                    CompareNode.CompareType.Equal));
             }
             return result;
         }
@@ -942,35 +858,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     break;
                 case AgentConfigureActionAdmissionMutation admission:
                     ValidateOwnedReference(admission.Element.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAIBlackboardDeclarationMutation declaration:
-                    ValidateOwnedReference(declaration.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(declaration.ExistingDeclaration.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAISharedNodeMutation shared:
-                    ValidateOwnedReference(shared.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(shared.ExistingNode.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAIObservationNodeMutation observation:
-                    ValidateOwnedReference(observation.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(observation.ExistingNode.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAIMemoryNodeMutation memory:
-                    ValidateOwnedReference(memory.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(memory.ExistingNode.Value, command.OwnerScope, "targetElement");
-                    ValidateOwnedReference(memory.Declaration, command.OwnerScope, "declaration");
-                    break;
-                case AgentEnsureAIContinuousInputMutation continuousInput:
-                    ValidateOwnedReference(continuousInput.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(continuousInput.ExistingNode.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAIActionTargetMutation actionTarget:
-                    ValidateOwnedReference(actionTarget.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(actionTarget.ExistingNode.Value, command.OwnerScope, "targetElement");
-                    break;
-                case AgentEnsureAIActionRequestMutation actionRequest:
-                    ValidateOwnedReference(actionRequest.Graph.Value, command.OwnerScope, "graph");
-                    ValidateOwnedReference(actionRequest.ExistingNode.Value, command.OwnerScope, "targetElement");
                     break;
             }
         }

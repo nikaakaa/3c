@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using ThirdPersonCharacter.AI;
-using ThirdPersonCharacter.AI.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
@@ -36,10 +34,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         return Failure(request.action, request.domain, request.rootAssetPath, code, message);
                     return ExecuteCharacter(request, definition);
                 }
-
-                if (!TryLoadRoot(request.rootAssetPath, out AIControllerDefinition aiDefinition, out string aiCode, out string aiMessage))
-                    return Failure(request.action, request.domain, request.rootAssetPath, aiCode, aiMessage);
-                return ExecuteAI(request, aiDefinition);
+                return Failure(
+                    request.action,
+                    request.domain,
+                    request.rootAssetPath,
+                    "unsupported_domain",
+                    "Agent Document只服务CharacterController；Behavior Designer行为不进入BTSMTL Document。");
             }
             catch (AgentAuthoringOperationException exception)
             {
@@ -66,23 +66,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 AgentAuthoringAction.CheckoutDocument => Checkout(request, projection),
                 AgentAuthoringAction.RebaseDocument => Rebase(request, projection),
-                AgentAuthoringAction.DryRunDocument => DryRun(request, projection, definition, null),
-                AgentAuthoringAction.ApplyDocument => Apply(request, projection, definition, null),
+                AgentAuthoringAction.DryRunDocument => DryRun(request, projection, definition),
+                AgentAuthoringAction.ApplyDocument => Apply(request, projection, definition),
                 AgentAuthoringAction.Validate => FromReport(request, new AgentGraphValidator().Validate(definition), projection, null),
-                _ => Failure(request.action, request.domain, request.rootAssetPath, "unsupported_action", "不支持的Agent Document action。")
-            };
-        }
-
-        AgentAuthoringResponse ExecuteAI(AgentAuthoringRequest request, AIControllerDefinition definition)
-        {
-            AgentAuthoringPackageProjection projection = m_Exporter.Export(definition);
-            return request.action switch
-            {
-                AgentAuthoringAction.CheckoutDocument => Checkout(request, projection),
-                AgentAuthoringAction.RebaseDocument => Rebase(request, projection),
-                AgentAuthoringAction.DryRunDocument => DryRun(request, projection, null, definition),
-                AgentAuthoringAction.ApplyDocument => Apply(request, projection, null, definition),
-                AgentAuthoringAction.Validate => FromReport(request, new AgentAIControllerValidator().Validate(definition), projection, null),
                 _ => Failure(request.action, request.domain, request.rootAssetPath, "unsupported_action", "不支持的Agent Document action。")
             };
         }
@@ -143,8 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         AgentAuthoringResponse DryRun(
             AgentAuthoringRequest request,
             AgentAuthoringPackageProjection projection,
-            CharacterPipelineDefinition character,
-            AIControllerDefinition ai)
+            CharacterPipelineDefinition character)
         {
             string path = m_Store.GetPackagePath(request.domain, request.rootAssetPath, projection.Target.rootIdentity);
             AgentCompileReport report = CreateReport(request, projection.Target.rootIdentity);
@@ -156,9 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = character
-                ? m_Reconciler.Prepare(character, projection.Snapshot, state.Target)
-                : m_Reconciler.Prepare(ai, projection.Snapshot, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection.Snapshot, state.Target);
             AgentAuthoringResponse response = FromReport(request, preparation.Report, projection, path, state);
             response.documentHash = state.DocumentHash;
             response.planHash = AgentAuthoringDocumentCodec.Hash(preparation.Report.plannedDiff);
@@ -169,8 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         AgentAuthoringResponse Apply(
             AgentAuthoringRequest request,
             AgentAuthoringPackageProjection projection,
-            CharacterPipelineDefinition character,
-            AIControllerDefinition ai)
+            CharacterPipelineDefinition character)
         {
             string path = m_Store.GetPackagePath(request.domain, request.rootAssetPath, projection.Target.rootIdentity);
             AgentCompileReport report = CreateReport(request, projection.Target.rootIdentity);
@@ -192,14 +174,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = character
-                ? m_Reconciler.Prepare(character, projection.Snapshot, state.Target)
-                : m_Reconciler.Prepare(ai, projection.Snapshot, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection.Snapshot, state.Target);
             if (!preparation.IsValid)
                 return FromReport(request, preparation.Report, projection, path, state);
             if (!TryCollectOwners(
                     character,
-                    ai,
                     preparation,
                     preparation.Report,
                     out UnityEngine.Object[] owners))
@@ -221,38 +200,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 Undo.RegisterCompleteObjectUndo(owners, undoName);
                 var compiler = new AgentDocumentMutationCompiler();
-                AgentDocumentApplyResult result = character
-                    ? compiler.Apply(character, preparation)
-                    : compiler.Apply(ai, preparation);
+                AgentDocumentApplyResult result = compiler.Apply(character, preparation);
                 applied = result.Report;
                 AgentAuthoringPackageProjection appliedProjection = null;
-                bool authoringSemanticsChanged = false;
-                bool controlledCharacterProgramStale = false;
                 if (!applied.HasErrors() && character)
                     ApplyPresentation(preparation.PresentationPlan, applied);
                 if (!applied.HasErrors())
                 {
-                    if (character)
-                    {
-                        AppendValidation(
-                            applied,
-                            new AgentGraphValidator().Validate(character, false));
-                    }
-                    else
-                    {
-                        appliedProjection = m_Exporter.Export(ai);
-                        authoringSemanticsChanged = !string.Equals(
-                            projection.SourceRevision,
-                            appliedProjection.SourceRevision,
-                            StringComparison.Ordinal);
-                        controlledCharacterProgramStale =
-                            CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(ai.ControlledCharacter);
-                        AppendValidation(
-                            applied,
-                            new AgentAIControllerValidator().Validate(
-                                ai,
-                                !controlledCharacterProgramStale || authoringSemanticsChanged));
-                    }
+                    AppendValidation(
+                        applied,
+                        new AgentGraphValidator().Validate(character, false));
                 }
                 if (!applied.HasErrors() && character)
                     AppendPresentationValidation(
@@ -268,27 +225,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     result.TouchedOwners,
                     preparation.PresentationPlan);
                 AssetDatabase.SaveAssets();
-                appliedProjection ??= character
-                    ? m_Exporter.Export(character)
-                    : m_Exporter.Export(ai);
-                if (character)
-                {
-                    authoringSemanticsChanged = !string.Equals(
-                        projection.SourceRevision,
-                        appliedProjection.SourceRevision,
-                        StringComparison.Ordinal);
-                }
-                bool aiProgramNeedsPublish = !character && !controlledCharacterProgramStale &&
-                    (authoringSemanticsChanged || !AIIntentProgramBuildService.IsCurrent(ai, out _));
-                if (aiProgramNeedsPublish)
-                {
-                    AIIntentProgramBuildService.CompileAndPublish(ai);
-                }
-
-                AgentAuthoringPackageProjection finalProjection =
-                    aiProgramNeedsPublish
-                        ? m_Exporter.Export(ai)
-                        : appliedProjection;
+                appliedProjection = m_Exporter.Export(character);
+                AgentAuthoringPackageProjection finalProjection = appliedProjection;
                 AgentAuthoringPackageSync finalSync = CreateSync(request, finalProjection);
                 string finalDocumentHash = m_Store.Write(
                     path,
@@ -392,7 +330,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool TryCollectOwners(
             CharacterPipelineDefinition character,
-            AIControllerDefinition ai,
             AgentDocumentPreparation preparation,
             AgentCompileReport report,
             out UnityEngine.Object[] owners)
@@ -494,14 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 owners = allOwners.ToArray();
                 return true;
             }
-
-            var aiOwners = new List<UnityEngine.Object> { ai, ai?.RootTreeAsset, ai?.PerceptionProfile };
-            if (aiOwners.Exists(value => !value))
-                return FailOwner(report, "ai_transaction_owner_missing", "AI Definition、RootTree与Perception Profile必须全部进入事务。", out owners);
-            if (ai.IntentProgram)
-                aiOwners.Add(ai.IntentProgram);
-            owners = aiOwners.ToArray();
-            return true;
+            return FailOwner(report, "character_transaction_owner_missing", "Character Definition缺失，无法建立事务owner。", out owners);
         }
 
         static bool FailOwner(AgentCompileReport report, string code, string message, out UnityEngine.Object[] owners)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Tags;
@@ -64,17 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionRequestTimingClass,
         ConfigureControlConfiguration,
         SetSkillFlowDocument,
-        EnsureAIControllerDefinition,
-        EnsureAIControllerTree,
-        BindAIControllerAssets,
-        ConfigureAICandidates,
-        EnsureAIBlackboardDeclaration,
-        EnsureAISharedNode,
-        EnsureAIObservationNode,
-        EnsureAIMemoryNode,
-        EnsureAIContinuousInput,
-        EnsureAIActionTarget,
-        EnsureAIActionRequest,
         EnsureBTConditionRule,
         EnsureGraphNode,
         DeleteGraphNode,
@@ -103,31 +91,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         Graph
     }
 
-    public enum AgentAIObservationNodeKind
-    {
-        ReadSelf,
-        EnumerateConfiguredCandidates,
-        SelectNearestCandidate,
-        ReadTargetDistance,
-        ReadTargetDirection,
-        ReadSelectedTargetSnapshot
-    }
-
-    public enum AgentAISharedNodeKind
-    {
-        Loop,
-        Sequence,
-        Selector,
-        Compare,
-        WaitTicks
-    }
-
-    public enum AgentAIMemoryNodeKind
-    {
-        Read,
-        Write
-    }
-
     public enum AgentConditionTermKind
     {
         MoveStop,
@@ -139,8 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         StateRootCompleted,
         ActionRequest,
         ActionWindowActive,
-        CanActivateAction,
-        AITargetDistanceCompareBlackboard
+        CanActivateAction
     }
 
     public readonly struct AgentPlannedIdentityReference
@@ -1792,205 +1754,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentFlowEdgeTargetReference Edge { get; }
         public BTAbortPolicy AbortPolicy { get; }
         public IReadOnlyList<AgentConditionGroupMutation> Groups => m_Groups;
-    }
-
-    public sealed class AgentEnsureAIControllerDefinitionMutation : AgentMutation
-    {
-        public AgentEnsureAIControllerDefinitionMutation(string id, string path, string controllerId)
-            : base(id, AgentMutationKind.EnsureAIControllerDefinition, "ensure_ai_controller_definition", AgentMutationOutputKind.None, path, controllerId, Vector2.zero)
-        {
-            ControllerId = controllerId;
-        }
-
-        public string ControllerId { get; }
-    }
-
-    public sealed class AgentEnsureAIControllerTreeMutation : AgentMutation
-    {
-        public AgentEnsureAIControllerTreeMutation(string id, string path, string treeAssetPath)
-            : base(id, AgentMutationKind.EnsureAIControllerTree, "ensure_ai_controller_tree", AgentMutationOutputKind.None, path, treeAssetPath, Vector2.zero)
-        {
-            TreeAssetPath = treeAssetPath;
-        }
-
-        public string TreeAssetPath { get; }
-    }
-
-    public sealed class AgentBindAIControllerAssetsMutation : AgentMutation
-    {
-        public AgentBindAIControllerAssetsMutation(
-            string id,
-            string path,
-            AgentAssetReference controlledCharacter,
-            AgentAssetReference perceptionProfile)
-            : base(id, AgentMutationKind.BindAIControllerAssets, "bind_ai_controller_assets", AgentMutationOutputKind.None, path, string.Empty, Vector2.zero)
-        {
-            ControlledCharacter = controlledCharacter;
-            PerceptionProfile = perceptionProfile;
-        }
-
-        public AgentAssetReference ControlledCharacter { get; }
-        public AgentAssetReference PerceptionProfile { get; }
-    }
-
-    public sealed class AgentConfigureAICandidatesMutation : AgentMutation
-    {
-        readonly ReadOnlyCollection<string> m_CandidateActorIds;
-
-        public AgentConfigureAICandidatesMutation(
-            string id,
-            string path,
-            AICandidateOrdering ordering,
-            IList<string> candidateActorIds)
-            : base(id, AgentMutationKind.ConfigureAICandidates, "configure_ai_candidates", AgentMutationOutputKind.None, path, string.Empty, Vector2.zero)
-        {
-            Ordering = ordering;
-            m_CandidateActorIds = new ReadOnlyCollection<string>(new List<string>(candidateActorIds));
-        }
-
-        public AICandidateOrdering Ordering { get; }
-        public IReadOnlyList<string> CandidateActorIds => m_CandidateActorIds;
-    }
-
-    public sealed class AgentEnsureAIBlackboardDeclarationMutation : AgentMutation
-    {
-        public AgentEnsureAIBlackboardDeclarationMutation(
-            string id,
-            string path,
-            AgentGraphTargetReference graph,
-            AgentElementTargetReference existingDeclaration,
-            string key,
-            Type valueType,
-            PipelineBlackboardVariableScope scope,
-            object defaultValue)
-            : base(id, AgentMutationKind.EnsureAIBlackboardDeclaration, "ensure_ai_blackboard_declaration", AgentMutationOutputKind.BlackboardDeclaration, path, graph.Identity, Vector2.zero)
-        {
-            Graph = graph;
-            ExistingDeclaration = existingDeclaration;
-            Key = key;
-            ValueType = valueType;
-            Scope = scope;
-            DefaultValue = defaultValue;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingDeclaration { get; }
-        public string Key { get; }
-        public Type ValueType { get; }
-        public PipelineBlackboardVariableScope Scope { get; }
-        public object DefaultValue { get; }
-    }
-
-    public sealed class AgentEnsureAIObservationNodeMutation : AgentMutation
-    {
-        public AgentEnsureAIObservationNodeMutation(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, AgentAIObservationNodeKind nodeKind, Vector2 position)
-            : base(id, AgentMutationKind.EnsureAIObservationNode, "ensure_ai_observation_node", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            NodeKind = nodeKind;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public AgentAIObservationNodeKind NodeKind { get; }
-    }
-
-    public sealed class AgentEnsureAISharedNodeMutation : AgentMutation
-    {
-        public AgentEnsureAISharedNodeMutation(
-            string id,
-            string path,
-            AgentGraphTargetReference graph,
-            AgentElementTargetReference existingNode,
-            AgentAISharedNodeKind nodeKind,
-            LoopNode.StopType loopStopType,
-            CompareNode.CompareType compareType,
-            Vector2 position)
-            : base(id, AgentMutationKind.EnsureAISharedNode, "ensure_ai_shared_node", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            NodeKind = nodeKind;
-            LoopStopType = loopStopType;
-            CompareType = compareType;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public AgentAISharedNodeKind NodeKind { get; }
-        public LoopNode.StopType LoopStopType { get; }
-        public CompareNode.CompareType CompareType { get; }
-    }
-
-    public sealed class AgentEnsureAIMemoryNodeMutation : AgentMutation
-    {
-        public AgentEnsureAIMemoryNodeMutation(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, AgentAuthoringReference declaration, AgentAIMemoryNodeKind nodeKind, AIMemoryValueKind valueKind, Vector2 position)
-            : base(id, AgentMutationKind.EnsureAIMemoryNode, "ensure_ai_memory_node", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            Declaration = declaration;
-            NodeKind = nodeKind;
-            ValueKind = valueKind;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public AgentAuthoringReference Declaration { get; }
-        public AgentAIMemoryNodeKind NodeKind { get; }
-        public AIMemoryValueKind ValueKind { get; }
-    }
-
-    public sealed class AgentEnsureAIContinuousInputMutation : AgentMutation
-    {
-        public AgentEnsureAIContinuousInputMutation(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string inputId, Vector2 position)
-            : base(id, AgentMutationKind.EnsureAIContinuousInput, "ensure_ai_continuous_input", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            InputId = inputId;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public string InputId { get; }
-    }
-
-    public sealed class AgentEnsureAIActionTargetMutation : AgentMutation
-    {
-        public AgentEnsureAIActionTargetMutation(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string inputId, Vector2 position)
-            : base(id, AgentMutationKind.EnsureAIActionTarget, "ensure_ai_action_target", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            InputId = inputId;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public string InputId { get; }
-    }
-
-    public sealed class AgentEnsureAIActionRequestMutation : AgentMutation
-    {
-        public AgentEnsureAIActionRequestMutation(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string requestId, float bufferSeconds, int priority, AIRequestRepeatPolicy repeatPolicy, Vector2 position)
-            : base(id, AgentMutationKind.EnsureAIActionRequest, "ensure_ai_action_request", AgentMutationOutputKind.Node, path, graph.Identity, position)
-        {
-            Graph = graph;
-            ExistingNode = existingNode;
-            RequestId = requestId;
-            BufferSeconds = bufferSeconds;
-            Priority = priority;
-            RepeatPolicy = repeatPolicy;
-        }
-
-        public AgentGraphTargetReference Graph { get; }
-        public AgentElementTargetReference ExistingNode { get; }
-        public string RequestId { get; }
-        public float BufferSeconds { get; }
-        public int Priority { get; }
-        public AIRequestRepeatPolicy RepeatPolicy { get; }
     }
 
     public readonly struct AgentPlannedIdentitySymbol

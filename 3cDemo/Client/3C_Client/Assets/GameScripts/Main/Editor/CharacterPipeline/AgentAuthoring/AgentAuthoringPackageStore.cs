@@ -492,8 +492,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageBlackboardFile _, out raw);
             if (string.Equals(relativePath, "editable/actions.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageActionsFile _, out raw);
-            if (string.Equals(relativePath, "editable/ai/perception.json", StringComparison.Ordinal))
-                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageAIFile _, out raw);
             if (relativePath.StartsWith("editable/skills/", StringComparison.Ordinal) &&
                 relativePath.EndsWith("/definition.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageSkillDefinitionFile _, out raw);

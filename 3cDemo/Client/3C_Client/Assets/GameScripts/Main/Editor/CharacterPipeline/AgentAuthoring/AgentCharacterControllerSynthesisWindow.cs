@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline;
 using UnityEditor;
 using UnityEngine;
@@ -10,13 +9,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentCharacterControllerSynthesisWindow : EditorWindow
     {
-        enum ControllerDomain
-        {
-            CharacterController,
-            AIController
-        }
-
-        ControllerDomain m_Domain;
         UnityEngine.Object m_Root;
         Vector2 m_Scroll;
         AgentAuthoringResponse m_LastResponse;
@@ -27,15 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static void Open(CharacterPipelineDefinition definition)
         {
             AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v7");
-            window.m_Domain = ControllerDomain.CharacterController;
-            window.m_Root = definition;
-            window.Show();
-        }
-
-        public static void Open(AIControllerDefinition definition)
-        {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v7");
-            window.m_Domain = ControllerDomain.AIController;
             window.m_Root = definition;
             window.Show();
         }
@@ -43,10 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         void OnGUI()
         {
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
-            m_Domain = (ControllerDomain)EditorGUILayout.EnumPopup("Domain", m_Domain);
-            System.Type rootType = m_Domain == ControllerDomain.CharacterController
-                ? typeof(CharacterPipelineDefinition)
-                : typeof(AIControllerDefinition);
+            System.Type rootType = typeof(CharacterPipelineDefinition);
             if (m_Root && !rootType.IsInstanceOfType(m_Root))
                 m_Root = null;
             m_Root = EditorGUILayout.ObjectField("Root Definition", m_Root, rootType, false);
@@ -113,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             m_LastResponse = new AgentAuthoringDocumentApplicationService().Execute(new AgentAuthoringRequest
             {
                 action = action,
-                domain = m_Domain.ToString(),
+                domain = AgentAuthoringSchema.CharacterControllerDomain,
                 rootAssetPath = m_Root ? AssetDatabase.GetAssetPath(m_Root) : string.Empty,
                 expectedDocumentHash = expectedDocumentHash,
                 confirmRebase = confirmRebase

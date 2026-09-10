@@ -56,10 +56,7 @@ namespace TreeDesigner
                 IsTimelineValueNode(type))
                 return false;
 
-            return typeof(ValueNode).IsAssignableFrom(type) &&
-                   (AuthoringRole != GraphAuthoringRole.AIController ||
-                    NodeAuthoringCapabilityPolicy.TryGetCapability(type, out NodeAuthoringCapability capability) &&
-                    NodeAuthoringCapabilityPolicy.Allows(AuthoringRole, capability));
+            return typeof(ValueNode).IsAssignableFrom(type);
         }
 
         static bool IsTimelineValueNode(Type type)

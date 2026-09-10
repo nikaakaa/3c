@@ -50,8 +50,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (type != typeof(bool) && type != typeof(int) && type != typeof(float) && type != typeof(string) &&
                 type != typeof(Vector2) && type != typeof(Vector3) && type != typeof(ActionTargetSnapshot))
                 throw new InvalidOperationException($"技能黑板不支持'{type.FullName}'类型。");
-            if (m_Scope is PipelineBlackboardVariableScope.AIController or PipelineBlackboardVariableScope.AITick ||
-                !PipelineBlackboardVariablePolicy.IsValid(m_Scope, m_Lifetime))
+            if (!PipelineBlackboardVariablePolicy.IsValid(m_Scope, m_Lifetime))
                 throw new InvalidOperationException("技能黑板作用域与生命周期不匹配。");
             PipelineBlackboardInputBinding inputBinding = InputBinding;
             PipelineBlackboardFactProjection factProjection = FactProjection;

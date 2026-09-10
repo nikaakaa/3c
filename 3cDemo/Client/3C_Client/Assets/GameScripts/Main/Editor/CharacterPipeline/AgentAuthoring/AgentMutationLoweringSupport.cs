@@ -4,7 +4,6 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Tags;
@@ -57,30 +56,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case "vector2": case "unityengine.vector2": return typeof(Vector2);
                 case "vector3": case "unityengine.vector3": return typeof(Vector3);
                 case "actiontargetsnapshot": case "action_target_snapshot": case "thirdpersoncharacter.actionsystem.actiontargetsnapshot": return typeof(ActionTargetSnapshot);
-                case "aiactorid": case "ai_actor_id": case "thirdpersoncharacter.ai.aiactoridvalue": return typeof(AIActorIdValue);
-                case "aiactiontargetsnapshot": case "ai_action_target_snapshot": case "thirdpersoncharacter.ai.aiactiontargetsnapshotvalue": return typeof(AIActionTargetSnapshotValue);
                 default:
                     context.Error("blackboardValueType", "blackboard_value_type_invalid", $"不支持的 Blackboard value type：{value}");
                     return null;
             }
-        }
-
-        internal static object AIBlackboardDefault(AgentMutationDraft operation, Type valueType)
-        {
-            if (valueType == typeof(bool)) return operation.blackboardBoolValue;
-            if (valueType == typeof(int)) return operation.blackboardIntValue;
-            if (valueType == typeof(float)) return operation.blackboardFloatValue;
-            if (valueType == typeof(Vector2)) return operation.blackboardVector2Value;
-            if (valueType == typeof(Vector3)) return operation.blackboardVector3Value;
-            if (valueType == typeof(AIActorIdValue)) return new AIActorIdValue(operation.blackboardActorIdValue);
-            if (valueType == typeof(AIActionTargetSnapshotValue))
-            {
-                return new AIActionTargetSnapshotValue(
-                    new AIActorIdValue(operation.blackboardTargetActorIdValue),
-                    operation.blackboardTargetPositionValue,
-                    operation.blackboardTargetYawValue);
-            }
-            throw new InvalidOperationException($"Unsupported AI Blackboard value type: {valueType?.FullName}");
         }
 
         internal static object ReadBlackboardDefault(

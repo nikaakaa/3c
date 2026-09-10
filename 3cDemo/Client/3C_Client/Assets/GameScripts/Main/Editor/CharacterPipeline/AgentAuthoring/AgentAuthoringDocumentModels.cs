@@ -62,27 +62,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
         public List<AgentPackageSkillTimelineFile> skillTimelines = new List<AgentPackageSkillTimelineFile>();
         public AgentDocumentPresentationEditable presentation;
-        public AgentDocumentAIEditable aiController;
-    }
-
-    [Serializable]
-    public sealed class AgentDocumentAIEditable
-    {
-        public string controllerId;
-        public string definitionAssetPath;
-        public string definitionAssetGuid;
-        public string treeAssetPath;
-        public string treeAssetGuid;
-        public string graphAuthoringId;
-        public string authoringRole;
-        public string perceptionAssetPath;
-        public string perceptionAssetGuid;
-        public string candidateOrdering;
-        public List<string> candidateActorIds = new List<string>();
-        public string controlledCharacterAssetPath;
-        public string controlledCharacterAssetGuid;
-        public List<AgentSnapshotAIBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotAIBlackboardDeclaration>();
-        public List<AgentSnapshotAINode> nodes = new List<AgentSnapshotAINode>();
     }
 
     [Serializable]
@@ -100,7 +79,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
         public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
         public AgentDocumentGeneratedProduct generatedProduct = new AgentDocumentGeneratedProduct();
-        public AgentDocumentAIContext aiController;
         public List<string> capabilities = new List<string>();
     }
 
@@ -229,20 +207,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentDocumentAIContext
-    {
-        public string characterProgramId;
-        public string characterProgramHash;
-        public bool characterProgramStale;
-        public string intentProgramAssetPath;
-        public string intentProgramAssetGuid;
-        public string intentProgramId;
-        public string intentProgramHash;
-        public string intentProgramSourceRevision;
-        public bool intentProgramStale;
-    }
-
-    [Serializable]
     public sealed class AgentPackageControllerFile
     {
         public string controlModuleId;
@@ -307,56 +271,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string targetKey;
         public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
         public List<string> allowedFollowUpSkillIds = new List<string>();
-    }
-
-    [Serializable]
-    public sealed class AgentPackageAIFile
-    {
-        public int blackboardSchemaRevision;
-        public AgentPackageAIController controller;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageAIController
-    {
-        public string controllerId;
-        public string definitionAssetPath;
-        public string definitionAssetGuid;
-        public string treeAssetPath;
-        public string treeAssetGuid;
-        public string graphAuthoringId;
-        public string authoringRole;
-        public string perceptionAssetPath;
-        public string perceptionAssetGuid;
-        public string candidateOrdering;
-        public List<string> candidateActorIds = new List<string>();
-        public string controlledCharacterAssetPath;
-        public string controlledCharacterAssetGuid;
-        public List<AgentPackageAIBlackboardDeclaration> blackboard = new List<AgentPackageAIBlackboardDeclaration>();
-        public List<AgentPackageAINodeConfiguration> nodes = new List<AgentPackageAINodeConfiguration>();
-    }
-
-    [Serializable]
-    public sealed class AgentPackageAIBlackboardDeclaration
-    {
-        public string id;
-        public string key;
-        public string valueType;
-        public string scope;
-        public string defaultValue;
-    }
-
-    [Serializable]
-    public sealed class AgentPackageAINodeConfiguration
-    {
-        public string id;
-        public string memoryValueKind;
-        public string memoryDeclarationId;
-        public string inputId;
-        public string requestId;
-        public float requestBufferSeconds;
-        public int requestPriority;
-        public string requestRepeatPolicy;
     }
 
     [Serializable]
@@ -569,7 +483,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
-        public List<AgentSnapshotAIBlackboardDeclaration> aiBlackboardDeclarations = new List<AgentSnapshotAIBlackboardDeclaration>();
         public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
         public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
         public List<AgentDocumentBlendAssetContext> animationBlendCurves =
@@ -590,7 +503,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentSnapshotBodyMotionProfile bodyMotion;
         public AgentDocumentPresentationContext presentation;
         public AgentDocumentGeneratedProduct generatedProduct;
-        public AgentDocumentAIContext aiController;
         public List<string> capabilities = new List<string>();
         public List<AgentPackageDependency> graphDependencies = new List<AgentPackageDependency>();
         public List<AgentPackageDependency> timelineDependencies = new List<AgentPackageDependency>();

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using FlowCanvas;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
@@ -48,25 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        public AgentMutationSession(
-            AIControllerDefinition definition,
-            AgentGraphSnapshot snapshot,
-            AgentMutationPlan plan,
-            AgentCompileReport report,
-            bool apply)
-        {
-            AIDefinition = definition;
-            Domain = AgentAuthoringSchema.AIControllerDomain;
-            Snapshot = snapshot;
-            Plan = plan;
-            Report = report;
-            IsApply = apply;
-            Resolver = new AgentAssetResolver(definition ? definition.ControlledCharacter : null, snapshot);
-            Index = new AgentGraphAuthoringIndex();
-        }
-
         public CharacterPipelineDefinition Definition { get; }
-        public AIControllerDefinition AIDefinition { get; }
         public string Domain { get; }
         public AgentGraphSnapshot Snapshot { get; }
         public AgentMutationPlan Plan { get; }
@@ -102,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public bool Initialize()
         {
-            if (!Definition && !AIDefinition)
+            if (!Definition)
             {
                 Report.Error("definition", "missing_definition", $"{Domain} root definition 缺失。");
                 return false;
@@ -126,28 +107,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Report.Error("snapshot.domain", "domain_root_mismatch", "Snapshot、Mutation Plan与加载的root domain不一致。");
                 return false;
             }
-            BaseTree rootTree = null;
-            if (!Definition && AIDefinition.RootTreeAsset?.Tree is AIControllerTree aiRoot)
-            {
-                rootTree = aiRoot;
-            }
-            else if (!Definition)
-            {
-                Report.Error("definition", "missing_ai_root_tree", "AIControllerDefinition 缺少正式 AIControllerTree。");
-                return false;
-            }
-
-            RootTree = rootTree;
-            UnityEngine.Object rootAsset = Definition ? null : AIDefinition.RootTreeAsset;
-            UnityEngine.Object rootDefinition = Definition ? Definition : AIDefinition;
-            string definitionPath = AssetDatabase.GetAssetPath(rootDefinition);
-            string rootPath = AssetDatabase.GetAssetPath(rootAsset);
-            string rootIdentity = Definition ? AssetDatabase.AssetPathToGUID(definitionPath) : AIDefinition.ControllerId;
+            RootTree = null;
+            string definitionPath = AssetDatabase.GetAssetPath(Definition);
+            string rootIdentity = AssetDatabase.AssetPathToGUID(definitionPath);
             if (!string.Equals(Snapshot.rootAssetPath, definitionPath, StringComparison.Ordinal) ||
                 !string.Equals(Snapshot.rootIdentity, rootIdentity, StringComparison.Ordinal) ||
                 !string.Equals(Plan.RootIdentity, rootIdentity, StringComparison.Ordinal) ||
                 !string.Equals(Plan.SourceRevision, Snapshot.sourceRevision, StringComparison.Ordinal) ||
-                !string.Equals(Snapshot.rootTreeAssetPath, rootPath, StringComparison.Ordinal) ||
+                !string.IsNullOrEmpty(Snapshot.rootTreeAssetPath) ||
                 !string.Equals(Snapshot.rootGraphAuthoringId, RootTree?.GraphAuthoringId ?? string.Empty, StringComparison.Ordinal))
             {
                 Report.Error(
@@ -842,42 +809,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         AgentDocumentBoundaryIdentity(
             UnityEngine.Object definition,
-            UnityEngine.Object rootTreeAsset,
-            BaseTree rootTree,
             string definitionPath,
             string definitionGuid,
-            string rootPath,
-            string rootGuid,
             IDictionary<string, BaseTree> graphs,
             IDictionary<string, string> skillGraphs)
         {
             Definition = definition;
-            RootTreeAsset = rootTreeAsset;
-            RootTree = rootTree;
             DefinitionPath = definitionPath;
             DefinitionGuid = definitionGuid;
-            RootPath = rootPath;
-            RootGuid = rootGuid;
-            RootGraphAuthoringId = rootTree?.GraphAuthoringId ?? string.Empty;
             m_Graphs = new Dictionary<string, BaseTree>(graphs, StringComparer.Ordinal);
             m_SkillGraphs = new Dictionary<string, string>(skillGraphs, StringComparer.Ordinal);
         }
 
         UnityEngine.Object Definition { get; }
-        UnityEngine.Object RootTreeAsset { get; }
-        BaseTree RootTree { get; }
         string DefinitionPath { get; }
         string DefinitionGuid { get; }
-        string RootPath { get; }
-        string RootGuid { get; }
-        string RootGraphAuthoringId { get; }
 
         public static AgentDocumentBoundaryIdentity Capture(AgentMutationSession session)
         {
-            UnityEngine.Object definition = session.Definition ? session.Definition : session.AIDefinition;
-            UnityEngine.Object rootTreeAsset = session.Definition ? null : session.AIDefinition.RootTreeAsset;
+            UnityEngine.Object definition = session.Definition;
             string definitionPath = AssetDatabase.GetAssetPath(definition);
-            string rootPath = AssetDatabase.GetAssetPath(rootTreeAsset);
             var graphs = new Dictionary<string, BaseTree>(StringComparer.Ordinal);
             for (int i = 0; i < session.Plan.Commands.Count; i++)
             {
@@ -896,12 +847,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return new AgentDocumentBoundaryIdentity(
                 definition,
-                rootTreeAsset,
-                session.RootTree,
                 definitionPath,
                 AssetDatabase.AssetPathToGUID(definitionPath),
-                rootPath,
-                AssetDatabase.AssetPathToGUID(rootPath),
                 graphs,
                 skillGraphs);
         }
@@ -909,29 +856,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool Validate(UnityEngine.Object definition, AgentMutationSession session, AgentCompileReport report)
         {
             string definitionPath = AssetDatabase.GetAssetPath(definition);
-            UnityEngine.Object rootTreeAsset = definition is ThirdPersonCharacter.AI.AIControllerDefinition ai
-                ? ai.RootTreeAsset
-                : null;
-            string rootPath = rootTreeAsset ? AssetDatabase.GetAssetPath(rootTreeAsset) : string.Empty;
             bool sourceUnchanged =
                 definition == Definition &&
                 string.Equals(definitionPath, DefinitionPath, StringComparison.Ordinal) &&
                 string.Equals(AssetDatabase.AssetPathToGUID(definitionPath), DefinitionGuid, StringComparison.Ordinal);
-            if (!Definition)
-            {
-                sourceUnchanged = sourceUnchanged &&
-                    rootTreeAsset == RootTreeAsset &&
-                    session.RootTree == RootTree &&
-                    string.Equals(rootPath, RootPath, StringComparison.Ordinal) &&
-                    string.Equals(AssetDatabase.AssetPathToGUID(rootPath), RootGuid, StringComparison.Ordinal) &&
-                    string.Equals(session.RootTree?.GraphAuthoringId, RootGraphAuthoringId, StringComparison.Ordinal);
-            }
             if (!sourceUnchanged)
             {
                 report.Error(
                     "transaction",
                     "authoring_source_changed",
-                    "Character Definition或AI RootTree identity在dry-run与apply之间发生变化。");
+                    "Character Definition identity在dry-run与apply之间发生变化。");
                 return false;
             }
 

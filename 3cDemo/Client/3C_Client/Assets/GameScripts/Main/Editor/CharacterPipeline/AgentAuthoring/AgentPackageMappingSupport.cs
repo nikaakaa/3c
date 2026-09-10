@@ -129,8 +129,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                 }
             }
-            foreach (AgentSnapshotAIBlackboardDeclaration declaration in editable.aiController?.blackboardDeclarations ?? new List<AgentSnapshotAIBlackboardDeclaration>())
-                Add(declaration?.declarationAuthoringId, "editable.ai.blackboard");
             foreach (AgentSnapshotTimeline timeline in editable.timelines ?? new List<AgentSnapshotTimeline>())
             {
                 string timelinePath = $"editable.timelines[{timeline.timelineAuthoringId}]";

@@ -417,9 +417,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             ref PipelineBlackboardVariableScope scope,
             ref PipelineBlackboardVariableLifetime lifetime)
         {
-            if (scope == PipelineBlackboardVariableScope.Character ||
-                scope == PipelineBlackboardVariableScope.AIController ||
-                scope == PipelineBlackboardVariableScope.AITick)
+            if (scope == PipelineBlackboardVariableScope.Character)
                 return false;
             if (scope == PipelineBlackboardVariableScope.State)
                 lifetime = PipelineBlackboardVariableLifetime.StateEnterToExit;

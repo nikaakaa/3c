@@ -9,12 +9,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public const string Version = "btsmtl-agent-authoring-document.v7";
         public const string CharacterControllerDomain = "CharacterController";
-        public const string AIControllerDomain = "AIController";
 
         public static bool IsDomain(string domain)
         {
-            return string.Equals(domain, CharacterControllerDomain, StringComparison.Ordinal) ||
-                   string.Equals(domain, AIControllerDomain, StringComparison.Ordinal);
+            return string.Equals(domain, CharacterControllerDomain, StringComparison.Ordinal);
         }
     }
 
@@ -97,67 +95,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
         public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
         public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
-        public AgentSnapshotAIController aiController;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAIController
-    {
-        public string controllerId;
-        public string definitionAssetPath;
-        public string definitionAssetGuid;
-        public string treeAssetPath;
-        public string treeAssetGuid;
-        public string graphAuthoringId;
-        public string authoringRole;
-        public string sourceRevision;
-        public string perceptionAssetPath;
-        public string perceptionAssetGuid;
-        public string candidateOrdering;
-        public List<string> candidateActorIds = new List<string>();
-        public string controlledCharacterAssetPath;
-        public string controlledCharacterAssetGuid;
-        public string characterProgramId;
-        public string characterProgramHash;
-        public bool characterProgramStale;
-        public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
-        public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
-        public List<AgentSnapshotAIBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotAIBlackboardDeclaration>();
-        public List<AgentSnapshotAINode> nodes = new List<AgentSnapshotAINode>();
-        public string intentProgramAssetPath;
-        public string intentProgramAssetGuid;
-        public string intentProgramId;
-        public string intentProgramHash;
-        public string intentProgramSourceRevision;
-        public bool intentProgramStale;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAIBlackboardDeclaration
-    {
-        public string declarationAuthoringId;
-        public string ownerGraphAuthoringId;
-        public string displayName;
-        public string valueType;
-        public string scope;
-        public string lifetime;
-        public string defaultValue;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAINode
-    {
-        public string graphAuthoringId;
-        public string nodeAuthoringId;
-        public string nodeType;
-        public string capability;
-        public string memoryDeclarationAuthoringId;
-        public string memoryValueKind;
-        public string inputId;
-        public string requestId;
-        public float requestBufferSeconds;
-        public int requestPriority;
-        public string requestRepeatPolicy;
     }
 
     [Serializable]
@@ -920,10 +857,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public float blackboardFloatValue;
         public Vector2 blackboardVector2Value;
         public Vector3 blackboardVector3Value;
-        public string blackboardActorIdValue;
-        public string blackboardTargetActorIdValue;
-        public Vector3 blackboardTargetPositionValue;
-        public float blackboardTargetYawValue;
         public int startFrame;
         public int endFrame;
         public int clipInFrame;

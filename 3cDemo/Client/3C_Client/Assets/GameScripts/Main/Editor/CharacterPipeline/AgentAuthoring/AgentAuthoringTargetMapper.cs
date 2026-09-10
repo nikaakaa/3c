@@ -55,15 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report);
             }
 
-            if (target.editable.aiController != null)
-            {
-                files["editable/ai/perception.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageAIFile
-                {
-                    blackboardSchemaRevision = target.editable.blackboardSchemaRevision,
-                    controller = AgentAIDocumentMapper.ToPackageAI(target.editable.aiController)
-                });
-            }
-
             foreach (AgentSnapshotGraph graph in target.editable.graphs ?? new List<AgentSnapshotGraph>())
             {
                 string directory = $"editable/graphs/{Segment(graph.graphAuthoringId)}";
@@ -99,7 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 inputValues = target.context.inputValues,
                 actionRequests = target.context.actionRequests,
                 blackboardDeclarations = snapshot?.blackboardDeclarations ?? new List<AgentSnapshotBlackboardDeclaration>(),
-                aiBlackboardDeclarations = snapshot?.aiController?.blackboardDeclarations ?? new List<AgentSnapshotAIBlackboardDeclaration>(),
                 timelineAssets = target.context.timelineAssets,
                 actionContextAssets = target.context.actionContextAssets,
                 animationBlendCurves = target.context.presentation?.blendCurves ??
@@ -118,7 +108,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 bodyMotion = target.context.bodyMotion,
                 presentation = target.context.presentation,
                 generatedProduct = target.context.generatedProduct,
-                aiController = target.context.aiController,
                 capabilities = target.context.capabilities,
                 graphDependencies = (snapshot?.graphs ?? new List<AgentSnapshotGraph>())
                     .Select(graph => new AgentPackageDependency
@@ -154,11 +143,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 domain = manifest.domain,
                 rootIdentity = manifest.rootIdentity
             };
+            if (!AgentAuthoringSchema.IsDomain(manifest.domain))
+            {
+                report.Error("manifest.domain", "unsupported_domain", "Agent Document只支持CharacterController；Behavior Designer行为不进入BTSMTL Document。");
+                return false;
+            }
             bool valid = true;
             AgentPackageControllerFile controller = new AgentPackageControllerFile();
             AgentPackageBlackboardFile blackboard = new AgentPackageBlackboardFile();
             AgentPackageActionsFile actions = new AgentPackageActionsFile();
-            AgentPackageAIFile aiFile = null;
             if (string.Equals(manifest.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
             {
                 valid &= TryFile(files, "editable/controller.json", report, out controller);
@@ -190,30 +183,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
                 valid &= AgentSkillFlowDocumentMapper.TryRead(files, target.editable, report);
             }
-            else
-            {
-                target.editable.stateMachines = new List<AgentSnapshotStateMachineSummary>();
-                target.editable.timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
-                target.editable.control = new AgentDocumentControlConfiguration();
-                target.editable.blackboardSchemaRevision = 0;
-                target.editable.blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
-                target.editable.actionRequests = new List<AgentSnapshotActionRequest>();
-                target.editable.actionProfiles = new List<AgentSnapshotActionProfile>();
-                if (files.Keys.Any(path =>
-                            string.Equals(path, "editable/controller.json", StringComparison.Ordinal) ||
-                            string.Equals(path, "editable/blackboard.json", StringComparison.Ordinal) ||
-                            string.Equals(path, "editable/actions.json", StringComparison.Ordinal) ||
-                            path.StartsWith("editable/timelines/", StringComparison.Ordinal) ||
-                            AgentSkillDocumentMapper.IsDefinitionPath(path) ||
-                            AgentSkillFlowDocumentMapper.IsFragmentPath(path)))
-                {
-                    report.Error(
-                        "editable",
-                        "document_domain_file_invalid",
-                        "AIController文档包不能包含CharacterController的controller、blackboard、actions、skills或timelines分片。");
-                    valid = false;
-                }
-            }
             if (string.Equals(
                     manifest.domain,
                     AgentAuthoringSchema.CharacterControllerDomain,
@@ -225,41 +194,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out AgentDocumentPresentationEditable presentation);
                 target.editable.presentation = presentation;
             }
-            else if (files.Keys.Any(path =>
-                         path.StartsWith(
-                             "editable/presentation/",
-                             StringComparison.Ordinal) ||
-                         path.StartsWith(
-                             "editable/animation-clips/",
-                             StringComparison.Ordinal) ||
-                         path.StartsWith(
-                             "readonly/presentation/",
-                             StringComparison.Ordinal)))
+            if (files.ContainsKey("editable/ai/perception.json"))
             {
-                report.Error(
-                    "editable/presentation",
-                    "document_domain_file_invalid",
-                    "AIController文档包不能包含Presentation分片。");
-                valid = false;
-            }
-
-            AgentPackageAIController packageAI = null;
-            if (string.Equals(manifest.domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal))
-            {
-                valid &= TryFile(files, "editable/ai/perception.json", report, out aiFile) &&
-                         (packageAI = aiFile.controller) != null;
-                if (aiFile != null)
-                {
-                    target.editable.blackboardSchemaRevision = aiFile.blackboardSchemaRevision;
-                    valid &= AgentBlackboardDocumentMapper.ValidateBlackboardSchemaRevision(
-                        aiFile.blackboardSchemaRevision,
-                        "editable/ai/perception.json.blackboardSchemaRevision",
-                        report);
-                }
-            }
-            else if (files.ContainsKey("editable/ai/perception.json"))
-            {
-                report.Error("editable/ai/perception.json", "document_domain_file_invalid", "CharacterController文档包不能包含AI perception分片。");
+                report.Error("editable/ai/perception.json", "document_domain_file_invalid", "BTSMTL Document不能包含Behavior Designer AI分片。");
                 valid = false;
             }
 
@@ -366,12 +303,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     target.editable.control?.moduleId);
             valid &= AgentTimelineDocumentMapper.ValidateTimelineRelationships(target.editable, report);
             valid &= AgentPackageMappingSupport.ValidatePrimaryIdentities(target.editable, report);
-            if (packageAI != null && valid)
-            {
-                if (!AgentAIDocumentMapper.TryFromPackageAI(packageAI, target.editable.graphs, report, out AgentDocumentAIEditable aiController))
-                    valid = false;
-                target.editable.aiController = aiController;
-            }
 
             target.context = new AgentDocumentContext
             {
@@ -387,7 +318,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation = dependencies.presentation ??
                                new AgentDocumentPresentationContext(),
                 generatedProduct = dependencies.generatedProduct ?? new AgentDocumentGeneratedProduct(),
-                aiController = dependencies.aiController,
                 capabilities = dependencies.capabilities ?? new List<string>()
             };
             if (string.Equals(

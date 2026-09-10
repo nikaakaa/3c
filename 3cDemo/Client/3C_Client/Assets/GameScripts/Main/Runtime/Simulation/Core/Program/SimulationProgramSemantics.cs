@@ -292,64 +292,6 @@ namespace ThirdPersonSimulation
         BeginEquipmentChange = 133,
         CommitEquipmentChange = 134,
         CancelEquipmentChange = 135,
-        AIReadSelfObservation = 200,
-        AIEnumerateConfiguredCandidates = 201,
-        AISelectNearestCandidate = 202,
-        AIReadTargetDistance = 203,
-        AIReadTargetDirection = 204,
-        AIReadMemory = 205,
-        AIWriteMemory = 206,
-        AIWriteContinuousInput = 207,
-        AIWriteActionTargetSnapshot = 208,
-        AISubmitActionRequest = 209,
-        AIReadSelectedTargetSnapshot = 210,
-        AIWaitTicks = 211
-    }
-
-    public static class AIIntentOperationSet
-    {
-        public const string Id = "ai-intent-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/3");
-        static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations = Array.AsReadOnly(new[]
-        {
-            SimulationOperationCode.Root,
-            SimulationOperationCode.Loop,
-            SimulationOperationCode.Parallel,
-            SimulationOperationCode.Sequence,
-            SimulationOperationCode.Selector,
-            SimulationOperationCode.Succeed,
-            SimulationOperationCode.Compare,
-            SimulationOperationCode.And,
-            SimulationOperationCode.Or,
-            SimulationOperationCode.Not,
-            SimulationOperationCode.Constant,
-            SimulationOperationCode.AIReadSelfObservation,
-            SimulationOperationCode.AIEnumerateConfiguredCandidates,
-            SimulationOperationCode.AISelectNearestCandidate,
-            SimulationOperationCode.AIReadTargetDistance,
-            SimulationOperationCode.AIReadTargetDirection,
-            SimulationOperationCode.AIReadSelectedTargetSnapshot,
-            SimulationOperationCode.AIReadMemory,
-            SimulationOperationCode.AIWriteMemory,
-            SimulationOperationCode.AIWriteContinuousInput,
-            SimulationOperationCode.AIWriteActionTargetSnapshot,
-            SimulationOperationCode.AISubmitActionRequest,
-            SimulationOperationCode.AIWaitTicks
-        });
-
-        public static IReadOnlyList<SimulationOperationCode> Operations => s_Operations;
-
-        public static void RequireVersion(OperationSetVersion version)
-        {
-            if (!version.Equals(Version))
-                throw new InvalidOperationException($"AI operation set '{version.Value}' is unsupported; expected '{Version.Value}'.");
-        }
-
-        public static void RequireOperation(SimulationOperationCode code)
-        {
-            if (!s_Operations.Contains(code))
-                throw new InvalidOperationException($"Operation code '{(ushort)code}' is not supported by '{Version.Value}'.");
-        }
     }
 
     public static class CharacterGameplayOperationSet

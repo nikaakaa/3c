@@ -4,7 +4,6 @@ using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Rules;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -1365,18 +1364,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     kind = "turn_facing_angle",
                     blackboardKey = angleThreshold.BlackboardVariable.DisplayKey,
-                    negate = IsNegated(graph, compare)
-                };
-            }
-            if (left is ReadTargetDistanceNode &&
-                right is ReadAIMemoryNode memory)
-            {
-                return new AgentSnapshotConditionTerm
-                {
-                    kind = "ai_target_distance_compare_blackboard",
-                    blackboardKey =
-                        memory.BlackboardVariable.DisplayKey,
-                    compareType = compare.Comparison.ToString(),
                     negate = IsNegated(graph, compare)
                 };
             }

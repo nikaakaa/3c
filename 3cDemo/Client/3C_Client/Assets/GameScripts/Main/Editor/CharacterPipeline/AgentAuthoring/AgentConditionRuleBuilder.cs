@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -54,7 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register(new ActionRequestEmitter());
             Register(new ActionWindowActiveEmitter());
             Register(new CanActivateActionEmitter());
-            Register(new AITargetDistanceCompareBlackboardEmitter());
         }
 
         public bool Preflight(
@@ -666,46 +664,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
     }
 
-    sealed class AITargetDistanceCompareBlackboardEmitter : IAgentConditionTermEmitter
-    {
-        public AgentConditionTermKind Kind => AgentConditionTermKind.AITargetDistanceCompareBlackboard;
-
-        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
-        {
-            if (session.Domain != AgentAuthoringSchema.AIControllerDomain)
-            {
-                session.Report.Error(path, "ai_condition_wrong_domain", "AI target distance condition 只能用于 AIController domain。");
-                return false;
-            }
-            return session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out _);
-        }
-
-        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
-        {
-            if (!session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out BaseExposedProperty declaration))
-                return default;
-
-            ReadTargetDistanceNode distance = graph.CreateNode(typeof(ReadTargetDistanceNode)) as ReadTargetDistanceNode;
-            distance.DisplayName = "Target Distance";
-            distance.Position = new Vector2(-520f, index * 100f);
-
-            ReadAIMemoryNode threshold = graph.CreateNode(typeof(ReadAIMemoryNode)) as ReadAIMemoryNode;
-            threshold.DisplayName = term.BlackboardKey;
-            threshold.Position = new Vector2(-520f, index * 100f + 50f);
-            threshold.ConfigureAuthoring(declaration, AIMemoryValueKind.Scalar);
-            threshold.RebindReadOnlyViewReferences(graph);
-
-            CompareNode compare = graph.CreateNode(typeof(CompareNode)) as CompareNode;
-            compare.DisplayName = "Compare Target Distance";
-            compare.Position = new Vector2(-240f, index * 100f + 20f);
-            compare.ConfigureAuthoring(term.CompareType);
-            AgentConditionRuleBuilder.ConfigureFloatInputs(compare);
-
-            graph.LinkProperty(distance, compare, distance.PropertyPortMap["m_Distance"], compare.PropertyPortMap["m_InputValue1"]);
-            graph.LinkProperty(threshold, compare, threshold.PropertyPortMap["m_Value"], compare.PropertyPortMap["m_InputValue2"]);
-            AgentConditionTermOutput output = AgentConditionRuleBuilder.Output(compare, "m_Result");
-            return ActionWindowActiveEmitter.ApplyNegate(session, graph, output, term.Negate, compare.DisplayName, index, path);
-        }
-
-    }
 }

@@ -7,7 +7,7 @@
 #### Scenario: AI首次编辑现有Character Controller
 
 - **WHEN** Agent对已有合法Character root显式checkout
-- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline、Presentation与可达Clip Curve生成规范目录包
+- **THEN** 系统 MUST从当前正式Skill Graph、Macro、Skill Timeline、Presentation与可达Clip Curve生成规范目录包
 - **AND** response MUST返回唯一文档包绝对路径
 - **AND** 系统 MUST不修改或保存Unity资产
 
@@ -41,7 +41,7 @@ Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner�
 - **THEN** dry-run MUST对完整声明闭包计算修改和引用合法性，apply MUST只采用相同document hash
 - **AND** 任一owner保存或反向导出失败 MUST完整回滚，不留下只更新接口的调用点
 
-非技能分片 MUST保持原有业务语义及正式作者模型；协议版本升级不得触发其他领域资产迁移。
+非技能分片 MUST保持原有业务语义及正式作者模型；协议版本升级不得触发其他领域资产迁移。CharacterController Document MUST不生成或读取`editable/blackboard.json`、`editable/graphs/**`和`editable/timelines/**`；这些内容只能通过Skill Flow闭包表达。
 
 ### Requirement: Document技能根必须遵守独立资产事务
 

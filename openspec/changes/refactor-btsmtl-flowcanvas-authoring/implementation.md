@@ -8,6 +8,8 @@
 
 2026-09-10 收口记录：`b012bf211`删除旧自研AI作者与运行链，`9e98cb5bf`删除旧AI资产注册，`e8303a34e`同步Behavior Designer边界与current specs，`d946ac153`清除共享Capability中的旧AI kind；`76ecc5a8b`与`e9c5f0f85`修复Skill provider owner在Snapshot/TargetMapper/TryRead链上的漏传，`1a6e887f1`补齐MCP batch camelCase参数归一。Corin旧工作包因AnimationClip闭包漂移被正式dry-run拒绝后按确认范围整体删除重建；当前精确v7 checkout/dry-run均返回`success=true`、`syncState=Clean`、`plannedDiff=[]`，documentHash为`81651f92321288d500de8ab90496663f12089b4159d7b139bbf5edebd533e508`。`b28cbd1ae`提交3个Skill根、4个SharedGraph和Definition RootTree删除。没有运行Character Build、网络回放或内容构建。
 
+2026-09-10 根无关文档清理：`559c476b9`移除Character Document snapshot/context/dependencies中的RootTree字段与Mutation Session持有的RootTree；`63d0ccfe3`收紧Document写出、读取和对账入口，不再生成顶层Blackboard、旧Graph或旧Timeline分片，并让Presentation Animation Channel只从Skill Timeline闭包核对。随后目标Unity实例`3C_Client@e852139597e42532`完成正式checkout：`success=true`、`syncState=Clean`、`plannedDiff=[]`，`documentHash=c3b5e7ab89750c40a1f9b9ad17348e8c1fe215400006d59b813237ef0c9da2ff`、`sourceRevision=e525bd94abfc8b7d6544fde33272ba8c8092882a5065592bcdd91817d31e97c8`。包根editable文件仅保留`actions.json`和`controller.json`，没有`editable/blackboard.json`、`editable/graphs/**`或`editable/timelines/**`。未执行Build、运行回放或资产迁移。
+
 ## 此前增量记录
 
 本节保留此前各次检查与实施事实，旧的“尚未完成”和旧版本号不代表当前状态。

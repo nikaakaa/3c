@@ -10,7 +10,7 @@
 #### Scenario: Agent首次编辑现有Character Controller
 
 - **WHEN** Agent对已有合法Character root显式checkout
-- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline、Presentation与可达Clip Curve生成规范目录包
+- **THEN** 系统 MUST从当前正式Skill Graph、Macro、Skill Timeline、Presentation与可达Clip Curve生成规范目录包
 - **AND** response MUST返回唯一文档包绝对路径
 - **AND** 系统 MUST不修改或保存Unity资产
 
@@ -22,7 +22,7 @@
 
 ### Requirement: 物理分片不得改变Document整包同步语义
 
-文档包 MUST通过service-owned manifest声明唯一规范文件清单，并 MAY按Graph、Timeline、Timeline Curve、AnimationClip Curve、Presentation、领域配置和只读context拆分JSON。Agent MAY只读取和修改相关文件，但checkout、rebase、dry-run、apply、Conflict、hash锁定与反向导出 MUST始终以整个文档包为唯一提交单元。系统 MUST不提供文件级基线、文件级dirty、文件级apply或文件级Conflict。新增允许创建的Graph分片 MUST继续使用完整canonical文件对；AnimationClip分片 MUST只能引用当前Definition闭包中已有原生`.anim`，不得使用`local:*`创建Clip。Agent MUST不直接修改manifest。
+文档包 MUST通过service-owned manifest声明唯一规范文件清单，并 MAY按Skill Graph、Macro、Skill Timeline、Timeline Curve、AnimationClip Curve、Presentation、领域配置和只读context拆分JSON。Agent MAY只读取和修改相关文件，但checkout、rebase、dry-run、apply、Conflict、hash锁定与反向导出 MUST始终以整个文档包为唯一提交单元。系统 MUST不提供文件级基线、文件级dirty、文件级apply或文件级Conflict。新增允许创建的Skill Graph分片 MUST继续使用完整canonical文件对；AnimationClip分片 MUST只能引用当前Definition闭包中已有原生`.anim`，不得使用`local:*`创建Clip。Agent MUST不直接修改manifest。
 
 #### Scenario: Agent只修改一个Clip Curve文件
 
@@ -44,7 +44,8 @@
 #### Scenario: Agent读取Character文档包
 
 - **WHEN** checkout导出Character Controller
-- **THEN** editable MUST表达Agent正式可写的Graph、StateMachine、Condition、Timeline、Blackboard、Action、Presentation与Clip Curve结构
+- **THEN** editable MUST表达Agent正式可写的Control、Skill Graph、Macro、Skill Timeline、Action、Presentation与Clip Curve结构
+- **AND** Skill Blackboard declaration MUST位于所属Skill Graph分片内，不得生成Character顶层Blackboard分片
 - **AND** context MUST只读表达Node/Graph schema、可引用asset、dependency与必要能力摘要
 - **AND** 文档包 MUST不暴露Unity YAML、managed-reference布局或私有SerializedProperty path
 
@@ -53,6 +54,16 @@
 - **WHEN** context文件semantic hash与checkout基线不同
 - **THEN** parser或Reconciler MUST返回`readonly_context_modified`
 - **AND** MUST不把变化降低为Mutation
+
+### Requirement: Character Document不得提供旧顶层Graph入口
+
+CharacterController Document MUST不生成或读取`editable/blackboard.json`、`editable/graphs/**`和`editable/timelines/**`。Blackboard declaration、Timeline、TreeClip、Macro和节点关系 MUST由Skill Flow闭包表达；旧顶层分片 MUST触发重新checkout或整包拒绝，不得静默兼容。
+
+#### Scenario: 包含旧顶层分片
+
+- **WHEN** 现有Document manifest包含顶层Blackboard、Graph或Timeline分片
+- **THEN** Store MUST要求从正式Character Definition重新checkout
+- **AND** 新包 MUST只写出Skill Flow、Action、Control、Presentation和Clip Curve分片
 
 ### Requirement: Graph JSON必须使用稀疏规范authoring语言
 
@@ -141,7 +152,7 @@
 
 ### Requirement: 可编辑能力必须由唯一authoring capability catalog闭合
 
-系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Node/Graph catalog。每个editable Node kind MUST声明允许Graph kind、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
+系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Skill Node/Graph catalog。每个editable Skill Node kind MUST声明允许Graph role、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
 
 #### Scenario: Exporter发现未登记Node类型
 
@@ -183,7 +194,7 @@
 
 ### Requirement: Document必须确定性降低为完整Mutation Plan
 
-系统 MUST使用唯一Document Reconciler比较当前规范Unity投影与整个文档包目标状态，并生成immutable typed `AgentMutationPlan`。Reconciler MUST自行决定Graph owner、Node、Flow Edge、Property Edge、Graph reference、Condition、Timeline、Blackboard和领域配置的创建、更新、连接与删除顺序。Agent MUST不提交operation数组、handler名称、前序输出或局部工具调用。
+系统 MUST使用唯一Document Reconciler比较当前规范Unity投影与整个文档包目标状态，并生成immutable typed `AgentMutationPlan`。Reconciler MUST自行决定Skill Graph owner、Node、Flow Edge、Property Edge、Macro、Skill Timeline、Skill Blackboard和领域配置的创建、更新、连接与删除顺序。Agent MUST不提交operation数组、handler名称、前序输出或局部工具调用。
 
 #### Scenario: AI重接Property Edge
 

@@ -475,14 +475,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 string timelinePath = AssetDatabase.GetAssetPath(timeline);
                 if (string.IsNullOrEmpty(timelinePath))
                     throw new InvalidOperationException($"TimelineBody '{target.id}'的Timeline owner没有正式资产路径。");
-                if (AssetDatabase.GetAssetPath(graph) == timelinePath)
+                string sourcePath = AssetDatabase.GetAssetPath(graph);
+                if (sourcePath == timelinePath)
                     continue;
                 if (AssetDatabase.IsMainAsset(graph))
                     continue;
                 if (AssetDatabase.IsSubAsset(graph))
                     AssetDatabase.RemoveObjectFromAsset(graph);
                 AssetDatabase.AddObjectToAsset(graph, timelinePath);
+                m_Session.RegisterRollback(() => RestoreAssetOwner(graph, sourcePath));
             }
+        }
+
+        static void RestoreAssetOwner(FlowGraph graph, string assetPath)
+        {
+            if (!graph || AssetDatabase.GetAssetPath(graph) == assetPath)
+                return;
+            if (!File.Exists(assetPath))
+                throw new InvalidOperationException($"无法恢复技能Graph原owner：{assetPath}");
+            AssetDatabase.RemoveObjectFromAsset(graph);
+            AssetDatabase.AddObjectToAsset(graph, assetPath);
+            EditorUtility.SetDirty(graph);
         }
 
         void SyncBlackboards()

@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         readonly HashSet<UnityEngine.Object> m_TouchedOwners = new HashSet<UnityEngine.Object>();
         readonly HashSet<string> m_PlannedGameplayTags = new HashSet<string>(StringComparer.Ordinal);
+        readonly List<Action> m_RollbackActions = new List<Action>();
 
         public AgentMutationSession(
             CharacterPipelineDefinition definition,
@@ -114,6 +115,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (owner != null)
                 m_TouchedOwners.Add(owner);
+        }
+
+        internal void RegisterRollback(Action rollback)
+        {
+            if (rollback != null)
+                m_RollbackActions.Add(rollback);
+        }
+
+        internal void RollbackAuthoring()
+        {
+            for (int i = m_RollbackActions.Count - 1; i >= 0; i--)
+                m_RollbackActions[i]();
         }
 
         public void PlanGameplayTag(string tag)

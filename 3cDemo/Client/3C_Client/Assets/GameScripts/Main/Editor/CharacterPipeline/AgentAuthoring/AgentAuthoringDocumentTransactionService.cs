@@ -212,12 +212,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             const string undoName = "Apply BTSMTL Agent Document";
             Undo.SetCurrentGroupName(undoName);
             AgentCompileReport applied = null;
+            AgentDocumentApplyResult applyResult = null;
             try
             {
                 Undo.RegisterCompleteObjectUndo(owners, undoName);
                 var compiler = new AgentDocumentMutationCompiler();
-                AgentDocumentApplyResult result = compiler.Apply(character, preparation);
-                applied = result.Report;
+                applyResult = compiler.Apply(character, preparation);
+                applied = applyResult.Report;
                 AgentAuthoringPackageProjection appliedProjection = null;
                 if (!applied.HasErrors() && character)
                     ApplyPresentation(preparation.PresentationPlan, applied);
@@ -232,13 +233,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         applied,
                         preparation.PresentationPlan);
                 if (applied.HasErrors())
-                    return RollbackResponse(request, projection, path, state, undoGroup, applied, "document_apply_failed", createdSkillRootPaths);
+                    return RollbackResponse(request, projection, path, state, undoGroup, applied, applyResult, "document_apply_failed", createdSkillRootPaths);
 
-                MarkTouchedOwnersDirty(result.TouchedOwners);
+                MarkTouchedOwnersDirty(applyResult.TouchedOwners);
                 MarkPresentationOwnersDirty(preparation.PresentationPlan);
                 RecordTouchedOwners(
                     applied,
-                    result.TouchedOwners,
+                    applyResult.TouchedOwners,
                     preparation.PresentationPlan);
                 AssetDatabase.SaveAssets();
                 appliedProjection = m_Exporter.Export(character);
@@ -270,7 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 applied ??= CreateReport(request, projection.Target.rootIdentity);
                 applied.Error("apply", "apply_exception", exception.ToString());
-                return RollbackResponse(request, projection, path, state, undoGroup, applied, "apply_exception", createdSkillRootPaths);
+                return RollbackResponse(request, projection, path, state, undoGroup, applied, applyResult, "apply_exception", createdSkillRootPaths);
             }
         }
 
@@ -933,11 +934,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentAuthoringPackageState state,
             int undoGroup,
             AgentCompileReport report,
+            AgentDocumentApplyResult applyResult,
             string code,
             IReadOnlyList<string> createdSkillRootPaths)
         {
             try
             {
+                applyResult?.RollbackAuthoring();
                 Undo.RevertAllDownToGroup(undoGroup);
                 foreach (string assetPath in createdSkillRootPaths)
                 {

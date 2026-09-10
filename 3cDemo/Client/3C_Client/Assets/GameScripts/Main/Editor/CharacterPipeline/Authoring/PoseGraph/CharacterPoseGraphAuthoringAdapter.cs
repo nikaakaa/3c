@@ -1123,6 +1123,76 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GraphAuthoringFieldDescriptor field,
             out IReadOnlyList<GraphAuthoringFieldOption> options)
         {
+            switch (field.PickerKind)
+            {
+                case "pose-parameter":
+                    options = ((CharacterPoseCanvasGraphDocument)document).Graph.Parameters
+                        .Where(value => value != null && value.ParameterId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.ParameterId.Value,
+                            value.ParameterId.Value))
+                        .ToArray();
+                    return true;
+                case "animation-channel":
+                    options = m_Profile?.PoseGraph?.EnumerateGraphs()
+                        .SelectMany(value => value?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
+                        .Select(value => (value.Payload as CharacterAnimationSlotPosePayload)?.AnimationChannelId)
+                        .Where(value => value.HasValue && value.Value.IsValid)
+                        .Select(value => value.Value.Value)
+                        .Distinct(StringComparer.Ordinal)
+                        .OrderBy(value => value, StringComparer.Ordinal)
+                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
+                case "animation-slot":
+                    options = m_Rig?.AnimationSlots
+                        .Where(value => value != null && value.SlotId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.SlotId.Value,
+                            $"{value.DisplayName} ({value.SlotId.Value})"))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
+                case "pose-graph":
+                    options = m_Profile?.PoseGraph?.EnumerateGraphs()
+                        .Where(value => value != null && value.GraphId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.GraphId.Value,
+                            value.GraphId.Value))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
+                case "linked-pose-group":
+                    options = m_Profile?.LinkedPoseGroups
+                        .Where(value => value != null && value.GroupId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.GroupId.Value,
+                            value.GroupId.Value))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
+                case "linked-pose-interface":
+                    options = CharacterLinkedPoseAuthoringService.EnumerateInterfaces(m_Profile)
+                        .Where(value => value != null && value.InterfaceId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.InterfaceId.Value,
+                            value.InterfaceId.Value))
+                        .ToArray();
+                    return true;
+                case "linked-pose-entry":
+                {
+                    CharacterPoseCanvasNode node =
+                        ((CharacterPoseCanvasGraphDocument)document).Graph.Nodes.Single(value => value.NodeId.Value == elementId.Value);
+                    CharacterLinkedPoseCallPayload payload = node.Payload as CharacterLinkedPoseCallPayload;
+                    CharacterLinkedPoseInterfaceAsset linkedInterface =
+                        CharacterLinkedPoseAuthoringService.EnumerateInterfaces(m_Profile)
+                            .SingleOrDefault(value => value != null && value.InterfaceId == payload?.InterfaceId);
+                    options = linkedInterface?.Entries
+                        .Where(value => value != null && value.EntryId.IsValid)
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value.EntryId.Value,
+                            value.EntryId.Value))
+                        .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+                    return true;
+                }
+            }
             bool physicalOnly = string.Equals(
                 field.PickerKind,
                 "rig-physical-bone",

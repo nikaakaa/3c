@@ -555,6 +555,7 @@ namespace BTSMTL.Timeline.Editor
                     (TimelineSection section, string name, int frame) = sectionChanges[index];
                     m_Request.Timeline.ConfigureSection(section, name, frame);
                 }
+                m_Request.Timeline.Init();
             }, "Slate Timeline Edit");
         }
 

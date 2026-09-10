@@ -16,6 +16,16 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
+    public enum BtsmtlGraphConditionValueConfigurationKind
+    {
+        None,
+        BlackboardDeclaration,
+        StateExitCause,
+        ActionContext,
+        ActionWindow,
+        ActionAdmission
+    }
+
     public sealed class BtsmtlGraphAuthoringCapabilities
     {
         sealed class NodeDescriptor
@@ -755,7 +765,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public bool ConfigureConditionValueNode(
             BaseNode node,
-            AgentConditionValueNodeConfigurationKind configuration,
+            BtsmtlGraphConditionValueConfigurationKind configuration,
             BaseExposedProperty declaration,
             StateExitCause stateExitCause,
             ActionContextSlot actionContext,
@@ -767,21 +777,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             switch (configuration)
             {
-                case AgentConditionValueNodeConfigurationKind.None:
+                case BtsmtlGraphConditionValueConfigurationKind.None:
                     return true;
-                case AgentConditionValueNodeConfigurationKind.BlackboardDeclaration when node is PipelineBlackboardValueInfoNode blackboard:
+                case BtsmtlGraphConditionValueConfigurationKind.BlackboardDeclaration when node is PipelineBlackboardValueInfoNode blackboard:
                     blackboard.ConfigureAuthoring(declaration);
                     return true;
-                case AgentConditionValueNodeConfigurationKind.StateExitCause when node is StateExitCauseInfoNode exitCause:
+                case BtsmtlGraphConditionValueConfigurationKind.StateExitCause when node is StateExitCauseInfoNode exitCause:
                     exitCause.ConfigureAuthoring(stateExitCause);
                     return true;
-                case AgentConditionValueNodeConfigurationKind.ActionContext when node is ActionContextActiveInfoNode context:
+                case BtsmtlGraphConditionValueConfigurationKind.ActionContext when node is ActionContextActiveInfoNode context:
                     context.ConfigureAuthoring(actionContext);
                     return true;
-                case AgentConditionValueNodeConfigurationKind.ActionWindow when node is ActionWindowActiveInfoNode window:
+                case BtsmtlGraphConditionValueConfigurationKind.ActionWindow when node is ActionWindowActiveInfoNode window:
                     window.ConfigureAuthoring(windowType);
                     return true;
-                case AgentConditionValueNodeConfigurationKind.ActionAdmission when node is CanActivateActionInfoNode admission:
+                case BtsmtlGraphConditionValueConfigurationKind.ActionAdmission when node is CanActivateActionInfoNode admission:
                     admission.ConfigureAuthoring(actionProfile, targetSnapshot);
                     return true;
                 default:

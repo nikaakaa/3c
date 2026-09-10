@@ -1,31 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using BTSMTL.Diagnostics;
-using BTSMTL.Timeline;
-using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Input;
-using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner;
-using UnityEngine;
 using static ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.AgentMutationLoweringSupport;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal static class AgentActionMutationLowering
     {
-        internal static AgentMutation LowerConfigureActionAdmission(AgentMutationPlanningContext context, AgentMutationDraft operation)
-        {
-            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
-            AgentElementTargetReference element = context.RequiredElement(operation.targetElementAuthoringId, operation.targetPlannedIdentity, "targetElement");
-            AgentAssetReference actionProfile = ReadActionProfile(context, operation);
-            return context.IsValid
-                ? new AgentConfigureActionAdmissionMutation(operation.id, context.Path, graph, element, actionProfile)
-                : null;
-        }
-
         internal static AgentMutation LowerEnsureGameplayTag(AgentMutationPlanningContext context, AgentMutationDraft operation)
         {
             string tag = context.RequiredText(operation.gameplayTag, string.Empty, "gameplayTag", "ensure_gameplay_tag 缺少 tag id。");

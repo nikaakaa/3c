@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             if (valid)
-                session.AddPlanned(command, null, "Skill Flow Document", $"graphs={set.Document.graphs.Count}; macros={set.Document.macros.Count}; timelines={set.Document.timelines.Count}");
+                session.AddPlanned(command, "Skill Flow Document", $"graphs={set.Document.graphs.Count}; macros={set.Document.macros.Count}; timelines={set.Document.timelines.Count}");
             return valid;
         }
 

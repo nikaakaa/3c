@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             bool valid = AgentControlDocumentMapper.Validate(configure.Configuration, session.Report);
             if (valid)
-                session.AddPlanned(command, null, configure.Configuration.moduleId, configure.Configuration.parameters.Count.ToString());
+                session.AddPlanned(command, configure.Configuration.moduleId, configure.Configuration.parameters.Count.ToString());
             return valid;
         }
 

@@ -19,29 +19,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!ValidateTag(session, value.Tag, value.ParentTag, value.Path))
                         return false;
                     session.PlanGameplayTag(value.Tag.Value);
-                    session.AddPlanned(value, null, value.Tag.Value, "ensure gameplay tag");
+                    session.AddPlanned(value, value.Tag.Value, "ensure gameplay tag");
                     return true;
                 case AgentSetActionProfileGrantedTagsMutation value:
                     if (!TryResolveProfile(session, value.ActionProfile, value.Path, out ActionProfile grantedProfile) ||
                         !ValidateTags(session, value.Tags, value.Path))
                         return false;
-                    session.AddPlanned(value, null, grantedProfile.ActionId, "set granted tags");
+                    session.AddPlanned(value, grantedProfile.ActionId, "set granted tags");
                     return true;
                 case AgentSetActionProfileCancelQueryMutation value:
                     if (!TryResolveProfile(session, value.ActionProfile, value.Path, out ActionProfile cancelProfile) ||
                         !ValidateTags(session, value.All.Concat(value.Any).Concat(value.None).ToList(), value.Path))
                         return false;
-                    session.AddPlanned(value, null, cancelProfile.ActionId, "set cancel query");
+                    session.AddPlanned(value, cancelProfile.ActionId, "set cancel query");
                     return true;
                 case AgentSetActionProfileTargetRequirementMutation value:
                     if (!TryResolveProfile(session, value.ActionProfile, value.Path, out ActionProfile targetProfile))
                         return false;
-                    session.AddPlanned(value, null, targetProfile.ActionId, $"set target requirement {value.TargetRequirement}");
+                    session.AddPlanned(value, targetProfile.ActionId, $"set target requirement {value.TargetRequirement}");
                     return true;
                 case AgentSetActionRequestTimingClassMutation value:
                     if (!TryResolveActionRequest(session, value.RequestId, value.Path, out _))
                         return false;
-                    session.AddPlanned(value, null, value.RequestId, $"set request timing {value.TimingClass}");
+                    session.AddPlanned(value, value.RequestId, $"set request timing {value.TimingClass}");
                     return true;
                 default:
                     throw new InvalidOperationException($"Unsupported action eligibility command: {command.Kind}");

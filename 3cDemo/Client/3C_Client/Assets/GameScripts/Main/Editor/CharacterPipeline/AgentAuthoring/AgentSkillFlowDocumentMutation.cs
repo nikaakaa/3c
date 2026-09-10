@@ -13,10 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 id,
                 AgentMutationKind.SetSkillFlowDocument,
                 "set_skill_flow_document",
-                AgentMutationOutputKind.None,
                 path,
-                "skill-flow",
-                Vector2.zero)
+                "skill-flow")
         {
             Document = document ?? throw new ArgumentNullException(nameof(document));
         }

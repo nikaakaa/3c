@@ -1,12 +1,8 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Control/Rules.meta
-guid: e0ef5fb876429db42a49800653081426
-========
 guid: 72fd968959b610e4bb7994fedbaab0c9
->>>>>>>> main:3cDemo/Client/3C_Client/Packages/com.opsive.behaviordesigner/Runtime/Tasks/Actions.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  userData:
+  assetBundleName:
+  assetBundleVariant:

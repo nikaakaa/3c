@@ -409,7 +409,10 @@ namespace BTSMTL.Timeline.Editor
                 return;
             if (CutsceneEditor.current == null ||
                 !ReferenceEquals(CutsceneEditor.current.cutscene, m_Cutscene))
+            {
                 CutsceneEditor.ShowWindow(m_Cutscene);
+                CutsceneEditor.current?.Focus();
+            }
             else
                 CutsceneEditor.current.Focus();
         }

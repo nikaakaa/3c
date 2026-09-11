@@ -79,7 +79,7 @@ MonoBehaviour:
   m_RotationTransitionSeconds: 3
   m_ChangeAvatarTransitionSeconds: 0.3
   m_Input:
-    m_Sensitivity: {x: 0.12, y: 0.0025}
+    m_Sensitivity: {x: 0.12, y: 0.12}
     m_PitchLimit: {x: -70, y: 70}
     m_DefaultResponseWeight: 1
     m_PitchResponseWeight: 1

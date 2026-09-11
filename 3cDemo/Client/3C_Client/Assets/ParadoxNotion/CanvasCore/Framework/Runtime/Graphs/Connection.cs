@@ -29,6 +29,13 @@ namespace NodeCanvas.Framework
         ///<summary>The Unique ID of the node. One is created only if requested.</summary>
         public virtual string UID => string.IsNullOrEmpty(_UID) ? _UID = System.Guid.NewGuid().ToString() : _UID;
 
+        public void ConfigureAuthoringIdentity(string identity)
+        {
+            if (string.IsNullOrWhiteSpace(identity))
+                throw new System.ArgumentException("Connection authoring identity cannot be empty.", nameof(identity));
+            _UID = identity;
+        }
+
         ///<summary>The source node of the connection</summary>
         public Node sourceNode {
             get { return _sourceNode; }

@@ -11,6 +11,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4abac72969544505a9f35828673d84db, type: 3}
   m_Name: CorinBodyMotionProfile
-  m_EditorClassIdentifier:
-  m_GravityAcceleration: -25.0
-  m_MaximumFallSpeed: 40.0
+  m_EditorClassIdentifier: 
+  m_GravityAcceleration: -25
+  m_MaximumFallSpeed: 40

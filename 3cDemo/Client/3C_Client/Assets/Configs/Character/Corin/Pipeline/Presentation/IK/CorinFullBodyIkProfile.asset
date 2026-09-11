@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Schema: character-full-body-ik-profile/v1
   m_ProfileId: corin.full-body-ik
-  m_Revision: e83001ccbfd6c20cf4c6da5290d24fde36e9d2a51e71d862411d4eb360f357cb
+  m_Revision: c88bb920961075b08561c03e92a16d70f06fad08560267e1516f4fd76c9adbb2
   m_Iterations: 4
   m_FabrikPass: 1
   m_SpineStiffness: 1
@@ -47,7 +47,7 @@ MonoBehaviour:
     m_BendClamp: 0.505
   m_LeftLeg:
     m_Pin: 0
-    m_Pull: 0
+    m_Pull: 1
     m_Push: 0
     m_PushParent: 0
     m_Reach: 0
@@ -59,7 +59,7 @@ MonoBehaviour:
     m_BendClamp: 0.505
   m_RightLeg:
     m_Pin: 0
-    m_Pull: 0
+    m_Pull: 1
     m_Push: 0
     m_PushParent: 0
     m_Reach: 0

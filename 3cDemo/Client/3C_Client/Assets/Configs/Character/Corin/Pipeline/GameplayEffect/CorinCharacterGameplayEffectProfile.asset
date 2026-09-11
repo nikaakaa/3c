@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f807b251417e44c7a2dd5d5e7db0ccf3, type: 3}
   m_Name: CorinCharacterGameplayEffectProfile
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_TagCatalog: {fileID: 11400000, guid: ea542b3ad56649dc88d64fb69ce9ad11, type: 2}
   m_AttributeDefinitions:
   - {fileID: 11400000, guid: 9c1f2a84c932472ea88854df6abf1518, type: 2}

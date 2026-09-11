@@ -30,14 +30,14 @@ MonoBehaviour:
   m_RightSoleFrameLocalRotation: {x: 0.4978254, y: 0.49281213, z: 0.5072455, w: -0.502004}
   m_GeometryValidation:
     m_SchemaVersion: 2
-    m_IdentityHash: ab38259cbd151eb9d130d865f4221acf956ba5eabd0fbd65e10195175895ff3c
+    m_IdentityHash: 0aa18d7cf108c7e9fadb5bd78a49d86a94b63e1eab526eb92047754ef2f26d9c
     m_GeometryContentHash: 2e7f37998d1d35ddd48e58437baedcbfb269c0f0b51bd821953bc2b224ef0371
     m_RigId: corin.animation-rig
     m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
     m_CalibrationId: Corin.FootPlacementRig
     m_CalibrationRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
     m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
-    m_SamplingRigDependencyHash: 73784112907894f210bad4412cda3d68a8d0afa1a9011b59b56de23e2f891f50
+    m_SamplingRigDependencyHash: 9381272404c2ae48225be4f0326074ecf3c8590da50384670c651a0f823cc3b8
     m_PreviewClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef
     m_PreviewClipDependencyHash: 2fea87e520dc79e11f531b1cebcdefb52398f55194b2a7c1dc89c519ce3bfcd7
     m_PreviewNormalizedTimeBits: 0

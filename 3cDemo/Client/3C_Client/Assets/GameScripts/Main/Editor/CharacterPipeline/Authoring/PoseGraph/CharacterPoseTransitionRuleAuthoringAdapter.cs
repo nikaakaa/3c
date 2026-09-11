@@ -5,6 +5,7 @@ using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using TreeDesigner.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -109,7 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         operation.OperationId.Value),
                     CharacterPoseGraphAuthoringCapabilities.Get(
                         operation.Kind),
-                    CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                    CharacterPoseGraphCapabilityProjector.Catalog.Require(
                         CharacterPoseGraphAuthoringCapabilities.Get(operation.Kind), DomainId, DocumentRoleId).DisplayName,
                     new Vector2(
                         depth * 280f,

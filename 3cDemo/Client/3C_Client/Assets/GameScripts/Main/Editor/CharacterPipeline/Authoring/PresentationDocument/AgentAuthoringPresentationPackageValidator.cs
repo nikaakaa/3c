@@ -1122,7 +1122,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     var capabilityId =
                         new GraphAuthoringCapabilityId(node.capability);
                     GraphAuthoringCapabilityDescriptor capability =
-                        CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                        CharacterPoseGraphCapabilityProjector.Catalog.Require(
                             capabilityId,
                             CharacterPoseGraphAuthoringCapabilities.Domain,
                             role);
@@ -1189,7 +1189,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
         {
             bool valid = true;
             portShape = Array.Empty<GraphAuthoringDynamicPortProjection>();
-            if (CharacterPoseGraphAuthoringCapabilities.IsDocumentNodeRetired(
+            if (CharacterPoseGraphCapabilityProjector.IsDocumentNodeRetired(
                     node.capability))
             {
                 report.Error(

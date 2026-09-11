@@ -73,6 +73,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public abstract CharacterPoseNodeKind Kind { get; }
         public abstract Type PayloadType { get; }
+        public abstract GraphAuthoringCapabilityDescriptor Declare();
         public virtual CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
         public virtual CharacterPoseOperationCode OperationCode => default;
@@ -519,6 +520,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
+        internal IReadOnlyCollection<CharacterPoseNodeDefinition> Declarations =>
+            m_Definitions.Values;
+
         public GraphAuthoringCapabilityDescriptor ProjectCapability(
             GraphAuthoringCapabilityDescriptor capability)
         {
@@ -613,11 +617,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void EnsureCapabilities()
         {
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
             if (m_CapabilitiesBound)
                 return;
             foreach (CharacterPoseNodeDefinition definition in m_Definitions.Values)
-                ProjectCapability(CharacterPoseGraphAuthoringCapabilities.Require(definition.Kind));
+                ProjectCapability(CharacterPoseGraphCapabilityProjector.Require(definition.Kind));
             SealCapabilities();
         }
     }

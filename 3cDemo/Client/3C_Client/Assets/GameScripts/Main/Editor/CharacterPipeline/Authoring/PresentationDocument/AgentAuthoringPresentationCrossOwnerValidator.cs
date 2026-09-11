@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                             "Pose Subgraph引用不在root-owned Graph catalog中。");
                     }
                     GraphAuthoringCapabilityDescriptor capability =
-                        CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                        CharacterPoseGraphCapabilityProjector.Catalog.Require(
                             new GraphAuthoringCapabilityId(node.capability),
                             CharacterPoseGraphAuthoringCapabilities.Domain,
                             new GraphAuthoringDocumentRoleId(graph.role));

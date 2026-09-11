@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             try
             {
                 capability =
-                    CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                    CharacterPoseGraphCapabilityProjector.Catalog.Require(
                         new GraphAuthoringCapabilityId(capabilityId),
                         CharacterPoseGraphAuthoringCapabilities.Domain,
                         new GraphAuthoringDocumentRoleId(role));
@@ -184,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             string capability,
             GraphAuthoringDocumentRoleId role)
         {
-            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+            CharacterPoseGraphCapabilityProjector.Catalog.Require(
                 new GraphAuthoringCapabilityId(capability),
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 role);
@@ -218,7 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     try
                     {
                         GraphAuthoringCapabilityDescriptor capability =
-                            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                            CharacterPoseGraphCapabilityProjector.Catalog.Require(
                                 new GraphAuthoringCapabilityId(node.capability),
                                 CharacterPoseGraphAuthoringCapabilities.Domain,
                                 role);

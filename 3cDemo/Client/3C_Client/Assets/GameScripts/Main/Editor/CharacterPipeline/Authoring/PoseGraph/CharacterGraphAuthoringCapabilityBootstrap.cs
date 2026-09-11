@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterGraphAuthoringCapabilityBootstrap()
         {
             _ = new BtsmtlGraphAuthoringCapabilities();
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
         }
     }
 

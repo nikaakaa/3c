@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     ? profile.PoseGraph
                     : throw new InvalidOperationException(
                         "Presentation Profile requires a Pose Graph asset.");
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
 
             var result = new AgentDocumentPresentationEditable
             {
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
         {
             if (!poseAsset)
                 throw new ArgumentNullException(nameof(poseAsset));
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
             var result = new AgentDocumentPresentationEditable();
             AppendPoseGraph(result, poseAsset, null);
             return result;
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                 throw new ArgumentNullException(nameof(poseAsset));
             if (!profile)
                 throw new ArgumentNullException(nameof(profile));
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
             var result = new AgentDocumentPresentationEditable();
             AppendPoseGraph(result, poseAsset, profile);
             return result;
@@ -496,7 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             CharacterPoseAuthoringNodeMetadata metadata =
                 CharacterPoseAuthoringMetadata.Require(node.Kind);
             GraphAuthoringCapabilityDescriptor capability =
-                CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                CharacterPoseGraphCapabilityProjector.Catalog.Require(
                     new GraphAuthoringCapabilityId(metadata.CapabilityIdentity),
                     CharacterPoseGraphAuthoringCapabilities.Domain,
                     role);

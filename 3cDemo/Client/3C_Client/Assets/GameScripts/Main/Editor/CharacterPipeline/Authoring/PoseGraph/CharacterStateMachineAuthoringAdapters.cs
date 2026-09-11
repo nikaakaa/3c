@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation;
 using TreeDesigner;
 using TreeDesigner.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -418,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
             (m_OwnerGraphId, m_OwnerNodeId) = CharacterPoseGraphAssetMutationOwner.ResolveStateMachineOwner(asset, definition.StateMachineId);
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
         }
 
         public GraphAuthoringStateMachineSemanticKind SemanticKind =>
@@ -1220,7 +1221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_OpenState = openState ?? throw new ArgumentNullException(nameof(openState));
             m_OpenTransition = openTransition ?? throw new ArgumentNullException(nameof(openTransition));
             m_CreateTransition = createTransition;
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
         }
 
         public GraphAuthoringStateMachineSemanticKind SemanticKind =>
@@ -1299,7 +1300,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new InvalidOperationException("Pose State details reject a non-Pose State.");
             }
-            return CharacterPoseGraphAuthoringCapabilities.Catalog
+            return CharacterPoseGraphCapabilityProjector.Catalog
                 .Require(
                     CharacterPoseGraphAuthoringCapabilities.StateMachineState,
                     CharacterPoseGraphAuthoringCapabilities.Domain,
@@ -1313,7 +1314,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!(transition?.Payload is CharacterPoseTransitionPayload))
                 throw new InvalidOperationException("Pose transition details reject non-Pose payload.");
-            return CharacterPoseGraphAuthoringCapabilities.Catalog
+            return CharacterPoseGraphCapabilityProjector.Catalog
                 .Require(
                     CharacterPoseGraphAuthoringCapabilities.StateMachineTransition,
                     CharacterPoseGraphAuthoringCapabilities.Domain,

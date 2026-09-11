@@ -6,8 +6,10 @@ using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
+using TreeDesigner.Authoring;
 using TreeDesigner.Editor;
 using UnityEngine;
+using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -232,6 +234,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ProgramParameterInput;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterProgramParameterInputPosePayload>(CharacterPoseNodeKind.ProgramParameterInput, AllPoseGraphsWithLinkedEntry, "Animation Parameter", "Inputs", InputColor,
+                Fields(Field("parameter-id", "Parameter", GraphAuthoringFieldValueKind.IdentityReference, "pose-parameter")),
+                Ports(Out("parameter", "Parameter", "pose.parameter")),
+                executionDomain: CharacterPoseExecutionDomain.FactAndDemand);
+
         protected override PoseParameterId GetParameter(
             CharacterProgramParameterInputPosePayload payload) =>
             payload.ParameterId;
@@ -271,6 +279,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.AnimationChannel |
                 CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterActionPlaybackInputPosePayload>(CharacterPoseNodeKind.ActionPlaybackInput, RootOnly, "Action Playback Input", "Inputs", InputColor,
+                Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel")),
+                Ports(Out("action-playback", "Action Playback", "pose.action-playback")),
+                executionDomain: CharacterPoseExecutionDomain.FactAndDemand,
+                systemOwned: true);
 
         protected override AnimationChannelId GetChannel(
             CharacterActionPlaybackInputPosePayload payload) =>
@@ -318,6 +333,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterSelectedPosePlayerPayload>(CharacterPoseNodeKind.SelectedPosePlayer, RootAndStateWithLinkedEntry, "Selected Pose Player", "Sources", SourceColor,
+                Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot))),
+                Ports(Out("pose", "Local Pose", "pose.local")),
+                commands: SourceCommands(),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture,
+                systemOwned: true);
+
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterSelectedPosePlayerPayload payload) =>
             payload.SourceSlot;
@@ -356,6 +379,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterBlendSpacePlayerPosePayload>(CharacterPoseNodeKind.BlendSpacePlayer, RootAndStateWithLinkedEntry, "Blend Space Player", "Sources", SourceColor,
+                Fields(SourceField(typeof(CharacterBlendSpacePoseSourceSlot)), EnumField("input-range-policy", "Input Range", typeof(CharacterAnimationBlendSpaceInputRangePolicy))),
+                Ports(In("x", "X", "pose.parameter"), OptionalIn("y", "Y", "pose.parameter"), Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
+                commands: SourceCommands(),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
+
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterBlendSpacePlayerPosePayload payload) =>
             payload.SourceSlot;
@@ -420,6 +451,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player |
                 CharacterPoseNodeRuntimeRequirement.ClipPlayer;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterClipPlayerPosePayload>(CharacterPoseNodeKind.ClipPlayer, RootAndStateWithLinkedEntry, "Clip Player", "Sources", SourceColor,
+                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), EnumField("clock-source", "Clock Source", typeof(CharacterClipPlayerClockSource))),
+                Ports(Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
+                commands: SourceCommands(),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterClipPlayerPosePayload payload) =>
             payload.SourceSlot;
@@ -495,6 +533,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.StateMachine;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterPoseStateMachineNodePayload>(CharacterPoseNodeKind.PoseStateMachine, RootAndLinkedEntry, "Animation State Machine", "State Machine", BlendColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(Out("pose", "Local Pose", "pose.local")),
+                GraphAuthoringDynamicPortPolicy.None,
+                new[] { Child("open-state-machine", "Open State Machine", CharacterPoseGraphAuthoringCapabilities.StateMachine) },
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl);
+
         protected override void Validate(
             CharacterPoseStateMachineNodePayload payload,
             string sourcePath) =>
@@ -553,6 +599,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl |
                 CharacterPoseNodeRuntimeRequirement.BlendPolicy |
                 CharacterPoseNodeRuntimeRequirement.AnimationSlot;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterAnimationSlotPosePayload>(CharacterPoseNodeKind.AnimationSlot, RootAndStateWithLinkedEntry, "Slot", "Action", BlendColor,
+                Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), ResourceField("blend-policy", "Blend Policy")),
+                Ports(In("source-pose", "Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
 
         protected override AnimationChannelId GetChannel(
             CharacterAnimationSlotPosePayload payload) =>
@@ -637,6 +689,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseNodeRuntimeRequirement.Player |
                 CharacterPoseNodeRuntimeRequirement.BlendPolicy;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, RootAndStateWithLinkedEntry, "Blend Stack", "Blend", BlendColor,
+                Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot)), ResourceField("blend-policy", "Blend Policy")),
+                Ports(Out("pose", "Local Pose", "pose.local")),
+                commands: SourceCommands(),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
+
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterBlendStackPosePayload payload) =>
             payload.SourceSlot;
@@ -689,6 +748,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Inertialization;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, AllPoseGraphsWithLinkedEntry, "Inertialization", "Blend", BlendColor,
+                Fields(ResourceField("inertialization-policy", "Policy")),
+                UnaryLocalPosePorts(),
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl);
+
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterInertializationPosePayload(
@@ -726,6 +791,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.BlendPose;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, AllPoseGraphsWithLinkedEntry, "Blend Pose", "Blend", BlendColor,
+                Fields(FloatField("weight", "Weight", 1f, 0f, 1f)),
+                BinaryLocalPoseWithWeight("Base", "Overlay"),
+                GraphAuthoringDynamicPortPolicy.OrderedInputs);
+
         protected override float GetWeight(
             CharacterBlendPosePayload payload) =>
             payload.Weight;
@@ -759,6 +830,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.LayeredBoneBlend;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LayeredBoneBlend;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, AllPoseGraphsWithLinkedEntry, "Layered Blend Per Bone", "Blend", BlendColor,
+                Fields(ResourceField("bone-mask", "Bone Mask"), EnumField("blend-space", "Pose Space", typeof(CharacterLayeredBoneBlendSpace)), FloatField("weight", "Weight", 1f, 0f, 1f)),
+                BinaryLocalPoseWithWeight("Base", "Overlay"));
 
         protected override float GetWeight(
             CharacterLayeredBoneBlendPosePayload payload) =>
@@ -827,6 +903,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Additive;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, AllPoseGraphsWithLinkedEntry, "Additive Pose", "Blend", BlendColor,
+                Fields(StringField("reference-pose-id", "Reference Pose", "RigReference"), EnumField("reference-space", "Reference Space", typeof(AdditiveReferenceSpace)), EnumField("scale-policy", "Scale Policy", typeof(AdditiveScalePolicy)), FloatField("weight", "Weight", 1f, 0f, 1f)),
+                BinaryLocalPoseWithWeight("Base", "Additive"));
+
         protected override float GetWeight(
             CharacterAdditivePosePayload payload) =>
             payload.Weight;
@@ -891,6 +972,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.PoseParameterResolve;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterPoseParameterResolvePayload>(CharacterPoseNodeKind.PoseParameterResolve, AllPoseGraphsWithLinkedEntry, "Pose Parameter Resolve", "Parameters", BlendColor,
+                Fields(Field("parameter-policies", "Parameter Policies", GraphAuthoringFieldValueKind.Object, "pose-parameter-policy")),
+                Ports(In("base-pose", "Base Local Pose", "pose.local"), In("parameter-source-pose", "Parameter Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local")),
+                executionDomain: CharacterPoseExecutionDomain.PureValue,
+                systemOwned: true);
+
         protected override IReadOnlyList<
             CharacterPoseParameterPolicy> GetParameterPolicies(
             CharacterPoseParameterResolvePayload payload) =>
@@ -920,6 +1008,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.ModifyBone;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterModifyBonePosePayload>(CharacterPoseNodeKind.ModifyBone, AllPoseGraphs, "Modify Bone", "Constraints", ConstraintColor,
+                Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
+                UnaryComponentPoseWithWeight());
 
         protected override void Validate(
             CharacterModifyBonePosePayload payload,
@@ -1003,6 +1096,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.RootOrientationWarp;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, RootAndStateWithLinkedEntry, "Root Orientation Warp", "Constraints", ConstraintColor,
+                Fields(ResourceField("yaw-curve", "Yaw Profile")),
+                UnaryLocalPosePorts());
+
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterRootOrientationWarpPosePayload(
@@ -1033,6 +1131,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.PoseSubgraph;
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Subgraph;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, AllPoseGraphsWithLinkedEntry, "Pose Subgraph", "Graph", BlendColor,
+                Fields(Field("graph-id", "Graph", GraphAuthoringFieldValueKind.IdentityReference, "pose-graph")),
+                Array.Empty<GraphAuthoringPortDescriptor>(),
+                GraphAuthoringDynamicPortPolicy.OrderedBidirectional,
+                new[] { Child("open-subgraph", "Open Subgraph", CharacterPoseGraphAuthoringCapabilities.Subgraph) });
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input)
@@ -1081,6 +1186,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.LocalToComponentPose;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LocalToComponentPose;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterLocalToComponentPosePayload>(CharacterPoseNodeKind.LocalToComponentPose, AllPoseGraphs, "Local To Component", "Pose Space", ConstraintColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(In("local-pose", "Local Pose", "pose.local"), Out("component-pose", "Component Pose", "pose.component")));
     }
 
     internal sealed class CharacterComponentToLocalPoseNodeDefinition :
@@ -1090,6 +1200,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.ComponentToLocalPose;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ComponentToLocalPose;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterComponentToLocalPosePayload>(CharacterPoseNodeKind.ComponentToLocalPose, AllPoseGraphs, "Component To Local", "Pose Space", BlendColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(In("component-pose", "Component Pose", "pose.component"), Out("local-pose", "Local Pose", "pose.local")));
     }
 
     internal sealed class CharacterGraphInputPoseNodeDefinition :
@@ -1099,6 +1214,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.GraphInput;
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.GraphInput;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterGraphInputPosePayload>(CharacterPoseNodeKind.GraphInput, StateSubgraphAndLinkedEntry, "Graph Input", "Graph", InputColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedOutputs);
     }
 
     internal sealed class CharacterGraphOutputPoseNodeDefinition :
@@ -1108,6 +1227,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.GraphOutput;
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.GraphOutput;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterGraphOutputPosePayload>(CharacterPoseNodeKind.GraphOutput, StateSubgraphAndLinkedEntry, "Graph Output", "Graph", OutputColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedInputs);
     }
 
     internal sealed class CharacterOutputPoseNodeDefinition :
@@ -1119,6 +1242,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNativeNodeRole.PoseOutput;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.OutputPose;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, RootAndState, "Output Pose", "Output", OutputColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),
+                executionDomain: CharacterPoseExecutionDomain.FinalPublication);
     }
 
     internal sealed class CharacterPoseIrTopologyCompiler

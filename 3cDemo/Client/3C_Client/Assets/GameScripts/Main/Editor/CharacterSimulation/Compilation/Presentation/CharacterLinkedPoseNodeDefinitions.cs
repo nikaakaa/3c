@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using TreeDesigner.Authoring;
+using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -13,6 +15,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.LinkedPoseCall;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LinkedPoseCall;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterLinkedPoseCallPayload>(CharacterPoseNodeKind.LinkedPoseCall, RootAndLinkedEntry, "Linked Pose Call", "Graph", BlendColor,
+                Fields(
+                    Field("group-id", "Group", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-group"),
+                    Field("interface-id", "Interface", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-interface"),
+                    Field("entry-id", "Entry", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-entry")),
+                Array.Empty<GraphAuthoringPortDescriptor>(),
+                GraphAuthoringDynamicPortPolicy.OrderedBidirectional,
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl);
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>

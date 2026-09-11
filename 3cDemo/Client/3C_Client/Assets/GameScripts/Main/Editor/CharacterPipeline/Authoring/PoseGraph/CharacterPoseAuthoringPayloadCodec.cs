@@ -53,8 +53,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .CreatePayload(
                 input ?? throw new ArgumentNullException(nameof(input)));
             if (payload == null ||
-                CharacterPoseGraphAuthoringCapabilities
-                    .RequireKind(payload) != kind)
+                CharacterPoseNodeDefinitionModule.Shared
+                    .RequirePayload(payload).Kind != kind)
             {
                 throw new InvalidOperationException(
                     $"Pose capability '{kind}' returned an invalid typed payload.");

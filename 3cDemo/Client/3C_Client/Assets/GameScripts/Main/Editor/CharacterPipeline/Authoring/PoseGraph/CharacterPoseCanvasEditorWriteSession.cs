@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.Require(CharacterPoseNodeKind.ProgramParameterInput);
-            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+            CharacterPoseGraphCapabilityProjector.Catalog.Require(
                 definition.Capability.CapabilityId,
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 ResolveRole());
@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (definition.Capability.SystemOwned)
                 throw new InvalidOperationException(
                     $"Pose node '{definition.Capability.DisplayName}' is compiler-owned and cannot be authored.");
-            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(definition.Capability.CapabilityId,
+            CharacterPoseGraphCapabilityProjector.Catalog.Require(definition.Capability.CapabilityId,
                 CharacterPoseGraphAuthoringCapabilities.Domain, ResolveRole());
             var node = new CharacterPoseCanvasNode(
                 new PoseNodeId(Guid.NewGuid().ToString("N")),
@@ -359,7 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             var mutation = new CharacterPoseCanvasMutationAdapter { ReadOnly = ReadOnly };
             var document = new CharacterPoseCanvasGraphDocument(m_Owner, m_Graph.GraphId.Value, ResolveRole(), m_Asset.name);
-            return new GraphAuthoringProjectionCanvasBinding(document, CharacterPoseGraphAuthoringCapabilities.Catalog,
+            return new GraphAuthoringProjectionCanvasBinding(document, CharacterPoseGraphCapabilityProjector.Catalog,
                 mutation, new CharacterPoseCanvasConnectionPolicy(), new CharacterPoseCanvasGraphClipboardCodec(mutation));
         }
 

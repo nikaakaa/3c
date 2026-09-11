@@ -258,8 +258,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static List<AgentDocumentPoseCapabilityContext> ExportPoseCapabilities()
         {
-            CharacterPoseGraphAuthoringCapabilities.EnsureRegistered();
-            return CharacterPoseGraphAuthoringCapabilities.Catalog.Descriptors
+            CharacterPoseGraphCapabilityProjector.EnsureRegistered();
+            return CharacterPoseGraphCapabilityProjector.Catalog.Descriptors
                 .Where(value => value.DomainId.Equals(
                     CharacterPoseGraphAuthoringCapabilities.Domain))
                 .Where(value => value.AuthoringType != null)

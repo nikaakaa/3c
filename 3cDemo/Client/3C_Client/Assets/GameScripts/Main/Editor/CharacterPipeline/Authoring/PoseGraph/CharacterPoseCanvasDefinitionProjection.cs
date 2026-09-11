@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static IReadOnlyList<GraphAuthoringCapabilityDescriptor> CreateMenu(
             GraphAuthoringDocumentRoleId role) =>
-            CharacterPoseGraphAuthoringCapabilities.Catalog.GetAllowed(
+            CharacterPoseGraphCapabilityProjector.Catalog.GetAllowed(
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 role);
 

@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RequireCopyable(node);
                 GraphAuthoringCapabilityDescriptor capability =
-                    CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                    CharacterPoseGraphCapabilityProjector.Catalog.Require(
                         CharacterPoseGraphAuthoringCapabilities.Get(node.Kind),
                         document.DomainId,
                         document.DocumentRoleId);
@@ -245,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPoseNodeDefinitionModule.Shared.Require(kind);
                 RequireCopyable(definition);
                 GraphAuthoringCapabilityDescriptor capability =
-                    CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                    CharacterPoseGraphCapabilityProjector.Catalog.Require(
                         new GraphAuthoringCapabilityId(node.capability),
                         document.DomainId,
                         document.DocumentRoleId);
@@ -360,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Type expectedType)
         {
             GraphAuthoringCapabilityDescriptor capability =
-                CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                CharacterPoseGraphCapabilityProjector.Catalog.Require(
                     new GraphAuthoringCapabilityId(node.capability),
                     document.DomainId,
                     document.DocumentRoleId);
@@ -499,7 +499,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
                     capability);
-            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+            CharacterPoseGraphCapabilityProjector.Catalog.Require(
                 definition.Capability.CapabilityId,
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 role);

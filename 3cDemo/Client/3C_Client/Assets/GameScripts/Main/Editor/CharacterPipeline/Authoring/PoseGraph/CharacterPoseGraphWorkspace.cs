@@ -506,7 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Mutation.ReadOnly =
                 m_LiveDebugToggle != null && m_LiveDebugToggle.value;
             m_RuntimeTrace = m_Projection ? new CharacterPoseRuntimeTraceProjection(m_Asset, m_Projection, () => IsRuntimeObservation ? m_ObservationPanel?.RuntimeTarget : null, MatchesCurrentPublishedRevision, () => m_ObservationPanel.PublishedPlan, () => m_ObservationPanel.CallSite) : null;
-            GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphAuthoringCapabilities.Catalog;
+            GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphCapabilityProjector.Catalog;
             m_Canvas.BindProjection(
                 new GraphAuthoringProjectionCanvasBinding(
                 m_Document,
@@ -839,7 +839,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Document.Nodes.Single(value =>
                     value.NodeId.Equals(nodeId));
             GraphAuthoringCapabilityDescriptor capability =
-                CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                CharacterPoseGraphCapabilityProjector.Catalog.Require(
                     node.CapabilityId,
                     m_Document.DomainId,
                     m_Document.DocumentRoleId);
@@ -1001,7 +1001,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseTransitionCreationDialog.Show);
             var binding = new GraphAuthoringStateMachineBinding(
                 m_StateMachineDocument,
-                CharacterPoseGraphAuthoringCapabilities.Catalog,
+                CharacterPoseGraphCapabilityProjector.Catalog,
                 m_StateMachineMutation,
                 policy);
             m_StateMachineSurface.BindStateMachine(binding);
@@ -1084,13 +1084,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Canvas.BindProjection(
                 new GraphAuthoringProjectionCanvasBinding(
                 m_RuleDocument,
-                CharacterPoseGraphAuthoringCapabilities.Catalog,
+                CharacterPoseGraphCapabilityProjector.Catalog,
                 m_RuleMutation,
                 new CharacterPoseTransitionRuleConnectionPolicy(),
                 persistsLayout: false));
             m_Details.Bind(new GraphAuthoringDetailsBinding(
                 m_RuleDocument,
-                CharacterPoseGraphAuthoringCapabilities.Catalog,
+                CharacterPoseGraphCapabilityProjector.Catalog,
                 m_RuleMutation,
                 new CharacterPoseTransitionRuleDetailsDataSource(),
                 ExecuteRuleDetailsCommand, authoringOnly: true));

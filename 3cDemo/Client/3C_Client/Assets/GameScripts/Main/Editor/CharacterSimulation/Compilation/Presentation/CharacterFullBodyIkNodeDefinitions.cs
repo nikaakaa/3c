@@ -4,6 +4,8 @@ using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using TreeDesigner.Authoring;
+using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -12,6 +14,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
         public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FootPlacement;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, AllPoseGraphs, "Foot Placement", "Goal Sources", ConstraintColor,
+                Fields(ResourceField("profile", "Profile"), ResourceField("calibration", "Calibration")),
+                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
+                executionDomain: CharacterPoseExecutionDomain.WorldAwareValue);
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterFootPlacementPosePayload(
@@ -47,6 +55,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseBoneIKGoals;
         public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseBoneIKGoals;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, AllPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", ConstraintColor,
+                Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),
+                Ports(In("pose", "Component Pose", "pose.component"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint);
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterPoseBoneIkGoalsPayload(
@@ -106,6 +120,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIK;
         public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FullBodyIK;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, AllPoseGraphs, "Full Body IK", "Constraints", ConstraintColor,
+                Fields(ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
+                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("goals", "Full Body IK Goals", "component.full-body-ik-goals"), Out("result", "Solved Component Pose", "pose.component")),
+                GraphAuthoringDynamicPortPolicy.OrderedInputs,
+                commands: new[]
+                {
+                    new GraphAuthoringCommandDescriptor(CharacterPoseGraphAuthoringCapabilities.OpenFullBodyIkProfile, "Edit FinalIK FBBIK Profile", false)
+                },
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint);
+
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterFullBodyIkPosePayload();
 
@@ -137,6 +162,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.FullBodyIkGoalAssembler;
         public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.FullBodyIkGoalAssembler;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterFullBodyIkGoalAssemblerPayload>(CharacterPoseNodeKind.FullBodyIkGoalAssembler, AllPoseGraphs, "Goal Assembler", "Goal Sources", ConstraintColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                GraphAuthoringDynamicPortPolicy.OrderedInputs,
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint,
+                systemOwned: true);
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>

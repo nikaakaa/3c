@@ -1467,7 +1467,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return errors;
             }
 
-            GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphAuthoringCapabilities.Catalog;
+            GraphAuthoringCapabilityCatalog catalog = CharacterPoseGraphCapabilityProjector.Catalog;
             HashSet<PoseGraphId> stateGraphs = asset.EnumerateGraphs()
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)

@@ -443,7 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseNodeDefinition handler;
                 try
                 {
-                    CharacterPoseGraphAuthoringCapabilities.Catalog
+                    CharacterPoseGraphCapabilityProjector.Catalog
                         .Require(
                             CharacterPoseGraphAuthoringCapabilities
                                 .Get(node.Kind),

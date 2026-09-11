@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
+using TreeDesigner.Authoring;
+using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabilityDeclarations;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -11,6 +13,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.MotionMatchingPose;
         public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.MotionMatchingPose;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterMotionMatchingPosePayload>(CharacterPoseNodeKind.MotionMatchingPose, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Motion Matching Pose", "Sources", SourceColor,
+                Fields(ResourceField("binding", "Motion Matching Binding"), ResourceField("jump-blend-policy", "Jump Blend Policy"), ReferenceIdentityField("entry-graph-id", "Entry Processing Graph", "pose-graph"), TypedEnumField("relevance-reset-policy", "Relevance Reset", typeof(CharacterMotionMatchingRelevanceResetPolicy)), TypedEnumField("search-cadence-policy", "Search Cadence", typeof(CharacterMotionMatchingSearchCadencePolicy))),
+                Ports(In("history.pose", "Previous Pose History", "pose.history"), OptionalIn("trajectory.query", "Trajectory", "motion-matching.trajectory"), OptionalIn("presentation.facts", "Presentation Facts", "presentation.facts"), OptionalIn("motion-matching.binding", "Binding", "motion-matching.binding"), Out("pose.local", "Local Pose", "pose.local")),
+                childSurfaces: new[] { Child("open-entry-processing-graph", "Open Entry Processing Graph", CharacterPoseGraphAuthoringCapabilities.Subgraph) },
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterMotionMatchingPosePayload(
@@ -68,6 +77,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseHistoryCollector;
         public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseHistoryRead;
 
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterPoseHistoryCollectorPayload>(CharacterPoseNodeKind.PoseHistoryCollector, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Pose History Collector", "Sources", SourceColor,
+                Fields(Field("history-id", "History", GraphAuthoringFieldValueKind.IdentityReference, "pose-history")),
+                Ports(In("pose.local.input", "Local Pose", "pose.local"), Out("pose.local", "Local Pose", "pose.local"), Out("history.pose", "Previous Pose History", "pose.history")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
+
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterPoseHistoryCollectorPayload(
                 new CharacterPoseHistoryId(input.Require<string>("history-id")));
@@ -89,5 +104,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.EntryPoseInput;
         public override CharacterPoseNativeNodeRole NativeRole => CharacterPoseNativeNodeRole.GraphInput;
+
+        public override GraphAuthoringCapabilityDescriptor Declare() =>
+            Node<CharacterEntryPoseInputPayload>(CharacterPoseNodeKind.EntryPoseInput, new[] { CharacterPoseGraphAuthoringCapabilities.Subgraph }, "Entry Pose Input", "Inputs", InputColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(InterfaceOut("pose.local", "Local Pose", "pose.local", "entry.pose")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture);
     }
 }

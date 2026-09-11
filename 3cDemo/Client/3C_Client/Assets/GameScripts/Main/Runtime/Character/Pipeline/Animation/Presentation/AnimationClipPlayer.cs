@@ -411,12 +411,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 normalizedTime,
                 Cycle,
                 Duration,
-                m_Source.IsLooping);
+                m_Descriptor.LoopAnimation);
             right = m_Source.FootStepObservation.Right.Sample(
                 normalizedTime,
                 Cycle,
                 Duration,
-                m_Source.IsLooping);
+                m_Descriptor.LoopAnimation);
         }
 
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>
@@ -700,7 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ContinuousTime,
                     normalizedTime,
                     1f,
-                    m_Source.IsLooping)
+                    m_Descriptor.LoopAnimation)
                 : new ClipSamplePlan(
                     0,
                     m_Source.Clip,
@@ -708,7 +708,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ContinuousTime,
                     normalizedTime,
                     1f,
-                    m_Source.IsLooping);
+                    m_Descriptor.LoopAnimation);
             AnimationPoseSourceCaptureBinding binding = m_SourceWorkspace.PrepareCapture(
                 m_SourceId,
                 m_ContinuityIdentity,
@@ -849,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(continuousTime));
             double duration = m_Source.SourceDurationSeconds;
             m_ContinuousTime = continuousTime;
-            if (m_Source.IsLooping)
+            if (m_Descriptor.LoopAnimation)
             {
                 m_Cycle = checked((int)Math.Floor(continuousTime / duration));
                 m_SampleTime = (float)(continuousTime - m_Cycle * duration);

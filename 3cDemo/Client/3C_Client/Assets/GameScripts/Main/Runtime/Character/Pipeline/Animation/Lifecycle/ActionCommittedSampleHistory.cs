@@ -752,7 +752,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     previous.ContinuousVisualTime)
                 {
                     throw new InvalidOperationException(
-                        "Action committed raw visual time moved backwards.");
+                        "Action committed raw visual time moved backwards." +
+                        $" prev Tick={previous.LocalLogicTick} Seq={previous.CommittedSequence} Event={previous.EventId} Time={previous.ContinuousVisualTime:R} Cycle={previous.Cycle}" +
+                        $" curr Tick={current.LocalLogicTick} Seq={current.CommittedSequence} Event={current.EventId} Time={current.ContinuousVisualTime:R} Cycle={current.Cycle}");
                 }
             }
         }

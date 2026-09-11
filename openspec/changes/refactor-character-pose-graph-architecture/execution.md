@@ -1615,3 +1615,9 @@ Corin资源槽由提交`b72f7d1e3`重建并经正式流程保存，当前Profile
 静态与Unity MCP核对确认，GameplayLab场景只有Environment、Directional Light、Gameplay Lab Bootstrap和Director Camera四个根对象，没有`TEngineBootstrap`或`RootModule`。`GameplayLabBootstrap.Start()`必须先等待`ProjectSceneResourcePreparation.PrepareAsync()`，而YooAsset异步操作由正式`RootModule -> ModuleSystem.Update`推进；缺少该根模块时不会创建Runtime Session和Actor。尝试加载已有`Bootstrap.unity`作为additive正式承载后，日志进一步暴露编辑器前一次Play留下的静态`ModuleSystem`，第二次`ResourceModule.Initialize()`因重复`Asset Pool`失败；没有进入Pose运行链。
 
 本节不修改当前有未提交改动的GameplayLab场景、不添加临时Root、不建立Scene Play fallback，也不修改TEngine包。需要干净的Unity Editor生命周期或由对应基础设施change收口后，才能继续Scene Play Pose reset；Document dry-run、validate、Float32/Fixed Build与Build后checkout均已独立通过。
+
+## Pose Graph直接打开的精确上下文解析（POSE-EXEC-20260911-17）
+
+状态：提交`7572f05a9`修正从Project直接打开可复用Pose Graph时的作者上下文。入口现在按Pose Graph反查Presentation Profile；只有恰好一个Profile引用该图时才继续解析其唯一Character Definition、Presentation Projection和Rig上下文，提供给FlowCanvas原生Inspector的资源与骨骼选项。多个Profile或没有Profile时不猜角色，图仍保持无绑定状态，Graph资产所有权没有改变。
+
+`ThirdPersonClient.Editor.csproj`按规定参数编译成功，0错误、93个既有警告，结束后已执行`dotnet build-server shutdown`。本步只修改编辑器打开入口，不改变Pose Graph、Document、Program或`CreatePoseOnlyInput()`链路；Unity窗口视觉复核仍等待主实例恢复ready。

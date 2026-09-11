@@ -672,6 +672,13 @@ namespace Slate
             CancelEditTransaction();
             if (cutscene != null && !Application.isPlaying)
                 Stop(true);
+            if (cutscene != null &&
+                (ReferenceEquals(Selection.activeObject, cutscene.gameObject) ||
+                 Selection.activeObject is Component component && component.transform.IsChildOf(cutscene.transform)))
+            {
+                Selection.activeObject = null;
+            }
+            CutsceneUtility.selectedObject = null;
             cutscene = null;
             clipWrappers = null;
             clipWrappersMap = null;

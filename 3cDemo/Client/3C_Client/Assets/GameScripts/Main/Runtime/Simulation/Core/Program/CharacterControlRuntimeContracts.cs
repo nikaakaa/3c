@@ -141,15 +141,19 @@ namespace ThirdPersonSimulation
             string binding,
             SimulationInputValueId input,
             int continuousTicks,
-            int phase)
+            int phase,
+            ulong playbackGeneration)
         {
             if (!source.IsCharacterControl || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0 || phase < 0)
                 throw new ArgumentException("Character control motion request is incomplete.");
+            if (playbackGeneration == 0)
+                throw new ArgumentException("Character control motion request playback generation is invalid.", nameof(playbackGeneration));
             Source = source;
             Binding = SimulationIdentity.Require(binding, nameof(binding));
             Input = input;
             ContinuousTicks = continuousTicks;
             Phase = phase;
+            PlaybackGeneration = playbackGeneration;
         }
 
         public SimulationExecutionSource Source { get; }
@@ -157,6 +161,7 @@ namespace ThirdPersonSimulation
         public SimulationInputValueId Input { get; }
         public int ContinuousTicks { get; }
         public int Phase { get; }
+        public ulong PlaybackGeneration { get; }
     }
 
     public interface ICharacterControlOutputPort

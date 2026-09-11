@@ -105,21 +105,22 @@ namespace ThirdPersonCharacter.Control.Rules
         void OnStateLogic(CharacterControlStateId stateId)
         {
             int elapsed = m_State.ReadInt32(s_MotionElapsed);
+            ulong playbackGeneration = m_State.ReadUInt64(s_EnteredTick);
             if (stateId == WalkStart)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkStartMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkStartMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == WalkLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkLoopMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_WalkLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == RunLoop)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_RunLoopMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
             else if (stateId == MovingTurn)
             {
-                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_MovingTurnMotion, s_MoveAxis, elapsed, 0));
+                m_Output.SubmitMotion(new CharacterControlMotionRequest(Source(stateId), s_MovingTurnMotion, s_MoveAxis, elapsed, 0, playbackGeneration));
             }
 
             if (stateId != Idle)

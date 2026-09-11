@@ -1247,13 +1247,13 @@ namespace ThirdPersonSimulation
                 : 0;
             var movementPlaybackClock = new CommittedMovementPlaybackClock(
                 request.Source.Identity,
-                1,
+                request.PlaybackGeneration,
                 m_Frame.Tick,
                 continuousTicks,
                 m_Program.Manifest.TickRate);
             var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
                 request.Source.Identity,
-                1,
+                request.PlaybackGeneration,
                 m_Frame.Tick,
                 m_Program.Manifest.TickRate,
                 (displacement.X / delta).ToSingle(),

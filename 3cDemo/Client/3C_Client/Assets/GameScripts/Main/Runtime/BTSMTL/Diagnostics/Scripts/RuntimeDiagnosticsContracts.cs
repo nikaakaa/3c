@@ -655,6 +655,8 @@ namespace BTSMTL.Diagnostics
         {
             SessionId = sessionId;
             ProgramRevision = programRevision;
+            ProgramEpoch = 0;
+            ExecutionBranchId = Guid.Empty;
             Domain = domain;
             Channel = channel;
             Position = position;

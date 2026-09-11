@@ -1,11 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:3cDemo/Client/3C_Client/Assets/ParadoxNotion/CanvasCore/Framework/Design/Editor/Resources/StyleSheet/StyleSheetLight.asset.meta
-guid: ac3f234217273a644aed606c7b88b85a
-timeCreated: 1541326337
-licenseType: Store
-========
 guid: 2fcaa5c986dfebe4b95c27f7b4268651
->>>>>>>> main:3cDemo/Client/3C_Client/Assets/Configs/Timeline/ScenePresentation/Generated/CorinPanelExpandTimeline.TimelineProgram.asset.meta
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 11400000

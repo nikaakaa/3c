@@ -1621,3 +1621,9 @@ Corin资源槽由提交`b72f7d1e3`重建并经正式流程保存，当前Profile
 状态：提交`7572f05a9`修正从Project直接打开可复用Pose Graph时的作者上下文。入口现在按Pose Graph反查Presentation Profile；只有恰好一个Profile引用该图时才继续解析其唯一Character Definition、Presentation Projection和Rig上下文，提供给FlowCanvas原生Inspector的资源与骨骼选项。多个Profile或没有Profile时不猜角色，图仍保持无绑定状态，Graph资产所有权没有改变。
 
 `ThirdPersonClient.Editor.csproj`按规定参数编译成功，0错误、93个既有警告，结束后已执行`dotnet build-server shutdown`。本步只修改编辑器打开入口，不改变Pose Graph、Document、Program或`CreatePoseOnlyInput()`链路；Unity窗口视觉复核仍等待主实例恢复ready。
+
+## Pose原生Inspector身份字段（POSE-EXEC-20260911-18）
+
+状态：提交`1ddc579da`让FlowCanvas原生节点Inspector优先使用Pose作者Capability提供的typed身份选项；存在精确Profile/Rig上下文时使用正式下拉选项，没有上下文时保留稳定身份并允许编辑，不再把可编辑的Animation Channel、Slot、Graph等字段显示成不可编辑的`Unavailable`。写入仍统一经过Pose Canvas editor router与typed Presentation Mutation，没有恢复右侧自定义面板或第二写入链。
+
+本步只改变作者Inspector交互，不改变Pose Graph拓扑、BlendStack/Layered能力、Document、Program产物、Timeline或`CreatePoseOnlyInput()`链路。用户已明确由其自行执行端到端验证，后续不再由本任务发起Unity MCP、Build、Play或Validate。

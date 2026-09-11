@@ -14,8 +14,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentAuthoringPackageProjection current,
             AgentAuthoringTarget target)
         {
-            AgentMutationDraftSet mutations = CreateMutationSet(current, target);
             var report = ValidateEnvelope(current, target);
+            AgentMutationPlanBuilder mutations = new AgentMutationPlanBuilder(
+                report,
+                target?.domain,
+                target?.rootIdentity,
+                current?.SourceRevision);
             if (!report.HasErrors())
                 BuildCharacterMutations(current?.Target, target.editable, mutations, report);
             AgentPresentationMutationPlan presentationPlan = null;
@@ -30,12 +34,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (report.HasErrors())
                 return new AgentDocumentPreparation(null, current?.Target, current?.SourceRevision, null, report);
+            AgentMutationPlan plan = mutations.Build();
+            if (plan == null)
+                return new AgentDocumentPreparation(null, current?.Target, current?.SourceRevision, null, report);
             AgentDocumentPreparation preparation =
                 new AgentDocumentMutationCompiler().Prepare(
                     definition,
                     current?.Target,
                     current?.SourceRevision,
-                    mutations);
+                    plan);
             preparation.Report.messages.AddRange(report.messages);
             preparation.Report.plannedDiff.AddRange(report.plannedDiff);
             preparation.Report.metrics.diffSize =
@@ -48,18 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 preparation.Boundary,
                 preparation.Report,
                 presentationPlan);
-        }
-
-        static AgentMutationDraftSet CreateMutationSet(AgentAuthoringPackageProjection current, AgentAuthoringTarget target)
-        {
-            return new AgentMutationDraftSet
-            {
-                schemaVersion = AgentAuthoringSchema.Version,
-                domain = target?.domain,
-                rootIdentity = target?.rootIdentity,
-                sourceRevision = current?.SourceRevision,
-                mutations = new List<AgentMutationDraft>()
-            };
         }
 
         static AgentCompileReport ValidateEnvelope(AgentAuthoringPackageProjection current, AgentAuthoringTarget target)
@@ -93,7 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static void BuildCharacterMutations(
             AgentAuthoringTarget current,
             AgentDocumentEditable target,
-            AgentMutationDraftSet mutations,
+            AgentMutationPlanBuilder mutations,
             AgentCompileReport report)
         {
             AgentActionDocumentMutationModule.BuildActionMutations(current, target, mutations, report);

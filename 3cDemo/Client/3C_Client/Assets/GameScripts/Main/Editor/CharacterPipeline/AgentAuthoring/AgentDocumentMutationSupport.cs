@@ -1,27 +1,126 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonGameplay.Tags;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    internal static class AgentDocumentMutationSupport
+    internal sealed class AgentMutationPlanBuilder
     {
-        internal static void Add(
-            AgentMutationDraftSet mutations,
-            string path,
-            AgentMutationKind kind,
-            Action<AgentMutationDraft> configure)
+        readonly List<AgentMutation> m_Commands = new List<AgentMutation>();
+        readonly HashSet<string> m_Ids = new HashSet<string>(StringComparer.Ordinal);
+        readonly AgentCompileReport m_Report;
+        int m_NextId;
+
+        public AgentMutationPlanBuilder(
+            AgentCompileReport report,
+            string domain,
+            string rootIdentity,
+            string sourceRevision)
         {
-            var operation = new AgentMutationDraft
-            {
-                id = "mutation-" + mutations.mutations.Count.ToString("D4"),
-                sourcePath = path,
-                kind = kind
-            };
-            configure(operation);
-            mutations.mutations.Add(operation);
+            m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            Domain = domain ?? string.Empty;
+            RootIdentity = rootIdentity ?? string.Empty;
+            SourceRevision = sourceRevision ?? string.Empty;
         }
 
+        public string Domain { get; }
+        public string RootIdentity { get; }
+        public string SourceRevision { get; }
+
+        public void Add(string path, Func<string, AgentMutation> factory)
+        {
+            string mutationId = "mutation-" + m_NextId++.ToString("D4");
+            AgentMutation command;
+            try
+            {
+                command = factory?.Invoke(mutationId);
+            }
+            catch (Exception exception)
+            {
+                m_Report.Error(path, "mutation_create_failed", exception.Message);
+                return;
+            }
+            if (command == null)
+                return;
+            if (!m_Ids.Add(command.Id))
+            {
+                m_Report.Error(path, "mutation_id_invalid", $"Mutation id重复：{command.Id}");
+                return;
+            }
+            m_Commands.Add(command);
+            m_Report.metrics.schemaValidCount++;
+        }
+
+        public AgentMutationPlan Build()
+        {
+            return m_Report.HasErrors()
+                ? null
+                : new AgentMutationPlan(m_Commands, Domain, RootIdentity, SourceRevision);
+        }
+    }
+
+    internal sealed class AgentMutationValueReader
+    {
+        readonly AgentCompileReport m_Report;
+
+        public AgentMutationValueReader(AgentCompileReport report, string path)
+        {
+            m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            Path = path ?? string.Empty;
+        }
+
+        public string Path { get; }
+        public bool IsValid { get; private set; } = true;
+
+        public string RequiredText(string value, string field, string message)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                Error(field, $"{field}_missing", message);
+                return string.Empty;
+            }
+            return value;
+        }
+
+        public bool TryParseEnum<T>(string value, string field, out T result)
+            where T : struct
+        {
+            if (Enum.TryParse(value, true, out result) && Enum.IsDefined(typeof(T), result))
+                return true;
+            Error(field, $"{field}_invalid", $"{field} 无效：{value}");
+            return false;
+        }
+
+        public List<GameplayTagId> ReadTags(IList<string> values, string field)
+        {
+            var result = new List<GameplayTagId>();
+            var unique = new HashSet<GameplayTagId>();
+            foreach (string value in values ?? Array.Empty<string>())
+            {
+                var tag = new GameplayTagId(value);
+                if (!tag.IsValid || !unique.Add(tag))
+                {
+                    Error(field, "gameplay_tag_invalid", $"GameplayTag 缺失或重复：{value}");
+                    continue;
+                }
+                result.Add(tag);
+            }
+            return result;
+        }
+
+        public void Error(string field, string code, string message)
+        {
+            IsValid = false;
+            m_Report.Error(
+                string.IsNullOrEmpty(field) ? Path : $"{Path}.{field}",
+                code,
+                message);
+        }
+    }
+
+    internal static class AgentDocumentMutationSupport
+    {
         internal static Dictionary<string, T> Index<T>(
             IEnumerable<T> values,
             Func<T, string> identity,

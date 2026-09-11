@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static void Build(
             AgentAuthoringTarget current,
             AgentDocumentEditable target,
-            AgentMutationDraftSet mutations,
+            AgentMutationPlanBuilder mutations,
             AgentCompileReport report)
         {
             AgentPackageSkillFlowDocument currentDocument = new AgentPackageSkillFlowDocument
@@ -31,11 +31,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             if (SameSemantic(currentDocument, targetDocument))
                 return;
-            AgentDocumentMutationSupport.Add(
-                mutations,
+            mutations.Add(
                 "document.editable.skills.flow",
-                AgentMutationKind.SetSkillFlowDocument,
-                operation => operation.skillFlowDocument = AgentSkillFlowDocumentClone.Clone(targetDocument));
+                id => new BtsmtlSetSkillDocumentMutation(
+                    id,
+                    "document.editable.skills.flow",
+                    AgentSkillFlowDocumentClone.Clone(targetDocument)));
         }
 
         static bool SameSemantic(

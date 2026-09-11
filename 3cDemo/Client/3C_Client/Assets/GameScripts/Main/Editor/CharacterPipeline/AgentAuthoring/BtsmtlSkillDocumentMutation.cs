@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
@@ -23,21 +22,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPackageSkillFlowDocument Document { get; }
     }
 
-    internal static class BtsmtlSkillDocumentMutationLowering
-    {
-        public static AgentMutation LowerSetSkillFlowDocument(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            if (operation.skillFlowDocument == null)
-            {
-                context.Error(string.Empty, "skill_flow_document_missing", "Skill Flow Document mutation正文缺失。");
-                return null;
-            }
-            return new BtsmtlSetSkillDocumentMutation(
-                operation.id,
-                context.Path,
-                AgentSkillFlowDocumentClone.Clone(operation.skillFlowDocument));
-        }
-    }
 }

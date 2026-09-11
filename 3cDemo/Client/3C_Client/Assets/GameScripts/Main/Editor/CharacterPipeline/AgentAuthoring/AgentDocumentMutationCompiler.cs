@@ -7,22 +7,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentDocumentMutationCompiler
     {
-        readonly AgentMutationPlanner m_Planner = new AgentMutationPlanner();
         readonly AgentMutationHandlerCatalog m_Handlers = new AgentMutationHandlerCatalog();
 
         public AgentDocumentPreparation Prepare(
             CharacterPipelineDefinition definition,
             AgentAuthoringTarget current,
             string sourceRevision,
-            AgentMutationDraftSet drafts)
+            AgentMutationPlan plan)
         {
             var report = new AgentCompileReport
             {
                 success = true,
                 applied = false
             };
-            if (!m_Planner.TryCreatePlan(drafts, report, out AgentMutationPlan plan))
+            if (plan == null)
+            {
+                report.Error("document.editable", "mutation_plan_missing", "Document Mutation Plan缺失。");
                 return new AgentDocumentPreparation(null, current, sourceRevision, null, report);
+            }
             var session = new AgentMutationSession(definition, current, sourceRevision, plan, report, false);
             if (!session.Initialize())
                 return new AgentDocumentPreparation(plan, current, sourceRevision, null, report);

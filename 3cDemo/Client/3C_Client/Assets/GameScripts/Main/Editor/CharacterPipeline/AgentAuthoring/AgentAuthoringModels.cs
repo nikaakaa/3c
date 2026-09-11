@@ -125,41 +125,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentMutationDraftSet
-    {
-        public string schemaVersion = AgentAuthoringSchema.Version;
-        public string domain;
-        public string rootIdentity;
-        public string sourceRevision;
-        public List<AgentMutationDraft> mutations = new List<AgentMutationDraft>();
-    }
-
-    [Serializable]
-    public sealed class AgentMutationDraft
-    {
-        public string id;
-        [NonSerialized]
-        public string sourcePath;
-        public AgentMutationKind kind;
-        public string displayName;
-        public string gameplayTag;
-        public string parentGameplayTag;
-        public string debugCategory;
-        public List<string> grantedTags = new List<string>();
-        public List<string> queryAll = new List<string>();
-        public List<string> queryAny = new List<string>();
-        public List<string> queryNone = new List<string>();
-        public string actionProfile;
-        public string targetRequirement;
-        public string request;
-        public string requestTimingClass;
-        public string controlModuleId;
-        public int controlSemanticVersion;
-        public List<AgentControlParameter> controlParameters = new List<AgentControlParameter>();
-        public AgentPackageSkillFlowDocument skillFlowDocument;
-    }
-
-    [Serializable]
     public sealed class AgentCompileReport
     {
         public string schemaVersion = AgentAuthoringSchema.Version;

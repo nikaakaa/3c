@@ -74,7 +74,6 @@ MonoBehaviour:
   m_NearClipPlane: 0.1
   m_FarClipPlane: 2000
   m_CameraLocateRadius: 3.75
-  m_DefaultElevationAngle: 3.4336302
   m_DefaultFieldOfView: 50
   m_DefaultSmoothTime: 0.15
   m_RotationTransitionSeconds: 3

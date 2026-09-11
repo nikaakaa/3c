@@ -25,7 +25,6 @@ namespace ThirdPersonCamera
         [SerializeField] float m_NearClipPlane;
         [SerializeField] float m_FarClipPlane;
         [SerializeField] float m_CameraLocateRadius;
-        [SerializeField] float m_DefaultElevationAngle;
         [SerializeField] float m_DefaultFieldOfView;
         [SerializeField] float m_DefaultSmoothTime;
         [SerializeField] float m_RotationTransitionSeconds;
@@ -64,7 +63,6 @@ namespace ThirdPersonCamera
             m_NearClipPlane = profile.NearClipPlane;
             m_FarClipPlane = profile.FarClipPlane;
             m_CameraLocateRadius = profile.CameraLocateRadius;
-            m_DefaultElevationAngle = profile.DefaultElevationAngle;
             m_DefaultFieldOfView = profile.DefaultFieldOfView;
             m_DefaultSmoothTime = profile.DefaultSmoothTime;
             m_RotationTransitionSeconds = profile.RotationTransitionSeconds;
@@ -91,7 +89,6 @@ namespace ThirdPersonCamera
         public float NearClipPlane => m_NearClipPlane;
         public float FarClipPlane => m_FarClipPlane;
         public float CameraLocateRadius => m_CameraLocateRadius;
-        public float DefaultElevationAngle => m_DefaultElevationAngle;
         public float DefaultFieldOfView => m_DefaultFieldOfView;
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
@@ -163,7 +160,7 @@ namespace ThirdPersonCamera
                 !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(FarClipPlane) || FarClipPlane <= NearClipPlane ||
                 !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
-                !float.IsFinite(DefaultElevationAngle) || !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
+                !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||
                 !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f ||
                 !float.IsFinite(ChangeAvatarTransitionSeconds) || ChangeAvatarTransitionSeconds < 0f)

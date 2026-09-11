@@ -990,3 +990,14 @@ owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文�
 用户运行时验收报告相机上下操作反向。取证：Corin InputProfile 的 LookAxis 绑定到 `InputSystem.inputactions` Player map 的 Look action，其 `<Pointer>/delta`（鼠标增量，Unity 约定 Y 正方向朝下）与 `<Gamepad>/rightStick`（Y 正方向朝上）共用且均无反相处理器——鼠标向上推产生负 y，FramePlanner `m_PitchOffset += look.y * Sensitivity.y` 后相机朝下，上下反向；手柄摇杆方向正确。
 
 修复：`<Pointer>/delta` 绑定加 `InvertVector2(invertX=false,invertY=true)` 处理器（仅鼠标绑定，手柄摇杆不反相）。人物不居中为俯仰反向的伴随症状（对抗反向鼠标把 pitch 拉到 ±70 限位导致极端机位），随本修复重测；若重测后仍偏，再对照 dump 内 CameraZooms/CameraCutscenes 数据调构图（标准跟随相机的距离参数不在 dump 范围内）。
+
+## 2026-09-12 相机构图修复：按 ZZZ dump 参数校正 Default 序列轨道采样
+
+对照 ZZZ dump 提取表（rebuild-character-camera-from-zzz/evidence/source-behavior.md 引用的 基础镜头.md）发现两处实差并修复：
+
+- `Default_Normal` 的 `ELEVATION_ANGLE` 为 `0.60000002`，生成投影里 Default 序列 stage 误授权为 `0.5`，已改为 `0.60000002`；
+- 轨道/ScreenOffsets 采样原实现为按下标 Floor 跳变，ZZZ 原始行为是 keys 0.0/0.5/1.0 之间的连续插值（evidence line 37 明确记录 Floor/RoundToInt 不能代表原采样边界），`CharacterCameraFramePlanner.SampleTrack` 两个重载改为连续插值并带单元素防御。
+
+ZZZ Default_Normal 参考值（供后续手感调参）：FOV 50、默认仰角 0.6、CameraLocateRadius 3.75、平滑时间 0.15、轨道 (2.225,2.5)/(0.225,3.75)/(-0.775,2.2)、ScreenY Top 0.5/Middle 0.5/Bottom 0.35、阻尼 Horizontal/Vertical 0.5、Drag 轴 X MaxSpeed 1550/Y MaxSpeed 25（AccelTime 0.2/DecelTime 0.1，InvertInput false）。当前投影轨道与 ScreenY 数据与 dump 一致；灵敏度 0.12/0.12 为唯一无 dump 依据的授权值，手感仍不满意时优先调它并考虑按 ZZZ CameraAxis 模型补平滑。
+
+验证：Unity 全量编译 0 error；构图/手感回归由用户端到端执行。

@@ -124,14 +124,31 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraTrackOrbitPayload> orbits,
             float elevationRatio)
         {
-            int index = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(elevationRatio) * 2f), 0, 2);
-            return orbits[index];
+            if (orbits.Count == 0)
+                return new CameraTrackOrbitPayload(0f, 0f);
+            if (orbits.Count == 1)
+                return orbits[0];
+            // ZZZ 原始采样为 keys 0.0/0.5/1.0 之间的连续插值,不是轨道下标跳变。
+            float t = Mathf.Clamp01(elevationRatio) * (orbits.Count - 1);
+            int index = Mathf.Min(Mathf.FloorToInt(t), orbits.Count - 2);
+            float alpha = t - index;
+            CameraTrackOrbitPayload left = orbits[index];
+            CameraTrackOrbitPayload right = orbits[index + 1];
+            return new CameraTrackOrbitPayload(
+                Mathf.Lerp(left.Height, right.Height, alpha),
+                Mathf.Lerp(left.Radius, right.Radius, alpha));
         }
 
         static Vector2 SampleTrack(IReadOnlyList<Vector2> offsets, float elevationRatio)
         {
-            int index = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(elevationRatio) * 2f), 0, 2);
-            return offsets[index];
+            if (offsets.Count == 0)
+                return Vector2.zero;
+            if (offsets.Count == 1)
+                return offsets[0];
+            float t = Mathf.Clamp01(elevationRatio) * (offsets.Count - 1);
+            int index = Mathf.Min(Mathf.FloorToInt(t), offsets.Count - 2);
+            float alpha = t - index;
+            return Vector2.LerpUnclamped(offsets[index], offsets[index + 1], alpha);
         }
 
     }

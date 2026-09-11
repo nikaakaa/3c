@@ -1597,3 +1597,13 @@ Editor源码编译为0错误、93个既有警告，targets已删除并执行`dot
 状态：静态核对当前v7 Document确认，`editable/presentation/pose-state-machines/corin-locomotion-7a67665368fb/state-machine.json`的21条Transition仍使用现行Document字段`blendProfileAssetId=corin.animation-rig.locomotion-blend-profile`，但`editable/presentation/profile.json.poseResources`只有BlendPolicy、FootPlacementCalibration、FootPlacementProfile和InertializationPolicy四项，没有该Blend Profile的Graph-owned Slot。当前Reconciler会按精确Profile Resource Slot查找，因此正式dry-run会在`blendProfileAssetId`路径拒绝，不能把源码已迁移误报为Corin资产已完成。目标槽应由同一Document的Pose Resource Binding声明，再经过`checkout -> dry-run -> apply`由正式Mutation创建并绑定；不手改Unity YAML或Document包。
 
 当前目标Unity实例`e852139597e42532`已被服务器发现，但主线程对`read_console`、`editor/state`和BTSMTL checkout命令均未返回，最近结果为`ping not answered`或超时；因此本项尚未执行Document apply、Character Build或Scene Play验证。
+
+## Corin正式Document与双Target产物复核（POSE-EXEC-20260911-15）
+
+状态：Agent作者链重构提交`c223d4080`完成后，使用同一目标Unity实例重新执行`btsmtl.dry_run_document`，结果`success=true`、`syncState=Clean`、`plannedDiff=[]`。随后执行正式`btsmtl.validate`，编译与语义校验均通过；Float32与Fixed的state layout和codec round-trip均通过，未产生Pose、Document或Agent错误。
+
+Corin资源槽由提交`b72f7d1e3`重建并经正式流程保存，当前Profile包含`BlendPolicy`、`BlendProfile`、`FootPlacementCalibration`、`FootPlacementProfile`和`InertializationPolicy`五个正式绑定。根Pose Graph保持`Pose State Machine -> Inertialization -> Full Body Action Slot -> Control Rig -> Output Pose`，Full Body Slot仍使用`corin.full-body-action`与`FullBodyAction`，不是新增角色专有NodeKind。
+
+已通过精确Definition路径发布Float32 Program与Presentation Projection，再通过精确Fixed wrapper路径发布Fixed Program。Float32 ProgramHash为`94cc87fae8d4aa930d4fb69a4cff104bd00ea1a4c13537184a12e5c1a79cb60e`，Fixed ProgramHash为`ac1d724ed66d44061eff6be11b9e10f965deb6af3f8ecdebacbe18990ab71a2c`，两者共享同一Presentation Projection与`semanticHash=84d76f9a69dcf3420005eaac071d7117c1ca2adb975111a255c529a423cc9571`。Build后重新checkout刷新context并再次validate，结果`success=true`、`syncState=Clean`。
+
+本节尚不勾选Scene Play Preview：当前Timeline/Slate窗口的未提交`CutsceneEditor.cs`存在独立编译错误，需其所属窗口完成修复后才能继续运行时Pose reset observation；不修改该交叉文件，也不以资产Build替代Scene Play证据。

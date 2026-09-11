@@ -20,7 +20,7 @@ using UnityEngine.SceneManagement;
 namespace ThirdPersonCharacter.Pipeline
 {
 	[DisallowMultipleComponent]
-	public sealed class CharacterPipelineHost : TimelinePreviewTarget, ISimulationSessionActorHost
+	public sealed class CharacterPipelineHost : MonoBehaviour, ISimulationSessionActorHost
 	{
 		[SerializeField] CharacterPipelineDefinition m_Definition;
 		[SerializeField] SimulationSessionHost m_SessionHost;
@@ -162,7 +162,7 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController.TrySetPoseWatchInterests(sessionId, ownerId, interests);
 		public void RemovePreviewPoseWatchInterests(Guid ownerId) =>
 			m_PreviewController?.RemovePoseWatchInterests(ownerId);
-		public override bool CanPreviewTimeline =>
+		public bool CanPreviewPoseGraph =>
 			!Application.isPlaying &&
 			m_Definition &&
 			m_Definition.AnimationPresentationProfile &&
@@ -173,9 +173,6 @@ namespace ThirdPersonCharacter.Pipeline
 			m_AnimationRigBinding &&
 			m_WorldBodyBinding &&
 			m_RootHierarchy;
-		public bool CanPreviewPoseGraph => CanPreviewTimeline;
-		public override string PreviewStatus =>
-			"Pose Graph preview uses the selected Host's formal Body fixture and Scene PhysicsScene. A missing World-Aware Binding is reported at the first world-aware stage.";
 		public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
 		{
 			if (m_Registration != null)
@@ -455,34 +452,6 @@ namespace ThirdPersonCharacter.Pipeline
 			}
 		}
 
-		public override void EvaluateTimelinePreview(
-			Guid sessionId,
-			TimelineData timeline,
-			float previousTime,
-			float currentTime,
-			string sourceId,
-			string sourceName,
-			ulong evaluationTick,
-			float presentationDeltaSeconds,
-			bool resetLifecycle)
-		{
-			if (sessionId == Guid.Empty || timeline == null || !CanPreviewTimeline)
-			{
-				ClearTimelinePreview(sessionId);
-				return;
-			}
-			EnsurePreviewController().Evaluate(
-				sessionId,
-				timeline,
-				previousTime,
-				currentTime,
-				sourceId,
-				sourceName,
-				evaluationTick,
-				presentationDeltaSeconds,
-				resetLifecycle);
-		}
-
 		public void EvaluatePoseGraphPreview(
 			Guid sessionId,
 			double presentationTime,
@@ -557,11 +526,6 @@ namespace ThirdPersonCharacter.Pipeline
 		public void ClearLinkedPosePreviewOverrides(Guid sessionId)
 		{
 			m_PreviewController?.ClearLinkedPosePreviewOverrides(sessionId);
-		}
-
-		public override void ClearTimelinePreview(Guid sessionId)
-		{
-			m_PreviewController?.Clear(sessionId);
 		}
 
 		void Awake()

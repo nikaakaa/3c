@@ -903,3 +903,15 @@ Scene Play 期间 Timeline 仍然可编辑。Clip/Curve/Section 修改通过正�
 后续由用户按范围指定、把分支成果逐块复制进主线（cherry-pick或文件级复制）。每批复制在此登记「分支提交↔主线提交」对应关系，并同步主线版tasks.md勾选；复制前确认主线tip与目标文件无其它窗口的未提交改动。单线化时主线tip为`f8bc2d853`（"补齐Timeline脚本绑定meta并清理已删除资源引用"）。
 
 原COMM-20260906-01多窗口文档协作与EXEC-SCENEPLAY-20260906-01批次表随双线模式作废；其中仍然有效的业务约束（唯一场景运行、正式Session/owner边界、不新增窗口级播放器、证据先行、问题一次写全）已由design.md正文与specs承载。
+
+## 2026-09-11 任务0.5：清除主线47a219bc0恢复的窗口级Timeline预览契约
+
+主线提交 `47a219bc0` 恢复了 `TimelinePreviewSession`、`TimelinePreviewTarget` 与窗口级预览路径，与本change目标模型冲突。经用户当日本对话确认边界：预览只有两种——纯Timeline预览与SkillGraph预览，都属Scene Play协调器范畴；Timeline窗口只保留作者编辑Surface与被动Runtime Trace overlay，不自有预览会话。该决定即0.5要求的"主线明确边界"，结论是不拆分消费、直接清除。
+
+主线实际状态核查：`TimelinePreviewSession`（文件名`TimelinePreviewRuntimeSession.cs`）在全主线无任何调用方，为孤儿代码；`TimelinePreviewTarget`的唯一继承者是`CharacterPipelineHost`（`Runtime/Character/Pipeline/Unity/CharacterPipelineHost.cs`），其四个override（`CanPreviewTimeline`/`PreviewStatus`/`EvaluateTimelinePreview`/`ClearTimelinePreview`）在全主线零消费方；窗口`TimelineEditorMainWindow.OnEditorUpdate`仅调用`m_SlateSurface?.MarkDirtyRepaint()`，不驱动预览——0.5所述"窗口级Editor update/SetTime"中SetTime路径在主线已无接线。
+
+主线原生清除内容（非分支复制；分支侧等价工作在9.1，由`ab2498864`系提交完成，本条与其互为记录）：
+- `CharacterPipelineHost`基类由`TimelinePreviewTarget`改为`MonoBehaviour`，删除上述四个override；`CanPreviewPoseGraph`改为内联原`CanPreviewTimeline`表达式，宿主自身Pose预览链（`EvaluatePoseGraphPreview`、`ClearAllTimelinePreviews`、`m_PreviewController`系）保持不变，不属本条范围。
+- 删除`Timeline/Editor/Scripts/Preview/TimelinePreviewRuntimeSession.cs`（含meta）与`Timeline/Scripts/TimelinePreviewTarget.cs`（含meta）及清空后的`Preview`目录meta。
+
+验证边界：三处目标文件编辑前工作区干净，符合清单头部复制前条件；编辑后全库`.cs`对`TimelinePreviewSession`/`TimelinePreviewTarget`引用为零；未跑Unity编译与端到端，按项目规则由用户验收。9.2–9.4所述`AnimationPreviewEngine/Controller`、Pose fixture等完整角色预览路径的删除仍待后续批次，本条不覆盖。

@@ -8,7 +8,7 @@
 - [ ] 0.2 等待主线 `refactor-agent-authoring-attribute-driven` 的正式 metadata、v7 projection、Mutation adapter 和删除清单落成，预览只消费其公开合同，不复制 Agent 领域实现。
 - [x] 0.3 等待 Slate Timeline projection/transaction 与 Pose owner 的正式入口稳定，预览移除对旧 Timeline UI、Pose migration 和一次性 Corin writer 的长期依赖。主线 `622ca053b` 的 embedded API 已由预览 `a3eda34cc` 接入，单窗口 Surface 由 `a40bb3c3c` 完成；`TimelineEditorWindow` 只承载 Slate，不复制其 editor 行为。证据还包括主线 `9cae9a16f`、预览合并 `f76c2dcb1` 及迁移入口清理 `2ace76b69`。
 - [ ] 0.4 将预览当前 `d07479b0e` 作为过渡审计快照，完成精确合并后的类型/程序集/owner 静态对账，再继续补运行功能。
-- [ ] 0.5 处理主线后续 `47a219bc0` 的语义冲突：该提交恢复 `TimelinePreviewSession`、`TimelinePreviewTarget` 和窗口级 Editor update/SetTime；本 change 不合入独立 Timeline 播放链，须由主线明确其仅限非技能作者工具的边界后再决定是否拆分消费。
+- [x] 0.5 处理主线后续 `47a219bc0` 的语义冲突：该提交恢复 `TimelinePreviewSession`、`TimelinePreviewTarget` 和窗口级 Editor update/SetTime；本 change 不合入独立 Timeline 播放链，须由主线明确其仅限非技能作者工具的边界后再决定是否拆分消费。主线原生清除，记录见 implementation-audit.md。
 
 ## 1. 固定迁移范围与规范对账
 

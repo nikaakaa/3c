@@ -48,7 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform aimAnchor,
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
             ICharacterPresentationLookInput inputAdapter,
-            string lookInputId)
+            string lookInputId,
+            bool initializeExternalState = true)
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
@@ -71,7 +72,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
             m_FollowBindPosition = inverse * (followAnchor.position - initialBody.Position);
             m_AimBindPosition = inverse * (aimAnchor.position - initialBody.Position);
-            PresentInitial(initialBody.Position, initialBody.Rotation);
+            if (initializeExternalState)
+                PresentInitial(initialBody.Position, initialBody.Rotation);
         }
 
         public CameraBasisSnapshot BasisSnapshot => m_CameraRig.BasisSnapshot;

@@ -219,67 +219,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_EquipmentRigBindings.RequireValid();
                 controlSource = controlSourceDefinition.Create(
                     new FixedCharacterControlSourceContext(this, program));
+                IUnityFixedCharacterControlSourceRuntime presentationControlSource = controlSource;
+                Func<
+                    CharacterPresentationSemanticContract,
+                    CharacterPresentationProjection,
+                    CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
+                    (candidateContract, candidateProjection) => CreatePresentationRuntime(
+                        candidateContract,
+                        candidateProjection,
+                        actorId,
+                        presentationBody,
+                        presentationControlSource,
+                        physicsScene,
+                        diagnosticsContext,
+                        program.Manifest.TickRate,
+                        false);
                 CharacterPresentationRuntimeBinding presentationBinding;
-                switch (m_PresentationRole)
-                {
-                    case CharacterPresentationRole.LocalOwner:
-                    {
-                        CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
-                            throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires a Camera Rig.");
-                        if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
-                            throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires camera follow and aim anchors.");
-                        if (m_CameraFollowAnchor != rootHierarchy.VisualRoot &&
-                            !m_CameraFollowAnchor.IsChildOf(rootHierarchy.VisualRoot) ||
-                            m_CameraAimAnchor != rootHierarchy.VisualRoot &&
-                            !m_CameraAimAnchor.IsChildOf(rootHierarchy.VisualRoot))
-                        {
-                            throw new InvalidOperationException($"Local Fixed Character Host '{name}' camera anchors must belong to VisualRoot.");
-                        }
-                        if (controlSource is not ICharacterPresentationLookInput lookInput)
-                            throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
-                        presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
-                            presentationContract,
-                            program.Manifest.TickRate,
-                            projection,
-                            actorId,
-                            animancer,
-                            animationRigBinding,
-                            rootHierarchy,
-                            presentationBody,
-                            bodyPresentationProfile,
-                            worldAwarePresentation,
-                            physicsScene,
-                            cameraRig,
-                            m_CameraFollowAnchor,
-                            m_CameraAimAnchor,
-                            m_CameraTargetBindings,
-                            lookInput,
-                            Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
-                            m_EquipmentRigBindings,
-                            sessionHost,
-                            diagnosticsContext);
-                        break;
-                    }
-                    case CharacterPresentationRole.SimulatedActor:
-                        presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-                            presentationContract,
-                            program.Manifest.TickRate,
-                            projection,
-                            actorId,
-                            animancer,
-                            animationRigBinding,
-                            rootHierarchy,
-                            presentationBody,
-                            bodyPresentationProfile,
-                            worldAwarePresentation,
-                            physicsScene,
-                            m_EquipmentRigBindings,
-                            sessionHost,
-                            diagnosticsContext);
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Fixed Character Host '{name}' has an invalid Presentation Role.");
-                }
+                presentationBinding = CreatePresentationRuntime(
+                    presentationContract,
+                    projection,
+                    actorId,
+                    presentationBody,
+                    presentationControlSource,
+                    physicsScene,
+                    diagnosticsContext,
+                    program.Manifest.TickRate,
+                    true);
                 presentation = presentationBinding.Runtime;
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
@@ -291,6 +256,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     name,
                     actorId,
                     program,
+                    projectionAsset,
+                    projection,
                     presentationContract,
                     new AnimationPresentationProgramIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
@@ -301,7 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
-                    m_MaximumActivePresentationRecords);
+                    m_MaximumActivePresentationRecords,
+                    presentationRuntimeFactory);
                 controlSource = null;
                 presentation = null;
                 diagnosticsTarget = null;
@@ -316,6 +284,85 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 presentation?.Dispose();
                 controlSource?.Dispose();
                 throw;
+            }
+        }
+
+        CharacterPresentationRuntimeBinding CreatePresentationRuntime(
+            CharacterPresentationSemanticContract contract,
+            CharacterPresentationProjection projection,
+            ActorId actorId,
+            CharacterPresentationBodyState initialPresentationBody,
+            IUnityFixedCharacterControlSourceRuntime controlSource,
+            PhysicsScene physicsScene,
+            RuntimeDiagnosticsContext diagnostics,
+            int tickRate,
+            bool initializeExternalState)
+        {
+            CharacterPresentationBodyState presentationBody = initialPresentationBody;
+            if (m_Registration?.PresentationRuntime is CharacterSimulationPresentationRuntime current &&
+                current.TryGetLatestBody(out CharacterPresentationBodyState currentBody))
+            {
+                presentationBody = currentBody;
+            }
+            switch (m_PresentationRole)
+            {
+                case CharacterPresentationRole.LocalOwner:
+                {
+                    CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
+                        throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires a Camera Rig.");
+                    if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
+                        throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires camera follow and aim anchors.");
+                    if (m_CameraFollowAnchor != m_RootHierarchy.VisualRoot &&
+                        !m_CameraFollowAnchor.IsChildOf(m_RootHierarchy.VisualRoot) ||
+                        m_CameraAimAnchor != m_RootHierarchy.VisualRoot &&
+                        !m_CameraAimAnchor.IsChildOf(m_RootHierarchy.VisualRoot))
+                    {
+                        throw new InvalidOperationException($"Local Fixed Character Host '{name}' camera anchors must belong to VisualRoot.");
+                    }
+                    if (controlSource is not ICharacterPresentationLookInput lookInput)
+                        throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
+                    return CharacterPresentationRuntimeFactory.CreateLocalOwner(
+                        contract,
+                        tickRate,
+                        projection,
+                        actorId,
+                        m_Animancer,
+                        m_AnimationRigBinding,
+                        m_RootHierarchy,
+                        presentationBody,
+                        m_BodyPresentationProfile,
+                        m_WorldAwarePresentation,
+                        physicsScene,
+                        cameraRig,
+                        m_CameraFollowAnchor,
+                        m_CameraAimAnchor,
+                        m_CameraTargetBindings,
+                        lookInput,
+                        Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
+                        m_EquipmentRigBindings,
+                        m_SessionHost,
+                        diagnostics,
+                        initializeExternalState);
+                }
+                case CharacterPresentationRole.SimulatedActor:
+                    return CharacterPresentationRuntimeFactory.CreateSimulatedActor(
+                        contract,
+                        tickRate,
+                        projection,
+                        actorId,
+                        m_Animancer,
+                        m_AnimationRigBinding,
+                        m_RootHierarchy,
+                        presentationBody,
+                        m_BodyPresentationProfile,
+                        m_WorldAwarePresentation,
+                        physicsScene,
+                        m_EquipmentRigBindings,
+                        m_SessionHost,
+                        diagnostics,
+                        initializeExternalState);
+                default:
+                    throw new InvalidOperationException($"Fixed Character Host '{name}' has an invalid Presentation Role.");
             }
         }
 

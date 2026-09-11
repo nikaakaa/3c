@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedPipelineTransaction
     {
+        readonly FixedPipelineTransactionPort m_Target;
         readonly PipelineTransactionCoordinator<
             FixedSimulationStep,
             FixedPipelineWorkingState,
@@ -63,7 +64,9 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<ISimulationPipelineReconstructiblePass> reconstructiblePasses,
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
-            FixedCompletedStepPort completedStepPort)
+            FixedCompletedStepPort completedStepPort,
+            FixedProgramRuntime programRuntime,
+            FixedProgramRuntimePort programRuntimePort)
         {
             var services = new PipelineTransactionRuntimeServices(
                 descriptor,
@@ -71,7 +74,7 @@ namespace ThirdPersonSimulation.Fixed
                 passes,
                 stateParticipants,
                 reconstructiblePasses);
-            var target = new FixedPipelineTransactionPort(
+            m_Target = new FixedPipelineTransactionPort(
                 services,
                 catalog,
                 roster,
@@ -83,7 +86,9 @@ namespace ThirdPersonSimulation.Fixed
                 committer,
                 products,
                 workingStatePort,
-                completedStepPort);
+                completedStepPort,
+                programRuntime,
+                programRuntimePort);
             m_Coordinator = new PipelineTransactionCoordinator<
                 FixedSimulationStep,
                 FixedPipelineWorkingState,
@@ -91,7 +96,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorTickResult,
                 SimulationActorState,
                 FixedSourceEgressRecord,
-                FixedSimulationCommitBatch>(services, target);
+                FixedSimulationCommitBatch>(services, m_Target);
         }
 
         [PerformanceProbe("simulation.pipeline.transaction")]
@@ -106,6 +111,25 @@ namespace ThirdPersonSimulation.Fixed
                 result.LastCompletedTick,
                 result.CommitBatch);
         }
+
+        public SimulationProgramAdoptionResult AdoptProgramEpoch(
+            SimulationProgramEpoch epoch,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            return m_Target.AdoptProgramEpoch(epoch, bindings);
+        }
+
+        public SimulationProgramEpoch PrepareProgramEpoch(
+            SimulationProgramEpoch current,
+            ProgramRevision sourceRevision,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            return m_Target.PrepareProgramEpoch(current, sourceRevision, bindings);
+        }
+
+        public SimulationSessionCheckpoint CaptureCheckpoint() => m_Target.CaptureCheckpoint();
+
+        public void RestoreCheckpoint(SimulationSessionCheckpoint checkpoint) => m_Target.RestoreCheckpoint(checkpoint);
     }
 
     internal sealed class FixedPipelineTransactionPort :
@@ -120,8 +144,8 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly IFixedSimulationRestoreSource m_RestoreSource;
         readonly PipelineTransactionRuntimeServices m_Services;
-        readonly SimulationProgramCatalog m_Catalog;
-        readonly IReadOnlyList<SimulationActorBinding> m_Roster;
+        SimulationProgramCatalog m_Catalog;
+        IReadOnlyList<SimulationActorBinding> m_Roster;
         readonly SimulationWorldStateStore m_StateStore;
         readonly ICharacterWorldSolver m_Solver;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -131,6 +155,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlySimulationPipelineProductPort<FixedPendingEvaluationBatch> m_PendingEvaluations;
         readonly FixedWorkingStatePort m_WorkingStatePort;
         readonly FixedCompletedStepPort m_CompletedStepPort;
+        readonly FixedProgramRuntime m_ProgramRuntime;
+        readonly FixedProgramRuntimePort m_ProgramRuntimePort;
 
         public FixedPipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -144,7 +170,9 @@ namespace ThirdPersonSimulation.Fixed
             IFixedSimulationCommitter committer,
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
-            FixedCompletedStepPort completedStepPort)
+            FixedCompletedStepPort completedStepPort,
+            FixedProgramRuntime programRuntime,
+            FixedProgramRuntimePort programRuntimePort)
         {
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -160,12 +188,144 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationPipelineProducts.PendingActorEvaluations);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
+            m_ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            m_ProgramRuntimePort = programRuntimePort ?? throw new ArgumentNullException(nameof(programRuntimePort));
         }
 
         public string TransactionIdentityDomain => "fixed-pipeline-transaction/1";
         public bool DiagnosticsEnabled => m_Diagnostics.IsEnabled;
         public ulong BaselineCompletedTick => m_StateStore.Current.LastCompletedTick;
         public WorldRevision BaselineWorldRevision => m_StateStore.Current.WorldState.WorldRevision;
+
+        public SimulationProgramAdoptionResult AdoptProgramEpoch(
+            SimulationProgramEpoch epoch,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            SimulationProgramEpoch current = SimulationProgramEpoch.Initial(m_Catalog.CatalogHash);
+            if (!epoch.IsValid)
+                throw new ArgumentException("Program Epoch is invalid.", nameof(epoch));
+            if (epoch.Value <= current.Value && epoch.ProgramCatalogHash.Equals(m_Catalog.CatalogHash))
+            {
+                return new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Rejected,
+                    current,
+                    epoch,
+                    "program_epoch_not_newer",
+                    "Program Epoch is not newer than the active Catalog.");
+            }
+            if (bindings == null || bindings.Count == 0)
+                throw new ArgumentException("Program adoption requires an Actor binding roster.", nameof(bindings));
+            var typed = new SimulationActorBinding[bindings.Count];
+            for (int i = 0; i < typed.Length; i++)
+            {
+                typed[i] = bindings[i]?.ProgramObject as SimulationActorBinding;
+                if (typed[i] == null)
+                    throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
+            }
+            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            SimulationWorldStateSet reboundState = m_StateStore.PrepareCatalogAdoption(catalog);
+            m_ProgramRuntime.AdoptPrograms(typed, catalog);
+            m_ProgramRuntimePort.AdoptRuntime(m_ProgramRuntime);
+            m_StateStore.AdoptCatalog(catalog, reboundState);
+            m_Catalog = catalog;
+            var roster = new List<SimulationActorBinding>(typed);
+            roster.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            m_Roster = roster.AsReadOnly();
+            m_Services.Descriptor.AdoptProgramCatalogHash(catalog.CatalogHash);
+            return new SimulationProgramAdoptionResult(
+                SimulationProgramAdoptionStatus.Applied,
+                epoch,
+                epoch,
+                "program_epoch_applied",
+                "Fixed Program Epoch was adopted at the Logic Tick boundary.");
+        }
+
+        public SimulationProgramEpoch PrepareProgramEpoch(
+            SimulationProgramEpoch current,
+            ProgramRevision sourceRevision,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            var typed = new SimulationActorBinding[bindings?.Count ?? 0];
+            for (int i = 0; i < typed.Length; i++)
+            {
+                typed[i] = bindings[i]?.ProgramObject as SimulationActorBinding;
+                if (typed[i] == null)
+                    throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
+            }
+            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            _ = m_StateStore.PrepareCatalogAdoption(catalog);
+            return new SimulationProgramEpoch(
+                checked(current.Value + 1),
+                sourceRevision,
+                catalog.CatalogHash);
+        }
+
+        public SimulationSessionCheckpoint CaptureCheckpoint()
+        {
+            SimulationWorldStateSet state = m_StateStore.Current;
+            if (state.LastCompletedTick == 0)
+                throw new InvalidOperationException("Session checkpoint requires a completed Logic Tick.");
+            SimulationPipelineStateSnapshot pipeline = SimulationPipelineStateSnapshotCoordinator.Capture(
+                m_Services.Plan,
+                state.LastCompletedTick,
+                m_Services.StateParticipants);
+            FixedSimulationSessionSnapshot snapshot = m_SnapshotCodec.Capture(
+                m_Services.Descriptor,
+                m_Catalog,
+                state,
+                pipeline,
+                m_Solver.Descriptor.Capabilities);
+            byte[] payload = m_SnapshotCodec.Write(snapshot);
+            string snapshotId = $"{m_Services.Descriptor.SessionId}/checkpoint/{snapshot.Tick.Value}";
+            return new SimulationSessionCheckpoint(
+                m_Services.Descriptor.SessionId,
+                snapshot.Tick,
+                m_Catalog.CatalogHash,
+                m_Services.Descriptor.Pipeline.Hash,
+                m_Services.Descriptor.ExecutionBackend.ComponentId,
+                m_Services.Descriptor.ExecutionBackend.SemanticVersion,
+                snapshotId,
+                snapshot.SnapshotHash,
+                payload);
+        }
+
+        public void RestoreCheckpoint(SimulationSessionCheckpoint checkpoint)
+        {
+            if (checkpoint == null)
+                throw new ArgumentNullException(nameof(checkpoint));
+            if (!checkpoint.SessionId.Equals(m_Services.Descriptor.SessionId))
+                throw new InvalidOperationException("Checkpoint belongs to another Simulation Session.");
+            FixedSimulationSessionSnapshot snapshot = m_SnapshotCodec.Read(checkpoint.PayloadBuffer);
+            var directive = new SimulationRestoreDirective(
+                checkpoint.SnapshotId,
+                checkpoint.Tick,
+                checkpoint.ProgramCatalogHash,
+                checkpoint.PipelineHash,
+                checkpoint.BackendId,
+                checkpoint.BackendSemanticVersion,
+                checkpoint.SnapshotHash);
+            m_SnapshotCodec.RequireRestore(
+                m_Services.Descriptor,
+                m_Catalog,
+                m_Solver,
+                directive,
+                snapshot);
+            SimulationWorldStateSet restored = m_StateStore.PrepareRestore(snapshot.World);
+            SimulationPipelineStateRestoreTransaction pipeline = SimulationPipelineStateSnapshotCoordinator.PrepareRestore(
+                m_Services.Plan,
+                snapshot.Pipeline,
+                m_Services.StateParticipants);
+            var working = new FixedPipelineWorkingState(m_StateStore.Current);
+            using var restore = new SimulationSessionRestoreTransaction(new ISimulationSessionRestoreParticipantTransaction[]
+            {
+                new FixedCharacterRestoreTransaction(working, restored, snapshot.World.WorldHash.ToString()),
+                new FixedWorldRestoreTransaction(working, m_Solver, restored, snapshot.World.WorldHash.ToString()),
+                pipeline
+            });
+            restore.ApplyAndValidate();
+            m_StateStore.Restore(snapshot.World);
+            restore.CompleteAfterAtomicSessionPublish();
+        }
 
         public FixedPipelineWorkingState CreateWorkingState()
         {

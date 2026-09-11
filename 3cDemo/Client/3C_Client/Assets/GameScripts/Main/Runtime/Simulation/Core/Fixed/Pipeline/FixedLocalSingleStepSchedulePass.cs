@@ -72,12 +72,16 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Fixed Local input Actor order does not match the locked roster.");
             }
             var tick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
+            bool replay = IsReplayInput(canonical);
             var step = new FixedSimulationStep(
                 tick,
                 new SimulationPipelineStepProvenance(
-                    SimulationPipelineStepExecutionKind.Forward,
+                    replay
+                        ? SimulationPipelineStepExecutionKind.Replay
+                        : SimulationPipelineStepExecutionKind.Forward,
                     context.Source,
-                    context.Source.SourceTick),
+                    context.Source.SourceTick,
+                    replay ? canonical.Inputs[0].Value.Input.InputSourceIdentity : string.Empty),
                 canonical.Inputs,
                 typed.Ingress);
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
@@ -97,6 +101,16 @@ namespace ThirdPersonSimulation.Fixed
                 new[] { step },
                 SimulationSessionPlanRequirement.WorkingState |
                 SimulationSessionPlanRequirement.OutputDisposition);
+        }
+
+        static bool IsReplayInput(FixedCanonicalInputBatch canonical)
+        {
+            for (int i = 0; i < canonical.Inputs.Count; i++)
+            {
+                if (!FixedCharacterInputTraceModule.IsReplayInput(canonical.Inputs[i].Value.Input))
+                    return false;
+            }
+            return true;
         }
     }
 

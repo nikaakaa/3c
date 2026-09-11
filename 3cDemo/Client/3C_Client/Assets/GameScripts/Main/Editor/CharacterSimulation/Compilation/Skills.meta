@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<<< HEAD:3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Control.meta
-guid: 3d897291033af1d44a6b063e11282677
-========
 guid: cf70808d5325e144a8e6912c026a9274
->>>>>>>> main:3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Skills.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}

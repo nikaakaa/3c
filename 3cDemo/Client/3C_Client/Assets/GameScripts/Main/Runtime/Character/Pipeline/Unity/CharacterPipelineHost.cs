@@ -162,6 +162,166 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController.TrySetPoseWatchInterests(sessionId, ownerId, interests);
 		public void RemovePreviewPoseWatchInterests(Guid ownerId) =>
 			m_PreviewController?.RemovePoseWatchInterests(ownerId);
+
+		public bool TryPrepareCurrentProgramAdoption(
+			CharacterSimulationProgram program,
+			CharacterPresentationProjection candidateProjection,
+			out string error)
+		{
+			error = string.Empty;
+			if (m_Registration == null || !m_Definition || !m_Definition.SimulationProgram ||
+				!m_Definition.PresentationProjection || !m_SessionHost)
+			{
+				error = "Character Program adoption requires an active Actor registration, Definition, Program, Projection, and Session Host.";
+				return false;
+			}
+			if (program == null)
+			{
+				error = "Character Program adoption requires a loaded Program.";
+				return false;
+			}
+			CharacterSimulationProgramAsset programAsset = m_Definition.SimulationProgram;
+			CharacterPresentationSemanticContract candidateContract =
+				Float32CharacterPresentationContractAdapter.Create(program);
+			CharacterPresentationProjectionAsset projectionAsset = m_Definition.PresentationProjection;
+			CharacterPresentationProjection projection = candidateProjection;
+			if (projection == null && string.Equals(
+					projectionAsset.SourceRevision,
+					program.Manifest.SourceRevision.Value,
+					StringComparison.Ordinal))
+			{
+				try
+				{
+					projection = projectionAsset.Load(candidateContract);
+				}
+				catch (Exception exception)
+				{
+					error = exception.Message;
+					return false;
+				}
+			}
+			if (!m_Registration.TryPrepareProgram(
+					programAsset,
+					program,
+					projectionAsset,
+					projection,
+					out error))
+				return false;
+			return true;
+		}
+
+		public void DiscardPreparedProgramAdoption()
+		{
+			m_Registration?.DiscardProgramEpoch();
+		}
+
+		public bool TryQueuePreparedProgramAdoption(
+			ProgramRevision sourceRevision,
+			out string error)
+		{
+			error = string.Empty;
+			if (m_Registration == null || !m_Definition || !m_SessionHost)
+			{
+				error = "Prepared Character Program adoption requires an active Actor registration, Definition, and Session Host.";
+				return false;
+			}
+			try
+			{
+				SimulationProgramAdoptionResult result = m_SessionHost.RequestProgramEpoch(sourceRevision);
+				if (result.Status == SimulationProgramAdoptionStatus.Rejected)
+				{
+					m_Registration.DiscardProgramEpoch();
+					error = result.Message;
+					return false;
+				}
+				return true;
+			}
+			catch (Exception exception)
+			{
+				m_Registration.DiscardProgramEpoch();
+				error = exception.Message;
+				return false;
+			}
+		}
+
+		CharacterPresentationRuntimeBinding CreatePresentationRuntime(
+			CharacterPresentationSemanticContract contract,
+			CharacterPresentationProjection projection,
+			ActorId actorId,
+			WorldBodyState initialBody,
+			IUnityCharacterControlSourceRuntime inputAdapter,
+			PhysicsScene physicsScene,
+			RuntimeDiagnosticsContext diagnostics,
+			int tickRate,
+			bool initializeExternalState)
+		{
+			CharacterPresentationBodyState presentationBody =
+				CharacterPresentationBodyState.FromFloat32(initialBody);
+			if (m_Registration?.PresentationRuntime is CharacterSimulationPresentationRuntime current &&
+				current.TryGetLatestBody(out CharacterPresentationBodyState currentBody))
+			{
+				presentationBody = currentBody;
+			}
+			if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
+			{
+				if (!(inputAdapter is ICharacterPresentationLookInput lookInput))
+					throw new InvalidOperationException("LocalOwner control source must provide Presentation look input.");
+				return CharacterPresentationRuntimeFactory.CreateLocalOwner(
+					contract,
+					tickRate,
+					projection,
+					actorId,
+					m_Animancer,
+					m_AnimationRigBinding,
+					m_RootHierarchy,
+					presentationBody,
+					m_BodyPresentationProfile,
+					m_WorldAwarePresentation,
+					physicsScene,
+					m_CameraRig,
+					m_CameraFollowAnchor,
+					m_CameraAimAnchor,
+					m_CameraTargetBindings,
+					lookInput,
+					m_CameraLookInputValueId,
+					m_EquipmentRigBindings,
+					m_SessionHost,
+					diagnostics,
+					initializeExternalState);
+			}
+			return CharacterPresentationRuntimeFactory.CreateSimulatedActor(
+				contract,
+				tickRate,
+				projection,
+				actorId,
+				m_Animancer,
+				m_AnimationRigBinding,
+				m_RootHierarchy,
+				presentationBody,
+				m_BodyPresentationProfile,
+				m_WorldAwarePresentation,
+				physicsScene,
+				m_EquipmentRigBindings,
+				m_SessionHost,
+				diagnostics,
+				initializeExternalState);
+		}
+
+		public bool TryQueueInputRequest(string requestId, out ulong requestSequence, out string error)
+		{
+			requestSequence = 0;
+			if (m_Registration == null)
+			{
+				error = "Character Actor registration is not active.";
+				return false;
+			}
+			if (!(m_Registration.LocalControlSource is ICharacterControlSourceInputRequestRuntime input))
+			{
+				error = $"Character Control Source '{m_ControlSource.SourceIdentity}' does not expose the input request port.";
+				return false;
+			}
+			return input.TryQueueInputRequest(requestId, out requestSequence, out error);
+		}
 		public bool CanPreviewPoseGraph =>
 			!Application.isPlaying &&
 			m_Definition &&
@@ -368,6 +528,50 @@ namespace ThirdPersonCharacter.Pipeline
 					throw new InvalidOperationException("Character control source returned no input adapter.");
 				WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
 				PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
+				Func<
+					CharacterPresentationSemanticContract,
+					CharacterPresentationProjection,
+					CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
+					(candidateContract, candidateProjection) =>
+						m_PresentationRole == CharacterPresentationRole.LocalOwner
+							? CharacterPresentationRuntimeFactory.CreateLocalOwner(
+								candidateContract,
+								tickRate,
+								candidateProjection,
+								actorId,
+								m_Animancer,
+								m_AnimationRigBinding,
+								m_RootHierarchy,
+								CharacterPresentationBodyState.FromFloat32(initialBody),
+								m_BodyPresentationProfile,
+								m_WorldAwarePresentation,
+								physicsScene,
+								m_CameraRig,
+								m_CameraFollowAnchor,
+								m_CameraAimAnchor,
+								m_CameraTargetBindings,
+								inputAdapter is ICharacterPresentationLookInput candidateLookInput
+									? candidateLookInput
+									: throw new InvalidOperationException("LocalOwner control source must provide Presentation look input."),
+								m_CameraLookInputValueId,
+								m_EquipmentRigBindings,
+								m_SessionHost,
+								diagnosticsContext)
+							: CharacterPresentationRuntimeFactory.CreateSimulatedActor(
+								candidateContract,
+								tickRate,
+								candidateProjection,
+								actorId,
+								m_Animancer,
+								m_AnimationRigBinding,
+								m_RootHierarchy,
+								CharacterPresentationBodyState.FromFloat32(initialBody),
+								m_BodyPresentationProfile,
+								m_WorldAwarePresentation,
+								physicsScene,
+								m_EquipmentRigBindings,
+								m_SessionHost,
+								diagnosticsContext);
 				CharacterPresentationRuntimeBinding presentationBinding;
 				if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
 				{
@@ -431,7 +635,8 @@ namespace ThirdPersonCharacter.Pipeline
 					presentationRuntime,
 					diagnosticsAdapter,
 					diagnosticsTarget,
-					m_RootHierarchy.VisualRoot);
+					m_RootHierarchy.VisualRoot,
+					presentationRuntimeFactory);
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;

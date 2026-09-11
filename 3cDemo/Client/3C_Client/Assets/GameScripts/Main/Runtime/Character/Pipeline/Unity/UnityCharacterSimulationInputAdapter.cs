@@ -13,10 +13,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public sealed class UnityCharacterSimulationInputAdapter :
         IUnityCharacterControlSourceRuntime,
         ICharacterPresentationLookInput,
-        ICharacterControlSourceRosterRuntime
+        ICharacterControlSourceRosterRuntime,
+        ICharacterControlSourceInputRequestRuntime
     {
         readonly CharacterInputProfile m_Profile;
-        readonly CharacterSimulationProgram m_Program;
+        CharacterSimulationProgram m_Program;
         readonly ICameraBasisSnapshotProvider m_CameraBasis;
         readonly CharacterPipelineHost m_Owner;
         readonly string m_ActionTargetInputValueId;
@@ -75,6 +76,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             : CharacterControlSourceCapability.CommittedObservation;
         public InputActionAsset Actions => m_Profile.SourceAsset;
 
+        public bool TryAdoptProgram(CharacterSimulationProgram program, out string error)
+        {
+            error = string.Empty;
+            if (program == null || program.Manifest.ProgramId != m_Program.Manifest.ProgramId ||
+                !program.LayoutHash.Equals(m_Program.LayoutHash) ||
+                program.Manifest.NumericProfile != m_Program.Manifest.NumericProfile)
+            {
+                error = "Unity input Program identity or input layout is incompatible.";
+                return false;
+            }
+            CharacterSimulationProgram previous = m_Program;
+            m_Program = program;
+            try
+            {
+                m_CameraRelativeVector2Ids.Clear();
+                m_WorldVector2Ids.Clear();
+                ValidateProgramInputs();
+                ResolveDirectionSpaces();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                m_Program = previous;
+                error = exception.Message;
+                return false;
+            }
+        }
+
         public void Activate()
         {
             RequireAlive();
@@ -127,6 +156,38 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                         binding.Priority));
                 }
             }
+        }
+
+        public bool TryQueueInputRequest(string requestId, out ulong requestSequence, out string error)
+        {
+            requestSequence = 0;
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(requestId) || !string.Equals(requestId, requestId.Trim(), StringComparison.Ordinal))
+            {
+                error = "Input request identity must be non-empty and trimmed.";
+                return false;
+            }
+            RequireAlive();
+            if (!m_Active)
+            {
+                error = "Unity Input Adapter is not active.";
+                return false;
+            }
+            for (int i = 0; i < m_RequestBindings.Count; i++)
+            {
+                RequestBinding binding = m_RequestBindings[i];
+                if (!string.Equals(binding.RequestId, requestId, StringComparison.Ordinal))
+                    continue;
+                requestSequence = NextRequestSequence();
+                m_PendingRequests.Add(new PendingRequest(
+                    binding.RequestId,
+                    requestSequence,
+                    binding.BufferSeconds,
+                    binding.Priority));
+                return true;
+            }
+            error = $"Input request '{requestId}' is not declared by the Character Input Profile.";
+            return false;
         }
 
         public CharacterSimulationInput BuildInput(SimulationInputBuildContext context)
@@ -316,6 +377,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         void ResolveDirectionSpaces()
         {
+            m_CameraRelativeVector2Ids.Clear();
+            m_WorldVector2Ids.Clear();
             for (int i = 0; i < m_Program.Operations.Count; i++)
             {
                 SimulationOperation operation = m_Program.Operations[i];

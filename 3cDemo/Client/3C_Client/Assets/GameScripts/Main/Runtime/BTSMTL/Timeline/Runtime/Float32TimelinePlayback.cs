@@ -930,6 +930,7 @@ namespace BTSMTL.Timeline.Runtime
         public Float32Scalar Max(Float32Scalar left, Float32Scalar right) => Float32Scalar.Max(left, right);
         public Float32Scalar Clamp(Float32Scalar value, Float32Scalar minimum, Float32Scalar maximum) => Float32Scalar.Clamp(value, minimum, maximum);
         public string Format(Float32Scalar value) => value.ToString();
+        public float ToSingle(Float32Scalar value) => value.ToSingle();
         public OperationExecutionDescriptor TimelineOperationAt(int index) => m_Program.Topology.TimelineOperationAt(index);
         public OperationHandle TimelineOwner(OperationHandle child) => m_Program.Topology.TimelineOwner(child);
         public OperationExecutionDescriptor Operation(OperationHandle operation) => m_Program.Topology.Operation(operation);
@@ -1034,6 +1035,7 @@ namespace BTSMTL.Timeline.Runtime
         public Float32Scalar ReadLogicTime(OperationHandle operation) => m_State.ReadScalar(m_Program.Topology.RequireOperationStateSlot(operation, ProgramStateSemantic.TimelineLogicTime));
         public void WriteLogicTime(OperationHandle operation, Float32Scalar value) => m_State.WriteScalar(m_Program.Topology.RequireOperationStateSlot(operation, ProgramStateSemantic.TimelineLogicTime), value);
         public ulong ReadActivationGeneration(OperationHandle operation) => m_State.ReadUInt64(m_Program.Topology.RequireOperationStateSlot(operation, ProgramStateSemantic.RunnableActivationGeneration));
+        public ulong TimelinePlaybackGeneration(OperationHandle timeline) => ReadActivationGeneration(timeline);
         public void SetTickDelta(Float32Scalar value)
         {
             if (value < Zero)

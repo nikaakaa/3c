@@ -147,6 +147,24 @@ namespace ThirdPersonSimulation
             m_ProgramBindingsSealed = true;
         }
 
+        internal void AdoptPrograms(IReadOnlyList<KernelProgramBinding> bindings)
+        {
+            if (!m_ProgramBindingsSealed)
+                throw new InvalidOperationException("Float32 Kernel Program bindings are not active.");
+            if (bindings == null || bindings.Count == 0)
+                throw new ArgumentException("Float32 Kernel requires at least one Program binding.", nameof(bindings));
+            m_Evaluators.Clear();
+            m_BoundPrograms.Clear();
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                KernelProgramBinding binding = bindings[i] ??
+                    throw new ArgumentException("Float32 Kernel Program binding is missing.", nameof(bindings));
+                binding.Require(binding.Program, binding.Layout, Specialization);
+                if (!m_BoundPrograms.Add(binding))
+                    throw new InvalidOperationException($"Program '{binding.Program.Manifest.ProgramId}' is bound more than once.");
+            }
+        }
+
         void RequireBoundProgram(KernelProgramBinding binding)
         {
             if (!m_ProgramBindingsSealed || binding == null || !m_BoundPrograms.Contains(binding))

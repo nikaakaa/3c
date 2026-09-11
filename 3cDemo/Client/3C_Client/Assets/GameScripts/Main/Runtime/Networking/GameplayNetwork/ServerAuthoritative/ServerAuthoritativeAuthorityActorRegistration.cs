@@ -99,6 +99,15 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             RequireAlive();
         }
 
+        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
+            Diagnostics.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
+
+        public void BindProgramEpoch(ulong programEpoch) =>
+            Diagnostics.Context.SetProgramEpoch(programEpoch);
+
+        public void BindExecutionBranch(Guid executionBranchId) =>
+            Diagnostics.Context.SetExecutionBranch(executionBranchId);
+
         public void ObservePublished(SimulationActorTickResult result)
         {
             RequireAlive();

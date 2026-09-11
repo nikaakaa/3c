@@ -476,8 +476,8 @@ namespace BTSMTL.Diagnostics.Editor
                 }
                 if (IsPoint(value.Kind, kind))
                 {
-                    if (open.TryGetValue(key, out PendingSpan active))
-                        active.Last = value;
+                    if (open.TryGetValue(key, out PendingSpan activePoint))
+                        activePoint.Last = value;
                     spans.Add(new RuntimeExecutionSpan(kind, value, value, handle, source, hasSource, true));
                     continue;
                 }
@@ -579,11 +579,11 @@ namespace BTSMTL.Diagnostics.Editor
                 }
                 if (value.Domain == RuntimeTraceDomain.Presentation)
                 {
-                    var key = new PresentationFrameKey(value.Position, value.ExecutionBranchId);
-                    if (!presentation.TryGetValue(key, out List<RuntimeTraceEvent> presentationEvents))
+                    var presentationKey = new PresentationFrameKey(value.Position, value.ExecutionBranchId);
+                    if (!presentation.TryGetValue(presentationKey, out List<RuntimeTraceEvent> presentationEvents))
                     {
                         presentationEvents = new List<RuntimeTraceEvent>();
-                        presentation.Add(key, presentationEvents);
+                        presentation.Add(presentationKey, presentationEvents);
                     }
                     presentationEvents.Add(value);
                     continue;
@@ -1159,7 +1159,7 @@ namespace BTSMTL.Diagnostics.Editor
             }
 
             readonly RuntimeExecutionSpanKind Kind;
-            readonly RuntimeTraceEvent Start;
+            public readonly RuntimeTraceEvent Start;
             readonly RuntimeSourceElementHandle Handle;
             readonly RuntimeSourceElementKey Source;
             readonly bool HasSource;

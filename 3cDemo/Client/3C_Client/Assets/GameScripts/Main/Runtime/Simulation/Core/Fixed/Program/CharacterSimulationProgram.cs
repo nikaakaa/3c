@@ -622,71 +622,73 @@ namespace ThirdPersonSimulation.Fixed
         {
             var values = source == null ? new List<ProgramSourceMapEntry>() : new List<ProgramSourceMapEntry>(source);
             RequireNoNull(values, nameof(source));
-            values.Sort((left, right) =>
-            {
-                int byKind = left.TargetKind.CompareTo(right.TargetKind);
-                if (byKind != 0)
-                    return byKind;
-                int byIndex = left.TargetIndex.CompareTo(right.TargetIndex);
-                if (byIndex != 0)
-                    return byIndex;
-                int comparison = string.CompareOrdinal(left.SourceType, right.SourceType);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.GraphId, right.GraphId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.NodeId, right.NodeId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.PortId, right.PortId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.EdgeId, right.EdgeId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.DeclarationId, right.DeclarationId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.TimelineId, right.TimelineId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.TrackId, right.TrackId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.ClipId, right.ClipId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.DisplayPath, right.DisplayPath);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.ContentHash, right.ContentHash);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.GraphInvocationPath, right.GraphInvocationPath);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.CompiledPortId, right.CompiledPortId);
-                if (comparison != 0)
-                    return comparison;
-                comparison = left.ValuePortDirection.CompareTo(right.ValuePortDirection);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.SourceInvocationPath, right.SourceInvocationPath);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.ParentInvocationPath, right.ParentInvocationPath);
-                if (comparison != 0)
-                    return comparison;
-                comparison = left.InvocationCallerKind.CompareTo(right.InvocationCallerKind);
-                if (comparison != 0)
-                    return comparison;
-                comparison = string.CompareOrdinal(left.InvocationCallerId, right.InvocationCallerId);
-                if (comparison != 0)
-                    return comparison;
-                return string.CompareOrdinal(left.InvocationCallerClipId, right.InvocationCallerClipId);
-            });
+            values.Sort(CompareSourceMap);
             return values.AsReadOnly();
+        }
+
+        static int CompareSourceMap(ProgramSourceMapEntry left, ProgramSourceMapEntry right)
+        {
+            int result = left.TargetKind.CompareTo(right.TargetKind);
+            if (result != 0)
+                return result;
+            result = left.TargetIndex.CompareTo(right.TargetIndex);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.SourceType, right.SourceType);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.GraphId, right.GraphId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.NodeId, right.NodeId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.PortId, right.PortId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.EdgeId, right.EdgeId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.DeclarationId, right.DeclarationId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.TimelineId, right.TimelineId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.TrackId, right.TrackId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.ClipId, right.ClipId);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.DisplayPath, right.DisplayPath);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.ContentHash, right.ContentHash);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.GraphInvocationPath, right.GraphInvocationPath);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.CompiledPortId, right.CompiledPortId);
+            if (result != 0)
+                return result;
+            result = left.ValuePortDirection.CompareTo(right.ValuePortDirection);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.SourceInvocationPath, right.SourceInvocationPath);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.ParentInvocationPath, right.ParentInvocationPath);
+            if (result != 0)
+                return result;
+            result = left.InvocationCallerKind.CompareTo(right.InvocationCallerKind);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(left.InvocationCallerId, right.InvocationCallerId);
+            if (result != 0)
+                return result;
+            return string.CompareOrdinal(left.InvocationCallerClipId, right.InvocationCallerClipId);
         }
 
         static void RequireNoNull<T>(IReadOnlyList<T> values, string parameterName) where T : class

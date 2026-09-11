@@ -11,8 +11,8 @@ namespace ThirdPersonSimulation.Fixed
         public const string SemanticVersion = "1";
 
         static readonly SimulationProgramRuntimeDescriptor s_Descriptor = BuildDescriptor();
-        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
-        readonly IReadOnlyDictionary<ProgramId, KernelProgramBinding> m_Bindings;
+        ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        IReadOnlyDictionary<ProgramId, KernelProgramBinding> m_Bindings;
         readonly CharacterControlModuleCatalog m_ControlModules;
 
         FixedProgramRuntime(
@@ -34,7 +34,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public static SimulationProgramRuntimeDescriptor DescriptorDefinition => s_Descriptor;
         public SimulationProgramRuntimeDescriptor Descriptor { get; }
-        public SimulationProgramCatalog Catalog { get; }
+        public SimulationProgramCatalog Catalog { get; private set; }
         public SimulationKernel Kernel { get; }
         public CharacterControlModuleCatalog ControlModules => m_ControlModules;
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
@@ -109,6 +109,96 @@ namespace ThirdPersonSimulation.Fixed
             }
             kernel.BindPrograms(kernelBindings);
             return new FixedProgramRuntime(catalog, kernel, bindings, bindingsByProgram, controlModules);
+        }
+
+        internal SimulationProgramCatalog PrepareCatalogAdoption(IReadOnlyList<SimulationActorBinding> bindings)
+        {
+            return BuildCatalog(bindings, m_ControlModules);
+        }
+
+        internal void AdoptPrograms(
+            IReadOnlyList<SimulationActorBinding> bindings,
+            SimulationProgramCatalog catalog)
+        {
+            if (bindings == null || catalog == null)
+                throw new ArgumentNullException(bindings == null ? nameof(bindings) : nameof(catalog));
+            var values = new List<SimulationActorBinding>(bindings);
+            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (values.Count != m_Roster.Count)
+                throw new InvalidOperationException("Fixed Program adoption changes the locked Actor roster.");
+            for (int i = 0; i < values.Count; i++)
+            {
+                SimulationActorBinding current = m_Roster[i];
+                SimulationActorBinding next = values[i];
+                if (current.ActorId != next.ActorId || current.ProgramId != next.ProgramId ||
+                    !string.Equals(current.WorldBodyBindingId, next.WorldBodyBindingId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("Fixed Program adoption changes the locked Actor or World binding.");
+                }
+                if (!next.LayoutHash.Equals(current.LayoutHash))
+                    throw new InvalidOperationException($"Actor '{next.ActorId}' Program LayoutHash changed during adoption.");
+            }
+            var kernelBindings = new KernelProgramBinding[catalog.Programs.Count];
+            var bindingsByProgram = new Dictionary<ProgramId, KernelProgramBinding>();
+            for (int i = 0; i < catalog.Programs.Count; i++)
+            {
+                CharacterSimulationProgram program = catalog.Programs[i];
+                KernelProgramBinding binding = new KernelProgramBinding(
+                    program,
+                    ProgramExecutionLayout.GetOrCreate(program),
+                    Kernel);
+                kernelBindings[i] = binding;
+                bindingsByProgram.Add(program.Manifest.ProgramId, binding);
+            }
+            Kernel.AdoptPrograms(kernelBindings);
+            Catalog = catalog;
+            m_Roster = values.AsReadOnly();
+            m_Bindings = bindingsByProgram;
+        }
+
+        static SimulationProgramCatalog BuildCatalog(
+            IReadOnlyList<SimulationActorBinding> bindings,
+            CharacterControlModuleCatalog controlModules)
+        {
+            if (bindings == null || bindings.Count == 0)
+                throw new ArgumentException("Fixed Program adoption requires an Actor roster.", nameof(bindings));
+            var programs = new Dictionary<ProgramId, CharacterSimulationProgram>();
+            var ordered = new List<SimulationActorBinding>(bindings);
+            ordered.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                SimulationActorBinding binding = ordered[i] ??
+                    throw new ArgumentException("Fixed Program adoption contains a missing Actor binding.", nameof(bindings));
+                if (i > 0 && ordered[i - 1].ActorId.Equals(binding.ActorId))
+                    throw new ArgumentException($"Fixed Program adoption contains duplicate ActorId '{binding.ActorId}'.", nameof(bindings));
+                CharacterSimulationProgram program = binding.Program;
+                if (program.Manifest.NumericProfile != FixedSimulationNumericProfile.Value ||
+                    !program.Manifest.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion) ||
+                    !program.Manifest.ProgramId.Equals(binding.ProgramId) ||
+                    !program.ProgramHash.Equals(binding.ProgramHash) ||
+                    !program.LayoutHash.Equals(binding.LayoutHash))
+                {
+                    throw new InvalidOperationException($"Actor '{binding.ActorId}' Program binding is stale or incompatible.");
+                }
+                if (program.ControlModuleBinding.IsValid)
+                {
+                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+                    CharacterControlProgramCatalogValidator.ValidateSkillPrograms(
+                        module.Contract,
+                        program.SkillPrograms,
+                        program.GraphCallFrames);
+                }
+                if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
+                {
+                    if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
+                        throw new InvalidOperationException($"ProgramId '{program.Manifest.ProgramId}' resolves to multiple Program identities.");
+                }
+                else
+                {
+                    programs.Add(program.Manifest.ProgramId, program);
+                }
+            }
+            return new SimulationProgramCatalog(programs.Values);
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)

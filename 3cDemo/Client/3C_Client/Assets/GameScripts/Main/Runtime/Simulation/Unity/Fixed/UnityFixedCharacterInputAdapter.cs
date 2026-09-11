@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         IDisposable
     {
         readonly CharacterInputProfile m_Profile;
-        readonly ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
+        ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
         readonly ICameraBasisSnapshotProvider m_CameraBasis;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
@@ -93,6 +93,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             $"UnityInputSystem/FixedQ32.32/{m_Program.ProgramHash}/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
         public ProgramHash CharacterProgramHash => m_Program.ProgramHash;
+
+        public bool TryAdoptProgram(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program, out string error)
+        {
+            error = string.Empty;
+            if (program == null || program.Manifest.ProgramId != m_Program.Manifest.ProgramId ||
+                !program.LayoutHash.Equals(m_Program.LayoutHash) ||
+                program.Manifest.NumericProfile != m_Program.Manifest.NumericProfile)
+            {
+                error = "Unity Fixed input Program identity or input layout is incompatible.";
+                return false;
+            }
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram previous = m_Program;
+            m_Program = program;
+            try
+            {
+                ValidateProgramInputs();
+                ResolveDirectionSpaces();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                m_Program = previous;
+                error = exception.Message;
+                return false;
+            }
+        }
         public InputActionAsset Actions => m_Profile.SourceAsset;
 
         public void Activate()
@@ -462,6 +488,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void ResolveDirectionSpaces()
         {
+            m_CameraRelativeVector2Ids.Clear();
+            m_WorldVector2Ids.Clear();
             for (int i = 0; i < m_Program.Operations.Count; i++)
             {
                 FixedSimulationOperation operation = m_Program.Operations[i];

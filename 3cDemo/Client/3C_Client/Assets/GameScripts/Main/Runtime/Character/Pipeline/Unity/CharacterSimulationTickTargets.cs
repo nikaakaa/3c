@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline
 {
     public class CharacterPresentationFrameTarget
     {
-        readonly CharacterSimulationPresentationRuntime m_Runtime;
+        CharacterSimulationPresentationRuntime m_Runtime;
         readonly CharacterPoseWorkerPresentationSession m_Session;
         GameplayPresentationFrameContext m_FrameContext;
         bool m_FrameEnabled;
@@ -40,6 +40,17 @@ namespace ThirdPersonCharacter.Pipeline
                 return;
             m_Session.Unregister(this);
             m_Active = false;
+        }
+
+        public void ReplaceRuntime(ICharacterPresentationRuntime runtime)
+        {
+            if (m_FrameEnabled)
+                throw new InvalidOperationException("Character Presentation runtime cannot be replaced during an active frame.");
+            CharacterSimulationPresentationRuntime next = runtime as CharacterSimulationPresentationRuntime ??
+                throw new ArgumentException("Character Presentation replacement requires the formal runtime.", nameof(runtime));
+            if (!ReferenceEquals(m_Session, next.WorkerPresentationSession))
+                throw new InvalidOperationException("Character Presentation replacement must use the current Worker Presentation session.");
+            m_Runtime = next;
         }
 
         internal void BeginFrame(GameplayPresentationFrameContext context)

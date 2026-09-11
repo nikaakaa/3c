@@ -695,7 +695,14 @@ namespace ThirdPersonSimulation.Fixed
             bool controlFlowSelected = false,
             bool controlFlowPassed = false,
             ulong graphInvocationGeneration = 0,
-            ulong parentInvocationGeneration = 0)
+            ulong parentInvocationGeneration = 0,
+            OperationHandle timelineOperation = default,
+            ulong timelinePlaybackGeneration = 0,
+            float timelineTime = 0f,
+            int timelineCycle = 0,
+            string actionId = "",
+            ulong inputSequence = 0,
+            SimulationActionResultKind actionResult = SimulationActionResultKind.None)
         {
             Header = header;
             Severity = severity;
@@ -711,6 +718,13 @@ namespace ThirdPersonSimulation.Fixed
             ControlFlowPassed = controlFlowPassed;
             GraphInvocationGeneration = graphInvocationGeneration;
             ParentInvocationGeneration = parentInvocationGeneration;
+            TimelineOperation = timelineOperation;
+            TimelinePlaybackGeneration = timelinePlaybackGeneration;
+            TimelineTime = timelineTime;
+            TimelineCycle = timelineCycle;
+            ActionId = actionId ?? string.Empty;
+            InputSequence = inputSequence;
+            ActionResult = actionResult;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
@@ -726,6 +740,13 @@ namespace ThirdPersonSimulation.Fixed
         public bool ControlFlowPassed { get; }
         public ulong GraphInvocationGeneration { get; }
         public ulong ParentInvocationGeneration { get; }
+        public OperationHandle TimelineOperation { get; }
+        public ulong TimelinePlaybackGeneration { get; }
+        public float TimelineTime { get; }
+        public int TimelineCycle { get; }
+        public string ActionId { get; }
+        public ulong InputSequence { get; }
+        public SimulationActionResultKind ActionResult { get; }
     }
 }
 

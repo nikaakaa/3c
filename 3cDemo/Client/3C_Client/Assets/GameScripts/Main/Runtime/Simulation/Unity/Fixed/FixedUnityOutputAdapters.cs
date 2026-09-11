@@ -13,8 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public sealed class FixedUnityPresentationOutputAdapter : IFixedPresentationCommitOutputPort
     {
         readonly ActorId m_ActorId;
-        readonly CharacterPresentationProjection m_Projection;
-        readonly ICharacterPresentationRuntime m_Runtime;
+        CharacterPresentationProjection m_Projection;
+        ICharacterPresentationRuntime m_Runtime;
         readonly int m_MaximumTrackedRecords;
         readonly Dictionary<EventId, ActivePresentationRecord> m_ByEvent =
             new Dictionary<EventId, ActivePresentationRecord>();
@@ -48,6 +48,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         public int ActiveRecordCount => m_ByEvent.Count;
+
+        internal void ReplaceRuntime(
+            CharacterPresentationProjection projection,
+            ICharacterPresentationRuntime runtime)
+        {
+            if (m_CommitActive)
+                throw new InvalidOperationException("Fixed Presentation runtime cannot be replaced during an active commit.");
+            m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
+            m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        }
 
         public void BeginCommit()
         {

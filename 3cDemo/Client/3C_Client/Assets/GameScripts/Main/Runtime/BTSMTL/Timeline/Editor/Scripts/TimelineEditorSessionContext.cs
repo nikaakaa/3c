@@ -277,7 +277,8 @@ namespace BTSMTL.Timeline.Editor
         public void Apply(Action mutation, string undoName)
         {
             if (IsReadOnly)
-                throw new InvalidOperationException("Live Debug Timeline is read-only.");
+                throw new InvalidOperationException(
+                    "Timeline authoring mutation is unavailable during Scene Play or Live Debug.");
             Timeline.ApplyModify(mutation ?? throw new ArgumentNullException(nameof(mutation)), undoName);
         }
 

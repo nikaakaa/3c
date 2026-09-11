@@ -268,10 +268,10 @@ namespace BTSMTL.Diagnostics
             return Kind == other.Kind && CharacterRuntimeId.Equals(other.CharacterRuntimeId) && GraphRuntimeId.Equals(other.GraphRuntimeId) &&
                    ActivationGeneration == other.ActivationGeneration && TimelinePlaybackId == other.TimelinePlaybackId && TreeClipCycle == other.TreeClipCycle &&
                    ActionInstanceId == other.ActionInstanceId &&
-                    InvocationGeneration == other.InvocationGeneration &&
-                    SourceOperationIndex == other.SourceOperationIndex &&
-                    TreeClipOperationIndex == other.TreeClipOperationIndex &&
-                    string.Equals(StateId, other.StateId, StringComparison.Ordinal) &&
+                   InvocationGeneration == other.InvocationGeneration &&
+                   SourceOperationIndex == other.SourceOperationIndex &&
+                   TreeClipOperationIndex == other.TreeClipOperationIndex &&
+                   string.Equals(StateId, other.StateId, StringComparison.Ordinal) &&
                    string.Equals(CallSiteId, other.CallSiteId, StringComparison.Ordinal);
         }
 
@@ -310,9 +310,9 @@ namespace BTSMTL.Diagnostics
                 case RuntimeInstanceKind.StateActivation:
                     return $"State:{GraphRuntimeId:N}/{StateId}/{ActivationGeneration}";
                 case RuntimeInstanceKind.TimelinePlayback:
-                    return $"Timeline:{TimelinePlaybackId}";
+                    return $"Timeline:{SourceOperationIndex}/{TimelinePlaybackId}/{ActionInstanceId}";
                 case RuntimeInstanceKind.TreeClip:
-                    return $"TreeClip:{TimelinePlaybackId}/{TreeClipCycle}/{GraphRuntimeId:N}";
+                    return $"TreeClip:{SourceOperationIndex}/{TreeClipOperationIndex}/{TimelinePlaybackId}/{TreeClipCycle}/{GraphRuntimeId:N}/{ActionInstanceId}";
                 case RuntimeInstanceKind.ControlModule:
                     return $"ControlModule:{GraphRuntimeId:N}";
                 case RuntimeInstanceKind.ControlState:
@@ -654,6 +654,8 @@ namespace BTSMTL.Diagnostics
         public RuntimeTraceEvent(
             Guid sessionId,
             RuntimeProgramRevision programRevision,
+            ulong programEpoch,
+            Guid executionBranchId,
             RuntimeTraceDomain domain,
             RuntimeTraceChannel channel,
             ulong position,
@@ -665,8 +667,8 @@ namespace BTSMTL.Diagnostics
         {
             SessionId = sessionId;
             ProgramRevision = programRevision;
-            ProgramEpoch = 0;
-            ExecutionBranchId = Guid.Empty;
+            ProgramEpoch = programEpoch;
+            ExecutionBranchId = executionBranchId;
             Domain = domain;
             Channel = channel;
             Position = position;

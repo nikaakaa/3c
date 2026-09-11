@@ -55,6 +55,11 @@ namespace ThirdPersonSimulation
         CharacterSimulationInput BuildInput(SimulationInputBuildContext context);
     }
 
+    public interface ICharacterControlSourceInputRequestRuntime
+    {
+        bool TryQueueInputRequest(string requestId, out ulong requestSequence, out string error);
+    }
+
     public interface ICharacterControlSourceStateRuntime
     {
         string StateSchemaId { get; }
@@ -233,7 +238,9 @@ namespace ThirdPersonSimulation
                     source.SourceTick,
                     tickRate,
                     committedObservation);
-                CharacterSimulationInput input = controlSource.BuildInput(context);
+                CharacterSimulationInput input = Float32CharacterInputTraceModule.Resolve(
+                    context,
+                    controlSource.BuildInput(context));
                 if (input == null || input.NumericProfile != numericProfile ||
                     !input.TickSource.Equals(source) || input.Sequence != source.SourceTick)
                 {

@@ -203,6 +203,8 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException(
                     $"Timeline '{m_Target.SourcePath(timeline)}' has unknown playback status '{playback}'.");
             }
+            if (starting && m_Target.DiagnosticsEnabled)
+                Trace(timeline, "timeline_requested", TimelineTraceSeverity.Information, operation.Text0);
             if (starting && !CaptureTimelineActionContext(timeline))
             {
                 if (m_Target.DiagnosticsEnabled)
@@ -217,6 +219,8 @@ namespace ThirdPersonSimulation
                     OperationStopContext.ActionContextEnded(timeline)));
             }
 
+            if (starting && m_Target.DiagnosticsEnabled)
+                Trace(timeline, "timeline_started", TimelineTraceSeverity.Information, operation.Text0);
             m_State.WritePlayback(timeline, TimelinePlaybackStatus.Running);
             m_State.WriteLoop(timeline, loop);
             TTime previous = m_Target.ReadLogicTime(timeline);
@@ -673,6 +677,10 @@ namespace ThirdPersonSimulation
             OperationHandle clip,
             OperationStopContext context)
         {
+            bool wasActive = m_State.TryReadTreeClipStatus(
+                clip,
+                out TimelineTreeClipStatus playback) &&
+                playback != TimelineTreeClipStatus.Dormant;
             IReadOnlyList<ProgramControlFlowEdge> entries = m_Target.Edges(clip, ProgramControlFlowKind.Enter);
             for (int i = 0; i < entries.Count; i++)
                 cursor.ForceStop(entries[i].Target, context);
@@ -680,6 +688,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < exits.Count; i++)
                 cursor.ForceStop(exits[i].Target, context);
             m_Target.ResetTreeClipState(clip);
+            if (wasActive && m_Target.DiagnosticsEnabled)
+                Trace(clip, "tree_clip_destroyed", TimelineTraceSeverity.Information, context.Cause.ToString());
         }
 
         void SampleCue(OperationHandle clip, TimelineSegment<TTime> segment)
@@ -970,7 +980,20 @@ namespace ThirdPersonSimulation
             TimelineTraceSeverity severity,
             string detail)
         {
-            m_Target.EmitTrace(new TimelineTraceOutput(operation, code, severity, detail));
+            OperationExecutionDescriptor descriptor = m_Target.Operation(operation);
+            OperationHandle timeline = descriptor.Code == SimulationOperationCode.Timeline
+                ? operation
+                : RequireTimelineOwner(operation);
+            m_Target.EmitTrace(new TimelineTraceOutput(
+                operation,
+                timeline,
+                code,
+                severity,
+                detail,
+                m_Target.ToSingle(m_Target.ReadLogicTime(operation)),
+                m_Target.TimelinePlaybackGeneration(timeline),
+                m_State.TryReadCycle(operation, out int cycle) ? cycle : 0,
+                m_State.ReadRetainedActionContext(timeline)));
         }
 
         bool Crosses(TimelineSegment<TTime> segment, TTime time) =>

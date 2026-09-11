@@ -35,11 +35,11 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedProgramRuntimePort : IFixedProgramRuntimePort
     {
-        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
-        readonly ReadOnlyCollection<CharacterSimulationProgram> m_Programs;
-        readonly ReadOnlyCollection<ProgramExecutionLayout> m_Layouts;
-        readonly ReadOnlyCollection<KernelProgramBinding> m_Bindings;
-        readonly SimulationActorRosterDescriptor m_RosterDescriptor;
+        ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        ReadOnlyCollection<CharacterSimulationProgram> m_Programs;
+        ReadOnlyCollection<ProgramExecutionLayout> m_Layouts;
+        ReadOnlyCollection<KernelProgramBinding> m_Bindings;
+        SimulationActorRosterDescriptor m_RosterDescriptor;
         readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
 
         public FixedProgramRuntimePort(
@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationPortDescriptor Descriptor { get; }
-        public SimulationProgramCatalog Catalog { get; }
+        public SimulationProgramCatalog Catalog { get; private set; }
         public SimulationKernel Kernel { get; }
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => m_RosterDescriptor;
@@ -115,6 +115,45 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterSimulationProgram GetProgram(int actorIndex) => m_Programs[actorIndex];
         public ProgramExecutionLayout GetExecutionLayout(int actorIndex) => m_Layouts[actorIndex];
         public KernelProgramBinding GetKernelBinding(int actorIndex) => m_Bindings[actorIndex];
+
+        internal void AdoptRuntime(FixedProgramRuntime runtime)
+        {
+            if (runtime == null)
+                throw new ArgumentNullException(nameof(runtime));
+            Catalog = runtime.Catalog;
+            var bindings = new List<SimulationActorBinding>(runtime.Roster);
+            bindings.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            var programs = new CharacterSimulationProgram[bindings.Count];
+            var layouts = new ProgramExecutionLayout[bindings.Count];
+            var kernelBindings = new KernelProgramBinding[bindings.Count];
+            var actorIds = new ActorId[bindings.Count];
+            var sharedLayouts = new Dictionary<ProgramId, ProgramExecutionLayout>();
+            m_ActorIndices.Clear();
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                SimulationActorBinding actor = bindings[i];
+                CharacterSimulationProgram program = Catalog.GetRequired(actor.ProgramId);
+                KernelProgramBinding kernelBinding = runtime.GetBinding(program.Manifest.ProgramId);
+                ProgramExecutionLayout layout = kernelBinding.Layout;
+                kernelBinding.Require(program, layout, Kernel.Specialization);
+                if (sharedLayouts.TryGetValue(program.Manifest.ProgramId, out ProgramExecutionLayout shared) &&
+                    !ReferenceEquals(shared.Services, layout.Services))
+                {
+                    throw new InvalidOperationException($"Program '{program.Manifest.ProgramId}' created more than one execution services instance.");
+                }
+                sharedLayouts[program.Manifest.ProgramId] = layout;
+                actorIds[i] = actor.ActorId;
+                m_ActorIndices.Add(actor.ActorId, i);
+                programs[i] = program;
+                layouts[i] = layout;
+                kernelBindings[i] = kernelBinding;
+            }
+            m_Roster = bindings.AsReadOnly();
+            m_Programs = Array.AsReadOnly(programs);
+            m_Layouts = Array.AsReadOnly(layouts);
+            m_Bindings = Array.AsReadOnly(kernelBindings);
+            m_RosterDescriptor = new SimulationActorRosterDescriptor(actorIds);
+        }
     }
 
     public interface IFixedWorkingStateReadPort : ISimulationRuntimePort

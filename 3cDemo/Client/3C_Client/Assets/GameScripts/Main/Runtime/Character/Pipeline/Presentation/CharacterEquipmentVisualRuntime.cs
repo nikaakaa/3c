@@ -31,7 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             CharacterPresentationProjection projection,
             CharacterEquipmentRigBindingCatalog rigCatalog,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Equipment Visual Runtime Actor identity is invalid.", nameof(actorId));
@@ -52,9 +53,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (!m_Bindings.TryAdd(binding.VisualBindingId, Resolve(binding, rigCatalog)))
                     throw new InvalidOperationException($"Equipment visual binding '{binding.VisualBindingId}' is duplicated.");
             }
-            foreach (ResolvedBinding binding in m_Bindings.Values)
-                for (int rendererIndex = 0; rendererIndex < binding.Renderers.Length; rendererIndex++)
-                    binding.Renderers[rendererIndex].enabled = false;
+            if (initializeExternalState)
+            {
+                foreach (ResolvedBinding binding in m_Bindings.Values)
+                    for (int rendererIndex = 0; rendererIndex < binding.Renderers.Length; rendererIndex++)
+                        binding.Renderers[rendererIndex].enabled = false;
+            }
         }
 
         public bool IsValid => !m_Invalid;

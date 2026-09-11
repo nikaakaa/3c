@@ -20,6 +20,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void CaptureRenderFrame(ulong renderFrame);
     }
 
+    public interface ICharacterControlSourceProgramAdoption
+    {
+        bool TryAdoptProgram(CharacterSimulationProgram program, out string error);
+    }
+
     public interface ICharacterActionTargetInputProvider
     {
         string ProviderIdentity { get; }
@@ -55,12 +60,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public abstract IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context);
     }
 
-    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime
+    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime, ICharacterControlSourceProgramAdoption
     {
         const string InputPrefix = "input:value:";
         readonly List<SimulationInputValue> m_Values = new List<SimulationInputValue>();
-        readonly ProgramId m_ProgramId;
-        readonly ProgramHash m_ProgramHash;
+        ProgramId m_ProgramId;
+        ProgramHash m_ProgramHash;
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
@@ -92,6 +97,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public ProgramId CharacterProgramId => m_ProgramId;
         public ProgramHash CharacterProgramHash => m_ProgramHash;
         public CharacterControlSourceCapability Capabilities => CharacterControlSourceCapability.None;
+
+        public bool TryAdoptProgram(CharacterSimulationProgram program, out string error)
+        {
+            error = string.Empty;
+            if (program == null || program.Manifest.ProgramId != m_ProgramId ||
+                program.Manifest.NumericProfile != Float32SimulationNumericProfile.Value)
+            {
+                error = "Neutral input Program identity is incompatible.";
+                return false;
+            }
+            m_ProgramHash = program.ProgramHash;
+            return true;
+        }
 
         public void Activate()
         {

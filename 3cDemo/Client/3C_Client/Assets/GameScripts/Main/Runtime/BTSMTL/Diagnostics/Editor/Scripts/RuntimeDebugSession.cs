@@ -12,6 +12,7 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly RuntimeDebugSession s_Shared;
 
         readonly Dictionary<object, LiveInterestLease> m_LiveInterests = new Dictionary<object, LiveInterestLease>();
+        readonly Dictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> m_SourceMaps = new Dictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot>();
         RuntimeDiagnosticsTarget m_Target;
         RuntimeDebugTargetProvider m_Provider;
         RuntimeDebugFrozenDiagnostics m_Frozen;
@@ -49,6 +50,86 @@ namespace BTSMTL.Diagnostics.Editor
         public RuntimeCaptureSnapshot CaptureSnapshot => m_CaptureSnapshot;
         public bool HasCaptureHistory => m_CaptureSnapshot != null;
         public int HistoryOffset => m_HistoryOffset;
+        public long CaptureVersion => m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended
+            ? m_CaptureSnapshot?.Version ?? 0
+            : m_Provider?.CaptureVersion ?? 0;
+
+        public RuntimeExecutionTimeline BuildExecutionTimeline(RuntimeInstanceKey instance = default)
+        {
+            RuntimeCaptureSnapshot capture = GetExecutionCapture();
+            if (capture == null)
+                return null;
+            RuntimeDebugSourceMapSnapshot currentMap = m_Target != null &&
+                m_SourceMaps.TryGetValue(m_Target.Revision, out RuntimeDebugSourceMapSnapshot mapped)
+                ? mapped
+                : RuntimeDebugSourceMapSnapshot.Empty;
+            return RuntimeExecutionTimelineBuilder.Build(
+                capture,
+                currentMap,
+                m_SourceMaps,
+                GetExecutionHistoryOffset(),
+                instance);
+        }
+
+        public RuntimeExecutionHistory BuildExecutionHistory(RuntimeInstanceKey instance = default)
+        {
+            RuntimeCaptureSnapshot capture = GetExecutionCapture();
+            if (capture == null)
+                return null;
+            return m_ViewModel.BuildExecutionHistory(
+                capture,
+                GetExecutionHistoryOffset(),
+                instance,
+                m_SourceMaps);
+        }
+
+        public void BuildExecutionProjections(
+            RuntimeInstanceKey instance,
+            out RuntimeExecutionTimeline timeline,
+            out RuntimeExecutionHistory history)
+        {
+            RuntimeCaptureSnapshot capture = GetExecutionCapture();
+            if (capture == null)
+            {
+                timeline = null;
+                history = null;
+                return;
+            }
+            RuntimeDebugSourceMapSnapshot currentMap = m_Target != null &&
+                m_SourceMaps.TryGetValue(m_Target.Revision, out RuntimeDebugSourceMapSnapshot mapped)
+                ? mapped
+                : RuntimeDebugSourceMapSnapshot.Empty;
+            int historyOffset = GetExecutionHistoryOffset();
+            timeline = RuntimeExecutionTimelineBuilder.Build(
+                capture,
+                currentMap,
+                m_SourceMaps,
+                historyOffset,
+                instance);
+            history = RuntimeExecutionTimelineBuilder.BuildHistory(
+                capture,
+                currentMap,
+                m_SourceMaps,
+                historyOffset,
+                instance);
+        }
+
+        public bool TryResolveHistoricalSource(
+            RuntimeProgramRevision revision,
+            RuntimeSourceElementHandle handle,
+            out RuntimeSourceElementKey source,
+            out DebugSourceMapEntry entry)
+        {
+            if (m_SourceMaps.TryGetValue(revision, out RuntimeDebugSourceMapSnapshot sourceMap) &&
+                sourceMap.TryGet(handle, out entry))
+            {
+                source = entry.Source;
+                return source.IsValid;
+            }
+            source = default;
+            entry = default;
+            return false;
+        }
 
         public int CaptureSegmentCount
         {
@@ -103,6 +184,7 @@ namespace BTSMTL.Diagnostics.Editor
             ReleaseLiveHandles();
             m_Target = null;
             m_Provider = null;
+            m_SourceMaps.Clear();
             m_Frozen = null;
             m_ViewModel = RuntimeDebugViewModel.Detached;
             m_CaptureSnapshot = null;
@@ -182,10 +264,26 @@ namespace BTSMTL.Diagnostics.Editor
 
             m_AttachmentState = RuntimeDebugAttachmentState.Live;
             m_HistoryOffset = 0;
+            m_CaptureSegmentLimit = 0;
+            m_NextCaptureRefreshTime = 0d;
             m_ViewModel = m_Provider.LiveModel;
             RebindLiveInterests();
-            if (!RefreshProvider())
-                NotifyChanged();
+            RefreshProvider();
+            NotifyChanged();
+        }
+
+        RuntimeCaptureSnapshot GetExecutionCapture()
+        {
+            if (m_AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
+                return m_CaptureSnapshot;
+            return m_Target?.Store.FreezeActiveCapture();
+        }
+
+        int GetExecutionHistoryOffset()
+        {
+            return m_AttachmentState == RuntimeDebugAttachmentState.CaptureHistory
+                ? m_HistoryOffset
+                : 0;
         }
 
         public bool BeginCapture(RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail)
@@ -237,7 +335,7 @@ namespace BTSMTL.Diagnostics.Editor
             m_CaptureSegmentLimit = 0;
             m_NextCaptureRefreshTime = 0d;
             ReleaseLiveHandles();
-            m_ViewModel = m_Provider.BuildCaptureView(snapshot, m_HistoryOffset);
+            m_ViewModel = m_Provider.BuildCaptureView(snapshot, m_HistoryOffset, m_SourceMaps);
             m_AttachmentState = RuntimeDebugAttachmentState.CaptureHistory;
             NotifyChanged();
             return true;
@@ -256,7 +354,7 @@ namespace BTSMTL.Diagnostics.Editor
             ReleaseLiveHandles();
             m_HistoryOffset = clampedOffset;
             m_ViewModel = m_Provider != null
-                ? m_Provider.BuildCaptureView(m_CaptureSnapshot, m_HistoryOffset)
+                ? m_Provider.BuildCaptureView(m_CaptureSnapshot, m_HistoryOffset, m_SourceMaps)
                 : m_Frozen?.BuildCaptureView(m_CaptureSnapshot, m_HistoryOffset) ?? RuntimeDebugViewModel.Detached;
             m_AttachmentState = m_Target == null ? RuntimeDebugAttachmentState.Ended : RuntimeDebugAttachmentState.CaptureHistory;
             NotifyChanged();
@@ -373,6 +471,8 @@ namespace BTSMTL.Diagnostics.Editor
             ReleaseLiveHandles();
             m_Target = target;
             m_Provider = new RuntimeDebugTargetProvider(target);
+            m_SourceMaps.Clear();
+            m_SourceMaps[target.Revision] = RuntimeDebugSourceMapSnapshot.Capture(target.SourceMap);
             m_Frozen = null;
             m_ViewModel = m_Provider.LiveModel;
             m_CaptureSnapshot = null;
@@ -411,6 +511,17 @@ namespace BTSMTL.Diagnostics.Editor
         {
             if (m_Provider == null)
                 return false;
+
+            if (m_Target != null &&
+                !m_Provider.LiveModel.Target.Revision.Equals(m_Target.Revision))
+            {
+                m_SourceMaps[m_Provider.LiveModel.Target.Revision] = m_Provider.SourceMap;
+                m_Provider = new RuntimeDebugTargetProvider(m_Target);
+                m_SourceMaps[m_Target.Revision] = m_Provider.SourceMap;
+                m_ViewModel = m_Provider.LiveModel;
+                m_TargetRevision++;
+                NotifyChanged();
+            }
 
             bool changed = m_Provider.Refresh();
             if (m_AttachmentState == RuntimeDebugAttachmentState.Live)
@@ -452,7 +563,7 @@ namespace BTSMTL.Diagnostics.Editor
                 return;
 
             ReleaseLiveHandles();
-            m_Frozen = m_Provider?.Freeze();
+            m_Frozen = m_Provider?.Freeze(m_SourceMaps);
             RuntimeCaptureSnapshot activeCapture = m_Frozen?.ActiveCapture;
             if (activeCapture != null)
                 m_CaptureSnapshot = activeCapture;

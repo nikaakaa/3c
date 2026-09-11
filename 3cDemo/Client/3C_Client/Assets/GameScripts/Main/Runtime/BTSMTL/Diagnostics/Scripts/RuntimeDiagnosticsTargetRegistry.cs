@@ -18,6 +18,8 @@ namespace BTSMTL.Diagnostics
         public Guid CharacterRuntimeId => Context.CharacterRuntimeId;
         public Guid SessionId => Context.SessionId;
         public RuntimeProgramRevision Revision => Context.Revision;
+        public ulong ProgramEpoch => Context.ProgramEpoch;
+        public Guid ExecutionBranchId => Context.ExecutionBranchId;
         public IDebugSourceMap SourceMap => Context.SourceMap;
         public RuntimeDiagnosticsStore Store => Context.Store;
 
@@ -64,6 +66,25 @@ namespace BTSMTL.Diagnostics
             for (int i = 0; i < s_Targets.Count; i++)
             {
                 if (s_Targets[i].CharacterRuntimeId == characterRuntimeId)
+                {
+                    target = s_Targets[i];
+                    return true;
+                }
+            }
+            target = null;
+            return false;
+        }
+
+        public static bool TryGetByHost(int hostInstanceId, out RuntimeDiagnosticsTarget target)
+        {
+            if (hostInstanceId == 0)
+            {
+                target = null;
+                return false;
+            }
+            for (int i = 0; i < s_Targets.Count; i++)
+            {
+                if (s_Targets[i].HostInstanceId == hostInstanceId)
                 {
                     target = s_Targets[i];
                     return true;

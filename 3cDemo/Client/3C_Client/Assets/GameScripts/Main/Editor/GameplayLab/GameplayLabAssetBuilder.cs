@@ -17,6 +17,7 @@ using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Lab;
+using ThirdPersonGameplay.ScenePlay;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -53,6 +54,9 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string FixedTargetProfilePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedTarget.prefab";
         const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
         const string EnvironmentPrefabPath = "Assets/Scenes/Shared/CharacterMovementTestEnvironment.prefab";
+        const string BtsmtlPreviewScenePath = "Assets/Scenes/Authoring/BtsmtlPreview.unity";
+        const string BtsmtlPreviewContextId = "btsmtl-preview";
+        const string BtsmtlPreviewActorId = "btsmtl-preview-corin";
         const string FixedPipelinePath = PipelineDirectory + "/StandardFixedLocalSimulationPipeline.asset";
         const string FixedSourcePath = SourceDirectory + "/LocalFixedSimulationSessionSource.asset";
         const string FixedCompositionPath = CompositionDirectory + "/CorinGameplayLabFixedComposition.asset";
@@ -167,6 +171,132 @@ namespace ThirdPersonGameplay.Editor.Lab
                     $"Gameplay Lab Character Simulation build failed.{Environment.NewLine}{details}");
             }
             return LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+        }
+
+        public static void BuildBtsmtlScenePlayPreview()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("BTSMTL Scene Play Preview cannot be built in Play Mode.");
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            EnsureFolder("Assets/Scenes", "Authoring");
+            CharacterPipelineDefinition definition =
+                LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            string cameraProfilePath = AssetDatabase.GetAssetPath(definition.CameraProfile);
+            if (string.IsNullOrEmpty(cameraProfilePath))
+                throw new InvalidOperationException("BTSMTL preview Character Definition has no formal Camera Profile asset path.");
+            SimulationSessionCompositionDefinition composition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
+            GameObject playerPrefab = LoadRequired<GameObject>(PlayerPrefabPath);
+            CharacterPipelineHost prefabHost = playerPrefab.GetComponent<CharacterPipelineHost>() ??
+                throw new InvalidOperationException(
+                    $"BTSMTL preview Corin Prefab has no CharacterPipelineHost: {PlayerPrefabPath}");
+            if (prefabHost.Definition != definition)
+                throw new InvalidOperationException(
+                    "BTSMTL preview Corin Prefab and Character Definition are not the same formal asset.");
+            if (!(prefabHost.ControlSource is PlayerCharacterControlSource))
+                throw new InvalidOperationException(
+                    "BTSMTL preview Corin Prefab requires the formal Player Character Control Source.");
+            if (!definition.SimulationProgram || !definition.PresentationProjection || !definition.InputProfile)
+                throw new InvalidOperationException(
+                    "BTSMTL preview requires the Corin Definition's published Program, Projection and Input Profile.");
+            composition.RequireComplete();
+            if (!(composition.WorldSolver is UnityCharacterControllerWorldSolverDefinition))
+                throw new InvalidOperationException(
+                    "BTSMTL preview requires the formal Float32 Unity CharacterController World Solver.");
+
+            Scene previous = SceneManager.GetActiveScene();
+            Scene existing = SceneManager.GetSceneByPath(BtsmtlPreviewScenePath);
+            if (existing.IsValid() && existing.isLoaded)
+                EditorSceneManager.CloseScene(existing, true);
+            bool useSingleSceneMode = !previous.IsValid() ||
+                                      !previous.isLoaded ||
+                                      string.IsNullOrEmpty(previous.path);
+            Scene scene = EditorSceneManager.NewScene(
+                NewSceneSetup.EmptyScene,
+                useSingleSceneMode ? NewSceneMode.Single : NewSceneMode.Additive);
+            Scene validationScene = default;
+            bool validationSceneOpened = false;
+            try
+            {
+                SceneManager.SetActiveScene(scene);
+                composition = LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
+                composition.RequireComplete();
+                GameObject environment = InstantiatePrefab(EnvironmentPrefabPath, scene);
+                environment.name = "BTSMTL Preview Environment";
+                CreateDirectionalLight("BTSMTL Preview Directional Light");
+
+                var runtimeRoot = new GameObject("BTSMTL Scene Play Runtime");
+                runtimeRoot.SetActive(false);
+                SimulationSessionHost sessionHost = runtimeRoot.AddComponent<SimulationSessionHost>();
+                sessionHost.BindComposition(composition);
+                CharacterCameraProfile cameraProfile =
+                    LoadRequired<CharacterCameraProfile>(cameraProfilePath);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(runtimeRoot.transform, cameraProfile);
+                CharacterPipelineHost player = InstantiateFloatActor(
+                    PlayerPrefabPath,
+                    runtimeRoot.transform,
+                    "BTSMTL Preview Corin",
+                    BtsmtlPreviewActorId,
+                    new Vector3(2.96f, 0f, -5.27f),
+                    Quaternion.identity,
+                    sessionHost,
+                    CharacterPresentationRole.LocalOwner,
+                    cameraRig);
+                var startupRoot = new GameObject("BTSMTL Scene Play Startup");
+                BtsmtlScenePlayResourceRuntimeOwner resourceOwner =
+                    startupRoot.AddComponent<BtsmtlScenePlayResourceRuntimeOwner>();
+                resourceOwner.SetAuthoring(
+                    LoadRequired<ProductStartupProfile>(ResourceProfilePath),
+                    runtimeRoot);
+                BtsmtlScenePlayContext context = startupRoot.AddComponent<BtsmtlScenePlayContext>();
+                context.SetAuthoring(
+                    BtsmtlPreviewContextId,
+                    sessionHost,
+                    new[] { player },
+                    resourceOwner);
+                if (!EditorSceneManager.SaveScene(scene, BtsmtlPreviewScenePath, true))
+                    throw new InvalidOperationException(
+                        $"BTSMTL preview scene could not be saved: {BtsmtlPreviewScenePath}");
+                validationScene = SceneManager.GetSceneByPath(BtsmtlPreviewScenePath);
+                if (!validationScene.IsValid() || !validationScene.isLoaded)
+                {
+                    validationScene = EditorSceneManager.OpenScene(
+                        BtsmtlPreviewScenePath,
+                        OpenSceneMode.Additive);
+                    validationSceneOpened = true;
+                }
+                BtsmtlScenePlayContext[] contexts = validationScene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<BtsmtlScenePlayContext>(true))
+                    .ToArray();
+                if (contexts.Length != 1)
+                    throw new InvalidOperationException(
+                        $"BTSMTL preview scene requires one Scene Play context, found {contexts.Length}.");
+                if (!contexts[0].TryDescribe(
+                        out BtsmtlScenePlayContextDescriptor descriptor,
+                        out BtsmtlScenePlayContextDiagnostic diagnostic))
+                {
+                    throw new InvalidOperationException(
+                        $"BTSMTL preview context is invalid: {diagnostic.Code} {diagnostic.Message}");
+                }
+                if (!descriptor.HasCharacterRuntime || descriptor.Actors.Count != 1)
+                    throw new InvalidOperationException(
+                        "BTSMTL preview context must expose exactly one formal Corin Character Actor.");
+            }
+            finally
+            {
+                if (validationSceneOpened && validationScene.IsValid() && validationScene.isLoaded)
+                    EditorSceneManager.CloseScene(validationScene, true);
+                if (!useSingleSceneMode && previous.IsValid() && previous.isLoaded)
+                {
+                    SceneManager.SetActiveScene(previous);
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"BTSMTL Scene Play Preview built: {BtsmtlPreviewScenePath}");
         }
 
         static void EnsureVariantProgram(
@@ -893,11 +1023,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 GameObject environment = InstantiatePrefab(EnvironmentPrefabPath, scene);
                 environment.name = "Character Movement Test Environment";
                 ConfigureDeterministicWorld(environment);
-                var lightObject = new GameObject("Gameplay Lab Directional Light");
-                Light light = lightObject.AddComponent<Light>();
-                light.type = LightType.Directional;
-                light.intensity = 1f;
-                lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+                CreateDirectionalLight("Gameplay Lab Directional Light");
                 if (variants.Length != 0)
                 {
                     var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
@@ -943,6 +1069,15 @@ namespace ThirdPersonGameplay.Editor.Lab
                 Object.DestroyImmediate(broadSurface);
             if (environment.GetComponentsInChildren<DeterministicCollisionSurfaceAuthoring>(true).Length == 0)
                 throw new InvalidOperationException("Gameplay Lab environment Prefab has no explicit deterministic surface authoring roots.");
+        }
+
+        static void CreateDirectionalLight(string objectName)
+        {
+            var lightObject = new GameObject(objectName);
+            Light light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1f;
+            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         }
 
         static void ReplaceSceneContents(Scene source, Scene destination)

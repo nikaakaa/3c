@@ -280,6 +280,7 @@ namespace BTSMTL.Diagnostics
             RuntimeTracePayload rightPayload = right.Payload;
             return left.Channel == right.Channel &&
                    left.Domain == right.Domain &&
+                   left.ExecutionBranchId == right.ExecutionBranchId &&
                    left.RuntimeInstance.Equals(right.RuntimeInstance) &&
                    left.Source.Equals(right.Source) &&
                    left.Kind == right.Kind &&
@@ -292,10 +293,15 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
                    string.Equals(left.Detail, right.Detail, StringComparison.Ordinal) &&
                    string.Equals(left.Cause, right.Cause, StringComparison.Ordinal) &&
+                   string.Equals(left.SourceClockId, right.SourceClockId, StringComparison.Ordinal) &&
+                   string.Equals(left.SourceTickKind, right.SourceTickKind, StringComparison.Ordinal) &&
                    string.Equals(left.AnimationChannelId, right.AnimationChannelId, StringComparison.Ordinal) &&
                    string.Equals(left.OwnerId, right.OwnerId, StringComparison.Ordinal) &&
                    string.Equals(left.RelatedElementId, right.RelatedElementId, StringComparison.Ordinal) &&
                    string.Equals(left.SkillId, right.SkillId, StringComparison.Ordinal) &&
+                   left.InputSequence == right.InputSequence &&
+                   string.Equals(left.CharacterStateHash, right.CharacterStateHash, StringComparison.Ordinal) &&
+                   string.Equals(left.WorldHash, right.WorldHash, StringComparison.Ordinal) &&
                    left.ActionInstanceId == right.ActionInstanceId &&
                    string.Equals(left.CallSiteId, right.CallSiteId, StringComparison.Ordinal) &&
                    left.ActivationGeneration == right.ActivationGeneration &&
@@ -734,6 +740,16 @@ namespace BTSMTL.Diagnostics
                 m_Terminated = true;
                 m_Interests.Clear();
                 m_LiveChannels = RuntimeTraceChannel.None;
+            }
+        }
+
+        public void ClearLiveState()
+        {
+            lock (m_Gate)
+            {
+                if (m_Disposed)
+                    return;
+                m_LiveState.Clear();
             }
         }
 

@@ -448,19 +448,58 @@ namespace ThirdPersonSimulation
             string code,
             TimelineTraceSeverity severity,
             string detail)
+            : this(
+                operation,
+                OperationHandle.Invalid,
+                code,
+                severity,
+                detail,
+                0f,
+                0,
+                0,
+                default)
+        {
+        }
+
+        public TimelineTraceOutput(
+            OperationHandle operation,
+            OperationHandle timelineOperation,
+            string code,
+            TimelineTraceSeverity severity,
+            string detail,
+            float time,
+            ulong playbackGeneration,
+            int cycle,
+            TimelineActionContextIdentity actionContext)
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline trace output requires a valid operation.", nameof(operation));
+            if (timelineOperation.IsValid && playbackGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            if (!float.IsFinite(time))
+                throw new ArgumentOutOfRangeException(nameof(time));
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
             Operation = operation;
+            TimelineOperation = timelineOperation;
             Code = SimulationIdentity.Require(code, nameof(code));
             Severity = severity;
             Detail = detail ?? string.Empty;
+            Time = time;
+            PlaybackGeneration = playbackGeneration;
+            Cycle = cycle;
+            ActionContext = actionContext;
         }
 
         public OperationHandle Operation { get; }
+        public OperationHandle TimelineOperation { get; }
         public string Code { get; }
         public TimelineTraceSeverity Severity { get; }
         public string Detail { get; }
+        public float Time { get; }
+        public ulong PlaybackGeneration { get; }
+        public int Cycle { get; }
+        public TimelineActionContextIdentity ActionContext { get; }
     }
 
     public interface ITimelineControlStatePort
@@ -499,6 +538,7 @@ namespace ThirdPersonSimulation
         TTime Max(TTime left, TTime right);
         TTime Clamp(TTime value, TTime minimum, TTime maximum);
         string Format(TTime value);
+        float ToSingle(TTime value);
         OperationExecutionDescriptor TimelineOperationAt(int index);
         OperationHandle TimelineOwner(OperationHandle child);
         OperationExecutionDescriptor Operation(OperationHandle operation);
@@ -540,6 +580,7 @@ namespace ThirdPersonSimulation
             TimelineSegment<TTime> segment);
         void CompleteTimeline(OperationHandle timeline, TTime time);
         void ReleaseTimeline(OperationHandle timeline);
+        ulong TimelinePlaybackGeneration(OperationHandle timeline);
         void EmitPresentation(TimelinePresentationOutput<TTime> output);
         void EmitCue(TimelineCueOutput<TTime> output);
         void EmitTrace(TimelineTraceOutput output);

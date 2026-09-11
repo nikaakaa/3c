@@ -237,14 +237,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public sealed class MotionMatchingQueryFixtureInspector : UnityEditor.Editor
     {
         MotionMatchingSearchReplayArtifact m_LastArtifact;
-        MotionMatchingQueryPreviewAdapter m_PreviewSession;
+        MotionMatchingQueryPreviewAdapter m_QueryPreview;
         CharacterPipelineHost m_PreviewTarget;
         string m_LastPreviewStatus = string.Empty;
 
         void OnDisable()
         {
-            m_PreviewSession?.Dispose();
-            m_PreviewSession = null;
+            m_QueryPreview?.Dispose();
+            m_QueryPreview = null;
         }
 
         public override void OnInspectorGUI()
@@ -312,16 +312,16 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     throw new InvalidOperationException("Query Fixture Pose Preview requires an explicit scene CharacterPipelineHost target.");
                 MotionMatchingQueryFixture fixture = (MotionMatchingQueryFixture)target;
                 MotionMatchingSearchReplayArtifact artifact = fixture.Execute();
-                m_PreviewSession?.Dispose();
-                m_PreviewSession = new MotionMatchingQueryPreviewAdapter(fixture, m_PreviewTarget);
-                ComposedAnimationPoseFrame finalPose = m_PreviewSession.Evaluate(artifact);
+                m_QueryPreview?.Dispose();
+                m_QueryPreview = new MotionMatchingQueryPreviewAdapter(fixture, m_PreviewTarget);
+                ComposedAnimationPoseFrame finalPose = m_QueryPreview.Evaluate(artifact);
                 m_LastArtifact = artifact;
                 m_LastPreviewStatus = $"Pose preview completed through Module and compiled Pose Plan. Completion={finalPose.CompletionIdentity}";
             }
             catch (Exception exception)
             {
-                m_PreviewSession?.Dispose();
-                m_PreviewSession = null;
+                m_QueryPreview?.Dispose();
+                m_QueryPreview = null;
                 m_LastPreviewStatus = string.Empty;
                 EditorUtility.DisplayDialog("Motion Matching Query Fixture Preview Failed", exception.Message, "OK");
             }

@@ -152,6 +152,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal ulong CurrentActionTraceInstanceId => m_ActionTraceInstanceId;
         internal string CurrentActionTraceSkillId => m_ActionTraceSkillId;
+        internal bool HasActionTraceContext => m_ActionTraceEntryOperation.IsValid;
 
         internal ulong CurrentSkillTraceGeneration
         {
@@ -598,11 +599,31 @@ namespace ThirdPersonSimulation.Fixed
                 parentInvocationGeneration: ParentGeneration(operation.Handle)));
         }
 
-        public void Add(SimulationExecutionSource source, string code, SimulationTraceSeverity severity, string detail, ulong generation = 1)
+        public void Add(
+            SimulationExecutionSource source,
+            string code,
+            SimulationTraceSeverity severity,
+            string detail,
+            ulong generation = 0,
+            ulong parentInvocationGeneration = 0)
         {
             if (!m_Enabled)
                 return;
             SimulationEventHeader header = m_Sequence.Next(source, generation);
+            ulong graphInvocationGeneration = source.IsSkillOperation
+                ? generation != 0
+                    ? generation
+                    : m_Frame.HasActionTraceContext
+                        ? InvocationGeneration(source.Operation)
+                        : 0
+                : 0;
+            ulong resolvedParentInvocationGeneration = source.IsSkillOperation
+                ? parentInvocationGeneration != 0
+                    ? parentInvocationGeneration
+                    : m_Frame.HasActionTraceContext
+                        ? ParentGeneration(source.Operation)
+                        : 0
+                : 0;
             m_Frame.AddTrace(new SimulationTraceRecord(
                 header,
                 severity,
@@ -612,18 +633,137 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.CurrentActionTraceInstanceId,
                 m_Frame.CurrentActionTraceSkillId,
                 m_Frame.CurrentSkillTraceGeneration,
-                graphInvocationGeneration: source.IsSkillOperation ? InvocationGeneration(source.Operation) : 0,
-                parentInvocationGeneration: source.IsSkillOperation ? ParentGeneration(source.Operation) : 0));
+                graphInvocationGeneration: graphInvocationGeneration,
+                parentInvocationGeneration: resolvedParentInvocationGeneration));
         }
+
+        public void AddActionResult(
+            SimulationOperation operation,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason)
+        {
+            if (!m_Enabled)
+                return;
+            SimulationEventHeader header = m_Sequence.Next(operation);
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                header,
+                SimulationTraceSeverity.Information,
+                "Kernel.Action",
+                "action_result",
+                reason,
+                actionInstanceId,
+                skillId.Value,
+                m_Frame.CurrentSkillTraceGeneration,
+                graphInvocationGeneration: InvocationGeneration(operation.Handle),
+                parentInvocationGeneration: ParentGeneration(operation.Handle),
+                actionId: actionId,
+                inputSequence: inputSequence,
+                actionResult: result));
+        }
+
+        public void AddActionResult(
+            SimulationExecutionSource source,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason,
+            ulong generation = 0,
+            ulong parentInvocationGeneration = 0)
+        {
+            if (!m_Enabled)
+                return;
+            SimulationEventHeader header = m_Sequence.Next(source, generation);
+            ulong graphInvocationGeneration = source.IsSkillOperation
+                ? generation != 0
+                    ? generation
+                    : m_Frame.HasActionTraceContext
+                        ? InvocationGeneration(source.Operation)
+                        : 0
+                : 0;
+            ulong resolvedParentInvocationGeneration = source.IsSkillOperation
+                ? parentInvocationGeneration != 0
+                    ? parentInvocationGeneration
+                    : m_Frame.HasActionTraceContext
+                        ? ParentGeneration(source.Operation)
+                        : 0
+                : 0;
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                header,
+                SimulationTraceSeverity.Information,
+                "Kernel.Action",
+                "action_result",
+                reason,
+                actionInstanceId,
+                skillId.Value,
+                m_Frame.CurrentSkillTraceGeneration,
+                graphInvocationGeneration: graphInvocationGeneration,
+                parentInvocationGeneration: resolvedParentInvocationGeneration,
+                actionId: actionId,
+                inputSequence: inputSequence,
+                actionResult: result));
+        }
+
+        public void Add(TimelineTraceOutput output)
+        {
+            if (!m_Enabled)
+                return;
+            SimulationTraceSeverity severity = output.Severity switch
+            {
+                TimelineTraceSeverity.Detail => SimulationTraceSeverity.Detail,
+                TimelineTraceSeverity.Information => SimulationTraceSeverity.Information,
+                TimelineTraceSeverity.Warning => SimulationTraceSeverity.Warning,
+                TimelineTraceSeverity.Error => SimulationTraceSeverity.Error,
+                _ => throw new ArgumentOutOfRangeException(nameof(output))
+            };
+            ulong actionInstanceId = output.ActionContext.IsValid
+                ? output.ActionContext.InstanceId
+                : m_Frame.CurrentActionTraceInstanceId;
+            string skillId = output.ActionContext.HasSkillExecution
+                ? output.ActionContext.SkillId.Value
+                : m_Frame.CurrentActionTraceSkillId;
+            ulong skillExecutionGeneration = output.ActionContext.HasSkillExecution
+                ? output.ActionContext.SkillExecutionGeneration
+                : m_Frame.CurrentSkillTraceGeneration;
+            SimulationOperation operation = m_Frame.Program.Operations[output.Operation.Value];
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                m_Sequence.Next(operation),
+                severity,
+                "Kernel.Timeline",
+                output.Code,
+                output.Detail,
+                actionInstanceId,
+                skillId,
+                skillExecutionGeneration,
+                graphInvocationGeneration: InvocationGeneration(output.Operation),
+                parentInvocationGeneration: ParentGeneration(output.Operation),
+                timelineOperation: output.TimelineOperation,
+                timelinePlaybackGeneration: output.PlaybackGeneration,
+                timelineTime: output.Time,
+                timelineCycle: output.Cycle));
+        }
+
+        internal ulong ReadInvocationGeneration(OperationHandle operation) => InvocationGeneration(operation);
+
+        internal ulong ReadParentInvocationGeneration(OperationHandle operation) => ParentGeneration(operation);
 
         ulong InvocationGeneration(OperationHandle operation)
         {
+            if (!m_Frame.HasActionTraceContext)
+                return 0;
             int slot = m_Invocations.GenerationSlot(operation);
             return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
         }
 
         ulong ParentGeneration(OperationHandle operation)
         {
+            if (!m_Frame.HasActionTraceContext)
+                return 0;
             int slot = m_Invocations.ParentGenerationSlot(operation);
             return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
         }

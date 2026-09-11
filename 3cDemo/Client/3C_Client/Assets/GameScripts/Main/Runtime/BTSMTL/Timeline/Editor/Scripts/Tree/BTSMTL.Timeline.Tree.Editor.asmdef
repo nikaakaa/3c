@@ -11,7 +11,8 @@
         "GUID:8b1b654162f79f947a2aceb988ac315a",
         "GUID:dbcec5c5c83b92c40956750ad4235b10",
         "GUID:d64301999c8636b4c8ec42e0c4f9cad9",
-        "GUID:478a2357cc57436488a56e564b08d223"
+        "GUID:478a2357cc57436488a56e564b08d223",
+        "ThirdPersonGameplay"
     ],
     "includePlatforms": [
         "Editor"

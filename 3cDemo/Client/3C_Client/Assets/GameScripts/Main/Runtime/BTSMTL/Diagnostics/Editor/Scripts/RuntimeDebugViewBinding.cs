@@ -202,7 +202,9 @@ namespace BTSMTL.Diagnostics.Editor
         {
             return Kind == RuntimeDebugViewKind.Graph
                 ? view.GetGraphInstances(m_Request.Source.GraphAuthoringId)
-                : view.GetTimelineInstances(m_Request.Source.TimelineAuthoringId);
+                : view.GetTimelineInstances(
+                    m_Request.Source.TimelineAuthoringId,
+                    m_Request.Source.GraphAuthoringId);
         }
 
         static bool Contains(IReadOnlyList<RuntimeInstanceKey> instances, RuntimeInstanceKey value)

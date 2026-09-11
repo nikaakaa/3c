@@ -77,6 +77,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public StableHash ContractHash { get; }
         public IReadOnlyList<CharacterPresentationProducerContractEntry> Producers => m_Producers;
 
+        public static bool TryMatchProducerTopology(
+            CharacterPresentationSemanticContract current,
+            CharacterPresentationSemanticContract candidate,
+            out string error)
+        {
+            error = string.Empty;
+            if (current == null || candidate == null)
+            {
+                error = "Program adoption requires both current and candidate Presentation contracts.";
+                return false;
+            }
+            if (current.Producers.Count != candidate.Producers.Count)
+            {
+                error = "Program adoption changes the Presentation producer layout required by the active Presentation runtime.";
+                return false;
+            }
+            for (int i = 0; i < current.Producers.Count; i++)
+            {
+                CharacterPresentationProducerContractEntry left = current.Producers[i];
+                CharacterPresentationProducerContractEntry right = candidate.Producers[i];
+                if (left.Index != right.Index ||
+                    !string.Equals(left.Identity, right.Identity, StringComparison.Ordinal) ||
+                    left.AnimationChannelId != right.AnimationChannelId ||
+                    !string.Equals(left.SourceIdentity, right.SourceIdentity, StringComparison.Ordinal) ||
+                    left.ChannelKind != right.ChannelKind)
+                {
+                    error = $"Program adoption changes Presentation producer '{left.Identity}' at index {i}; the active Presentation runtime cannot adopt that producer contract.";
+                    return false;
+                }
+            }
+            return true;
+        }
+
         static StableHash ComputeHash(
             ProgramId programId,
             ProgramRevision sourceRevision,

@@ -10,6 +10,10 @@ namespace BTSMTL.Diagnostics
         ulong m_Sequence;
         ulong m_LogicTick;
         ulong m_PresentationFrame;
+        ulong m_ProgramEpoch;
+        Guid m_ExecutionBranchId;
+        string m_SourceClockId = string.Empty;
+        string m_SourceTickKind = string.Empty;
 
         public RuntimeDiagnosticsContext(
             Guid characterRuntimeId,
@@ -31,8 +35,10 @@ namespace BTSMTL.Diagnostics
 
         public Guid CharacterRuntimeId { get; }
         public Guid SessionId { get; }
-        public RuntimeProgramRevision Revision { get; }
-        public IDebugSourceMap SourceMap { get; }
+        public RuntimeProgramRevision Revision { get; private set; }
+        public ulong ProgramEpoch => m_ProgramEpoch;
+        public Guid ExecutionBranchId => m_ExecutionBranchId;
+        public IDebugSourceMap SourceMap { get; private set; }
         public RuntimeDiagnosticsStore Store { get; }
         public ulong LogicTick => m_LogicTick;
         public ulong PresentationFrame => m_PresentationFrame;
@@ -40,9 +46,48 @@ namespace BTSMTL.Diagnostics
             ? m_InstanceStack.Peek()
             : RuntimeInstanceKey.Character(CharacterRuntimeId);
 
-        public void BeginLogicTick(ulong localLogicTick)
+        public void AdoptProgram(RuntimeProgramRevision revision, IDebugSourceMap sourceMap)
+        {
+            Revision = revision;
+            SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
+            m_InstanceStack.Clear();
+            m_InstanceSources.Clear();
+            m_SourceClockId = string.Empty;
+            m_SourceTickKind = string.Empty;
+            Store.ClearLiveState();
+        }
+
+        public void SetProgramEpoch(ulong programEpoch)
+        {
+            if (programEpoch == 0)
+                throw new ArgumentOutOfRangeException(nameof(programEpoch));
+            if (m_ProgramEpoch != 0 && programEpoch < m_ProgramEpoch)
+                throw new InvalidOperationException("Runtime diagnostics Program Epoch cannot move backwards.");
+            m_ProgramEpoch = programEpoch;
+        }
+
+        public void SetExecutionBranch(Guid executionBranchId)
+        {
+            if (executionBranchId == Guid.Empty)
+                throw new ArgumentException("Runtime diagnostics Execution Branch identity is required.", nameof(executionBranchId));
+            if (m_ExecutionBranchId == executionBranchId)
+                return;
+            m_ExecutionBranchId = executionBranchId;
+            m_SourceClockId = string.Empty;
+            m_SourceTickKind = string.Empty;
+            Store.ClearLiveState();
+        }
+
+        public void BeginLogicTick(
+            ulong localLogicTick,
+            string sourceClockId = "",
+            string sourceTickKind = "")
         {
             m_LogicTick = localLogicTick;
+            if (!string.IsNullOrEmpty(sourceClockId))
+                m_SourceClockId = sourceClockId;
+            if (!string.IsNullOrEmpty(sourceTickKind))
+                m_SourceTickKind = sourceTickKind;
         }
 
         public void BeginPresentationFrame(ulong presentationFrame)
@@ -106,10 +151,14 @@ namespace BTSMTL.Diagnostics
             m_Sequence++;
             if (m_Sequence == 0)
                 m_Sequence++;
+            payload.SourceClockId = m_SourceClockId;
+            payload.SourceTickKind = m_SourceTickKind;
             ulong position = domain == RuntimeTraceDomain.Presentation ? m_PresentationFrame : m_LogicTick;
             Store.Publish(new RuntimeTraceEvent(
                 SessionId,
                 Revision,
+                m_ProgramEpoch,
+                m_ExecutionBranchId,
                 domain,
                 channel,
                 position,

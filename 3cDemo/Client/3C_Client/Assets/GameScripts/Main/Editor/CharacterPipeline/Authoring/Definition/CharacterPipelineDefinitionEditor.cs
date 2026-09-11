@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_ControlModuleId;
         SerializedProperty m_ControlParameters;
         SerializedProperty m_SkillDefinitions;
+        SerializedProperty m_SkillGraphs;
         SerializedProperty m_SimulationTickRate;
         SerializedProperty m_SimulationProgram;
         SerializedProperty m_PresentationProjection;
@@ -36,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_ActionProfiles;
         SerializedProperty m_BehaviorProfiles;
         SerializedProperty m_AnimationPresentationProfile;
+		SerializedProperty m_CameraProfile;
 		SerializedProperty m_EquipmentCapabilityEnabled;
 		SerializedProperty m_EquipmentProfile;
 		SerializedProperty m_EquipmentPresentationProfile;
@@ -56,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ControlModuleId = serializedObject.FindProperty("m_ControlModuleId");
             m_ControlParameters = serializedObject.FindProperty("m_ControlParameters");
             m_SkillDefinitions = serializedObject.FindProperty("m_SkillDefinitions");
+            m_SkillGraphs = serializedObject.FindProperty("m_SkillGraphs");
             m_SimulationTickRate = serializedObject.FindProperty("m_SimulationTickRate");
             m_SimulationProgram = serializedObject.FindProperty("m_SimulationProgram");
             m_PresentationProjection = serializedObject.FindProperty("m_PresentationProjection");
@@ -65,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ActionProfiles = serializedObject.FindProperty("m_ActionProfiles");
             m_BehaviorProfiles = serializedObject.FindProperty("m_BehaviorProfiles");
             m_AnimationPresentationProfile = serializedObject.FindProperty("m_AnimationPresentationProfile");
+			m_CameraProfile = serializedObject.FindProperty("m_CameraProfile");
 			m_EquipmentCapabilityEnabled = serializedObject.FindProperty("m_EquipmentCapabilityEnabled");
 			m_EquipmentProfile = serializedObject.FindProperty("m_EquipmentProfile");
 			m_EquipmentPresentationProfile = serializedObject.FindProperty("m_EquipmentPresentationProfile");
@@ -100,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_SkillDefinitions, new GUIContent("Definitions"), true);
+            EditorGUILayout.PropertyField(m_SkillGraphs, new GUIContent("Native Graphs"), true);
             EditorGUILayout.Space(6f);
         }
 
@@ -110,6 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.PropertyField(m_GameplayEffectProfile, new GUIContent("Gameplay Effect"));
             EditorGUILayout.PropertyField(m_BodyMotionProfile, new GUIContent("Body Motion"));
             EditorGUILayout.PropertyField(m_AnimationPresentationProfile, new GUIContent("Animation Presentation"));
+			EditorGUILayout.PropertyField(m_CameraProfile, new GUIContent("Camera"));
 			EditorGUILayout.Space(3f);
 			EditorGUILayout.PropertyField(m_EquipmentCapabilityEnabled, new GUIContent("Equipment Capability"));
 			using (new EditorGUI.DisabledScope(!m_EquipmentCapabilityEnabled.boolValue))

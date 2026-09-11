@@ -99,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
     public sealed class AnimationPresentationRuntimeTarget
     {
-        readonly IAnimationPresentationRuntimeSnapshotProvider m_Provider;
+        IAnimationPresentationRuntimeSnapshotProvider m_Provider;
 
         public AnimationPresentationRuntimeTarget(
             Guid runtimeInstanceId,
@@ -122,11 +122,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Provider = provider ?? throw new ArgumentNullException(nameof(provider));
         }
 
+        public void Replace(
+            AnimationPresentationProgramIdentity programIdentity,
+            IAnimationPresentationRuntimeSnapshotProvider provider)
+        {
+            if (!programIdentity.IsValid)
+                throw new ArgumentException("Animation Presentation replacement identity is invalid.", nameof(programIdentity));
+            if (provider == null)
+                throw new ArgumentNullException(nameof(provider));
+            m_Provider = provider;
+            ProgramIdentity = programIdentity;
+        }
+
         public Guid RuntimeInstanceId { get; }
         public ActorId ActorId { get; }
         public int HostInstanceId { get; }
         public string DisplayName { get; }
-        public AnimationPresentationProgramIdentity ProgramIdentity { get; }
+        public AnimationPresentationProgramIdentity ProgramIdentity { get; private set; }
         public string ProjectionRevision => ProgramIdentity.ProjectionRevision;
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>

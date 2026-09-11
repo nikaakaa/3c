@@ -3,12 +3,14 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public interface ISimulationActorRegistration : IDisposable
+    public interface ISimulationActorRegistration : IDisposable, ISimulationCheckpointTracePublisher
     {
         ActorId ActorId { get; }
         string OwnerIdentity { get; }
         StableHash DiagnosticsConfigurationHash { get; }
         SimulationOutputRouteDescriptor OutputRoute { get; }
+        void BindProgramEpoch(ulong programEpoch);
+        void BindExecutionBranch(Guid executionBranchId);
         void Activate();
         void Deactivate();
         void CaptureRenderFrame(ulong renderFrame);
@@ -18,6 +20,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         bool IsSimulationStartReady { get; }
         string SimulationStartWaitReason { get; }
+    }
+
+    public interface ISimulationCheckpointTracePublisher
+    {
+        void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash);
+    }
+
+    public interface ISimulationPresentationCheckpointRuntime
+    {
+        bool SupportsPresentationCheckpointCapture { get; }
+        bool SupportsPresentationCheckpointRestore { get; }
+        bool TryCapturePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error);
+        bool TryRestorePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error);
+    }
+
+    public interface ISimulationProgramEpochRegistration
+    {
+        ISimulationProgramBinding ProgramBinding { get; }
+        void CommitProgramEpoch();
+        void DiscardProgramEpoch();
     }
 
     public interface IFloat32SimulationActorRegistration :

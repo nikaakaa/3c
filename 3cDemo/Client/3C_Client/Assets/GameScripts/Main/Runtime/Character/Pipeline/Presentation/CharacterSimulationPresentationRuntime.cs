@@ -128,6 +128,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong BodyResetSequence => m_Body.ResetSequence;
         public CharacterPosePlanStageSnapshot PosePlanStages => m_PosePlanStages;
 
+        public bool TryGetLatestBody(out CharacterPresentationBodyState body) =>
+            m_Body.TryGetLatestBody(out body);
+
         public bool TryGetAnimationPresentationDebugView(
             out AnimationPresentationDebugView debugView)
         {

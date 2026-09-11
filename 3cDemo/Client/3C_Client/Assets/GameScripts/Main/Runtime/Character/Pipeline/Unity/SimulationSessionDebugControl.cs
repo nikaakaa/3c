@@ -108,7 +108,6 @@ namespace ThirdPersonCharacter.Pipeline
                 descriptor.SessionId.ToString(),
                 descriptor.Identity.ToString(),
                 descriptor.Pipeline.Hash.ToString(),
-                descriptor.ProgramCatalogHash.ToString(),
                 descriptor.SessionSource.ToString(),
                 descriptor.WorldSolver.ToString());
             string displayName = $"{descriptor.SessionId} | {descriptor.NumericProfileId} | {hostInstanceId}";
@@ -246,7 +245,10 @@ namespace ThirdPersonCharacter.Pipeline
             ulong historyLatestTick,
             ulong latestCheckpointTick,
             string latestHash,
-            SimulationSessionFailure failure)
+            SimulationSessionFailure failure,
+            Guid executionBranchId = default,
+            Guid parentExecutionBranchId = default,
+            string latestCheckpointFailure = "")
         {
             Identity = identity;
             Capability = capability;
@@ -260,6 +262,9 @@ namespace ThirdPersonCharacter.Pipeline
             LatestCheckpointTick = latestCheckpointTick;
             LatestHash = latestHash ?? string.Empty;
             Failure = failure;
+            ExecutionBranchId = executionBranchId;
+            ParentExecutionBranchId = parentExecutionBranchId;
+            LatestCheckpointFailure = latestCheckpointFailure ?? string.Empty;
         }
 
         public SimulationSessionDebugTargetIdentity Identity { get; }
@@ -274,6 +279,9 @@ namespace ThirdPersonCharacter.Pipeline
         public ulong LatestCheckpointTick { get; }
         public string LatestHash { get; }
         public SimulationSessionFailure Failure { get; }
+        public Guid ExecutionBranchId { get; }
+        public Guid ParentExecutionBranchId { get; }
+        public string LatestCheckpointFailure { get; }
         public string FailureSummary => Failure?.ToString() ?? string.Empty;
     }
 
@@ -396,10 +404,10 @@ namespace ThirdPersonCharacter.Pipeline
                 true,
                 true,
                 localFixedCandidate,
+                host.SupportsInputReplay,
+                host.SupportsInputReplay,
                 false,
-                false,
-                false,
-                false);
+                localFixedCandidate);
         }
 
         public SimulationSessionDebugTargetIdentity Identity => m_Identity;
@@ -446,14 +454,21 @@ namespace ThirdPersonCharacter.Pipeline
                 case SimulationSessionDebugCommandKind.SetPresentationClock:
                     return SubmitTickCommand(GameplayTickDriveCommand.SetPresentationClock(command.PresentationClockMode), command.Sequence, out result);
                 case SimulationSessionDebugCommandKind.StartRecording:
+                    return StartInputRecording(command.Sequence, out result);
                 case SimulationSessionDebugCommandKind.StopRecording:
+                    return StopInputRecording(command.Sequence, out result);
                 case SimulationSessionDebugCommandKind.ReplayRange:
+                    return ReplayInputRange(command, out result);
                 case SimulationSessionDebugCommandKind.ResumeFromTick:
-                    result = SimulationSessionDebugCommandResult.Rejected(
-                        SimulationSessionDebugCommandResultCode.RejectedUnsupportedCapability,
-                        command.Sequence,
-                        "Local Fixed recording/replay pipeline is not installed on this Session.");
-                    return false;
+                    if (!m_Host.TryRestoreToTick(command.FromTick, out _, out string restoreError))
+                    {
+                        result = SimulationSessionDebugCommandResult.Rejected(
+                            SimulationSessionDebugCommandResultCode.RejectedUnsupportedCapability,
+                            command.Sequence,
+                            restoreError);
+                        return false;
+                    }
+                    return SubmitTickCommand(GameplayTickDriveCommand.SetRealtime(), command.Sequence, out result);
                 default:
                     result = SimulationSessionDebugCommandResult.Rejected(
                         SimulationSessionDebugCommandResultCode.RejectedInvalidCommand,
@@ -480,6 +495,87 @@ namespace ThirdPersonCharacter.Pipeline
             return true;
         }
 
+        bool StartInputRecording(
+            ulong sequence,
+            out SimulationSessionDebugCommandResult result)
+        {
+            if (!m_Capability.SupportsRecording)
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedUnsupportedCapability,
+                    sequence,
+                    "Session does not expose a single current Actor input for recording.");
+                return false;
+            }
+            try
+            {
+                if (!m_Host.TryStartInputRecording(out string startError))
+                    throw new InvalidOperationException(startError);
+                result = SimulationSessionDebugCommandResult.AcceptedResult(sequence);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedInvalidCommand,
+                    sequence,
+                    exception.Message);
+                return false;
+            }
+        }
+
+        bool StopInputRecording(
+            ulong sequence,
+            out SimulationSessionDebugCommandResult result)
+        {
+            if (!m_Capability.SupportsRecording)
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedUnsupportedCapability,
+                    sequence,
+                    "Session does not expose a completed input trace.");
+                return false;
+            }
+            try
+            {
+                if (!m_Host.TryStopInputRecording(out string stopError))
+                    throw new InvalidOperationException(stopError);
+                result = SimulationSessionDebugCommandResult.AcceptedResult(sequence);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedInvalidCommand,
+                    sequence,
+                    exception.Message);
+                return false;
+            }
+        }
+
+        bool ReplayInputRange(
+            SimulationSessionDebugCommand command,
+            out SimulationSessionDebugCommandResult result)
+        {
+            if (!m_Capability.SupportsReplay || command.FromTick >= command.ToTick)
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedInvalidCommand,
+                    command.Sequence,
+                    "Input replay range is invalid or unsupported by this Session.");
+                return false;
+            }
+            if (!m_Host.TryReplayInputRange(command.FromTick, command.ToTick, out string replayError))
+            {
+                result = SimulationSessionDebugCommandResult.Rejected(
+                    SimulationSessionDebugCommandResultCode.RejectedUnsupportedCapability,
+                    command.Sequence,
+                    replayError);
+                return false;
+            }
+            return SubmitTickCommand(GameplayTickDriveCommand.SetRealtime(), command.Sequence, out result);
+        }
+
         SimulationSessionDebugStatusSnapshot BuildStatus()
         {
             SimulationSessionDiagnosticsSnapshot diagnostics = m_Host.Diagnostics;
@@ -494,12 +590,15 @@ namespace ThirdPersonCharacter.Pipeline
                 tickSystemAvailable,
                 m_Host.LifecycleState,
                 diagnostics?.LatestOuterTick ?? 0,
-                false,
-                0,
-                0,
-                0,
+                m_Host.IsInputRecording,
+                m_Host.OldestCheckpointTick,
+                m_Host.LatestCheckpointTick,
+                m_Host.LatestCheckpointTick,
                 string.Empty,
-                m_Host.Failure ?? diagnostics?.Failure);
+                m_Host.Failure ?? diagnostics?.Failure,
+                m_Host.ExecutionBranchId,
+                m_Host.ParentExecutionBranchId,
+                m_Host.LastCheckpointFailure);
         }
     }
 }

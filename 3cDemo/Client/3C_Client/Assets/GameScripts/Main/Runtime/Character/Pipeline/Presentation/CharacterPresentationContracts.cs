@@ -334,6 +334,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Reset();
     }
 
+    public interface ICharacterPresentationCheckpointRuntime
+    {
+        bool SupportsCheckpointCapture { get; }
+        bool SupportsCheckpointRestore { get; }
+        bool TryCaptureCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error);
+        bool TryRestoreCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error);
+    }
+
     public sealed class CharacterPresentationRuntimeBinding
     {
         public CharacterPresentationRuntimeBinding(

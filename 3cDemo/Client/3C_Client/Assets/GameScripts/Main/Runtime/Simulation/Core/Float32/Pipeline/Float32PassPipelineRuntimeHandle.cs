@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32PassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle
+    public sealed class Float32PassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ISimulationSessionProgramAdoption, ISimulationSessionCheckpointRuntime, ISimulationSessionInputReplayRuntime
     {
         readonly SimulationSessionLifecycleController m_Lifecycle;
         readonly CompiledSimulationPipelinePlan m_Pipeline;
@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation
         readonly Float32PipelineTransaction m_Transaction;
         readonly IReadOnlyList<IFloat32CompiledPipelinePassRuntime> m_Passes;
         readonly SimulationSessionResourceRegistry m_Resources;
+        SimulationProgramEpoch m_ProgramEpoch;
         ulong m_LatestOuterTick;
         bool m_Disposed;
 
@@ -31,12 +32,204 @@ namespace ThirdPersonSimulation
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
             m_Lifecycle.Activate(descriptor);
+            m_ProgramEpoch = SimulationProgramEpoch.Initial(descriptor.ProgramCatalogHash);
         }
 
         public SimulationSessionCompositionDescriptor Descriptor { get; }
         public SimulationSessionLifecycleState LifecycleState => m_Lifecycle.State;
         public SimulationSessionFailure Failure => m_Lifecycle.Failure;
         public SimulationSessionDiagnosticsSnapshot Diagnostics => BuildDiagnostics();
+        public SimulationProgramEpoch ProgramEpoch => m_ProgramEpoch;
+
+        public SimulationSessionCheckpoint CaptureCheckpoint()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
+            return m_Transaction.CaptureCheckpoint();
+        }
+
+        public bool IsInputRecording => Float32CharacterInputTraceModule.IsRecording;
+
+        public void RestoreCheckpoint(SimulationSessionCheckpoint checkpoint)
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
+            m_Transaction.RestoreCheckpoint(checkpoint);
+            m_LatestOuterTick = checkpoint.Tick.Value;
+        }
+
+        public bool TryStartInputRecording(out string error)
+        {
+            error = string.Empty;
+            if (m_StateStore.Current.Actors.Count != 1)
+            {
+                error = "Float32 input recording requires exactly one Actor.";
+                return false;
+            }
+            try
+            {
+                Float32CharacterInputTraceModule.PrepareRecording(m_StateStore.Current.Actors[0].ActorId);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
+        public bool TryStopInputRecording(out string error)
+        {
+            try
+            {
+                Float32CharacterInputTraceModule.StopRecording();
+                error = string.Empty;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
+        public bool TryCancelInputReplay(out string error)
+        {
+            if (!Float32CharacterInputTraceModule.IsReplayActive)
+            {
+                error = "Float32 input replay is not active.";
+                return false;
+            }
+            Float32CharacterInputTraceModule.Stop();
+            error = string.Empty;
+            return true;
+        }
+
+        public bool TryReplayInputRange(
+            SimulationSessionCheckpoint checkpoint,
+            ulong fromTick,
+            ulong toTick,
+            out string error)
+        {
+            error = string.Empty;
+            if (fromTick >= toTick)
+            {
+                error = "Float32 replay range is invalid.";
+                return false;
+            }
+            if (HasExternalReplaySource())
+            {
+                error = "Float32 replay requires an external result journal for the active Pipeline Source.";
+                return false;
+            }
+            if (Float32CharacterInputTraceModule.IsRecording)
+            {
+                error = "Float32 replay cannot start while input recording is active.";
+                return false;
+            }
+            Float32CharacterInputTrace recorded = Float32CharacterInputTraceModule.LastCompletedTrace;
+            if (recorded == null)
+            {
+                error = "No completed Float32 input trace is available.";
+                return false;
+            }
+            if (m_StateStore.Current.Actors.Count != 1 ||
+                recorded.ActorId != m_StateStore.Current.Actors[0].ActorId)
+            {
+                error = "Float32 input trace Actor does not match the active Session Actor.";
+                return false;
+            }
+            var frames = new List<Float32CharacterInputTraceFrame>();
+            for (int i = 0; i < recorded.Frames.Count; i++)
+            {
+                Float32CharacterInputTraceFrame frame = recorded.Frames[i];
+                if (frame.Tick.Value > fromTick && frame.Tick.Value <= toTick)
+                    frames.Add(frame);
+            }
+            if (frames.Count == 0 ||
+                frames[0].Tick.Value != checked(fromTick + 1) ||
+                frames[frames.Count - 1].Tick.Value != toTick)
+            {
+                error = "Float32 input trace does not cover every Tick in the requested replay range.";
+                return false;
+            }
+            SimulationSessionCheckpoint rollback = null;
+            bool replayPrepared = false;
+            try
+            {
+                rollback = m_Transaction.CaptureCheckpoint();
+                RestoreCheckpoint(checkpoint);
+                Float32CharacterInputTraceModule.PrepareReplay(
+                    new Float32CharacterInputTrace(
+                        $"{recorded.TraceId}/range/{fromTick}-{toTick}",
+                        recorded.ActorId,
+                        frames));
+                replayPrepared = true;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                if (replayPrepared)
+                    Float32CharacterInputTraceModule.Stop();
+                if (rollback != null)
+                {
+                    try
+                    {
+                        RestoreCheckpoint(rollback);
+                    }
+                    catch (Exception rollbackException)
+                    {
+                        error = $"{exception.Message} Rollback failed: {rollbackException.Message}";
+                        return false;
+                    }
+                }
+                error = exception.Message;
+                return false;
+            }
+        }
+
+        public SimulationProgramEpoch PrepareProgramEpoch(
+            ProgramRevision sourceRevision,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
+            return m_Transaction.PrepareProgramEpoch(m_ProgramEpoch, sourceRevision, bindings);
+        }
+
+        public SimulationProgramAdoptionResult AdoptProgramEpoch(
+            SimulationProgramEpoch epoch,
+            IReadOnlyList<ISimulationProgramBinding> bindings)
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
+            if (!epoch.IsValid || epoch.Value <= m_ProgramEpoch.Value)
+            {
+                return new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Rejected,
+                    m_ProgramEpoch,
+                    epoch,
+                    "program_epoch_not_newer",
+                    "Program Epoch is not newer than the active Session Epoch.");
+            }
+            SimulationProgramAdoptionResult result;
+            try
+            {
+                result = m_Transaction.AdoptProgramEpoch(epoch, bindings);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Rejected,
+                    m_ProgramEpoch,
+                    epoch,
+                    "program_epoch_incompatible",
+                    exception.Message);
+            }
+            if (result.IsApplied)
+                m_ProgramEpoch = epoch;
+            return result;
+        }
 
         public void LogicTick(SimulationSessionLogicTickContext context)
         {
@@ -80,6 +273,7 @@ namespace ThirdPersonSimulation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            Float32CharacterInputTraceModule.ClearCompletedTrace();
             try
             {
                 m_Resources.Dispose();
@@ -102,6 +296,16 @@ namespace ThirdPersonSimulation
         {
             m_Lifecycle.Fail(failure);
             throw new SimulationSessionCompositionException(failure);
+        }
+
+        bool HasExternalReplaySource()
+        {
+            for (int i = 0; i < m_Pipeline.Passes.Count; i++)
+            {
+                if (m_Pipeline.Passes[i].Descriptor.StateClass == SimulationPipelinePassStateClass.ExternalSource)
+                    return true;
+            }
+            return false;
         }
 
         SimulationSessionDiagnosticsSnapshot BuildDiagnostics()

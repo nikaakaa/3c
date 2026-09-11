@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation
         public OperationSetVersion OperationSetVersion { get; }
         public SimulationComponentIdentity ExecutionBackend { get; }
         public SimulationPipelineIdentity Pipeline { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public ProgramCatalogHash ProgramCatalogHash { get; private set; }
         public SimulationActorRosterDescriptor Roster { get; }
         public SimulationComponentIdentity SessionSource { get; }
         public SimulationComponentIdentity WorldSolver { get; }
@@ -141,7 +141,6 @@ namespace ThirdPersonSimulation
                 OperationSetVersion.Value,
                 ExecutionBackend.ToString(),
                 Pipeline.ToString(),
-                ProgramCatalogHash.ToString(),
                 Roster.RosterHash.ToString(),
                 SessionSource.ToString(),
                 WorldSolver.ToString(),
@@ -153,6 +152,13 @@ namespace ThirdPersonSimulation
                 Model?.ToString() ?? string.Empty,
                 Endpoint?.ToString() ?? string.Empty,
                 Protocol?.ToString() ?? string.Empty));
+        }
+
+        public void AdoptProgramCatalogHash(ProgramCatalogHash programCatalogHash)
+        {
+            if (!programCatalogHash.IsValid)
+                throw new ArgumentException("Program Catalog Hash is invalid.", nameof(programCatalogHash));
+            ProgramCatalogHash = programCatalogHash;
         }
 
         static void RequireRole(SimulationComponentIdentity identity, SimulationComponentRole role, string parameter)

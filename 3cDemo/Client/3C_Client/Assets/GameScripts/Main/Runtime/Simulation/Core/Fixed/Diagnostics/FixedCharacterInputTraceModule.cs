@@ -233,12 +233,14 @@ namespace ThirdPersonSimulation.Fixed
         static ActorId s_ActorId;
         static int s_TickRate;
         static FixedCharacterInputTrace s_Replay;
+        static FixedCharacterInputTrace s_LastCompletedTrace;
         static WorldBodyState s_StartBody;
         static bool s_HasStartBody;
         static ulong s_ReplayStartTick;
         static int s_ReplayIndex;
         static int s_ReplayBodyCount;
         static int s_ReplayPauseAfterFrameCount;
+        static bool s_ContinueAfterReplay;
         static ReplayFrameBuilder[] s_ReplayEvidence =
             Array.Empty<ReplayFrameBuilder>();
         static string s_TraceId = string.Empty;
@@ -258,6 +260,17 @@ namespace ThirdPersonSimulation.Fixed
                     ? FixedCharacterInputTrace.ComputeBodyHash(s_StartBody).ToString()
                     : string.Empty,
                 s_Message);
+
+        public static FixedCharacterInputTrace LastCompletedTrace => s_LastCompletedTrace;
+        public static bool IsRecording => s_Mode == FixedCharacterInputTraceMode.Recording;
+        public static bool IsReplayActive =>
+            s_Mode == FixedCharacterInputTraceMode.PreparingReplay ||
+            s_Mode == FixedCharacterInputTraceMode.Replaying ||
+            s_Mode == FixedCharacterInputTraceMode.ReplayPaused;
+
+        public static bool IsReplayInput(CharacterSimulationInput input) =>
+            input != null &&
+            input.InputSourceIdentity.StartsWith("FixedInputTrace/", StringComparison.Ordinal);
 
         public static void PrepareRecording(ActorId actorId)
         {
@@ -285,6 +298,16 @@ namespace ThirdPersonSimulation.Fixed
             s_Message = "Waiting for the first canonical Fixed input frame.";
         }
 
+        public static void PrepareRecordingFromCheckpoint(
+            ActorId actorId,
+            WorldBodyState startBody)
+        {
+            PrepareRecording(actorId);
+            s_StartBody = startBody;
+            s_HasStartBody = true;
+            s_Message = "Fixed character input recording start body captured from Session state.";
+        }
+
         public static FixedCharacterInputTrace StopRecording()
         {
             if (s_Mode != FixedCharacterInputTraceMode.Recording)
@@ -301,6 +324,7 @@ namespace ThirdPersonSimulation.Fixed
                 s_ActorId,
                 s_TickRate,
                 s_RecordingFrames);
+            s_LastCompletedTrace = trace;
             ResetState();
             return trace;
         }
@@ -334,6 +358,19 @@ namespace ThirdPersonSimulation.Fixed
             }
             s_Mode = FixedCharacterInputTraceMode.Replaying;
             s_Message = "Waiting for the first canonical Fixed replay input frame.";
+        }
+
+        public static void PrepareReplayFromCheckpoint(
+            FixedCharacterInputTrace trace,
+            int pauseAfterFrameCount,
+            WorldBodyState startBody,
+            bool continueAfterReplay = false)
+        {
+            PrepareReplay(trace, pauseAfterFrameCount);
+            s_StartBody = startBody;
+            s_HasStartBody = true;
+            s_ContinueAfterReplay = continueAfterReplay;
+            s_Message = "Fixed character input replay start body restored from Session checkpoint.";
         }
 
         public static void ResumeReplay()
@@ -412,9 +449,16 @@ namespace ThirdPersonSimulation.Fixed
                 else if (s_ReplayIndex == s_Replay.Frames.Count &&
                     s_ReplayBodyCount == s_Replay.Frames.Count)
                 {
-                    s_Mode = FixedCharacterInputTraceMode.Completed;
-                    s_Message =
-                        $"Replayed and observed all {s_ReplayBodyCount} canonical Fixed input frames.";
+                    if (s_ContinueAfterReplay)
+                    {
+                        ResetState();
+                    }
+                    else
+                    {
+                        s_Mode = FixedCharacterInputTraceMode.Completed;
+                        s_Message =
+                            $"Replayed and observed all {s_ReplayBodyCount} canonical Fixed input frames.";
+                    }
                 }
             }
             catch (Exception exception)
@@ -458,6 +502,12 @@ namespace ThirdPersonSimulation.Fixed
         public static void Stop()
         {
             ResetState();
+        }
+
+        public static void ClearCompletedTrace()
+        {
+            ResetState();
+            s_LastCompletedTrace = null;
         }
 
         public static CharacterSimulationInput Resolve(
@@ -706,6 +756,7 @@ namespace ThirdPersonSimulation.Fixed
             s_ReplayIndex = 0;
             s_ReplayBodyCount = 0;
             s_ReplayPauseAfterFrameCount = 0;
+            s_ContinueAfterReplay = false;
             s_ReplayEvidence = Array.Empty<ReplayFrameBuilder>();
             s_TraceId = string.Empty;
             s_Message = string.Empty;

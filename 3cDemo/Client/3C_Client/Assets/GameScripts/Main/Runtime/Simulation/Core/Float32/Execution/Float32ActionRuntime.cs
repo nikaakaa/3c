@@ -459,11 +459,43 @@ namespace ThirdPersonSimulation
 			ActionSkillTraceSeverity severity,
 			string detail) => m_Trace.Add(operation, code, ToTraceSeverity(severity), detail);
 
-		void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Trace(
-			SimulationExecutionSource source,
-			string code,
-			ActionSkillTraceSeverity severity,
-			string detail) => m_Trace.Add(source, code, ToTraceSeverity(severity), detail);
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Trace(
+            SimulationExecutionSource source,
+            string code,
+            ActionSkillTraceSeverity severity,
+            string detail) => m_Trace.Add(source, code, ToTraceSeverity(severity), detail);
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TraceActionResult(
+            SimulationOperation operation,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason) => m_Trace.AddActionResult(
+                operation,
+                actionId,
+                skillId,
+                actionInstanceId,
+                inputSequence,
+                result,
+                reason);
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TraceActionResult(
+            SimulationExecutionSource source,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason) => m_Trace.AddActionResult(
+                source,
+                actionId,
+                skillId,
+                actionInstanceId,
+                inputSequence,
+                result,
+                reason);
 
 		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
 
@@ -482,7 +514,9 @@ namespace ThirdPersonSimulation
 
 		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.IsActive(Float32ActionInstanceState action) => action.IsActive;
 
-		string IActionSkillLifecyclePort<Float32ActionInstanceState>.ActionId(Float32ActionInstanceState action) => action.ActionId;
+	string IActionSkillLifecyclePort<Float32ActionInstanceState>.ActionId(Float32ActionInstanceState action) => action.ActionId;
+
+	CharacterSkillId IActionSkillLifecyclePort<Float32ActionInstanceState>.SkillId(Float32ActionInstanceState action) => action.SkillId;
 
 		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.InstanceId(Float32ActionInstanceState action) => action.InstanceId;
 
@@ -547,12 +581,29 @@ namespace ThirdPersonSimulation
 
 		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.TraceEnabled => m_Trace.Enabled;
 
-		void IActionSkillLifecyclePort<Float32ActionInstanceState>.Trace(
+	void IActionSkillLifecyclePort<Float32ActionInstanceState>.Trace(
 			SimulationExecutionSource source,
 			string code,
 			ActionSkillTraceSeverity severity,
 			string detail,
 			ulong generation) => m_Trace.Add(source, code, ToTraceSeverity(severity), detail, generation);
+
+	void IActionSkillLifecyclePort<Float32ActionInstanceState>.TraceActionResult(
+			SimulationExecutionSource source,
+			string actionId,
+			CharacterSkillId skillId,
+			ulong actionInstanceId,
+			ulong inputSequence,
+			SimulationActionResultKind result,
+			string reason) => m_Trace.AddActionResult(
+			source,
+			actionId,
+			skillId,
+			actionInstanceId,
+			inputSequence,
+			result,
+			reason,
+			SourceGeneration(source));
 
 		IEnumerable<Float32ActionInstanceState> EnumerateActionStates()
 		{

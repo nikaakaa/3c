@@ -161,6 +161,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedScalar Clamp(FixedScalar value, FixedScalar minimum, FixedScalar maximum) =>
             FixedScalar.Clamp(value, minimum, maximum);
         public string Format(FixedScalar value) => value.ToString();
+        public float ToSingle(FixedScalar value) => value.ToSingle();
         public OperationExecutionDescriptor TimelineOperationAt(int index) => Access.Topology.TimelineOperationAt(index);
         public OperationHandle TimelineOwner(OperationHandle child) => Access.Topology.TimelineOwner(child);
         public OperationExecutionDescriptor Operation(OperationHandle operation) => Access.Topology.Operation(operation);
@@ -322,6 +323,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public string ProducerIdentity(OperationHandle operation) => RequireProducer(Access.Operation(operation)).Identity;
         public ulong ReadActivationGeneration(OperationHandle operation) => m_Activations.ReadGeneration(operation);
+        public ulong TimelinePlaybackGeneration(OperationHandle timeline) =>
+            checked(ReadActivationGeneration(timeline) + CurrentSegmentGeneration());
 
         public bool TryCaptureActionContext(OperationHandle operation, out TimelineActionContextIdentity identity)
         {
@@ -605,18 +608,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedScalar.Zero));
         }
 
-        public void EmitTrace(TimelineTraceOutput output)
-        {
-            SimulationTraceSeverity severity = output.Severity switch
-            {
-                TimelineTraceSeverity.Detail => SimulationTraceSeverity.Detail,
-                TimelineTraceSeverity.Information => SimulationTraceSeverity.Information,
-                TimelineTraceSeverity.Warning => SimulationTraceSeverity.Warning,
-                TimelineTraceSeverity.Error => SimulationTraceSeverity.Error,
-                _ => throw new ArgumentOutOfRangeException(nameof(output))
-            };
-            m_Trace.Add(Access.Operation(output.Operation), output.Code, severity, output.Detail);
-        }
+        public void EmitTrace(TimelineTraceOutput output) => m_Trace.Add(output);
 
         FixedActionInstanceState RequireAction(TimelineActionContextIdentity identity)
         {

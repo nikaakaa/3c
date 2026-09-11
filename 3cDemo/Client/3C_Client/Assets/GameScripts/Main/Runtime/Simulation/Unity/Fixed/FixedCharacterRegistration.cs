@@ -18,16 +18,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public sealed class FixedCharacterRegistration :
         IFixedLocalSimulationActorRegistration,
-        ISimulationActorStartGate
+        ISimulationActorStartGate, ISimulationProgramEpochRegistration,
+        ISimulationPresentationCheckpointRuntime
     {
         readonly IUnityFixedCharacterControlSourceRuntime m_ControlSource;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
-        readonly ICharacterPresentationRuntime m_PresentationRuntime;
+        ICharacterPresentationRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly CharacterPresentationFrameTarget m_PresentationTarget;
+        readonly int m_MaximumActivePresentationRecords;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, EquipmentVisualSelection[]> m_PendingEquipmentSelections =
@@ -44,12 +46,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         int m_MaximumBodySamples;
         ulong m_TrajectoryIntentSequence;
         bool m_Disposed;
+        FixedCharacterSimulationProgramAsset m_PendingProgramAsset;
+        FixedCharacterSimulationProgram m_PendingProgram;
+        FixedSimulationActorBinding m_PendingProgramIdentity;
+        CharacterPresentationProjectionAsset m_PendingProjectionAsset;
+        CharacterPresentationProjection m_PendingProjection;
+        CharacterPresentationSemanticContract m_PendingPresentationContract;
+        ICharacterPresentationRuntime m_PendingPresentationRuntime;
+        readonly Func<
+            CharacterPresentationSemanticContract,
+            CharacterPresentationProjection,
+            CharacterPresentationRuntimeBinding> m_PresentationRuntimeFactory;
 
         public FixedCharacterRegistration(
             int ownerInstanceId,
             string ownerName,
             ActorId actorId,
             FixedCharacterSimulationProgram program,
+            CharacterPresentationProjectionAsset projectionAsset,
+            CharacterPresentationProjection projection,
             CharacterPresentationSemanticContract presentationContract,
             AnimationPresentationProgramIdentity presentationProgramIdentity,
             string worldBodyBindingId,
@@ -60,7 +75,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
-            int maximumActivePresentationRecords)
+            int maximumActivePresentationRecords,
+            Func<
+                CharacterPresentationSemanticContract,
+                CharacterPresentationProjection,
+                CharacterPresentationRuntimeBinding> presentationRuntimeFactory)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Fixed Actor registration owner identity is incomplete.");
@@ -77,9 +96,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             OwnerName = ownerName.Trim();
             ActorId = actorId;
             Program = program ?? throw new ArgumentNullException(nameof(program));
+            ProjectionAsset = projectionAsset ? projectionAsset : throw new ArgumentNullException(nameof(projectionAsset));
+            Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
+            Projection.RequireContract(PresentationContract);
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
+            m_MaximumActivePresentationRecords = maximumActivePresentationRecords;
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
             if (!m_ControlSource.CharacterProgramId.Equals(Program.Manifest.ProgramId) ||
                 !m_ControlSource.CharacterProgramHash.Equals(Program.ProgramHash))
@@ -88,6 +111,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
+            m_PresentationRuntimeFactory = presentationRuntimeFactory ??
+                throw new ArgumentNullException(nameof(presentationRuntimeFactory));
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
@@ -124,16 +149,197 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public string OwnerName { get; }
         public string OwnerIdentity => $"unity-fixed-character/{OwnerInstanceId}";
         public ActorId ActorId { get; }
-        public FixedCharacterSimulationProgram Program { get; }
-        public FixedSimulationActorBinding ProgramIdentity { get; }
-        public CharacterPresentationSemanticContract PresentationContract { get; }
+        public FixedCharacterSimulationProgram Program { get; private set; }
+        public FixedSimulationActorBinding ProgramIdentity { get; private set; }
+        public CharacterPresentationProjectionAsset ProjectionAsset { get; private set; }
+        public CharacterPresentationProjection Projection { get; private set; }
+        public CharacterPresentationSemanticContract PresentationContract { get; private set; }
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }
         public RuntimeDiagnosticsContext DiagnosticsContext { get; }
-        public SimulationOutputRouteDescriptor OutputRoute { get; }
+        public SimulationOutputRouteDescriptor OutputRoute { get; private set; }
         public IFixedCharacterControlSourceRuntime FixedControlSource => m_ControlSource;
+        public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public ISimulationProgramBinding ProgramBinding => m_PendingProgramIdentity ?? ProgramIdentity;
+        public bool SupportsPresentationCheckpointCapture =>
+            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
+            checkpoint.SupportsCheckpointCapture;
+        public bool SupportsPresentationCheckpointRestore =>
+            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
+            checkpoint.SupportsCheckpointCapture &&
+            checkpoint.SupportsCheckpointRestore;
+        public bool TryCapturePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error)
+        {
+            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime runtime)
+                return runtime.TryCaptureCheckpoint(checkpoint, out error);
+            error = "Character Presentation runtime does not expose checkpoint capture.";
+            return false;
+        }
+        public bool TryRestorePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error)
+        {
+            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime restore)
+                return restore.TryRestoreCheckpoint(checkpoint, out error);
+            error = "Character Presentation runtime does not expose checkpoint restore.";
+            return false;
+        }
+
+        public bool TryPrepareProgram(
+            FixedCharacterSimulationProgramAsset programAsset,
+            FixedCharacterSimulationProgram program,
+            CharacterPresentationProjectionAsset projectionAsset,
+            CharacterPresentationProjection projection,
+            out string error)
+        {
+            RequireAlive();
+            error = string.Empty;
+            DiscardProgramEpoch();
+            if (!programAsset || program == null)
+            {
+                error = "Program adoption requires a valid Fixed Program asset and loaded Program.";
+                return false;
+            }
+			if (program.Manifest.ProgramId != Program.Manifest.ProgramId ||
+				!program.LayoutHash.Equals(Program.LayoutHash) ||
+				program.Manifest.NumericProfile != Program.Manifest.NumericProfile)
+            {
+				error = "Program adoption changes the locked ProgramId, LayoutHash, or Numeric Profile.";
+				return false;
+			}
+			CharacterPresentationSemanticContract candidateContract =
+				FixedCharacterPresentationContractAdapter.Create(program);
+            if (!CharacterPresentationSemanticContract.TryMatchProducerTopology(
+					PresentationContract,
+					candidateContract,
+					out error))
+				return false;
+			if (projection != null)
+			{
+				if (!projectionAsset)
+				{
+					error = "Presentation Projection adoption requires a valid Projection asset.";
+					return false;
+				}
+				try
+				{
+					projection.RequireContract(candidateContract);
+					projection.RequirePosePayload();
+					projection.RequireTuningPayload();
+				}
+				catch (Exception exception)
+				{
+					error = exception.Message;
+					return false;
+				}
+				m_PendingProjectionAsset = projectionAsset;
+				m_PendingProjection = projection;
+				m_PendingPresentationContract = candidateContract;
+				if (!SameProjectionIdentity(Projection, projection))
+				{
+					try
+					{
+						CharacterPresentationRuntimeBinding binding =
+							m_PresentationRuntimeFactory(candidateContract, projection);
+						if (binding == null || binding.Runtime == null ||
+							!SameProjectionIdentity(binding.Projection, projection))
+							throw new InvalidOperationException("Presentation Projection factory returned a mismatched runtime.");
+						m_PendingPresentationRuntime = binding.Runtime;
+					}
+					catch (Exception exception)
+					{
+						DiscardPendingPresentation();
+						error = exception.Message;
+						return false;
+					}
+				}
+			}
+			m_PendingProgramAsset = programAsset;
+			m_PendingProgram = program;
+			m_PendingProgramIdentity = new FixedSimulationActorBinding(ActorId, program, WorldBodyBindingId);
+			return true;
+		}
+
+		public void CommitProgramEpoch()
+		{
+			if (m_PendingProgram == null)
+				return;
+			if (m_ControlSource is IFixedCharacterControlSourceProgramAdoption adoption &&
+				!adoption.TryAdoptProgram(m_PendingProgram, out string inputError))
+			{
+				throw new InvalidOperationException(inputError);
+			}
+			m_DiagnosticsAdapter.AdoptProgram(m_PendingProgram);
+			if (m_PendingProjection != null)
+			{
+				if (m_PendingPresentationRuntime != null)
+				{
+					ICharacterPresentationRuntime previous = m_PresentationRuntime;
+					ICharacterPresentationRuntime next = m_PendingPresentationRuntime;
+					IAnimationPresentationRuntimeSnapshotProvider snapshotProvider =
+						next as IAnimationPresentationRuntimeSnapshotProvider ??
+						throw new InvalidOperationException("Presentation Projection runtime has no diagnostics provider.");
+					m_PresentationOutput.Reset();
+					m_PresentationOutput.ReplaceRuntime(m_PendingProjection, next);
+					m_PresentationTarget.ReplaceRuntime(next);
+					m_AnimationDiagnosticsTarget.Replace(
+						new AnimationPresentationProgramIdentity(m_PendingProjection),
+						snapshotProvider);
+					m_PresentationRuntime = next;
+					m_PendingPresentationRuntime = null;
+					previous.Dispose();
+				}
+				ProjectionAsset = m_PendingProjectionAsset;
+				Projection = m_PendingProjection;
+				PresentationContract = m_PendingPresentationContract;
+			}
+			Program = m_PendingProgram;
+			ProgramIdentity = m_PendingProgramIdentity;
+			DiscardProgramEpoch();
+		}
+
+		public void DiscardProgramEpoch()
+		{
+			m_PendingProgramAsset = null;
+			m_PendingProgram = null;
+			m_PendingProgramIdentity = null;
+			DiscardPendingPresentation();
+		}
+
+		void DiscardPendingPresentation()
+		{
+			m_PendingProjectionAsset = null;
+			m_PendingProjection = null;
+			m_PendingPresentationContract = null;
+			ICharacterPresentationRuntime pending = m_PendingPresentationRuntime;
+			m_PendingPresentationRuntime = null;
+			pending?.Dispose();
+		}
+
+		static bool SameProjectionIdentity(
+			CharacterPresentationProjection current,
+			CharacterPresentationProjection candidate)
+		{
+			return current != null && candidate != null &&
+				string.Equals(current.ProgramId, candidate.ProgramId, StringComparison.Ordinal) &&
+				string.Equals(current.SourceRevision, candidate.SourceRevision, StringComparison.Ordinal) &&
+				string.Equals(current.SemanticHash, candidate.SemanticHash, StringComparison.Ordinal) &&
+				string.Equals(current.ContractHash, candidate.ContractHash, StringComparison.Ordinal) &&
+				string.Equals(current.ProjectionRevision, candidate.ProjectionRevision, StringComparison.Ordinal);
+		}
+
+		public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
+			m_DiagnosticsAdapter.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
+
+		public void BindProgramEpoch(ulong programEpoch) =>
+			DiagnosticsContext.SetProgramEpoch(programEpoch);
+
+		public void BindExecutionBranch(Guid executionBranchId) =>
+			DiagnosticsContext.SetExecutionBranch(executionBranchId);
         public bool IsSimulationStartReady =>
             FixedCharacterInputTraceModule.CanAdvanceSimulation(ActorId);
         public string SimulationStartWaitReason =>

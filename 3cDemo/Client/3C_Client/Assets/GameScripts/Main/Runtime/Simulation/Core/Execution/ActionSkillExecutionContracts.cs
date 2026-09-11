@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    public enum SimulationActionResultKind : byte
+    {
+        None = 0,
+        Accepted = 1,
+        Rejected = 2,
+        Completed = 3,
+        Cancelled = 4,
+        Interrupted = 5,
+        Aborted = 6,
+        Corrected = 7
+    }
+
     internal enum ActionSkillTraceSeverity : byte
     {
         Detail = 1,
@@ -175,6 +187,22 @@ namespace ThirdPersonSimulation
         bool IsActionInstanceStopComplete(ulong actionInstanceId);
         void Trace(TOperation operation, string code, ActionSkillTraceSeverity severity, string detail);
         void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail);
+        void TraceActionResult(
+            TOperation operation,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason);
+        void TraceActionResult(
+            SimulationExecutionSource source,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason);
     }
 
     internal enum ActionSkillLifecyclePhase : byte
@@ -279,6 +307,7 @@ namespace ThirdPersonSimulation
         bool TryFindActive(CharacterSkillId skillId, out TActionState action);
         bool IsActive(TActionState action);
         string ActionId(TActionState action);
+        CharacterSkillId SkillId(TActionState action);
         ulong InstanceId(TActionState action);
         ulong PredictionKey(TActionState action);
         ulong InputSequence(TActionState action);
@@ -295,5 +324,13 @@ namespace ThirdPersonSimulation
         ulong SourceGeneration(SimulationExecutionSource source);
         bool TraceEnabled { get; }
         void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail, ulong generation);
+        void TraceActionResult(
+            SimulationExecutionSource source,
+            string actionId,
+            CharacterSkillId skillId,
+            ulong actionInstanceId,
+            ulong inputSequence,
+            SimulationActionResultKind result,
+            string reason);
     }
 }

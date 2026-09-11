@@ -187,6 +187,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FollowerPositionCorrectionMeters => m_LastPresentedFrame.PositionError;
         public float FollowerYawCorrectionDegrees => m_LastPresentedFrame.RotationError;
 
+        internal bool TryGetLatestBody(out CharacterPresentationBodyState body)
+        {
+            if (m_LatestTick != 0 &&
+                m_CommittedBodies.TryGetValue(m_LatestTick, out body))
+            {
+                return true;
+            }
+            if (m_LastPresentedFrame.IsValid)
+            {
+                body = new CharacterPresentationBodyState(
+                    m_ActorId,
+                    m_LastPresentedFrame.TargetPosition,
+                    m_LastPresentedFrame.TargetRotation,
+                    m_LastPresentedFrame.TargetVelocity,
+                    m_LastPresentedFrame.TargetGrounded);
+                return true;
+            }
+            body = default;
+            return false;
+        }
+
         public void Capture(CharacterPresentationBodyInterval interval)
         {
             RequireAlive();

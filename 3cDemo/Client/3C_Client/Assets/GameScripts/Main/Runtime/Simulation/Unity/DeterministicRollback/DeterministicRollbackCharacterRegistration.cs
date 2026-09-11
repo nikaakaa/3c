@@ -20,7 +20,8 @@ using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
 {
     public sealed class DeterministicRollbackCharacterRegistration :
-        IDeterministicRollbackSimulationActorRegistration
+        IDeterministicRollbackSimulationActorRegistration,
+        ISimulationPresentationCheckpointRuntime
     {
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
@@ -134,6 +135,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public IFixedCharacterControlSourceRuntime RollbackInput => m_LocalInput;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public bool SupportsPresentationCheckpointCapture =>
+            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
+            checkpoint.SupportsCheckpointCapture;
+        public bool SupportsPresentationCheckpointRestore =>
+            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
+            checkpoint.SupportsCheckpointCapture &&
+            checkpoint.SupportsCheckpointRestore;
+        public bool TryCapturePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error)
+        {
+            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime runtime)
+                return runtime.TryCaptureCheckpoint(checkpoint, out error);
+            error = "Character Presentation runtime does not expose checkpoint capture.";
+            return false;
+        }
+        public bool TryRestorePresentationCheckpoint(
+            SimulationSessionCheckpoint checkpoint,
+            out string error)
+        {
+            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime restore)
+                return restore.TryRestoreCheckpoint(checkpoint, out error);
+            error = "Character Presentation runtime does not expose checkpoint restore.";
+            return false;
+        }
         StableHash ISimulationActorRegistration.DiagnosticsConfigurationHash => StableHash.Compute(
             Program.Manifest.ProgramId.Value,
             Program.Manifest.SourceRevision.Value,
@@ -172,6 +198,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_OutputCommitter = outputCommitter ?? throw new ArgumentNullException(nameof(outputCommitter));
             m_NetworkDiagnostics = networkDiagnostics ?? throw new ArgumentNullException(nameof(networkDiagnostics));
         }
+
+        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
+            m_DiagnosticsAdapter.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
+
+        public void BindProgramEpoch(ulong programEpoch) =>
+            DiagnosticsContext.SetProgramEpoch(programEpoch);
+
+        public void BindExecutionBranch(Guid executionBranchId) =>
+            DiagnosticsContext.SetExecutionBranch(executionBranchId);
 
         public void Activate()
         {

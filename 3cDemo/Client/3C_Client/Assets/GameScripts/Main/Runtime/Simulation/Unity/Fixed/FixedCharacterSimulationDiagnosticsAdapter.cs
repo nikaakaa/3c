@@ -10,27 +10,64 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public sealed class FixedCharacterSimulationDiagnosticsAdapter : FixedRuntime.ISimulationDiagnosticsSink, ISimulationValueTraceInterest, ISimulationControlTraceInterest
     {
         readonly RuntimeDiagnosticsContext m_Context;
-        readonly IDebugSourceMap m_SourceMap;
+        IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
-        readonly string[] m_GraphInvocationPaths;
-        readonly CharacterPortValueDiagnostics m_PortValues;
-        readonly CharacterControlFlowDiagnostics m_ControlEdges;
+        string[] m_GraphInvocationPaths;
+        RuntimeSourceElementHandle[] m_GraphInvocationSources;
+        ThirdPersonSimulation.ProgramSourceMapEntry[] m_OperationSources;
+        CharacterPortValueDiagnostics m_PortValues;
+        CharacterControlFlowDiagnostics m_ControlEdges;
 
         public FixedCharacterSimulationDiagnosticsAdapter(
             RuntimeDiagnosticsContext context,
             FixedRuntime.CharacterSimulationProgram program)
         {
             m_Context = context ?? throw new ArgumentNullException(nameof(context));
-            m_SourceMap = context.SourceMap;
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
-            m_PortValues = new CharacterPortValueDiagnostics(context, m_ExecutionId, program.SourceMap);
-            m_ControlEdges = new CharacterControlFlowDiagnostics(context, m_ExecutionId, program.SourceMap, program.ControlFlow);
+            ConfigureProgram(program);
+        }
+
+        public void AdoptProgram(FixedRuntime.CharacterSimulationProgram program)
+        {
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
+                program.Manifest.ProgramId.Value,
+                program.Manifest.SourceRevision.Value,
+                program.ProgramHash.ToString(),
+                program.SourceMap);
+            m_Context.AdoptProgram(debugProgram.Revision, debugProgram.SourceMap);
+            ConfigureProgram(program);
+        }
+
+        void ConfigureProgram(FixedRuntime.CharacterSimulationProgram program)
+        {
+            m_SourceMap = m_Context.SourceMap;
+            m_PortValues = new CharacterPortValueDiagnostics(m_Context, m_ExecutionId, program.SourceMap);
+            m_ControlEdges = new CharacterControlFlowDiagnostics(m_Context, m_ExecutionId, program.SourceMap, program.ControlFlow);
             m_GraphInvocationPaths = new string[program.Operations.Count];
+            m_GraphInvocationSources = new RuntimeSourceElementHandle[program.Operations.Count];
+            m_OperationSources = new ThirdPersonSimulation.ProgramSourceMapEntry[program.Operations.Count];
             foreach (ThirdPersonSimulation.ProgramSourceMapEntry entry in program.SourceMap)
+            {
                 if (entry.TargetKind == ThirdPersonSimulation.ProgramSourceTargetKind.Operation)
+                {
                     m_GraphInvocationPaths[entry.TargetIndex] = entry.GraphInvocationPath;
+                    m_OperationSources[entry.TargetIndex] = entry;
+                }
+                else if (entry.TargetKind == ThirdPersonSimulation.ProgramSourceTargetKind.GraphInvocation)
+                {
+                    m_GraphInvocationPaths[entry.TargetIndex] = entry.GraphInvocationPath;
+                    if (!m_SourceMap.TryGetHandle(
+                            CharacterRuntimeDebugProgramBuilder.ResolveSourceKey(entry),
+                            out RuntimeSourceElementHandle graphSource))
+                        throw new InvalidOperationException(
+                            $"Graph invocation '{entry.GraphInvocationPath}' is absent from the Debug Source Map.");
+                    m_GraphInvocationSources[entry.TargetIndex] = graphSource;
+                }
+            }
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 if (!m_SourceMap.TryGetProgramTarget(
@@ -56,7 +93,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (!IsEnabled)
                 return;
-            m_Context.BeginLogicTick(record.Tick.Value);
+            m_Context.BeginLogicTick(
+                record.Tick.Value,
+                record.Source.ClockId,
+                record.Source.Kind.ToString());
             RuntimeTraceChannel channel = record.Kind == FixedRuntime.SimulationBoundaryTraceKind.WorldBatchStarted ||
                                           record.Kind == FixedRuntime.SimulationBoundaryTraceKind.WorldBatchCompleted
                 ? RuntimeTraceChannel.Motion
@@ -74,6 +114,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     Detail = $"{record.Detail} | Source={record.Source.Kind}:{record.Source.ClockId}/{record.Source.SourceTick} | Program={record.ProgramId.Value} | Solver={record.SolverId.Value} | Capabilities={record.SolverCapabilities} | StateHash={record.CharacterStateHash} | WorldHash={record.WorldHash} | Deterministic={record.DeterministicValidity}",
                     OwnerId = record.ActorId.IsValid ? record.ActorId.Value : string.Empty,
                     RelatedElementId = record.SnapshotIdentity,
+                    CharacterStateHash = record.CharacterStateHash.IsValid ? record.CharacterStateHash.ToString() : string.Empty,
+                    WorldHash = record.WorldHash.IsValid ? record.WorldHash.ToString() : string.Empty,
                     Flag = record.Success,
                     Value = DebugValueSnapshot.Capture(record.Tick.Value)
                 });
@@ -119,20 +161,75 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             string callSite = m_GraphInvocationPaths[record.Header.Activation.Source.Operation.Value];
             if (record.ActionInstanceId != 0 && string.IsNullOrEmpty(callSite))
                 throw new InvalidOperationException("技能诊断操作缺少编译图调用路径。");
-            RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
-                ? RuntimeInstanceKey.SkillExecution(
-                    m_Context.CharacterRuntimeId,
-                    m_ExecutionId,
-                    record.SkillId,
-                    record.ActionInstanceId,
-                    callSite,
-                    record.SkillExecutionGeneration,
-                    record.GraphInvocationGeneration)
-                : RuntimeInstanceKey.Runnable(
-                    m_Context.CharacterRuntimeId,
-                    m_ExecutionId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation);
+            RuntimeInstanceKey runtimeInstance;
+            if (record.TimelineOperation.IsValid)
+            {
+                if (record.TimelinePlaybackGeneration == 0)
+                    throw new InvalidOperationException("Timeline trace is missing its playback generation.");
+                runtimeInstance = IsTreeClipTrace(kind)
+                    ? RuntimeInstanceKey.TreeClip(
+                         m_Context.CharacterRuntimeId,
+                         m_ExecutionId,
+                         record.TimelineOperation.Value,
+                         record.TimelinePlaybackGeneration,
+                         record.TimelineCycle,
+                         record.ActionInstanceId,
+                         record.Header.Activation.Source.Operation.Value)
+                    : RuntimeInstanceKey.Timeline(
+                         m_Context.CharacterRuntimeId,
+                         record.TimelineOperation.Value,
+                         record.TimelinePlaybackGeneration,
+                         record.ActionInstanceId);
+            }
+            else
+            {
+                runtimeInstance = record.ActionInstanceId != 0
+                    ? RuntimeInstanceKey.SkillExecution(
+                        m_Context.CharacterRuntimeId,
+                        m_ExecutionId,
+                        record.SkillId,
+                        record.ActionInstanceId,
+                        callSite,
+                        record.SkillExecutionGeneration,
+                        record.GraphInvocationGeneration)
+                    : RuntimeInstanceKey.Runnable(
+                        m_Context.CharacterRuntimeId,
+                        m_ExecutionId,
+                        record.Header.Activation.Source.Operation.Value.ToString(),
+                        record.Header.Activation.Generation);
+            }
+            RuntimeTraceEventKind graphKind = ResolveGraphLifecycleKind(record.Code);
+            RuntimeSourceElementHandle graphSource =
+                m_GraphInvocationSources[record.Header.Activation.Source.Operation.Value];
+            if (graphKind != RuntimeTraceEventKind.None && graphSource.IsValid)
+            {
+                m_Context.Publish(
+                    RuntimeTraceChannel.Graph,
+                    RuntimeTraceDomain.Logic,
+                    graphKind,
+                    graphSource,
+                    runtimeInstance,
+                    new RuntimeTracePayload
+                    {
+                        Status = record.Severity.ToString(),
+                        Name = record.Code,
+                        Detail = record.Detail,
+                        Cause = record.Boundary,
+                        OwnerId = record.Header.ActorId.Value,
+                        SkillId = record.SkillId,
+                        ActionInstanceId = record.ActionInstanceId,
+                        CallSiteId = callSite,
+                        ActivationGeneration = record.Header.Activation.Generation,
+                        SkillExecutionGeneration = record.SkillExecutionGeneration,
+                        GraphInvocationGeneration = record.GraphInvocationGeneration,
+                        ParentInvocationGeneration = record.ParentInvocationGeneration,
+                        Time = record.TimelineTime,
+                        Cycle = record.TimelineCycle,
+                        TimelinePlayback = ResolveTimelinePlayback(record),
+                        Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
+                        Value = DebugValueSnapshot.Capture(record.Header.Sequence)
+                    });
+            }
             m_Context.Publish(
                 ResolveOperationChannel(kind, record.Code),
                 RuntimeTraceDomain.Logic,
@@ -141,22 +238,56 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 runtimeInstance,
                 new RuntimeTracePayload
                 {
-                    Status = record.Severity.ToString(),
+                    Status = record.ActionResult == ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? record.Severity.ToString()
+                        : record.ActionResult.ToString(),
                     Name = record.Code,
                     Detail = record.Detail,
-                    Cause = record.Boundary,
+                    Cause = record.ActionResult == ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? record.Boundary
+                        : record.ActionResult.ToString(),
                     OwnerId = record.Header.ActorId.Value,
+                    RelatedElementId = record.ActionResult != ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? record.ActionId
+                        : string.Empty,
                     SkillId = record.SkillId,
+                    InputSequence = record.InputSequence,
                     ActionInstanceId = record.ActionInstanceId,
                     CallSiteId = callSite,
                     ActivationGeneration = record.Header.Activation.Generation,
                     SkillExecutionGeneration = record.SkillExecutionGeneration,
                     GraphInvocationGeneration = record.GraphInvocationGeneration,
                     ParentInvocationGeneration = record.ParentInvocationGeneration,
-                    Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
+                    Time = record.TimelineTime,
+                    Cycle = record.TimelineCycle,
+                    TimelinePlayback = ResolveTimelinePlayback(record),
+                    Flag = record.ActionResult != ThirdPersonSimulation.SimulationActionResultKind.Rejected &&
+                        record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
             CharacterPipelineTraceCommandLine.LogOperation(record, kind, source, m_SourceMap);
+        }
+
+        RuntimeTimelinePlaybackProvenance ResolveTimelinePlayback(FixedRuntime.SimulationTraceRecord record)
+        {
+            if (!record.TimelineOperation.IsValid ||
+                record.TimelineOperation.Value >= m_OperationSources.Length)
+                return default;
+            ThirdPersonSimulation.ProgramSourceMapEntry source =
+                m_OperationSources[record.TimelineOperation.Value];
+            if (source == null || string.IsNullOrEmpty(source.GraphId) ||
+                string.IsNullOrEmpty(source.NodeId) || record.GraphInvocationGeneration == 0)
+                return default;
+            return new RuntimeTimelinePlaybackProvenance(
+                source.GraphId,
+                source.NodeId,
+                m_ExecutionId,
+                record.GraphInvocationGeneration,
+                string.Empty,
+                string.Empty,
+                Guid.Empty,
+                0,
+                source.DisplayPath);
         }
 
         static DebugValueSnapshot CaptureValue(FixedRuntime.CharacterStateValue value) => value.Kind switch
@@ -191,17 +322,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     : RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId),
                 new RuntimeTracePayload
                 {
-                    Status = record.Severity.ToString(),
+                    Status = record.ActionResult == ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? record.Severity.ToString()
+                        : record.ActionResult.ToString(),
                     Name = record.Code,
                     Detail = $"{record.Detail} | Source={source.Identity}",
+                    Cause = record.ActionResult == ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? string.Empty
+                        : record.ActionResult.ToString(),
                     OwnerId = source.ModuleId.Value,
-                    RelatedElementId = source.TransitionId.IsValid
+                    RelatedElementId = record.ActionResult != ThirdPersonSimulation.SimulationActionResultKind.None
+                        ? record.ActionId
+                        : source.TransitionId.IsValid
                         ? source.TransitionId.Value
                         : source.StateId.Value,
                     SkillId = record.SkillId,
+                    InputSequence = record.InputSequence,
                     ActionInstanceId = record.ActionInstanceId,
                     ActivationGeneration = record.Header.Activation.Generation,
-                    Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
+                    Flag = record.ActionResult != ThirdPersonSimulation.SimulationActionResultKind.Rejected &&
+                        record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
                 });
         }
@@ -210,7 +350,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (!IsEnabled)
                 return;
-            m_Context.BeginLogicTick(record.Source.SourceTick);
+            m_Context.BeginLogicTick(
+                record.Source.SourceTick,
+                record.Source.ClockId,
+                record.Source.Kind.ToString());
             RuntimeTraceEventKind kind = ResolvePipelineKind(record);
             string name = record.PassId.IsValid ? record.PassId.Value : record.Kind.ToString();
             m_Context.Publish(
@@ -230,6 +373,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     RelatedElementId = record.SnapshotParticipant,
                     Flag = record.Success,
                     Value = DebugValueSnapshot.Capture(record.ElapsedStopwatchTicks)
+                });
+        }
+
+        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash)
+        {
+            if (!IsEnabled)
+                return;
+            if (tick == 0 || string.IsNullOrWhiteSpace(snapshotIdentity) || !snapshotHash.IsValid)
+                throw new ArgumentException("Simulation checkpoint trace identity is incomplete.");
+            m_Context.BeginLogicTick(tick);
+            m_Context.Publish(
+                RuntimeTraceChannel.Graph,
+                RuntimeTraceDomain.Lifecycle,
+                RuntimeTraceEventKind.SimulationCheckpointCaptured,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = "Captured",
+                    Name = "SimulationCheckpointCaptured",
+                    Detail = $"Snapshot={snapshotIdentity};Hash={snapshotHash}",
+                    RelatedElementId = snapshotIdentity,
+                    Flag = true,
+                    Value = DebugValueSnapshot.Capture(snapshotHash.ToString())
                 });
         }
 
@@ -263,6 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     Cause = record.Kind.ToString(),
                     OwnerId = record.ActorId.IsValid ? record.ActorId.Value : string.Empty,
                     RelatedElementId = $"confirmed={record.AuthorityTick};snapshot={record.SnapshotSequence};ack={record.AckSequence}",
+                    InputSequence = record.InputSequence,
                     Time = record.PrimaryValue.ToSingle(),
                     SecondaryTime = record.SecondaryValue.ToSingle(),
                     Priority = record.QueueDepth,
@@ -328,6 +496,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "condition_graph_evaluated" => RuntimeTraceEventKind.ConditionGraphEvaluated,
                 "state_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
                 "state_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
+                "timeline_requested" => RuntimeTraceEventKind.TimelineRequested,
+                "timeline_action_context_missing" => RuntimeTraceEventKind.TimelineCancelled,
+                "timeline_started" => RuntimeTraceEventKind.TimelineStarted,
                 "timeline_logic_time" => RuntimeTraceEventKind.TimelineLogicTime,
                 "timeline_completed" => RuntimeTraceEventKind.TimelineCompleted,
                 "timeline_action_context_ended" => RuntimeTraceEventKind.TimelineCancelled,
@@ -335,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "tree_clip_entered" => RuntimeTraceEventKind.TreeClipEntered,
                 "tree_clip_updated" => RuntimeTraceEventKind.TreeClipUpdated,
                 "tree_clip_exited" => RuntimeTraceEventKind.TreeClipExited,
+                "tree_clip_destroyed" => RuntimeTraceEventKind.TreeClipDestroyed,
                 "tree_clip_decision" => RuntimeTraceEventKind.ClipActive,
                 "blackboard_action_window_projected" => RuntimeTraceEventKind.BlackboardProjected,
                 "action_window_active" or
@@ -344,6 +516,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "action_activation_rejected" => RuntimeTraceEventKind.ActionActivationRequested,
                 "action_activated" => RuntimeTraceEventKind.ActionActivationRequested,
                 "action_lifecycle" => RuntimeTraceEventKind.ActionLifecycleTransitioned,
+                "action_result" => RuntimeTraceEventKind.ActionResultSubmitted,
                 "equipment_snapshot" => RuntimeTraceEventKind.EquipmentSnapshot,
                 "equipment_change" => RuntimeTraceEventKind.EquipmentChange,
                 "motion_contribution" => RuntimeTraceEventKind.MotionContribution,
@@ -357,6 +530,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             };
         }
 
+        static bool IsTreeClipTrace(RuntimeTraceEventKind kind) =>
+            kind == RuntimeTraceEventKind.TreeClipEntered ||
+            kind == RuntimeTraceEventKind.TreeClipUpdated ||
+            kind == RuntimeTraceEventKind.TreeClipExited ||
+            kind == RuntimeTraceEventKind.TreeClipDestroyed ||
+            kind == RuntimeTraceEventKind.ClipActive;
+
         static RuntimeTraceEventKind ResolveControlKind(string code)
         {
             return code switch
@@ -365,7 +545,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "control_state_exited" => RuntimeTraceEventKind.StateScopeExited,
                 "control_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
                 "control_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
+                "action_result" => RuntimeTraceEventKind.ActionResultSubmitted,
                 _ => RuntimeTraceEventKind.NodeStatus
+            };
+        }
+
+        static RuntimeTraceEventKind ResolveGraphLifecycleKind(string code)
+        {
+            return code switch
+            {
+                "operation_enter" => RuntimeTraceEventKind.GraphCreated,
+                "operation_complete" or
+                "operation_stopped" or
+                "operation_force_stopped" => RuntimeTraceEventKind.GraphDestroyed,
+                _ => RuntimeTraceEventKind.None
             };
         }
 
@@ -387,13 +580,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         static RuntimeTraceChannel ResolveOperationChannel(RuntimeTraceEventKind kind, string code)
         {
-            if (kind == RuntimeTraceEventKind.TimelineLogicTime ||
+            if (kind == RuntimeTraceEventKind.TimelineRequested ||
+                kind == RuntimeTraceEventKind.TimelineStarted ||
+                kind == RuntimeTraceEventKind.TimelineLogicTime ||
                 kind == RuntimeTraceEventKind.TimelineCompleted ||
                 kind == RuntimeTraceEventKind.TimelineCancelled ||
                 kind == RuntimeTraceEventKind.TimelineStopped ||
                 kind == RuntimeTraceEventKind.TreeClipEntered ||
                 kind == RuntimeTraceEventKind.TreeClipUpdated ||
                 kind == RuntimeTraceEventKind.TreeClipExited ||
+                kind == RuntimeTraceEventKind.TreeClipDestroyed ||
                 kind == RuntimeTraceEventKind.ClipActive)
                 return RuntimeTraceChannel.Timeline;
             if (kind == RuntimeTraceEventKind.BlackboardProjected)
@@ -405,7 +601,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 kind == RuntimeTraceEventKind.StateTransitionSelected ||
                 kind == RuntimeTraceEventKind.ActionWindowSampled ||
                 kind == RuntimeTraceEventKind.ActionActivationRequested ||
-                kind == RuntimeTraceEventKind.ActionLifecycleTransitioned)
+                kind == RuntimeTraceEventKind.ActionLifecycleTransitioned ||
+                kind == RuntimeTraceEventKind.ActionResultSubmitted)
                 return RuntimeTraceChannel.StateMachine;
             if (kind == RuntimeTraceEventKind.GameplayEffectLifecycle || code.StartsWith("gameplay_", StringComparison.Ordinal))
                 return RuntimeTraceChannel.GameplayEffect;

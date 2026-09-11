@@ -203,7 +203,9 @@ namespace ThirdPersonSimulation.Fixed
                     reconstructible.AsReadOnly(),
                     products,
                     workingStatePort,
-                    completedStepPort);
+                    completedStepPort,
+                    request.ProgramRuntime,
+                    programPort);
                 var handle = new FixedPassPipelineRuntimeHandle(
                     request.Descriptor,
                     request.CompiledPipeline,

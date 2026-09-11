@@ -957,3 +957,18 @@ owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文�
 依赖闭合验证：协调器引用的 `EditorPlayModeSceneLauncher` 新API、`SessionHost.ProgramEpoch`（主线原SessionHost无此属性，本批整取分支版补齐）、`RuntimeDebugSession`（主线与分支该文件逐字节一致）、`RuntimeDebugSourceMapSnapshot`（主线已有）全部在主线可解析；启动器主线调用方仅本批三处，已全部随批迁移；未复制 `TimelineEditorCursorState`/`Float32CharacterInputTraceModule`（本批无引用，留待6.2/5.3批次）。
 
 边界与未含：Timeline窗口侧的被动观察接线（6.2窗口段）、领域信息展示与最终UI验收（6.1）、协调器状态机的验收级勾选（4.1–4.7，分支亦未勾）、Build后台拆分（8.6）不在本批。未跑Unity编译与端到端，按项目规则由用户验收：编译 + 打开任一Graph Shell确认Scene Play工具条出现。
+
+## 2026-09-11 复制批次2：诊断/模拟合同层批量同步与编译收口
+
+批次1编译暴露的依赖瀑布按层闭合后，对剩余差异执行原则化批量同步：分支相对主线全部差异文件中，主线自合并基线 `9c7766d32` 后未演进且工作区干净的整取分支版，共83文件；主线演进的104个（Pose/相机/表现等主线新工作）与工作区脏的8个（含用户未提交工作）一律排除。同步覆盖 Simulation 合同（ActorRegistration含Checkpoint/ProgramEpoch/ExecutionBranch端口、ActionSkillExecution、TimelineControl）、诊断层（Context/Store/ViewModel/TargetRegistry/合同）、表现运行时（Body/相机/设备/工厂）、Build后台与Graph Shell/Timeline编辑面。
+
+批次1自己的遗留也一并清账：
+- `RuntimeExecutionTimeline.cs` 三处分支自带错误修复（`active`/`key`作用域重名、`PendingSpan.Start`改public）；
+- 两个分支半成品Inspector（`TimelineClipInspectorView`/`TreeClipInspectorView`引用从未存在的`EditorView`）回退主线版；
+- `AnimationPreviewEngine`/`AnimationPreviewAdapters`为9.2半删除状态（引擎引用已删adapter），回退主线版，待9.x批次按任务统一删除；
+- `BtsmtlSkillObservationSession`/`RuntimeDebugSourceNavigator`主线本有实现，误以分支版覆盖又误删，已恢复主线版；其分支增量（三参`Open`重载、`FocusSource`、`FlowGraph.AuthoringId`）依赖的窗口导航API属6.2批次实现，本批不含；
+- 主线演进文件的手术移植：`CharacterPipelineHost`补4个adoption/input成员（TryPrepare/Discard/TryQueueProgramAdoption、TryQueueInputRequest，并剔除随range拖入的重复LiveTuning两属性）并以主线新工厂实现`presentationRuntimeFactory`；`AnimationPresentationRuntimeTarget.Replace`移植（m_Provider去readonly、ProgramIdentity改private set）；`CharacterSimulationPresentationRuntime.TryGetLatestBody`移植并升public；`CharacterSimulationTickTargets.ReplaceRuntime`升public（Fixed程序集跨界调用，分支同名internal为分支自带错误）；
+- `MotionMatchingQueryFixture`按主线ctor补`TimelineData`空参（引擎显式处理null）；
+- `ThirdPersonSimulation.Fixed.Unity.asmdef`补`ThirdPersonSimulation.Float32`引用（分支asmdef同样缺失，分支自带错误）。
+
+验证：主线Unity Editor全量编译 **0 error**（MCP read_console确认），涵盖此前13处报错的全部修复。任务11.1编译门禁据此勾选。排除文件（主线演进104个）与6.2窗口接线、9.x删除批次、4.1-4.7验收级勾选为后续范围。

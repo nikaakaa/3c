@@ -202,7 +202,9 @@ namespace ThirdPersonSimulation
                     reconstructible.AsReadOnly(),
                     products,
                     workingStatePort,
-                    completedStepPort);
+                    completedStepPort,
+                    request.ProgramRuntime,
+                    programPort);
                 var handle = new Float32PassPipelineRuntimeHandle(
                     request.Descriptor,
                     request.CompiledPipeline,

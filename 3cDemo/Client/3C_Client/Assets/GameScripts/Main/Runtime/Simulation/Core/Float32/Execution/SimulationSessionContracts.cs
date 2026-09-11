@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class SimulationActorBinding
+    public sealed class SimulationActorBinding : ISimulationProgramBinding
     {
         public SimulationActorBinding(ActorId actorId, CharacterSimulationProgram program, string worldBodyBindingId)
         {
@@ -24,6 +24,7 @@ namespace ThirdPersonSimulation
         public LayoutHash LayoutHash { get; }
         public string WorldBodyBindingId { get; }
         internal CharacterSimulationProgram Program { get; }
+        object ISimulationProgramBinding.ProgramObject => Program;
     }
 
     public enum SimulationOutputDispositionKind : byte

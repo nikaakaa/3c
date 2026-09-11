@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
@@ -202,6 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         artifact.Header.Root));
                 if (!roundTrip.ProgramHash.Equals(result.Program.ProgramHash) || !roundTrip.LayoutHash.Equals(result.Program.LayoutHash))
                     throw new InvalidDataException("Float32 Program round-trip identity mismatch.");
+                _ = CharacterRuntimeDebugProgramBuilder.Build(roundTrip);
                 var partitions = new HashSet<ProgramStateValueKind>();
                 for (int i = 0; i < result.Program.StateSlots.Count; i++)
                     partitions.Add(result.Program.StateSlots[i].ValueKind);
@@ -284,6 +286,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 FixedCompilation compilation =
                     FixedCharacterSimulationTargetCompiler.CompileArtifact(artifact);
+                _ = CharacterRuntimeDebugProgramBuilder.Build(
+                    compilation.Program.Manifest.ProgramId.Value,
+                    compilation.Program.Manifest.SourceRevision.Value,
+                    compilation.Program.ProgramHash.ToString(),
+                    compilation.Program.SourceMap);
                 return new FixedCharacterSimulationTargetBuildProduct(
                     compilation,
                     FixedCharacterPresentationContractAdapter.Create(compilation.Program));

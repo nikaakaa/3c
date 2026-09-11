@@ -304,7 +304,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationWorldStateStore
     {
-        readonly SimulationProgramCatalog m_Catalog;
+        SimulationProgramCatalog m_Catalog;
         SimulationWorldStateSet m_Current;
 
         public SimulationWorldStateStore(SimulationProgramCatalog catalog, SimulationWorldStateSet initialState)
@@ -315,6 +315,40 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationWorldStateSet Current => m_Current;
+
+        public SimulationWorldStateSet PrepareCatalogAdoption(SimulationProgramCatalog catalog)
+        {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            if (catalog.NumericProfile != m_Catalog.NumericProfile ||
+                catalog.TickRate != m_Catalog.TickRate ||
+                !catalog.OperationSetVersion.Equals(m_Catalog.OperationSetVersion))
+            {
+                throw new InvalidOperationException("Program Catalog adoption changes the locked runtime ABI.");
+            }
+            var actors = new SimulationActorState[m_Current.Actors.Count];
+            for (int i = 0; i < actors.Length; i++)
+            {
+                SimulationActorState current = m_Current.Actors[i];
+                CharacterSimulationProgram program = catalog.GetRequired(current.State.ProgramId);
+                if (!program.LayoutHash.Equals(current.State.LayoutHash))
+                    throw new InvalidOperationException($"Actor '{current.ActorId}' Program LayoutHash changed during adoption.");
+                actors[i] = new SimulationActorState(current.ActorId, current.State.RebindProgram(program));
+            }
+            var candidate = new SimulationWorldStateSet(m_Current.LastCompletedTick, actors, m_Current.WorldState);
+            ValidateCurrentBindings(candidate, catalog);
+            return candidate;
+        }
+
+        public void AdoptCatalog(SimulationProgramCatalog catalog, SimulationWorldStateSet state)
+        {
+            if (catalog == null || state == null)
+                throw new ArgumentNullException(catalog == null ? nameof(catalog) : nameof(state));
+            ValidateCurrentBindings(state, catalog);
+            RequireSameRosterAndWorldBinding(m_Current, state);
+            m_Catalog = catalog;
+            m_Current = state;
+        }
 
         public void Restore(SimulationWorldSnapshot snapshot)
         {
@@ -390,11 +424,16 @@ namespace ThirdPersonSimulation.Fixed
 
         void ValidateCurrentBindings(SimulationWorldStateSet stateSet)
         {
+            ValidateCurrentBindings(stateSet, m_Catalog);
+        }
+
+        static void ValidateCurrentBindings(SimulationWorldStateSet stateSet, SimulationProgramCatalog catalog)
+        {
             for (int i = 0; i < stateSet.Actors.Count; i++)
             {
                 CharacterSimulationState state = stateSet.Actors[i].State;
-                CharacterSimulationProgram program = m_Catalog.GetRequired(state.ProgramId);
-                if (state.NumericProfile != m_Catalog.NumericProfile || stateSet.WorldState.NumericProfile != m_Catalog.NumericProfile || !program.ProgramHash.Equals(state.ProgramHash) || !program.LayoutHash.Equals(state.LayoutHash))
+                CharacterSimulationProgram program = catalog.GetRequired(state.ProgramId);
+                if (state.NumericProfile != catalog.NumericProfile || stateSet.WorldState.NumericProfile != catalog.NumericProfile || !program.ProgramHash.Equals(state.ProgramHash) || !program.LayoutHash.Equals(state.LayoutHash))
                     throw new InvalidDataException($"Actor '{stateSet.Actors[i].ActorId}' state does not match active Catalog.");
             }
         }

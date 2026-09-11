@@ -76,12 +76,16 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException("Single-step Schedule input Actor order does not match the locked roster.");
             }
             var tick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
+            bool replay = IsReplayInput(canonical);
             var step = new Float32SimulationStep(
                 tick,
                 new SimulationPipelineStepProvenance(
-                    SimulationPipelineStepExecutionKind.Forward,
+                    replay
+                        ? SimulationPipelineStepExecutionKind.Replay
+                        : SimulationPipelineStepExecutionKind.Forward,
                     context.Source,
-                    context.Source.SourceTick),
+                    context.Source.SourceTick,
+                    replay ? canonical.Inputs[0].Value.Input.InputSourceIdentity : string.Empty),
                 canonical.Inputs,
                 typed.Ingress,
                 ObservedWorldConstraintFrame.Empty(tick));
@@ -102,6 +106,16 @@ namespace ThirdPersonSimulation
                 new[] { step },
                 SimulationSessionPlanRequirement.WorkingState |
                 SimulationSessionPlanRequirement.OutputDisposition);
+        }
+
+        static bool IsReplayInput(Float32CanonicalInputBatch canonical)
+        {
+            for (int i = 0; i < canonical.Inputs.Count; i++)
+            {
+                if (!Float32CharacterInputTraceModule.IsReplayInput(canonical.Inputs[i].Value.Input))
+                    return false;
+            }
+            return true;
         }
     }
 

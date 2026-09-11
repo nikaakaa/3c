@@ -46,7 +46,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             return CreateLocalOwner(
                 contract,
@@ -68,7 +69,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lookInputId,
                 null,
                 futureBodyTranslationSource,
-                diagnostics);
+                diagnostics,
+                initializeExternalState);
         }
 
         public static CharacterPresentationRuntimeBinding CreateLocalOwner(
@@ -91,7 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             return Create(
                 contract,
@@ -114,7 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lookInputId,
                 equipmentRigCatalog,
                 futureBodyTranslationSource,
-                diagnostics);
+                diagnostics,
+                initializeExternalState);
         }
 
         public static CharacterPresentationRuntimeBinding CreateSimulatedActor(
@@ -130,7 +134,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             return CreateSimulatedActor(
                 contract,
@@ -146,7 +151,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 physicsScene,
                 null,
                 futureBodyTranslationSource,
-                diagnostics);
+                diagnostics,
+                initializeExternalState);
         }
 
         public static CharacterPresentationRuntimeBinding CreateSimulatedActor(
@@ -163,7 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PhysicsScene physicsScene,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             return Create(
                 contract,
@@ -186,7 +193,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 string.Empty,
                 equipmentRigCatalog,
                 futureBodyTranslationSource,
-                diagnostics);
+                diagnostics,
+                initializeExternalState);
         }
 
         public static CharacterPresentationRuntimeBinding CreateObservedActor(
@@ -202,7 +210,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState = true)
         {
             return Create(
                 contract,
@@ -225,7 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 string.Empty,
                 null,
                 futureBodyTranslationSource,
-                diagnostics);
+                diagnostics,
+                initializeExternalState);
         }
 
         static CharacterPresentationRuntimeBinding Create(
@@ -249,7 +259,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string lookInputId,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            bool initializeExternalState)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
@@ -377,7 +388,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     actorId,
                     projection,
                     equipmentRigCatalog,
-                    diagnostics);
+                    diagnostics,
+                    initializeExternalState);
                 if (cameraRig)
                 {
                     camera = new CharacterCameraPresentationRuntime(
@@ -388,7 +400,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         aimAnchor,
                         cameraTargetBindings,
                         inputAdapter,
-                        lookInputId);
+                        lookInputId,
+                        initializeExternalState);
                 }
                 else if (followAnchor || aimAnchor || inputAdapter != null ||
                          cameraTargetBindings != null || !string.IsNullOrEmpty(lookInputId))

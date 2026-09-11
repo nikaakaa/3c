@@ -20,6 +20,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         void CaptureRenderFrame(ulong renderFrame);
     }
 
+    public interface IFixedCharacterControlSourceProgramAdoption
+    {
+        bool TryAdoptProgram(FixedCharacterSimulationProgram program, out string error);
+    }
+
     public readonly struct FixedCharacterControlSourceContext
     {
         public FixedCharacterControlSourceContext(
@@ -40,12 +45,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public abstract IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context);
     }
 
-    public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime
+    public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime, IFixedCharacterControlSourceProgramAdoption
     {
         const string InputPrefix = "input:value:";
         readonly List<FixedSimulationInputValue> m_Values = new List<FixedSimulationInputValue>();
-        readonly ProgramId m_ProgramId;
-        readonly ProgramHash m_ProgramHash;
+        ProgramId m_ProgramId;
+        ProgramHash m_ProgramHash;
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
@@ -75,6 +80,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public string SourceIdentity { get; }
         public ProgramId CharacterProgramId => m_ProgramId;
         public ProgramHash CharacterProgramHash => m_ProgramHash;
+
+        public bool TryAdoptProgram(FixedCharacterSimulationProgram program, out string error)
+        {
+            error = string.Empty;
+            if (program == null || program.Manifest.ProgramId != m_ProgramId ||
+                program.Manifest.NumericProfile != FixedSimulationNumericProfile.Value)
+            {
+                error = "Neutral Fixed input Program identity is incompatible.";
+                return false;
+            }
+            m_ProgramHash = program.ProgramHash;
+            return true;
+        }
 
         public void Activate()
         {

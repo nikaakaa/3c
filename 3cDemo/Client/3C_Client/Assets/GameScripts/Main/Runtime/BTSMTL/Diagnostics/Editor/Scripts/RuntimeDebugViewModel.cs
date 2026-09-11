@@ -12,6 +12,7 @@ namespace BTSMTL.Diagnostics.Editor
             CharacterRuntimeId = target?.CharacterRuntimeId ?? Guid.Empty;
             SessionId = target?.SessionId ?? Guid.Empty;
             Revision = target?.Revision ?? default;
+            ProgramEpoch = target?.ProgramEpoch ?? 0;
         }
 
         public string DisplayName { get; }
@@ -19,6 +20,7 @@ namespace BTSMTL.Diagnostics.Editor
         public Guid CharacterRuntimeId { get; }
         public Guid SessionId { get; }
         public RuntimeProgramRevision Revision { get; }
+        public ulong ProgramEpoch { get; }
     }
 
     public readonly struct RuntimeDebugEventView
@@ -181,8 +183,8 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<string, long> m_GraphInstanceRevisions = new Dictionary<string, long>(StringComparer.Ordinal);
         readonly Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder> m_TimelinePlayback = new Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder>();
         readonly Dictionary<RuntimeInstanceKey, Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>> m_PlaybackEvents = new Dictionary<RuntimeInstanceKey, Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>>();
-        readonly Dictionary<string, HashSet<RuntimeInstanceKey>> m_TimelinePlaybackMembership = new Dictionary<string, HashSet<RuntimeInstanceKey>>(StringComparer.Ordinal);
-        readonly Dictionary<string, long> m_TimelinePlaybackRevisions = new Dictionary<string, long>(StringComparer.Ordinal);
+        readonly Dictionary<TimelineSourceKey, HashSet<RuntimeInstanceKey>> m_TimelinePlaybackMembership = new Dictionary<TimelineSourceKey, HashSet<RuntimeInstanceKey>>();
+        readonly Dictionary<TimelineSourceKey, long> m_TimelinePlaybackRevisions = new Dictionary<TimelineSourceKey, long>();
         readonly HashSet<RuntimeSourceElementKey> m_PendingSources = new HashSet<RuntimeSourceElementKey>();
         readonly HashSet<RuntimeInstanceKey> m_PendingInstances = new HashSet<RuntimeInstanceKey>();
         RuntimeDebugChangeSet m_Changes = RuntimeDebugChangeSet.Empty;
@@ -213,6 +215,25 @@ namespace BTSMTL.Diagnostics.Editor
         public long Revision => m_Revision;
         public bool HasCoverageGap => m_HasCoverageGap;
         public long EvictedStates => m_EvictedStates;
+
+        public RuntimeExecutionTimeline BuildExecutionTimeline(
+            RuntimeCaptureSnapshot capture,
+            int historyOffset = 0,
+            RuntimeInstanceKey instance = default) =>
+            RuntimeExecutionTimelineBuilder.Build(capture, m_SourceMap, historyOffset, instance);
+
+        public RuntimeExecutionHistory BuildExecutionHistory(
+            RuntimeCaptureSnapshot capture,
+            int historyOffset = 0,
+            RuntimeInstanceKey instance = default) =>
+            RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, null, historyOffset, instance);
+
+        internal RuntimeExecutionHistory BuildExecutionHistory(
+            RuntimeCaptureSnapshot capture,
+            int historyOffset,
+            RuntimeInstanceKey instance,
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps) =>
+            RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, sourceMaps, historyOffset, instance);
 
         internal void SetCoverage(long evictedStates, bool missedChanges)
         {
@@ -257,31 +278,41 @@ namespace BTSMTL.Diagnostics.Editor
                 : 0;
         }
 
-        public IReadOnlyList<RuntimeInstanceKey> GetTimelineInstances(string timelineAuthoringId)
+        public IReadOnlyList<RuntimeInstanceKey> GetTimelineInstances(
+            string timelineAuthoringId,
+            string graphAuthoringId = "")
         {
             var result = new List<RuntimeInstanceKey>();
             foreach (KeyValuePair<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder> pair in m_TimelinePlayback)
             {
-                if (string.Equals(pair.Value.TimelineAuthoringId, timelineAuthoringId, StringComparison.Ordinal))
+                if (MatchesTimeline(
+                        pair.Value,
+                        timelineAuthoringId,
+                        graphAuthoringId))
                     result.Add(pair.Key);
             }
             result.Sort((left, right) => GetTimelineSequence(right).CompareTo(GetTimelineSequence(left)));
             return result;
         }
 
-        public long GetTimelinePlaybackRevision(string timelineAuthoringId)
+        public long GetTimelinePlaybackRevision(
+            string timelineAuthoringId,
+            string graphAuthoringId = "")
         {
-            return !string.IsNullOrEmpty(timelineAuthoringId) && m_TimelinePlaybackRevisions.TryGetValue(timelineAuthoringId, out long revision)
+            TimelineSourceKey key = new TimelineSourceKey(timelineAuthoringId, graphAuthoringId);
+            return !string.IsNullOrEmpty(timelineAuthoringId) && m_TimelinePlaybackRevisions.TryGetValue(key, out long revision)
                 ? revision
                 : 0;
         }
 
-        public IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetTimelinePlaybackSummaries(string timelineAuthoringId)
+        public IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetTimelinePlaybackSummaries(
+            string timelineAuthoringId,
+            string graphAuthoringId = "")
         {
             var result = new List<RuntimeTimelinePlaybackDebugSummary>();
             foreach (TimelinePlaybackSummaryBuilder builder in m_TimelinePlayback.Values)
             {
-                if (string.Equals(builder.TimelineAuthoringId, timelineAuthoringId, StringComparison.Ordinal))
+                if (MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
                     result.Add(builder.Build());
             }
             result.Sort((left, right) => right.LatestLogicTick != left.LatestLogicTick
@@ -290,10 +321,14 @@ namespace BTSMTL.Diagnostics.Editor
             return result;
         }
 
-        public bool TryGetTimelinePlaybackSummary(string timelineAuthoringId, RuntimeInstanceKey playback, out RuntimeTimelinePlaybackDebugSummary summary)
+        public bool TryGetTimelinePlaybackSummary(
+            string timelineAuthoringId,
+            RuntimeInstanceKey playback,
+            out RuntimeTimelinePlaybackDebugSummary summary,
+            string graphAuthoringId = "")
         {
             if (m_TimelinePlayback.TryGetValue(playback, out TimelinePlaybackSummaryBuilder builder) &&
-                string.Equals(builder.TimelineAuthoringId, timelineAuthoringId, StringComparison.Ordinal))
+                MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
             {
                 summary = builder.Build();
                 return true;
@@ -303,17 +338,35 @@ namespace BTSMTL.Diagnostics.Editor
             return false;
         }
 
-        public IReadOnlyList<RuntimeDebugEventView> GetTimelineCurrentEvents(string timelineAuthoringId, RuntimeInstanceKey playback)
+        public IReadOnlyList<RuntimeDebugEventView> GetTimelineCurrentEvents(
+            string timelineAuthoringId,
+            RuntimeInstanceKey playback,
+            string graphAuthoringId = "")
         {
             if (!m_PlaybackEvents.TryGetValue(playback, out Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> events))
                 return Array.Empty<RuntimeDebugEventView>();
             if (!m_TimelinePlayback.TryGetValue(playback, out TimelinePlaybackSummaryBuilder builder) ||
-                !string.Equals(builder.TimelineAuthoringId, timelineAuthoringId, StringComparison.Ordinal))
+                !MatchesTimeline(builder, timelineAuthoringId, graphAuthoringId))
                 return Array.Empty<RuntimeDebugEventView>();
 
             var result = new List<RuntimeDebugEventView>(events.Values);
             result.Sort((left, right) => right.Event.Sequence.CompareTo(left.Event.Sequence));
             return result;
+        }
+
+        static bool MatchesTimeline(
+            TimelinePlaybackSummaryBuilder builder,
+            string timelineAuthoringId,
+            string graphAuthoringId)
+        {
+            return string.Equals(
+                       builder.TimelineAuthoringId,
+                       timelineAuthoringId,
+                       StringComparison.Ordinal) &&
+                   string.Equals(
+                       builder.Provenance.SourceGraphAuthoringId ?? string.Empty,
+                       graphAuthoringId ?? string.Empty,
+                       StringComparison.Ordinal);
         }
 
         public IReadOnlyList<RuntimeDebugEventView> GetCurrentEvents(RuntimeTraceChannel channel, RuntimeInstanceKey instance = default)
@@ -402,20 +455,37 @@ namespace BTSMTL.Diagnostics.Editor
 
         internal void Apply(RuntimeLiveStateKey key, RuntimeTraceEvent traceEvent)
         {
-            if (!traceEvent.ProgramRevision.Equals(Target.Revision))
+            Apply(key, traceEvent, null);
+        }
+
+        internal void Apply(
+            RuntimeLiveStateKey key,
+            RuntimeTraceEvent traceEvent,
+            RuntimeDebugSourceMapSnapshot sourceMapOverride)
+        {
+            bool historical = sourceMapOverride != null;
+            if (!historical && !traceEvent.ProgramRevision.Equals(Target.Revision))
             {
                 m_Error = $"Trace revision mismatch: {traceEvent.ProgramRevision} != {Target.Revision}";
                 return;
             }
 
+            RuntimeDebugSourceMapSnapshot sourceMap = sourceMapOverride ?? m_SourceMap;
             RuntimeSourceElementKey source = default;
             string sourceName = string.Empty;
             if (traceEvent.Source.IsValid)
             {
-                if (!m_SourceMap.TryResolve(traceEvent.Source, out source, out sourceName))
+                if (!sourceMap.TryResolve(traceEvent.Source, out source, out sourceName))
                 {
-                    m_Error = $"Trace source handle is absent from Source Map: {traceEvent.Source}";
-                    return;
+                    if (historical)
+                    {
+                        sourceName = "unmapped";
+                    }
+                    else
+                    {
+                        m_Error = $"Trace source handle is absent from Source Map: {traceEvent.Source}";
+                        return;
+                    }
                 }
             }
 
@@ -461,6 +531,14 @@ namespace BTSMTL.Diagnostics.Editor
         {
             RuntimeTraceEvent traceEvent = eventView.Event;
             RuntimeInstanceKey playback = traceEvent.RuntimeInstance;
+            if (playback.Kind == RuntimeInstanceKind.TreeClip)
+            {
+                playback = RuntimeInstanceKey.Timeline(
+                    playback.CharacterRuntimeId,
+                    playback.SourceOperationIndex,
+                    playback.TimelinePlaybackId,
+                    playback.ActionInstanceId);
+            }
             if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
                 return;
 
@@ -470,9 +548,12 @@ namespace BTSMTL.Diagnostics.Editor
                 m_TimelinePlayback.Add(playback, builder);
             }
             string previousTimelineAuthoringId = builder.TimelineAuthoringId;
+            string previousGraphAuthoringId = builder.Provenance.SourceGraphAuthoringId ?? string.Empty;
             builder.Apply(eventView);
-            if (!string.Equals(previousTimelineAuthoringId, builder.TimelineAuthoringId, StringComparison.Ordinal))
-                RegisterTimelinePlayback(builder.TimelineAuthoringId, playback);
+            string graphAuthoringId = builder.Provenance.SourceGraphAuthoringId ?? string.Empty;
+            if (!string.Equals(previousTimelineAuthoringId, builder.TimelineAuthoringId, StringComparison.Ordinal) ||
+                !string.Equals(previousGraphAuthoringId, graphAuthoringId, StringComparison.Ordinal))
+                RegisterTimelinePlayback(builder.TimelineAuthoringId, graphAuthoringId, playback);
 
             if (!m_PlaybackEvents.TryGetValue(playback, out Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> events))
             {
@@ -520,17 +601,39 @@ namespace BTSMTL.Diagnostics.Editor
                 m_GraphInstanceRevisions[graphAuthoringId] = GetGraphInstanceRevision(graphAuthoringId) + 1;
         }
 
-        void RegisterTimelinePlayback(string timelineAuthoringId, RuntimeInstanceKey playback)
+        void RegisterTimelinePlayback(
+            string timelineAuthoringId,
+            string graphAuthoringId,
+            RuntimeInstanceKey playback)
         {
             if (string.IsNullOrEmpty(timelineAuthoringId))
                 return;
-            if (!m_TimelinePlaybackMembership.TryGetValue(timelineAuthoringId, out HashSet<RuntimeInstanceKey> playbacks))
+            var key = new TimelineSourceKey(timelineAuthoringId, graphAuthoringId);
+            if (!m_TimelinePlaybackMembership.TryGetValue(key, out HashSet<RuntimeInstanceKey> playbacks))
             {
                 playbacks = new HashSet<RuntimeInstanceKey>();
-                m_TimelinePlaybackMembership.Add(timelineAuthoringId, playbacks);
+                m_TimelinePlaybackMembership.Add(key, playbacks);
             }
             if (playbacks.Add(playback))
-                m_TimelinePlaybackRevisions[timelineAuthoringId] = GetTimelinePlaybackRevision(timelineAuthoringId) + 1;
+                m_TimelinePlaybackRevisions[key] = GetTimelinePlaybackRevision(timelineAuthoringId, graphAuthoringId) + 1;
+        }
+
+        internal readonly struct TimelineSourceKey : IEquatable<TimelineSourceKey>
+        {
+            public TimelineSourceKey(string timelineAuthoringId, string graphAuthoringId)
+            {
+                TimelineAuthoringId = timelineAuthoringId ?? string.Empty;
+                GraphAuthoringId = graphAuthoringId ?? string.Empty;
+            }
+
+            public string TimelineAuthoringId { get; }
+            public string GraphAuthoringId { get; }
+            public bool Equals(TimelineSourceKey other) =>
+                string.Equals(TimelineAuthoringId, other.TimelineAuthoringId, StringComparison.Ordinal) &&
+                string.Equals(GraphAuthoringId, other.GraphAuthoringId, StringComparison.Ordinal);
+            public override bool Equals(object obj) => obj is TimelineSourceKey other && Equals(other);
+            public override int GetHashCode() =>
+                (TimelineAuthoringId?.GetHashCode() ?? 0) * 397 ^ (GraphAuthoringId?.GetHashCode() ?? 0);
         }
 
         internal readonly struct ElementInstanceKey : IEquatable<ElementInstanceKey>
@@ -634,9 +737,13 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<string, RuntimeGraphInvocation> m_Invocations = new(StringComparer.Ordinal);
         readonly IReadOnlyList<RuntimeGraphInvocation> m_GraphInvocations;
 
-        RuntimeDebugSourceMapSnapshot(Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries, Dictionary<RuntimeSourceElementKey, string[]> hashes,
+        RuntimeDebugSourceMapSnapshot(
+            RuntimeProgramRevision revision,
+            Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries,
+            Dictionary<RuntimeSourceElementKey, string[]> hashes,
             IReadOnlyList<RuntimeGraphInvocation> invocations = null)
         {
+            Revision = revision;
             m_Entries = entries ?? new Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry>();
             m_Hashes = hashes ?? new Dictionary<RuntimeSourceElementKey, string[]>();
             m_GraphInvocations = invocations ?? Array.Empty<RuntimeGraphInvocation>();
@@ -644,10 +751,11 @@ namespace BTSMTL.Diagnostics.Editor
                 m_Invocations.Add(invocation.Path, invocation);
         }
 
+        public RuntimeProgramRevision Revision { get; }
         public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
         public bool TryGetInvocation(string path, out RuntimeGraphInvocation invocation) => m_Invocations.TryGetValue(path, out invocation);
 
-        public static RuntimeDebugSourceMapSnapshot Empty { get; } = new RuntimeDebugSourceMapSnapshot(null, null);
+        public static RuntimeDebugSourceMapSnapshot Empty { get; } = new RuntimeDebugSourceMapSnapshot(default, null, null);
 
         public static RuntimeDebugSourceMapSnapshot Capture(IDebugSourceMap sourceMap)
         {
@@ -674,7 +782,11 @@ namespace BTSMTL.Diagnostics.Editor
             var frozen = new Dictionary<RuntimeSourceElementKey, string[]>();
             foreach (KeyValuePair<RuntimeSourceElementKey, List<string>> pair in collected)
                 frozen.Add(pair.Key, pair.Value.ToArray());
-            return new RuntimeDebugSourceMapSnapshot(entries, frozen, new List<RuntimeGraphInvocation>(sourceMap.GraphInvocations).AsReadOnly());
+            return new RuntimeDebugSourceMapSnapshot(
+                sourceMap.Revision,
+                entries,
+                frozen,
+                new List<RuntimeGraphInvocation>(sourceMap.GraphInvocations).AsReadOnly());
         }
 
         public bool TryResolve(RuntimeSourceElementHandle handle, out RuntimeSourceElementKey source, out string sourceName)
@@ -689,6 +801,9 @@ namespace BTSMTL.Diagnostics.Editor
             sourceName = string.Empty;
             return false;
         }
+
+        public bool TryGet(RuntimeSourceElementHandle handle, out DebugSourceMapEntry entry) =>
+            m_Entries.TryGetValue(handle, out entry);
 
         public RuntimeDebugTargetMatch Match(RuntimeDebugTargetRequest request)
         {

@@ -37,11 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_InterruptedBackupFolders =
                 interruptedBackupFolders ?? Array.Empty<string>();
             CharacterAclAnimationArtifactFileStore.EnsureFolder(m_OutputFolder);
-            string transactionId = Convert.ToBase64String(
-                    Guid.NewGuid().ToByteArray())
-                .TrimEnd('=')
-                .Replace('+', '-')
-                .Replace('/', '_');
+            string transactionId = Guid.NewGuid().ToString("N").Substring(0, 12);
             m_StagingFolder =
                 $"{m_OutputFolder}/{CharacterAclAnimationArtifactIdentity.StagingFolderPrefix}{transactionId}";
             m_BackupFolder =

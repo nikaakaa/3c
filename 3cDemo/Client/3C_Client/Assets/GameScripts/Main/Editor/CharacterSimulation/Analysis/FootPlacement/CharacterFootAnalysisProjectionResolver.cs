@@ -752,15 +752,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     }
                     try
                     {
-                        CharacterAnimationClipContentIdentity identity =
-                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(clipBinding.Clip);
-                        string clipIdentity = $"{identity.AssetGuid}:{identity.LocalFileId}";
-                        if (directClipBindings.Add(clipIdentity))
+                        string bindingIdentity = CharacterPresentationAssetObjectIdentity.Require(clipBinding);
+                        if (directClipBindings.Add(bindingIdentity))
                             result.Add(new ClipBinding(
-                                clipIdentity,
+                                bindingIdentity,
                                 clipBinding.Clip,
-                                AnimationFootContactSchedule.Inferred,
-                                true));
+                                AnimationFootContactSchedule.Inferred));
                     }
                     catch (Exception exception)
                     {

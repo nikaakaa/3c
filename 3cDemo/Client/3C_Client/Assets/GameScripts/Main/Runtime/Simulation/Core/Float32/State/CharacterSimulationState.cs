@@ -476,6 +476,25 @@ namespace ThirdPersonSimulation
 			return new CharacterSimulationState(program, m_Layout, completedTick.Value, partitions, true);
 		}
 
+		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
+		{
+			if (program == null)
+				throw new ArgumentNullException(nameof(program));
+			if (program.Manifest.ProgramId != ProgramId || !program.LayoutHash.Equals(LayoutHash) ||
+				program.Manifest.NumericProfile != NumericProfile || program.StateSlots.Count != SlotCount)
+			{
+				throw new InvalidOperationException("Character state cannot be rebound to an incompatible Program.");
+			}
+			var values = new CharacterStateValue[program.StateSlots.Count];
+			for (int i = 0; i < values.Length; i++)
+				values[i] = Get(m_Layout.Address(i));
+			return Create(
+				program,
+				ProgramExecutionLayout.GetOrCreate(program),
+				LastCompletedTick,
+				values);
+		}
+
 		void RequireAddress(TypedStateAddress address)
 		{
 			if (!address.IsValid || !m_Layout.Address(address.SlotIndex).Equals(address))

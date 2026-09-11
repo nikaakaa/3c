@@ -941,3 +941,19 @@ Scene Play 期间 Timeline 仍然可编辑。Clip/Curve/Section 修改通过正�
 - `AnimationPreviewEngine.cs`/`AnimationPreviewAdapters.cs` 双侧都有，为 9.2 删除目标，到达 9.x 批次时按分支提交删除，不提前。
 
 owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文在客户端 Unity 边界，编排只在 Editor 程序集——A 文件分布符合 design 决策 8 的单向依赖，无公共 Simulation/Timeline 程序集反向引用 Editor 的新增。已勾任务（2.6/4.8/4.9/5.3/6.0/6.2/6.10/6.11/8.1/8.7/9.1）的实现均落在上述 A+M 集合，勾选为分支记账，复制落地时逐批转正为主线进度。逐类型签名级对账随每批复制的「分支提交↔主线提交」登记执行，本条完成文件级与类型级对账。
+
+## 2026-09-11 复制批次1：场景合同、上下文与Graph Shell控制面落地主线
+
+按0.4对账执行第一批复制，来源为分支停写tip `4b7f7544e` 的checkout path（文件级；分支侧6.0的 lineage 提交为 `ab2498864` 系）。复制前核查：merge-base `9c7766d32` 之后主线侧未触碰本批任何M文件（启动器、SessionHost、GraphAuthoringEditorShell及两个调用方），整文件取分支版即安全超集；目标文件工作区干净。
+
+落地内容（24文件，+6533行）：
+- 运行时合同（2.1）：`Runtime/Gameplay/BtsmtlScenePlayPreviewContracts.cs`（`BtsmtlScenePlayRequest`/`BtsmtlScenePlayProgramAdoptionReport`/`IBtsmtlScenePlayPreviewOperations`，namespace `ThirdPersonGameplay.ScenePlay`）、`BtsmtlScenePlayRuntimeOwner.cs`。
+- 场景上下文（2.2）：`Runtime/Character/Pipeline/Unity/BtsmtlScenePlayContext.cs`（+`BtsmtlScenePlayContextRegistry`）、`BtsmtlScenePlayResourceRuntimeOwner.cs`（`IBtsmtlScenePlayRuntimeOwner`实现）。
+- ProgramEpoch（2.6主线落位）：`Runtime/Simulation/Core/Composition/SimulationProgramEpoch.cs`。
+- 启动器重构代码（3.x）：`Editor/ProductStartup/EditorPlayModeSceneLauncher.cs`（显式启动请求、`TryGetPendingRequest`/`Start`/`ReloadInPlayMode`/`StateChanged`）及调用方 `GameplayLabEditorLauncher.cs`、`GameplayLauncherWindow.cs` 迁移；3.1–3.6暂不勾选，与分支口径一致，待用户端到端验收。
+- Graph Shell控制面（6.0）：`GraphAuthoringEditorShell.cs`（含 `IGraphAuthoringShellToolbarExtension` 扩展点）、`Editor/CharacterPipeline/Preview/BtsmtlScenePlayGraphShellToolbar.cs`、`BtsmtlScenePlayPreviewCoordinator.cs`（唯一协调器）、`BtsmtlScenePlayPreviewMcpTool.cs`。
+- 动态执行时间轴呈现（6.10表面）：`Runtime/BTSMTL/Diagnostics/Editor/Scripts/RuntimeExecutionTimeline.cs`。
+
+依赖闭合验证：协调器引用的 `EditorPlayModeSceneLauncher` 新API、`SessionHost.ProgramEpoch`（主线原SessionHost无此属性，本批整取分支版补齐）、`RuntimeDebugSession`（主线与分支该文件逐字节一致）、`RuntimeDebugSourceMapSnapshot`（主线已有）全部在主线可解析；启动器主线调用方仅本批三处，已全部随批迁移；未复制 `TimelineEditorCursorState`/`Float32CharacterInputTraceModule`（本批无引用，留待6.2/5.3批次）。
+
+边界与未含：Timeline窗口侧的被动观察接线（6.2窗口段）、领域信息展示与最终UI验收（6.1）、协调器状态机的验收级勾选（4.1–4.7，分支亦未勾）、Build后台拆分（8.6）不在本批。未跑Unity编译与端到端，按项目规则由用户验收：编译 + 打开任一Graph Shell确认Scene Play工具条出现。

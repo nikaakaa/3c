@@ -54,11 +54,18 @@ namespace ThirdPersonGameplay.Editor.Lab
         internal static void Play(int variantIndex)
         {
             Validate();
-            EditorPlayModeSceneLauncher.Play(ScenePath, scene =>
+            EditorPlayModeSceneLaunchResult result = EditorPlayModeSceneLauncher.Start(
+                new EditorPlayModeSceneLaunchRequest(
+                    ScenePath,
+                    $"gameplay-lab/{variantIndex}",
+                    prepare: scene =>
             {
                 GameplayLabBootstrap bootstrap = RequireBootstrap(scene);
                 bootstrap.SetStartupVariantIndex(variantIndex);
-            });
+            }));
+            if (result.Code != EditorPlayModeSceneLaunchResultCode.Started &&
+                result.Code != EditorPlayModeSceneLaunchResultCode.Cancelled)
+                throw new InvalidOperationException(result.Message);
         }
 
         internal static void Validate()
@@ -272,6 +279,12 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void RebuildFixedCharacterPrefabs()
         {
             GameplayLabAssetBuilder.RebuildFixedCharacterPrefabs();
+        }
+
+        [MenuItem("Tools/3C/Character/Build BTSMTL Scene Play Preview")]
+        static void BuildBtsmtlScenePlayPreview()
+        {
+            GameplayLabAssetBuilder.BuildBtsmtlScenePlayPreview();
         }
 
         sealed class Operations : IGameplayLabLauncherOperations

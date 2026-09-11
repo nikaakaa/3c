@@ -18,8 +18,8 @@
 
 ## 2. 共享合同与场景上下文
 
-- [ ] 2.1 定义场景预览操作、只读状态、请求 identity、场景 generation、ProgramEpoch adoption、历史查看和恢复阶段合同，接口能够表达开始、暂停、继续、Build、采用、重建、结束及每个失败阶段，不持有领域执行状态或提供业务Advance。
-- [ ] 2.2 在已有客户端Unity边界实现场景上下文声明，角色准确引用Session/Actor及正式组合配置，非Skill消费Timeline已发布的正式owner/目标绑定；登记各自精确内容根、产物和就绪结果，不伪造角色或猜测目标。
+- [x] 2.1 定义场景预览操作、只读状态、请求 identity、场景 generation、ProgramEpoch adoption、历史查看和恢复阶段合同，接口能够表达开始、暂停、继续、Build、采用、重建、结束及每个失败阶段，不持有领域执行状态或提供业务Advance。
+- [x] 2.2 在已有客户端Unity边界实现场景上下文声明，角色准确引用Session/Actor及正式组合配置，非Skill消费Timeline已发布的正式owner/目标绑定；登记各自精确内容根、产物和就绪结果，不伪造角色或猜测目标。
 - [ ] 2.3 消费唯一v7共享Capability、领域增量与实际已发布参数合同，提供控制配置/技能/Pose及独立Timeline字段的编辑资格和采用规则；生成内容、实际对象绑定和实例状态只读，不补造热更新能力。
 - [ ] 2.4 配置 Editor、客户端与公共 Composition 的单向依赖，程序集引用中不出现公共 Simulation 到 Editor、窗口、Animancer 或具体 Network Model 的新增反向依赖。
 

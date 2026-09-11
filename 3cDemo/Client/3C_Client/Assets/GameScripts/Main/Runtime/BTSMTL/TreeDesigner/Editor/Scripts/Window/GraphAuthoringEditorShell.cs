@@ -77,6 +77,37 @@ namespace TreeDesigner.Editor
         void Clear();
     }
 
+    public interface IGraphAuthoringShellToolbarExtension
+    {
+        VisualElement Create(GraphAuthoringEditorShell shell);
+    }
+
+    public static class GraphAuthoringShellToolbarExtensionRegistry
+    {
+        static readonly List<IGraphAuthoringShellToolbarExtension> s_Extensions =
+            new List<IGraphAuthoringShellToolbarExtension>();
+
+        public static void Register(IGraphAuthoringShellToolbarExtension extension)
+        {
+            if (extension == null)
+                throw new ArgumentNullException(nameof(extension));
+            if (!s_Extensions.Contains(extension))
+                s_Extensions.Add(extension);
+        }
+
+        public static void Append(VisualElement toolbar, GraphAuthoringEditorShell shell)
+        {
+            if (toolbar == null || shell == null)
+                return;
+            for (int index = 0; index < s_Extensions.Count; index++)
+            {
+                VisualElement extension = s_Extensions[index].Create(shell);
+                if (extension != null)
+                    toolbar.Add(extension);
+            }
+        }
+    }
+
     public enum GraphAuthoringToolbarCommandKind : byte
     {
         Lightweight = 0,
@@ -518,6 +549,7 @@ namespace TreeDesigner.Editor
             if (!ReferenceEquals(m_Adapters.Inspector.View, inspector))
                 throw new InvalidOperationException("Graph Authoring Inspector adapter must own the Shell Inspector view.");
             ConfigureWorkspace(inspector);
+            GraphAuthoringShellToolbarExtensionRegistry.Append(m_WorkspaceToolbar, this);
             if (m_GraphView is IGraphAuthoringDomainView domainView)
                 domainView.BindAdapters(m_Adapters.Document, m_Adapters.PortPolicy, m_Adapters.Mutation);
             if (UseGraphAuthoringShellInteractions)

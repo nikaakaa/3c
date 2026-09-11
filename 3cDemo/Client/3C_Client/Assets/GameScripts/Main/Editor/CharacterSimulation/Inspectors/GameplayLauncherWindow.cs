@@ -844,7 +844,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void RunProductStartup()
         {
             CommercialStartupConfigurationValidator.ValidateAll();
-            EditorPlayModeSceneLauncher.Play(BootstrapScene);
+            EditorPlayModeSceneLaunchResult result = EditorPlayModeSceneLauncher.Start(
+                new EditorPlayModeSceneLaunchRequest(BootstrapScene, "product-startup"));
+            if (result.Code != EditorPlayModeSceneLaunchResultCode.Started &&
+                result.Code != EditorPlayModeSceneLaunchResultCode.Cancelled)
+                throw new InvalidOperationException(result.Message);
         }
 
         void RunPublishedPlayer()

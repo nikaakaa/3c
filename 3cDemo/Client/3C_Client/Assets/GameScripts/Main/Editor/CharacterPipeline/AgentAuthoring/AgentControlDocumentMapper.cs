@@ -5,6 +5,9 @@ using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonSimulation;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal static class AgentControlDocumentMapper

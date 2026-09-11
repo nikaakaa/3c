@@ -7,6 +7,9 @@ using TreeDesigner.Authoring;
 using TreeDesigner.Editor;
 using TreeDesigner;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal sealed class AgentGraphPackageProjection

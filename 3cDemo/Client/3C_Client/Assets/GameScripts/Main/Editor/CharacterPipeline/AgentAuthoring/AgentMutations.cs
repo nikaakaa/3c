@@ -7,6 +7,9 @@ using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using UnityEngine;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public enum AgentMutationKind

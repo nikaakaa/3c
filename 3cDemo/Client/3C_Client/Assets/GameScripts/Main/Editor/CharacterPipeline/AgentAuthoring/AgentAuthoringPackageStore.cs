@@ -11,6 +11,9 @@ using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentAuthoringDocumentStore

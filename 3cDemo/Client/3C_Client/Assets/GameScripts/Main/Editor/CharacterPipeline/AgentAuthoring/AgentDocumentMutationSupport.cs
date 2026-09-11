@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonGameplay.Tags;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal sealed class AgentMutationPlanBuilder

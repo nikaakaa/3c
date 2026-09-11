@@ -10,7 +10,10 @@ using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
 {
     internal sealed class BtsmtlSkillTimelineAuthoringApplier : ITimelineAuthoringClipResolver
     {

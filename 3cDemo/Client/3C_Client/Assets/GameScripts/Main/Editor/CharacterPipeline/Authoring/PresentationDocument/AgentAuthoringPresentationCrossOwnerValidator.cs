@@ -18,7 +18,10 @@ using UnityEngine;
 using AnimationClip = UnityEngine.AnimationClip;
 
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
 {
     internal static class AgentAuthoringPresentationCrossOwnerValidator
     {

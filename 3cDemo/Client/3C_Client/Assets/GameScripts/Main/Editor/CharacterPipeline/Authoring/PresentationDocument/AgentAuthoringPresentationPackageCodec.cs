@@ -10,7 +10,9 @@ using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using TreeDesigner.Editor;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
 {
     internal static class AgentAuthoringPresentationPackageCodec
     {

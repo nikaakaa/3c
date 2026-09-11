@@ -5,6 +5,9 @@ using System.Globalization;
 using System.Linq;
 using TreeDesigner.Editor;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentPackageNodeCatalogValidator

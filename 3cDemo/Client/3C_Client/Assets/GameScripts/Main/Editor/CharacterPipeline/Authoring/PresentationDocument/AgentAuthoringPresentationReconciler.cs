@@ -17,7 +17,9 @@ using UnityEditor;
 using UnityEngine;
 using AnimationClip = UnityEngine.AnimationClip;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
 {
     public sealed partial class AgentAuthoringPresentationReconciler
     {

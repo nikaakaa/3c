@@ -7,7 +7,10 @@ using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
 {
     internal static class AgentSkillFlowDocumentOwnerCollector
     {

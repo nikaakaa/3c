@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
 {
     [Serializable]
     public sealed class AgentPackageObjectReference

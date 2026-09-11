@@ -5,7 +5,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json.Linq;
-using static ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.AgentPackageMappingSupport;
+using static ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill.AgentPackageMappingSupport;
+
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {

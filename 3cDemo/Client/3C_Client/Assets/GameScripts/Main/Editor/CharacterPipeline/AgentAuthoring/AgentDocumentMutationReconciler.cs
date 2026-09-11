@@ -5,6 +5,9 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Motion;
 using UnityEngine;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentDocumentReconciler

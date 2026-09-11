@@ -4,7 +4,10 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
+using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+
+namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
 {
     [Serializable]
     public sealed class AgentPackageSkillFlowDocument

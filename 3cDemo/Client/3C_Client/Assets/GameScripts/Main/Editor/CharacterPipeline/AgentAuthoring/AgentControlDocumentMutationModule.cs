@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonSimulation;
 
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill;
+
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal static class AgentControlDocumentMutationModule

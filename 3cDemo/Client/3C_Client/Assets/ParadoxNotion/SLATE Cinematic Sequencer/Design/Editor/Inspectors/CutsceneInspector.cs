@@ -34,7 +34,10 @@ namespace Slate
         //...
         void OnEnable() {
             currentDirectableEditor = null;
-            cutscene = (Cutscene)target;
+            cutscene = target as Cutscene;
+            if ( cutscene == null ) {
+                return;
+            }
             willResample = false;
             willDirty = false;
             updateModeProp = serializedObject.FindProperty("_updateMode");
@@ -62,7 +65,10 @@ namespace Slate
         //...
         public override void OnInspectorGUI() {
 
-            cutscene = (Cutscene)target;
+            cutscene = target as Cutscene;
+            if ( cutscene == null ) {
+                return;
+            }
 
             if ( UnityEditor.EditorUtility.IsPersistent(cutscene) ) {
                 EditorGUILayout.HelpBox("To edit a cutscene prefab please open it first.", MessageType.Info);

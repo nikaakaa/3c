@@ -589,8 +589,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             out CharacterPoseNodeDefinition definition)
         {
             EnsureCapabilities();
-            return !string.IsNullOrWhiteSpace(capabilityIdentity) &&
-                m_ByCapability.TryGetValue(capabilityIdentity, out definition);
+            if (string.IsNullOrWhiteSpace(capabilityIdentity))
+            {
+                definition = null;
+                return false;
+            }
+            return m_ByCapability.TryGetValue(capabilityIdentity, out definition);
         }
 
         public CharacterPoseNodeDefinition RequirePayload(

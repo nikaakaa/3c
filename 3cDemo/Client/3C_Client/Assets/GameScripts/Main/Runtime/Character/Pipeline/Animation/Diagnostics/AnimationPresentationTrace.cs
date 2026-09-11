@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                        RuntimeTraceEventKind.AnimationPlaybackPending) ||
                    diagnostics.ShouldPublish(
                        RuntimeTraceChannel.FootPlacement,
-                       RuntimeTraceEventKind.FootPlacementSnapshot)
+                    RuntimeTraceEventKind.FootPlacementSnapshot)
                 ? AnimationPresentationDiagnosticsInterest.LiveState
                 : AnimationPresentationDiagnosticsInterest.None;
         }
@@ -180,7 +180,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     RuntimeTraceDomain.Presentation,
                     kind,
                     RuntimeSourceElementHandle.Invalid,
-                    ResolveInstance(diagnostics, playback.PlaybackId),
+                    ResolveInstance(
+                        diagnostics,
+                        playback.PlaybackId,
+                        playback.ActionInstanceId),
                     new RuntimeTracePayload
                     {
                         AnimationChannelId = playback.AnimationChannelId.Value,
@@ -280,11 +283,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         static RuntimeInstanceKey ResolveInstance(
             RuntimeDiagnosticsContext diagnostics,
-            AnimationPlaybackId playbackId) =>
+            AnimationPlaybackId playbackId,
+            ulong actionInstanceId = 0) =>
             playbackId.IsValid
                 ? RuntimeInstanceKey.Timeline(
                     diagnostics.CharacterRuntimeId,
-                    playbackId.Generation)
+                    -1,
+                    playbackId.Generation,
+                    actionInstanceId)
                 : RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId);
     }
 }

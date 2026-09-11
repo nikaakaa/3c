@@ -208,6 +208,30 @@ CharacterController Document MUST把状态、节点关系和Blackboard声明放�
 - **THEN** Reconciler MUST计划正式断开Mutation
 - **AND** MUST不要求AI调用`delete_edge`
 
+### Requirement: Agent实现必须是通用Document适配器
+
+Agent实现 MUST只拥有v7 Document文件生命周期、规范解析与写出、整包Hash、同步状态、通用闭包检查、通用Diff、正式Mutation Dispatcher的调用顺序以及唯一事务编排。Agent实现 MUST不再拥有独立的Unity语义快照、按Skill/Pose/Timeline分别维护的领域对象模型、相同目标的Draft到Plan重复中间表示或领域字段/端口/owner规则。正式领域Module MUST通过Authoring Capability、正式字段描述、引用描述和Mutation binding提供这些语义；Agent只传递稳定identity、capability、typed properties、logical ports、references和owner。
+
+#### Scenario: Agent读取正式作者状态
+
+- **WHEN** Agent执行checkout或dry-run
+- **THEN** Document生命周期 MUST从正式领域Module获得只读live context和可编辑目标投影
+- **AND** MUST不先生成另一套包含领域语义的`AgentGraphSnapshot`
+- **AND** MUST不把领域字段复制到Agent专属快照类型后再转换成Document
+
+#### Scenario: Agent修改任意已登记Skill能力
+
+- **WHEN** AI在合法闭包中新增或修改已登记Capability的Node、Macro、Timeline或Blackboard声明
+- **THEN** 通用Document Diff MUST把目标交给正式Capability和Mutation binding
+- **AND** MUST不为每个Node kind增加Agent专用模型、字段表、端口表或Apply分支
+
+#### Scenario: Agent完成正式apply
+
+- **WHEN** 通用Diff已经通过Capability验证
+- **THEN** Document MUST直接生成一个正式Mutation Plan并交给唯一Dispatcher
+- **AND** MUST不经过`AgentMutationDraft`等与正式Plan重复的中间语义层
+- **AND** Undo、Rollback、Save、reverse export仍 MUST由唯一Document Transaction拥有
+
 ### Requirement: dry-run与apply必须锁定同一整包语义
 
 dry-run MUST重新加载完整文档包、计算live revision、推导同步状态、严格解析、reconcile并执行无副作用preflight。成功结果 MUST包含canonical document hash、plan hash、planned diff、metrics与跨文件entity诊断。Apply MUST要求同一expected document hash，并在mutation前重新确认package、root、revision、context和状态未变化。

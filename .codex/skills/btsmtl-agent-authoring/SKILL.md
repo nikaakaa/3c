@@ -25,7 +25,7 @@ Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和Agent工�
 
 Document不会自动编译或自动apply。Unity树变化和Document变化只计算同步状态；只有显式`apply_document`才修改Unity authoring资产。Character Presentation Profile、Pose Graph与PoseStateMachine属于同一Document目标、Reconciler和资产级apply事务；Character Program、Presentation Projection与Native Pose Program不属于Document事务，必须在apply成功后通过精确Definition的Character Build生命周期显式发布。
 
-Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正式Authoring类型上的Editor-only metadata marker、共享`GraphAuthoringCapabilityCatalog`、正式字段/引用描述和正式Mutation binding是唯一语义来源；`AgentPackage...`类型只表示v7 JSON包外壳。Skill字段、端口和Graph role由正式`BtsmtlSkillCapabilityCatalog`及其marker投影，Gameplay Graph包目录由正式共享Capability投影，Pose继续由`CharacterPoseNodeDefinitionModule`和`CharacterPoseGraphAuthoringCapabilities`投影。内部C#类型、文件组织或Compiler实现变化而不改变稳定kind、typed field、logical port、owner和闭包关系时，不升级Document schema。
+Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正式Authoring类型上的Editor-only metadata marker、共享`GraphAuthoringCapabilityCatalog`、正式字段/引用描述和正式Mutation binding是唯一语义来源；Agent包只表示v7 JSON文件、稳定外壳和原始typed payload，不再生成独立Unity语义快照、领域对象树或Draft语义副本。Skill字段、端口和Graph role由正式`BtsmtlSkillCapabilityCatalog`及其marker投影，Gameplay Graph包目录由正式共享Capability投影，Pose继续由`CharacterPoseNodeDefinitionModule`和`CharacterPoseGraphAuthoringCapabilities`投影。内部C#类型、文件组织或Compiler实现变化而不改变稳定kind、typed field、logical port、owner和闭包关系时，不升级Document schema。
 
 修改C#、OpenSpec和Skill文件继续使用Codex文件工具，不通过Unity MCP写代码。
 
@@ -104,13 +104,14 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 正式调用链必须保持：
 
 ```text
-Package manifest + strict per-file parser
-  -> AgentDocumentMutationReconciler
-  -> AgentAuthoringPresentationReconciler（Animation/PoseGraph/LinkedPose/Profile/Conversion/Support）
-  -> immutable AgentMutationPlan
-  -> Mutation preflight
+Package manifest + strict file parser
+  -> generic Document target/context
+  -> formal Capability projection
+  -> one Document Diff
+  -> immutable typed Mutation Plan
+  -> one Mutation Dispatcher
   -> one Undo transaction
-  -> typed Gameplay/Timeline/Presentation Mutation handlers
+  -> formal Skill/Timeline/Presentation Mutation bindings
   -> formal Validator
   -> save formal authoring
   -> canonical reverse export
@@ -129,6 +130,7 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 - 外部不存在Intent、Macro、Patch IR、operation catalog、bootstrap action或旧action alias。
 - BTSMTL MCP和Window只暴露`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`、`btsmtl.validate`。
 - `btsmtl.validate`可选接收一个精确`composition_asset_path`，只读取并报告正式Session Composition兼容性；不得扫描目录、修改资产、Build或Play。
+- Agent实现不得以`AgentGraphSnapshot`、按领域Package语义模型或`AgentMutationDraft`作为第二作者语义来源；这些内容必须删除或退回正式领域Module，Agent目录只保留通用Document适配与事务编排。
 - 旧Pose State inline Graph只通过`character.migrate_legacy_pose_state_graphs(definition_asset_path)`一次性迁入GraphCatalog；该工具不读取selection、不扫描、不build。
 - Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
 - 不存在BTSMTL局部节点/边/属性修改工具；Agent直接修改package文件。

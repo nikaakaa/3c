@@ -8,18 +8,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     internal static class BtsmtlSkillDocumentDiffModule
     {
         public static void Build(
-            AgentGraphSnapshot current,
+            AgentAuthoringTarget current,
             AgentDocumentEditable target,
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
         {
             AgentPackageSkillFlowDocument currentDocument = new AgentPackageSkillFlowDocument
             {
-                skills = current?.skills ?? new List<AgentPackageSkillDefinitionFile>(),
-                graphs = current?.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>(),
-                layouts = current?.skillGraphLayouts ?? new List<AgentPackageSkillFlowGraphLayoutFile>(),
-                macros = current?.skillMacros ?? new List<AgentPackageSkillMacroFile>(),
-                timelines = current?.skillTimelines ?? new List<AgentPackageSkillTimelineFile>()
+                skills = current?.editable?.skills ?? new List<AgentPackageSkillDefinitionFile>(),
+                graphs = current?.editable?.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>(),
+                layouts = current?.editable?.skillGraphLayouts ?? new List<AgentPackageSkillFlowGraphLayoutFile>(),
+                macros = current?.editable?.skillMacros ?? new List<AgentPackageSkillMacroFile>(),
+                timelines = current?.editable?.skillTimelines ?? new List<AgentPackageSkillTimelineFile>()
             };
             AgentPackageSkillFlowDocument targetDocument = new AgentPackageSkillFlowDocument
             {

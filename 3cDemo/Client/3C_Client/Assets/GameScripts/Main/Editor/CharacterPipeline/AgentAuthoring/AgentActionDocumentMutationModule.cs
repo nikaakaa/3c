@@ -8,12 +8,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     internal static class AgentActionDocumentMutationModule
     {
         internal static void BuildActionMutations(
-            AgentGraphSnapshot current,
+            AgentAuthoringTarget current,
             AgentDocumentEditable target,
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
         {
-            var oldRequests = Index(current.actionRequests, value => value.requestId, "document.editable.actionRequests", report);
+            var oldRequests = Index(current?.editable?.actionRequests, value => value.requestId, "document.editable.actionRequests", report);
             var newRequests = Index(target.actionRequests, value => value.requestId, "document.editable.actionRequests", report);
             foreach (AgentActionRequest request in target.actionRequests ?? new List<AgentActionRequest>())
             {
@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             foreach (string removed in oldRequests.Keys.Except(newRequests.Keys, StringComparer.Ordinal))
                 report.Error($"document.editable.actionRequests[{Escape(removed)}]", "action_request_delete_unsupported", "Action Request catalog不可由Document删除。");
 
-            var oldProfiles = Index(current.actionProfiles, value => value.actionId, "document.editable.actionProfiles", report);
+            var oldProfiles = Index(current?.editable?.actionProfiles, value => value.actionId, "document.editable.actionProfiles", report);
             var newProfiles = Index(target.actionProfiles, value => value.actionId, "document.editable.actionProfiles", report);
             foreach (AgentActionProfile profile in target.actionProfiles ?? new List<AgentActionProfile>())
             {

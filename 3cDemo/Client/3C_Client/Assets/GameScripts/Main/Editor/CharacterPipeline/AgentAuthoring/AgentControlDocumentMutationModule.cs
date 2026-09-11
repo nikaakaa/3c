@@ -8,16 +8,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     internal static class AgentControlDocumentMutationModule
     {
         internal static void BuildControlConfigurationMutations(
-            AgentGraphSnapshot current,
+            AgentAuthoringTarget current,
             AgentDocumentEditable target,
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
         {
             var currentControl = new AgentDocumentControlConfiguration
             {
-                moduleId = current?.controlModuleId,
-                semanticVersion = current?.controlSemanticVersion ?? 0,
-                parameters = current?.controlParameters ?? new List<AgentControlParameter>()
+                moduleId = current?.editable?.control?.moduleId,
+                semanticVersion = current?.editable?.control?.semanticVersion ?? 0,
+                parameters = current?.editable?.control?.parameters ?? new List<AgentControlParameter>()
             };
             if (AgentControlDocumentMapper.SemanticEquals(currentControl, target?.control))
                 return;

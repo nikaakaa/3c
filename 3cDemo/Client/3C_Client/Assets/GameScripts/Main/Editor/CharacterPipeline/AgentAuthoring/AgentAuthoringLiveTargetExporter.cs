@@ -19,41 +19,42 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
-    public sealed class AgentCharacterSnapshotExporter
+    public sealed class AgentAuthoringLiveTargetExporter
     {
-        public AgentGraphSnapshot Export(CharacterPipelineDefinition definition)
+        public AgentAuthoringTarget Export(CharacterPipelineDefinition definition)
         {
-            return ExportSnapshot(definition, AgentSnapshotExportMode.Compact);
+            return ExportTarget(definition);
         }
-        public AgentGraphSnapshot ExportFull(CharacterPipelineDefinition definition)
-        {
-            return ExportSnapshot(definition, AgentSnapshotExportMode.Full);
-        }
-        AgentGraphSnapshot ExportSnapshot(CharacterPipelineDefinition definition, AgentSnapshotExportMode mode)
+        AgentAuthoringTarget ExportTarget(CharacterPipelineDefinition definition)
         {
 
-            AgentGraphSnapshot snapshot = new AgentGraphSnapshot();
-            snapshot.domain = AgentAuthoringSchema.CharacterControllerDomain;
-            snapshot.exportMode = mode.ToString();
+            var target = new AgentAuthoringTarget
+            {
+                domain = AgentAuthoringSchema.CharacterControllerDomain,
+                editable = new AgentDocumentEditable(),
+                context = new AgentDocumentContext
+                {
+                    presentation = new AgentDocumentPresentationContext()
+                }
+            };
             if (!definition)
-                return snapshot;
+                return target;
 
-            snapshot.definitionName = definition.name;
-            snapshot.definitionAssetPath = AssetDatabase.GetAssetPath(definition);
-            snapshot.rootAssetPath = snapshot.definitionAssetPath;
-            snapshot.rootIdentity = AssetDatabase.AssetPathToGUID(snapshot.definitionAssetPath);
-            snapshot.inputProviderOwnerId = CharacterSkillProviderOwners.Asset(
+            target.context.definitionName = definition.name;
+            target.context.definitionAssetPath = AssetDatabase.GetAssetPath(definition);
+            target.rootIdentity = AssetDatabase.AssetPathToGUID(target.context.definitionAssetPath);
+            target.context.inputProviderOwnerId = CharacterSkillProviderOwners.Asset(
                 AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.InputProfile)));
-            snapshot.gameplayProviderOwnerId = CharacterSkillProviderOwners.Asset(
+            target.context.gameplayProviderOwnerId = CharacterSkillProviderOwners.Asset(
                 AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition.GameplayEffectProfile)));
-            snapshot.controlModuleId = definition.ControlModuleId;
-            if (!string.IsNullOrEmpty(snapshot.controlModuleId))
+            target.editable.control.moduleId = definition.ControlModuleId;
+            if (!string.IsNullOrEmpty(target.editable.control.moduleId))
             {
                 ICharacterControlModule controlModule =
                     CorinCharacterControlModuleCatalog.Create().Require(
-                        new CharacterControlModuleId(snapshot.controlModuleId));
-                snapshot.controlSemanticVersion = controlModule.Contract.SemanticVersion;
-                snapshot.controlParameters = definition.ControlParameters
+                        new CharacterControlModuleId(target.editable.control.moduleId));
+                target.editable.control.semanticVersion = controlModule.Contract.SemanticVersion;
+                target.editable.control.parameters = definition.ControlParameters
                     .Where(value => value != null)
                     .Select(value => new AgentControlParameter
                     {
@@ -64,35 +65,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .ToList();
             }
 
-            ExportBodyMotion(definition.BodyMotionProfile, mode, snapshot);
-            ExportInputs(definition.InputProfile, snapshot);
-            ExportActionProfiles(definition.ActionProfiles, snapshot);
+            ExportBodyMotion(definition.BodyMotionProfile, target.context.bodyMotion);
+            ExportInputs(definition.InputProfile, target.context);
+            target.editable.actionRequests = target.context.actionRequests;
+            ExportActionProfiles(definition.ActionProfiles, target.editable);
 
             var program = definition.SimulationProgram;
             if (program)
             {
-                snapshot.programId = program.ProgramId;
-                snapshot.sourceRevision = program.SourceRevision;
-                snapshot.semanticHash = program.SemanticHash;
-                snapshot.numericProfileId = program.NumericProfileId;
-                snapshot.targetAbiVersion = program.TargetAbiVersion;
-                snapshot.programHash = program.ProgramHash;
-                snapshot.layoutHash = program.LayoutHash;
+                target.context.generatedProduct.programId = program.ProgramId;
+                target.context.generatedProduct.sourceRevision = program.SourceRevision;
+                target.context.generatedProduct.semanticHash = program.SemanticHash;
+                target.context.generatedProduct.numericProfileId = program.NumericProfileId;
+                target.context.generatedProduct.targetAbiVersion = program.TargetAbiVersion;
+                target.context.generatedProduct.programHash = program.ProgramHash;
+                target.context.generatedProduct.layoutHash = program.LayoutHash;
             }
-            ExportPresentation(definition, snapshot);
+            ExportPresentation(definition, target);
 
-            return snapshot;
+            return target;
         }
         static void ExportBodyMotion(
             CharacterBodyMotionProfile profile,
-            AgentSnapshotExportMode mode,
-            AgentGraphSnapshot snapshot)
+            AgentBodyMotionProfile bodyMotion)
         {
             if (!profile)
                 return;
             string path = AssetDatabase.GetAssetPath(profile);
             string guid = AssetDatabase.AssetPathToGUID(path);
-            AgentBodyMotionProfile bodyMotion = snapshot.bodyMotion;
             bodyMotion.assetPath = path;
             bodyMotion.assetGuid = guid;
             bodyMotion.sourceIdentity = $"asset:{guid}";
@@ -101,13 +101,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .ToString();
             bodyMotion.semanticVersion = CharacterBodyMotionProfile.SemanticVersion;
             bodyMotion.requiredWorldCapability = WorldCapability.AirborneVerticalMotion.ToString();
-            if (mode == AgentSnapshotExportMode.Full)
-            {
-                bodyMotion.gravityAcceleration = profile.GravityAcceleration.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-                bodyMotion.maximumFallSpeed = profile.MaximumFallSpeed.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
-            }
+            bodyMotion.gravityAcceleration = profile.GravityAcceleration.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            bodyMotion.maximumFallSpeed = profile.MaximumFallSpeed.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         }
-        static void ExportInputs(CharacterInputProfile inputProfile, AgentGraphSnapshot snapshot)
+        static void ExportInputs(CharacterInputProfile inputProfile, AgentDocumentContext context)
         {
             if (!inputProfile)
                 return;
@@ -119,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (value == null)
                     continue;
 
-                snapshot.inputValues.Add(new AgentInputValue
+                context.inputValues.Add(new AgentInputValue
                 {
                     inputValueId = value.InputValueId,
                     valueType = value.ValueType.ToString()
@@ -133,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (request == null)
                     continue;
 
-                snapshot.actionRequests.Add(new AgentActionRequest
+                context.actionRequests.Add(new AgentActionRequest
                 {
                     requestId = request.RequestId,
                     bufferSeconds = request.BufferSeconds,
@@ -142,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 });
             }
         }
-        static void ExportActionProfiles(IReadOnlyList<ActionProfile> profiles, AgentGraphSnapshot snapshot)
+        static void ExportActionProfiles(IReadOnlyList<ActionProfile> profiles, AgentDocumentEditable editable)
         {
             if (profiles == null)
                 return;
@@ -154,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
 
                 string path = AssetDatabase.GetAssetPath(profile);
-                snapshot.actionProfiles.Add(new AgentActionProfile
+                editable.actionProfiles.Add(new AgentActionProfile
                 {
                     actionId = profile.ActionId,
                     displayName = profile.DisplayName,
@@ -169,37 +166,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
         void ExportPresentation(
             CharacterPipelineDefinition definition,
-            AgentGraphSnapshot snapshot)
+            AgentAuthoringTarget target)
         {
             CharacterAnimationPresentationProfile presentation = definition.AnimationPresentationProfile;
-            string profilePath = presentation ? AssetDatabase.GetAssetPath(presentation) : string.Empty;
-            snapshot.presentation.profileAssetPath = profilePath;
-            snapshot.presentation.profileAssetGuid = string.IsNullOrEmpty(profilePath)
-                ? string.Empty
-                : AssetDatabase.AssetPathToGUID(profilePath);
             if (!presentation)
                 return;
 
             CharacterPresentationPoseGraphAsset poseGraph = presentation.PoseGraph;
-            string poseGraphPath = poseGraph ? AssetDatabase.GetAssetPath(poseGraph) : string.Empty;
-            snapshot.presentation.poseGraphAssetPath = poseGraphPath;
-            snapshot.presentation.poseGraphAssetGuid = string.IsNullOrEmpty(poseGraphPath)
-                ? string.Empty
-                : AssetDatabase.AssetPathToGUID(poseGraphPath);
-            snapshot.presentation.poseGraphId = poseGraph && poseGraph.Graph != null ? poseGraph.Graph.GraphId.Value : string.Empty;
-            snapshot.presentation.poseGraphRevision = poseGraph?.Graph?.ContentRevision ?? string.Empty;
-
-            CharacterAnimationRigDefinition rig = presentation.RigDefinition;
-            string rigPath = rig ? AssetDatabase.GetAssetPath(rig) : string.Empty;
-            snapshot.presentation.rigAssetPath = rigPath;
-            snapshot.presentation.rigAssetGuid = string.IsNullOrEmpty(rigPath)
-                ? string.Empty
-                : AssetDatabase.AssetPathToGUID(rigPath);
-            snapshot.presentation.rigId = rig?.RigId ?? string.Empty;
-            snapshot.presentation.rigRevision = rig?.Revision ?? string.Empty;
-
-            snapshot.presentation.footAnalysisMode = presentation.FootPlacementAnalysisMode.ToString();
-            snapshot.presentation.footAnalysisSourceAssetGuid = presentation.FootPlacementAnalysisSourceAssetGuid;
+            AgentDocumentPresentationContext context = target.context.presentation;
+            context.footAnalysisSourceId = string.Empty;
+            context.footAnalysisSourceVersion = 0;
+            context.footAnalysisAlgorithmVersion = string.Empty;
             if (CharacterFootPlacementAnalysisSource.IsAssetGuid(presentation.FootPlacementAnalysisSourceAssetGuid))
             {
                 string sourcePath = AssetDatabase.GUIDToAssetPath(presentation.FootPlacementAnalysisSourceAssetGuid);
@@ -207,9 +184,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(sourcePath);
                 if (source)
                 {
-                    snapshot.presentation.footAnalysisSourceId = source.AnalysisSourceId.Value;
-                    snapshot.presentation.footAnalysisSourceVersion = source.AnalysisVersion;
-                    snapshot.presentation.footAnalysisAlgorithmVersion = CharacterFootPlacementAnalysisSource.AlgorithmVersion;
+                    context.footAnalysisSourceId = source.AnalysisSourceId.Value;
+                    context.footAnalysisSourceVersion = source.AnalysisVersion;
+                    context.footAnalysisAlgorithmVersion = CharacterFootPlacementAnalysisSource.AlgorithmVersion;
                 }
             }
 
@@ -219,15 +196,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 poseGraph?.Graph,
                 string.Empty,
                 new HashSet<PoseGraphId>(),
-                snapshot.presentation);
+                context);
 
-            ExportBlendSpaces(definition, presentation, snapshot.presentation);
+            ExportBlendSpaces(definition, presentation, context);
         }
 
         static void ExportBlendSpaces(
             CharacterPipelineDefinition definition,
             CharacterAnimationPresentationProfile profile,
-            AgentSnapshotAnimationPresentation destination)
+            AgentDocumentPresentationContext destination)
         {
             var assets = new HashSet<CharacterAnimationBlendSpaceAsset>();
             for (int i = 0; i < profile.PoseSourceBindings.Count; i++)
@@ -244,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             foreach (CharacterAnimationBlendSpaceAsset asset in assets.OrderBy(value => value.BlendSpaceId.Value, StringComparer.Ordinal))
             {
                 string path = AssetDatabase.GetAssetPath(asset);
-                var entry = new AgentSnapshotAnimationBlendSpace
+                var entry = new AgentDocumentAnimationBlendSpaceContext
                 {
                     assetPath = path,
                     assetGuid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path),
@@ -298,7 +275,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             CharacterPoseCanvasGraph graph,
             string scope,
             HashSet<PoseGraphId> path,
-            AgentSnapshotAnimationPresentation destination)
+            AgentDocumentPresentationContext destination)
         {
             if (!owner || graph == null || !path.Add(graph.GraphId))
                 return;
@@ -327,7 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         CharacterPoseAuthoringPortProjection.Get(node)
                         .Where(port => port != null && port.Direction == CharacterPosePortDirection.Input && port.Kind == CharacterPosePortKind.Parameter)
                         .ToArray();
-                    destination.stateLocalPoseSources.Add(new AgentSnapshotStateLocalPoseSource
+                    destination.stateLocalPoseSources.Add(new AgentDocumentStateLocalPoseSourceContext
                     {
                         graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,
@@ -350,7 +327,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (metadata.OperationFamily ==
                     CharacterPoseOperationFamily.ActionInput)
                 {
-                    destination.actionPlaybackInputs.Add(new AgentSnapshotActionPlaybackInput
+                    destination.actionPlaybackInputs.Add(new AgentDocumentActionPlaybackInputContext
                     {
                         graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,
@@ -372,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         string.IsNullOrWhiteSpace(animationSlotValue)
                             ? default
                             : new AnimationSlotId(animationSlotValue);
-                    destination.animationSlots.Add(new AgentSnapshotAnimationSlot
+                    destination.animationSlots.Add(new AgentDocumentAnimationSlotContext
                     {
                         graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,

@@ -47,46 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         Error
     }
 
-    public enum AgentSnapshotExportMode
-    {
-        Compact,
-        Full
-    }
-
-    [Serializable]
-    public sealed class AgentGraphSnapshot
-    {
-        public string schemaVersion = AgentAuthoringSchema.Version;
-        public string domain;
-        public string rootAssetPath;
-        public string rootIdentity;
-        public string exportMode = AgentSnapshotExportMode.Compact.ToString();
-        public string definitionName;
-        public string definitionAssetPath;
-        public string controlModuleId;
-        public int controlSemanticVersion;
-        public List<AgentControlParameter> controlParameters = new List<AgentControlParameter>();
-        public string programId;
-        public string sourceRevision;
-        public string semanticHash;
-        public string numericProfileId;
-        public int targetAbiVersion;
-        public string programHash;
-        public string layoutHash;
-        public AgentBodyMotionProfile bodyMotion = new AgentBodyMotionProfile();
-        public List<AgentInputValue> inputValues = new List<AgentInputValue>();
-        public List<AgentActionRequest> actionRequests = new List<AgentActionRequest>();
-        public string inputProviderOwnerId;
-        public string gameplayProviderOwnerId;
-        public List<AgentActionProfile> actionProfiles = new List<AgentActionProfile>();
-        public List<AgentPackageSkillDefinitionFile> skills = new List<AgentPackageSkillDefinitionFile>();
-        public List<AgentPackageSkillFlowGraphFile> skillGraphs = new List<AgentPackageSkillFlowGraphFile>();
-        public List<AgentPackageSkillFlowGraphLayoutFile> skillGraphLayouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
-        public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
-        public List<AgentPackageSkillTimelineFile> skillTimelines = new List<AgentPackageSkillTimelineFile>();
-        public AgentSnapshotAnimationPresentation presentation = new AgentSnapshotAnimationPresentation();
-    }
-
     [Serializable]
     public sealed class AgentBodyMotionProfile
     {
@@ -162,92 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<string> all = new List<string>();
         public List<string> any = new List<string>();
         public List<string> none = new List<string>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotStateLocalPoseSource
-    {
-        public string graphId;
-        public string nodeId;
-        public string nodeKind;
-        public string ownerKind;
-        public string sourceSlotName;
-        public string sourceSlotAssetPath;
-        public string sourceSlotAssetGuid;
-        public long sourceSlotLocalFileId;
-        public string sourceKind;
-        public string xParameterPortId;
-        public string yParameterPortId;
-        public string inputRangePolicy;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotActionPlaybackInput
-    {
-        public string graphId;
-        public string nodeId;
-        public string ownerKind;
-        public string animationChannelId;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAnimationSlot
-    {
-        public string graphId;
-        public string nodeId;
-        public string ownerKind;
-        public string animationSlotId;
-        public string animationSlotGroupId;
-        public string animationChannelId;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAnimationPresentation
-    {
-        public string profileAssetPath;
-        public string profileAssetGuid;
-        public string poseGraphAssetPath;
-        public string poseGraphAssetGuid;
-        public string poseGraphId;
-        public string poseGraphRevision;
-        public string rigAssetPath;
-        public string rigAssetGuid;
-        public string rigId;
-        public string rigRevision;
-        public string footAnalysisMode;
-        public string footAnalysisSourceAssetGuid;
-        public string footAnalysisSourceId;
-        public int footAnalysisSourceVersion;
-        public string footAnalysisAlgorithmVersion;
-        public List<AgentSnapshotStateLocalPoseSource> stateLocalPoseSources =
-            new List<AgentSnapshotStateLocalPoseSource>();
-        public List<AgentSnapshotActionPlaybackInput> actionPlaybackInputs =
-            new List<AgentSnapshotActionPlaybackInput>();
-        public List<AgentSnapshotAnimationSlot> animationSlots =
-            new List<AgentSnapshotAnimationSlot>();
-        public List<AgentSnapshotAnimationBlendSpace> blendSpaces = new List<AgentSnapshotAnimationBlendSpace>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotAnimationBlendSpace
-    {
-        public string assetPath;
-        public string assetGuid;
-        public string blendSpaceId;
-        public string contentRevision;
-        public string mode;
-        public string xParameterId;
-        public string xUnit;
-        public float xMinimum;
-        public float xMaximum;
-        public string yParameterId;
-        public string yUnit;
-        public float yMinimum;
-        public float yMaximum;
-        public int sampleCount;
-        public string compileStatus;
-        public string projectionRevision;
-        public List<string> diagnostics = new List<string>();
     }
 
     [Serializable]

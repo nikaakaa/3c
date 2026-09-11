@@ -17,12 +17,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentAssetResolver
     {
         readonly CharacterPipelineDefinition m_Definition;
-        readonly AgentGraphSnapshot m_Snapshot;
+        readonly AgentAuthoringTarget m_Current;
 
-        public AgentAssetResolver(CharacterPipelineDefinition definition, AgentGraphSnapshot snapshot)
+        public AgentAssetResolver(CharacterPipelineDefinition definition, AgentAuthoringTarget current)
         {
             m_Definition = definition;
-            m_Snapshot = snapshot;
+            m_Current = current;
         }
 
         public bool TryResolveInputValue(string inputValueId, out CharacterInputValueDefinition value)
@@ -49,9 +49,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string inputValueId,
             ProgramInputValueKind expectedKind)
         {
-            if (string.IsNullOrEmpty(inputValueId) || m_Snapshot?.inputValues == null)
+            if (string.IsNullOrEmpty(inputValueId) || m_Current?.context?.inputValues == null)
                 return false;
-            return m_Snapshot.inputValues.Any(value =>
+            return m_Current.context.inputValues.Any(value =>
                 value != null &&
                 string.Equals(value.inputValueId, inputValueId, StringComparison.Ordinal) &&
                 string.Equals(value.valueType, expectedKind.ToString(), StringComparison.Ordinal));

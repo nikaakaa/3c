@@ -22,7 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public Dictionary<string, JToken> ToFiles(
             AgentAuthoringTarget target,
-            AgentGraphSnapshot snapshot,
             AgentCompileReport report)
         {
             var files = new Dictionary<string, JToken>(StringComparer.Ordinal);
@@ -85,7 +84,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         internal bool TryFromFiles(
             AgentAuthoringPackageManifest manifest,
             IReadOnlyDictionary<string, JToken> files,
-            AgentGraphSnapshot current,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId,
             AgentCompileReport report,
             AgentAuthoringDocumentReadPhase phase,
             out AgentAuthoringTarget target)
@@ -130,8 +130,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     files,
                     target.editable,
                     report,
-                    current?.inputProviderOwnerId,
-                    current?.gameplayProviderOwnerId);
+                    inputProviderOwnerId,
+                    gameplayProviderOwnerId);
             }
             if (string.Equals(
                     manifest.domain,
@@ -165,8 +165,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     },
                     report,
                     target.editable.control?.moduleId,
-                    current?.inputProviderOwnerId,
-                    current?.gameplayProviderOwnerId);
+                    inputProviderOwnerId,
+                    gameplayProviderOwnerId);
             valid &= AgentPackageMappingSupport.ValidatePrimaryIdentities(target.editable, report);
 
             target.context = new AgentDocumentContext

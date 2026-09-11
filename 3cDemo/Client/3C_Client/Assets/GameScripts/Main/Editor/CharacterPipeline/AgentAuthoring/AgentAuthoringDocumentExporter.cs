@@ -22,15 +22,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool generatedProductStale =
                 CharacterSimulationProgramBuildService
                     .EvaluateExactArtifactStaleness(definition);
-            AgentGraphSnapshot snapshot = new AgentCharacterSnapshotExporter().ExportFull(definition);
-            snapshot.controlModuleId = definition.ControlModuleId;
+            AgentAuthoringTarget target =
+                new AgentAuthoringLiveTargetExporter().Export(definition);
             List<AgentPackageSkillDefinitionFile> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
-            snapshot.skills = skills;
             var skillReport = new AgentCompileReport
             {
                 success = true,
                 domain = AgentAuthoringSchema.CharacterControllerDomain,
-                rootIdentity = snapshot.rootIdentity
+                rootIdentity = target.rootIdentity
             };
             AgentPackageSkillFlowDocument skillDocument =
                 AgentSkillFlowDocumentExporter.Export(definition, skillReport);
@@ -44,88 +43,55 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         AssetDatabase.GetAssetPath(definition.GameplayEffectProfile)))) ||
                 skillReport.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, skillReport.messages.Select(value => value.message)));
-            AddSkillInputBindings(snapshot, skillDocument);
-            snapshot.skillGraphs = skillDocument.graphs;
-            snapshot.skillGraphLayouts = skillDocument.layouts;
-            snapshot.skillMacros = skillDocument.macros;
-            snapshot.skillTimelines = skillDocument.timelines;
-            var editable = new AgentDocumentEditable
-            {
-                control = new AgentDocumentControlConfiguration
-                {
-                    moduleId = snapshot.controlModuleId,
-                    semanticVersion = snapshot.controlSemanticVersion,
-                    parameters = snapshot.controlParameters
-                },
-                actionRequests = snapshot.actionRequests,
-                actionProfiles = snapshot.actionProfiles,
-                skills = skills,
-                skillGraphs = skillDocument.graphs,
-                skillGraphLayouts = skillDocument.layouts,
-                skillMacros = skillDocument.macros,
-                skillTimelines = skillDocument.timelines,
-                presentation = new AgentAuthoringPresentationExporter().Export(definition)
-            };
-            var context = new AgentDocumentContext
-            {
-                definitionName = snapshot.definitionName,
-                definitionAssetPath = snapshot.definitionAssetPath,
-                inputValues = snapshot.inputValues,
-                bodyMotion = snapshot.bodyMotion,
-                presentation = ExportPresentationContext(
-                    definition,
-                    snapshot.presentation),
-                generatedProduct = ExportGeneratedProduct(
-                    snapshot,
-                    generatedProductStale),
-                capabilities = CharacterCapabilities()
-            };
-            AgentGraphSnapshot projectionSnapshot = AgentAuthoringDocumentCodec.Clone(snapshot);
-            projectionSnapshot.skills = skills;
-            projectionSnapshot.skillGraphs = skillDocument.graphs;
-            projectionSnapshot.skillGraphLayouts = skillDocument.layouts;
-            projectionSnapshot.skillMacros = skillDocument.macros;
-            projectionSnapshot.skillTimelines = skillDocument.timelines;
-            return Finish(projectionSnapshot, editable, context);
+            AddSkillInputBindings(target.context, skillDocument);
+            target.editable.skills = skills;
+            target.editable.skillGraphs = skillDocument.graphs;
+            target.editable.skillGraphLayouts = skillDocument.layouts;
+            target.editable.skillMacros = skillDocument.macros;
+            target.editable.skillTimelines = skillDocument.timelines;
+            target.editable.presentation = new AgentAuthoringPresentationExporter().Export(definition);
+            target.context.presentation = ExportPresentationContext(
+                definition,
+                target.context.presentation);
+            target.context.generatedProduct = ExportGeneratedProduct(
+                target.context.generatedProduct,
+                generatedProductStale);
+            target.context.capabilities = CharacterCapabilities();
+            return Finish(target);
         }
 
         static AgentAuthoringPackageProjection Finish(
-            AgentGraphSnapshot snapshot,
-            AgentDocumentEditable editable,
-            AgentDocumentContext context)
+            AgentAuthoringTarget target)
         {
-            var target = new AgentAuthoringTarget
-            {
-                domain = snapshot.domain,
-                rootIdentity = snapshot.rootIdentity,
-                editable = editable,
-                context = context
-            };
             var report = new AgentCompileReport
             {
                 schemaVersion = AgentAuthoringSchema.Version,
-                domain = snapshot.domain,
-                rootIdentity = snapshot.rootIdentity
+                domain = target.domain,
+                rootIdentity = target.rootIdentity
             };
-            Dictionary<string, Newtonsoft.Json.Linq.JToken> files = new AgentAuthoringPackageMapper().ToFiles(target, snapshot, report);
+            Dictionary<string, Newtonsoft.Json.Linq.JToken> files = new AgentAuthoringPackageMapper().ToFiles(target, report);
             if (report.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, report.messages.Select(message => message.message)));
             string editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
             string contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair =>
                 pair.Key.StartsWith("context/", StringComparison.Ordinal) ||
                 pair.Key.StartsWith("readonly/", StringComparison.Ordinal)));
-            string sourceRevision = ComputeSourceRevision(editable);
-            snapshot.schemaVersion = AgentAuthoringSchema.Version;
-            snapshot.sourceRevision = sourceRevision;
-            return new AgentAuthoringPackageProjection(snapshot, target, sourceRevision, editableHash, contextHash);
+            string sourceRevision = ComputeSourceRevision(target.editable);
+            return new AgentAuthoringPackageProjection(
+                target,
+                sourceRevision,
+                editableHash,
+                contextHash,
+                target.context.inputProviderOwnerId,
+                target.context.gameplayProviderOwnerId);
         }
 
         static void AddSkillInputBindings(
-            AgentGraphSnapshot snapshot,
+            AgentDocumentContext context,
             AgentPackageSkillFlowDocument document)
         {
             var inputIds = new HashSet<string>(
-                snapshot.inputValues.Select(value => value.inputValueId),
+                context.inputValues.Select(value => value.inputValueId),
                 StringComparer.Ordinal);
             foreach (AgentPackageSkillFlowGraphFile graph in document.graphs)
                 foreach (AgentPackageSkillBlackboardDeclaration declaration in graph.blackboardDeclarations)
@@ -133,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     string inputValueId = declaration.inputBinding?.inputValueId;
                     if (string.IsNullOrWhiteSpace(inputValueId) || !inputIds.Add(inputValueId))
                         continue;
-                    snapshot.inputValues.Add(new AgentInputValue
+                    context.inputValues.Add(new AgentInputValue
                     {
                         inputValueId = inputValueId,
                         valueType = ProgramInputValueKind.ActionTargetSnapshot.ToString()
@@ -188,31 +154,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static AgentDocumentGeneratedProduct ExportGeneratedProduct(
-            AgentGraphSnapshot snapshot,
+            AgentDocumentGeneratedProduct current,
             bool? stale = null)
         {
             return new AgentDocumentGeneratedProduct
             {
-                programId = snapshot.programId,
-                sourceRevision = snapshot.sourceRevision,
-                semanticHash = snapshot.semanticHash,
-                numericProfileId = snapshot.numericProfileId,
-                targetAbiVersion = snapshot.targetAbiVersion,
-                programHash = snapshot.programHash,
-                layoutHash = snapshot.layoutHash,
+                programId = current.programId,
+                sourceRevision = current.sourceRevision,
+                semanticHash = current.semanticHash,
+                numericProfileId = current.numericProfileId,
+                targetAbiVersion = current.targetAbiVersion,
+                programHash = current.programHash,
+                layoutHash = current.layoutHash,
                 stale = stale ??
-                        string.IsNullOrEmpty(snapshot.programHash)
+                        string.IsNullOrEmpty(current.programHash)
             };
         }
 
         static AgentDocumentPresentationContext ExportPresentationContext(
             CharacterPipelineDefinition definition,
-            AgentSnapshotAnimationPresentation snapshot)
+            AgentDocumentPresentationContext source)
         {
             CharacterAnimationRigDefinition rig =
                 definition.AnimationPresentationProfile?.RigDefinition;
             if (!rig)
-                return new AgentDocumentPresentationContext();
+                return source;
             string rigPath = AssetDatabase.GetAssetPath(rig);
             return new AgentDocumentPresentationContext
             {
@@ -263,23 +229,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         targetPhysicalBoneId =
                             value.TargetPhysicalBoneId.Value
                     }).ToList(),
-                stateLocalPoseSources =
-                    snapshot.stateLocalPoseSources,
-                actionPlaybackInputs =
-                    snapshot.actionPlaybackInputs,
-                animationSlots = snapshot.animationSlots,
-                blendSpaces = snapshot.blendSpaces,
+                stateLocalPoseSources = source.stateLocalPoseSources,
+                actionPlaybackInputs = source.actionPlaybackInputs,
+                animationSlots = source.animationSlots,
+                blendSpaces = source.blendSpaces,
                 blendCurves = ExportBlendCurves(),
                 blendProfiles = ExportBlendProfiles(
                     rig),
                 animationClips = ExportAnimationClips(
                     definition),
-                footAnalysisSourceId =
-                    snapshot.footAnalysisSourceId,
-                footAnalysisSourceVersion =
-                    snapshot.footAnalysisSourceVersion,
-                footAnalysisAlgorithmVersion =
-                    snapshot.footAnalysisAlgorithmVersion
+                footAnalysisSourceId = source.footAnalysisSourceId,
+                footAnalysisSourceVersion = source.footAnalysisSourceVersion,
+                footAnalysisAlgorithmVersion = source.footAnalysisAlgorithmVersion
             };
         }
 

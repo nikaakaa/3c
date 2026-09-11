@@ -16,7 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentMutationSession(
             CharacterPipelineDefinition definition,
-            AgentGraphSnapshot snapshot,
+            AgentAuthoringTarget current,
+            string sourceRevision,
             AgentMutationPlan plan,
             AgentCompileReport report,
             bool apply,
@@ -24,17 +25,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             Definition = definition;
             Domain = AgentAuthoringSchema.CharacterControllerDomain;
-            Snapshot = snapshot;
+            Current = current;
+            SourceRevision = sourceRevision ?? string.Empty;
             Plan = plan;
             Report = report;
             IsApply = apply;
             PresentationPlan = presentationPlan;
-            Resolver = new AgentAssetResolver(definition, snapshot);
+            Resolver = new AgentAssetResolver(definition, current);
         }
 
         public CharacterPipelineDefinition Definition { get; }
         public string Domain { get; }
-        public AgentGraphSnapshot Snapshot { get; }
+        public AgentAuthoringTarget Current { get; }
+        public string SourceRevision { get; }
         public AgentMutationPlan Plan { get; }
         public AgentCompileReport Report { get; }
         public bool IsApply { get; }
@@ -49,32 +52,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Report.Error("definition", "missing_definition", $"{Domain} root definition 缺失。");
                 return false;
             }
-            if (Snapshot == null || Plan == null)
+            if (Current == null || Plan == null)
             {
-                Report.Error("document", "mutation_boundary_missing", "Snapshot或Mutation Plan缺失。");
-                return false;
-            }
-            if (!string.Equals(Snapshot.schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
-            {
-                Report.Error(
-                    "snapshot.schemaVersion",
-                    "unsupported_schema_version",
-                    $"Snapshot schema 必须是 {AgentAuthoringSchema.Version}，当前为 {Snapshot.schemaVersion}。");
+                Report.Error("document", "mutation_boundary_missing", "Current Document或Mutation Plan缺失。");
                 return false;
             }
             string definitionPath = AssetDatabase.GetAssetPath(Definition);
             string definitionIdentity = AssetDatabase.AssetPathToGUID(definitionPath);
-            if (!string.Equals(Snapshot.domain, Domain, StringComparison.Ordinal) ||
+            if (!string.Equals(Current.domain, Domain, StringComparison.Ordinal) ||
                 !string.Equals(Plan.Domain, Domain, StringComparison.Ordinal) ||
-                !string.Equals(Snapshot.rootAssetPath, definitionPath, StringComparison.Ordinal) ||
-                !string.Equals(Snapshot.rootIdentity, definitionIdentity, StringComparison.Ordinal) ||
+                !string.Equals(Current.rootIdentity, definitionIdentity, StringComparison.Ordinal) ||
                 !string.Equals(Plan.RootIdentity, definitionIdentity, StringComparison.Ordinal) ||
-                !string.Equals(Plan.SourceRevision, Snapshot.sourceRevision, StringComparison.Ordinal))
+                !string.Equals(Plan.SourceRevision, SourceRevision, StringComparison.Ordinal))
             {
                 Report.Error(
-                    "snapshot",
-                    "snapshot_source_changed",
-                    $"Snapshot与Mutation Plan的source不一致：snapshotRoot={Snapshot.rootAssetPath}, definitionRoot={definitionPath}, snapshotIdentity={Snapshot.rootIdentity}, planIdentity={Plan.RootIdentity}, snapshotRevision={Snapshot.sourceRevision}, planRevision={Plan.SourceRevision}。");
+                    "document",
+                    "document_source_changed",
+                    $"Current Document与Mutation Plan的source不一致：definitionRoot={definitionPath}, currentIdentity={Current.rootIdentity}, planIdentity={Plan.RootIdentity}, currentRevision={SourceRevision}, planRevision={Plan.SourceRevision}。");
                 return false;
             }
             return true;
@@ -158,13 +152,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         internal AgentDocumentPreparation(
             AgentMutationPlan plan,
-            AgentGraphSnapshot snapshot,
+            AgentAuthoringTarget current,
+            string sourceRevision,
             AgentDocumentBoundaryIdentity boundary,
             AgentCompileReport report,
             AgentPresentationMutationPlan presentationPlan = null)
         {
             Plan = plan;
-            Snapshot = snapshot;
+            Current = current;
+            SourceRevision = sourceRevision ?? string.Empty;
             Boundary = boundary;
             Report = report;
             PresentationPlan = presentationPlan;
@@ -172,7 +168,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentMutationPlan Plan { get; }
         public AgentCompileReport Report { get; }
-        internal AgentGraphSnapshot Snapshot { get; }
+        internal AgentAuthoringTarget Current { get; }
+        internal string SourceRevision { get; }
         internal AgentDocumentBoundaryIdentity Boundary { get; }
         public AgentPresentationMutationPlan PresentationPlan { get; }
         public bool IsValid => Plan != null && Report != null && !Report.HasErrors();

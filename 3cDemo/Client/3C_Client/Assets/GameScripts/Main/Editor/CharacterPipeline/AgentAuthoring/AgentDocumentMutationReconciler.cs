@@ -11,13 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentDocumentPreparation Prepare(
             CharacterPipelineDefinition definition,
-            AgentGraphSnapshot current,
+            AgentAuthoringPackageProjection current,
             AgentAuthoringTarget target)
         {
             AgentMutationDraftSet mutations = CreateMutationSet(current, target);
             var report = ValidateEnvelope(current, target);
             if (!report.HasErrors())
-                BuildCharacterMutations(current, target.editable, mutations, report);
+                BuildCharacterMutations(current?.Target, target.editable, mutations, report);
             AgentPresentationMutationPlan presentationPlan = null;
             if (!report.HasErrors())
             {
@@ -29,11 +29,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out presentationPlan);
             }
             if (report.HasErrors())
-                return new AgentDocumentPreparation(null, current, null, report);
+                return new AgentDocumentPreparation(null, current?.Target, current?.SourceRevision, null, report);
             AgentDocumentPreparation preparation =
                 new AgentDocumentMutationCompiler().Prepare(
                     definition,
-                    current,
+                    current?.Target,
+                    current?.SourceRevision,
                     mutations);
             preparation.Report.messages.AddRange(report.messages);
             preparation.Report.plannedDiff.AddRange(report.plannedDiff);
@@ -42,40 +43,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             preparation.Report.success = !preparation.Report.HasErrors();
             return new AgentDocumentPreparation(
                 preparation.Plan,
-                preparation.Snapshot,
+                preparation.Current,
+                preparation.SourceRevision,
                 preparation.Boundary,
                 preparation.Report,
                 presentationPlan);
         }
 
-        static AgentMutationDraftSet CreateMutationSet(AgentGraphSnapshot current, AgentAuthoringTarget target)
+        static AgentMutationDraftSet CreateMutationSet(AgentAuthoringPackageProjection current, AgentAuthoringTarget target)
         {
             return new AgentMutationDraftSet
             {
                 schemaVersion = AgentAuthoringSchema.Version,
                 domain = target?.domain,
                 rootIdentity = target?.rootIdentity,
-                sourceRevision = current?.sourceRevision,
+                sourceRevision = current?.SourceRevision,
                 mutations = new List<AgentMutationDraft>()
             };
         }
 
-        static AgentCompileReport ValidateEnvelope(AgentGraphSnapshot current, AgentAuthoringTarget target)
+        static AgentCompileReport ValidateEnvelope(AgentAuthoringPackageProjection current, AgentAuthoringTarget target)
         {
             var report = new AgentCompileReport
             {
                 success = true,
-                domain = current?.domain ?? string.Empty,
-                rootIdentity = current?.rootIdentity ?? string.Empty
+                domain = current?.Target?.domain ?? string.Empty,
+                rootIdentity = current?.Target?.rootIdentity ?? string.Empty
             };
             if (target == null)
             {
                 report.Error("document", "document_missing", "Agent Authoring Document缺失。");
                 return report;
             }
-            if (!string.Equals(target.domain, current.domain, StringComparison.Ordinal))
+            if (!string.Equals(target.domain, current?.Target?.domain, StringComparison.Ordinal))
                 report.Error("document.domain", "document_domain_mismatch", "Document domain与当前root不一致。");
-            if (!string.Equals(target.rootIdentity, current.rootIdentity, StringComparison.Ordinal))
+            if (!string.Equals(target.rootIdentity, current?.Target?.rootIdentity, StringComparison.Ordinal))
                 report.Error("document.rootIdentity", "document_root_mismatch", "Document rootIdentity与当前root不一致。");
             if (target.editable == null)
                 report.Error("document.editable", "editable_missing", "Document editable正文缺失。");
@@ -89,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static void BuildCharacterMutations(
-            AgentGraphSnapshot current,
+            AgentAuthoringTarget current,
             AgentDocumentEditable target,
             AgentMutationDraftSet mutations,
             AgentCompileReport report)

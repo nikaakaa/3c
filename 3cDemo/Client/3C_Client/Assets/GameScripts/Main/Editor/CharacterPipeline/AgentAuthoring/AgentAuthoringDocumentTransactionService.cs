@@ -129,9 +129,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string documentHash = m_Store.Write(
                 path,
                 rebased,
-                projection.Snapshot,
                 sync,
                 report,
+                projection.InputProviderOwnerId,
+                projection.GameplayProviderOwnerId,
                 out string editableHash,
                 out string contextHash);
             AgentDocumentSyncState syncState = string.Equals(editableHash, projection.EditableHash, StringComparison.Ordinal)
@@ -156,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection.Snapshot, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection, state.Target);
             AgentAuthoringResponse response = FromReport(request, preparation.Report, projection, path, state);
             response.documentHash = state.DocumentHash;
             response.planHash = AgentAuthoringDocumentCodec.Hash(preparation.Report.plannedDiff);
@@ -189,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection.Snapshot, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection, state.Target);
             if (!preparation.IsValid)
                 return FromReport(request, preparation.Report, projection, path, state);
             if (!TryCollectOwners(
@@ -247,9 +248,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 string finalDocumentHash = m_Store.Write(
                     path,
                     finalProjection.Target,
-                    finalProjection.Snapshot,
                     finalSync,
                     applied,
+                    finalProjection.InputProviderOwnerId,
+                    finalProjection.GameplayProviderOwnerId,
                     out string finalEditableHash,
                     out string finalContextHash);
                 Undo.CollapseUndoOperations(undoGroup);
@@ -283,9 +285,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string documentHash = m_Store.Write(
                 path,
                 projection.Target,
-                projection.Snapshot,
                 sync,
                 report,
+                projection.InputProviderOwnerId,
+                projection.GameplayProviderOwnerId,
                 out string editableHash,
                 out string contextHash);
             return Success(request, projection, path, AgentDocumentSyncState.Clean, documentHash, report, editableHash, contextHash);
@@ -304,7 +307,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     request.domain,
                     projection.Target.rootIdentity,
                     request.rootAssetPath,
-                    projection.Snapshot,
+                    projection.InputProviderOwnerId,
+                    projection.GameplayProviderOwnerId,
                     report,
                     out AgentAuthoringTarget target,
                     out AgentAuthoringPackageSync sync,

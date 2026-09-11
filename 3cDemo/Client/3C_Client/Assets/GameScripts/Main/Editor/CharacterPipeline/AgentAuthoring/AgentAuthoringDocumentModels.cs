@@ -63,6 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string definitionName;
         public string definitionAssetPath;
+        [JsonIgnore]
+        public string inputProviderOwnerId;
+        [JsonIgnore]
+        public string gameplayProviderOwnerId;
         public List<AgentInputValue> inputValues = new List<AgentInputValue>();
         public List<AgentActionRequest> actionRequests = new List<AgentActionRequest>();
         public AgentBodyMotionProfile bodyMotion = new AgentBodyMotionProfile();
@@ -92,14 +96,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentDocumentRigBoneContext>();
         public List<AgentDocumentVirtualBoneContext> virtualBones =
             new List<AgentDocumentVirtualBoneContext>();
-        public List<AgentSnapshotStateLocalPoseSource> stateLocalPoseSources =
-            new List<AgentSnapshotStateLocalPoseSource>();
-        public List<AgentSnapshotActionPlaybackInput> actionPlaybackInputs =
-            new List<AgentSnapshotActionPlaybackInput>();
-        public List<AgentSnapshotAnimationSlot> animationSlots =
-            new List<AgentSnapshotAnimationSlot>();
-        public List<AgentSnapshotAnimationBlendSpace> blendSpaces =
-            new List<AgentSnapshotAnimationBlendSpace>();
+        public List<AgentDocumentStateLocalPoseSourceContext> stateLocalPoseSources =
+            new List<AgentDocumentStateLocalPoseSourceContext>();
+        public List<AgentDocumentActionPlaybackInputContext> actionPlaybackInputs =
+            new List<AgentDocumentActionPlaybackInputContext>();
+        public List<AgentDocumentAnimationSlotContext> animationSlots =
+            new List<AgentDocumentAnimationSlotContext>();
+        public List<AgentDocumentAnimationBlendSpaceContext> blendSpaces =
+            new List<AgentDocumentAnimationBlendSpaceContext>();
         public List<AgentDocumentBlendAssetContext> blendCurves =
             new List<AgentDocumentBlendAssetContext>();
         public List<AgentDocumentBlendAssetContext> blendProfiles =
@@ -109,6 +113,65 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string footAnalysisSourceId;
         public int footAnalysisSourceVersion;
         public string footAnalysisAlgorithmVersion;
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentStateLocalPoseSourceContext
+    {
+        public string graphId;
+        public string nodeId;
+        public string nodeKind;
+        public string ownerKind;
+        public string sourceSlotName;
+        public string sourceSlotAssetPath;
+        public string sourceSlotAssetGuid;
+        public long sourceSlotLocalFileId;
+        public string sourceKind;
+        public string xParameterPortId;
+        public string yParameterPortId;
+        public string inputRangePolicy;
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentActionPlaybackInputContext
+    {
+        public string graphId;
+        public string nodeId;
+        public string ownerKind;
+        public string animationChannelId;
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentAnimationSlotContext
+    {
+        public string graphId;
+        public string nodeId;
+        public string ownerKind;
+        public string animationSlotId;
+        public string animationSlotGroupId;
+        public string animationChannelId;
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentAnimationBlendSpaceContext
+    {
+        public string assetPath;
+        public string assetGuid;
+        public string blendSpaceId;
+        public string contentRevision;
+        public string mode;
+        public string xParameterId;
+        public string xUnit;
+        public float xMinimum;
+        public float xMaximum;
+        public string yParameterId;
+        public string yUnit;
+        public float yMinimum;
+        public float yMaximum;
+        public int sampleCount;
+        public string compileStatus;
+        public string projectionRevision;
+        public List<string> diagnostics = new List<string>();
     }
 
     [Serializable]
@@ -391,24 +454,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentAuthoringPackageProjection
     {
         public AgentAuthoringPackageProjection(
-            AgentGraphSnapshot snapshot,
             AgentAuthoringTarget target,
             string sourceRevision,
             string editableHash,
-            string contextHash)
+            string contextHash,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId)
         {
-            Snapshot = snapshot;
             Target = target;
             SourceRevision = sourceRevision;
             EditableHash = editableHash;
             ContextHash = contextHash;
+            InputProviderOwnerId = inputProviderOwnerId ?? string.Empty;
+            GameplayProviderOwnerId = gameplayProviderOwnerId ?? string.Empty;
         }
 
-        public AgentGraphSnapshot Snapshot { get; }
         public AgentAuthoringTarget Target { get; }
         public string SourceRevision { get; }
         public string EditableHash { get; }
         public string ContextHash { get; }
+        public string InputProviderOwnerId { get; }
+        public string GameplayProviderOwnerId { get; }
     }
 
     public sealed class AgentAuthoringPackageState

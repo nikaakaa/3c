@@ -57,13 +57,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string Write(
             string packagePath,
             AgentAuthoringTarget target,
-            AgentGraphSnapshot snapshot,
             AgentAuthoringPackageSync sync,
             AgentCompileReport report,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId,
             out string editableHash,
             out string contextHash)
         {
-            Dictionary<string, JToken> files = m_Mapper.ToFiles(target, snapshot, report);
+            Dictionary<string, JToken> files = m_Mapper.ToFiles(target, report);
             if (report.HasErrors())
                 throw new InvalidOperationException("Document package导出失败。");
             editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
@@ -81,7 +82,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 sync,
                 files,
                 target,
-                snapshot,
+                inputProviderOwnerId,
+                gameplayProviderOwnerId,
                 documentHash,
                 editableHash,
                 contextHash);
@@ -93,7 +95,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string domain,
             string rootIdentity,
             string rootAssetPath,
-            AgentGraphSnapshot current,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId,
             AgentCompileReport report,
             out AgentAuthoringTarget target,
             out AgentAuthoringPackageSync sync,
@@ -106,7 +109,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 domain,
                 rootIdentity,
                 rootAssetPath,
-                current,
+                inputProviderOwnerId,
+                gameplayProviderOwnerId,
                 report,
                 AgentAuthoringDocumentReadPhase.TargetMutation,
                 out target,
@@ -121,7 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string domain,
             string rootIdentity,
             string rootAssetPath,
-            AgentGraphSnapshot current,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId,
             AgentCompileReport report,
             AgentAuthoringDocumentReadPhase phase,
             out AgentAuthoringTarget target,
@@ -293,7 +298,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
             contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => IsReadOnlyPath(pair.Key)));
             documentHash = AgentAuthoringDocumentCodec.HashDocument(manifest, editableHash, contextHash);
-            return m_Mapper.TryFromFiles(manifest, files, current, report, phase, out target);
+            return m_Mapper.TryFromFiles(
+                manifest,
+                files,
+                inputProviderOwnerId,
+                gameplayProviderOwnerId,
+                report,
+                phase,
+                out target);
         }
 
         static bool TryReadContent(string relativePath, string fullPath, AgentCompileReport report, out JToken raw)
@@ -342,7 +354,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentAuthoringPackageSync sync,
             IReadOnlyDictionary<string, JToken> files,
             AgentAuthoringTarget target,
-            AgentGraphSnapshot snapshot,
+            string inputProviderOwnerId,
+            string gameplayProviderOwnerId,
             string expectedDocumentHash,
             string expectedEditableHash,
             string expectedContextHash)
@@ -372,7 +385,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     target.domain,
                     target.rootIdentity,
                     sync.rootAssetPath,
-                    snapshot,
+                    inputProviderOwnerId,
+                    gameplayProviderOwnerId,
                     validation,
                     AgentAuthoringDocumentReadPhase.CheckoutRoundTrip,
                     out _,

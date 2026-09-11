@@ -12,7 +12,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentDocumentPreparation Prepare(
             CharacterPipelineDefinition definition,
-            AgentGraphSnapshot snapshot,
+            AgentAuthoringTarget current,
+            string sourceRevision,
             AgentMutationDraftSet drafts)
         {
             var report = new AgentCompileReport
@@ -21,10 +22,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 applied = false
             };
             if (!m_Planner.TryCreatePlan(drafts, report, out AgentMutationPlan plan))
-                return new AgentDocumentPreparation(null, snapshot, null, report);
-            var session = new AgentMutationSession(definition, snapshot, plan, report, false);
+                return new AgentDocumentPreparation(null, current, sourceRevision, null, report);
+            var session = new AgentMutationSession(definition, current, sourceRevision, plan, report, false);
             if (!session.Initialize())
-                return new AgentDocumentPreparation(plan, snapshot, null, report);
+                return new AgentDocumentPreparation(plan, current, sourceRevision, null, report);
 
             for (int i = 0; i < plan.Commands.Count; i++)
             {
@@ -39,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentDocumentBoundaryIdentity boundary = report.HasErrors()
                 ? null
                 : AgentDocumentBoundaryIdentity.Capture(session);
-            return new AgentDocumentPreparation(plan, snapshot, boundary, report);
+            return new AgentDocumentPreparation(plan, current, sourceRevision, boundary, report);
         }
 
         public AgentDocumentApplyResult Apply(
@@ -60,7 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             CopyPreparationReport(preparation.Report, report);
             var session = new AgentMutationSession(
                 definition,
-                preparation.Snapshot,
+                preparation.Current,
+                preparation.SourceRevision,
                 preparation.Plan,
                 report,
                 true,

@@ -16,13 +16,19 @@ MonoBehaviour:
     m_AuthoringId: 10f4cb90-8b9a-4944-b77c-14efc9a3124d
     m_Name: CorinAttack1Timeline
     m_Tracks:
-    - rid: 665191780990845504
-    - rid: 665191803296677992
-    - rid: 665191780990845505
-    - rid: 665191780990845503
     - rid: 665191780990845502
-    m_Sections: []
+    - rid: 665191803296677992
+    - rid: 665191780990845504
+    - rid: 665191780990845503
+    - rid: 665191780990845505
+    m_Sections:
+    - m_AuthoringId: c196a52f-4b06-4310-8a8a-8699ef6a5620
+      m_Name: Attack
+      m_Frame: 0
+      m_NextSectionId: 
+    m_ExternalBindings: []
     m_Scale: 0.117767066
+    m_Loop: 0
   references:
     version: 2
     RefIds:
@@ -38,6 +44,7 @@ MonoBehaviour:
         - rid: 665191780990845506
         - rid: 665191780990845507
         m_AnimationChannelId: FullBodyAction
+        m_AnimationSlotId: corin.full-body-action
     - rid: 665191780990845503
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -152,6 +159,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        BlendProfileId: corin.animation-rig.action-blend-profile
     - rid: 665191780990845507
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -237,6 +245,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        BlendProfileId: corin.animation-rig.action-blend-profile
     - rid: 665191780990845508
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -6624,8 +6633,9 @@ MonoBehaviour:
         ClipInFrame: 0
         m_ExecutionPhase: 0
         m_InlineTree:
-          rid: 665191780990845516
+          rid: -2
         m_SharedTreeAsset: {fileID: 0}
+        m_AssetTree: {fileID: 11400000, guid: c416d05fe9800e34bb8f1bef0a75754b, type: 2}
     - rid: 665191780990845513
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -6639,8 +6649,9 @@ MonoBehaviour:
         ClipInFrame: 0
         m_ExecutionPhase: 0
         m_InlineTree:
-          rid: 665191780990845517
+          rid: -2
         m_SharedTreeAsset: {fileID: 0}
+        m_AssetTree: {fileID: 11400000, guid: 4f3c0ecae2ec0804c9ca86eecf6ed56c, type: 2}
     - rid: 665191780990845514
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -6654,8 +6665,9 @@ MonoBehaviour:
         ClipInFrame: 0
         m_ExecutionPhase: 0
         m_InlineTree:
-          rid: 665191780990845518
+          rid: -2
         m_SharedTreeAsset: {fileID: 0}
+        m_AssetTree: {fileID: 11400000, guid: a910f64b6e41cf74ab40ebd3f751b3fe, type: 2}
     - rid: 665191780990845515
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -6669,504 +6681,9 @@ MonoBehaviour:
         ClipInFrame: 0
         m_ExecutionPhase: 0
         m_InlineTree:
-          rid: 665191780990845519
+          rid: -2
         m_SharedTreeAsset: {fileID: 0}
-    - rid: 665191780990845516
-      type: {class: TimelineRunningTree, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_Name: Decision Attack1Hit
-        m_GraphAuthoringId: f8a822bf-13f7-4542-924e-5ce769613e6d
-        m_Nodes:
-        - rid: 665191780990845520
-        - rid: 665191780990845521
-        - rid: 665191780990845522
-        - rid: 665191780990845523
-        - rid: 665191780990845524
-        m_Edges:
-        - m_GUID: 2df23c55-db1a-42c9-95df-9f291cabd564
-          m_StartNodeGUID: 33e2d967-5325-410f-8401-34efa61ff376
-          m_EndNodeGUID: bd4ddf62-bfd5-4063-a740-16419736e381
-          m_StartPortName: Output
-          m_EndPortName: Input
-          m_FlowOrder: 0
-          m_TransitionPriority: 0
-          m_AbortPolicy: 0
-          m_InlineConditionRuleGraph:
-            rid: -2
-          m_SharedConditionRuleGraphAsset: {fileID: 0}
-          m_ConditionRuleGraphOwnership: 0
-        m_PropertyEdges: []
-        m_ExposedProperties: []
-        m_NodeGroups: []
-        m_StackNodes: []
-        m_BlackboardAuthoringSchemaRevision: 0
-        m_RootGUID: 33e2d967-5325-410f-8401-34efa61ff376
-        m_OnEnableGUID: ed0632b7-b37a-404c-9c71-704dd3c85818
-        m_OnDisableGUID: d3ab225d-9add-4ea1-b2a1-27c90a33b8c5
-        m_OnDestroyGUID: b02eeb40-0251-4217-ba74-e29dbca7f058
-    - rid: 665191780990845517
-      type: {class: TimelineRunningTree, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_Name: Decision ComboAccept
-        m_GraphAuthoringId: 2fd29e97-77d5-4125-9ab1-2f89cd677759
-        m_Nodes:
-        - rid: 665191780990845525
-        - rid: 665191780990845526
-        - rid: 665191780990845527
-        - rid: 665191780990845528
-        - rid: 665191780990845529
-        m_Edges:
-        - m_GUID: 512c453c-e881-4df7-a9cc-7a741d60f4c1
-          m_StartNodeGUID: a45a9ce8-9cac-4c8c-bc79-b2ce7df85bc6
-          m_EndNodeGUID: 1f1c3ca3-d329-4790-a5d8-f5abc745d03b
-          m_StartPortName: Output
-          m_EndPortName: Input
-          m_FlowOrder: 0
-          m_TransitionPriority: 0
-          m_AbortPolicy: 0
-          m_InlineConditionRuleGraph:
-            rid: -2
-          m_SharedConditionRuleGraphAsset: {fileID: 0}
-          m_ConditionRuleGraphOwnership: 0
-        m_PropertyEdges: []
-        m_ExposedProperties: []
-        m_NodeGroups: []
-        m_StackNodes: []
-        m_BlackboardAuthoringSchemaRevision: 0
-        m_RootGUID: a45a9ce8-9cac-4c8c-bc79-b2ce7df85bc6
-        m_OnEnableGUID: 65b9de6f-230d-4dec-b4f9-e44917bfe7eb
-        m_OnDisableGUID: 24e90bec-632d-4bcc-a0a7-3793a1d97fad
-        m_OnDestroyGUID: 8fe5efce-4d35-489a-98c7-62437e62a404
-    - rid: 665191780990845518
-      type: {class: TimelineRunningTree, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_Name: Decision RecoveryLate
-        m_GraphAuthoringId: e150372b-680e-4281-9428-52a5ae1a2221
-        m_Nodes:
-        - rid: 665191780990845530
-        - rid: 665191780990845531
-        - rid: 665191780990845532
-        - rid: 665191780990845533
-        - rid: 665191780990845534
-        m_Edges:
-        - m_GUID: 3afb2f94-e006-4fc1-b9cd-a0819624b7a1
-          m_StartNodeGUID: 379e752a-c1d4-4dd1-9502-07f716198f02
-          m_EndNodeGUID: c7b464e7-b80c-49a8-a4f9-6e722c60a7f4
-          m_StartPortName: Output
-          m_EndPortName: Input
-          m_FlowOrder: 0
-          m_TransitionPriority: 0
-          m_AbortPolicy: 0
-          m_InlineConditionRuleGraph:
-            rid: -2
-          m_SharedConditionRuleGraphAsset: {fileID: 0}
-          m_ConditionRuleGraphOwnership: 0
-        m_PropertyEdges: []
-        m_ExposedProperties: []
-        m_NodeGroups: []
-        m_StackNodes: []
-        m_BlackboardAuthoringSchemaRevision: 0
-        m_RootGUID: 379e752a-c1d4-4dd1-9502-07f716198f02
-        m_OnEnableGUID: b0451f77-b183-48de-9a14-43bb6d7bcbfa
-        m_OnDisableGUID: 582114d8-1b55-4968-b01b-20a6db1d0835
-        m_OnDestroyGUID: 294f0b09-ac8e-435f-acdf-81a3ae36c532
-    - rid: 665191780990845519
-      type: {class: TimelineRunningTree, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_Name: Decision RecoveryEarly
-        m_GraphAuthoringId: 3185e467-14fe-4b9a-ba62-5466d9899f24
-        m_Nodes:
-        - rid: 665191780990845535
-        - rid: 665191780990845536
-        - rid: 665191780990845537
-        - rid: 665191780990845538
-        - rid: 665191780990845539
-        m_Edges:
-        - m_GUID: b587175e-8d55-4d86-a83b-fa8d4d27e3da
-          m_StartNodeGUID: f24c1141-ebf7-49b7-8a98-962db6b6c4df
-          m_EndNodeGUID: ab180ee3-0a85-47c2-b5b3-0fd5c0ed2aa9
-          m_StartPortName: Output
-          m_EndPortName: Input
-          m_FlowOrder: 0
-          m_TransitionPriority: 0
-          m_AbortPolicy: 0
-          m_InlineConditionRuleGraph:
-            rid: -2
-          m_SharedConditionRuleGraphAsset: {fileID: 0}
-          m_ConditionRuleGraphOwnership: 0
-        m_PropertyEdges: []
-        m_ExposedProperties: []
-        m_NodeGroups: []
-        m_StackNodes: []
-        m_BlackboardAuthoringSchemaRevision: 0
-        m_RootGUID: f24c1141-ebf7-49b7-8a98-962db6b6c4df
-        m_OnEnableGUID: e52e43a0-44ea-4950-b6ce-13e66308bd1b
-        m_OnDisableGUID: 8f008907-5f21-4609-959b-c606b1bc3e4f
-        m_OnDestroyGUID: f3909ccd-e950-4277-af74-7fdd528df654
-    - rid: 665191780990845520
-      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: 33e2d967-5325-410f-8401-34efa61ff376
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 0}
-        m_DeltaTime:
-          m_Name: m_DeltaTime
-          m_PortId: m_DeltaTime
-          m_DeclarationId: 
-          m_DisplayName: DeltaTime
-          m_OwnerModuleId: 
-          m_FieldKey: m_DeltaTime
-          m_Index: 0
-          m_Expanded: 0
-          m_Direction: 1
-          m_InputEdgeGUID: 
-          m_OutputEdgeGUIDs: []
-          m_Value: 0
-        m_OutputEdgeGUID: 2df23c55-db1a-42c9-95df-9f291cabd564
-    - rid: 665191780990845521
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: ed0632b7-b37a-404c-9c71-704dd3c85818
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 200}
-        m_OutputEdgeGUID: 
-        EnterType: 0
-    - rid: 665191780990845522
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: d3ab225d-9add-4ea1-b2a1-27c90a33b8c5
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 400}
-        m_OutputEdgeGUID: 
-        EnterType: 1
-    - rid: 665191780990845523
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: b02eeb40-0251-4217-ba74-e29dbca7f058
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 600}
-        m_OutputEdgeGUID: 
-        EnterType: 2
-    - rid: 665191780990845524
-      type: {class: ExposedPropertyNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: bd4ddf62-bfd5-4063-a740-16419736e381
-        m_DisplayName: Set Attack1Hit
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 320, y: 0}
-        m_NodeType: 1
-        m_Value:
-          rid: 665191780990845540
-        m_InputEdgeGUID: 2df23c55-db1a-42c9-95df-9f291cabd564
-        m_BlackboardVariable:
-          m_DeclarationId: 5e549c2b-b601-4fbd-a65b-cdb0f3a63f29
-          m_DeclarationOwnerId: 79647291-0c69-4e9e-9276-96a93c3647e7
-          m_DisplayKey: Attack1Hit
-          m_ValueTypeName: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        m_FactContext: {fileID: 0}
-    - rid: 665191780990845525
-      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: a45a9ce8-9cac-4c8c-bc79-b2ce7df85bc6
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 0}
-        m_DeltaTime:
-          m_Name: m_DeltaTime
-          m_PortId: m_DeltaTime
-          m_DeclarationId: 
-          m_DisplayName: DeltaTime
-          m_OwnerModuleId: 
-          m_FieldKey: m_DeltaTime
-          m_Index: 0
-          m_Expanded: 0
-          m_Direction: 1
-          m_InputEdgeGUID: 
-          m_OutputEdgeGUIDs: []
-          m_Value: 0
-        m_OutputEdgeGUID: 512c453c-e881-4df7-a9cc-7a741d60f4c1
-    - rid: 665191780990845526
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 65b9de6f-230d-4dec-b4f9-e44917bfe7eb
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 200}
-        m_OutputEdgeGUID: 
-        EnterType: 0
-    - rid: 665191780990845527
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 24e90bec-632d-4bcc-a0a7-3793a1d97fad
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 400}
-        m_OutputEdgeGUID: 
-        EnterType: 1
-    - rid: 665191780990845528
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 8fe5efce-4d35-489a-98c7-62437e62a404
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 600}
-        m_OutputEdgeGUID: 
-        EnterType: 2
-    - rid: 665191780990845529
-      type: {class: ExposedPropertyNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: 1f1c3ca3-d329-4790-a5d8-f5abc745d03b
-        m_DisplayName: Set ComboAccept
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 320, y: 0}
-        m_NodeType: 1
-        m_Value:
-          rid: 665191780990845541
-        m_InputEdgeGUID: 512c453c-e881-4df7-a9cc-7a741d60f4c1
-        m_BlackboardVariable:
-          m_DeclarationId: e143e75d-8bd1-4556-b7f0-514be04f9307
-          m_DeclarationOwnerId: cf79f885-4e1f-4a3b-8bf7-8a21620959b1
-          m_DisplayKey: ComboAccept
-          m_ValueTypeName: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        m_FactContext: {fileID: 0}
-    - rid: 665191780990845530
-      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: 379e752a-c1d4-4dd1-9502-07f716198f02
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 0}
-        m_DeltaTime:
-          m_Name: m_DeltaTime
-          m_PortId: m_DeltaTime
-          m_DeclarationId: 
-          m_DisplayName: DeltaTime
-          m_OwnerModuleId: 
-          m_FieldKey: m_DeltaTime
-          m_Index: 0
-          m_Expanded: 0
-          m_Direction: 1
-          m_InputEdgeGUID: 
-          m_OutputEdgeGUIDs: []
-          m_Value: 0
-        m_OutputEdgeGUID: 3afb2f94-e006-4fc1-b9cd-a0819624b7a1
-    - rid: 665191780990845531
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: b0451f77-b183-48de-9a14-43bb6d7bcbfa
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 200}
-        m_OutputEdgeGUID: 
-        EnterType: 0
-    - rid: 665191780990845532
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 582114d8-1b55-4968-b01b-20a6db1d0835
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 400}
-        m_OutputEdgeGUID: 
-        EnterType: 1
-    - rid: 665191780990845533
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 294f0b09-ac8e-435f-acdf-81a3ae36c532
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 600}
-        m_OutputEdgeGUID: 
-        EnterType: 2
-    - rid: 665191780990845534
-      type: {class: ExposedPropertyNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: c7b464e7-b80c-49a8-a4f9-6e722c60a7f4
-        m_DisplayName: Set RecoveryLate
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 320, y: 0}
-        m_NodeType: 1
-        m_Value:
-          rid: 665191780990845542
-        m_InputEdgeGUID: 3afb2f94-e006-4fc1-b9cd-a0819624b7a1
-        m_BlackboardVariable:
-          m_DeclarationId: 78a0f37c-b725-4f8f-a885-22232133d509
-          m_DeclarationOwnerId: cf79f885-4e1f-4a3b-8bf7-8a21620959b1
-          m_DisplayKey: RecoveryLate
-          m_ValueTypeName: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        m_FactContext: {fileID: 0}
-    - rid: 665191780990845535
-      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: f24c1141-ebf7-49b7-8a98-962db6b6c4df
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 0}
-        m_DeltaTime:
-          m_Name: m_DeltaTime
-          m_PortId: m_DeltaTime
-          m_DeclarationId: 
-          m_DisplayName: DeltaTime
-          m_OwnerModuleId: 
-          m_FieldKey: m_DeltaTime
-          m_Index: 0
-          m_Expanded: 0
-          m_Direction: 1
-          m_InputEdgeGUID: 
-          m_OutputEdgeGUIDs: []
-          m_Value: 0
-        m_OutputEdgeGUID: b587175e-8d55-4d86-a83b-fa8d4d27e3da
-    - rid: 665191780990845536
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: e52e43a0-44ea-4950-b6ce-13e66308bd1b
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 200}
-        m_OutputEdgeGUID: 
-        EnterType: 0
-    - rid: 665191780990845537
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: 8f008907-5f21-4609-959b-c606b1bc3e4f
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 400}
-        m_OutputEdgeGUID: 
-        EnterType: 1
-    - rid: 665191780990845538
-      type: {class: TimelineEnterNode, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_GUID: f3909ccd-e950-4277-af74-7fdd528df654
-        m_DisplayName: 
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 0, y: 600}
-        m_OutputEdgeGUID: 
-        EnterType: 2
-    - rid: 665191780990845539
-      type: {class: ExposedPropertyNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_GUID: ab180ee3-0a85-47c2-b5b3-0fd5c0ed2aa9
-        m_DisplayName: Set RecoveryEarly
-        m_Modules: []
-        m_Expanded: 1
-        m_ShowPanel: 0
-        m_Position: {x: 320, y: 0}
-        m_NodeType: 1
-        m_Value:
-          rid: 665191780990845543
-        m_InputEdgeGUID: b587175e-8d55-4d86-a83b-fa8d4d27e3da
-        m_BlackboardVariable:
-          m_DeclarationId: 12667106-9486-4415-a37a-374a13297433
-          m_DeclarationOwnerId: cf79f885-4e1f-4a3b-8bf7-8a21620959b1
-          m_DisplayKey: RecoveryEarly
-          m_ValueTypeName: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
-            PublicKeyToken=b77a5c561934e089
-        m_FactContext: {fileID: 0}
-    - rid: 665191780990845540
-      type: {class: BoolPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_Name: m_Value
-        m_PortId: m_Value
-        m_DeclarationId: 
-        m_DisplayName: m_Value
-        m_OwnerModuleId: 
-        m_FieldKey: m_Value
-        m_Index: -1
-        m_Expanded: 0
-        m_Direction: 0
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
-        m_Value: 1
-    - rid: 665191780990845541
-      type: {class: BoolPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_Name: m_Value
-        m_PortId: m_Value
-        m_DeclarationId: 
-        m_DisplayName: m_Value
-        m_OwnerModuleId: 
-        m_FieldKey: m_Value
-        m_Index: -1
-        m_Expanded: 0
-        m_Direction: 0
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
-        m_Value: 1
-    - rid: 665191780990845542
-      type: {class: BoolPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_Name: m_Value
-        m_PortId: m_Value
-        m_DeclarationId: 
-        m_DisplayName: m_Value
-        m_OwnerModuleId: 
-        m_FieldKey: m_Value
-        m_Index: -1
-        m_Expanded: 0
-        m_Direction: 0
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
-        m_Value: 1
-    - rid: 665191780990845543
-      type: {class: BoolPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
-      data:
-        m_Name: m_Value
-        m_PortId: m_Value
-        m_DeclarationId: 
-        m_DisplayName: m_Value
-        m_OwnerModuleId: 
-        m_FieldKey: m_Value
-        m_Index: -1
-        m_Expanded: 0
-        m_Direction: 0
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
-        m_Value: 1
+        m_AssetTree: {fileID: 11400000, guid: 2cace4d817133124b919668b385f54ee, type: 2}
     - rid: 665191803296677992
       type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:

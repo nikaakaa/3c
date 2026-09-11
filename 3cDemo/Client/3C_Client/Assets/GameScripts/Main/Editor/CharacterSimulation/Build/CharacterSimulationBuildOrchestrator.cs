@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    public static class CharacterSimulationBuildOrchestrator
+    public static partial class CharacterSimulationBuildOrchestrator
     {
         public static CharacterSimulationBuildResult Build(CharacterPipelineDefinition definition)
         {

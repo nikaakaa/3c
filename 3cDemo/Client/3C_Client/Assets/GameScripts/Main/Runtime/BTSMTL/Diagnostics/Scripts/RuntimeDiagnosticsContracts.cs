@@ -436,7 +436,8 @@ namespace BTSMTL.Diagnostics
         ValueSampled,
         ValueSamplingLimited,
         NodeRunning,
-        NodeWaiting
+        NodeWaiting,
+        SimulationCheckpointCaptured
     }
 
     public enum DebugValueKind
@@ -608,10 +609,15 @@ namespace BTSMTL.Diagnostics
         public string Name;
         public string Detail;
         public string Cause;
+        public string SourceClockId;
+        public string SourceTickKind;
         public string AnimationChannelId;
         public string OwnerId;
         public string RelatedElementId;
         public string SkillId;
+        public ulong InputSequence;
+        public string CharacterStateHash;
+        public string WorldHash;
         public ulong ActionInstanceId;
         public string CallSiteId;
         public ulong ActivationGeneration;
@@ -661,6 +667,8 @@ namespace BTSMTL.Diagnostics
 
         public Guid SessionId { get; }
         public RuntimeProgramRevision ProgramRevision { get; }
+        public ulong ProgramEpoch { get; }
+        public Guid ExecutionBranchId { get; }
         public RuntimeTraceDomain Domain { get; }
         public RuntimeTraceChannel Channel { get; }
         public ulong Position { get; }

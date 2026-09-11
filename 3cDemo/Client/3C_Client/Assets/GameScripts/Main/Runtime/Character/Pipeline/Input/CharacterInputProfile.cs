@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -31,6 +32,17 @@ namespace ThirdPersonCharacter.Pipeline.Input
             : m_BindingGroup.Trim();
         public IReadOnlyList<CharacterInputValueDefinition> InputValues => m_InputValues;
         public IReadOnlyList<CharacterActionRequestDefinition> ActionRequests => m_ActionRequests;
+
+        public void ConfigureActionRequestTimingClass(
+            string requestId,
+            CharacterActionRequestTimingClass timingClass)
+        {
+            CharacterActionRequestDefinition request = m_ActionRequests
+                .SingleOrDefault(value => value != null && value.RequestId == requestId);
+            if (request == null)
+                throw new InvalidOperationException($"Action request '{requestId}' was not found.");
+            request.ConfigureTimingClass(timingClass);
+        }
 
         public bool CollectConfigurationErrors(List<string> errors)
         {
@@ -196,6 +208,13 @@ namespace ThirdPersonCharacter.Pipeline.Input
         public float BufferSeconds => Mathf.Max(0f, m_BufferSeconds);
         public int Priority => m_Priority;
         public CharacterActionRequestTimingClass TimingClass => m_TimingClass;
+
+        public void ConfigureTimingClass(CharacterActionRequestTimingClass timingClass)
+        {
+            if (!Enum.IsDefined(typeof(CharacterActionRequestTimingClass), timingClass))
+                throw new ArgumentOutOfRangeException(nameof(timingClass));
+            m_TimingClass = timingClass;
+        }
 
         public bool TryResolveAction(InputActionAsset sourceAsset, out InputAction action, out string error)
         {

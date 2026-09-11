@@ -271,6 +271,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendProfileSlot = blendProfileSlot;
         }
 
+        public static bool IsValidDocumentBlendSettings(
+            string blendLogicValue,
+            float durationSeconds,
+            string blendModeValue,
+            bool hasCustomBlendCurve,
+            bool hasBlendProfile)
+        {
+            if (!Enum.TryParse(blendLogicValue, false, out AnimationTransitionBlendLogic blendLogic) ||
+                !Enum.IsDefined(typeof(AnimationTransitionBlendLogic), blendLogic) ||
+                blendLogicValue != blendLogic.ToString() ||
+                !Enum.TryParse(blendModeValue, false, out CharacterAnimationBlendMode blendMode) ||
+                !Enum.IsDefined(typeof(CharacterAnimationBlendMode), blendMode) ||
+                blendModeValue != blendMode.ToString() ||
+                !float.IsFinite(durationSeconds) || durationSeconds < 0f ||
+                blendLogic == AnimationTransitionBlendLogic.Inertialization && durationSeconds <= 0f ||
+                (blendMode == CharacterAnimationBlendMode.Custom) != hasCustomBlendCurve)
+                return false;
+            bool hardCut = blendLogic == AnimationTransitionBlendLogic.StandardBlend && durationSeconds == 0f;
+            return hardCut && !hasBlendProfile || !hardCut && hasBlendProfile;
+        }
+
         public static void RequireBlendSettings(
             AnimationTransitionBlendLogic blendLogic,
             float durationSeconds,

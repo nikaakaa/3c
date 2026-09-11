@@ -518,6 +518,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseStateMachineNodePayload payload) =>
             payload.StateMachine?.StateMachineId.Value ?? string.Empty;
 
+        public override IReadOnlyList<CharacterPoseResourceSlot>
+            ProjectResourceSlots(
+                CharacterPoseNodePayload payload) =>
+            (payload as CharacterPoseStateMachineNodePayload)?.StateMachine?.Transitions
+                .SelectMany(transition => new[]
+                {
+                    transition?.CustomBlendCurveSlot,
+                    transition?.BlendProfileSlot
+                })
+                .OfType<CharacterPoseResourceSlot>()
+                .Distinct()
+                .ToArray() ?? Array.Empty<CharacterPoseResourceSlot>();
+
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new CharacterPoseStateMachineNodePayload(

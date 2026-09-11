@@ -8,7 +8,6 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
@@ -1937,18 +1936,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case "displacementMode" when node is LocomotionInputMotionNode motion:
                     return motion.DisplacementMode.ToString();
                 case "assetReferences" when node is LocomotionInputMotionNode motion:
-                    if (!motion.ActionMotionCurve)
-                        return Array.Empty<AgentPackageAssetReference>();
-                    string curvePath = AssetDatabase.GetAssetPath(motion.ActionMotionCurve);
-                    return new[]
-                    {
-                        new AgentPackageAssetReference
-                        {
-                            key = "m_ActionMotionCurve",
-                            assetPath = curvePath,
-                            assetGuid = AssetDatabase.AssetPathToGUID(curvePath)
-                        }
-                    };
+                    return motion.ActionMotionCurve;
                 case "turnSpeedDegrees" when node is LocomotionInputMotionNode motion:
                     return motion.TurnSpeedDegrees;
                 case "cameraRelative" when node is LocomotionInputMotionNode motion:

@@ -29,9 +29,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 moduleId = moduleId,
                 semanticVersion = operation.controlSemanticVersion,
-                parameters = new List<AgentSnapshotControlParameter>()
+                parameters = new List<AgentControlParameter>()
             };
-            foreach (AgentSnapshotControlParameter parameter in operation.controlParameters ?? new List<AgentSnapshotControlParameter>())
+            foreach (AgentControlParameter parameter in operation.controlParameters ?? new List<AgentControlParameter>())
             {
                 if (parameter == null)
                 {
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (!Enum.TryParse(parameter.valueType, false, out SemanticValueKind _))
                     context.Error("controlParameters.valueType", "control_parameter_type_invalid", $"控制参数值类型无效：{parameter.valueType}");
-                configuration.parameters.Add(new AgentSnapshotControlParameter
+                configuration.parameters.Add(new AgentControlParameter
                 {
                     id = parameter.id,
                     valueType = parameter.valueType,

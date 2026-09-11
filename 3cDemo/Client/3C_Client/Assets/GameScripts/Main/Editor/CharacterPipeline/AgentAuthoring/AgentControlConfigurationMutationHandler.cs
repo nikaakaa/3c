@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentConfigureControlConfigurationMutation configure =
                 (AgentConfigureControlConfigurationMutation)command;
             var parameters = new List<CharacterControlParameterConfiguration>();
-            foreach (AgentSnapshotControlParameter parameter in configure.Configuration.parameters ?? new List<AgentSnapshotControlParameter>())
+            foreach (AgentControlParameter parameter in configure.Configuration.parameters ?? new List<AgentControlParameter>())
             {
                 parameters.Add(new CharacterControlParameterConfiguration(
                     parameter.id,

@@ -323,7 +323,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
                 {
                     CharacterPresentationPoseSourceSlot slot =
-                        graph.Nodes[nodeIndex]?.PresentationPoseSourceSlot;
+                        graph.Nodes[nodeIndex]?.Payload == null
+                            ? null
+                            : CharacterPoseAuthoringMetadata
+                                .Require(graph.Nodes[nodeIndex].Kind)
+                                .Source(graph.Nodes[nodeIndex].Payload);
                     CharacterPresentationPoseSourceBinding binding =
                         slot ? profile.FindPoseSourceBinding(slot) : null;
                     if (binding is CharacterClipPoseSourceBinding clipBinding)
@@ -487,14 +491,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node?.Payload == null)
                 throw new InvalidOperationException(
                     "Pose Graph contains a node without typed payload.");
-            CharacterPoseNodeDefinition definition =
-                CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind);
+            CharacterPoseAuthoringNodeMetadata metadata =
+                CharacterPoseAuthoringMetadata.Require(node.Kind);
             GraphAuthoringCapabilityDescriptor capability =
                 CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
-                    definition.Capability.CapabilityId,
+                    new GraphAuthoringCapabilityId(metadata.CapabilityIdentity),
                     CharacterPoseGraphAuthoringCapabilities.Domain,
                     role);
-            _ = definition.ProjectPortShape(node);
+            _ = metadata.ProjectPortShape(node);
             var properties = new JObject();
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields
                          .Where(value => value.AuthoringWritable)
@@ -502,7 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 properties[field.FieldId.Value] =
                     CharacterPoseAuthoringPayloadCodec.EncodeValue(
-                        CharacterPoseAuthoringPayloadCodec.Read(
+                        metadata.ReadField(
                             node.Payload,
                             field.FieldId.Value),
                         asset => AgentAuthoringDocumentCodec.ToToken(
@@ -527,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         interfacePortId = value.InterfacePortId.Value
                     }).ToList(),
                 childDocumentId =
-                    definition.ProjectChildDocumentId(node.Payload)
+                    metadata.ProjectChildDocumentId(node.Payload)
             };
         }
 

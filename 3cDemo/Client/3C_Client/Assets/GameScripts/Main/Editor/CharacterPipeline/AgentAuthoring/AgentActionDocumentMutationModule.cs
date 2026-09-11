@@ -15,10 +15,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             var oldRequests = Index(current.actionRequests, value => value.requestId, "document.editable.actionRequests", report);
             var newRequests = Index(target.actionRequests, value => value.requestId, "document.editable.actionRequests", report);
-            foreach (AgentSnapshotActionRequest request in target.actionRequests ?? new List<AgentSnapshotActionRequest>())
+            foreach (AgentActionRequest request in target.actionRequests ?? new List<AgentActionRequest>())
             {
                 string path = $"document.editable.actionRequests[{Escape(request.requestId)}]";
-                if (!oldRequests.TryGetValue(request.requestId, out AgentSnapshotActionRequest oldRequest))
+                if (!oldRequests.TryGetValue(request.requestId, out AgentActionRequest oldRequest))
                 {
                     report.Error(path, "action_request_create_unsupported", "Action Request catalog不能由Agent Document创建。");
                     continue;
@@ -39,10 +39,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             var oldProfiles = Index(current.actionProfiles, value => value.actionId, "document.editable.actionProfiles", report);
             var newProfiles = Index(target.actionProfiles, value => value.actionId, "document.editable.actionProfiles", report);
-            foreach (AgentSnapshotActionProfile profile in target.actionProfiles ?? new List<AgentSnapshotActionProfile>())
+            foreach (AgentActionProfile profile in target.actionProfiles ?? new List<AgentActionProfile>())
             {
                 string path = $"document.editable.actionProfiles[{Escape(profile.actionId)}]";
-                if (!oldProfiles.TryGetValue(profile.actionId, out AgentSnapshotActionProfile oldProfile))
+                if (!oldProfiles.TryGetValue(profile.actionId, out AgentActionProfile oldProfile))
                 {
                     report.Error(path, "action_profile_create_unsupported", "ActionProfile资产不能由Agent Document创建。");
                     continue;

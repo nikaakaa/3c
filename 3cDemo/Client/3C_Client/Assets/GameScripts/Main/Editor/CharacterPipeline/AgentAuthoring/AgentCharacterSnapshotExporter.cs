@@ -13,6 +13,7 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
+using TreeDesigner.Authoring;
 using UnityEditor;
 using UnityEngine;
 
@@ -54,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 snapshot.controlSemanticVersion = controlModule.Contract.SemanticVersion;
                 snapshot.controlParameters = definition.ControlParameters
                     .Where(value => value != null)
-                    .Select(value => new AgentSnapshotControlParameter
+                    .Select(value => new AgentControlParameter
                     {
                         id = value.ParameterId,
                         valueType = value.ValueKind.ToString(),
@@ -91,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             string path = AssetDatabase.GetAssetPath(profile);
             string guid = AssetDatabase.AssetPathToGUID(path);
-            AgentSnapshotBodyMotionProfile bodyMotion = snapshot.bodyMotion;
+            AgentBodyMotionProfile bodyMotion = snapshot.bodyMotion;
             bodyMotion.assetPath = path;
             bodyMotion.assetGuid = guid;
             bodyMotion.sourceIdentity = $"asset:{guid}";
@@ -118,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (value == null)
                     continue;
 
-                snapshot.inputValues.Add(new AgentSnapshotInputValue
+                snapshot.inputValues.Add(new AgentInputValue
                 {
                     inputValueId = value.InputValueId,
                     valueType = value.ValueType.ToString()
@@ -132,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (request == null)
                     continue;
 
-                snapshot.actionRequests.Add(new AgentSnapshotActionRequest
+                snapshot.actionRequests.Add(new AgentActionRequest
                 {
                     requestId = request.RequestId,
                     bufferSeconds = request.BufferSeconds,
@@ -153,7 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
 
                 string path = AssetDatabase.GetAssetPath(profile);
-                snapshot.actionProfiles.Add(new AgentSnapshotActionProfile
+                snapshot.actionProfiles.Add(new AgentActionProfile
                 {
                     actionId = profile.ActionId,
                     displayName = profile.DisplayName,
@@ -309,13 +310,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                CharacterPoseNodeDefinition definition =
-                    CharacterPoseNodeDefinitionModule.Shared.Require(
-                        node.Kind);
-                if (definition.UsesPoseSourceSlot)
+                CharacterPoseAuthoringNodeMetadata metadata =
+                    CharacterPoseAuthoringMetadata.Require(node.Kind);
+                CharacterPresentationPoseSourceSlot sourceSlot =
+                    metadata.UsesPoseSourceSlot
+                        ? metadata.Source(node.Payload)
+                        : null;
+                if (metadata.UsesPoseSourceSlot)
                 {
-                    CharacterPresentationPoseSourceSlot sourceSlot =
-                        node.PresentationPoseSourceSlot;
                     ResolveObjectIdentity(
                         sourceSlot,
                         out string sourceSlotAssetPath,
@@ -335,17 +337,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         sourceSlotAssetPath = sourceSlotAssetPath,
                         sourceSlotAssetGuid = sourceSlotAssetGuid,
                         sourceSlotLocalFileId = sourceSlotLocalFileId,
-                        sourceKind = ResolveStateLocalPoseSourceKind(profile, node),
+                        sourceKind = ResolveStateLocalPoseSourceKind(profile, sourceSlot),
                         xParameterPortId = parameters.Length > 0 ? parameters[0].PortId.Value : string.Empty,
                         yParameterPortId = parameters.Length > 1 ? parameters[1].PortId.Value : string.Empty,
                         inputRangePolicy =
-                            definition.OperationCode ==
+                            metadata.OperationCode ==
                             CharacterPoseOperationCode.BlendSpacePlayer
-                                ? definition.InputRange(node.Payload).ToString()
+                                ? metadata.InputRange(node.Payload).ToString()
                                 : string.Empty
                     });
                 }
-                if (definition.OperationFamily ==
+                if (metadata.OperationFamily ==
                     CharacterPoseOperationFamily.ActionInput)
                 {
                     destination.actionPlaybackInputs.Add(new AgentSnapshotActionPlaybackInput
@@ -353,32 +355,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,
                         ownerKind = "ActionAnimationChannel",
-                        animationChannelId = node.AnimationChannelId.IsValid
-                            ? node.AnimationChannelId.Value
+                        animationChannelId = metadata.Channel(node.Payload).IsValid
+                            ? metadata.Channel(node.Payload).Value
                             : string.Empty
                     });
                 }
-                if (definition.OperationFamily ==
+                if (metadata.OperationFamily ==
                     CharacterPoseOperationFamily.AnimationSlot)
                 {
+                    GraphAuthoringFieldDescriptor slotField = metadata.Fields
+                        .Single(value => value.PickerKind == "animation-slot");
+                    string animationSlotValue = metadata.ReadField(
+                        node.Payload,
+                        slotField.FieldId.Value) as string;
+                    AnimationSlotId animationSlotId =
+                        string.IsNullOrWhiteSpace(animationSlotValue)
+                            ? default
+                            : new AnimationSlotId(animationSlotValue);
                     destination.animationSlots.Add(new AgentSnapshotAnimationSlot
                     {
                         graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,
                         ownerKind = "ActionAnimationChannel",
-                        animationSlotId = node.AnimationSlotId.IsValid
-                            ? node.AnimationSlotId.Value
+                        animationSlotId = animationSlotId.IsValid
+                            ? animationSlotId.Value
                             : string.Empty,
-                        animationSlotGroupId = node.AnimationSlotId.IsValid
-                            ? profile.RigDefinition.RequireAnimationSlot(node.AnimationSlotId).GroupId.Value
+                        animationSlotGroupId = animationSlotId.IsValid
+                            ? profile.RigDefinition.RequireAnimationSlot(
+                                animationSlotId).GroupId.Value
                             : string.Empty,
-                        animationChannelId = node.AnimationChannelId.IsValid
-                            ? node.AnimationChannelId.Value
+                        animationChannelId = metadata.Channel(node.Payload).IsValid
+                            ? metadata.Channel(node.Payload).Value
                             : string.Empty
                     });
                 }
                 IReadOnlyList<CharacterPoseGraphDependency> dependencies =
-                    definition.ProjectGraphDependencies(node.Payload);
+                    metadata.ProjectGraphDependencies(node.Payload);
                 for (int dependencyIndex = 0;
                      dependencyIndex < dependencies.Count;
                      dependencyIndex++)
@@ -407,12 +419,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static string ResolveStateLocalPoseSourceKind(
             CharacterAnimationPresentationProfile profile,
-            CharacterPoseCanvasNode node)
+            CharacterPresentationPoseSourceSlot sourceSlot)
         {
-            if (node == null || profile == null)
+            if (!sourceSlot || profile == null)
                 return string.Empty;
-            CharacterPresentationPoseSourceSlot sourceSlot =
-                node.PresentationPoseSourceSlot;
             CharacterPresentationPoseSourceBinding source = sourceSlot
                 ? profile.FindPoseSourceBinding(sourceSlot)
                 : null;
@@ -435,9 +445,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 localFileId = 0;
             }
         }
-        static AgentSnapshotGameplayTagQuery ExportTagQuery(ThirdPersonGameplay.Tags.GameplayTagQuery query)
+        static AgentGameplayTagQuery ExportTagQuery(ThirdPersonGameplay.Tags.GameplayTagQuery query)
         {
-            var result = new AgentSnapshotGameplayTagQuery();
+            var result = new AgentGameplayTagQuery();
             if (query == null)
                 return result;
             result.all.AddRange(query.All.Select(value => value.Value));
@@ -448,4 +458,3 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
     }
 }
-

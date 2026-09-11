@@ -76,10 +76,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 TimelineAsset asset = target.asset != null &&
                     m_Session.Resolver.TryResolveSkillObject(target.asset, out TimelineAsset resolved)
-                    ? resolved
-                    : null;
+                        ? resolved
+                        : null;
                 if (!asset)
                 {
+                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                        throw new InvalidOperationException(
+                            $"Skill Timeline '{target.id}'的正式资产引用无法解析。");
                     asset = ScriptableObject.CreateInstance<TimelineAsset>();
                     asset.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Timeline" : target.name;
                     UnityEngine.Object owner = m_ResolveGraph(target.ownerGraphId);
@@ -90,8 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AssetDatabase.AddObjectToAsset(asset, ownerPath);
                     Undo.RegisterCreatedObjectUndo(asset, "创建技能Timeline");
                     asset.SetData(TimelineData.CreateDefault(asset.name));
-                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
-                        asset.Data.ConfigureAuthoringIdentity(target.id);
                 }
                 m_Timelines[target.id] = asset;
                 if (target.id.StartsWith("local:", StringComparison.Ordinal))
@@ -157,8 +158,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         Type type = TimelineAuthoringTypeCatalog.RequireTrackType(targetTrack.kind);
                         timeline.AddTrack(type, TimelineTreeContractComposition.Create());
                         track = timeline.Tracks.Last();
-                        if (!targetTrack.id.StartsWith("local:", StringComparison.Ordinal))
-                            track.ConfigureAuthoringIdentity(targetTrack.id);
                     }
                     else if (track.ContractKind != targetTrack.kind)
                         throw new InvalidOperationException($"Timeline Track '{targetTrack.id}'不能原位改变kind。");
@@ -207,8 +206,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         Enum.Parse<TimelineBindingAccess>(target.access, false),
                         Enum.Parse<TimelineBindingLifetime>(target.lifetime, false),
                         target.parameterId);
-                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
-                        binding.ConfigureAuthoringIdentity(target.id);
                 }
                 else
                     binding.Configure(
@@ -240,8 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!target.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Timeline Section '{target.id}'无法保持稳定identity。");
                     section = timeline.AddSection(target.name ?? string.Empty, target.frame);
-                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
-                        section.ConfigureAuthoringIdentity(target.id);
                 }
                 else
                     timeline.ConfigureSection(section, target.name ?? string.Empty, target.frame);
@@ -275,10 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!target.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Timeline Clip '{target.id}'无法创建新的formal identity。");
                     clip = CreateClip(timeline, catalog, track, target);
-                    if (!target.id.StartsWith("local:", StringComparison.Ordinal))
-                        clip.ConfigureAuthoringIdentity(target.id);
-                    if (target.id.StartsWith("local:", StringComparison.Ordinal))
-                        m_LocalClips[TimelineKey(timeline.AuthoringId, target.id)] = clip;
+                    m_LocalClips[TimelineKey(timeline.AuthoringId, target.id)] = clip;
                 }
                 else if (clip.ContractKind != target.kind)
                     throw new InvalidOperationException($"Timeline Clip '{target.id}'不能原位改变kind。");

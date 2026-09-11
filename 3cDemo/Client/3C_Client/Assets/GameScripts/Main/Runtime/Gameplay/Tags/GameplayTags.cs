@@ -43,6 +43,18 @@ namespace ThirdPersonGameplay.Tags
         public string DisplayName => m_DisplayName ?? string.Empty;
         public GameplayTagId ParentTag => m_ParentTag;
         public string DebugCategory => m_DebugCategory ?? string.Empty;
+
+        public void Configure(
+            GameplayTagId tagId,
+            string displayName,
+            GameplayTagId parentTag,
+            string debugCategory)
+        {
+            m_TagId = tagId;
+            m_DisplayName = displayName ?? string.Empty;
+            m_ParentTag = parentTag;
+            m_DebugCategory = debugCategory ?? string.Empty;
+        }
     }
 
     public sealed class GameplayTagCatalogRuntimeData
@@ -176,6 +188,16 @@ namespace ThirdPersonGameplay.Tags
         public IReadOnlyList<GameplayTagId> Any => m_Any ?? Array.Empty<GameplayTagId>();
         public IReadOnlyList<GameplayTagId> None => m_None ?? Array.Empty<GameplayTagId>();
         public bool IsEmpty => All.Count == 0 && Any.Count == 0 && None.Count == 0;
+
+        public void Configure(
+            IEnumerable<GameplayTagId> all,
+            IEnumerable<GameplayTagId> any,
+            IEnumerable<GameplayTagId> none)
+        {
+            m_All = (all ?? Array.Empty<GameplayTagId>()).ToArray();
+            m_Any = (any ?? Array.Empty<GameplayTagId>()).ToArray();
+            m_None = (none ?? Array.Empty<GameplayTagId>()).ToArray();
+        }
 
         public bool CollectConfigurationErrors(GameplayTagCatalogRuntimeData catalog, string owner, List<string> errors)
         {

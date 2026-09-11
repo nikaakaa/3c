@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string definitionAssetPath;
         public string controlModuleId;
         public int controlSemanticVersion;
-        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
+        public List<AgentControlParameter> controlParameters = new List<AgentControlParameter>();
         public string programId;
         public string sourceRevision;
         public string semanticHash;
@@ -73,13 +73,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int targetAbiVersion;
         public string programHash;
         public string layoutHash;
-        public AgentSnapshotBodyMotionProfile bodyMotion = new AgentSnapshotBodyMotionProfile();
-        public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
-        public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
+        public AgentBodyMotionProfile bodyMotion = new AgentBodyMotionProfile();
+        public List<AgentInputValue> inputValues = new List<AgentInputValue>();
+        public List<AgentActionRequest> actionRequests = new List<AgentActionRequest>();
         public string inputProviderOwnerId;
         public string gameplayProviderOwnerId;
-        public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
-        public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
+        public List<AgentActionProfile> actionProfiles = new List<AgentActionProfile>();
+        public List<AgentPackageSkillDefinitionFile> skills = new List<AgentPackageSkillDefinitionFile>();
         public List<AgentPackageSkillFlowGraphFile> skillGraphs = new List<AgentPackageSkillFlowGraphFile>();
         public List<AgentPackageSkillFlowGraphLayoutFile> skillGraphLayouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
         public List<AgentPackageSkillMacroFile> skillMacros = new List<AgentPackageSkillMacroFile>();
@@ -88,7 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotBodyMotionProfile
+    public sealed class AgentBodyMotionProfile
     {
         public string assetPath;
         public string assetGuid;
@@ -101,13 +101,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotBlackboardInputBinding
+    public sealed class AgentPackageSkillBlackboardInputBinding
     {
         public string inputValueId;
     }
 
     [Serializable]
-    public sealed class AgentSnapshotBlackboardFactProjection
+    public sealed class AgentPackageSkillBlackboardFactProjection
     {
         public string kind;
         public string windowType;
@@ -128,36 +128,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentAnimationCurvePayload
-    {
-        public string preWrapMode;
-        public string postWrapMode;
-        public List<AgentAnimationCurveKey> keys = new List<AgentAnimationCurveKey>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotNode
-    {
-        public string elementAuthoringId;
-        public string typeName;
-        public AgentSnapshotExposedProperty exposedProperty;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotExposedProperty
-    {
-        public string mode;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotInputValue
+    public sealed class AgentInputValue
     {
         public string inputValueId;
         public string valueType;
     }
 
     [Serializable]
-    public sealed class AgentSnapshotActionRequest
+    public sealed class AgentActionRequest
     {
         public string requestId;
         public float bufferSeconds;
@@ -166,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotActionProfile
+    public sealed class AgentActionProfile
     {
         public string actionId;
         public string displayName;
@@ -174,38 +152,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string assetGuid;
         public string targetRequirement;
         public List<string> grantedTags = new List<string>();
-        public AgentSnapshotGameplayTagQuery blockQuery = new AgentSnapshotGameplayTagQuery();
-        public AgentSnapshotGameplayTagQuery cancelQuery = new AgentSnapshotGameplayTagQuery();
+        public AgentGameplayTagQuery blockQuery = new AgentGameplayTagQuery();
+        public AgentGameplayTagQuery cancelQuery = new AgentGameplayTagQuery();
     }
 
     [Serializable]
-    public sealed class AgentSnapshotSkillDefinition
-    {
-        public string skillId;
-        public string entryGraphAuthoringId;
-        public string actionProfileId;
-        public string actionProfileAssetPath;
-        public string actionProfileAssetGuid;
-        public string actionContext;
-        public string actionContextAssetPath;
-        public string actionContextAssetGuid;
-        public string sourceInputRequestId;
-        public bool consumeSourceInputRequest = true;
-        public string targetInputValueId;
-        public string targetKey;
-        public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
-        public List<string> allowedFollowUpSkillIds = new List<string>();
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotSkillSubgraphDependency
-    {
-        public string subgraphIdentity;
-        public string callSiteIdentity;
-    }
-
-    [Serializable]
-    public sealed class AgentSnapshotGameplayTagQuery
+    public sealed class AgentGameplayTagQuery
     {
         public List<string> all = new List<string>();
         public List<string> any = new List<string>();
@@ -329,7 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string requestTimingClass;
         public string controlModuleId;
         public int controlSemanticVersion;
-        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
+        public List<AgentControlParameter> controlParameters = new List<AgentControlParameter>();
         public AgentPackageSkillFlowDocument skillFlowDocument;
     }
 

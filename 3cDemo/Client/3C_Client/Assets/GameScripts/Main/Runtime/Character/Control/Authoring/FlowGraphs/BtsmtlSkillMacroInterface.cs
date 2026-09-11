@@ -84,6 +84,24 @@ namespace ThirdPersonCharacter.Control.Authoring
             graph.inputDefinitions.Add(new DynamicParameterDefinition("执行", typeof(Flow)));
         }
 
+        public static void Configure(
+            BtsmtlSkillMacroGraph graph,
+            IEnumerable<DynamicParameterDefinition> inputs,
+            IEnumerable<DynamicParameterDefinition> outputs)
+        {
+            if (!graph)
+                throw new ArgumentNullException(nameof(graph));
+            List<DynamicParameterDefinition> inputValues =
+                inputs?.ToList() ?? new List<DynamicParameterDefinition>();
+            List<DynamicParameterDefinition> outputValues =
+                outputs?.ToList() ?? new List<DynamicParameterDefinition>();
+            Validate(inputValues, outputValues);
+            graph.inputDefinitions.Clear();
+            graph.inputDefinitions.AddRange(inputValues);
+            graph.outputDefinitions.Clear();
+            graph.outputDefinitions.AddRange(outputValues);
+        }
+
         public static void Validate(BtsmtlSkillMacroGraph graph)
             => Validate(graph.inputDefinitions, graph.outputDefinitions);
 

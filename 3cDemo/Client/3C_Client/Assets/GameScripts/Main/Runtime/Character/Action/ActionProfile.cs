@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ThirdPersonGameplay.Contracts;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -31,6 +32,26 @@ namespace ThirdPersonCharacter.ActionSystem
         public GameplayTagQuery CancelTags => m_CancelTags;
         public ActionTargetRequirement TargetRequirement => m_TargetRequirement;
         public int MaxConcurrentInstances => m_MaxConcurrentInstances;
+
+        public void ConfigureGrantedTags(IEnumerable<GameplayTagId> tags)
+        {
+            m_Tags = (tags ?? Array.Empty<GameplayTagId>()).ToArray();
+        }
+
+        public void ConfigureCancelTags(
+            IEnumerable<GameplayTagId> all,
+            IEnumerable<GameplayTagId> any,
+            IEnumerable<GameplayTagId> none)
+        {
+            if (m_CancelTags == null)
+                m_CancelTags = new GameplayTagQuery();
+            m_CancelTags.Configure(all, any, none);
+        }
+
+        public void ConfigureTargetRequirement(ActionTargetRequirement targetRequirement)
+        {
+            m_TargetRequirement = targetRequirement;
+        }
 
         public bool ContainsTag(GameplayTagId tag)
         {

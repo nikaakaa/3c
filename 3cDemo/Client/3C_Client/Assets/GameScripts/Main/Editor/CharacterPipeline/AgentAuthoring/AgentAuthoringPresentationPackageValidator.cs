@@ -364,15 +364,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             foreach (AgentPackagePoseNode node in nodes.Values)
             {
-                CharacterPoseNodeDefinition definition =
-                    CharacterPoseNodeDefinitionModule.Shared
-                        .RequireCapability(node.capability);
-                bool stateMachine = definition.OperationFamily ==
+                CharacterPoseAuthoringNodeMetadata metadata =
+                    CharacterPoseAuthoringMetadata.RequireCapability(
+                        node.capability);
+                bool stateMachine = metadata.OperationFamily ==
                     CharacterPoseOperationFamily.StateMachine;
-                bool motionMatching = definition.OperationFamily ==
+                bool motionMatching = metadata.OperationFamily ==
                     CharacterPoseOperationFamily.MotionMatching;
-                string expectedGraph = motionMatching
-                    ? node.properties?["entry-graph-id"]?.Value<string>() ??
+                GraphAuthoringFieldDescriptor graphField = metadata.Fields
+                    .SingleOrDefault(value => value.PickerKind == "pose-graph");
+                string expectedGraph = motionMatching && graphField != null
+                    ? node.properties?[graphField.FieldId.Value]?.Value<string>() ??
                       string.Empty
                     : string.Empty;
                 bool validChild = stateMachine
@@ -395,20 +397,124 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                 }
             }
-            HashSet<string> ownedMachines = nodes.Values
-                .Where(value =>
-                    CharacterPoseNodeDefinitionModule.Shared
-                        .RequireCapability(value.capability)
-                        .OperationFamily ==
-                    CharacterPoseOperationFamily.StateMachine)
-                .Select(value => value.childDocumentId)
-                .ToHashSet(StringComparer.Ordinal);
-            if (!ownedMachines.SetEquals(machines.Keys))
+            AgentPackagePoseGraphFile[] rootGraphs = graphs.Values
+                .Where(value => string.Equals(
+                    value.role,
+                    CharacterPoseGraphAuthoringCapabilities.RootGraph.Value,
+                    StringComparison.Ordinal))
+                .ToArray();
+            if (rootGraphs.Length != 1)
             {
                 report.Error(
-                    AgentAuthoringPresentationPackageCodec.StateMachinePrefix,
-                    "presentation_pose_state_machine_owner_invalid",
-                    "每个Pose StateMachine必须由唯一typed节点持有。");
+                    AgentAuthoringPresentationPackageCodec.GraphPrefix,
+                    "presentation_pose_root_graph_invalid",
+                    "Presentation Pose Graph必须恰好包含一个root graph。");
+                valid = false;
+            }
+            else
+            {
+                valid &= ValidateGraphClosure(
+                    new[] { rootGraphs[0].id },
+                    graphs,
+                    machines,
+                    "editable/presentation",
+                    report,
+                    out _,
+                    out _);
+            }
+            return valid;
+        }
+
+        static bool ValidateGraphClosure(
+            IReadOnlyCollection<string> roots,
+            IReadOnlyDictionary<string, AgentPackagePoseGraphFile> graphs,
+            IReadOnlyDictionary<string, AgentPackagePoseStateMachineFile> machines,
+            string path,
+            AgentCompileReport report,
+            out HashSet<string> reachableGraphs,
+            out HashSet<string> reachableMachines)
+        {
+            reachableGraphs = new HashSet<string>(StringComparer.Ordinal);
+            reachableMachines = new HashSet<string>(StringComparer.Ordinal);
+            var pending = new Stack<string>(
+                (roots ?? Array.Empty<string>())
+                    .Where(value => graphs.ContainsKey(value ?? string.Empty))
+                    .Reverse());
+            while (pending.Count > 0)
+            {
+                string graphId = pending.Pop();
+                if (!reachableGraphs.Add(graphId) ||
+                    !graphs.TryGetValue(
+                        graphId,
+                        out AgentPackagePoseGraphFile graph))
+                    continue;
+                foreach (AgentPackagePoseNode node in graph.nodes ??
+                             new List<AgentPackagePoseNode>())
+                {
+                    if (node == null)
+                        continue;
+                    CharacterPoseAuthoringNodeMetadata metadata;
+                    try
+                    {
+                        metadata = CharacterPoseAuthoringMetadata.RequireCapability(
+                            node.capability);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (metadata.OperationFamily ==
+                        CharacterPoseOperationFamily.StateMachine)
+                    {
+                        if (!machines.TryGetValue(
+                                node.childDocumentId ?? string.Empty,
+                                out AgentPackagePoseStateMachineFile machine) ||
+                            !reachableMachines.Add(machine.id))
+                            continue;
+                        foreach (AgentPackagePoseState state in machine.states ??
+                                     new List<AgentPackagePoseState>())
+                        {
+                            if (state != null &&
+                                graphs.ContainsKey(state.poseGraphId ?? string.Empty))
+                                pending.Push(state.poseGraphId);
+                        }
+                        continue;
+                    }
+                    if (metadata.NativeRole !=
+                            CharacterPoseNativeNodeRole.Subgraph &&
+                        metadata.OperationFamily !=
+                            CharacterPoseOperationFamily.MotionMatching)
+                        continue;
+                    GraphAuthoringFieldDescriptor graphField = metadata.Fields
+                        .SingleOrDefault(value => value.PickerKind == "pose-graph");
+                    string childGraphId = graphField == null
+                        ? string.Empty
+                        : node.properties?[graphField.FieldId.Value]
+                            ?.Value<string>() ?? string.Empty;
+                    if (graphs.ContainsKey(childGraphId))
+                        pending.Push(childGraphId);
+                }
+            }
+
+            bool valid = true;
+            foreach (string graphId in graphs.Keys.Except(
+                         reachableGraphs,
+                         StringComparer.Ordinal))
+            {
+                report.Error(
+                    path + ".poseGraphs[" + graphId + "]",
+                    "presentation_pose_graph_closure_invalid",
+                    "Pose Graph分片不在root或Entry Graph的正式闭包中。");
+                valid = false;
+            }
+            foreach (string machineId in machines.Keys.Except(
+                         reachableMachines,
+                         StringComparer.Ordinal))
+            {
+                report.Error(
+                    path + ".poseStateMachines[" + machineId + "]",
+                    "presentation_pose_state_machine_closure_invalid",
+                    "Pose StateMachine分片不由可达的PoseStateMachine节点持有。");
                 valid = false;
             }
             return valid;
@@ -669,6 +775,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Implementation Entry映射必须精确覆盖全部LinkedPoseEntry graph。");
                 valid = false;
             }
+            valid &= ValidateGraphClosure(
+                entryGraphs,
+                graphs,
+                machines,
+                path,
+                report,
+                out _,
+                out _);
             return valid;
         }
 
@@ -1196,15 +1310,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     exception.Message);
                 valid = false;
             }
-            if (CharacterPoseNodeDefinitionModule.Shared
-                    .RequireCapability(node.capability)
-                    .OperationFamily ==
-                CharacterPoseOperationFamily.AnimationSlot)
+            CharacterPoseAuthoringNodeMetadata metadata =
+                CharacterPoseAuthoringMetadata.RequireCapability(
+                    node.capability);
+            if (metadata.OperationFamily == CharacterPoseOperationFamily.AnimationSlot)
             {
-                string slotId = node.properties["slot-id"]?.Value<string>();
-                string animationChannelId =
-                    node.properties["animation-channel-id"]?.Value<string>();
-                if (!Identity(slotId) || !Identity(animationChannelId))
+                string[] requiredFields = metadata.Fields
+                    .Where(value => value.PickerKind == "animation-slot" ||
+                                    value.PickerKind == "animation-channel")
+                    .Select(value => value.FieldId.Value)
+                    .ToArray();
+                if (requiredFields.Any(field =>
+                        !Identity(node.properties[field]?.Value<string>())))
                 {
                     report.Error(
                         AgentAuthoringPresentationPackageCodec.GraphDirectory(graphId) +
@@ -1222,15 +1339,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentCompileReport report)
         {
             bool valid = true;
-            string subgraphCapability = CharacterPoseNodeDefinitionModule
-                .Shared.Require(CharacterPoseNodeKind.PoseSubgraph)
+            string subgraphCapability = CharacterPoseAuthoringMetadata
+                .Require(CharacterPoseNodeKind.PoseSubgraph)
                 .CapabilityIdentity;
-            string inputCapability = CharacterPoseNodeDefinitionModule.Shared
+            string inputCapability = CharacterPoseAuthoringMetadata
                 .Require(CharacterPoseNodeKind.GraphInput)
                 .CapabilityIdentity;
-            string outputCapability = CharacterPoseNodeDefinitionModule.Shared
+            string outputCapability = CharacterPoseAuthoringMetadata
                 .Require(CharacterPoseNodeKind.GraphOutput)
                 .CapabilityIdentity;
+            GraphAuthoringFieldDescriptor graphField =
+                CharacterPoseAuthoringMetadata
+                    .RequireCapability(subgraphCapability)
+                    .Fields.Single(value => value.PickerKind == "pose-graph");
             foreach (AgentPackagePoseGraphFile owner in graphs.Values)
             {
                 foreach (AgentPackagePoseNode callSite in owner.nodes ??
@@ -1241,7 +1362,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             subgraphCapability,
                             StringComparison.Ordinal))
                         continue;
-                    string childId = callSite.properties?["graph-id"]?.Value<string>();
+                    string childId = callSite.properties?[graphField.FieldId.Value]
+                        ?.Value<string>();
                     if (!graphs.TryGetValue(
                             childId ?? string.Empty,
                             out AgentPackagePoseGraphFile child))

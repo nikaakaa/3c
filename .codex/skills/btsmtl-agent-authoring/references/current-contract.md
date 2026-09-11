@@ -53,7 +53,7 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
 
 CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；子图依赖的`callSiteIdentity`按原生编译路径`skill:<skillId>/graph:<ownerGraphId>/node:<nodeId>/call:Macro`寻址，并由入口Graph闭包与Graph reference目标同时校验。技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
 
-v7技能闭包的正式文件位于`editable/skills/graphs/**`、`editable/skills/macros/**`和`editable/skills/timelines/**`。Graph正文只保存Skill role、ownership、显式owner、业务kind、typed properties、逻辑Flow/Value port endpoint、稳定Edge identity与原生Variable元数据；Macro文件只保存稳定输入/输出参数identity、名称和值类型；Timeline文件保存稳定Timeline/Section/ExternalBinding/Track/Clip identity、contract kind、资源引用、TreeClip Graph引用、typed clip properties和业务曲线。`BtsmtlSkillFlowGraph`与`BtsmtlSkillMacroGraph`是唯一正式来源，不生成旧`BaseGraph`镜像，不把FlowCanvas私有字段、委托、运行状态或编译索引写入Document。
+v7技能闭包的正式文件位于`editable/skills/graphs/**`、`editable/skills/macros/**`和`editable/skills/timelines/**`。Graph正文只保存Skill role、ownership、显式owner、业务kind、typed properties、逻辑Flow/Value port endpoint、稳定Edge identity与原生Variable元数据；Macro文件只保存稳定输入/输出参数identity、名称和值类型；Timeline文件保存稳定Timeline/Section/ExternalBinding/Track/Clip identity、contract kind、资源引用、TreeClip Graph引用、typed clip properties和业务曲线。`BtsmtlSkillFlowGraph`与`BtsmtlSkillMacroGraph`是唯一正式来源，不生成旧`BaseGraph`镜像，不把FlowCanvas私有字段、委托、运行状态或编译索引写入Document。Blackboard访问变体、Blackboard值端口、Macro参数端口、复合步骤端口和Macro接口端口由正式 capability 的字段与`DynamicPortSource`元数据生成，Agent只负责提供包中的identity、名称、值类型和顺序。
 
 Skill Graph的根owner是`skill-root`，由`SkillDefinition`通过`entryGraphAuthoringId`唯一反向引用；状态机、状态内容、条件页和Timeline TreeClip Graph使用`node`、`step`或`timeline-clip` owner；共享Macro只能使用`shared` owner和正式资产引用。新Graph、Node、Edge、Step Port、Macro Parameter、Blackboard declaration、Timeline、Track与Clip均使用`local:*`计划identity，dry-run纳入同一manifest/hash，apply经唯一Mutation dispatcher创建后由canonical reverse export替换为稳定identity。
 
@@ -74,7 +74,7 @@ Store在整包strict parse前只发现满足以下全部条件的新增文件对
 - Graph、Node、Edge等新增实体使用`local:*`；`contentRevision`是普通版本值，不是local实体identity。
 - role为`pose-state-graph`或`pose-subgraph`，不能创建第二个root graph。
 - 两个文件都通过各自strict JSON parser。
-- Inline Timeline文件对位于`editable/timelines/<canonical-segment>/`，文件精确为`timeline.json`与`curves.json`。
+- Skill Timeline文件统一位于`editable/skills/timelines/<canonical-segment>/`，文件精确为`timeline.json`与`curves.json`。
 - Timeline id、唯一TimelineNode调用点、Track与Clip全部使用`local:*`，curves timelineId与Timeline id相同。
 - controller Timeline摘要、Graph TimelineNode、Timeline callSite与Graph path必须形成同一拥有关系；Track与Clip只能通过现有typed Timeline Mutation创建。
 
@@ -165,7 +165,7 @@ Context：
 
 Character Presentation是`editable/`中的正式目标状态：
 
-- `editable/presentation/profile.json`保存Profile稳定owner、policy、Pose Source Binding子资产、对应Graph-owned Source Slot、实际动画资源的结构化对象引用与有限Action producer binding。正式对象引用固定包含`assetPath + assetGuid + signed non-zero localFileId`；负`localFileId`是合法Unity子资产身份，只有0非法。新建Slot或Binding只在dry-run目标中使用`local:*`，成功apply后的reverse export必须替换为正式对象引用。
+- `editable/presentation/profile.json`保存Profile稳定owner、policy、Pose Source Binding子资产、对应Graph-owned Source Slot、Graph-owned Resource Slot到Blend Curve/Profile资源的Binding、实际动画资源的结构化对象引用与有限Action producer binding。正式对象引用固定包含`assetPath + assetGuid + signed non-zero localFileId`；负`localFileId`是合法Unity子资产身份，只有0非法。新建Slot或Binding只在dry-run目标中使用`local:*`，成功apply后的reverse export必须替换为正式对象引用。
 - `editable/presentation/pose-graphs/<stable-segment>/graph.json`保存Graph role、parameter、Capability节点typed properties、dynamic port与edge。
 - 同目录`layout.json`只保存节点位置，目录segment、Graph id与layout graphId必须一致。
 - `editable/presentation/pose-state-machines/<stable-segment>/state-machine.json`保存entry、显式`alwaysResetOnEntry` state、alias、transition、规则图与blend策略。Transition禁止`targetResetPolicy`和`sourceSyncMode`；Clip Player properties禁止`reset-on-entry`。
@@ -208,11 +208,11 @@ five BTSMTL lifecycle MCP tools
   -> AgentAuthoringDocumentTransactionService
   -> AgentAuthoringDocumentExporter
   -> AgentAuthoringTargetMapper
-  -> AgentAuthoringPresentationPackageCodec
+  -> AgentAuthoringPresentationPackageCodec + AgentAuthoringPresentationPackageValidator
   -> AgentAuthoringDocumentCodec + AgentAuthoringPackageStore
-  -> AgentSkillFlowDocumentMapper (native FlowGraph/Macro/Timeline closure)
+  -> AgentSkillFlowDocumentMapper + AgentSkillFlowDocumentExporter + AgentSkillFlowDocumentValidator (native FlowGraph/Macro/Timeline closure)
   -> AgentDocumentMutationReconciler
-  -> AgentAuthoringPresentationReconciler
+  -> AgentAuthoringPresentationReconciler partials (Animation/PoseGraph/LinkedPose/Profile/Conversion/Support)
   -> AgentMutationPlanner
   -> immutable AgentMutationPlan
   -> AgentMutationSession preflight
@@ -240,24 +240,24 @@ Character generated product发布是上述Document事务之外的显式精确Def
 | `AgentAuthoringDocumentModels.cs` | manifest、sync、package file与内部target |
 | `AgentAuthoringDocumentCodec.cs` | strict parse、canonical write、整包hash |
 | `AgentAuthoringPackageStore.cs` | 确定目录、文件闭包、staging校验、package内容镜像与rollback恢复 |
-| `AgentAuthoringTargetMapper.cs` | 整包分片顺序、manifest闭包与跨分片协调；具体Graph、Timeline、Blackboard映射由对应Mapper负责 |
-| `AgentGraphDocumentMapper.cs`、`AgentTimelineDocumentMapper.cs`、`AgentBlackboardDocumentMapper.cs` | 各自领域的sparse package与完整target映射、关系校验与正式能力投影 |
+| `AgentAuthoringTargetMapper.cs` | 整包分片顺序、manifest闭包与跨分片协调；具体Control、Skill Flow和Presentation映射由对应模块负责 |
+| `AgentControlDocumentMapper.cs`、`AgentSkillFlowDocumentMapper.cs`、`AgentSkillFlowDocumentExporter.cs`、`AgentSkillFlowDocumentValidator.cs`、`AgentAuthoringPresentationPackageCodec.cs`、`AgentAuthoringPresentationPackageValidator.cs` | 各自领域的sparse package、完整target映射、文件闭包与正式能力投影；Skill读写/导出/校验和Presentation读写/校验分离 |
 | `AgentPackageMappingSupport.cs` | package主identity与引用的共享严格校验 |
-| `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | stable node kind、typed property、port与system anchor唯一目录 |
+| `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | 不依赖Agent package的stable node kind、typed property、port与system anchor唯一目录；Agent JSON校验/创建适配不再放在此类 |
 | `AgentAuthoringDocumentExporter.cs` | Character canonical package投影 |
 | `AgentControlDocumentMapper.cs` | controller.json控制模块binding与作者参数的严格映射、正式模块校验 |
 | `AgentSkillDocumentExporter.cs`、`AgentSkillDocumentMapper.cs` | SkillDefinition分片导出与strict解析/local发现 |
-| `AgentAuthoringPresentationPackageModels.cs` | Document v7 Presentation Profile、Pose Graph与PoseStateMachine模型 |
-| `AgentAuthoringPresentationPackageCodec.cs` | Presentation分片路径、strict parse与文件闭包 |
+| `AgentAuthoringPresentationPackageModels.cs` | Document v7 Presentation Profile、Pose Graph与PoseStateMachine包DTO；不定义正式作者语义 |
+| `AgentAuthoringPresentationPackageCodec.cs` | Presentation分片路径、strict parse与文件闭包；Pose字段值和Port Shape委托正式Pose authoring投影 |
 | `AgentAuthoringPresentationPackageExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
-| `AgentAuthoringPresentationReconciler.cs` | Presentation完整目标对账与typed Mutation事务规划 |
+| `AgentAuthoringPresentationReconciler.cs`及其`Animation`、`PoseGraph`、`LinkedPose`、`Profile`、`Conversion`、`Support` partial文件、`AgentAuthoringPresentationCrossOwnerValidator.cs`、`AgentAuthoringPresentationMutationPlans.cs`、`CharacterAnimationPresentationAuthoringService.cs` | Presentation完整目标对账、跨owner引用校验、Mutation计划数据，以及正式Pose Graph role、Source Slot/Binding、Resource binding、Producer binding factory和typed Mutation事务规划 |
 | `AgentGraphDocumentFragments.cs`、`AgentTimelineDocumentFragments.cs` | 新增Graph/Timeline文件对的canonical local发现与strict闭包检查 |
-| `AgentSkillFlowDocumentModels.cs`、`AgentSkillFlowDocumentMapper.cs` | v7原生Skill FlowGraph、Macro接口、Timeline与owner闭包模型、strict parser与canonical local发现 |
-| `AgentSkillFlowAuthoringCapabilities.cs` | 原生技能kind、typed字段、实际Flow/Value port shape与locomotion capability目录 |
-| `AgentSkillFlowDocumentMutationModule.cs`、`AgentSkillFlowDocumentMutationHandler.cs` | 原生技能整包typed Mutation、真实FlowGraph/Timeline owner对账与保存 |
-| `AgentSkillFlowDocumentOwnerCollector.cs`、`AgentSkillFlowMutationDispatcher.cs` | 原生技能事务owner收集与唯一Mutation dispatcher契约 |
+| `AgentSkillFlowDocumentModels.cs`、`AgentSkillFlowDocumentMapper.cs`、`AgentSkillDocumentMapper.cs` | v7原生Skill FlowGraph、Macro接口、Timeline与owner闭包模型、strict parser与canonical local发现；只负责package外壳与映射 |
+| `BtsmtlSkillCapabilityCatalog.cs`、`BtsmtlSkillGraphAuthoringMetadata.cs`、`BtsmtlSkillGraphClosure.cs`、`BtsmtlSkillBlackboardDeclaration.cs`、`BtsmtlSkillMacroInterface.cs`、`BtsmtlSkillNodeAuthoringValidation.cs`、`BtsmtlSkillNodeAuthoringBinding.cs`、`BtsmtlAuthoringFieldValueValidation.cs` | 正式技能kind特性、typed字段、节点规则/外部引用特性、Graph role与必需anchor、实际Flow/Value port shape、Blackboard定义与校验、Macro接口、provider owner、节点authoring写入与Graph字段值校验 |
+| `BtsmtlSkillDocumentDiffModule.cs`、`BtsmtlSkillAuthoringMutationAdapter.cs`、`BtsmtlSkillDocumentAssetValidator.cs`、`BtsmtlSkillGraphAuthoringApplier.cs`、`BtsmtlSkillTimelineAuthoringApplier.cs` | Skill闭包差异进入唯一Mutation计划，以及真实Graph/Timeline owner对账、资源预检与保存 |
+| `AgentSkillFlowDocumentOwnerCollector.cs`、`BtsmtlSkillGraphClosureIndex.cs`、`BtsmtlSkillFlowEditorMutation.cs` | 原生技能闭包索引、事务owner收集与正式Mutation事务入口 |
 | `AgentDocumentMutationReconciler.cs` | 完整目标集合对账入口与有序领域模块协调 |
-| `Agent*DocumentMutationModule.cs`、`AgentSkillFlowDocumentMutationModule.cs` | Graph、Timeline、Blackboard、Action、Control与Skill各自的目标差异与依赖计划 |
+| `AgentActionDocumentMutationModule.cs`、`AgentControlDocumentMutationModule.cs`、`BtsmtlSkillDocumentDiffModule.cs` | Action、Control与Skill各自的目标差异与依赖计划；Skill Graph/Timeline真实写入由专用 Applier 完成 |
 | `AgentMutationPlanner.cs`、`Agent*MutationLowering.cs`、`AgentMutations.cs` | typed Mutation lowering、Graph/State/Node planned identity与immutable plan；Blackboard lowering独立于Action lowering |
 | `AgentMutationSession.cs` | 单次Index、anchor/reference resolver、symbol、diff、touched owner |
 | `AgentGraphLinkMutationHandler.cs` | flow/property edge创建、删除与改接 |

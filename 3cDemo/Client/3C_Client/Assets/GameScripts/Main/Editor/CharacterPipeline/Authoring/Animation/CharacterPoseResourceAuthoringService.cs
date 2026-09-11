@@ -14,8 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!graph || string.IsNullOrWhiteSpace(displayName) ||
                 !Enum.IsDefined(typeof(CharacterPoseResourceKind), kind))
                 throw new ArgumentException("Pose Resource Slot creation inputs are incomplete.");
-            CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
-            slot.name = displayName.Trim();
+            CharacterPoseResourceSlot slot = CreateSlot(displayName, kind);
             var transaction = new CharacterPresentationMutationTransaction(
                 Guid.NewGuid().ToString("N"),
                 "Create Pose Resource Slot");
@@ -25,6 +24,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new CharacterPresentationMutationService().Apply(
                 new CharacterPoseGraphAssetMutationOwner(graph),
                 transaction);
+            return slot;
+        }
+
+        public static CharacterPoseResourceSlot CreateSlot(
+            string displayName,
+            CharacterPoseResourceKind kind)
+        {
+            if (string.IsNullOrWhiteSpace(displayName) ||
+                !Enum.IsDefined(typeof(CharacterPoseResourceKind), kind))
+                throw new ArgumentException("Pose Resource Slot creation inputs are incomplete.");
+            CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
+            slot.name = displayName.Trim();
             return slot;
         }
 

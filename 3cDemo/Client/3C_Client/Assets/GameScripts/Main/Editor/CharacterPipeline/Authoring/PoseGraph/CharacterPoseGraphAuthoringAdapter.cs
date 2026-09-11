@@ -721,8 +721,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void DeleteResourceSlot(CharacterPoseResourceSlot slot)
         {
-            if (!m_Asset.ResourceSlots.Contains(slot))
+            CharacterPoseResourceSlot owned = m_Asset.ResourceSlots.FirstOrDefault(
+                value => value == slot ||
+                         SameAssetIdentity(value, slot) ||
+                         value && slot && string.Equals(value.name, slot.name, StringComparison.Ordinal));
+            if (!owned)
+            {
+                if (!slot)
+                    return;
+                if (string.Equals(
+                        AssetDatabase.GetAssetPath(slot),
+                        AssetDatabase.GetAssetPath(m_Asset),
+                        StringComparison.Ordinal))
+                {
+                    Undo.DestroyObjectImmediate(slot);
+                    return;
+                }
                 throw new InvalidOperationException("Pose Resource Slot does not belong to this Pose Graph.");
+            }
+            slot = owned;
             if (m_Asset.EnumerateGraphs()
                     .SelectMany(value => value.Nodes)
                     .Any(value => value != null && OwnsResourceSlot(value.Payload, slot)))
@@ -733,21 +750,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Undo.DestroyObjectImmediate(slot);
         }
 
-        static bool OwnsResourceSlot(CharacterPoseNodePayload payload, CharacterPoseResourceSlot slot) =>
-            payload switch
-            {
-                CharacterAnimationSlotPosePayload value => value.BlendPolicySlot == slot,
-                CharacterBlendStackPosePayload value => value.BlendPolicySlot == slot,
-                CharacterInertializationPosePayload value => value.PolicySlot == slot,
-                CharacterLayeredBoneBlendPosePayload value => value.BoneMaskSlot == slot,
-                CharacterRootOrientationWarpPosePayload value => value.YawCurveSlot == slot,
-                CharacterFootPlacementPosePayload value => value.ProfileSlot == slot || value.CalibrationSlot == slot,
-                CharacterMotionMatchingPosePayload value => value.BindingSlot == slot || value.JumpBlendPolicySlot == slot,
-                CharacterPoseStateMachineNodePayload value => value.StateMachine != null &&
-                    value.StateMachine.Transitions.Any(transition => transition != null &&
-                        (transition.CustomBlendCurveSlot == slot || transition.BlendProfileSlot == slot)),
-                _ => false
-            };
+        static bool OwnsResourceSlot(
+            CharacterPoseNodePayload payload,
+            CharacterPoseResourceSlot slot) =>
+            payload != null &&
+            slot &&
+            CharacterPoseAuthoringMetadata.Require(payload.Kind)
+                .ProjectResourceSlots(payload)
+                .Contains(slot);
 
         static bool SameAssetIdentity(UnityEngine.Object left, UnityEngine.Object right)
         {

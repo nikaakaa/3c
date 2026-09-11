@@ -101,14 +101,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var values = new List<CharacterSkillAuthoringDefinition>();
             var skillIds = new HashSet<string>(StringComparer.Ordinal);
             var resolvedSkillIds = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (AgentSnapshotSkillDefinition source in m_Document.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile source in m_Document.skills ?? new List<AgentPackageSkillDefinitionFile>())
             {
                 if (source == null)
                     continue;
                 resolvedSkillIds[source.skillId] = m_GraphApplier.StableSkillId(source.skillId, skillIds);
                 skillIds.Add(resolvedSkillIds[source.skillId]);
             }
-            foreach (AgentSnapshotSkillDefinition source in m_Document.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile source in m_Document.skills ?? new List<AgentPackageSkillDefinitionFile>())
             {
                 if (source == null)
                     continue;
@@ -135,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     source.targetInputValueId,
                     source.targetKey);
                 definition.ConfigureSkillRelations(
-                    (source.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                    (source.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                         .Where(value => value != null)
                         .Select(value => new CharacterSkillSubgraphDependencyConfiguration(
                             m_GraphApplier.ResolveGraph(value.subgraphIdentity) is IBtsmtlSkillFlowGraph graph

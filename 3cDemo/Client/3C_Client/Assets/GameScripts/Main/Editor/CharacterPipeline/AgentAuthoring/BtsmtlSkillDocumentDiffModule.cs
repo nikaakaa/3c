@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             AgentPackageSkillFlowDocument currentDocument = new AgentPackageSkillFlowDocument
             {
-                skills = current?.skills ?? new List<AgentSnapshotSkillDefinition>(),
+                skills = current?.skills ?? new List<AgentPackageSkillDefinitionFile>(),
                 graphs = current?.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>(),
                 layouts = current?.skillGraphLayouts ?? new List<AgentPackageSkillFlowGraphLayoutFile>(),
                 macros = current?.skillMacros ?? new List<AgentPackageSkillMacroFile>(),
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             AgentPackageSkillFlowDocument targetDocument = new AgentPackageSkillFlowDocument
             {
-                skills = target?.skills ?? new List<AgentSnapshotSkillDefinition>(),
+                skills = target?.skills ?? new List<AgentPackageSkillDefinitionFile>(),
                 graphs = target?.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>(),
                 layouts = target?.skillGraphLayouts ?? new List<AgentPackageSkillFlowGraphLayoutFile>(),
                 macros = target?.skillMacros ?? new List<AgentPackageSkillMacroFile>(),
@@ -70,14 +70,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                          new List<AgentPackageSkillFlowGraphFile>())
                 if (graph != null)
                     graph.contentRevision = string.Empty;
-            value.skills = (value.skills ?? new List<AgentSnapshotSkillDefinition>())
+            value.skills = (value.skills ?? new List<AgentPackageSkillDefinitionFile>())
                 .OrderBy(skill => skill?.skillId, StringComparer.Ordinal)
                 .ToList();
-            foreach (AgentSnapshotSkillDefinition skill in value.skills)
+            foreach (AgentPackageSkillDefinitionFile skill in value.skills)
             {
                 if (skill == null)
                     continue;
-                skill.subgraphDependencies = (skill.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                skill.subgraphDependencies = (skill.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                     .OrderBy(dependency => dependency?.subgraphIdentity, StringComparer.Ordinal)
                     .ThenBy(dependency => dependency?.callSiteIdentity, StringComparer.Ordinal)
                     .ToList();

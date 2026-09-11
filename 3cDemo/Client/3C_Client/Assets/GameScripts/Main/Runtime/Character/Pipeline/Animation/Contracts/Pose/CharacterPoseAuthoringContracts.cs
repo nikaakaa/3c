@@ -6,6 +6,17 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+    public sealed class CharacterPoseDocumentPolicyAttribute : Attribute
+    {
+        public CharacterPoseDocumentPolicyAttribute(bool retired)
+        {
+            Retired = retired;
+        }
+
+        public bool Retired { get; }
+    }
+
     public enum CharacterPoseAuthoringGraphRole : byte
     {
         AnimGraph = 1,

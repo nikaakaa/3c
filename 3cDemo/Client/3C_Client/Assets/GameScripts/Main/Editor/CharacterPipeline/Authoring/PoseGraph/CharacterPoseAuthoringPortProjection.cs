@@ -1,9 +1,10 @@
 using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
@@ -98,6 +99,115 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPosePortKind.MotionMatchingBinding => "motion-matching.binding",
                 _ => throw new InvalidOperationException(
                     $"Pose port kind '{kind}' is not registered.")
+            };
+
+        public static GraphAuthoringDynamicPortProjection Dynamic(
+            string id,
+            string name,
+            string valueType,
+            string direction,
+            bool required,
+            int order,
+            string interfacePortId)
+        {
+            CharacterPosePortKind kind = Kind(valueType);
+            GraphAuthoringPortDirection parsedDirection =
+                Enum.Parse<GraphAuthoringPortDirection>(direction, false);
+            return new GraphAuthoringDynamicPortProjection(
+                new GraphAuthoringPortId(id),
+                name,
+                ValueType(kind),
+                parsedDirection,
+                parsedDirection == GraphAuthoringPortDirection.Input
+                    ? GraphAuthoringPortCapacity.Single
+                    : GraphAuthoringPortCapacity.Multiple,
+                required,
+                order,
+                interfacePortId);
+        }
+
+        public static CharacterPoseDynamicPort CreateDynamicPort(
+            string id,
+            string name,
+            string valueType,
+            string direction,
+            bool required,
+            int order,
+            string interfacePortId)
+        {
+            GraphAuthoringDynamicPortProjection projected = Dynamic(
+                id,
+                name,
+                valueType,
+                direction,
+                required,
+                order,
+                interfacePortId);
+            return new CharacterPoseDynamicPort(
+                new PosePortId(projected.PortId.Value),
+                projected.DisplayName,
+                Kind(projected.ValueTypeId),
+                projected.Direction == GraphAuthoringPortDirection.Input
+                    ? CharacterPosePortDirection.Input
+                    : CharacterPosePortDirection.Output,
+                projected.Required,
+                projected.Order,
+                string.IsNullOrWhiteSpace(projected.InterfacePortId)
+                    ? default
+                    : new PoseInterfacePortId(projected.InterfacePortId));
+        }
+
+        public static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ReadTypedProperties(
+                GraphAuthoringCapabilityDescriptor capability,
+                JObject properties)
+        {
+            return capability.PortVariants
+                .Select(value => value.When.FieldId)
+                .Distinct()
+                .Select(fieldId =>
+                {
+                    GraphAuthoringFieldDescriptor field = capability.Fields
+                        .Single(value => value.FieldId.Equals(fieldId));
+                    if (properties == null ||
+                        !properties.TryGetValue(
+                            fieldId.Value,
+                            StringComparison.Ordinal,
+                            out JToken token))
+                    {
+                        throw new GraphAuthoringPortShapeException(
+                            "port_shape_discriminator_unknown",
+                            $"Pose capability '{capability.CapabilityId}' requires discriminator '{fieldId}'.");
+                    }
+                    return new GraphAuthoringTypedPropertyValue(
+                        fieldId,
+                        field.ValueKind,
+                        CanonicalPropertyValue(field.ValueKind, token));
+                })
+                .ToArray();
+        }
+
+        static string CanonicalPropertyValue(
+            GraphAuthoringFieldValueKind kind,
+            JToken token) =>
+            kind switch
+            {
+                GraphAuthoringFieldValueKind.Boolean =>
+                    token.Value<bool>().ToString(),
+                GraphAuthoringFieldValueKind.Integer =>
+                    token.Value<long>().ToString(
+                        CultureInfo.InvariantCulture),
+                GraphAuthoringFieldValueKind.Float =>
+                    token.Value<double>().ToString(
+                        "R",
+                        CultureInfo.InvariantCulture),
+                GraphAuthoringFieldValueKind.String or
+                GraphAuthoringFieldValueKind.Enum or
+                GraphAuthoringFieldValueKind.IdentityReference =>
+                    token.Value<string>() ?? string.Empty,
+                _ => throw new GraphAuthoringPortShapeException(
+                    "port_shape_discriminator_type_invalid",
+                    $"Pose port discriminator type '{kind}' is not supported.")
             };
 
         static CharacterPosePortDefinition ToPosePort(

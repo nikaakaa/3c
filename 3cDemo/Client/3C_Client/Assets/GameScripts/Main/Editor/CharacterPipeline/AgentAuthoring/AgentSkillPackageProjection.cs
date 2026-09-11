@@ -147,8 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BtsmtlSkillFlowGraphRole role) =>
             BtsmtlSkillGraphAuthoringMetadata.IsAllowed(
                 node?.capability,
-                role,
-                node?.properties?.Value<string>("accessMode"));
+                role);
 
         public static bool IsAllowed(
             string kind,
@@ -163,65 +162,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node == null)
                 return Array.Empty<AgentPackagePortDescriptor>();
             string kind = node.capability ?? string.Empty;
-            if (kind == "macro-call")
+            GraphAuthoringCapabilityDescriptor capability =
+                BtsmtlSkillGraphAuthoringMetadata.Require(kind);
+            var dynamicPorts = new List<GraphAuthoringDynamicPortProjection>();
+            switch (capability.DynamicPortSource)
             {
-                string macroId = node.properties?.Value<string>("graphId");
-                AgentPackageSkillMacroFile macro = (macros ??
-                        new List<AgentPackageSkillMacroFile>())
-                    .FirstOrDefault(value => value != null && value.id == macroId);
-                var dynamicPorts = new List<GraphAuthoringDynamicPortProjection>();
-                int order = 0;
-                foreach (AgentPackageSkillMacroParameter parameter in
-                         macro?.inputs ?? new List<AgentPackageSkillMacroParameter>())
-                {
-                    dynamicPorts.Add(
-                        BtsmtlSkillGraphAuthoringMetadata.ProjectMacroParameterPort(
-                            parameter.id,
-                            parameter.name,
-                            parameter.valueType,
-                            true,
-                            order++));
-                }
-                foreach (AgentPackageSkillMacroParameter parameter in
-                         macro?.outputs ?? new List<AgentPackageSkillMacroParameter>())
-                {
-                    dynamicPorts.Add(
-                        BtsmtlSkillGraphAuthoringMetadata.ProjectMacroParameterPort(
-                            parameter.id,
-                            parameter.name,
-                            parameter.valueType,
-                            false,
-                            order++));
-                }
-                return ToPackagePorts(BtsmtlSkillGraphAuthoringMetadata.ProjectPorts(
-                    kind,
-                    Array.Empty<GraphAuthoringTypedPropertyValue>(),
-                    dynamicPorts));
-            }
-            if (kind == "exposed-property")
-                return ProjectBlackboardPorts(node);
-
-            var dynamic = new List<GraphAuthoringDynamicPortProjection>();
-            if (kind == "sequence" || kind == "selector" ||
-                kind == "parallel" || kind == "state")
-            {
-                int order = 100;
-                foreach (JObject step in (node.properties?["steps"] as JArray)
-                             ?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
-                {
-                    string id = step.Value<string>("id");
-                    dynamic.Add(
-                        BtsmtlSkillGraphAuthoringMetadata.ProjectCompositeStepPort(
-                            kind,
-                            id,
-                            step.Value<string>("name"),
-                            order++));
-                }
+                case GraphAuthoringDynamicPortSource.MacroParameters:
+                    string macroId = node.properties?.Value<string>("graphId");
+                    AgentPackageSkillMacroFile macro = (macros ??
+                            new List<AgentPackageSkillMacroFile>())
+                        .FirstOrDefault(value => value != null && value.id == macroId);
+                    int macroOrder = 0;
+                    AddMacroParameterPorts(
+                        dynamicPorts,
+                        macro?.inputs,
+                        true,
+                        ref macroOrder);
+                    AddMacroParameterPorts(
+                        dynamicPorts,
+                        macro?.outputs,
+                        false,
+                        ref macroOrder);
+                    break;
+                case GraphAuthoringDynamicPortSource.BlackboardValue:
+                    return ProjectBlackboardPorts(node);
+                case GraphAuthoringDynamicPortSource.OrderedSteps:
+                    int stepOrder = 100;
+                    foreach (JObject step in (node.properties?["steps"] as JArray)
+                                 ?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                    {
+                        dynamicPorts.Add(
+                            BtsmtlSkillGraphAuthoringMetadata.ProjectCompositeStepPort(
+                                kind,
+                                step.Value<string>("id"),
+                                step.Value<string>("name"),
+                                stepOrder++));
+                    }
+                    break;
             }
             return ToPackagePorts(BtsmtlSkillGraphAuthoringMetadata.ProjectPorts(
                 kind,
                 Array.Empty<GraphAuthoringTypedPropertyValue>(),
-                dynamic));
+                dynamicPorts));
         }
 
         public static IReadOnlyList<AgentPackagePortDescriptor> ProjectAnchorPorts(
@@ -231,46 +213,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (anchor == null)
                 return Array.Empty<AgentPackagePortDescriptor>();
+            GraphAuthoringCapabilityDescriptor capability =
+                BtsmtlSkillGraphAuthoringMetadata.Require(anchor.kind);
             var dynamic = new List<GraphAuthoringDynamicPortProjection>();
-            if (anchor.kind == "@enter" || anchor.kind == "@any")
+            switch (capability.DynamicPortSource)
             {
-                int order = 100;
-                foreach (AgentPackageSkillFlowStep step in
-                         anchor.steps ?? new List<AgentPackageSkillFlowStep>())
-                {
-                    dynamic.Add(
-                        BtsmtlSkillGraphAuthoringMetadata.ProjectAnchorStepPort(
-                            anchor.kind,
-                            step.id,
-                            step.name,
-                            order++));
-                }
-            }
-            else if (anchor.kind == "@input" || anchor.kind == "@output")
-            {
-                AgentPackageSkillMacroFile macro = (macros ??
-                        new List<AgentPackageSkillMacroFile>())
-                    .FirstOrDefault(value => value != null && value.id == graph?.id);
-                IEnumerable<AgentPackageSkillMacroParameter> parameters =
-                    anchor.kind == "@input"
-                        ? macro?.inputs ?? new List<AgentPackageSkillMacroParameter>()
-                        : macro?.outputs ?? new List<AgentPackageSkillMacroParameter>();
-                int order = 0;
-                foreach (AgentPackageSkillMacroParameter parameter in parameters)
-                {
-                    dynamic.Add(
-                        BtsmtlSkillGraphAuthoringMetadata.ProjectMacroInterfacePort(
-                            anchor.kind,
-                            parameter.id,
-                            parameter.name,
-                            parameter.valueType,
-                            order++));
-                }
+                case GraphAuthoringDynamicPortSource.OrderedSteps:
+                    int stepOrder = 100;
+                    foreach (AgentPackageSkillFlowStep step in
+                             anchor.steps ?? new List<AgentPackageSkillFlowStep>())
+                    {
+                        dynamic.Add(
+                            BtsmtlSkillGraphAuthoringMetadata.ProjectAnchorStepPort(
+                                anchor.kind,
+                                step.id,
+                                step.name,
+                                stepOrder++));
+                    }
+                    break;
+                case GraphAuthoringDynamicPortSource.MacroInputs:
+                case GraphAuthoringDynamicPortSource.MacroOutputs:
+                    AgentPackageSkillMacroFile macro = (macros ??
+                            new List<AgentPackageSkillMacroFile>())
+                        .FirstOrDefault(value => value != null && value.id == graph?.id);
+                    IEnumerable<AgentPackageSkillMacroParameter> parameters =
+                        capability.DynamicPortSource ==
+                        GraphAuthoringDynamicPortSource.MacroInputs
+                            ? macro?.inputs ?? new List<AgentPackageSkillMacroParameter>()
+                            : macro?.outputs ?? new List<AgentPackageSkillMacroParameter>();
+                    int parameterOrder = 0;
+                    foreach (AgentPackageSkillMacroParameter parameter in parameters)
+                    {
+                        dynamic.Add(
+                            BtsmtlSkillGraphAuthoringMetadata.ProjectMacroInterfacePort(
+                                anchor.kind,
+                                parameter.id,
+                                parameter.name,
+                                parameter.valueType,
+                                parameterOrder++));
+                    }
+                    break;
             }
             return ToPackagePorts(BtsmtlSkillGraphAuthoringMetadata.ProjectPorts(
                 anchor.kind,
                 Array.Empty<GraphAuthoringTypedPropertyValue>(),
                 dynamic));
+        }
+
+        static void AddMacroParameterPorts(
+            ICollection<GraphAuthoringDynamicPortProjection> target,
+            IEnumerable<AgentPackageSkillMacroParameter> parameters,
+            bool input,
+            ref int order)
+        {
+            foreach (AgentPackageSkillMacroParameter parameter in
+                     parameters ?? Enumerable.Empty<AgentPackageSkillMacroParameter>())
+            {
+                target.Add(
+                    BtsmtlSkillGraphAuthoringMetadata.ProjectMacroParameterPort(
+                        parameter.id,
+                        parameter.name,
+                        parameter.valueType,
+                        input,
+                        order++));
+            }
         }
 
         public static string ValueType(Type type) =>

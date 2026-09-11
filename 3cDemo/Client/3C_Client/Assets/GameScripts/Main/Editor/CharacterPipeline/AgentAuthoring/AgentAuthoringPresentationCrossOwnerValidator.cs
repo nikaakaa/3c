@@ -83,26 +83,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var graphs = new HashSet<string>(
                 presentation.poseGraphs.Select(value => value.id),
                 StringComparer.Ordinal);
-            var sourceCapabilities = new HashSet<string>(
-                CharacterPoseNodeDefinitionModule.Shared.All
-                    .Where(value => value.UsesPoseSourceSlot)
-                    .Select(value =>
-                        value.CapabilityIdentity),
-                StringComparer.Ordinal);
-            var channelCapabilities = new HashSet<string>(
-                CharacterPoseNodeDefinitionModule.Shared.All
-                    .Where(value => value.UsesAnimationChannel)
-                    .Select(value =>
-                        value.CapabilityIdentity),
-                StringComparer.Ordinal);
-            var subgraphCapabilities = new HashSet<string>(
-                CharacterPoseNodeDefinitionModule.Shared.All
-                    .Where(value =>
-                        value.NativeRole ==
-                        CharacterPoseNativeNodeRole.Subgraph)
-                    .Select(value =>
-                        value.CapabilityIdentity),
-                StringComparer.Ordinal);
+            var sourceFields = CharacterPoseAuthoringMetadata.All
+                .Where(value => value.UsesPoseSourceSlot)
+                .ToDictionary(
+                    value => value.CapabilityIdentity,
+                    value => value.Fields.Single(field =>
+                        field.PickerKind == "pose-source-slot").FieldId.Value,
+                    StringComparer.Ordinal);
+            var channelFields = CharacterPoseAuthoringMetadata.All
+                .Where(value => value.UsesAnimationChannel)
+                .ToDictionary(
+                    value => value.CapabilityIdentity,
+                    value => value.Fields.Single(field =>
+                        field.PickerKind == "animation-channel").FieldId.Value,
+                    StringComparer.Ordinal);
+            var graphReferenceFields = CharacterPoseAuthoringMetadata.All
+                .Where(value => value.NativeRole ==
+                    CharacterPoseNativeNodeRole.Subgraph)
+                .SelectMany(value => value.Fields
+                    .Where(field => field.PickerKind == "pose-graph")
+                    .Select(field => new
+                    {
+                        value.CapabilityIdentity,
+                        FieldId = field.FieldId.Value
+                    }))
+                .ToDictionary(
+                    value => value.CapabilityIdentity,
+                    value => value.FieldId,
+                    StringComparer.Ordinal);
             foreach (AgentPackagePoseGraphFile graph in
                      presentation.poseGraphs)
             {
@@ -110,37 +118,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     string path =
                         GraphPath(graph.id) + $".nodes[{node.id}]";
-                    if (sourceCapabilities.Contains(node.capability) &&
+                    if (sourceFields.TryGetValue(
+                            node.capability,
+                            out string sourceFieldId) &&
                         !sources.Contains(
                             AgentAuthoringPresentationPackageValidator.ReferenceIdentity(
-                                node.properties["pose-source-slot"]
+                                node.properties[sourceFieldId]
                                     ?.ToObject<AgentPackageObjectReference>())))
                     {
                         report.Error(
-                            path + ".properties.pose-source-slot",
+                            path + ".properties." + sourceFieldId,
                             "presentation_pose_source_unresolved",
                             "Pose节点引用的Source Slot不在Profile目标状态中。");
                     }
-                    if (channelCapabilities.Contains(
-                            node.capability) &&
+                    if (channelFields.TryGetValue(
+                            node.capability,
+                            out string channelFieldId) &&
                         !channels.Contains(
-                            node.properties["animation-channel-id"]
+                            node.properties[channelFieldId]
                                 ?.Value<string>() ??
                             string.Empty))
                     {
                         report.Error(
-                            path + ".properties.animation-channel-id",
+                            path + ".properties." + channelFieldId,
                             "presentation_animation_channel_unresolved",
                             "Pose节点引用的Animation Channel不在Timeline目标状态中。");
                     }
-                    if (subgraphCapabilities.Contains(
-                            node.capability) &&
+                    if (graphReferenceFields.TryGetValue(
+                            node.capability,
+                            out string graphFieldId) &&
                         !graphs.Contains(
-                            node.properties["graph-id"]?.Value<string>() ??
+                            node.properties[graphFieldId]?.Value<string>() ??
                             string.Empty))
                     {
                         report.Error(
-                            path + ".properties.graph-id",
+                            path + ".properties." + graphFieldId,
                             "presentation_subgraph_unresolved",
                             "Pose Subgraph引用不在root-owned Graph catalog中。");
                     }

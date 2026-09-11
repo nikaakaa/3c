@@ -186,8 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 new GraphAuthoringCapabilityId(capability),
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 role);
-            return CharacterPoseNodeDefinitionModule.Shared
-                .RequireCapability(capability)
+            return CharacterPoseAuthoringMetadata.RequireCapability(capability)
                 .Kind;
         }
 

@@ -25,6 +25,8 @@ Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和Agent工�
 
 Document不会自动编译或自动apply。Unity树变化和Document变化只计算同步状态；只有显式`apply_document`才修改Unity authoring资产。Character Presentation Profile、Pose Graph与PoseStateMachine属于同一Document目标、Reconciler和资产级apply事务；Character Program、Presentation Projection与Native Pose Program不属于Document事务，必须在apply成功后通过精确Definition的Character Build生命周期显式发布。
 
+Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正式Authoring类型上的Editor-only metadata marker、共享`GraphAuthoringCapabilityCatalog`、正式字段/引用描述和正式Mutation binding是唯一语义来源；`AgentPackage...`类型只表示v7 JSON包外壳。Skill字段、端口和Graph role由正式`BtsmtlSkillCapabilityCatalog`及其marker投影，Gameplay Graph包目录由正式共享Capability投影，Pose继续由`CharacterPoseNodeDefinitionModule`和`CharacterPoseGraphAuthoringCapabilities`投影。内部C#类型、文件组织或Compiler实现变化而不改变稳定kind、typed field、logical port、owner和闭包关系时，不升级Document schema。
+
 修改C#、OpenSpec和Skill文件继续使用Codex文件工具，不通过Unity MCP写代码。
 
 ## 资产修改流程
@@ -77,7 +79,7 @@ Character Document v7正式可写：
 
 Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Clip Binding直接引用现有原生AnimationClip，Profile唯一装配Rig、Analysis Source与Locomotion Sync Group。Document只可完整替换或删除注册Curve，不得创建Clip、修改骨骼曲线、AnimationEvent、import设置、Foot Analysis或generated payload。Clip Curve变化必须进入planned/applied diff与同一Undo owner；reverse export必须从最终Clip省略已删除channel。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
 
-Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
+Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Pose Graph role、字段值、dynamic port与退役节点策略由正式 Pose capability/authoring marker提供，Document Codec只做包闭包校验。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
 
 PoseStateMachine Transition混合字段固定为`blendLogic`、`durationSeconds`、`blendMode`、条件式`customBlendCurveAssetId`与`blendProfileAssetId`。Curve/Profile必须从只读Asset Catalog解析为强类型资产并提交同一Presentation Mutation；禁止恢复`blendCurveId`、旧`blendProfileId`或GUID文本输入。Custom必须带Curve Asset，非Custom不得保留Curve Asset；BlendStack只作为显式Pose Graph节点存在。
 
@@ -104,7 +106,7 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 ```text
 Package manifest + strict per-file parser
   -> AgentDocumentMutationReconciler
-  -> AgentAuthoringPresentationReconciler
+  -> AgentAuthoringPresentationReconciler（Animation/PoseGraph/LinkedPose/Profile/Conversion/Support）
   -> immutable AgentMutationPlan
   -> Mutation preflight
   -> one Undo transaction

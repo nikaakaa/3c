@@ -153,31 +153,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new ArgumentException("Pose resource binding inputs are incomplete.");
             }
+            return CreateResourceBinding(slot, kind, resource);
+        }
+
+        public static CharacterPoseResourceBinding CreateResourceBinding(
+            CharacterPoseResourceSlot slot,
+            CharacterPoseResourceKind kind,
+            UnityEngine.Object resource)
+        {
+            if (!slot || slot.Kind != kind || !slot.Accepts(resource))
+                throw new ArgumentException("Pose resource binding inputs are incomplete.");
             var binding = new CharacterPoseResourceBinding();
             binding.Configure(slot, resource);
             return binding;
-        }
-
-        public static CharacterPoseResourceSlot CreateResourceSlot(
-            CharacterPresentationPoseGraphAsset graph,
-            string displayName,
-            CharacterPoseResourceKind kind)
-        {
-            if (!graph || string.IsNullOrWhiteSpace(displayName) ||
-                !Enum.IsDefined(typeof(CharacterPoseResourceKind), kind))
-                throw new ArgumentException("Pose Resource Slot creation inputs are incomplete.");
-            CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
-            slot.name = displayName.Trim();
-            var transaction = new CharacterPresentationMutationTransaction(
-                Guid.NewGuid().ToString("N"),
-                "Create Pose Resource Slot");
-            transaction.Add(new CreatePoseResourceSlotMutation(
-                RequireAssetOwnerId(graph),
-                slot));
-            new CharacterPresentationMutationService().Apply(
-                new CharacterPoseGraphAssetMutationOwner(graph),
-                transaction);
-            return slot;
         }
 
         public static CharacterClipPoseSourceSlot CreateClipPoseSource(

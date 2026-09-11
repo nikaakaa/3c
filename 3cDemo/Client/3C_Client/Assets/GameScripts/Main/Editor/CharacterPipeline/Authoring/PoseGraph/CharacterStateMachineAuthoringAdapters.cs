@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using TreeDesigner;
 using TreeDesigner.Editor;
 using UnityEngine;

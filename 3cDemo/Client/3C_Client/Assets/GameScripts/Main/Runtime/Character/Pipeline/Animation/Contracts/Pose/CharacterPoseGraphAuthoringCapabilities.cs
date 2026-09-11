@@ -66,6 +66,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNodeKind kind) =>
             Require(kind).AuthoringType;
 
+        public static bool IsDocumentNodeRetired(string capability)
+        {
+            GraphAuthoringCapabilityDescriptor descriptor = Catalog.Require(
+                new GraphAuthoringCapabilityId(capability));
+            return descriptor.AuthoringType != null &&
+                   descriptor.AuthoringType
+                       .GetCustomAttributes(
+                           typeof(CharacterPoseDocumentPolicyAttribute),
+                           false)
+                       .OfType<CharacterPoseDocumentPolicyAttribute>()
+                       .Any(value => value.Retired);
+        }
+
         public static CharacterPoseNodeKind RequireKind(
             CharacterPoseNodePayload payload) =>
             payload != null && Require(payload.Kind).AuthoringType == payload.GetType() ? payload.Kind : throw new InvalidOperationException("Pose payload does not match its registered schema.");
@@ -84,6 +97,53 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseAuthoringGraphRole.LinkedPoseEntry => LinkedPoseEntry,
                 _ => throw new InvalidOperationException($"Pose authoring graph role '{role}' has no document role.")
             };
+        }
+
+        public static bool TryResolveRole(
+            string documentRole,
+            out CharacterPoseAuthoringGraphRole role)
+        {
+            foreach (CharacterPoseAuthoringGraphRole candidate in
+                     Enum.GetValues(typeof(CharacterPoseAuthoringGraphRole)))
+            {
+                if (string.Equals(
+                        GetRole(candidate).Value,
+                        documentRole,
+                        StringComparison.Ordinal))
+                {
+                    role = candidate;
+                    return true;
+                }
+            }
+            role = default;
+            return false;
+        }
+
+        public static GraphAuthoringDocumentRoleId ResolveGraphRole(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterPoseCanvasGraph graph,
+            ISet<PoseGraphId> linkedEntryGraphs)
+        {
+            if (!owner || graph == null || !owner.EnumerateGraphs().Contains(graph))
+                throw new ArgumentException("Pose Graph role context is invalid.");
+            if (linkedEntryGraphs != null && linkedEntryGraphs.Contains(graph.GraphId))
+                return LinkedPoseEntry;
+            if (ReferenceEquals(graph, owner.Graph))
+                return RootGraph;
+            if (graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer)
+                return AnimationLayer;
+            if (graph.Role == CharacterPoseAuthoringGraphRole.ControlRig)
+                return ControlRig;
+            bool stateGraph = owner.EnumerateGraphs()
+                .Where(value => value != null)
+                .SelectMany(value => value.Nodes)
+                .Select(value => value?.Payload)
+                .OfType<CharacterPoseStateMachineNodePayload>()
+                .Where(value => value.StateMachine != null)
+                .SelectMany(value => value.StateMachine.States)
+                .Where(value => value != null && value.PoseGraphId.IsValid)
+                .Any(value => value.PoseGraphId.Equals(graph.GraphId));
+            return stateGraph ? StatePoseGraph : Subgraph;
         }
 
         public static GraphAuthoringCapabilityId Get(

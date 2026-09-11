@@ -229,6 +229,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public abstract IReadOnlyList<CharacterPoseParameterPolicy>
             ParameterPolicies(CharacterPoseNodePayload payload);
 
+        public virtual IReadOnlyList<CharacterPoseResourceSlot>
+            ProjectResourceSlots(CharacterPoseNodePayload payload)
+        {
+            RequirePayload(payload);
+            return Capability.Fields
+                .Where(field =>
+                    field.ObjectType != null &&
+                    typeof(CharacterPoseResourceSlot).IsAssignableFrom(
+                        field.ObjectType))
+                .Select(field => ReadField(payload, field.FieldId.Value))
+                .OfType<CharacterPoseResourceSlot>()
+                .Distinct()
+                .ToArray();
+        }
+
         public abstract IReadOnlyList<CharacterPoseGraphDependency>
             ProjectGraphDependencies(CharacterPoseNodePayload payload);
 

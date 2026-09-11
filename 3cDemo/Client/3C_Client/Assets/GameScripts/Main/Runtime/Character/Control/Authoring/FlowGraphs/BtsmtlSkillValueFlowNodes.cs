@@ -12,6 +12,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         void SetInputId(string inputId, string providerOwnerId);
     }
 
+    [BtsmtlSkillProvider(BtsmtlSkillProviderKind.InputProfile)]
+    [BtsmtlSkillAuthoringField("inputId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+    [BtsmtlSkillAuthoringField("providerOwnerId", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
     public abstract class BtsmtlSkillInputFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillInputNode
     {
         [SerializeField] string m_InputId = string.Empty;
@@ -33,33 +36,58 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("读取布尔输入"), Category("BTSMTL/技能输入")]
+    [BtsmtlSkillNodeKind("character-input-bool")]
+    [BtsmtlSkillNodeAuthoringReference(
+        "inputId",
+        BtsmtlSkillNodeAuthoringReferenceKind.InputValue,
+        "skill_input_value_unresolved",
+        "Skill Input节点的inputId无法解析。")]
     public sealed class BtsmtlSkillBooleanInputFlowNode : BtsmtlSkillInputFlowNode<bool>
     {
-        public override string CapabilityId => "character-input-bool";
     }
 
     [Name("读取数值输入"), Category("BTSMTL/技能输入")]
+    [BtsmtlSkillNodeKind("character-input-float")]
+    [BtsmtlSkillNodeAuthoringReference(
+        "inputId",
+        BtsmtlSkillNodeAuthoringReferenceKind.InputValue,
+        "skill_input_value_unresolved",
+        "Skill Input节点的inputId无法解析。")]
     public sealed class BtsmtlSkillScalarInputFlowNode : BtsmtlSkillInputFlowNode<float>
     {
-        public override string CapabilityId => "character-input-float";
     }
 
     [Name("读取方向输入"), Category("BTSMTL/技能输入")]
+    [BtsmtlSkillNodeKind("character-input-vector2")]
+    [BtsmtlSkillNodeAuthoringReference(
+        "inputId",
+        BtsmtlSkillNodeAuthoringReferenceKind.InputValue,
+        "skill_input_value_unresolved",
+        "Skill Input节点的inputId无法解析。")]
     public sealed class BtsmtlSkillVector2InputFlowNode : BtsmtlSkillInputFlowNode<Vector2>
     {
-        public override string CapabilityId => "character-input-vector2";
     }
 
     [Name("读取方向输入长度"), Category("BTSMTL/技能输入")]
+    [BtsmtlSkillNodeKind("character-input-vector2-magnitude")]
+    [BtsmtlSkillNodeAuthoringReference(
+        "inputId",
+        BtsmtlSkillNodeAuthoringReferenceKind.InputValue,
+        "skill_input_value_unresolved",
+        "Skill Input节点的inputId无法解析。")]
     public sealed class BtsmtlSkillInputMagnitudeFlowNode : BtsmtlSkillInputFlowNode<float>
     {
-        public override string CapabilityId => "character-input-vector2-magnitude";
     }
 
     [Name("读取动作请求"), Category("BTSMTL/技能输入")]
+    [BtsmtlSkillNodeKind("character-action-request")]
+    [BtsmtlSkillNodeAuthoringReference(
+        "inputId",
+        BtsmtlSkillNodeAuthoringReferenceKind.ActionRequest,
+        "skill_action_request_unresolved",
+        "Skill Action Request节点的inputId无法解析。")]
     public sealed class BtsmtlSkillActionRequestFlowNode : BtsmtlSkillInputFlowNode<bool>
     {
-        public override string CapabilityId => "character-action-request";
     }
 
 }

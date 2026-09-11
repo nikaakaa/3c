@@ -130,12 +130,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     false);
                 if (!string.IsNullOrWhiteSpace(resource.slot.localId))
                 {
-                    CharacterPoseResourceSlot slot = CharacterPoseResourceSlot.Create(kind);
                     string displayName = Path.GetFileNameWithoutExtension(
                         resource.resource?.assetPath ?? string.Empty);
-                    slot.name = string.IsNullOrWhiteSpace(displayName)
+                    CharacterPoseResourceSlot slot =
+                        CharacterPoseResourceAuthoringService.CreateSlot(
+                            string.IsNullOrWhiteSpace(displayName)
                         ? kind.ToString()
-                        : displayName + " " + kind;
+                        : displayName + " " + kind,
+                        kind);
                     if (!m_LocalAssets.TryAdd(resource.slot.localId, slot))
                     {
                         report.Error(
@@ -722,9 +724,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 contextByGroup.Add(group.groupId, interfaceContext);
             }
 
-            string capability = CharacterPoseNodeDefinitionModule.Shared
+            string capability = CharacterPoseAuthoringMetadata
                 .Require(CharacterPoseNodeKind.LinkedPoseCall)
                 .CapabilityIdentity;
+            CharacterPoseAuthoringNodeMetadata metadata =
+                CharacterPoseAuthoringMetadata.RequireCapability(capability);
+            GraphAuthoringFieldDescriptor groupField = metadata.Fields.Single(
+                value => value.PickerKind == "linked-pose-group");
+            GraphAuthoringFieldDescriptor entryField = metadata.Fields.Single(
+                value => value.PickerKind == "linked-pose-entry");
             var calls = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (AgentPackagePoseGraphFile graph in presentation.poseGraphs)
             {
@@ -734,8 +742,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                  capability,
                                  StringComparison.Ordinal)))
                 {
-                    string groupId = node.properties?["group-id"]?.Value<string>();
-                    string entryId = node.properties?["entry-id"]?.Value<string>();
+                    string groupId = node.properties?[groupField.FieldId.Value]
+                        ?.Value<string>();
+                    string entryId = node.properties?[entryField.FieldId.Value]
+                        ?.Value<string>();
                     string key = (groupId ?? string.Empty) + "\0" +
                                  (entryId ?? string.Empty);
                     calls.TryGetValue(key, out int count);

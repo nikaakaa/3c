@@ -3,66 +3,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FlowCanvas.Macros;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
     public static class BtsmtlSkillNodeCatalog
     {
-        public static IReadOnlyList<Type> All { get; } = Array.AsReadOnly(new[]
-        {
-            typeof(BtsmtlSkillSequenceFlowNode),
-            typeof(BtsmtlSkillSelectorFlowNode),
-            typeof(BtsmtlSkillLoopFlowNode),
-            typeof(BtsmtlSkillParallelFlowNode),
-            typeof(BtsmtlSkillSucceedFlowNode),
-            typeof(BtsmtlSkillStateMachineFlowNode),
-            typeof(BtsmtlSkillStateFlowNode),
-            typeof(BtsmtlSkillStateRootCompletedFlowNode),
-            typeof(BtsmtlSkillStateExitCauseFlowNode),
-            typeof(BtsmtlSkillTimelineFlowNode),
-            typeof(BtsmtlSkillBooleanInputFlowNode),
-            typeof(BtsmtlSkillScalarInputFlowNode),
-            typeof(BtsmtlSkillVector2InputFlowNode),
-            typeof(BtsmtlSkillInputMagnitudeFlowNode),
-            typeof(BtsmtlSkillActionRequestFlowNode),
-            typeof(BtsmtlSkillActionContextActiveFlowNode),
-            typeof(BtsmtlSkillActionWindowActiveFlowNode),
-            typeof(BtsmtlSkillCanActivateActionFlowNode),
-            typeof(BtsmtlSkillSubmitActionLifecycleFlowNode),
-            typeof(BtsmtlSkillMoveFacingAngleFlowNode),
-            typeof(BtsmtlSkillCharacterStateVector3FlowNode),
-            typeof(BtsmtlSkillCharacterStateScalarFlowNode),
-            typeof(BtsmtlSkillCharacterStateYawFlowNode),
-            typeof(BtsmtlSkillCharacterStateBooleanFlowNode),
-            typeof(BtsmtlSkillGameplayTagFlowNode),
-            typeof(BtsmtlSkillGameplayTagQueryFlowNode),
-            typeof(BtsmtlSkillGameplayAttributeFlowNode),
-            typeof(BtsmtlSkillApplyGameplayEffectFlowNode),
-            typeof(BtsmtlSkillRemoveGameplayEffectFlowNode),
-            typeof(BtsmtlSkillBlackboardBooleanFlowNode),
-            typeof(BtsmtlSkillBlackboardScalarFlowNode),
-            typeof(BtsmtlSkillBlackboardGetFlowNode),
-            typeof(BtsmtlSkillBlackboardSetFlowNode),
-            typeof(BtsmtlSkillLocomotionFlowNode),
-            typeof(BtsmtlSkillRootFlowNode),
-            typeof(BtsmtlSkillStateOnEnterFlowNode),
-            typeof(BtsmtlSkillStateOnExitFlowNode),
-            typeof(BtsmtlSkillStateEnterFlowNode),
-            typeof(BtsmtlSkillStateAnyFlowNode),
-            typeof(BtsmtlSkillStateExitFlowNode),
-            typeof(BtsmtlSkillConditionResultFlowNode),
-            typeof(BtsmtlSkillTimelineEnableFlowNode),
-            typeof(BtsmtlSkillTimelineDisableFlowNode),
-            typeof(BtsmtlSkillTimelineDestroyFlowNode),
-            typeof(MacroNodeWrapper),
-            typeof(MacroInputNode),
-            typeof(MacroOutputNode),
-            typeof(BtsmtlSkillMacroInputNode),
-            typeof(BtsmtlSkillMacroOutputNode)
-        }.Concat(BtsmtlSkillNativeNodeCatalog.All.Select(value => value.NodeType)).ToArray());
+        public static IReadOnlyList<Type> All { get; } = Create();
 
         static readonly HashSet<Type> s_Types = new(All);
         public static bool Contains(Type type) => type != null && s_Types.Contains(type);
+
+        static IReadOnlyList<Type> Create()
+        {
+            var result = TypeCache.GetTypesDerivedFrom<BtsmtlSkillFlowNode>()
+                .Where(type => type != null && !type.IsAbstract && !type.ContainsGenericParameters)
+                .ToList();
+            result.Add(typeof(MacroNodeWrapper));
+            result.Add(typeof(MacroInputNode));
+            result.Add(typeof(MacroOutputNode));
+            result.Add(typeof(BtsmtlSkillMacroInputNode));
+            result.Add(typeof(BtsmtlSkillMacroOutputNode));
+            result.AddRange(BtsmtlSkillNativeNodeCatalog.All.Select(value => value.NodeType));
+            return result.Distinct().OrderBy(type => type.FullName, StringComparer.Ordinal).ToArray();
+        }
     }
 }
 #endif

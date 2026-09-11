@@ -199,10 +199,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Variable variable = variables.Values.SingleOrDefault(value => value != null && value.ID == declaration.id);
                 if (variable != null && variable.varType != type)
                     throw new InvalidOperationException($"Skill Blackboard '{declaration.id}'不能原位改变类型。");
-                AgentSnapshotBlackboardInputBinding inputBinding = declaration.inputBinding;
+                AgentPackageSkillBlackboardInputBinding inputBinding = declaration.inputBinding;
                 if (inputBinding != null && string.IsNullOrWhiteSpace(inputBinding.inputValueId))
                     inputBinding = null;
-                AgentSnapshotBlackboardFactProjection factProjection = declaration.factProjection;
+                AgentPackageSkillBlackboardFactProjection factProjection = declaration.factProjection;
                 if (factProjection != null &&
                     (string.IsNullOrWhiteSpace(factProjection.kind) ||
                      string.IsNullOrWhiteSpace(factProjection.windowType) ||
@@ -367,8 +367,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!node.id.StartsWith("local:", StringComparison.Ordinal))
                         throw new InvalidOperationException($"Skill Node '{node.id}'无法创建新的formal identity。");
                     actual = (FlowNode)graph.AddNode(ResolveNodeType(node), Vector2.zero);
-                    if (node.id.StartsWith("local:", StringComparison.Ordinal))
-                        m_LocalNodes[NodeKey(target.id, node.id)] = actual;
+                    m_LocalNodes[NodeKey(target.id, node.id)] = actual;
                 }
                 else if (NodeKind(actual) != node.capability ||
                          ResolveNodeType(node) != actual.GetType())
@@ -514,32 +513,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         FlowGraph CreateGraph(AgentPackageSkillFlowGraphFile target)
         {
+            if (!target.id.StartsWith("local:", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Skill Graph '{target.id}'只能由local identity创建。");
             FlowGraph graph;
             if (target.role == BtsmtlSkillFlowGraphRole.Subgraph.ToString())
             {
                 var macro = ScriptableObject.CreateInstance<BtsmtlSkillMacroGraph>();
                 BtsmtlSkillMacroInterface.Initialize(macro);
                 macro.ConfigureIdentity(
-                    target.id.StartsWith("local:", StringComparison.Ordinal)
-                        ? BtsmtlSkillGraphAssetFactory.StableIdentity(target.id)
-                        : target.id);
+                    BtsmtlSkillGraphAssetFactory.StableIdentity(target.id));
                 graph = macro;
             }
             else
             {
                 var skill = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
-                string identity = target.id.StartsWith("local:", StringComparison.Ordinal)
-                    ? BtsmtlSkillGraphAssetFactory.StableIdentity(target.id)
-                    : target.id;
-                skill.ConfigureIdentity(identity, Enum.Parse<BtsmtlSkillFlowGraphRole>(target.role, false));
+                skill.ConfigureIdentity(
+                    BtsmtlSkillGraphAssetFactory.StableIdentity(target.id),
+                    Enum.Parse<BtsmtlSkillFlowGraphRole>(target.role, false));
                 graph = skill;
             }
             graph.name = string.IsNullOrWhiteSpace(target.name) ? "Skill Graph" : target.name;
             if (target.ownership == AgentGraphOwnership.RootAsset.ToString())
             {
-                string assetPath = target.id.StartsWith("local:", StringComparison.Ordinal)
-                    ? AgentSkillFlowAssetPaths.Root(m_Session.Definition, target.id)
-                    : target.asset?.assetPath;
+                string assetPath = AgentSkillFlowAssetPaths.Root(
+                    m_Session.Definition,
+                    target.id);
                 if (string.IsNullOrEmpty(assetPath))
                     throw new InvalidOperationException($"Skill Graph '{target.id}'缺少根资产路径。");
                 AgentSkillFlowAssetPaths.RequireAvailable(assetPath);
@@ -547,9 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             else if (target.ownership == AgentGraphOwnership.SharedAsset.ToString())
             {
-                string assetPath = target.id.StartsWith("local:", StringComparison.Ordinal)
-                    ? SharedGraphAssetPath(target.id)
-                    : target.asset?.assetPath;
+                string assetPath = SharedGraphAssetPath(target.id);
                 if (string.IsNullOrEmpty(assetPath))
                     throw new InvalidOperationException($"共享技能Graph '{target.id}'缺少资产路径。");
                 if (File.Exists(assetPath) || File.Exists(assetPath + ".meta") ||

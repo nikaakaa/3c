@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentPackageSkillFlowDocument
     {
-        public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
+        public List<AgentPackageSkillDefinitionFile> skills = new List<AgentPackageSkillDefinitionFile>();
         public List<AgentPackageSkillFlowGraphFile> graphs = new List<AgentPackageSkillFlowGraphFile>();
         public List<AgentPackageSkillFlowGraphLayoutFile> layouts = new List<AgentPackageSkillFlowGraphLayoutFile>();
         public List<AgentPackageSkillMacroFile> macros = new List<AgentPackageSkillMacroFile>();
@@ -135,8 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string lifetime;
         public string category;
         public JToken defaultValue;
-        public AgentSnapshotBlackboardInputBinding inputBinding;
-        public AgentSnapshotBlackboardFactProjection factProjection;
+        public AgentPackageSkillBlackboardInputBinding inputBinding;
+        public AgentPackageSkillBlackboardFactProjection factProjection;
     }
 
     [Serializable]

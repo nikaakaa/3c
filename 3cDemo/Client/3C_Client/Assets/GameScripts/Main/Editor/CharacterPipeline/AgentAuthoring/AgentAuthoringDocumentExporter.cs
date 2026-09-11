@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .EvaluateExactArtifactStaleness(definition);
             AgentGraphSnapshot snapshot = new AgentCharacterSnapshotExporter().ExportFull(definition);
             snapshot.controlModuleId = definition.ControlModuleId;
-            List<AgentSnapshotSkillDefinition> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
+            List<AgentPackageSkillDefinitionFile> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
             snapshot.skills = skills;
             var skillReport = new AgentCompileReport
             {
@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     string inputValueId = declaration.inputBinding?.inputValueId;
                     if (string.IsNullOrWhiteSpace(inputValueId) || !inputIds.Add(inputValueId))
                         continue;
-                    snapshot.inputValues.Add(new AgentSnapshotInputValue
+                    snapshot.inputValues.Add(new AgentInputValue
                     {
                         inputValueId = inputValueId,
                         valueType = ProgramInputValueKind.ActionTargetSnapshot.ToString()
@@ -305,10 +305,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     id = value.CapabilityId.Value,
                     nodeKind = value.ExternalKind,
                     executionDomain = value.ExecutionDomainId,
-                    workerThreadSafe = CharacterPoseNodeDefinitionModule.Shared
+                    workerThreadSafe = CharacterPoseAuthoringMetadata
                         .RequireCapability(value.CapabilityId.Value)
                         .WorkerThreadSafe,
-                    workerKernel = CharacterPoseNodeDefinitionModule.Shared
+                    workerKernel = CharacterPoseAuthoringMetadata
                         .RequireCapability(value.CapabilityId.Value)
                         .WorkerKernel.ToString(),
                     ports = value.FixedPorts

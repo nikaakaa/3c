@@ -111,6 +111,16 @@ namespace TreeDesigner.Authoring
         OrderedBidirectional = 3
     }
 
+    public enum GraphAuthoringDynamicPortSource : byte
+    {
+        None = 0,
+        OrderedSteps = 1,
+        MacroParameters = 2,
+        BlackboardValue = 3,
+        MacroInputs = 4,
+        MacroOutputs = 5
+    }
+
     public enum GraphAuthoringNodePresentationKind : byte
     {
         Standard = 0,
@@ -569,7 +579,8 @@ namespace TreeDesigner.Authoring
             bool systemOwned = false,
             string anchorId = "",
             string executionDomainId = "",
-            IReadOnlyList<GraphAuthoringPortVariantDescriptor> portVariants = null)
+            IReadOnlyList<GraphAuthoringPortVariantDescriptor> portVariants = null,
+            GraphAuthoringDynamicPortSource dynamicPortSource = GraphAuthoringDynamicPortSource.None)
         {
             CapabilityId = capabilityId.IsValid ? capabilityId : throw new ArgumentException("Capability identity is missing.", nameof(capabilityId));
             DomainId = domainId.IsValid ? domainId : throw new ArgumentException("Capability domain identity is missing.", nameof(domainId));
@@ -582,6 +593,7 @@ namespace TreeDesigner.Authoring
             m_Fields = Index(fields ?? Array.Empty<GraphAuthoringFieldDescriptor>(), value => value.FieldId, "field");
             m_FixedPorts = Index(fixedPorts ?? Array.Empty<GraphAuthoringPortDescriptor>(), value => value.PortId, "port");
             DynamicPortPolicy = dynamicPortPolicy;
+            DynamicPortSource = dynamicPortSource;
             m_PortVariants = ValidatePortVariants(
                 portVariants ?? Array.Empty<GraphAuthoringPortVariantDescriptor>());
             ChildSurfaces = childSurfaces ?? Array.Empty<GraphAuthoringChildSurfaceDescriptor>();
@@ -622,6 +634,7 @@ namespace TreeDesigner.Authoring
         public IReadOnlyCollection<GraphAuthoringFieldDescriptor> Fields => m_Fields.Values;
         public IReadOnlyCollection<GraphAuthoringPortDescriptor> FixedPorts => m_FixedPorts.Values;
         public GraphAuthoringDynamicPortPolicy DynamicPortPolicy { get; }
+        public GraphAuthoringDynamicPortSource DynamicPortSource { get; }
         public IReadOnlyList<GraphAuthoringPortVariantDescriptor> PortVariants => m_PortVariants;
         public IReadOnlyList<GraphAuthoringChildSurfaceDescriptor> ChildSurfaces { get; }
         public IReadOnlyList<GraphAuthoringCommandDescriptor> Commands { get; }

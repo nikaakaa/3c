@@ -196,6 +196,12 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
+    [TimelineAuthoringProperty("mode", typeof(TimelineCameraMode))]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
+    [TimelineAuthoringProperty("blendInSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("blendOutSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("targetKey", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
+    [TimelineAuthoringProperty("interruptPolicy", typeof(TimelineCameraInterruptPolicy))]
     public sealed class CameraStateClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraStateClip;
@@ -265,6 +271,12 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(255, 168, 214)]
+    [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("cueKind", typeof(TimelineCameraCueKind))]
+    [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("intensity", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("durationSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     public sealed class CameraCueClip : SignalClip
     {
         public override string ContractKind => TimelineContractKinds.CameraCueClip;
@@ -340,6 +352,11 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(170, 225, 255)]
+    [TimelineAuthoringProperty("lookResponse", typeof(TimelineCameraLookResponseMode))]
+    [TimelineAuthoringProperty("manualOrbitWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("pitchResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("yawResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     public sealed class CameraResponseClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraResponseClip;

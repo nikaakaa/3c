@@ -100,8 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 expectedType,
                                 report,
                                 path + ".properties." + field),
-                            CharacterPoseNodeDefinitionModule
-                                .Shared.Require(kind).OperationFamily ==
+                            CharacterPoseAuthoringMetadata
+                                .Require(kind).OperationFamily ==
                             CharacterPoseOperationFamily.StateMachine
                                 ? new Func<CharacterPoseStateMachineDefinition>(() =>
                                     ConvertStateMachine(
@@ -391,13 +391,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             CharacterPoseResourceSlot slot,
             CharacterPoseResourceKind kind,
             UnityEngine.Object resource)
-        {
-            if (!slot || slot.Kind != kind || !slot.Accepts(resource))
-                throw new ArgumentException("Pose resource binding inputs are incomplete.");
-            var binding = new CharacterPoseResourceBinding();
-            binding.Configure(slot, resource);
-            return binding;
-        }
+            => CharacterAnimationPresentationAuthoringService
+                .CreateResourceBinding(slot, kind, resource);
 
         CharacterPresentationPoseSourceSlot ResolveSourceSlot(
             CharacterPresentationPoseGraphAsset poseGraph,

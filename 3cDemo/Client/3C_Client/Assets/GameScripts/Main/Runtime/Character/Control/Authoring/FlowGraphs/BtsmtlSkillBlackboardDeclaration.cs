@@ -46,20 +46,37 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (variable == null || !variable.hasStableIdentity || variable.ID != m_VariableId ||
                 variable.isDataBound || variable.isPropertyBound || variable is not ISerializedVariableValue)
                 throw new InvalidOperationException("技能黑板变量必须有稳定身份，且不能绑定原生运行getter或对象属性。");
-            Type type = variable.varType;
+            ValidateDefinition(
+                variable.varType,
+                m_Scope,
+                m_Lifetime,
+                InputBinding,
+                FactProjection);
+        }
+
+        public static void ValidateDefinition(
+            Type type,
+            PipelineBlackboardVariableScope scope,
+            PipelineBlackboardVariableLifetime lifetime,
+            PipelineBlackboardInputBinding inputBinding,
+            PipelineBlackboardFactProjection factProjection)
+        {
             if (type != typeof(bool) && type != typeof(int) && type != typeof(float) && type != typeof(string) &&
                 type != typeof(Vector2) && type != typeof(Vector3) && type != typeof(ActionTargetSnapshot))
-                throw new InvalidOperationException($"技能黑板不支持'{type.FullName}'类型。");
-            if (!PipelineBlackboardVariablePolicy.IsValid(m_Scope, m_Lifetime))
+                throw new InvalidOperationException($"技能黑板不支持'{type?.FullName}'类型。");
+            if (!PipelineBlackboardVariablePolicy.IsValid(scope, lifetime))
                 throw new InvalidOperationException("技能黑板作用域与生命周期不匹配。");
-            PipelineBlackboardInputBinding inputBinding = InputBinding;
-            PipelineBlackboardFactProjection factProjection = FactProjection;
-            if (inputBinding != null && (m_Scope != PipelineBlackboardVariableScope.Character ||
-                m_Lifetime != PipelineBlackboardVariableLifetime.Spawn || type != typeof(ActionTargetSnapshot)))
+            if (inputBinding != null && (!inputBinding.IsDefined ||
+                scope != PipelineBlackboardVariableScope.Character ||
+                lifetime != PipelineBlackboardVariableLifetime.Spawn ||
+                type != typeof(ActionTargetSnapshot)))
                 throw new InvalidOperationException("黑板输入绑定必须使用有效输入ID、ActionTargetSnapshot类型和Character／Spawn作用域。");
-            if (factProjection != null && (factProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
-                type != typeof(bool) || m_Scope != PipelineBlackboardVariableScope.Frame ||
-                m_Lifetime != PipelineBlackboardVariableLifetime.Frame || string.IsNullOrWhiteSpace(factProjection.ActionWindowType) ||
+            if (factProjection != null && (!factProjection.IsDefined ||
+                factProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
+                type != typeof(bool) ||
+                scope != PipelineBlackboardVariableScope.Frame ||
+                lifetime != PipelineBlackboardVariableLifetime.Frame ||
+                string.IsNullOrWhiteSpace(factProjection.ActionWindowType) ||
                 string.IsNullOrWhiteSpace(factProjection.ActionWindowId)))
                 throw new InvalidOperationException("动作窗口投射必须使用Frame布尔声明并指定窗口类型与ID。");
         }
@@ -67,6 +84,30 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public static class BtsmtlSkillBlackboardDeclarations
     {
+        public static Variable CreateVariable(
+            BtsmtlSkillBlackboardDeclaration declaration,
+            string name,
+            Type type,
+            object value)
+        {
+            if (declaration == null)
+                throw new ArgumentNullException(nameof(declaration));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("黑板变量名称不能为空。", nameof(name));
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+            var variable = (Variable)Activator.CreateInstance(
+                typeof(Variable<>).MakeGenericType(type),
+                name,
+                declaration.VariableId);
+            declaration.Validate(variable);
+            variable.SetValueBoxed(
+                value == null && type == typeof(string)
+                    ? string.Empty
+                    : value);
+            return variable;
+        }
+
         public static Variable Add(FlowGraph graph, BtsmtlSkillBlackboardDeclaration declaration, string name, Type type, object value)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -77,9 +118,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 var variables = graph.GetGraphSource().localBlackboard.variables;
                 if (variables.ContainsKey(name))
                     throw new InvalidOperationException($"黑板变量'{name}'已存在。");
-                var variable = (Variable)Activator.CreateInstance(typeof(Variable<>).MakeGenericType(type), name, declaration.VariableId);
-                declaration.Validate(variable);
-                variable.SetValueBoxed(value == null && type == typeof(string) ? string.Empty : value);
+                Variable variable = CreateVariable(declaration, name, type, value);
                 variables.Add(name, variable);
                 owner.SetBlackboardDeclarations(owner.BlackboardDeclarations.Concat(new[] { declaration }));
                 return variable;

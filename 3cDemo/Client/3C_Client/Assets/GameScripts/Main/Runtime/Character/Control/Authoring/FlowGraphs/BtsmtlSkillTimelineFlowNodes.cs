@@ -13,13 +13,23 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("播放技能Timeline"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("timeline")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.TimelineReference, "timelineId")]
+    [BtsmtlSkillAuthoringField(
+        "timelineId",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("timelineOwnership", typeof(BtsmtlSkillTimelineOwnership))]
+    [BtsmtlSkillAuthoringField(
+        "actionContext",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        Optional = true)]
+    [BtsmtlSkillAuthoringField("playbackMode", typeof(TimelinePlaybackMode))]
     public sealed class BtsmtlSkillTimelineFlowNode : BtsmtlSkillFlowNode
     {
         [SerializeField] TimelineAsset m_Timeline;
         [SerializeField] BtsmtlSkillTimelineOwnership m_Ownership;
         [SerializeField] ActionContextSlot m_ActionContext;
         [SerializeField] TimelinePlaybackMode m_PlaybackMode = TimelinePlaybackMode.Once;
-        public override string CapabilityId => "timeline";
         public TimelineAsset TimelineAsset => m_Timeline;
         public TimelineData Timeline => m_Timeline != null ? m_Timeline.Data : null;
         public BtsmtlSkillTimelineOwnership Ownership => m_Ownership;
@@ -60,23 +70,23 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("片段启用"), Category("BTSMTL/Timeline"), DoNotList]
+    [BtsmtlSkillNodeKind("@timelineEnable")]
     public sealed class BtsmtlSkillTimelineEnableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
-        public override string CapabilityId => "@timelineEnable";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnEnable;
     }
 
     [Name("片段停用"), Category("BTSMTL/Timeline"), DoNotList]
+    [BtsmtlSkillNodeKind("@timelineDisable")]
     public sealed class BtsmtlSkillTimelineDisableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
-        public override string CapabilityId => "@timelineDisable";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDisable;
     }
 
     [Name("片段销毁"), Category("BTSMTL/Timeline"), DoNotList]
+    [BtsmtlSkillNodeKind("@timelineDestroy")]
     public sealed class BtsmtlSkillTimelineDestroyFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
-        public override string CapabilityId => "@timelineDestroy";
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnDestroy;
     }
 }

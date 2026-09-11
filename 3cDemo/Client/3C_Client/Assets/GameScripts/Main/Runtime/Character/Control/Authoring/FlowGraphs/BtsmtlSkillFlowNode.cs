@@ -14,7 +14,6 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public abstract class BtsmtlSkillFlowNode : FlowScriptNode
     {
-        public abstract string CapabilityId { get; }
         public override bool ignoreSelfInstancePortAssignment => true;
 
         protected override void OnNodeInspectorGUI() =>
@@ -105,15 +104,23 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("顺序执行"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("sequence")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
+    [BtsmtlSkillAuthoringField(
+        "steps",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillSequenceFlowNode : BtsmtlSkillCompositeFlowNode
     {
-        public override string CapabilityId => "sequence";
     }
 
     [Name("选择执行"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("selector")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
+    [BtsmtlSkillAuthoringField(
+        "steps",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillSelectorFlowNode : BtsmtlSkillCompositeFlowNode
     {
-        public override string CapabilityId => "selector";
     }
 
     public enum BtsmtlSkillParallelMode
@@ -130,10 +137,11 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("循环执行"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("loop")]
+    [BtsmtlSkillAuthoringField("stopType", typeof(BtsmtlSkillLoopStopType), Optional = true)]
     public sealed class BtsmtlSkillLoopFlowNode : BtsmtlSkillFlowNode
     {
         [SerializeField] BtsmtlSkillLoopStopType m_StopType;
-        public override string CapabilityId => "loop";
         public BtsmtlSkillLoopStopType StopType => m_StopType;
 
         public void SetStopType(BtsmtlSkillLoopStopType stopType)
@@ -151,10 +159,15 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("并行执行"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("parallel")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
+    [BtsmtlSkillAuthoringField("mode", typeof(BtsmtlSkillParallelMode), Optional = true)]
+    [BtsmtlSkillAuthoringField(
+        "steps",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
     public sealed class BtsmtlSkillParallelFlowNode : BtsmtlSkillCompositeFlowNode
     {
         [SerializeField] BtsmtlSkillParallelMode m_Mode;
-        public override string CapabilityId => "parallel";
         public BtsmtlSkillParallelMode Mode => m_Mode;
 
         public void SetMode(BtsmtlSkillParallelMode mode)

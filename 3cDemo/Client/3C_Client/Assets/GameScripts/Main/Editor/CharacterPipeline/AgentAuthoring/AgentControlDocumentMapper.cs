@@ -18,10 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 controlModuleId = control.moduleId,
                 controlSemanticVersion = control.semanticVersion,
-                controlParameters = (control.parameters ?? new List<AgentSnapshotControlParameter>())
+                controlParameters = (control.parameters ?? new List<AgentControlParameter>())
                     .Where(value => value != null)
                     .OrderBy(value => value.id, StringComparer.Ordinal)
-                    .Select(value => new AgentPackageControlParameter
+                    .Select(value => new AgentControlParameter
                     {
                         id = value.id,
                         valueType = value.valueType,
@@ -39,10 +39,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 moduleId = controller?.controlModuleId,
                 semanticVersion = controller?.controlSemanticVersion ?? 0,
-                parameters = (controller?.controlParameters ?? new List<AgentPackageControlParameter>())
+                parameters = (controller?.controlParameters ?? new List<AgentControlParameter>())
                     .Select(value => value == null
                         ? null
-                        : new AgentSnapshotControlParameter
+                        : new AgentControlParameter
                         {
                             id = value.id,
                             valueType = value.valueType,
@@ -77,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var ids = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < (control.parameters?.Count ?? 0); i++)
             {
-                AgentSnapshotControlParameter parameter = control.parameters[i];
+                AgentControlParameter parameter = control.parameters[i];
                 string path = $"editable/controller.json.controlParameters[{i}]";
                 if (parameter == null ||
                     string.IsNullOrWhiteSpace(parameter.id) ||
@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     var values = new List<CharacterControlParameterValue>();
                     for (int i = 0; i < (control.parameters?.Count ?? 0); i++)
                     {
-                        AgentSnapshotControlParameter parameter = control.parameters[i];
+                        AgentControlParameter parameter = control.parameters[i];
                         if (parameter == null ||
                             !Enum.TryParse(parameter.valueType, false, out SemanticValueKind valueKind))
                             continue;
@@ -152,18 +152,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!string.Equals(left.moduleId, right.moduleId, StringComparison.Ordinal) ||
                 left.semanticVersion != right.semanticVersion)
                 return false;
-            var leftParameters = (left.parameters ?? new List<AgentSnapshotControlParameter>())
+            var leftParameters = (left.parameters ?? new List<AgentControlParameter>())
                 .OrderBy(value => value?.id, StringComparer.Ordinal)
                 .ToList();
-            var rightParameters = (right.parameters ?? new List<AgentSnapshotControlParameter>())
+            var rightParameters = (right.parameters ?? new List<AgentControlParameter>())
                 .OrderBy(value => value?.id, StringComparer.Ordinal)
                 .ToList();
             if (leftParameters.Count != rightParameters.Count)
                 return false;
             for (int i = 0; i < leftParameters.Count; i++)
             {
-                AgentSnapshotControlParameter l = leftParameters[i];
-                AgentSnapshotControlParameter r = rightParameters[i];
+                AgentControlParameter l = leftParameters[i];
+                AgentControlParameter r = rightParameters[i];
                 if (l == null || r == null ||
                     !string.Equals(l.id, r.id, StringComparison.Ordinal) ||
                     !string.Equals(l.valueType, r.valueType, StringComparison.Ordinal) ||

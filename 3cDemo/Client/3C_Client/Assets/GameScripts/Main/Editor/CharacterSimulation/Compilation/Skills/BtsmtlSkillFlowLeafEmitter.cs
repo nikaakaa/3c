@@ -267,8 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             if (string.IsNullOrEmpty(owner))
                 return;
-            BtsmtlSkillProviderKind providerKind = BtsmtlSkillProviderContract.Resolve(
-                node is BtsmtlSkillFlowNode skill ? skill.CapabilityId : string.Empty);
+            BtsmtlSkillProviderKind providerKind = BtsmtlSkillProviderContract.Resolve(node);
             if (!BtsmtlSkillProviderContract.Matches(
                     providerKind,
                     owner,

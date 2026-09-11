@@ -33,6 +33,14 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public interface IBtsmtlSkillBlackboardReadNode : IBtsmtlSkillBlackboardAccessNode { }
 
+    [BtsmtlSkillAuthoringField(
+        "declarationId",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField(
+        "ownerId",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+        "bool", "int", "float", "string", "vector2", "vector3")]
     public abstract class BtsmtlSkillBlackboardReadFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillBlackboardReadNode
     {
         [SerializeField] BtsmtlSkillBlackboardReference m_Variable;
@@ -51,15 +59,17 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("读取布尔黑板值"), Category("BTSMTL/技能黑板")]
+    [BtsmtlSkillNodeKind("pipeline-blackboard-bool")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.BlackboardValueType, "valueType", "bool")]
     public sealed class BtsmtlSkillBlackboardBooleanFlowNode : BtsmtlSkillBlackboardReadFlowNode<bool>
     {
-        public override string CapabilityId => "pipeline-blackboard-bool";
     }
 
     [Name("读取数值黑板值"), Category("BTSMTL/技能黑板")]
+    [BtsmtlSkillNodeKind("pipeline-blackboard-float")]
+    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.BlackboardValueType, "valueType", "float")]
     public sealed class BtsmtlSkillBlackboardScalarFlowNode : BtsmtlSkillBlackboardReadFlowNode<float>
     {
-        public override string CapabilityId => "pipeline-blackboard-float";
     }
 
     public enum BtsmtlSkillBlackboardValueType
@@ -72,12 +82,33 @@ namespace ThirdPersonCharacter.Control.Authoring
         Vector3
     }
 
+    [BtsmtlSkillAuthoringField(
+        "declarationId",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField(
+        "ownerId",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+        "bool", "int", "float", "string", "vector2", "vector3")]
+    [BtsmtlSkillAuthoringField("accessMode", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
+        "get", "set")]
+    [BtsmtlSkillAuthoringField(
+        "factContext",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.AssetReference,
+        Optional = true)]
+    [BtsmtlSkillNodeAuthoringReference(
+        "factContext",
+        BtsmtlSkillNodeAuthoringReferenceKind.Asset,
+        "skill_fact_context_unresolved",
+        "Skill Blackboard factContext引用无法解析。",
+        typeof(UnityEngine.Object),
+        Optional = true)]
+    [BtsmtlSkillNodeKind("exposed-property")]
     public abstract class BtsmtlSkillBlackboardAccessFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillBlackboardAccessNode
     {
         [SerializeField] BtsmtlSkillBlackboardReference m_Variable;
         [SerializeField] BtsmtlSkillBlackboardValueType m_ValueType = BtsmtlSkillBlackboardValueType.Number;
         [SerializeField] UnityEngine.Object m_FactContext;
-        public override string CapabilityId => "exposed-property";
         public BtsmtlSkillBlackboardReference Variable => m_Variable;
         public BtsmtlSkillBlackboardValueType DeclaredType => m_ValueType;
         public UnityEngine.Object FactContext => m_FactContext;
@@ -109,6 +140,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("读取黑板声明"), Category("BTSMTL/技能黑板")]
+    [BtsmtlSkillNodeVariant("accessMode", "get")]
     public sealed class BtsmtlSkillBlackboardGetFlowNode : BtsmtlSkillBlackboardAccessFlowNode, IBtsmtlSkillPureValueNode
     {
         public override bool Writes => false;
@@ -116,6 +148,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("写入黑板声明"), Category("BTSMTL/技能黑板")]
+    [BtsmtlSkillNodeVariant("accessMode", "set")]
     public sealed class BtsmtlSkillBlackboardSetFlowNode : BtsmtlSkillBlackboardAccessFlowNode
     {
         public override bool Writes => true;

@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 moduleId = current?.controlModuleId,
                 semanticVersion = current?.controlSemanticVersion ?? 0,
-                parameters = current?.controlParameters ?? new List<AgentSnapshotControlParameter>()
+                parameters = current?.controlParameters ?? new List<AgentControlParameter>()
             };
             if (AgentControlDocumentMapper.SemanticEquals(currentControl, target?.control))
                 return;
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 operation.controlSemanticVersion = target.control.semanticVersion;
                 operation.controlParameters = target.control.parameters
                     ?.Select(value => AgentAuthoringDocumentCodec.Clone(value))
-                    .ToList() ?? new List<AgentSnapshotControlParameter>();
+                    .ToList() ?? new List<AgentControlParameter>();
             });
         }
     }

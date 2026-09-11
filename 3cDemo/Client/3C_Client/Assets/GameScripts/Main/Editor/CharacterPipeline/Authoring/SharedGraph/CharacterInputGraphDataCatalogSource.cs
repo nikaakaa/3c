@@ -1,7 +1,6 @@
 using TreeDesigner.Authoring;
 using System;
 using System.Collections.Generic;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using TreeDesigner;

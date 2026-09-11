@@ -55,6 +55,8 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("43f20139703b4e96a6c8f201f0a703c7"), Color(255, 210, 92)]
+    [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     public sealed class ActionCueClip : SignalClip
     {
         public override string ContractKind => TimelineContractKinds.ActionCueClip;

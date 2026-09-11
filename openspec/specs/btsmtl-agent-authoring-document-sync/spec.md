@@ -152,7 +152,7 @@ CharacterController Document MUST把状态、节点关系和Blackboard声明放�
 
 ### Requirement: 可编辑能力必须由唯一authoring capability catalog闭合
 
-系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Skill Node/Graph catalog。每个editable Skill Node kind MUST声明允许Graph role、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
+系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Skill Node/Graph catalog。Skill正式节点上的Editor-only metadata marker、BTSMTL共享Graph descriptor与正式Mutation binding MUST投影为该唯一catalog；`AgentPackage...`只能是v7包外壳，不得成为第二作者语义来源。每个editable Skill Node kind MUST声明允许Graph role、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
 
 #### Scenario: Exporter发现未登记Node类型
 

@@ -4,8 +4,6 @@ using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Tags;
-using UnityEditor;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
@@ -75,20 +73,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static void ApplyEnsureGameplayTag(AgentMutationSession session, AgentEnsureGameplayTagMutation command)
         {
             GameplayTagCatalog catalog = session.Definition.GameplayEffectProfile.TagCatalog;
-            SerializedObject serialized = new SerializedObject(catalog);
-            SerializedProperty tags = serialized.FindProperty("m_Tags");
-            SerializedProperty entry = FindTag(tags, command.Tag.Value);
+            var tags = catalog.Tags.ToList();
+            GameplayTagDefinition entry = tags.FirstOrDefault(value => value != null && value.TagId == command.Tag);
             if (entry == null)
             {
-                int index = tags.arraySize;
-                tags.InsertArrayElementAtIndex(index);
-                entry = tags.GetArrayElementAtIndex(index);
+                entry = new GameplayTagDefinition();
+                tags.Add(entry);
             }
-            entry.FindPropertyRelative("m_TagId").FindPropertyRelative("m_Value").stringValue = command.Tag.Value;
-            entry.FindPropertyRelative("m_DisplayName").stringValue = command.DisplayName;
-            entry.FindPropertyRelative("m_ParentTag").FindPropertyRelative("m_Value").stringValue = command.ParentTag.Value;
-            entry.FindPropertyRelative("m_DebugCategory").stringValue = command.DebugCategory;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            entry.Configure(command.Tag, command.DisplayName, command.ParentTag, command.DebugCategory);
+            catalog.ConfigureTags(tags);
             session.AddAppliedAuthoring(command, catalog, null, command.Tag.Value, "ensure gameplay tag");
         }
 
@@ -96,9 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (!TryResolveProfile(session, command.ActionProfile, command.Path, out ActionProfile profile))
                 return;
-            SerializedObject serialized = new SerializedObject(profile);
-            WriteTagArray(serialized.FindProperty("m_Tags"), command.Tags);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            profile.ConfigureGrantedTags(command.Tags);
             session.AddAppliedAuthoring(command, profile, null, profile.ActionId, "set granted tags");
         }
 
@@ -106,12 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (!TryResolveProfile(session, command.ActionProfile, command.Path, out ActionProfile profile))
                 return;
-            SerializedObject serialized = new SerializedObject(profile);
-            SerializedProperty query = serialized.FindProperty("m_CancelTags");
-            WriteTagArray(query.FindPropertyRelative("m_All"), command.All);
-            WriteTagArray(query.FindPropertyRelative("m_Any"), command.Any);
-            WriteTagArray(query.FindPropertyRelative("m_None"), command.None);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            profile.ConfigureCancelTags(command.All, command.Any, command.None);
             session.AddAppliedAuthoring(command, profile, null, profile.ActionId, "set cancel query");
         }
 
@@ -121,9 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (!TryResolveProfile(session, command.ActionProfile, command.Path, out ActionProfile profile))
                 return;
-            SerializedObject serialized = new SerializedObject(profile);
-            serialized.FindProperty("m_TargetRequirement").enumValueIndex = (int)command.TargetRequirement;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            profile.ConfigureTargetRequirement(command.TargetRequirement);
             session.AddAppliedAuthoring(command, profile, null, profile.ActionId, $"set target requirement {command.TargetRequirement}");
         }
 
@@ -134,25 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!TryResolveActionRequest(session, command.RequestId, command.Path, out CharacterActionRequestDefinition request))
                 return;
             CharacterInputProfile profile = session.Definition.InputProfile;
-            SerializedObject serialized = new SerializedObject(profile);
-            SerializedProperty requests = serialized.FindProperty("m_ActionRequests");
-            SerializedProperty target = null;
-            for (int i = 0; i < requests.arraySize; i++)
-            {
-                SerializedProperty candidate = requests.GetArrayElementAtIndex(i);
-                if (string.Equals(
-                        candidate.FindPropertyRelative("m_RequestId").stringValue,
-                        request.RequestId,
-                        StringComparison.Ordinal))
-                {
-                    target = candidate;
-                    break;
-                }
-            }
-            if (target == null)
-                throw new InvalidOperationException($"Action request '{command.RequestId}' disappeared during apply.");
-            target.FindPropertyRelative("m_TimingClass").intValue = (int)command.TimingClass;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            profile.ConfigureActionRequestTimingClass(request.RequestId, command.TimingClass);
             session.AddAppliedAuthoring(command, profile, null, command.RequestId, "set request timing class");
         }
 
@@ -242,23 +208,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
-        static SerializedProperty FindTag(SerializedProperty tags, string tag)
-        {
-            for (int i = 0; i < tags.arraySize; i++)
-            {
-                SerializedProperty entry = tags.GetArrayElementAtIndex(i);
-                if (entry.FindPropertyRelative("m_TagId").FindPropertyRelative("m_Value").stringValue == tag)
-                    return entry;
-            }
-            return null;
-        }
-
-        static void WriteTagArray(SerializedProperty array, IReadOnlyList<GameplayTagId> values)
-        {
-            array.arraySize = values.Count;
-            for (int i = 0; i < values.Count; i++)
-                array.GetArrayElementAtIndex(i).FindPropertyRelative("m_Value").stringValue = values[i].Value;
-        }
     }
 }
-

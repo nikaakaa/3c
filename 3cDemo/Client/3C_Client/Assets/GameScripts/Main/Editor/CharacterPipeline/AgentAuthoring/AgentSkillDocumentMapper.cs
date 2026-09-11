@@ -9,9 +9,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public static void Write(
             IDictionary<string, JToken> files,
-            IReadOnlyList<AgentSnapshotSkillDefinition> skills)
+            IReadOnlyList<AgentPackageSkillDefinitionFile> skills)
         {
-            foreach (AgentSnapshotSkillDefinition skill in skills ?? Array.Empty<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in skills ?? Array.Empty<AgentPackageSkillDefinitionFile>())
             {
                 if (skill == null)
                     continue;
@@ -31,11 +31,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         consumeSourceInputRequest = skill.consumeSourceInputRequest,
                         targetInputValueId = skill.targetInputValueId,
                         targetKey = skill.targetKey,
-                        subgraphDependencies = (skill.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                        subgraphDependencies = (skill.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                             .Where(value => value != null)
                             .OrderBy(value => value.subgraphIdentity, StringComparer.Ordinal)
                             .ThenBy(value => value.callSiteIdentity, StringComparer.Ordinal)
-                            .Select(value => new AgentSnapshotSkillSubgraphDependency
+                            .Select(value => new AgentPackageSkillSubgraphDependency
                             {
                                 subgraphIdentity = value.subgraphIdentity,
                                 callSiteIdentity = value.callSiteIdentity
@@ -77,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                     continue;
                 }
-                editable.skills.Add(ToSnapshot(source));
+                editable.skills.Add(Canonical(source));
             }
             return valid;
         }
@@ -148,10 +148,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return !identity.StartsWith("local:", StringComparison.Ordinal) || IsLocal(identity);
         }
 
-        public static AgentSnapshotSkillDefinition ToSnapshot(
+        public static AgentPackageSkillDefinitionFile Canonical(
             AgentPackageSkillDefinitionFile source)
         {
-            return new AgentSnapshotSkillDefinition
+            return new AgentPackageSkillDefinitionFile
             {
                 skillId = source.skillId,
                 entryGraphAuthoringId = source.entryGraphAuthoringId,
@@ -165,10 +165,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 consumeSourceInputRequest = source.consumeSourceInputRequest,
                 targetInputValueId = source.targetInputValueId ?? string.Empty,
                 targetKey = source.targetKey ?? string.Empty,
-                subgraphDependencies = (source.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                subgraphDependencies = (source.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                     .Select(value => value == null
                         ? null
-                        : new AgentSnapshotSkillSubgraphDependency
+                        : new AgentPackageSkillSubgraphDependency
                         {
                             subgraphIdentity = value.subgraphIdentity,
                             callSiteIdentity = value.callSiteIdentity
@@ -179,8 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public static bool SemanticEquals(
-            AgentSnapshotSkillDefinition left,
-            AgentSnapshotSkillDefinition right)
+            AgentPackageSkillDefinitionFile left,
+            AgentPackageSkillDefinitionFile right)
         {
             return string.Equals(left?.skillId, right?.skillId, StringComparison.Ordinal) &&
                    string.Equals(left?.entryGraphAuthoringId, right?.entryGraphAuthoringId, StringComparison.Ordinal) &&
@@ -194,11 +194,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                    left?.consumeSourceInputRequest == right?.consumeSourceInputRequest &&
                    string.Equals(left?.targetInputValueId, right?.targetInputValueId, StringComparison.Ordinal) &&
                    string.Equals(left?.targetKey, right?.targetKey, StringComparison.Ordinal) &&
-                   (left?.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                   (left?.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                        .OrderBy(value => value?.subgraphIdentity, StringComparer.Ordinal)
                        .ThenBy(value => value?.callSiteIdentity, StringComparer.Ordinal)
                        .Select(value => (value?.subgraphIdentity ?? string.Empty) + "\0" + (value?.callSiteIdentity ?? string.Empty))
-                       .SequenceEqual((right?.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                       .SequenceEqual((right?.subgraphDependencies ?? new List<AgentPackageSkillSubgraphDependency>())
                            .OrderBy(value => value?.subgraphIdentity, StringComparer.Ordinal)
                            .ThenBy(value => value?.callSiteIdentity, StringComparer.Ordinal)
                            .Select(value => (value?.subgraphIdentity ?? string.Empty) + "\0" + (value?.callSiteIdentity ?? string.Empty)), StringComparer.Ordinal) &&

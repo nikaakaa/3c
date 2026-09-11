@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             var nodes = new HashSet<string>(StringComparer.Ordinal);
             var edges = new HashSet<string>(StringComparer.Ordinal);
-            var anchors = new HashSet<Type>();
+            var anchors = new HashSet<string>(StringComparer.Ordinal);
             var occupied = new HashSet<Port>();
             foreach (Node value in graph.allNodes)
             {
@@ -150,7 +150,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (!nodes.Add(node.UID))
                     throw Error(path, "节点身份重复。");
                 bool anchor = node is IBtsmtlSkillSystemNode || node is MacroInputNode || node is MacroOutputNode;
-                if (anchor && !anchors.Add(node.GetType()))
+                if (anchor &&
+                    (!BtsmtlSkillGraphAuthoringMetadata.TryGetKind(
+                        node.GetType(),
+                        out string anchorKind) ||
+                     !anchors.Add(anchorKind)))
                     throw Error(path, "系统入口重复。");
                 if (node is BtsmtlSkillCompositeFlowNode composite)
                 {
@@ -182,28 +186,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                     VisitEdges(node, path, visiting, visited);
             if (!complete)
                 return;
-            Type[] required = role switch
-            {
-                BtsmtlSkillFlowGraphRole.Skill => new[] { typeof(BtsmtlSkillRootFlowNode) },
-                BtsmtlSkillFlowGraphRole.StateBody => new[] { typeof(BtsmtlSkillRootFlowNode), typeof(BtsmtlSkillStateOnEnterFlowNode), typeof(BtsmtlSkillStateOnExitFlowNode) },
-                BtsmtlSkillFlowGraphRole.StateMachine => new[] { typeof(BtsmtlSkillStateEnterFlowNode), typeof(BtsmtlSkillStateAnyFlowNode), typeof(BtsmtlSkillStateExitFlowNode) },
-                BtsmtlSkillFlowGraphRole.ConditionRule => new[] { typeof(BtsmtlSkillConditionResultFlowNode) },
-                BtsmtlSkillFlowGraphRole.Subgraph => new[] { typeof(MacroInputNode), typeof(MacroOutputNode) },
-                BtsmtlSkillFlowGraphRole.TimelineBody => new[] { typeof(BtsmtlSkillRootFlowNode), typeof(BtsmtlSkillTimelineEnableFlowNode), typeof(BtsmtlSkillTimelineDisableFlowNode), typeof(BtsmtlSkillTimelineDestroyFlowNode) },
-                _ => throw Error(path, "未知技能页面类型。")
-            };
-            foreach (Type type in required)
-                if (!HasAnchor(anchors, type))
-                    throw Error(path, $"页面缺少 {type.Name} 系统入口。");
-        }
-
-        static bool HasAnchor(ISet<Type> anchors, Type required)
-        {
-            if (required == typeof(MacroInputNode))
-                return anchors.Any(value => typeof(MacroInputNode).IsAssignableFrom(value));
-            if (required == typeof(MacroOutputNode))
-                return anchors.Any(value => typeof(MacroOutputNode).IsAssignableFrom(value));
-            return anchors.Contains(required);
+            foreach (string required in BtsmtlSkillGraphAuthoringMetadata.RequiredAnchors(role))
+                if (!anchors.Contains(required))
+                    throw Error(path, $"页面缺少 {required} 系统入口。");
         }
 
         static void VisitEdges(Node node, string path, HashSet<Node> active, HashSet<Node> visited)

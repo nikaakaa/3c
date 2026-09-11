@@ -123,8 +123,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     StringComparison.Ordinal))
             {
                 target.editable.control = AgentControlDocumentMapper.ReadController(controller, report);
-                target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
-                target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
+                target.editable.actionRequests = actions.requests ?? new List<AgentActionRequest>();
+                target.editable.actionProfiles = actions.profiles ?? new List<AgentActionProfile>();
                 valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
                 valid &= AgentSkillFlowDocumentMapper.TryRead(
                     files,
@@ -173,9 +173,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 definitionName = dependencies.definitionName,
                 definitionAssetPath = dependencies.definitionAssetPath,
-                inputValues = assets.inputValues ?? new List<AgentSnapshotInputValue>(),
-                actionRequests = assets.actionRequests ?? new List<AgentSnapshotActionRequest>(),
-                bodyMotion = dependencies.bodyMotion ?? new AgentSnapshotBodyMotionProfile(),
+                inputValues = assets.inputValues ?? new List<AgentInputValue>(),
+                actionRequests = assets.actionRequests ?? new List<AgentActionRequest>(),
+                bodyMotion = dependencies.bodyMotion ?? new AgentBodyMotionProfile(),
                 presentation = dependencies.presentation ??
                                new AgentDocumentPresentationContext(),
                 generatedProduct = dependencies.generatedProduct ?? new AgentDocumentGeneratedProduct(),

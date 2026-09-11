@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 "skill_animation_clip_unresolved", "Skill Timeline AnimationClip引用无法解析。");
                             valid = false;
                         }
-            foreach (AgentSnapshotSkillDefinition skill in document.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in document.skills ?? new List<AgentPackageSkillDefinitionFile>())
             {
                 if (skill == null)
                     continue;

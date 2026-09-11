@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 owners.Add(identity, path);
             }
 
-            foreach (AgentSnapshotSkillDefinition skill in editable.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in editable.skills ?? new List<AgentPackageSkillDefinitionFile>())
                 Add(skill?.skillId, "editable.skills");
             foreach (AgentPackageSkillFlowGraphFile graph in editable.skillGraphs ?? new List<AgentPackageSkillFlowGraphFile>())
             {

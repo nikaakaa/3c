@@ -322,6 +322,12 @@ Character Presentation Profile或独立Binding MUST按稳定Graph／Node／Field
 
 FlowCanvas GraphEditor打开可复用Pose Graph时 MUST不要求Character Runtime上下文；Binding编辑、正式Preview和Character Build才要求精确Profile、Rig和Definition上下文。
 
+#### Scenario: 两个Character复用同一Pose Graph
+
+- **WHEN** 两个Character Presentation Profile引用同一个可复用Pose Graph但提供不同的Rig和资源Binding
+- **THEN** 系统 MUST按各自稳定Graph／Node／Field identity解析Binding并生成各自Presentation Projection
+- **AND** Pose Graph资产 MUST不写入任一Character专属AnimationClip、Rig、Mask或Pose Source Binding
+
 ### Requirement: Pose StateMachine layout必须是独立纯作者数据
 
 每个root-owned PoseStateMachine MUST在`CharacterPresentationPoseGraphAsset`中拥有按稳定`PoseStateMachineId`索引的唯一layout owner。Layout MAY稀疏保存Entry、State与Alias的显式二维位置；缺少显式位置时 MUST按元素类型和稳定identity使用唯一确定性排布。Layout MUST拒绝重复identity、未知元素和非有限坐标，且 MUST不保存Transition edge位置。Layout变化 MUST进入typed Presentation Mutation、Undo、dirty、保存与Document同步，但 MUST不修改PoseStateMachine `ContentRevision`、不得使Presentation Projection变为Stale，也不得触发Compile或Build。Compiler与Runtime MUST不读取layout。

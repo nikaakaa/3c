@@ -22,9 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .Where(value =>
                     !value.SystemOwned &&
                     value.AuthoringType != null &&
-                    m_Catalog.CanCreate(value.ExternalKind) &&
-                    m_Catalog.CanConfigure(value.ExternalKind) &&
-                    m_Catalog.CanDelete(value.ExternalKind) &&
+                    !string.IsNullOrWhiteSpace(value.MutationBindingId) &&
                     AgentAuthoringSchema.IsDomain(domain) &&
                     m_Catalog.IsNodeTypeAllowed(value.AuthoringType))
                 .OrderBy(value => value.ExternalKind, StringComparer.Ordinal)
@@ -72,9 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             !descriptor.SystemOwned &&
                             descriptor.AuthoringType != null &&
                             descriptor.Allows(BtsmtlGraphAuthoringCapabilities.SharedRoleId(value)) &&
-                            m_Catalog.CanCreate(descriptor.ExternalKind) &&
-                            m_Catalog.CanConfigure(descriptor.ExternalKind) &&
-                            m_Catalog.CanDelete(descriptor.ExternalKind) &&
+                            !string.IsNullOrWhiteSpace(descriptor.MutationBindingId) &&
                             AgentAuthoringSchema.IsDomain(domain) &&
                             m_Catalog.IsNodeTypeAllowed(descriptor.AuthoringType))
                         .Select(descriptor => descriptor.ExternalKind)

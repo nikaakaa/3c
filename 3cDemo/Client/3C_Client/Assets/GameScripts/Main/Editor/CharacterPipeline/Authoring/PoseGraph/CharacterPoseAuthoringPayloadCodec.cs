@@ -203,4 +203,80 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     nameof(expectedType)));
         }
     }
+
+    internal readonly struct CharacterPoseAuthoringNodeMetadata
+    {
+        readonly CharacterPoseNodeDefinition m_Definition;
+
+        internal CharacterPoseAuthoringNodeMetadata(
+            CharacterPoseNodeDefinition definition)
+        {
+            m_Definition = definition ??
+                throw new ArgumentNullException(nameof(definition));
+        }
+
+        public CharacterPoseNodeKind Kind => m_Definition.Kind;
+        public string CapabilityIdentity => m_Definition.CapabilityIdentity;
+        public IReadOnlyCollection<GraphAuthoringFieldDescriptor> Fields =>
+            m_Definition.Capability.Fields;
+        public CharacterPoseOperationFamily OperationFamily => m_Definition.OperationFamily;
+        public CharacterPoseNativeNodeRole NativeRole => m_Definition.NativeRole;
+        public CharacterPoseOperationCode OperationCode => m_Definition.OperationCode;
+        public bool WorkerThreadSafe => m_Definition.WorkerThreadSafe;
+        public CharacterPoseWorkerKernelId WorkerKernel => m_Definition.WorkerKernel;
+        public bool UsesPoseSourceSlot => m_Definition.UsesPoseSourceSlot;
+        public bool UsesAnimationChannel => m_Definition.UsesAnimationChannel;
+
+        public CharacterPresentationPoseSourceSlot Source(
+            CharacterPoseNodePayload payload) =>
+            m_Definition.Source(payload);
+
+        public AnimationChannelId Channel(
+            CharacterPoseNodePayload payload) =>
+            m_Definition.Channel(payload);
+
+        public IReadOnlyList<GraphAuthoringDynamicPortProjection>
+            ProjectPortShape(CharacterPoseCanvasNode node) =>
+            m_Definition.ProjectPortShape(node);
+
+        public object ReadField(
+            CharacterPoseNodePayload payload,
+            string field) =>
+            m_Definition.ReadField(payload, field);
+
+        public string ProjectChildDocumentId(
+            CharacterPoseNodePayload payload) =>
+            m_Definition.ProjectChildDocumentId(payload);
+
+        public IReadOnlyList<CharacterPoseGraphDependency>
+            ProjectGraphDependencies(CharacterPoseNodePayload payload) =>
+            m_Definition.ProjectGraphDependencies(payload);
+
+        public IReadOnlyList<CharacterPoseResourceSlot>
+            ProjectResourceSlots(CharacterPoseNodePayload payload) =>
+            m_Definition.ProjectResourceSlots(payload);
+
+        public CharacterAnimationBlendSpaceInputRangePolicy InputRange(
+            CharacterPoseNodePayload payload) =>
+            m_Definition.InputRange(payload);
+    }
+
+    internal static class CharacterPoseAuthoringMetadata
+    {
+        public static IReadOnlyList<CharacterPoseAuthoringNodeMetadata> All =>
+            CharacterPoseNodeDefinitionModule.Shared.All
+                .Select(value => new CharacterPoseAuthoringNodeMetadata(value))
+                .ToArray();
+
+        public static CharacterPoseAuthoringNodeMetadata Require(
+            CharacterPoseNodeKind kind) =>
+            new CharacterPoseAuthoringNodeMetadata(
+                CharacterPoseNodeDefinitionModule.Shared.Require(kind));
+
+        public static CharacterPoseAuthoringNodeMetadata RequireCapability(
+            string capabilityIdentity) =>
+            new CharacterPoseAuthoringNodeMetadata(
+                CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
+                    capabilityIdentity));
+    }
 }

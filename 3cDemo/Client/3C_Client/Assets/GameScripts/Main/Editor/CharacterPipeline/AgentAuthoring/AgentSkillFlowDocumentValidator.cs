@@ -116,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         valid = false;
                     }
                     if (anchor != null &&
-                        (anchor.kind == "@enter" || anchor.kind == "@any") &&
+                        BtsmtlSkillGraphAuthoringMetadata.HasOrderedStepPorts(anchor.kind) &&
                         !ValidateSteps(anchor.steps, path + ".anchors[" + anchor.kind + "].steps", report))
                         valid = false;
                     if (anchor != null &&
@@ -285,7 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BtsmtlSkillFlowGraphRole role,
             AgentGraphOwnership ownership,
             string path,
-            IReadOnlyList<AgentSnapshotSkillDefinition> skills,
+            IReadOnlyList<AgentPackageSkillDefinitionFile> skills,
             AgentCompileReport report)
         {
             if (graph.owner == null)
@@ -301,7 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(path + ".owner", "skill_root_owner_invalid", "Skill根图必须由SkillDefinition以RootAsset ownership拥有。");
                     return false;
                 }
-                return (skills ?? new List<AgentSnapshotSkillDefinition>())
+                return (skills ?? new List<AgentPackageSkillDefinitionFile>())
                     .Any(value => value != null && string.Equals(value.skillId, graph.owner.skillId, StringComparison.Ordinal));
             }
             if (graph.owner.kind == "shared")
@@ -431,16 +431,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 try
                 {
-                    PipelineBlackboardInputBinding inputBinding = declaration.inputBinding == null
-                        ? null
-                        : new PipelineBlackboardInputBinding(declaration.inputBinding.inputValueId);
-                    PipelineBlackboardFactProjection factProjection = declaration.factProjection == null
-                        ? null
-                        : new PipelineBlackboardFactProjection(
-                            Enum.Parse<PipelineBlackboardFactProjectionKind>(declaration.factProjection.kind, false),
-                            declaration.factProjection.windowType,
-                            declaration.factProjection.windowId,
-                            declaration.factProjection.digest);
+                    PipelineBlackboardInputBinding inputBinding =
+                        declaration.inputBinding == null ||
+                        string.IsNullOrWhiteSpace(
+                            declaration.inputBinding.inputValueId)
+                            ? null
+                            : new PipelineBlackboardInputBinding(
+                                declaration.inputBinding.inputValueId);
+                    PipelineBlackboardFactProjection factProjection =
+                        declaration.factProjection == null ||
+                        string.IsNullOrWhiteSpace(
+                            declaration.factProjection.kind) ||
+                        string.IsNullOrWhiteSpace(
+                            declaration.factProjection.windowType) ||
+                        string.IsNullOrWhiteSpace(
+                            declaration.factProjection.windowId)
+                            ? null
+                            : new PipelineBlackboardFactProjection(
+                                Enum.Parse<PipelineBlackboardFactProjectionKind>(
+                                    declaration.factProjection.kind,
+                                    false),
+                                declaration.factProjection.windowType,
+                                declaration.factProjection.windowId,
+                                declaration.factProjection.digest);
                     BtsmtlSkillBlackboardDeclaration.ValidateDefinition(
                         type,
                         Enum.Parse<PipelineBlackboardVariableScope>(declaration.scope, false),
@@ -878,20 +891,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         static bool ValidateSkillRoots(
-            IReadOnlyList<AgentSnapshotSkillDefinition> skills,
+            IReadOnlyList<AgentPackageSkillDefinitionFile> skills,
             IReadOnlyDictionary<string, AgentPackageSkillFlowGraphFile> graphs,
             AgentCompileReport report)
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            var skillById = new Dictionary<string, AgentSnapshotSkillDefinition>(StringComparer.Ordinal);
+            var skillById = new Dictionary<string, AgentPackageSkillDefinitionFile>(StringComparer.Ordinal);
             bool valid = true;
             if (skills == null || skills.Count == 0)
             {
                 report.Error("editable/skills", "skill_definition_missing", "Skill Flow Document至少需要一个SkillDefinition。");
                 return false;
             }
-            foreach (AgentSnapshotSkillDefinition skill in skills ??
-                         new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in skills ??
+                         new List<AgentPackageSkillDefinitionFile>())
             {
                 if (skill == null || !IsIdentity(skill.skillId) || !ids.Add(skill.skillId) ||
                     !IsIdentity(skill.entryGraphAuthoringId) ||
@@ -909,8 +922,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                 }
                 var dependencies = new HashSet<string>(StringComparer.Ordinal);
-                foreach (AgentSnapshotSkillSubgraphDependency dependency in skill.subgraphDependencies ??
-                             new List<AgentSnapshotSkillSubgraphDependency>())
+                foreach (AgentPackageSkillSubgraphDependency dependency in skill.subgraphDependencies ??
+                             new List<AgentPackageSkillSubgraphDependency>())
                 {
                     bool dependencyValid = dependency != null &&
                         IsIdentity(dependency.subgraphIdentity) &&
@@ -930,8 +943,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                 }
             }
-            foreach (AgentSnapshotSkillDefinition skill in skills ??
-                         new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in skills ??
+                         new List<AgentPackageSkillDefinitionFile>())
             {
                 if (skill == null)
                     continue;
@@ -1092,7 +1105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             var reachable = new HashSet<string>(StringComparer.Ordinal);
-            var pending = new Stack<string>((document.skills ?? new List<AgentSnapshotSkillDefinition>())
+            var pending = new Stack<string>((document.skills ?? new List<AgentPackageSkillDefinitionFile>())
                 .Where(value => value != null && !string.IsNullOrEmpty(value.entryGraphAuthoringId))
                 .Select(value => value.entryGraphAuthoringId));
             while (pending.Count > 0)
@@ -1178,11 +1191,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (node == null)
                 return false;
-            bool blackboardNode = BtsmtlSkillCapabilityCatalog.TryGet(
+            bool blackboardNode = BtsmtlSkillCapabilityCatalog.TryResolveType(
                                       node.capability,
-                                      out BtsmtlSkillNodeCapability capability) &&
+                                      out Type nodeType) &&
                                   typeof(IBtsmtlSkillBlackboardAccessNode).IsAssignableFrom(
-                                      capability.NodeType);
+                                      nodeType);
             bool valid = true;
             if (blackboardNode)
             {
@@ -1292,7 +1305,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return result;
             }
 
-            foreach (AgentSnapshotSkillDefinition skill in document.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentPackageSkillDefinitionFile skill in document.skills ?? new List<AgentPackageSkillDefinitionFile>())
                 if (skill != null)
                     valid &= Visit(skill.entryGraphAuthoringId, "editable/skills[" + skill.skillId + "]");
             return valid;

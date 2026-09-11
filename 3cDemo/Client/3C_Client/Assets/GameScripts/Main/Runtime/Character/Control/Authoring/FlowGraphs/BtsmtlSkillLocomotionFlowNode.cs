@@ -8,6 +8,41 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Control.Authoring
 {
     [Name("移动输入运动"), Category("BTSMTL/技能流程")]
+    [BtsmtlSkillNodeKind("locomotion-input-motion")]
+    [BtsmtlSkillAuthoringField(
+        "moveSpeed",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [BtsmtlSkillAuthoringField("displacementMode", typeof(LocomotionInputMotionDisplacementMode))]
+    [BtsmtlSkillAuthoringField(
+        "turnSpeedDegrees",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [BtsmtlSkillAuthoringField(
+        "cameraRelative",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean)]
+    [BtsmtlSkillAuthoringField("executionMode", typeof(LocomotionInputMotionExecutionMode))]
+    [BtsmtlSkillAuthoringField(
+        "durationSeconds",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [BtsmtlSkillAuthoringField(
+        "actionMotionCurve",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.AssetReference,
+        Optional = true)]
+    [BtsmtlSkillNodeAuthoringReference(
+        "actionMotionCurve",
+        BtsmtlSkillNodeAuthoringReferenceKind.Asset,
+        "skill_root_motion_curve_unresolved",
+        "Skill Locomotion节点的ActionMotionCurve引用无法解析。",
+        typeof(RootMotionCurveAsset),
+        Optional = true)]
     public sealed class BtsmtlSkillLocomotionFlowNode : BtsmtlSkillFlowNode, ILocomotionInputMotionAuthoring
     {
         [SerializeField] float m_MoveSpeed = 4f;
@@ -18,7 +53,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         [SerializeField] LocomotionInputMotionExecutionMode m_ExecutionMode;
         [SerializeField] float m_DurationSeconds;
 
-        public override string CapabilityId => "locomotion-input-motion";
         public float MoveSpeed => m_MoveSpeed;
         public LocomotionInputMotionDisplacementMode DisplacementMode => m_DisplacementMode;
         public RootMotionCurveAsset ActionMotionCurve => m_ActionMotionCurve;

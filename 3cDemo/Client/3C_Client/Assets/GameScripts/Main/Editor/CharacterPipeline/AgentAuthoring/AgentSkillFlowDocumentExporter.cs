@@ -46,12 +46,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         void ExportDefinition(CharacterPipelineDefinition definition)
         {
-            var skillDefinitions = new List<AgentSnapshotSkillDefinition>();
+            var skillDefinitions = new List<AgentPackageSkillDefinitionFile>();
             foreach (CharacterSkillAuthoringDefinition definitionEntry in definition.SkillDefinitions)
             {
                 if (definitionEntry == null)
                     continue;
-                skillDefinitions.Add(new AgentSnapshotSkillDefinition
+                skillDefinitions.Add(new AgentPackageSkillDefinitionFile
                 {
                     skillId = definitionEntry.SkillId,
                     entryGraphAuthoringId = definitionEntry.EntryGraphAuthoringId,
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     consumeSourceInputRequest = definitionEntry.ConsumeSourceInputRequest,
                     targetInputValueId = definitionEntry.TargetInputValueId,
                     targetKey = definitionEntry.TargetKey,
-                    subgraphDependencies = definitionEntry.SubgraphDependencies.Where(value => value != null).Select(value => new AgentSnapshotSkillSubgraphDependency
+                    subgraphDependencies = definitionEntry.SubgraphDependencies.Where(value => value != null).Select(value => new AgentPackageSkillSubgraphDependency
                     {
                         subgraphIdentity = value.SubgraphIdentity,
                         callSiteIdentity = value.CallSiteIdentity
@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 VisitGraph(root, Owner("skill-root", skillId: skillId), skillId);
             }
-            foreach (AgentSnapshotSkillDefinition skill in skillDefinitions)
+            foreach (AgentPackageSkillDefinitionFile skill in skillDefinitions)
                 if (!m_Graphs.ContainsKey(skill.entryGraphAuthoringId))
                     m_Report.Error(
                         "definition.SkillDefinitions[" + skill.skillId + "]",
@@ -293,8 +293,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     lifetime = declaration.Lifetime.ToString(),
                     category = declaration.Category,
                     defaultValue = DocumentValue(serialized.serializedValue, variable.varType, path + ".blackboardDeclarations[" + declaration.VariableId + "]"),
-                    inputBinding = declaration.InputBinding == null ? null : new AgentSnapshotBlackboardInputBinding { inputValueId = declaration.InputBinding.InputValueId },
-                    factProjection = declaration.FactProjection == null ? null : new AgentSnapshotBlackboardFactProjection
+                    inputBinding = declaration.InputBinding == null ? null : new AgentPackageSkillBlackboardInputBinding { inputValueId = declaration.InputBinding.InputValueId },
+                    factProjection = declaration.FactProjection == null ? null : new AgentPackageSkillBlackboardFactProjection
                     {
                         kind = declaration.FactProjection.Kind.ToString(),
                         windowType = declaration.FactProjection.ActionWindowType,

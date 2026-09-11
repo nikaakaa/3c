@@ -52,6 +52,32 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), ClipInspectorView("MotionWarpClipInspectorView"), Color(248, 177, 91)]
+    [TimelineAuthoringProperty("sourceMotionClipId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("translationMode", typeof(MotionWarpTranslationMode))]
+    [TimelineAuthoringProperty("targetOffsetSpace", typeof(MotionWarpTargetOffsetSpace))]
+    [TimelineAuthoringProperty("rotationMode", typeof(MotionWarpRotationMode))]
+    [TimelineAuthoringProperty("rotationMethod", typeof(MotionWarpRotationMethod))]
+    [TimelineAuthoringProperty("targetPlanarOffset", TimelineAuthoringPropertyKind.Vector2)]
+    [TimelineAuthoringProperty("targetYawOffsetDegrees", TimelineAuthoringPropertyKind.Float, Finite = true)]
+    [TimelineAuthoringProperty(
+        "maxTotalPositionCorrection",
+        TimelineAuthoringPropertyKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [TimelineAuthoringProperty(
+        "maxTotalYawCorrectionDegrees",
+        TimelineAuthoringPropertyKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [TimelineAuthoringProperty(
+        "maximumYawRateDegreesPerSecond",
+        TimelineAuthoringPropertyKind.Float,
+        HasMinimum = true,
+        Minimum = 0d,
+        Finite = true)]
+    [TimelineAuthoringProperty("limitPolicy", typeof(MotionWarpLimitPolicy))]
     public sealed class MotionWarpClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.MotionWarpClip;

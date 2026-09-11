@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     internal static class AgentSkillDocumentExporter
     {
-        public static List<AgentSnapshotSkillDefinition> Export(
+        public static List<AgentPackageSkillDefinitionFile> Export(
             IReadOnlyList<CharacterSkillAuthoringDefinition> definitions)
         {
             return (definitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     string actionContextPath = value.ActionContext
                         ? AssetDatabase.GetAssetPath(value.ActionContext)
                         : string.Empty;
-                    return new AgentSnapshotSkillDefinition
+                    return new AgentPackageSkillDefinitionFile
                     {
                         skillId = value.SkillId,
                         entryGraphAuthoringId = value.EntryGraphAuthoringId,
@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         targetKey = value.TargetKey,
                         subgraphDependencies = (value.SubgraphDependencies ?? Array.Empty<CharacterSkillSubgraphDependencyConfiguration>())
                             .Where(dependency => dependency != null)
-                            .Select(dependency => new AgentSnapshotSkillSubgraphDependency
+                            .Select(dependency => new AgentPackageSkillSubgraphDependency
                             {
                                 subgraphIdentity = dependency.SubgraphIdentity,
                                 callSiteIdentity = dependency.CallSiteIdentity

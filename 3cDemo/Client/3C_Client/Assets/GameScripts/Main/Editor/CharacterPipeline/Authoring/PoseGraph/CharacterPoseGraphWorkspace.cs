@@ -205,7 +205,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!asset || asset.Graph == null || !asset.Graph.GraphId.IsValid)
                 throw new ArgumentException("Pose Graph has no valid authoring graph.", nameof(asset));
-            return CreateWorkspace(asset, null, null, null);
+            CharacterAnimationPresentationProfile[] profiles = AssetDatabase
+                .FindAssets("t:CharacterAnimationPresentationProfile")
+                .Select(guid => AssetDatabase.LoadAssetAtPath<CharacterAnimationPresentationProfile>(
+                    AssetDatabase.GUIDToAssetPath(guid)))
+                .Where(profile => profile && profile.PoseGraph == asset)
+                .ToArray();
+            if (profiles.Length != 1)
+                return CreateWorkspace(asset, null, null, null);
+
+            CharacterAnimationPresentationProfile profile = profiles[0];
+            CharacterPipelineDefinition[] definitions = AssetDatabase
+                .FindAssets("t:CharacterPipelineDefinition")
+                .Select(guid => AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
+                    AssetDatabase.GUIDToAssetPath(guid)))
+                .Where(definition => definition && definition.AnimationPresentationProfile == profile)
+                .ToArray();
+            if (definitions.Length != 1)
+                return CreateWorkspace(asset, profile, null, null);
+
+            CharacterPipelineDefinition definition = definitions[0];
+            return CreateWorkspace(asset, profile, definition.PresentationProjection, definition);
         }
 
         static CharacterPoseGraphWorkspace CreateWorkspace(CharacterPresentationPoseGraphAsset asset,

@@ -708,6 +708,35 @@ namespace Slate
             current.willRepaint = true;
         }
 
+        void SyncEmbeddedCurveTrack()
+        {
+            if (!embeddedSurface || cutscene == null)
+                return;
+            CutsceneTrack selectedTrack = (CutsceneUtility.selectedObject as ActionClip)?.parent as CutsceneTrack;
+            bool changed = false;
+            foreach (CutsceneGroup group in cutscene.groups)
+            {
+                foreach (CutsceneTrack track in group.tracks)
+                {
+                    bool shouldShow = selectedTrack != null && ReferenceEquals(track, selectedTrack);
+                    if (track.showCurves == shouldShow)
+                        continue;
+                    track.showCurves = shouldShow;
+                    changed = true;
+                }
+            }
+            if (changed)
+                willRepaint = true;
+        }
+
+        void OnEmbeddedSelectionChanged(IDirectable _)
+        {
+            if (!embeddedSurface)
+                return;
+            SyncEmbeddedCurveTrack();
+            RequestEmbeddedRepaint();
+        }
+
         void ShowNotification(GUIContent content)
         {
             showNotification?.Invoke(content);
@@ -757,11 +786,14 @@ namespace Slate
             pendingGuides = new List<GuideLine>();
 
             current = this;
+            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
+            CutsceneUtility.onSelectionChange += OnEmbeddedSelectionChanged;
             InitializeAll();
         }
 
         //...
         void OnDisable() {
+            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             CancelEditTransaction();
 

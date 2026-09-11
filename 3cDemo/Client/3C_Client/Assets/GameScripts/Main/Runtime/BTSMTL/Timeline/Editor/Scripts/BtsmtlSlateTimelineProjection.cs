@@ -501,10 +501,7 @@ namespace BTSMTL.Timeline.Editor
             GameObject groupObject = CreateChild(m_Cutscene.groupsRoot, "BTSMTL Timeline");
             BtsmtlSlateGroup group = groupObject.AddComponent<BtsmtlSlateGroup>();
             group.hideFlags = HideFlags.HideAndDontSave;
-            string ownershipLabel = string.IsNullOrWhiteSpace(m_Request.OwnershipLabel)
-                ? string.Empty
-                : $" [{m_Request.OwnershipLabel}]";
-            group.name = $"{m_Request.Timeline.Name}{ownershipLabel}";
+            group.name = m_Request.Timeline.Name;
             m_Cutscene.groups.Add(group);
 
             for (int trackIndex = 0; trackIndex < m_Request.Timeline.Tracks.Count; trackIndex++)
@@ -578,11 +575,13 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_Cutscene.Validate();
-            foreach (BtsmtlSlateTrack proxyTrack in m_ProxyTracks.Values)
-                proxyTrack.showCurves = true;
             BtsmtlSlateActionClip firstClip = m_ProxyClips.Values.FirstOrDefault();
             if (firstClip != null)
+            {
+                if (firstClip.parent is BtsmtlSlateTrack firstTrack)
+                    firstTrack.showCurves = true;
                 CutsceneUtility.selectedObject = firstClip;
+            }
         }
 
         void CreateEmbeddedEditor()

@@ -408,6 +408,16 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor?.DrawEmbeddedGUI(width, height);
         }
 
+        public void DrawEmbeddedGUI(
+            float width,
+            float height,
+            Action beginWindows,
+            Action endWindows)
+        {
+            if (!m_Disposed)
+                m_EmbeddedEditor?.DrawEmbeddedGUI(width, height, beginWindows, endWindows);
+        }
+
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
             if (!string.IsNullOrEmpty(clipAuthoringId) &&
@@ -568,6 +578,11 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_Cutscene.Validate();
+            foreach (BtsmtlSlateTrack proxyTrack in m_ProxyTracks.Values)
+                proxyTrack.showCurves = true;
+            BtsmtlSlateActionClip firstClip = m_ProxyClips.Values.FirstOrDefault();
+            if (firstClip != null)
+                CutsceneUtility.selectedObject = firstClip;
         }
 
         void CreateEmbeddedEditor()

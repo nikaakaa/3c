@@ -174,7 +174,9 @@ namespace Slate
                 Repaint,
                 ShowNotification,
                 RemoveNotification,
-                content => titleContent = content);
+                content => titleContent = content,
+                BeginWindowsHost,
+                EndWindowsHost);
         }
 
         void OnDisable()
@@ -201,7 +203,19 @@ namespace Slate
                 Repaint,
                 ShowNotification,
                 RemoveNotification,
-                content => titleContent = content);
+                content => titleContent = content,
+                BeginWindowsHost,
+                EndWindowsHost);
+        }
+
+        void BeginWindowsHost()
+        {
+            BeginWindows();
+        }
+
+        void EndWindowsHost()
+        {
+            EndWindows();
         }
 
         void EnsureSurface()
@@ -261,6 +275,8 @@ namespace Slate
         [System.NonSerialized] private System.Action<GUIContent> showNotification;
         [System.NonSerialized] private System.Action removeNotification;
         [System.NonSerialized] private System.Action<GUIContent> setTitle;
+        [System.NonSerialized] private System.Action beginWindows;
+        [System.NonSerialized] private System.Action endWindows;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -580,7 +596,9 @@ namespace Slate
             System.Action repaint,
             System.Action<GUIContent> notification,
             System.Action removeNotificationCallback,
-            System.Action<GUIContent> titleCallback)
+            System.Action<GUIContent> titleCallback,
+            System.Action beginWindowsCallback,
+            System.Action endWindowsCallback)
         {
             embeddedSurface = false;
             embeddedRepaint = null;
@@ -588,6 +606,8 @@ namespace Slate
             showNotification = notification;
             removeNotification = removeNotificationCallback;
             setTitle = titleCallback;
+            beginWindows = beginWindowsCallback;
+            endWindows = endWindowsCallback;
             showDragDropInfo = true;
             InitializeAll(newCutscene);
         }
@@ -609,10 +629,21 @@ namespace Slate
 
         public void DrawEmbeddedGUI(float width, float height)
         {
+            DrawEmbeddedGUI(width, height, null, null);
+        }
+
+        public void DrawEmbeddedGUI(
+            float width,
+            float height,
+            System.Action beginWindowsCallback,
+            System.Action endWindowsCallback)
+        {
             if (!embeddedSurface)
                 throw new System.InvalidOperationException("Slate editor is not initialized as an embedded surface.");
             embeddedWidth = Mathf.Max(1f, width);
             embeddedHeight = Mathf.Max(1f, height);
+            beginWindows = beginWindowsCallback;
+            endWindows = endWindowsCallback;
             CutsceneEditorSurface previous = current;
             current = this;
             try
@@ -649,6 +680,8 @@ namespace Slate
             showNotification = null;
             removeNotification = null;
             setTitle = null;
+            beginWindows = null;
+            endWindows = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -685,10 +718,12 @@ namespace Slate
 
         void BeginWindows()
         {
+            beginWindows?.Invoke();
         }
 
         void EndWindows()
         {
+            endWindows?.Invoke();
         }
 
         //...
@@ -1159,13 +1194,17 @@ namespace Slate
             centerRect = new Rect(LEFT_MARGIN, TOP_MARGIN + TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
 
             //...
-            DoKeyboardShortcuts();
-            bool guiEnabled = GUI.enabled;
-            GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
-            ShowPlaybackControls(topLeftRect);
-            GUI.enabled = guiEnabled;
+            if (!embeddedSurface)
+            {
+                DoKeyboardShortcuts();
+                bool guiEnabled = GUI.enabled;
+                GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
+                ShowPlaybackControls(topLeftRect);
+                GUI.enabled = guiEnabled;
+            }
             ShowTimeInfo(topMiddleRect);
-            ShowToolbar();
+            if (!embeddedSurface)
+                ShowToolbar();
             DoScrubControls();
             DoZoomAndPan();
 
@@ -1939,12 +1978,14 @@ namespace Slate
 
 
             //Simple button to add empty group for convenience
-            var addButtonY = totalHeight + TOP_MARGIN + TOOLBAR_HEIGHT + 20;
-            var addRect = Rect.MinMaxRect(leftRect.xMin + 10, addButtonY, leftRect.xMax - 10, addButtonY + 20);
-            GUI.color = Color.white.WithAlpha(0.5f);
-            if ( GUI.Button(addRect, "Add Actor Group") ) {
-                var newGroup = cutscene.AddGroup<ActorGroup>(null).AddTrack<ActorActionTrack>();
-                CutsceneUtility.selectedObject = newGroup;
+            if ( !embeddedSurface ) {
+                var addButtonY = totalHeight + TOP_MARGIN + TOOLBAR_HEIGHT + 20;
+                var addRect = Rect.MinMaxRect(leftRect.xMin + 10, addButtonY, leftRect.xMax - 10, addButtonY + 20);
+                GUI.color = Color.white.WithAlpha(0.5f);
+                if ( GUI.Button(addRect, "Add Actor Group") ) {
+                    var newGroup = cutscene.AddGroup<ActorGroup>(null).AddTrack<ActorActionTrack>();
+                    CutsceneUtility.selectedObject = newGroup;
+                }
             }
 
             //clear picks
@@ -2001,7 +2042,7 @@ namespace Slate
                 group.isCollapsed = !EditorGUI.Foldout(foldRect, !group.isCollapsed, string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty));
                 GUI.color = Color.white;
                 //Actor Object Field
-                if ( group.actor == null ) {
+                if ( !embeddedSurface && group.actor == null ) {
                     var oRect = Rect.MinMaxRect(groupRect.xMin + 20, groupRect.yMin + 1, groupRect.xMax - 20, groupRect.yMax - 1);
                     group.actor = (GameObject)UnityEditor.EditorGUI.ObjectField(oRect, group.actor, typeof(GameObject), true);
                 }

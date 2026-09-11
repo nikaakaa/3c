@@ -307,9 +307,9 @@ namespace BTSMTL.Timeline.Editor
         readonly Func<Cutscene, bool> m_PlaybackPolicy;
         GameObject m_Host;
         Cutscene m_Cutscene;
+        CutsceneEditor m_EmbeddedEditor;
         bool m_Disposed;
         bool m_RebuildQueued;
-        bool m_EditorClosed;
         bool m_ReadOnly;
 
         static BtsmtlSlateTimelineProjection s_Current;
@@ -384,10 +384,10 @@ namespace BTSMTL.Timeline.Editor
             try
             {
                 BuildProjection();
+                CreateEmbeddedEditor();
                 CutsceneEditor.OnEditTransactionBegin += OnEditTransactionBegin;
                 CutsceneEditor.OnEditTransactionCommit += OnEditTransactionCommit;
                 CutsceneEditor.OnEditTransactionCancel += OnEditTransactionCancel;
-                CutsceneEditor.OnEditorClosed += OnEditorClosed;
                 CutsceneEditor.OnActionDoubleClick += OnActionDoubleClick;
                 CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
                 CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
@@ -403,18 +403,10 @@ namespace BTSMTL.Timeline.Editor
 
         public Cutscene Cutscene => m_Cutscene;
 
-        public void FocusEditorWindow()
+        public void DrawEmbeddedGUI(float width, float height)
         {
-            if (m_Disposed || m_Cutscene == null)
-                return;
-            if (CutsceneEditor.current == null ||
-                !ReferenceEquals(CutsceneEditor.current.cutscene, m_Cutscene))
-            {
-                CutsceneEditor.ShowWindow(m_Cutscene);
-                CutsceneEditor.current?.Focus();
-            }
-            else
-                CutsceneEditor.current.Focus();
+            if (!m_Disposed)
+                m_EmbeddedEditor?.DrawEmbeddedGUI(width, height);
         }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
@@ -423,14 +415,14 @@ namespace BTSMTL.Timeline.Editor
                 m_ProxyClips.TryGetValue(clipAuthoringId, out BtsmtlSlateActionClip clip))
             {
                 CutsceneUtility.selectedObject = clip;
-                CutsceneEditor.current?.Repaint();
+                m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }
             if (!string.IsNullOrEmpty(trackAuthoringId) &&
                 m_ProxyTracks.TryGetValue(trackAuthoringId, out BtsmtlSlateTrack track))
             {
                 CutsceneUtility.selectedObject = track;
-                CutsceneEditor.current?.Repaint();
+                m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }
             return false;
@@ -442,7 +434,6 @@ namespace BTSMTL.Timeline.Editor
         {
             DisposeCurrent();
             s_Current = new BtsmtlSlateTimelineProjection(request, openSourceClip);
-            CutsceneEditor.ShowWindow(s_Current.m_Cutscene);
             return s_Current;
         }
 
@@ -574,6 +565,14 @@ namespace BTSMTL.Timeline.Editor
             m_Cutscene.Validate();
         }
 
+        void CreateEmbeddedEditor()
+        {
+            CutsceneEditor previous = CutsceneEditor.current;
+            m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditor>();
+            m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null);
+            CutsceneEditor.current = previous;
+        }
+
         static AnimationCurve ToSlateCurve(AnimationCurve normalizedCurve, float duration)
         {
             return ConvertCurveTime(normalizedCurve, duration, false);
@@ -641,14 +640,6 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_BeginSnapshot = null;
             QueueRebuildProjection();
-        }
-
-        void OnEditorClosed()
-        {
-            m_EditorClosed = true;
-            Dispose();
-            if (ReferenceEquals(s_Current, this))
-                s_Current = null;
         }
 
         void OnActionDoubleClick(ActionClip action)
@@ -899,7 +890,7 @@ namespace BTSMTL.Timeline.Editor
         public void SetRuntimeReadOnly(bool readOnly)
         {
             m_ReadOnly = readOnly;
-            CutsceneEditor.current?.Repaint();
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
         public void ApplyRuntimeOverlay(
@@ -922,7 +913,7 @@ namespace BTSMTL.Timeline.Editor
                     activeClips.TryGetValue(pair.Key, out status);
                 pair.Value.SetRuntimeStatus(status);
             }
-            CutsceneEditor.current?.Repaint();
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
         public void ClearRuntimeOverlay()
@@ -931,7 +922,7 @@ namespace BTSMTL.Timeline.Editor
                 track.SetRuntimeActive(true);
             foreach (BtsmtlSlateActionClip clip in m_ProxyClips.Values)
                 clip.SetRuntimeStatus(string.Empty);
-            CutsceneEditor.current?.Repaint();
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
         public void ApplyAuthoringPreviewTime(float time)
@@ -939,7 +930,7 @@ namespace BTSMTL.Timeline.Editor
             if (m_Cutscene == null)
                 return;
             m_Cutscene.currentTime = Mathf.Clamp(time, 0f, m_Cutscene.length);
-            CutsceneEditor.current?.Repaint();
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
         void QueueRebuildProjection()
@@ -961,6 +952,12 @@ namespace BTSMTL.Timeline.Editor
             m_ProxyTracks.Clear();
             m_SourceSections.Clear();
             m_ProxySections.Clear();
+            if (m_EmbeddedEditor != null)
+            {
+                m_EmbeddedEditor.ClearEmbedded();
+                UnityEngine.Object.DestroyImmediate(m_EmbeddedEditor);
+                m_EmbeddedEditor = null;
+            }
             foreach (Transform child in m_Host.transform.Cast<Transform>().ToArray())
                 UnityEngine.Object.DestroyImmediate(child.gameObject);
             if (m_Cutscene != null)
@@ -968,7 +965,7 @@ namespace BTSMTL.Timeline.Editor
             m_Host = null;
             m_Cutscene = null;
             BuildProjection();
-            CutsceneEditor.ShowWindow(m_Cutscene);
+            CreateEmbeddedEditor();
         }
 
         public void Dispose()
@@ -979,7 +976,6 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditTransactionBegin -= OnEditTransactionBegin;
             CutsceneEditor.OnEditTransactionCommit -= OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;
-            CutsceneEditor.OnEditorClosed -= OnEditorClosed;
             CutsceneEditor.OnActionDoubleClick -= OnActionDoubleClick;
             m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
             Undo.undoRedoEvent -= OnUndoRedoEvent;
@@ -987,8 +983,12 @@ namespace BTSMTL.Timeline.Editor
                 CutsceneEditor.RecordUndoForCutscene = null;
             if (ReferenceEquals(CutsceneEditor.AllowPlaybackForCutscene, m_PlaybackPolicy))
                 CutsceneEditor.AllowPlaybackForCutscene = null;
-            if (!m_EditorClosed && m_Cutscene != null)
-                CutsceneEditor.ClearCutscene(m_Cutscene);
+            if (m_EmbeddedEditor != null)
+            {
+                m_EmbeddedEditor.ClearEmbedded();
+                UnityEngine.Object.DestroyImmediate(m_EmbeddedEditor);
+                m_EmbeddedEditor = null;
+            }
             m_Session.Dispose();
             if (m_Host != null)
                 UnityEngine.Object.DestroyImmediate(m_Host);

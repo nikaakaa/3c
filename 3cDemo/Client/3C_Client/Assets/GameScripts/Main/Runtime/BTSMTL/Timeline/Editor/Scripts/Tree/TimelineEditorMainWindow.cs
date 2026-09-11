@@ -79,6 +79,7 @@ namespace BTSMTL.Timeline.Editor
 
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
+        IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
         TimelinePreviewSession m_PreviewSession;
 
@@ -133,10 +134,7 @@ namespace BTSMTL.Timeline.Editor
             window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
-            if (window.m_SlateProjection != null)
-                window.m_SlateProjection.FocusEditorWindow();
-            else
-                window.Focus();
+            window.Focus();
             return window;
         }
 
@@ -149,10 +147,7 @@ namespace BTSMTL.Timeline.Editor
             window.ClearNavigation();
             window.BindAsset(asset);
             window.Show();
-            if (window.m_SlateProjection != null)
-                window.m_SlateProjection.FocusEditorWindow();
-            else
-                window.Focus();
+            window.Focus();
             return window;
         }
 
@@ -282,12 +277,19 @@ namespace BTSMTL.Timeline.Editor
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());
             rootVisualElement.Add(ownership);
+            m_SlateSurface = new IMGUIContainer(DrawSlateSurface)
+            {
+                name = "slate-timeline-surface"
+            };
+            m_SlateSurface.style.flexGrow = 1f;
+            m_SlateSurface.style.flexShrink = 1f;
+            m_SlateSurface.style.minHeight = 320f;
+            rootVisualElement.Add(m_SlateSurface);
             m_DebugDetails = new ScrollView();
             m_DebugDetails.style.maxHeight = 150;
             m_DebugDetails.style.minHeight = 80;
             rootVisualElement.Add(m_DebugDetails);
             SetMode(m_Mode);
-            m_SlateProjection.FocusEditorWindow();
         }
 
         void BuildUnboundView()
@@ -423,6 +425,7 @@ namespace BTSMTL.Timeline.Editor
             m_PreviewSession = null;
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
+            m_SlateSurface = null;
             m_Timeline = null;
         }
 
@@ -682,6 +685,17 @@ namespace BTSMTL.Timeline.Editor
             m_LastEditorUpdateTime = now;
             if (m_Mode == TimelineWindowMode.AuthoringPreview && m_PreviewSession != null)
                 m_PreviewSession.Tick(deltaTime);
+            m_SlateSurface?.MarkDirtyRepaint();
+        }
+
+        void DrawSlateSurface()
+        {
+            if (m_SlateProjection == null || m_SlateSurface == null)
+                return;
+            Rect rect = m_SlateSurface.contentRect;
+            m_SlateProjection.DrawEmbeddedGUI(
+                Mathf.Max(1f, rect.width),
+                Mathf.Max(1f, rect.height));
         }
 
         void OnPreviewEvaluated()

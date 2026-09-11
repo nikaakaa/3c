@@ -16376,10 +16376,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
-  m_Name: Attack State Body
+  m_Name: Attack
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"ec373e53-0dab-46f2-b04e-3423bbcf423c","_position":{"x":-204.0,"y":120.6666},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"0"},{"m_Mode":1,"m_Steps":[{"m_Id":"3faebe174f314f6484335160bee0b8e4","m_Name":"onEnter","m_Priority":1},{"m_Id":"9370a0a41b004a1ba1ca0facbe64978f","m_Name":"root"}],"_UID":"7c8073c9-3f80-446d-a5f7-bd0ed2847ab0","_name":"Legacy
-    Lifecycle Branches","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillParallelFlowNode","$id":"1"},{"m_StateMachine":1,"_UID":"09a906ca-f0e7-467a-a0e2-4d7b47cd0896","_name":"Attack
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"ec373e53-0dab-46f2-b04e-3423bbcf423c","_position":{"x":-204.0,"y":120.6666},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"0"},{"m_Mode":1,"m_Steps":[{"m_Id":"3faebe174f314f6484335160bee0b8e4","m_Name":"Setup","m_Priority":1},{"m_Id":"9370a0a41b004a1ba1ca0facbe64978f","m_Name":"Body"}],"_UID":"7c8073c9-3f80-446d-a5f7-bd0ed2847ab0","_name":"Startup Branches","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillParallelFlowNode","$id":"1"},{"m_StateMachine":1,"_UID":"09a906ca-f0e7-467a-a0e2-4d7b47cd0896","_name":"Attack
     Combo StateMachine","_position":{"x":458.0,"y":40.66667},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateMachineFlowNode","$id":"2"},{"m_Steps":[{"m_Id":"45dc38bcbdcf4413a74e6c1cacd9e11e","m_Name":"Clear
     Directional Dodge Run Intent","m_Condition":2}],"_UID":"f28233d4-ea90-4458-96dd-ed8063da1095","_name":"OnEnter
     Action Setup","_position":{"x":438.6667,"y":-169.3333},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillSequenceFlowNode","$id":"3"},{"m_Variable":{"m_DeclarationId":"6454110cbe02414e9bef4f4415cde1b1","m_OwnerId":"00ec42f6d5ede195dcf13e4e27fe7933"},"m_ValueType":0,"_UID":"c976b5e2-b97c-4b47-844a-1c88f4cec940","_name":"Clear

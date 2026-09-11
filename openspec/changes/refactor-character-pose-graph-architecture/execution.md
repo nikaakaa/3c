@@ -1607,3 +1607,11 @@ Corin资源槽由提交`b72f7d1e3`重建并经正式流程保存，当前Profile
 已通过精确Definition路径发布Float32 Program与Presentation Projection，再通过精确Fixed wrapper路径发布Fixed Program。Float32 ProgramHash为`94cc87fae8d4aa930d4fb69a4cff104bd00ea1a4c13537184a12e5c1a79cb60e`，Fixed ProgramHash为`ac1d724ed66d44061eff6be11b9e10f965deb6af3f8ecdebacbe18990ab71a2c`，两者共享同一Presentation Projection与`semanticHash=84d76f9a69dcf3420005eaac071d7117c1ca2adb975111a255c529a423cc9571`。Build后重新checkout刷新context并再次validate，结果`success=true`、`syncState=Clean`。
 
 本节尚不勾选Scene Play Preview：当前Timeline/Slate窗口的未提交`CutsceneEditor.cs`存在独立编译错误，需其所属窗口完成修复后才能继续运行时Pose reset observation；不修改该交叉文件，也不以资产Build替代Scene Play证据。
+
+## Scene Play首帧阻塞边界（POSE-EXEC-20260911-16）
+
+状态：正式`character.pose_reset_observation`在GameplayLab直接Play下两次验证。第一次Job `7590d80cb3d641419457153f62c333eb`因观察期间Unity bridge断开而丢失；第二次Job `cd28ea21b5e54c45b4b2d957bcc9b71b`明确以`WaitingInitialFrame`超时，`gameplay-lab-player`没有产生任何committed Pose frame。
+
+静态与Unity MCP核对确认，GameplayLab场景只有Environment、Directional Light、Gameplay Lab Bootstrap和Director Camera四个根对象，没有`TEngineBootstrap`或`RootModule`。`GameplayLabBootstrap.Start()`必须先等待`ProjectSceneResourcePreparation.PrepareAsync()`，而YooAsset异步操作由正式`RootModule -> ModuleSystem.Update`推进；缺少该根模块时不会创建Runtime Session和Actor。尝试加载已有`Bootstrap.unity`作为additive正式承载后，日志进一步暴露编辑器前一次Play留下的静态`ModuleSystem`，第二次`ResourceModule.Initialize()`因重复`Asset Pool`失败；没有进入Pose运行链。
+
+本节不修改当前有未提交改动的GameplayLab场景、不添加临时Root、不建立Scene Play fallback，也不修改TEngine包。需要干净的Unity Editor生命周期或由对应基础设施change收口后，才能继续Scene Play Pose reset；Document dry-run、validate、Float32/Fixed Build与Build后checkout均已独立通过。

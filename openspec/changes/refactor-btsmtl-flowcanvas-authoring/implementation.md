@@ -286,6 +286,12 @@ Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backen
 
 对同一根再次执行只读 dry-run job `e8d2d574a1dc45d49e566457cd710ddb`，仍返回 `success=false`、`errorCode=document_sync_state_blocked`、`syncState=TreeDirty`，没有产生新的计划或资产写入。该重复结果确认阻塞来自 authoring/package 事实差异而不是一次性连接失败；继续等待外部窗口完成并裁决其 Pose/资产变更。
 
+# 2026-09-10 当前Float32 Build复核
+
+在目标实例脚本编译无C#错误、未进入Play且编辑器可用后，正式执行 `character.build_float32_products` job `01320a4db85b4ac7842da66456212fa9`，精确Definition为 `Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。Build在PresentationProjection阶段返回 `success=false`、`error=character_build_failed`，没有发布有效Projection或Program结果，因此5.6继续未完成。
+
+机器诊断为：7个Presentation Pose source binding均缺少Foot Analysis artifact binding；`corin.locomotion.inertialization`节点TypedLowering发生空引用；7个ACL source resource未被当前编译动画图引用；ACL group 0 entries不连续或与声明不一致；最终Presentation Projection缺失。该结果说明当前Pose/动画资产与正式Build合同仍未闭合，不是Agent Document等待造成的Build失败。
+
 # 2026-09-10 Skill原生编辑器编译复核
 
 本轮刷新目标Unity实例 `3C_Client@e852139597e42532` 时，Skill原生Blackboard适配器、provider节点菜单和运行观察自动绑定器首次暴露了三个缺失using/类型解析问题；仅修正命名空间和 `Graph` 类型冲突，提交为 `8721e1d59`。明确暂存文件只有这三个Skill源码文件，没有带入Pose、Build或资产改动。
@@ -297,3 +303,11 @@ Prediction结果返回 Server-Authoritative Prediction Pipeline、Float32 Backen
 同一目标随后通过重连后的正式 custom tool 入口再次 checkout，job `136bba4591bc44c29f5c03da7be0f6fb` 返回相同的 `presentation_pose_properties_invalid`，`applied=false`、`saved=false`、`plannedDiff=[]`，错误仍集中在六个 Pose Graph 节点的旧 `animation` 属性与缺失 `pose-source-slot`。这次复核排除了前一次 MCP 会话断开造成的假失败；当前不能进入Document dry-run、apply、Character Build或最终资产迁移。
 
 目标实例恢复连接后再次执行 checkout，job `198ae781e90e4835a37dbe3e10a715df` 仍返回相同错误，`applied=false`、`saved=false`、`plannedDiff=[]`，`sourceRevision`、`editableHash`和`contextHash`均未产生可用的新Document基线。连续三次正式复核都指向外部Pose节点迁移，Skill authoring代码和本变更范围没有可安全绕过的下一步。
+
+# 2026-09-11 主线 JSON 清理、双 Target Build
+
+按当前正式合同删除 `AgentAuthoring/Documents/AIController` 下两套旧自研 AI v7 包，共58个JSON/同步文件；主线Character v7包不再包含AI domain、Character RootTree或旧PoseGraph路径。删除后主线 `CharacterController/c7a7c1e3-001dd30a08d99da6.btsmtl` 通过正式 `checkout_document`、`dry_run_document` 和 `validate`：`syncState=Clean`、`plannedDiff=[]`、`compileSuccessCount=1`、`semanticValidCount=1`、Float32/Fixed均为1127个StateSlot。
+
+主线精确Definition `Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset` 经唯一 Character Build 发布 Float32 Program、Presentation Projection、Fixed Program和ACL产物。Float32与Fixed共享 `ProgramId=character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e` 和 `SourceRevision=139c7eda5f4aa04e29ea2f713855f95fbeb0d9d47ad0ddcccb013648fcc80c30`，分别保留自己的 Numeric Program/Layout hash；Generated Program、Projection、`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset` 与 ACL 发布目录在同一主线Build时间窗更新。该证据关闭5.6，不关闭8.1、8.4.2或Corin Replay任务。
+
+本轮回放使用正式 Trace `Diagnostics/CharacterInputTraces/20260904-153738-150-f169da25c67742aaafa0e9860ae4a230.json`，但主Unity WebSocket在 `character.fixed_input_trace` 回包前反复断开，未产生新的Replay Proof；没有把历史 `.codex-tmp`结果当作本轮证据。

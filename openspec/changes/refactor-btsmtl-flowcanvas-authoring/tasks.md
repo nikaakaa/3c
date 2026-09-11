@@ -156,7 +156,7 @@ Document代码范围：5.1—5.3，以及2.1.2的导入身份、2.2.3的能力�
 
 Document必须直接读写Definition.SkillGraphs所引用的原生技能图；普通图、Macro接口、调用节点、稳定步骤端口、黑板声明、Timeline和TreeClip都使用同一包、同一hash和现有Mutation dispatcher。具体合同见design.md第6节，不增加独立交接文档或第二套写入服务。
 
-5.4—5.6属于最后的资产阶段。5.4与5.5的迁移计划、apply和工作包发布已经完成；5.6仍未运行Character Build，未获得对应Build证据的任务保持未勾选。
+5.4—5.6属于最后的资产阶段。5.4与5.5的迁移计划、apply和工作包发布已经完成；5.6已由2026-09-11主线唯一Character Build及产物身份对账收口。8.1与8.4.2仍保留正式运行观察、Replay和最终汇总证据门槛。
 
 - [x] 5.1 定义v7图、Macro接口／调用／owner分片与manifest闭包，统一Exporter、Codec、Mapper和严格旧包拒绝；通过正式checkout及schema校验核对。证据：2026-09-09正式CLI checkout 返回 v7、`success=true`、`syncState=Clean`，package 为精确 Character Definition。
 - [x] 5.2 同步Reconciler、Mutation、资产resolver、Validator及五生命周期说明，取消旧作者对象中转；通过无业务变化dry-run的零修改清单核对。证据：2026-09-09正式CLI dry-run 返回 `success=true`、`plannedDiff=[]`、`syncState=Clean`，并返回有效 plan/document hash。
@@ -167,7 +167,7 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 
   交付物：skill-migration-plan.md。计划固定Attack/DodgeBack/DodgeForward旧入口、闭包规模、共享Timeline GUID、确定性根路径、能力映射、identity/layout/owner核对和apply顺序；实际冲突已按正式dry-run结果处理，拒绝的旧工作包已整体删除并由当前v7包重建。
 - [x] 5.5 显式应用迁移、发布v7工作包并通过同hash dry-run／apply／重新checkout；成功证据必须包含applied、saved和Clean。证据：正式 Timeline 合同迁移后 checkout/dry-run 返回 `plannedDiff=[]`，以 `bb5af1f5514f1990b9da427799b81b0e253d32b5d38fa4a76b3457457e5fa169` 执行 apply，返回 `applied=true`、`saved=true`、`syncState=Clean`，随后 re-checkout 仍为同一 `documentHash` 与 `Clean`。
-- [ ] 5.6 经唯一Character Build发布所需Numeric Target和Projection，核对产物组身份及依赖一致；不复用其他worktree生成资产冒充本批输出。
+- [x] 5.6 经唯一Character Build发布所需Numeric Target和Projection，核对产物组身份及依赖一致；不复用其他worktree生成资产冒充本批输出。证据：2026-09-11 主线 `3C_Client@e852139597e42532` 精确Definition执行 Float32/Fixed Build；Float32 ProgramHash=`94cc87fae8d4aa930d4fb69a4cff104bd00ea1a4c13537184a12e5c1a79cb60e`、LayoutHash=`e175d6635a0dbe9ca0f1896b96d7d54dae51417831d0803ec1e1c537b4776d0e`，Fixed ProgramHash=`ac1d724ed66d44061eff6be11b9e10f965deb6af3f8ecdebacbe18990ab71a2c`、LayoutHash=`ffc4a1761e0abf315ce795d2cb1ad1bc1474bc57d59ccb4f62cdbaf72b8c0529`，共同ProgramId=`character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`、SourceRevision=`139c7eda5f4aa04e29ea2f713855f95fbeb0d9d47ad0ddcccb013648fcc80c30`、StateSlots=1127；主线Generated Program/Projection、`CorinFixedProgram.asset`与ACL目录在同一Build时间窗更新，Unity日志记录Publish与收尾。未引用parallel-test产物。
 
 ## 6. 编译来源及运行观测
 
@@ -233,4 +233,3 @@ Document必须直接读写Definition.SkillGraphs所引用的原生技能图；�
 - [x] 8.5 核对Character RootTree删除后的Definition、GA精确导航、provider Blackboard、Simulation Pipeline和Network Adapter规范一致性；运行OpenSpec严格校验并输出仍存在的非技能RootTree残留清单。证据：`559c476b9`、`63d0ccfe3`、`dc98db8b4`、`2dd98c9cc`、`aa5b99a56`、`eb9dd7719`及目标Unity v7 checkout/dry-run；源码与包扫描无Character RootTree字段/路径，OpenSpec strict通过。
 
   当前残留清单：旧`AgentAI*`导出器、lowering、handler、AI事务owner和BTSMTL AI operation均已删除；`AIController` domain已不再被Document schema、MCP或Validator接收。Character Definition、Skill导航、provider Blackboard、Session Composition、Pipeline和网络Adapter均不再以Character RootTree作为入口；正式v7 checkout/dry-run已核对`Clean`且包内无顶层旧分片。源码中的`OneRootTree`、`SubTree`和`TimelineRunningTree`是TreeDesigner/Skill Timeline的非技能通用类型，不属于Character Definition入口。Behavior Designer插件尚未在本change中接入角色任务和网络Source，后续由`replace-btsmtl-ai-with-behavior-designer`独立change负责；不在此处建立第二套AI路径。Character State只读projection已接入并升级Gameplay operation set到`/15`。正式运行一致性和网络产品证据归8.1/8.4.2，仍未执行。
-

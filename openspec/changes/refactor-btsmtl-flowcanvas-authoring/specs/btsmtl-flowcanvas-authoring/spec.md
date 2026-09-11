@@ -152,4 +152,3 @@ Skill Timeline MUST能够表达动作AnimationTrack、AnimationClip、Action Slo
 - **WHEN** 同一Character Program被不同正式Session Pipeline加载
 - **THEN** Skill语义、ActionInstance身份和状态恢复合同 MUST保持一致
 - **AND** 网络层 MUST同步输入、权威状态、Hash或Snapshot，不得复制作者Graph或最终Pose
-

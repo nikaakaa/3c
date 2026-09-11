@@ -86,4 +86,3 @@ Document MUST不保存PredictionKey、ActionInstance当前值、Rollback Snapsho
 - **WHEN** Agent在Character `btsmtl.validate`中提供一个精确的 `SimulationSessionCompositionDefinition` 资产路径
 - **THEN** Validator MUST 返回该Composition的正式兼容结果、Pipeline plan identity与Source/网络身份
 - **AND** MUST不从Selection、第一个资产或目录扫描推断Composition
-

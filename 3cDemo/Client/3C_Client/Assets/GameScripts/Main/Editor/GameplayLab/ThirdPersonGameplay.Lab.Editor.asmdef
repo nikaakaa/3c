@@ -19,6 +19,10 @@
         "ThirdPersonGameplay",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Tree",
+        "BTSMTL.TreeDesigner",
+        "FlowCanvas",
+        "ParadoxNotion",
         "Kybernetik.Animancer",
         "Cinemachine"                             
     ],

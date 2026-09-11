@@ -32,6 +32,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawBody(CharacterPoseCanvasNode node)
         {
+            if (node.Payload is CharacterProgramParameterInputPosePayload parameter)
+                GUILayout.Label($"Get: {parameter.ParameterId.Value}", EditorStyles.miniLabel);
+
             if (node.Payload is CharacterAnimationSlotPosePayload slot)
             {
                 GUILayout.Label($"Slot: {slot.SlotId.Value}", EditorStyles.miniLabel);

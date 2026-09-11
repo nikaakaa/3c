@@ -45,7 +45,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal enum CharacterPoseCanvasCreationKind : byte
     {
         Direct = 1,
-        DedicatedSurface = 2
+        DedicatedSurface = 2,
+        BlackboardOnly = 3
     }
 
     [Flags]
@@ -90,6 +91,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public CharacterPoseCanvasCreationKind CanvasCreation =>
             Kind == CharacterPoseNodeKind.LinkedPoseCall
                 ? CharacterPoseCanvasCreationKind.DedicatedSurface
+                : Kind == CharacterPoseNodeKind.ProgramParameterInput
+                    ? CharacterPoseCanvasCreationKind.BlackboardOnly
                 : CharacterPoseCanvasCreationKind.Direct;
         public bool Copyable =>
             Kind != CharacterPoseNodeKind.GraphInput &&
@@ -579,6 +582,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ? value
                 : throw new InvalidOperationException(
                     $"Pose capability '{capabilityIdentity ?? "<null>"}' has no Node Definition.");
+        }
+
+        public bool TryGetCapability(
+            string capabilityIdentity,
+            out CharacterPoseNodeDefinition definition)
+        {
+            EnsureCapabilities();
+            return !string.IsNullOrWhiteSpace(capabilityIdentity) &&
+                m_ByCapability.TryGetValue(capabilityIdentity, out definition);
         }
 
         public CharacterPoseNodeDefinition RequirePayload(

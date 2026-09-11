@@ -623,6 +623,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var menu = new GenericMenu();
             foreach (GraphAuthoringCapabilityDescriptor capability in capabilities.OrderBy(value => value.Category).ThenBy(value => value.DisplayName))
             {
+                if (CharacterPoseNodeDefinitionModule.Shared.TryGetCapability(
+                        capability.CapabilityId.Value,
+                        out CharacterPoseNodeDefinition definition) &&
+                    definition.CanvasCreation == CharacterPoseCanvasCreationKind.BlackboardOnly)
+                    continue;
                 GraphAuthoringCapabilityDescriptor selected = capability;
                 menu.AddItem(new GUIContent($"{selected.Category}/{selected.DisplayName}"), false, () => CreateNode(selected, screenPosition));
             }
@@ -663,6 +668,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 ShowLinkedPoseSelection("linked-root");
                 m_Status.text = "Linked Pose Call is created from the typed Group/Entry authoring page.";
+                return;
+            }
+            if (definition.CanvasCreation == CharacterPoseCanvasCreationKind.BlackboardOnly)
+            {
+                m_Status.text = "Pose 参数 Get 节点必须从 Blackboard 变量拖入。";
                 return;
             }
             CharacterPoseNodePayload payload =

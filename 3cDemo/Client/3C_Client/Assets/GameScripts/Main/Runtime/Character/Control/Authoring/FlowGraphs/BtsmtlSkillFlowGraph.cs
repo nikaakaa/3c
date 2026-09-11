@@ -163,6 +163,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public override bool isEditorReadOnly => Application.isPlaying;
         public override bool usesExplicitPortSelection => true;
         public bool IsReadOnly => isEditorReadOnly;
+        public bool AllowVariablePick => !IsReadOnly;
         public void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject) =>
             BtsmtlSkillBlackboardEditorAdapter.Draw(this, blackboard);
         public GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject) =>

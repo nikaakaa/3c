@@ -6,6 +6,7 @@ using ParadoxNotion;
 using ParadoxNotion.Design;
 using UnityEngine;
 #if UNITY_EDITOR
+using NodeCanvas.Framework.Internal;
 using UnityEditor;
 #endif
 
@@ -13,6 +14,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     [Serializable]
     public sealed class CharacterPoseCanvasGraph : FlowCanvas.FlowGraph
+#if UNITY_EDITOR
+        , NodeCanvas.Editor.IBlackboardEditorAdapter
+#endif
     {
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_ContentRevision = string.Empty;
@@ -46,12 +50,127 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool isTree => false;
         public override PlanarDirection flowDirection => PlanarDirection.Horizontal;
         public override bool allowBlackboardOverrides => false;
-        public override bool canAcceptVariableDrops => false;
+        public override bool canAcceptVariableDrops => true;
 
         protected override void OnGraphInitialize() =>
             throw new InvalidOperationException("Pose authoring graphs compile to the formal Pose Program; they cannot execute as FlowCanvas graphs.");
 
 #if UNITY_EDITOR
+        [NonSerialized] BlackboardSource m_EditorBlackboard;
+
+        public override IBlackboard editorBlackboard => GetEditorBlackboard();
+        public bool IsReadOnly => true;
+        public bool AllowVariablePick => true;
+
+        BlackboardSource GetEditorBlackboard()
+        {
+            m_EditorBlackboard ??= new BlackboardSource();
+            m_EditorBlackboard.unityContextObject = this;
+            var next = new Dictionary<string, Variable>(StringComparer.Ordinal);
+            foreach (CharacterPoseParameterDeclaration declaration in Parameters)
+            {
+                if (declaration == null || !declaration.ParameterId.IsValid)
+                    continue;
+                string id = declaration.ParameterId.Value;
+                if (!m_EditorBlackboard.variables.TryGetValue(id, out Variable variable) ||
+                    variable == null || variable.varType != VariableType(declaration.ValueType) ||
+                    !string.Equals(variable.ID, id, StringComparison.Ordinal))
+                    variable = CreateEditorVariable(declaration);
+                else
+                    variable.value = DefaultValue(declaration);
+                next.Add(id, variable);
+            }
+
+            bool changed = m_EditorBlackboard.variables.Count != next.Count ||
+                next.Any(pair => !m_EditorBlackboard.variables.TryGetValue(pair.Key, out Variable current) ||
+                    !ReferenceEquals(current, pair.Value));
+            if (changed)
+                m_EditorBlackboard.variables = next;
+            return m_EditorBlackboard;
+        }
+
+        public void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject)
+        {
+            if (ReferenceEquals(blackboard, editorBlackboard))
+                EditorGUILayout.LabelField("Pose Parameters · 只读", EditorStyles.miniLabel);
+        }
+
+        public GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject)
+        {
+            var menu = new GenericMenu();
+            menu.AddDisabledItem(new GUIContent("Pose 参数由声明提供"));
+            return menu;
+        }
+
+        public GenericMenu GetVariableMenu(
+            IBlackboard blackboard,
+            UnityEngine.Object contextObject,
+            Variable variable,
+            int index)
+        {
+            var menu = new GenericMenu();
+            menu.AddDisabledItem(new GUIContent("拖拽变量以创建 Get 节点"));
+            return menu;
+        }
+
+        public void ExecuteMutation(string title, Action mutation) =>
+            throw new InvalidOperationException("Pose 参数 Blackboard 只读。");
+
+        public void ApplyVariableList(IBlackboard blackboard, IReadOnlyList<Variable> variables) { }
+
+        protected override void OnVariableDropInGraph(IBlackboard blackboard, Variable variable, Vector2 mousePos)
+        {
+            if (!ReferenceEquals(blackboard, editorBlackboard) || variable == null)
+                return;
+            CharacterPoseParameterDeclaration declaration = Parameters.SingleOrDefault(value =>
+                value != null && value.ParameterId.IsValid &&
+                string.Equals(value.ParameterId.Value, variable.ID, StringComparison.Ordinal));
+            if (declaration == null)
+                throw new InvalidOperationException("Pose 参数 Blackboard 变量没有对应声明。");
+            if (isEditorReadOnly || EditorWriteRouter == null)
+            {
+                NodeCanvas.Editor.GraphEditor.current?.ShowNotification(new GUIContent("Pose Graph 当前不可编辑。"));
+                return;
+            }
+            EditorWriteRouter.CreateParameterGet(declaration.ParameterId, variable.name, mousePos);
+            Event.current.Use();
+        }
+
+        static Type VariableType(PoseParameterValueType valueType) => valueType switch
+        {
+            PoseParameterValueType.Float => typeof(float),
+            PoseParameterValueType.Int => typeof(int),
+            PoseParameterValueType.Bool => typeof(bool),
+            _ => throw new InvalidOperationException("Pose 参数类型无效。")
+        };
+
+        static Variable CreateEditorVariable(CharacterPoseParameterDeclaration declaration) =>
+            declaration.ValueType switch
+            {
+                PoseParameterValueType.Float => new Variable<float>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                {
+                    value = declaration.DefaultValue
+                },
+                PoseParameterValueType.Int => new Variable<int>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                {
+                    value = Convert.ToInt32(declaration.DefaultValue)
+                },
+                PoseParameterValueType.Bool => new Variable<bool>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                {
+                    value = declaration.DefaultValue > 0.5f
+                },
+                _ => throw new InvalidOperationException("Pose 参数类型无效。")
+            };
+
+        static object DefaultValue(CharacterPoseParameterDeclaration declaration) =>
+            declaration.ValueType switch
+            {
+                PoseParameterValueType.Float => declaration.DefaultValue,
+                PoseParameterValueType.Int => Convert.ToInt32(declaration.DefaultValue),
+                PoseParameterValueType.Bool => declaration.DefaultValue > 0.5f,
+                _ => throw new InvalidOperationException("Pose 参数类型无效。")
+            };
+
         protected override void OnGraphEditorToolbar() =>
             PoseCanvasEditorBridge.Toolbar?.Invoke(this);
 
@@ -337,6 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void MoveNode(Node node, Vector2 position);
         void RenameNode(Node node, string name);
         Connection Reconnect(Connection connection, Node source, int sourceIndex, Node target, int targetIndex);
+        Node CreateParameterGet(PoseParameterId parameterId, string displayName, Vector2 position);
         GenericMenu BuildNodeCreationMenu(NodeCanvas.Framework.Graph.NodeCreationRequestContext request);
         GenericMenu BuildPortCreationMenu(Vector2 position, FlowCanvas.Port context);
         bool HandleCommand(string command, Vector2 position);

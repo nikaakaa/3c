@@ -116,6 +116,7 @@ namespace NodeCanvas.Editor
             var options = new EditorUtils.ReorderableListOptions();
             options.blockReorder = isPrefab;
             options.blockReorder |= adapter != null && adapter.IsReadOnly;
+            options.allowPick = adapter != null && adapter.AllowVariablePick;
             options.unityObjectContext = contextObject;
             options.customItemMenu = (i) => adapter != null
                 ? adapter.GetVariableMenu(bb, contextObject, tempVariablesList[i], i)

@@ -21,6 +21,7 @@ namespace ParadoxNotion.Design
         {
             public delegate GenericMenu GetItemMenuDelegate(int i);
             public bool blockReorder;
+            public bool allowPick;
             public bool allowAdd;
             public bool allowRemove;
             public UnityObject unityObjectContext;
@@ -164,7 +165,7 @@ namespace ParadoxNotion.Design
                 if ( !options.blockReorder ) { EditorGUIUtility.AddCursorRect(pickRect, MouseCursor.MoveArrow); }
                 var boundRect = GUILayoutUtility.GetLastRect();
 
-                if ( pickRect.Contains(e.mousePosition) && e.type == EventType.MouseDown && !options.blockReorder ) {
+                if ( pickRect.Contains(e.mousePosition) && e.type == EventType.MouseDown && (!options.blockReorder || options.allowPick) ) {
                     pickedList = list;
                     pickedListIndex = i;
                     GUIUtility.hotControl = 0;

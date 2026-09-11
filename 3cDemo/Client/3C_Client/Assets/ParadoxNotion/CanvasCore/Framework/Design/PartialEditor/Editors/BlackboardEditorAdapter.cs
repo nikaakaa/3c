@@ -10,6 +10,7 @@ namespace NodeCanvas.Editor
     public interface IBlackboardEditorAdapter
     {
         bool IsReadOnly { get; }
+        bool AllowVariablePick { get; }
         void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject);
         GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject);
         GenericMenu GetVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject, Variable variable, int index);

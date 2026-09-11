@@ -59,6 +59,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             throw new InvalidOperationException(
                 "Pose Canvas nodes are created from their Node Definition; use the Definition-driven creation menu.");
 
+        public Node CreateParameterGet(PoseParameterId parameterId, string displayName, Vector2 position)
+        {
+            CharacterPoseNodeDefinition definition =
+                CharacterPoseNodeDefinitionModule.Shared.Require(CharacterPoseNodeKind.ProgramParameterInput);
+            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                definition.Capability.CapabilityId,
+                CharacterPoseGraphAuthoringCapabilities.Domain,
+                ResolveRole());
+            var node = new CharacterPoseCanvasNode(
+                new PoseNodeId(Guid.NewGuid().ToString("N")),
+                displayName,
+                new CharacterProgramParameterInputPosePayload(parameterId));
+            var transaction = new CharacterPresentationMutationTransaction(
+                Guid.NewGuid().ToString("N"),
+                "创建 Pose 参数 Get 节点");
+            transaction.Add(new CreatePoseNodeMutation(
+                m_Graph.GraphId.Value,
+                node,
+                position));
+            Apply(transaction);
+            CharacterPoseCanvasNode created = m_Graph.RequireNode(node.NodeId);
+            created.customColor = definition.Capability.Color;
+            GraphEditorUtility.activeElement = created;
+            return created;
+        }
+
         public Node CreateNodeFromCapability(
             string capabilityIdentity,
             Vector2 position,
@@ -74,9 +100,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
                     capabilityIdentity);
-            if (definition.CanvasCreation == CharacterPoseCanvasCreationKind.DedicatedSurface)
+            if (definition.CanvasCreation != CharacterPoseCanvasCreationKind.Direct)
                 throw new InvalidOperationException(
-                    $"Pose node '{definition.Capability.DisplayName}' is created from its dedicated authoring surface.");
+                    definition.CanvasCreation == CharacterPoseCanvasCreationKind.BlackboardOnly
+                        ? "Pose 参数 Get 节点必须从 Blackboard 变量拖入。"
+                        : $"Pose node '{definition.Capability.DisplayName}' is created from its dedicated authoring surface.");
             if (definition.Capability.SystemOwned)
                 throw new InvalidOperationException(
                     $"Pose node '{definition.Capability.DisplayName}' is compiler-owned and cannot be authored.");
@@ -284,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var menu = new GenericMenu();
             IEnumerable<CharacterPoseNodeDefinition> definitions =
                 CharacterPoseNodeDefinitionModule.Shared.All
-                    .Where(value => value.CanvasCreation != CharacterPoseCanvasCreationKind.DedicatedSurface)
+                    .Where(value => value.CanvasCreation == CharacterPoseCanvasCreationKind.Direct)
                     .Where(value => !value.Capability.SystemOwned)
                     .Where(value => value.Capability.Allows(ResolveRole()))
                     .OrderBy(value => value.Capability.Category, StringComparer.Ordinal)

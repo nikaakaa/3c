@@ -186,7 +186,8 @@ namespace NodeCanvas.Editor
         //blackboard inspector panel
         static Rect ShowBlackboardGUIPanel(Graph graph, Vector2 canvasMousePos) {
             var blackboardPanel = default(Rect);
-            if ( graph.blackboard == null ) {
+            var blackboard = graph.editorBlackboard;
+            if ( blackboard == null ) {
                 blackboardPanelHeight = 0;
                 return blackboardPanel;
             }
@@ -230,7 +231,7 @@ namespace NodeCanvas.Editor
                 blackboardPanelScrollPos = GUI.BeginScrollView(position, blackboardPanelScrollPos, viewRect, false, false);
                 GUILayout.BeginArea(contentRect);
 
-                BlackboardEditor.ShowVariables(graph.blackboard, graph);
+                BlackboardEditor.ShowVariables(blackboard, graph);
                 EditorUtils.EndOfInspector();
                 if ( e.type == EventType.Repaint ) {
                     blackboardPanelHeight = GUILayoutUtility.GetLastRect().yMax + headerHeight + 5;
@@ -255,7 +256,7 @@ namespace NodeCanvas.Editor
             blackboardPanel.x += canvasRect.x;
             blackboardPanel.y += canvasRect.y;
 
-            if ( graph.canAcceptVariableDrops && BlackboardEditor.pickedVariable != null && BlackboardEditor.pickedVariableBlackboard.IsPartOf(graph.blackboard) ) {
+            if ( graph.canAcceptVariableDrops && BlackboardEditor.pickedVariable != null && BlackboardEditor.pickedVariableBlackboard.IsPartOf(blackboard) ) {
                 GUI.Label(new Rect(e.mousePosition.x + 15, e.mousePosition.y, 100, 18), "Drop Variable", StyleSheet.labelOnCanvas);
                 if ( e.type == EventType.MouseUp && !blackboardPanel.Contains(e.mousePosition) ) {
                     graph.CallbackOnVariableDropInGraph(BlackboardEditor.pickedVariableBlackboard, BlackboardEditor.pickedVariable, canvasMousePos);

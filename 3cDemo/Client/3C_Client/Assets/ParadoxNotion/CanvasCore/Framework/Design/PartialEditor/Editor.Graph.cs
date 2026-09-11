@@ -23,6 +23,7 @@ namespace NodeCanvas.Framework
         public virtual bool isEditorReadOnly => false; // 3C: observe domain instances without mutating authoring state.
         public virtual bool usesDomainAuthoring => false; // 3C: exclude generic refactoring and raw JSON import from strict domain assets.
         public virtual Object EditorUndoTarget => this;
+        public virtual IBlackboard editorBlackboard => blackboard;
         public IGraphEditorObservation editorObservation { get; set; }
         public virtual bool HandleEditorCommand(string command, Vector2 position) => false; // 3C: domains keep their clipboard and batch mutation contracts.
 

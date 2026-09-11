@@ -7,8 +7,8 @@ namespace ThirdPersonCamera
     internal sealed class CharacterCameraFramePlanner
     {
         readonly CharacterCameraProjectionPayload m_Projection;
-        float m_Yaw;
-        float m_Pitch;
+        float m_YawOffset;
+        float m_PitchOffset;
 
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
@@ -17,13 +17,8 @@ namespace ThirdPersonCamera
 
         public void Reset()
         {
-            Reset(Quaternion.identity);
-        }
-
-        public void Reset(Quaternion bodyRotation)
-        {
-            m_Yaw = Mathf.Repeat(bodyRotation.eulerAngles.y, 360f);
-            m_Pitch = m_Projection.DefaultElevationAngle;
+            m_YawOffset = 0f;
+            m_PitchOffset = 0f;
         }
 
         public Vector2 ResolveLook(
@@ -31,9 +26,9 @@ namespace ThirdPersonCamera
             in CameraResponseRequest response)
         {
             Vector2 look = response.Apply(lookInput);
-            m_Yaw = Mathf.Repeat(m_Yaw + look.x * m_Projection.Input.Sensitivity.x, 360f);
-            m_Pitch = Mathf.Clamp(
-                m_Pitch - look.y * m_Projection.Input.Sensitivity.y,
+            m_YawOffset = Mathf.Repeat(m_YawOffset + look.x * m_Projection.Input.Sensitivity.x, 360f);
+            m_PitchOffset = Mathf.Clamp(
+                m_PitchOffset - look.y * m_Projection.Input.Sensitivity.y,
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);
             return look;
@@ -66,8 +61,8 @@ namespace ThirdPersonCamera
             float radius = m_Projection.DefaultSphere.Radius;
             float fieldOfView = m_Projection.DefaultFieldOfView;
             Vector2 offset = Vector2.zero;
-            float evaluatedYaw = m_Yaw;
-            float evaluatedPitch = m_Pitch;
+            float evaluatedYaw = m_YawOffset;
+            float evaluatedPitch = m_PitchOffset;
             float evaluatedRoll = 0f;
             for (int stageIndex = 0; stageIndex < sequence.Stages.Count; stageIndex++)
             {
@@ -90,8 +85,11 @@ namespace ThirdPersonCamera
                         CameraTrackOrbitPayload orbit = SampleTrack(byTrack.CameraOrbits, byTrack.ElevationRatio);
                         offset = SampleTrack(byTrack.ScreenOffsets, byTrack.ElevationRatio);
                         radius = Mathf.Sqrt(orbit.Height * orbit.Height + orbit.Radius * orbit.Radius);
-                        evaluatedPitch = Mathf.Atan2(orbit.Height, orbit.Radius) * Mathf.Rad2Deg;
-                        evaluatedYaw = byTrack.PolarAngle;
+                        evaluatedPitch = Mathf.Clamp(
+                            Mathf.Atan2(orbit.Height, orbit.Radius) * Mathf.Rad2Deg + m_PitchOffset,
+                            m_Projection.Input.PitchLimit.x,
+                            m_Projection.Input.PitchLimit.y);
+                        evaluatedYaw = Mathf.Repeat(byTrack.PolarAngle + m_YawOffset, 360f);
                         evaluatedRoll = 0f;
                         fieldOfView = byTrack.FieldOfView;
                         break;

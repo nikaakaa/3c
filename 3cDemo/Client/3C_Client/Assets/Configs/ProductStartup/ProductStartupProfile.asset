@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b55d74a74d43468097529a6376803507, type: 3}
   m_Name: ProductStartupProfile
   m_EditorClassIdentifier:
-  m_ResourceEndpoint:
-  m_AuthEndpoint:
+  m_ResourceEndpoint: https://localhost:8443
+  m_AuthEndpoint: wss://localhost:9443/
   m_ClientBuildVersion: 1.0.0
   m_AuthProtocolVersion: 1
   m_RequestTimeoutSeconds: 30

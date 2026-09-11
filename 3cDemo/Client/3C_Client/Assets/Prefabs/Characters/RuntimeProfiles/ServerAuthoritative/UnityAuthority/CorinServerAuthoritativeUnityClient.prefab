@@ -2562,7 +2562,7 @@ MonoBehaviour:
     m_Renderer: {fileID: 1558316937851238142}
     m_ExpectedMesh: {fileID: 2248241420830187273, guid: c3a5ce34162b1294e9d35f20534cd050,
       type: 3}
-    m_MeshContentHash: 629dce717d32291fa754154082c6f03bfba4f47fd87c72861da4efdc459c515c
+    m_MeshContentHash: 3796cee9f3521528f9bd1c7a116407fa6cb16309d36c640f7a8d32bb194db8c2
 --- !u!1 &2831792937522958483
 GameObject:
   m_ObjectHideFlags: 0

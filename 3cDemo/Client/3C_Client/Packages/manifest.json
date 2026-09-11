@@ -11,6 +11,7 @@
   ],
   "dependencies": {
     "com.alex.tengine": "file:com.alex.tengine",
+    "com.cwcbb.cwcmontage": "file:com.cwcbb.cwcmontage",
     "com.code-philosophy.hybridclr": "https://gitee.com/focus-creative-games/hybridclr_unity.git",
     "com.coplaydev.unity-mcp": "file:C:/Users/Lenovo/.unity-mcp/MCPForUnity",
     "com.cysharp.unitask": "file:UniTask",

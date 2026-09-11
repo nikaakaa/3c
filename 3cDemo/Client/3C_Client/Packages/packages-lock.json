@@ -22,6 +22,12 @@
         "com.unity.test-framework": "1.1.31"
       }
     },
+    "com.cwcbb.cwcmontage": {
+      "version": "file:com.cwcbb.cwcmontage",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.cysharp.unitask": {
       "version": "file:UniTask",
       "depth": 0,
@@ -44,7 +50,7 @@
       "dependencies": {}
     },
     "com.kk.generated-diagnostic-sampling": {
-      "version": "file:D:/Unity_Project_1/generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
+      "version": "file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
       "depth": 0,
       "source": "local",
       "dependencies": {}

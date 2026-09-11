@@ -2,11 +2,13 @@
 
 ### Requirement: Timeline Editor必须直接使用Slate CutsceneEditor作为实际编辑表面
 
-正式 Timeline 编辑入口 MUST 打开并使用 Slate `CutsceneEditor` 的真实 IMGUI UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放、播放控制和 Slate Inspector。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格视图，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。
+正式 Timeline 编辑入口 MUST 打开并使用 Slate `CutsceneEditor` 的真实 IMGUI 编辑 UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放、Curve/DopeSheet 和 Slate Inspector。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格视图，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。Slate 播放、暂停、场景绑定和运行控制在 BTSMTL Embedded Surface 中 MUST被隐藏或禁用。
 
 BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview、Live Debug 和 Document identity MUST继续由 BTSMTL 拥有。Slate `Cutscene`、Group、Track 和 ActionClip 只能由 Editor-only projection 提供给 Slate UI，不能成为持久化或 runtime 数据源。
 
 BTSMTL Skill、Timeline、Preview 和 Runtime MUST NOT依赖 Slate GameObject Actor、DirectorGroup、Camera/Audio/Director Track、PlayableGraph 或 Slate Preview。Projection 中的 Unity/Slate 对象若为满足 Slate Surface 的临时兼容对象，MUST NOT拥有角色、技能、authoring 数据或 runtime 状态。
+
+Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runtime Trace overlay。Scene Play 的 Start、Pause、Resume、Reset、Stop、Build、Skill request、Live Debug、Capture、History、Restore 和 Replay MUST由 SkillGraph/Graph Shell 调用唯一 Scene Play coordinator；Timeline 不得创建 `TimelinePreviewSession`、独立 evaluator、私有 clock 或同类运行命令。
 
 #### Scenario: 从正式Skill Graph打开Skill Timeline
 
@@ -75,18 +77,31 @@ Slate 原生 `CutsceneEditor` 对 proxy 的字段修改、`Undo.RecordObject`、
 - **AND** MUST从 BTSMTL owner重新生成 projection
 - **AND** MUST不写入半成品 TimelineData
 
-### Requirement: Preview与Live Debug必须继续由BTSMTL拥有
+### Requirement: Preview与Live Debug控制必须归Graph Shell
 
-Slate `CutsceneEditor` 的播放和时间控件 MUST不创建第二个 BTSMTL Timeline player、PlayableGraph、时钟或 runtime binding。Authoring Preview、Live Debug、Follow/Pin overlay、TreeClip ownership 和 Character Preview Target MUST继续经 BTSMTL 的 session adapter 管理；Slate UI只显示或驱动经过适配的编辑时间状态。
+Scene Play Session、Runtime Trace、Follow/Pin、TreeClip ownership、Character/Actor target、Build、Skill request、Capture、History、Restore 和 Replay MUST由 Graph Shell/SkillGraph 与唯一 Scene Play coordinator 管理。Timeline 只读取正式 binding，将当前实际运行标记作为只读 overlay 显示；Timeline 不得控制运行对象或复制这些状态机。
 
-Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 或 Actor binding 来执行 Preview。`TimelinePreviewSession` MUST是唯一 Preview 时间推进和输出 owner；Slate current time 只允许作为显示游标和编辑时间输入。
+Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 或 Actor binding 来执行 Preview。Scene Play Session 与领域 owner 是唯一时间推进和输出 owner；Slate current time 只允许作为编辑游标和被动 overlay 的显示输入。
 
-#### Scenario: Authoring Preview切换Live Debug
+#### Scenario: Graph Shell启动Scene Play
 
-- **WHEN** 作者从 Authoring Preview切换到 Live Debug
-- **THEN** BTSMTL session MUST停止 authoring preview 并建立本地 runtime binding
-- **AND** Slate projection MUST进入只读或由 adapter禁止编辑的状态
-- **AND** MUST不启动第二个 Slate runtime playback
+- **WHEN** 作者在 Graph Shell 点击 Scene Play、Build 或 Skill request
+- **THEN** 命令 MUST进入唯一 Scene Play coordinator 和正式 Session
+- **AND** Timeline MUST只接收正式 runtime binding/overlay，不创建本地播放器
+- **AND** Timeline 的作者编辑能力 MUST不因打开运行观察而复制或切换到另一个窗口
+
+#### Scenario: Scene Play期间编辑Timeline
+
+- **WHEN** 作者在同一 Scene Play Session 中拖动 Clip、修改 Curve 或 Section
+- **THEN** Timeline MUST通过正式 BTSMTL Mutation/Undo 写入作者 Timeline
+- **AND** Graph Shell MUST负责显示 dirty、Build 和 Program adoption 状态
+- **AND** Build 成功后 MUST在同一 Session 的 adoption barrier 采用兼容的新 ProgramEpoch；当前 Action 不兼容时保留旧 Epoch，下一次 Action 才采用
+
+#### Scenario: Timeline只读观察运行
+
+- **WHEN** Scene Play coordinator 已产生正式 Runtime Trace
+- **THEN** Timeline MAY显示 active Track/Clip、logic/visual time、TreeClip phase 和 playback identity overlay
+- **AND** overlay MUST只读，Timeline 不得暂停、恢复、重置、恢复历史或回放运行对象
 
 ## ADDED Requirements
 

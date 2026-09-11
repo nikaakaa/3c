@@ -12,13 +12,14 @@ BTSMTL 的 Skill、Timeline、Preview 和 Runtime 不依赖 Slate 的 GameObject
 
 **Goals:**
 
-- 在唯一 `TimelineEditorWindow` 内直接使用 Slate `CutsceneEditor` 的时间尺、Group/Track、Clip、拖动、缩放、选择、Inspector 和播放控制 UI。
+- 在唯一 `TimelineEditorWindow` 内直接使用 Slate `CutsceneEditor` 的时间尺、Group/Track、Clip、拖动、缩放、选择、Curve/DopeSheet 和 Inspector 编辑 UI；Timeline 不拥有运行时播放控制。
 - 修改 Slate Editor 源码提供可嵌入 Surface；BTSMTL Timeline 入口不创建第二个 Slate `EditorWindow`。
 - Embedded Surface 不创建 Slate 默认 DirectorGroup、Camera/Audio/Director Track，不显示 Actor 创建入口，也不调用 Slate Preview/PlayableGraph。
 - 将当前 BTSMTL Timeline 投影为 Slate 能编辑的临时层级，并保留每个 Track、Clip、Section、TreeClip 的 authoring identity 映射。
 - 将 Slate UI 的有效改动转换为 BTSMTL `TimelineEditorSessionContext` 和 `ITimelineEditorMutationPort` 操作，使用正式 owner 和 Undo。
 - Slate Surface 重绘、Undo/Redo、外部 Timeline 刷新或 owner 切换时，能够销毁并重建临时投影。
-- 继续由 BTSMTL 拥有 Preview、Live Debug、Skill/Shared owner、TreeClip ownership、Source Map 和 Document identity。
+- Timeline 只保留作者编辑与被动 Runtime Trace overlay；Scene Play、Build、Skill、Live Debug、Capture、History、Restore 和 Replay 由 SkillGraph/Graph Shell 与 Scene Play coordinator 拥有。
+- Scene Play 期间允许继续编辑 Timeline；正式 Mutation 后由 Graph Shell 发起 Build，在同一 Session 的 adoption barrier 采用兼容的新 ProgramEpoch。
 
 **Non-Goals:**
 
@@ -56,7 +57,7 @@ BTSMTL Timeline / Track / Clip / Section identity
 
 Projection 只向 Slate 提供 Track/Clip/Curve 的显示和编辑形态。BTSMTL 不创建或读取 Slate DirectorGroup、CameraTrack、DirectorAudioTrack、DirectorActionTrack、ActorGroup、PlayableGraph 或 Slate Preview output。
 
-`TimelinePreviewSession` 是唯一时间推进和表现预览 owner；Slate Surface 的 current time 只用于显示游标和编辑上下文。Slate 的 Play、Sample、Scene binding 和 Actor 语义在 Embedded Surface 中必须关闭或隐藏。
+Scene Play Session 与领域 owner 是唯一时间推进和表现执行 owner；Slate Surface 的 current time 只用于编辑游标和被动 overlay。Slate 的 Play、Sample、Scene binding 和 Actor 语义在 Embedded Surface 中必须关闭或隐藏。Timeline 不创建 `TimelinePreviewSession`、独立 evaluator 或私有 clock。
 
 Projection 必须清理 `Cutscene.Reset/TryReset` 自动创建的默认 Director 内容，并把每个 `BtsmtlSlateActionClip` 直接挂到 Slate Track 能发现的 ActionClip 集合中；不能用子 GameObject 层级导致 Slate `Validate` 丢失 Clip。
 
@@ -82,7 +83,13 @@ Slate pointer edit
 - BTSMTL Clip 的正式类型、TreeClip、ActionContext、Curve channel 和 owner identity保存在 projection map，不伪装成 Slate runtime 语义。
 - Slate 不支持的 BTSMTL 字段显示为只读或 unavailable；不得静默写入默认值。
 - 双击 Clip、TreeClip 下钻、AnimationClip 导航和 BTSMTL Details 由 adapter 处理，不依赖 Slate 的 runtime player。
-- Preview/Live Debug 仍由 BTSMTL `TimelinePreviewSession` 和 runtime binding 拥有；Slate 播放按钮不能启动第二个正式时钟。
+- Timeline 不提供 Preview/Live Debug 的控制按钮。运行状态通过 Graph Shell 建立的正式 binding 以只读 overlay 投影到 Slate Surface；Slate 播放按钮不能启动任何时钟。
+
+### 4.1 运行控制归属 Graph Shell
+
+Graph Shell/SkillGraph 页面是 Scene Play 控制面，统一持有 Start、Pause、Resume、Reset、Stop、Build、Skill request、Runtime Trace/Live Debug、Capture、History、Restore 和 Replay。它们调用同一个 Scene Play coordinator，不在 Timeline 窗口复制一套命令或状态机。
+
+Timeline 窗口只持有 authoring owner、Slate projection、selection、geometry、Mutation/Undo 和被动 overlay。作者在 Play 期间拖动 Clip、修改 Curve 或 Section 时，提交仍进入 BTSMTL 正式 Mutation；Graph Shell 负责显示 dirty/build/adoption 状态并在同一 Session 中发布新 Program。当前 Action 不兼容时继续使用旧 Epoch，下一次 Action 才采用新版本。
 
 ### 5. 删除错误的 UI Toolkit 仿制链
 
@@ -112,5 +119,5 @@ Slate pointer edit
 4. 建立 Editor-only projection host、identity map 和临时 Cutscene 生命周期。
 5. 实现 Timeline/Track/Clip/Section 到 Slate Group/Track/ActionClip 的读取投影。
 6. 实现 Slate wrapper snapshot/diff 到 BTSMTL Session/Mutation/Undo 的回写桥。
-7. 接入 Skill Timeline owner、TreeClip、Preview、Live Debug 和 Surface 重建生命周期。
+7. 接入 Skill Timeline owner、TreeClip、Graph Shell 的 Scene Play/Build/Live Debug binding 和 Surface 重建生命周期；Timeline 只接收只读运行 overlay。
 8. 删除旧 UI Toolkit Timeline 正式入口，运行 OpenSpec 严格校验；不在本 change 内执行 Character Build 或用户端到端验收。

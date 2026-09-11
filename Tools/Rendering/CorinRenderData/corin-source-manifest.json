@@ -1,0 +1,173 @@
+{
+  "schema": "corin-dump-source-manifest/1",
+  "characterId": "corin",
+  "sourceRootKey": "ZZZ_DUMP_OUTPUT_CORIN_REPLICATION",
+  "sourceRootDescription": "External ZZZ dump export root resolved by editor-only environment binding",
+  "renderCatalog": {
+    "relativePath": "Tools/Rendering/CorinRenderData/整理数据.json",
+    "schema": "zzz-corin-render-data-catalog/1",
+    "sha256": "5689e57e89b82544e064f4826b94baaddcde7d3e3056d11fd3e256bb7c817cba",
+    "sourceCount": 33,
+    "materialCount": 6,
+    "textureCount": 17
+  },
+  "sourceSets": [
+    {
+      "sourceId": "dump:corin:animations.all.v2",
+      "artifactKind": "AnimationClip",
+      "revision": "20260903_animations_all_v2",
+      "relativeRoot": "20260903_animations_all_v2",
+      "indexRelativePath": "20260903_animations_all_v2/export-manifest.json",
+      "contentHash": "d931fe6c196f405c48a4753b83e5db7942b53929ce241e98fe83c82d541f26da",
+      "indexEntryCount": 169,
+      "fileCount": 313,
+      "byteLength": 4966809202
+    },
+    {
+      "sourceId": "dump:corin:acl.native.v1",
+      "artifactKind": "AnimationArtifact",
+      "revision": "20260904_acl_native_v1",
+      "relativeRoot": "20260904_acl_native_v1",
+      "indexRelativePath": "20260904_acl_native_v1/manifest.json",
+      "contentHash": "829c9dcd8ae5d52724445806c1c0b734a4fde6ba460f3fd2a09d212da64b0787",
+      "indexEntryCount": 169,
+      "fileCount": 587,
+      "byteLength": 19146168
+    },
+    {
+      "sourceId": "dump:corin:camera.typetree.v1",
+      "artifactKind": "Camera",
+      "revision": "20260904_camera_typetree_v1",
+      "relativeRoot": "20260904_camera_typetree_v1",
+      "indexRelativePath": "20260904_camera_typetree_v1/manifest.json",
+      "contentHash": "a920220a9a24f0c1a5653685844bdd92472cda4b0b01601099501d5edc2138f0",
+      "fileCount": 5,
+      "byteLength": 5551
+    },
+    {
+      "sourceId": "dump:corin:config.typetree.v2",
+      "artifactKind": "TimelineCameraConfig",
+      "revision": "20260904_config_typetree_v2",
+      "relativeRoot": "20260904_config_typetree_v2",
+      "indexRelativePath": "20260904_config_typetree_v2/manifest.json",
+      "contentHash": "6a5384474c51d6bcd664648419cde06695595c60e8941d2c75485382e803f372",
+      "fileCount": 61,
+      "byteLength": 83802
+    },
+    {
+      "sourceId": "dump:corin:model.complete.v3",
+      "artifactKind": "ModelRigTexture",
+      "revision": "20260905_corin_original_model_complete_v3",
+      "relativeRoot": "20260905_corin_original_model_complete_v3",
+      "contentHash": "eaf3c0352ef1f2c7feb29330838c126db03af4931fe97ca8b3401fab2a86ff7e",
+      "fileCount": 15,
+      "byteLength": 14518946
+    }
+  ],
+  "normalizedAssets": [
+    {
+      "identity": "asset:corin.definition",
+      "assetGuid": "c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset",
+      "owner": "CharacterPipelineDefinition",
+      "sourceIds": ["dump:corin:config.typetree.v2", "dump:corin:animations.all.v2"]
+    },
+    {
+      "identity": "asset:corin.input",
+      "assetGuid": "be650df85b1e49ab9d1cefc91c6cc809",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Input/CorinCharacterInputProfile.asset",
+      "owner": "InputProfile",
+      "sourceIds": ["dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.action.attack",
+      "assetGuid": "450722665af79c2468ff212811859458",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset",
+      "owner": "ActionProfile",
+      "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.action.dodge",
+      "assetGuid": "add8a25636588a543a6770231bea14b6",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset",
+      "owner": "ActionProfile",
+      "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.presentation.profile",
+      "assetGuid": "2fbcf34b8e3d4f46a91fd81d62b9241e",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/Profiles/CorinAnimationPresentationProfile.asset",
+      "owner": "AnimationPresentationProfile",
+      "sourceIds": ["dump:corin:model.complete.v3", "dump:corin:animations.all.v2", "dump:corin:acl.native.v1"]
+    },
+    {
+      "identity": "asset:corin.rig",
+      "assetGuid": "6f792f666e4405d4b813f79b53714aea",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/Rig/CorinAnimationRigDefinition.asset",
+      "owner": "AnimationRigDefinition",
+      "sourceIds": ["dump:corin:model.complete.v3"]
+    },
+    {
+      "identity": "asset:corin.camera.profile",
+      "assetGuid": "7736f41e1b5846f685ce4cb049373532",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/CorinCharacterCameraProfile.asset",
+      "owner": "CameraProfile",
+      "sourceIds": ["dump:corin:camera.typetree.v1", "dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.camera.default-sequence",
+      "assetGuid": "b3351f824e49467c893d83d326b392b3",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/CorinCameraDefaultSequence.asset",
+      "owner": "CameraSequence",
+      "sourceIds": ["dump:corin:camera.typetree.v1", "dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.foot.analysis-source",
+      "assetGuid": "2487156154864bb5b49cb283c2583808",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/CorinFootPlacementAnalysisSource.asset",
+      "owner": "FootAnalysisSource",
+      "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:acl.native.v1"]
+    },
+    {
+      "identity": "asset:corin.foot.profile",
+      "assetGuid": "6b94b222eff64c24a2ecf708238ef9a1",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/CorinFootPlacementProfile.asset",
+      "owner": "FootPlacementProfile",
+      "sourceIds": ["dump:corin:model.complete.v3"]
+    },
+    {
+      "identity": "asset:corin.foot.calibration",
+      "assetGuid": "471a3432ddd640c187b4ebfdf8c94e69",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/FootPlacement/CorinFootPlacementRigCalibration.asset",
+      "owner": "FootPlacementCalibration",
+      "sourceIds": ["dump:corin:model.complete.v3"]
+    },
+    {
+      "identity": "asset:corin.ik",
+      "assetGuid": "d8baaf75d0994cf6aa8ed54c35542ea0",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Presentation/IK/CorinFullBodyIkProfile.asset",
+      "owner": "FullBodyIkProfile",
+      "sourceIds": ["dump:corin:model.complete.v3"]
+    },
+    {
+      "identity": "asset:corin.timeline.attack1",
+      "assetGuid": "be588770448d17444828b566954e2709",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Graphs/SharedTimelines/CorinAttack1Timeline.asset",
+      "owner": "SharedTimeline",
+      "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
+    },
+    {
+      "identity": "asset:corin.fixed-program",
+      "assetGuid": "91063668fd0eaa84d9b7d688aadbc90a",
+      "assetPath": "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset",
+      "owner": "FixedProgramProduct",
+      "sourceIds": ["asset:corin.definition"]
+    }
+  ],
+  "gates": {
+    "runtimeMustUseNormalizedAssets": true,
+    "absoluteDumpPathsAreEditorEvidenceOnly": true,
+    "directoryScanningIsForbidden": true,
+    "runtimeDumpCannotBecomeAuthoringInput": true
+  }
+}

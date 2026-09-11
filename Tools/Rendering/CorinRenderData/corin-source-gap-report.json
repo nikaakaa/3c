@@ -1,0 +1,31 @@
+{
+  "schema": "corin-dump-source-gap-report/1",
+  "sourceManifest": "Tools/Rendering/CorinRenderData/corin-source-manifest.json",
+  "sourceManifestSha256": "694bfced917f6aea3c16f8825639d7e72e63ba024cc8c7fd8362687cdb3e4712",
+  "gaps": [
+    {
+      "gapId": "camera.runtime-input-trace",
+      "status": "unverified",
+      "reason": "Dump contains Camera Typetree and Timeline configuration, but no canonical gameplay camera input trace.",
+      "nextGate": "ReplayRequest"
+    },
+    {
+      "gapId": "foot.analysis.dump-artifact",
+      "status": "normalized-from-unity",
+      "reason": "The formal Corin Foot Analysis Source and Calibration are Unity-owned normalized assets; the external dump set has no equivalent runtime artifact identity.",
+      "nextGate": "CharacterBuild"
+    },
+    {
+      "gapId": "session.initial-world-state",
+      "status": "unverified",
+      "reason": "The dump source does not define the Unity GameplayLab Session/Prefab initial world snapshot.",
+      "nextGate": "ReplayRequest"
+    },
+    {
+      "gapId": "animation.normalized-coverage",
+      "status": "partial",
+      "reason": "The animation export contains 169 clip entries; the current Corin Presentation Profile binds only the formally reachable normalized sources.",
+      "nextGate": "AuthoringClosure"
+    }
+  ]
+}

@@ -27,6 +27,8 @@
 !Tools/ThirdPersonSimulation.Portable/**/*.csproj
 !Tools/ThirdPersonPerformanceCapture/ThirdPersonPerformanceCapture.Controller.csproj
 !Tools/ThirdPersonNetworkTest/ThirdPerson.NetworkTest.Orchestrator.csproj
+!Tools/ThirdPersonLocalContentService/ThirdPerson.LocalContentService.csproj
+/Tools/ThirdPersonLocalContentService/certs/
 *.suo
 *.tmp
 *.user
@@ -63,6 +65,10 @@ coverage.cobertura.xml
 /3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/
 /3cDemo/Client/3C_Client/Captures/
 /3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/
+/3cDemo/Client/3C_Client/Diagnostics/GeneratedPresentationSampling/
+/3cDemo/Client/3C_Client/Diagnostics/PresentationReplicationAnalysis/
+/3cDemo/Client/3C_Client/Diagnostics/Rendering/
+/3cDemo/Client/3C_Client/Assets/Screenshots/
 
 # Local analysis and performance output
 /tmp/
@@ -70,8 +76,12 @@ coverage.cobertura.xml
 /.codex-artifacts/
 /.codex-canvas-probe-link/
 /.codex-tmp/
+/.codex-small-step-index.lock
+/.zcode/
 /Maps/
 /CPU_Usage_*.csv
+/3cDemo/Client/3C_Client/.codex-tmp/
+/Packages/com.kk.generated-diagnostic-sampling/
 
 # Python generated cache
 __pycache__/

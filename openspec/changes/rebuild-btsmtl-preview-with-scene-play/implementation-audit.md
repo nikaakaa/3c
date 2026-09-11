@@ -915,3 +915,29 @@ Scene Play 期间 Timeline 仍然可编辑。Clip/Curve/Section 修改通过正�
 - 删除`Timeline/Editor/Scripts/Preview/TimelinePreviewRuntimeSession.cs`（含meta）与`Timeline/Scripts/TimelinePreviewTarget.cs`（含meta）及清空后的`Preview`目录meta。
 
 验证边界：三处目标文件编辑前工作区干净，符合清单头部复制前条件；编辑后全库`.cs`对`TimelinePreviewSession`/`TimelinePreviewTarget`引用为零；未跑Unity编译与端到端，按项目规则由用户验收。9.2–9.4所述`AnimationPreviewEngine/Controller`、Pose fixture等完整角色预览路径的删除仍待后续批次，本条不覆盖。
+
+## 2026-09-11 任务0.4：Scene Play 分支↔主线类型/程序集/owner 静态对账
+
+对账基线：主线 tip（本日 `af58da853` 时点）vs 分支 `codex/btsmtl-scene-play-preview` 停写 tip `4b7f7544e`（含其对主线 `d07479b0e` 正式 Presentation Reset capability 等提交的消费，作为过渡审计快照）。GameScripts 范围 `git diff --name-status`：A=40（其中 14 个属 AgentAuthoring，按 0.2 归其它 change，不复制）、M=196、D/R 为主线侧后续演进与分支重命名，不作为复制对象。
+
+分支独有 Scene Play 核心面（A 类，主线不存在，可整文件复制的类型清单与程序集归属）：
+
+| 程序集/目录 | 类型 | 任务 |
+|---|---|---|
+| Editor/CharacterPipeline/Preview | `BtsmtlScenePlayPreviewCoordinator : IBtsmtlScenePlayPreviewOperations`（唯一协调器） | 4.x |
+| 同上 | `BtsmtlScenePlayGraphShellToolbarExtension : IGraphAuthoringShellToolbarExtension`、`BtsmtlScenePlayGraphShellToolbar : VisualElement` | 6.0/6.1 |
+| 同上 | `BtsmtlScenePlayPreviewMcpTool` | 诊断/MCP |
+| Runtime/Gameplay | `BtsmtlScenePlayRequest`、`BtsmtlScenePlayProgramAdoptionReport`、`IBtsmtlScenePlayPreviewOperations`、`IBtsmtlScenePlayRuntimeOwner` | 2.1 |
+| Runtime/Character/Pipeline/Unity | `BtsmtlScenePlayContext : MonoBehaviour`（+`BtsmtlScenePlayContextRegistry`）、`BtsmtlScenePlayResourceRuntimeOwner` | 2.2 |
+| Runtime/Simulation/Core | `SimulationProgramEpoch`（Composition）、`Float32CharacterInputTraceModule`（Float32/Diagnostics） | 2.6/5.3 |
+| Runtime/BTSMTL Timeline Editor | `TimelineEditorCursorState`（编辑游标视图数据） | 6.2 |
+| Runtime/BTSMTL Diagnostics Editor | `RuntimeExecutionTimeline`（动态执行时间轴） | 6.10/6.11 |
+| Editor/CharacterSimulation/Build | `CharacterSimulationBuildOrchestrator.Background.cs` | 8.6 |
+
+复制顺序约束（M 重叠文件，必须按分支提交 cherry-pick，禁止整文件覆盖）：
+- `IGraphAuthoringShellToolbarExtension` 主线不存在，定义在分支 `Runtime/BTSMTL/TreeDesigner/Editor/Scripts/Window/GraphAuthoringEditorShell.cs`；Graph Shell 工具条（A）复制前必须先落该扩展点段（6.1）。
+- `Editor/ProductStartup/EditorPlayModeSceneLauncher.cs` 及调用方 `GameplayLabEditorLauncher.cs`/`GameplayLauncherWindow.cs` 双侧演进，3.x 启动器重构按提交摘取。
+- `TimelineEditorMainWindow.cs`、`TimelineEditorSessionContext.cs` 双侧演进（主线已 Slate 化），6.2 观察接线按提交摘取。
+- `AnimationPreviewEngine.cs`/`AnimationPreviewAdapters.cs` 双侧都有，为 9.2 删除目标，到达 9.x 批次时按分支提交删除，不提前。
+
+owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文在客户端 Unity 边界，编排只在 Editor 程序集——A 文件分布符合 design 决策 8 的单向依赖，无公共 Simulation/Timeline 程序集反向引用 Editor 的新增。已勾任务（2.6/4.8/4.9/5.3/6.0/6.2/6.10/6.11/8.1/8.7/9.1）的实现均落在上述 A+M 集合，勾选为分支记账，复制落地时逐批转正为主线进度。逐类型签名级对账随每批复制的「分支提交↔主线提交」登记执行，本条完成文件级与类型级对账。

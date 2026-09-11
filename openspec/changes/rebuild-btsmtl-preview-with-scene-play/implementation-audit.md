@@ -972,3 +972,15 @@ owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文�
 - `ThirdPersonSimulation.Fixed.Unity.asmdef`补`ThirdPersonSimulation.Float32`引用（分支asmdef同样缺失，分支自带错误）。
 
 验证：主线Unity Editor全量编译 **0 error**（MCP read_console确认），涵盖此前13处报错的全部修复。任务11.1编译门禁据此勾选。排除文件（主线演进104个）与6.2窗口接线、9.x删除批次、4.1-4.7验收级勾选为后续范围。
+
+## 2026-09-11 MovingTurn root motion 修复：重建控制运动曲线载体
+
+用户运行时验收发现 MovingTurn 无 root motion 位移（in-place 动画正常播放）。取证：`6f5a99fff`（09-09"清理移动转身的旧曲线引用"）把控制模块 MovingTurn 的运动请求从旧 RootTree 内嵌 Timeline（`CorinMovingTurnRootMotionTimeline`，authoring id `8a6491b4`，MotionCurveClip `MovingTurn180` 0..28 帧）的 `SourceCurve` 位移改成 `ConstantSpeed` 顶账——旧 RootTree 退役后曲线载体与编译入口一起消失，迁移基线（refactor-btsmtl-authoring-architecture/baseline.md）规划的"迁为控制模块静态 typed Body Motion descriptor"只做了 descriptor 一半。
+
+本批按迁移意图补完：
+- 从历史 `4fad93882` 的 RootTree 嵌入数据完整抢救 `MovingTurn180` 曲线（Weight/PositionX/Y/Z/Yaw/EaseIn/EaseOut，28 帧采样），重建独立资产 `CorinMovingTurnRootMotionTimeline.asset`（AuthoringId 沿用 `8a6491b4`/`e04f4e26`，保证控制模块身份字符串不变）；
+- `CharacterPipelineDefinition` 新增 `m_ControlMotionTimelines`（TimelineData[]）序列化字段与访问器，Corin Definition 资产引用上述 Timeline；
+- 编译器：`CharacterControlMotionCompilationDiscovery` 增加控制运动 Timeline 直采（identity `timeline:{id}/clip:{id}`，Graph/Timeline 允许 null），`CharacterSemanticEmitter` 跳过无图 motion，新增 `CharacterControlMotionCatalogEmitter` 按 Timeline/TimelineTrack/MotionCurve 三级 Catalog 契约声明曲线（SemanticDataWriter VRUC 格式与 TimelineSemanticEmitterRegistry.BakeCurve 一致），`CharacterSemanticFrontendCompiler` 接线；
+- 控制模块恢复 `s_MovingTurnSourceMotion` + `SourceCurve`（与 6f5a99fff 之前逐字节同义）。
+
+验证：主线 Unity Editor 全量编译 0 error。运行时验证（Build 后转身弧线位移回归）由用户端到端执行。

@@ -16,9 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             MotionCurveClip clip)
         {
             Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
-            Graph = graph ?? throw new ArgumentNullException(nameof(graph));
-            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             Clip = clip ?? throw new ArgumentNullException(nameof(clip));
+            Graph = graph;
+            Timeline = timeline;
         }
 
         public CharacterControlMotionDescriptor Descriptor { get; }
@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static IReadOnlyList<CharacterControlMotionCompilationRecord> Discover(
             IReadOnlyList<CharacterControlMotionDescriptor> descriptors,
             IReadOnlyList<CharacterCompositionRoot> roots,
+            IReadOnlyList<TimelineData> controlMotionTimelines,
             CharacterSimulationCompileReport report)
         {
             if (descriptors == null)
@@ -44,6 +45,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var visited = new HashSet<string>(StringComparer.Ordinal);
             for (int rootIndex = 0; rootIndex < roots.Count; rootIndex++)
                 Collect(roots[rootIndex].Occurrence);
+
+            for (int timelineIndex = 0; timelineIndex < controlMotionTimelines?.Count; timelineIndex++)
+            {
+                TimelineData timeline = controlMotionTimelines[timelineIndex];
+                if (timeline == null)
+                    continue;
+                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                {
+                    if (timeline.Tracks[trackIndex] is not MotionCurveTrack track)
+                        continue;
+                    for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    {
+                        if (track.Clips[clipIndex] is not MotionCurveClip clip)
+                            continue;
+                        string identity = $"timeline:{timeline.AuthoringId}/clip:{clip.AuthoringId}";
+                        if (!clips.TryGetValue(identity, out var matches))
+                        {
+                            matches = new List<(CharacterAuthoringGraphOccurrence, CharacterAuthoringTimelineRecord, MotionCurveClip)>();
+                            clips.Add(identity, matches);
+                        }
+                        matches.Add((null, null, clip));
+                    }
+                }
+            }
 
             var result = new List<CharacterControlMotionCompilationRecord>();
             for (int descriptorIndex = 0; descriptorIndex < descriptors.Count; descriptorIndex++)

@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline
 #if UNITY_EDITOR
         [SerializeField] BtsmtlSkillFlowGraph[] m_SkillGraphs = Array.Empty<BtsmtlSkillFlowGraph>();
 #endif
+        [SerializeField] TimelineData[] m_ControlMotionTimelines = Array.Empty<TimelineData>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
@@ -77,6 +78,8 @@ namespace ThirdPersonCharacter.Pipeline
 #if UNITY_EDITOR
         public IReadOnlyList<BtsmtlSkillFlowGraph> SkillGraphs => m_SkillGraphs;
 #endif
+        public IReadOnlyList<TimelineData> ControlMotionTimelines =>
+            m_ControlMotionTimelines ?? Array.Empty<TimelineData>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
         public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;

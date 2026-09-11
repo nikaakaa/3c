@@ -67,6 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Blackboard.CompileDeclarations();
             for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
             {
+                if (motions[motionIndex].Graph == null)
+                    continue;
                 m_SkillCompilationDepth++;
                 try
                 {

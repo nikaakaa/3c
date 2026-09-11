@@ -165,6 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 IReadOnlyList<CharacterControlMotionCompilationRecord> motions = CharacterControlMotionCompilationDiscovery.Discover(
                     controlModule.Contract.Motions,
                     model.Roots,
+                    model.Definition.ControlMotionTimelines,
+                    report);
+                CharacterControlMotionCatalogEmitter.Declare(
+                    builder,
+                    model.Definition.ControlMotionTimelines,
+                    model.DefinitionPath,
                     report);
                 if (!report.IsValid)
                     return null;

@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_WalkLoopMotion = "locomotion:corin:walk-loop";
         static readonly string s_RunLoopMotion = "locomotion:corin:run-loop";
         static readonly string s_MovingTurnMotion = "locomotion:corin:moving-turn";
+        static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
         // UnityHFSM 是控制层状态机的执行引擎:Contract 构造时已按 Priority/Order/Id 排序,
@@ -304,8 +305,8 @@ namespace ThirdPersonCharacter.Control.Rules
                         0d,
                         CharacterControlMotionExecutionMode.Timed,
                         28d / 30d,
-                        string.Empty,
-                        CharacterControlMotionDisplacementMode.ConstantSpeed,
+                        s_MovingTurnSourceMotion,
+                        CharacterControlMotionDisplacementMode.SourceCurve,
                         CharacterControlMotionSpace.ActorLocal,
                         100,
                         true)

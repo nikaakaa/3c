@@ -10,8 +10,9 @@ BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、Seriali
 
 - **WHEN** 作者从正式 Skill Graph 调用点打开 Timeline
 - **THEN** 系统 MUST 为当前 BTSMTL Timeline 创建或刷新 Editor-only Slate projection
-- **AND** MUST调用 Slate `CutsceneEditor.ShowWindow(projection)` 显示真实 Slate UI
-- **AND** Slate 窗口 MUST显示当前 Timeline 的 Track、Clip、Section和identity映射
+- **AND** MUST在唯一 `TimelineEditorWindow` 的嵌入 Surface 中调用 Slate `CutsceneEditor.DrawEmbeddedGUI`
+- **AND** 该窗口 MUST显示当前 Timeline 的 Track、Clip、Section和identity映射
+- **AND** BTSMTL Timeline入口 MUST NOT 创建独立的 Slate `EditorWindow`
 - **AND** 不得同时打开或维护上一轮 UI Toolkit Timeline 作为第二个正式编辑表面
 
 #### Scenario: Slate UI编辑Clip范围
@@ -33,14 +34,14 @@ Projection MUST建立明确的 BTSMTL identity 到 Slate object 的双向映射�
 
 #### Scenario: 关闭Slate窗口
 
-- **WHEN** Slate `CutsceneEditor` 关闭或切换到其它 Timeline owner
+- **WHEN** Slate Surface 被销毁或切换到其它 Timeline owner
 - **THEN** adapter MUST丢弃临时 Cutscene、Group、Track 和 ActionClip 对象
 - **AND** MUST保留已提交的 BTSMTL Timeline 修改
 - **AND** MUST不产生 Slate Cutscene 资产或残留的可运行 GameObject
 
 #### Scenario: Slate插件不可用
 
-- **WHEN** 当前编辑器无法加载 Slate `CutsceneEditor`
+- **WHEN** 当前编辑器无法加载 Slate `CutsceneEditor` 或嵌入 Surface
 - **THEN** Timeline UI MUST显示明确的 Unavailable 原因
 - **AND** MUST不偷偷切回上一轮 UI Toolkit仿制界面
 - **AND** MUST不创建替代数据源或默认 Timeline
@@ -83,5 +84,5 @@ Slate `CutsceneEditor` 的播放和时间控件 MUST不创建第二个 BTSMTL Ti
 #### Scenario: 检查Timeline编辑入口
 
 - **WHEN** 工程编译并打开正式 Timeline入口
-- **THEN** 调用链 MUST能追溯到 Slate `CutsceneEditor.ShowWindow`
+- **THEN** 调用链 MUST能追溯到唯一 `TimelineEditorWindow` 中的 Slate `CutsceneEditor.DrawEmbeddedGUI`
 - **AND** MUST不存在并行的旧 UI Toolkit Timeline窗口、仿 Slate皮肤或兼容开关

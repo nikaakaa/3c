@@ -1,6 +1,6 @@
 ## 1. 确认Slate真实编辑器边界
 
-- [x] 1.1 登记 Slate `CutsceneEditor.ShowWindow(Cutscene)`、`Cutscene`、`CutsceneGroup`、`CutsceneTrack`、`ActionClip` 和 Slate Undo/dirty 生命周期；以 API 入口和 `OnGUI` 写入点代码清单确认不是直接接收 BTSMTL TimelineData
+- [x] 1.1 登记 Slate `CutsceneEditor` 的 `InitializeEmbedded` / `DrawEmbeddedGUI`、`Cutscene`、`CutsceneGroup`、`CutsceneTrack`、`ActionClip` 和 Slate Undo/dirty 生命周期；以 Surface API 和 `OnGUI` 写入点代码清单确认不是直接接收 BTSMTL TimelineData
 - [x] 1.2 明确正式数据链：BTSMTL TimelineData 是唯一持久化真相，Slate proxy 只存在 Editor；以 SerializedOwner、AssetDatabase、Document manifest、runtime compile 搜索确认 proxy 没有正式写入路径
 
 ## 2. 删除上一轮错误实现
@@ -24,12 +24,13 @@
 
 ## 5. 接入正式Timeline入口与运行状态
 
-- [x] 5.1 将正式 Skill/Shared Timeline 打开入口切换到 Slate `CutsceneEditor.ShowWindow`；以打开调用链和窗口 owner 检查确认不再创建旧 UI Toolkit Timeline窗口
+- [x] 5.1 将正式 Skill/Shared Timeline 打开入口切换到唯一 `TimelineEditorWindow` 内的 Slate `DrawEmbeddedGUI` Surface；以打开调用链和窗口 owner 检查确认不再创建旧 UI Toolkit Timeline窗口或第二个 Slate 窗口
 - [x] 5.2 保留 BTSMTL Authoring Preview、Live Debug、Follow/Pin overlay、TreeClip 下钻和 Character Preview Target；以 Slate 播放控件不启动第二个正式时钟、Live Debug只读的代码检查确认运行时链唯一
 - [x] 5.3 Slate 插件缺失或版本不兼容时显示 typed Unavailable；以不回退到旧 UI、不创建默认数据、不写 Slate 资产的路径检查确认没有 fallback 分裂实现
+- [x] 5.4 修改 Slate Editor 源码抽取可嵌入 Surface；以 `IMGUIContainer` 承载时间轴且 Timeline 打开调用链不再出现 `CutsceneEditor.ShowWindow` 确认最终只有一个 BTSMTL Timeline 窗口
 
 ## 6. 文档与变更收口
 
-- [x] 6.1 对照当前 `btsmtl-timeline-editor-preview` spec、proposal 和 design，确认“真实Slate UI、Editor-only projection、BTSMTL唯一持久化真相、proxy双写边界”术语一致
+- [x] 6.1 对照当前 `btsmtl-timeline-editor-preview` spec、proposal 和 design，确认“真实Slate Surface、单窗口承载、Editor-only projection、BTSMTL唯一持久化真相、proxy双写边界”术语一致
 - [x] 6.2 运行 `openspec validate "restyle-timeline-editor-slate-style" --type change --strict`，并以 change 状态显示所有规划任务完成作为文档交付证据
 - [x] 6.3 交付 handoff，列出 Slate 实际入口、projection host、identity map、snapshot/diff、Undo boundary、旧 UI 删除范围和未包含的 Character Build/runtime 范围

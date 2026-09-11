@@ -1,6 +1,6 @@
 ## Context
 
-用户要求使用 Slate 插件的真实 Timeline UI。Slate 的正式入口是 `Slate.CutsceneEditor.ShowWindow(Cutscene)`，实现为独立的 IMGUI `EditorWindow`，内部读取 `Cutscene` 的 Group/Track/ActionClip 层级并自行处理时间尺、Clip 命中、拖动、缩放、Undo 和播放状态。
+用户要求使用 Slate 插件的真实 Timeline UI，并且最终只有一个 Timeline 窗口。Slate 原始入口是 `Slate.CutsceneEditor.ShowWindow(Cutscene)`，实现为独立的 IMGUI `EditorWindow`，内部读取 `Cutscene` 的 Group/Track/ActionClip 层级并自行处理时间尺、Clip 命中、拖动、缩放、Undo 和播放状态。BTSMTL 路径修改 Slate Editor 源码，把这套 OnGUI 时间轴抽成可嵌入的 Surface，由唯一 `TimelineEditorWindow` 承载。
 
 BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、TreeClip、Session、Mutation、Undo、Preview 和 Live Debug 拥有。两套模型不能直接互换：Slate UI 不能直接读取 `TimelineData`，BTSMTL 也不能把普通 Clip 直接当成 Slate `ActionClip`。
 
@@ -10,10 +10,11 @@ BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、
 
 **Goals:**
 
-- 直接使用 Slate `CutsceneEditor` 的窗口、时间尺、Group/Track、Clip、拖动、缩放、选择、Inspector 和播放控制 UI。
+- 在唯一 `TimelineEditorWindow` 内直接使用 Slate `CutsceneEditor` 的时间尺、Group/Track、Clip、拖动、缩放、选择、Inspector 和播放控制 UI。
+- 修改 Slate Editor 源码提供可嵌入 Surface；BTSMTL Timeline 入口不创建第二个 Slate `EditorWindow`。
 - 将当前 BTSMTL Timeline 投影为 Slate 能编辑的临时层级，并保留每个 Track、Clip、Section、TreeClip 的 authoring identity 映射。
 - 将 Slate UI 的有效改动转换为 BTSMTL `TimelineEditorSessionContext` 和 `ITimelineEditorMutationPort` 操作，使用正式 owner 和 Undo。
-- Slate 窗口重新打开、Undo/Redo、外部 Timeline 刷新或 owner 切换时，能够销毁并重建临时投影。
+- Slate Surface 重绘、Undo/Redo、外部 Timeline 刷新或 owner 切换时，能够销毁并重建临时投影。
 - 继续由 BTSMTL 拥有 Preview、Live Debug、Skill/Shared owner、TreeClip ownership、Source Map 和 Document identity。
 
 **Non-Goals:**
@@ -26,13 +27,13 @@ BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、
 
 ## Decisions
 
-### 1. Slate `CutsceneEditor` 是实际 UI owner
+### 1. Slate `CutsceneEditor` Surface 是实际 UI owner
 
-Timeline 打开命令直接创建或刷新 Editor-only Slate Cutscene projection，然后调用 `CutsceneEditor.ShowWindow(projection)`. Slate 的 IMGUI 窗口负责真实的视觉和交互；当前 BTSMTL `TimelineEditorView` 不再作为正式 Timeline UI 入口。
+Timeline 打开命令只创建或刷新 Editor-only Slate Cutscene projection，然后在唯一 `TimelineEditorWindow` 的 `IMGUIContainer` 中调用 Slate `CutsceneEditor.DrawEmbeddedGUI`. Slate Surface 负责真实的视觉和交互；当前 BTSMTL `TimelineEditorView` 不再作为正式 Timeline UI 入口。
 
-不使用 Slate 图片、GUI skin 或自定义 USS 仿制，因为那仍然会产生第二套 UI。只有调用 Slate 的真实 EditorWindow，才能保证看到的是 Slate 自己的实际 UI。
+不使用 Slate 图片、GUI skin 或自定义 USS 仿制，因为那仍然会产生第二套 UI。BTSMTL 只承载 Slate Surface，不复制 Slate 绘制和时间轴交互。
 
-由于 Slate 编辑器是独立 `EditorWindow`，本 change 不把它嵌进现有 UI Toolkit 窗口；嵌入需要 fork Slate 的 OnGUI 实现，之后就不再是直接使用 Slate UI。
+Slate 原生 `EditorWindow` 仍可供 Slate 插件自身入口使用，但 BTSMTL Timeline 路径不得调用它；BTSMTL 只使用修改后的可嵌入 Surface。
 
 ### 2. BTSMTL TimelineData 是唯一持久化真相
 
@@ -87,14 +88,15 @@ Slate pointer edit
 - [Slate 临时 Undo 与 BTSMTL Undo 不同] → Slate wrapper 只作为草稿，正式提交统一由 BTSMTL Mutation/Undo 完成。
 - [Slate 不覆盖全部 BTSMTL 字段] → 未映射字段由 BTSMTL Details/adapter 保留，显示 typed unavailable，不静默丢数据。
 - [Slate 插件升级] → transaction sink 是局部 Editor patch；需要固定补丁点并在插件升级后重新对照 `CutsceneEditor.OnGUI` 的 Undo/dirty 入口，版本不兼容时 Timeline editor 明确 unavailable。
-- [独立窗口而非嵌入] → 保留 Slate 原生 UI 的完整行为；如果未来必须嵌入，需要另开 change 处理 Slate IMGUI fork，不能在本 change 偷换成 UI Toolkit 重做。
+- [Slate Editor 源码维护] → 需要维护 `CutsceneEditor` 的 Surface 抽取点，Slate 插件升级时必须重新对照 OnGUI、Undo 和输入事件；换来的收益是 Timeline 作者最终只面对一个窗口。
 
 ## Migration Plan
 
 1. 删除上一轮错误的 UI Toolkit 仿 Slate实现及其 change 任务，不把它们继续当作正式 Timeline UI。
 2. 登记 Slate `CutsceneEditor` 的公开入口、生命周期、可编辑字段和 Undo 行为。
-3. 建立 Editor-only projection host、identity map 和临时 Cutscene 生命周期。
-4. 实现 Timeline/Track/Clip/Section 到 Slate Group/Track/ActionClip 的读取投影。
-5. 实现 Slate wrapper snapshot/diff 到 BTSMTL Session/Mutation/Undo 的回写桥。
-6. 接入 Skill Timeline owner、TreeClip、Preview、Live Debug 和窗口关闭/重建生命周期。
-7. 删除旧 UI Toolkit Timeline 正式入口，运行 OpenSpec 严格校验；不在本 change 内执行 Character Build 或用户端到端验收。
+3. 抽取 Slate Editor 可嵌入 Surface，并由唯一 TimelineEditorWindow 承载。
+4. 建立 Editor-only projection host、identity map 和临时 Cutscene 生命周期。
+5. 实现 Timeline/Track/Clip/Section 到 Slate Group/Track/ActionClip 的读取投影。
+6. 实现 Slate wrapper snapshot/diff 到 BTSMTL Session/Mutation/Undo 的回写桥。
+7. 接入 Skill Timeline owner、TreeClip、Preview、Live Debug 和 Surface 重建生命周期。
+8. 删除旧 UI Toolkit Timeline 正式入口，运行 OpenSpec 严格校验；不在本 change 内执行 Character Build 或用户端到端验收。

@@ -395,6 +395,17 @@ namespace BTSMTL.Timeline.Editor
 
         public Cutscene Cutscene => m_Cutscene;
 
+        public void FocusEditorWindow()
+        {
+            if (m_Disposed || m_Cutscene == null)
+                return;
+            if (CutsceneEditor.current == null ||
+                !ReferenceEquals(CutsceneEditor.current.cutscene, m_Cutscene))
+                CutsceneEditor.ShowWindow(m_Cutscene);
+            else
+                CutsceneEditor.current.Focus();
+        }
+
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
             if (!string.IsNullOrEmpty(clipAuthoringId) &&

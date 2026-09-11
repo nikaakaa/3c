@@ -381,16 +381,24 @@ namespace BTSMTL.Timeline.Editor
             m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
             m_PlaybackPolicy = cutscene => !ReferenceEquals(cutscene, m_Cutscene);
-            BuildProjection();
-            CutsceneEditor.OnEditTransactionBegin += OnEditTransactionBegin;
-            CutsceneEditor.OnEditTransactionCommit += OnEditTransactionCommit;
-            CutsceneEditor.OnEditTransactionCancel += OnEditTransactionCancel;
-            CutsceneEditor.OnEditorClosed += OnEditorClosed;
-            CutsceneEditor.OnActionDoubleClick += OnActionDoubleClick;
-            CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
-            CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
-            m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
-            Undo.undoRedoEvent += OnUndoRedoEvent;
+            try
+            {
+                BuildProjection();
+                CutsceneEditor.OnEditTransactionBegin += OnEditTransactionBegin;
+                CutsceneEditor.OnEditTransactionCommit += OnEditTransactionCommit;
+                CutsceneEditor.OnEditTransactionCancel += OnEditTransactionCancel;
+                CutsceneEditor.OnEditorClosed += OnEditorClosed;
+                CutsceneEditor.OnActionDoubleClick += OnActionDoubleClick;
+                CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
+                CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
+                m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
+                Undo.undoRedoEvent += OnUndoRedoEvent;
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public Cutscene Cutscene => m_Cutscene;
@@ -976,7 +984,7 @@ namespace BTSMTL.Timeline.Editor
                 CutsceneEditor.RecordUndoForCutscene = null;
             if (ReferenceEquals(CutsceneEditor.AllowPlaybackForCutscene, m_PlaybackPolicy))
                 CutsceneEditor.AllowPlaybackForCutscene = null;
-            if (!m_EditorClosed)
+            if (!m_EditorClosed && m_Cutscene != null)
                 CutsceneEditor.ClearCutscene(m_Cutscene);
             m_Session.Dispose();
             if (m_Host != null)

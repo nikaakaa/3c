@@ -133,7 +133,9 @@ namespace BTSMTL.Timeline.Editor
             window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
-            if (window.m_SlateProjection == null)
+            if (window.m_SlateProjection != null)
+                window.m_SlateProjection.FocusEditorWindow();
+            else
                 window.Focus();
             return window;
         }
@@ -147,7 +149,9 @@ namespace BTSMTL.Timeline.Editor
             window.ClearNavigation();
             window.BindAsset(asset);
             window.Show();
-            if (window.m_SlateProjection == null)
+            if (window.m_SlateProjection != null)
+                window.m_SlateProjection.FocusEditorWindow();
+            else
                 window.Focus();
             return window;
         }

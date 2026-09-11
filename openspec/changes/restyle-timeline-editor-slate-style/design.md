@@ -4,6 +4,8 @@
 
 BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、TreeClip、Session、Mutation、Undo、Preview 和 Live Debug 拥有。两套模型不能直接互换：Slate UI 不能直接读取 `TimelineData`，BTSMTL 也不能把普通 Clip 直接当成 Slate `ActionClip`。
 
+BTSMTL 的 Skill、Timeline、Preview 和 Runtime 不依赖 Slate 的 GameObject Actor、DirectorGroup、PlayableGraph 或 Slate 播放内核。Projection 中的 Slate 对象只是满足 Slate Surface 的 Editor-only 兼容对象，不拥有 BTSMTL 领域数据、不拥有角色、不拥有预览时钟。
+
 因此本 change 采用一个 Editor-only bridge。Slate UI 作为作者看到和操作的真实编辑表面；BTSMTL TimelineData 作为唯一持久化真相。临时 Slate 对象只负责满足 Slate 编辑器的读取和交互要求，不能保存、编译或进入运行时。
 
 ## Goals / Non-Goals
@@ -12,6 +14,7 @@ BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、
 
 - 在唯一 `TimelineEditorWindow` 内直接使用 Slate `CutsceneEditor` 的时间尺、Group/Track、Clip、拖动、缩放、选择、Inspector 和播放控制 UI。
 - 修改 Slate Editor 源码提供可嵌入 Surface；BTSMTL Timeline 入口不创建第二个 Slate `EditorWindow`。
+- Embedded Surface 不创建 Slate 默认 DirectorGroup、Camera/Audio/Director Track，不显示 Actor 创建入口，也不调用 Slate Preview/PlayableGraph。
 - 将当前 BTSMTL Timeline 投影为 Slate 能编辑的临时层级，并保留每个 Track、Clip、Section、TreeClip 的 authoring identity 映射。
 - 将 Slate UI 的有效改动转换为 BTSMTL `TimelineEditorSessionContext` 和 `ITimelineEditorMutationPort` 操作，使用正式 owner 和 Undo。
 - Slate Surface 重绘、Undo/Redo、外部 Timeline 刷新或 owner 切换时，能够销毁并重建临时投影。
@@ -23,6 +26,7 @@ BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、
 - 不把 Slate `ActionClip` 当成 BTSMTL runtime clip、Timeline compiler 输入或第二个正式数据源。
 - 不复制 Slate 的 `CutsceneEditor` UI 到 UI Toolkit，不重新实现 Slate 的绘制和时间轴交互。
 - 不修改 Slate runtime、Cutscene 数据语义或播放器；允许在 Slate Editor 目录增加最小 transaction sink hook。
+- 不把 Slate GameObject、Actor、Director 或 Preview 状态写入 BTSMTL Skill、Timeline、Character 或 Runtime。
 - 不在本 change 内改 Character Build、PoseGraph、SkillGraph、Blackboard 或 Timeline runtime。
 
 ## Decisions
@@ -45,6 +49,16 @@ BTSMTL Timeline / Track / Clip / Section identity
 ```
 
 临时对象使用 `HideFlags.HideAndDontSave`，不进入 AssetDatabase、不写入 Document、不进入 runtime build。Slate 只读写临时对象，适配层负责将结果转换回 BTSMTL owner。
+
+这些对象即使在 Editor 中采用 Slate 所需的组件形态，也只能是 UI 兼容层；它们不是 BTSMTL 的 GameObject authoring、Actor binding 或 Runtime object。
+
+### 2.1 BTSMTL Embedded Surface 不使用 Slate 内核
+
+Projection 只向 Slate 提供 Track/Clip/Curve 的显示和编辑形态。BTSMTL 不创建或读取 Slate DirectorGroup、CameraTrack、DirectorAudioTrack、DirectorActionTrack、ActorGroup、PlayableGraph 或 Slate Preview output。
+
+`TimelinePreviewSession` 是唯一时间推进和表现预览 owner；Slate Surface 的 current time 只用于显示游标和编辑上下文。Slate 的 Play、Sample、Scene binding 和 Actor 语义在 Embedded Surface 中必须关闭或隐藏。
+
+Projection 必须清理 `Cutscene.Reset/TryReset` 自动创建的默认 Director 内容，并把每个 `BtsmtlSlateActionClip` 直接挂到 Slate Track 能发现的 ActionClip 集合中；不能用子 GameObject 层级导致 Slate `Validate` 丢失 Clip。
 
 ### 3. Slate 改动通过 snapshot/diff 转换为正式 Mutation
 

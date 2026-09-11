@@ -6,6 +6,8 @@
 
 BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview、Live Debug 和 Document identity MUST继续由 BTSMTL 拥有。Slate `Cutscene`、Group、Track 和 ActionClip 只能由 Editor-only projection 提供给 Slate UI，不能成为持久化或 runtime 数据源。
 
+BTSMTL Skill、Timeline、Preview 和 Runtime MUST NOT依赖 Slate GameObject Actor、DirectorGroup、Camera/Audio/Director Track、PlayableGraph 或 Slate Preview。Projection 中的 Unity/Slate 对象若为满足 Slate Surface 的临时兼容对象，MUST NOT拥有角色、技能、authoring 数据或 runtime 状态。
+
 #### Scenario: 从正式Skill Graph打开Skill Timeline
 
 - **WHEN** 作者从正式 Skill Graph 调用点打开 Timeline
@@ -14,6 +16,13 @@ BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、Seriali
 - **AND** 该窗口 MUST显示当前 Timeline 的 Track、Clip、Section和identity映射
 - **AND** BTSMTL Timeline入口 MUST NOT 创建独立的 Slate `EditorWindow`
 - **AND** 不得同时打开或维护上一轮 UI Toolkit Timeline 作为第二个正式编辑表面
+
+#### Scenario: Embedded Surface不带入Slate默认Director
+
+- **WHEN** BTSMTL Timeline 创建 Embedded Slate Surface
+- **THEN** Surface MUST 清理 Slate `Reset/TryReset` 自动创建的 DirectorGroup、CameraTrack、DirectorAudioTrack 和 DirectorActionTrack
+- **AND** Surface MUST隐藏或禁用 Actor Group、New Cutscene 和 Slate Runtime Playback入口
+- **AND** Surface MUST只显示 BTSMTL projection 提供的 Group、Track、Clip 和 Curve
 
 #### Scenario: Slate UI编辑Clip范围
 
@@ -31,6 +40,8 @@ BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、Seriali
 ### Requirement: Slate Projection必须是Editor-only桥接而不是第二个正式数据源
 
 Projection MUST建立明确的 BTSMTL identity 到 Slate object 的双向映射。Projection 对象 MUST使用临时生命周期，不得绑定 BTSMTL SerializedObject，不得保存为资产，不得进入 Document manifest、Timeline compiler、runtime player 或 runtime clock。Projection 只负责满足 Slate UI 的对象模型和交互要求。
+
+Projection MUST将每个可编辑 Clip 挂载到 Slate `CutsceneTrack` 能发现的 ActionClip 集合中。Slate `Validate`、Clip wrapper 或 DopeSheet 不得因为临时 GameObject 层级错误而丢失 Clip；BTSMTL 已拥有的 Curve Channel MUST只能通过该 Clip 的 Slate AnimatedParameter 显示和编辑。
 
 #### Scenario: 关闭Slate窗口
 
@@ -67,6 +78,8 @@ Slate 原生 `CutsceneEditor` 对 proxy 的字段修改、`Undo.RecordObject`、
 ### Requirement: Preview与Live Debug必须继续由BTSMTL拥有
 
 Slate `CutsceneEditor` 的播放和时间控件 MUST不创建第二个 BTSMTL Timeline player、PlayableGraph、时钟或 runtime binding。Authoring Preview、Live Debug、Follow/Pin overlay、TreeClip ownership 和 Character Preview Target MUST继续经 BTSMTL 的 session adapter 管理；Slate UI只显示或驱动经过适配的编辑时间状态。
+
+Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 或 Actor binding 来执行 Preview。`TimelinePreviewSession` MUST是唯一 Preview 时间推进和输出 owner；Slate current time 只允许作为显示游标和编辑时间输入。
 
 #### Scenario: Authoring Preview切换Live Debug
 

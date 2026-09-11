@@ -367,3 +367,11 @@ Profile Inspector 的连续Pose区域已按新owner整理：当Pose Graph没有S
 对阻塞输入的只读核对显示：三个入口 identity 在 `CorinPlayableRootTree.asset` 中对应的是 `StateBehaviorSubTree`，而 `CharacterPipelineDefinition.SkillGraphs` 要求正式 `BtsmtlSkillFlowGraph` 根图；当前 Definition 的 `m_SkillGraphs` 为空。因此它不是 Pose 迁移可以自行修复的名称或路径问题。
 
 由于该外部闭包阻塞尚未变化，后续代码复核重点转向直接资源链的潜在旧消费者：Slot Blend Compiler 已不再读取 `action-playback` 作者端口，Resource Closure Analyzer 已收集直接 Clip／Blend Space；这两处会在 Skill Graph 闭包恢复后直接进入正式 Build，而不会重新走旧 Source Slot 路径。
+
+#### 2026-09-11：Pose 参数进入原生 Blackboard Get 工作流
+
+Pose Graph 继续以 `CharacterPoseParameterDeclaration[]` 作为唯一参数契约；FlowCanvas 原生 Blackboard 面板只把这份声明投影为只读变量行，不写入第二份持久化参数表。参数变量使用稳定的 ParameterId 作为变量身份，保留 Float／Int／Bool 类型和默认值，`Foot Placement Weight` 不再被当作专用节点数据。
+
+Blackboard 变量可以从原生面板拖入 Pose Canvas，拖放直接通过现有 `CharacterPoseCanvasEditorWriteSession` 创建带参数 ID 的 `ProgramParameterInput` Get 节点。该节点不提供 Set 路径，普通 Pose 节点创建菜单也不再列出参数输入；节点实例名称仍可由作者自定义，节点正文显示 Get 与实际参数 ID。只读列表保留原生拖拽入口，未新增 Pose 专用面板。
+
+代码提交：`3ddc30212`。本轮没有启动 Unity、Build、Play 或 Validate，保留端到端验证由作者执行。

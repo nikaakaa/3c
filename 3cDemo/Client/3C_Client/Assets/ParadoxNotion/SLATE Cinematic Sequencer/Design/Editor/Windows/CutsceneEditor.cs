@@ -10,6 +10,208 @@ namespace Slate
 
     public class CutsceneEditor : EditorWindow
     {
+        CutsceneEditorSurface m_Surface;
+
+        public static CutsceneEditor current;
+
+        public static event System.Action OnStopInEditor
+        {
+            add => CutsceneEditorSurface.OnStopInEditor += value;
+            remove => CutsceneEditorSurface.OnStopInEditor -= value;
+        }
+
+        public static event System.Action<Cutscene, string> OnEditTransactionBegin
+        {
+            add => CutsceneEditorSurface.OnEditTransactionBegin += value;
+            remove => CutsceneEditorSurface.OnEditTransactionBegin -= value;
+        }
+
+        public static event System.Action<Cutscene> OnEditTransactionCommit
+        {
+            add => CutsceneEditorSurface.OnEditTransactionCommit += value;
+            remove => CutsceneEditorSurface.OnEditTransactionCommit -= value;
+        }
+
+        public static event System.Action<Cutscene> OnEditTransactionCancel
+        {
+            add => CutsceneEditorSurface.OnEditTransactionCancel += value;
+            remove => CutsceneEditorSurface.OnEditTransactionCancel -= value;
+        }
+
+        public static event System.Action OnEditorClosed
+        {
+            add => CutsceneEditorSurface.OnEditorClosed += value;
+            remove => CutsceneEditorSurface.OnEditorClosed -= value;
+        }
+
+        public static event System.Action<ActionClip> OnActionDoubleClick
+        {
+            add => CutsceneEditorSurface.OnActionDoubleClick += value;
+            remove => CutsceneEditorSurface.OnActionDoubleClick -= value;
+        }
+
+        public static System.Func<Cutscene, bool> RecordUndoForCutscene
+        {
+            get => CutsceneEditorSurface.RecordUndoForCutscene;
+            set => CutsceneEditorSurface.RecordUndoForCutscene = value;
+        }
+
+        public static System.Func<Cutscene, bool> AllowPlaybackForCutscene
+        {
+            get => CutsceneEditorSurface.AllowPlaybackForCutscene;
+            set => CutsceneEditorSurface.AllowPlaybackForCutscene = value;
+        }
+
+        public Cutscene cutscene => m_Surface != null ? m_Surface.cutscene : null;
+        public float length
+        {
+            get => m_Surface != null ? m_Surface.length : 0f;
+            set
+            {
+                if (m_Surface != null)
+                    m_Surface.length = value;
+            }
+        }
+
+        public float viewTimeMin
+        {
+            get => m_Surface != null ? m_Surface.viewTimeMin : 0f;
+            set
+            {
+                if (m_Surface != null)
+                    m_Surface.viewTimeMin = value;
+            }
+        }
+
+        public float viewTimeMax
+        {
+            get => m_Surface != null ? m_Surface.viewTimeMax : 0f;
+            set
+            {
+                if (m_Surface != null)
+                    m_Surface.viewTimeMax = value;
+            }
+        }
+
+        public static bool ShouldRecordUndoFor(Cutscene target)
+        {
+            return CutsceneEditorSurface.ShouldRecordUndoFor(target);
+        }
+
+        public static bool IsPlaybackAllowedFor(Cutscene target)
+        {
+            return CutsceneEditorSurface.IsPlaybackAllowedFor(target);
+        }
+
+        public static void ShowWindow()
+        {
+            ShowWindow(null);
+        }
+
+        public static void ShowWindow(Cutscene newCutscene)
+        {
+            CutsceneEditor window = GetWindow<CutsceneEditor>();
+            window.InitializeWindow(newCutscene);
+            window.Show();
+        }
+
+        public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
+        {
+            EnsureSurface();
+            m_Surface.InitializeEmbedded(newCutscene, repaint);
+        }
+
+        public void DrawEmbeddedGUI(float width, float height)
+        {
+            m_Surface?.DrawEmbeddedGUI(width, height);
+        }
+
+        public void RequestEmbeddedRepaint()
+        {
+            m_Surface?.RequestEmbeddedRepaint();
+        }
+
+        public void ClearEmbedded()
+        {
+            m_Surface?.ClearEmbedded();
+        }
+
+        public void Play(Cutscene.WrapMode wrapMode = Cutscene.WrapMode.Loop, System.Action callback = null)
+        {
+            m_Surface?.Play(wrapMode, callback);
+        }
+
+        public void PlayReverse()
+        {
+            m_Surface?.PlayReverse();
+        }
+
+        public void Pause()
+        {
+            m_Surface?.Pause();
+        }
+
+        public void Stop(bool forceRewind)
+        {
+            m_Surface?.Stop(forceRewind);
+        }
+
+        public static void ClearCutscene(Cutscene target)
+        {
+            CutsceneEditorSurface.ClearCutscene(target);
+        }
+
+        void OnEnable()
+        {
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
+            wantsMouseMove = true;
+            autoRepaintOnSceneChange = false;
+            minSize = new Vector2(500, 500);
+            current = this;
+            EnsureSurface();
+            m_Surface.InitializeStandalone(
+                null,
+                Repaint,
+                ShowNotification,
+                RemoveNotification,
+                content => titleContent = content);
+        }
+
+        void OnDisable()
+        {
+            if (m_Surface != null)
+            {
+                DestroyImmediate(m_Surface);
+                m_Surface = null;
+            }
+            if (ReferenceEquals(current, this))
+                current = null;
+        }
+
+        void OnGUI()
+        {
+            m_Surface?.DrawGUI(position.width, position.height);
+        }
+
+        void InitializeWindow(Cutscene newCutscene)
+        {
+            EnsureSurface();
+            m_Surface.InitializeStandalone(
+                newCutscene,
+                Repaint,
+                ShowNotification,
+                RemoveNotification,
+                content => titleContent = content);
+        }
+
+        void EnsureSurface()
+        {
+            if (m_Surface == null)
+                m_Surface = CreateInstance<CutsceneEditorSurface>();
+        }
+    }
+    public class CutsceneEditorSurface : ScriptableObject
+    {
 
         enum EditorPlaybackState
         {
@@ -30,7 +232,7 @@ namespace Slate
 
         ///----------------------------------------------------------------------------------------------
 
-        public static CutsceneEditor current;
+        public static CutsceneEditorSurface current;
         public static event System.Action OnStopInEditor;
         public static event System.Action<Cutscene, string> OnEditTransactionBegin;
         public static event System.Action<Cutscene> OnEditTransactionCommit;
@@ -55,6 +257,10 @@ namespace Slate
         [System.NonSerialized] private float embeddedWidth;
         [System.NonSerialized] private float embeddedHeight;
         [System.NonSerialized] private System.Action embeddedRepaint;
+        [System.NonSerialized] private System.Action standaloneRepaint;
+        [System.NonSerialized] private System.Action<GUIContent> showNotification;
+        [System.NonSerialized] private System.Action removeNotification;
+        [System.NonSerialized] private System.Action<GUIContent> setTitle;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -358,14 +564,6 @@ namespace Slate
 
         ///----------------------------------------------------------------------------------------------
 
-        ///<summary>Opens the editor :)</summary>
-        public static void ShowWindow() { ShowWindow(null); }
-        public static void ShowWindow(Cutscene newCutscene) {
-            var window = EditorWindow.GetWindow(typeof(CutsceneEditor)) as CutsceneEditor;
-            window.InitializeAll(newCutscene);
-            window.Show();
-        }
-
         public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
         {
             embeddedSurface = true;
@@ -377,13 +575,45 @@ namespace Slate
             InitializeAll(newCutscene);
         }
 
+        public void InitializeStandalone(
+            Cutscene newCutscene,
+            System.Action repaint,
+            System.Action<GUIContent> notification,
+            System.Action removeNotificationCallback,
+            System.Action<GUIContent> titleCallback)
+        {
+            embeddedSurface = false;
+            embeddedRepaint = null;
+            standaloneRepaint = repaint;
+            showNotification = notification;
+            removeNotification = removeNotificationCallback;
+            setTitle = titleCallback;
+            showDragDropInfo = true;
+            InitializeAll(newCutscene);
+        }
+
+        public void DrawGUI(float width, float height)
+        {
+            CutsceneEditorSurface previous = current;
+            current = this;
+            try
+            {
+                OnGUI();
+            }
+            finally
+            {
+                if (ReferenceEquals(current, this))
+                    current = previous;
+            }
+        }
+
         public void DrawEmbeddedGUI(float width, float height)
         {
             if (!embeddedSurface)
                 throw new System.InvalidOperationException("Slate editor is not initialized as an embedded surface.");
             embeddedWidth = Mathf.Max(1f, width);
             embeddedHeight = Mathf.Max(1f, height);
-            CutsceneEditor previous = current;
+            CutsceneEditorSurface previous = current;
             current = this;
             try
             {
@@ -401,7 +631,7 @@ namespace Slate
             if (embeddedSurface)
                 embeddedRepaint?.Invoke();
             else
-                Repaint();
+                standaloneRepaint?.Invoke();
         }
 
         public void ClearEmbedded()
@@ -415,6 +645,10 @@ namespace Slate
             clipWrappers = null;
             clipWrappersMap = null;
             embeddedRepaint = null;
+            standaloneRepaint = null;
+            showNotification = null;
+            removeNotification = null;
+            setTitle = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -432,6 +666,29 @@ namespace Slate
             current.clipWrappersMap = null;
             CutsceneUtility.selectedObject = null;
             current.willRepaint = true;
+        }
+
+        void ShowNotification(GUIContent content)
+        {
+            showNotification?.Invoke(content);
+        }
+
+        void RemoveNotification()
+        {
+            removeNotification?.Invoke();
+        }
+
+        void SetTitle(GUIContent content)
+        {
+            setTitle?.Invoke(content);
+        }
+
+        void BeginWindows()
+        {
+        }
+
+        void EndWindows()
+        {
         }
 
         //...
@@ -453,10 +710,6 @@ namespace Slate
             SceneView.duringSceneGui += OnSceneGUI;
 
             Tools.hidden = false;
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
-            wantsMouseMove = true;
-            autoRepaintOnSceneChange = false;
-            minSize = new Vector2(500, 500);
             willRepaint = true;
             showDragDropInfo = true;
             pendingGuides = new List<GuideLine>();
@@ -577,7 +830,7 @@ namespace Slate
         //Play button pressed or otherwise started
         public void Play(Cutscene.WrapMode wrapMode = Cutscene.WrapMode.Loop, System.Action callback = null) {
 
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconClose);
+            SetTitle(new GUIContent("SLATE", Styles.cutsceneIconClose));
 
             if ( Application.isPlaying ) {
                 var temp = cutscene.currentTime == length ? 0 : cutscene.currentTime;
@@ -596,7 +849,7 @@ namespace Slate
         //Play reverse button pressed
         public void PlayReverse() {
 
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconClose);
+            SetTitle(new GUIContent("SLATE", Styles.cutsceneIconClose));
 
             if ( Application.isPlaying ) {
                 var temp = cutscene.currentTime == 0 ? length : cutscene.currentTime;
@@ -618,7 +871,6 @@ namespace Slate
         //Pause button pressed
         public void Pause() {
 
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
 
             if ( Application.isPlaying ) {
                 if ( cutscene.isActive ) {
@@ -637,7 +889,6 @@ namespace Slate
         //Stop button pressed or otherwise reset the scrubbing/previewing
         public void Stop(bool forceRewind) {
 
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
 
             if ( Application.isPlaying ) {
                 if ( cutscene.isActive ) {
@@ -2780,8 +3031,8 @@ namespace Slate
             private Rect controlRectIn;
             private Rect controlRectOut;
 
-            private CutsceneEditor editor {
-                get { return CutsceneEditor.current; }
+            private CutsceneEditorSurface editor {
+                get { return CutsceneEditorSurface.current; }
             }
 
             private List<ActionClipWrapper> multiSelection {

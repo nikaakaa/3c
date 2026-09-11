@@ -170,7 +170,6 @@ namespace BTSMTL.Timeline.Editor
             length = duration;
             this.blendIn = blendIn;
             this.blendOut = blendOut;
-            name = m_DisplayName;
         }
 
         public void ConfigureSource(string sourceAuthoringId)
@@ -307,7 +306,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Func<Cutscene, bool> m_PlaybackPolicy;
         GameObject m_Host;
         Cutscene m_Cutscene;
-        CutsceneEditor m_EmbeddedEditor;
+        CutsceneEditorSurface m_EmbeddedEditor;
         bool m_Disposed;
         bool m_RebuildQueued;
         bool m_ReadOnly;
@@ -478,6 +477,13 @@ namespace BTSMTL.Timeline.Editor
             m_Host.hideFlags = HideFlags.HideAndDontSave;
             m_Cutscene = m_Host.AddComponent<Cutscene>();
             m_Cutscene.hideFlags = HideFlags.HideAndDontSave;
+            CutsceneGroup[] defaultGroups = m_Cutscene.groups.ToArray();
+            m_Cutscene.groups.Clear();
+            for (int index = 0; index < defaultGroups.Length; index++)
+            {
+                if (defaultGroups[index] != null)
+                    UnityEngine.Object.DestroyImmediate(defaultGroups[index].gameObject);
+            }
             m_Cutscene.length = Mathf.Max(1f, m_Request.Timeline.Duration);
             m_Cutscene.viewTimeMin = 0f;
             m_Cutscene.viewTimeMax = Mathf.Max(m_Cutscene.length + 1f, m_Cutscene.length);
@@ -516,8 +522,7 @@ namespace BTSMTL.Timeline.Editor
                     Clip sourceClip = sourceTrack.Clips[clipIndex];
                     if (sourceClip == null)
                         continue;
-                    GameObject clipObject = CreateChild(trackObject.transform, sourceClip.Name);
-                    BtsmtlSlateActionClip proxyClip = clipObject.AddComponent<BtsmtlSlateActionClip>();
+                    BtsmtlSlateActionClip proxyClip = trackObject.AddComponent<BtsmtlSlateActionClip>();
                     proxyClip.hideFlags = HideFlags.HideAndDontSave;
                     string displayName = sourceClip.Name;
                     if (sourceClip is ITimelineOwnedAuthoringIdentity)
@@ -567,10 +572,8 @@ namespace BTSMTL.Timeline.Editor
 
         void CreateEmbeddedEditor()
         {
-            CutsceneEditor previous = CutsceneEditor.current;
-            m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditor>();
+            m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
             m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null);
-            CutsceneEditor.current = previous;
         }
 
         static AnimationCurve ToSlateCurve(AnimationCurve normalizedCurve, float duration)

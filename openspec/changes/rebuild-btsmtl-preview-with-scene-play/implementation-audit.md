@@ -984,3 +984,9 @@ owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文�
 - 控制模块恢复 `s_MovingTurnSourceMotion` + `SourceCurve`（与 6f5a99fff 之前逐字节同义）。
 
 验证：主线 Unity Editor 全量编译 0 error。运行时验证（Build 后转身弧线位移回归）由用户端到端执行。
+
+## 2026-09-11 相机上下反向修复：Look鼠标绑定补Y反相处理器
+
+用户运行时验收报告相机上下操作反向。取证：Corin InputProfile 的 LookAxis 绑定到 `InputSystem.inputactions` Player map 的 Look action，其 `<Pointer>/delta`（鼠标增量，Unity 约定 Y 正方向朝下）与 `<Gamepad>/rightStick`（Y 正方向朝上）共用且均无反相处理器——鼠标向上推产生负 y，FramePlanner `m_PitchOffset += look.y * Sensitivity.y` 后相机朝下，上下反向；手柄摇杆方向正确。
+
+修复：`<Pointer>/delta` 绑定加 `InvertVector2(invertX=false,invertY=true)` 处理器（仅鼠标绑定，手柄摇杆不反相）。人物不居中为俯仰反向的伴随症状（对抗反向鼠标把 pitch 拉到 ±70 限位导致极端机位），随本修复重测；若重测后仍偏，再对照 dump 内 CameraZooms/CameraCutscenes 数据调构图（标准跟随相机的距离参数不在 dump 范围内）。

@@ -34,6 +34,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 node.graph == s_Current.m_Canvas?.Graph && s_Current.m_ObservedNodes.TryGetValue(node.NodeId.Value, out trace);
         }
 
+        internal static bool TryGetFieldOptions(
+            CharacterPoseCanvasNode node,
+            GraphAuthoringFieldDescriptor field,
+            out IReadOnlyList<GraphAuthoringFieldOption> options)
+        {
+            options = Array.Empty<GraphAuthoringFieldOption>();
+            CharacterPoseGraphWorkspace workspace = s_Current;
+            if (workspace == null || workspace.m_Document == null ||
+                workspace.m_DetailsDataSource == null || node == null ||
+                workspace.m_Canvas?.Graph != node.graph)
+                return false;
+            return workspace.m_DetailsDataSource.TryGetFieldOptions(
+                workspace.m_Document,
+                new GraphAuthoringElementId(node.NodeId.Value),
+                field,
+                out options);
+        }
+
         const string SessionKey = "3C.PoseCanvas.Workspace.";
         static bool s_Reloading;
         NodeCanvas.Editor.GraphEditor m_Editor;
@@ -108,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CharacterPoseCanvasGraphDocument m_Document;
         CharacterPoseCanvasEditorMutationAdapter m_Mutation;
         CharacterPoseRuntimeTraceProjection m_RuntimeTrace;
+        CharacterPoseCanvasDetailsDataSource m_DetailsDataSource;
         CharacterPoseLiveObservationPanel m_ObservationPanel;
         readonly CharacterPosePublishedProjectionReader m_PublishedReader = new CharacterPosePublishedProjectionReader();
         Action m_ShowDetails;
@@ -496,15 +515,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new CharacterPoseCanvasConnectionPolicy(),
                 new CharacterPoseCanvasGraphClipboardCodec(
                     m_Mutation)));
+            m_DetailsDataSource = new CharacterPoseCanvasDetailsDataSource(
+                m_RuntimeTrace,
+                m_Profile?.RigDefinition,
+                m_Profile,
+                m_ObservationPanel.GetAppliedValues);
             m_Details.Bind(new GraphAuthoringDetailsBinding(
                 m_Document,
                 catalog,
                 m_Mutation,
-                new CharacterPoseCanvasDetailsDataSource(
-                    m_RuntimeTrace,
-                    m_Profile?.RigDefinition,
-                    m_Profile,
-                    m_ObservationPanel.GetAppliedValues),
+                m_DetailsDataSource,
 
                 OpenDetailsCommand,
                 true,

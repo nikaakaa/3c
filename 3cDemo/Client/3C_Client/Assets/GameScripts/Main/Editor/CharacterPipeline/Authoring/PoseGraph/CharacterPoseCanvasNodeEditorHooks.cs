@@ -113,6 +113,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     graph,
                     field,
                     current as CharacterPoseBoneIkGoalBinding[] ?? Array.Empty<CharacterPoseBoneIkGoalBinding>());
+            if (field.ValueKind == GraphAuthoringFieldValueKind.IdentityReference)
+                return DrawIdentityReference(node, graph, field, current);
             object next = current;
             EditorGUI.BeginChangeCheck();
             using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
@@ -182,6 +184,53 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Pose Canvas field edits require the Pose Canvas editor session.");
             CharacterPoseCanvasInteraction.Apply(() => poseGraph.EditorWriteRouter.SetNodeField(node, fieldId, next));
+            return false;
+        }
+
+        static bool DrawIdentityReference(
+            CharacterPoseCanvasNode node,
+            NodeCanvas.Framework.Graph graph,
+            GraphAuthoringFieldDescriptor field,
+            object current)
+        {
+            string currentValue = current?.ToString() ?? string.Empty;
+            if (CharacterPoseGraphWorkspace.TryGetFieldOptions(
+                    node,
+                    field,
+                    out IReadOnlyList<GraphAuthoringFieldOption> options) &&
+                options.Count != 0)
+            {
+                var values = new List<string>(options.Count + 1);
+                var labels = new List<string>(options.Count + 1);
+                foreach (GraphAuthoringFieldOption option in options)
+                {
+                    values.Add(option.Value);
+                    labels.Add(option.DisplayName);
+                }
+                if (!string.IsNullOrEmpty(currentValue) &&
+                    !values.Contains(currentValue))
+                {
+                    values.Add(currentValue);
+                    labels.Add("Missing Reference");
+                }
+                int selected = Math.Max(0, values.IndexOf(currentValue));
+                EditorGUI.BeginChangeCheck();
+                using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
+                    selected = EditorGUILayout.Popup(field.DisplayName, selected, labels.ToArray());
+                if (!EditorGUI.EndChangeCheck() || graph.isEditorReadOnly || !field.AuthoringWritable)
+                    return true;
+                ApplyNodeField(node, graph, field.FieldId.Value, values[selected]);
+                return false;
+            }
+
+            EditorGUI.BeginChangeCheck();
+            string next = currentValue;
+            using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
+                next = EditorGUILayout.DelayedTextField(field.DisplayName, currentValue);
+            if (!EditorGUI.EndChangeCheck() || graph.isEditorReadOnly || !field.AuthoringWritable ||
+                string.Equals(next, currentValue, StringComparison.Ordinal))
+                return true;
+            ApplyNodeField(node, graph, field.FieldId.Value, next);
             return false;
         }
 

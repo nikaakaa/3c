@@ -51,6 +51,10 @@ namespace Slate
         }
 
         private Cutscene _cutscene;
+        [System.NonSerialized] private bool embeddedSurface;
+        [System.NonSerialized] private float embeddedWidth;
+        [System.NonSerialized] private float embeddedHeight;
+        [System.NonSerialized] private System.Action embeddedRepaint;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -209,13 +213,13 @@ namespace Slate
         }
 
         //Screen Width. Handles retina.
-        private static float screenWidth {
-            get { return Screen.width / EditorGUIUtility.pixelsPerPoint; }
+        private float screenWidth {
+            get { return embeddedSurface ? embeddedWidth : Screen.width / EditorGUIUtility.pixelsPerPoint; }
         }
 
         //Screen Height. Hanldes retina.
-        private static float screenHeight {
-            get { return Screen.height / EditorGUIUtility.pixelsPerPoint; }
+        private float screenHeight {
+            get { return embeddedSurface ? embeddedHeight : Screen.height / EditorGUIUtility.pixelsPerPoint; }
         }
 
         //The color used in scruber
@@ -360,6 +364,60 @@ namespace Slate
             var window = EditorWindow.GetWindow(typeof(CutsceneEditor)) as CutsceneEditor;
             window.InitializeAll(newCutscene);
             window.Show();
+        }
+
+        public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
+        {
+            embeddedSurface = true;
+            embeddedRepaint = repaint;
+            Styles.Load();
+            showDragDropInfo = false;
+            willRepaint = true;
+            pendingGuides = new List<GuideLine>();
+            InitializeAll(newCutscene);
+        }
+
+        public void DrawEmbeddedGUI(float width, float height)
+        {
+            if (!embeddedSurface)
+                throw new System.InvalidOperationException("Slate editor is not initialized as an embedded surface.");
+            embeddedWidth = Mathf.Max(1f, width);
+            embeddedHeight = Mathf.Max(1f, height);
+            CutsceneEditor previous = current;
+            current = this;
+            try
+            {
+                OnGUI();
+            }
+            finally
+            {
+                if (ReferenceEquals(current, this))
+                    current = previous;
+            }
+        }
+
+        public void RequestEmbeddedRepaint()
+        {
+            if (embeddedSurface)
+                embeddedRepaint?.Invoke();
+            else
+                Repaint();
+        }
+
+        public void ClearEmbedded()
+        {
+            if (!embeddedSurface)
+                return;
+            CancelEditTransaction();
+            if (cutscene != null && !Application.isPlaying)
+                Stop(true);
+            cutscene = null;
+            clipWrappers = null;
+            clipWrappersMap = null;
+            embeddedRepaint = null;
+            embeddedSurface = false;
+            if (ReferenceEquals(current, this))
+                current = null;
         }
 
         public static void ClearCutscene(Cutscene target)
@@ -632,6 +690,10 @@ namespace Slate
         //Sample the cutscene
         void OnEditorUpdate() {
 
+            if ( embeddedSurface ) {
+                return;
+            }
+
             //if cutscene playmode active, it will sample and update itself.
             if ( cutscene == null || cutscene.isActive ) {
                 return;
@@ -687,6 +749,10 @@ namespace Slate
 
         //...
         void OnSceneGUI(SceneView sceneView) {
+
+            if ( embeddedSurface ) {
+                return;
+            }
 
             if ( cutscene == null ) {
                 return;
@@ -940,7 +1006,7 @@ namespace Slate
             //repaint
             if ( willRepaint ) {
                 willRepaint = false;
-                Repaint();
+                RequestEmbeddedRepaint();
             }
 
             //cleanup
@@ -2654,7 +2720,7 @@ namespace Slate
                 }
 
                 request.Dispose();
-                Repaint();
+                RequestEmbeddedRepaint();
             };
         }
 

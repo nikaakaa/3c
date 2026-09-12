@@ -184,6 +184,8 @@ Formal authoring type、字段、引用方法和正式Mutation写入方法上的
 
 metadata的Editor查找实现 MAY生成不可编辑的静态索引，但该索引 MUST不成为第二作者真相，也不得要求运行时反射、Unity序列化字段或Compiler operation作为作者合同。
 
+对于BTSMTL Skill领域，formal metadata MUST同时提供当前节点的typed字段读取、真实引用目标读取、稳定identity投影和正式创建/配置入口描述。Skill原节点、FlowCanvas目录、人工Inspector、步骤编辑器和Skill compiler MUST消费这些入口；字段的本地序列化形态与编译所需identity可以不同，但两者 MUST由同一业务定义明确映射，MUST不各自读取或维护第二份字段规则。
+
 #### Scenario: Agent和原生UI使用同一作者字段
 
 - **WHEN** 正式作者类型metadata声明一个可写typed field和合法port

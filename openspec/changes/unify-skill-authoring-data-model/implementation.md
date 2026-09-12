@@ -17,7 +17,7 @@
 - 原业务节点与FlowCanvas节点共享输入身份、ActionContext、ActionWindow、CanActivate目标快照、生命周期、Gameplay、Blackboard和Locomotion authoring合同；Locomotion默认值与组合校验集中到同一业务规则。
 - 固定、条件和动态端口继续由共享Capability与唯一`GraphAuthoringNodePortShapeProjector`投影；已有TransferPayload、真实端口和普通组合步骤未被改写。
 
-当前已完成tasks 1.1、1.2、1.3、2.3、3.1、3.2。2.1、2.2和3.3仍未完成：已确认的Skill/原业务同义合同和Skill消费方已经接通，但原节点与FlowCanvas的完整字段对照、原节点目录/人工入口的全量改接仍需继续；并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。4.1至4.3仍按文档保留未完成状态。
+当前已完成tasks 1.1、1.2、1.3、2.1、2.2、2.3、3.1、3.2、3.3和4.3。4.1仍未完成，因为`DocumentCodecId`仍有其它正式领域调用方；4.2仅完成本任务已确认的重复端口/字段模型清理，待对本目录剩余旧适配做最终边界审计。并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。
 
 ## 2026-09-13 r2字段与引用链收口
 
@@ -32,6 +32,20 @@
 本轮补齐的业务配置入口包括：原生Gameplay Tag、Tag Query、Attribute、Apply/Remove Gameplay Effect节点的`ConfigureAuthoring`，以及原生与Skill Action Window、Gameplay节点共用的合法性规则。Locomotion两类节点的位移模式、执行模式和持续时间默认值也由同一业务规则提供。
 
 本轮没有修改`BtsmtlSkillNodeAuthoringBinding.cs`、`TimelineAuthoringClipBinding.cs`、JSON/Agent协议、FSM状态迁移或事件图路径。C# authoring负责的代码输出与JSON退役只消费本轮提供的typed metadata/API，不由本change新增第二套模型。
+
+## r2同义字段对照与宿主差异
+
+| 业务语义 | 原业务节点 | FlowCanvas Skill节点 | 统一入口 | 保留的真实差异 |
+|---|---|---|---|---|
+| 输入值/动作请求身份 | `InputId`、`RequestId`，来源owner由角色图上下文提供 | `InputId`/`RequestId`与显式`ProviderOwnerId` | `ICharacterInputValueAuthoring`、`ICharacterActionRequestAuthoring`、`CharacterInputAuthoringRules` | 原节点不在节点实例保存InputProfile owner；Skill节点保存引用owner，不能伪装成同一序列化字段 |
+| Action Context | `ActionContextSlot` | `ActionContextSlot` | `IActionContextAuthoring`及正式资产引用读取 | 节点基类和本地端口不同，值类型与引用语义相同 |
+| Action Window | 字符串窗口类型 | 字符串窗口类型 | `IActionWindowAuthoring`、`CharacterActionAuthoringRules.RequireWindowType` | 原节点和Skill节点各持有自己的实例值 |
+| Action Lifecycle | `ActionLifecycleTransitionType`、`Reason` | `ActionLifecycleTransitionType`、`Reason` | `ISubmitActionLifecycleAuthoring`、`CharacterActionAuthoringRules` | 原生和Skill写入口名称不同，生命周期枚举与禁止`None`规则相同 |
+| Gameplay Tag/Query/Attribute/Effect | typed Tag、Query、Attribute、Effect；原生Apply还保留SetByCaller扩展 | typed Tag、Query、Attribute、Effect与Skill provider owner | `IGameplay*Authoring`、`GameplayAuthoringRules` | provider owner是Skill外部引用事实；原生节点owner由宿主上下文提供，SetByCaller不是Skill节点字段 |
+| Blackboard | `PipelineBlackboardVariableReference`与CLR `Type` | `BtsmtlSkillBlackboardReference`、声明/owner/valueType/access | `ICharacterBlackboardAuthoring`及Skill `ReadSteps`/字段读取 | 引用结构和写入端口属于各宿主正式模型，不互相复制变量对象 |
+| Locomotion | `ILocomotionInputMotionAuthoring` | 同一接口 | `LocomotionInputMotionAuthoringRules` | 两个宿主各自保存字段值，Skill额外用FlowCanvas移动输入端口 |
+
+端口也按同一原则处理：原业务节点的`PropertyPort`和Skill节点的FlowCanvas Port仍由各宿主物化；Capability与唯一`GraphAuthoringNodePortShapeProjector`只接收正式typed参数和宿主端口映射，不把一方端口对象序列化到另一方。Skill Provider菜单、Node Inspector和Step Inspector现在通过`BtsmtlSkillGraphAuthoringMetadata`解析kind、字段、步骤和引用，compiler通过`ReadField`/`ReadIdentity`消费同一结果。
 
 ## r2前任务状态存档
 

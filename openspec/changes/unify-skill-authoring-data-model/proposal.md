@@ -28,4 +28,4 @@
 - 各领域保留自己的正式能力模块与写入/保存责任。共享层只提供统一描述，不承接领域运行、全图保存事务或源码同步。
 - BtsmtlSkillNodeAuthoringBinding.cs、TimelineAuthoringClipBinding.cs的JSON退役及公共代码输出器属于C# authoring任务；本任务仅提供其消费的正式业务定义与必要API，不同时修改这两份文件。
 - 现行Agent专属规范与本目录旧协议delta冲突，删除本目录旧btsmtl-agent-authoring-document-sync delta，协议整体退役由remove-agent-authoring-use-native-csharp负责；本轮不修改current或其它任务文档。
-- 规划阶段只更新本目录规划和历史入口；执行阶段按tasks修改共享业务定义与metadata，不修改资产、不新增测试或验证任务，不把文档对齐当成实现完成。
+- 规划阶段只更新本目录规划和历史入口；执行阶段按tasks修改共享业务定义与metadata，并在4.3对匹配的现行共享spec做增量对账；不修改资产、不新增测试或验证任务，不把文档对齐当成实现完成。

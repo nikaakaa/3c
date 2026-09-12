@@ -1304,7 +1304,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return m_Rig ? "Missing" : "Unavailable: exact Rig context required";
             try
             {
-                return m_Rig.RequireAnimationSlot(slotId).GroupId.Value;
+                return CharacterPoseAuthoringDisplayNames.ForIdentity(
+                    m_Rig.RequireAnimationSlot(slotId).GroupId.Value);
             }
             catch (InvalidOperationException)
             {
@@ -1379,13 +1380,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case "pose-graph":
                     options = m_Profile?.PoseGraph?.EnumerateGraphs()
                         .Where(value => value != null && value.GraphId.IsValid)
-                        .Select((value, index) => new GraphAuthoringFieldOption(
-                            value.GraphId.Value,
-                            string.IsNullOrWhiteSpace(value.name)
-                                ? ReferenceEquals(value, m_Profile.PoseGraph.Graph)
+                        .Select((value, index) =>
+                        {
+                            string displayName =
+                                CharacterPoseAuthoringDisplayNames.ForIdentity(value.name);
+                            if (displayName == "Unnamed")
+                            {
+                                displayName = ReferenceEquals(value, m_Profile.PoseGraph.Graph)
                                     ? "Root Pose Graph"
-                                    : $"Pose Graph {index}"
-                                : value.name))
+                                    : $"Pose Graph {index + 1}";
+                            }
+                            return new GraphAuthoringFieldOption(
+                                value.GraphId.Value,
+                                displayName);
+                        })
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "linked-pose-group":
@@ -1393,7 +1401,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Where(value => value != null && value.GroupId.IsValid)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.GroupId.Value,
-                            value.GroupId.Value))
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(
+                                value.GroupId.Value)))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "linked-pose-interface":
@@ -1401,7 +1410,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Where(value => value != null && value.InterfaceId.IsValid)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.InterfaceId.Value,
-                            value.InterfaceId.Value))
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(
+                                value.InterfaceId.Value)))
                         .ToArray();
                     return true;
                 case "linked-pose-entry":
@@ -1416,7 +1426,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Where(value => value != null && value.EntryId.IsValid)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.EntryId.Value,
-                            value.EntryId.Value))
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(
+                                value.EntryId.Value)))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 }
@@ -1456,7 +1467,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     result.Add(new GraphAuthoringFieldOption(
                         bone.BoneId.Value,
-                        $"{bone.BoneId.Value} (Physical)"));
+                        $"{CharacterPoseAuthoringDisplayNames.ForIdentity(bone.BoneId.Value)} (Physical)"));
                 }
             }
             if (!physicalOnly)

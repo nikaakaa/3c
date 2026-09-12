@@ -437,6 +437,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             HashSet<PoseParameterId> parameters =
                 ValidateParameters(graph, report);
+            HashSet<PoseParameterId> externalParameters =
+                new HashSet<PoseParameterId>(
+                    animationInputParameters?.Where(
+                            CharacterPoseParameterAccess.IsBlackboardInput)
+                        .Select(value => value.ParameterId) ??
+                    Enumerable.Empty<PoseParameterId>());
             var nodes =
                 new Dictionary<PoseNodeId, CharacterPoseCanvasNode>();
             var ports = new Dictionary<
@@ -515,7 +521,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PoseParameterId parameter =
                     handler.Parameter(node.Payload);
                 if (parameter.IsValid &&
-                    !parameters.Contains(parameter))
+                    !parameters.Contains(parameter) &&
+                    !externalParameters.Contains(parameter))
                 {
                     Report(
                         report,
@@ -1208,12 +1215,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         value.ParameterId.IsValid)
                     .Select(value => value.ParameterId) ??
                 Enumerable.Empty<PoseParameterId>());
+            var externalParameters = new HashSet<PoseParameterId>(
+                animationInputParameters?.Where(
+                        CharacterPoseParameterAccess.IsBlackboardInput)
+                    .Select(value => value.ParameterId) ??
+                Enumerable.Empty<PoseParameterId>());
             var covered = new HashSet<PoseParameterId>();
             for (int i = 0; i < policies.Count; i++)
             {
                 CharacterPoseParameterPolicy policy = policies[i];
                 if (policy == null ||
                     !(parameters.Contains(policy.ParameterId) ||
+                      externalParameters.Contains(policy.ParameterId) ||
                       curveParameters.Contains(policy.ParameterId)) ||
                     !covered.Add(policy.ParameterId) ||
                     !Enum.IsDefined(

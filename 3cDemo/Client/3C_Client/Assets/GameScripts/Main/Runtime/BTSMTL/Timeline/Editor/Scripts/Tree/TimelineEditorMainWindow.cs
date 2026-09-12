@@ -22,6 +22,7 @@ namespace BTSMTL.Timeline.Editor
 
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
+        internal static event Action<TimelineEditorWindow> WindowOpened;
 
         [SerializeField]
         UnityEngine.Object m_SerializedOwner;
@@ -477,6 +478,7 @@ namespace BTSMTL.Timeline.Editor
             RebuildDetails(m_SlateProjection.Selection);
             if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
                 m_SlateProjection.RestoreViewState(m_ViewState);
+            WindowOpened?.Invoke(this);
         }
 
         void BuildUnboundView()
@@ -859,7 +861,7 @@ namespace BTSMTL.Timeline.Editor
         static TimelineRuntimeObservationBridge()
         {
             RuntimeDebugSession.Shared.Changed += Refresh;
-            TimelineEditorWindow.AssetOpened += _ => Refresh();
+            TimelineEditorWindow.WindowOpened += RefreshWindow;
         }
 
         static void Refresh()

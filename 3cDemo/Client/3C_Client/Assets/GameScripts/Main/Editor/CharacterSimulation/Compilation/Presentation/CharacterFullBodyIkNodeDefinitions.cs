@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, AllPoseGraphs, "Foot Placement", "Goal Sources", ConstraintColor,
                 Fields(ResourceField("profile", "Profile"), ResourceField("calibration", "Calibration")),
-                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
+                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight Override", "pose.parameter"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
                 executionDomain: CharacterPoseExecutionDomain.WorldAwareValue);
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>

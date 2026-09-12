@@ -117,14 +117,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 menu.AddDisabledItem(new GUIContent("缺少正式 Pose 输入声明"));
                 return menu;
             }
+            CharacterPoseParameterAccessDescriptor access =
+                CharacterPoseParameterAccess.Describe(this, declaration);
             menu.AddDisabledItem(new GUIContent(
-                $"类型: {VariableType(declaration.ValueType).Name}"));
+                $"名称: {access.DisplayName}"));
             menu.AddDisabledItem(new GUIContent(
-                $"来源: {SourceLabel(declaration)}"));
+                $"类型: {VariableType(access.ValueType).Name}"));
             menu.AddDisabledItem(new GUIContent(
-                $"范围: {ScopeLabel(Role)}"));
+                $"来源: {CharacterPoseParameterAccess.CategoryDisplayName(access.Category)}"));
             menu.AddDisabledItem(new GUIContent(
-                $"使用: {ParameterConsumerCount(declaration.ParameterId)} 个节点"));
+                $"范围: {CharacterPoseParameterAccess.ScopeDisplayName(access.Scope)}"));
+            menu.AddDisabledItem(new GUIContent(
+                $"Owner: {access.OwnerIdentity}"));
+            menu.AddDisabledItem(new GUIContent(
+                $"使用: {ParameterConsumerCount(access.ParameterId)} 个节点"));
             menu.AddSeparator("");
             menu.AddDisabledItem(new GUIContent("拖拽变量以创建 Get 节点"));
             return menu;
@@ -166,23 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 .Sum(node => node.outConnections.Count);
         }
 
-        static string SourceLabel(CharacterPoseParameterDeclaration declaration) =>
-            declaration.Usage == CharacterPoseParameterUsage.Control
-                ? "动画实例输入 · 只读"
-                : "Pose 曲线";
-
-        static string ScopeLabel(CharacterPoseAuthoringGraphRole role) => role switch
-        {
-            CharacterPoseAuthoringGraphRole.AnimGraph => "Root",
-            CharacterPoseAuthoringGraphRole.StatePose => "State Pose",
-            CharacterPoseAuthoringGraphRole.AnimationLayer => "Animation Layer",
-            CharacterPoseAuthoringGraphRole.ControlRig => "Control Rig",
-            CharacterPoseAuthoringGraphRole.Subgraph => "Subgraph",
-            CharacterPoseAuthoringGraphRole.LinkedPoseEntry => "Linked Pose",
-            CharacterPoseAuthoringGraphRole.TransitionRule => "Transition Rule",
-            _ => "Unknown"
-        };
-
         static Type VariableType(PoseParameterValueType valueType) => valueType switch
         {
             PoseParameterValueType.Float => typeof(float),
@@ -195,19 +184,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             declaration.ValueType switch
             {
                 PoseParameterValueType.Float => new Variable<float>(
-                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.DisplayName,
                     declaration.ParameterId.Value)
                 {
                     value = declaration.DefaultValue
                 },
                 PoseParameterValueType.Int => new Variable<int>(
-                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.DisplayName,
                     declaration.ParameterId.Value)
                 {
                     value = Convert.ToInt32(declaration.DefaultValue)
                 },
                 PoseParameterValueType.Bool => new Variable<bool>(
-                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.DisplayName,
                     declaration.ParameterId.Value)
                 {
                     value = declaration.DefaultValue > 0.5f

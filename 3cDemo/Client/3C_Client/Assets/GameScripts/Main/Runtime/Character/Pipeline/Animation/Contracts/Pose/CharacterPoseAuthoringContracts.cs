@@ -333,6 +333,99 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimatedProperty = 2
     }
 
+    public enum CharacterPoseParameterInputCategory : byte
+    {
+        AnimationInstanceVariable = 1,
+        PresentationFact = 2,
+        SubgraphInput = 3,
+        PoseCurve = 4
+    }
+
+    public readonly struct CharacterPoseParameterAccessDescriptor
+    {
+        public CharacterPoseParameterAccessDescriptor(
+            PoseParameterId parameterId,
+            string displayName,
+            PoseParameterValueType valueType,
+            string unit,
+            CharacterPoseParameterInputCategory category,
+            CharacterPoseAuthoringGraphRole scope,
+            string ownerIdentity,
+            bool readOnly)
+        {
+            if (!parameterId.IsValid || string.IsNullOrWhiteSpace(displayName) ||
+                !Enum.IsDefined(typeof(PoseParameterValueType), valueType) ||
+                !Enum.IsDefined(typeof(CharacterPoseParameterInputCategory), category) ||
+                !Enum.IsDefined(typeof(CharacterPoseAuthoringGraphRole), scope) ||
+                string.IsNullOrWhiteSpace(ownerIdentity))
+                throw new ArgumentException("Pose parameter access descriptor is invalid.");
+            ParameterId = parameterId;
+            DisplayName = displayName.Trim();
+            ValueType = valueType;
+            Unit = unit?.Trim() ?? string.Empty;
+            Category = category;
+            Scope = scope;
+            OwnerIdentity = ownerIdentity.Trim();
+            ReadOnly = readOnly;
+        }
+
+        public PoseParameterId ParameterId { get; }
+        public string DisplayName { get; }
+        public PoseParameterValueType ValueType { get; }
+        public string Unit { get; }
+        public CharacterPoseParameterInputCategory Category { get; }
+        public CharacterPoseAuthoringGraphRole Scope { get; }
+        public string OwnerIdentity { get; }
+        public bool ReadOnly { get; }
+    }
+
+    public static class CharacterPoseParameterAccess
+    {
+        public static CharacterPoseParameterAccessDescriptor Describe(
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseParameterDeclaration declaration)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            if (declaration == null || !declaration.ParameterId.IsValid)
+                throw new ArgumentException("Pose parameter declaration is invalid.", nameof(declaration));
+            CharacterPoseParameterInputCategory category = declaration.Usage ==
+                CharacterPoseParameterUsage.AnimatedProperty
+                    ? CharacterPoseParameterInputCategory.PoseCurve
+                    : CharacterPoseParameterInputCategory.AnimationInstanceVariable;
+            return new CharacterPoseParameterAccessDescriptor(
+                declaration.ParameterId,
+                declaration.DisplayName,
+                declaration.ValueType,
+                declaration.Unit,
+                category,
+                graph.Role,
+                graph.GraphId.Value,
+                true);
+        }
+
+        public static string CategoryDisplayName(CharacterPoseParameterInputCategory category) => category switch
+        {
+            CharacterPoseParameterInputCategory.AnimationInstanceVariable => "动画实例变量",
+            CharacterPoseParameterInputCategory.PresentationFact => "表现事实",
+            CharacterPoseParameterInputCategory.SubgraphInput => "子图输入",
+            CharacterPoseParameterInputCategory.PoseCurve => "输入 Pose 曲线",
+            _ => "未知来源"
+        };
+
+        public static string ScopeDisplayName(CharacterPoseAuthoringGraphRole role) => role switch
+        {
+            CharacterPoseAuthoringGraphRole.AnimGraph => "Root",
+            CharacterPoseAuthoringGraphRole.StatePose => "State Pose",
+            CharacterPoseAuthoringGraphRole.AnimationLayer => "Animation Layer",
+            CharacterPoseAuthoringGraphRole.ControlRig => "Control Rig",
+            CharacterPoseAuthoringGraphRole.Subgraph => "Subgraph",
+            CharacterPoseAuthoringGraphRole.LinkedPoseEntry => "Linked Pose",
+            CharacterPoseAuthoringGraphRole.TransitionRule => "Transition Rule",
+            _ => "Unknown"
+        };
+    }
+
     public enum ModifyBoneReferenceSpace : byte
     {
         Local = 1,
@@ -352,12 +445,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterPoseParameterDeclaration
     {
         [SerializeField] string m_ParameterId = string.Empty;
+        [SerializeField] string m_DisplayName = string.Empty;
         [SerializeField] PoseParameterValueType m_ValueType = PoseParameterValueType.Float;
         [SerializeField] CharacterPoseParameterUsage m_Usage = CharacterPoseParameterUsage.Control;
         [SerializeField] string m_Unit = string.Empty;
         [SerializeField] float m_DefaultValue;
 
         public PoseParameterId ParameterId => string.IsNullOrWhiteSpace(m_ParameterId) ? default : new PoseParameterId(m_ParameterId);
+        public string DisplayName => string.IsNullOrWhiteSpace(m_DisplayName)
+            ? CharacterPoseAuthoringDisplayNames.ForParameter(ParameterId)
+            : m_DisplayName.Trim();
         public PoseParameterValueType ValueType => m_ValueType;
         public CharacterPoseParameterUsage Usage => m_Usage;
         public string Unit => m_Unit ?? string.Empty;
@@ -370,7 +467,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseParameterValueType valueType,
             float defaultValue,
             string unit = "",
-            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control)
+            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control,
+            string displayName = "")
         {
             if (!parameterId.IsValid)
                 throw new ArgumentException("Pose Parameter identity is invalid.", nameof(parameterId));
@@ -381,6 +479,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!float.IsFinite(defaultValue))
                 throw new ArgumentOutOfRangeException(nameof(defaultValue));
             m_ParameterId = parameterId.Value;
+            m_DisplayName = string.IsNullOrWhiteSpace(displayName)
+                ? CharacterPoseAuthoringDisplayNames.ForParameter(parameterId)
+                : displayName.Trim();
             m_ValueType = valueType;
             m_Usage = usage;
             m_Unit = unit?.Trim() ?? string.Empty;

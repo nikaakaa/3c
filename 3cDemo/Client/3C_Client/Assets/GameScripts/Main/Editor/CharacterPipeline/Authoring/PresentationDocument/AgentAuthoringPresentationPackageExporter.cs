@@ -463,7 +463,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     new AgentPackagePoseParameter
                     {
                         id = value.ParameterId.Value,
+                        displayName = value.DisplayName,
                         valueType = value.ValueType.ToString(),
+                        usage = value.Usage.ToString(),
                         unit = value.Unit,
                         defaultValue = value.DefaultValue
                     }).ToList(),

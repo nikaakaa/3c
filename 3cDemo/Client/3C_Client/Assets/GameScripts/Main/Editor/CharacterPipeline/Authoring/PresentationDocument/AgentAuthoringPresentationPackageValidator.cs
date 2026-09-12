@@ -1102,6 +1102,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             GraphAuthoringDocumentRoleId role =
                 CharacterPoseGraphAuthoringCapabilities.GetRole(authoringRole);
             bool valid = Identity(graph.contentRevision);
+            var parameterIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackagePoseParameter parameter in graph.parameters ??
+                         new List<AgentPackagePoseParameter>())
+            {
+                if (parameter == null ||
+                    !Identity(parameter.id) ||
+                    !parameterIds.Add(parameter.id) ||
+                    string.IsNullOrWhiteSpace(parameter.displayName) ||
+                    !Enum.TryParse(parameter.valueType, false, out PoseParameterValueType _) ||
+                    !Enum.TryParse(parameter.usage, false, out CharacterPoseParameterUsage _) ||
+                    !float.IsFinite(parameter.defaultValue))
+                {
+                    report.Error(
+                        AgentAuthoringPresentationPackageCodec.GraphDirectory(graph.id) + "/graph.json.parameters",
+                        "presentation_pose_parameter_invalid",
+                        "Pose 参数必须具有唯一identity、作者名称、值类型、usage和有限默认值。");
+                    valid = false;
+                }
+            }
             var nodes = new Dictionary<string, NodeContract>(StringComparer.Ordinal);
             foreach (AgentPackagePoseNode node in graph.nodes ??
                          new List<AgentPackagePoseNode>())

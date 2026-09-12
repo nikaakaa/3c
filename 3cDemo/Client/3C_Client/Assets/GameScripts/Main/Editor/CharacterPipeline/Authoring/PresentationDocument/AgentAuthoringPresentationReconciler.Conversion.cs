@@ -135,7 +135,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                 new PoseParameterId(value.id),
                 Enum.Parse<PoseParameterValueType>(value.valueType, false),
                 value.defaultValue,
-                value.unit);
+                value.unit,
+                Enum.Parse<CharacterPoseParameterUsage>(value.usage, false),
+                value.displayName);
 
         static CharacterPoseDynamicPort ConvertPort(
             AgentPackagePoseDynamicPort value) =>

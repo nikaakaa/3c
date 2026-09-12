@@ -235,7 +235,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
     public sealed class AgentPackagePoseParameter
     {
         public string id;
+        public string displayName;
         public string valueType;
+        public string usage;
         public string unit;
         public float defaultValue;
     }

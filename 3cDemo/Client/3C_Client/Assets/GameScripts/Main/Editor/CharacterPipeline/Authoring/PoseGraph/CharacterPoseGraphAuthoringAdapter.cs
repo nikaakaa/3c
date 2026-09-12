@@ -1280,12 +1280,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     options = CharacterPresentationFactSchema.OrderedDeclarations
                         .Select(value => new GraphAuthoringFieldOption(
                             value.FactId.Value,
-                            value.FactId.Value))
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(value.FactId.Value)))
                         .ToArray();
                     return true;
                 case "gameplay-state":
                     options = EnumerateIdentityLiterals()
-                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value,
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(value)))
                         .ToArray();
                     return true;
                 case "pose-parameter":
@@ -1293,7 +1295,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Where(value => value != null && value.ParameterId.IsValid)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.ParameterId.Value,
-                            value.ParameterId.Value))
+                            value.DisplayName))
                         .ToArray();
                     return true;
                 case "pose-history":
@@ -1304,7 +1306,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Select(value => value.Value.Value)
                         .Distinct(StringComparer.Ordinal)
                         .OrderBy(value => value, StringComparer.Ordinal)
-                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value,
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(value)))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "animation-channel":
@@ -1315,7 +1319,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Select(value => value.Value.Value)
                         .Distinct(StringComparer.Ordinal)
                         .OrderBy(value => value, StringComparer.Ordinal)
-                        .Select(value => new GraphAuthoringFieldOption(value, value))
+                        .Select(value => new GraphAuthoringFieldOption(
+                            value,
+                            CharacterPoseAuthoringDisplayNames.ForIdentity(value)))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "animation-slot":
@@ -1323,7 +1329,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .Where(value => value != null && value.SlotId.IsValid)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.SlotId.Value,
-                            $"{value.DisplayName} ({value.SlotId.Value})"))
+                            value.DisplayName))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "pose-graph":

@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] int m_Index;
         [SerializeField] string m_ParameterId = string.Empty;
+        [SerializeField] string m_DisplayName = string.Empty;
         [SerializeField] PoseParameterValueType m_ValueType;
         [SerializeField] CharacterPoseParameterUsage m_Usage;
         [SerializeField] string m_Unit = string.Empty;
@@ -147,7 +148,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseParameterValueType valueType,
             float defaultValue,
             string unit,
-            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control)
+            CharacterPoseParameterUsage usage = CharacterPoseParameterUsage.Control,
+            string displayName = "")
         {
             if (index < 0 || !parameterId.IsValid || !Enum.IsDefined(typeof(PoseParameterValueType), valueType) ||
                 !Enum.IsDefined(typeof(CharacterPoseParameterUsage), usage) ||
@@ -155,6 +157,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Compiled Pose Parameter entry is invalid.");
             m_Index = index;
             m_ParameterId = parameterId.Value;
+            m_DisplayName = string.IsNullOrWhiteSpace(displayName)
+                ? CharacterPoseAuthoringDisplayNames.ForParameter(parameterId)
+                : displayName.Trim();
             m_ValueType = valueType;
             m_Usage = usage;
             m_Unit = unit?.Trim() ?? string.Empty;
@@ -163,6 +168,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public int Index => m_Index;
         public PoseParameterId ParameterId => new PoseParameterId(m_ParameterId);
+        public string DisplayName => string.IsNullOrWhiteSpace(m_DisplayName)
+            ? CharacterPoseAuthoringDisplayNames.ForParameter(ParameterId)
+            : m_DisplayName.Trim();
         public PoseParameterValueType ValueType => m_ValueType;
         public CharacterPoseParameterUsage Usage => m_Usage;
         public string Unit => m_Unit ?? string.Empty;

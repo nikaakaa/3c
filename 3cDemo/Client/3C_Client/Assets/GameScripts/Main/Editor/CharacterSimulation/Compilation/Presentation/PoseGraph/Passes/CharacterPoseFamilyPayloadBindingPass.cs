@@ -202,7 +202,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameter.ValueType,
                     parameter.DefaultValue,
                     parameter.Unit,
-                    parameter.Usage);
+                    parameter.Usage,
+                    parameter.DisplayName);
                 parameterIndices.Add(parameter.ParameterId, i);
             }
             var state = new BindingBuilder(

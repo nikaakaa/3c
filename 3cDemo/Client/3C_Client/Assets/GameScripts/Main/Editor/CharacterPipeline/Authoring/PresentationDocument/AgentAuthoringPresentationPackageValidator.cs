@@ -1116,6 +1116,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     parameterCategory != CharacterPoseParameterAccess.ResolveCategory(
                         new PoseParameterId(parameter.id),
                         parameterUsage) ||
+                    !CharacterPoseParameterAccess.IsBlackboardInput(
+                        new PoseParameterId(parameter.id),
+                        parameterUsage) ||
                     !Enum.TryParse(parameter.scope, false, out CharacterPoseAuthoringGraphRole parameterScope) ||
                     parameterScope != authoringRole ||
                     !string.Equals(parameter.owner, graph.id, StringComparison.Ordinal) ||

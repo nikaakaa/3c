@@ -53,6 +53,8 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `bd5dbfb71` 后的 Unity MCP Console 复查未发现编译错误；返回项仍为既有编辑器异常和重复的SkillDefinition先验错误。
 - `b14900e69`：Animation Input Contract持有唯一EventGraph变量Contract、Revision和Layout identity，曲线、Fact、Slot与外部变量仍保持各自来源。
 - `b14900e69` 后的 Unity MCP Console 复查没有新增Pose编译错误；当前返回项仍是未定位编辑器异常和SkillDefinition先验错误。
+- `f1dc9f9eb`：运行、Preview、StateSource、BlendSpace统一消费`CharacterAnimationPoseInputFrame`，删除旧`CharacterPresentationProgramParameterFrame`与旧PresentationFrameCoordinator；显式Preview fixture保留为唯一测试输入入口。
+- 旧Frame引用审计与Unity MCP Console复查均未发现残留Pose消费或新增编译错误。
 
 正式 Document 流程：
 

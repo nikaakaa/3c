@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Animation Input Contract requires one Pose Graph and Rig Definition.");
             CharacterPoseCanvasGraph root = profile.PoseGraph.Graph ??
                 throw new InvalidOperationException("Animation Input Contract requires a Pose Graph root.");
-            CharacterPoseParameterDeclaration[] parameters = BuildParameters(profile, root);
+            CharacterPoseParameterDeclaration[] parameters = BuildParameters(profile);
             var facts = new Dictionary<string, CharacterPresentationFactDeclaration>(StringComparer.Ordinal);
             var slots = new List<CharacterAnimationInputSlot>();
             var slotsByKey = new Dictionary<string, CharacterAnimationInputSlot>(StringComparer.Ordinal);
@@ -207,14 +207,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static CharacterPoseParameterDeclaration[] BuildParameters(
-            CharacterAnimationPresentationProfile profile,
-            CharacterPoseCanvasGraph root)
+            CharacterAnimationPresentationProfile profile)
         {
             var parameters = new List<CharacterPoseParameterDeclaration>();
             var ids = new HashSet<PoseParameterId>();
-            foreach (CharacterPoseParameterDeclaration declaration in root.Parameters
+            var declarations =
+                new Dictionary<PoseParameterId, CharacterPoseParameterDeclaration>();
+            foreach (CharacterPoseParameterDeclaration declaration in
+                     profile.PoseGraph.EnumerateGraphs()
+                         .Where(value => value != null)
+                         .SelectMany(value => value.Parameters)
                          .Where(CharacterPoseParameterAccess.IsBlackboardInput)
                          .OrderBy(value => value.ParameterId))
+            {
+                if (!declarations.TryGetValue(
+                        declaration.ParameterId,
+                        out CharacterPoseParameterDeclaration existing))
+                {
+                    declarations.Add(declaration.ParameterId, declaration);
+                    continue;
+                }
+                if (existing.ValueType != declaration.ValueType ||
+                    !string.Equals(existing.Unit, declaration.Unit, StringComparison.Ordinal) ||
+                    existing.DefaultValue != declaration.DefaultValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Input Contract contains conflicting control declarations for '{declaration.ParameterId}'.");
+                }
+            }
+            foreach (CharacterPoseParameterDeclaration declaration in
+                     declarations.Values.OrderBy(value => value.ParameterId))
             {
                 if (!ids.Add(declaration.ParameterId))
                     throw new InvalidOperationException(

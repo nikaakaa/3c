@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
@@ -175,6 +176,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (string.IsNullOrWhiteSpace(identity))
                 return "Unnamed";
             string value = identity.Trim();
+            if (value.Length >= 24 && value.All(Uri.IsHexDigit))
+                return "Unnamed";
             int separator = Math.Max(value.LastIndexOf('.'), value.LastIndexOf('/'));
             string segment = separator >= 0 && separator + 1 < value.Length
                 ? value.Substring(separator + 1)

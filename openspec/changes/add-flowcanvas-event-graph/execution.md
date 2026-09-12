@@ -65,7 +65,7 @@
 源码构建使用了 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，每次构建后立即执行 `dotnet build-server shutdown`。
 
 - `BTSMTL.EventGraphs.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 warning，0 error。
-- `ThirdPersonClient.Editor.csproj` Rebuild，`/p:BuildProjectReferences=false`：当前被其它窗口新增的 `BtsmtlScenePlayGraphShellToolbar.cs` 对缺失 `BtsmtlScenePlayPreviewPresenter` 的引用阻塞；本步事件图文件没有产生编译错误。
+- `ThirdPersonClient.Editor.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，32 个现有 ACL artifact identity warning。
 - 上一步 `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。
 

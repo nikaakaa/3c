@@ -478,7 +478,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             ValidateMacroInterface(context, node.UID, macro);
             string macroPath = AssetDatabase.GetAssetPath(macro);
             if (string.IsNullOrWhiteSpace(macroPath) ||
-                AssetDatabase.LoadAssetAtPath<Macro>(macroPath) != macro)
+                !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
+                    macro,
+                    out _,
+                    out long localFileId))
             {
                 context.ReportError(
                     "event_graph_macro_reference_not_loadable",
@@ -497,10 +500,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 macroVariables.Add(macro, macroVariable);
                 context.AddExternalDependency(
                     macroPath,
-                    typeof(Macro).FullName);
+                    typeof(Macro).FullName,
+                    localFileId);
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
-                    $"var {macroVariable} = UnityEditor.AssetDatabase.LoadAssetAtPath<{TypeExpression(typeof(Macro))}>({StringLiteral(macroPath)}) ?? throw new System.InvalidOperationException({StringLiteral($"Event graph Macro '{macroPath}' could not be loaded.")});");
+                    $"var {macroVariable} = context.ResolveExternalAsset<{TypeExpression(typeof(Macro))}>({StringLiteral(macroPath)}, {localFileId.ToString(CultureInfo.InvariantCulture)}L) ?? throw new System.InvalidOperationException({StringLiteral($"Event graph Macro '{macroPath}' could not be loaded.")});");
             }
             context.AddStatement(
                 BtsmtlAuthoringCodeEmissionPhase.Configure,
@@ -676,31 +680,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
 
         static string TypeExpression(Type type)
         {
-            if (type == typeof(bool))
-                return "bool";
-            if (type == typeof(int))
-                return "int";
-            if (type == typeof(float))
-                return "float";
-            if (type == typeof(Vector2))
-                return "UnityEngine.Vector2";
-            if (type == typeof(Vector3))
-                return "UnityEngine.Vector3";
-            if (type.IsArray)
-                return $"{TypeExpression(type.GetElementType())}[]";
-            if (type.IsGenericType)
-            {
-                Type definition = type.GetGenericTypeDefinition();
-                string definitionName = (definition.FullName ?? definition.Name)
-                    .Replace('+', '.');
-                int arity = definitionName.IndexOf('`');
-                if (arity >= 0)
-                    definitionName = definitionName.Substring(0, arity);
-                return $"{definitionName}<{string.Join(
-                    ", ",
-                    type.GetGenericArguments().Select(TypeExpression))}>";
-            }
-            return (type.FullName ?? type.Name).Replace('+', '.');
+            return BtsmtlAuthoringCodeSyntax.TypeName(type);
         }
 
         static string StringLiteral(string value) =>

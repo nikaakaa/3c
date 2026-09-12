@@ -82,15 +82,26 @@ namespace FlowCanvas
         }
 
         internal static BinderConnection CreateValidated(Port source, Port target) {
+            return CreateValidated(source, target, null);
+        }
+
+        // 3C: domain graphs create their own connection subclasses through the graph factory.
+        public static BinderConnection CreateValidatedForDomain(Port source, Port target, System.Func<BinderConnection> createBinder) {
+            return CreateValidated(source, target, createBinder);
+        }
+
+        static BinderConnection CreateValidated(Port source, Port target, System.Func<BinderConnection> createBinder) {
 
             ParadoxNotion.Design.UndoUtility.RecordObject(source.parent.graph, "Connect Ports");
 
             BinderConnection binder = null;
-            if ( source is FlowOutput && target is FlowInput ) {
+            if ( createBinder != null ) {
+                binder = createBinder();
+            } else if ( source is FlowOutput && target is FlowInput ) {
                 binder = new BinderConnection();
             }
 
-            if ( source is ValueOutput && target is ValueInput ) {
+            if ( binder == null && source is ValueOutput && target is ValueInput ) {
                 binder = (BinderConnection)System.Activator.CreateInstance(typeof(BinderConnection<>).RTMakeGenericType(new System.Type[] { target.type }));
             }
 
@@ -374,6 +385,10 @@ namespace FlowCanvas
             var case2 = targetPort == null || targetPort.bindStatus != Port.BindStatus.Valid;
             if ( case1 || case2 ) { return null; }
 
+            // 3C: domain connections contribute their own always-visible authoring label on the link.
+            var domainInfo = GetDomainConnectionInfo();
+            if ( domainInfo != null ) { return domainInfo; }
+
             if ( targetPort.willDraw ) {
 
                 if ( Application.isPlaying ) {
@@ -387,6 +402,9 @@ namespace FlowCanvas
 
             return null;
         }
+
+        // 3C: domain connection subclasses override to render a static authoring label on the link.
+        virtual protected string GetDomainConnectionInfo() { return null; }
 
         //Data label to show on binder info
         virtual protected string GetTransferDataLabel() { return null; }

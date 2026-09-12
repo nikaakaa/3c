@@ -91,6 +91,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
         public string kind;
         public AgentPackageSkillFlowEdgeEndpoint from;
         public AgentPackageSkillFlowEdgeEndpoint to;
+        public string conditionGraphId;
+        public int priority;
+        public string abortPolicy;
     }
 
     [Serializable]

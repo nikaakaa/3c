@@ -201,6 +201,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 if (!BtsmtlSkillFlowEditorMutation.CanConnect(this, source, target, out string reason))
                     throw new InvalidOperationException(reason);
+                if (m_Role == BtsmtlSkillFlowGraphRole.StateMachine && source is FlowOutput && target is FlowInput)
+                    return BtsmtlSkillFlowConnection.Create(source, target);
                 return base.CreatePortConnection(source, target);
             });
 

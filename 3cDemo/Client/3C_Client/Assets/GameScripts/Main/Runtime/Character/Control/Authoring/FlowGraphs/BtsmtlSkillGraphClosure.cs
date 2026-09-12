@@ -109,6 +109,13 @@ namespace ThirdPersonCharacter.Control.Authoring
                             RequirePrivateOwnership(graph, step.Condition, nodePath);
                             VisitChild(step.Condition, BtsmtlSkillFlowGraphRole.ConditionRule, $"{nodePath}/port:{step.Id}", complete, active, identities, result);
                         }
+                foreach (Connection outgoing in node.outConnections)
+                    if (outgoing is BtsmtlSkillFlowConnection transfer && transfer.Condition != null)
+                    {
+                        RequirePrivateOwnership(graph, transfer.Condition, nodePath);
+                        VisitChild(transfer.Condition, BtsmtlSkillFlowGraphRole.ConditionRule,
+                            $"{nodePath}/edge:{transfer.UID}", complete, active, identities, result);
+                    }
             }
             active.Remove(graph);
         }
@@ -177,6 +184,15 @@ namespace ThirdPersonCharacter.Control.Authoring
                     if ((source is FlowOutput && !occupied.Add(source)) ||
                         (target is ValueInput && !occupied.Add(target)))
                         throw Error($"{path}/edge:{edge.UID}", "端口超过原生连接容量。");
+                    if (role == BtsmtlSkillFlowGraphRole.StateMachine && source is FlowOutput)
+                    {
+                        if (edge is not BtsmtlSkillFlowConnection transfer)
+                            throw Error($"{path}/edge:{edge.UID}", "状态机转移连线未携带转移数据，需要先执行资产迁移。");
+                        if (transfer.Priority < BtsmtlSkillFlowConnection.MinPriority)
+                            throw Error($"{path}/edge:{edge.UID}", "转移优先级不能为负。");
+                        if (node is BtsmtlSkillStateAnyFlowNode && transfer.Condition == null)
+                            throw Error($"{path}/edge:{edge.UID}", "任意状态的转移必须挂条件图。");
+                    }
                 }
             }
             var visiting = new HashSet<Node>();

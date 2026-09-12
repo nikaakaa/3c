@@ -206,6 +206,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         "skill_edge_identity_missing",
                         "Document Edge identity不存在于当前正式Skill Graph。");
                     valid = false;
+                    continue;
+                }
+                if (edge != null && !string.IsNullOrEmpty(edge.conditionGraphId) &&
+                    edges.TryGetValue(edge.id, out BinderConnection actual) &&
+                    actual is not BtsmtlSkillFlowConnection)
+                {
+                    report.Error(path + ".graphs[" + target.id + "].edges[" + edge.id + "]",
+                        "skill_edge_transfer_type_mismatch",
+                        "Document Edge声明了转移条件，但正式Skill Graph连线未携带转移数据。");
+                    valid = false;
                 }
             }
             return valid;

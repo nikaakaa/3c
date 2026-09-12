@@ -180,12 +180,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                             m_Report.Error(graphPath + ".edges[" + connection.UID + "]", "skill_edge_port_invalid", "Skill Edge端点缺失或类型不一致。");
                             continue;
                         }
+                        var transfer = connection as BtsmtlSkillFlowConnection;
+                        string conditionGraphId = null;
+                        int priority = 0;
+                        string abortPolicy = null;
+                        if (transfer != null)
+                        {
+                            conditionGraphId = transfer.Condition != null ? transfer.Condition.AuthoringId : null;
+                            priority = transfer.Priority;
+                            abortPolicy = transfer.AbortPolicy.ToString();
+                        }
+                        else if (authoring.Role == BtsmtlSkillFlowGraphRole.StateMachine &&
+                                 connection.sourcePort is FlowOutput &&
+                                 connection.sourceNode is BtsmtlSkillCompositeFlowNode legacyComposite)
+                        {
+                            BtsmtlSkillStepPort legacy = legacyComposite.Steps.FirstOrDefault(value =>
+                                string.Equals(value.Id, connection.sourcePortID, StringComparison.Ordinal));
+                            if (legacy != null)
+                            {
+                                conditionGraphId = legacy.Condition != null ? legacy.Condition.AuthoringId : null;
+                                priority = legacy.Priority;
+                                abortPolicy = legacy.AbortPolicy.ToString();
+                            }
+                        }
                         file.edges.Add(new AgentPackageSkillFlowEdge
                         {
                             id = connection.UID,
                             kind = connection.sourcePort.IsFlowPort() ? "flow" : "value",
                             from = Endpoint(connection.sourceNode as FlowNode, connection.sourcePortID),
-                            to = Endpoint(connection.targetNode as FlowNode, connection.targetPortID)
+                            to = Endpoint(connection.targetNode as FlowNode, connection.targetPortID),
+                            conditionGraphId = conditionGraphId,
+                            priority = priority,
+                            abortPolicy = abortPolicy
                         });
                     }
                 m_Layouts[authoring.AuthoringId] = new AgentPackageSkillFlowGraphLayoutFile

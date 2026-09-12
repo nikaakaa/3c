@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string sourcePort = value ? valueSource.PortId : edge.sourcePortID;
                 string targetPort = value ? valueTarget.PortId : edge.targetPortID;
                 m_Builder.DeclareControlFlow(record.Route, source, target, sourcePort, targetPort,
-                    kind, record.Order, record.Step?.Priority ?? 0, record.Step?.AbortPolicy ?? ProgramAbortPolicy.None,
+                    kind, record.Order, record.Priority, record.AbortPolicy,
                     record.Condition != null, condition,
                     new CharacterSimulationSourceLocation(edge.GetType().FullName, graph.GraphId, string.Empty,
                         edge.UID, string.Empty, string.Empty, record.Route, contentHash: graph.ContentHash));

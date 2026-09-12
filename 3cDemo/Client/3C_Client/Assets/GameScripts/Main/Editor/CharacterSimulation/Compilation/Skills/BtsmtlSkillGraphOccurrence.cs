@@ -5,6 +5,7 @@ using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -37,19 +38,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillEdgeOccurrence
     {
         internal BtsmtlSkillEdgeOccurrence(BinderConnection edge, string route, int order,
-            BtsmtlSkillStepPort step, BtsmtlSkillGraphOccurrence condition)
+            int priority, ProgramAbortPolicy abortPolicy, BtsmtlSkillGraphOccurrence condition)
         {
             Edge = edge;
             Route = route;
             Order = order;
-            Step = step;
+            Priority = priority;
+            AbortPolicy = abortPolicy;
             Condition = condition;
         }
 
         public BinderConnection Edge { get; }
         public string Route { get; }
         public int Order { get; }
-        public BtsmtlSkillStepPort Step { get; }
+        public int Priority { get; }
+        public ProgramAbortPolicy AbortPolicy { get; }
         public BtsmtlSkillGraphOccurrence Condition { get; }
     }
 
@@ -118,24 +121,39 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     string edgeRoute = $"{route}/edge:{edge.UID}";
                     int order = 0;
-                    BtsmtlSkillStepPort step = null;
-                    if (edge.sourcePort is FlowOutput && node is BtsmtlSkillCompositeFlowNode composite)
+                    int priority = 0;
+                    ProgramAbortPolicy abortPolicy = ProgramAbortPolicy.None;
+                    BtsmtlSkillGraphOccurrence condition = null;
+                    if (Role == BtsmtlSkillFlowGraphRole.StateMachine)
+                    {
+                        if (edge.sourcePort is not FlowOutput)
+                            throw new InvalidOperationException($"{edgeRoute}: 状态机图连线必须从转移端口发出。");
+                        if (edge is not BtsmtlSkillFlowConnection transfer)
+                            throw new InvalidOperationException($"{edgeRoute}: 状态机转移连线未携带转移数据，需要先执行资产迁移。");
+                        priority = transfer.Priority;
+                        abortPolicy = transfer.AbortPolicy;
+                        condition = transfer.Condition != null
+                            ? ReadOccurrence(transfer.Condition, $"{edgeRoute}/condition:{transfer.Condition.AuthoringId}", contentHash, timelineEmitters, report)
+                            : null;
+                    }
+                    else if (edge.sourcePort is FlowOutput && node is BtsmtlSkillCompositeFlowNode composite)
                     {
                         order = -1;
                         for (int i = 0; i < composite.Steps.Count; i++)
                             if (string.Equals(composite.Steps[i].Id, edge.sourcePortID, StringComparison.Ordinal))
                             {
                                 order = i;
-                                step = composite.Steps[i];
+                                priority = composite.Steps[i].Priority;
+                                abortPolicy = composite.Steps[i].AbortPolicy;
+                                condition = composite.Steps[i].Condition != null
+                                    ? ReadOccurrence(composite.Steps[i].Condition, $"{edgeRoute}/condition:{composite.Steps[i].Condition.AuthoringId}", contentHash, timelineEmitters, report)
+                                    : null;
                                 break;
                             }
                         if (order < 0)
                             throw new InvalidOperationException($"{edgeRoute}: 执行连线没有对应的稳定步骤端口。");
                     }
-                    BtsmtlSkillGraphOccurrence condition = step?.Condition != null
-                        ? ReadOccurrence(step.Condition, $"{edgeRoute}/condition:{step.Condition.AuthoringId}", contentHash, timelineEmitters, report)
-                        : null;
-                    edges.Add(new BtsmtlSkillEdgeOccurrence(edge, edgeRoute, order, step, condition));
+                    edges.Add(new BtsmtlSkillEdgeOccurrence(edge, edgeRoute, order, priority, abortPolicy, condition));
                 }
                 switch (node)
                 {

@@ -465,14 +465,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                     BinderConnection created = graph.CreatePortConnection(source, destination);
                     if (created == null)
                         throw new InvalidOperationException($"Skill Edge '{edge.id}'创建失败。");
+                    ApplyTransfer(created, edge, target.id);
                     m_LocalEdges[EdgeKey(target.id, edge.id)] = created;
                     continue;
+                }
+                if (existing is not BtsmtlSkillFlowConnection &&
+                    graph is IBtsmtlSkillFlowGraph { Role: BtsmtlSkillFlowGraphRole.StateMachine } &&
+                    source is FlowOutput && destination is FlowInput)
+                {
+                    string preservedUid = existing.UID;
+                    graph.RemoveConnection(existing, false);
+                    existing = graph.CreatePortConnection(source, destination)
+                        ?? throw new InvalidOperationException($"Skill Edge '{edge.id}'迁移重建失败。");
+                    existing.ConfigureAuthoringIdentity(preservedUid);
                 }
                 if (existing.sourcePort != source)
                     existing.SetSourcePort(source);
                 if (existing.targetPort != destination)
                     existing.SetTargetPort(destination);
+                ApplyTransfer(existing, edge, target.id);
             }
+        }
+
+        void ApplyTransfer(BinderConnection connection, AgentPackageSkillFlowEdge edge, string graphId)
+        {
+            if (connection is not BtsmtlSkillFlowConnection transfer)
+            {
+                if (!string.IsNullOrEmpty(edge.conditionGraphId))
+                    throw new InvalidOperationException($"Skill Edge '{edge.id}'声明了转移条件，但连线未携带转移数据。");
+                return;
+            }
+            BtsmtlSkillFlowGraph condition = null;
+            if (!string.IsNullOrEmpty(edge.conditionGraphId))
+                condition = ResolveGraph(edge.conditionGraphId)
+                    ?? throw new InvalidOperationException($"Skill Edge '{edge.id}'的条件图'{edge.conditionGraphId}'未应用或顺序错误。");
+            transfer.Configure(condition, edge.priority,
+                string.IsNullOrEmpty(edge.abortPolicy)
+                    ? ProgramAbortPolicy.None
+                    : Enum.Parse<ProgramAbortPolicy>(edge.abortPolicy, false));
         }
 
         public void ValidateAppliedIdentityContracts()

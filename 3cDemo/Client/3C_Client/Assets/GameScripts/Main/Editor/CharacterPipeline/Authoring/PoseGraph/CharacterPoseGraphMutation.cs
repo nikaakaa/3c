@@ -214,6 +214,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 graphId)
         {
             Parameters = parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
+            for (int i = 0; i < Parameters.Count; i++)
+            {
+                if (!CharacterPoseParameterAccess.IsBlackboardInput(Parameters[i]))
+                {
+                    throw new ArgumentException(
+                        "Pose Graph mutations may only declare external read-only inputs.",
+                        nameof(parameters));
+                }
+            }
         }
 
         public IReadOnlyList<CharacterPoseParameterDeclaration> Parameters { get; }

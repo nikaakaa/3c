@@ -56,6 +56,8 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `f1dc9f9eb`：运行、Preview、StateSource、BlendSpace统一消费`CharacterAnimationPoseInputFrame`，删除旧`CharacterPresentationProgramParameterFrame`与旧PresentationFrameCoordinator；显式Preview fixture保留为唯一测试输入入口。
 - 旧Frame引用审计与Unity MCP Console复查均未发现残留Pose消费或新增编译错误。
 - `b5e2590c4`：Preview Host和Authoring Controller移除direct参数接口，完整Pose Preview统一由Native EventGraph变量帧驱动。
+- `f8cf7bfaa`：固化Character Animation Event Graph类型、Host和变量合同，并让Profile/Projection强制挂接唯一动画输入宿主。
+- `60888aabb`：删除无调用者且无法满足严格EventGraph输入合同的Projection Draft备用路径。
 
 正式 Document 流程：
 

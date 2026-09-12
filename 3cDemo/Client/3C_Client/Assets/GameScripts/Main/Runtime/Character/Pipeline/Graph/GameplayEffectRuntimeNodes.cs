@@ -26,6 +26,14 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         public GameplayTagId Tag => m_Tag;
 
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(GameplayTagId tag)
+        {
+            m_Tag = GameplayAuthoringRules.RequireTag(tag);
+            OnNodeChangedCallback();
+        }
+#endif
+
         protected override void OutputValue()
         {
             throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
@@ -45,6 +53,14 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         BoolPropertyPort m_Result = new BoolPropertyPort();
 
         public GameplayTagQuery Query => m_Query;
+
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(GameplayTagQuery query)
+        {
+            m_Query = GameplayAuthoringRules.RequireTagQuery(query);
+            OnNodeChangedCallback();
+        }
+#endif
 
         protected override void OutputValue()
         {
@@ -71,6 +87,14 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         FloatPropertyPort m_CurrentValue = new FloatPropertyPort();
 
         public GameplayAttributeId Attribute => m_Attribute;
+
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(GameplayAttributeId attribute)
+        {
+            m_Attribute = GameplayAuthoringRules.RequireAttribute(attribute);
+            OnNodeChangedCallback();
+        }
+#endif
 
         protected override void OutputValue()
         {
@@ -106,6 +130,19 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         public override State ReturnState => m_Applied.Value ? State.Success : State.Failure;
 
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(
+            GameplayEffectDefinition effect,
+            ActionContextSlot actionContext,
+            bool predicted)
+        {
+            m_Effect = GameplayAuthoringRules.RequireEffect(effect);
+            m_ActionContext = actionContext;
+            m_Predicted = predicted;
+            OnNodeChangedCallback();
+        }
+#endif
+
         protected override void DoAction()
         {
             throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
@@ -139,6 +176,22 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         public GameplayTagQuery EffectTagQuery => m_EffectTagQuery;
 
         public override State ReturnState => m_Removed.Value ? State.Success : State.Failure;
+
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(
+            GameplayEffectRemoveSelector selector,
+            ulong handle,
+            GameplayEffectDefinition effect,
+            GameplayTagQuery effectTagQuery)
+        {
+            GameplayAuthoringRules.ValidateEffectRemoval(selector, effect, effectTagQuery);
+            m_Selector = selector;
+            m_Handle = handle;
+            m_Effect = effect;
+            m_EffectTagQuery = effectTagQuery ?? new GameplayTagQuery();
+            OnNodeChangedCallback();
+        }
+#endif
 
         protected override void DoAction()
         {

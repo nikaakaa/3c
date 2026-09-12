@@ -32,12 +32,13 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeKind("action-window-active")]
     [BtsmtlSkillAuthoringField(
         "windowType",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,
+        NonEmpty = true)]
     public sealed class BtsmtlSkillActionWindowActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IActionWindowAuthoring
     {
         [SerializeField] string m_WindowType;
         public string WindowType => m_WindowType ?? string.Empty;
-        public void SetWindowType(string windowType) => m_WindowType = windowType?.Trim() ?? string.Empty;
+        public void SetWindowType(string windowType) => m_WindowType = CharacterActionAuthoringRules.RequireWindowType(windowType);
         protected override void RegisterPorts() => AddValueOutput<bool>("开放中", RejectAuthoringValue<bool>, "m_Output");
     }
 

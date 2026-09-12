@@ -429,7 +429,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(GameplayTagId tag, string providerOwnerId)
         {
-            if (!tag.IsValid || string.IsNullOrWhiteSpace(providerOwnerId))
+            GameplayAuthoringRules.RequireTag(tag);
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Tag provider reference is incomplete.");
             m_Tag = tag;
             m_ProviderOwnerId = providerOwnerId.Trim();
@@ -455,7 +456,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(GameplayTagQuery query, string providerOwnerId)
         {
-            if (query == null || string.IsNullOrWhiteSpace(providerOwnerId))
+            GameplayAuthoringRules.RequireTagQuery(query);
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Tag Query provider reference is incomplete.");
             m_Query = query;
             m_ProviderOwnerId = providerOwnerId.Trim();
@@ -480,7 +482,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(GameplayAttributeId attribute, string providerOwnerId)
         {
-            if (!attribute.IsValid || string.IsNullOrWhiteSpace(providerOwnerId))
+            GameplayAuthoringRules.RequireAttribute(attribute);
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Attribute provider reference is incomplete.");
             m_Attribute = attribute;
             m_ProviderOwnerId = providerOwnerId.Trim();
@@ -530,7 +533,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(GameplayEffectDefinition effect, ActionContextSlot actionContext, bool predicted, string providerOwnerId)
         {
-            if (!effect || string.IsNullOrWhiteSpace(providerOwnerId))
+            GameplayAuthoringRules.RequireEffect(effect);
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Effect provider reference is incomplete.");
             m_Effect = effect;
             m_ActionContext = actionContext;
@@ -589,13 +593,9 @@ namespace ThirdPersonCharacter.Control.Authoring
             GameplayTagQuery effectTagQuery,
             string providerOwnerId)
         {
-            if (!Enum.IsDefined(typeof(GameplayEffectRemoveSelector), selector) ||
-                string.IsNullOrWhiteSpace(providerOwnerId))
+            GameplayAuthoringRules.ValidateEffectRemoval(selector, effect, effectTagQuery);
+            if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Effect removal provider reference is incomplete.");
-            if (selector == GameplayEffectRemoveSelector.EffectId && !effect)
-                throw new ArgumentException("EffectId removal requires an effect definition.");
-            if (selector == GameplayEffectRemoveSelector.EffectTagQuery && effectTagQuery == null)
-                throw new ArgumentException("EffectTagQuery removal requires a tag query.");
             m_Selector = selector;
             m_Handle = handle;
             m_Effect = effect;

@@ -151,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 #if UNITY_EDITOR
         public void ConfigureAuthoring(string windowType)
         {
-            m_WindowType = string.IsNullOrWhiteSpace(windowType) ? string.Empty : windowType.Trim();
+            m_WindowType = CharacterActionAuthoringRules.RequireWindowType(windowType);
             OnNodeChangedCallback();
         }
 #endif

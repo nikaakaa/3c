@@ -119,6 +119,57 @@ namespace ThirdPersonCharacter.Pipeline.Motion
                 transitionType == ActionLifecycleTransitionType.None)
                 throw new ArgumentOutOfRangeException(nameof(transitionType));
         }
+
+        public static string RequireWindowType(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("Action window requires a declared window type.", nameof(value));
+            return value.Trim();
+        }
+    }
+
+    public static class GameplayAuthoringRules
+    {
+        public static GameplayTagId RequireTag(GameplayTagId value)
+        {
+            if (!value.IsValid)
+                throw new ArgumentException("Gameplay Tag authoring requires a valid tag identity.", nameof(value));
+            return value;
+        }
+
+        public static GameplayAttributeId RequireAttribute(GameplayAttributeId value)
+        {
+            if (!value.IsValid)
+                throw new ArgumentException("Gameplay Attribute authoring requires a valid attribute identity.", nameof(value));
+            return value;
+        }
+
+        public static GameplayTagQuery RequireTagQuery(GameplayTagQuery value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            return value;
+        }
+
+        public static GameplayEffectDefinition RequireEffect(GameplayEffectDefinition value)
+        {
+            if (!value)
+                throw new ArgumentNullException(nameof(value));
+            return value;
+        }
+
+        public static void ValidateEffectRemoval(
+            GameplayEffectRemoveSelector selector,
+            GameplayEffectDefinition effect,
+            GameplayTagQuery query)
+        {
+            if (!Enum.IsDefined(typeof(GameplayEffectRemoveSelector), selector))
+                throw new ArgumentOutOfRangeException(nameof(selector));
+            if (selector == GameplayEffectRemoveSelector.EffectId && !effect)
+                throw new ArgumentException("EffectId removal requires an effect definition.", nameof(effect));
+            if (selector == GameplayEffectRemoveSelector.EffectTagQuery && query == null)
+                throw new ArgumentNullException(nameof(query));
+        }
     }
 
     public static class LocomotionInputMotionAuthoringRules

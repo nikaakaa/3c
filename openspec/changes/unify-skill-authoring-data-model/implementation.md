@@ -17,7 +17,20 @@
 - 原业务节点与FlowCanvas节点共享输入身份、ActionContext、ActionWindow、CanActivate目标快照、生命周期、Gameplay、Blackboard和Locomotion authoring合同；Locomotion默认值与组合校验集中到同一业务规则。
 - 固定、条件和动态端口继续由共享Capability与唯一`GraphAuthoringNodePortShapeProjector`投影；已有TransferPayload、真实端口和普通组合步骤未被改写。
 
-当前只完成tasks 1.1、1.2、1.3；tasks 2.1至4.3仍按文档保留未完成状态。NodeInspector仍有并行Native FSM未提交改动，本次只保留其工作树内容，不把它混入本记录的提交范围。
+当前已完成tasks 1.1、1.2、1.3、2.3、3.1、3.2。2.1、2.2和3.3仍未完成：已确认的Skill/原业务同义合同和Skill消费方已经接通，但原节点与FlowCanvas的完整字段对照、原节点目录/人工入口的全量改接仍需继续；并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。4.1至4.3仍按文档保留未完成状态。
+
+## 2026-09-13 r2字段与引用链收口
+
+本轮把“字段身份”和“引用目标”分成两个正式读取结果：
+
+- `BtsmtlSkillGraphAuthoringMetadata.ReadField`返回当前节点的typed业务值；Timeline、Skill状态机和状态主体返回真实对象，不把资产对象硬转成编译器所需的字符串。
+- `ReadIdentity`专门把同一typed值降为稳定identity，Skill compiler只从该入口取得Timeline和图引用ID；`ReadReferences`与`ReadGraphReferences`返回实际目标、identity和缺失状态。
+- Timeline节点的TimelineAsset引用已登记到正式metadata，Inspector通过引用入口读取真实资产；字段目录、Inspector和compiler不再各读一套Timeline字段。
+- Skill字段、节点引用和图引用按稳定fieldId排序；provider owner、Character State fieldId、Blackboard declaration/owner的必填事实进入共享字段约束。
+
+本轮补齐的业务配置入口包括：原生Gameplay Tag、Tag Query、Attribute、Apply/Remove Gameplay Effect节点的`ConfigureAuthoring`，以及原生与Skill Action Window、Gameplay节点共用的合法性规则。Locomotion两类节点的位移模式、执行模式和持续时间默认值也由同一业务规则提供。
+
+本轮没有修改`BtsmtlSkillNodeAuthoringBinding.cs`、`TimelineAuthoringClipBinding.cs`、JSON/Agent协议、FSM状态迁移或事件图路径。C# authoring负责的代码输出与JSON退役只消费本轮提供的typed metadata/API，不由本change新增第二套模型。
 
 ## r2前任务状态存档
 
@@ -100,8 +113,8 @@
 
 ## 验证记录
 
-- Runtime 与 Editor 的 `dotnet build` 已通过；编译使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后执行了 `dotnet build-server shutdown`。
-- 上述通过是既有记录；本轮r2代码完成后，`BTSMTL.TreeDesigner.csproj`重新编译为0错误，`ThirdPersonClient.Editor.csproj`的Skill相关代码无错误，当前剩余3条并行Pose错误（`CharacterPoseGraphWorkspace.cs`调用缺失的`SetEditorAnimationVariables`）。
+- Runtime、Editor和`BTSMTL.TreeDesigner.csproj`的最新增量编译均为0错误；编译使用`--disable-build-servers /nr:false /p:UseSharedCompilation=false`，每次结束后均执行了`dotnet build-server shutdown`。当前只剩既有警告：Runtime 1条、TreeDesigner 16条、Editor 32条，未出现Skill字段/引用链错误。
+- 旧记录曾有并行Pose `CharacterPoseGraphWorkspace.cs`的`SetEditorAnimationVariables`错误；最新Editor编译已不再复现该错误。并行Pose/FSM/EventGraph工作树仍不作为本change的实现证据。
 - Unity 正确实例为 `3C_Client@e852139597e42532`；没有向并行测试实例 apply。
 - v8代码加载后，MCP tool description 已显示 Document v8。
 - 当前最新正式 `checkout_document` 没有生成 package，返回真实 authoring错误：当前未提交 Native FSM/相关节点闭包存在缺失，且当前目录有并行 Timeline 改动；这是正确阻断。

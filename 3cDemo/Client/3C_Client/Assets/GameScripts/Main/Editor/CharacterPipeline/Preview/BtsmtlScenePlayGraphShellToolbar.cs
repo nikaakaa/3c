@@ -26,7 +26,8 @@ namespace ThirdPersonCharacter.Editor.Preview
         public VisualElement Create(GraphAuthoringEditorShell shell)
         {
             return shell is BaseTreeWindow
-                ? new BtsmtlScenePlayGraphShellToolbar()
+                ? new BtsmtlScenePlayGraphShellToolbar(
+                    (shell as BaseTreeWindow).Tree?.GraphAuthoringId)
                 : null;
         }
     }
@@ -45,6 +46,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly ToolbarMenu m_BuildMenu;
         readonly ToolbarMenu m_SkillMenu;
         readonly Label m_BuildStatus;
+        readonly Label m_TimelineAuthoringStatus;
         readonly ToolbarButton m_CaptureButton;
         readonly ToolbarButton m_InputRecordButton;
         readonly LongField m_RestoreTickField;
@@ -56,9 +58,9 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly Label m_Status;
         bool m_Disposed;
 
-        public BtsmtlScenePlayGraphShellToolbar()
+        public BtsmtlScenePlayGraphShellToolbar(string graphAuthoringId)
         {
-            m_Presenter = new BtsmtlScenePlayPreviewPresenter();
+            m_Presenter = new BtsmtlScenePlayPreviewPresenter(graphAuthoringId);
             m_Presenter.Changed += Refresh;
             AddToClassList("btsmtl-scene-play-graph-shell-toolbar");
             style.flexGrow = 1f;
@@ -107,9 +109,12 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_BuildStatus = new Label();
             m_BuildStatus.style.marginLeft = 6f;
             m_BuildStatus.style.flexGrow = 1f;
+            m_TimelineAuthoringStatus = new Label();
+            m_TimelineAuthoringStatus.style.marginLeft = 6f;
             experimentControls.Add(m_BuildMenu);
             experimentControls.Add(m_SkillMenu);
             experimentControls.Add(m_BuildStatus);
+            experimentControls.Add(m_TimelineAuthoringStatus);
 
             m_CaptureButton = new ToolbarButton(() => m_Presenter.ToggleDiagnosticCapture()) { text = "Capture" };
             observationControls.Add(m_CaptureButton);
@@ -163,6 +168,8 @@ namespace ThirdPersonCharacter.Editor.Preview
             RefreshSkillMenu(status);
             m_BuildStatus.text = m_Presenter.BuildStatusDescription;
             m_BuildStatus.tooltip = m_Presenter.BuildStatus.Message;
+            m_TimelineAuthoringStatus.text = m_Presenter.TimelineAuthoringDescription;
+            m_TimelineAuthoringStatus.tooltip = "Timeline作者版本只表示当前作者内容，不代表运行时已经采用。";
             m_InputRecordButton.SetEnabled(m_Presenter.HasOperations &&
                                            m_Presenter.SupportsInputReplay &&
                                            (status.State == BtsmtlScenePlayState.Running ||

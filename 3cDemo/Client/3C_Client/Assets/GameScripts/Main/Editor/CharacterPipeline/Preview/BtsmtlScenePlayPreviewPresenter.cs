@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using BTSMTL.Timeline;
+using BTSMTL.Timeline.Editor;
 using FlowCanvas;
 using NodeCanvas.Editor;
 using ThirdPersonCharacter.Control.Authoring;
@@ -33,7 +35,10 @@ namespace ThirdPersonCharacter.Editor.Preview
             {
                 s_SkillGraphPresenter?.Dispose();
                 s_SkillGraph = graph;
-                s_SkillGraphPresenter = new BtsmtlScenePlayPreviewPresenter();
+                string graphAuthoringId = graph is IBtsmtlSkillFlowGraph authoring
+                    ? authoring.AuthoringId
+                    : string.Empty;
+                s_SkillGraphPresenter = new BtsmtlScenePlayPreviewPresenter(graphAuthoringId);
             }
             s_SkillGraphPresenter.DrawImmediateGUI();
         }
@@ -68,12 +73,19 @@ namespace ThirdPersonCharacter.Editor.Preview
         long m_ReplayToTick = -1;
         RuntimeExecutionHistory m_History;
         string m_StatusMessage = string.Empty;
+        readonly string m_GraphAuthoringId;
+        string m_TimelineAuthoringDescription = "作者版本：未绑定";
 
-        public BtsmtlScenePlayPreviewPresenter()
+        public BtsmtlScenePlayPreviewPresenter(string graphAuthoringId = "")
         {
+            m_GraphAuthoringId = graphAuthoringId ?? string.Empty;
             BtsmtlScenePlayPreviewOperationsRegistry.Changed += OnRegistryChanged;
             RuntimeDebugSession.Shared.Changed += OnRuntimeChanged;
+            TimelineEditorWindow.AssetOpened += OnTimelineWindowChanged;
+            TimelineEditorWindow.WindowClosed += OnTimelineWindowChanged;
+            TimelineEditorWindow.AuthoringRevisionChanged += OnTimelineWindowChanged;
             BindOperations(BtsmtlScenePlayPreviewOperationsRegistry.Current);
+            RefreshTimelineAuthoringStatus();
         }
 
         public event Action Changed;
@@ -118,6 +130,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         public BtsmtlScenePlayStatus Status => m_Operations?.Status ?? BtsmtlScenePlayStatus.Idle;
         public BtsmtlScenePlayBuildStatus BuildStatus => m_Operations?.BuildStatus ?? BtsmtlScenePlayBuildStatus.Idle;
         public string BuildStatusDescription => DescribeBuildStatus(BuildStatus);
+        public string TimelineAuthoringDescription => m_TimelineAuthoringDescription;
         public bool HasOperations => m_Operations != null;
         public bool IsInputRecording => m_Operations?.IsInputRecording == true;
         public bool IsDiagnosticCaptureRecording => RuntimeDebugSession.Shared.IsCaptureRecording;
@@ -322,6 +335,7 @@ namespace ThirdPersonCharacter.Editor.Preview
             if (GUILayout.Button("Skill", EditorStyles.toolbarButton))
                 ShowSkillMenu();
             EditorGUILayout.LabelField(BuildStatusDescription, EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(TimelineAuthoringDescription, EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
         }
 
@@ -409,7 +423,51 @@ namespace ThirdPersonCharacter.Editor.Preview
         void OnRuntimeChanged()
         {
             RefreshState();
+            RefreshTimelineAuthoringStatus();
             NotifyChanged();
+        }
+
+        void OnTimelineWindowChanged(TimelineAsset _)
+        {
+            RefreshTimelineAuthoringStatus();
+            NotifyChanged();
+        }
+
+        void OnTimelineWindowChanged(TimelineEditorWindow _)
+        {
+            RefreshTimelineAuthoringStatus();
+            NotifyChanged();
+        }
+
+        void RefreshTimelineAuthoringStatus()
+        {
+            if (string.IsNullOrEmpty(m_GraphAuthoringId))
+            {
+                m_TimelineAuthoringDescription = "作者版本：未绑定 Graph";
+                return;
+            }
+            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
+            TimelineEditorWindow matched = null;
+            int matches = 0;
+            for (int index = 0; index < windows.Length; index++)
+            {
+                TimelineEditorWindow window = windows[index];
+                if (!window || window.Timeline == null ||
+                    !string.Equals(window.SourceGraphAuthoringId, m_GraphAuthoringId, StringComparison.Ordinal))
+                    continue;
+                matched = window;
+                matches++;
+            }
+            if (matches == 1 && matched != null && !string.IsNullOrEmpty(matched.AuthoringRevision))
+            {
+                string revision = matched.AuthoringRevision;
+                m_TimelineAuthoringDescription =
+                    $"作者版本：{revision.Substring(0, Math.Min(8, revision.Length))}";
+            }
+            else if (matches > 1)
+                m_TimelineAuthoringDescription = "作者版本：多个 Timeline";
+            else
+                m_TimelineAuthoringDescription = "作者版本：未打开 Timeline";
         }
 
         void OnStatusChanged(BtsmtlScenePlayStatus _)
@@ -542,6 +600,9 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_Disposed = true;
             BtsmtlScenePlayPreviewOperationsRegistry.Changed -= OnRegistryChanged;
             RuntimeDebugSession.Shared.Changed -= OnRuntimeChanged;
+            TimelineEditorWindow.AssetOpened -= OnTimelineWindowChanged;
+            TimelineEditorWindow.WindowClosed -= OnTimelineWindowChanged;
+            TimelineEditorWindow.AuthoringRevisionChanged -= OnTimelineWindowChanged;
             if (m_Operations != null)
                 m_Operations.StatusChanged -= OnStatusChanged;
             Changed = null;

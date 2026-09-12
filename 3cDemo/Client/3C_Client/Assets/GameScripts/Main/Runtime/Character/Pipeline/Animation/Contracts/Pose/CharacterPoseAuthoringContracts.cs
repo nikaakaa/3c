@@ -384,9 +384,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public static bool IsBlackboardInput(
             CharacterPoseParameterDeclaration declaration) =>
-            declaration != null &&
-            declaration.Usage == CharacterPoseParameterUsage.Control &&
-            Category(declaration.ParameterId, declaration.Usage) ==
+            declaration != null && IsBlackboardInput(
+                declaration.ParameterId,
+                declaration.Usage);
+
+        public static bool IsBlackboardInput(
+            PoseParameterId parameterId,
+            CharacterPoseParameterUsage usage) =>
+            parameterId.IsValid &&
+            usage == CharacterPoseParameterUsage.Control &&
+            Category(parameterId, usage) ==
                 CharacterPoseParameterInputCategory.AnimationInstanceVariable;
 
         public static CharacterPoseParameterAccessDescriptor Describe(

@@ -575,10 +575,34 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (handler.Kind == CharacterPoseNodeKind.FootPlacement)
                 {
                     if (parameterInputIndex >= 0)
-                        throw new InvalidOperationException(
-                            $"Foot Placement '{scopedNodeId}' must read its input Pose curve internally; remove the external weight port connection.");
-                    parameterIndex = state.ParameterIndices[
-                        AnimationPoseParameterIds.FootPlacementWeight];
+                    {
+                        CharacterPosePortDefinition parameterPort =
+                            CharacterPoseAuthoringPortProjection.Get(node)
+                                .First(value =>
+                                    value != null &&
+                                    value.Kind == CharacterPosePortKind.Parameter &&
+                                    value.Direction == CharacterPosePortDirection.Input);
+                        CharacterPoseCanvasConnection edge = incoming[
+                            node.NodeId.Value + "\0" + parameterPort.PortId.Value];
+                        CharacterPoseCanvasNode sourceNode = graph.RequireNode(edge.SourceNodeId);
+                        if (!(sourceNode.Payload is CharacterProgramParameterInputPosePayload sourceParameter) ||
+                            !state.ParameterIndices.TryGetValue(
+                                sourceParameter.ParameterId,
+                                out int externalParameterIndex) ||
+                            !CharacterPoseParameterAccess.IsBlackboardInput(
+                                sourceParameter.ParameterId,
+                                state.Parameters[externalParameterIndex].Usage))
+                        {
+                            throw new InvalidOperationException(
+                                $"Foot Placement '{scopedNodeId}' external weight must be a direct public Pose input Get; remove the internal curve passthrough.");
+                        }
+                        parameterIndex = externalParameterIndex;
+                    }
+                    else
+                    {
+                        parameterIndex = state.ParameterIndices[
+                            AnimationPoseParameterIds.FootPlacementWeight];
+                    }
                 }
                 else if (declaredParameter.IsValid)
                     parameterIndex = state.ParameterIndices[declaredParameter];

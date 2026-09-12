@@ -16,6 +16,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             UnityEngine.Debug.Log(result);
         }
 
+        public static string NormalizeInertializationPolicyAtPath(string assetPath)
+        {
+            if (string.IsNullOrWhiteSpace(assetPath))
+                throw new ArgumentException("Inertialization policy asset path is missing.", nameof(assetPath));
+            CharacterPoseInertializationPolicy policy =
+                AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(assetPath);
+            if (!policy)
+                throw new InvalidOperationException($"Inertialization policy asset '{assetPath}' is missing.");
+            CharacterPoseParameterInertializationFilter[] filters = policy.Response.ParameterFilters
+                .Where(value => value != null && !IsRetiredDeclaration(value.ParameterId))
+                .ToArray();
+            int removed = policy.Response.ParameterFilters.Count - filters.Length;
+            if (removed != 0)
+            {
+                Undo.RecordObject(policy, "Normalize Pose Inertialization Policy");
+                policy.Response.Configure(filters);
+                EditorUtility.SetDirty(policy);
+                AssetDatabase.SaveAssetIfDirty(policy);
+            }
+            return $"Inertialization policy '{assetPath}' normalized: filters={removed} removed.";
+        }
+
+        [MenuItem("3C/Character/Animation/Pose Graph/Normalize Locomotion Inertialization Policy")]
+        public static void NormalizeLocomotionInertializationPolicy()
+        {
+            string result = NormalizeInertializationPolicyAtPath(
+                "Assets/Configs/Character/Corin/Pipeline/Presentation/Blend/Locomotion/CorinPoseInertializationPolicy.asset");
+            UnityEngine.Debug.Log(result);
+        }
+
         public static string NormalizeAssetAtPath(string assetPath)
         {
             if (string.IsNullOrWhiteSpace(assetPath))

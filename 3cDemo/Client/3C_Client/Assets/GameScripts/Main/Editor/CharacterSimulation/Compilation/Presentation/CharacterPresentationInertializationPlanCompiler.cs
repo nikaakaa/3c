@@ -277,20 +277,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseInertializationResponse response,
             IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters)
         {
-            if (response.ParameterFilters.Count != parameters.Count)
-                throw new InvalidOperationException($"Inertialization '{nodeId}' rule must declare every Pose Parameter exactly once.");
-            var authored = new Dictionary<PoseParameterId, PoseParameterInertializationMode>();
+            var indices = new Dictionary<PoseParameterId, int>();
+            for (int i = 0; i < parameters.Count; i++)
+                indices.Add(parameters[i].ParameterId, i);
+            var result = Enumerable.Repeat(
+                PoseParameterInertializationMode.Snap,
+                parameters.Count).ToArray();
+            var filters = new HashSet<PoseParameterId>();
             for (int i = 0; i < response.ParameterFilters.Count; i++)
             {
                 CharacterPoseParameterInertializationFilter filter = response.ParameterFilters[i];
-                if (filter == null || !authored.TryAdd(filter.ParameterId, filter.Mode))
+                if (filter == null || !filter.ParameterId.IsValid || !filters.Add(filter.ParameterId))
                     throw new InvalidOperationException($"Inertialization '{nodeId}' parameter filter #{i} is invalid or duplicated.");
-            }
-            var result = new PoseParameterInertializationMode[parameters.Count];
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                if (!authored.TryGetValue(parameters[i].ParameterId, out result[i]))
-                    throw new InvalidOperationException($"Inertialization '{nodeId}' is missing Parameter '{parameters[i].ParameterId}'.");
+                if (!Enum.IsDefined(typeof(PoseParameterInertializationMode), filter.Mode))
+                    throw new InvalidOperationException($"Inertialization '{nodeId}' parameter filter #{i} has an invalid mode.");
+                if (!indices.TryGetValue(filter.ParameterId, out int parameterIndex))
+                    throw new InvalidOperationException($"Inertialization '{nodeId}' parameter filter '{filter.ParameterId}' is not in the shared Pose input contract.");
+                result[parameterIndex] = filter.Mode;
             }
             return result;
         }

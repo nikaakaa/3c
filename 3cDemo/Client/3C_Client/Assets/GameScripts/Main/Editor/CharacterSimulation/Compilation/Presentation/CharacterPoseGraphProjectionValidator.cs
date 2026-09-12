@@ -219,6 +219,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
 
+            var sharedParameters =
+                new Dictionary<PoseParameterId, CharacterPoseParameterDeclaration>();
+            foreach (CharacterPoseCanvasGraph graph in asset.EnumerateGraphs())
+            {
+                foreach (CharacterPoseParameterDeclaration parameter in graph.Parameters)
+                {
+                    if (parameter == null ||
+                        !parameter.ParameterId.IsValid ||
+                        !CharacterPoseParameterAccess.IsBlackboardInput(parameter))
+                        continue;
+                    if (!sharedParameters.TryGetValue(
+                            parameter.ParameterId,
+                            out CharacterPoseParameterDeclaration existing))
+                    {
+                        sharedParameters.Add(parameter.ParameterId, parameter);
+                        continue;
+                    }
+                    if (existing.ValueType != parameter.ValueType ||
+                        !string.Equals(existing.Unit, parameter.Unit, StringComparison.Ordinal) ||
+                        existing.DefaultValue != parameter.DefaultValue)
+                    {
+                        Report(
+                            report,
+                            CharacterPoseGraphValidationCode.ParameterInvalid,
+                            $"External Pose input '{parameter.ParameterId}' has conflicting declarations across graphs.",
+                            graph.GraphId);
+                    }
+                }
+            }
+
             HashSet<CharacterPresentationPoseSourceSlot> sourceSlots = null;
             if (reachableSources != null)
             {

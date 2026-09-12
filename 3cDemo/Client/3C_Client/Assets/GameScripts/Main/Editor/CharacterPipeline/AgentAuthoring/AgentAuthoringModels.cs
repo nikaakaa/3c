@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "btsmtl-agent-authoring-document.v7";
+        public const string Version = "btsmtl-agent-authoring-document.v8";
         public const string CharacterControllerDomain = "CharacterController";
 
         public static bool IsDomain(string domain)

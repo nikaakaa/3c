@@ -1111,7 +1111,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     !parameterIds.Add(parameter.id) ||
                     string.IsNullOrWhiteSpace(parameter.displayName) ||
                     !Enum.TryParse(parameter.valueType, false, out PoseParameterValueType _) ||
-                    !Enum.TryParse(parameter.usage, false, out CharacterPoseParameterUsage _) ||
+                    !Enum.TryParse(parameter.usage, false, out CharacterPoseParameterUsage parameterUsage) ||
+                    !Enum.TryParse(parameter.category, false, out CharacterPoseParameterInputCategory parameterCategory) ||
+                    parameterCategory != CharacterPoseParameterAccess.ResolveCategory(
+                        new PoseParameterId(parameter.id),
+                        parameterUsage) ||
+                    !Enum.TryParse(parameter.scope, false, out CharacterPoseAuthoringGraphRole parameterScope) ||
+                    parameterScope != authoringRole ||
+                    !string.Equals(parameter.owner, graph.id, StringComparison.Ordinal) ||
                     !float.IsFinite(parameter.defaultValue))
                 {
                     report.Error(

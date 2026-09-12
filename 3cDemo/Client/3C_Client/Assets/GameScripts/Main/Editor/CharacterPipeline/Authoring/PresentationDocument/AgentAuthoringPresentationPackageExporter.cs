@@ -454,21 +454,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             CharacterPoseCanvasGraph graph,
             GraphAuthoringDocumentRoleId role)
         {
+            CharacterPoseAuthoringGraphRole authoringRole =
+                CharacterPoseGraphAuthoringCapabilities.TryResolveRole(
+                    role.Value,
+                    out CharacterPoseAuthoringGraphRole resolvedRole)
+                    ? resolvedRole
+                    : throw new InvalidOperationException(
+                        $"Pose Graph role '{role}' has no typed authoring mapping.");
             return new AgentPackagePoseGraphFile
             {
                 id = graph.GraphId.Value,
                 role = role.Value,
                 contentRevision = graph.ContentRevision,
                 parameters = graph.Parameters.Select(value =>
-                    new AgentPackagePoseParameter
+                {
+                    CharacterPoseParameterAccessDescriptor access =
+                        CharacterPoseParameterAccess.Describe(graph, value);
+                    return new AgentPackagePoseParameter
                     {
-                        id = value.ParameterId.Value,
-                        displayName = value.DisplayName,
-                        valueType = value.ValueType.ToString(),
+                        id = access.ParameterId.Value,
+                        displayName = access.DisplayName,
+                        valueType = access.ValueType.ToString(),
                         usage = value.Usage.ToString(),
-                        unit = value.Unit,
+                        category = access.Category.ToString(),
+                        scope = authoringRole.ToString(),
+                        owner = access.OwnerIdentity,
+                        unit = access.Unit,
                         defaultValue = value.DefaultValue
-                    }).ToList(),
+                    };
+                }).ToList(),
                 nodes = graph.Nodes.Select(value => ExportNode(value, role)).ToList(),
                 edges = graph.Edges.Select(value =>
                     new AgentPackagePoseEdge

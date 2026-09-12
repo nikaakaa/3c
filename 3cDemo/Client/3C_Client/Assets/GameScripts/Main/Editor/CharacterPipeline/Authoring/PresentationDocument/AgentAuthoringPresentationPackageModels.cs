@@ -238,6 +238,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
         public string displayName;
         public string valueType;
         public string usage;
+        public string category;
+        public string scope;
+        public string owner;
         public string unit;
         public float defaultValue;
     }

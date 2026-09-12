@@ -207,7 +207,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
             {
                 graph.id = identities.Map(graph.id);
                 foreach (AgentPackagePoseParameter parameter in graph.parameters)
+                {
                     parameter.id = identities.Map(parameter.id);
+                    parameter.owner = identities.Map(parameter.owner);
+                }
                 GraphAuthoringDocumentRoleId role =
                     new GraphAuthoringDocumentRoleId(graph.role);
                 foreach (AgentPackagePoseNode node in graph.nodes)

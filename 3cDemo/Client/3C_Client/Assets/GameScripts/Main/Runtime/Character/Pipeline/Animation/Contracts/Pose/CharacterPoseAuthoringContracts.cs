@@ -393,7 +393,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseParameterUsage usage) =>
             parameterId.IsValid &&
             usage == CharacterPoseParameterUsage.Control &&
-            Category(parameterId, usage) ==
+            ResolveCategory(parameterId, usage) ==
                 CharacterPoseParameterInputCategory.AnimationInstanceVariable;
 
         public static CharacterPoseParameterAccessDescriptor Describe(
@@ -404,7 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(graph));
             if (declaration == null || !declaration.ParameterId.IsValid)
                 throw new ArgumentException("Pose parameter declaration is invalid.", nameof(declaration));
-            CharacterPoseParameterInputCategory category = Category(
+            CharacterPoseParameterInputCategory category = ResolveCategory(
                 declaration.ParameterId,
                 declaration.Usage);
             return new CharacterPoseParameterAccessDescriptor(
@@ -428,7 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             _ => "未知来源"
         };
 
-        static CharacterPoseParameterInputCategory Category(
+        public static CharacterPoseParameterInputCategory ResolveCategory(
             PoseParameterId parameterId,
             CharacterPoseParameterUsage usage)
         {

@@ -1336,12 +1336,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToArray();
                     return true;
                 case "pose-parameter":
-                    options = ((CharacterPoseCanvasGraphDocument)document).Graph.Parameters
-                        .Where(CharacterPoseParameterAccess.IsBlackboardInput)
-                        .Select(value => new GraphAuthoringFieldOption(
-                            value.ParameterId.Value,
-                            value.DisplayName))
-                        .ToArray();
+                    options = m_Profile && m_Profile.EventGraph
+                        ? m_Profile.EventGraph.BuildVariableContract().Descriptors
+                            .Where(value =>
+                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Bool ||
+                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Int32 ||
+                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Float32)
+                            .Where(value =>
+                                value.Reference.VariableId != AnimationPoseParameterIds.ActionWeight.Value &&
+                                value.Reference.VariableId != AnimationPoseParameterIds.FootPlacementWeight.Value)
+                            .OrderBy(value => value.Reference.VariableId, StringComparer.Ordinal)
+                            .Select(value => new GraphAuthoringFieldOption(
+                                value.Reference.VariableId,
+                                value.Name))
+                            .ToArray()
+                        : Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "pose-history":
                     options = m_Profile?.PoseGraph?.EnumerateGraphs()

@@ -48,24 +48,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         public const int MinPriority = 0;
         public const int MinOrder = 0;
 
-        [SerializeField] BtsmtlSkillTransferPayload m_Payload;
-        [SerializeField, HideInInspector] BtsmtlSkillFlowGraph m_Condition;
-        [SerializeField, HideInInspector] int m_Priority;
-        [SerializeField, HideInInspector] ProgramAbortPolicy m_AbortPolicy;
-        [SerializeField, HideInInspector] int m_Order;
+        [SerializeField] BtsmtlSkillTransferPayload m_Payload = new();
 
-        public BtsmtlSkillTransferPayload Payload
-        {
-            get
-            {
-                if (m_Payload == null)
-                {
-                    m_Payload = new BtsmtlSkillTransferPayload();
-                    m_Payload.Configure(m_Condition, m_Priority, m_AbortPolicy, m_Order);
-                }
-                return m_Payload;
-            }
-        }
+        public BtsmtlSkillTransferPayload Payload => m_Payload;
 
         public BtsmtlSkillFlowGraph Condition => Payload.Condition;
         public int Priority => Payload.Priority;
@@ -81,7 +66,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             Payload.Configure(condition, priority, abortPolicy, order);
         }
 
-        public static BtsmtlSkillFlowConnection Create(Port source, Port target)
+        public static new BtsmtlSkillFlowConnection Create(Port source, Port target)
         {
             if (source == null || target == null)
                 throw new InvalidOperationException("技能转移连线两端端口缺失。");
@@ -107,7 +92,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         protected override string GetDomainConnectionInfo()
         {
             string condition = Condition != null ? Condition.name : "无条件";
-            string priority = m_Priority != 0 ? $" · 优先级 {m_Priority}" : string.Empty;
+            string priority = Priority != 0 ? $" · 优先级 {Priority}" : string.Empty;
             return $"{condition} · 顺序 {Order}{priority}";
         }
 

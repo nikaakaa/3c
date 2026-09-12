@@ -48,4 +48,4 @@
 4. 对本 change 的现行 spec、`openspec/project.md` 和 `btsmtl-agent-authoring` 技能合同完成 v8对账；历史 archive只保留追溯，不作为当前完成证明。
 5. 清理当前工作区中明确属于本 change的剩余重复节点定义；不触碰其它 active task 的未提交文件。
 
-当前扫描还发现并行 Native FSM改动中存在 `BtsmtlSkillNativeConnection` 自己重复保存转移字段，以及未提交的 `BtsmtlSkillLegacyMigrationWorkflow` 一次性迁移入口。它们不能进入最终统一链；待对应并行改动稳定后，必须改为共享Transfer payload或删除，不能保留第二份状态机存储。
+本轮复核确认并行 Native FSM 改动中的 `BtsmtlSkillNativeConnection` 已读取共享 `BtsmtlSkillTransferPayload`，未再保留第二份转移字段；未提交的 `BtsmtlSkillLegacyMigrationWorkflow` 及菜单入口已删除。Native FSM 本身仍属于并行未提交改动，不能作为 FlowCanvas 正式拓扑统一完成的证据，也不能在本 change 中继续扩展第二条正式 authoring 路径。

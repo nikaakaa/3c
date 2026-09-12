@@ -1,5 +1,7 @@
 ## Why
 
+2026-09-12 后续范围：本change的共享metadata、Agent领域下沉、唯一事务和v7交付证据保留。Skill正式参数/节点定义、端口和引用仍分散的后续缺口由 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 承接，不重复执行本change已完成的Pose/Control/Clip工作；目标v8只因状态机外部形状变化，不推翻“内部重构不升级schema”的原则。
+
 当前 Agent Document 已经能够通过 JSON 表达完整 Skill 闭包和 Presentation 目标，但 Agent 侧又维护了一份节点、字段、端口、owner 和能力定义。正式作者模型一变化，Agent mapper、codec、reconciler、validator 和 schema 会一起变化，导致原本应当简单的 JSON 编辑工具持续膨胀并频繁升级。
 
 这次变更把 Agent 收回为正式作者系统上的 JSON 编辑和事务适配层：保留完整 Skill 创建能力，不再维护第二套作者语义。

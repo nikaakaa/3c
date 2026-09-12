@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-12 数据层交接：本设计的原生GraphEditor、FlowCanvas唯一拓扑、GA/Timeline及运行边界继续有效。节点参数/定义、端口、引用和作者版本的后续改造统一见 [unify-skill-authoring-data-model/design.md](../unify-skill-authoring-data-model/design.md)，特别是D9任务映射和D10规范对账；不在两处重复设计或实施。原v7要求是已有阶段记录，新的外部形状与v8迁移由该change明确负责。
+
 本变更的正式对象是Character技能，不是AI Controller，也不是PoseGraph本体。Character RootTree已经从正式资产和Definition合同中删除；Character主线由C# ControlModule、编译后的Character Program以及Simulation Pipeline执行。AI自研RootTree已由独立`replace-btsmtl-ai-with-behavior-designer` change退役，Behavior Designer不进入本Skill Document或BTSMTL Graph。
 
 当前角色技能作者源由`CharacterPipelineDefinition.SkillGraphs`和`CharacterSkillAuthoringDefinition.EntryGraphAuthoringId`组成。Skill Graph由FlowCanvas保存，运行时只消费Semantic IR和Numeric Program，不启动FlowCanvas委托、协程或自动Update。Character Program进入`SimulationSessionCompositionDefinition`，再由ProgramRuntime、ExecutionBackend、WorldSolver、SimulationPipeline和SessionSource组成正式Session。

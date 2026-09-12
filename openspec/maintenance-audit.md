@@ -1,5 +1,16 @@
 # OpenSpec 整理与现行合同审计
 
+## 2026-09-12 Skill数据层专项交接
+
+本次只更新Skill节点数据规划入口，不重做下方2026-09-08全仓审计，也不把创建提案当作实现完成。
+
+- [unify-skill-authoring-data-model](changes/unify-skill-authoring-data-model/proposal.md) 是节点参数、节点定义、字段/端口规则、引用生命周期、转移双写和相关Document版本迁移的唯一新增实施入口；用户已确定保留FlowCanvas正式图拓扑。
+- 总FlowCanvas change保留原生作者业务、运行观察和网络；metadata change保留既有通用适配/非Skill成果与v7证据；转移专项4.4/5.1/5.3/6.1/6.3改为接收新change结果，未完成框不勾选。
+- 精确来源、任务映射和current/delta冲突见[新design D9/D10](changes/unify-skill-authoring-data-model/design.md)。当前正式包仍为v7；v8是新提案对Edge owner/端口形状变化的目标，不是已发布合同。
+- 下方旧数量、TreeDirty、目录与版本判断仅保留其原审计时间含义。本次不归档change、不移动无关Foot/Pose/AI文档、不修改现行spec正文。
+
+## 2026-09-08 全仓审计记录
+
 更新：2026-09-08。范围：主仓库全部活跃change及现行spec；源码抽查采用当前工作区，Git读取期间已推进到`cfe1d9065`。这是文档整理结果，不是新的功能proposal或第二套任务清单；实现状态仍写回各原tasks。
 
 ## 本轮结果

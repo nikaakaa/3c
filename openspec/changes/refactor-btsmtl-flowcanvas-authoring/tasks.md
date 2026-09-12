@@ -1,5 +1,9 @@
 ## 当前执行位置
 
+2026-09-12 交接说明：Skill节点参数、完整定义、唯一端口、引用生命周期和转移双写由 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md) 统一执行。原2.2.3、2.3.2—2.3.4、3.1.3、3.2.1/3.2.3保留当时实现记录，不能据此认定现在已无重复定义；新增缺口只在新change勾选。3.3.1中状态机结构节点的步骤输出由新change第4节替代，普通组合步骤不因此迁移。
+
+原2.4.2/5.3的Skill owner与迁移回滚部分接收新change 5.3/5.4/7.4结果，其余跨域/交互验收仍归本表；6.2作者来源版本接收新change 6.3/6.4结果。运行观察7.x、网络4.5.5和端到端8.1仍由本change负责。原TreeDirty和v7 job/hash只表示记录时的状态；转移专项已记录后续裁决与迁移，新阶段执行须读取当时的live状态。完整交接见[design D9/D10](../unify-skill-authoring-data-model/design.md)。
+
 当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、provider合同、黑板声明、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；Skill provider authoring已经收敛到FlowCanvas原生Blackboard、Inspector和菜单，旧自定义右侧面板已删除；本任务还剩Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
 
 本表是执行清单。原来的大项拆为代码、接入和证据任务，原完成标准保留在对应标题中，不删减要求。勾选代码任务只表示该段实现已提交，不表示实际技能已经使用它；接入及验证分别勾选。不再用旧的“1/35”或提交数量推算整体百分比。

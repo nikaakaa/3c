@@ -1,5 +1,7 @@
 ## Why
 
+2026-09-12 交接：节点参数、完整节点定义、唯一端口与引用关系、转移双写清理及其Document版本迁移由 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 统一实施。FlowCanvas继续保存图拓扑，本change保留原生作者业务、运行观察和网络范围；精确任务映射见[交接设计](../unify-skill-authoring-data-model/design.md)。下文v7及已完成实现描述保留原阶段口径，不能作为新模型或v8已交付证明。
+
 BTSMTL技能需要成熟的节点、端口、参数化子图、动作时间轴和运行观察能力，同时保留既有技能编译、ActionInstance、预测、回滚及状态恢复链。本变更把技能收敛为类似Gameplay Ability的独立业务单元，但继续使用项目自己的确定性Simulation与网络管线。
 
 Character RootTree已经不是有效的角色主线入口。角色主线由C# ControlModule和Simulation Pipeline负责，Skill Graph只拥有技能执行拓扑；RootTree删除后，作者、编译、运行和网络边界必须在规范中明确分开。PoseGraph仍由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)管理，但技能Timeline可以承载类似Montage的有限动作动画，最终混合仍由Presentation/PoseGraph完成。

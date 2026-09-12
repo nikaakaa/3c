@@ -1,3 +1,9 @@
+## 后续Skill数据层交接
+
+2026-09-12：本表原完成记录和6.1—6.3的v7 apply/validate证据保持不变。2.1—2.3、3.1—3.3、4.1、5.1中Skill完整定义/字段访问/端口/引用的后续差异统一交给 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md) 第2、3、5、6节；不得因原任务已勾选而跳过新审计发现的缺口，也不在这里再建同一实施任务。Presentation、Control、Clip、通用Document事务继续按原职责保留。
+
+新change承接参数抽取与状态机外部合同变化：内部改动仍不单独触发schema升级；其v8是新owner/端口/steps形状的明确迁移，不是对本表v7结果的改写。交接及规范冲突见[新设计D9/D10](../unify-skill-authoring-data-model/design.md)。
+
 ## 1. 现有语义盘点
 
 - [x] 1.1 盘点正式SkillGraph、Timeline、Blackboard、Pose Graph、PoseStateMachine、Slot/Mask、Profile和Clip Curve作者类型，与Agent侧`AgentPackage...`、Capability、字段、端口、owner定义逐项对账；交付唯一来源与删除清单。

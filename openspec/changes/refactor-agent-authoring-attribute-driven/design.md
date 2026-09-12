@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-12 交接：本设计与tasks中的v7证据属于已完成阶段。Skill payload、节点定义、字段访问、端口和引用生命周期的统一增量见 [unify-skill-authoring-data-model/design.md](../unify-skill-authoring-data-model/design.md) D1—D8；对应原2.x/3.x/4.1/5.1范围见其D9。当前文件继续拥有既有Agent适配/事务与非Skill领域决策，不复制新模型设计或将旧证据提升为新模型完成结论。
+
 当前 Character Agent Document 已是 v7，外部入口只有 checkout、rebase、dry-run、apply、validate 五个生命周期工具。它可以表达完整 Skill 闭包和 Presentation 目标，但 Agent 内部同时存在正式作者类型和 `AgentPackage...`、手写 Capability、字段/端口校验、owner 推断及 Presentation 模型，造成同一语义有多个来源。
 
 当前正式真相仍是 Unity authoring asset；Document 是 AI 工作副本，Program、Projection、Native Pose Program 和运行状态仍不进入 Document 事务。Skill Graph、Macro、Skill Timeline、Blackboard、Pose Graph 和 Presentation 继续共享一条 Document hash、Mutation、Undo、Rollback、Save 与 reverse export 链。

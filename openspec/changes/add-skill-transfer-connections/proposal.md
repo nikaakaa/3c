@@ -1,5 +1,7 @@
 ## Why
 
+2026-09-12 交接：本change继续拥有转移线上显示/编辑及调度的可见行为合同。未完成的旧steps退役、完整条件引用、迁移后验证和对账集中由 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 第4、7、8节承接；原tasks改为接收结果，保留已完成commit与v7迁移证据。下文“不抽中立层/v7迁移”是当时局部范围，不限制已由用户选定的后续节点参数/定义抽取；FlowCanvas图拓扑仍不迁出。
+
 技能图（FlowCanvas 域）的状态机转移目前由 state 节点的有序步骤端口（`BtsmtlSkillStepPort`）表达：条件图、优先级、中止策略全部塞在源节点的端口定义里，画布上表现为多条同名端口（如 Attack1 的三个 `@exit`），条件与优先级完全不可见，作者无法从图上判断转移语义。同一插件家族中 FSM 模块的 `FSMConnection` 已验证"转移线携带条件"是框架支持的成熟形态，且 `FlowGraph.CreatePortConnection` 钩子（项目已加）允许在不魔改插件的前提下让 FlowCanvas 连线携带业务数据。
 
 本变更把技能图状态机转移从"端口承载"迁到"连线承载"：转移条件、优先级、中止策略直接挂在连接对象上，画布可见、可选、可编译。这是作者体验的直接修复，也是技能图向老库 `BaseEdge` 语义（条件在转移上）对齐的第一步；数据模型的中立化归一由后续变更处理，不在本变更范围。

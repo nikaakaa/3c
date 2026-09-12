@@ -45,6 +45,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly ToolbarMenu m_BuildMenu;
         readonly ToolbarMenu m_SkillMenu;
         readonly Label m_BuildStatus;
+        readonly ToolbarButton m_CaptureButton;
         readonly ToolbarButton m_InputRecordButton;
         readonly LongField m_RestoreTickField;
         readonly IntegerField m_HistoryOffsetField;
@@ -110,6 +111,8 @@ namespace ThirdPersonCharacter.Editor.Preview
             experimentControls.Add(m_SkillMenu);
             experimentControls.Add(m_BuildStatus);
 
+            m_CaptureButton = new ToolbarButton(() => m_Presenter.ToggleDiagnosticCapture()) { text = "Capture" };
+            observationControls.Add(m_CaptureButton);
             m_InputRecordButton = new ToolbarButton(() => m_Presenter.ToggleInputRecording()) { text = "Record Input" };
             observationControls.Add(m_InputRecordButton);
 
@@ -165,6 +168,13 @@ namespace ThirdPersonCharacter.Editor.Preview
                                            (status.State == BtsmtlScenePlayState.Running ||
                                             status.State == BtsmtlScenePlayState.Paused));
             m_InputRecordButton.text = m_Presenter.IsInputRecording ? "Stop Input" : "Record Input";
+            m_CaptureButton.SetEnabled(
+                m_Presenter.IsDiagnosticCaptureRecording
+                    ? m_Presenter.CanStopDiagnosticCapture
+                    : m_Presenter.CanStartDiagnosticCapture);
+            m_CaptureButton.text = m_Presenter.IsDiagnosticCaptureRecording
+                ? "Stop Capture"
+                : "Start Capture";
             RefreshHistoryControls();
             string message = m_Presenter.StatusMessage;
             m_Status.text = string.IsNullOrEmpty(message) ? DescribeStatus(status) : message;

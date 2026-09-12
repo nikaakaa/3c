@@ -120,6 +120,9 @@ namespace ThirdPersonCharacter.Editor.Preview
         public string BuildStatusDescription => DescribeBuildStatus(BuildStatus);
         public bool HasOperations => m_Operations != null;
         public bool IsInputRecording => m_Operations?.IsInputRecording == true;
+        public bool IsDiagnosticCaptureRecording => RuntimeDebugSession.Shared.IsCaptureRecording;
+        public bool CanStartDiagnosticCapture => RuntimeDebugSession.Shared.CanStartCapture;
+        public bool CanStopDiagnosticCapture => RuntimeDebugSession.Shared.CanStopCapture;
         public bool SupportsInputReplay => m_Operations?.SupportsInputReplay == true;
         public bool SupportsPresentationCheckpointRestore => m_Operations?.SupportsPresentationCheckpointRestore == true;
         public IReadOnlyList<string> ActorIds => m_Operations?.ActorIds ?? Array.Empty<string>();
@@ -214,6 +217,20 @@ namespace ThirdPersonCharacter.Editor.Preview
                 : m_Operations.StartInputRecording());
         }
 
+        public void ToggleDiagnosticCapture()
+        {
+            bool accepted = IsDiagnosticCaptureRecording
+                ? RuntimeDebugSession.Shared.EndCapture()
+                : RuntimeDebugSession.Shared.BeginCapture(
+                    RuntimeTraceChannel.All,
+                    RuntimeDiagnosticsCaptureDetail.Continuous);
+            SetStatus(accepted
+                ? IsDiagnosticCaptureRecording ? "诊断采集已开始。" : "诊断采集已结束。"
+                : IsDiagnosticCaptureRecording ? "诊断采集结束失败。" : "当前运行目标不允许开始诊断采集。");
+            RefreshState();
+            NotifyChanged();
+        }
+
         public void SetHistoryOffset(int offset)
         {
             m_HistoryOffset = Mathf.Max(0, offset);
@@ -297,6 +314,8 @@ namespace ThirdPersonCharacter.Editor.Preview
         void DrawObservationControls()
         {
             EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(IsDiagnosticCaptureRecording ? "停止诊断采集" : "开始诊断采集", EditorStyles.toolbarButton))
+                ToggleDiagnosticCapture();
             if (GUILayout.Button(IsInputRecording ? "停止输入录制" : "开始输入录制", EditorStyles.toolbarButton))
                 ToggleInputRecording();
             EditorGUILayout.LabelField(

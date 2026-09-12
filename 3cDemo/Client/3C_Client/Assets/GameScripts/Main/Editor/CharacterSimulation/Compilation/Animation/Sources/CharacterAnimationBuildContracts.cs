@@ -160,16 +160,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 contract.Parameters.ToArray());
         }
 
-        internal static CharacterAnimationParameterLayout Build(CharacterPoseCanvasGraph graph)
-        {
-            if (graph == null)
-                throw new ArgumentNullException(nameof(graph));
-            CharacterPoseParameterDeclaration[] declarations = graph.Parameters
-                .Where(value => value != null)
-                .OrderBy(value => value.ParameterId)
-                .ToArray();
-            return new CharacterAnimationParameterLayout(declarations);
-        }
     }
 
     internal sealed class CharacterAnimationBuildInput

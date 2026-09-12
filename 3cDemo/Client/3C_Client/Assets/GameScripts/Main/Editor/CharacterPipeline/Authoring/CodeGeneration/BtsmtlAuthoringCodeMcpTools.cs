@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using BTSMTL.EventGraphs;
 using BTSMTL.Timeline;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
@@ -95,7 +96,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static readonly IReadOnlyList<IBtsmtlAuthoringCodeDomainAdapter> s_Adapters =
             new IBtsmtlAuthoringCodeDomainAdapter[]
             {
-                new BtsmtlSkillAuthoringCodeAdapter()
+                new BtsmtlSkillAuthoringCodeAdapter(),
+                EventGraphAuthoringCodeAdapter.Instance
             };
 
         public static object Export(JObject parameters)
@@ -240,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             UnityEngine.Object[] supported = assets
-                .Where(value => value is BtsmtlSkillFlowGraph || value is BtsmtlSkillNativeStateMachine || value is TimelineAsset)
+                .Where(value => value is BtsmtlSkillFlowGraph || value is BtsmtlSkillNativeStateMachine || value is TimelineAsset || value is HostEventGraph)
                 .ToArray();
             if (localFileId != 0L)
             {
@@ -251,7 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"Asset '{assetPath}' has no supported authoring root with local id {localFileId}.");
             }
             UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(assetPath);
-            if (main is BtsmtlSkillFlowGraph || main is BtsmtlSkillNativeStateMachine || main is TimelineAsset)
+            if (main is BtsmtlSkillFlowGraph || main is BtsmtlSkillNativeStateMachine || main is TimelineAsset || main is HostEventGraph)
                 return main;
             if (supported.Length == 1)
                 return supported[0];

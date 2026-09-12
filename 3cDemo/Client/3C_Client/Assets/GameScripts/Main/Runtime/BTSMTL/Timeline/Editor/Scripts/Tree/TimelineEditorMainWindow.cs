@@ -60,6 +60,12 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         Vector2 m_NavigationViewport;
 
+        [SerializeField]
+        string m_ViewTimelineAuthoringId;
+
+        [SerializeField]
+        BtsmtlSlateTimelineViewState m_ViewState;
+
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
@@ -196,6 +202,7 @@ namespace BTSMTL.Timeline.Editor
             if (timeline == null || !serializedOwner || string.IsNullOrEmpty(serializedPropertyPath))
                 throw new InvalidOperationException("TimelineEditorWindow requires a bound TimelineData owner/path.");
 
+            CaptureViewState();
             DisposeView();
             timeline.BindSerializedOwner(serializedOwner, serializedPropertyPath);
             m_SerializedOwner = serializedOwner;
@@ -260,6 +267,8 @@ namespace BTSMTL.Timeline.Editor
             rootVisualElement.Add(m_DetailsHost);
             m_SlateProjection.SelectionChanged += RebuildDetails;
             RebuildDetails(m_SlateProjection.Selection);
+            if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
+                m_SlateProjection.RestoreViewState(m_ViewState);
         }
 
         void BuildUnboundView()
@@ -376,6 +385,7 @@ namespace BTSMTL.Timeline.Editor
 
         void DisposeView()
         {
+            CaptureViewState();
             if (m_SlateProjection != null)
                 m_SlateProjection.SelectionChanged -= RebuildDetails;
             m_SlateProjection?.Dispose();
@@ -383,6 +393,14 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface = null;
             m_DetailsHost = null;
             m_Timeline = null;
+        }
+
+        void CaptureViewState()
+        {
+            if (m_SlateProjection == null || m_Timeline == null)
+                return;
+            m_ViewTimelineAuthoringId = m_Timeline.AuthoringId;
+            m_ViewState = m_SlateProjection.CaptureViewState();
         }
 
         void OnEditorUpdate()

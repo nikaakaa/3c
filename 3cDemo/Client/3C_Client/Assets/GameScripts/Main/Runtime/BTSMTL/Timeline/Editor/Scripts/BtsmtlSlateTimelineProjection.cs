@@ -10,6 +10,37 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
 {
+    [Serializable]
+    public struct BtsmtlSlateTimelineViewState
+    {
+        [SerializeField] float m_ViewTimeMin;
+        [SerializeField] float m_ViewTimeMax;
+        [SerializeField] Vector2 m_ScrollPosition;
+        [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] string m_ClipAuthoringId;
+
+        public BtsmtlSlateTimelineViewState(
+            float viewTimeMin,
+            float viewTimeMax,
+            Vector2 scrollPosition,
+            string trackAuthoringId,
+            string clipAuthoringId)
+        {
+            m_ViewTimeMin = viewTimeMin;
+            m_ViewTimeMax = viewTimeMax;
+            m_ScrollPosition = scrollPosition;
+            m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
+            m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+        }
+
+        public float ViewTimeMin => m_ViewTimeMin;
+        public float ViewTimeMax => m_ViewTimeMax;
+        public Vector2 ScrollPosition => m_ScrollPosition;
+        public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
+        public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
+        public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
+    }
+
     readonly struct BtsmtlSlateCurveBinding
     {
         public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve, float duration)
@@ -441,6 +472,31 @@ namespace BTSMTL.Timeline.Editor
         public Cutscene Cutscene => m_Cutscene;
         public TimelineEditorSelection Selection => m_Session.Selection;
         public event Action<TimelineEditorSelection> SelectionChanged;
+
+        public BtsmtlSlateTimelineViewState CaptureViewState()
+        {
+            TimelineEditorSelection selection = m_Session.Selection;
+            return new BtsmtlSlateTimelineViewState(
+                m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMin : 0f,
+                m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMax : 0f,
+                m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
+                selection.Track?.AuthoringId,
+                selection.Clip?.AuthoringId);
+        }
+
+        public void RestoreViewState(BtsmtlSlateTimelineViewState state)
+        {
+            if (m_EmbeddedEditor == null)
+                return;
+            if (state.ViewTimeMax > state.ViewTimeMin)
+            {
+                m_EmbeddedEditor.viewTimeMin = state.ViewTimeMin;
+                m_EmbeddedEditor.viewTimeMax = state.ViewTimeMax;
+            }
+            m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
+            if (state.HasSelection)
+                FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);
+        }
 
         public void DrawEmbeddedGUI(float width, float height)
         {

@@ -405,6 +405,11 @@ namespace Slate
             set { cutscene.viewTimeMax = value; }
         }
 
+        public Vector2 EmbeddedScrollPosition {
+            get => scrollPos;
+            set => scrollPos = value;
+        }
+
         //The max time currently in view
         public float maxTime {
             get { return Mathf.Max(viewTimeMax, length); }

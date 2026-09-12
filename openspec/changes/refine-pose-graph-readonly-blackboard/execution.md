@@ -58,6 +58,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `b5e2590c4`：Preview Host和Authoring Controller移除direct参数接口，完整Pose Preview统一由Native EventGraph变量帧驱动。
 - `f8cf7bfaa`：固化Character Animation Event Graph类型、Host和变量合同，并让Profile/Projection强制挂接唯一动画输入宿主。
 - `60888aabb`：删除无调用者且无法满足严格EventGraph输入合同的Projection Draft备用路径。
+- 当前 Transition Rule 作者面已接入唯一 EventGraph variable contract：Animation Variable 节点的类型、连线兼容性、详情值类型和选择列表均从同一 typed declaration 读取，支持 Bool/Int32/Float32，不再把该字段当作普通字符串。
 
 正式 Document 流程：
 
@@ -74,3 +75,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 上述代码提交未修改当前用户未提交的PoseGraph、Profile、Definition或Scene资产。
 - 当前工作区的Character Document package尚未checkout，不能绕过Document/Mutation直接编辑PoseGraph YAML；旧的Action/Foot声明、根图Get、Body透传端口和孤立重复子图仍需在正式Document/Mutation流程中删除。
 - `CharacterPoseGraphProjectionValidator` 的子图签名门禁已进入代码，但尚未对当前资产执行Unity Validate/Build；编辑器交叉编译仍受工作区既有Timeline改动影响。
+- 上述 Transition Rule 作者接入仍处于共享 worktree 的未提交小步，待同批 EventGraph 输入合同相关文件统一落盘后再单独提交；没有改动 PoseGraph 资产或覆盖其它窗口的未提交文件。

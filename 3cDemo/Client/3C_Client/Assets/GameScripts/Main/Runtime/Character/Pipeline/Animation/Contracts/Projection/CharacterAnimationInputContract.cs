@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.EventGraphs;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonSimulation;
 
@@ -53,8 +54,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterAnimationInputSlot[] m_Slots;
         readonly string[] m_WorldCapabilities;
         readonly string[] m_MovementModeStateIdentities;
+        readonly CharacterAnimationVariableContract m_AnimationVariables;
 
         CharacterAnimationInputContract(
+            CharacterAnimationPresentationProfile profile,
             CharacterPoseParameterDeclaration[] parameters,
             CharacterPresentationFactDeclaration[] facts,
             CharacterAnimationInputSlot[] slots,
@@ -68,6 +71,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(worldCapabilities));
             m_MovementModeStateIdentities = movementModeStateIdentities ??
                 throw new ArgumentNullException(nameof(movementModeStateIdentities));
+            if (profile != null && profile.EventGraph)
+            {
+                m_AnimationVariables = new CharacterAnimationVariableContract(
+                    profile.EventGraph.BuildVariableContract());
+            }
             var hashParts = new List<string>
             {
                 "character-animation-input-contract/v2"
@@ -80,6 +88,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 hashParts.Add(((int)parameter.Usage).ToString());
                 hashParts.Add(parameter.Unit);
                 hashParts.Add(parameter.DefaultValue.ToString("R"));
+            }
+            if (m_AnimationVariables != null)
+            {
+                hashParts.Add("event-graph");
+                hashParts.Add(m_AnimationVariables.GraphId);
+                hashParts.Add(m_AnimationVariables.Revision);
+                hashParts.Add(m_AnimationVariables.LayoutId);
+                for (int i = 0; i < m_AnimationVariables.Variables.Count; i++)
+                {
+                    EventGraphVariableDescriptor variable =
+                        m_AnimationVariables.Variables[i];
+                    hashParts.Add(variable.Reference.VariableId);
+                    hashParts.Add(variable.Name);
+                    hashParts.Add(variable.ValueKind.ToString());
+                }
             }
             for (int i = 0; i < m_Facts.Length; i++)
             {
@@ -105,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterAnimationInputSlot> Slots => m_Slots;
         public IReadOnlyList<string> WorldCapabilities => m_WorldCapabilities;
         public IReadOnlyList<string> MovementModeStateIdentities => m_MovementModeStateIdentities;
+        public CharacterAnimationVariableContract AnimationVariables => m_AnimationVariables;
         public string ContractHash { get; }
 
         public static CharacterAnimationInputContract Create(
@@ -199,6 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 .OrderBy(value => value.FactId.Value, StringComparer.Ordinal)
                 .ToArray();
             return new CharacterAnimationInputContract(
+                profile,
                 parameters,
                 orderedFacts,
                 slots.ToArray(),

@@ -245,6 +245,8 @@ namespace TreeDesigner.Authoring
             Direction = direction;
             Capacity = capacity;
             Required = required;
+            if (order < 0)
+                throw new ArgumentOutOfRangeException(nameof(order));
             Order = order;
             InterfacePortId = interfacePortId ?? string.Empty;
         }
@@ -371,6 +373,7 @@ namespace TreeDesigner.Authoring
                     properties,
                     authoredDynamicPorts))
                 .OrderBy(value => value.Order)
+                .ThenBy(value => value.PortId.Value, StringComparer.Ordinal)
                 .ToArray();
         }
 

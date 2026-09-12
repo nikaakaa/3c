@@ -1569,6 +1569,8 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSections.Clear();
             m_ProxySections.Clear();
             m_BeginSnapshot = null;
+            if (ReferenceEquals(s_Current, this))
+                s_Current = null;
         }
     }
 }

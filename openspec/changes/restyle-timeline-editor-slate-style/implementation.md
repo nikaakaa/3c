@@ -50,6 +50,7 @@ TimelineEditorWindow
 - Scene Play 输入已改为正式 `SceneAsset + ContextId`，两个宿主不再要求作者拖场景里的 Context GameObject；启动时由 coordinator 按精确路径和 ContextId 打开场景、检查唯一 Context、角色列表和正式 Runtime Owner。
 - 观察区已把正式 `RuntimeDebugSession` 的诊断 Capture 与输入录制拆成两个独立按钮；Capture 使用正式 All/Continuous 合同，恢复/回放仍显示 coordinator 返回的接受与失败结果。
 - Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
+- Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
 
 ## 正式能力对账
 

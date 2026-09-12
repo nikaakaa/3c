@@ -19,6 +19,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] Vector2 m_ScrollPosition;
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] string m_ClipAuthoringId;
+        [SerializeField] bool m_GroupCollapsed;
 
         public BtsmtlSlateTimelineViewState(
             float viewTimeMin,
@@ -26,7 +27,8 @@ namespace BTSMTL.Timeline.Editor
             float currentTime,
             Vector2 scrollPosition,
             string trackAuthoringId,
-            string clipAuthoringId)
+            string clipAuthoringId,
+            bool groupCollapsed)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
@@ -34,6 +36,7 @@ namespace BTSMTL.Timeline.Editor
             m_ScrollPosition = scrollPosition;
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_GroupCollapsed = groupCollapsed;
         }
 
         public float ViewTimeMin => m_ViewTimeMin;
@@ -42,6 +45,7 @@ namespace BTSMTL.Timeline.Editor
         public Vector2 ScrollPosition => m_ScrollPosition;
         public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
         public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
+        public bool GroupCollapsed => m_GroupCollapsed;
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
     }
 
@@ -487,7 +491,8 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor != null && m_EmbeddedEditor.cutscene != null ? m_EmbeddedEditor.cutscene.currentTime : 0f,
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
                 selection.Track?.AuthoringId,
-                selection.Clip?.AuthoringId);
+                selection.Clip?.AuthoringId,
+                m_Cutscene != null && m_Cutscene.groups.Count != 0 && m_Cutscene.groups[0].isCollapsed);
         }
 
         public void RestoreViewState(BtsmtlSlateTimelineViewState state)
@@ -501,6 +506,8 @@ namespace BTSMTL.Timeline.Editor
             }
             if (m_EmbeddedEditor.cutscene != null)
                 m_EmbeddedEditor.cutscene.currentTime = Mathf.Clamp(state.CurrentTime, 0f, m_EmbeddedEditor.cutscene.length);
+            if (m_Cutscene != null && m_Cutscene.groups.Count != 0)
+                m_Cutscene.groups[0].isCollapsed = state.GroupCollapsed;
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
                 FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);

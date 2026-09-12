@@ -485,6 +485,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSummary = new Label(CurrentSourceSummary());
             m_SourceSummary.style.minWidth = 180f;
             m_SourceSummary.style.marginLeft = 6f;
+            m_SourceSummary.tooltip = CurrentSourceTooltip();
             m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
             m_Status.style.marginLeft = 6f;
             m_Status.style.flexGrow = 1f;
@@ -571,6 +572,14 @@ namespace BTSMTL.Timeline.Editor
                 return "Source: None";
             string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
             return ownership;
+        }
+
+        string CurrentSourceTooltip()
+        {
+            if (m_Timeline == null)
+                return "Source: None";
+            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
+            return $"Source: {ownership} / {m_Timeline.Name}";
         }
 
         void SetStatus(string value)

@@ -1,6 +1,6 @@
 # FlowCanvas 事件图：当前代码与规范核对
 
-日期：2026-09-12。对应[规划 r1](flowcanvas-event-graph-plan-2026-09-12.md)。本文件记录静态读取证据，不是实现或运行通过报告。
+日期：2026-09-12。本文件只保留此前的静态读取证据，不是正式接口、实施方案或运行通过报告。用户明确调用 OpenSpec 后，唯一正式规划见 [add-flowcanvas-event-graph](../openspec/changes/add-flowcanvas-event-graph/proposal.md)；原长草案已撤下。后续事实与交叉范围以该提案 design 的当前对账为准，本历史记录不继续承担方案维护职责。
 
 ## 1. 读取基线与保护范围
 

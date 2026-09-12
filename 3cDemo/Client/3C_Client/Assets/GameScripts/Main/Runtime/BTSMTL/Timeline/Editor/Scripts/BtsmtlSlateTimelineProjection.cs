@@ -336,6 +336,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, Slate.Section> m_ProxySections =
             new Dictionary<string, Slate.Section>(StringComparer.Ordinal);
         ProjectionSnapshot m_BeginSnapshot;
+        string m_BeginSourceRevision;
         readonly Func<Cutscene, bool> m_UndoPolicy;
         readonly Func<Cutscene, bool> m_PlaybackPolicy;
         GameObject m_Host;
@@ -863,15 +864,27 @@ namespace BTSMTL.Timeline.Editor
             if (!ReferenceEquals(cutscene, m_Cutscene))
                 return;
             m_BeginSnapshot = CaptureSnapshot();
+            m_BeginSourceRevision = TimelineAuthoringFingerprint.Compute(m_Request.Timeline);
         }
 
         void OnEditTransactionCommit(Cutscene cutscene)
         {
             if (!ReferenceEquals(cutscene, m_Cutscene) || m_BeginSnapshot == null)
                 return;
+            if (!string.Equals(
+                    m_BeginSourceRevision,
+                    TimelineAuthoringFingerprint.Compute(m_Request.Timeline),
+                    StringComparison.Ordinal))
+            {
+                m_BeginSnapshot = null;
+                m_BeginSourceRevision = string.Empty;
+                QueueRebuildProjection();
+                return;
+            }
             ProjectionSnapshot endSnapshot = CaptureSnapshot();
             ApplyDiff(m_BeginSnapshot, endSnapshot);
             m_BeginSnapshot = null;
+            m_BeginSourceRevision = string.Empty;
             QueueRebuildProjection();
         }
 
@@ -880,6 +893,7 @@ namespace BTSMTL.Timeline.Editor
             if (!ReferenceEquals(cutscene, m_Cutscene))
                 return;
             m_BeginSnapshot = null;
+            m_BeginSourceRevision = string.Empty;
             QueueRebuildProjection();
         }
 

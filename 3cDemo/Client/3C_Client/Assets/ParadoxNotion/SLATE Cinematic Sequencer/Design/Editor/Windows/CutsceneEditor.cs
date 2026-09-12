@@ -2301,15 +2301,17 @@ namespace Slate
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Disable Track"), !track.isActive, () => { track.isActive = !track.isActive; });
                     menu.AddItem(new GUIContent("Lock Track"), track.isLocked, () => { track.isLocked = !track.isLocked; });
-                    menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
-                    if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
-                        menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                            {
-                                group.DuplicateTrack(track);
-                                InitClipWrappers();
-                            });
-                    } else {
-                        menu.AddDisabledItem(new GUIContent("Duplicate"));
+                    if ( !embeddedSurface ) {
+                        menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
+                        if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
+                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                                {
+                                    group.DuplicateTrack(track);
+                                    InitClipWrappers();
+                                });
+                        } else {
+                            menu.AddDisabledItem(new GUIContent("Duplicate"));
+                        }
                     }
                     menu.AddSeparator("/");
                     menu.AddItem(new GUIContent("Delete Track"), false, () =>
@@ -3586,12 +3588,14 @@ namespace Slate
                     return;
                 }
 
-                menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
-                menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
+                if ( !editor.embeddedSurface ) {
+                    menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
+                    menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
+                }
 
                 if ( allowScale ) {
                     menu.AddItem(new GUIContent("Fit Clip (F)"), false, () => { StretchFit(); });
-                    if ( action.length > 0 ) {
+                    if ( action.length > 0 && !editor.embeddedSurface ) {
                         menu.AddItem(new GUIContent("Split At Cursor"), false, () => { Split(snapedPointerTime); });
                         menu.AddItem(new GUIContent("Split At Scrubber (S)"), false, () => { Split(editor.cutscene.currentTime); });
                     }

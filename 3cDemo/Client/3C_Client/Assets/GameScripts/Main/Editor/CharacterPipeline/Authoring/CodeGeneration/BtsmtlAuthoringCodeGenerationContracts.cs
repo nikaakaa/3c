@@ -381,6 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         string RecipeType { get; }
         string EntryTypeName { get; }
+        string SourceCodePath { get; }
         BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context);
     }
 
@@ -393,9 +394,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             IEnumerable<string> createdAssetPaths,
             IEnumerable<string> replacedAssetPaths,
             IEnumerable<string> deletedAssetPaths,
-            IEnumerable<BtsmtlAuthoringCodeDiagnostic> diagnostics)
+            IEnumerable<BtsmtlAuthoringCodeDiagnostic> diagnostics,
+            bool saved = false)
         {
             Success = success;
+            Saved = saved;
             RootOutput = rootOutput;
             OutputAssetPath = outputAssetPath ?? string.Empty;
             CreatedAssetPaths = new ReadOnlyCollection<string>((createdAssetPaths ?? Enumerable.Empty<string>()).ToArray());
@@ -406,6 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         }
 
         public bool Success { get; }
+        public bool Saved { get; }
         public object RootOutput { get; }
         public string OutputAssetPath { get; }
         public IReadOnlyList<string> CreatedAssetPaths { get; }

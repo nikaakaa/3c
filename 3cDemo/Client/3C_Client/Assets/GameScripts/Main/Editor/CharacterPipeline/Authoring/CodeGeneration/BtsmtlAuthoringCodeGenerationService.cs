@@ -121,7 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         request.EntryTypeName,
                         "正式生成上下文不能为空。"));
             if (!string.Equals(request.RecipeType, entry.RecipeType, StringComparison.Ordinal) ||
-                !string.Equals(request.EntryTypeName, entry.EntryTypeName, StringComparison.Ordinal))
+                !string.Equals(request.EntryTypeName, entry.EntryTypeName, StringComparison.Ordinal) ||
+                !string.Equals(request.SourceCodePath, entry.SourceCodePath, StringComparison.Ordinal))
                 return BtsmtlAuthoringGenerationResult.Failure(
                     request.OutputAssetPath,
                     new BtsmtlAuthoringCodeDiagnostic(
@@ -183,6 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 $"public string RecipeType => {BtsmtlAuthoringCodeSyntax.StringLiteral(context.Request.RecipeType)};");
             writer.WriteLine(
                 $"public string EntryTypeName => typeof({context.Request.EntryTypeName}).FullName;");
+            writer.WriteLine(
+                $"public string SourceCodePath => {BtsmtlAuthoringCodeSyntax.StringLiteral(context.Request.OutputCodePath)};");
             writer.WriteLine(
                 "public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)");
             writer.OpenBlock();

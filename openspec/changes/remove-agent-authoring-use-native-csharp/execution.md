@@ -93,6 +93,8 @@
 
 该适配器已覆盖当前正式 Skill/Timeline 节点和片段的类型化配置、动态步骤、FSM Transfer、MotionWarp source、完整 AnimationCurve、外部资源引用与根绑定表达。遇到内联旧 Tree 或未持久化资源时返回明确不支持诊断，不用默认值或旧 JSON 补齐。
 
+已新增两个显式 MCP：`btsmtl.export_code` 只接收精确资产、Definition、Editor 源码输出路径、recipe、命名空间和入口类型，成功完成完整性检查后原子写出源码；`btsmtl.generate_assets` 只接收精确源码路径、recipe、已编译入口类型、Definition 和输出资产路径，校验入口的 `RecipeType`、`EntryTypeName`、`SourceCodePath` 及上下文完全一致后执行。两者都拒绝 Play、编译、导入忙状态，不调用旧 Document 生命周期，不自动 Build 或 Refresh。
+
 ## 4. 当前验证记录
 
 - 规划文档已由规划窗口执行 `openspec validate remove-agent-authoring-use-native-csharp --strict` 并通过；本首步未修改规划文件。
@@ -102,5 +104,6 @@
 - `git diff --check` 对首步 execution 与 CodeGeneration 文件通过。
 - 关键词合法性修正后的同一 Editor 增量编译再次成功：`0 个警告`、`0 个错误`，成功生成 `ThirdPersonClient.Editor.dll`；随后 `dotnet build-server shutdown` 成功关闭全部编译服务器。该结果只证明静态程序集编译，不替代 Unity Editor Console 或运行验证。
 - 接入 Skill 适配器后，使用 Unity 2022 Editor 引用与当前 `Temp/bin/Debug` 程序集直接编译 CodeGeneration 全部 `.cs`，结果为 `0` 错误；该检查覆盖新文件自身语法和类型引用。完整 `ThirdPersonClient.Editor.csproj` 编译另有并行任务现存错误：`BtsmtlScenePlayGraphShellToolbar.cs:37` 找不到 `BtsmtlScenePlayPreviewPresenter`，不是本任务新增文件的诊断，已保留未覆盖。
+- 使用临时检查项目编译 CodeGeneration 全部 `.cs`（包含两个 MCP）成功：`0 个错误`、`2 个引用版本警告`；检查项目已删除，不作为正式工程路径。该检查证明新增代码可编译，不证明 Unity Editor 已刷新、MCP 已加载或资产往返已执行。
 - 尚未运行 Unity、Unity MCP、Play、Build 或资产生成；本首步未新增测试代码。
 - 待完成验证：Editor 程序集编译、具体领域适配、两个 MCP 显式入口、导出/删除重建往返、D7.1 删除门槛以及 Unity Console 实际状态。

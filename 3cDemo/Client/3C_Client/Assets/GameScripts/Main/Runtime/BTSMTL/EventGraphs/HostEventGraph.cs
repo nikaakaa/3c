@@ -79,6 +79,9 @@ namespace BTSMTL.EventGraphs
                 authoringId,
                 contentRevision);
 
+        public void ClearAuthoringContent() =>
+            HostEventGraphEditorMutation.ClearAuthoringContent(this);
+
         public Variable<T> DeclareVariable<T>(
             string variableId,
             string variableName,

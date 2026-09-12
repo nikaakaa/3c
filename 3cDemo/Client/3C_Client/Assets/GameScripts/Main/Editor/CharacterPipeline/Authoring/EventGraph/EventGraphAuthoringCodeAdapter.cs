@@ -216,17 +216,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                         "事件图变量使用了属性绑定，当前直接API适配不能安全重建该外部绑定。");
                     continue;
                 }
-                if (!TryFormatLiteral(
-                        variable.value,
-                        variable.varType,
-                        out string valueLiteral))
-                {
-                    context.ReportError(
-                        "event_graph_variable_value_unsupported",
-                        variable.ID,
-                        "事件图变量初值不能按精确类型输出。");
-                    continue;
-                }
+                string valueLiteral = BtsmtlAuthoringCodeValues.Value(
+                    context,
+                    variable.value,
+                    variable.varType,
+                    variable.ID);
                 string type = TypeExpression(variable.varType);
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
@@ -477,11 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             }
             ValidateMacroInterface(context, node.UID, macro);
             string macroPath = AssetDatabase.GetAssetPath(macro);
-            if (string.IsNullOrWhiteSpace(macroPath) ||
-                !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
-                    macro,
-                    out _,
-                    out long localFileId))
+            if (string.IsNullOrWhiteSpace(macroPath))
             {
                 context.ReportError(
                     "event_graph_macro_reference_not_loadable",
@@ -489,6 +479,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                     "事件图Macro不是可由明确资产路径恢复的外部Macro引用。");
                 return;
             }
+            string macroExpression = BtsmtlAuthoringCodeValues.ExternalAsset(
+                context,
+                macro,
+                typeof(Macro));
+            if (macroExpression == "null")
+                return;
             if (!macroVariables.TryGetValue(macro, out string macroVariable))
             {
                 macroVariable = context.RegisterObject(
@@ -498,13 +494,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 if (string.IsNullOrEmpty(macroVariable))
                     return;
                 macroVariables.Add(macro, macroVariable);
-                context.AddExternalDependency(
-                    macroPath,
-                    typeof(Macro).FullName,
-                    localFileId);
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
-                    $"var {macroVariable} = context.ResolveExternalAsset<{TypeExpression(typeof(Macro))}>({StringLiteral(macroPath)}, {localFileId.ToString(CultureInfo.InvariantCulture)}L) ?? throw new System.InvalidOperationException({StringLiteral($"Event graph Macro '{macroPath}' could not be loaded.")});");
+                    $"var {macroVariable} = {macroExpression} ?? throw new System.InvalidOperationException({StringLiteral($"Event graph Macro '{macroPath}' could not be loaded.")});");
             }
             context.AddStatement(
                 BtsmtlAuthoringCodeEmissionPhase.Configure,
@@ -553,11 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                     }
                     if (valueInput.isDefaultValue)
                         continue;
-                    if (!EventGraphValueKinds.IsSupported(valueInput.type) ||
-                        !TryFormatLiteral(
-                            valueInput.serializedValue,
-                            valueInput.type,
-                            out string literal))
+                    if (!EventGraphValueKinds.IsSupported(valueInput.type))
                     {
                         context.ReportError(
                             "event_graph_value_input_unsupported",
@@ -565,6 +553,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                             "事件图未连接值输入不能按正式直接API完整输出。");
                         continue;
                     }
+                    string literal = BtsmtlAuthoringCodeValues.Value(
+                        context,
+                        valueInput.serializedValue,
+                        valueInput.type,
+                        $"{node.UID}/{port.ID}");
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"{graphVariable}.ConfigureValueInput((FlowNode){nodeVariable}, {StringLiteral(port.ID)}, {literal});");
@@ -642,40 +635,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             if (node is EventGraphVector3InputNode vector3Input)
                 return vector3Input.InputId;
             return string.Empty;
-        }
-
-        static bool TryFormatLiteral(
-            object value,
-            Type type,
-            out string literal)
-        {
-            literal = null;
-            if (type == typeof(bool) && value is bool boolValue)
-            {
-                literal = BoolLiteral(boolValue);
-                return true;
-            }
-            if (type == typeof(int) && value is int intValue)
-            {
-                literal = intValue.ToString(CultureInfo.InvariantCulture);
-                return true;
-            }
-            if (type == typeof(float) && value is float floatValue && float.IsFinite(floatValue))
-            {
-                literal = FloatLiteral(floatValue);
-                return true;
-            }
-            if (type == typeof(Vector2) && value is Vector2 vector2Value && IsFinite(vector2Value))
-            {
-                literal = Vector2Literal(vector2Value);
-                return true;
-            }
-            if (type == typeof(Vector3) && value is Vector3 vector3Value && IsFinite(vector3Value))
-            {
-                literal = Vector3Literal(vector3Value);
-                return true;
-            }
-            return false;
         }
 
         static string TypeExpression(Type type)

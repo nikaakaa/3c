@@ -435,7 +435,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 interpolationAlpha,
                 presentationDeltaSeconds,
                 in factFrame,
-                in parameterFrame);
+                in parameterFrame,
+                m_ActorId);
             AnimationPresentationDiagnosticsInterest traceInterest =
                 AnimationPresentationTracePublisher.ResolveInterest(
                     diagnostics);
@@ -513,7 +514,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     m_PendingFrameStage = "PoseFinalize";
                     m_PoseFrame.FinalizePoseState(
-                        in factFrame);
+                        in factFrame,
+                        in parameterFrame);
                     PoseProgram.PublishActionSources(
                         m_PendingTransaction.PoseLease,
                         m_ActionSourceSamples);
@@ -1260,7 +1262,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float interpolationAlpha,
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterAnimationPoseInputFrame parameterFrame)
+            in CharacterAnimationPoseInputFrame parameterFrame,
+            ActorId expectedActorId)
         {
             if (presentationFrame == 0 ||
                 !float.IsFinite(interpolationAlpha) ||
@@ -1274,6 +1277,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(presentationDeltaSeconds));
+            }
+            if (parameterFrame.IsPublishedVariableFrame)
+            {
+                CharacterAnimationVariableFrame variableFrame =
+                    parameterFrame.PublishedVariableFrame;
+                bool nonAdvancingFrame = presentationDeltaSeconds == 0f;
+                if (!variableFrame.ActorId.Equals(expectedActorId) ||
+                    !nonAdvancingFrame &&
+                    (variableFrame.RenderFrame != presentationFrame ||
+                     variableFrame.SimulationTick.Value != latestSimulationTick ||
+                     variableFrame.BodyDiscontinuityGeneration !=
+                         factFrame.BodyDiscontinuityGeneration))
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(parameterFrame));
+                }
             }
         }
 

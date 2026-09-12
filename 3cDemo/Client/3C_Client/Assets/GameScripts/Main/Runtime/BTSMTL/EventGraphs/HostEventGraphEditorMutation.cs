@@ -439,6 +439,19 @@ namespace BTSMTL.EventGraphs
                 false);
         }
 
+        internal static void ClearAuthoringContent(HostEventGraph graph)
+        {
+            Apply(graph, "Clear Event Graph Authoring Content", () =>
+            {
+                foreach (Connection connection in graph.GetAllConnections().ToArray())
+                    graph.RemoveConnectionNative(connection, false);
+                graph.ClearNativeNodes();
+                foreach (Variable variable in graph.blackboard.variables.Values.ToArray())
+                    graph.blackboard.RemoveVariable(variable.name);
+                graph.canvasGroups = new List<NodeCanvas.Framework.CanvasGroup>();
+            });
+        }
+
         internal static void BindVariableNode(
             HostEventGraph graph,
             ParameterVariableNode node,

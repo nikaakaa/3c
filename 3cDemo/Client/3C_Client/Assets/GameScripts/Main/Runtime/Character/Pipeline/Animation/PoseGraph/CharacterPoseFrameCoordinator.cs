@@ -208,10 +208,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void FinalizePoseState(
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             RequireOpenMutation();
-            if (!factFrame.IsValid)
+            if (!factFrame.IsValid || !parameterFrame.IsValid)
             {
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
@@ -219,7 +220,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_Program.FinalizePoseStateFrame(
                 m_ActiveFrameLease,
-                in factFrame);
+                in factFrame,
+                in parameterFrame);
         }
 
         internal CharacterPoseSourceDemand CreateSourceDemand(

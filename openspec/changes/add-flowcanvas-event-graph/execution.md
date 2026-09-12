@@ -9,6 +9,8 @@
 本步提交：`873c497eb`，`事件图：收口原生直接作者API与C#输出适配`。
 后续小步提交：`746ce0c67` 补齐目录元数据，`01194e852` 改用公共生成上下文恢复外部Macro引用。
 
+本轮继续基于最新工作树推进：公共 C# 输出入口已在 `6c80aee6` 接入事件图适配器；Pose 旧参数帧链路由 `f1dc9f9eb` 及后续预览收口提交退役。本轮没有重建已完成的旧链路，只补齐了变量帧在 Pose 收尾阶段的传递，并新增 Corin 正式事件图生成入口。
+
 ## 本步已完成
 
 ### 1. 原生直接作者 API
@@ -46,6 +48,18 @@
 
 `EventGraphAuthoringDocument`、`HostEventGraph.ApplyAuthoringDocument` 和 `HostEventGraphEditorMutation.ApplyDocument` 当前仍存在，是因为工作树中的 Pose adapter 和 Agent Presentation 调用者尚未迁出。它们是明确的待删除旧调用链，不是新的兼容入口；调用者迁出后必须直接删除，不能保留转发或改名。
 
+### 4. Pose 只读变量消费者接入
+
+Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合同。运行帧从 `CharacterPresentationRuntime` 进入 `CharacterPoseFrameCoordinator`、`CharacterPoseProgramRuntime` 和 `CharacterPoseProgramActorRuntime`，Advance 与 Finalize 使用同一份 `CharacterAnimationPoseInputFrame`；状态机转换规则也从该 typed frame 读取 Bool、Float、Int 动画变量。
+
+这条链路没有再保留固定 motor 参数桥或旧 `CharacterPresentationProgramParameterFrame`。Pose Graph 编辑器只投影 EventGraph 声明的变量，作者侧不创建第二份可写 Blackboard。
+
+### 5. Corin 正式生成入口
+
+新增 `CorinAnimationEventGraphAuthoringCode`，recipe 为 `character.animation-event-graph.corin/v1`。入口通过公共生成上下文解析精确 Definition 和 Profile，按原生直接 API 创建或清空正式 `CharacterAnimationEventGraph`，声明 `animation.action-weight` 与 `animation.foot-placement-weight` 两个 Float 变量，建立 Start/Update → Instant Split → SetVariable 的连接，并最后绑定 Profile。
+
+入口的 `SourceCodePath` 与公共 bridge 使用同一套项目绝对路径计算，输出路径固定为 `Assets/Configs/Character/Corin/Pipeline/Presentation/EventGraphs/CorinAnimationEventGraph.asset`。正式 `btsmtl.generate_assets` 已执行成功，创建事件图 GUID `d90ccc65c39b2d84a8b06ef1ae46b885`，并把该引用写入 Corin Profile；Projection 尚未生成。
+
 ## 直接 API 输入输出
 
 输入是稳定 identity、正式节点/变量对象、typed 配置、端口 ID、Macro 外部引用和 Canvas layout。输出是原生 Graph/Blackboard/Node/Connection 对象及其序列化结果；代码输出适配器的输出是公共 C# 语句，不是另一份可编辑图数据。
@@ -56,18 +70,21 @@
 
 - Pose 任务仍需将 `CharacterPoseGraphAuthoringAdapter.ApplyEventGraphMutation` 迁移为直接 API 调用，并完成其自身输入消费归属。
 - C# authoring 任务仍需迁出 Agent Mapper 和 Presentation/Skill 的公共协议调用，随后才能删除 `EventGraphAuthoringDocument`、`AgentAuthoringEventGraphDocumentMapper` 以及事件图 Document 分片处理。
-- 公共 C# authoring 任务仍需把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合，并完成两个显式 MCP 的实际调用链；本窗口不复制公共 MCP。
+- 公共 C# authoring 任务已把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合；事件图生成入口等待 Unity Editor 稳定注册 `btsmtl.generate_assets` 后执行。当前不复制公共 MCP，也不调用旧 Document MCP。
 - 固定 motor 参数桥、Pose 条件/BlendSpace/运行/Preview consumer 属于独立运行闭环，不能作为本步作者协议删除的理由，也不能因为作者 API 已有就提前删除。
 
-在这些调用者和公共入口迁出前，本窗口不删除共享 Agent/Presentation 文件，不修改 Pose adapter/Mutation，不创建 Corin 事件图资产，不通过 fallback 或旁路保持旧协议。
+在这些调用者和公共入口迁出前，本窗口不删除共享 Agent/Presentation 文件，不删除 `EventGraphAuthoringDocument` 及其 mapper，不通过 fallback 或旁路保持旧协议。Corin 资产只由正式 C# generation recipe 创建。
 
 ## 验证记录
 
 源码构建使用了 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，每次构建后立即执行 `dotnet build-server shutdown`。
 
 - `BTSMTL.EventGraphs.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 warning，0 error。
-- `ThirdPersonClient.Editor.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，32 个现有 ACL artifact identity warning。
-- 上一步 `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
+- `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
+- `ThirdPersonClient.Editor.csproj` Rebuild：0 error，32 个现有 ACL artifact identity warning；此前 Pose 编辑器的 3 个跨程序集可见性错误已由 Pose 任务将 `SetEditorAnimationVariables` 正式公开后清零。
+- 正式 `character.build_float32_products` 已执行，但被当前 Corin 既有资产链拒绝：Attack skill 缺少原生状态机资产；Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 `corin.control-rig.body.call` 暴露内部 Foot Placement curve；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
+- Unity Editor 日志已记录本轮 Tundra 编译成功、无 C# 编译 error；域重载后出现 RendererFeature/空对象编辑器警告，属于当前编辑器状态，不是 EventGraph 编译证据。
+- Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；正式 `btsmtl.generate_assets` 成功，`manage_asset` 已确认事件图资产类型和 Profile 文件中的 GUID 绑定。Projection 因上一条既有资产链诊断仍未生成。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。
 
-本步没有运行 Unity MCP、Play Mode、Build、资产生成或端到端回放。静态源码构建不等于 Unity Console 清洁，也不等于事件图删除重建往返已经通过。
+本轮没有进入 Play Mode，也没有运行端到端回放。事件图资产生成和 Profile 绑定已完成，但 Float32/Projection 构建仍被 Skill/Pose 资产链阻塞；源码构建成功、Tundra 成功和单次生成成功，都不等于 Unity Console 清洁、Projection 已更新或事件图删除重建往返已经通过。

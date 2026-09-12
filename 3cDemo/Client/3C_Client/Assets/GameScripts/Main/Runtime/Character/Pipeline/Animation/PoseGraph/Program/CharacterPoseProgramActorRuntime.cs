@@ -71,7 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             m_ActorState.PoseStateSources.PrepareFrame(
                 presentationDeltaSeconds,
-                in factFrame);
+                in factFrame,
+                in parameterFrame);
             for (int i = 0; i < m_ActorState.Routes.Length; i++)
             {
                 AnimationBlendStackRuntime stack = m_ActorState.Stacks[i];
@@ -110,12 +111,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void FinalizePoseStateFrame(
             CharacterPoseProgramFrameLease lease,
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             m_Action.RequireWorkspace(lease.Lineage.FrameIdentity);
             PresentationFrameWorkspaceLease workspaceFrame =
                 m_Action.WorkspaceFrame;
-            if (!factFrame.IsValid || !workspaceFrame.IsValid)
+            if (!factFrame.IsValid || !parameterFrame.IsValid ||
+                !workspaceFrame.IsValid)
             {
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
@@ -125,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             m_ActorState.PoseStateSources.EvaluateTransitions(
                 in factFrame,
+                in parameterFrame,
                 m_FramePages,
                 m_PresentationWorkspace,
                 workspaceFrame);

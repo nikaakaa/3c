@@ -487,10 +487,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void FinalizePoseStateFrame(
             CharacterPoseProgramFrameLease lease,
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             RequireFrame(lease);
-            m_ActorRuntime.FinalizePoseStateFrame(lease, in factFrame);
+            m_ActorRuntime.FinalizePoseStateFrame(
+                lease,
+                in factFrame,
+                in parameterFrame);
         }
 
         internal bool IsSequencePreviewPlayer(int playerIndex) =>

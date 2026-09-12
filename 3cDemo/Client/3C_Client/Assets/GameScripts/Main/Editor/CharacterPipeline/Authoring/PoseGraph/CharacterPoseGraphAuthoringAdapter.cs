@@ -1335,9 +1335,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case "pose-graph":
                     options = m_Profile?.PoseGraph?.EnumerateGraphs()
                         .Where(value => value != null && value.GraphId.IsValid)
-                        .Select(value => new GraphAuthoringFieldOption(
+                        .Select((value, index) => new GraphAuthoringFieldOption(
                             value.GraphId.Value,
-                            value.GraphId.Value))
+                            string.IsNullOrWhiteSpace(value.name)
+                                ? ReferenceEquals(value, m_Profile.PoseGraph.Graph)
+                                    ? "Root Pose Graph"
+                                    : $"Pose Graph {index}"
+                                : value.name))
                         .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
                     return true;
                 case "linked-pose-group":

@@ -29,6 +29,19 @@
 - 旧 v7 及更早包不会被兼容读取；Store 会要求重新 checkout。
 - 独立 `BtsmtlSkillTransferConnectionMigrator` 已删除，Git提交 `a1738ec56` 保留删除前历史。
 
+### 源码入口与删除边界
+
+| 业务责任 | 正式入口 | 当前处理 |
+|---|---|---|
+| FlowCanvas拓扑与状态结构 | `BtsmtlSkillFlowGraph.cs`、`BtsmtlSkillFlowNode.cs`、`BtsmtlSkillStructuralFlowNodes.cs` | 保留正式Graph、State和固定逻辑端口 |
+| 状态机转移数据 | `BtsmtlSkillFlowConnection.cs` 的 `BtsmtlSkillTransferPayload` | Edge唯一保存condition、priority、abortPolicy和order |
+| 节点定义与Port Shape | `BtsmtlSkillCapabilityCatalog.cs`、`BtsmtlSkillGraphAuthoringMetadata.cs` | 由Capability和唯一投影入口提供 |
+| 引用闭包与复制 | `BtsmtlSkillGraphClosure.cs`、`BtsmtlSkillGraphClosureIndex.cs`、`BtsmtlSkillGraphCopy.cs` | 沿正式Edge/Step/Node引用闭合；两种条件owner不互读 |
+| Document读写与校验 | `AgentSkillFlowDocumentModels.cs`、`AgentSkillFlowDocumentExporter.cs`、`AgentSkillFlowDocumentValidator.cs`、`BtsmtlSkillGraphAuthoringApplier.cs` | 统一v8 Graph/Edge/owner/order链 |
+| 编译消费与SourceMap | `BtsmtlSkillGraphOccurrence.cs`、`BtsmtlSkillGraphFlowEmitter.cs`、`BtsmtlSkillGraphCompiler.cs` | 状态机按显式Edge order发射Transfer控制流 |
+| 已删除路径 | `BtsmtlSkillTransferConnectionMigrator`、`BtsmtlSkillLegacyMigrationWorkflow`、状态机anchor/State旧steps | 不再有迁移菜单、旁路转换或状态机Step副本 |
+| 保留的相似语义 | `BtsmtlSkillCompositeFlowNode.Steps` 与 Document `properties.steps` | 仅服务Sequence/Selector/Parallel，不属于状态机Transition |
+
 ### 正式资产处理
 
 之前通过正式 Document JSON checkout/dry-run/apply 已把当前 Corin 状态机的 20 条转移边写成 Edge Payload，并确认旧状态 step 节点为 0、转移端点为 `Transfer → StateIn`。后续 v8切换前已删除被忽略的旧 v4/v5/v7 package目录，准备由正式 checkout重新生成唯一 v8包。

@@ -29,6 +29,6 @@
 ## 5. 文档与交付
 
 - [x] 5.1 重写本change的proposal、design和implementation，移除与实际Edge/v8实现矛盾的旧口径。
-- [ ] 5.2 对照并更新现行 `openspec/specs/`、`openspec/project.md` 与 `btsmtl-agent-authoring` 技能合同，保留非本change场景和历史archive。
-- [ ] 5.3 完成原业务/FlowCanvas定义清单、源码路径、删除项和业务行为对照；不以Agent往返成功代替模型统一证明。
+- [x] 5.2 对照并更新现行 `openspec/specs/`、`openspec/project.md` 与 `btsmtl-agent-authoring` 技能合同，保留非本change场景和历史archive。
+- [x] 5.3 完成原业务/FlowCanvas定义清单、源码路径、删除项和业务行为对照；不以Agent往返成功代替模型统一证明。
 - [ ] 5.4 汇总小步提交、正式Unity实例、checkout/dry-run/apply/validate结果与未提交外部改动边界。

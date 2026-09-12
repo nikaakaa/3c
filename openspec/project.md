@@ -245,7 +245,7 @@
 
 ## Pending Work
 
-- `refactor-character-pose-graph-architecture`于2026-09-12按用户要求拆出[已完成运行基础](changes/archive/2026-09-12-complete-pose-graph-runtime-foundation/proposal.md)：原任务1、2、4、5、6、7、8组共60项完成记录与对应设计归档。原57项未完成记录仍留在原change，新增第25组继续规划PoseGraph只读Blackboard的输入来源、跨图可见范围、动画变量与Pose曲线区分、Body公开接口和作者名称；这些不是已实现能力。FlowCanvas事件图的事件、变量更新与Set由独立规划窗口拥有，PoseGraph只负责消费其正式接口，不创建第二套变量系统。该文档归档不重新发布current specs或运行产物。
+- `refactor-character-pose-graph-architecture`已拆出[运行基础归档](changes/archive/2026-09-12-complete-pose-graph-runtime-foundation/proposal.md)，保存原7组60条完成记录及对应设计；旧架构剩余任务仍由原change维护。[refine-pose-graph-readonly-blackboard](changes/refine-pose-graph-readonly-blackboard/proposal.md)独立承接原25.1—25.12与Decision 26，负责只读输入分类、跨图可见范围、Get引用、Pose曲线和Body接口，当前0/12项实现完成。FlowCanvas事件图规划窗口独立拥有事件、变量更新与Set方案；其变量输出合同尚未确认，PoseGraph不自建第二变量系统。该任务分离不修改current能力spec或运行产物。
 
 - `add-animation-transition-routing-module`已经在独立`ThirdPersonCharacter.Animation.TransitionRouting`程序集实现exact rule compiler、Standard Blend/Inertialization route decision、独立capture/release completion outcome、typed request、generation、握手、reset和有界snapshot。当前PoseStateMachine Transition与AnimationSlot是其明确owner：模块只提供route decision和capture/release协议，不拥有PoseState、Slot、Player、BlendStack、Inertialization、PlayableGraph或最终Pose。Corin作者资产与generated Projection已经完成正式迁移和显式Build，旧BaseLocomotion Selection拓扑及其集成路径已经删除。
 - 当前没有正式命中 solver、目标 registry、跨角色 GameplayResult 与完整 combat closure；不得由 Character、GE 或网络 Handler 旁路补齐。

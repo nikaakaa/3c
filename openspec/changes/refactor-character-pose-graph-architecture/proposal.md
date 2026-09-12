@@ -4,7 +4,7 @@ BTSMTL技能后续作者迁移由[独立技能提案](../integrate-native-fsm-sk
 
 ## 2026-09-08 当前增量范围
 
-本节及后续旧版What Changes保留原重构范围；完成状态以tasks.md为准。2026-09-12已完成运行基础与新的只读输入范围见下节，不能重复执行已归档任务。
+本节及后续旧版What Changes保留原重构范围；完成状态以tasks.md为准。2026-09-12已完成运行基础与只读输入独立变更的去向见下节，不能重复执行已归档任务。
 
 当前已确定：保留Pose编译及Native／Job运行，只复用FlowCanvas作者UI，并在Unity Play中观察已有角色。该作者接入由[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)负责；技能留在独立技能提案，两边都不创建预览执行器。
 
@@ -18,17 +18,11 @@ Pose作者界面直接使用FlowCanvas原生`GraphEditor`。画布、breadcrumb�
 
 PoseGraph的作者图必须可复用。`CharacterPresentationPoseGraphAsset`/FlowCanvas Graph只拥有稳定拓扑、参数、状态机和抽象能力合同；Character Animation Presentation Profile或独立Binding拥有Rig、Source、Slot、Policy、IK、Foot与Action资源。Graph不再把Corin资源、Character Definition或角色Profile当作自身所有者；Projection和Program仍按具体Definition生成角色实例化产物。
 
-## 2026-09-12 完成部分归档与只读Blackboard剩余范围
+## 2026-09-12 完成归档与后续任务分离
 
-用户已要求将完成文档分离归档。原任务1、2、4、5、6、7、8组共60项完成记录及Decision 3、4、6、7、11、12正文移入[运行基础归档](../archive/2026-09-12-complete-pose-graph-runtime-foundation/proposal.md)。原57项未完成记录继续留在本change；没有把Scene Play、Compiler质量、资源复用或Blackboard设计一起认定完成。
+原任务1、2、4、5、6、7、8组共60条完成记录及对应设计已移入[运行基础归档](../archive/2026-09-12-complete-pose-graph-runtime-foundation/proposal.md)。其余旧架构任务及历史验证记录保留于本change，不因分离而改变完成状态。
 
-本change继续负责PoseGraph消费侧：划分动画实例变量、外部只读事实、随Pose传播的曲线和节点/资源配置；只读Blackboard只展示当前图可访问的正式输入声明，不把所有动画属性复制成图变量，也不把未使用的合法声明直接删除。Get读取同一正式变量合同，PoseGraph主图不提供修改共享动画变量的Set。
-
-EventGraph的变量声明/更新机制、事件入口、Set、执行顺序和实例生命周期由独立FlowCanvas事件图规划窗口负责。它的正式合同尚未交付，本change只约束消费侧需要稳定身份、类型、来源/作用范围和本帧可用性，不另建第二变量布局、更新器或运行时Blackboard；具体共享接口以双方正式文档一致后实施，不把聊天建议当成已实现合同。
-
-Foot Placement Weight与BlendShape继续作为随Pose采样、混合和传播的数据。Body内部必须明确读取哪一个输入Pose的曲线；有真实父图控制需求时才能声明对应公开输入，不能把所有Weight一律隐藏或暴露。根图是否有变量由实际公开接口决定，不以“Blackboard必须为空”为目标。Foot权重只改变既有Goal可见权重，不释放Anchor、清零连续历史或改变Landing Reach准入。
-
-本次新增范围还包括：统一作者显示名与内部身份、移除旧声明复制链、校验跨图可见性与失效引用、迁移确认废弃的根图Get/透传端口、清理确认无引用的重复子图，并同步Capability、Document、Mutation、Compiler与诊断。全部为待实施工作，不恢复独立Canvas、Preview或第二Pose执行链。
+原第25组的12项只读Blackboard任务、Decision 26设计和对应spec已整体移至[refine-pose-graph-readonly-blackboard](../refine-pose-graph-readonly-blackboard/proposal.md)。本change不再拥有该消费侧实现；EventGraph事件、变量更新与Set由独立事件图规划窗口负责。
 
 ## Why
 
@@ -109,7 +103,7 @@ Foot Placement Weight与BlendShape继续作为随Pose采样、混合和传播的
 - `character-animation-pipeline`：保持唯一表现事务、Source、Constraint和Final Publication边界。
 - `character-animation-selection-runtime`：保持Player、Action、Slot、Blend与Inertialization所有权。
 - `character-foot-placement-presentation`：保持Foot、Goal、FBBIK与Writer的唯一执行链。
-- `character-presentation-pose-graph`：将Pose唯一作者资产和编辑表面迁移到ParadoxNotion Canvas；继续收口只读输入范围、变量与曲线分责、子图公开接口及作者显示，保持唯一编译和运行链。
+- `character-presentation-pose-graph`：将Pose唯一作者资产和编辑表面迁移到ParadoxNotion Canvas，保持唯一编译和运行链；只读输入专项由独立change维护。
 - `graph-authoring-domain-framework`：共享Capability、Document、Mutation与事务合同，但允许不同领域使用各自唯一具体Canvas。
 
 ## Impact
@@ -148,7 +142,7 @@ Foot Placement Weight与BlendShape继续作为随Pose采样、混合和传播的
 
 - 不改变保留的Corin PoseState选择、Transition rule、Standard Blend、Blend Stack、Inertialization、Slot、Linked Pose、Blend Space、Motion Matching、Foot Placement、Goal、FBBIK或Writer的逐帧业务结果。
 - 不删除或降级现有actor-local在线调参能力；调参只迁移Owner与事务，不得修改共享Program Image、跨Actor传播或改变生效时机。
-- 不新增角色专属Pose节点、Layer、Control Rig、传统Animator Controller、第二PlayableGraph、第二Animator、第二IK solver或GPU动画路径。只读输入与曲线绑定所需的通用Capability调整属于本change；EventGraph事件和Set的作者/执行能力属于独立规划。
+- 不新增角色专属Pose节点、Layer、Control Rig、传统Animator Controller、第二PlayableGraph、第二Animator、第二IK solver或GPU动画路径。只读输入与曲线绑定的通用Capability调整已归独立只读Blackboard change；EventGraph事件和Set的作者/执行能力属于独立规划。
 - 不重新设计Foot Contact Plan、Heel/Toe、脚掌旋转、Reactive、移动平台或上下楼专用动画；不恢复已撤销Reach夹紧或SmoothKnee，不接管任何未实施IK行为任务，不再改变第一阶段通过后的正常初始化／Reset结果。
 - 不改变Gameplay/Presentation边界，不把Pose、Program Actor State或Frame workspace写入Rollback snapshot或网络协议。
 - 不创建通用插件容器、运行时反射Handler、任意Operation注册表、Solver抽象接口或只有一个Adapter的假设性Seam。

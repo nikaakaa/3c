@@ -178,26 +178,6 @@ Player与组合节点 MUST声明Required／Optional Pose语义，NoPose与Invali
 - **THEN** residual MUST只影响该Action分支
 - **AND** Base Pose分支 MUST不共享其history
 
-### Requirement: Pose参数必须通过typed页面和显式解析传播
-
-Pose参数 MUST使用稳定typed声明、明确默认值和合法来源；变量输入读取committed页面，素材Curve随Pose Value传播。普通混合的Curve策略 MUST配置在实际组合节点，内部参数解析由Compiler展开，不强制作者接Pose Parameter Resolve。确有独立Curve修改意图时提供明确作者能力，不恢复通用内部数据汇总节点。
-
-节点不得按显示名、任意字符串或Gameplay对象查值。脚部权重等参数必须保持其正式Curve／Fact来源，不因隐藏内部operation而补造默认结果。
-
-#### Scenario: 权重连接参数
-- **WHEN** 作者把正式参数接到Alpha
-- **THEN** 编译 MUST确定类型与页面来源，Runtime直接读取该typed值
-
-#### Scenario: 两份Pose需要不同Curve组合
-- **WHEN** 作者在组合节点选择Curve混合策略
-- **THEN** 编译 MUST按该策略传播参数并将内部步骤映射回该组合节点
-
-#### Scenario: Blend权重读取Program参数
-
-- **WHEN** BlendPose权重连接ProgramParameterInput
-- **THEN** Compiler MUST校验ParameterId、类型和page layout
-- **AND** Runtime MUST不读取Gameplay对象
-
 ### Requirement: Pose Graph工作区必须准确映射Authoring、Live与References
 
 正式工作区 MUST用唯一原生图区域组织各角色图、目录、Details、必要资产工具与运行观察。Authoring只写当前真实owner；Live只显示精确Actor／generation／图与产物版本／call-site的已完成结果；References只按需提供资源、Rig、Policy、Timeline与调用来源。GUID、hash、compiled index和空运行栏目默认隐藏。
@@ -230,6 +210,8 @@ Pose MUST继续编译为唯一不可变Program Image，Actor复用既有Executio
 
 Layer、Slot和Rig调用全部进入同一计划；观察不得增加sample、Foot、FBBIK或Writer执行次数。更改作者数据只使产物Stale，必须由显式Build发布新版本，不热换运行实例。
 
+完整Pose/角色Preview的输入 MUST沿运行相同的动画宿主和事件图唯一Contract/Layout/Frame，Get、条件和BlendSpace使用同次成功发布的精确类型变量。Source Pending不得回退事件图状态，输入发布不能当作最终Pose提交。单资源查看保持原资源调参合同；旧CharacterPresentationProgramParameterFrame消费签名全部迁移后才删除生产方法，不补默认motor值。
+
 #### Scenario: 普通Play中打开控制图
 - **WHEN** 已有精确匹配的真实Actor
 - **THEN** 工作区 MUST观察该调用完成结果，不启动一份Control Rig runtime
@@ -247,29 +229,6 @@ Layer、Slot和Rig调用全部进入同一计划；观察不得增加sample、Fo
 - **WHEN** 真实角色执行Foot Placement时缺少World Context
 - **THEN** 正式Runtime MUST发布Unavailable并阻断依赖输出
 - **AND** 窗口不得补地面或进行简化求解
-
-### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
-
-AnimGraph、Layer、State、Rule、Rig与节点字段／端口 MUST由唯一Capability及接口合同提供，供Editor、Document、Clipboard、Reconciler、Mutation和Compiler共用。作者节点和运行operation不必一一对应，语义展开只能由对应Definition提供；Topology和Stage保持全局唯一职责。
-
-创建、连接、改接、粘贴、删除、资源、字段、接口和布局变更 MUST进入同一typed Mutation与实际owner事务；失败不得部分写入。内部Generated binding和operation不能进入editable，Compiler不能通过作者getter求值或旧图镜像获取输入。
-
-#### Scenario: 添加新的Rig目标能力
-- **WHEN** 正式目录注册新的typed目标节点
-- **THEN** 创建菜单、端口、Document、编译展开及约束 MUST识别同一合同
-- **AND** MUST不在Editor和Compiler分别维护目标字段清单
-
-#### Scenario: 新增Pose节点能力
-
-- **WHEN** 新Pose节点注册唯一Definition Adapter
-- **THEN** 人工创建菜单、Document v7、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
-- **AND** MUST不要求在多个Catalog、Handler或NodeKind switch中重复声明同一字段和端口
-
-#### Scenario: Node Definition缺少Document投影
-
-- **WHEN** 一个Definition无法为正式Document/Mutation合同提供完整typed字段、条件端口或Graph dependency
-- **THEN** Definition目录或Character Build MUST失败并定位Node Kind
-- **AND** Agent authoring MUST不使用通用SerializedProperty或自由文本绕过
 
 ### Requirement: Pose Graph UI必须保留准确术语和serialized identity
 
@@ -310,3 +269,36 @@ Goal对求解要求权威，Solved Pose对本次Solver输出权威，Physical Re
 - **WHEN** Foot记录了本腿不可达观察且原流程保持该脚目标与作者权重
 - **THEN** Encoder MUST只完成原空间和权重编码，保持最终Resolved与Contribution一致
 - **AND** Assembler MUST不新增Reach拦截或夹脚，FBBIK继续原求解数学并保留真实误差
+
+## REMOVED Requirements
+
+### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
+
+**Reason**: 旧要求包含Document投影和Agent作者协议场景，与两个显式C#作者入口及Agent退役冲突。
+
+**Migration**: 使用新增的“Pose authoring必须复用正式类型化API与领域校验”。保留Capability、Port Shape、类型化Mutation、局部/拓扑规则和真实owner；删除协议依赖，不保留旧Document场景别名。
+
+## ADDED Requirements
+
+### Requirement: Pose authoring必须复用正式类型化API与领域校验
+
+AnimGraph、Layer、State、Rule、Rig与节点字段／端口 MUST由唯一Capability及接口合同提供，供Editor、C#作者API、Clipboard、正式Mutation和Compiler共用。作者节点和运行operation不必一一对应，语义展开只能由对应Definition提供；Topology和Stage保持全局唯一职责。
+
+创建、连接、改接、粘贴、删除、资源、字段、接口和布局变更 MUST进入同一typed Mutation与实际owner事务；失败遵守既有领域编辑/保存边界，不新增整包同步事务。内部Generated binding和operation不能进入editable，Compiler不能通过作者getter求值或旧图镜像获取输入。
+
+#### Scenario: 添加新的Rig目标能力
+- **WHEN** 正式目录注册新的typed目标节点
+- **THEN** 创建菜单、端口、C#作者API、编译展开及约束 MUST识别同一合同
+- **AND** MUST不在Editor和Compiler分别维护目标字段清单
+
+#### Scenario: 新增Pose节点能力
+
+- **WHEN** 新Pose节点注册唯一Definition Adapter
+- **THEN** 人工创建菜单、C#作者API、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
+- **AND** MUST不要求在多个Catalog、Handler或NodeKind switch中重复声明同一字段和端口
+
+#### Scenario: Node Definition缺少正式读取与配置能力
+
+- **WHEN** 一个Definition无法通过正式读取/配置API提供完整typed字段、条件端口或Graph dependency
+- **THEN** Definition目录或Character Build MUST失败并定位Node Kind
+- **AND** C#输出/生成 MUST不使用Agent DTO、通用SerializedProperty或自由文本绕过

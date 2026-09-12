@@ -1,3 +1,7 @@
+## 2026-09-13 公共协议r2
+
+依据[公共C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)和用户广播修订；范围与维护归属见[对接记录](coordination-r2.md)。本轮只更新本旧方案的公共输入与authoring协议，其它图组织、Slot/Action、资源、曲线和IK业务不变，历史implementation.md不改。
+
 ## Context
 
 本文件是`integrate-pose-flowcanvas-editor-preview`的新目标设计，直接替换原“接通FlowCanvas UI即可收口”的方案。动机见proposal.md。2026-09-09作者明确要求基本照搬UE的作者组织：分图、层内状态机与Slot、Montage路由、骨骼混合与Control Rig；保留现有编译／Native运行方向。
@@ -6,7 +10,7 @@
 
 尚未完成的是作者职责重组：根图仍展示Action Playback Input、Pose Parameter Resolve、Foot Placement、Goal Assembler与FBBIK内部流程；Slot仅允许根图，Player还通过Source Slot／Profile Binding间接选资源。旧UI阶段曾被记为“20/21、只剩Build”，该完成结论已撤回；implementation.md现将它与新范围状态分开记录。
 
-本方案重规划时的Document基线为v6，后续实施已报告v7代码增量，实际状态见implementation.md；现行spec与部分skill仍有旧版本文字，需要一并同步。原Build因Attack、DodgeBack、DodgeForward缺失SkillGraphs而在Pose编译前停止，暴露了动画编译入口绑定Character前端的问题。本方案要求拆开这条依赖，不能只把它登记为永远等待的外部阻塞。
+原Document v6/v7实现仅作为implementation.md中的历史记录；后续作者入口采用两个显式C#工具及正式Pose API，不再升级或运行Document协议。原Build因Attack、DodgeBack、DodgeForward缺失SkillGraphs而在Pose编译前停止，暴露了动画编译入口绑定Character前端的问题。本方案要求拆开这条依赖，不能只把它登记为永远等待的外部阻塞。
 
 精确资产范围：Definition为`Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`；现有Pose作者根为`Assets/Configs/Character/Corin/Pipeline/Presentation/PoseGraphs/CorinPresentationPoseGraph.asset`；Fixed产物目的地为`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。新增层或Rig作者资产必须进入该Definition的正式引用闭包，不通过名称或当前Selection猜根。
 
@@ -22,7 +26,7 @@
 
 **Non-Goals:**
 
-- 不运行FlowCanvas getter／协程，不引入RigVM、第二PlayableGraph、第二动作时钟或第二骨骼Writer。
+- PoseGraph继续由原Compiler/Program执行，不运行其FlowCanvas getter／协程；原生事件图按独立宿主提供输入。不引入RigVM、第二PlayableGraph、第二动作时钟或第二骨骼Writer。
 - 不新建平行动画Montage资产，不将所有通用Timeline重命名为Montage，不重做技能图、Action admission、战斗窗口、Gameplay root motion或网络模型。
 - 不移植UE引擎源码、UE资产格式或整个Control Rig工具箱。Backwards Solve、Sequencer录制／烘焙、通用RigVM脚本、编辑器控制器操纵器不属于本次作者组织重构。
 - 不把已有FinalIK FBBIK伪装成UE PBIK：对齐骨骼／目标／权重的作者分工，算法参数按真实后端提供，不能摆出没有实现效果的UE专用参数。
@@ -37,9 +41,9 @@
 |---|---|---|---|
 | AnimGraph | Fact／参数／资源引用 → 最终Local Pose | 组合状态机、Slot、动画层、Blend、Inertialization、Control Rig | 动作时间轴正文、Goal打包、Native调度 |
 | Animation Layer | 明确的Pose／参数／资源接口 → Pose | 封装可复用身体部位、武器或姿势功能；可包含状态机和Slot | 隐含骨骼范围、私有Montage播放实例 |
-| State Machine | 表现Fact → 当前状态组合Pose | Entry、State、Alias、Transition及转换策略 | 普通数值线式状态连线、玩法状态机逻辑 |
+| State Machine | 同帧Fact／typed动画变量 → 当前状态组合Pose | Entry、State、Alias、Transition及转换策略 | 普通数值线式状态连线、玩法状态机逻辑 |
 | State Pose Graph | 本状态输入 → Pose | Sequence Player、Blend Space、Blend或层调用，也可放Slot | 状态转换条件、动作准入 |
-| Transition Rule | Fact／状态时间／相关动画剩余时间 → Bool | 进入下一状态的条件 | 播动画、World query、写骨骼 |
+| Transition Rule | 同帧Fact／typed动画变量／状态时间／相关动画剩余时间 → Bool | 进入下一状态的条件 | 播动画、World query、写骨骼 |
 | Control Rig | 输入姿势形成的Rig hierarchy＋目标／参数 → 修正姿势 | Forwards Solve、控制目标、Foot Placement、FBIK及已有骨骼控制 | Montage播放、状态选择、Goal Assembler作者节点 |
 | 有限Action Timeline（Montage职责） | 原生Clip、Slot轨道、Sections、混合设置与原玩法轨道 → 已提交动作播放结果 | 在原时间轴编排动作动画与同步事件 | 第二Montage资产、复制Clip曲线或独立动画时钟 |
 
@@ -201,7 +205,9 @@ Gameplay／技能 → Gameplay编译结果 → Character装配与接口绑定 �
 
 **正式输入：**动画根或完整动画Profile、Rig及骨骼／Mask／Profile目录、可达Pose／Layer／Rig图、直接动画资源、所引用Timeline的动画内容，以及Animation Input Contract。具体资源参数必须在动画根的绑定中明确提供；库图仅声明接口时可以产生接口诊断，不能凭空生成可执行资源。
 
-**Animation Input Contract：**由动画作者侧拥有，声明所需Fact／参数的稳定identity、类型／单位、合法默认值，Slot／Group接收的播放消息形状及必要World能力。它不含假速度、假Grounded、假Action或预览角色；这是输入接口声明，不是运行采样值，也不从过期Gameplay Program反推。
+**Animation Input Contract：**保留原Fact、Slot/Group播放消息与World能力；共享实例变量部分引用事件图唯一CharacterAnimationVariableContract/Layout，不复制声明、初值或重建另一份变量列。Subgraph公开参数与source-local曲线仍保留各自正式来源。独立编译只需合法合同，不运行事件图、不伪造速度/Grounded/Action，也不反读过期Gameplay Program。
+
+Get、条件和BlendSpace消费同次成功发布的Float/Int32/Bool变量Frame，检查实例、表现采样、Simulation tick、Reset代际和版本；消费者结束前不得改写输出。Source Pending不回退成功更新的事件状态，Pose输入发布不等于最终姿势提交。Transition保留Fact、时间范围和选择规则，拒绝Gameplay mutable address。
 
 **不允许的输入依赖：**SkillGraph对象、技能执行拓扑、完整Character Semantic IR、Numeric Target布局、Character ProgramHash、网络模式和场景角色实例。参数若最终由Gameplay提供，独立编译只绑定动画侧typed输入handle；Gameplay地址／offset在角色适配表中处理，不能烙进可复用Pose模块。
 
@@ -213,7 +219,7 @@ Gameplay／技能 → Gameplay编译结果 → Character装配与接口绑定 �
 
 **Timeline边界：**独立Pose编译只读取现有Action Timeline声明的动画轨道、Slot／Section／混合设置等动画合同，不编译该Timeline的技能控制或战斗逻辑来“发现”这些字段。Timeline仍是单一作者owner和单一时钟；真正运行时由原Timeline提交播放结果，动画侧只消费。不能复制成动画专用Timeline或独立Montage资产。
 
-**Editor与Document：**图窗口默认命令是“编译动画”，只需动画上下文；“发布角色”是另一个明确的装配命令，只有具备角色上下文时可用。动画详情、资源目录和结构约束来自动画模块，不借Gameplay编译填充。Document仍使用同一五生命周期和整包事务，动画字段处理不依赖Gameplay编译成功；真实跨域引用冲突仍按原事务报告，不增加skip-validation开关或第二个局部写入服务。
+**Editor与C# authoring：**“编译动画”继续调用独立Pose Compiler，“发布角色”继续要求明确角色上下文。人工编辑使用正式Pose类型化API、既有Undo/保存和领域校验；公共export_code完整读取当前资产并输出C#，generate_assets执行已编译代码重建指定范围。人工修改不自动写代码，生成不自动合并未导出修改，不新增Document、整包Reconciler、中央Validator或自动Build。
 
 **失败归属：**缺少动画参数声明、Rig、资源或控制目标属于Pose编译错误；缺少SkillGraphs、producer或角色接口映射属于角色装配错误；运行时缺少实际合法输入按既有Unavailable／Fault处理。三类错误分别定位，不用默认值、旧Program或简化模式掩盖。
 
@@ -231,7 +237,7 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 
 退出Play、关闭、销毁、替换和重载释放兴趣与租约；Unity暂停保留最后完成帧。观察不推进Montage、状态机、Clip或Solver，不提供窗口播放器。
 
-### 10. 唯一数据owner和Document v7
+### 10. 正式数据owner与显式C# authoring
 
 | 数据 | 作者owner |
 |---|---|
@@ -244,12 +250,15 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 | Rig控制拓扑与目标绑定 | Control Rig资产；共享Rig／Profile引用不复制 |
 | 玩法时序、窗口、位移与动画播放命令 | 既有BTSMTL Timeline／Action |
 | dense binding、Goal组装、Stage、Workspace | generated Program／Projection，作者不可写 |
+| 动画实例变量声明、Contract/Layout/Frame | 原生事件图唯一拥有；Pose与Preview只读取 |
 
-以当前v6为唯一输入基线，目标v7一次升级。v7保留技能Macro及其它领域全部现行业务字段，新增／调整动画图角色、层接口、Timeline动画设置、Slot目录、Mask／Profile与控制图分片，并移除旧Source Slot／作者内部节点字段。版本和新字段必须同时进入Catalog、严格codec、Exporter、Reconciler、Mutation、owner事务与MCP说明，不只改UI。
+C# authoring任务拥有公共对象遍历、代码输出、生成入口以及两个显式MCP。本任务范围的正式Pose读取/配置能力由只读Blackboard change维护，输出适配消费这些能力，不先生成Agent JSON，不保留另一份Document模型。
 
-建议的正式分片职责：profile.json保存装配引用；graphs的graph.json／layout.json保存各图正文和布局；state-machines保存状态与转换；既有timeline.json／curves.json原位扩展Slot轨道、Sections和动画混合设置；Rig目录保存Slot／Group／Mask／Blend Profile；Linked接口／Implementation沿用既有owner。具体目录使用当前Store的canonical identity分段规则，不另加watcher或manifest外自由文件。
+完整导出/生成必须恢复业务ID、节点配置、完整曲线、布局、动态端口、顺序、资源和引用。生成范围内的Unity物理对象可以替换，内部引用使用本次新对象；明确恢复Profile/Definition根挂接，不依赖旧生成子资产GUID。范围外资源仍为显式外部输入，不能因为可达就复制或删除。
 
-五生命周期仍是checkout、dry-run、apply、rebase、validate；不新增逐节点／逐骨骼写入API。v7严格拒绝旧包并要求重新checkout，不常驻v6兼容reader。旧Unity作者资产仅通过显式、一次性的Editor迁移入口转换，不能放在Runtime加载、窗口打开或Getters中。
+人工编辑不自动导出源码，重新生成不自动合并未导出修改。正常Undo、保存、依赖失效和独立显式Build保持；不新增源码同步、五生命周期、专属Agent校验或整包同步事务。
+
+完整Pose/角色Preview沿同一动画宿主和变量合同；单资源查看走原资源调参合同。运行及Preview全部旧签名由只读Blackboard任务迁移后，事件图任务才删除CharacterPresentationProgramParameterFrame及旧生产方法，不补默认motor值。
 
 ### 11. 旧数据与代码去向
 
@@ -268,7 +277,7 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 
 ### 12. 现行规范对账与必须同步的冲突
 
-正式规划由status列出的8份文件承载；implementation.md与authoring-inventory.md分别记录实施事实、历史基线和旧能力去向，不把未实施设计写成current truth。下表列出必须随实施同步的其它现行规范；它们的旧条款仍存在，不能在apply时忽略。已有delta文件承载本方案完整行为要求，不另建change。
+正式规划由status实际列出的文件承载；implementation.md与authoring-inventory.md分别记录实施事实、历史基线和旧能力去向，不把未实施设计写成current truth。下表列出必须随实施同步的其它现行规范；它们的旧条款仍存在，不能在apply时忽略。已有delta文件承载本方案完整行为要求，不另建change。
 
 | 现行来源／精确条款 | 与新方案关系 | 本提案处理 |
 |---|---|---|
@@ -279,7 +288,7 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 | character-animation-layer-runtime：持续Pose与有限Action控制边界必须分离；每类连续性必须只有一个明确owner | 禁止旧Layer catalog有保留价值，但不能误杀新的作者Animation Layer | 保留旧runtime Layer删除结论；新Layer基于现有Linked实现与编译范围，Runtime owner仍唯一 |
 | character-pose-inertialization：Inertialization时间数学必须由触发owner唯一提供；Inertialization必须位于native Pose阶段且早于FootPlacement | 当前限制恰好一个直接owner／Player，与UE下游接收请求不一致 | 实施同步为每请求唯一owner、节点处理有界请求集合；保留局部history、残差与Foot前置阶段 |
 | character-pose-plan-compilation：Typed Lowering／Topology／Family／Source Map相关条款 | 同一Pass链可复用，但作者节点与operation不再一一对应，入口目前依赖Character前端 | 保留唯一Compiler；加入独立动画输入／结果合同，角色Build复用它；内部展开不再依赖技能发现 |
-| btsmtl-agent-authoring-document-sync：Presentation分片、typed字段、v4替代v3及失败恢复 | current仍写v4，实际已为v6；作者合同再次改变 | 本delta明确v6基线与v7一次升级，保留完整技能v6字段和整包事务 |
+| 原Document同步、五工具与专属Validator条款 | 与C# authoring r2退役要求冲突 | 本change撤销旧Document delta；删除协议由C# authoring任务承担，保留原Pose领域规则与正式API |
 | graph-authoring-domain-framework／editor-shell：旧GraphView、Details、目录、状态表面 | 实现与组织限制旧 | 既有delta更新为原生角色化表面、调用导航和作者有意义的字段 |
 | character-animation-clip-authoring：原生AnimationClip唯一owner | 与新方案相容 | Montage不复制素材曲线；Sequence Player名称不恢复Sequence包装资产 |
 | btsmtl-timeline-animation-authoring-surface／animation-layer-runtime：Timeline本地编排及有限Action命令 | 原动画轨道扩展Montage式设置及Sections | 实施同步现有payload和Section控制；保留窗口与动画同一时间，不新增Montage资产或播放器 |
@@ -296,17 +305,17 @@ Details默认显示资源、数值、策略和必要命令。Mask、Blend Profil
 - [Slot、Group与骨骼范围混淆] → 独立typed身份和详情；层内封装不创造隐式Mask或私有播放实例。
 - [多个层重复求值或重复身体求解] → 完整call-site、同帧缓存和唯一身体求解位置进入统一编译拓扑；不是运行时看到重复后跳过。
 - [旧exact pair混合或曲线规则不能表达为UE设置] → 迁移生成精确冲突清单，不保留隐藏兼容Policy、不猜默认值；交由作者决定业务取舍。
-- [共享规范或技能v6仍在修改] → 实施前读取当前合同，保留技能字段；真实同段冲突停止并报告，不覆盖其它正确改动。
+- [共享规范或技能作者合同仍在修改] → 实施前读取当前正式类型和已确认公共基线，保留其它领域字段；真实同段冲突保持现场，不覆盖其它正确改动。
 - [通过旧Program或跳过技能错误伪装独立编译] → 正式拆出动画输入与结果合同，窗口和角色Build调用同一Compiler；角色发布保留全部接口约束。
 - [作者图仍能打开但新产物尚未发布] → 明确Stale；只有显式Build更新产物，不用旧v28冒充新组织完成。
 
 ## Migration Plan
 
-1. 在改动作者schema前，使用正式Document导出精确Corin的图、资源、动作动画、Slot与Policy目标；固定完整closure及可回滚owner。只读导出不是提前迁移资产。
-2. 完成新Capability、图角色、直接资源、Layer／Slot／Montage、Mask／Profile、Control Rig、编译展开、Document v7和编辑器代码。一次性旧资产读取器仅存在于显式Editor迁移模块，Runtime和普通编辑入口拒绝旧格式；不保留长期双写。
-3. 补齐第12节的现行规范与共享合同同步。完成代码后，按唯一事务生成并应用Corin的新作者目标；对保留节点沿用identity，对被内部化的节点保存迁移对应记录，退役旧作者ID而非另留可编辑图。
+1. 通过正式读取API及显式export_code输出精确Corin当前结构与外部依赖；明确生成范围、业务ID和根挂接。读取与导出不修改输入资产。
+2. 完成新Capability、图角色、直接资源、Layer／Slot／Montage、Mask／Profile、Control Rig、编译展开、正式读取/配置API和编辑器代码。一次性旧资产读取器仅存在于显式Editor迁移模块，Runtime和普通编辑入口拒绝旧格式；不保留长期双写。
+3. 补齐第12节的现行规范与共享合同同步。完成代码后，按正式Pose API和既有资产服务生成并保存明确范围的Corin作者目标；对保留节点沿用identity，对被内部化的节点保存迁移对应记录，退役旧作者ID而非另留可编辑图。
 4. 保留原有限动作片段与玩法窗口，在同一Timeline补齐Slot轨道、Sections与Blend设置；将原Foot／目标／FBIK迁到Control Rig。布局按作者职责重建，状态条件、资源、Loop、时间和IK设置不擅自改变。
-5. 事务保存与规范反向导出成功后删除无消费者的旧Source Slot、Binding、作者内部节点及过期编辑代码。任一owner转换或保存失败，原组资产与Document目标一起回滚。
+5. 明确生成范围的内容完整保存并恢复根挂接后，使用既有资产服务清理该范围内无消费者的旧对象与编辑代码。失败不得换绑不完整根，遵守现有领域保存/失败边界，不新增整包同步事务；范围外资源不删除。
 6. 先由动画侧输入完成独立Pose编译并保存正式模块结果，再由精确Corin的Character Build组装Gameplay与同一Pose结果，一起发布Float32、Fixed和共享Projection。SkillGraphs不完整时只阻止角色装配／发布，不阻止Pose编辑或独立编译；不降低集成约束、不绕行、不虚勾发布。
 
 检查、运行结果和性能记录留在实施记录中，不写进tasks。当前原始UE组织决定已确定；字段的代码命名和文件拆分由实施遵守既有模块边界，不作为新增架构分支。

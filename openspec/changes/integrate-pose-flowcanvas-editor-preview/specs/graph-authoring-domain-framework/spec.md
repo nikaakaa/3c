@@ -2,7 +2,7 @@
 
 ### Requirement: Graph Authoring必须拥有唯一领域框架
 
-各领域 MUST共用document、Capability、Port Shape、接口、selection、clipboard、Details、Navigator、Mutation和diagnostics合同。Pose作者的AnimGraph、Layer、State、Rule和Rig使用同一原生图编辑基础，并分别拥有业务语义；不能为新的Control Rig表面复制第二套编辑器或节点目录。技能与其它领域保留其正式入口，不因Pose组织重构被隐式迁移。
+各领域 MUST复用正式作者对象及Capability、Port Shape、接口、selection、clipboard、Details、Navigator、Mutation和diagnostics合同。Pose作者的AnimGraph、Layer、State、Rule和Rig使用同一原生图编辑基础，并分别拥有业务语义；不能为新的Control Rig表面复制第二套编辑器或节点目录。技能与其它领域保留其正式入口，不因Pose组织重构被隐式迁移。
 
 #### Scenario: 切换图角色
 - **WHEN** 作者从AnimGraph进入状态机或Rig图
@@ -17,11 +17,11 @@
 
 - **WHEN** 作者分别打开BTSMTL Graph与Pose Graph
 - **THEN** 两者 MUST复用同一套canvas、node、port与selection交互
-- **AND** 每个document MUST只加载本领域的asset adapter、capability与mutation
+- **AND** 每个作者上下文 MUST只加载本领域的asset adapter、capability与mutation
 
 #### Scenario: 跨领域粘贴节点
 
-- **WHEN** clipboard的domain identity与当前document不一致
+- **WHEN** clipboard的domain identity与当前作者上下文不一致
 - **THEN** 框架 MUST在mutation前拒绝粘贴
 - **AND** MUST不猜测或转换另一领域的payload
 
@@ -38,52 +38,6 @@
 - **WHEN** 作者从现有Data Catalog把黑板变量拖到BTSMTL画布
 - **THEN** 共享实现 MUST保留原拖拽手势、变量节点表现、Property Port和正式BTSMTL mutation语义
 - **AND** MUST不把该操作降级成功能不完整的通用节点创建
-
-### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
-
-每个作者能力 MUST在唯一目录声明领域、图角色、typed字段、固定／条件／动态端口、接口依赖和可用作者操作。直接资源Player、层调用、Slot、按骨骼混合、状态／Alias／Rule和Rig目标 MUST使用该目录；UI、Document、Clipboard、Reconciler和Compiler不得分别声明同一语义。
-
-合法创建与连接必须由完整Port Shape和角色合同确定，不能从默认构造节点猜端口。内部Action输入、Goal组装和参数解析operation MUST不出现在可创建作者目录；缺少正式投影或lowering的能力不能降级成自由字段节点。
-
-固定端口、条件portVariants与node-local动态端口 MUST由唯一Projector从同一字段合同合成，条件必须唯一命中，三类端口identity不能重叠。节点Definition只拥有局部作者语义、直接依赖与展开，不得接管package路径、diff、Undo、保存、回滚、反向导出或MCP生命周期。目录变化必须同步新Document合同，不允许UI与Reconciler各自解释mode或使用自由SerializedProperty路径。
-
-#### Scenario: Layer接口变化
-- **WHEN** 作者修改层的Pose或资源接口
-- **THEN** 同一合同 MUST更新所有调用端口和Document引用，缺少适配的调用明确失败
-- **AND** MUST不依靠旧端口别名继续连接
-
-#### Scenario: FootPlacement声明Goal Contribution输出
-- **WHEN** Foot Placement声明Rig目标并由lowering生成内部Goal Contribution
-- **THEN** Capability MUST声明作者目标与空间，Compiler保留内部Contribution的同一来源
-- **AND** 不把内部组装暴露为作者必接节点
-
-#### Scenario: Goal Contribution连接错误节点
-- **WHEN** 旧作者数据试图把内部Goal Contribution接入普通Pose输入
-- **THEN** Mutation MUST拒绝，内部typed依赖继续由唯一Topology处理
-
-#### Scenario: 新增Pose节点能力
-
-- **WHEN** 开发者注册一个新的Component Pose骨骼控制节点
-- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family、Graph dependency与typed lowering
-- **AND** Capability、人工创建菜单、Document、Validator和Compiler MUST同时识别该能力而不得注册第二Compiler Handler
-
-#### Scenario: capability未声明字段
-
-- **WHEN** UI或Document尝试写入当前node Definition未声明的字段
-- **THEN** Mutation MUST拒绝该命令并返回稳定诊断
-- **AND** MUST不通过SerializedProperty path、自由文本或Reconciler特例绕过目录
-
-#### Scenario: Local Pose连接Component Pose
-
-- **WHEN** 作者或Document创建空间不兼容的Pose edge
-- **THEN** 共享connection policy MUST在Mutation前拒绝
-- **AND** Compiler Topology Pass MUST继续执行同一规则作为完整性校验
-
-#### Scenario: Definition尝试接管Document事务
-
-- **WHEN** Pose Definition Adapter尝试直接修改Unity对象、执行apply、创建Undo或发布canonical package
-- **THEN** Framework MUST拒绝该依赖并保持正式Reconciler与Transaction Service调用链
-- **AND** MUST不建立Pose专用Document入口或第二事务Owner
 
 ### Requirement: Details必须只显示当前作者需要的业务字段
 
@@ -131,7 +85,7 @@ Details MUST按当前图角色和选中对象显示可编辑资源、数值、Ma
 
 #### Scenario: 打开Gameplay StateMachine
 
-- **WHEN** 当前document role为BTSMTL StateMachine
+- **WHEN** 当前作者图role为BTSMTL StateMachine
 - **THEN** 共享表面 MUST显示Condition Rule、priority与interruption，并保留现有节点拖动和增选框选行为
 - **AND** MUST不显示blend duration、sync或inertialization
 
@@ -152,7 +106,7 @@ Details MUST按当前图角色和选中对象显示可编辑资源、数值、Ma
 
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 
-作者节点 MUST表达动画或控制意图，Compiler可以为一个作者节点生成多个内部operation及接口边界转换。每个生成步骤必须可追溯到稳定作者owner和call-site；Runtime只消费正式产物，不依赖作者getter、窗口或图对象。帧页地址、offset、Goal打包和调度步骤不能成为作者必接节点。
+Pose作者节点 MUST表达动画或控制意图，Pose Compiler可以为一个作者节点生成多个内部operation及接口边界转换。每个生成步骤必须可追溯到稳定作者owner和call-site；Pose Runtime只消费正式产物，不执行Pose作者getter或读取窗口图对象。事件图按独立宿主合同原生执行并生产只读变量Frame，MUST不由本要求强制增加事件编译器。帧页地址、offset、Goal打包和调度步骤不能成为作者必接节点。
 
 #### Scenario: Slot编译展开
 - **WHEN** Slot被展开为动作读取、混合及Curve处理
@@ -161,12 +115,12 @@ Details MUST按当前图角色和选中对象显示可编辑资源、数值、Ma
 #### Scenario: Runtime增加优化字段
 
 - **WHEN** Pose Runtime为执行计划增加内部offset或buffer index
-- **THEN** Authoring capability、Details与Document MUST不自动暴露该字段
+- **THEN** Authoring capability、Details与C#作者API MUST不自动暴露该字段
 - **AND** Compiler MUST负责从Pose IR生成该内部值
 
 ### Requirement: Graph Canvas必须复用统一节点与端口投影
 
-作者画布 MUST从唯一document、Capability和Port Shape生成节点、端口、菜单与可编辑连接；领域适配可提供图角色、标题、颜色、状态标记和特殊命令，不重建选择、框选、Undo或另一画布。固定、条件与动态端口必须保持稳定identity及空间／目标类型，不能从显示名、现有连线或operation位置猜测。
+作者画布 MUST从唯一正式作者对象、Capability和Port Shape生成节点、端口、菜单与可编辑连接；领域适配可提供图角色、标题、颜色、状态标记和特殊命令，不重建选择、框选、Undo或另一画布。固定、条件与动态端口必须保持稳定identity及空间／目标类型，不能从显示名、现有连线或operation位置猜测。
 
 显式空间转换在作者图中正常显示；由Slot／Control Rig等接口合同展开的内部转换、参数读取及Goal组装只属于编译计划与按需诊断，不向作者图插入不可见的可编辑节点。UI不能同时保留内部组装图作为第二正式拓扑。
 
@@ -177,8 +131,56 @@ Details MUST按当前图角色和选中对象显示可编辑资源、数值、Ma
 
 #### Scenario: 节点拥有动态输入
 - **WHEN** Layer接口或图输入增加明确的typed Pose／目标端口
-- **THEN** 画布 MUST按该owner的稳定端口identity更新，并保持Document与剪贴板的相同空间合同
+- **THEN** 画布 MUST按该owner的稳定端口identity更新，并保持正式对象与剪贴板的相同空间合同
 
 #### Scenario: 作者查看空间转换
 - **WHEN** 作者显式放置Local To Component节点
 - **THEN** 画布 MUST显示对应输入输出空间，作者数据不能保存compiled Stage index
+
+## ADDED Requirements
+
+### Requirement: Pose作者能力必须由正式API共享字段与端口
+
+每个Pose作者能力 MUST在唯一目录声明领域、图角色、typed字段、固定／条件／动态端口、接口依赖和可用作者操作。直接资源Player、层调用、Slot、按骨骼混合、状态／Alias／Rule和Rig目标 MUST使用该目录；UI、C#作者API、Clipboard、正式Mutation和Compiler不得分别声明同一语义。
+
+合法创建与连接必须由完整Port Shape和角色合同确定，不能从默认构造节点猜端口。内部Action输入、Goal组装和参数解析operation MUST不出现在可创建作者目录；缺少正式投影或lowering的能力不能降级成自由字段节点。
+
+固定端口、条件portVariants与node-local动态端口 MUST由唯一Projector从同一字段合同合成，条件必须唯一命中，三类端口identity不能重叠。节点Definition只拥有局部作者语义、直接依赖与展开，不得接管package路径、diff、Undo、保存、回滚、反向导出或MCP生命周期。目录变化必须同步正式Pose读取/配置及消费者，不允许UI与C#输出适配各自解释mode或使用自由SerializedProperty路径；不新增Agent模型、中央Validator或整包同步事务。
+
+#### Scenario: Layer接口变化
+- **WHEN** 作者修改层的Pose或资源接口
+- **THEN** 同一合同 MUST更新所有调用端口和正式对象引用，缺少适配的调用明确失败
+- **AND** MUST不依靠旧端口别名继续连接
+
+#### Scenario: FootPlacement声明Goal Contribution输出
+- **WHEN** Foot Placement声明Rig目标并由lowering生成内部Goal Contribution
+- **THEN** Capability MUST声明作者目标与空间，Compiler保留内部Contribution的同一来源
+- **AND** 不把内部组装暴露为作者必接节点
+
+#### Scenario: Goal Contribution连接错误节点
+- **WHEN** 旧作者数据试图把内部Goal Contribution接入普通Pose输入
+- **THEN** Mutation MUST拒绝，内部typed依赖继续由唯一Topology处理
+
+#### Scenario: 新增Pose节点能力
+
+- **WHEN** 开发者注册一个新的Component Pose骨骼控制节点
+- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family、Graph dependency与typed lowering
+- **AND** Capability、人工创建菜单、C#作者API、领域Validator和Compiler MUST同时识别该能力而不得注册第二Compiler Handler
+
+#### Scenario: capability未声明字段
+
+- **WHEN** UI或C#作者API尝试写入当前node Definition未声明的字段
+- **THEN** Mutation MUST拒绝该命令并返回稳定诊断
+- **AND** MUST不通过SerializedProperty path、自由文本或独立协议特例绕过目录
+
+#### Scenario: Local Pose连接Component Pose
+
+- **WHEN** 作者或C#代码创建空间不兼容的Pose edge
+- **THEN** 共享connection policy MUST在Mutation前拒绝
+- **AND** Compiler Topology Pass MUST继续执行同一规则作为完整性校验
+
+#### Scenario: Definition尝试接管作者保存
+
+- **WHEN** Pose Definition Adapter尝试直接接管Undo、保存或公共代码生成生命周期
+- **THEN** Framework MUST拒绝该依赖，继续由正式领域修改/保存入口拥有这些职责
+- **AND** MUST不建立Pose专用Document入口、中央Validator或整包同步事务

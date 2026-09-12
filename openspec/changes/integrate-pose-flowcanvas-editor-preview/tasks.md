@@ -1,10 +1,4 @@
-## 当前对账（2026-09-10）
-
-此前将Capability注册、Compiler内部operation支持和一次旧拓扑Build误判为完整作者架构。对照当前Corin根图、Projection和面板代码后，以下任务重新打开：2.5、4.4、7.5；4.2、7.3、9.2、9.4已按当前代码、Document和正式产物完成。现有character-animation-blend-stack、character-animation-transition-routing-module和Presentation authoring spec已经要求显式BlendStack、独立Inertialization、Layered Blend Per Bone及正式详情选项源，本次不修改spec，只按spec修正实现。
-
-本轮已完成的增量：根图通过Document v7正式事务接入通用Inertialization，Locomotion↔Turn两条过渡选择该逻辑；Layered Blend Per Bone已把Local／Component Pose Space贯通到Program与Worker；Pose详情已接入Animation Channel、Slot、Graph、Linked Pose、Presentation Fact、Gameplay State和Pose History候选。Corin没有Motion Matching或其它多源Selection source，也没有真实UpperBody Overlay，因此当前不伪造BlendStack或Layered节点；剩余任务继续围绕真实Overlay、观察和最终产品发布推进。
-
-Action Slot外接通用Inertialization的尝试已被正式Build拒绝并回滚：当前Pose-only输入不携带完整Character的ACL Action producer endpoint，不能凭空生成Action route。保留Slot-owner的通用编译/runtime扩展，待独立Action route contract完成后再接入，不改变现有Pose-only Build隔离。
+本轮公共输入与C# authoring协议见[对接记录](coordination-r2.md)。对应新增实现任务由[只读Blackboard任务](../refine-pose-graph-readonly-blackboard/tasks.md)唯一维护；下列旧方案其它任务及状态保留，原Document专属完成记录已移至历史表。
 
 ## 1. 保留现有基础
 
@@ -66,18 +60,13 @@ Action Slot外接通用Inertialization的尝试已被正式Build拒绝并回滚�
 - [x] 7.4 在原Timeline表面展示Slot轨道、Sections和动画混合设置，保持技能窗口及Clip曲线各自既有入口。
 - [ ] 7.5 接通新Slot、层、骨骼权重和Rig目标的已完成观察，内部operation只在需要时展开。
 
-## 8. Document与规范同步
+## 8. 正式作者入口与规范同步
 
-- [x] 8.1 在当前唯一v6基础上统一升级v7动画字段与图角色，保留技能Macro和其它领域正文。
-- [x] 8.2 同步Capability、严格codec、Exporter、Reconciler、typed Mutation、owner及五生命周期说明。
-- [x] 8.3 将新图、Rig关联设置和Timeline动画字段纳入同一保存、回滚与反向导出事务。
 - [x] 8.4 同步design.md列出的现行spec与project.md冲突条款，删除旧作者显式流水线、Source Slot及旧版本描述。
 - [x] 8.5 整理一次性Editor迁移入口，禁止普通窗口、Runtime或Build暗中迁移旧作者资产。
-- [x] 8.6 将动画目录与Document动画字段处理接到独立动画合同，保留现有整包事务，不以Gameplay编译成功作为动画编辑前提。
 
 ## 9. 最后迁移与发布
 
 - [x] 9.1 生成精确Corin作者目标，保留可保留的图／状态identity、动画资源、时间、过渡与IK配置，列明无法无损表达的旧规则。
 - [x] 9.2 通过正式事务把Corin根图与身体控制重组为新层次，直接资源写回Player，Timeline原位补齐Slot／Section／Blend设置。
-- [x] 9.3 在成功反向导出后删除退役作者节点、无消费者Source Slot／Binding及迁移专用旧读写代码。
 - [x] 9.4 通过唯一Character Build统一发布Corin所需Float32、Fixed与共享Projection，删除过期产物读取路径。

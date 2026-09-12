@@ -13,10 +13,10 @@
 - **WHEN** 作者从Slot或播放引用导航到有限动作
 - **THEN** 系统 MUST打开原Timeline资产及其Slot轨道／Sections／混合设置，不创建第二Montage编辑副本
 
-#### Scenario: 打开BTSMTL RootTree
-- **WHEN** 作者打开技能正式根入口
-- **THEN** 工作区 MUST装配技能当前正式表面及字段
-- **AND** 不强制替换画布或加入Pose／Rig字段
+#### Scenario: 打开BTSMTL Gameplay Graph
+- **WHEN** 作者通过正式入口打开非Skill的BTSMTL Gameplay Graph
+- **THEN** 工作区 MUST装配该领域当前正式Data Catalog、图表面与字段
+- **AND** MUST不创建Pose Graph Navigator、Pose Preview或动画字段
 
 #### Scenario: 打开Character Pose Graph
 - **WHEN** 作者从精确Profile打开动画工作区
@@ -41,11 +41,11 @@
 
 - **WHEN** Editor domain reload后恢复Graph窗口
 - **THEN** Shell MAY恢复editor-only布局状态
-- **AND** document与runtime target仍 MUST按各自稳定identity重新绑定，不得恢复旧对象实例
+- **AND** 正式图与runtime target仍 MUST按各自稳定identity重新绑定，不得恢复旧对象实例
 
 ### Requirement: Shell必须保持重操作的显式触发边界
 
-Build、资源生成、作者迁移与正式资产发布 MUST由明确命令触发。普通Inspector、节点选中、目录打开、窗口恢复和AssetDatabase刷新不得自动Build、解码大型产物或修复作者数据。
+Build、资源生成、作者迁移与正式资产发布 MUST由明确命令触发。普通Inspector、节点选中、目录打开、窗口恢复和AssetDatabase刷新不得自动Build、解码大型产物、修复作者数据或自动导出源码。export_code/generate_assets只由公共显式入口执行，生成不自动合并未导出修改，不新增源码Undo或同步。
 
 #### Scenario: 选择一个节点
 - **WHEN** 作者反复选择Slot或Rig节点

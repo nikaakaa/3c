@@ -153,7 +153,7 @@ Control Rig MUST按Forwards Solve和明确的数据依赖组织已有骨骼控�
 
 ### Requirement: 作者组织迁移必须在代码完成后一次收敛
 
-新组织涉及真实作者结构变化，系统 MUST在代码与唯一Document合同完成后迁移精确Corin闭包，保留可保留的identity、资源、动作时间、过渡及IK设置。Action Timeline正文原位扩展，旧Source Slot、内部作者节点和废弃配置在成功转换后删除。失败 MUST原子恢复原owner及Document，不发布半迁移内容；产物只能通过精确Definition的唯一Build更新。
+新组织涉及真实作者结构变化，系统 MUST在代码及正式读取/配置API完整后，通过显式C#导出/生成迁移精确Corin闭包，保留可保留的identity、资源、动作时间、过渡及IK设置。Action Timeline正文原位扩展，旧Source Slot、内部作者节点和废弃配置在成功转换后删除。失败 MUST按既有资产服务处理，不换绑未完整的新根；不得新增整包同步事务。物理对象可重建，图/节点/变量业务ID MUST保持，内部引用使用新对象并恢复明确Profile/Definition根挂接，不依赖旧生成子资产GUID。产物只能通过独立显式Build更新，生成不得自动Build。
 
 #### Scenario: 旧混合规则无法表示
 - **WHEN** 某个旧exact pair策略无法无损迁入目标Timeline或转换设置
@@ -161,11 +161,11 @@ Control Rig MUST按Forwards Solve和明确的数据依赖组织已有骨骼控�
 
 #### Scenario: 迁移成功
 - **WHEN** 正式事务保存了新图、Timeline设置与Rig控制引用
-- **THEN** 反向导出 MUST只保留一套正式作者数据，旧作者类型不再可创建或编辑
+- **THEN** 本次生成 MUST恢复明确根挂接并清理指定范围内的退役对象，旧作者类型不再可创建或编辑；人工编辑不自动写源码，生成不自动合并未导出修改
 
 ### Requirement: Pose必须独立编译并由角色层完成接口装配
 
-完整动画根、Rig、资源、可达图及Animation Input Contract MUST足以进入唯一Pose Compiler，无需合法SkillGraphs、Character Program、Numeric Target或场景Actor。输入合同只声明所需Fact／参数／Slot消息与能力，MUST不伪造运行值、读取过期角色产物或遍历技能实现来填充。
+完整动画根、Rig、资源、可达图及Animation Input Contract MUST足以进入唯一Pose Compiler，无需合法SkillGraphs、Character Program、Numeric Target或场景Actor。输入合同 MUST保留Fact/Slot/World，共享变量部分引用事件图唯一Contract/Layout，公开子图入参与source-local曲线保留原来源；该合同只声明依赖，MUST不伪造运行值、读取过期角色产物或遍历技能实现来填充。
 
 独立结果 MUST包含不可变Pose程序、资源及依赖清单、来源映射和动画输入接口，能够以自身输入identity／hash保存和复用。角色总Build MUST调用同一Compiler或复用精确匹配结果，在装配时绑定Gameplay producer、参数、Timeline播放消息、Rig与World能力，并原子发布角色产物。角色装配失败不能否定已成功的独立Pose编译，也不能发布未绑定的角色Projection。
 
@@ -193,3 +193,15 @@ Control Rig MUST按Forwards Solve和明确的数据依赖组织已有骨骼控�
 - **WHEN** 技能内部逻辑改变但公开动画输入合同与动画作者数据未改变
 - **THEN** Pose编译结果的失效判定 MUST只依据自身真实依赖
 - **AND** 角色总Build仍 MUST重新处理受影响的Gameplay结果及绑定，不擅自放行错误接口
+
+### Requirement: 完整动画预览必须沿同一公共变量输入
+
+完整Pose/角色预览 MUST使用运行相同的动画宿主和事件图唯一Contract/Layout/Frame。Get、条件与BlendSpace MUST读取同次成功发布的Float/Int32/Bool精确类型帧，匹配实例、表现采样、Simulation tick、Reset和版本；消费者结束前输出不得重写。Source Pending不得回退已成功更新的事件状态，输入发布不得标记为最终Pose提交。窗口仍不拥有时钟或第二执行器。
+
+单资源查看 MUST使用原正式资源调参合同。全部CharacterPresentationProgramParameterFrame消费签名迁移后，事件图任务才删除旧类型和生产方法，MUST不以默认motor值补齐缺失角色输入。
+
+#### Scenario: 完整预览消费作者变量
+
+- **WHEN** 正式角色预览使用事件图输出驱动条件和BlendSpace
+- **THEN** 两者 MUST读取同一实例、同次成功发布的typed帧，并保持原Pose编译和提交边界
+- **AND** 单资源查看不得借用该角色帧或恢复旧固定参数桥

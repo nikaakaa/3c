@@ -355,8 +355,6 @@ namespace Slate
         [System.NonSerialized] private float timeInfoInterval;
         [System.NonSerialized] private float timeInfoHighMod;
 
-        [System.NonSerialized] private string webMessage;
-
         ///----------------------------------------------------------------------------------------------
 
         //The current cutscene reference
@@ -2974,11 +2972,6 @@ namespace Slate
         //...
         void ShowWelcome() {
 
-            if ( webMessage == null ) {
-                webMessage = string.Empty;
-                FetchWebMessageBoard();
-            }
-
             var bgRect = Rect.MinMaxRect(0, 0, screenWidth, screenHeight);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
@@ -3012,7 +3005,7 @@ namespace Slate
             GUI.color = Color.black.WithAlpha(0.2f);
             GUI.Box(boardRect, string.Empty);
             GUI.color = Color.white;
-            GUI.Label(boardRect.ExpandBy(-5), webMessage);
+            GUI.Label(boardRect.ExpandBy(-5), "从 Skill Graph 打开 Timeline 进行作者编辑。\n\n角色运行预览由 Graph Shell 管理。", EditorStyles.wordWrappedLabel);
 
             var buttonsRect = Rect.MinMaxRect(titleRect.xMin, titleRect.yMax + 5, titleRect.xMax, screenHeight);
             var openRect = new Rect(buttonsRect.xMax - 40, buttonsRect.yMin, 40, 40);
@@ -3080,40 +3073,6 @@ namespace Slate
                 }
                 GUI.backgroundColor = Color.white;
             }
-        }
-
-        //...
-        void FetchWebMessageBoard() {
-            var url = "https://paradoxnotion.com/files/softwaremessageboard.txt";
-            var request = UnityEngine.Networking.UnityWebRequest.Get(url);
-            var op = request.SendWebRequest();
-            op.completed += (x) =>
-            {
-                webMessage = request.downloadHandler?.text;
-                if ( !string.IsNullOrEmpty(webMessage) ) {
-                    var result = string.Empty;
-                    var boards = webMessage.Split('|');
-                    foreach ( var board in boards ) {
-                        var targetPair = board.GetStringWithinOuter('<', '>').Split(':');
-                        var target = targetPair[0];
-                        var isAll = target.ToLower() == "all";
-                        if ( isAll || target.ToLower() == "slate" ) {
-                            if ( !isAll ) {
-                                var version = targetPair[1];
-                                var uptodate = Cutscene.VERSION_NUMBER == float.Parse(version);
-                                result += uptodate ? "<b>You are up to date on the latest version!</b>" : string.Format("<b>There is a new version available! ( v{0} )</b>", version);
-                            }
-                            var content = board.GetStringWithinOuter('{', '}');
-                            result += content.Replace("\t", "").TrimEnd();
-                        }
-                    }
-                    result = result.Trim();
-                    webMessage = result;
-                }
-
-                request.Dispose();
-                RequestEmbeddedRepaint();
-            };
         }
 
         ///----------------------------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-13 公共作者基线采用 [remove-agent-authoring-use-native-csharp/design.md r2](../remove-agent-authoring-use-native-csharp/design.md)。TimelineData 是正式业务对象，Slate 是现有编辑投影；显式 C# 导出/生成替代旧 Agent Document/五工具。旧日期的 UI 问题记录仅作历史，已完成交互、布局、选择、Undo、owner、时钟和 Camera 轨道按最新实现保留。本次仅规划 UI JSON 接入退役及公共生成合同的领域边界，不重做已完成 UI 或预览。
+
 2026-09-12 后续授权：用户要求将“预览”任务一起规划、后续随 Timeline 实施。跨窗口布局、场景/目标选择、技能与纯 Timeline 预览、运行标记、编辑后采用和历史操作的统一计划见 [预览联动计划](preview-integration-plan.md)。本文件继续定义 Timeline 编辑表面，两边使用同一排期而保持已有数据/运行归属。
 
 目标是让作者在唯一 Timeline 窗口里完成：新增轨道 → 添加 Clip → 调整帧范围 → 编辑属性/曲线 → 撤销重做 → 保存重开，并通过已有 SkillGraph 场景预览查看实际效果。使用 Slate 的真实 Track/Clip/Curve UI，正式数据仍属于 BTSMTL TimelineData。
@@ -76,7 +78,7 @@ TimelineEditorWindow 的正式 owner/path
   -> CutsceneEditorSurface
 ```
 
-临时 GameObject/组件仅满足 Slate UI 的接口，使用 HideAndDontSave；不保存、不进入 Document/Compiler、不绑定角色。SourceAuthoringId 映射到正式对象，不能用显示名、组件 instance id 或数组下标替代。
+临时 GameObject/组件仅满足 Slate UI 的接口，使用 HideAndDontSave；不保存、不进入 C# 导出输入或 Compiler、不绑定角色。SourceAuthoringId 映射到正式对象，不能用显示名、组件 instance id 或数组下标替代。
 
 在现有 Editor 模块内明确五项责任：窗口布局/生命周期、帧映射、创建及字段命令、identity/快照转换、视图状态恢复。使用现有 TimelineEditorSessionContext 调度唯一 Mutation/Undo，不另建 service。各模块输入分别为窗口尺寸、正式帧率、typed 用户输入、正式数据/草稿、稳定 ID 视图状态；输出分别为区域、帧坐标、正式修改、显示投影、恢复后的视图。
 
@@ -147,7 +149,45 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 
 只在主线执行。预览 change 的 2026-09-11 约定要求旧 worktree 停写，后者仅供历史追溯和未集成内容参考，不自动双写。相同文件存在其它未提交改动时报告冲突，不覆盖。
 
+
+### 8. r2 强类型配置与共享文件分工
+
+| 文件/能力 | 唯一负责方 | 本任务边界 |
+|---|---|---|
+| TimelineAuthoringClipBinding.cs | C# authoring | 等待其正式强类型读取/配置接口；该任务删除 JSON，保留原 Configure/Set 和字段规则 |
+| BtsmtlSlateTimelineProjection.cs | Timeline | 本任务独占 UI 接入，公共任务不并行修改此文件 |
+| 两个作者 MCP、公共输出/生成 | C# authoring | 不在 Timeline/Slate 新建工具、输出器、源码 Undo 或导出界面 |
+| TimelineData.AddTrack/AddClip/AddSection、Curve/引用规则 | 原 Timeline 模块 | 人工编辑和代码生成继续使用同一正式业务 API |
+| Scene Play、Build/adoption | 原预览/运行 owner | 保留现有 Session、owner、时钟、已正确 UI 和 Camera Track |
+
+当前新增片段调用 TimelineAuthoringClipBinding.Apply(...BuildClipProperties(...))，后者调用 Export(clip).Properties 得到 JObject 再覆盖表单字段。目标改为“现有创建输入与当前 Clip 值 → 同一正式强类型配置入口 → 原 Configure/Set/领域规则 → 既有 Session/Undo”。删掉 UI JSON 中转，不用另一份 UI DTO 或按 kind 复制业务规则顶替。
+
+只改变参数传递方式，保留未覆盖字段、既有默认值、资源、CurveEndFrame、合法范围、取消/错误反馈、选择和刷新。字段/签名以公共任务已交付的正式文档和代码为准；未交付只等待该接线项，不新增兼容入口，也不重做无关 UI。
+
+公共完整导出直接读取 TimelineData：
+- Timeline/Track/Clip/Section 的 identity、字段、帧、业务顺序和 Loop/Scale 等正式配置。
+- 外部 binding 声明及使用、Channel/Slot、TreeClip 的来源/阶段/嵌套图和 owner 关系。
+- 完整原始曲线的 key、tangent、weight、WeightedMode、wrap 与 time domain，不能读取 Slate 秒域草稿或显示降采样结果。
+- 正式 layout owner 的布局。窗口局部选择/滚动/运行标记不成为生成内容，不另存布局镜像。
+
+生成范围内对象使用本次创建引用；范围外共享图、原始 AnimationClip、Rig/Profile 等作为精确外部输入，不因可达而复制或删除。仅替换明确范围内物理对象，保持业务 identity/引用关系，通过正式 API 恢复明确的 Definition/Profile/Timeline 根挂接并保存；不能用旧生成子资产 GUID 寻找内部对象，不能扫描全项目猜消费者。
+
+r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已编译入口并保存生成范围；导出从当前资产完整输出，不读取旧源码增量合并。未导出人工修改只在资产中，重新生成不自动合并；源码编译不触发生成，两作者操作不自动 Character Build/Play。代码未编译或版本不匹配由公共入口拒绝，不执行旧程序集。
+
+现有正式局部校验和编辑 Undo 保留；旧 Agent Document/五工具/同步协议退役不新增中央 Validator、新整包事务、rebase 或源码状态机。生成后沿已有 owner/identity 失效和刷新规则处理，不新增源码同步/重载恢复系统。
+
+### 9. r2 行为条件
+
+以下是交付行为，不添加测试或验证 tasks：
+- 人工拖动、字段/曲线修改、保存和 Undo/Redo 不写源码；编译源码不生成资产。
+- UI 和 C# 创建使用同一 typed 配置规则，projection 无 BuildClipProperties/Export/JObject/JSON Apply 中转。
+- 完整导出/重建保持帧、顺序、字段、曲线 tangent/weight/WeightedMode/wrap、业务身份和资源关系，生成根已挂回明确 owner 并保存。
+- 只替换声明范围，范围外资源不变；未导出修改不自动合并。
+- 已正确 Slate 编辑、布局、选择、Undo、Session、时钟、预览采用和 Camera 轨道继续工作。
+
 ## Risks / Trade-offs
+
+- C# 是显式生成范围的可重建来源，人工编辑保留在资产；需要把人工修改带入下次生成时显式完整 export_code。代价是未导出修改不会自动合并，收益是没有源码同步/解析/冲突状态机。
 
 - 修改 Slate 源码需要维护插件升级差异，换来复用真实 UI；补丁集中于 Editor Surface，领域规则留在 BTSMTL。
 - 临时对象是内存草稿，正式保存只有 TimelineData；新增先建正式对象，编辑只提交一次事务。
@@ -155,6 +195,8 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 - 作者帧沿用已有语义，逐 Tick 运行定位消费真实 trace；本次不做时钟迁移。
 
 ## 文档对账
+
+2026-09-13 r2 补充：current Agent 专属规范中的目录包、五工具和中央 Agent Validator 与 r2 冲突，删除/替换 delta 由 C# authoring 任务拥有。本任务只清理自己规划里的协议依赖；正式 Timeline 校验、编辑 Session 和预览 Session 不属于旧 Agent 协议。原“资产永久为唯一来源”被明确生成范围的 C# 重建规则替代，TimelineData 作为正式对象、Slate 作为临时投影不变。implementation.md 中旧 Document 对账属于历史实现记录，不作为新接线前提。
 
 | 来源 | 处理 |
 |---|---|
@@ -165,6 +207,8 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 | 当前代码 | f1287b44c 接回 Slate Play/Sample；639ba8253 只增加垂直偏移；两者均未完成本设计，需要替换。 |
 
 ## Migration Plan
+
+已完成的前序 UI 工作保持，不重复实施；r2 增量在正式强类型配置合同交付后只修改本任务拥有的 projection 调用段。公共代码输出/生成由 C# authoring 任务负责，下节列出需要表达的完整 Timeline 内容，不在本任务复制输出器。
 
 1. 接通正式新增、字段编辑及取消/失败/Undo，替换无正式回写的菜单。
 2. 统一帧几何、曲线 domain 转换、逐帧和视图状态恢复。

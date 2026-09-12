@@ -4,11 +4,16 @@
 
 Slate 的 `CutsceneEditor` 原始实现是独立的 IMGUI `EditorWindow`，它直接要求 `Slate.Cutscene`、`CutsceneGroup`、`CutsceneTrack` 和 `ActionClip` 层级；它不能直接接收 BTSMTL `TimelineData`。因此需要同时修改 Slate Editor 源码，把其 OnGUI 时间轴抽成可嵌入的 Surface，并用只存在于 Unity Editor 的适配层把当前 BTSMTL Timeline 投影成 Slate 可读写的临时层级，再把 Slate UI 的改动转换回 BTSMTL 正式 Mutation。
 
-本 change 将 Slate `CutsceneEditor` 作为真实 Timeline 编辑 UI，BTSMTL `TimelineData` 继续作为唯一持久化和运行时作者数据源。不复制 Slate 运行时，不保存 Slate Cutscene 资产，不把 Slate 数据变成第二个正式 Timeline。
+本 change 将 Slate `CutsceneEditor` 作为真实 Timeline 编辑 UI，BTSMTL `TimelineData` 继续作为正式 Timeline 对象和 compiler 输入，Slate Cutscene 不保存为第二份 Timeline。按 2026-09-13 C# authoring r2，显式导出的 C# 可作为指定生成范围的重建来源；未导出的人工修改只在当前资产中，重新生成不会自动合并这些修改。
 
 BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Actor、DirectorGroup、PlayableGraph 或 Slate 播放内核。Slate 的 Group/Track/ActionClip 只允许作为 Editor-only UI 兼容对象存在；它们不拥有角色、不拥有技能、不拥有预览时钟，也不进入 authoring/runtime 数据链。
 
 ## What Changes
+
+- 公共作者输入采用 [C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)：只有显式 `btsmtl.export_code` 从当前资产完整写出 C#，和 `btsmtl.generate_assets` 执行已编译入口、重建并保存明确生成范围。人工拖动/修改/保存 Timeline 不写源码，源码编译不生成资产，两工具不自动 Character Build 或 Play。
+- 旧 Agent Document/五工具退役；不增加 Timeline MCP、源码 Undo、源码同步、中央 Validator 或新整包事务。Timeline 原有 Session、owner、Mutation/Undo、校验和预览 adoption 保留。
+- C# authoring 任务唯一负责 `TimelineAuthoringClipBinding.cs` 的 JSON 退役、强类型配置与公共代码输出/生成；本任务唯一修改 `BtsmtlSlateTimelineProjection.cs` 的 UI 接入。其 `BuildClipProperties -> Export -> JObject -> Apply` 中转待正式强类型合同交付后直接替换，不复制字段规则。
+- 导出直接读取 TimelineData 的轨道、片段、Section、外部 binding、TreeClip、完整曲线和正式布局；保持业务顺序和身份。内部引用使用本次创建对象，范围外资源作为精确外部输入，生成后恢复明确的根 owner 挂接并保存。
 
 - 用户后续要求预览窗口随 Timeline 联合实施：增加 preview-integration-plan.md 作为唯一跨窗口体验与联合排期入口，覆盖 SkillGraph 预览分组布局、技能/纯 Timeline 两类正式入口、实例选择、双向导航、运行标记、编辑后采用以及历史/恢复/回放交互。
 - 复用现有场景协调器和正式运行 owner；Timeline 扩展本地观察/导航，不复制运行命令。实际 FlowCanvas SkillGraph 宿主必须接入，不能仅在旧 BaseTreeWindow 上显示工具条便宣称技能预览可用。
@@ -27,9 +32,9 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 - 增加 Slate-to-BTSMTL mutation bridge：Slate UI 的移动、裁剪、删除、添加、Section 和时间编辑先转换成 BTSMTL 编辑命令，再经 `TimelineEditorSessionContext`、正式 owner、Mutation 和 Undo 写回。
 - 补齐 Timeline 编辑器的新增内容入口：Add Track 与 Add Clip 菜单必须由 `TimelineContractCatalog` 提供合法类型，并调用正式 `TimelineData.AddTrack` / `AddClip` 和唯一 Mutation/Undo；不得直接让 Slate 创建无 BTSMTL identity 的任意 `CutsceneTrack` / `ActionClip`。
 - 新增 Clip 必须按 Track contract 提供准确创建方式：Animation 使用已有原生 AnimationClip 引用，TreeClip 使用正式 Graph/Tree 来源，Camera、Motion 和其它 typed Clip 使用各自 authoring binding；不得创建替代资源或默认 Clip。
-- 明确 proxy 的双写边界：BTSMTL 是唯一持久化真相，但 Slate 原生 UI 会先修改临时 proxy；若要一个动作只有一个正式 Undo，必须提供 Slate transaction/Undo sink 扩展，不能假设原生窗口自动完成同步。
+- 明确 proxy 的写入边界：人工编辑只写正式 TimelineData，Slate 原生 UI 的临时草稿不成为生成来源或独立保存对象；一次手势使用现有正式 Undo，不能触发源码写入。
 - Slate 临时层级关闭、Timeline owner 变化、Undo/Redo 或外部刷新时重新建立投影，禁止把临时 Slate 对象保存成资产或进入运行时编译链。
-- 保留 BTSMTL 的 Skill Timeline、TreeClip、ActionContext、AnimationSlot、Document v7、Source Map 和 authoring identity；Timeline 页面只显示作者内容与被动运行标记。
+- 保留 BTSMTL 的 Skill Timeline、TreeClip、ActionContext、AnimationSlot、Source Map 和 authoring identity；Timeline 页面只显示作者内容与被动运行标记，不依赖旧 Agent 文件协议或五工具。
 - 将 Scene Play 的 Start/Pause/Resume/Reset/Stop、Build、Skill request、Runtime Trace/Live Debug、Capture、History、Restore 和 Replay 控制统一放到 SkillGraph/Graph Shell 与 Scene Play coordinator；Timeline 不再拥有这些运行命令。
 - Scene Play 运行期间 Timeline 仍保持可编辑。编辑通过正式 Mutation 改变作者 Timeline，Build 在同一 Session 中发布并由 ProgramEpoch adoption 采用，不退出 Play、不切换到 Timeline 私有 Session。
 - 删除上一轮错误方向中新增的 UI Toolkit Slate 仿制层、项目自定义 Timeline 皮肤和重复时间视口实现；不再维护第二个正式 Timeline UI。
@@ -47,6 +52,8 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 - `btsmtl-timeline-editor-preview`: 增加 contract-driven Add Track/Add Clip 的作者入口，新增对象仍由 Timeline owner 和 typed Mutation 拥有。
 
 ## Impact
+
+- r2 仅更新本任务规划文档，不修改公共 authoring 任务文件、其它预览任务文档、业务代码或资产，不派发执行消息。已有正确 UI/时钟/Session/Camera 轨道不因协议退役重做。
 
 - 本次只更新现有 change，并同步修正场景预览 delta 的“结构只读”冲突；不安装未完成的 active delta 到 current specs，不把文档更新当成实施或验收完成。
 - 联合实施消费 rebuild-btsmtl-preview-with-scene-play 原任务的公开合同；共享预览 UI 与接线纳入本次交付，底层启动、adoption、checkpoint 和领域执行仍由原 owner 实现，具体映射见预览联动计划。

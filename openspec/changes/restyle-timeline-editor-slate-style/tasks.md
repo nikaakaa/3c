@@ -1,4 +1,4 @@
-2026-09-12 审计：以下任务按主线实现证据管理。条目按本次模块重新编号，旧编号通过 Git 历史追溯；已重新打开的条目表示代码基础存在，但未满足完整行为。文档写完、严格校验通过、编译通过均不等于窗口已验收。只在主线实施，不继续向旧预览 worktree 双写。人工验收行为列在 design.md，不作为本清单任务；默认不新增测试代码。
+2026-09-13 r2：保持已有实施勾选和正确业务链，第10节只记录强类型接线增量。只在主线实施，不继续向旧预览 worktree 双写。任务仅记录实现，不添加测试、手动验证、编译或校验任务；用户自行验收，行为条件放 design.md。原完成记录在 implementation.md 和 Git 历史保留，规划修改不代表代码完成。
 
 ## 1. 已有接入基础
 
@@ -20,7 +20,7 @@
 - [x] 2.3 完成有效手势 begin/commit/cancel 与 source revision 校验；选择/游标/缩放不生成 mutation，不因每次 MouseUp 重建
 - [x] 2.4 完成 diff -> Session -> 正式 owner 的校验/提交/刷新；拒绝操作给出原因，删除 Unsupported 静默吞修改路径
 - [x] 2.5 收口取消、关闭、Undo/Redo、外部 owner 修改和过期草稿；无效草稿不覆盖正式数据
-- [x] 2.6 核对 Clip、Curve、属性和菜单路径只产生一个正式 Undo，隔离临时 Slate Undo/dirty，并保留取消和失败事务结果
+- [x] 2.6 Clip、Curve、属性和菜单路径使用一个正式 Undo，隔离临时 Slate Undo/dirty，保留取消和失败事务结果
 - [x] 2.7 将删除、复制、排序、跨轨道移动统一接正式 contract/引用校验，复制生成新 identity，排序保留 identity
 
 ## 3. 正式新增
@@ -54,7 +54,7 @@
 ## 7. 预览边界
 
 - [x] 7.1 移除误接的嵌入 Slate Play/Sample/ReSample/Stop 和私有时钟，保留静态编辑游标、逐帧与被动运行标记
-- [x] 7.2 完整审计默认 Director/Actor 清理和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；原勾选因后续接回播放而重新打开
+- [x] 7.2 清理默认 Director/Actor 和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；r2 保留已有实现
 - [x] 7.3 Timeline 通过 `RuntimeDebugSession` 的正式 Timeline playback summary 接入场景/技能观察，Preview 返回 Graph Shell；运行事实只读、作者仍可编辑，多调用不猜选，Graph Shell 继续拥有运行控制
 - [x] 7.4 作者游标、Runtime overlay 和 History overlay 使用三个独立时间状态；Graph Shell Segment 选择进入历史观察，Timeline 不提供未经批准的本地 Play
 
@@ -62,11 +62,9 @@
 
 联合预览实施的 P1–P5、原任务映射与行为标准见 [preview-integration-plan.md](preview-integration-plan.md)。以下联动任务负责跨窗口集成；场景预览原 tasks 继续记录其 owner 内部实现，不复制一套协调器待办。
 
-- [x] 8.1 2026-09-12 完成 proposal/design/delta 对账，记录 current spec 待替换条款与待确认 Play 语义，并同步修正场景预览 delta 的结构只读冲突
-- [x] 8.2 2026-09-12 对 restyle-timeline-editor-slate-style 和 rebuild-btsmtl-preview-with-scene-play 执行 openspec validate --type change --strict，均返回 is valid；结构合法不代表实现完成
-- [x] 8.3 `implementation.md` 已交付模块输入/输出、实际代码链、编译与严格校验结果、删除范围及未完成项，不用旧交付说明代替
-- [x] 8.4 Scene valueCurve 与 typed binding 已对照正式 catalog/binding、Skill Document exporter/applier/validator；UI 与 Document 共用正式能力，不复制 schema
-- [x] 8.5 分模块中文小步提交，保留其它任务改动；dotnet build 按 AGENTS 禁用构建服务器并立即 shutdown，不新增测试代码
+- [x] 8.1 已形成 proposal/design/delta 的编辑和预览边界说明；r2 追加两个显式作者操作、文件分工和协议退役范围
+- [x] 8.2 implementation.md 已交付模块输入/输出、实际代码链、删除范围及未完成项；旧验证记录保留为历史，不作为本轮任务
+- [x] 8.3 Scene valueCurve 已接入正式曲线 descriptor 和领域规则，保留实现；旧 Skill Document 对账不作为新依赖，JSON 退役接线另列第10节
 
 ## 9. 与预览窗口联合实施
 
@@ -76,3 +74,12 @@
 - [ ] 9.4 P4：Timeline 修改/Undo 后把 authoring revision 与真实 Build/adoption 报告接入预览状态区，显示待采用/已采用/下次激活/失败，同 Session 生效不由窗口伪造
 - [ ] 9.5 P5：历史面板区分诊断采集与输入录制，按选定 Tick/区间和正式 capability 校验恢复/回放，刷新不覆盖输入，命令接受与完成分开显示
 - [ ] 9.6 跨宿主布局、切页、关闭、重载和绑定释放统一收口；同步预览原任务/审计的主线证据，记录缺失能力，不以按钮存在代替联合交付
+
+## 10. C# authoring r2 强类型接线
+
+- [ ] 10.1 在 C# authoring 提供 TimelineAuthoringClipBinding 正式强类型配置合同后，将 projection 现有创建输入及当前 Clip 值接入该入口，保持原字段/默认值/引用/合法范围与失败反馈
+- [ ] 10.2 删除 BtsmtlSlateTimelineProjection.cs 的 BuildClipProperties、Export/JObject/JSON Apply 中转及专用依赖；不建立 UI 配置模型，不修改公共任务拥有的 TimelineAuthoringClipBinding.cs
+- [ ] 10.3 如公共输出接入需要补充读取或根挂接能力，仅在既有 Timeline 领域 API 暴露正式内容/布局/owner 能力；公共遍历、C#输出、生成及两个MCP由 C# authoring 负责，不在 Slate 复制
+- [ ] 10.4 从本任务剩余 UI/导航消费者移除旧 Agent 文件协议调用与无用依赖，保留 AddTrack/AddClip/AddSection、正式规则/Undo/Session和已有刷新；人工编辑不写源码，生成不自动 Build/Play
+
+依赖仅阻止第10节对应接线，无关 UI 继续原范围。领域规则是业务实现，不是中央 Agent Validator；不新增验证任务。按中文小步提交，命令执行遵守 AGENTS。

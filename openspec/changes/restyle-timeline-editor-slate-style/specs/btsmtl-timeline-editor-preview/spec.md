@@ -4,7 +4,7 @@
 
 正式 Timeline 编辑入口 MUST使用从 Slate `CutsceneEditor` 抽出的 `CutsceneEditorSurface` 真实 IMGUI 编辑 UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放和 Curve/DopeSheet。属性区 MUST使用正式 typed 字段绑定，不把 Slate proxy Inspector 的私有参数作为作者字段。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格时间轴，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。Slate 播放、暂停、场景绑定和运行控制在 BTSMTL Embedded Surface 中 MUST被隐藏或禁用。
 
-BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview、Live Debug 和 Document identity MUST继续由 BTSMTL 拥有。Slate `Cutscene`、Group、Track 和 ActionClip 只能由 Editor-only projection 提供给 Slate UI，不能成为持久化或 runtime 数据源。
+BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview 和 Live Debug MUST继续由原业务模块拥有。Slate `Cutscene`、Group、Track 和 ActionClip 只能由 Editor-only projection 提供给 Slate UI，不能成为持久化或 runtime 数据源。显式导出的 C# MAY作为声明生成范围的重建来源，生成 MUST仍产出正式 TimelineData 并恢复 owner 挂接。
 
 BTSMTL Skill、Timeline、Preview 和 Runtime MUST NOT依赖 Slate GameObject Actor、DirectorGroup、Camera/Audio/Director Track、PlayableGraph 或 Slate Preview。Projection 中的 Unity/Slate 对象若为满足 Slate Surface 的临时兼容对象，MUST NOT拥有角色、技能、authoring 数据或 runtime 状态。
 
@@ -35,13 +35,13 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 
 #### Scenario: Timeline owner外部刷新
 
-- **WHEN** BTSMTL Timeline 被 Undo/Redo、Agent 或其它正式入口修改
+- **WHEN** BTSMTL Timeline 被 Undo/Redo、显式 generate_assets 或其它正式业务入口修改
 - **THEN** adapter MUST销毁旧 projection 的临时状态并从最新 BTSMTL Timeline 重建
 - **AND** MUST不把旧 Slate proxy 的字段覆盖回 BTSMTL
 
 ### Requirement: Slate Projection必须是Editor-only桥接而不是第二个正式数据源
 
-Projection MUST建立明确的 BTSMTL identity 到 Slate object 的双向映射。Projection 对象 MUST使用临时生命周期，不得绑定 BTSMTL SerializedObject，不得保存为资产，不得进入 Document manifest、Timeline compiler、runtime player 或 runtime clock。Projection 只负责满足 Slate UI 的对象模型和交互要求。
+Projection MUST建立明确的 BTSMTL identity 到 Slate object 的双向映射。Projection 对象 MUST使用临时生命周期，不得绑定 BTSMTL SerializedObject，不得保存为资产，不得进入 C# 导出内容、Timeline compiler、runtime player 或 runtime clock。Projection 只负责满足 Slate UI 的对象模型和交互要求。
 
 Projection MUST将每个可编辑 Clip 挂载到 Slate `CutsceneTrack` 能发现的 ActionClip 集合中。Slate `Validate`、Clip wrapper 或 DopeSheet 不得因为临时 GameObject 层级错误而丢失 Clip；BTSMTL 已拥有的 Curve Channel MUST只能通过该 Clip 的 Slate AnimatedParameter 显示和编辑。
 
@@ -144,6 +144,55 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 - **AND** 成功后 MUST选中新对象；取消或失败 MUST不修改已有内容
 
 ## ADDED Requirements
+
+### Requirement: Timeline作者输入必须遵守两个显式C#操作边界
+
+Timeline MUST消费公共 C# authoring r2 的 export_code 与 generate_assets，不新增 Timeline MCP、源码 Undo、自动同步、导出界面、中央 Validator 或新整包事务。人工拖动/修改/保存/撤销 MUST只走现有正式 TimelineData 编辑与 Undo；旧 Agent Document/五工具 MUST不再作为作者或预览依赖。两个公共工具的实现和旧协议删除由 C# authoring owner 负责，本任务 MUST保留正确的 Slate UI、Session、owner、时钟、Camera Track 和预览 adoption。
+
+#### Scenario: 人工编辑与源码编译
+
+- **WHEN** 作者拖动或保存 Timeline，或导出的 C# 经正常编译
+- **THEN** 人工编辑 MUST不自动 export_code，源码编译 MUST不自动 generate_assets
+- **AND** 只有显式公共操作才更新指定源码或资产；两操作 MUST不自动 Character Build 或 Play
+
+#### Scenario: 显式重新生成
+
+- **WHEN** 作者明确以当前已编译入口生成声明范围
+- **THEN** generate_assets MUST重建并保存该范围、恢复根挂接，MUST不自动合并未导出人工修改
+- **AND** 当前编译结果不匹配时 MUST由公共入口拒绝，不调用旧程序集或增加源码同步流程
+
+### Requirement: Timeline UI配置必须直接使用共同强类型入口
+
+Timeline 任务 MUST唯一维护 BtsmtlSlateTimelineProjection.cs；C# authoring 任务 MUST提供 TimelineAuthoringClipBinding.cs 的 JSON 退役与正式 typed 读取/配置合同。UI MUST移除 BuildClipProperties -> Export -> JObject -> Apply 中转，直接调用同一配置入口，保留原字段、值、引用、校验、取消/失败和编辑行为。MUST不建立 UI DTO/第二业务规则或并行修改公共文件。
+
+#### Scenario: 强类型合同接通
+
+- **WHEN** 公共任务交付正式字段和接口
+- **THEN** projection MUST把当前 Clip 值与现有创建输入交给共同 typed 配置入口
+- **AND** AddTrack/AddClip/AddSection、Curve/引用约束、Session/Undo MUST继续来自既有 Timeline 规则
+
+#### Scenario: 合同尚未交付
+
+- **WHEN** projection 所需强类型入口尚未可用
+- **THEN** 对应接线 MUST保持未完成，无关 UI 工作保持原范围
+- **AND** MUST不复制实现、添加兼容 JSON 路径或把规划修改称为代码完成
+
+### Requirement: Timeline完整代码输出必须保留正式内容与生成边界
+
+公共输出 MUST直接读取 TimelineData 的 Track、Clip、Section、外部 binding、TreeClip、全部正式配置、完整曲线及正式布局，保持业务顺序和 identity；MUST不读取 Slate 草稿或显示降采样数据。生成 MUST沿 AddTrack/AddClip/AddSection 和共同 typed 配置/原 owner API，只有本次生成范围内物理对象可替换。
+
+#### Scenario: 完整曲线与引用重建
+
+- **WHEN** 公共操作导出并生成包含 Curve、TreeClip 和共享引用的 Timeline
+- **THEN** key/time/tangent/weight/WeightedMode/wrap、业务顺序、identity 和全部正式配置 MUST保持
+- **AND** 内部对象 MUST使用本次创建引用，范围外共享图和原始资源 MUST为精确外部输入，不靠旧生成子资产 GUID 解析内部引用
+- **AND** 生成根 MUST经正式 API 挂回明确 owner 并保存，不扫描全项目猜消费者
+
+#### Scenario: 临时窗口状态
+
+- **WHEN** 输出正式 Timeline 布局
+- **THEN** MUST读取已有正式 layout owner
+- **AND** MUST不将选择、滚动、运行 Session、编辑游标或 Slate proxy 私有状态作为生成内容，不新增布局镜像
 
 ### Requirement: Timeline必须与共享预览区完成跨窗口联动
 

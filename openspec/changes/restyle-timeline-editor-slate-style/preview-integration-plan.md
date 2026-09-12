@@ -2,6 +2,8 @@
 
 ## 目标与归属
 
+2026-09-13 r2：作者输入采用 [公共 C# authoring 方案](../remove-agent-authoring-use-native-csharp/design.md)，不再依赖 Agent Document 版本或五工具生命周期。现有 Timeline 编辑 Session、运行 Session、owner、Undo、时钟、Build/adoption 和已正确界面保持原归属，不按 Document/JSON 名字整目录删除业务代码。
+
 2026-09-12 用户要求将“预览”任务的窗口一起规划，写入 Timeline change，后续随 Timeline 一起实施。本文件是两边 UI、导航、binding 和编辑后采用的统一实施入口。这里的“一起”是一次完整作者操作交付，不是把所有场景运行按钮塞进 Timeline。
 
 - SkillGraph/共享 Graph Shell 的预览区：配置场景、选择正式目标、开始/暂停/继续/结束、请求技能或合法独立调用、Build/采用、运行观察与历史。
@@ -142,5 +144,13 @@ P1/P3 与 Timeline 布局、帧、新增一起排期；P2/P4/P5 逐项核对主�
 
 本文件拥有跨窗口体验、联动批次和共同验收。Timeline design/tasks 继续拥有编辑器实现细节；rebuild-btsmtl-preview-with-scene-play 保留场景/运行合同和原实现任务，并以链接引用本计划，避免复制两套待办。
 
-预览旧 design 中 Document v5 是历史迁移基线，实施消费当前正式发布的 Document/Capability 版本，不恢复 v5 reader 或预先实施未发布 schema。旧“结构必须在 Edit Mode”“结构变更一律换 Session”“禁止一切恢复”与后续已批准同 Session adoption/restore 合同冲突，本次同步改为精确能力与正式采用规则。
+旧“结构必须在 Edit Mode”“结构变更一律换 Session”“禁止一切恢复”与已批准的同 Session adoption/restore 合同冲突，联合接线使用现有精确能力与正式采用规则。旧 Agent 文件协议/版本不再是预览配置、编辑资格或采用前置条件；已有领域 Capability 和业务规则保留。
 
+## 显式作者操作与预览
+
+- 人工修改/拖动/保存 Timeline 只写正式 TimelineData，经原 Undo，不生成 C#，不增加源码同步状态、源码 Undo 或导出 UI。
+- export_code 从当前资产完整输出 C#；generate_assets 执行当前已编译入口，重建并保存明确生成范围和根挂接。重新生成不会合并未导出修改，保留修改需先显式导出。
+- 源码编译不自动 generate_assets；两个作者 MCP 不自动 Character Build 或 Play。预览仍使用原显式 Build/采用入口。
+- TimelineAuthoringClipBinding.cs 的 JSON 退役、typed 配置和公共输出/生成归 C# authoring；BtsmtlSlateTimelineProjection.cs 由本任务独占修改，等待同一强类型入口后去掉 UI 的 BuildClipProperties/Export/JObject 中转，不复制业务模型或中央 Validator。
+- 生成内部引用使用新建对象，范围外共享图和原始资源作为精确外部输入。仅生成范围内物理对象可替换，业务 identity/引用和根 owner 挂接须恢复并保存。预览按已有 binding/revision 规则刷新，不把旧对象或 Slate proxy 当成生成输入。
+- 本轮只更新 Timeline 目录内规划，不修改其它预览任务文档或实现；不因协议退役重做已正确 UI/预览，也不将新接线列为完成。

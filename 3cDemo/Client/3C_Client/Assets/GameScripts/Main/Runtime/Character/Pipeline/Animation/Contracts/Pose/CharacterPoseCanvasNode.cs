@@ -24,7 +24,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId)
             ? default
             : new PoseNodeId(m_NodeId);
-        public string DisplayName => m_DisplayName ?? string.Empty;
+        public string DisplayName => string.IsNullOrWhiteSpace(m_DisplayName)
+            ? m_Payload == null
+                ? "Pose Node"
+                : CharacterPoseAuthoringDisplayNames.ForIdentity(m_Payload.Kind.ToString())
+            : m_DisplayName.Trim();
         public CharacterPoseNodePayload Payload => m_Payload;
         public CharacterPoseNodeKind Kind =>
             m_Payload?.Kind ??

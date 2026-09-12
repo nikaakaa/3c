@@ -18,7 +18,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_InterfacePortId = string.Empty;
 
         public PosePortId PortId => string.IsNullOrWhiteSpace(m_PortId) ? default : new PosePortId(m_PortId);
-        public string DisplayName => m_DisplayName ?? string.Empty;
+        public string DisplayName => string.IsNullOrWhiteSpace(m_DisplayName)
+            ? CharacterPoseAuthoringDisplayNames.ForIdentity(PortId.Value)
+            : m_DisplayName.Trim();
         public CharacterPosePortKind Kind => m_Kind;
         public CharacterPosePortDirection Direction => m_Direction;
         public bool Required => m_Required;

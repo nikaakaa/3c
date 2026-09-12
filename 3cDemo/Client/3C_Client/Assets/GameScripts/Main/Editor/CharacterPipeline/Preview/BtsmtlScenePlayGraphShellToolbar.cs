@@ -53,6 +53,8 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly Label m_Status;
         IBtsmtlScenePlayPreviewOperations m_Operations;
         bool m_Disposed;
+        Guid m_HistoryCaptureId;
+        bool m_HistoryInputsInitialized;
 
         public BtsmtlScenePlayGraphShellToolbar()
         {
@@ -349,6 +351,8 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_ReplayButton.SetDisplay(hasHistory);
             if (!hasHistory || m_Operations == null)
             {
+                m_HistoryCaptureId = Guid.Empty;
+                m_HistoryInputsInitialized = false;
                 m_RestoreButton.SetEnabled(false);
                 m_ReplayButton.SetEnabled(false);
                 return;
@@ -365,9 +369,14 @@ namespace ThirdPersonCharacter.Editor.Preview
             ulong latestTick = history.Ticks.Count == 0
                 ? checkpoint.Tick
                 : history.Ticks[history.Ticks.Count - 1].Tick;
-            m_RestoreTickField.SetValueWithoutNotify(checked((long)checkpoint.Tick));
-            m_ReplayFromTickField.SetValueWithoutNotify(checked((long)checkpoint.Tick));
-            m_ReplayToTickField.SetValueWithoutNotify(checked((long)latestTick));
+            if (!m_HistoryInputsInitialized || m_HistoryCaptureId != history.CaptureId)
+            {
+                m_HistoryCaptureId = history.CaptureId;
+                m_HistoryInputsInitialized = true;
+                m_RestoreTickField.SetValueWithoutNotify(checked((long)checkpoint.Tick));
+                m_ReplayFromTickField.SetValueWithoutNotify(checked((long)checkpoint.Tick));
+                m_ReplayToTickField.SetValueWithoutNotify(checked((long)latestTick));
+            }
             bool running = m_Operations.Status.State == BtsmtlScenePlayState.Running ||
                            m_Operations.Status.State == BtsmtlScenePlayState.Paused;
             m_RestoreButton.SetEnabled(running && m_Operations.SupportsPresentationCheckpointRestore && checkpoint.CanRestore);

@@ -117,7 +117,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `62eb28721`、`95eea34ff`、`bb5005be3`、`d5af35ba4`：公共 `export_code/generate_assets` 已注册 Pose 正式 C# 薄适配；它读取 `CharacterPresentationPoseGraphAsset` 的 Graph、Node、Edge、Slot、StateMachine、Transition Rule、动态端口和正式资源引用，不读取旧 JSON 或 Agent DTO。Pose 根生成会恢复 Profile/Definition 挂接，并保持业务 identity。
 - Pose 正式 `generate_assets` 已对 `LocomotionFullBodyPoseGraph.asset` 执行成功，返回 0 diagnostics；回写后 9 个有效图仍保持 `m_Parameters=0`、Foot 内部接口/Get=0、Body 输入 Pose 曲线链完整。
 - `6b7be5c7b`、`9c9520afa`、`ad698053a` 及后续清理已移除 Pose EventGraph 旧 Mutation/Agent Mapper、Presentation/Skill Document 链和 EventGraphAuthoringDocument；业务代码中的旧入口扫描为 0。公共 authoring 注册表现在只保留正式 `export_code`、`generate_assets` 和非 authoring 的 Scene Play 工具。
-- 项目 `.codex/skills/btsmtl-agent-authoring` 是执行规则资源，不属于已退役的 Assets Agent 工具链，已保留；旧业务工具和过时 current spec 的删除不影响该 skill 文件。
+- 项目 `.codex/skills/btsmtl-agent-authoring` 三份旧 Agent current 说明已按 r2-skill-and-generated-source revision 删除；`CodeGeneration/Generated` 下的正式 Pose/Skill C# 创建源码保留为唯一生成入口，旧业务工具和旧 Document 协议不再恢复。
 
 未把以下结果写成 Pose 完成证据：
 

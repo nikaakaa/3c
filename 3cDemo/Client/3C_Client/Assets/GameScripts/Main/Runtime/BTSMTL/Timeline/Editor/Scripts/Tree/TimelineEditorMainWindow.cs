@@ -68,6 +68,7 @@ namespace BTSMTL.Timeline.Editor
         ObjectField m_SharedTimelineField;
         Label m_SourceSummary;
         Label m_Status;
+        VisualElement m_DetailsHost;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
@@ -249,6 +250,16 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
             rootVisualElement.Add(m_SlateSurface);
+            m_DetailsHost = new VisualElement { name = "timeline-details" };
+            m_DetailsHost.style.flexShrink = 0f;
+            m_DetailsHost.style.maxHeight = 260f;
+            m_DetailsHost.style.paddingLeft = 8f;
+            m_DetailsHost.style.paddingRight = 8f;
+            m_DetailsHost.style.paddingTop = 4f;
+            m_DetailsHost.style.paddingBottom = 4f;
+            rootVisualElement.Add(m_DetailsHost);
+            m_SlateProjection.SelectionChanged += RebuildDetails;
+            RebuildDetails(m_SlateProjection.Selection);
         }
 
         void BuildUnboundView()
@@ -365,9 +376,12 @@ namespace BTSMTL.Timeline.Editor
 
         void DisposeView()
         {
+            if (m_SlateProjection != null)
+                m_SlateProjection.SelectionChanged -= RebuildDetails;
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
+            m_DetailsHost = null;
             m_Timeline = null;
         }
 
@@ -386,6 +400,42 @@ namespace BTSMTL.Timeline.Editor
                 Mathf.Max(1f, rect.height),
                 BeginWindows,
                 EndWindows);
+        }
+
+        void RebuildDetails(TimelineEditorSelection selection)
+        {
+            if (m_DetailsHost == null)
+                return;
+            m_DetailsHost.Clear();
+            if (selection.Kind == TimelineEditorSelectionKind.None)
+            {
+                m_DetailsHost.style.display = DisplayStyle.None;
+                return;
+            }
+
+            m_DetailsHost.style.display = DisplayStyle.Flex;
+            if (selection.Clip != null)
+            {
+                Clip clip = selection.Clip;
+                m_DetailsHost.Add(new Label(
+                    $"{clip.Name}  |  {clip.ContractKind}  |  Frame {clip.StartFrame}..{clip.EndFrame}"));
+                m_DetailsHost.Add(new Button(() => OpenClip(clip)) { text = "Open Source" });
+                if (clip is MotionWarpClip)
+                    m_DetailsHost.Add(new MotionWarpClipInspectorView(clip));
+                else if (clip is TreeClip treeClip)
+                {
+                    var inspector = new TreeClipInspectorView(treeClip);
+                    inspector.Initialize(OpenClip);
+                    m_DetailsHost.Add(inspector);
+                }
+                return;
+            }
+
+            if (selection.Track != null)
+            {
+                Track track = selection.Track;
+                m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
+            }
         }
 
         VisualElement CreateAuthoringToolbar()

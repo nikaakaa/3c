@@ -16,7 +16,7 @@
 ## 2. 投影和数据编辑收口
 
 - [ ] 2.1 对齐 Clip/Section/Curve 全部显示与 domain 映射，尤其 Motion CurveEndFrame 和真实内容终点；未支持字段明确报告
-- [ ] 2.2 将正式 selection、属性、TreeClip ownership/下钻和 AnimationClip 资源导航接入同一 adapter，不仅保存在临时名称中
+- [x] 2.2 将正式 selection、属性、TreeClip ownership/下钻和 AnimationClip 资源导航接入同一 adapter，不仅保存在临时名称中
 - [ ] 2.3 完成有效手势 begin/commit/cancel 与 source revision 校验；选择/游标/缩放不生成 mutation，不因每次 MouseUp 重建
 - [ ] 2.4 完成 diff -> Session -> 正式 owner 的校验/提交/刷新；拒绝操作给出原因，删除 Unsupported 静默吞修改路径
 - [ ] 2.5 收口取消、关闭、Undo/Redo、外部 owner 修改和过期草稿；无效草稿不覆盖正式数据

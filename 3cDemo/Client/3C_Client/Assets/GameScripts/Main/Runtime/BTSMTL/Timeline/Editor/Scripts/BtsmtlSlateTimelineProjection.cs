@@ -427,6 +427,7 @@ namespace BTSMTL.Timeline.Editor
                 CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
                 CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
                 m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
+                CutsceneUtility.onSelectionChange += OnSlateSelectionChanged;
                 Undo.undoRedoEvent += OnUndoRedoEvent;
             }
             catch
@@ -437,6 +438,8 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public Cutscene Cutscene => m_Cutscene;
+        public TimelineEditorSelection Selection => m_Session.Selection;
+        public event Action<TimelineEditorSelection> SelectionChanged;
 
         public void DrawEmbeddedGUI(float width, float height)
         {
@@ -888,6 +891,26 @@ namespace BTSMTL.Timeline.Editor
                 m_OpenSourceClip?.Invoke(sourceClip);
         }
 
+        void OnSlateSelectionChanged(IDirectable directable)
+        {
+            if (directable is BtsmtlSlateActionClip proxyClip &&
+                m_SourceClips.TryGetValue(proxyClip.SourceAuthoringId, out Clip sourceClip))
+            {
+                m_Session.SetSelection(sourceClip);
+                SelectionChanged?.Invoke(m_Session.Selection);
+                return;
+            }
+            if (directable is BtsmtlSlateTrack proxyTrack &&
+                m_SourceTracks.TryGetValue(proxyTrack.SourceAuthoringId, out Track sourceTrack))
+            {
+                m_Session.SetSelection(sourceTrack);
+                SelectionChanged?.Invoke(m_Session.Selection);
+                return;
+            }
+            m_Session.SetSelection(null);
+            SelectionChanged?.Invoke(m_Session.Selection);
+        }
+
         void OnSourceTimelineChanged()
         {
             QueueRebuildProjection();
@@ -1219,6 +1242,7 @@ namespace BTSMTL.Timeline.Editor
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;
             CutsceneEditor.OnActionDoubleClick -= OnActionDoubleClick;
             m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
+            CutsceneUtility.onSelectionChange -= OnSlateSelectionChanged;
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))
                 CutsceneEditor.RecordUndoForCutscene = null;
@@ -1231,6 +1255,7 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor = null;
             }
             m_Session.Dispose();
+            SelectionChanged = null;
             if (m_Host != null)
                 UnityEngine.Object.DestroyImmediate(m_Host);
             m_Host = null;

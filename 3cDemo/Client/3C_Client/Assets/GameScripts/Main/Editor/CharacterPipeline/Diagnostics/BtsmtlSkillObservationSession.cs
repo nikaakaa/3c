@@ -174,13 +174,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Session.ViewModel.GetTimelinePlaybackSummaries(
                     timeline.AuthoringId,
                     m_ActiveTimeline.GraphAuthoringId);
-            RuntimeTimelinePlaybackDebugSummary summary = summaries.FirstOrDefault(value =>
-                string.Equals(value.Provenance.SourceNodeAuthoringId, m_ActiveTimeline.NodeId, StringComparison.Ordinal));
-            if (!summary.Playback.IsValid)
+            RuntimeTimelinePlaybackDebugSummary[] matches = summaries
+                .Where(value => string.Equals(
+                    value.Provenance.SourceNodeAuthoringId,
+                    m_ActiveTimeline.NodeId,
+                    StringComparison.Ordinal))
+                .ToArray();
+            if (matches.Length != 1 || !matches[0].Playback.IsValid)
             {
                 window.ClearRuntimeObservation();
+                if (matches.Length > 1)
+                    window.SetRuntimeObservationStatus("当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。");
                 return;
             }
+            RuntimeTimelinePlaybackDebugSummary summary = matches[0];
 
             var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
             var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);

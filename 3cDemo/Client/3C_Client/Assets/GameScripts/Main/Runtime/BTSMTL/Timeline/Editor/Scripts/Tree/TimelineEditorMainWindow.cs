@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using TreeDesigner.Editor;
@@ -89,6 +90,8 @@ namespace BTSMTL.Timeline.Editor
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
+        public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
+        public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
@@ -160,6 +163,11 @@ namespace BTSMTL.Timeline.Editor
         public void ClearRuntimeObservation()
         {
             m_SlateProjection?.ClearRuntimeOverlay();
+        }
+
+        public void SetRuntimeObservationStatus(string message)
+        {
+            SetStatus(message);
         }
 
         void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)
@@ -721,11 +729,23 @@ namespace BTSMTL.Timeline.Editor
             if (!window || window.Timeline == null)
                 return;
             IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
-                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(window.Timeline.AuthoringId);
+                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(
+                    window.Timeline.AuthoringId,
+                    window.SourceGraphAuthoringId);
+            if (!string.IsNullOrEmpty(window.SourceNodeAuthoringId))
+            {
+                summaries = summaries
+                    .Where(value => string.Equals(
+                        value.Provenance.SourceNodeAuthoringId,
+                        window.SourceNodeAuthoringId,
+                        StringComparison.Ordinal))
+                    .ToArray();
+            }
             if (summaries.Count != 1 || !summaries[0].Playback.IsValid)
             {
-                if (summaries.Count == 0)
-                    window.ClearRuntimeObservation();
+                window.ClearRuntimeObservation();
+                if (summaries.Count > 1)
+                    window.SetRuntimeObservationStatus("当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。");
                 return;
             }
 

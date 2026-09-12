@@ -44,6 +44,7 @@ TimelineEditorWindow
 - `BtsmtlScenePlayPreviewPresenter` 统一持有 `IBtsmtlScenePlayPreviewOperations`、状态变化、Build/Skill 请求、输入录制和历史 Tick 输入；它不创建新的 Scene Play coordinator，也不推进运行时钟。
 - `BaseTreeWindow` 的 UI Toolkit 工具条和实际 FlowCanvas SkillGraph 的 IMGUI 工具条都只绘制同一个 Presenter；FlowCanvas 通过 `BtsmtlSkillGraphPreviewToolbarRegistry` 挂载，不再把 SkillGraph 误导到旧树窗口。
 - 四组入口在两个宿主保持一致：场景控制、试验与采用、观察、历史与录制。SkillGraph 原有的端口采集、执行实例选择和父调用导航仍是 Graph 观察专属项，不与 Scene Play 命令重复。
+- Timeline 运行观察现在按 Timeline、Graph 和绑定的 SourceNode 精确筛选；0 条或多条调用都会清空旧 overlay，多条时提示从 SkillGraph 选择实例，不再使用第一条 summary 猜测。
 
 ## 正式能力对账
 

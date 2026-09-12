@@ -103,6 +103,10 @@ namespace ThirdPersonCharacter.Pipeline.Motion
 
     public static class CharacterActionAuthoringRules
     {
+        public const ActionLifecycleTransitionType DefaultLifecycleTransition =
+            ActionLifecycleTransitionType.Complete;
+        public const string DefaultLifecycleTransitionText = "Complete";
+
         public static void ValidateTargetSnapshot(string declarationId, string ownerId)
         {
             if (string.IsNullOrWhiteSpace(declarationId) != string.IsNullOrWhiteSpace(ownerId))

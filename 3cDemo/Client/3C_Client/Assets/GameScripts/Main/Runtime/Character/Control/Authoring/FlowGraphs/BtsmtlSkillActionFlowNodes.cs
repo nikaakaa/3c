@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         "transitionType",
         typeof(ActionLifecycleTransitionType),
         HasDefaultValue = true,
-        DefaultValue = "Complete")]
+        DefaultValue = CharacterActionAuthoringRules.DefaultLifecycleTransitionText)]
     [BtsmtlSkillAuthoringField(
         "reason",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     public sealed class BtsmtlSkillSubmitActionLifecycleFlowNode : BtsmtlSkillFlowNode, ISubmitActionLifecycleAuthoring
     {
         [SerializeField] ActionContextSlot m_ActionContext;
-        [SerializeField] ActionLifecycleTransitionType m_TransitionType = ActionLifecycleTransitionType.Complete;
+        [SerializeField] ActionLifecycleTransitionType m_TransitionType = CharacterActionAuthoringRules.DefaultLifecycleTransition;
         [SerializeField] string m_Reason;
         public ActionContextSlot ActionContext => m_ActionContext;
         public ActionLifecycleTransitionType TransitionType => m_TransitionType;

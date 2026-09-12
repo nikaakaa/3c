@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         ActionContextSlot m_ActionContext;
 
         [SerializeField, ShowInPanel("Transition Type")]
-        ActionLifecycleTransitionType m_TransitionType = ActionLifecycleTransitionType.Complete;
+        ActionLifecycleTransitionType m_TransitionType = CharacterActionAuthoringRules.DefaultLifecycleTransition;
 
         [SerializeField, ShowInPanel("Reason")]
         string m_Reason;

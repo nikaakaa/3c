@@ -77,7 +77,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !string.Equals(variable.ID, id, StringComparison.Ordinal))
                     variable = CreateEditorVariable(declaration);
                 else
+                {
+                    variable.name = declaration.DisplayName;
                     variable.value = DefaultValue(declaration);
+                }
                 next.Add(id, variable);
             }
 

@@ -48,7 +48,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         "actionProfile",
         BtsmtlSkillNodeAuthoringReferenceKind.ActionProfile,
         "skill_action_profile_unresolved",
-        "Skill CanActivate节点的ActionProfile引用无法解析。")]
+        "Skill CanActivate节点的ActionProfile引用无法解析。",
+        typeof(ActionProfile))]
     [BtsmtlSkillAuthoringField(
         "actionProfile",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]

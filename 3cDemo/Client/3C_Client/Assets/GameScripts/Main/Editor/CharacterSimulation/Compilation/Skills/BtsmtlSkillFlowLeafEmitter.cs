@@ -90,10 +90,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillLoopFlowNode loop => new CharacterSimulationNodeEmission(SimulationOperationCode.Loop, integer0: (int)Field<BtsmtlSkillLoopFlowNode, BtsmtlSkillLoopStopType>(loop, "stopType")),
             BtsmtlSkillTimelineHookFlowNode hook => new CharacterSimulationNodeEmission(SimulationOperationCode.TimelineEnter, integer0: (int)hook.Hook),
             BtsmtlSkillTimelineFlowNode timeline => new CharacterSimulationNodeEmission(SimulationOperationCode.Timeline,
-                integer0: (int)Field<BtsmtlSkillTimelineFlowNode, TimelinePlaybackMode>(timeline, "playbackMode"), text0: Field<BtsmtlSkillTimelineFlowNode, string>(timeline, "timelineId"),
+                integer0: (int)Field<BtsmtlSkillTimelineFlowNode, TimelinePlaybackMode>(timeline, "playbackMode"), text0: Identity(timeline, "timelineId"),
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillTimelineFlowNode, ActionContextSlot>(timeline, "actionContext"))))),
-            BtsmtlSkillStateMachineFlowNode machine => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: Field<BtsmtlSkillStateMachineFlowNode, string>(machine, "graphId")),
-            BtsmtlSkillStateFlowNode state => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: Field<BtsmtlSkillStateFlowNode, string>(state, "bodyGraphId")),
+            BtsmtlSkillStateMachineFlowNode machine => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: Identity(machine, "graphId")),
+            BtsmtlSkillStateFlowNode state => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: Identity(state, "bodyGraphId")),
             BtsmtlSkillSequenceFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Sequence),
             BtsmtlSkillSelectorFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Selector),
             BtsmtlSkillParallelFlowNode parallel => new CharacterSimulationNodeEmission(SimulationOperationCode.Parallel, integer0: (int)Field<BtsmtlSkillParallelFlowNode, BtsmtlSkillParallelMode>(parallel, "mode")),
@@ -161,6 +161,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             (TValue)BtsmtlSkillGraphAuthoringMetadata.ReadField(
                 (FlowNode)(object)node,
                 fieldId);
+
+        static string Identity(FlowNode node, string fieldId) =>
+            BtsmtlSkillGraphAuthoringMetadata.ReadIdentity(node, fieldId);
 
         static CharacterSimulationNodeEmission CanActivate(
             BtsmtlSkillCanActivateActionFlowNode node)

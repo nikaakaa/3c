@@ -822,11 +822,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                 case "factContext" when node is BtsmtlSkillBlackboardAccessFlowNode blackboard:
                     return blackboard.FactContext;
                 case "graphId" when node is BtsmtlSkillStateMachineFlowNode stateMachine:
-                    return stateMachine.StateMachine?.AuthoringId ?? string.Empty;
+                    return stateMachine.StateMachine;
                 case "bodyGraphId" when node is BtsmtlSkillStateFlowNode state:
-                    return state.Body?.AuthoringId ?? string.Empty;
+                    return state.Body;
                 case "timelineId" when node is BtsmtlSkillTimelineFlowNode timeline:
-                    return timeline.TimelineAsset?.Data?.AuthoringId ?? string.Empty;
+                    return timeline.TimelineAsset;
                 case "timelineOwnership" when node is BtsmtlSkillTimelineFlowNode timeline:
                     return timeline.Ownership;
                 case "actionContext" when node is BtsmtlSkillTimelineFlowNode timeline:

@@ -122,11 +122,17 @@ namespace ThirdPersonCharacter.Control.Authoring
                 .Select(value => new GraphAuthoringTypedPropertyValue(
                     value.Field.FieldId,
                     value.Field.ValueKind,
-                    value.CanonicalValue))
+                    value.Field.ValueKind == GraphAuthoringFieldValueKind.IdentityReference ||
+                    value.Field.ValueKind == GraphAuthoringFieldValueKind.AssetReference
+                        ? BtsmtlSkillAuthoringValues.IdentityOf(value.Value)
+                        : value.CanonicalValue))
                 .ToArray();
 
         public static object ReadField(FlowNode node, string fieldId) =>
             BtsmtlSkillAuthoringValues.ReadField(node, fieldId);
+
+        public static string ReadIdentity(FlowNode node, string fieldId) =>
+            BtsmtlSkillAuthoringValues.IdentityOf(ReadField(node, fieldId));
 
         public static IReadOnlyList<BtsmtlSkillAuthoringReferenceValue> ReadReferences(
             FlowNode node) =>

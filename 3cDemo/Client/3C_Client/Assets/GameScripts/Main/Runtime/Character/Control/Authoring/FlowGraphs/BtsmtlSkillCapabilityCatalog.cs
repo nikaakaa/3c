@@ -680,7 +680,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             return BtsmtlSkillCapabilityCatalog.AuthoringReferences(node.GetType())
                 .Select(definition => new BtsmtlSkillAuthoringReferenceValue(
                     definition,
-                    ReadField(node, definition.FieldId)))
+                    ReadReferenceTarget(node, definition)))
                 .ToArray();
         }
 
@@ -694,8 +694,30 @@ namespace ThirdPersonCharacter.Control.Authoring
             return BtsmtlSkillGraphAuthoringMetadata.GraphReferences(kind)
                 .Select(definition => new BtsmtlSkillAuthoringGraphReferenceValue(
                     definition,
-                    ReadField(node, definition.FieldId)))
+                    ReadGraphReferenceTarget(node, definition)))
                 .ToArray();
+        }
+
+        static object ReadReferenceTarget(
+            FlowNode node,
+            BtsmtlSkillNodeAuthoringReferenceAttribute definition)
+        {
+            if (definition.FieldId == "timelineId" && node is BtsmtlSkillTimelineFlowNode timeline)
+                return timeline.TimelineAsset;
+            return ReadField(node, definition.FieldId);
+        }
+
+        static object ReadGraphReferenceTarget(
+            FlowNode node,
+            BtsmtlSkillGraphReferenceAttribute definition)
+        {
+            if (definition.FieldId == "graphId" && node is BtsmtlSkillStateMachineFlowNode stateMachine)
+                return stateMachine.StateMachine;
+            if (definition.FieldId == "bodyGraphId" && node is BtsmtlSkillStateFlowNode state)
+                return state.Body;
+            if (definition.FieldId == "graphId" && node is MacroNodeWrapper macro)
+                return macro.macro as BtsmtlSkillMacroGraph;
+            return ReadField(node, definition.FieldId);
         }
 
         public static string IdentityOf(object value)

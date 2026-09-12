@@ -68,64 +68,82 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawMoveFacing(FlowGraph graph, BtsmtlSkillMoveFacingAngleFlowNode node)
         {
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (!string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(owner))
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (!string.Equals(owner, currentOwner, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(owner))
                 Change(graph, "修改Character State引用", () => node.Configure(owner));
         }
 
         static void DrawGameplayTag(FlowGraph graph, BtsmtlSkillGameplayTagFlowNode node)
         {
-            string id = EditorGUILayout.DelayedTextField("Tag ID", node.Tag.Value);
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (!string.Equals(id, node.Tag.Value, StringComparison.Ordinal) ||
-                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+            string currentId = Read<string>(node, "tagId");
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            string id = EditorGUILayout.DelayedTextField("Tag ID", currentId);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (!string.Equals(id, currentId, StringComparison.Ordinal) ||
+                !string.Equals(owner, currentOwner, StringComparison.Ordinal))
                 Change(graph, "修改Gameplay Tag引用", () => node.Configure(new GameplayTagId(id), owner));
         }
 
         static void DrawGameplayTagQuery(FlowGraph graph, BtsmtlSkillGameplayTagQueryFlowNode node)
         {
-            string all = EditorGUILayout.DelayedTextField("All Tags", JoinTags(node.Query.All));
-            string any = EditorGUILayout.DelayedTextField("Any Tags", JoinTags(node.Query.Any));
-            string none = EditorGUILayout.DelayedTextField("None Tags", JoinTags(node.Query.None));
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (!string.Equals(all, JoinTags(node.Query.All), StringComparison.Ordinal) ||
-                !string.Equals(any, JoinTags(node.Query.Any), StringComparison.Ordinal) ||
-                !string.Equals(none, JoinTags(node.Query.None), StringComparison.Ordinal) ||
-                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+            GameplayTagQuery currentQuery = Read<GameplayTagQuery>(node, "query");
+            string currentAll = JoinTags(currentQuery?.All);
+            string currentAny = JoinTags(currentQuery?.Any);
+            string currentNone = JoinTags(currentQuery?.None);
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            string all = EditorGUILayout.DelayedTextField("All Tags", currentAll);
+            string any = EditorGUILayout.DelayedTextField("Any Tags", currentAny);
+            string none = EditorGUILayout.DelayedTextField("None Tags", currentNone);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (!string.Equals(all, currentAll, StringComparison.Ordinal) ||
+                !string.Equals(any, currentAny, StringComparison.Ordinal) ||
+                !string.Equals(none, currentNone, StringComparison.Ordinal) ||
+                !string.Equals(owner, currentOwner, StringComparison.Ordinal))
                 Change(graph, "修改Gameplay Tag Query", () => node.Configure(
                     new GameplayTagQuery(ParseTags(all), ParseTags(any), ParseTags(none)), owner));
         }
 
         static void DrawGameplayAttribute(FlowGraph graph, BtsmtlSkillGameplayAttributeFlowNode node)
         {
-            string id = EditorGUILayout.DelayedTextField("Attribute ID", node.Attribute.Value);
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (!string.Equals(id, node.Attribute.Value, StringComparison.Ordinal) ||
-                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+            string currentId = Read<string>(node, "attributeId");
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            string id = EditorGUILayout.DelayedTextField("Attribute ID", currentId);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (!string.Equals(id, currentId, StringComparison.Ordinal) ||
+                !string.Equals(owner, currentOwner, StringComparison.Ordinal))
                 Change(graph, "修改Gameplay Attribute引用", () => node.Configure(new GameplayAttributeId(id), owner));
         }
 
         static void DrawApplyGameplayEffect(FlowGraph graph, BtsmtlSkillApplyGameplayEffectFlowNode node)
         {
-            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", node.Effect, typeof(GameplayEffectDefinition));
-            ActionContextSlot context = ObjectField("Action Context", node.ActionContext, typeof(ActionContextSlot));
-            bool predicted = EditorGUILayout.Toggle("Predicted", node.Predicted);
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (effect != node.Effect || context != node.ActionContext || predicted != node.Predicted ||
-                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+            GameplayEffectDefinition currentEffect = Read<GameplayEffectDefinition>(node, "effect");
+            ActionContextSlot currentContext = Read<ActionContextSlot>(node, "actionContext");
+            bool currentPredicted = Read<bool>(node, "predicted");
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", currentEffect, typeof(GameplayEffectDefinition));
+            ActionContextSlot context = ObjectField("Action Context", currentContext, typeof(ActionContextSlot));
+            bool predicted = EditorGUILayout.Toggle("Predicted", currentPredicted);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (effect != currentEffect || context != currentContext || predicted != currentPredicted ||
+                !string.Equals(owner, currentOwner, StringComparison.Ordinal))
                 Change(graph, "修改Gameplay Effect应用", () => node.Configure(effect, context, predicted, owner));
         }
 
         static void DrawRemoveGameplayEffect(FlowGraph graph, BtsmtlSkillRemoveGameplayEffectFlowNode node)
         {
-            GameplayEffectRemoveSelector selector = (GameplayEffectRemoveSelector)EditorGUILayout.EnumPopup("Selector", node.Selector);
-            long handleValue = EditorGUILayout.LongField("Handle", (long)node.Handle);
+            GameplayEffectRemoveSelector currentSelector = Read<GameplayEffectRemoveSelector>(node, "selector");
+            ulong currentHandle = Read<ulong>(node, "handle");
+            GameplayEffectDefinition currentEffect = Read<GameplayEffectDefinition>(node, "effect");
+            string currentOwner = Read<string>(node, "providerOwnerId");
+            GameplayEffectRemoveSelector selector = (GameplayEffectRemoveSelector)EditorGUILayout.EnumPopup("Selector", currentSelector);
+            long handleValue = EditorGUILayout.LongField("Handle", (long)currentHandle);
             ulong handle = handleValue < 0 ? 0UL : (ulong)handleValue;
-            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", node.Effect, typeof(GameplayEffectDefinition));
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (selector != node.Selector || handle != node.Handle || effect != node.Effect ||
-                !string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
-                Change(graph, "修改Gameplay Effect移除", () => node.Configure(selector, handle, effect, node.EffectTagQuery, owner));
+            GameplayEffectDefinition effect = ObjectField("Gameplay Effect", currentEffect, typeof(GameplayEffectDefinition));
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (selector != currentSelector || handle != currentHandle || effect != currentEffect ||
+                !string.Equals(owner, currentOwner, StringComparison.Ordinal))
+                Change(graph, "修改Gameplay Effect移除", () => node.Configure(selector, handle, effect, Read<GameplayTagQuery>(node, "query"), owner));
         }
 
         static string JoinTags(IReadOnlyList<GameplayTagId> tags) =>
@@ -139,50 +157,59 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawLoop(FlowGraph graph, BtsmtlSkillLoopFlowNode node)
         {
-            var value = (BtsmtlSkillLoopStopType)EditorGUILayout.EnumPopup("停止方式", node.StopType);
-            if (value != node.StopType)
+            BtsmtlSkillLoopStopType current = Read<BtsmtlSkillLoopStopType>(node, "stopType");
+            var value = (BtsmtlSkillLoopStopType)EditorGUILayout.EnumPopup("停止方式", current);
+            if (value != current)
                 Change(graph, "修改技能循环", () => node.SetStopType(value));
         }
 
         static void DrawCause(FlowGraph graph, BtsmtlSkillStateExitCauseFlowNode node)
         {
-            var value = (BtsmtlSkillStateExitCause)EditorGUILayout.EnumPopup("退出原因", node.Cause);
-            if (value != node.Cause)
+            BtsmtlSkillStateExitCause current = Read<BtsmtlSkillStateExitCause>(node, "cause");
+            var value = (BtsmtlSkillStateExitCause)EditorGUILayout.EnumPopup("退出原因", current);
+            if (value != current)
                 Change(graph, "修改状态退出原因", () => node.SetCause(value));
         }
 
         static void DrawContextActive(FlowGraph graph, BtsmtlSkillActionContextActiveFlowNode node)
         {
-            ActionContextSlot value = ObjectField("动作上下文", node.ActionContext, typeof(ActionContextSlot));
-            if (value != node.ActionContext)
+            ActionContextSlot current = Read<ActionContextSlot>(node, "actionContext");
+            ActionContextSlot value = ObjectField("动作上下文", current, typeof(ActionContextSlot));
+            if (value != current)
                 Change(graph, "修改动作上下文", () => node.SetActionContext(value));
         }
 
         static void DrawWindow(FlowGraph graph, BtsmtlSkillActionWindowActiveFlowNode node)
         {
-            string value = EditorGUILayout.DelayedTextField("窗口类型", node.WindowType);
-            if (!string.Equals(value, node.WindowType, StringComparison.Ordinal))
+            string current = Read<string>(node, "windowType");
+            string value = EditorGUILayout.DelayedTextField("窗口类型", current);
+            if (!string.Equals(value, current, StringComparison.Ordinal))
                 Change(graph, "修改动作窗口", () => node.SetWindowType(value));
         }
 
         static void DrawAdmission(FlowGraph graph, BtsmtlSkillCanActivateActionFlowNode node)
         {
-            ActionProfile profile = ObjectField("动作配置", node.ActionProfile, typeof(ActionProfile));
-            string declarationId = EditorGUILayout.DelayedTextField("目标声明", node.TargetSnapshotDeclarationId);
-            string ownerId = EditorGUILayout.DelayedTextField("声明作用域", node.TargetSnapshotOwnerId);
-            if (profile != node.ActionProfile ||
-                !string.Equals(declarationId, node.TargetSnapshotDeclarationId, StringComparison.Ordinal) ||
-                !string.Equals(ownerId, node.TargetSnapshotOwnerId, StringComparison.Ordinal))
+            ActionProfile currentProfile = Read<ActionProfile>(node, "actionProfile");
+            BtsmtlSkillTargetSnapshotReference currentSnapshot = Read<BtsmtlSkillTargetSnapshotReference>(node, "targetSnapshot");
+            ActionProfile profile = ObjectField("动作配置", currentProfile, typeof(ActionProfile));
+            string declarationId = EditorGUILayout.DelayedTextField("目标声明", currentSnapshot.DeclarationId);
+            string ownerId = EditorGUILayout.DelayedTextField("声明作用域", currentSnapshot.OwnerId);
+            if (profile != currentProfile ||
+                !string.Equals(declarationId, currentSnapshot.DeclarationId, StringComparison.Ordinal) ||
+                !string.Equals(ownerId, currentSnapshot.OwnerId, StringComparison.Ordinal))
                 Change(graph, "修改动作准入", () => node.Configure(profile, declarationId, ownerId));
         }
 
         static void DrawLifecycle(FlowGraph graph, BtsmtlSkillSubmitActionLifecycleFlowNode node)
         {
-            ActionContextSlot context = ObjectField("动作上下文", node.ActionContext, typeof(ActionContextSlot));
-            var transition = (ActionLifecycleTransitionType)EditorGUILayout.EnumPopup("生命周期", node.TransitionType);
-            string reason = EditorGUILayout.DelayedTextField("原因", node.Reason);
-            if (context != node.ActionContext || transition != node.TransitionType ||
-                !string.Equals(reason, node.Reason, StringComparison.Ordinal))
+            ActionContextSlot currentContext = Read<ActionContextSlot>(node, "actionContext");
+            ActionLifecycleTransitionType currentTransition = Read<ActionLifecycleTransitionType>(node, "transitionType");
+            string currentReason = Read<string>(node, "reason");
+            ActionContextSlot context = ObjectField("动作上下文", currentContext, typeof(ActionContextSlot));
+            var transition = (ActionLifecycleTransitionType)EditorGUILayout.EnumPopup("生命周期", currentTransition);
+            string reason = EditorGUILayout.DelayedTextField("原因", currentReason);
+            if (context != currentContext || transition != currentTransition ||
+                !string.Equals(reason, currentReason, StringComparison.Ordinal))
                 Change(graph, "修改动作生命周期", () => node.Configure(context, transition, reason));
         }
 
@@ -199,10 +226,12 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawInput(FlowGraph graph, IBtsmtlSkillInputNode node)
         {
-            string value = EditorGUILayout.DelayedTextField("输入身份", node.InputId);
-            string owner = EditorGUILayout.DelayedTextField("Provider Owner", node.ProviderOwnerId);
-            if (string.Equals(value, node.InputId, StringComparison.Ordinal) &&
-                string.Equals(owner, node.ProviderOwnerId, StringComparison.Ordinal))
+            string currentInputId = Read<string>((FlowNode)node, "inputId");
+            string currentOwner = Read<string>((FlowNode)node, "providerOwnerId");
+            string value = EditorGUILayout.DelayedTextField("输入身份", currentInputId);
+            string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
+            if (string.Equals(value, currentInputId, StringComparison.Ordinal) &&
+                string.Equals(owner, currentOwner, StringComparison.Ordinal))
                 return;
             if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(owner))
                 return;
@@ -233,9 +262,10 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawBlackboardRead<T>(FlowGraph graph, BtsmtlSkillBlackboardReadFlowNode<T> node)
         {
-            BtsmtlSkillBlackboardReference value = Reference(node.Variable);
-            if (value.DeclarationId == node.Variable.DeclarationId &&
-                value.OwnerId == node.Variable.OwnerId)
+            BtsmtlSkillBlackboardReference current = ReadBlackboardReference(node);
+            BtsmtlSkillBlackboardReference value = Reference(current);
+            if (value.DeclarationId == current.DeclarationId &&
+                value.OwnerId == current.OwnerId)
                 return;
             if (!value.IsValid)
                 return;
@@ -244,17 +274,20 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawBlackboardAccess(FlowGraph graph, BtsmtlSkillBlackboardAccessFlowNode node)
         {
-            BtsmtlSkillBlackboardReference variable = Reference(node.Variable);
-            var valueType = (BtsmtlSkillBlackboardValueType)EditorGUILayout.EnumPopup("值类型", node.DeclaredType);
+            BtsmtlSkillBlackboardReference currentVariable = ReadBlackboardReference(node);
+            BtsmtlSkillBlackboardReference variable = Reference(currentVariable);
+            BtsmtlSkillBlackboardValueType currentType = Read<BtsmtlSkillBlackboardValueType>(node, "valueType");
+            var valueType = (BtsmtlSkillBlackboardValueType)EditorGUILayout.EnumPopup("值类型", currentType);
+            UnityEngine.Object currentFactContext = Read<UnityEngine.Object>(node, "factContext");
             UnityEngine.Object factContext = EditorGUILayout.ObjectField(
                 "事实上下文",
-                node.FactContext,
+                currentFactContext,
                 typeof(UnityEngine.Object),
                 false);
-            if (variable.DeclarationId == node.Variable.DeclarationId &&
-                variable.OwnerId == node.Variable.OwnerId &&
-                valueType == node.DeclaredType &&
-                factContext == node.FactContext)
+            if (variable.DeclarationId == currentVariable.DeclarationId &&
+                variable.OwnerId == currentVariable.OwnerId &&
+                valueType == currentType &&
+                factContext == currentFactContext)
                 return;
             if (!variable.IsValid)
                 return;
@@ -263,38 +296,49 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawTimeline(FlowGraph graph, BtsmtlSkillTimelineFlowNode node)
         {
-            TimelineAsset timeline = ObjectField("Timeline", node.TimelineAsset, typeof(TimelineAsset));
-            var ownership = (BtsmtlSkillTimelineOwnership)EditorGUILayout.EnumPopup("所有权", node.Ownership);
-            ActionContextSlot context = ObjectField("动作上下文", node.ActionContext, typeof(ActionContextSlot));
-            var playback = (TimelinePlaybackMode)EditorGUILayout.EnumPopup("播放模式", node.PlaybackMode);
-            if (timeline != node.TimelineAsset || ownership != node.Ownership ||
-                context != node.ActionContext || playback != node.PlaybackMode)
+            TimelineAsset currentTimeline = ReadReference<TimelineAsset>(node, "timelineId");
+            TimelineAsset timeline = ObjectField("Timeline", currentTimeline, typeof(TimelineAsset));
+            BtsmtlSkillTimelineOwnership currentOwnership = Read<BtsmtlSkillTimelineOwnership>(node, "timelineOwnership");
+            ActionContextSlot currentContext = Read<ActionContextSlot>(node, "actionContext");
+            TimelinePlaybackMode currentPlayback = Read<TimelinePlaybackMode>(node, "playbackMode");
+            var ownership = (BtsmtlSkillTimelineOwnership)EditorGUILayout.EnumPopup("所有权", currentOwnership);
+            ActionContextSlot context = ObjectField("动作上下文", currentContext, typeof(ActionContextSlot));
+            var playback = (TimelinePlaybackMode)EditorGUILayout.EnumPopup("播放模式", currentPlayback);
+            if (timeline != currentTimeline || ownership != currentOwnership ||
+                context != currentContext || playback != currentPlayback)
                 Change(graph, "修改技能Timeline", () => node.Configure(timeline, ownership, context, playback));
-            if (node.TimelineAsset && GUILayout.Button("打开Timeline编辑器"))
+            if (currentTimeline && GUILayout.Button("打开Timeline编辑器"))
             {
                 var observation = graph.editorObservation as IBtsmtlSkillObservationControls;
                 observation?.NotifyTimelineOpening(node);
-                try { AssetDatabase.OpenAsset(node.TimelineAsset); }
+                try { AssetDatabase.OpenAsset(currentTimeline); }
                 finally { observation?.NotifyTimelineOpening(null); }
             }
         }
 
         static void DrawLocomotion(FlowGraph graph, BtsmtlSkillLocomotionFlowNode node)
         {
-            float moveSpeed = EditorGUILayout.FloatField("移动速度", node.MoveSpeed);
-            var displacement = (LocomotionInputMotionDisplacementMode)EditorGUILayout.EnumPopup("位移模式", node.DisplacementMode);
-            RootMotionCurveAsset curve = ObjectField("动作曲线", node.ActionMotionCurve, typeof(RootMotionCurveAsset));
-            float turnSpeed = EditorGUILayout.FloatField("转向速度", node.TurnSpeedDegrees);
-            bool cameraRelative = EditorGUILayout.Toggle("相机相对", node.CameraRelative);
-            var execution = (LocomotionInputMotionExecutionMode)EditorGUILayout.EnumPopup("执行模式", node.ExecutionMode);
-            float duration = EditorGUILayout.FloatField("持续时间", node.DurationSeconds);
-            if (!Mathf.Approximately(moveSpeed, node.MoveSpeed) ||
-                displacement != node.DisplacementMode ||
-                curve != node.ActionMotionCurve ||
-                !Mathf.Approximately(turnSpeed, node.TurnSpeedDegrees) ||
-                cameraRelative != node.CameraRelative ||
-                execution != node.ExecutionMode ||
-                !Mathf.Approximately(duration, node.DurationSeconds))
+            float currentMoveSpeed = Read<float>(node, "moveSpeed");
+            LocomotionInputMotionDisplacementMode currentDisplacement = Read<LocomotionInputMotionDisplacementMode>(node, "displacementMode");
+            RootMotionCurveAsset currentCurve = Read<RootMotionCurveAsset>(node, "actionMotionCurve");
+            float currentTurnSpeed = Read<float>(node, "turnSpeedDegrees");
+            bool currentCameraRelative = Read<bool>(node, "cameraRelative");
+            LocomotionInputMotionExecutionMode currentExecution = Read<LocomotionInputMotionExecutionMode>(node, "executionMode");
+            float currentDuration = Read<float>(node, "durationSeconds");
+            float moveSpeed = EditorGUILayout.FloatField("移动速度", currentMoveSpeed);
+            var displacement = (LocomotionInputMotionDisplacementMode)EditorGUILayout.EnumPopup("位移模式", currentDisplacement);
+            RootMotionCurveAsset curve = ObjectField("动作曲线", currentCurve, typeof(RootMotionCurveAsset));
+            float turnSpeed = EditorGUILayout.FloatField("转向速度", currentTurnSpeed);
+            bool cameraRelative = EditorGUILayout.Toggle("相机相对", currentCameraRelative);
+            var execution = (LocomotionInputMotionExecutionMode)EditorGUILayout.EnumPopup("执行模式", currentExecution);
+            float duration = EditorGUILayout.FloatField("持续时间", currentDuration);
+            if (!Mathf.Approximately(moveSpeed, currentMoveSpeed) ||
+                displacement != currentDisplacement ||
+                curve != currentCurve ||
+                !Mathf.Approximately(turnSpeed, currentTurnSpeed) ||
+                cameraRelative != currentCameraRelative ||
+                execution != currentExecution ||
+                !Mathf.Approximately(duration, currentDuration))
                 Change(graph, "修改技能移动", () => node.Configure(
                     moveSpeed,
                     displacement,
@@ -309,6 +353,15 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             string declarationId = EditorGUILayout.DelayedTextField("声明身份", current.DeclarationId);
             string ownerId = EditorGUILayout.DelayedTextField("作用域身份", current.OwnerId);
+            return string.IsNullOrWhiteSpace(declarationId) || string.IsNullOrWhiteSpace(ownerId)
+                ? default
+                : new BtsmtlSkillBlackboardReference(declarationId, ownerId);
+        }
+
+        static BtsmtlSkillBlackboardReference ReadBlackboardReference(FlowNode node)
+        {
+            string declarationId = Read<string>(node, "declarationId");
+            string ownerId = Read<string>(node, "ownerId");
             return string.IsNullOrWhiteSpace(declarationId) || string.IsNullOrWhiteSpace(ownerId)
                 ? default
                 : new BtsmtlSkillBlackboardReference(declarationId, ownerId);
@@ -344,6 +397,14 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static T ObjectField<T>(string label, T value, Type type) where T : UnityEngine.Object =>
             (T)EditorGUILayout.ObjectField(label, value, type, false);
+
+        static TValue Read<TValue>(FlowNode node, string fieldId) =>
+            (TValue)BtsmtlSkillGraphAuthoringMetadata.ReadField(node, fieldId);
+
+        static T ReadReference<T>(FlowNode node, string fieldId) where T : UnityEngine.Object =>
+            BtsmtlSkillGraphAuthoringMetadata.ReadReferences(node)
+                .SingleOrDefault(value => value.Definition.FieldId == fieldId)
+                .Target as T;
 
         static void Change(FlowGraph graph, string title, Action mutation)
         {

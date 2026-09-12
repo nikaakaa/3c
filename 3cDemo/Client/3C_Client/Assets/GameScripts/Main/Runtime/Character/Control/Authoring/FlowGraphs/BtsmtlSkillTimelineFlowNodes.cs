@@ -19,6 +19,12 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillAuthoringField(
         "timelineId",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+    [BtsmtlSkillNodeAuthoringReference(
+        "timelineId",
+        BtsmtlSkillNodeAuthoringReferenceKind.Asset,
+        "skill_timeline_unresolved",
+        "Skill Timeline引用无法解析。",
+        typeof(TimelineAsset))]
     [BtsmtlSkillAuthoringField("timelineOwnership", typeof(BtsmtlSkillTimelineOwnership))]
     [BtsmtlSkillNodeAuthoringReference(
         "actionContext",

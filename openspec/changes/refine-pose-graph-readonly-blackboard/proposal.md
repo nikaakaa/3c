@@ -1,6 +1,6 @@
 # Change: 整理PoseGraph只读Blackboard与输入范围
 
-修订：r2，2026-09-13。按用户广播`2026-09-13-authoring-r2-plan`对齐[原生C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)。本轮只更新规划；原实现勾选不变，新增迁移任务保持未完成。
+修订：r2，2026-09-13。按用户广播`2026-09-13-authoring-r2-plan`对齐[原生C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)。规划快照已按当前实现结果对账；任务完成状态以`tasks.md`和`execution.md`为准。
 
 ## Why
 
@@ -42,7 +42,7 @@
 
 - EventGraph正式规划由独立窗口维护，现以[add-flowcanvas-event-graph](../add-flowcanvas-event-graph/design.md)及本次广播为共同基线：事件图原生执行，唯一拥有声明、更新、Contract/Layout/Frame；本任务消费它们，不另设运行模式。
 - 共享变量采用Float、Int32、Bool精确类型；Get、条件、BlendSpace使用相同图/变量身份和唯一布局，校验实例、表现采样、Simulation tick、Reset代际和版本。消费者结束前输出不得被重写。
-- Source Pending不回退已成功更新的事件图状态；Pose仍遵守原提交规则。全部运行和完整Preview消费签名迁移完成后，事件图任务才删除CharacterPresentationProgramParameterFrame及旧生产方法；不补默认motor值。
+- Source Pending不回退已成功更新的事件图状态；Pose仍遵守原提交规则。运行和完整Preview消费签名已迁移，旧CharacterPresentationProgramParameterFrame及旧生产方法已删除；不补默认motor值。
 - C# authoring任务拥有两个显式工具、公共代码输出/生成入口和Agent Mapper/DTO退役；事件图任务拥有HostEventGraph原生操作API；本任务拥有CharacterPoseGraphAuthoringAdapter、Pose Mutation、输入合同及消费文件的对应调用修改。
 - 曲线来源分类、已有作者显示和Body内部依赖可以在其自身合同内推进，但不能把只隐藏UI描述为完整迁移，也不能把未完成接口从本change范围中删掉。
 - Foot权重继续只控制既有Goal可见权重，不释放Anchor、清空历史或改变Landing Reach准入。

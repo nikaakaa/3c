@@ -54,17 +54,17 @@ Pose MUST提供正式对象、配置、曲线、布局、动态端口、资源�
 - **THEN** 节点、稳定Get引用、曲线、布局、动态端口和内部引用 MUST由新对象完整恢复，并挂回指定Profile/Definition
 - **AND** 外部资源 MUST保持明确外部引用，旧生成子资产GUID不得成为内容来源
 
-#### Scenario: Pose修改事件图内容
+#### Scenario: Pose绑定事件图输入
 
-- **WHEN** Pose作者入口需要修改关联事件图
-- **THEN** CharacterPoseGraphAuthoringAdapter MUST调用事件图正式原生操作API并保留领域修改规则
-- **AND** MUST不经AgentAuthoringEventGraphDocumentMapper.Map调用ApplyAuthoringDocument，不构造替代Document模型
+- **WHEN** Pose作者面打开已绑定的 Character Animation Event Graph
+- **THEN** Pose MUST只读取该事件图的唯一变量 Contract/Layout/Frame，并通过正式 Profile 引用保持同一动画宿主
+- **AND** EventGraph内容修改 MUST由其原生作者API或公共 C# authoring入口负责，Pose Mutation MUST不携带Agent DTO或替代Document模型
 
 ### Requirement: 运行与完整Preview必须共享动画宿主和变量合同
 
 完整Pose/角色Preview MUST沿运行相同的动画宿主和唯一变量Contract/Layout/Frame消费，不创建Preview私有变量更新器或默认motor输入。单资源查看 MUST使用原正式资源调参合同，不要求构造完整角色，也不保留CharacterPresentationProgramParameterFrame.FromDirect作为兼容桥。
 
-Pose消费侧 MUST先迁移全部运行、Get、条件、BlendSpace与Preview旧签名，事件图任务才能删除CharacterPresentationProgramParameterFrame及旧生产方法。观察窗口仍不拥有播放时钟或第二Pose执行器。
+Pose消费侧已迁移全部运行、Get、条件、BlendSpace与Preview旧签名，旧CharacterPresentationProgramParameterFrame及旧生产方法不得重新引入。观察窗口仍不拥有播放时钟或第二Pose执行器。
 
 #### Scenario: 角色预览读取作者变量
 

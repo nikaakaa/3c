@@ -26,7 +26,7 @@
 | 本任务 | CharacterPoseGraphAuthoringAdapter.cs、Pose类型化Mutation、CharacterAnimationInputContract、Get/条件/BlendSpace、运行与Preview输入消费文件和Pose正式读取/配置能力 |
 | C# authoring任务 | export_code/generate_assets两个显式MCP、公共对象到代码输出、生成入口及Agent Mapper/DTO/协议退役；输出薄适配消费正式Pose能力 |
 
-当前`CharacterPoseGraphAuthoringAdapter.ApplyEventGraphMutation`的内容分支仍经`AgentAuthoringEventGraphDocumentMapper.Map`调用`ApplyAuthoringDocument`。这是待删除的现状，不是正式公共接口。本任务将该调用及Pose Mutation中的Agent载荷替换为事件图任务提供的正式原生操作API；HostEventGraph的API实现仍由事件图任务修改，Agent Mapper/DTO删除由C# authoring任务负责。API未接通前不能只移除using后另建一份Pose Document DTO。
+`CharacterPoseGraphAuthoringAdapter`已不再拥有或执行事件图内容 Mutation；Pose 只通过 Profile 的正式事件图引用消费唯一 Contract/Layout/Frame。事件图内容由 `HostEventGraph` 原生 API 和公共 C# authoring 入口负责，Pose Mutation 不携带 Agent DTO 或替代 Document 模型。
 
 保留正式Pose类型化修改、Node Definition、Port Shape和领域校验。旧Agent Document、五生命周期、专属Validator、Exporter/Reconciler与反向导出不再成为创建、保存、导出或生成的前置条件。只存在旧Agent层的必要业务规则归回现有Pose修改或编译入口，不增加中央Validator、整包同步事务、反射私有字段或第二Pose模型。
 
@@ -70,7 +70,7 @@ Body内FootPlacement Weight读取指定输入Pose经过上游正式混合后的�
 
 单AnimationClip/BlendSpace等资源查看使用原正式资源调参合同，不能为缺少角色变量帧补默认motor值，也不强迫单资源工具构造完整角色/事件图。两类入口按业务目的区分；不得以保留CharacterPresentationProgramParameterFrame.FromDirect作为资源Preview长期兼容路径。
 
-本任务迁移CharacterSimulationPresentationRuntime、Pose帧协调、Program/StateSource/BlendSpace、条件/Get及AnimationPreviewEngine等全部旧消费签名。旧类型和FromBody/FromFact/FromDirect等生产方法由事件图任务在所有消费引用消失后删除；本任务不抢先删除生产者、不复制同名替代类型。执行记录保留精确迁移文件清单和剩余引用。
+本任务已迁移CharacterSimulationPresentationRuntime、Pose帧协调、Program/StateSource/BlendSpace、条件/Get及AnimationPreviewEngine等全部旧消费签名；旧 `CharacterPresentationProgramParameterFrame` 及其旧生产方法已无业务代码引用并完成删除。执行记录保留精确迁移文件清单和剩余引用。
 
 ## 8. 执行顺序与完成定义
 

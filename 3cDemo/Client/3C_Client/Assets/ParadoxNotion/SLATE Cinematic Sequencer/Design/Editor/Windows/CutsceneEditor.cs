@@ -1014,11 +1014,6 @@ namespace Slate
 
         //Sample the cutscene
         void OnEditorUpdate() {
-
-            if ( embeddedSurface ) {
-                return;
-            }
-
             //if cutscene playmode active, it will sample and update itself.
             if ( cutscene == null || cutscene.isActive ) {
                 return;
@@ -1069,6 +1064,7 @@ namespace Slate
 
             cutscene.currentTime += editorPlaybackState == EditorPlaybackState.PlayingForwards ? delta : -delta;
             cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, startTime, endTime);
+            RequestEmbeddedRepaint();
         }
 
 
@@ -1233,9 +1229,13 @@ namespace Slate
             centerRect = new Rect(LEFT_MARGIN, TOP_MARGIN + TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
 
             //...
-            if (!embeddedSurface)
+            DoKeyboardShortcuts();
+            if (embeddedSurface)
             {
-                DoKeyboardShortcuts();
+                ShowEmbeddedPlaybackControls(topLeftRect);
+            }
+            else
+            {
                 bool guiEnabled = GUI.enabled;
                 GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
                 ShowPlaybackControls(topLeftRect);
@@ -1626,7 +1626,7 @@ namespace Slate
         //Scrubing....
         void DoScrubControls() {
 
-            if ( !IsPlaybackAllowedFor(cutscene) ) {
+            if ( !embeddedSurface && !IsPlaybackAllowedFor(cutscene) ) {
                 return;
             }
 
@@ -1748,6 +1748,67 @@ namespace Slate
         }
 
         //top left controls
+        void ShowEmbeddedPlaybackControls(Rect topLeftRect) {
+
+            GUI.Box(topLeftRect, string.Empty, EditorStyles.toolbar);
+            var x = topLeftRect.xMin + 6;
+            var y = topLeftRect.yMin + 10;
+            var buttonSize = new Vector2(22, 20);
+
+            var autoKeyRect = new Rect(x, topLeftRect.yMin + 4, 32, 32);
+            AddCursorRect(autoKeyRect, MouseCursor.Link);
+            GUI.backgroundColor = Prefs.autoKey ? Color.black.WithAlpha(0.5f) : Color.grey.WithAlpha(0.5f);
+            GUI.Box(autoKeyRect, string.Empty, Styles.clipBoxStyle);
+            GUI.color = Prefs.autoKey ? new Color(1, 0.4f, 0.4f) : Color.white;
+            GUI.backgroundColor = Color.clear;
+            if ( GUI.Button(autoKeyRect, new GUIContent(Styles.keyIcon, "自动插入曲线关键帧"), (GUIStyle)"box") ) {
+                Prefs.autoKey = !Prefs.autoKey;
+                ShowNotification(new GUIContent(string.Format("AutoKey {0}", Prefs.autoKey ? "Enabled" : "Disabled"), Styles.keyIcon));
+                Event.current.Use();
+            }
+            var autoKeyLabelRect = autoKeyRect;
+            autoKeyLabelRect.yMin += 16;
+            GUI.backgroundColor = Color.white;
+            GUI.Label(autoKeyLabelRect, "<color=#AAAAAA>Auto</color>", Styles.centerLabel);
+            GUI.color = Color.white;
+            x += 38;
+
+            DrawEmbeddedPlaybackButton(ref x, y, buttonSize, Styles.stepReverseIcon, "上一个关键时间", StepBackward);
+            if ( editorPlaybackState == EditorPlaybackState.Stoped ) {
+                DrawEmbeddedPlaybackButton(ref x, y, buttonSize, Styles.playReverseIcon, "向后反向预览", PlayReverse);
+                DrawEmbeddedPlaybackButton(ref x, y, buttonSize, Styles.playIcon, "播放 Timeline 作者预览", () => Play());
+            }
+            else {
+                DrawEmbeddedPlaybackButton(ref x, y, new Vector2(44, 20), Styles.pauseIcon, "暂停 Timeline 作者预览", Pause);
+                x += 22;
+            }
+            DrawEmbeddedPlaybackButton(ref x, y, buttonSize, Styles.stopIcon, "停止并回到起点", () => Stop(false));
+            DrawEmbeddedPlaybackButton(ref x, y, buttonSize, Styles.stepIcon, "下一个关键时间", StepForward);
+
+            var labelRect = new Rect(x + 4, y, Mathf.Max(48, topLeftRect.xMax - x - 4), 20);
+            GUI.color = Color.white.WithAlpha(0.7f);
+            GUI.Label(labelRect, "作者预览", EditorStyles.miniLabel);
+            GUI.color = Color.white;
+            GUI.backgroundColor = Color.white;
+        }
+
+        void DrawEmbeddedPlaybackButton(
+            ref float x,
+            float y,
+            Vector2 size,
+            Texture2D icon,
+            string tooltip,
+            System.Action action) {
+
+            var rect = new Rect(x, y, size.x, size.y);
+            AddCursorRect(rect, MouseCursor.Link);
+            if ( GUI.Button(rect, new GUIContent(icon, tooltip), (GUIStyle)"box") ) {
+                action();
+                Event.current.Use();
+            }
+            x += size.x;
+        }
+
         void ShowPlaybackControls(Rect topLeftRect) {
 
             var autoKeyRect = new Rect(topLeftRect.xMin + 10, topLeftRect.yMin + 4, 32, 32);

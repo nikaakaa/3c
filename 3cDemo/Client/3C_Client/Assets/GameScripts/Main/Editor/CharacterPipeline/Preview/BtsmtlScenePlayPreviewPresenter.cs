@@ -151,14 +151,18 @@ namespace ThirdPersonCharacter.Editor.Preview
         public bool CanRestore => HasHistory &&
             IsRunningOrPaused &&
             SupportsPresentationCheckpointRestore &&
-            FindRestoreCheckpoint().CanRestore &&
-            m_RestoreTick >= 0;
+            m_RestoreTick >= 0 &&
+            TryFindRestoreCheckpoint((ulong)m_RestoreTick, out RuntimeExecutionCheckpoint selectedCheckpoint) &&
+            selectedCheckpoint.CanRestore;
         public bool CanReplay => HasHistory &&
             IsRunningOrPaused &&
             SupportsInputReplay &&
             !m_History.HasExternalResults &&
             m_ReplayFromTick >= 0 &&
-            m_ReplayToTick >= 0;
+            m_ReplayToTick >= m_ReplayFromTick &&
+            m_History.Ticks.Count != 0 &&
+            (ulong)m_ReplayFromTick >= m_History.Ticks[0].Tick &&
+            (ulong)m_ReplayToTick <= m_History.Ticks[m_History.Ticks.Count - 1].Tick;
 
         public void Refresh()
         {
@@ -241,6 +245,11 @@ namespace ThirdPersonCharacter.Editor.Preview
         {
             if (m_Operations == null || m_RestoreTick < 0)
                 return;
+            if (!CanRestore)
+            {
+                SetStatus("Restore Tick 不是当前采集中的可恢复 checkpoint，或当前运行目标不支持恢复。");
+                return;
+            }
             BtsmtlScenePlayCommandResult result = m_Operations.ResumeFromTick(checked((ulong)m_RestoreTick));
             if (result.Accepted && RuntimeDebugSession.Shared.CanResumeLiveTarget)
                 RuntimeDebugSession.Shared.ResumeLive();
@@ -251,6 +260,11 @@ namespace ThirdPersonCharacter.Editor.Preview
         {
             if (m_Operations == null || m_ReplayFromTick < 0 || m_ReplayToTick < 0)
                 return;
+            if (!CanReplay)
+            {
+                SetStatus("输入回放区间超出当前采集范围，或当前运行目标不支持输入回放。");
+                return;
+            }
             BtsmtlScenePlayCommandResult result = m_Operations.ReplayInputRange(
                 checked((ulong)m_ReplayFromTick),
                 checked((ulong)m_ReplayToTick));
@@ -460,6 +474,26 @@ namespace ThirdPersonCharacter.Editor.Preview
                 }
             }
             return checkpoint;
+        }
+
+        bool TryFindRestoreCheckpoint(ulong tick, out RuntimeExecutionCheckpoint checkpoint)
+        {
+            if (!HasHistory)
+            {
+                checkpoint = default;
+                return false;
+            }
+            for (int index = 0; index < m_History.Checkpoints.Count; index++)
+            {
+                RuntimeExecutionCheckpoint candidate = m_History.Checkpoints[index];
+                if (candidate.Tick == tick)
+                {
+                    checkpoint = candidate;
+                    return true;
+                }
+            }
+            checkpoint = default;
+            return false;
         }
 
         bool IsRunningOrPaused => Status.State == BtsmtlScenePlayState.Running ||

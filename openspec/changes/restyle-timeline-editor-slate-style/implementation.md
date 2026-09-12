@@ -49,6 +49,7 @@ TimelineEditorWindow
 - Graph Shell 与 SkillGraph 的共享 Presenter 现在显示 coordinator 的真实 Build/adoption 状态：构建中、等待采用、已采用 Epoch 或失败；这只是运行版本事实，不把作者 revision 伪装成已采用。
 - Scene Play 输入已改为正式 `SceneAsset + ContextId`，两个宿主不再要求作者拖场景里的 Context GameObject；启动时由 coordinator 按精确路径和 ContextId 打开场景、检查唯一 Context、角色列表和正式 Runtime Owner。
 - 观察区已把正式 `RuntimeDebugSession` 的诊断 Capture 与输入录制拆成两个独立按钮；Capture 使用正式 All/Continuous 合同，恢复/回放仍显示 coordinator 返回的接受与失败结果。
+- Restore 现在只允许选择当前历史中真实存在且 `CanRestore` 的 checkpoint；Input Replay 只允许落在当前采集 Tick 范围内，直接命令调用也返回对应拒绝原因。
 - Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
 - Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
 - C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。公共 binding 中剩余旧 JSON 方法由 C# authoring owner 清理。

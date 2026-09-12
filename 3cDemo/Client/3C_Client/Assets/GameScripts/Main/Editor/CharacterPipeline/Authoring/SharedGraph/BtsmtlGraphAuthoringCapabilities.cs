@@ -607,17 +607,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (type != typeof(LocomotionInputMotionNode))
                 return null;
             if (string.Equals(property, "moveSpeed", StringComparison.Ordinal))
-                return 4f;
+                return LocomotionInputMotionAuthoringRules.DefaultMoveSpeed;
             if (string.Equals(property, "displacementMode", StringComparison.Ordinal))
-                return LocomotionInputMotionDisplacementMode.ConstantSpeed.ToString();
+                return LocomotionInputMotionAuthoringRules.DefaultDisplacementMode.ToString();
             if (string.Equals(property, "turnSpeedDegrees", StringComparison.Ordinal))
-                return 720f;
+                return LocomotionInputMotionAuthoringRules.DefaultTurnSpeedDegrees;
             if (string.Equals(property, "cameraRelative", StringComparison.Ordinal))
-                return true;
+                return LocomotionInputMotionAuthoringRules.DefaultCameraRelative;
             if (string.Equals(property, "executionMode", StringComparison.Ordinal))
-                return LocomotionInputMotionExecutionMode.Once.ToString();
+                return LocomotionInputMotionAuthoringRules.DefaultExecutionMode.ToString();
             if (string.Equals(property, "durationSeconds", StringComparison.Ordinal))
-                return 0f;
+                return LocomotionInputMotionAuthoringRules.DefaultDurationSeconds;
             return null;
         }
 

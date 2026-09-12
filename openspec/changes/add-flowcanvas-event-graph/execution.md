@@ -11,6 +11,10 @@
 
 本轮继续基于最新工作树推进：公共 C# 输出入口已在 `6c80aee6` 接入事件图适配器；Pose 旧参数帧链路由 `f1dc9f9eb` 及后续预览收口提交退役。本轮没有重建已完成的旧链路，只补齐了变量帧在 Pose 收尾阶段的传递，并新增 Corin 正式事件图生成入口。C# authoring 窗口随后完成公共 Agent、Skill、Presentation 旧文档链迁出；本窗口再删除最后没有调用者的 EventGraph Document API。
 
+本次继续推进已解决上一版记录中的构建阻塞：原生 FSM 的发现、条件作用域、条件代次归属、程序来源容器和 Debug SourceMap 调用者均已按正式对象关系收口，Float32 Program 与 Presentation Projection 已在当前工作树正式生成。
+
+本次收口提交：`89084a7f9` 接通原生 FSM 编译生命周期，`4997648fa` 修复 Discovery、Program 来源和 Runtime Debug SourceMap。
+
 ## 本步已完成
 
 ### 1. 原生直接作者 API
@@ -58,7 +62,18 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 
 新增 `CorinAnimationEventGraphAuthoringCode`，recipe 为 `character.animation-event-graph.corin/v1`。入口通过公共生成上下文解析精确 Definition 和 Profile，按原生直接 API 创建或清空正式 `CharacterAnimationEventGraph`，只建立宿主必须的 Start/Update 生命周期节点并最后绑定 Profile。当前 Corin 没有由 EventGraph 写入的动画实例变量：Action Weight 由 Action Playback 负责，Foot Placement Weight 由输入 Pose source 曲线负责，避免重新生成一个无正式 owner 的第二变量。
 
-入口的 `SourceCodePath` 与公共 bridge 使用同一套项目绝对路径计算，输出路径固定为 `Assets/Configs/Character/Corin/Pipeline/Presentation/EventGraphs/CorinAnimationEventGraph.asset`。正式 `btsmtl.generate_assets` 首次创建并在 helper 收口后再次替换成功，事件图 GUID 保持为 `d90ccc65c39b2d84a8b06ef1ae46b885`，并把该引用写入 Corin Profile；Projection 尚未生成。Corin recipe 与公共导出代码共用同一个 `EnsureRoot`，不再维护单独的 `AssetDatabase.CreateAsset` 根创建实现。
+入口的 `SourceCodePath` 与公共 bridge 使用同一套项目绝对路径计算，输出路径固定为 `Assets/Configs/Character/Corin/Pipeline/Presentation/EventGraphs/CorinAnimationEventGraph.asset`。正式 `btsmtl.generate_assets` 已成功创建并替换该资产，事件图 GUID 保持为 `d90ccc65c39b2d84a8b06ef1ae46b885`，并把该引用写入 Corin Profile；随后正式 Float32/Projection 构建也已成功。Corin recipe 与公共导出代码共用同一个 `EnsureRoot`，不再维护单独的 `AssetDatabase.CreateAsset` 根创建实现。
+
+### 6. 原生 FSM 编译与 Debug SourceMap 收口
+
+为使当前正式 Skill 资产能够被唯一编译链完整消费，补齐了以下对象关系：
+
+- Discovery 遍历 `NativeStateMachine` 的 State Body 和 Edge Condition；Edge Condition 同时继承其源 State Body 的可见变量作用域，恢复 `RecoveryEarly`、`RecoveryLate`、`ComboAccept` 等条件查询。
+- Native FSM 的 Entry、Any、Exit 条件使用外层 StateMachine operation 作为代次 owner，普通 State 条件使用自己的 operation，避免把不可运行的伪状态当作执行 owner。
+- Asset 来源携带 Definition 的 `SourceRevision`；程序级 `CharacterSkillProgramBinding` 使用保留的 `Program` 来源图标识；Native edge 来源按 `edgeId` 写入 SourceMap，避免把 edge identity 错位成 clip identity。
+- Runtime Debug SourceMap 按正式 SourceMap entry 解析跨 Native FSM 图的 Edge/Node caller，不再假设 caller 一定属于父 invocation graph；缺失容器时保留完整对象定位信息。
+
+这些修复都作用在现有 Semantic IR、Program SourceMap 和 Runtime Debug 入口，没有新增旁路运行时、第二份作者模型或 fallback 来源。
 
 ## 直接 API 输入输出
 
@@ -66,12 +81,12 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 
 生成代码先通过 `EnsureRoot` 按上下文输出路径创建或替换持久化根并恢复 graph identity/revision，再创建变量/节点、配置节点和外部 Macro，随后绑定 Get/Set、建立连接。内部引用使用本次调用创建的局部对象，范围外 Macro 使用明确资产路径。
 
-## 尚未满足的闭环条件
+## 闭环结论与验收边界
 
-- EventGraph 旧 Document、Mapper 和 Presentation/Skill 旧文档调用者已经迁出；全局 `rg` 不再发现 `EventGraphAuthoringDocument`、`ApplyAuthoringDocument`、`HostEventGraphEditorMutation.ApplyDocument` 或事件图 Mapper 的调用。
+- EventGraph 旧 Document、Mapper 和 Presentation/Skill 旧文档调用者已经迁出；在 `Assets/**/*.cs` 范围内扫描不到 `EventGraphAuthoringDocument`、`ApplyAuthoringDocument`、`HostEventGraphEditorMutation.ApplyDocument` 或事件图 Mapper 的业务代码调用。变更文档和 Git 历史中的旧名称仅作为历史记录保留，不是运行路径。
 - 公共 C# authoring 任务已把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合，两个公共 MCP 均已注册并完成事件图现场验证。当前不复制公共 MCP，也不调用旧 Document MCP。
 - 固定 motor 参数桥、Pose 条件/BlendSpace/运行/Preview consumer 属于独立运行闭环，不能作为本步作者协议删除的理由，也不能因为作者 API 已有就重新引入旁路。
-- Character Float32/Projection 正式构建仍需在当前 C# authoring 清理落稳后重跑，并查明剩余 `AuthoringDiscovery` 的 `Value cannot be null (Parameter name: key)`；Corin Profile 已绑定事件图，但 Projection 是否成功生成尚未形成新的成功证据。
+- Character Float32/Projection 正式构建已经成功；Corin Profile 绑定的事件图、Pose 只读消费者和同一份 Definition SourceRevision 已进入生成产物。当前剩余的是 Unity Editor 验收边界，不是本次源码构建阻塞：Live Console 仍有 3 条既有编辑器空引用错误，尚未进入 Play Mode 或端到端回放。
 
 Corin 资产只由正式 C# generation recipe 创建；旧 EventGraph Document 路径已经删除，不再作为兼容入口恢复。
 
@@ -81,12 +96,14 @@ Corin 资产只由正式 C# generation recipe 创建；旧 EventGraph Document �
 
 - `BTSMTL.EventGraphs.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 warning，0 error。
 - `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
-- `ThirdPersonClient.Editor.csproj` Rebuild：0 error，32 个现有 ACL artifact identity warning；此前 Pose 编辑器的 3 个跨程序集可见性错误已由 Pose 任务将 `SetEditorAnimationVariables` 正式公开后清零。
+- `ThirdPersonClient.Editor.csproj` 源码构建：0 error；当前仅保留 34 个既有 ACL artifact identity warning。此前 Pose 编辑器的跨程序集可见性错误已由 Pose 任务将正式 API 公开后清零。
 - 公共 `btsmtl.export_code` 已针对 Corin EventGraph 现场执行成功；生成源码的根创建语句已确认是 `EventGraphAuthoringCode.EnsureRoot<...>(context, ...)`，随后删除验证用输出文件，没有留下第二个 authoring 入口。
-- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入并同步 Pose 状态参数校验后，最新已知结果只剩 `AuthoringDiscovery authoring_discovery_failed: Value cannot be null. Parameter name: key`；此前的 Foot Placement、State 参数和稀疏惯性化错误已消失，Projection 因发现阶段中断尚未形成生成成功证据。本窗口没有给 EventGraph 增加旁路。
-- 删除旧 EventGraph Document 后，`BTSMTL.EventGraphs.csproj` 源码构建通过：0 warning，0 error。一次完整 Runtime 构建首先命中 Unity 生成的旧 csproj 文件列表，仍引用已删除的 `EventGraphAuthoringDocument.cs`；Unity 刷新需重新生成项目文件后再复跑完整源码构建。
+- 正式 `btsmtl.generate_assets` 已成功写回 Pose 资产，`LocomotionFullBodyPoseGraph.asset` 生成诊断为 0；当前注册的作者工具只保留 `export_code`、`generate_assets` 和非 authoring 的 `scene_play`。
+- 正式 `character.build_float32_products` 最新 job `8a40f68244b34acc92b5d620e804be42` 返回成功：`Exact Float32 Program and Presentation Projection were published.` ProgramId 为 `character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`，SourceRevision 为 `aa43ee9c9f02ac8de30c6c8dc3c0cdad54f3b6defaeed1ea54bcd425ee3a6285`，SemanticHash 为 `54f5241e0aee361b758c273957bbe4f766b9b0c05ae2f82fd211ce3b0c69f7ae`，ProgramHash 为 `13b21c66820073e108c63f64eee960f70f65459e468b535f128559643be61cfe`，LayoutHash 为 `9a5b94f9c1cd9536f4dd8949be162bf02ff79d63ad6645e81c9a3815f647d874`，CanonicalBytesHash 为 `6aeffb23dd594588da85610e30e94d836a1c9609b1223df3a7a0f75ad1834f3f`。
+- 同一 job 生成的 Presentation Projection 使用相同 ProgramId、SourceRevision 和 SemanticHash，ContractHash 为 `b56b38e5bf340cb6c2876b0c291d855404167807316c683128593a18a7411a9c`，ProjectionRevision 为 `c0f3985f670358d320b6973afb6883300e9410c8a660beeb73e7976ce2bf236f`；数值配置为 `float32-ieee754`，Target ABI 为 `8`，CanonicalBytes 长度为 `2109553`。
+- 删除旧 EventGraph Document 后，`BTSMTL.EventGraphs.csproj` 源码构建通过：0 warning，0 error。历史上一次完整 Runtime 构建曾命中 Unity 生成的旧 csproj 文件列表并引用已删除的 `EventGraphAuthoringDocument.cs`；随后刷新并重新生成项目文件，当前完整 Editor 源码构建已通过。
 - Unity Editor 日志已记录本轮 Tundra 编译成功、无 C# 编译 error；域重载后出现 RendererFeature/空对象编辑器警告，属于当前编辑器状态，不是 EventGraph 编译证据。
-- Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；更新后的正式 `btsmtl.generate_assets` 成功替换事件图，磁盘复核确认 Action/Foot 变量、Set 节点和连接均已移除，Profile 仍绑定同一事件图 GUID。Projection 因上一条既有资产链诊断仍未生成。
+- Unity MCP 目标实例 `3C_Client@e852139597e42532` 当前不在 Play Mode；磁盘复核确认 Corin EventGraph 只保留正式 Start/Update 生命周期节点、无变量和连接，Profile 仍绑定同一事件图 GUID。生成的 Simulation Program 与 Presentation Projection 时间戳分别为 `2026-09-13 06:41:26` 和 `2026-09-13 06:41:29`。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。
 
-本轮没有进入 Play Mode，也没有运行端到端回放。事件图资产生成和 Profile 绑定已完成，但 Float32/Projection 构建仍被 Skill/Pose 资产链阻塞；源码构建成功、Tundra 成功和单次生成成功，都不等于 Unity Console 清洁、Projection 已更新或事件图删除重建往返已经通过。
+本轮没有进入 Play Mode，也没有运行端到端回放。源码、正式作者资产、Pose 只读消费者、Corin EventGraph/Profile 绑定以及 Float32/Projection 发布链已经闭环；Unity Console 清洁和实机端到端行为仍需用户按项目验收边界自行确认。

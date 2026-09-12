@@ -8,6 +8,7 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
 using ThirdPersonSimulation;
 using TreeDesigner.Editor;
 using UnityEditor;
@@ -31,8 +32,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public UnityEngine.Object SerializedOwner => m_Profile;
-        public IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction) =>
-            new UnityEngine.Object[] { m_Profile };
+        public IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction)
+        {
+            var owners = new List<UnityEngine.Object> { m_Profile };
+            foreach (CharacterPresentationMutation mutation in transaction?.Mutations ?? Array.Empty<CharacterPresentationMutation>())
+            {
+                if (mutation is SetAnimationEventGraphMutation eventGraph &&
+                    eventGraph.Graph &&
+                    !owners.Contains(eventGraph.Graph))
+                    owners.Add(eventGraph.Graph);
+                if (mutation is SetAnimationEventGraphContentMutation content &&
+                    content.Graph &&
+                    !owners.Contains(content.Graph))
+                    owners.Add(content.Graph);
+            }
+            return owners;
+        }
 
         public CharacterPoseCanvasGraph RequirePoseGraph(string graphId) =>
             m_Profile.PoseGraph
@@ -206,6 +221,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"Mutation '{mutation.Kind}' is not owned by the Presentation Profile surface.");
             }
+        }
+
+        public void ApplyEventGraphMutation(CharacterPresentationMutation mutation)
+        {
+            if (mutation == null ||
+                !string.Equals(mutation.OwnerId, m_ProfileId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Animation Event Graph mutation does not target '{m_ProfileId}'.");
+            }
+            if (mutation is SetAnimationEventGraphMutation eventGraph)
+            {
+                m_Profile.SetEventGraph(eventGraph.Graph);
+                return;
+            }
+            if (mutation is SetAnimationEventGraphContentMutation content)
+            {
+                content.Graph.ApplyAuthoringDocument(
+                    AgentAuthoringEventGraphDocumentMapper.Map(
+                        content.Target,
+                        content.Layout,
+                        content.Macros));
+                return;
+            }
+            throw new InvalidOperationException(
+                $"Mutation '{mutation.Kind}' is not owned by the Animation Event Graph surface.");
         }
 
         void CreateLinkedPoseImplementation(
@@ -897,6 +938,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void ApplyProfileMutation(CharacterPresentationMutation mutation) =>
             throw new InvalidOperationException("Presentation Profile mutations require the Profile owner surface.");
 
+        public void ApplyEventGraphMutation(CharacterPresentationMutation mutation) =>
+            throw new InvalidOperationException("Animation Event Graph mutations require the Profile owner surface.");
+
         CharacterPoseStateMachineDefinition FindStateMachine(string id)
         {
             CharacterPoseStateMachineDefinition[] matches = m_Asset
@@ -1292,7 +1336,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return true;
                 case "pose-parameter":
                     options = ((CharacterPoseCanvasGraphDocument)document).Graph.Parameters
-                        .Where(value => value != null && value.ParameterId.IsValid)
+                        .Where(CharacterPoseParameterAccess.IsBlackboardInput)
                         .Select(value => new GraphAuthoringFieldOption(
                             value.ParameterId.Value,
                             value.DisplayName))

@@ -24,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPoseTuningParameterBlock m_TuningDefaultBlock;
         [SerializeField] string m_PublishedParameterRevision = string.Empty;
         [SerializeField] CharacterPresentationAnimationPropertyBinding[] m_AnimationProperties = Array.Empty<CharacterPresentationAnimationPropertyBinding>();
+        [SerializeField] CharacterAnimationEventGraph m_AnimationEventGraph;
         [NonSerialized] MotionMatchingProjectionPayload m_MotionMatching;
         [SerializeField] byte[] m_MotionMatchingPayload = Array.Empty<byte>();
         [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingNativeClips = Array.Empty<UnityEngine.AnimationClip>();
@@ -48,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string PublishedParameterRevision => m_PublishedParameterRevision ?? string.Empty;
         public IReadOnlyList<CharacterPresentationAnimationPropertyBinding> AnimationProperties =>
             m_AnimationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>();
+        public CharacterAnimationEventGraph AnimationEventGraph => m_AnimationEventGraph;
 
         public bool TryGetPoseSource(
             PresentationPoseSourceIndex sourceIndex,
@@ -120,7 +122,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseTuningLayout tuningLayout = null,
             CharacterPoseTuningParameterBlock tuningDefaultBlock = null,
             string publishedParameterRevision = "",
-            CharacterPresentationAnimationPropertyBinding[] animationProperties = null)
+            CharacterPresentationAnimationPropertyBinding[] animationProperties = null,
+            CharacterAnimationEventGraph animationEventGraph = null)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
@@ -148,7 +151,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_TuningLayout = tuningLayout,
                 m_TuningDefaultBlock = tuningDefaultBlock,
                 m_PublishedParameterRevision = publishedParameterRevision ?? string.Empty,
-                m_AnimationProperties = animationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>()
+                m_AnimationProperties = animationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>(),
+                m_AnimationEventGraph = animationEventGraph
+                    ? animationEventGraph
+                    : throw new ArgumentNullException(nameof(animationEventGraph))
             };
             projection.SetEquipmentProjection(
                 projectionRevision,

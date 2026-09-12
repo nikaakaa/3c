@@ -1,0 +1,304 @@
+using System;
+using System.Collections.Generic;
+using BTSMTL.EventGraphs;
+using ThirdPersonSimulation;
+
+namespace ThirdPersonCharacter.Pipeline.Animation
+{
+    public sealed class CharacterAnimationEventGraphHost : IDisposable
+    {
+        readonly ActorId m_ActorId;
+        readonly CharacterAnimationEventGraph m_Graph;
+        readonly CharacterAnimationVariableContract m_VariableContract;
+        readonly EventGraphHostContract m_HostContract;
+        readonly NativeEventGraphRuntime m_Runtime;
+        readonly FactHostContext m_Context = new FactHostContext();
+
+        ulong m_LastBodyDiscontinuityGeneration;
+        CharacterAnimationVariableFrame m_LastFrame;
+        bool m_Disposed;
+
+        public CharacterAnimationEventGraphHost(
+            CharacterAnimationEventGraph graph,
+            ActorId actorId)
+        {
+            m_Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+            if (!actorId.IsValid)
+                throw new ArgumentException(
+                    "Character animation event graph Actor identity is invalid.",
+                    nameof(actorId));
+            m_ActorId = actorId;
+            m_VariableContract = new CharacterAnimationVariableContract(
+                graph.BuildVariableContract());
+            m_HostContract = CreateContract(graph);
+            m_Runtime = new NativeEventGraphRuntime(
+                graph,
+                m_HostContract);
+        }
+
+        public CharacterAnimationEventGraph Graph => m_Graph;
+        public CharacterAnimationVariableContract VariableContract =>
+            m_VariableContract;
+        public EventGraphHostContract HostContract => m_HostContract;
+        public bool IsFaulted => m_Runtime.IsFaulted;
+        public EventGraphExecutionFailure LastFailure => m_Runtime.LastFailure;
+        public ulong ResetGeneration => m_Runtime.ResetGeneration;
+        public CharacterAnimationVariableFrame LastFrame => m_LastFrame;
+
+        internal CharacterAnimationVariableUpdateResult Update(
+            in CharacterPresentationFactFrame factFrame,
+            float animationDeltaSeconds,
+            ulong renderFrame)
+        {
+            RequireAlive();
+            if (!factFrame.IsValid ||
+                factFrame.Identity.ActorId != m_ActorId ||
+                renderFrame == 0 ||
+                factFrame.Identity.RenderFrame != renderFrame)
+            {
+                throw new ArgumentException(
+                    "Character animation event graph fact frame identity is invalid.",
+                    nameof(factFrame));
+            }
+            if (!float.IsFinite(animationDeltaSeconds) ||
+                animationDeltaSeconds <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(animationDeltaSeconds));
+            }
+            if (m_LastBodyDiscontinuityGeneration != 0 &&
+                m_LastBodyDiscontinuityGeneration !=
+                factFrame.BodyDiscontinuityGeneration)
+            {
+                m_Runtime.Reset();
+            }
+            m_LastBodyDiscontinuityGeneration =
+                factFrame.BodyDiscontinuityGeneration;
+            var identity = new EventGraphInvocationIdentity(
+                CharacterAnimationEventGraph.ContractId,
+                renderFrame);
+            var invocation = new EventGraphInvocationContext(
+                identity,
+                CharacterAnimationEventGraph.UpdateEventId,
+                animationDeltaSeconds);
+            m_Context.Set(invocation, in factFrame);
+            NativeEventGraphExecutionResult execution =
+                m_Runtime.Execute(invocation, m_Context);
+            if (!execution.Succeeded)
+                return CharacterAnimationVariableUpdateResult.Failed(
+                    execution.Failure);
+            var frame = new CharacterAnimationVariableFrame(
+                m_ActorId,
+                renderFrame,
+                factFrame.SimulationTick,
+                factFrame.BodyDiscontinuityGeneration,
+                execution.Frame);
+            m_LastFrame = frame;
+            return CharacterAnimationVariableUpdateResult.Success(frame);
+        }
+
+        public void Reset()
+        {
+            RequireAlive();
+            m_Runtime.Reset();
+            m_LastBodyDiscontinuityGeneration = 0;
+            m_LastFrame = null;
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            m_Disposed = true;
+            m_Runtime.Dispose();
+        }
+
+        public static EventGraphHostContract CreateContract(
+            CharacterAnimationEventGraph graph)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            return CreateHostContract(
+                new CharacterAnimationVariableContract(
+                    graph.BuildVariableContract()));
+        }
+
+        internal static EventGraphHostContract CreateHostContract(
+            CharacterAnimationVariableContract variableContract)
+        {
+            var inputs = new List<EventGraphInputDescriptor>
+            {
+                new EventGraphInputDescriptor(
+                    EventGraphHostInputIds.DeltaSeconds,
+                    typeof(float)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.Grounded.Value,
+                    typeof(bool)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.HorizontalSpeed.Value,
+                    typeof(float)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.HorizontalAcceleration.Value,
+                    typeof(float)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.VerticalSpeed.Value,
+                    typeof(float)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.MovementDirection.Value,
+                    typeof(UnityEngine.Vector2)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.LocomotionPlanarBasis.Value,
+                    typeof(UnityEngine.Vector2)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.DesiredDirection.Value,
+                    typeof(UnityEngine.Vector2)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.FacingError.Value,
+                    typeof(float))
+            };
+            var outputs = new List<EventGraphOutputDescriptor>();
+            for (int i = 0; i < variableContract.Variables.Count; i++)
+            {
+                EventGraphVariableDescriptor variable =
+                    variableContract.Variables[i];
+                outputs.Add(new EventGraphOutputDescriptor(
+                    variable.Reference.VariableId,
+                    variable.ValueType));
+            }
+            return new EventGraphHostContract(
+                CharacterAnimationEventGraph.ContractId,
+                CharacterAnimationEventGraph.ContractRevision,
+                CharacterAnimationEventGraph.UpdateEventId,
+                inputs,
+                outputs);
+        }
+
+        void RequireAlive()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(
+                    nameof(CharacterAnimationEventGraphHost));
+        }
+
+        sealed class FactHostContext : IEventGraphHostContext
+        {
+            CharacterPresentationFactFrame m_Fact;
+            EventGraphInvocationContext m_Invocation;
+
+            public EventGraphInvocationContext Invocation => m_Invocation;
+
+            internal void Set(
+                EventGraphInvocationContext invocation,
+                in CharacterPresentationFactFrame fact)
+            {
+                m_Invocation = invocation;
+                m_Fact = fact;
+            }
+
+            public bool TryRead(
+                string inputId,
+                EventGraphValueKind expectedKind,
+                out EventGraphValue value)
+            {
+                if (string.Equals(
+                        inputId,
+                        EventGraphHostInputIds.DeltaSeconds,
+                        StringComparison.Ordinal))
+                {
+                    if (expectedKind == EventGraphValueKind.Float32)
+                    {
+                        value = EventGraphValue.FromFloat32(
+                            m_Invocation.DeltaSeconds);
+                        return true;
+                    }
+                    value = default;
+                    return false;
+                }
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.Grounded.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Bool,
+                        expectedKind,
+                        EventGraphValue.FromBool(m_Fact.Grounded),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.HorizontalSpeed.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Float32,
+                        expectedKind,
+                        EventGraphValue.FromFloat32(m_Fact.HorizontalSpeed),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.HorizontalAcceleration.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Float32,
+                        expectedKind,
+                        EventGraphValue.FromFloat32(m_Fact.HorizontalAcceleration),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.VerticalSpeed.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Float32,
+                        expectedKind,
+                        EventGraphValue.FromFloat32(m_Fact.VerticalSpeed),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.MovementDirection.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Vector2,
+                        expectedKind,
+                        EventGraphValue.FromVector2(m_Fact.MovementDirection),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.LocomotionPlanarBasis.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Vector2,
+                        expectedKind,
+                        EventGraphValue.FromVector2(m_Fact.LocomotionPlanarBasis),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.DesiredDirection.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Vector2,
+                        expectedKind,
+                        EventGraphValue.FromVector2(m_Fact.DesiredDirection),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.FacingError.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Float32,
+                        expectedKind,
+                        EventGraphValue.FromFloat32(m_Fact.FacingError),
+                        out value);
+                value = default;
+                return false;
+            }
+
+            static bool Read(
+                EventGraphValueKind actualKind,
+                EventGraphValueKind expectedKind,
+                EventGraphValue actual,
+                out EventGraphValue value)
+            {
+                value = actualKind == expectedKind ? actual : default;
+                return actualKind == expectedKind;
+            }
+        }
+    }
+}

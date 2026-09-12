@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.EventGraphs;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEngine;
 
@@ -31,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterAnimationPresentationProfile : ScriptableObject
     {
         [SerializeField] CharacterPresentationPoseGraphAsset m_PoseGraph;
+        [SerializeField] CharacterAnimationEventGraph m_EventGraph;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
         [SerializeField] CharacterMotionMatchingProfile m_MotionMatchingProfile;
         [SerializeField] CharacterFullBodyIkProfile m_FullBodyIkProfile;
@@ -58,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_FootPlacementAnalysisSourceAssetGuid = string.Empty;
 
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
+        public CharacterAnimationEventGraph EventGraph => m_EventGraph;
         public CharacterAnimationRigDefinition RigDefinition => m_RigDefinition;
         public CharacterMotionMatchingProfile MotionMatchingProfile => m_MotionMatchingProfile;
         public CharacterFullBodyIkProfile FullBodyIkProfile => m_FullBodyIkProfile;
@@ -195,6 +198,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RigDefinition = rigDefinition ? rigDefinition : throw new ArgumentNullException(nameof(rigDefinition));
         }
 
+        public void SetEventGraph(CharacterAnimationEventGraph eventGraph)
+        {
+            m_EventGraph = eventGraph
+                ? eventGraph
+                : throw new ArgumentNullException(nameof(eventGraph));
+        }
+
         public void SetMotionMatchingProfile(CharacterMotionMatchingProfile profile)
         {
             m_MotionMatchingProfile = profile;
@@ -260,6 +270,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 errors?.Add($"{name}: Animation Rig Definition is missing.");
                 valid = false;
+            }
+            if (!m_EventGraph)
+            {
+                errors?.Add($"{name}: Animation Event Graph is missing.");
+                valid = false;
+            }
+            else
+            {
+                try
+                {
+                    CharacterAnimationVariableContract variableContract =
+                        new CharacterAnimationVariableContract(
+                            m_EventGraph.BuildVariableContract());
+                    EventGraphAssetValidator.Require(
+                        m_EventGraph,
+                        CharacterAnimationEventGraphHost.CreateHostContract(variableContract));
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Animation Event Graph is invalid: {exception.Message}");
+                    valid = false;
+                }
             }
             if (!m_FullBodyIkProfile)
             {

@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!profile || !profile.PoseGraph || !profile.RigDefinition)
                 throw new InvalidOperationException(
                     "Animation Input Contract requires one Pose Graph and Rig Definition.");
-            CharacterPoseCanvasGraph root = profile.PoseGraph.Graph ??
+            if (profile.PoseGraph.Graph == null)
                 throw new InvalidOperationException("Animation Input Contract requires a Pose Graph root.");
             CharacterPoseParameterDeclaration[] parameters = BuildParameters(profile);
             var facts = new Dictionary<string, CharacterPresentationFactDeclaration>(StringComparer.Ordinal);

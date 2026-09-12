@@ -1,43 +1,33 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: Formal authoring metadata必须是Agent与UI共享的唯一语义来源
+### Requirement: 共享metadata必须提供正式字段读取与配置绑定
 
-Formal authoring type、字段、引用方法和正式Mutation写入方法上的metadata MUST是Agent可见kind、typed field、logical port、owner和连接规则的唯一语义来源。共享Capability、Document parser、Exporter、Reconciler、Validator、Compiler和原生UI MUST从该metadata投影同一语义；MUST不维护Agent专用节点模型、字段表、端口表、Pose模型或owner规则副本。
+共享字段描述 MUST由所属领域的正式能力提供，包含稳定字段identity、typed值类型、默认值/可写性、必要约束，以及读取当前正式对象和调用正式配置API所需的绑定信息。人工UI、原节点适配、FlowCanvas和C#领域输出适配 MUST消费同一信息，不维护第二份节点/字段/owner模型。绑定只表达正式方法与参数对应，不保存源码模板、语法树或操作历史。
 
-metadata的Editor查找实现 MAY生成不可编辑的静态索引，但该索引 MUST不成为第二作者真相，也不得要求运行时反射、Unity序列化字段或Compiler operation作为作者合同。
+#### Scenario: 输出器请求一个正式字段
 
-原业务节点与FlowCanvas对应节点经核对为同义时，参数、默认值、校验、逻辑端口和引用 MUST由同一业务定义提供。两侧目录及作者宿主只投影该定义；本地identity/端口映射与框架事件可以不同，但 MUST不各自重写业务规则。每个节点实例 MUST独立保存自己的值；图拓扑与现有公开字段、端点和owner形状 MUST保持各自正式来源。
+- **WHEN** C#领域输出适配按字段identity读取当前正式对象
+- **THEN** 共享合同 MUST给出当前typed值及所属领域的正式配置入口
+- **AND** 该配置入口 MUST与人工编辑使用同一业务规则
 
-#### Scenario: Agent和原生UI使用同一作者字段
+#### Scenario: 某字段缺少读取或配置能力
 
-- **WHEN** 正式作者类型metadata声明一个可写typed field和合法port
-- **THEN** Agent Document、原生Details/创建菜单、Validator和Compiler MUST使用同一字段和port语义
-- **AND** 不得保留另一套手写Agent或UI能力定义继续接受旧字段
+- **WHEN** 字段没有完整的正式读取或配置绑定
+- **THEN** 共享合同 MUST明确指出字段和缺失能力
+- **AND** 调用者 MUST不回退到私有字段反射、Agent JSON或另建字段表
 
-#### Scenario: Agent提交未声明作者内容
+### Requirement: 共享端口结果必须来自领域正式声明
 
-- **WHEN** Document目标提交metadata未声明的字段、port、引用或owner关系
-- **THEN** 共享Capability或Mutation preflight MUST拒绝该目标并返回稳定诊断
-- **AND** MUST不按C#类型名、显示名、SerializedProperty路径或runtime index猜测能力
+完整端口形状 MUST由共享Capability、当前typed参数和正式动态接口决定，包含稳定identity、类型、方向、容量与顺序。各领域保持自己的能力模块、业务校验和创建/保存责任；共享层 MUST只组合正式声明，不建立中央角色Validator、业务节点全集副本或整包同步事务。调用者不能为了代码导出自行增加同义端口规则。
 
-#### Scenario: 正式作者类型内部重构
+#### Scenario: 人工连接与生成代码连接同一端口
 
-- **WHEN** 正式作者类型的C#实现或文件组织变化，但metadata的稳定kind、typed field、logical port和owner语义不变
-- **THEN** Agent Document和原生UI MUST保持相同可见行为
-- **AND** 不得仅因内部实现变化升级Document schema
+- **WHEN** 两个入口提交相同正式参数和连接目标
+- **THEN** 它们 MUST获得同一端口形状并调用原领域连接规则
+- **AND** 动态端口顺序 MUST保留真实业务顺序，不为源码排版重排
 
-#### Scenario: 两个作者宿主使用同义节点
+#### Scenario: 新领域能力接入
 
-- **WHEN** 原作者入口与FlowCanvas入口提交相同业务配置
-- **THEN** 两者 MUST采用同一参数约束和逻辑端口规则，保留各自实例值和来源identity
-- **AND** 单独让Agent导出两套重复定义 MUST不视为满足此要求
-
-### Requirement: Gameplay StateMachine必须把转移数据归属Edge
-
-共享Graph Framework接入Gameplay StateMachine时，Transition Edge MUST提供唯一typed payload，包含ConditionRule、priority、abortPolicy和显式order；State节点、anchor和动态Step端口 MUST不再保存该payload副本。Transfer端口形状、Edge owner和条件闭包 MUST由同一Capability与领域适配器提供，Pose StateMachine的Blend语义不得混入Gameplay Transition。
-
-#### Scenario: Framework显示Gameplay转移
-
-- **WHEN** 作者或Document选择Gameplay StateMachine Transition
-- **THEN** Edge View、Details、Validator、复制和Compiler MUST读取同一Edge payload与owner
-- **AND** 任何旧Step补读或按节点位置重排 MUST被拒绝
+- **WHEN** 领域模块增加正式节点或引用能力
+- **THEN** 它 MUST通过唯一共享描述合同提供自身定义
+- **AND** 共享层不得接管该领域运行、Undo或保存实现

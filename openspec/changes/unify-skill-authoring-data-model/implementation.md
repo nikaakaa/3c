@@ -1,5 +1,44 @@
 # Skill authoring 数据模型统一实施记录
 
+## 2026-09-13 r2规划入口
+
+当前执行范围以[proposal.md](proposal.md)、[design.md](design.md)和[tasks.md](tasks.md)为准。本轮仅更新规划，没有执行代码、资产或旧包操作。共同参数/规则与共享Capability归本任务，两个作者MCP、JSON binding和Agent协议退役归C# authoring，FSM与事件图业务由各自Owner负责。
+
+下方既有实施记录保留其记录时语境，其中v8包重建、checkout/dry-run/apply等待和协议发布已撤出r2任务，不再按旧“未完成”段继续实施。TransferPayload、真实端口、普通步骤和已正确迁移结果保持有效；协议退役不回退这些业务代码，也不丢弃失败记录。
+
+本轮读取期间新增了2907713a5的旧Step DTO/死路径清理记录，原文保留。旧tasks 2.4未完成与5.3已勾选的记录也同时保存，不能将任一记录扩大为r2全量共同定义已经完成。
+
+## r2前任务状态存档
+
+本表保存原任务文字和状态，不是新的执行清单；当前tasks只列r2剩余实现。
+
+| 原编号 | 原状态 | 原任务文字 |
+|---|---|---|
+| 1.1 | 原记录已勾选 | 确认状态机转移同时存在 Step 与 Edge 两份条件、priority、abortPolicy，固定 Edge 为唯一转移来源。 |
+| 1.2 | 原记录已勾选 | 确认普通 Sequence、Selector、Parallel 的 steps 是另一种组合语义，保留在普通节点 properties 中。 |
+| 1.3 | 原记录已勾选 | 固定 Corin 状态机的节点、边、条件图、owner、UID和并列顺序基线，避开其它未提交资产。 |
+| 2.1 | 原记录已勾选 | 建立 `BtsmtlSkillTransferPayload`，统一条件图、priority、abortPolicy和order的类型与写入口。 |
+| 2.2 | 原记录已勾选 | 状态 Enter、Any、State、Exit改为固定逻辑端口；Transfer输出容量和StateIn输入规则由正式Closure校验。 |
+| 2.3 | 原记录已勾选 | 接入共享 `GraphAuthoringCapabilityCatalog` 与唯一 `GraphAuthoringNodePortShapeProjector`，删除anchor动态steps投影。 |
+| 2.4 | 原记录未勾选 | 完成原业务节点与FlowCanvas同义节点的全量字段、默认值、校验、引用和编译对照；未确认同义的能力不合并。 |
+| 3.1 | 原记录已勾选 | Closure、ClosureIndex、GraphCopy、Exporter、Validator、Applier和Occurrence改为读取Edge transfer payload。 |
+| 3.2 | 原记录已勾选 | ConditionRule owner统一为`kind=edge`、`edgeId`、`referenceKey=condition`，并纳入可达性、循环和owner校验。 |
+| 3.3 | 原记录已勾选 | 删除状态机anchor.steps的DTO、导出、应用、投影、引用闭包和循环检查路径；普通节点properties.steps保留。 |
+| 3.4 | 原记录未勾选 | 等并行 Native FSM/Timeline authoring闭包稳定后，完成当前正式编译和SourceMap对账，不覆盖其未提交改动。 |
+| 4.1 | 原记录已勾选 | 将唯一 `AgentAuthoringSchema.Version`、Report、Codec、Store、作者窗口和五个MCP工具说明切换为 v8，并严格拒绝v7及更早包。 |
+| 4.2 | 原记录已勾选 | 删除独立 `BtsmtlSkillTransferConnectionMigrator`；删除前代码由Git提交历史保留，不建立旁路迁移入口。 |
+| 4.3 | 原记录已勾选 | 删除被忽略的旧 v4/v5/v7 package目录，保留正式Unity资产和Git历史。 |
+| 4.4 | 原记录未勾选 | 在当前 authoring闭包可导出后，通过正式checkout生成v8 package，核对manifest/sync、完整闭包、owner/order和hash。 |
+| 4.5 | 原记录未勾选 | 对v8执行无修改dry-run、validate、重新checkout；需要改资产时才使用同hash apply，并交付Clean结果。 |
+| 5.1 | 原记录已勾选 | 重写本change的proposal、design和implementation，移除与实际Edge/v8实现矛盾的旧口径。 |
+| 5.2 | 原记录已勾选 | 对照并更新现行 `openspec/specs/`、`openspec/project.md` 与 `btsmtl-agent-authoring` 技能合同，保留非本change场景和历史archive。 |
+| 5.3 | 原记录已勾选 | 完成原业务/FlowCanvas定义清单、源码路径、删除项和业务行为对照；不以Agent往返成功代替模型统一证明。 |
+| 5.4 | 原记录未勾选 | 汇总小步提交、正式Unity实例、checkout/dry-run/apply/validate结果与未提交外部改动边界。 |
+
+## 既有实施记录
+
+以下“当前”“已完成”“验证记录”和“未完成”均保留原记录含义；旧协议后续动作已由上方r2入口替代。
+
 ## 当前状态
 
 核心数据模型和代码链已经落地，正式 v8 package 重建尚未完成。当前 Unity 工程有其它任务留下的未提交 Native FSM、Timeline 和生成物改动；正式 checkout 已正确拒绝不完整的当前 authoring 闭包，没有绕过它们生成假包。

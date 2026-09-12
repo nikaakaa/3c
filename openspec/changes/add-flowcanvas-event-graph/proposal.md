@@ -1,35 +1,38 @@
 ## Why
 
-项目已有 FlowCanvas 的事件、变量、计算、分支和执行能力，但没有让动画作者直接用这些能力更新变量、再交给 PoseGraph 使用的正式接入。现在以动画为第一个应用建立可复用的可视化事件图：以后关卡流程等系统提供自己的事件和操作即可接入，不重复建设画布、节点或事件执行器。
+项目已有 FlowCanvas 的事件、变量、计算、分支和执行能力。本提案以动画为第一个应用，提供作者可视化更新变量并交给 PoseGraph 的正式接入；以后关卡等业务复用宿主机制，不重建事件执行器。
+
+r2 按用户单向广播 2026-09-13-authoring-r2-plan 更新作者入口：事件图沿正式直接配置 API 接入公共 C# 输出/生成能力，退出已决定退役的 Agent Document 链。原生运行和动画输入合同保持已确认方向。
 
 ## What Changes
 
-- 直接复用原生 FlowScript、GraphEditor、事件入口、执行线、数值节点、分支、GetVariable/SetVariable、Blackboard 和 Macro；事件图由 FlowCanvas 原生执行，不增加事件图 Compiler、IR 或另一套指令执行器。
-- 建立不依赖动画的宿主合同，明确事件、只读输入、可写变量、实例生命周期和错误结果；不同系统各有自己的图实例，不把通用事件图等同于全局广播总线。
-- 首个动画宿主只接初始化和每帧更新、已有角色表现事实与本次更新时间。作者自己创建变量、计算与 Get/Set；不增加关卡宿主、动画播放指令、Gameplay 写入或额外事件集合。
-- 动画变量唯一声明与存储沿用原生 Blackboard；PoseGraph 从同一声明读取一次完整更新后发布的只读值。每个动画实例拥有独立变量与原生节点状态，角色事实和素材曲线不变成它的可写变量。
-- **BREAKING**：正式区分原生 EventGraph 输入生产与编译 PoseGraph 求值，修正共享框架“所有领域作者图必须编译”的约束；保留 Skill、Pose 的现有编译运行，不启用它们的原生作者图。
-- **BREAKING**：以正式动画变量输出合同替换三个固定 motor 参数的生产接口；在全部消费者迁移后删除旧参数桥及补值路径。Pose Get、作用范围、typed 消费和曲线清理由独立 `refine-pose-graph-readonly-blackboard` 实现，不在两个 change 重复维护。
-- 新图、原生变量、宿主引用和 Macro 闭包接入共享 Capability、现有 Document/Mutation 与正式资产事务；显式 Build 校验接口、发布依赖，运行不临时补建。
+- 直接复用原生 FlowScript、GraphEditor、事件、执行线、计算、分支、Get/Set、Blackboard 和 Macro；事件图仍由 FlowCanvas runtime 执行，不增加事件图 Compiler、IR 或备用执行器。
+- 保持动画初始化/每帧更新、只读角色事实、实例隔离、错误/Reset，以及唯一 Contract/Layout/Frame 生产。Pose 的 Get、条件、BlendSpace、曲线和编译消费继续由 Pose 任务负责。
+- **BREAKING**：取消事件图 PresentationDocument 分片、Document 升版、Reconciler/反向导出和整包同步事务要求。移除 EventGraphAuthoringDocument 及其必经 ApplyDocument 中转，不能只删除 Agent 目录或改名保留结构模型。
+- 保留原生创建、变量声明、配置、连接、身份、局部规则和已有 Undo，形成原生 UI 与 C# 生成共用的直接 API；不新建中央 Validator，不复制业务规则。
+- 为公共代码输出器提供事件图薄适配，完整读取变量、节点、配置、Macro、动态端口、连线、布局和引用，输出正式 API 调用；不另建事件图导出器或 EventGraph MCP。未支持的正式内容明确拒绝完整导出。
+- 仅复用公共 btsmtl.export_code 和 btsmtl.generate_assets。人工编辑不自动导出，生成不自动合并未导出的修改，两者不自动 Build；C# 是明确生成范围的可重建内容来源。
+- 生成代码保持图和 Variable.ID 等逻辑身份；内部引用使用本次生成对象，真正外部资源明确传入，Profile 根绑定显式恢复，不依赖旧生成资产 GUID 重建内部对象。
+- **BREAKING**：保留原生 EventGraph 输入生产与编译 PoseGraph 求值的明确边界；固定 motor 桥只在全部 Pose、条件、BlendSpace、运行和 Preview 消费者迁移后删除，不能与 Agent 协议删除混为一步。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `flowcanvas-event-graph`：可复用的原生事件图、宿主合同、变量身份、实例执行与作者生命周期。
-- `character-animation-event-graph`：动画初始化/更新事件、只读角色事实、动画变量输出与 Pose 消费侧的交接。
+- flowcanvas-event-graph：原生事件图、宿主合同、变量身份、直接作者 API，以及接入公共 C# 输出/生成的领域薄适配。
+- character-animation-event-graph：动画事件、只读事实、精确变量输出、身份重建和同次 Pose 交接。
 
 ### Modified Capabilities
 
-- `graph-authoring-domain-framework`：允许明确声明的原生 EventGraph 执行域，保留编译领域和统一作者语义的边界。
-- `character-animation-pipeline`：加入唯一动画变量生产入口，区分输入更新完成与 Pose 提交完成，保持原 Pose 事务及最终写入链。
-- `btsmtl-agent-authoring-document-sync`：事件图、变量与 Macro 进入现有 Character Presentation 文档闭包和同一资产事务。
+- graph-authoring-domain-framework：在公共 C# 作者基线上保留原生 EventGraph 执行域，现有编译领域与其运行描述继续分离。
+- character-animation-pipeline：唯一动画变量生产入口，区分输入更新和 Pose 提交，保持现有最终姿势链。
+
+本 change 撤下原 btsmtl-agent-authoring-document-sync 增量，不再扩展将退役的协议。通用输出/生成、两个 MCP 及 Agent 协议整体删除由 remove-agent-authoring-use-native-csharp 的 r2 拥有，本任务不重复声明该能力。
 
 ## Impact
 
-- 通用接入：原生 FlowCanvas 扩展点、领域无关宿主合同和实例驱动；动画数据只在 Character 动画宿主内出现。
-- 动画生产侧：`CharacterPresentationRuntimeFactory`、`CharacterSimulationPresentationRuntime`、固定参数帧生产及生命周期、错误和输出映射。
-- 作者与 Document：原生 GraphEditor/Blackboard 适配、共享 Capability、PresentationDocument、typed Mutation/Validator 及依赖修订。
-- 关联边界：本 change 唯一拥有变量声明、更新和输出合同；[Pose 只读输入 change](../refine-pose-graph-readonly-blackboard/proposal.md)拥有 Get、输入范围、消费者编译与曲线迁移。两者完成接口接入前，不宣称动画闭环已完成。
-- 不接管 Skill/FSM、关卡内容、Timeline/Montage、Foot/IK 算法、Source 资源改革或整个 Pose runtime。实际动画内容只使用明确的正式角色/Fixture，不为了示例改写 Corin 状态机。
-- 本提案阶段仅产出 proposal、design、delta specs 和 tasks，没有实施代码。用户随后确认 r1 并显式调用 derive-implementation，授权按正式文档派生实现；确认及唯一窗口绑定见 design 的 Workflow Binding。不新增测试，关联规范和依赖继续按 design 处理。
+- 本任务唯一维护 Runtime/BTSMTL/EventGraphs/EventGraphAuthoringDocument.cs、HostEventGraph.cs、HostEventGraphEditorMutation.cs 的直接 API 收口及事件图输出薄适配；完整路径和先后依赖见 design D7/D8。
+- Pose 任务负责 CharacterPoseGraphAuthoringAdapter 等消费调用适配；C# authoring 任务负责 AgentAuthoringEventGraphDocumentMapper 等公共协议退役。各任务不同时覆盖同一文件。
+- 动画根事件图引用、变量声明/更新/输出属于本任务；Pose 只读输入和曲线清理仍属于 [独立 Pose 任务](../refine-pose-graph-readonly-blackboard/proposal.md)。
+- 不接管 Skill/FSM、关卡内容、Timeline/Montage、Foot/IK 算法或其它角色改造。不因生成源码需要正常 C# 编译而重开事件图 runtime 路线。
+- 本轮按广播只修订本目录规划，不改业务代码或资产，不向实现窗口发消息；已有实现绑定保留，本次 r2 未下发实施。

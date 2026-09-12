@@ -1,48 +1,50 @@
 ## 1. 原生图与公共合同
 
-- [ ] 1.1 建立 HostEventGraph 与领域无关宿主合同，复用 FlowScript 和现有程序集；交付代码依赖中不出现动画、角色或 Skill 业务类型。
-- [ ] 1.2 从原生 Blackboard 投影稳定变量引用与动画 Contract/Layout，保留原生 ID、类型和初值；交付唯一公共合同，不增加第二份可写声明。
-- [ ] 1.3 定义 Float/Int/Bool 输出及图内 Vector2/Vector3 能力，提供类型与只读权限校验；交付精确 typed 字段及错误路径，不以 float/object 中转所有值。
-- [ ] 1.4 登记本次图种与届时唯一 Document 发布版本、消费侧字段归属；交付 execution.md 中的精确基线与交接记录，不产生同版本分叉。
+- [ ] 1.1 保留已有效的 HostEventGraph、领域无关宿主合同与原生 FlowScript 运行；交付现有实现保留清单，不重建事件 Compiler 或执行器。
+- [ ] 1.2 保持同一原生声明投影出的唯一 Contract/Layout/Frame；交付图/Variable.ID、类型、实例与采样身份对照，不增加第二份声明或布局。
+- [ ] 1.3 保持 Float/Int32/Bool 精确输出与图内 Vector2/Vector3，沿原局部规则处理类型和只读权限；交付明确 API 合同，不新建中央 Validator。
+- [ ] 1.4 按 design D7 登记事件图三份领域文件、Pose调用文件、Agent Mapper及公共输出器的唯一Owner；交付两项删除各自的消费者依赖，不再登记Document升版。
 
-## 2. 原生作者与执行接入
+## 2. 原生作者直接API
 
-- [ ] 2.1 接入原生 GraphEditor、Blackboard、创建/拖拽、Inspector 和 Mutation 路由；交付单一作者入口，保留当前只读列表拾取能力。
-- [ ] 2.2 建立同一节点/成员能力目录与宿主准入，覆盖初始化、更新、Get/Set、计算、比较、分支、Flip Flop 和同步 Macro；交付 UI、Document、Validator 共用的描述。
-- [ ] 2.3 实现每实例原生克隆、Manual 驱动和一次调用身份；交付无自动组件 Update、无新事件 IR/Compiler 的正式运行器。
-- [ ] 2.4 接入 Macro 闭包、参数和实例生命周期；交付稳定引用、禁止递归和跨帧节点的正式校验，保留原生调用语义。
+- [ ] 2.1 保留原生 GraphEditor、Blackboard、拖拽、Inspector及现有Undo；提供人工编辑与C#共用的变量/节点/配置/连接直接API，交付无整图DTO必经中转的调用链。
+- [ ] 2.2 从 HostEventGraphEditorMutation 原实现复用有效 typed 配置、身份、端口顺序和局部约束，补齐可读/可恢复字段；交付节点、Get/Set目标及赋值模式的直接调用对照。
+- [ ] 2.3 保持已有原生克隆、Manual驱动、调用身份和错误处理，不因作者协议退役修改运行语义；交付保留入口和有效行为说明。
+- [ ] 2.4 保留Macro闭包、接口、共享引用与生命周期，提供生成所需的正式读取和配置；交付逻辑ID、端口、owner与内部对象绑定合同。
 
 ## 3. 动画宿主与输出
 
-- [ ] 3.1 提供正式 FactFrame 与本次表现 delta 的只读输入，接初始化和更新入口；交付从已有事实采样到原生调用的唯一适配。
-- [ ] 3.2 实现成功调用后的 typed 变量帧及只读租约；交付带实例、采样、图/布局版本和 Reset 代际的输出，不向 Worker 暴露原生可变对象。
-- [ ] 3.3 在原生 Node/Graph 错误边界接入按实例失败通知；交付 Editor/Player 一致的失败结果，部分 Set 后不发布、不扫描 Console 补判成功。
-- [ ] 3.4 接通暂停、Reset、Body discontinuity、Replacement 和 Dispose；交付变量与节点历史共同清理、另一 Actor 不受影响的生命周期。
-- [ ] 3.5 落实同步更新和时间准入规则；交付对 Wait、Timed Split、perSecond/全局时间模式和跨帧断点的明确诊断。
+- [ ] 3.1 保持正式 FactFrame/delta → 初始化或一次更新 → 完整输出的唯一动画接入；交付不依赖Agent协议的现有宿主链。
+- [ ] 3.2 保持typed只读帧的实例、表现采样、Simulation tick、Reset代际、合同/layout版本和租约；交付消费者完成前不覆盖的数据寿命。
+- [ ] 3.3 保留Node/Graph按实例失败通知、失败不发布及Editor/Player一致结果；交付不扫描Console、不发布部分Set结果的正式边界。
+- [ ] 3.4 保留暂停、Reset、Body discontinuity、Replacement、Dispose与Actor隔离；交付变量和节点历史共同清理的生命周期。
+- [ ] 3.5 保留同步更新及时间准入，保持Pending不回退成功事件状态；交付Wait/Timed Split/全局时间模式等原约束，不改通用插件能力。
 
-## 4. Document与资产事务
+## 4. 公共C#输出与生成薄适配
 
-- [ ] 4.1 在现有 PresentationDocument 增加事件图、变量、Macro 和宿主 context 的 Codec/Exporter；交付 canonical 图/布局闭包，不输出私有序列化字段。
-- [ ] 4.2 在唯一 Reconciler/typed Mutation/Validator 接入事件图修改和跨 Pose 变量引用；交付删除悬空引用、非法类型和缺失依赖的精确诊断。
-- [ ] 4.3 将新 owner 纳入既有 Undo、保存、失败恢复与反向导出；交付同批事件图和消费引用的原子资产事务，不增加局部工具入口。
+- [ ] 4.1 为共同输出器完整读取当前原生变量、节点、typed配置、动态端口、Macro、连接、布局及引用；交付字段覆盖与未知正式内容的精确拒绝，不经Document/JSON。
+- [ ] 4.2 按公共扩展合同输出正式创建/配置/连接API调用，复用通用值/语句输出；交付事件图薄适配，不另建导出器、源码模型或EventGraph MCP。
+- [ ] 4.3 输出稳定图ID、原生Variable.ID和内部对象引用，区分生成闭包与外部资源；交付不依赖旧生成GUID、可删除重建的创建代码。
+- [ ] 4.4 经正式API返回根输出并恢复明确Profile/owner挂接及跨Pose引用；交付相同逻辑身份与共享关系，不全局扫描消费者。
+- [ ] 4.5 只接公共export_code/generate_assets，保存交由既有明确范围能力；交付人工编辑不导出、生成不合并未导出修改、两工具不自动Build的接入边界。
 
 ## 5. 正式动画链与消费侧交接
 
-- [ ] 5.1 由现有 RuntimeFactory 装配唯一动画事件宿主，在正式 Fact 输入后、Pose 推进前调用；交付一条实际生产链，根 Pose 调度职责不搬入作者图。
-- [ ] 5.2 向 readonly-blackboard change 提供已实现的唯一 Contract/Layout/Frame 和原生声明引用；交付明确 API 与文件/字段所有权，Pose Get/Compiler 消费不在本 change 重做。
-- [ ] 5.3 在消费侧接通同一输入后完成生产调用处切换，落实 Source 未就绪保留原生状态、Actor Faulted 停止更新；交付无旧值补偿和重复事件推进的正式调用顺序。
-- [ ] 5.4 对接既有只读观察，区分节点执行、变量发布与 Pose completion；交付同实例来源标识，不新增预览时钟或节点重执行。
+- [ ] 5.1 保留RuntimeFactory和Fact后的唯一动画事件宿主，维护动画根事件图引用及其直接配置API；交付不改变Pose根调度职责的入口。
+- [ ] 5.2 向Pose消费侧提供唯一Contract/Layout/Frame与事件图直接API，合同通过代码和execution记录交付；不改Pose Get/条件/BlendSpace及调用适配所属文件。
+- [ ] 5.3 在消费侧完成同一输入接入后收口生产切换、Pending/Fault行为；交付无重复更新或旧值补偿的正式顺序。
+- [ ] 5.4 观察继续区分原生执行、变量发布和Pose completion；交付同实例来源标识，不新增预览时钟或节点重执行。
 
-## 6. 迁移与旧链删除
+## 6. 两项独立删除与内容生成
 
-- [ ] 6.1 按消费侧现有正式角色/Fixture 清单创建或绑定动画事件图、变量与输入；交付精确资产引用，保护未提交 PoseGraph 修改，不重写角色状态机。
-- [ ] 6.2 在所有运行和 Preview 消费者完成同一合同迁移后，删除 CharacterPresentationProgramParameterFrame、Supports 和 FromBody/FromFact/FromDirect；交付无旧生产类型引用的代码及资产清单。
-- [ ] 6.3 清除旧固定 motor 提供者注册与重复配置，对照真实坐标语义保留既有行为；交付旧 ID 到正式变量的精确迁移结果，不按名称猜测。
-- [ ] 6.4 确认 CharacterPresentationFrameCoordinator 的全部引用与编译条件，仅删除受旧桥移除牵连且无消费者的旧类；交付唯一主入口，保留其它任务仍在使用的实现。
+- [ ] 6.1 在直接API可用后，依赖Pose调用适配迁出和C# authoring公共Mapper退役，删除EventGraphAuthoringDocument及其附属DTO、ApplyAuthoringDocument/ApplyDocument和无消费者协议解析；交付调用引用清单，不将模型改名保留。
+- [ ] 6.2 按明确角色/Fixture生成范围与根绑定参数完成事件图薄适配内容接入；交付完整变量/节点/引用/布局重建与Get逻辑身份，不删除范围外资源或未授权人工内容。
+- [ ] 6.3 独立等待Pose、条件、BlendSpace、运行与Preview全部迁入同一变量合同，再删除CharacterPresentationProgramParameterFrame、Supports、FromBody/FromFact/FromDirect及固定注册；交付全消费者迁移清单，不因Agent删除提前拆桥。
+- [ ] 6.4 清理确认无消费者且受固定桥移除牵连的旧协调类和重复配置，保留真实坐标语义；交付明确旧路径去向，不默认补值或临时绕行。
 
-## 7. 正式发布与文档收口
+## 7. 独立发布与文档收口
 
-- [ ] 7.1 将图/宿主/变量依赖 hash、语义 Stale、合规反射成员与泛型保留纳入既有 Build；交付正式构建绑定，不增加事件图指令编译或运行时补建。
-- [ ] 7.2 在消费侧接口和选定内容都完成后，通过原资产事务与精确 Definition Build 发布对应产物；交付唯一可消费的新版本，旧 ABI/包按正式迁移退役。
-- [ ] 7.3 按本提案范围同步现行规范与 project 入口；交付 EventGraph 原生执行边界及关联消费/文档版本的对账，不改其它规划窗口的文件。
-- [ ] 7.4 在唯一 execution.md 记录实现、中文小步提交、删除清单、正式检查和实际限制；交付可直接审查的证据，不把历史通过或文档齐全当作运行完成。
+- [ ] 7.1 保持既有Build中的运行合同/layout、依赖hash、Stale、AOT/泛型和Replacement要求；交付作者生成与运行发布分开的入口，不引入Document包版本。
+- [ ] 7.2 在消费接口与明确内容就绪后沿原精确Definition Build发布正式产物；交付独立Build结果，不以导出或生成保存成功代替运行完成。
+- [ ] 7.3 归并本任务四份delta与公共C# r2，保留共享Requirement中的原生EventGraph例外，清除本任务的Document扩展口径；交付准确规范对账，不覆盖其它规划文件。
+- [ ] 7.4 由实现窗口在唯一execution.md记录直接API、薄适配、完整往返、两项删除、中文小步提交及实际证据/限制；不新增测试代码或手动验证tasks。本次PLAN仅修订清单，不触发这些实施工作。

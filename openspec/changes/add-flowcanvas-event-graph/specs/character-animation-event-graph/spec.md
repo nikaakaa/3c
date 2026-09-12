@@ -34,7 +34,7 @@
 
 ### Requirement: 动画变量必须按精确类型交接
 
-动画变量输出 MUST按稳定图身份、变量身份、精确类型和实例来源引用同一原生声明。首个 Pose 交接 MUST支持 Float、Int、Bool；方向或位置 MUST能在事件图内部使用原生 Vector2/Vector3 并以所需分量输出。未支持的对象、集合或直接 Pose 向量输出 MUST明确拒绝，不能经 object 或 float 冒充合法类型。
+动画变量输出 MUST按稳定图身份、变量身份、精确类型和实例来源引用同一原生声明。首个 Pose 交接 MUST支持 Float、Int32、Bool；方向或位置 MUST能在事件图内部使用原生 Vector2/Vector3 并以所需分量输出。未支持的对象、集合或直接 Pose 向量输出 MUST明确拒绝，不能经 object 或 float 冒充合法类型。
 
 #### Scenario: 自建变量提供动画输入
 
@@ -45,6 +45,12 @@
 
 - **WHEN** 作者输出合法 Int32 计数
 - **THEN** 消费者 MUST收到同一整数，不能先转换 float 导致精度丢失
+
+#### Scenario: 生成后恢复变量Get身份
+
+- **WHEN** 显式执行已编译创建代码重建事件图并恢复指定动画根引用
+- **THEN** 图与原生Variable.ID MUST按代码恢复，Pose Get MUST引用同一声明与唯一布局
+- **AND** MUST不新增第二变量表或依赖已删除生成对象的物理GUID
 
 ### Requirement: 输出必须是一次完整更新的只读值
 

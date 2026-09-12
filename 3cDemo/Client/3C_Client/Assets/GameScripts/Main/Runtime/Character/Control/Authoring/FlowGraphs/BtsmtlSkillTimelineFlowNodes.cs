@@ -2,6 +2,7 @@
 using System;
 using BTSMTL.Timeline;
 using ParadoxNotion.Design;
+using ThirdPersonCharacter.Pipeline.Motion;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -31,7 +32,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField("playbackMode", typeof(TimelinePlaybackMode))]
-    public sealed class BtsmtlSkillTimelineFlowNode : BtsmtlSkillFlowNode
+    public sealed class BtsmtlSkillTimelineFlowNode : BtsmtlSkillFlowNode, IActionContextAuthoring
     {
         [SerializeField] TimelineAsset m_Timeline;
         [SerializeField] BtsmtlSkillTimelineOwnership m_Ownership;

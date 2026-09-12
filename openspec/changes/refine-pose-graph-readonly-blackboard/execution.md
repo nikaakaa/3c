@@ -36,6 +36,8 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `d82a7afbb`、`3e788506a`：为Pose子图接口增加内部Foot曲线端口门禁，并修正签名校验调用位置；内部曲线不得通过GraphInput、GraphOutput或Subgraph Call公开透传。
 - `32f2cbba1`：原生Pose Blackboard主菜单不再显示内部Owner identity，只显示作者需要的输入信息。
 - `9a448cfb8`、`4a8625e95`、`43cfcb34c`：纯十六进制稳定身份不进入作者主显示；Root、Animation Layer、Control Rig、Transition Rule及参数/骨骼下拉统一使用语义名称。
+- `67e688fad`：FootPlacement和普通参数节点在输入合同缺项时返回带图/节点范围的明确编译诊断。
+- `6034ba2a0`、`3367b6495`：拓扑校验接收同一动画输入合同，允许合法输入Pose曲线参与Resolve策略校验，并同步编辑器 Validate 与 Document Apply 的合同来源。
 
 当前约束：
 

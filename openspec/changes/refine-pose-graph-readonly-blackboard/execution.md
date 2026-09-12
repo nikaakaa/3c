@@ -59,6 +59,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `f8cf7bfaa`：固化Character Animation Event Graph类型、Host和变量合同，并让Profile/Projection强制挂接唯一动画输入宿主。
 - `60888aabb`：删除无调用者且无法满足严格EventGraph输入合同的Projection Draft备用路径。
 - 当前 Transition Rule 作者面已接入唯一 EventGraph variable contract：Animation Variable 节点的类型、连线兼容性、详情值类型和选择列表均从同一 typed declaration 读取，支持 Bool/Int32/Float32，不再把该字段当作普通字符串。
+- `f7023b27f`：Blackboard 改为由编辑上下文注入的唯一 EventGraph variable contract 投影，只创建精确 Bool/Int32/Float32 的只读变量；Pose 图本地 `m_Parameters` 不再驱动变量列表，Action Weight 与 Foot Placement 内部项不进入普通 Get。
+- `32a8b1f90`：Pose 参数选择器的 `pose-parameter` 来源改为同一 EventGraph contract，策略引用继续保存稳定 ParameterId。
+- 当前未提交小步已把 workspace、节点内参数策略下拉和 Animation Input Contract 接到上述合同；其中输入合同仍与并行 Pose typed-frame 改动同文件，待共享链路稳定后再单独提交。
 
 正式 Document 流程：
 

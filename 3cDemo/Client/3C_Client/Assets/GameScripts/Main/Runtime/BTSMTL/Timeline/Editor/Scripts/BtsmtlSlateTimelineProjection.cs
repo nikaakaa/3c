@@ -386,6 +386,7 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         string m_PendingTrackFocus;
         string m_PendingClipFocus;
+        string m_SourceRevision = string.Empty;
         BtsmtlSlateTimelineViewState? m_PendingViewState;
 
         static BtsmtlSlateTimelineProjection s_Current;
@@ -627,6 +628,7 @@ namespace BTSMTL.Timeline.Editor
 
         void BuildProjection()
         {
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Request.Timeline);
             m_Host = new GameObject("__BTSMTL_SlateTimelineProjection__");
             m_Host.hideFlags = HideFlags.HideAndDontSave;
             m_Cutscene = m_Host.AddComponent<Cutscene>();
@@ -761,6 +763,8 @@ namespace BTSMTL.Timeline.Editor
 
         void AddTrack(string kind, string name, string channelId, string slotId)
         {
+            if (!IsSourceCurrent())
+                return;
             Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
             string authoringId = string.Empty;
             Track addedTrack = null;
@@ -832,6 +836,8 @@ namespace BTSMTL.Timeline.Editor
 
         void AddClip(TimelineClipCreationRequest request)
         {
+            if (!IsSourceCurrent())
+                return;
             if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
                 return;
             string authoringId = string.Empty;
@@ -881,6 +887,15 @@ namespace BTSMTL.Timeline.Editor
             m_PendingTrackFocus = request.TrackAuthoringId;
             m_PendingClipFocus = authoringId;
             QueueRebuildProjection();
+        }
+
+        bool IsSourceCurrent()
+        {
+            if (string.Equals(m_SourceRevision, TimelineAuthoringFingerprint.Compute(m_Request.Timeline), StringComparison.Ordinal))
+                return true;
+            ReportIssue("Timeline owner 已在外部修改，当前新增输入已取消。");
+            QueueRebuildProjection();
+            return false;
         }
 
         static JObject BuildClipProperties(TimelineClipCreationRequest request)

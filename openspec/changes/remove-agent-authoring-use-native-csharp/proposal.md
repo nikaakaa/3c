@@ -18,6 +18,7 @@ AI 已能编写 C# 并调用项目的 FlowCanvas、Timeline 和 Presentation 正
 - Slate 继续作为 BTSMTL Timeline 的人工编辑界面；正式创建使用 `TimelineData.AddTrack / AddClip / AddSection`，不改为 Slate Cutscene 数据源。
 - Character Build 仍独立显式执行；原有 Build 与其他非AgentAuthoring工具不属于本次两个作者MCP，也不被导出/生成工具自动调用。
 - 清理现行规范中的 Agent 专属合同，把仍有效的业务限制留在对应正式规范；列出与其他 active change 的冲突，不覆盖其已完成的 FSM、端口、Pose 或 UI 改动。
+- 明确删除`.codex/skills/btsmtl-agent-authoring/`中的旧skill三份说明，不恢复旧v8/五工具指令；正式业务规则仍归现行spec/API。`CodeGeneration/Generated/`下已经采用的正式导出C#及meta保留，它们不是验证垃圾。
 
 ## Capabilities
 
@@ -54,5 +55,7 @@ AI 已能编写 C# 并调用项目的 FlowCanvas、Timeline 和 Presentation 正
 旧协议删除门槛是作者调用者脱离Agent、正式编辑/生成/保存已可用。该门槛与运行时固定motor参数桥删除分开记录，本任务不承担动画变量运行闭环，也不等待该运行闭环来保留已无消费者的旧协议。
 
 不改角色运行逻辑、插件内部资产序列化或 Semantic IR/Program/Projection 格式，不新增测试。实施需具备生成范围的删除重建与引用恢复能力，但本次文档更新不删除任何资产、不操作 Unity。完整角色迁移不由“一个图可导出”自动推定。旧评估仍仅为本提案索引，r2 取代原 r1 的“资产为唯一来源”设计。
+
+按用户最新AGENTS，本任务不设置验证、回放、编译检查或证据归集任务，功能验收由用户完成；正式业务API的合法性检查继续保留。
 
 现行规范仍要求 Document 与 Agent Validator；本提案提供对应删除/修改增量，尚不宣称现行系统已切换。原生 FSM、Slate UI、共同节点定义和 Agent attribute-driven 等 active change 的重叠条款与处理边界见 design；实施前须解决实际冲突，不自动撤销其他任务成果。

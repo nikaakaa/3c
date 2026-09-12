@@ -140,6 +140,16 @@ export_code MUST以当前资产为输入完整覆盖明确目标代码内容；g
 - **THEN** 输出 MUST按指定代码重新创建
 - **AND** MUST不自动把人工调整反推到源码或建立另一条同步路径
 
+### Requirement: 正式导出代码必须作为可重建来源保留
+
+通过正式工具导出并采用为实际作者内容生成入口的C#源码及其资源元信息 MUST作为正式交付保留，不得仅因位于Generated目录或曾用于执行/往返操作而视为临时验证产物。旧生成资产清理 MUST不删除其有效创建源码；后续人工编辑仍只在显式导出时更新源码，保留源码不代表与资产自动同步。
+
+#### Scenario: 已采用的生成入口位于Generated目录
+
+- **WHEN** 正式导出C#实现生成入口并用于创建实际Graph或Pose资产
+- **THEN** 源码 MUST保持为可再次执行的正式内容来源
+- **AND** 旧Agent清理或生成资产替换 MUST不以Generated目录名为由删除它
+
 ### Requirement: 业务规则必须继续由正式模块承担
 
 代码创建与人工编辑 MUST共用正式Graph、Timeline、Presentation及Curve规则，整角色诊断 MUST复用正式编译器。导出只增加输出完整性检查，不复制领域规则。Agent协议校验与重复业务校验 MUST删除；仅在正式模块真实缺少时补入所属模块，不得新建中央Agent替代Validator。
@@ -169,6 +179,8 @@ export_code MUST在完整输出检查成功后写目标源码，失败不得以�
 ### Requirement: Agent authoring旧协议与工具必须激进删除
 
 系统 MUST删除旧五个BTSMTL authoring工具、Agent Window、Document/Snapshot/Codec/Store/Exporter/Reconciler、专属Mutation/Session/Validator/Report和无消费者的协议DTO、测试及依赖。新导出/生成入口 MUST不转发旧工具、保留兼容包或把Agent框架换名搬迁；正式领域代码和新代码输出器只保留其实际职责。
+
+旧作者skill和使用说明中要求v8目录包、旧五工具及Document对账的入口 MUST一并退役，不得通过恢复旧说明重新要求已删除协议。仍有效的领域业务约束 MUST留在所属现行规范与正式API，两个新工具的使用合同由正式作者文档维护。
 
 #### Scenario: 完成切换
 

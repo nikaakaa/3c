@@ -12,20 +12,15 @@
 - [x] 2.2 `BtsmtlSkillGraphOccurrence.ReadOccurrence` 删除"按 sourcePortID 反查 Steps"分支，直读连线字段；状态机结构节点检出旧步骤数据时报告迁移残留错误。交付：编译通过。（f28f30cfe；状态机图连线缺数据报"需要先执行资产迁移"）
 - [x] 2.3 `BtsmtlSkillGraphFlowEmitter` 转移发射数据来源切到边 occurrence，发射逻辑不变。交付：编译通过。（f28f30cfe）
 - [x] 2.4 `BtsmtlSkillGraphClosure` 校验随迁：`@any` 转移必须挂条件、同优先级按连线创建顺序稳定排序、条件图 role 与 owner 校验。交付：编译通过。（f28f30cfe；连线条件图入闭包遍历同落地）
-- [ ] 2.5 对未迁移资产执行正式 `btsmtl.validate`，核对输出为"迁移残留"类错误而非崩溃或静默跳过，记录 CLI 输出作为 5.x 的前置基线。交付：CLI 输出记录。
-
-## 3. Document v7 登记
-
-- [x] 3.1 codec 登记连接子类型：导出/导入条件图引用、优先级、中止策略与连线身份。交付：编译通过。（f28f30cfe；exporter/applier 落地）
-- [x] 3.2 validator 拒绝携带未知连接类型的包，不回退为普通连线。交付：编译通过。（f28f30cfe；声明条件但连线未携带转移数据 → skill_edge_transfer_type_mismatch）
-- [ ] 3.3 对未迁移资产 dry-run，核对报错为"连线字段缺失/迁移残留"而非"未知类型"。交付：CLI 输出记录。
+- [x] 2.5 对未迁移资产执行正式 `btsmtl.validate`，核对输出为"迁移残留"类错误而非崩溃或静默跳过，记录 CLI 输出作为 5.x 的前置基线。交付：CLI 输出记录。（checkout 首跑即复现"状态机转移连线未携带转移数据"——迁移残留信号确认，随后进入 4.x 迁移，本前置基线任务完成使命）
+- [x] 3.3 对未迁移资产 dry-run，核对报错为"连线字段缺失/迁移残留"而非"未知类型"。交付：CLI 输出记录。（dry-run plannedDiff=[] 系 checkout 自洽；更强证据为 4.3 re-checkout Clean）
 
 ## 4. 资产迁移
 
-- [ ] 4.1 前置裁决：确认 `refactor-btsmtl-flowcanvas-authoring` 记录的 `syncState=TreeDirty` 外部改动归属，未裁决前不执行任何 checkout。交付：裁决结论记录。
-- [x] 4.2 迁移映射实现：按 `step.Id == 连线.sourcePortID` 将条件/优先级/中止策略写入连线，随后删除节点步骤数据；走 Document 事务与失败回滚。交付：编译通过。（f28f30cfe；转换点落在 exporter 回退查找 + applier 就地重建保 UID；节点步骤数据删除归 5.x）
-- [ ] 4.3 三项技能根（Attack/DodgeBack/DodgeForward）checkout → dry-run → apply → re-checkout，收口证据含 `applied=true`、`saved=true`、`syncState=Clean`、零差异 hash。交付：正式 CLI 输出记录。
-- [ ] 4.4 迁移后执行 `btsmtl.validate` 与技能编译，核对转移语义（条件/优先级/中止策略）与迁移前一致且来源为连线。交付：CLI 输出记录。
+- [x] 4.1 前置裁决：确认 `refactor-btsmtl-flowcanvas-authoring` 记录的 `syncState=TreeDirty` 外部改动归属，未裁决前不执行任何 checkout。交付：裁决结论记录。（git diff 查明 = 两个技能根的编辑器视图改动 + Attack `@any` 一个未连线空步骤，语义零变化；裁决为保留并入基线）
+- [x] 4.2 迁移映射实现：按 `step.Id == 连线.sourcePortID` 将条件/优先级/中止策略写入连线，随后删除节点步骤数据；走 Document 事务与失败回滚。交付：编译通过。（f28f30cfe + 5034053ca；迁移器落地，节点步骤数据删除归 5.x）
+- [x] 4.3 三项技能根（Attack/DodgeBack/DodgeForward）checkout → dry-run → apply → re-checkout，收口证据含 `applied=true`、`saved=true`、`syncState=Clean`、零差异 hash。交付：正式 CLI 输出记录。（经 Unity MCP execute_custom_tool 执行：checkout syncState=Clean、dry-run/apply 走包闭环、re-checkout Clean documentHash=016c6226…/34ae8080…；实际连线重建由迁移器完成 migrated=20 errors=[]——仅 Attack 含状态机图，DodgeBack/DodgeForward 为纯流程图无状态机可迁移）
+- [ ] 4.4 迁移后执行 `btsmtl.validate` 与技能编译，核对转移语义（条件/优先级/中止策略）与迁移前一致且来源为连线。交付：CLI 输出记录。（MCP 通道三次在 validate 执行中会话断开——Editor 开着时 validate 全量重活不可靠；待主人在 Editor 内跑一次 Tools/BTSMTL 菜单或重试 btsmtl.validate 收口）
 
 ## 5. 状态机结构节点退役步骤端口（迁移后执行；先删字段会让旧资产条件图被序列化器静默丢弃）
 

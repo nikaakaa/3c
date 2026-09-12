@@ -27,9 +27,9 @@
 
 ### 2. EventGraph C# 输出薄适配
 
-新增 `EventGraphAuthoringCodeAdapter`，实现公共 `IBtsmtlAuthoringCodeDomainAdapter`。它直接读取当前 `HostEventGraph` 对象，不读取旧源码、不经过 JSON、不创建持久化 Snapshot/DTO，向公共输出上下文写入五个阶段的正式 API 调用：
+新增 `EventGraphAuthoringCodeAdapter`，实现公共 `IBtsmtlAuthoringCodeDomainAdapter`。它直接读取当前 `HostEventGraph` 对象，不读取旧源码、不经过 JSON、不创建持久化 Snapshot/DTO，向公共输出上下文写入四个阶段的正式 API 调用：
 
-`Create → Configure → Bind → Connect → RootBinding`
+`Create → Configure → Bind → Connect`
 
 覆盖内容包括：
 
@@ -56,7 +56,7 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 
 ### 5. Corin 正式生成入口
 
-新增 `CorinAnimationEventGraphAuthoringCode`，recipe 为 `character.animation-event-graph.corin/v1`。入口通过公共生成上下文解析精确 Definition 和 Profile，按原生直接 API 创建或清空正式 `CharacterAnimationEventGraph`，声明 `animation.action-weight` 与 `animation.foot-placement-weight` 两个 Float 变量，建立 Start/Update → Instant Split → SetVariable 的连接，并最后绑定 Profile。
+新增 `CorinAnimationEventGraphAuthoringCode`，recipe 为 `character.animation-event-graph.corin/v1`。入口通过公共生成上下文解析精确 Definition 和 Profile，按原生直接 API 创建或清空正式 `CharacterAnimationEventGraph`，只建立宿主必须的 Start/Update 生命周期节点并最后绑定 Profile。当前 Corin 没有由 EventGraph 写入的动画实例变量：Action Weight 由 Action Playback 负责，Foot Placement Weight 由输入 Pose source 曲线负责，避免重新生成一个无正式 owner 的第二变量。
 
 入口的 `SourceCodePath` 与公共 bridge 使用同一套项目绝对路径计算，输出路径固定为 `Assets/Configs/Character/Corin/Pipeline/Presentation/EventGraphs/CorinAnimationEventGraph.asset`。正式 `btsmtl.generate_assets` 首次创建并在 helper 收口后再次替换成功，事件图 GUID 保持为 `d90ccc65c39b2d84a8b06ef1ae46b885`，并把该引用写入 Corin Profile；Projection 尚未生成。Corin recipe 与公共导出代码共用同一个 `EnsureRoot`，不再维护单独的 `AssetDatabase.CreateAsset` 根创建实现。
 
@@ -64,13 +64,13 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 
 输入是稳定 identity、正式节点/变量对象、typed 配置、端口 ID、Macro 外部引用和 Canvas layout。输出是原生 Graph/Blackboard/Node/Connection 对象及其序列化结果；代码输出适配器的输出是公共 C# 语句，不是另一份可编辑图数据。
 
-生成代码先创建根图和变量/节点，再配置节点和外部 Macro，随后绑定 Get/Set、建立连接，最后恢复 graph identity/revision。内部引用使用本次调用创建的局部对象，范围外 Macro 使用明确资产路径。
+生成代码先通过 `EnsureRoot` 按上下文输出路径创建或替换持久化根并恢复 graph identity/revision，再创建变量/节点、配置节点和外部 Macro，随后绑定 Get/Set、建立连接。内部引用使用本次调用创建的局部对象，范围外 Macro 使用明确资产路径。
 
 ## 尚未满足的删除依赖
 
 - Pose 任务仍需将 `CharacterPoseGraphAuthoringAdapter.ApplyEventGraphMutation` 迁移为直接 API 调用，并完成其自身输入消费归属。
 - C# authoring 任务仍需迁出 Agent Mapper 和 Presentation/Skill 的公共协议调用，随后才能删除 `EventGraphAuthoringDocument`、`AgentAuthoringEventGraphDocumentMapper` 以及事件图 Document 分片处理。
-- 公共 C# authoring 任务已把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合；事件图生成入口等待 Unity Editor 稳定注册 `btsmtl.generate_assets` 后执行。当前不复制公共 MCP，也不调用旧 Document MCP。
+- 公共 C# authoring 任务已把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合，两个公共 MCP 均已注册并完成事件图现场验证。当前不复制公共 MCP，也不调用旧 Document MCP。
 - 固定 motor 参数桥、Pose 条件/BlendSpace/运行/Preview consumer 属于独立运行闭环，不能作为本步作者协议删除的理由，也不能因为作者 API 已有就提前删除。
 
 在这些调用者和公共入口迁出前，本窗口不删除共享 Agent/Presentation 文件，不删除 `EventGraphAuthoringDocument` 及其 mapper，不通过 fallback 或旁路保持旧协议。Corin 资产只由正式 C# generation recipe 创建。
@@ -83,9 +83,9 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 - `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
 - `ThirdPersonClient.Editor.csproj` Rebuild：0 error，32 个现有 ACL artifact identity warning；此前 Pose 编辑器的 3 个跨程序集可见性错误已由 Pose 任务将 `SetEditorAnimationVariables` 正式公开后清零。
 - 公共 `btsmtl.export_code` 已针对 Corin EventGraph 现场执行成功；生成源码的根创建语句已确认是 `EventGraphAuthoringCode.EnsureRoot<...>(context, ...)`，随后删除验证用输出文件，没有留下第二个 authoring 入口。
-- 正式 `character.build_float32_products` 已执行，但被当前 Corin 既有资产链拒绝：Attack skill 缺少原生状态机资产；Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 `corin.control-rig.body.call` 暴露内部 Foot Placement curve；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
+- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入后再次执行；Foot Placement 内部曲线暴露诊断已消失，但当前仍被两项既有链路拒绝：AuthoringDiscovery 对 Corin Definition 返回 `Object reference not set to an instance of an object`，Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 State `12a31544976ddf152639d62c6d19142c` 参数合同不完整；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
 - Unity Editor 日志已记录本轮 Tundra 编译成功、无 C# 编译 error；域重载后出现 RendererFeature/空对象编辑器警告，属于当前编辑器状态，不是 EventGraph 编译证据。
-- Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；正式 `btsmtl.generate_assets` 成功，`manage_asset` 已确认事件图资产类型和 Profile 文件中的 GUID 绑定。Projection 因上一条既有资产链诊断仍未生成。
+- Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；更新后的正式 `btsmtl.generate_assets` 成功替换事件图，磁盘复核确认 Action/Foot 变量、Set 节点和连接均已移除，Profile 仍绑定同一事件图 GUID。Projection 因上一条既有资产链诊断仍未生成。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。
 
 本轮没有进入 Play Mode，也没有运行端到端回放。事件图资产生成和 Profile 绑定已完成，但 Float32/Projection 构建仍被 Skill/Pose 资产链阻塞；源码构建成功、Tundra 成功和单次生成成功，都不等于 Unity Console 清洁、Projection 已更新或事件图删除重建往返已经通过。

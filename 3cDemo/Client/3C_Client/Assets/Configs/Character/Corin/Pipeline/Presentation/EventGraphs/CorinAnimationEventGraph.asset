@@ -12,21 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a5a852cbbda34842932a63f4012a35f, type: 3}
   m_Name: CorinAnimationEventGraph
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationEventGraph","nodes":[{"_UID":"corin.animation-event-graph.start","_position":{"x":-720.0},"$type":"FlowCanvas.Nodes.StartEvent","$id":"0"},{"_portCount":2,"_UID":"corin.animation-event-graph.start-split","_position":{"x":-440.0},"$type":"FlowCanvas.Nodes.Split","$id":"1"},{"targetVariable":{"_name":"Action
-    Weight","_targetVariableID":"animation.action-weight"},"_UID":"corin.animation-event-graph.set-action-weight","_position":{"x":-120.0},"$type":"FlowCanvas.Nodes.SetVariable`1[[System.Single,
-    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]","$id":"2"},{"targetVariable":{"_name":"Foot
-    Placement Weight","_targetVariableID":"animation.foot-placement-weight"},"_UID":"corin.animation-event-graph.set-foot-placement-weight","_position":{"x":-120.0,"y":280.0},"$type":"FlowCanvas.Nodes.SetVariable`1[[System.Single,
-    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]","$id":"3"},{"updateInterval":{},"_UID":"corin.animation-event-graph.update","_position":{"x":-720.0,"y":280.0},"$type":"FlowCanvas.Nodes.UpdateEvent","$id":"4"},{"_portCount":2,"_UID":"corin.animation-event-graph.update-split","_position":{"x":-440.0,"y":280.0},"$type":"FlowCanvas.Nodes.Split","$id":"5"}],"connections":[{"_sourcePortName":"Once","_targetPortName":"In","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"_UID":"corin.animation-event-graph.start-to-start-split","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"0","_targetPortName":"In","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"corin.animation-event-graph.start-action-weight","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"1","_targetPortName":"In","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"_UID":"corin.animation-event-graph.start-foot-placement-weight","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"Out","_targetPortName":"In","_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"_UID":"corin.animation-event-graph.update-to-update-split","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"0","_targetPortName":"In","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"_UID":"corin.animation-event-graph.update-action-weight","$type":"FlowCanvas.BinderConnection"},{"_sourcePortName":"1","_targetPortName":"In","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"3"},"_UID":"corin.animation-event-graph.update-foot-placement-weight","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"Foot
-    Placement Weight":{"_value":1.0,"_name":"Foot Placement Weight","_id":"animation.foot-placement-weight","$type":"NodeCanvas.Framework.Variable`1[[System.Single,
-    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"Action
-    Weight":{"_value":1.0,"_name":"Action Weight","_id":"animation.action-weight","$type":"NodeCanvas.Framework.Variable`1[[System.Single,
-    mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}}}'
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationEventGraph","nodes":[{"_UID":"corin.animation-event-graph.start","_position":{"x":-720.0},"$type":"FlowCanvas.Nodes.StartEvent"},{"updateInterval":{},"_UID":"corin.animation-event-graph.update","_position":{"x":-720.0,"y":280.0},"$type":"FlowCanvas.Nodes.UpdateEvent"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences: []
   _graphSource:
     _version: 3.42
     _category: Animation Event Graph
-    _comments: Corin animation variables are produced by the native presentation
-      event graph.
+    _comments: Corin animation presentation uses Action Playback and source curves
+      as formal inputs.
     _translation: {x: 0, y: 0}
     _zoomFactor: 1
   _haltSerialization: 0

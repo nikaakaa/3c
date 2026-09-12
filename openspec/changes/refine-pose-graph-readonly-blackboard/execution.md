@@ -55,6 +55,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `b14900e69` 后的 Unity MCP Console 复查没有新增Pose编译错误；当前返回项仍是未定位编辑器异常和SkillDefinition先验错误。
 - `f1dc9f9eb`：运行、Preview、StateSource、BlendSpace统一消费`CharacterAnimationPoseInputFrame`，删除旧`CharacterPresentationProgramParameterFrame`与旧PresentationFrameCoordinator；显式Preview fixture保留为唯一测试输入入口。
 - 旧Frame引用审计与Unity MCP Console复查均未发现残留Pose消费或新增编译错误。
+- `b5e2590c4`：Preview Host和Authoring Controller移除direct参数接口，完整Pose Preview统一由Native EventGraph变量帧驱动。
 
 正式 Document 流程：
 

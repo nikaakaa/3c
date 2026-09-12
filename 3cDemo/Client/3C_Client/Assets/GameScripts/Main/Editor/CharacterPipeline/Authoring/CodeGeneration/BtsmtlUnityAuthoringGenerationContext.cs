@@ -11,10 +11,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         readonly BtsmtlAuthoringGenerationRequest m_Request;
         readonly List<BtsmtlAuthoringCodeDiagnostic> m_Diagnostics = new();
+        readonly bool m_OutputExisted;
 
         public BtsmtlUnityAuthoringGenerationContext(BtsmtlAuthoringGenerationRequest request)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
+            m_OutputExisted = AssetDatabase.LoadMainAssetAtPath(m_Request.OutputAssetPath) != null;
         }
 
         public override string SourceCodePath => m_Request.SourceCodePath;
@@ -53,8 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     true,
                     rootOutput,
                     OutputAssetPath,
-                    new[] { OutputAssetPath },
-                    new[] { OutputAssetPath },
+                    m_OutputExisted ? Array.Empty<string>() : new[] { OutputAssetPath },
+                    m_OutputExisted ? new[] { OutputAssetPath } : Array.Empty<string>(),
                     Array.Empty<string>(),
                     m_Diagnostics,
                     true);

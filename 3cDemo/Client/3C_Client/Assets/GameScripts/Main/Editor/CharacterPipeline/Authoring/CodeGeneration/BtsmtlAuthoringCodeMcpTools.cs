@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             [ToolParameter("必须与已编译入口的 RecipeType 完全一致。", Required = true)]
             public string recipe_type { get; set; }
 
-            [ToolParameter("必须与已编译入口的 EntryTypeName 完全一致。", Required = true)]
+            [ToolParameter("必须填写已编译入口返回的完整 EntryTypeName。", Required = true)]
             public string entry_type_name { get; set; }
 
             [ToolParameter("精确 CharacterPipelineDefinition 资产路径。", Required = true)]
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         definition_asset_path = definitionPath,
                         output_code_path = outputRelativePath,
                         recipe_type = result.RecipeType,
-                        entry_type_name = result.EntryTypeName,
+                        entry_type_name = $"{namespaceName}.{result.EntryTypeName}",
                         external_dependencies = result.ExternalDependencies.Select(value => new
                         {
                             asset_path = value.AssetPath,

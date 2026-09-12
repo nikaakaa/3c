@@ -1,0 +1,30 @@
+# PoseGraph只读Blackboard实施记录
+
+## 2026-09-12 当前小步
+
+已完成：
+
+- `216bccd99`：FlowCanvas原生Pose Blackboard只投影外部Control输入，AnimatedProperty不再进入作者变量列表。
+- `f8d6e78d4`：动画输入合同从根图Control声明和Profile属性绑定分别构建参数布局；属性导入器不再把BlendShape声明复制到每张PoseGraph。
+- `779e9273f`、`1208a06f8`、`e260de9e2`：统一作者显示名、输入类别/作用范围投影、Document参数的Usage/displayName导出解析，以及Graph参数声明校验。
+- `fb89142d4`、`9d916f0a9`、`8818c7d1c`、`9fdbc321b`：FootPlacement默认从输入Pose的内部曲线参数列读取；只有直接连接公开Pose输入Get时才允许外部覆盖，旧Body GraphInput透传会在编译时明确失败。
+
+代码输入输出边界：
+
+```text
+Graph Control declaration -> read-only Blackboard/Get
+Profile BlendShape binding -> animation input curve declaration -> source scalar page
+Input Pose source-local Foot curve -> FootPlacement internal weight read
+```
+
+检查记录：
+
+- `ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；编译后已执行`dotnet build-server shutdown`。
+- `ThirdPersonClient.Editor.csproj`被工作区已有的`TimelineClipCreationPopup.cs`未定义`TimelineBindingValueKind`、`TimelineBindingAccess`和`TimelineBindingLifetime`阻塞；未修改该交叉文件，随后已执行`dotnet build-server shutdown`。
+- 未运行Unity、Character Build、Play或资产导入；未修改用户未提交的PoseGraph/Profile/Scene资产。
+
+仍未完成：
+
+- EventGraph正式变量Contract/Layout/Frame尚未交付，本change没有创建第二变量更新器。
+- 当前Corin Pose资产仍需要通过正式Document/Mutation删除旧的Action/Foot声明、根图Get、Body透传端口和确认无引用的重复子图。
+- Subgraph/Linked Pose跨图可访问范围、完整曲线依赖编译收口、全部Document/Exporter/Reconciler/Validator同步和最终现行spec更新仍待继续。

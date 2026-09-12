@@ -18,8 +18,10 @@ namespace ThirdPersonCharacter.Control.Authoring
             using var disabled = new EditorGUI.DisabledScope(graph.isEditorReadOnly);
             if (node is BtsmtlSkillParallelFlowNode parallel)
             {
-                var mode = (BtsmtlSkillParallelMode)EditorGUILayout.EnumPopup("完成方式", parallel.Mode);
-                if (mode != parallel.Mode)
+                BtsmtlSkillParallelMode currentMode =
+                    (BtsmtlSkillParallelMode)BtsmtlSkillGraphAuthoringMetadata.ReadField(node, "mode");
+                var mode = (BtsmtlSkillParallelMode)EditorGUILayout.EnumPopup("完成方式", currentMode);
+                if (mode != currentMode)
                     Change(graph, "修改并行完成方式", () => parallel.SetMode(mode));
             }
             if (node is BtsmtlSkillStateFlowNode state)
@@ -29,9 +31,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                     Change(graph, "修改状态内容", () => state.SetBody(body));
             }
             EditorGUILayout.LabelField("执行步骤", EditorStyles.boldLabel);
-            for (int index = 0; index < node.Steps.Count; index++)
+            IReadOnlyList<BtsmtlSkillStepAuthoringValue> steps =
+                BtsmtlSkillGraphAuthoringMetadata.ReadSteps(node);
+            for (int index = 0; index < steps.Count; index++)
             {
-                BtsmtlSkillStepPort step = node.Steps[index];
+                BtsmtlSkillStepAuthoringValue step = steps[index];
                 using var box = new EditorGUILayout.VerticalScope(EditorStyles.helpBox);
                 EditorGUI.BeginChangeCheck();
                 string name = EditorGUILayout.DelayedTextField($"{index + 1}. 名称", step.Name);
@@ -45,16 +49,17 @@ namespace ThirdPersonCharacter.Control.Authoring
                     {
                         var replacement = new BtsmtlSkillStepPort(step.Id, name);
                         replacement.Configure(name, condition, priority, abort);
-                        List<BtsmtlSkillStepPort> steps = node.Steps.ToList();
-                        steps[position] = replacement;
-                        node.SetSteps(steps);
+                        List<BtsmtlSkillStepPort> next =
+                            BtsmtlSkillGraphAuthoringMetadata.ReadStepPorts(node).ToList();
+                        next[position] = replacement;
+                        node.SetSteps(next);
                     });
                     return;
                 }
                 using var buttons = new EditorGUILayout.HorizontalScope();
                 using (new EditorGUI.DisabledScope(index == 0))
                     if (GUILayout.Button("上移")) { Move(node, index, index - 1); return; }
-                using (new EditorGUI.DisabledScope(index == node.Steps.Count - 1))
+                using (new EditorGUI.DisabledScope(index == steps.Count - 1))
                     if (GUILayout.Button("下移")) { Move(node, index, index + 1); return; }
                 bool connected = node.outConnections.OfType<BinderConnection>().Any(edge => edge.sourcePortID == step.Id);
                 using (new EditorGUI.DisabledScope(connected))
@@ -63,9 +68,10 @@ namespace ThirdPersonCharacter.Control.Authoring
                         int position = index;
                         Change(graph, "删除技能步骤", () =>
                         {
-                            var steps = node.Steps.ToList();
-                            steps.RemoveAt(position);
-                            node.SetSteps(steps);
+                            List<BtsmtlSkillStepPort> next =
+                                BtsmtlSkillGraphAuthoringMetadata.ReadStepPorts(node).ToList();
+                            next.RemoveAt(position);
+                            node.SetSteps(next);
                         });
                         return;
                     }
@@ -73,18 +79,20 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (GUILayout.Button("添加执行步骤"))
                 Change(graph, "添加技能步骤", () =>
                 {
-                    var steps = node.Steps.ToList();
-                    steps.Add(new BtsmtlSkillStepPort(Guid.NewGuid().ToString("N"), "步骤"));
-                    node.SetSteps(steps);
+                    List<BtsmtlSkillStepPort> next =
+                        BtsmtlSkillGraphAuthoringMetadata.ReadStepPorts(node).ToList();
+                    next.Add(new BtsmtlSkillStepPort(Guid.NewGuid().ToString("N"), "步骤"));
+                    node.SetSteps(next);
                 });
         }
 
         static void Move(BtsmtlSkillCompositeFlowNode node, int from, int to) =>
             Change((FlowGraph)node.graph, "调整技能步骤顺序", () =>
             {
-                var steps = node.Steps.ToList();
-                (steps[from], steps[to]) = (steps[to], steps[from]);
-                node.SetSteps(steps);
+                List<BtsmtlSkillStepPort> next =
+                    BtsmtlSkillGraphAuthoringMetadata.ReadStepPorts(node).ToList();
+                (next[from], next[to]) = (next[to], next[from]);
+                node.SetSteps(next);
             });
 
         static void Change(FlowGraph graph, string title, Action mutation)

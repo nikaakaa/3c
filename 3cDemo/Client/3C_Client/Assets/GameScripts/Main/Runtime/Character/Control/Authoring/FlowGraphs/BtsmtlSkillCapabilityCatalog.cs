@@ -622,6 +622,26 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool IsEmpty => string.IsNullOrEmpty(DeclarationId) && string.IsNullOrEmpty(OwnerId);
     }
 
+    public readonly struct BtsmtlSkillStepAuthoringValue
+    {
+        public BtsmtlSkillStepAuthoringValue(BtsmtlSkillStepPort step)
+        {
+            if (step == null)
+                throw new ArgumentNullException(nameof(step));
+            Id = step.Id;
+            Name = step.Name;
+            Condition = step.Condition;
+            Priority = step.Priority;
+            AbortPolicy = step.AbortPolicy;
+        }
+
+        public string Id { get; }
+        public string Name { get; }
+        public BtsmtlSkillFlowGraph Condition { get; }
+        public int Priority { get; }
+        public ProgramAbortPolicy AbortPolicy { get; }
+    }
+
     public readonly struct BtsmtlSkillAuthoringReferenceValue
     {
         public BtsmtlSkillAuthoringReferenceValue(
@@ -669,6 +689,22 @@ namespace ThirdPersonCharacter.Control.Authoring
                     field,
                     ReadField(node, field.FieldId.Value)))
                 .ToArray();
+        }
+
+        public static IReadOnlyList<BtsmtlSkillStepAuthoringValue> ReadSteps(FlowNode node)
+        {
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
+            return ((IReadOnlyList<BtsmtlSkillStepPort>)ReadField(node, "steps"))
+                .Select(value => new BtsmtlSkillStepAuthoringValue(value))
+                .ToArray();
+        }
+
+        public static IReadOnlyList<BtsmtlSkillStepPort> ReadStepPorts(FlowNode node)
+        {
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
+            return (IReadOnlyList<BtsmtlSkillStepPort>)ReadField(node, "steps");
         }
 
         public static object ReadField(FlowNode node, string fieldId)

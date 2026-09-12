@@ -116,6 +116,14 @@ namespace ThirdPersonCharacter.Control.Authoring
             FlowNode node) =>
             BtsmtlSkillAuthoringValues.ReadFields(node);
 
+        public static IReadOnlyList<BtsmtlSkillStepAuthoringValue> ReadSteps(
+            FlowNode node) =>
+            BtsmtlSkillAuthoringValues.ReadSteps(node);
+
+        public static IReadOnlyList<BtsmtlSkillStepPort> ReadStepPorts(
+            FlowNode node) =>
+            BtsmtlSkillAuthoringValues.ReadStepPorts(node);
+
         public static IReadOnlyList<GraphAuthoringTypedPropertyValue>
             ReadTypedProperties(FlowNode node) =>
             ReadFields(node)

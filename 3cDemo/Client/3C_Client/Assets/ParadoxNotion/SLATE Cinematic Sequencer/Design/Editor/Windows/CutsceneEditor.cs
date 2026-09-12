@@ -699,7 +699,7 @@ namespace Slate
             if (!embeddedSurface)
                 return;
             CancelEditTransaction();
-            if (cutscene != null && !Application.isPlaying)
+            if (cutscene != null && !embeddedSurface && !Application.isPlaying)
                 Stop(true);
             if (cutscene != null &&
                 (ReferenceEquals(Selection.activeObject, cutscene.gameObject) ||
@@ -797,7 +797,7 @@ namespace Slate
         void OnEnable() {
             Styles.Load();
 
-            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
+            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( !embeddedSurface && cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnWillSaveScene;
 
@@ -855,7 +855,7 @@ namespace Slate
 
         //Before scene is saved we need to stop so that cutscene changes are reverted.
         void OnWillSaveScene(UnityEngine.SceneManagement.Scene scene, string path) {
-            if ( cutscene != null && cutscene.currentTime > 0 ) {
+            if ( cutscene != null && !embeddedSurface && cutscene.currentTime > 0 ) {
                 Stop(true);
                 Debug.LogWarning("Scene Saved while a cutscene was in preview mode. Cutscene was reverted before saving the scene along with changes it affected.");
             }
@@ -867,7 +867,7 @@ namespace Slate
 
             //first stop current cut if any
             if ( cutscene != null ) {
-                if ( !Application.isPlaying ) {
+                if ( !embeddedSurface && !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -878,7 +878,7 @@ namespace Slate
                 CutsceneUtility.selectedObject = null;
                 multiSelection = null;
                 InitClipWrappers();
-                if ( !Application.isPlaying ) {
+                if ( !embeddedSurface && !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -896,7 +896,7 @@ namespace Slate
             multiSelection = null;
             var lastTime = cutscene.currentTime;
 
-            if ( !Application.isPlaying ) {
+            if ( !embeddedSurface && !Application.isPlaying ) {
                 Stop(true);
             }
 
@@ -1220,7 +1220,8 @@ namespace Slate
 
             //avoid edit when compiling
             if ( EditorApplication.isCompiling ) {
-                Stop(true);
+                if ( !embeddedSurface )
+                    Stop(true);
                 ShowNotification(new GUIContent("Compiling\n...Please wait..."));
                 return;
             }

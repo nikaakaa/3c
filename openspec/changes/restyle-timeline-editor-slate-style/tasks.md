@@ -53,8 +53,8 @@
 
 ## 7. 预览边界
 
-- [ ] 7.1 移除误接的嵌入 Slate Play/Sample/ReSample/Stop 和私有时钟，保留静态编辑游标、逐帧与被动运行标记
-- [ ] 7.2 完整审计默认 Director/Actor 清理和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；原勾选因后续接回播放而重新打开
+- [x] 7.1 移除误接的嵌入 Slate Play/Sample/ReSample/Stop 和私有时钟，保留静态编辑游标、逐帧与被动运行标记
+- [x] 7.2 完整审计默认 Director/Actor 清理和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；原勾选因后续接回播放而重新打开
 - [ ] 7.3 对接场景预览 change 已在主线提供的精确 binding/导航，运行事实只读而作者保持可编辑；Graph Shell 功能实施仍由该 change 拥有，不重复建设
 - [ ] 7.4 编辑游标、运行位置和历史位置分别显示，不能互相写同一个时间状态；未确认的 Timeline 内 Play 不作为已批准功能
 

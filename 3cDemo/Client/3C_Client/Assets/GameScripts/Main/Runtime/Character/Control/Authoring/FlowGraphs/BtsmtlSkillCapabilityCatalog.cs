@@ -217,6 +217,10 @@ namespace ThirdPersonCharacter.Control.Authoring
             .OrderBy(value => value.FullName, StringComparer.Ordinal)
             .ToArray();
 
+        public static IReadOnlyList<string> Kinds => s_ByKind.Keys
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+
         public static bool TryGetKind(Type type, out string kind)
         {
             if (type != null && s_ByType.TryGetValue(type, out kind))

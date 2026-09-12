@@ -339,14 +339,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                 "btsmtl.skill",
                 catalog =>
                 {
-                    var kinds = new HashSet<string>(StringComparer.Ordinal);
-                    foreach (Type type in BtsmtlSkillCapabilityCatalog.All)
+                    foreach (string kind in BtsmtlSkillCapabilityCatalog.Kinds)
                     {
-                        if (!BtsmtlSkillCapabilityCatalog.TryGetKind(
-                                type,
-                                out string kind) ||
-                            !kinds.Add(kind))
-                            continue;
+                        if (!BtsmtlSkillCapabilityCatalog.TryResolveType(
+                                kind,
+                                out Type type))
+                            throw new InvalidOperationException($"技能节点kind无法解析：{kind}");
                         catalog.Register(CreateDescriptor(type, kind));
                     }
                 });

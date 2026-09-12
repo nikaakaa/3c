@@ -586,8 +586,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string[] stateNames = m_Asset.EnumerateStateMachines()
                 .SelectMany(value => value.States)
                 .Where(value => value.PoseGraphId == graph.GraphId)
-                .Select(value => value.DisplayName)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => CharacterPoseAuthoringDisplayNames.ForIdentity(value.DisplayName))
+                .Where(value => !string.IsNullOrWhiteSpace(value) && value != "Unnamed")
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
             if (stateNames.Length == 1)
@@ -601,8 +601,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     value?.Payload is CharacterPoseSubgraphPayload payload &&
                     payload.Subgraph != null &&
                     payload.Subgraph.PoseGraphId == graph.GraphId)
-                .Select(value => value.DisplayName)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => CharacterPoseAuthoringDisplayNames.ForIdentity(value.DisplayName))
+                .Where(value => !string.IsNullOrWhiteSpace(value) && value != "Unnamed")
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
             if (subgraphOwners.Length == 1)

@@ -51,6 +51,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - checkout 在 SkillDefinition 完整性检查阶段失败，报告缺少原生状态机资产以及 Blackboard/ActionTargetSnapshot declaration；没有进入 Pose Document 写入或资产 Apply，也没有生成 `AgentAuthoring` 半成品目录。
 - 随后以同一实例调用只读 `btsmtl.validate`，在相同 SkillDefinition 入口返回相同错误；因此当前还没有可用于 Pose 资产迁移的有效 Document hash 或 Mutation plan。
 - Unity MCP Console 轻量检查返回的新增错误仅为工作区既有 Timeline `RuntimeDebugEventView.Status` 缺失，以及上述 SkillDefinition 缺失；未发现本change最近Pose文件的编译错误。
+- 后续同一实例的轻量 Console 读取返回 `SerializedObjectNotCreatableException`、`ArgumentNullException`、`NullReferenceException` 和上述 SkillDefinition 错误；MCP/Console 未提供堆栈，暂不能把前三项归因到本change。
 
 当前约束：
 

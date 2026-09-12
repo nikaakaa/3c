@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
@@ -92,6 +93,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool Finite { get; set; }
         public bool NonEmpty { get; set; }
         public string[] AllowedValues { get; set; }
+        public bool HasDefaultValue { get; set; }
+        public string DefaultValue { get; set; }
+        public string PickerKind { get; set; }
     }
 
     public readonly struct BtsmtlSkillPortShape
@@ -292,12 +296,14 @@ namespace ThirdPersonCharacter.Control.Authoring
         public static IReadOnlyList<GraphAuthoringFieldDescriptor> Fields(
             Type type)
         {
-            var fields = type
+            var attributes = type
                 .GetCustomAttributes(typeof(BtsmtlSkillAuthoringFieldAttribute), true)
                 .OfType<BtsmtlSkillAuthoringFieldAttribute>()
                 .GroupBy(value => value.FieldId, StringComparer.Ordinal)
-                .Select(value => value.First())
-                .Select(CreateField)
+                .Select(value => ResolveField(type, value.Key, value.ToArray()))
+                .ToArray();
+            var fields = attributes
+                .Select(value => CreateField(type, value))
                 .ToList();
             if (fields.Count == 0 && type == typeof(MacroNodeWrapper))
             {
@@ -338,7 +344,10 @@ namespace ThirdPersonCharacter.Control.Authoring
                 : node.GetInputValuePorts().Cast<Port>().Concat(node.GetOutputValuePorts().Cast<Port>());
             foreach (Port port in ports)
             {
-                bool multiple = port is FlowInput || port is ValueOutput;
+                bool multiple = port is FlowInput || port is ValueOutput ||
+                    node is IBtsmtlSkillStateStructureNode &&
+                    port is FlowOutput &&
+                    string.Equals(port.ID, "Transfer", StringComparison.Ordinal);
                 bool required = port is ValueInput input && input.isRequired;
                 yield return new BtsmtlSkillPortShape(
                     port.ID,
@@ -398,7 +407,38 @@ namespace ThirdPersonCharacter.Control.Authoring
         static string VariantKey(string kind, string fieldId, string value) =>
             (kind ?? string.Empty) + "\0" + (fieldId ?? string.Empty) + "\0" + (value ?? string.Empty);
 
+        static BtsmtlSkillAuthoringFieldAttribute ResolveField(
+            Type type,
+            string fieldId,
+            IReadOnlyList<BtsmtlSkillAuthoringFieldAttribute> fields)
+        {
+            BtsmtlSkillAuthoringFieldAttribute first = fields.First();
+            if (fields.Any(value =>
+                    value.ValueKind != first.ValueKind ||
+                    value.EnumType != first.EnumType ||
+                    value.ObjectType != first.ObjectType ||
+                    value.Optional != first.Optional ||
+                    value.HasMinimum != first.HasMinimum ||
+                    value.HasMinimum && value.Minimum != first.Minimum ||
+                    value.HasMaximum != first.HasMaximum ||
+                    value.HasMaximum && value.Maximum != first.Maximum ||
+                    value.Finite != first.Finite ||
+                    value.NonEmpty != first.NonEmpty ||
+                    !string.Equals(value.DefaultValue, first.DefaultValue, StringComparison.Ordinal) ||
+                    value.HasDefaultValue != first.HasDefaultValue ||
+                    !string.Equals(value.PickerKind, first.PickerKind, StringComparison.Ordinal) ||
+                    !(value.AllowedValues ?? Array.Empty<string>()).SequenceEqual(
+                        first.AllowedValues ?? Array.Empty<string>(),
+                        StringComparer.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    $"技能节点类型 '{type.FullName}' 的字段 '{fieldId}' 定义冲突。");
+            }
+            return first;
+        }
+
         static GraphAuthoringFieldDescriptor CreateField(
+            Type type,
             BtsmtlSkillAuthoringFieldAttribute field)
         {
             IReadOnlyList<string> allowedValues = field.AllowedValues;
@@ -412,6 +452,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 field.Finite,
                 field.NonEmpty,
                 allowedValues);
+            BtsmtlSkillNodeAuthoringReferenceAttribute reference =
+                AuthoringReferences(type).FirstOrDefault(value => value.FieldId == field.FieldId);
             return new GraphAuthoringFieldDescriptor(
                 new GraphAuthoringFieldId(field.FieldId),
                 string.IsNullOrWhiteSpace(field.DisplayName)
@@ -420,9 +462,97 @@ namespace ThirdPersonCharacter.Control.Authoring
                 field.ValueKind,
                 GraphAuthoringFieldAccess.AuthoringRead |
                 GraphAuthoringFieldAccess.AuthoringWrite,
+                defaultValue: DefaultValue(type, field),
                 constraint: constraint,
+                pickerKind: PickerKind(field, reference),
                 optional: field.Optional,
-                objectType: field.ObjectType);
+                objectType: field.ObjectType ?? reference?.ObjectType);
+        }
+
+        static object DefaultValue(
+            Type type,
+            BtsmtlSkillAuthoringFieldAttribute field)
+        {
+            string variant = type
+                .GetCustomAttributes(typeof(BtsmtlSkillNodeVariantAttribute), false)
+                .OfType<BtsmtlSkillNodeVariantAttribute>()
+                .FirstOrDefault(value => value.FieldId == field.FieldId)?.Value;
+            if (field.HasDefaultValue)
+                return ParseDefault(field, field.DefaultValue);
+            if (!string.IsNullOrEmpty(variant))
+                return variant;
+            if (field.FieldId == "valueType")
+            {
+                if (type == typeof(BtsmtlSkillBlackboardBooleanFlowNode))
+                    return "bool";
+                if (type == typeof(BtsmtlSkillBlackboardScalarFlowNode) ||
+                    typeof(BtsmtlSkillBlackboardAccessFlowNode).IsAssignableFrom(type))
+                    return "float";
+            }
+            if (field.EnumType != null && field.EnumType.IsEnum)
+                return Enum.GetValues(field.EnumType).GetValue(0);
+            return field.ValueKind switch
+            {
+                GraphAuthoringFieldValueKind.String => string.Empty,
+                GraphAuthoringFieldValueKind.IdentityReference => string.Empty,
+                GraphAuthoringFieldValueKind.Boolean => false,
+                GraphAuthoringFieldValueKind.Integer => 0,
+                GraphAuthoringFieldValueKind.Float => 0f,
+                _ => null
+            };
+        }
+
+        static object ParseDefault(
+            BtsmtlSkillAuthoringFieldAttribute field,
+            string value)
+        {
+            if (value == null)
+                throw new ArgumentException($"技能字段 '{field.FieldId}' 的默认值缺失。");
+            try
+            {
+                return field.ValueKind switch
+                {
+                    GraphAuthoringFieldValueKind.String => value,
+                    GraphAuthoringFieldValueKind.IdentityReference => value,
+                    GraphAuthoringFieldValueKind.Boolean => bool.Parse(value),
+                    GraphAuthoringFieldValueKind.Integer => int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture),
+                    GraphAuthoringFieldValueKind.Float => float.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture),
+                    GraphAuthoringFieldValueKind.Enum when field.EnumType != null =>
+                        Enum.Parse(field.EnumType, value, false),
+                    GraphAuthoringFieldValueKind.Enum => value,
+                    _ => throw new ArgumentException($"技能字段 '{field.FieldId}' 不支持字符串默认值。")
+                };
+            }
+            catch (Exception error) when (error is FormatException || error is OverflowException || error is ArgumentException)
+            {
+                throw new ArgumentException(
+                    $"技能字段 '{field.FieldId}' 的默认值 '{value}' 与 {field.ValueKind} 不匹配。",
+                    error);
+            }
+        }
+
+        static string PickerKind(
+            BtsmtlSkillAuthoringFieldAttribute field,
+            BtsmtlSkillNodeAuthoringReferenceAttribute reference)
+        {
+            if (!string.IsNullOrWhiteSpace(field.PickerKind))
+                return field.PickerKind;
+            if (reference != null)
+                return reference.Kind switch
+                {
+                    BtsmtlSkillNodeAuthoringReferenceKind.InputValue => "input-value",
+                    BtsmtlSkillNodeAuthoringReferenceKind.ActionRequest => "action-request",
+                    BtsmtlSkillNodeAuthoringReferenceKind.ActionProfile => "action-profile",
+                    BtsmtlSkillNodeAuthoringReferenceKind.Asset => "asset",
+                    _ => string.Empty
+                };
+            return field.ValueKind switch
+            {
+                GraphAuthoringFieldValueKind.IdentityReference => "identity",
+                GraphAuthoringFieldValueKind.AssetReference => "asset",
+                GraphAuthoringFieldValueKind.Object => "object",
+                _ => string.Empty
+            };
         }
     }
 }

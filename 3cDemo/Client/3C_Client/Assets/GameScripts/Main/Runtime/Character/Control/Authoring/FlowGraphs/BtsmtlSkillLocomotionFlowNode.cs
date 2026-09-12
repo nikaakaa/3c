@@ -14,17 +14,23 @@ namespace ThirdPersonCharacter.Control.Authoring
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
-        Finite = true)]
+        Finite = true,
+        HasDefaultValue = true,
+        DefaultValue = "4")]
     [BtsmtlSkillAuthoringField("displacementMode", typeof(LocomotionInputMotionDisplacementMode))]
     [BtsmtlSkillAuthoringField(
         "turnSpeedDegrees",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
-        Finite = true)]
+        Finite = true,
+        HasDefaultValue = true,
+        DefaultValue = "720")]
     [BtsmtlSkillAuthoringField(
         "cameraRelative",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean)]
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean,
+        HasDefaultValue = true,
+        DefaultValue = "true")]
     [BtsmtlSkillAuthoringField("executionMode", typeof(LocomotionInputMotionExecutionMode))]
     [BtsmtlSkillAuthoringField(
         "durationSeconds",

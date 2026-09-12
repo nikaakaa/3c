@@ -77,7 +77,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         "actionContext",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
-    [BtsmtlSkillAuthoringField("transitionType", typeof(ActionLifecycleTransitionType))]
+    [BtsmtlSkillAuthoringField(
+        "transitionType",
+        typeof(ActionLifecycleTransitionType),
+        HasDefaultValue = true,
+        DefaultValue = "Complete")]
     [BtsmtlSkillAuthoringField(
         "reason",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;

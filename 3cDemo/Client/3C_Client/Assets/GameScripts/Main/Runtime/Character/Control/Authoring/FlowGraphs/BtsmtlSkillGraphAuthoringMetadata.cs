@@ -469,21 +469,18 @@ namespace ThirdPersonCharacter.Control.Authoring
                 composite.SetSteps(Array.Empty<BtsmtlSkillStepPort>());
             node.GatherPorts();
             var result = new List<GraphAuthoringPortDescriptor>();
-            foreach (BtsmtlSkillPortShape shape in
+            foreach (GraphAuthoringDynamicPortProjection shape in
                      BtsmtlSkillCapabilityCatalog.ProjectPorts(node))
             {
                 result.Add(new GraphAuthoringPortDescriptor(
-                    new GraphAuthoringPortId(shape.Id),
-                    shape.Id,
-                    ValueType(shape.ValueType),
-                    shape.IsInput
-                        ? GraphAuthoringPortDirection.Input
-                        : GraphAuthoringPortDirection.Output,
-                    shape.Multiple
-                        ? GraphAuthoringPortCapacity.Multiple
-                        : GraphAuthoringPortCapacity.Single,
+                    shape.PortId,
+                    shape.DisplayName,
+                    shape.ValueTypeId,
+                    shape.Direction,
+                    shape.Capacity,
                     shape.Required,
-                    result.Count));
+                    shape.Order,
+                    shape.InterfacePortId));
             }
             return result;
         }

@@ -9,6 +9,7 @@ using FlowCanvas.Macros;
 using FlowCanvas.Nodes;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
@@ -99,26 +100,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool HasDefaultValue { get; set; }
         public string DefaultValue { get; set; }
         public string PickerKind { get; set; }
-    }
-
-    public readonly struct BtsmtlSkillPortShape
-    {
-        internal BtsmtlSkillPortShape(string id, Type valueType, bool isFlow, bool isInput, bool multiple, bool required)
-        {
-            Id = id;
-            ValueType = valueType;
-            IsFlow = isFlow;
-            IsInput = isInput;
-            Multiple = multiple;
-            Required = required;
-        }
-
-        public string Id { get; }
-        public Type ValueType { get; }
-        public bool IsFlow { get; }
-        public bool IsInput { get; }
-        public bool Multiple { get; }
-        public bool Required { get; }
     }
 
     public enum BtsmtlSkillProviderKind : byte
@@ -327,7 +308,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             return fields;
         }
 
-        public static IReadOnlyList<BtsmtlSkillPortShape> ProjectPorts(Type type)
+        public static IReadOnlyList<GraphAuthoringDynamicPortProjection> ProjectPorts(Type type)
         {
             if (!TryGetKind(type, out _))
                 throw new InvalidOperationException($"技能节点类型未登记：{type?.FullName}");
@@ -336,18 +317,27 @@ namespace ThirdPersonCharacter.Control.Authoring
             return ProjectPorts(node);
         }
 
-        public static IReadOnlyList<BtsmtlSkillPortShape> ProjectPorts(FlowNode node)
+        public static IReadOnlyList<GraphAuthoringDynamicPortProjection> ProjectPorts(FlowNode node)
         {
             if (!TryGetKind(node, out _))
                 throw new InvalidOperationException("技能节点类型未登记，不能投影端口。");
             return ProjectPorts(node, true)
                 .Concat(ProjectPorts(node, false))
-                .OrderBy(value => value.Id, StringComparer.Ordinal)
-                .ThenBy(value => value.IsInput ? 0 : 1)
+                .OrderBy(value => value.PortId.Value, StringComparer.Ordinal)
+                .ThenBy(value => value.Direction == GraphAuthoringPortDirection.Input ? 0 : 1)
+                .Select((value, index) => new GraphAuthoringDynamicPortProjection(
+                    value.PortId,
+                    value.DisplayName,
+                    value.ValueTypeId,
+                    value.Direction,
+                    value.Capacity,
+                    value.Required,
+                    index,
+                    value.InterfacePortId))
                 .ToArray();
         }
 
-        static IEnumerable<BtsmtlSkillPortShape> ProjectPorts(FlowNode node, bool flow)
+        static IEnumerable<GraphAuthoringDynamicPortProjection> ProjectPorts(FlowNode node, bool flow)
         {
             IEnumerable<Port> ports = flow
                 ? node.GetInputFlowPorts().Cast<Port>().Concat(node.GetOutputFlowPorts().Cast<Port>())
@@ -359,13 +349,18 @@ namespace ThirdPersonCharacter.Control.Authoring
                     port is FlowOutput &&
                     string.Equals(port.ID, "Transfer", StringComparison.Ordinal);
                 bool required = port is ValueInput input && input.isRequired;
-                yield return new BtsmtlSkillPortShape(
+                yield return new GraphAuthoringDynamicPortProjection(
+                    new GraphAuthoringPortId(port.ID),
                     port.ID,
-                    flow ? typeof(Flow) : port.type,
-                    flow,
-                    port.IsInputPort(),
-                    multiple,
-                    required);
+                    flow ? "flow" : BtsmtlSkillGraphAuthoringMetadata.ValueType(port.type),
+                    port.IsInputPort()
+                        ? GraphAuthoringPortDirection.Input
+                        : GraphAuthoringPortDirection.Output,
+                    multiple
+                        ? GraphAuthoringPortCapacity.Multiple
+                        : GraphAuthoringPortCapacity.Single,
+                    required,
+                    0);
             }
         }
 
@@ -813,39 +808,37 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return state.ProviderOwnerId;
                 case "fieldId" when node is IBtsmtlSkillCharacterStateNode state:
                     return state.FieldId;
-                case "tagId" when node is BtsmtlSkillGameplayTagFlowNode tag:
+                case "tagId" when node is IGameplayTagAuthoring tag:
                     return tag.Tag.Value;
                 case "providerOwnerId" when node is BtsmtlSkillGameplayTagFlowNode tag:
                     return tag.ProviderOwnerId;
-                case "query" when node is BtsmtlSkillGameplayTagQueryFlowNode query:
+                case "query" when node is IGameplayTagQueryAuthoring query:
                     return query.Query;
                 case "providerOwnerId" when node is BtsmtlSkillGameplayTagQueryFlowNode query:
                     return query.ProviderOwnerId;
-                case "attributeId" when node is BtsmtlSkillGameplayAttributeFlowNode attribute:
+                case "attributeId" when node is IGameplayAttributeAuthoring attribute:
                     return attribute.Attribute.Value;
                 case "providerOwnerId" when node is BtsmtlSkillGameplayAttributeFlowNode attribute:
                     return attribute.ProviderOwnerId;
-                case "effect" when node is BtsmtlSkillApplyGameplayEffectFlowNode apply:
+                case "effect" when node is IGameplayEffectApplicationAuthoring apply:
                     return apply.Effect;
-                case "actionContext" when node is BtsmtlSkillApplyGameplayEffectFlowNode apply:
-                    return apply.ActionContext;
-                case "predicted" when node is BtsmtlSkillApplyGameplayEffectFlowNode apply:
+                case "actionContext" when node is IActionContextAuthoring context:
+                    return context.ActionContext;
+                case "predicted" when node is IGameplayEffectApplicationAuthoring apply:
                     return apply.Predicted;
                 case "providerOwnerId" when node is BtsmtlSkillApplyGameplayEffectFlowNode apply:
                     return apply.ProviderOwnerId;
-                case "selector" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
+                case "selector" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.Selector;
-                case "handle" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
+                case "handle" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.Handle;
-                case "effect" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
+                case "effect" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.Effect;
-                case "query" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
+                case "query" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.EffectTagQuery;
                 case "providerOwnerId" when node is BtsmtlSkillRemoveGameplayEffectFlowNode remove:
                     return remove.ProviderOwnerId;
-                case "actionContext" when node is BtsmtlSkillActionContextActiveFlowNode context:
-                    return context.ActionContext;
-                case "windowType" when node is BtsmtlSkillActionWindowActiveFlowNode window:
+                case "windowType" when node is IActionWindowAuthoring window:
                     return window.WindowType;
                 case "actionProfile" when node is BtsmtlSkillCanActivateActionFlowNode admission:
                     return admission.ActionProfile;
@@ -853,8 +846,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return new BtsmtlSkillTargetSnapshotReference(
                         admission.TargetSnapshotDeclarationId,
                         admission.TargetSnapshotOwnerId);
-                case "actionContext" when node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle:
-                    return lifecycle.ActionContext;
                 case "transitionType" when node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle:
                     return lifecycle.TransitionType;
                 case "reason" when node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle:

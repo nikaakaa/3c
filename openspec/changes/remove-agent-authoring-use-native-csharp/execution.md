@@ -86,7 +86,25 @@ output_asset_path: Assets/Configs/Animation/Presentation/PoseGraphs/LocomotionFu
 
 Unity 返回：`saved=true`、`replaced_asset_paths` 包含精确 Pose 根、`created_asset_paths=[]`、`deleted_asset_paths=[]`、`diagnostics=[]`。这证明新入口完成了正式 Pose Graph 替换、Profile/Definition 绑定和保存，没有调用旧 Document 生命周期。
 
-### 4.4 Unity 边界
+### 4.4 Character Float32 / Presentation Projection
+
+在原生 FSM 闭包的正式 discovery、semantic emission、SourceMap 和 TargetLowering 修正后，使用同一 Unity 实例和精确 Corin Definition 执行 `character.build_float32_products`，job 为 `8a40f68244b34acc92b5d620e804be42`。
+
+结果：Exact Float32 Program 和 Presentation Projection 已发布。
+
+- Program wrapper：`Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.SimulationProgram.asset`
+- Presentation Projection：`Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.PresentationProjection.asset`
+- Numeric profile：`float32-ieee754`，Target ABI：`8`
+- Program ID：`character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`
+- Source revision：`aa43ee9c9f02ac8de30c6c8dc3c0cdad54f3b6defaeed1ea54bcd425ee3a6285`
+- Semantic hash：`54f5241e0aee361b758c273957bbe4f766b9b0c05ae2f82fd211ce3b0c69f7ae`
+- Program hash：`13b21c66820073e108c63f64eee960f70f65459e468b535f128559643be61cfe`
+- Projection revision：`c0f3985f670358d320b6973afb6883300e9410c8a660beeb73e7976ce2bf236f`
+- Canonical bytes：`2109553`
+
+期间暴露的空 `Child`、State Body 可见范围、Entry/Any/Exit 生命周期 owner、SourceMap content hash 和原生 FSM edge identity 参数错误均已按正式来源修正；没有用 fallback 或默认 hash 放行。Float32 结果中的 `float32_literal_rounded` 与 `float32_state_abi` 是正式 TargetLowering 信息诊断，不是失败。
+
+### 4.5 Unity 边界
 
 Unity 实例为 `3C_Client@e852139597e42532`，项目路径为 `D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`。最近状态为非 Play、idle、未编译、未进行 AssetDatabase 刷新，`ready_for_tools=true`。
 
@@ -103,4 +121,4 @@ Unity 实例为 `3C_Client@e852139597e42532`，项目路径为 `D:/Unity_Project
 
 ## 6. 未并入本 change 的外部依赖
 
-固定 motor 参数桥、动画变量的运行时推进与消费闭环，以及完整 Character Projection/Float32/Fixed 产品 Build 不因作者协议退役自动完成。它们继续由各自领域任务和显式 Build 入口负责；本 change 不恢复旧 Agent 协议，也不把 C# authoring 成功描述为运行时闭环完成。
+固定 motor 参数桥、动画变量的运行时推进与消费闭环，以及 Fixed 产品 Build 不因作者协议退役自动完成。它们继续由各自领域任务和显式 Build 入口负责；本 change 不恢复旧 Agent 协议，也不把 C# authoring 成功描述为运行时闭环完成。

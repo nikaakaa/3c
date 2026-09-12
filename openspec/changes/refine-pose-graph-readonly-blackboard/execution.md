@@ -43,6 +43,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `8b2d611d4`：拓扑校验要求跨图复用的同一外部参数保持类型、单位、默认值和Usage一致，避免形成第二份输入定义。
 - `90df0a710`：Animation Input Contract从所有可达Pose Graph收集正式外部变量，按稳定ParameterId形成唯一运行时布局并拒绝跨图声明冲突；原有EventGraph合同改动保持未提交。
 - `a42d1275e`：简化输入合同的根图存在校验；该提交同时包含索引中另一条已暂存的Skill规范变更，未回退其内容。
+- `6d55f3288`：删除无调用者且会按单个Graph参数构建布局的遗留重载，保留唯一Animation Input Contract布局和用户要求的`CreatePoseOnlyInput()`隔离入口。
 
 正式 Document 流程：
 

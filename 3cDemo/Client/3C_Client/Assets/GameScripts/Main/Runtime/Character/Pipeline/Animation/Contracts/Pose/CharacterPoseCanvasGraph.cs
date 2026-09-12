@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool IsReadOnly => true;
         public bool AllowVariablePick => true;
 
-        internal void SetEditorAnimationVariables(
+        public void SetEditorAnimationVariables(
             CharacterAnimationVariableContract animationVariables) =>
             m_EditorAnimationVariables = animationVariables;
 

@@ -29,15 +29,15 @@ namespace BTSMTL.Timeline.Editor
     [AddComponentMenu("")]
     sealed class BtsmtlSlateGroup : CutsceneGroup
     {
-        [SerializeField] string m_Name = "Timeline";
+        [SerializeField] string m_DisplayName = "Timeline";
         [SerializeField] GameObject m_Actor;
         [SerializeField] ActorReferenceMode m_ReferenceMode = ActorReferenceMode.UseOriginal;
         [SerializeField] ActorInitialTransformation m_InitialTransformation = ActorInitialTransformation.UseOriginal;
 
         public override string name
         {
-            get => m_Name;
-            set => m_Name = value ?? string.Empty;
+            get => m_DisplayName;
+            set => m_DisplayName = value ?? string.Empty;
         }
 
         public override GameObject actor
@@ -464,6 +464,11 @@ namespace BTSMTL.Timeline.Editor
                 m_ProxyClips.TryGetValue(clipAuthoringId, out BtsmtlSlateActionClip clip))
             {
                 CutsceneUtility.selectedObject = clip;
+                if (m_SourceClips.TryGetValue(clipAuthoringId, out Clip sourceClip))
+                {
+                    m_Session.SetSelection(sourceClip);
+                    SelectionChanged?.Invoke(m_Session.Selection);
+                }
                 m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }
@@ -471,6 +476,11 @@ namespace BTSMTL.Timeline.Editor
                 m_ProxyTracks.TryGetValue(trackAuthoringId, out BtsmtlSlateTrack track))
             {
                 CutsceneUtility.selectedObject = track;
+                if (m_SourceTracks.TryGetValue(trackAuthoringId, out Track sourceTrack))
+                {
+                    m_Session.SetSelection(sourceTrack);
+                    SelectionChanged?.Invoke(m_Session.Selection);
+                }
                 m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }

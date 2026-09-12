@@ -490,6 +490,22 @@ namespace Slate
             }
         }
 
+        readonly struct SurfaceLayout
+        {
+            public SurfaceLayout(Rect topLeft, Rect topMiddle, Rect left, Rect center)
+            {
+                TopLeft = topLeft;
+                TopMiddle = topMiddle;
+                Left = left;
+                Center = center;
+            }
+
+            public Rect TopLeft { get; }
+            public Rect TopMiddle { get; }
+            public Rect Left { get; }
+            public Rect Center { get; }
+        }
+
         //Do action safely (stop cutscene, do, resample)
         void SafeDoAction(System.Action call) {
             bool ownsTransaction = !editTransactionActive;
@@ -603,6 +619,19 @@ namespace Slate
         public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
         {
             InitializeEmbedded(newCutscene, repaint, null, null, null);
+        }
+
+        SurfaceLayout CalculateLayout()
+        {
+            var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
+            var timeInfoTop = embeddedSurface ? 0f : TOOLBAR_HEIGHT;
+            float contentWidth = screenWidth - LEFT_MARGIN - RIGHT_MARGIN;
+            float contentHeight = screenHeight - timelineTop + scrollPos.y;
+            return new SurfaceLayout(
+                new Rect(0, embeddedSurface ? 0 : TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN),
+                new Rect(LEFT_MARGIN, timeInfoTop, contentWidth, TOP_MARGIN),
+                new Rect(0, timelineTop, LEFT_MARGIN, contentHeight),
+                new Rect(LEFT_MARGIN, timelineTop, contentWidth, contentHeight));
         }
 
         public void InitializeEmbedded(
@@ -1283,12 +1312,11 @@ namespace Slate
             }
 
             //make the layout rects
-            var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
-            var timeInfoTop = embeddedSurface ? 0 : TOOLBAR_HEIGHT;
-            topLeftRect = new Rect(0, embeddedSurface ? 0 : TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
-            topMiddleRect = new Rect(LEFT_MARGIN, timeInfoTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
-            leftRect = new Rect(0, timelineTop, LEFT_MARGIN, screenHeight - timelineTop + scrollPos.y);
-            centerRect = new Rect(LEFT_MARGIN, timelineTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - timelineTop + scrollPos.y);
+            SurfaceLayout layout = CalculateLayout();
+            topLeftRect = layout.TopLeft;
+            topMiddleRect = layout.TopMiddle;
+            leftRect = layout.Left;
+            centerRect = layout.Center;
 
             //...
             DoKeyboardShortcuts();

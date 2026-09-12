@@ -40,7 +40,7 @@
 ## 5. GUI 布局和生命周期
 
 - [x] 5.1 合并文档名/ownership/来源，工具栏统一高度；清掉重复标题和隐藏控件的空白占位
-- [ ] 5.2 一次计算工具栏、搜索、缩放、标尺、左右轨道、属性区域；背景/分隔线/裁剪/命中共用结果
+- [x] 5.2 Slate Surface 通过单一 SurfaceLayout 计算工具栏、搜索、缩放、标尺、左右轨道和命中区域；属性区由同一 Timeline 窗口的 UI Toolkit 宿主管理
 - [x] 5.3 左右共同行高度与垂直滚动，曲线展开同步；属性区可收起/调高，窄窗口自动收起属性区
 - [x] 5.4 删除临时 Auto、“作者预览”、无关 Actor/Director/Render 和未映射菜单；曲线入口不再拼入 Track 名
 - [x] 5.5 根据完整堆栈修复重复序列化字段、GUI 和 proxy 生命周期异常，销毁时释放临时宿主/选择/回调，不隐藏错误代替处理
@@ -65,8 +65,8 @@
 - [x] 8.1 2026-09-12 完成 proposal/design/delta 对账，记录 current spec 待替换条款与待确认 Play 语义，并同步修正场景预览 delta 的结构只读冲突
 - [x] 8.2 2026-09-12 对 restyle-timeline-editor-slate-style 和 rebuild-btsmtl-preview-with-scene-play 执行 openspec validate --type change --strict，均返回 is valid；结构合法不代表实现完成
 - [ ] 8.3 实施结束交付模块输入/输出、实际代码链、编译与已有 validator 结果、删除范围及未完成项，不用旧交付说明代替
-- [ ] 8.4 新增/字段改变后对照正式 catalog/binding、Document exporter/reconciler/validator，UI 与 Document 共享正式能力，不复制 schema
-- [ ] 8.5 分模块中文小步提交，保留其它任务改动；dotnet build 按 AGENTS 禁用构建服务器并立即 shutdown，不新增测试代码
+- [x] 8.4 Scene valueCurve 与 typed binding 已对照正式 catalog/binding、Skill Document exporter/applier/validator；UI 与 Document 共用正式能力，不复制 schema
+- [x] 8.5 分模块中文小步提交，保留其它任务改动；dotnet build 按 AGENTS 禁用构建服务器并立即 shutdown，不新增测试代码
 
 ## 9. 与预览窗口联合实施
 

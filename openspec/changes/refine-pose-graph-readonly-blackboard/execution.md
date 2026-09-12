@@ -94,3 +94,18 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 
 - Unity 维护入口只解决当前 Corin 资产的正式边界迁移；Pose 对旧 Agent EventGraph Mapper/DTO 的正式替换、完整 Pose C# 输出适配、跨图输入作用域和最终 spec 对账仍需继续。
 - 当前 Unity 工程仍有其它窗口的 Skill/编辑器改动在编译或刷新，不能把本次资产维护结果等同于完整 Character Build 已通过。
+
+## 2026-09-13 最新 Pose 编译边界
+
+已确认：
+
+- `0f752d9b3`：Corin 原生 EventGraph 移除没有正式所有者的 Action/Foot 权重变量及 Set 分支；Foot Placement 不再由 EventGraph 写入。
+- `26f684d9e`：Pose State Graph 不再复制根图或运行时输入参数声明，只允许空的图本地参数集合，运行时统一读取 Animation Input Contract。
+- `5dc21dc88`：Inertialization 规则改为稀疏参数 override，缺省保持 `Snap`；Corin policy 的 43 条旧 Action/Foot/BlendShape filter 已通过正式入口删除。
+- 第二轮正式 Float32/Projection 构建已确认 Pose、Foot Placement 和 Inertialization 阶段通过；此前的 Foot 接口、State Parameter contract 和 Inertialization full-parameter 错误均已消失。
+- 当前构建剩余错误为 Character Definition `AuthoringDiscovery` 的 `Value cannot be null. Parameter name: key`，尚未归因到 Pose 编译；C# authoring 任务正在处理 Definition/Skill 发现链和 Pose 薄输出适配。
+
+当前 Pose 资产事实：
+
+- `LocomotionFullBodyPoseGraph.asset` 有 9 个目录引用图；各图 `m_Parameters` 均为空，根图无 Foot Get/内部 Foot 动态接口，Body 图只保留输入 Pose 到 Foot Placement、Full Body IK 和输出的正式拓扑。
+- BlendShape 仍由 Profile 的 AnimationPropertyBindings 和正式曲线资源合同提供，不再复制进任何 Pose Graph 参数列表；黑板/Transition 普通变量只接受 EventGraph 的精确 Bool、Int32、Float32 声明。

@@ -16,17 +16,17 @@
 
 ### Requirement: Bridge 必须复用正式 Agent compiler 与 BTSMTL authoring API
 
-MCP bridge MUST复用v7 package exporter、Document Reconciler、Mutation Compiler、Character Validator和Compile Report。全部Graph、Timeline、AnimationClip Curve与Presentation修改 MUST继续由typed handler通过正式BTSMTL、Timeline、Clip Curve与Presentation authoring API执行。Bridge MUST不直接写Unity YAML、AnimationClip serialized curve、Node集合、Edge集合、GUID映射或建立第二套authoring数据。
+MCP bridge MUST复用v8 package exporter、Document Reconciler、Mutation Compiler、Character Validator和Compile Report。全部Graph、Timeline、AnimationClip Curve与Presentation修改 MUST继续由typed handler通过正式BTSMTL、Timeline、Clip Curve与Presentation authoring API执行。Bridge MUST不直接写Unity YAML、AnimationClip serialized curve、Node集合、Edge集合、GUID映射或建立第二套authoring数据。
 
 #### Scenario: Bridge应用Clip Curve变化
 
-- **WHEN** v7 Character package包含合法Clip注册Curve变化
+- **WHEN** v8 Character package包含合法Clip注册Curve变化
 - **THEN** Bridge MUST把整包交给统一Application Service和Clip Curve handler
 - **AND** MCP handler MUST不直接调用AnimationUtility或编辑`.anim`文本
 
 #### Scenario: Bridge应用Graph变化
 
-- **WHEN** v7 package包含合法Graph目标变化
+- **WHEN** v8 package包含合法Graph目标变化
 - **THEN** handler MUST继续调用正式Graph authoring API
 - **AND** MUST不创建Node级MCP工具
 
@@ -150,7 +150,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 ### Requirement: Document Apply必须执行hash门禁、预检和资产级事务
 
-`btsmtl.apply_document` MUST重新读取确定性v7文档包，校验expected document hash、live source revision、current context hash、root identity和同步状态，再执行无副作用reconcile与preflight。全部门禁成功后，系统 MUST对Definition和全部可达serialized owner建立单一Undo事务，调用Mutation Compiler、Character Validator、save与最终文档包反向发布。Behavior Designer AI不进入Document事务。Character domain MUST不在Document apply内Build。任一错误或异常 MUST回滚，MUST不保存半成品或报告Clean。
+`btsmtl.apply_document` MUST重新读取确定性v8文档包，校验expected document hash、live source revision、current context hash、root identity和同步状态，再执行无副作用reconcile与preflight。全部门禁成功后，系统 MUST对Definition和全部可达serialized owner建立单一Undo事务，调用Mutation Compiler、Character Validator、save与最终文档包反向发布。Behavior Designer AI不进入Document事务。Character domain MUST不在Document apply内Build。任一错误或异常 MUST回滚，MUST不保存半成品或报告Clean。
 
 #### Scenario: Document hash变化
 
@@ -172,7 +172,7 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 
 ### Requirement: MCP bridge必须只透传Character Document事务
 
-五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v7`同步与validation结果，并只透传CharacterController整包事务。Character package MUST覆盖State、Action、Skill Graph、Macro、Timeline、Timeline-local Curve、AnimationClip注册Curve、Node、Edge、direct Clip Binding、Animation Slot／Group、Locomotion Sync Group与Presentation owner可写语义。Behavior Designer AI不进入BTSMTL package。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Clip级tool、Pose专用tool、插件AI专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
+五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v8`同步与validation结果，并只透传CharacterController整包事务。Character package MUST覆盖State、Action、Skill Graph、Macro、Timeline、Timeline-local Curve、AnimationClip注册Curve、Node、Edge、direct Clip Binding、Animation Slot／Group、Locomotion Sync Group与Presentation owner可写语义。Behavior Designer AI不进入BTSMTL package。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Clip级tool、Pose专用tool、插件AI专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
 
 #### Scenario: dry-run发现Clip Curve分片
 
@@ -184,11 +184,11 @@ Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期
 #### Scenario: Agent Document修改Input binding
 
 - **WHEN** Character package增加合法Character input/request binding
-- **THEN** bridge MUST把同一v7整包交给统一service
+- **THEN** bridge MUST把同一v8整包交给统一service
 - **AND** response MUST返回Mutation Plan、事务与Validator机器报告
 
 #### Scenario: bridge收到旧schema
 
-- **WHEN** 调用方提交v1-v6、v15-v17 Snapshot/Patch、operation或`patch_json`
+- **WHEN** 调用方提交v1-v7、v15-v17 Snapshot/Patch、operation或`patch_json`
 - **THEN** bridge MUST返回unsupported schema或unsupported parameter
-- **AND** MUST不转换为v7文档包
+- **AND** MUST不转换为v8文档包

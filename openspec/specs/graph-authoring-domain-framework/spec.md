@@ -36,7 +36,7 @@
 
 BTSMTL与其它正式Graph领域 MAY通过各自正式Definition Adapter向同一Framework提供Capability，但 MUST不被迫引用Pose运行类型。BTSMTL Skill正式节点上的Editor-only metadata marker、Gameplay Graph descriptor与正式Mutation binding MUST通过同一Capability投影供Agent、原生UI、Validator和Compiler消费；`AgentPackage...`只表示Document包格式。Behavior Designer AI使用插件自己的作者框架，不向该Framework提供Capability。唯一`GraphAuthoringNodePortShapeProjector` MUST只从Capability、typed properties与node-local动态端口合成固定、唯一命中的条件端口和动态端口，并拒绝三类端口identity重叠。人工UI、Document exporter、strict parser、Target Mapper、Clipboard、Reconciler、Mutation preflight和Validator MUST只消费同一Capability与Port Shape；不得各自判断mode、构造默认Node或从现有edge反推端口。Compiler MUST从同一Pose Definition读取Graph dependency与typed lowering。Definition与Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
 
-Pose Node Definition只拥有节点局部作者语义、直接Graph dependency与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save、reverse export或五个MCP生命周期；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。Definition变化如果改变Agent能看到、创建、连接或必须验证的语义，MUST同步Document v7模型、Presentation codec/exporter、Target Mapper、唯一Reconciler、typed Presentation Mutation、Validator与`btsmtl-agent-authoring`当前合同。
+Pose Node Definition只拥有节点局部作者语义、直接Graph dependency与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save、reverse export或五个MCP生命周期；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。Definition变化如果改变Agent能看到、创建、连接或必须验证的语义，MUST同步Document v8模型、Presentation codec/exporter、Target Mapper、唯一Reconciler、typed Presentation Mutation、Validator与`btsmtl-agent-authoring`当前合同。
 
 #### Scenario: FootPlacement声明Goal Contribution输出
 
@@ -158,7 +158,7 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 #### Scenario: UI与Document修改同一Transition
 
-- **WHEN** 人工UI或Document v7修改Pose transition blend policy
+- **WHEN** 人工UI或Document v8修改Pose transition blend policy
 - **THEN** 两条入口 MUST生成同一种Presentation Mutation
 - **AND** 最终资产约束、诊断和revision变化 MUST一致
 

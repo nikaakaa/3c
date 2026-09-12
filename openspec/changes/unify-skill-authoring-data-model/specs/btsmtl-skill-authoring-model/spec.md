@@ -94,3 +94,19 @@ Document MUST从共同业务定义读取和提交节点参数，保留实施基�
 
 - **WHEN** 写入或保存失败
 - **THEN** 原参数、身份和引用 MUST由既有事务恢复，不能留下半迁移实例
+
+### Requirement: 状态机转移必须使用唯一Edge Payload
+
+StateMachine的Transfer Edge MUST唯一保存ConditionRule引用、priority、abortPolicy和非负order。Enter、Any和State只能通过固定Transfer输出发起转移，State和Exit只能通过固定StateIn输入接收；状态节点和anchor MUST不保存同义转移Step。
+
+#### Scenario: 多条转移保持作者顺序
+
+- **WHEN** 同一状态有多条合法Transfer Edge
+- **THEN** 编译、Document和作者视图 MUST按显式order保持同一顺序
+- **AND** 同一source的order重复 MUST被拒绝
+
+#### Scenario: 普通组合节点仍使用Step
+
+- **WHEN** Sequence、Selector或Parallel保存执行分支
+- **THEN** 分支 MUST继续位于该节点的`properties.steps`
+- **AND** 该Step数据 MUST不被解释为StateMachine Edge转移数据

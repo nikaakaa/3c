@@ -1,39 +1,49 @@
 # Skill authoring 数据模型统一实施记录
 
-## 当前记录范围
+## 当前状态
 
-以下内容来自范围收窄前的阶段记录，对应提交73f4b59de。当前执行范围以[proposal.md](proposal.md)和[tasks.md](tasks.md)为准：原业务节点与FlowCanvas节点共用参数和规则，当前25项任务尚未记录完成；本文件没有提供该窄范围的实际实施交付证据。状态机迁移和最终协议升级已归独立integrate-native-fsm-skill-authoring，不再按下方旧顺序在本change实施。保留下方资产数量、hash口径和检查结论作历史追溯，不当作当前源码、包状态或完成证明。
+核心数据模型和代码链已经落地，正式 v8 package 重建尚未完成。当前 Unity 工程有其它任务留下的未提交 Native FSM、Timeline 和生成物改动；正式 checkout 已正确拒绝不完整的当前 authoring 闭包，没有绕过它们生成假包。
 
-## 历史基线
+## 已完成
 
-本记录从 2026-09-12 开始维护，目标是落实本 change 的数据层与状态机转移收口。正式 Unity authoring asset 仍是唯一真相，Agent Document 只作为 v8 工作副本，FlowCanvas 继续拥有图拓扑、Node/Edge identity 与布局。
+### 状态机转移唯一来源
 
-当前工作区存在其它未提交改动，实施只修改本 change 明确涉及的 Skill authoring 文件，不回退、不覆盖无关改动。迁移前必须保留精确 Definition、v7 package、Step/Edge 对应、条件图闭包、Macro/Timeline/Blackboard 引用与当前 hash。
+- `BtsmtlSkillFlowConnection` 只序列化 `BtsmtlSkillTransferPayload`。
+- Payload集中保存 `condition`、`priority`、`abortPolicy` 和 `order`。
+- 状态 Enter、Any、State 和 Exit 使用固定逻辑端点；状态机边从 `Transfer` 到 `StateIn`。
+- 同一来源的转移按显式 `order`排序并校验唯一性，不能按UID、位置或字典顺序推断。
+- 普通 Sequence、Selector、Parallel 仍从节点 `properties.steps` 读取自身分支顺序；它们不再被误当成状态机转移。
 
-## 已确认的数据双写
+### 统一消费者
 
-状态机转移当前存在两份来源：
+以下链路已经改为读取同一 Edge 数据：
 
-| 来源 | 保存内容 | 当前消费者 |
-|---|---|---|
-| `BtsmtlSkillStepPort` | condition、priority、abortPolicy | 旧步骤端口、部分 Closure/Copy/Exporter/Validator/Applier |
-| `BtsmtlSkillFlowConnection` | condition、priority、abortPolicy | 状态机编译、部分 Closure、Document Edge 导出 |
+`GraphClosure → ClosureIndex → GraphCopy → Document Exporter → Package Validator → Mutation Applier → Skill Occurrence/Compiler`
 
-当前目标是状态机的 Edge 唯一保存转移参数；`Sequence`、`Selector`、`Parallel` 的步骤语义继续保留。状态机转移还需要显式 `order`，不能按 UID、字典顺序或节点位置重新推断。
+状态机条件图的 owner 使用 `kind=edge`、`graphId`、`nodeId`、`edgeId` 和 `referenceKey=condition`。旧的 anchor.steps 已从 package DTO、Exporter、Projection、Applier、Validator、Closure 和循环检查中删除。
 
-## 当前 v7 资产证据
+### Document v8代码合同
 
-精确 Corin v7 package 当前包含 90 个 Skill Graph。状态机 Graph 中存在 20 条带 `edge.conditionGraphId` 的转移，同时仍保留 20 条旧 `steps[].conditionGraphId`。`@any` 还存在一个未连接的空步骤。
+- `AgentAuthoringSchema.Version` 已切换为 `btsmtl-agent-authoring-document.v8`。
+- Codec、Store、Report、作者窗口、Presentation 错误信息和五个 MCP 生命周期工具说明均已统一到 v8。
+- 旧 v7 及更早包不会被兼容读取；Store 会要求重新 checkout。
+- 独立 `BtsmtlSkillTransferConnectionMigrator` 已删除，Git提交 `a1738ec56` 保留删除前历史。
 
-这说明旧 steps 尚未具备删除条件。必须先完成 Edge 条件图的闭包、owner、复制、Document 校验和顺序收口，再删除状态机 steps。
+### 正式资产处理
 
-## 实施顺序
+之前通过正式 Document JSON checkout/dry-run/apply 已把当前 Corin 状态机的 20 条转移边写成 Edge Payload，并确认旧状态 step 节点为 0、转移端点为 `Transfer → StateIn`。后续 v8切换前已删除被忽略的旧 v4/v5/v7 package目录，准备由正式 checkout重新生成唯一 v8包。
 
-1. 完成 Step/Edge 逐实体差异与并列顺序报告。
-2. 建立状态机 Transfer payload、固定端口、多连接容量和显式 order。
-3. 让条件引用、Closure、ClosureIndex、GraphCopy、Exporter、Validator、Applier、Occurrence 和 SourceMap 只读取 Edge 转移数据。
-4. 按现有 Document 事务把 v7 精确迁移目标写成 v8，失败恢复全部 owner 与 package。
-5. 通过 re-checkout、无修改 dry-run、正式 validate 与技能编译核对 identity、owner、条件、优先级、中止策略和 order。
-6. 删除状态机 Composite/steps、旧补读、重复字段分支和一次性迁移入口，并同步父 change、current spec 与技能合同。
+## 验证记录
 
-普通组合节点的 steps 不进入本次状态机迁移；其它领域的同名 BaseGraph 类型按实际消费者保留。
+- Runtime 与 Editor 的 `dotnet build` 已通过；编译使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后执行了 `dotnet build-server shutdown`。
+- Unity 正确实例为 `3C_Client@e852139597e42532`；没有向并行测试实例 apply。
+- v8代码加载后，MCP tool description 已显示 Document v8。
+- 当前最新正式 `checkout_document` 没有生成 package，返回真实 authoring错误：当前未提交 Native FSM/相关节点闭包存在缺失，且当前目录有并行 Timeline 改动；这是正确阻断。
+
+## 未完成
+
+1. 等待并行 Native FSM/Timeline 改动形成可编译、可闭包的正式 authoring，不能覆盖或代替其未提交内容。
+2. 在 Unity authoring可完整导出后，重新执行 v8 `checkout_document`，核对manifest/sync schema、完整Graph闭包、Edge owner/order和hash。
+3. 对新 v8包执行无修改 `dry_run_document`、`validate` 和重新 checkout；必要时才执行同hash `apply_document`。
+4. 对本 change 的现行 spec、`openspec/project.md` 和 `btsmtl-agent-authoring` 技能合同完成 v8对账；历史 archive只保留追溯，不作为当前完成证明。
+5. 清理当前工作区中明确属于本 change的剩余重复节点定义；不触碰其它 active task 的未提交文件。

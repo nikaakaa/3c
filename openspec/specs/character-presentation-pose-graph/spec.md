@@ -119,7 +119,7 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 #### Scenario: ClipPlayer提交Loop字段
 
-- **WHEN** 人工Capability或Document v7为ClipPlayer提供合法Loop策略
+- **WHEN** 人工Capability或Document v8为ClipPlayer提供合法Loop策略
 - **THEN** Compiler MUST按该Player usage编译Finite或Cyclic时间行为
 - **AND** MUST不复制素材曲线或创建Sequence包装资产
 
@@ -290,12 +290,12 @@ Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`�
 
 ### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
 
-Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed domain document。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v7 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering与Source Map。系统 MUST不保留第二节点目录、重复字段switch、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。跨节点拓扑规则 MUST只属于唯一Topology Pass。
+Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed domain document。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v8 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering与Source Map。系统 MUST不保留第二节点目录、重复字段switch、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。跨节点拓扑规则 MUST只属于唯一Topology Pass。
 
 #### Scenario: 新增Pose节点能力
 
 - **WHEN** 新Pose节点注册唯一Definition Adapter
-- **THEN** 人工创建菜单、Document v7、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
+- **THEN** 人工创建菜单、Document v8、Clipboard、统一Port Shape、Validator、Graph Closure和Compiler MUST识别同一Capability与Payload合同
 - **AND** MUST不要求在多个Catalog、Handler或NodeKind switch中重复声明同一字段和端口
 
 #### Scenario: Node Definition缺少Document投影

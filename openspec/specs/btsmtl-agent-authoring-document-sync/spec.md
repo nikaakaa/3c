@@ -1,11 +1,11 @@
 # btsmtl-agent-authoring-document-sync Specification
 
 ## Purpose
-定义BTSMTL Agent Authoring Document v7目录包的分片、规范编码、Gameplay/Timeline/Presentation声明式Mutation、事务apply与反向发布合同。
+定义BTSMTL Agent Authoring Document v8目录包的分片、规范编码、Gameplay/Timeline/Presentation声明式Mutation、事务apply与反向发布合同。
 ## Requirements
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v7`文档包。Behavior Designer AI不以BTSMTL Document为根。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/CharacterController/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v8`文档包。Behavior Designer AI不以BTSMTL Document为根。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/CharacterController/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: Agent首次编辑现有Character Controller
 
@@ -108,6 +108,22 @@ CharacterController Document MUST把状态、节点关系和Blackboard声明放�
 - **THEN** parser MUST拒绝文档包
 - **AND** MUST不创建第二个系统Node
 
+### Requirement: Skill StateMachine转移必须由Edge唯一承载
+
+Skill StateMachine的Flow Edge MUST表达稳定edge identity、逻辑端点、ConditionRule引用、priority、abortPolicy和非负order。状态Node和系统anchor MUST不保存转移Step副本；普通Sequence、Selector、Parallel的`properties.steps`只属于普通组合Node。状态机ConditionRule owner MUST为`kind=edge`、`graphId`、`nodeId`、`edgeId`和`referenceKey=condition`，并进入同一闭包。
+
+#### Scenario: 状态机转移顺序稳定
+
+- **WHEN** 一个状态拥有多条Transfer Edge
+- **THEN** exporter、validator、reconciler、applier和compiler MUST读取同一显式order
+- **AND** 同一source下重复order或非Transfer端点 MUST被拒绝
+
+#### Scenario: 旧状态Step被提交
+
+- **WHEN** StateMachine anchor或state目标出现旧`steps`字段
+- **THEN** strict parser MUST拒绝该目标
+- **AND** MUST不从旧Step补读条件、priority、abortPolicy或order
+
 ### Requirement: 新Graph必须声明正式owner
 
 每个editable Graph MUST拥有`owner.entityId`与`owner.slot`。已有Graph MUST保持stable authoring identity；新Graph MUST使用local identity并引用同文档包内已有或新建owner。系统 MUST不接受无owner Graph、按路径猜owner或以独立Graph asset作为默认私有下钻。
@@ -152,7 +168,7 @@ CharacterController Document MUST把状态、节点关系和Blackboard声明放�
 
 ### Requirement: 可编辑能力必须由唯一authoring capability catalog闭合
 
-系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Skill Node/Graph catalog。Skill正式节点上的Editor-only metadata marker、BTSMTL共享Graph descriptor与正式Mutation binding MUST投影为该唯一catalog；`AgentPackage...`只能是v7包外壳，不得成为第二作者语义来源。每个editable Skill Node kind MUST声明允许Graph role、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
+系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Skill Node/Graph catalog。Skill正式节点上的Editor-only metadata marker、BTSMTL共享Graph descriptor与正式Mutation binding MUST投影为该唯一catalog；`AgentPackage...`只能是v8包外壳，不得成为第二作者语义来源。每个editable Skill Node kind MUST声明允许Graph role、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
 
 #### Scenario: Exporter发现未登记Node类型
 
@@ -210,7 +226,7 @@ CharacterController Document MUST把状态、节点关系和Blackboard声明放�
 
 ### Requirement: Agent实现必须是通用Document适配器
 
-Agent实现 MUST只拥有v7 Document文件生命周期、规范解析与写出、整包Hash、同步状态、通用闭包检查、通用Diff、正式Mutation Dispatcher的调用顺序以及唯一事务编排。Agent实现 MUST不再拥有独立的Unity语义快照、按Skill/Pose/Timeline分别维护的领域对象模型、相同目标的Draft到Plan重复中间表示或领域字段/端口/owner规则。正式领域Module MUST通过Authoring Capability、正式字段描述、引用描述和Mutation binding提供这些语义；Agent只传递稳定identity、capability、typed properties、logical ports、references和owner。
+Agent实现 MUST只拥有v8 Document文件生命周期、规范解析与写出、整包Hash、同步状态、通用闭包检查、通用Diff、正式Mutation Dispatcher的调用顺序以及唯一事务编排。Agent实现 MUST不再拥有独立的Unity语义快照、按Skill/Pose/Timeline分别维护的领域对象模型、相同目标的Draft到Plan重复中间表示或领域字段/端口/owner规则。正式领域Module MUST通过Authoring Capability、正式字段描述、引用描述和Mutation binding提供这些语义；Agent只传递稳定identity、capability、typed properties、logical ports、references和owner。
 
 #### Scenario: Agent读取正式作者状态
 
@@ -282,7 +298,7 @@ Graph编辑、Timeline编辑、Inspector修改、JSON保存、selection变化、
 
 ### Requirement: Presentation分片必须保持整包同步与稳定owner
 
-Document v7 MUST使用`editable/presentation/profile.json`、`editable/presentation/pose-graphs/<graph-id>/graph.json`、对应`layout.json`，以及`editable/presentation/pose-state-machines/<state-machine-id>/state-machine.json`与对应`layout.json`表达Presentation目标状态。Graph分片覆盖AnimGraph、Animation Layer、State Pose、Transition Rule和Control Rig；Profile MUST表达原生直接资源、有限Action producer binding与Locomotion Sync Group，Rig关联Slot／Group／Blend Profile通过正式owner context和typed Mutation表达；Pose StateMachine MUST只表达Entry、State、Alias、Transition、Rule与Blend，不保存Marker或同步override。Player与Timeline AnimationClip MUST通过包含asset GUID、有符号且非零local file id和一致asset path的结构化对象引用表达。新建子资产 MAY使用`local:*`，AnimationClip MUST不允许local identity。分片 MUST通过稳定owner identity互相引用，并继续服从整包checkout、hash、dry-run、apply、Conflict与反向导出语义；不得提供文件级apply、旧单文件reader、按显示名解析或缺失local file id fallback。
+Document v8 MUST使用`editable/presentation/profile.json`、`editable/presentation/pose-graphs/<graph-id>/graph.json`、对应`layout.json`，以及`editable/presentation/pose-state-machines/<state-machine-id>/state-machine.json`与对应`layout.json`表达Presentation目标状态。Graph分片覆盖AnimGraph、Animation Layer、State Pose、Transition Rule和Control Rig；Profile MUST表达原生直接资源、有限Action producer binding与Locomotion Sync Group，Rig关联Slot／Group／Blend Profile通过正式owner context和typed Mutation表达；Pose StateMachine MUST只表达Entry、State、Alias、Transition、Rule与Blend，不保存Marker或同步override。Player与Timeline AnimationClip MUST通过包含asset GUID、有符号且非零local file id和一致asset path的结构化对象引用表达。新建子资产 MAY使用`local:*`，AnimationClip MUST不允许local identity。分片 MUST通过稳定owner identity互相引用，并继续服从整包checkout、hash、dry-run、apply、Conflict与反向导出语义；不得提供文件级apply、旧单文件reader、按显示名解析或缺失local file id fallback。
 
 #### Scenario: Agent只修改一个Player资源
 
@@ -324,7 +340,7 @@ Pose Transition JSON MUST使用`blendLogic`、`durationSeconds`、`blendMode`、
 
 ### Requirement: Presentation Reconciler必须调用唯一Presentation Mutation
 
-Document v7 Reconciler MUST按owner依赖生成类型化Presentation Mutation计划，并与人工编辑共用validator、资产级transaction、子资产identity allocator、dirty owner与诊断。直接Clip／Blend Space／MM资源、Animation Slot／Group、Locomotion Sync Group、Pose Graph和PoseStateMachine的创建、修改、引用与删除 MUST在同一个正式资产事务中处理；Reconciler MUST不直接写Unity YAML、SerializedObject path、generated Projection或第二份字符串binding。
+Document v8 Reconciler MUST按owner依赖生成类型化Presentation Mutation计划，并与人工编辑共用validator、资产级transaction、子资产identity allocator、dirty owner与诊断。直接Clip／Blend Space／MM资源、Animation Slot／Group、Locomotion Sync Group、Pose Graph和PoseStateMachine的创建、修改、引用与删除 MUST在同一个正式资产事务中处理；Reconciler MUST不直接写Unity YAML、SerializedObject path、generated Projection或第二份字符串binding。
 
 #### Scenario: apply提交退役Source Slot与binding
 
@@ -338,9 +354,9 @@ Document v7 Reconciler MUST按owner依赖生成类型化Presentation Mutation计
 - **THEN** Reconciler MUST使用结构化Clip引用生成Profile Mutation并校验成员唯一性
 - **AND** MUST不修改Clip Curve或自动Build Projection
 
-### Requirement: Document v7必须原子替代v6
+### Requirement: Document v8必须原子替代v7
 
-系统 MUST删除v6及更早schema、reader、writer、manifest识别、文档包兼容与升级器，只接受v7 Document。已有v6工作目录 MUST要求显式重新checkout生成v7，不得静默迁移、fallback读取或并存两种apply路径。五个生命周期工具及其事务语义 MUST保持不变。
+系统 MUST删除v7及更早schema、reader、writer、manifest识别、文档包兼容与升级器，只接受v8 Document。已有v7及更早工作目录 MUST要求显式重新checkout生成v8，不得静默迁移、fallback读取或并存两种apply路径。五个生命周期工具及其事务语义 MUST保持不变。
 
 #### Scenario: 读取v3文档包
 
@@ -348,7 +364,7 @@ Document v7 Reconciler MUST按owner依赖生成类型化Presentation Mutation计
 - **THEN** dry-run与apply MUST拒绝该文档且不修改资产
 - **AND** 调用方 MUST显式重新checkout
 
-### Requirement: Document v7失败恢复必须同时覆盖Unity owner与正式package
+### Requirement: Document v8失败恢复必须同时覆盖Unity owner与正式package
 
 Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Timeline、AnimationClip与Presentation serialized owner，并注册一个完整Undo事务。只有Mutation、全域Validator、Unity authoring保存、最终树反向导出、staging重读与hash校验、正式package原子替换全部成功后，apply才可返回`applied=true`、`saved=true`与`Clean`。任一步失败 MUST恢复全部Unity owner并保留上一份正式package；Character apply MUST不发布Foot Analysis、Program、Projection或Native Pose Program。Clip registered Curve Mutation MUST只改变完整dependency baseline与Registered Curve Hash并使相关Projection stale，不得修改`AnimationClipAnalysisInputHash`或把匹配Artifact标记为stale。
 
@@ -360,7 +376,7 @@ Application Service MUST在首次Mutation前解析并锁定全部Gameplay、Time
 
 ### Requirement: AnimationClip注册Curve必须使用独立严格分片
 
-Document v7 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve目标集合；从目标集合省略已有channel MUST表达删除。可达Clip的Foot Weight删除和仍为Locomotion Sync Group成员的Phase删除 MUST被Validator拒绝。分片 MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。每项替换或删除 MUST进入planned/applied diff、同一AnimationClip Undo owner与最终reverse export。
+Document v8 MUST只为当前Definition闭包中实际可达且位于可写原生`.anim`的AnimationClip输出`editable/animation-clips/<stable-segment>/curves.json`。分片 MUST包含结构化Clip对象引用、完整dependency baseline、只读`AnimationClipAnalysisInputHash`和Clip Curve catalog允许的秒域完整canonical Curve目标集合；从目标集合省略已有channel MUST表达删除。可达Clip的Foot Weight删除和仍为Locomotion Sync Group成员的Phase删除 MUST被Validator拒绝。分片 MUST不包含骨骼Curve、AnimationEvent、import设置、Rig、Foot Analysis Artifact、Phase Validation samples、Group或generated plan。Exporter、strict parser、Reconciler、handler、Validator与reverse exporter MUST复用同一Clip Curve capability，并按完整`EditorCurveBinding(path + type + property)`识别channel，不得只比较propertyName。每项替换或删除 MUST进入planned/applied diff、同一AnimationClip Undo owner与最终reverse export。
 
 #### Scenario: checkout导出RunLoop Curve
 

@@ -7,9 +7,9 @@ description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账
 
 ## 核心边界
 
-Agent通过五个生命周期工具管理一个显式Document v7 JSON package，控制配置、SkillDefinition、Skill FlowGraph、Macro、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
+Agent通过五个生命周期工具管理一个显式Document v8 JSON package，控制配置、SkillDefinition、Skill FlowGraph、Macro、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
 
-只接受v7目录包；v1-v6及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
+只接受v8目录包；v1-v7及旧Snapshot/Patch输入必须拒绝，调用方需在精确Definition上重新checkout。
 
 ```text
 btsmtl.checkout_document
@@ -25,7 +25,7 @@ Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和Agent工�
 
 Document不会自动编译或自动apply。Unity树变化和Document变化只计算同步状态；只有显式`apply_document`才修改Unity authoring资产。Character Presentation Profile、Pose Graph与PoseStateMachine属于同一Document目标、Reconciler和资产级apply事务；Character Program、Presentation Projection与Native Pose Program不属于Document事务，必须在apply成功后通过精确Definition的Character Build生命周期显式发布。
 
-Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正式Authoring类型上的Editor-only metadata marker、共享`GraphAuthoringCapabilityCatalog`、正式字段/引用描述和正式Mutation binding是唯一语义来源；Agent包只表示v7 JSON文件、稳定外壳和原始typed payload，不再生成独立Unity语义快照、领域对象树或Draft语义副本。Skill字段、端口和Graph role由正式`BtsmtlSkillCapabilityCatalog`及其marker投影，Gameplay Graph包目录由正式共享Capability投影，Pose继续由`CharacterPoseNodeDefinitionModule`和`CharacterPoseGraphAuthoringCapabilities`投影。内部C#类型、文件组织或Compiler实现变化而不改变稳定kind、typed field、logical port、owner和闭包关系时，不升级Document schema。
+Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正式Authoring类型上的Editor-only metadata marker、共享`GraphAuthoringCapabilityCatalog`、正式字段/引用描述和正式Mutation binding是唯一语义来源；Agent包只表示v8 JSON文件、稳定外壳和原始typed payload，不再生成独立Unity语义快照、领域对象树或Draft语义副本。Skill字段、端口和Graph role由正式`BtsmtlSkillCapabilityCatalog`及其marker投影，Gameplay Graph包目录由正式共享Capability投影，Pose继续由`CharacterPoseNodeDefinitionModule`和`CharacterPoseGraphAuthoringCapabilities`投影。内部C#类型、文件组织或Compiler实现变化而不改变稳定kind、typed field、logical port、owner和闭包关系时，不升级Document schema。
 
 修改C#、OpenSpec和Skill文件继续使用Codex文件工具，不通过Unity MCP写代码。
 
@@ -59,7 +59,7 @@ Agent不维护Skill、Gameplay Graph或Pose Graph的第二套节点定义。正�
 
 ## 可写与只读边界
 
-Character Document v7正式可写：
+Character Document v8正式可写：
 
 - `editable/controller.json`中的已登记控制模块binding、语义版本和作者参数覆盖，以及`editable/skills/<canonical-id>/definition.json`中的SkillDefinition、ActionProfile、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能。控制模块代码、参数schema、默认值、状态schema和运行状态只读；参数必须经过正式Control Module合同校验并由Build采用。
 - Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或Behavior Designer内部payload。
@@ -93,10 +93,10 @@ authoring代码变化只要改变Agent能看到、能写入、能创建、能连
 |---|---|
 | Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
 | Timeline、Track、AnimationClip Segment、Timeline-local Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
-| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v7 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
+| AnimationClip注册Curve或Profile Locomotion Sync Group | Document v8 Clip分片、Presentation exporter/reconciler、Clip Curve Mutation、Validator |
 | Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
 | Behavior Designer行为、任务或AI输入接入 | 独立插件接入程序集、正式Character Input/TargetData/Action结果合同；不进入BTSMTL Document |
-| Presentation Profile、Pose Graph或PoseStateMachine | Document v7模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v8模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
 | Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
 | MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
 | Skill FlowGraph、Macro、native Timeline或locomotion capability | Skill Flow模型、Codec/Store、Exporter/Mapper、唯一Mutation dispatcher、AssetResolver/Index、Validator与五工具说明 |
@@ -135,7 +135,7 @@ Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不�
 - Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
 - 不存在BTSMTL局部节点/边/属性修改工具；Agent直接修改package文件。
 - Package严格拒绝清单外文件、未知字段、重复属性、非法数值、`.sync.json`语义改动和read-only context改动；Character必须包含完整Presentation目标文件闭包，每个Pose StateMachine必须同时具有`state-machine.json`与`layout.json`。
-- v7 Character Skill Flow必须包含入口Skill Graph、完整Macro接口、Graph owner闭包、稳定Step Port、原生Variable元数据、Timeline/TreeClip引用；所有变化必须通过唯一typed Mutation dispatcher进入同一事务。
+- v8 Character Skill Flow必须包含入口Skill Graph、完整Macro接口、Graph owner闭包、稳定Step Port、Edge transfer payload、原生Variable元数据、Timeline/TreeClip引用；所有变化必须通过唯一typed Mutation dispatcher进入同一事务。
 - manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`、Skill FlowGraph的`graph.json + layout.json`、Skill Macro的`macro.json`和Skill Timeline的`timeline.json + curves.json`创建闭包；它们都属于同一Store、hash和apply生命周期，不是未知文件fallback。
 - dry-run不dirty、不保存、不build；apply使用同一Document hash，Character apply不build。
 - apply失败必须同时恢复Unity owner与正式package并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。

@@ -1,39 +1,49 @@
 ## MODIFIED Requirements
 
-### Requirement: Agent Document必须从正式作者metadata投影完整闭包
+### Requirement: Agent Document必须使用唯一Skill节点与边语义
 
-Agent Document MUST支持从零创建或完整修改Character Skill与Presentation闭包，包括SkillDefinition、Entry Graph、嵌套Graph/State/Condition、Macro、Skill Timeline、TreeClip、局部Blackboard、Pose Graph、PoseStateMachine、Animation Layer、Control Rig、Slot/Group、Mask、Blend Policy、Animation Producer、Clip Curve与typed引用。Document JSON MUST只表达稳定业务identity、kind、typed properties、logical ports、references、owner和闭包关系。
+Agent Document MUST从正式Skill authoring metadata和共享Capability catalog投影节点的typed properties、logical ports、引用和owner。Skill Graph拓扑仍以FlowCanvas正式资产为唯一真相；Document MUST不维护第二份可写拓扑或节点语义。
 
-正式作者类型、字段、引用关系和正式Mutation写入方法上的metadata MUST是上述字段可见性、可写性、类型、端口、owner和闭包规则的唯一来源。Agent Document MUST不维护第二份节点模型、字段表、端口表、Pose模型或owner推断。
+状态机转移 MUST 从唯一Edge payload投影`conditionGraphId`、`priority`、`abortPolicy`和`order`。状态节点、anchor和普通组合Step MUST不再复制状态机转移字段。普通Sequence、Selector、Parallel的Step目标仍位于对应节点的`properties.steps`。
 
-Skill字段访问、逻辑端口与引用 MUST消费原业务节点和FlowCanvas适配共用的正式业务定义，Document只处理现有包格式与事务接入，不得成为两套重复业务定义之间的唯一桥。本次参数类型和存储位置调整 MUST保持实施基线的公开kind、typed properties、values、端点与owner形状；独立变更正式升级协议后 MUST消费唯一新合同，不得恢复旧版。无法无损映射的差异 MUST明确报告，不能自行升级版本、放宽parser或增加兼容reader。
+#### Scenario: 状态机边包含转移数据
 
-#### Scenario: Agent从空目标创建完整Skill
+- **WHEN** Document导出或接收StateMachine Edge
+- **THEN** Edge MUST拥有稳定`id`、逻辑端点、条件图、priority、abortPolicy和非负order
+- **AND** 同一source下的order MUST唯一
 
-- **WHEN** Agent目标包含合法Skill Entry Graph及其完整Graph/State/Condition/Macro/Timeline/TreeClip/Blackboard闭包
-- **THEN** checkout、dry-run和apply MUST按同一Document hash校验完整闭包并进入同一事务
-- **AND** apply后的正式Skill作者入口 MUST能读取相同的stable identity、owner和引用关系
+#### Scenario: 状态机旧Step字段出现
 
-#### Scenario: Agent修改Skill和Pose的跨域引用
+- **WHEN** editable StateMachine anchor或state目标包含旧`steps`字段
+- **THEN** strict parser、Validator或Reconciler MUST拒绝该目标
+- **AND** 普通组合节点的`properties.steps` MUST继续按其自身Capability校验
 
-- **WHEN** Agent同时修改Skill Timeline的AnimationSlot引用和Presentation Pose Graph的Slot/Mask组合
-- **THEN** dry-run MUST在同一Document hash中核对两个正式owner的引用闭包
-- **AND** apply MUST使用与人工作者入口相同的typed Mutation和唯一事务
+### Requirement: Edge条件图owner必须闭合
 
-#### Scenario: Agent提交metadata未声明内容
+状态机Edge的ConditionRule owner MUST 使用`kind=edge`、所属`graphId`、源`nodeId`、`edgeId`和`referenceKey=condition`。Exporter、OwnerCollector、Closure、ClosureIndex、GraphCopy、Validator、Reconciler、Applier和Compiler MUST使用同一owner关系；不得按显示名、节点位置或旧Step补读。
 
-- **WHEN** JSON目标写入metadata未声明的节点kind、字段、port、引用、owner、Pose空间或Clip Curve channel
-- **THEN** strict parser、Reconciler、Validator或Mutation preflight MUST返回稳定路径诊断并拒绝目标
-- **AND** MUST不按C#类型名、显示名、Unity序列化字段、SerializedProperty路径或Compiler operation猜测能力
+#### Scenario: Edge条件图可达
 
-#### Scenario: 正式作者内部实现变化
+- **WHEN** Edge引用ConditionRule graph
+- **THEN** 该graph MUST通过edge owner进入所属Skill闭包、owner检查、可达性和循环检查
+- **AND** condition graph缺失、role错误、edgeId错误或owner字段不一致 MUST返回稳定路径诊断
 
-- **WHEN** 正式作者类型、文件组织或Compiler实现变化但Agent可见kind、typed field、logical port、owner和闭包语义不变
-- **THEN** Agent Document schema MUST保持不变
-- **AND** Exporter、Parser、Reconciler、Validator、Compiler和原生UI MUST继续消费同一正式metadata投影
+### Requirement: Document版本必须切换到v8
 
-#### Scenario: 内部参数抽取保持包形状
+系统 MUST只接受`btsmtl-agent-authoring-document.v8`。manifest、sync、Report、Codec、Store和五个生命周期工具 MUST共享同一版本常量；v7及更早版本 MUST返回unsupported schema，不得保留converter、兼容reader、一次性migrator或旁路JSON写入。
 
-- **WHEN** 节点参数从宿主字段迁入共同业务参数对象但公开合同不变
-- **THEN** 现行Document导出、dry-run和apply MUST保持相同可见字段与业务结果
-- **AND** 该内部改动 MUST不增加新的owner、端点格式或生命周期工具
+#### Scenario: 旧包重新checkout
+
+- **WHEN** v7或更早package进入checkout
+- **THEN** 系统 MUST要求重新checkout并生成v8 package
+- **AND** checkout MUST不修改Unity authoring、不自动apply、不启动第二事务
+
+#### Scenario: v8整包往返
+
+- **WHEN** v8 package经过checkout、editable修改、dry-run、同hash apply和重新checkout
+- **THEN** 五个生命周期工具 MUST使用同一整包hash和唯一资产事务
+- **AND** Node、Edge、引用、owner和order MUST在反向导出后保持稳定
+
+### Requirement: package重建不得增加迁移路径
+
+存量package重建 MUST先删除被替代的旧package目录，再调用正式`checkout_document`生成新包。删除前的代码和资产历史由Git保留；系统 MUST不新增独立迁移器、旧字段兼容读或Document专用写服务。

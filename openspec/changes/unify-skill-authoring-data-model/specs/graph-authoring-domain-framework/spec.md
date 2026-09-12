@@ -31,3 +31,13 @@ metadata的Editor查找实现 MAY生成不可编辑的静态索引，但该索�
 - **WHEN** 原作者入口与FlowCanvas入口提交相同业务配置
 - **THEN** 两者 MUST采用同一参数约束和逻辑端口规则，保留各自实例值和来源identity
 - **AND** 单独让Agent导出两套重复定义 MUST不视为满足此要求
+
+### Requirement: Gameplay StateMachine必须把转移数据归属Edge
+
+共享Graph Framework接入Gameplay StateMachine时，Transition Edge MUST提供唯一typed payload，包含ConditionRule、priority、abortPolicy和显式order；State节点、anchor和动态Step端口 MUST不再保存该payload副本。Transfer端口形状、Edge owner和条件闭包 MUST由同一Capability与领域适配器提供，Pose StateMachine的Blend语义不得混入Gameplay Transition。
+
+#### Scenario: Framework显示Gameplay转移
+
+- **WHEN** 作者或Document选择Gameplay StateMachine Transition
+- **THEN** Edge View、Details、Validator、复制和Compiler MUST读取同一Edge payload与owner
+- **AND** 任何旧Step补读或按节点位置重排 MUST被拒绝

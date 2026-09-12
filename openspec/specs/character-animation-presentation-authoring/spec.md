@@ -249,7 +249,7 @@ Pose Graph作者下钻 MUST使用FlowCanvas原生GraphEditor breadcrumb与Child 
 
 ### Requirement: 跨资产表现配置必须保持唯一写入口
 
-Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segment、Player Source Slot及其Profile资源、Locomotion Sync Group、Clip注册Curve、Policy、Rig与Analysis状态。修改Action Segment编排 MUST导航到Timeline Editor；修改Clip骨骼或注册Curve MUST打开Unity Animation Window中的精确Clip与Preview Target；修改Sync Group MUST导航到Profile；修改State transition与Slot Policy MUST导航到Pose Graph/Policy owner。人工入口与Document v7 Reconciler MUST分别调用同一正式Mutation和资产事务，系统 MUST不复制字段、提供第二mutation命令、按窗口类型分叉写链或保留字符串binding镜像。
+Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segment、Player Source Slot及其Profile资源、Locomotion Sync Group、Clip注册Curve、Policy、Rig与Analysis状态。修改Action Segment编排 MUST导航到Timeline Editor；修改Clip骨骼或注册Curve MUST打开Unity Animation Window中的精确Clip与Preview Target；修改Sync Group MUST导航到Profile；修改State transition与Slot Policy MUST导航到Pose Graph/Policy owner。人工入口与Document v8 Reconciler MUST分别调用同一正式Mutation和资产事务，系统 MUST不复制字段、提供第二mutation命令、按窗口类型分叉写链或保留字符串binding镜像。
 
 #### Scenario: 从Pose Graph调整Run Phase
 

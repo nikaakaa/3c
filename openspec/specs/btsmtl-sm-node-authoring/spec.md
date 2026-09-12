@@ -114,7 +114,7 @@
 
 ### Requirement: Transition 是同层 BaseEdge 语义
 
-系统 MUST 将状态转换表达为 `StateMachineGraph` 内联保存的 `BaseEdge`，MUST NOT 新增 `TransitionNode`，也 MUST NOT 为 Transition 本体创建 asset。Transition MUST 只连接同层 `Enter`、`AnyState`、`StateNode` 和 `Exit`。Transition 条件默认 MUST 是该 edge 内部的 inline `ConditionRuleGraph` 数据；需要复用时才显式绑定 shared `ConditionRuleGraph` asset。每个 edge MUST 保存正式 ConditionRuleGraph ownership，系统 MUST NOT 根据 shared asset 是否可解析来猜测或改写 owner 来源。
+系统 MUST 将状态转换表达为 `StateMachineGraph` 内联保存的 `BaseEdge`，MUST NOT 新增 `TransitionNode`，也 MUST NOT 为 Transition 本体创建 asset。Transition MUST 只连接同层 `Enter`、`AnyState`、`StateNode` 和 `Exit`。Transition Edge MUST 唯一保存其 ConditionRule 引用、priority、abortPolicy和显式order；条件图通过该 Edge 的正式 owner 进入闭包。系统 MUST NOT 从状态节点或旧Step字段补读这些值，也 MUST NOT 根据资产是否可解析来猜测或改写 owner 来源。
 
 #### Scenario: 合法端点
 
@@ -126,8 +126,8 @@
 
 - **WHEN** Transition 配置条件
 - **THEN** 条件 MUST 通过该 Transition resolved `ConditionRuleGraph` 表达
-- **AND** 创建合法 Transition edge 时 MUST 立即创建该 edge 内部的 inline `ConditionRuleGraph`
-- **AND** 默认规则图 MUST 是该 edge 内部的 inline graph data
+- **AND** 创建合法 Transition edge 时 MUST 建立该 Edge 的正式 ConditionRule 引用
+- **AND** 默认规则图 MUST 由该 Edge owner 持有并进入同一Graph闭包
 - **AND** 默认规则图在未连接条件时 MUST 允许 Transition 通过
 - **AND** `AnyState` Transition MUST 配置规则图条件
 - **AND** runtime MUST 按 Transition 优先级选择可通过的边
@@ -135,9 +135,9 @@
 #### Scenario: Transition 显式复用规则图
 
 - **WHEN** 多条 Transition 需要复用同一套规则
-- **THEN** 用户 MUST 显式抽取或分配 shared `ConditionRuleGraph` asset
-- **AND** 删除 Transition 时 MUST 只断开 shared 引用，不删除 shared asset
-- **AND** 切换到 shared asset 后 MUST 清理该 Transition 的 inline rule graph 真数据
+- **THEN** 用户 MUST 显式引用同一个正式 ConditionRuleGraph asset
+- **AND** 每条 Transition MUST 仍保留自己的 Edge owner、edgeId和referenceKey
+- **AND** 删除 Transition 时 MUST 只断开该 Edge 引用，不删除仍被其它Edge引用的ConditionRule asset
 
 #### Scenario: Shared ConditionRuleGraph asset 被删除
 

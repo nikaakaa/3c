@@ -1,42 +1,34 @@
-## 1. 原节点与FlowCanvas逐对对照
+## 1. 数据来源对账
 
-- [ ] 1.1 从实际正式注册集合建立原业务节点与FlowCanvas节点对应表，覆盖移动、输入、黑板、动作、条件、结构和原生逻辑能力；交付每对节点的参数、默认值、校验、端口、引用和编译位置，未在Corin使用的能力不遗漏。
-- [ ] 1.2 区分同义、独有、无消费者和有行为冲突的节点，列出已正确原规则及两侧差异；交付带实际调用者的共用/保留/删除清单，冲突不得默认覆盖。
-- [ ] 1.3 按受字段迁移影响的精确资产封存节点参数、UID、端点、引用与未提交差异；交付迁移基线，不覆盖已有工作区或Document修改。
+- [x] 1.1 确认状态机转移同时存在 Step 与 Edge 两份条件、priority、abortPolicy，固定 Edge 为唯一转移来源。
+- [x] 1.2 确认普通 Sequence、Selector、Parallel 的 steps 是另一种组合语义，保留在普通节点 properties 中。
+- [x] 1.3 固定 Corin 状态机的节点、边、条件图、owner、UID和并列顺序基线，避开其它未提交资产。
 
-## 2. 从原业务抽出共同定义
+## 2. 正式节点与端口模型
 
-- [ ] 2.1 在原业务模块抽出共同参数类型与读取/修改接口，两侧节点分别持有本实例的一份值；交付数据归属图和源码检查，确认没有BaseNode嵌入FlowNode、共享可变实例或第二份可写图。
-- [ ] 2.2 集中参数默认值、校验、逻辑端口和引用定义，原目录与FlowCanvas目录只投影同义规则；交付定义注册与两侧调用路径，删除重复人工声明。
-- [ ] 2.3 统一原移动节点与FlowCanvas移动节点的七项参数和原有效约束，保留现有ILocomotionInputMotionAuthoring及lowering；交付相同合法/非法模式、曲线、速度和时长配置的一致校验/编译报告。
-- [ ] 2.4 迁移输入、动作请求、Blackboard与Character State的同义定义，保持类型、owner、作用域和访问权限；交付两侧字段/端口映射及独有业务保留说明。
-- [ ] 2.5 迁移动作窗口、准入和其他Action/Ability同义参数，正式节点移出Inspector实现文件；交付共同定义、必要宿主差异和原规则保留清单，单侧独有能力不造第二份节点。
-- [ ] 2.6 处理结构、条件、逻辑与Macro/Timeline引用的同义定义，保留各自生命周期和现有端口/owner合同；交付逐项行为对照，不改状态转移拓扑或步骤存储归属。
+- [x] 2.1 建立 `BtsmtlSkillTransferPayload`，统一条件图、priority、abortPolicy和order的类型与写入口。
+- [x] 2.2 状态 Enter、Any、State、Exit改为固定逻辑端口；Transfer输出容量和StateIn输入规则由正式Closure校验。
+- [x] 2.3 接入共享 `GraphAuthoringCapabilityCatalog` 与唯一 `GraphAuthoringNodePortShapeProjector`，删除anchor动态steps投影。
+- [ ] 2.4 完成原业务节点与FlowCanvas同义节点的全量字段、默认值、校验、引用和编译对照；未确认同义的能力不合并。
 
-## 3. 接通两侧作者适配
+## 3. 引用、复制与编译消费
 
-- [ ] 3.1 让旧作者目录、Skill Capability与创建入口使用共同定义及明确宿主映射；交付全部对应kind/variant的注册覆盖报告，不允许两套默认值或校验继续生效。
-- [ ] 3.2 将固定/条件/动态端口的业务形状集中到正式定义，两侧按原本地ID物化端口；交付端点、类型、方向、容量与默认输入值对照，删除原型反推和重复业务规则，不改公开连线身份。
-- [ ] 3.3 将受影响Inspector字段接到共同访问和现有typed Mutation，复杂字段继续使用正式业务控件；交付字段可写性、合法值及两侧调用链，不重做旁路面板或编辑器。
-- [ ] 3.4 将受参数抽取影响的引用读取、复制重映射和删除回收接到共同字段/引用定义；交付私有/共享目标和保存重载对照，保留现有owner及事务，不重建引用引擎。
+- [x] 3.1 Closure、ClosureIndex、GraphCopy、Exporter、Validator、Applier和Occurrence改为读取Edge transfer payload。
+- [x] 3.2 ConditionRule owner统一为`kind=edge`、`edgeId`、`referenceKey=condition`，并纳入可达性、循环和owner校验。
+- [x] 3.3 删除状态机anchor.steps的DTO、导出、应用、投影、引用闭包和循环检查路径；普通节点properties.steps保留。
+- [ ] 3.4 等并行 Native FSM/Timeline authoring闭包稳定后，完成当前正式编译和SourceMap对账，不覆盖其未提交改动。
 
-## 4. 接通业务编译消费
+## 4. Document v8与存量包
 
-- [ ] 4.1 让原节点编译登记与Skill编译适配读取同一业务参数接口，框架身份/端口单独映射；交付实际调用链，确认没有构造旧节点执行或画布getter求值。
-- [ ] 4.2 将同义参数发射接入适用的共同lowering，保留现有正确编译逻辑、Program Builder和运行执行链；交付重复业务发射删除清单及现有编译结果。
-- [ ] 4.3 对正式节点对应集核对作者能力、参数合法性和编译支持，并验证来源能定位各自真实节点；交付业务参数/操作/连接语义报告，不用完整产物字节相同代替语义比较。
+- [x] 4.1 将唯一 `AgentAuthoringSchema.Version`、Report、Codec、Store、作者窗口和五个MCP工具说明切换为 v8，并严格拒绝v7及更早包。
+- [x] 4.2 删除独立 `BtsmtlSkillTransferConnectionMigrator`；删除前代码由Git提交历史保留，不建立旁路迁移入口。
+- [x] 4.3 删除被忽略的旧 v4/v5/v7 package目录，保留正式Unity资产和Git历史。
+- [ ] 4.4 在当前 authoring闭包可导出后，通过正式checkout生成v8 package，核对manifest/sync、完整闭包、owner/order和hash。
+- [ ] 4.5 对v8执行无修改dry-run、validate、重新checkout；需要改资产时才使用同hash apply，并交付Clean结果。
 
-## 5. 保持现有Document消费合同
+## 5. 文档与交付
 
-- [ ] 5.1 将现有SkillDocument字段读取与写回改为消费共同业务定义，保持实施基线的kind、properties、values、端点和owner；当前为v7，若FSM专项已正式切换则使用其唯一新合同，交付包形状对照，不自行升级schema、恢复旧版或增加兼容reader。
-- [ ] 5.2 将受参数迁移影响的校验、Apply与Export接入同一正式字段访问和已有事务；交付调用链，确认不增加Agent业务模型、局部MCP工具或第二写入服务。
-- [ ] 5.3 通过现有正式Document流程完成目标参数往返和无修改对账；交付参数值、identity、引用及v7形状一致结果，失败使用现有事务恢复，不新增测试或故障注入旁路。
-
-## 6. 参数迁移、删除与交付
-
-- [ ] 6.1 在旧字段仍可读取时生成精确节点参数到共同对象的迁移映射；交付旧值、新字段位置、UID、端点、引用和冲突清单，不迁移状态机Step/Edge合同。
-- [ ] 6.2 通过既有正式资产入口迁移受影响实例，保存并重新读取；交付参数、连接、引用一致和失败恢复记录，保留用户改动，不手改Unity YAML。
-- [ ] 6.3 删除重复字段、默认值、校验、同义目录声明、无消费者旧适配及一次性转换代码；交付全链消费者扫描，正常入口不得双读或双写。
-- [ ] 6.4 使用精确目标的现有正式校验、编译及必要Build完成接入核对，并读取当前Console；交付本次结果和真实阻塞，不能用旧日志或无修改包Clean替代代码接入证明。
-- [ ] 6.5 同步本change涉及的现行spec与原文档任务接收关系，保留原Scenario及非本次范围；交付严格校验和职责对照，不转入状态迁移、版本升级或布局hash任务。
-- [ ] 6.6 逐对交付共同定义、原节点适配、FlowCanvas适配与删除项的源码路径；确认“业务只维护一份、实例值独立、行为保持”，相关未完成事项如实记录，不把Agent往返正常当作定义统一完成。
+- [x] 5.1 重写本change的proposal、design和implementation，移除与实际Edge/v8实现矛盾的旧口径。
+- [ ] 5.2 对照并更新现行 `openspec/specs/`、`openspec/project.md` 与 `btsmtl-agent-authoring` 技能合同，保留非本change场景和历史archive。
+- [ ] 5.3 完成原业务/FlowCanvas定义清单、源码路径、删除项和业务行为对照；不以Agent往返成功代替模型统一证明。
+- [ ] 5.4 汇总小步提交、正式Unity实例、checkout/dry-run/apply/validate结果与未提交外部改动边界。

@@ -168,7 +168,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin资产迁移必须通过正式Agent Document事务
 
-有限Action Timeline、Gameplay Graph、Blackboard、Presentation Binding、Pose Graph、Locomotion Sync Group、AnimationClip注册Curve与旧Locomotion数据清理 MUST通过`btsmtl-agent-authoring-document.v7`的`checkout_document -> editable修改 -> dry_run_document -> apply_document(expected_document_hash) -> validate`唯一事务完成。Reconciler MUST把全部目标降低为同一immutable Mutation Plan和Undo事务。实现 MUST不直接修改Unity YAML、不恢复旧Patch链、不创建一次性migrator或第二mutation service。Document apply MUST只修改authoring并标记生成物Stale，不得自动Build。
+有限Action Timeline、Gameplay Graph、Blackboard、Presentation Binding、Pose Graph、Locomotion Sync Group、AnimationClip注册Curve与旧Locomotion数据清理 MUST通过`btsmtl-agent-authoring-document.v8`的`checkout_document -> editable修改 -> dry_run_document -> apply_document(expected_document_hash) -> validate`唯一事务完成。Reconciler MUST把全部目标降低为同一immutable Mutation Plan和Undo事务。实现 MUST不直接修改Unity YAML、不恢复旧Patch链、不创建一次性migrator或第二mutation service。Document apply MUST只修改authoring并标记生成物Stale，不得自动Build。
 
 #### Scenario: 应用Corin Document
 
@@ -179,7 +179,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin生成产物必须显式重建
 
-Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过Document v7写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。Document apply成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Clip plan或Phase relation。
+Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过Document v8写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。Document apply成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Clip plan或Phase relation。
 
 #### Scenario: 迁移后显式Build
 

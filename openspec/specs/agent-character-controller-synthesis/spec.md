@@ -1,7 +1,7 @@
 # agent-character-controller-synthesis Specification
 
 ## Purpose
-定义Agent在编辑器内通过Document v7目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
+定义Agent在编辑器内通过Document v8目录包、canonical Snapshot、Mutation Compiler、Validator与Report生成并修复正式BTSMTL角色控制器资产的唯一链路。
 ## Requirements
 ### Requirement: Agent必须保持Generated Foot Analysis只读
 
@@ -45,12 +45,12 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Agent Snapshot 必须是只读投影
 
-系统 MUST从当前`CharacterPipelineDefinition`和正式Character Skill/Presentation authoring资产生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、直接资源Player、Animation Slot／Group、Locomotion Sync Group、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v7 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含旧Sequence同步数据、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
+系统 MUST从当前`CharacterPipelineDefinition`和正式Character Skill/Presentation authoring资产生成只读canonical Snapshot，作为Document package checkout和Reconciler比较的唯一当前状态投影。Snapshot MUST包含Agent正式可写结构、stable identity、ownership与可引用catalog。Pose Graph、PoseStateMachine、直接资源Player、Animation Slot／Group、Locomotion Sync Group、有限Action channel binding、Timeline direct Clip引用、当前Definition可达原生AnimationClip注册Curve和node-local Policy MUST进入Document v8 editable目标状态；Rig/Virtual Bone资源正文、Body Motion、Foot Analysis、runtime state和generated product MUST只进入紧凑只读context或完全省略。Clip与子资产引用 MUST使用`assetPath + assetGuid + signed non-zero localFileId`结构化身份。Projection-local dense index、runtime generation、lease与provider index MUST不进入editable。Snapshot MUST不包含旧Sequence同步数据、Timeline locomotion producer、旧Selection、runtime临时状态、Unity YAML或generated payload，也不得因导出触发Build。
 
 #### Scenario: checkout生成Character Document package
 
 - **WHEN** Agent对已有Character root显式checkout
-- **THEN** exporter MUST从当前Character authoring资产建立canonical Snapshot并写出v7目录包
+- **THEN** exporter MUST从当前Character authoring资产建立canonical Snapshot并写出v8目录包
 - **AND** snapshot/export MUST不修改Graph、Clip或触发Program/Projection Build
 
 #### Scenario: Presentation能力进入正式Document
@@ -197,7 +197,7 @@ Document package editable分片与Mutation Compiler MUST只编辑正式Graph、S
 
 #### Scenario: Document配置Pose Graph
 
-- **WHEN** Agent修改Document v7中Capability已登记的Pose Graph业务字段
+- **WHEN** Agent修改Document v8中Capability已登记的Pose Graph业务字段
 - **THEN** Reconciler MUST生成与人工编辑相同的typed Presentation Mutation
 - **AND** 未登记字段、Rig正文、generated payload或能力私有mutation MUST被拒绝
 
@@ -233,7 +233,7 @@ Character Document context MUST从显式Definition只读输出Body Motion Profil
 
 ### Requirement: Agent Authoring Document必须是声明式控制器结构
 
-系统 MUST使用`btsmtl-agent-authoring-document.v7`目录包作为CharacterController唯一Agent-facing编辑合同。Character editable分片 MUST按Skill Graph、Macro、StateMachine、State、Transition、Condition、Action、Timeline、Blackboard、Presentation和AnimationClip注册Curve描述目标结构；Behavior Designer AI不进入该Document。Graph MUST使用稳定kind、typed properties、逻辑port、系统anchor、正式owner和Flow/Property Edge完整目标集合，MUST不暴露C# type name、重复port metadata、`operations[]`、内部handler、创建顺序、前序operation output、Unity YAML或任意SerializedProperty写入。Document Reconciler MUST只把正式支持的整包变化降低为内部typed Mutation。
+系统 MUST使用`btsmtl-agent-authoring-document.v8`目录包作为CharacterController唯一Agent-facing编辑合同。Character editable分片 MUST按Skill Graph、Macro、StateMachine、State、Transition、Condition、Action、Timeline、Blackboard、Presentation和AnimationClip注册Curve描述目标结构；Behavior Designer AI不进入该Document。Graph MUST使用稳定kind、typed properties、逻辑port、系统anchor、正式owner和Flow/Property Edge完整目标集合，MUST不暴露C# type name、重复port metadata、`operations[]`、内部handler、创建顺序、前序operation output、Unity YAML或任意SerializedProperty写入。Document Reconciler MUST只把正式支持的整包变化降低为内部typed Mutation。
 
 #### Scenario: 添加状态和Transition
 
@@ -247,9 +247,19 @@ Character Document context MUST从显式Definition只读输出Body Motion Profil
 - **THEN** strict parser或Reconciler MUST在mutation前拒绝
 - **AND** MUST不创建placeholder或动态反射操作
 
+### Requirement: Skill StateMachine转移参数必须只有Edge一份
+
+Skill StateMachine的Transition Edge MUST唯一保存ConditionRule引用、priority、abortPolicy和显式order，并通过`Transfer`到`StateIn`的逻辑端点表达拓扑。状态节点、系统anchor和普通组合Step MUST不保存同义状态机转移数据；Edge condition owner MUST能从所属Graph、source Node和edge identity闭合回Document。
+
+#### Scenario: 编译状态机转移
+
+- **WHEN** StateMachine包含多条来自同一source的Transition
+- **THEN** Exporter、Validator、Mutation、Applier和Compiler MUST读取同一Edge payload
+- **AND** 同一source下重复order、非法端点或缺失edge owner MUST被拒绝
+
 ### Requirement: Agent Document reconcile必须维护 identity 生命周期
 
-Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable authoring identity，在`local:<meaningful-id>`创建时生成新identity，在复制entity时生成新identity。系统 MUST只接受Document package v7，不得保留v1-v6、v16/v17 Patch parser或按path、display name、Actor名称、Tag和列表index猜identity。Node kind与Graph kind MUST不可原地改变。AnimationClip不能由Document创建或复制，只能通过结构化对象引用选择现有原生`.anim`。Apply成功后的整包反向导出 MUST把可创建entity的新local identity替换为正式stable identity。
+Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable authoring identity，在`local:<meaningful-id>`创建时生成新identity，在复制entity时生成新identity。系统 MUST只接受Document package v8，不得保留v1-v7、v16/v17 Patch parser或按path、display name、Actor名称、Tag和列表index猜identity。Node kind与Graph kind MUST不可原地改变。AnimationClip不能由Document创建或复制，只能通过结构化对象引用选择现有原生`.anim`。Apply成功后的整包反向导出 MUST把可创建entity的新local identity替换为正式stable identity。
 
 #### Scenario: 更新现有Timeline Segment
 
@@ -275,7 +285,7 @@ Document Reconciler与Mutation Compiler MUST在更新现有entity时保持stable
 
 ### Requirement: Agent Document必须输出稳定 authoring identity
 
-Document package v7与其canonical Snapshot MUST按显式Character domain输出Graph、Node、Flow Edge、Property Edge、Timeline、Track、Segment、Curve owner、AnimationClip对象引用、Blackboard declaration、Presentation owner、Input request timing和domain正式producer的stable identity。物理文件路径与列表index MAY用于阅读但不得取代identity。Document MUST不输出Sequence identity、Marker identity、runtime mutable state、C# type name或重复port metadata。Document checkout MUST成为Agent编辑的唯一领域上下文，不提供v1-v6、v16/v17 Patch或Snapshot镜像。
+Document package v8与其canonical Snapshot MUST按显式Character domain输出Graph、Node、Flow Edge、Property Edge、Timeline、Track、Segment、Curve owner、AnimationClip对象引用、Blackboard declaration、Presentation owner、Input request timing和domain正式producer的stable identity。物理文件路径与列表index MAY用于阅读但不得取代identity。Document MUST不输出Sequence identity、Marker identity、runtime mutable state、C# type name或重复port metadata。Document checkout MUST成为Agent编辑的唯一领域上下文，不提供v1-v7、v16/v17 Patch或Snapshot镜像。
 
 #### Scenario: Timeline元素重排后checkout
 
@@ -315,7 +325,7 @@ Character Document MUST按有限Action Timeline与AnimationTrack stable identity
 
 ### Requirement: Agent Document必须完整读写Clip注册Curve与Timeline本地Curve
 
-Character Document v7 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的秒域注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Clip channel MUST按完整`EditorCurveBinding(path + type + property)`识别；Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation、仅propertyName匹配或字段名目标。
+Character Document v8 MUST在`editable/animation-clips/<stable-segment>/curves.json`按结构化AnimationClip对象引用表达允许的秒域注册Curve，并在`editable/timelines/**/curves.json`按Timeline owner表达Timeline-local registered Curve。两类Curve MUST使用同一canonical Keyframe语义，但不同Capability、owner和Mutation handler。Clip channel MUST按完整`EditorCurveBinding(path + type + property)`识别；Reconciler MUST为完整Curve替换生成typed Mutation；Clip handler MUST只调用Clip registered Curve Mutation，Timeline handler MUST只调用Timeline Curve MutationAdapter。系统 MUST不接受key级MCP操作、Marker字段、Sequence分片、旧Patch operation、仅propertyName匹配或字段名目标。
 
 #### Scenario: 修改weighted Clip Curve
 

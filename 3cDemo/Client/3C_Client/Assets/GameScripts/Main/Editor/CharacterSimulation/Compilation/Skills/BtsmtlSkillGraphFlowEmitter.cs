@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FlowCanvas;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
@@ -9,10 +10,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillGraphFlowEmitter
     {
         readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly CharacterSimulationOperationEmitter m_NativeOperations;
 
         public BtsmtlSkillGraphFlowEmitter(CharacterSimulationProgramBuilder builder)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            m_NativeOperations = new CharacterSimulationOperationEmitter(m_Builder);
         }
 
         public void EmitEdges(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillOperationBindings operations,
@@ -70,6 +73,70 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        public void EmitNativeStateMachine(
+            BtsmtlSkillGraphReferenceOccurrence reference,
+            OperationHandle owner,
+            BtsmtlSkillNativeStateMachineOccurrence machine,
+            Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillInvocationContext, BtsmtlSkillGraphCompilation> compileGraph,
+            Func<BtsmtlSkillNativeEdgeOccurrence, OperationHandle, OperationHandle> compileCondition)
+        {
+            var operations = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
+            foreach (BtsmtlSkillNativeState state in new[] { machine.Entry, machine.Any, machine.Exit }
+                         .Concat(machine.States.Select(value => value.State))
+                         .Distinct())
+            {
+                SimulationOperationCode code = state switch
+                {
+                    BtsmtlSkillNativeEntryState => SimulationOperationCode.StateEnter,
+                    BtsmtlSkillNativeAnyState => SimulationOperationCode.StateAny,
+                    BtsmtlSkillNativeExitState => SimulationOperationCode.StateExit,
+                    _ => SimulationOperationCode.State
+                };
+                operations[state.UID] = m_NativeOperations.Emit(
+                    Source(machine, state),
+                    new CharacterSimulationNodeEmission(code, text0: state.Body?.AuthoringId),
+                    Array.Empty<CharacterSimulationConstantInput>());
+            }
+            DeclareNativeEntry(reference, owner, operations[machine.Entry.UID], "StateMachine", 0, machine);
+            DeclareNativeEntry(reference, owner, operations[machine.Any.UID], "AnyState", 1, machine);
+            foreach (BtsmtlSkillNativeStateOccurrence state in machine.States)
+            {
+                if (state.Body == null)
+                    continue;
+                BtsmtlSkillGraphCompilation body = compileGraph(
+                    state.Body,
+                    operations[state.State.UID],
+                    BtsmtlSkillInvocationContext.Call(state.State.UID, operations[state.State.UID]));
+                DeclareNativeBodyEntry(machine, state, body, operations[state.State.UID], "OnEnter", 0);
+                DeclareNativeBodyEntry(machine, state, body, operations[state.State.UID], "Root", 1);
+                DeclareNativeBodyEntry(machine, state, body, operations[state.State.UID], "OnExit", 2);
+            }
+            foreach (BtsmtlSkillNativeEdgeOccurrence edge in machine.Edges)
+            {
+                OperationHandle conditionOwner = edge.Source is BtsmtlSkillNativeEntryState ||
+                                                 edge.Source is BtsmtlSkillNativeAnyState ||
+                                                 edge.Source is BtsmtlSkillNativeExitState
+                    ? owner
+                    : operations[edge.Source.UID];
+                OperationHandle condition = edge.Condition == null
+                    ? OperationHandle.Invalid
+                    : compileCondition(edge, conditionOwner);
+                m_Builder.DeclareControlFlow(
+                    edge.Route,
+                    operations[edge.Source.UID],
+                    operations[edge.Target.UID],
+                    "Transfer",
+                    "StateIn",
+                    ProgramControlFlowKind.Transition,
+                    edge.Order,
+                    edge.Priority,
+                    edge.AbortPolicy,
+                    edge.Condition != null,
+                    condition,
+                    Source(machine, edge.Edge));
+            }
+        }
+
         void DeclareEntry(BtsmtlSkillGraphReferenceOccurrence reference, OperationHandle owner, OperationHandle entry,
             string port, ProgramControlFlowKind kind, int order)
         {
@@ -79,6 +146,83 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ((IBtsmtlSkillFlowGraph)reference.Owner.graph).AuthoringId, reference.Owner.UID,
                     string.Empty, string.Empty, string.Empty, reference.CallSiteIdentity, contentHash: reference.OwnerContentHash));
         }
+
+        void DeclareNativeEntry(
+            BtsmtlSkillGraphReferenceOccurrence reference,
+            OperationHandle owner,
+            OperationHandle entry,
+            string port,
+            int order,
+            BtsmtlSkillNativeStateMachineOccurrence machine)
+        {
+            m_Builder.DeclareControlFlow(
+                $"{reference.CallSiteIdentity}/entry:{port}",
+                owner,
+                entry,
+                port,
+                "Entry",
+                ProgramControlFlowKind.Enter,
+                order,
+                0,
+                ProgramAbortPolicy.None,
+                false,
+                OperationHandle.Invalid,
+                Source(machine, machine.Machine));
+        }
+
+        void DeclareNativeBodyEntry(
+            BtsmtlSkillNativeStateMachineOccurrence machine,
+            BtsmtlSkillNativeStateOccurrence state,
+            BtsmtlSkillGraphCompilation body,
+            OperationHandle owner,
+            string port,
+            int order)
+        {
+            BtsmtlSkillFlowGraph graph = (BtsmtlSkillFlowGraph)state.Body.Graph;
+            FlowNode entry = port switch
+            {
+                "OnEnter" => graph.allNodes.OfType<BtsmtlSkillStateOnEnterFlowNode>().Single(),
+                "Root" => graph.allNodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
+                "OnExit" => graph.allNodes.OfType<BtsmtlSkillStateOnExitFlowNode>().Single(),
+                _ => throw new ArgumentOutOfRangeException(nameof(port))
+            };
+            if (!body.Operations.Nodes.TryGetValue(entry.UID, out OperationHandle entryOperation))
+                throw new InvalidOperationException($"{state.Route}: StateBody入口'{port}'未编译。");
+            m_Builder.DeclareControlFlow(
+                $"{state.Route}/body-entry:{port}",
+                owner,
+                entryOperation,
+                port,
+                "Entry",
+                port == "OnExit" ? ProgramControlFlowKind.Exit : ProgramControlFlowKind.Enter,
+                order,
+                0,
+                ProgramAbortPolicy.None,
+                false,
+                OperationHandle.Invalid,
+                Source(machine, state.State));
+        }
+
+        static CharacterSimulationSourceLocation Source(
+            BtsmtlSkillNativeStateMachineOccurrence machine,
+            BtsmtlSkillNativeState state) =>
+            new(typeof(BtsmtlSkillNativeState).FullName, machine.GraphId, state.UID,
+                string.Empty, string.Empty, string.Empty,
+                $"{machine.Route}/state:{state.UID}", contentHash: machine.ContentHash);
+
+        static CharacterSimulationSourceLocation Source(
+            BtsmtlSkillNativeStateMachineOccurrence machine,
+            BtsmtlSkillNativeConnection edge) =>
+            new(typeof(BtsmtlSkillNativeConnection).FullName, machine.GraphId, string.Empty,
+                edge.UID, string.Empty, string.Empty,
+                $"{machine.Route}/edge:{edge.UID}", contentHash: machine.ContentHash);
+
+        static CharacterSimulationSourceLocation Source(
+            BtsmtlSkillNativeStateMachineOccurrence machine,
+            BtsmtlSkillNativeStateMachine graph) =>
+            new(typeof(BtsmtlSkillNativeStateMachine).FullName, machine.GraphId, string.Empty,
+                string.Empty, string.Empty, string.Empty,
+                machine.Route, contentHash: machine.ContentHash);
 
         static OperationHandle Require<T>(BtsmtlSkillGraphOccurrence graph, IReadOnlyDictionary<string, OperationHandle> operations)
             where T : FlowNode

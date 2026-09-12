@@ -47,6 +47,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `7fb3412a0`：Pose Get参数选择器只展示正式外部输入；该提交同时包含索引中原已暂存的EventGraph owner/apply改动，未回退其内容。
 - `3cb2370bf`：Linked Pose、Pose Graph、Slot Group和物理骨骼引用选择器统一使用作者可读标签，写回仍绑定稳定identity。
 - `902c6060f`：Resolve策略新增候选限制为正式外部输入，禁止从Inspector新增内部Foot曲线或BlendShape策略。
+- `902c6060f` 后的 Unity MCP Console 复查仍未出现Pose编译错误；返回项保持为未定位编辑器异常和SkillDefinition先验错误。
 
 正式 Document 流程：
 

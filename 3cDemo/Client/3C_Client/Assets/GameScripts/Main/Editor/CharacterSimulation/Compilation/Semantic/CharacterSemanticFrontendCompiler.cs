@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             catch (Exception exception)
             {
-                report.DiscoveryError("authoring_discovery_failed", definitionPath, exception.Message);
+                report.DiscoveryError("authoring_discovery_failed", definitionPath, exception.ToString());
                 return null;
             }
         }

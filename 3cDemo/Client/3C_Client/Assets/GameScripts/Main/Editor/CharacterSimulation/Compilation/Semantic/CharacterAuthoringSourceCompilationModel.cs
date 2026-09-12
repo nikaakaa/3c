@@ -660,7 +660,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (phase != null)
                     phases.Add(graph, phase);
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
-                    Collect(reference.Child, path, phase, visible);
+                {
+                    if (reference.Child != null)
+                        Collect(reference.Child, path, phase, visible);
+                    if (reference.NativeStateMachine != null)
+                    {
+                        foreach (BtsmtlSkillNativeStateOccurrence state in reference.NativeStateMachine.States)
+                            if (state.Body != null)
+                                Collect(state.Body, path, phase, visible);
+                        foreach (BtsmtlSkillNativeEdgeOccurrence edge in reference.NativeStateMachine.Edges)
+                            if (edge.Condition != null)
+                            {
+                                var conditionVisibleScopes = new HashSet<BtsmtlSkillGraphOccurrence>(visible);
+                                BtsmtlSkillGraphOccurrence sourceStateBody = reference.NativeStateMachine.States
+                                    .Where(state => ReferenceEquals(state.State, edge.Source))
+                                    .Select(state => state.Body)
+                                    .SingleOrDefault();
+                                if (sourceStateBody != null)
+                                    conditionVisibleScopes.Add(sourceStateBody);
+                                Collect(edge.Condition, path, phase, conditionVisibleScopes);
+                            }
+                    }
+                }
                 foreach (BtsmtlSkillEdgeOccurrence edge in graph.Edges)
                     if (edge.Condition != null)
                     {

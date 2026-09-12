@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Builder.DeclareStandaloneStateSlot(
                 new CharacterSimulationSourceLocation(
                     typeof(CharacterSkillProgramBinding).FullName,
-                    "SkillExecutionState",
+                    "Program",
                     string.Empty,
                     string.Empty,
                     string.Empty,

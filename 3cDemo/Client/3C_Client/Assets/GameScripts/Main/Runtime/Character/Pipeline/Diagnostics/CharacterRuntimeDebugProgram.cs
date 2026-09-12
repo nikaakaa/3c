@@ -71,9 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 if (!string.IsNullOrEmpty(entry.ParentInvocationPath))
                 {
                     string parentGraph = ResolveGraphAuthoringId(invocations[entry.ParentInvocationPath]);
-                    caller = entry.InvocationCallerKind == ProgramInvocationCallerKind.Edge
-                        ? RuntimeSourceElementKey.Edge(parentGraph, entry.InvocationCallerId)
-                        : RuntimeSourceElementKey.Node(parentGraph, entry.InvocationCallerId);
+                    caller = ResolveInvocationCallerKey(entry, parentGraph, entries);
                 }
                 sourceMap.AddGraphInvocation(new RuntimeGraphInvocation(entry.GraphInvocationPath, ResolveGraphAuthoringId(entry),
                     entry.ParentInvocationPath, caller, entry.InvocationCallerClipId));
@@ -81,15 +79,29 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramSourceMapEntry entry = entries[i];
-                RuntimeSourceElementKey source = ResolveSourceKey(entry);
-                string contentHash = ResolveContentHash(source, entry.ContentHash, containerContentHashes, programHash);
-                RuntimeSourceElementHandle parent = EnsureParent(sourceMap, containers, source, containerContentHashes, programHash);
-                sourceMap.Add(
-                    source,
-                    parent,
-                    string.IsNullOrEmpty(entry.DisplayPath) ? source.ToString() : entry.DisplayPath,
-                    contentHash,
-                    ResolveTarget(entry));
+                RuntimeSourceElementKey source = default;
+                try
+                {
+                    source = ResolveSourceKey(entry);
+                    string contentHash = ResolveContentHash(source, entry.ContentHash, containerContentHashes, programHash);
+                    RuntimeSourceElementHandle parent = EnsureParent(sourceMap, containers, source, containerContentHashes, programHash);
+                    sourceMap.Add(
+                        source,
+                        parent,
+                        string.IsNullOrEmpty(entry.DisplayPath) ? source.ToString() : entry.DisplayPath,
+                        contentHash,
+                        ResolveTarget(entry));
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidOperationException(
+                        $"Program source map entry has no valid runtime container: target={entry.TargetKind}:{entry.TargetIndex}; " +
+                        $"type='{entry.SourceType}'; graph='{entry.GraphId}'; node='{entry.NodeId}'; " +
+                        $"timeline='{entry.TimelineId}'; track='{entry.TrackId}'; clip='{entry.ClipId}'; " +
+                        $"display='{entry.DisplayPath}'; keyKind={source.Kind}; keyGraph='{source.GraphAuthoringId}'; " +
+                        $"keyTimeline='{source.TimelineAuthoringId}'; keyTrack='{source.TrackAuthoringId}'; detail={exception.Message}",
+                        exception);
+                }
             }
             sourceMap.Seal();
             foreach (ProgramSourceMapEntry entry in invocations.Values)
@@ -98,12 +110,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     continue;
                 ProgramSourceMapEntry parent = invocations[entry.ParentInvocationPath];
                 string parentGraph = ResolveGraphAuthoringId(parent);
-                RuntimeSourceElementKey caller = entry.InvocationCallerKind == ProgramInvocationCallerKind.Edge
-                    ? RuntimeSourceElementKey.Edge(parentGraph, entry.InvocationCallerId)
-                    : RuntimeSourceElementKey.Node(parentGraph, entry.InvocationCallerId);
+                RuntimeSourceElementKey caller = ResolveInvocationCallerKey(entry, parentGraph, entries);
                 if (!sourceMap.TryGetHandle(caller, out _))
                     throw new InvalidOperationException(
-                        $"Graph invocation '{entry.GraphInvocationPath}' caller '{caller}' is absent from the Debug Source Map.");
+                        $"Graph invocation '{entry.GraphInvocationPath}' caller is absent from the Debug Source Map: " +
+                        $"kind={caller.Kind}, graph='{caller.GraphAuthoringId}', element='{caller.ElementAuthoringId}', " +
+                        $"edge='{caller.ElementAuthoringId}', timeline='{caller.TimelineAuthoringId}'.");
                 if (entry.InvocationCallerKind != ProgramInvocationCallerKind.TimelineClip)
                     continue;
                 bool hasCallerClip = false;
@@ -123,6 +135,52 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         $"Graph invocation '{entry.GraphInvocationPath}' caller TreeClip '{entry.InvocationCallerClipId}' is absent from the Debug Source Map.");
             }
             return new CharacterRuntimeDebugProgram(revision, sourceMap);
+        }
+
+        static RuntimeSourceElementKey ResolveInvocationCallerKey(
+            ProgramSourceMapEntry entry,
+            string parentGraph,
+            IReadOnlyList<ProgramSourceMapEntry> entries)
+        {
+            RuntimeSourceElementKey requested = entry.InvocationCallerKind == ProgramInvocationCallerKind.Edge
+                ? RuntimeSourceElementKey.Edge(parentGraph, entry.InvocationCallerId)
+                : RuntimeSourceElementKey.Node(parentGraph, entry.InvocationCallerId);
+            if (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip)
+                return requested;
+            ProgramSourceMapEntry caller = FindInvocationCallerSource(entry, parentGraph, entries);
+            if (caller == null)
+                return requested;
+            RuntimeSourceElementKey resolved = ResolveSourceKey(caller);
+            return resolved.IsValid ? resolved : requested;
+        }
+
+        static ProgramSourceMapEntry FindInvocationCallerSource(
+            ProgramSourceMapEntry invocation,
+            string parentGraph,
+            IReadOnlyList<ProgramSourceMapEntry> entries)
+        {
+            ProgramSourceMapEntry fallback = null;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ProgramSourceMapEntry candidate = entries[i];
+                bool matches = invocation.InvocationCallerKind == ProgramInvocationCallerKind.Edge
+                    ? string.Equals(candidate.EdgeId, invocation.InvocationCallerId, StringComparison.Ordinal) &&
+                      string.IsNullOrEmpty(candidate.ClipId)
+                    : string.Equals(candidate.NodeId, invocation.InvocationCallerId, StringComparison.Ordinal) &&
+                      string.IsNullOrEmpty(candidate.PortId) &&
+                      string.IsNullOrEmpty(candidate.EdgeId) &&
+                      string.IsNullOrEmpty(candidate.DeclarationId) &&
+                      string.IsNullOrEmpty(candidate.TimelineId) &&
+                      string.IsNullOrEmpty(candidate.TrackId) &&
+                      string.IsNullOrEmpty(candidate.ClipId);
+                if (!matches)
+                    continue;
+                if (fallback == null)
+                    fallback = candidate;
+                if (string.Equals(candidate.GraphId, parentGraph, StringComparison.Ordinal))
+                    return candidate;
+            }
+            return fallback;
         }
 
         static RuntimeSourceElementHandle EnsureParent(
@@ -253,7 +311,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             {
                 return programHash;
             }
-            throw new InvalidOperationException($"Program authoring container '{source}' has no content hash.");
+            throw new InvalidOperationException(
+                $"Program authoring container has no content hash: kind={source.Kind}, graph='{source.GraphAuthoringId}', " +
+                $"element='{source.ElementAuthoringId}', timeline='{source.TimelineAuthoringId}', " +
+                $"track='{source.TrackAuthoringId}', clip='{source.ClipAuthoringId}', port='{source.PortAuthoringId}'.");
         }
 
         public static RuntimeSourceElementKey ResolveSourceKey(ProgramSourceMapEntry source)

@@ -20,7 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 string.Empty,
-                $"asset:{guid}/{identity}");
+                $"asset:{guid}/{identity}",
+                contentHash: model.SourceRevision.Value);
         }
 
         public static CharacterSimulationSourceLocation Node(

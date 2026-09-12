@@ -341,8 +341,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             EditorGUILayout.EndHorizontal();
 
-            if (GUILayout.Button("Open Agent Controller"))
-                AgentCharacterControllerSynthesisWindow.Open(definition);
             if (GUILayout.Button("Validate Configuration"))
                 ValidateConfiguration(definition);
 

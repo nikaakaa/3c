@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(movementModeStateIdentities));
             var hashParts = new List<string>
             {
-                "character-animation-input-contract/v1"
+                "character-animation-input-contract/v2"
             };
             for (int i = 0; i < m_Parameters.Length; i++)
             {
@@ -115,10 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Animation Input Contract requires one Pose Graph and Rig Definition.");
             CharacterPoseCanvasGraph root = profile.PoseGraph.Graph ??
                 throw new InvalidOperationException("Animation Input Contract requires a Pose Graph root.");
-            CharacterPoseParameterDeclaration[] parameters = root.Parameters
-                .Where(value => value != null)
-                .OrderBy(value => value.ParameterId)
-                .ToArray();
+            CharacterPoseParameterDeclaration[] parameters = BuildParameters(profile, root);
             var facts = new Dictionary<string, CharacterPresentationFactDeclaration>(StringComparer.Ordinal);
             var slots = new List<CharacterAnimationInputSlot>();
             var slotsByKey = new Dictionary<string, CharacterAnimationInputSlot>(StringComparer.Ordinal);
@@ -207,6 +204,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 slots.ToArray(),
                 worldCapabilities.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
                 movementModeStateIdentities.OrderBy(value => value, StringComparer.Ordinal).ToArray());
+        }
+
+        static CharacterPoseParameterDeclaration[] BuildParameters(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPoseCanvasGraph root)
+        {
+            var parameters = new List<CharacterPoseParameterDeclaration>();
+            var ids = new HashSet<PoseParameterId>();
+            foreach (CharacterPoseParameterDeclaration declaration in root.Parameters
+                         .Where(value => value != null && value.Usage == CharacterPoseParameterUsage.Control)
+                         .OrderBy(value => value.ParameterId))
+            {
+                if (!ids.Add(declaration.ParameterId))
+                    throw new InvalidOperationException(
+                        $"Animation Input Contract contains duplicate control parameter '{declaration.ParameterId}'.");
+                parameters.Add(declaration);
+            }
+            foreach (CharacterAnimationPropertyAuthoringBinding binding in profile.AnimationPropertyBindings
+                         .Where(value => value != null)
+                         .OrderBy(value => value.ParameterId))
+            {
+                if (!binding.ParameterId.IsValid || !ids.Add(binding.ParameterId))
+                    throw new InvalidOperationException(
+                        $"Animation Input Contract contains duplicate or invalid property parameter '{binding?.ParameterId}'.");
+                parameters.Add(new CharacterPoseParameterDeclaration(
+                    binding.ParameterId,
+                    PoseParameterValueType.Float,
+                    0f,
+                    "percent",
+                    CharacterPoseParameterUsage.AnimatedProperty));
+            }
+            return parameters.ToArray();
         }
 
         static void AddFact(

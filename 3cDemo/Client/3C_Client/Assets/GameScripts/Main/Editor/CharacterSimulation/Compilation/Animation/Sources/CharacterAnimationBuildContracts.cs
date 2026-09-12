@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             var ids = new HashSet<PoseParameterId>();
             var hashParts = new List<string>(declarations.Length * 5 + 1)
             {
-                "character-animation-parameter-layout/v1"
+                "character-animation-parameter-layout/v2"
             };
             for (int i = 0; i < declarations.Length; i++)
             {

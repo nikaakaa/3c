@@ -79,8 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                          .OrderBy(value => value.GraphId.Value, StringComparer.Ordinal))
             {
                 CharacterPoseParameterDeclaration[] desired = BuildGraphParameters(
-                    graph,
-                    propertyParameters);
+                    graph);
                 graphParameters.Add(graph.GraphId.Value, desired);
                 poseGraphs.Add(new CharacterAnimationPropertyImportPoseGraphTarget(
                     graph.GraphId.Value,
@@ -128,8 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static CharacterPoseParameterDeclaration[] BuildGraphParameters(
-            CharacterPoseCanvasGraph graph,
-            IReadOnlyList<CharacterPoseParameterDeclaration> propertyParameters)
+            CharacterPoseCanvasGraph graph)
         {
             var result = new List<CharacterPoseParameterDeclaration>();
             var ids = new HashSet<PoseParameterId>();
@@ -137,23 +135,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (current == null)
                     throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' contains a missing parameter.");
-                if (current.Usage == CharacterPoseParameterUsage.AnimatedProperty)
+                if (current.Usage != CharacterPoseParameterUsage.Control)
                     continue;
                 if (!ids.Add(current.ParameterId))
                     throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' has duplicate parameter '{current.ParameterId}'.");
                 result.Add(current);
-            }
-            foreach (CharacterPoseParameterDeclaration property in propertyParameters)
-            {
-                if (!ids.Add(property.ParameterId))
-                    throw new InvalidOperationException(
-                        $"Pose Graph '{graph.GraphId}' already uses property parameter '{property.ParameterId}' as another declaration.");
-                result.Add(new CharacterPoseParameterDeclaration(
-                    property.ParameterId,
-                    property.ValueType,
-                    property.DefaultValue,
-                    property.Unit,
-                    property.Usage));
             }
             return result.ToArray();
         }

@@ -383,7 +383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (binding == null || !propertyIds.Add(binding.ParameterId) ||
                         !propertyBindingIds.Add(binding.RendererBindingId + ":" + binding.BlendShapeName))
                         throw new InvalidOperationException("property binding is missing or duplicated.");
-                    binding.RequireValid(m_PoseGraph?.Graph);
+                    binding.RequireValid();
                 }
                 catch (Exception exception)
                 {

@@ -334,7 +334,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterAnimationPropertyAuthoringBinding source = profile.AnimationPropertyBindings[i];
                 try
                 {
-                    source.RequireValid(profile.PoseGraph.Graph);
+                    source.RequireValid();
                     int parameterIndex = poseProgram.RequireParameterIndex(source.ParameterId);
                     CharacterPresentationPoseParameterEntry parameter = poseProgram.Parameters[parameterIndex];
                     result.Add(new CharacterPresentationAnimationPropertyBinding(

@@ -196,27 +196,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendShapeIndex = blendShapeIndex;
         }
 
-        public void RequireValid(CharacterPoseCanvasGraph graph)
+        public void RequireValid()
         {
-            if (graph == null || !ParameterId.IsValid || string.IsNullOrWhiteSpace(RendererBindingId) ||
+            if (!ParameterId.IsValid || string.IsNullOrWhiteSpace(RendererBindingId) ||
                 string.IsNullOrWhiteSpace(AnimationCurvePath) ||
                 !ExpectedMesh || !CharacterAclHash.IsSha256(MeshContentHash) ||
                 string.IsNullOrWhiteSpace(BlendShapeName) || BlendShapeIndex < 0 ||
                 BlendShapeIndex >= ExpectedMesh.blendShapeCount ||
                 !string.Equals(ExpectedMesh.GetBlendShapeName(BlendShapeIndex), BlendShapeName, StringComparison.Ordinal))
                 throw new InvalidOperationException("Animation property authoring binding is invalid.");
-            CharacterPoseParameterDeclaration declaration = null;
-            for (int i = 0; i < graph.Parameters.Count; i++)
-            {
-                if (graph.Parameters[i] != null && graph.Parameters[i].ParameterId.Equals(ParameterId))
-                {
-                    declaration = graph.Parameters[i];
-                    break;
-                }
-            }
-            if (declaration == null || declaration.Usage != CharacterPoseParameterUsage.AnimatedProperty ||
-                declaration.ValueType != PoseParameterValueType.Float)
-                throw new InvalidOperationException($"Animation property '{ParameterId}' is not an AnimatedProperty float parameter.");
         }
     }
 

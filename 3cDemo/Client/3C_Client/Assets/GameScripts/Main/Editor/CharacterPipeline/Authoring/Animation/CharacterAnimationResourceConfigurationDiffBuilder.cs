@@ -160,44 +160,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (KeyValuePair<string, CharacterPoseParameterDeclaration[]> graph in graphParameters)
             {
                 CharacterPoseCanvasGraph current = poseGraph.RequireGraph(new PoseGraphId(graph.Key));
-                foreach (CharacterPoseParameterDeclaration parameter in graph.Value.Where(value => desiredPropertyIds.Contains(value.ParameterId)))
-                {
-                    CharacterPoseParameterDeclaration previous = current.Parameters
-                        .FirstOrDefault(value => value != null && value.ParameterId.Equals(parameter.ParameterId));
-                    if (previous == null)
-                    {
-                        AddDiff(
-                            diffs,
-                            CharacterAnimationPropertyImportDiffKind.Add,
-                            $"poseGraph:{graph.Key}.parameters:{parameter.ParameterId}",
-                            "missing",
-                            parameter.Usage.ToString(),
-                            "Add the formal AnimatedProperty declaration.");
-                    }
-                    else if (!SameParameter(previous, parameter))
-                    {
-                        AddDiff(
-                            diffs,
-                            CharacterAnimationPropertyImportDiffKind.Update,
-                            $"poseGraph:{graph.Key}.parameters:{parameter.ParameterId}",
-                            DescribeParameter(previous),
-                            DescribeParameter(parameter),
-                            "Replace the declaration with the formal Float percent contract.");
-                    }
-                }
                 foreach (CharacterPoseParameterDeclaration previous in current.Parameters)
                 {
-                    if (previous != null &&
-                        previous.Usage == CharacterPoseParameterUsage.AnimatedProperty &&
-                        !desiredPropertyIds.Contains(previous.ParameterId))
+                    if (previous != null && previous.Usage == CharacterPoseParameterUsage.AnimatedProperty)
                     {
                         AddDiff(
                             diffs,
                             CharacterAnimationPropertyImportDiffKind.Remove,
                             $"poseGraph:{graph.Key}.parameters:{previous.ParameterId}",
                             DescribeParameter(previous),
-                            "formal BlendShape contract",
-                            "Remove an AnimatedProperty outside the formal curve set.");
+                            "profile.AnimationPropertyBindings",
+                            "Remove the graph-owned AnimatedProperty declaration; curve data remains in the formal property contract.");
                     }
                 }
             }
@@ -332,16 +305,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                    left.MaxDatabaseChunkSize == right.MaxDatabaseChunkSize &&
                    left.CompilerOptions == right.CompilerOptions;
         }
-
-        static bool SameParameter(
-            CharacterPoseParameterDeclaration left,
-            CharacterPoseParameterDeclaration right) =>
-            left != null && right != null &&
-            left.ParameterId.Equals(right.ParameterId) &&
-            left.ValueType == right.ValueType &&
-            left.Usage == right.Usage &&
-            left.Unit == right.Unit &&
-            left.DefaultValue.Equals(right.DefaultValue);
 
         static string DescribeParameter(CharacterPoseParameterDeclaration value) =>
             $"{value.ParameterId}:{value.ValueType}:{value.Usage}:{value.Unit}:{value.DefaultValue.ToString("R", CultureInfo.InvariantCulture)}";

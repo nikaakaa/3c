@@ -2,11 +2,22 @@
 
 ## 2026-09-13 r2规划入口
 
-当前执行范围以[proposal.md](proposal.md)、[design.md](design.md)和[tasks.md](tasks.md)为准。本轮仅更新规划，没有执行代码、资产或旧包操作。共同参数/规则与共享Capability归本任务，两个作者MCP、JSON binding和Agent协议退役归C# authoring，FSM与事件图业务由各自Owner负责。
+当前执行范围以[proposal.md](proposal.md)、[design.md](design.md)和[tasks.md](tasks.md)为准。下方原句保留规划阶段语境；用户随后授权按r2开始实现。共同参数/规则与共享Capability归本任务，两个作者MCP、JSON binding和Agent协议退役归C# authoring，FSM与事件图业务由各自Owner负责。
 
 下方既有实施记录保留其记录时语境，其中v8包重建、checkout/dry-run/apply等待和协议发布已撤出r2任务，不再按旧“未完成”段继续实施。TransferPayload、真实端口、普通步骤和已正确迁移结果保持有效；协议退役不回退这些业务代码，也不丢弃失败记录。
 
 本轮读取期间新增了2907713a5的旧Step DTO/死路径清理记录，原文保留。旧tasks 2.4未完成与5.3已勾选的记录也同时保存，不能将任一记录扩大为r2全量共同定义已经完成。
+
+## 2026-09-13 r2执行进度
+
+已完成共享字段与端口合同的第一段实现：
+
+- `BtsmtlSkillCapabilityCatalog.cs` 为Skill字段提供当前typed读取、默认值、约束、引用目标和稳定identity入口；不经过JObject、AgentPackage或第二份节点快照。
+- `BtsmtlSkillGraphAuthoringMetadata.cs` 暴露能力、字段、引用、配置绑定和正式字段读取入口，Skill compiler从该入口读取叶节点参数。
+- 原业务节点与FlowCanvas节点共享输入身份、ActionContext、ActionWindow、CanActivate目标快照、生命周期、Gameplay、Blackboard和Locomotion authoring合同；Locomotion默认值与组合校验集中到同一业务规则。
+- 固定、条件和动态端口继续由共享Capability与唯一`GraphAuthoringNodePortShapeProjector`投影；已有TransferPayload、真实端口和普通组合步骤未被改写。
+
+当前只完成tasks 1.1、1.2、1.3；tasks 2.1至4.3仍按文档保留未完成状态。NodeInspector仍有并行Native FSM未提交改动，本次只保留其工作树内容，不把它混入本记录的提交范围。
 
 ## r2前任务状态存档
 

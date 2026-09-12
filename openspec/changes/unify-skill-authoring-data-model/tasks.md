@@ -2,7 +2,7 @@
 
 按2026-09-13 r2执行：共同业务定义与共享metadata归本任务；export_code/generate_assets、JSON binding退役和公共协议删除归C# authoring。FSM与事件图保留各自职责。已有TransferPayload、真实端口和组合步骤成果继续使用，不重新实施旧v8发布或包重建。
 
-旧任务的勾选和未完成记录已原样转为[implementation.md](implementation.md)中的历史表。以下只列r2剩余实现，不含测试、验证、包往返或等待运行证据任务；本轮文档修改不勾选实现完成。
+旧任务的勾选和未完成记录已原样转为[implementation.md](implementation.md)中的历史表。以下只列r2剩余实现，不含测试、验证、包往返或等待运行证据任务；实现按实际代码完成情况勾选，不以编译或手动验收代替未完成项。
 
 ## 1. 共享字段与端口合同
 

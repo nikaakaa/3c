@@ -9,6 +9,7 @@ using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 using UnityEngine;

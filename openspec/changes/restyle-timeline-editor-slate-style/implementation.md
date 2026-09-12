@@ -54,6 +54,7 @@ TimelineEditorWindow
 - Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
 - Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
 - Timeline 窗口新增完整构建后的 `WindowOpened` 生命周期通知，Runtime Observation Bridge 在 Slate Surface、属性区和恢复状态都建立后再刷新；不再依赖过早的 AssetOpened 时机。
+- Timeline 顶部显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
 - C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。公共 binding 中剩余旧 JSON 方法由 C# authoring owner 清理。
 
 ## 正式能力对账

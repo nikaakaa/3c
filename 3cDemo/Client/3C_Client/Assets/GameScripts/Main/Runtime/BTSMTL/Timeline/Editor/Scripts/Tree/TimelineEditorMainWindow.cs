@@ -24,6 +24,7 @@ namespace BTSMTL.Timeline.Editor
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
         internal static event Action<TimelineEditorWindow> WindowOpened;
         public static event Action<TimelineEditorWindow> WindowClosed;
+        public static event Action<TimelineEditorWindow> AuthoringRevisionChanged;
 
         [SerializeField]
         UnityEngine.Object m_SerializedOwner;
@@ -95,6 +96,7 @@ namespace BTSMTL.Timeline.Editor
         ToolbarButton m_BackButton;
         ObjectField m_SharedTimelineField;
         Label m_SourceSummary;
+        Label m_RevisionSummary;
         Label m_Status;
         ToolbarMenu m_RuntimeObservationMenu;
         VisualElement m_DetailsHost;
@@ -107,6 +109,9 @@ namespace BTSMTL.Timeline.Editor
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
         public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
+        public string AuthoringRevision => m_Timeline == null
+            ? string.Empty
+            : TimelineAuthoringFingerprint.Compute(m_Timeline);
 
         internal IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetRuntimeObservationSummaries()
         {
@@ -410,6 +415,7 @@ namespace BTSMTL.Timeline.Editor
             CaptureViewState();
             DisposeView();
             timeline.BindSerializedOwner(serializedOwner, serializedPropertyPath);
+            timeline.OnValueChanged += OnTimelineValueChanged;
             m_SerializedOwner = serializedOwner;
             m_SerializedPropertyPath = serializedPropertyPath;
             m_OwnershipLabel = ownershipLabel;
@@ -598,6 +604,8 @@ namespace BTSMTL.Timeline.Editor
         void DisposeView()
         {
             CaptureViewState();
+            if (m_Timeline != null)
+                m_Timeline.OnValueChanged -= OnTimelineValueChanged;
             if (m_SlateProjection != null)
             {
                 m_SlateProjection.SelectionChanged -= RebuildDetails;
@@ -607,7 +615,23 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection = null;
             m_SlateSurface = null;
             m_DetailsHost = null;
+            m_RevisionSummary = null;
             m_Timeline = null;
+        }
+
+        void OnTimelineValueChanged()
+        {
+            if (m_RevisionSummary != null)
+                m_RevisionSummary.text = AuthoringRevisionLabel();
+            AuthoringRevisionChanged?.Invoke(this);
+        }
+
+        string AuthoringRevisionLabel()
+        {
+            string revision = AuthoringRevision;
+            return string.IsNullOrEmpty(revision)
+                ? "Authoring: -"
+                : $"Authoring: {revision.Substring(0, Math.Min(8, revision.Length))}";
         }
 
         void OnAuthoringIssue(string message)
@@ -736,6 +760,9 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSummary.style.minWidth = 180f;
             m_SourceSummary.style.marginLeft = 6f;
             m_SourceSummary.tooltip = CurrentSourceTooltip();
+            m_RevisionSummary = new Label(AuthoringRevisionLabel());
+            m_RevisionSummary.style.marginLeft = 6f;
+            m_RevisionSummary.tooltip = "TimelineData 当前作者内容指纹；不代表运行时已采用。";
             m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
             m_RuntimeObservationMenu.style.width = 150f;
             m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
@@ -746,6 +773,7 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(previewButton);
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
+            toolbar.Add(m_RevisionSummary);
             toolbar.Add(m_RuntimeObservationMenu);
             toolbar.Add(m_Status);
             RefreshRuntimeObservationMenu();

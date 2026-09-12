@@ -20,8 +20,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 .Where(type => type != null && !type.IsAbstract && !type.ContainsGenericParameters)
                 .ToList();
             result.Add(typeof(MacroNodeWrapper));
-            result.Add(typeof(MacroInputNode));
-            result.Add(typeof(MacroOutputNode));
             result.Add(typeof(BtsmtlSkillMacroInputNode));
             result.Add(typeof(BtsmtlSkillMacroOutputNode));
             result.AddRange(BtsmtlSkillNativeNodeCatalog.All.Select(value => value.NodeType));

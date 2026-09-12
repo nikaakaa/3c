@@ -210,8 +210,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         static readonly IReadOnlyDictionary<Type, string> s_ByType = CreateTypes();
         static readonly IReadOnlyDictionary<string, Type> s_ByKind =
-            s_ByType.GroupBy(value => value.Value, StringComparer.Ordinal)
-                .ToDictionary(value => value.Key, value => value.First().Key, StringComparer.Ordinal);
+            CreateKindIndex(s_ByType);
         static readonly IReadOnlyDictionary<string, Type> s_ByVariant = CreateVariants(s_ByType);
 
         public static IReadOnlyList<Type> All => s_ByType.Keys
@@ -401,6 +400,39 @@ namespace ThirdPersonCharacter.Control.Authoring
                              .GetCustomAttributes(typeof(BtsmtlSkillNodeVariantAttribute), true)
                              .OfType<BtsmtlSkillNodeVariantAttribute>())
                     result.Add(VariantKey(capability.Value, variant.FieldId, variant.Value), capability.Key);
+            return result;
+        }
+
+        static IReadOnlyDictionary<string, Type> CreateKindIndex(
+            IReadOnlyDictionary<Type, string> capabilities)
+        {
+            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
+            foreach (IGrouping<string, KeyValuePair<Type, string>> group in
+                     capabilities.GroupBy(value => value.Value, StringComparer.Ordinal))
+            {
+                KeyValuePair<Type, string>[] types = group.ToArray();
+                if (types.Length > 1)
+                {
+                    var variants = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (KeyValuePair<Type, string> value in types)
+                    {
+                        BtsmtlSkillNodeVariantAttribute[] declared = value.Key
+                            .GetCustomAttributes(typeof(BtsmtlSkillNodeVariantAttribute), false)
+                            .OfType<BtsmtlSkillNodeVariantAttribute>()
+                            .ToArray();
+                        if (declared.Length == 0)
+                            throw new InvalidOperationException(
+                                $"技能节点kind '{group.Key}' 对应多个类型但未声明variant：{value.Key.FullName}");
+                        foreach (BtsmtlSkillNodeVariantAttribute variant in declared)
+                            if (!variants.Add(VariantKey(group.Key, variant.FieldId, variant.Value)))
+                                throw new InvalidOperationException(
+                                    $"技能节点kind '{group.Key}' 的variant重复：{variant.FieldId}={variant.Value}");
+                    }
+                }
+                result.Add(
+                    group.Key,
+                    types.OrderBy(value => value.Key.FullName, StringComparer.Ordinal).First().Key);
+            }
             return result;
         }
 

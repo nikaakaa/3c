@@ -353,6 +353,7 @@ namespace TreeDesigner.Authoring
             GraphAuthoringDynamicPortProjection[] fixedPorts = capability
                 .FixedPorts
                 .OrderBy(value => value.Order)
+                .ThenBy(value => value.PortId.Value, StringComparer.Ordinal)
                 .Select(value =>
                     new GraphAuthoringDynamicPortProjection(
                         value.PortId,
@@ -394,7 +395,9 @@ namespace TreeDesigner.Authoring
             var result = new List<GraphAuthoringDynamicPortProjection>();
             if (variant != null)
             {
-                foreach (GraphAuthoringPortDescriptor port in variant.Ports.OrderBy(value => value.Order))
+                foreach (GraphAuthoringPortDescriptor port in variant.Ports
+                             .OrderBy(value => value.Order)
+                             .ThenBy(value => value.PortId.Value, StringComparer.Ordinal))
                 {
                     AddProjectedPort(
                         result,
@@ -423,7 +426,10 @@ namespace TreeDesigner.Authoring
                     port,
                     capability.CapabilityId);
             }
-            return result.OrderBy(value => value.Order).ToArray();
+            return result
+                .OrderBy(value => value.Order)
+                .ThenBy(value => value.PortId.Value, StringComparer.Ordinal)
+                .ToArray();
         }
 
         static GraphAuthoringPortVariantDescriptor ResolveVariant(

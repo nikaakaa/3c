@@ -45,6 +45,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `a42d1275e`：简化输入合同的根图存在校验；该提交同时包含索引中另一条已暂存的Skill规范变更，未回退其内容。
 - `6d55f3288`：删除无调用者且会按单个Graph参数构建布局的遗留重载，保留唯一Animation Input Contract布局和用户要求的`CreatePoseOnlyInput()`隔离入口。
 - `7fb3412a0`：Pose Get参数选择器只展示正式外部输入；该提交同时包含索引中原已暂存的EventGraph owner/apply改动，未回退其内容。
+- `3cb2370bf`：Linked Pose、Pose Graph、Slot Group和物理骨骼引用选择器统一使用作者可读标签，写回仍绑定稳定identity。
 
 正式 Document 流程：
 

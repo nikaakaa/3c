@@ -1429,7 +1429,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     state.GraphClosure.RequireGraph(
                         ownerAsset,
                         authored.PoseGraphId);
-                ValidateStateParameters(authored, stateGraph, state.Parameters);
+                ValidateStateParameters(authored, stateGraph);
                 int operationStart = state.Operations.Count;
                 int outputValueIndex = -1;
                 string stateScope = CharacterPoseCallScope.State(string.Empty, scopedNodeId, authored.StateId);
@@ -1549,7 +1549,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     authored.Priority,
                     CharacterPoseTransitionRuleCompiler.Compile(
                         authored.Rule,
-                        state.MovementModeStateIdentities),
+                        state.MovementModeStateIdentities,
+                        state.Profile.EventGraph
+                            ? new CharacterAnimationVariableContract(
+                                state.Profile.EventGraph.BuildVariableContract())
+                            : null),
                     authored.BlendLogic,
                     authored.DurationSeconds,
                     completionDurationSeconds,
@@ -1649,25 +1653,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static void ValidateStateParameters(
             CharacterPoseStateDefinition state,
-            CharacterPoseCanvasGraph stateGraph,
-            IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters)
+            CharacterPoseCanvasGraph stateGraph)
         {
-            if (stateGraph.Parameters.Count != parameters.Count)
-                throw new InvalidOperationException($"Pose State '{state.StateId}' Parameter contract is incomplete.");
-            var authored = stateGraph.Parameters.ToDictionary(value => value.ParameterId);
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                CharacterPresentationPoseParameterEntry expected = parameters[i];
-                if (!authored.TryGetValue(expected.ParameterId, out CharacterPoseParameterDeclaration actual) ||
-                    actual.ValueType != expected.ValueType ||
-                    actual.Usage != expected.Usage ||
-                    !string.Equals(actual.Unit, expected.Unit, StringComparison.Ordinal) ||
-                    actual.DefaultValue != expected.DefaultValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Pose State '{state.StateId}' Parameter '{expected.ParameterId}' does not match the root Pose Graph.");
-                }
-            }
+            if (stateGraph.Parameters.Count != 0)
+                throw new InvalidOperationException(
+                    $"Pose State '{state.StateId}' contains graph-local input declarations; use the shared Animation Input Contract.");
         }
 
         static PoseStateSourceProviderPlan[] BuildStateSourceProviders(

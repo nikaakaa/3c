@@ -9,7 +9,7 @@ namespace BTSMTL.Timeline.Editor
     {
         readonly string m_Kind;
         readonly bool m_RequiresFields;
-        readonly Action<string, string, string> m_Create;
+        readonly Func<string, string, string, bool> m_Create;
         string m_Name;
         string m_ChannelId;
         string m_SlotId;
@@ -19,7 +19,7 @@ namespace BTSMTL.Timeline.Editor
             string kind,
             string displayName,
             bool requiresFields,
-            Action<string, string, string> create)
+            Func<string, string, string, bool> create)
         {
             m_Kind = kind;
             m_RequiresFields = requiresFields;
@@ -47,8 +47,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (GUILayout.Button("Create"))
                 {
-                    m_Create(m_Name, m_ChannelId, m_SlotId);
-                    editorWindow.Close();
+                    if (m_Create(m_Name, m_ChannelId, m_SlotId))
+                        editorWindow.Close();
                 }
             }
         }

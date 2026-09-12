@@ -69,6 +69,9 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         float m_DetailsHeight = 180f;
 
+        [SerializeField]
+        bool m_DetailsCollapsed;
+
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
@@ -78,6 +81,8 @@ namespace BTSMTL.Timeline.Editor
         Label m_SourceSummary;
         Label m_Status;
         VisualElement m_DetailsHost;
+        ToolbarButton m_DetailsToggle;
+        bool m_DetailsAvailable;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
@@ -260,6 +265,7 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
             rootVisualElement.Add(m_SlateSurface);
+            rootVisualElement.Add(CreateDetailsToolbar());
             m_DetailsHost = new VisualElement { name = "timeline-details" };
             m_DetailsHost.style.flexShrink = 0f;
             m_DetailsHost.style.height = Mathf.Clamp(m_DetailsHeight, 80f, 320f);
@@ -440,11 +446,12 @@ namespace BTSMTL.Timeline.Editor
             m_DetailsHost.Clear();
             if (selection.Kind == TimelineEditorSelectionKind.None)
             {
-                m_DetailsHost.style.display = DisplayStyle.None;
+                m_DetailsAvailable = false;
+                ApplyDetailsVisibility();
                 return;
             }
 
-            m_DetailsHost.style.display = DisplayStyle.Flex;
+            m_DetailsAvailable = true;
             if (selection.Clip != null)
             {
                 Clip clip = selection.Clip;
@@ -461,6 +468,7 @@ namespace BTSMTL.Timeline.Editor
                 }
                 else
                     m_DetailsHost.Add(new TimelineFormalClipDetailsView(clip, m_SlateProjection.ApplyFormalMutation));
+                ApplyDetailsVisibility();
                 return;
             }
 
@@ -469,6 +477,43 @@ namespace BTSMTL.Timeline.Editor
                 Track track = selection.Track;
                 m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
             }
+            ApplyDetailsVisibility();
+        }
+
+        VisualElement CreateDetailsToolbar()
+        {
+            var toolbar = new Toolbar { name = "timeline-details-toolbar" };
+            m_DetailsToggle = new ToolbarButton(() =>
+            {
+                m_DetailsCollapsed = !m_DetailsCollapsed;
+                ApplyDetailsVisibility();
+            });
+            m_DetailsToggle.style.width = 88f;
+            toolbar.Add(m_DetailsToggle);
+            var height = new Slider("Height", 80f, 320f)
+            {
+                value = Mathf.Clamp(m_DetailsHeight, 80f, 320f)
+            };
+            height.style.width = 220f;
+            height.RegisterValueChangedCallback(evt =>
+            {
+                m_DetailsHeight = evt.newValue;
+                if (m_DetailsHost != null)
+                    m_DetailsHost.style.height = m_DetailsHeight;
+            });
+            toolbar.Add(height);
+            ApplyDetailsVisibility();
+            return toolbar;
+        }
+
+        void ApplyDetailsVisibility()
+        {
+            if (m_DetailsToggle != null)
+                m_DetailsToggle.text = m_DetailsCollapsed ? "Details ▸" : "Details ▾";
+            if (m_DetailsHost != null)
+                m_DetailsHost.style.display = m_DetailsAvailable && !m_DetailsCollapsed
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
         }
 
         VisualElement CreateAuthoringToolbar()

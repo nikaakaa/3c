@@ -48,14 +48,14 @@ namespace BTSMTL.Timeline.Editor
         readonly TimelineClipCreationRequest m_Request;
         readonly IReadOnlyList<string> m_MotionClipIds;
         readonly IReadOnlyList<TimelineExternalBindingDeclaration> m_Bindings;
-        readonly Action<TimelineClipCreationRequest> m_Create;
+        readonly Func<TimelineClipCreationRequest, bool> m_Create;
         string m_Error;
 
         public TimelineClipCreationPopup(
             TimelineClipCreationRequest request,
             IReadOnlyList<string> motionClipIds,
             IReadOnlyList<TimelineExternalBindingDeclaration> bindings,
-            Action<TimelineClipCreationRequest> create)
+            Func<TimelineClipCreationRequest, bool> create)
         {
             m_Request = request;
             m_MotionClipIds = motionClipIds ?? Array.Empty<string>();
@@ -148,8 +148,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (GUILayout.Button("Create"))
                 {
-                    m_Create(m_Request);
-                    editorWindow.Close();
+                    if (m_Create(m_Request))
+                        editorWindow.Close();
                 }
             }
         }

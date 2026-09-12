@@ -278,6 +278,7 @@ namespace Slate
         [System.NonSerialized] private System.Action beginWindows;
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
+        [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
 #if UNITY_6000_5_OR_NEWER
@@ -623,6 +624,11 @@ namespace Slate
             InitializeAll(newCutscene);
         }
 
+        public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
+        {
+            embeddedRuntimeTime = runtimeTime;
+        }
+
         public void InitializeStandalone(
             Cutscene newCutscene,
             System.Action repaint,
@@ -722,6 +728,7 @@ namespace Slate
             beginWindows = null;
             endWindows = null;
             embeddedFrameRate = null;
+            embeddedRuntimeTime = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             embeddedSurface = false;
@@ -1278,7 +1285,7 @@ namespace Slate
             //make the layout rects
             var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
             var timeInfoTop = embeddedSurface ? 0 : TOOLBAR_HEIGHT;
-            topLeftRect = new Rect(0, TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
+            topLeftRect = new Rect(0, embeddedSurface ? 0 : TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
             topMiddleRect = new Rect(LEFT_MARGIN, timeInfoTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
             leftRect = new Rect(0, timelineTop, LEFT_MARGIN, screenHeight - timelineTop + scrollPos.y);
             centerRect = new Rect(LEFT_MARGIN, timelineTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - timelineTop + scrollPos.y);
@@ -1291,6 +1298,10 @@ namespace Slate
                 GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
                 ShowPlaybackControls(topLeftRect);
                 GUI.enabled = guiEnabled;
+            }
+            else
+            {
+                ShowEmbeddedAuthoringToolbar(topLeftRect);
             }
             ShowTimeInfo(topMiddleRect);
             if (!embeddedSurface)
@@ -1308,6 +1319,7 @@ namespace Slate
             GUI.EndScrollView();
             ///---
 
+            DrawRuntimeOverlay();
             DrawGuides();
             AcceptDrops();
 
@@ -1397,6 +1409,39 @@ namespace Slate
             GUI.skin = null;
 
             if ( viewTimeMax == 0 ) { GUI.Label(centerRect, "<size=40>:-)</size>", Styles.centerLabel); }
+        }
+
+        void DrawRuntimeOverlay()
+        {
+            if (!embeddedSurface || embeddedRuntimeTime == null)
+                return;
+            float? runtimeTime = embeddedRuntimeTime();
+            if (!runtimeTime.HasValue || runtimeTime.Value < viewTimeMin || runtimeTime.Value > viewTimeMax)
+                return;
+            float x = TimeToPos(runtimeTime.Value) + centerRect.x;
+            GUI.color = new Color(0.25f, 0.85f, 1f, 0.9f);
+            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
+            GUI.Label(new Rect(x + 4f, centerRect.y + 2f, 64f, 18f), "Runtime", EditorStyles.label);
+            GUI.color = Color.white;
+        }
+
+        void ShowEmbeddedAuthoringToolbar(Rect rect)
+        {
+            GUI.Box(rect, string.Empty, EditorStyles.toolbar);
+            GUI.BeginGroup(rect);
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            if (GUILayout.Button("+ Track", EditorStyles.toolbarButton, GUILayout.Width(62)))
+                embeddedAddTrack?.Invoke();
+            if (GUILayout.Button("Fit", EditorStyles.toolbarButton, GUILayout.Width(36)))
+            {
+                viewTimeMin = 0f;
+                viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+            }
+            GUILayout.Label(
+                $"Edit  {Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate))}F",
+                EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+            GUI.EndGroup();
         }
 
         ///----------------------------------------------------------------------------------------------

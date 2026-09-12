@@ -389,6 +389,7 @@ namespace BTSMTL.Timeline.Editor
         string m_SourceRevision = string.Empty;
         Clip m_CopiedClip;
         BtsmtlSlateTimelineViewState? m_PendingViewState;
+        float? m_RuntimeVisualTime;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -727,6 +728,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
             m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null, () => m_Session.FrameRate, ShowAddTrackMenu, CopyProxyClip);
+            m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             if (!string.IsNullOrEmpty(m_PendingTrackFocus) || !string.IsNullOrEmpty(m_PendingClipFocus))
             {
                 FocusSource(m_PendingTrackFocus, m_PendingClipFocus);
@@ -762,10 +764,10 @@ namespace BTSMTL.Timeline.Editor
                     (name, channelId, slotId) => AddTrack(kind, name, channelId, slotId)));
         }
 
-        void AddTrack(string kind, string name, string channelId, string slotId)
+        bool AddTrack(string kind, string name, string channelId, string slotId)
         {
             if (!IsSourceCurrent())
-                return;
+                return false;
             Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
             string authoringId = string.Empty;
             Track addedTrack = null;
@@ -786,10 +788,11 @@ namespace BTSMTL.Timeline.Editor
                 if (addedTrack != null)
                     m_Request.Timeline.RemoveTrack(addedTrack);
                 ReportIssue($"新增 Track 失败：{exception.Message}");
-                return;
+                return false;
             }
             m_PendingTrackFocus = authoringId;
             QueueRebuildProjection();
+            return true;
         }
 
         void ShowAddClipMenu(string trackAuthoringId, float time)
@@ -875,12 +878,12 @@ namespace BTSMTL.Timeline.Editor
                 new TimelineClipCreationPopup(request, motionClipIds, m_Request.Timeline.ExternalBindings, AddClip));
         }
 
-        void AddClip(TimelineClipCreationRequest request)
+        bool AddClip(TimelineClipCreationRequest request)
         {
             if (!IsSourceCurrent())
-                return;
+                return false;
             if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
-                return;
+                return false;
             string authoringId = string.Empty;
             Clip addedClip = null;
             try
@@ -923,11 +926,12 @@ namespace BTSMTL.Timeline.Editor
                 if (addedClip != null)
                     m_Request.Timeline.RemoveClip(addedClip);
                 ReportIssue($"新增 Clip 失败：{exception.Message}");
-                return;
+                return false;
             }
             m_PendingTrackFocus = request.TrackAuthoringId;
             m_PendingClipFocus = authoringId;
             QueueRebuildProjection();
+            return true;
         }
 
         bool IsSourceCurrent()
@@ -1424,7 +1428,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_Cutscene == null)
                 return;
-            m_Cutscene.currentTime = Mathf.Max(0f, visualTime);
+            m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
             foreach (KeyValuePair<string, BtsmtlSlateTrack> pair in m_ProxyTracks)
             {
                 bool active = activeTracks != null && activeTracks.ContainsKey(pair.Key);
@@ -1442,6 +1446,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void ClearRuntimeOverlay()
         {
+            m_RuntimeVisualTime = null;
             foreach (BtsmtlSlateTrack track in m_ProxyTracks.Values)
                 track.SetRuntimeActive(true);
             foreach (BtsmtlSlateActionClip clip in m_ProxyClips.Values)

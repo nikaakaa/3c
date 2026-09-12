@@ -215,6 +215,7 @@ namespace Slate
 
                 //draw the dopekeys
                 var tangentMode = TangentMode.Editable;
+                var lastDrawnKeyX = float.NegativeInfinity;
                 for ( var t = 0; t < currentTimes.Count; t++ ) {
 
                     var time = currentTimes[t];
@@ -243,17 +244,21 @@ namespace Slate
                     var dopeKeyRect = new Rect(0, 0, icon.width, icon.height);
                     dopeKeyRect.center = new Vector2(TimeToPos(time), rect.center.y);
                     var isSelected = t == pickIndex || ( rectSelectedIndeces != null && rectSelectedIndeces.Contains(t) );
-                    GUI.color = isSelected ? new Color(0.6f, 0.6f, 1) : Color.white;
-                    GUI.DrawTexture(dopeKeyRect, icon);
-                    GUI.color = Color.white;
+                    var drawKey = isSelected || t == 0 || t == currentTimes.Count - 1 ||
+                                  dopeKeyRect.center.x - lastDrawnKeyX >= 4f;
+                    if ( drawKey ) {
+                        lastDrawnKeyX = dopeKeyRect.center.x;
+                        GUI.color = isSelected ? new Color(0.6f, 0.6f, 1) : Color.white;
+                        GUI.DrawTexture(dopeKeyRect, icon);
+                        GUI.color = Color.white;
 
-
-                    //key value label
-                    if ( Prefs.showDopesheetKeyValues ) {
-                        var nextPos = t < currentTimes.Count - 1 ? TimeToPos(currentTimes[t + 1]) : TimeToPos(length);
-                        var valueLabelRect = Rect.MinMaxRect(dopeKeyRect.xMax, rect.yMin - 3, nextPos - dopeKeyRect.width / 2, rect.yMax);
-                        if ( valueLabelRect.width > 20 ) {
-                            GUI.Label(valueLabelRect, keyLabels[t], Slate.Styles.leftLabel);
+                        //key value label
+                        if ( Prefs.showDopesheetKeyValues ) {
+                            var nextPos = t < currentTimes.Count - 1 ? TimeToPos(currentTimes[t + 1]) : TimeToPos(length);
+                            var valueLabelRect = Rect.MinMaxRect(dopeKeyRect.xMax, rect.yMin - 3, nextPos - dopeKeyRect.width / 2, rect.yMax);
+                            if ( valueLabelRect.width > 20 ) {
+                                GUI.Label(valueLabelRect, keyLabels[t], Slate.Styles.leftLabel);
+                            }
                         }
                     }
 

@@ -235,12 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "percent",
                     CharacterPoseParameterUsage.AnimatedProperty));
             }
-            if (profile.PoseGraph.EnumerateGraphs()
-                    .Where(value => value != null)
-                    .SelectMany(value => value.Nodes)
-                    .Any(value => value != null &&
-                                  value.Kind == CharacterPoseNodeKind.FootPlacement) &&
-                ids.Add(AnimationPoseParameterIds.FootPlacementWeight))
+            if (ids.Add(AnimationPoseParameterIds.FootPlacementWeight))
             {
                 parameters.Add(new CharacterPoseParameterDeclaration(
                     AnimationPoseParameterIds.FootPlacementWeight,

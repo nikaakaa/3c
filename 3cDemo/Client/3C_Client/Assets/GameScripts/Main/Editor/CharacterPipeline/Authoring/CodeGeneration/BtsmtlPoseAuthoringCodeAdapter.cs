@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             string rootVariable = context.RegisterObject(
                 asset,
-                rootGraph.GraphId.Value,
+                $"pose-asset:{rootGraph.GraphId.Value}",
                 "poseAsset",
                 true);
             CharacterPresentationPoseSourceSlot[] sourceSlots = asset.SourceSlots

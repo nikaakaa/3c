@@ -459,6 +459,8 @@ namespace BTSMTL.Timeline.Editor
                     inspector.Initialize(OpenClip);
                     m_DetailsHost.Add(inspector);
                 }
+                else
+                    m_DetailsHost.Add(new TimelineFormalClipDetailsView(clip, m_SlateProjection.ApplyFormalMutation));
                 return;
             }
 

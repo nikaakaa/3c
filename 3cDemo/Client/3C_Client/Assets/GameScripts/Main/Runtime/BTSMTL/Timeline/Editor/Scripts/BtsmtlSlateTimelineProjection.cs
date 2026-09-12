@@ -483,6 +483,28 @@ namespace BTSMTL.Timeline.Editor
         public event Action<TimelineEditorSelection> SelectionChanged;
         public event Action<string> AuthoringIssue;
 
+        public void ApplyFormalMutation(Action mutation, string undoName)
+        {
+            if (m_ReadOnly)
+            {
+                ReportIssue("Timeline 当前只读，不能修改正式字段。");
+                return;
+            }
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    mutation?.Invoke();
+                    m_Request.Timeline.Init();
+                }, undoName);
+                QueueRebuildProjection();
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"字段修改失败：{exception.Message}");
+            }
+        }
+
         public BtsmtlSlateTimelineViewState CaptureViewState()
         {
             TimelineEditorSelection selection = m_Session.Selection;

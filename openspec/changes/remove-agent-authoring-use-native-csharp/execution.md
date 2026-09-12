@@ -5,7 +5,7 @@
 - 实施版本：`r2-coordination-2026-09-13`。
 - 规划入口：`proposal.md`、`design.md`、`tasks.md` 与 `specs/`。
 - 实施入口：本文件。
-- 当前首步只覆盖 tasks 1.1—1.4 的基线记录，以及 tasks 3.1、4.1 的公共合同骨架；不提前删除旧 Agent，不改共享程序集、其它领域文件或生成资产。
+- 当前实现已完成 tasks 1.1—1.4 的基线记录、tasks 3.1—3.3 的公共输出合同，以及 tasks 4.1、5.1、5.2 的最小生成入口和两个显式 MCP；旧 Agent 删除仍受 D7.1 门槛约束，不改共享程序集或生成资产。
 - 规划提交：`00ea9a4e8`（规划：补齐作者r2公共扩展合同与共享文件边界）。
 
 ## 2. 基线与边界
@@ -87,11 +87,9 @@
 - `IBtsmtlAuthoringGenerationEntry` 与 `BtsmtlAuthoringGenerationContext`：生成入口必须是当前编译出的明确类型，接收精确 source/recipe/Definition/output 上下文，返回明确根输出和创建/替换/删除范围；不接受任意 C# 正文、任意方法名、反射字段或节点参数。
 - `BtsmtlAuthoringGenerationService`：校验请求、入口和上下文的 recipe、入口类型及全部精确路径一致后才调用入口；不负责领域对象模型、Undo、保存或 Build。
 
-该首步还没有接入具体 Skill、Timeline、Pose 或 EventGraph 薄适配，也没有写入源码文件。后续适配必须直接消费正式对象/API；导出失败时由公共服务阻止源码替换，生成时由正式领域入口负责创建、替换、根挂接、保存和业务校验。
+首步之后已接入 Skill 正式对象：`BtsmtlSkillAuthoringCodeAdapter` 直接遍历 `BtsmtlSkillGraphClosure`，按对象身份收集 Skill Graph、Macro、原生 FSM、Timeline、节点、连线、Blackboard、Track、Clip、Section 与外部 Binding，并按五个代码阶段输出正式 API 调用。`BtsmtlSkillAuthoringCode` 只包装已有 Graph mutation、GraphAssetFactory、TimelineData 与 Curve Catalog，不创建第二套节点或字段模型；生成范围清理也只接收当前导出的稳定 identity 集合。
 
-当前已继续接入 Skill 正式对象：`BtsmtlSkillAuthoringCodeAdapter` 直接遍历 `BtsmtlSkillGraphClosure`，按对象身份收集 Skill Graph、Macro、原生 FSM、Timeline、节点、连线、Blackboard、Track、Clip、Section 与外部 Binding，并按五个代码阶段输出正式 API 调用。`BtsmtlSkillAuthoringCode` 只包装已有 Graph mutation、GraphAssetFactory、TimelineData 与 Curve Catalog，不创建第二套节点或字段模型；生成范围清理也只接收当前导出的稳定 identity 集合。
-
-该适配器已覆盖当前正式 Skill/Timeline 节点和片段的类型化配置、动态步骤、FSM Transfer、MotionWarp source、完整 AnimationCurve、外部资源引用与根绑定表达。遇到内联旧 Tree 或未持久化资源时返回明确不支持诊断，不用默认值或旧 JSON 补齐。
+该适配器已覆盖当前正式 Skill/Timeline 节点和片段的类型化配置、动态步骤、FSM Transfer、MotionWarp source、完整 AnimationCurve、外部资源引用与根绑定表达。遇到内联旧 Tree 或未持久化资源时返回明确不支持诊断，不用默认值或旧 JSON 补齐。Timeline Slate 已接入同一 `TimelineAuthoringClipBinding.Read/Configure` 强类型合同，删除了 `BuildClipProperties` 和 projection 内的 JSON 中转。
 
 已新增两个显式 MCP：`btsmtl.export_code` 只接收精确资产、Definition、Editor 源码输出路径、recipe、命名空间和入口类型，成功完成完整性检查后原子写出源码；`btsmtl.generate_assets` 只接收精确源码路径、recipe、已编译入口类型、Definition 和输出资产路径，校验入口的 `RecipeType`、`EntryTypeName`、`SourceCodePath` 及上下文完全一致后执行。两者都拒绝 Play、编译、导入忙状态，不调用旧 Document 生命周期，不自动 Build 或 Refresh。
 
@@ -105,5 +103,5 @@
 - 关键词合法性修正后的同一 Editor 增量编译再次成功：`0 个警告`、`0 个错误`，成功生成 `ThirdPersonClient.Editor.dll`；随后 `dotnet build-server shutdown` 成功关闭全部编译服务器。该结果只证明静态程序集编译，不替代 Unity Editor Console 或运行验证。
 - 接入 Skill 适配器后，使用 Unity 2022 Editor 引用与当前 `Temp/bin/Debug` 程序集直接编译 CodeGeneration 全部 `.cs`，结果为 `0` 错误；该检查覆盖新文件自身语法和类型引用。完整 `ThirdPersonClient.Editor.csproj` 编译另有并行任务现存错误：`BtsmtlScenePlayGraphShellToolbar.cs:37` 找不到 `BtsmtlScenePlayPreviewPresenter`，不是本任务新增文件的诊断，已保留未覆盖。
 - 使用临时检查项目编译 CodeGeneration 全部 `.cs`（包含两个 MCP）成功：`0 个错误`、`2 个引用版本警告`；检查项目已删除，不作为正式工程路径。该检查证明新增代码可编译，不证明 Unity Editor 已刷新、MCP 已加载或资产往返已执行。
-- 尚未运行 Unity、Unity MCP、Play、Build 或资产生成；本首步未新增测试代码。
-- 待完成验证：Editor 程序集编译、具体领域适配、两个 MCP 显式入口、导出/删除重建往返、D7.1 删除门槛以及 Unity Console 实际状态。
+- 尚未完成 Unity MCP 的新 MCP 显式调用、资产导出/删除重建往返和 Unity Console 实际验收；本任务未新增测试代码。当前完整 Editor 编译仍需等待并行领域任务收口后再执行，避免把其共享文件中途状态当作本任务结果。
+- 待完成验证：Pose/EventGraph 薄适配、Skill/FSM 资产迁移、两个 MCP 实际入口、导出/删除重建往返、D7.1 删除门槛以及 Unity Console 实际状态。

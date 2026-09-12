@@ -162,15 +162,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseCanvasGraph current = poseGraph.RequireGraph(new PoseGraphId(graph.Key));
                 foreach (CharacterPoseParameterDeclaration previous in current.Parameters)
                 {
-                    if (previous != null && previous.Usage == CharacterPoseParameterUsage.AnimatedProperty)
+                    if (previous != null && !CharacterPoseParameterAccess.IsBlackboardInput(previous))
                     {
                         AddDiff(
                             diffs,
                             CharacterAnimationPropertyImportDiffKind.Remove,
                             $"poseGraph:{graph.Key}.parameters:{previous.ParameterId}",
                             DescribeParameter(previous),
-                            "profile.AnimationPropertyBindings",
-                            "Remove the graph-owned AnimatedProperty declaration; curve data remains in the formal property contract.");
+                            "formal Pose input contract",
+                            "Remove the graph declaration; curve and internal playback data remain in their owning contract.");
                     }
                 }
             }

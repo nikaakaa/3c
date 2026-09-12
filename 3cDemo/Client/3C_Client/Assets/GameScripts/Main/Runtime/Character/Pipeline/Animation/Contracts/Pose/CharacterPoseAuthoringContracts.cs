@@ -338,7 +338,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationInstanceVariable = 1,
         PresentationFact = 2,
         SubgraphInput = 3,
-        PoseCurve = 4
+        PoseCurve = 4,
+        ActionPlayback = 5
     }
 
     public readonly struct CharacterPoseParameterAccessDescriptor
@@ -381,6 +382,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public static class CharacterPoseParameterAccess
     {
+        public static bool IsBlackboardInput(
+            CharacterPoseParameterDeclaration declaration) =>
+            declaration != null &&
+            declaration.Usage == CharacterPoseParameterUsage.Control &&
+            Category(declaration.ParameterId, declaration.Usage) ==
+                CharacterPoseParameterInputCategory.AnimationInstanceVariable;
+
         public static CharacterPoseParameterAccessDescriptor Describe(
             CharacterPoseCanvasGraph graph,
             CharacterPoseParameterDeclaration declaration)
@@ -389,10 +397,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(graph));
             if (declaration == null || !declaration.ParameterId.IsValid)
                 throw new ArgumentException("Pose parameter declaration is invalid.", nameof(declaration));
-            CharacterPoseParameterInputCategory category = declaration.Usage ==
-                CharacterPoseParameterUsage.AnimatedProperty
-                    ? CharacterPoseParameterInputCategory.PoseCurve
-                    : CharacterPoseParameterInputCategory.AnimationInstanceVariable;
+            CharacterPoseParameterInputCategory category = Category(
+                declaration.ParameterId,
+                declaration.Usage);
             return new CharacterPoseParameterAccessDescriptor(
                 declaration.ParameterId,
                 declaration.DisplayName,
@@ -410,8 +417,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseParameterInputCategory.PresentationFact => "表现事实",
             CharacterPoseParameterInputCategory.SubgraphInput => "子图输入",
             CharacterPoseParameterInputCategory.PoseCurve => "输入 Pose 曲线",
+            CharacterPoseParameterInputCategory.ActionPlayback => "Action 播放",
             _ => "未知来源"
         };
+
+        static CharacterPoseParameterInputCategory Category(
+            PoseParameterId parameterId,
+            CharacterPoseParameterUsage usage)
+        {
+            if (parameterId.Equals(AnimationPoseParameterIds.FootPlacementWeight) ||
+                usage == CharacterPoseParameterUsage.AnimatedProperty)
+                return CharacterPoseParameterInputCategory.PoseCurve;
+            if (parameterId.Equals(AnimationPoseParameterIds.ActionWeight))
+                return CharacterPoseParameterInputCategory.ActionPlayback;
+            return CharacterPoseParameterInputCategory.AnimationInstanceVariable;
+        }
 
         public static string ScopeDisplayName(CharacterPoseAuthoringGraphRole role) => role switch
         {

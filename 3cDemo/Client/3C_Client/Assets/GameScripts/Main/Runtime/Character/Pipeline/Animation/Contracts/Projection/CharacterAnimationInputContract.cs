@@ -213,10 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var parameters = new List<CharacterPoseParameterDeclaration>();
             var ids = new HashSet<PoseParameterId>();
             foreach (CharacterPoseParameterDeclaration declaration in root.Parameters
-                         .Where(value => value != null &&
-                                         value.Usage == CharacterPoseParameterUsage.Control &&
-                                         !value.ParameterId.Equals(
-                                             AnimationPoseParameterIds.FootPlacementWeight))
+                         .Where(CharacterPoseParameterAccess.IsBlackboardInput)
                          .OrderBy(value => value.ParameterId))
             {
                 if (!ids.Add(declaration.ParameterId))

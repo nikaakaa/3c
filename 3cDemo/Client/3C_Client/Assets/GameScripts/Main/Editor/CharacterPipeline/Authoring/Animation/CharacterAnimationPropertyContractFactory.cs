@@ -135,7 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (current == null)
                     throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' contains a missing parameter.");
-                if (current.Usage != CharacterPoseParameterUsage.Control)
+                if (!CharacterPoseParameterAccess.IsBlackboardInput(current))
                     continue;
                 if (!ids.Add(current.ParameterId))
                     throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' has duplicate parameter '{current.ParameterId}'.");

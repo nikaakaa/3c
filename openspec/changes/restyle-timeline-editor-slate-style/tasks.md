@@ -47,7 +47,7 @@
 
 ## 6. 刷新与属性
 
-- [ ] 6.1 正式 Track/Clip/key selection 驱动属性区，时间按帧、资源精确引用、Curve 只显示当前注册 channel
+- [x] 6.1 正式 Track/Clip/key selection 驱动属性区，时间按帧、资源精确引用、Curve 只显示当前注册 channel
 - [x] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野、纵向滚动及属性高度；删除对象不自动改选首个 Clip
 - [ ] 6.3 外部刷新保留合法输入/草稿，过期明确报告；密集 key 显示优化不修改正式曲线
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Animancer;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
@@ -65,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_EquipmentFixture;
         readonly CharacterPoseWorkerPreviewAdapter m_WorkerAdapter;
         readonly CharacterAnimationResourceScope m_AnimationResources;
+        readonly CharacterAnimationEventGraphHost m_EventGraphHost;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -84,6 +86,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_ReleasedPreviewPlaybacks =
                 new List<AnimationPlaybackId>();
         ulong m_PresentationFrame;
+        CharacterAnimationPoseInputFrame m_LastPoseInputFrame;
         CharacterPosePlanStageSnapshot m_PosePlanStages;
 
         public AnimationPreviewRuntime(
@@ -110,12 +113,18 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new ArgumentNullException(nameof(rootHierarchy));
             rootHierarchy.RequireValid();
             m_Projection = projection;
+            if (!m_Projection.AnimationEventGraph)
+                throw new InvalidOperationException(
+                    "Animation Preview Projection requires a Character Animation Event Graph.");
             CharacterPresentationSemanticContract contract =
                 Float32CharacterPresentationContractAdapter.Create(program);
             m_Projection.RequireContract(contract);
             m_Projection.RequirePosePayload();
             m_Projection.RequireTuningPayload();
             m_PreviewActorId = new ActorId($"AnimationPreview/{previewSessionId:N}");
+            m_EventGraphHost = new CharacterAnimationEventGraphHost(
+                m_Projection.AnimationEventGraph,
+                m_PreviewActorId);
             m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(
                 m_PreviewActorId,
                 m_Projection);
@@ -230,6 +239,7 @@ namespace ThirdPersonCharacter.Pipeline
             }
             catch
             {
+                m_EventGraphHost.Dispose();
                 footPlacement?.Dispose();
                 playback?.Dispose();
                 workerAdapter?.Dispose();
@@ -443,9 +453,7 @@ namespace ThirdPersonCharacter.Pipeline
             Vector2 movementDirection,
             Vector2 desiredDirection,
             float facingError,
-            CharacterPresentationMotionPhase motionPhase,
-            IReadOnlyList<PoseParameterId> directParameterIds = null,
-            IReadOnlyList<float> directParameterValues = null)
+            CharacterPresentationMotionPhase motionPhase)
         {
             if (evaluationTick == 0 ||
                 !float.IsFinite(presentationDeltaSeconds) ||
@@ -453,7 +461,6 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 throw new ArgumentException("Pose Graph Preview frame is invalid.");
             }
-
             CharacterBodyPresentationFrame bodyFrame =
                 m_PoseGraphFactPreview.CreateBodyFrame(
                     evaluationTick,
@@ -476,36 +483,15 @@ namespace ThirdPersonCharacter.Pipeline
                     desiredDirection,
                     facingError,
                     motionPhase);
-            ComposedAnimationPoseFrame composed;
-            if (directParameterIds != null && directParameterIds.Count > 0)
-            {
-                CharacterPresentationProgramParameterFrame parameterFrame =
-                    CharacterPresentationProgramParameterFrame.FromDirect(
-                        directParameterIds,
-                        directParameterValues);
-                composed = Present(
-                    presentationFrame,
-                    evaluationTick,
-                    1f,
-                    presentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    in parameterFrame,
-                    m_LinkedPose.Session,
-                    null);
-            }
-            else
-            {
-                composed = Present(
-                    presentationFrame,
-                    evaluationTick,
-                    1f,
-                    presentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    m_LinkedPose.Session,
-                    null);
-            }
+            ComposedAnimationPoseFrame composed = Present(
+                presentationFrame,
+                evaluationTick,
+                1f,
+                presentationDeltaSeconds,
+                in bodyFrame,
+                in factFrame,
+                m_LinkedPose.Session,
+                null);
             m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
                 m_Projection.PosePlan,
                 in composed,
@@ -523,30 +509,13 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new ArgumentException(
                     "Motion Matching Query Preview input is invalid.");
             }
-            ulong presentationFrame =
-                ++m_PresentationFrame;
             m_Playback.CaptureMotionMatchingPreviewQuery(
                 providerId,
                 query);
-            CharacterBodyPresentationFrame bodyFrame =
-                m_PoseGraphFactPreview.CreateBodyFrame(
-                    presentationFrame);
-            CharacterPresentationFactFrame factFrame =
-                m_PoseGraphFactPreview.CreateFactFrame(
-                    presentationFrame,
-                    presentationFrame,
-                    0d,
-                    in bodyFrame);
-            ComposedAnimationPoseFrame composed =
-                Present(
-                    presentationFrame,
-                    presentationFrame,
-                    1f,
-                    0f,
-                    in bodyFrame,
-                    in factFrame,
-                    m_LinkedPose.Session,
-                    null);
+            if (!m_Playback.TryGetCommittedPose(
+                    out ComposedAnimationPoseFrame composed))
+                throw new InvalidOperationException(
+                    "Motion Matching Query Preview requires a committed pose frame.");
             m_PosePlanStages =
                 CharacterPosePlanStageSnapshotFactory
                     .Preview(
@@ -598,6 +567,8 @@ namespace ThirdPersonCharacter.Pipeline
                 ForgetReleasedPreviewPlaybacks();
             }
             m_Playback.Reset(PoseDiscontinuityResetReason.PreviewSeek);
+            m_EventGraphHost.Reset();
+            m_LastPoseInputFrame = default;
             m_LinkedPose.Reset();
             CaptureLinkedPoseSelections();
             ResetFootPlacement(tickValue);
@@ -620,9 +591,11 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterLinkedPoseRuntimeSession linkedPose,
             RuntimeDiagnosticsContext diagnostics)
         {
-            CharacterPresentationProgramParameterFrame parameterFrame =
-                CharacterPresentationProgramParameterFrame.FromFact(
-                    in factFrame);
+            CharacterAnimationPoseInputFrame parameterFrame =
+                CreatePoseInputFrame(
+                    in factFrame,
+                    presentationFrame,
+                    presentationDeltaSeconds);
             return Present(
                 presentationFrame,
                 latestSimulationTick,
@@ -642,7 +615,7 @@ namespace ThirdPersonCharacter.Pipeline
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
             RuntimeDiagnosticsContext diagnostics)
         {
@@ -679,19 +652,57 @@ namespace ThirdPersonCharacter.Pipeline
                 m_DiagnosticsOwnerId);
             try
             {
-                m_Playback.Dispose();
+                m_EventGraphHost.Dispose();
             }
             finally
             {
                 try
                 {
-                    m_WorkerAdapter.Dispose();
+                    m_Playback.Dispose();
                 }
                 finally
                 {
-                    m_AnimationResources.Dispose();
+                    try
+                    {
+                        m_WorkerAdapter.Dispose();
+                    }
+                    finally
+                    {
+                        m_AnimationResources.Dispose();
+                    }
                 }
             }
+        }
+
+        CharacterAnimationPoseInputFrame CreatePoseInputFrame(
+            in CharacterPresentationFactFrame factFrame,
+            ulong presentationFrame,
+            float presentationDeltaSeconds)
+        {
+            if (presentationDeltaSeconds > 0f)
+            {
+                CharacterAnimationVariableUpdateResult variables =
+                    m_EventGraphHost.Update(
+                        in factFrame,
+                        presentationDeltaSeconds,
+                        presentationFrame);
+                if (!variables.Succeeded)
+                    throw new InvalidOperationException(
+                        variables.Failure?.ToString() ??
+                        "Animation Event Graph update failed.");
+                m_LastPoseInputFrame =
+                    CharacterAnimationPoseInputFrame.FromPublishedVariables(
+                        variables.Frame,
+                        m_Projection.PosePlan.Parameters
+                            .Where(value => value.Usage == CharacterPoseParameterUsage.Control)
+                            .Select(value => value.ParameterId)
+                            .ToArray());
+                return m_LastPoseInputFrame;
+            }
+            if (m_LastPoseInputFrame.IsValid)
+                return m_LastPoseInputFrame;
+            throw new InvalidOperationException(
+                "Animation Event Graph has no published input for a non-advancing preview frame.");
         }
 
         void ResetFootPlacement(ulong renderFrame)

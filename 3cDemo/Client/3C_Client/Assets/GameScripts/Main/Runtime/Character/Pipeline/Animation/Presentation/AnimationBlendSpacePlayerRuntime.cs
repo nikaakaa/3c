@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         struct State
         {
-            internal CharacterPresentationProgramParameterFrame ParameterFrame;
+            internal CharacterAnimationPoseInputFrame ParameterFrame;
             internal double RawContinuousTime;
             internal double ContinuousTime;
             internal double ContinuationAnchorRawTime;
@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        CharacterPresentationProgramParameterFrame m_ParameterFrame { get => ActiveState.ParameterFrame; set => ActiveState.ParameterFrame = value; }
+        CharacterAnimationPoseInputFrame m_ParameterFrame { get => ActiveState.ParameterFrame; set => ActiveState.ParameterFrame = value; }
         double m_ContinuousTime { get => ActiveState.ContinuousTime; set => ActiveState.ContinuousTime = value; }
         double m_RawContinuousTime { get => ActiveState.RawContinuousTime; set => ActiveState.RawContinuousTime = value; }
         double m_ContinuationAnchorRawTime { get => ActiveState.ContinuationAnchorRawTime; set => ActiveState.ContinuationAnchorRawTime = value; }
@@ -241,7 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void SetParameterFrame(
-            in CharacterPresentationProgramParameterFrame parameterFrame)
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             RequireAlive();
             RequireOpenFrame();

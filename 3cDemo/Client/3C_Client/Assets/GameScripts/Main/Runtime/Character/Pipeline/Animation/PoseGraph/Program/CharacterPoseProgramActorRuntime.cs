@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease,
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             in CharacterPoseSourceTuningView sourceTuning)
         {
             if (!float.IsFinite(presentationDeltaSeconds) ||

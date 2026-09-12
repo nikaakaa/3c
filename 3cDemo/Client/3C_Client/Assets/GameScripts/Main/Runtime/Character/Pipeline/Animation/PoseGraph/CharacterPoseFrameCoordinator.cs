@@ -186,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void Advance(
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame)
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             RequireOpenMutation();
             if (!float.IsFinite(presentationDeltaSeconds) ||

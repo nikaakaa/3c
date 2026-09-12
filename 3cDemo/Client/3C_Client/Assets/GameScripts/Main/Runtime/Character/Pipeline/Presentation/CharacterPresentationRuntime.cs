@@ -416,7 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
             RuntimeDiagnosticsContext diagnostics = null)
         {
@@ -1260,7 +1260,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float interpolationAlpha,
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame)
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             if (presentationFrame == 0 ||
                 !float.IsFinite(interpolationAlpha) ||

@@ -668,7 +668,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseSourceModule sourceModule,
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame
+            in CharacterAnimationPoseInputFrame
                 parameterFrame,
             in CharacterPoseSourceTuningView sourceTuning)
         {

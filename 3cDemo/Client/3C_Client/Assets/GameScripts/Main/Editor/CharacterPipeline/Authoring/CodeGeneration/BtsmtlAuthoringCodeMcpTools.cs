@@ -106,6 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             const string operation = "export_code";
             try
             {
+                parameters = NormalizeParameters(parameters);
                 EnsureEditorReady(operation);
                 RejectUnknown(parameters, new[]
                 {
@@ -170,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             const string operation = "generate_assets";
             try
             {
+                parameters = NormalizeParameters(parameters);
                 EnsureEditorReady(operation);
                 RejectUnknown(parameters, new[]
                 {
@@ -282,6 +284,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 .FirstOrDefault(name => !allowedSet.Contains(name));
             if (!string.IsNullOrEmpty(unknown))
                 throw new ArgumentException($"Unknown parameter '{unknown}'.");
+        }
+
+        static JObject NormalizeParameters(JObject parameters)
+        {
+            if (parameters == null)
+                return null;
+            var normalized = new JObject();
+            foreach (JProperty property in parameters.Properties())
+            {
+                string name = property.Name switch
+                {
+                    "assetPath" => "asset_path",
+                    "assetLocalFileId" => "asset_local_file_id",
+                    "definitionAssetPath" => "definition_asset_path",
+                    "outputCodePath" => "output_code_path",
+                    "recipeType" => "recipe_type",
+                    "entryTypeName" => "entry_type_name",
+                    "namespaceName" => "namespace_name",
+                    "sourceCodePath" => "source_code_path",
+                    "outputAssetPath" => "output_asset_path",
+                    _ => property.Name
+                };
+                if (normalized[name] != null)
+                    throw new ArgumentException($"Duplicate parameter '{name}'.");
+                normalized[name] = property.Value;
+            }
+            return normalized;
         }
 
         static string RequireDefinitionPath(JObject parameters)

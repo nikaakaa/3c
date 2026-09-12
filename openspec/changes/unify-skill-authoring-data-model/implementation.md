@@ -26,6 +26,7 @@
 - `BtsmtlSkillGraphAuthoringMetadata.ReadField`返回当前节点的typed业务值；Timeline、Skill状态机和状态主体返回真实对象，不把资产对象硬转成编译器所需的字符串。
 - `ReadIdentity`专门把同一typed值降为稳定identity，Skill compiler只从该入口取得Timeline和图引用ID；`ReadReferences`与`ReadGraphReferences`返回实际目标、identity和缺失状态。
 - Timeline节点的TimelineAsset引用已登记到正式metadata，Inspector通过引用入口读取真实资产；字段目录、Inspector和compiler不再各读一套Timeline字段。
+- 组合步骤也通过`ReadSteps`和`ReadStepPorts`进入正式读取入口，步骤Inspector只把编辑结果交给既有`SetSteps`，不直接把节点字段当作第二份步骤模型。
 - Skill字段、节点引用和图引用按稳定fieldId排序；provider owner、Character State fieldId、Blackboard declaration/owner的必填事实进入共享字段约束。
 
 本轮补齐的业务配置入口包括：原生Gameplay Tag、Tag Query、Attribute、Apply/Remove Gameplay Effect节点的`ConfigureAuthoring`，以及原生与Skill Action Window、Gameplay节点共用的合法性规则。Locomotion两类节点的位移模式、执行模式和持续时间默认值也由同一业务规则提供。

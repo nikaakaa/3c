@@ -40,6 +40,11 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `6034ba2a0`、`3367b6495`：拓扑校验接收同一动画输入合同，允许合法输入Pose曲线参与Resolve策略校验，并同步编辑器 Validate 与 Document Apply 的合同来源。
 - `f612f8449`：节点和动态端口缺少显式作者名时使用语义显示名兜底，连接与稳定identity不变。
 
+正式 Document 流程：
+
+- 已通过 Unity MCP CLI 以实例 `e852139597e42532` 调用 `btsmtl.checkout_document`，目标为 `Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。
+- checkout 在 SkillDefinition 完整性检查阶段失败，报告缺少原生状态机资产以及 Blackboard/ActionTargetSnapshot declaration；没有进入 Pose Document 写入或资产 Apply，也没有生成 `AgentAuthoring` 半成品目录。
+
 当前约束：
 
 - 上述代码提交未修改当前用户未提交的PoseGraph、Profile、Definition或Scene资产。

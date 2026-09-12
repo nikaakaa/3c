@@ -340,7 +340,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
-每个 `BaseGraph` MUST 持有稳定 `GraphAuthoringId`，Node 和 Edge MUST 继续持有各自稳定 authoring GUID。Graph runtime clone MUST 保留这些 source identities，但 MUST 使用独立 runtime instance identity。Pipeline Blackboard declaration owner、Agent Snapshot、Debug Source Map 和 editor navigation MUST 引用同一个 Graph authoring identity。
+每个 `BaseGraph` MUST 持有稳定 `GraphAuthoringId`，Node 和 Edge MUST 继续持有各自稳定 authoring GUID。Graph runtime clone MUST 保留这些 source identities，但 MUST 使用独立 runtime instance identity。Pipeline Blackboard declaration owner、C#作者API、Debug Source Map 和 editor navigation MUST 引用同一个 Graph authoring identity；生成资产物理对象可替换，MUST不把物理GUID当作业务identity恢复的唯一来源。
 
 #### Scenario: 创建 inline Graph
 
@@ -414,7 +414,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
-每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。系统 MUST为后续自动authoring暴露同一只读policy查询，但本change MUST NOT修改Agent schema。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
+每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。正式C#作者API MUST复用同一只读policy查询，不另建协议schema或重复业务校验。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
 
 #### Scenario: 已退役AI图尝试进入BTSMTL
 

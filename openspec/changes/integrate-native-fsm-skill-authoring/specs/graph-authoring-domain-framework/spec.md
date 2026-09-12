@@ -4,17 +4,17 @@
 
 本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
-系统 MUST在BTSMTL作者层提供唯一Graph Authoring Domain Framework，统一承载Graph document、capability catalog、canvas、node view、port view、selection、clipboard、search、Details host、Navigator host、Mutation和diagnostics契约。BTSMTL Gameplay Graph与Character Presentation Pose Graph MUST分别适配该框架，但 MUST不共享正式序列化Graph基类、runtime node或compiler operation。
+系统 MUST在BTSMTL作者层提供唯一Graph Authoring Domain Framework，统一承载原生Graph对象、capability catalog、canvas、node view、port view、selection、clipboard、search、Details host、Navigator host、Mutation和diagnostics契约。BTSMTL Gameplay Graph与Character Presentation Pose Graph MUST分别适配该框架，但 MUST不共享正式序列化Graph基类、runtime node或compiler operation。
 
 #### Scenario: 打开不同领域Graph
 
 - **WHEN** 作者分别打开BTSMTL Graph与Pose Graph
 - **THEN** 两者 MUST复用同一套canvas、node、port与selection交互
-- **AND** 每个document MUST只加载本领域的asset adapter、capability与mutation
+- **AND** 每个原生图上下文 MUST只加载本领域的asset adapter、capability与mutation
 
 #### Scenario: 跨领域粘贴节点
 
-- **WHEN** clipboard的domain identity与当前document不一致
+- **WHEN** clipboard的domain identity与当前原生图上下文不一致
 - **THEN** 框架 MUST在mutation前拒绝粘贴
 - **AND** MUST不猜测或转换另一领域的payload
 
@@ -22,7 +22,7 @@
 
 本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
-共享Canvas、Node View、Port View、Edge View、Details、Navigator、Data Catalog与StateMachine表面 MUST以现有BTSMTL作者UI实现作为提取基线。系统 MUST通过抽取domain-neutral交互并注入document、capability、mutation与presenter边界完成共享化；MUST不新建功能更少的替代GraphView再切换BTSMTL入口。BTSMTL现有布局、节点信息、provider-aware Blackboard变量拖拽、Flow/Property Port、节点搜索与创建、selection、框选、clipboard、Undo、Inspector、子树/StateMachine下钻和Live Debug行为 MUST保持。Blackboard面板 MUST区分Skill Local变量与外部Character State、Ability Attribute、GameplayTag、Input/TargetData和Frame Fact引用，不得把外部值复制为第二份变量。
+共享Canvas、Node View、Port View、Edge View、Details、Navigator、Data Catalog与StateMachine表面 MUST以现有BTSMTL作者UI实现作为提取基线。系统 MUST通过抽取domain-neutral交互并注入原生图对象、capability、mutation与presenter边界完成共享化；MUST不新建功能更少的替代GraphView再切换BTSMTL入口。BTSMTL现有布局、节点信息、provider-aware Blackboard变量拖拽、Flow/Property Port、节点搜索与创建、selection、框选、clipboard、Undo、Inspector、子树/StateMachine下钻和Live Debug行为 MUST保持。Blackboard面板 MUST区分Skill Local变量与外部Character State、Ability Attribute、GameplayTag、Input/TargetData和Frame Fact引用，不得把外部值复制为第二份变量。
 
 #### Scenario: 拖出Skill Blackboard变量
 
@@ -37,69 +37,23 @@
 - **THEN** 共享实现 MUST保留原拖拽手势、变量节点表现、Property Port和正式BTSMTL mutation语义
 - **AND** Skill Graph中的provider规则 MUST不改变该未迁移领域的既有业务语义
 
-### Requirement: Authoring Capability Catalog必须是UI与Document的唯一语义目录
-
-本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
-
-唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、固定端口、条件`portVariants`、动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、Graph dependency、局部校验与typed lowering，并向共享Capability投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。
-
-BTSMTL、AI与其它Graph领域 MAY通过各自正式Definition Adapter向同一Framework提供Capability，但 MUST不被迫引用Pose运行类型。唯一`GraphAuthoringNodePortShapeProjector` MUST只从Capability、typed properties与node-local动态端口合成固定、唯一命中的条件端口和动态端口，并拒绝三类端口identity重叠。人工UI、Document exporter、strict parser、Target Mapper、Clipboard、Reconciler、Mutation preflight和Validator MUST只消费同一Capability与Port Shape；不得各自判断mode、构造默认Node或从现有edge反推端口。Compiler MUST从同一Pose Definition读取Graph dependency与typed lowering。Definition与Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
-
-Pose Node Definition只拥有节点局部作者语义、直接Graph dependency与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save、reverse export或五个MCP生命周期；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。Definition变化如果改变Agent能看到、创建、连接或必须验证的语义，MUST同步Document v4模型、Presentation codec/exporter、Target Mapper、唯一Reconciler、typed Presentation Mutation、Validator与`btsmtl-agent-authoring`当前合同。
-
-#### Scenario: FootPlacement声明Goal Contribution输出
-
-- **WHEN** FootPlacement Pose Definition声明`pose.component`与`component.full-body-ik-goal-contribution`两个输出
-- **THEN** Capability与唯一Port Shape Projector MUST让Canvas、Document、Reconciler、Mutation、Validator与Compiler识别两个稳定port及其lineage规则
-- **AND** MUST不把Goal Contribution伪装成Pose、动态字符串port或隐藏Compiler字段
-
-#### Scenario: Goal Contribution连接错误节点
-
-- **WHEN** 作者或Document把`component.full-body-ik-goal-contribution`连接到未声明该输入类型的节点
-- **THEN** Mutation MUST在写资产前拒绝
-- **AND** Compiler Topology Pass MUST继续执行同一规则作为完整性校验
-
-#### Scenario: 新增Pose节点能力
-
-- **WHEN** 开发者注册一个新的Component Pose骨骼控制节点
-- **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family、Graph dependency与typed lowering
-- **AND** Capability、人工创建菜单、Document、Validator和Compiler MUST同时识别该能力而不得注册第二Compiler Handler
-
-#### Scenario: capability未声明字段
-
-- **WHEN** UI或Document尝试写入当前node Definition未声明的字段
-- **THEN** Mutation MUST拒绝该命令并返回稳定诊断
-- **AND** MUST不通过SerializedProperty path、自由文本或Reconciler特例绕过目录
-
-#### Scenario: Local Pose连接Component Pose
-
-- **WHEN** 作者或Document创建空间不兼容的Pose edge
-- **THEN** 共享connection policy MUST在Mutation前拒绝
-- **AND** Compiler Topology Pass MUST继续执行同一规则作为完整性校验
-
-#### Scenario: Definition尝试接管Document事务
-
-- **WHEN** Pose Definition Adapter尝试直接修改Unity对象、执行apply、创建Undo或发布canonical package
-- **THEN** Framework MUST拒绝该依赖并保持正式Reconciler与Transaction Service调用链
-- **AND** MUST不建立Pose专用Document入口或第二事务Owner
-
 ### Requirement: Graph Canvas必须复用统一节点与端口投影
 
 本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
-Graph Canvas MUST通过document projection和Capability生成通用Node View、Port View、Edge View、创建菜单、搜索结果与clipboard payload。领域adapter MAY提供业务标题、图标、颜色、状态badge与特殊交互命令，但 MUST不重新实现selection、拖线、框选、复制粘贴、Undo或GraphView生命周期。固定端口 MUST来自Capability；动态端口 MUST由node-local稳定identity声明并接受同一port policy裁决。Pose端口 MUST从stable type投影Local/Component空间颜色和标签；非Pose瞬时control value MUST使用独立稳定类型、标签与颜色。转换节点 MUST作为普通serialized authoring节点显示。Canvas MUST不根据C#类型名、显示名或Compiler operation猜测空间，也 MUST不隐藏插入未序列化节点。
+Graph Canvas MUST通过原生图投影和Capability生成通用Node View、Port View、Edge View、创建菜单、搜索结果与clipboard payload。领域adapter MAY提供业务标题、图标、颜色、状态badge与特殊交互命令，但 MUST不重新实现selection、拖线、框选、复制粘贴、Undo或GraphView生命周期。固定端口 MUST来自Capability；动态端口 MUST由node-local稳定identity声明并接受同一port policy裁决。Pose端口 MUST从stable type投影Local/Component空间颜色和标签；非Pose瞬时control value MUST使用独立稳定类型、标签与颜色。转换节点 MUST作为普通serialized authoring节点显示。Canvas MUST不根据C#类型名、显示名或Compiler operation猜测空间，也 MUST不隐藏插入未序列化节点。
 
 #### Scenario: 作者连接Goal Contribution与Assembler
 
 - **WHEN** 作者从FootPlacement拖出Goal Contribution并连接唯一Goal Assembler
 - **THEN** Canvas MUST显示typed Contribution edge并保留稳定port identity
-- **AND** 框选、复制粘贴、Undo与Document往返 MUST保持Contribution到Assembler的完整拓扑
+- **AND** 框选、复制粘贴、Undo与资产保存重载 MUST保持Contribution到Assembler的完整拓扑
 
 #### Scenario: 节点拥有动态输入
 
 - **WHEN** GraphInput或GraphOutput增加一个显式Component Pose动态port
 - **THEN** Canvas MUST使用节点局部稳定identity投影并保存该port
-- **AND** clipboard与Document往返 MUST保留其Pose空间
+- **AND** clipboard与资产保存重载 MUST保留其Pose空间
 
 #### Scenario: 作者查看空间转换
 
@@ -147,13 +101,13 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 #### Scenario: 打开Gameplay StateMachine
 
-- **WHEN** 当前document role为BTSMTL StateMachine
+- **WHEN** 当前原生图上下文 role为BTSMTL StateMachine
 - **THEN** 共享表面 MUST显示Condition Rule、priority与interruption，并保留现有节点拖动和增选框选行为
 - **AND** MUST不显示blend duration、sync或inertialization
 
 #### Scenario: 打开PoseStateMachine
 
-- **WHEN** 当前document role为Pose StateMachine
+- **WHEN** 当前原生图上下文 role为Pose StateMachine
 - **THEN** 共享表面 MUST显示Pose State、Transition Rule、blend、sync与source readiness，并允许拖动Entry、State、Alias及增选框选
 - **AND** MUST不创建BaseGraph、ConditionRuleGraph、Pose专用GraphView或第二框选器
 
@@ -169,32 +123,36 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 - **THEN** 共享表面 MUST拒绝位置Mutation并保持正式layout不变
 - **AND** MUST不通过window-local缓存记录一个不可提交的位置
 
-### Requirement: 人工编辑与Document Apply必须复用同一类型化Mutation
-
-本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
-
-窗口交互与Agent Authoring Document Reconciler MUST分别把用户操作或目标状态差异降低为同一领域类型化Mutation，再由同一Validator、transaction、dirty owner和Undo边界应用。系统 MUST不允许Document直接写Unity YAML、SerializedObject path、AnimationClip序列化文本或构造第二套Pose/Clip资产写服务。
-
-#### Scenario: UI与Document修改同一Transition
-
-- **WHEN** 人工UI或Document v4修改Pose transition blend policy
-- **THEN** 两条入口 MUST生成同一种Presentation Mutation
-- **AND** 最终资产约束、诊断和revision变化 MUST一致
-
-#### Scenario: Animation Window入口与Document修改同一Clip Curve
-
-- **WHEN** 两条入口替换同一注册Curve
-- **THEN** 两条入口 MUST调用同一Clip Curve validator与Mutation语义
-- **AND** MUST进入各自单一Undo事务并产生相同canonical结果
-
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 
 本要求中旧GraphView、旧UI原地抽取及具体序列化基类限制不再适用于BTSMTL技能。技能 MUST采用btsmtl-flowcanvas-authoring及btsmtl-flowcanvas-runtime-observation，保持能力、事务及领域隔离；其他领域继续以下原有行为，不能因技能迁移被强制切换。
 
-Graph Authoring Domain Framework MUST只理解稳定作者identity、typed payload、port与mutation，不得要求authoring node继承runtime node。领域compiler MUST把authoring graph编译为领域自己的中间表示和runtime program；Runtime性能枚举、线性index与switch MAY存在于compiled层，但 MUST不反向成为创建菜单、Details或Document schema。
+Graph Authoring Domain Framework MUST只理解稳定作者identity、typed payload、port与mutation，不得要求authoring node继承runtime node。领域compiler MUST把authoring graph编译为领域自己的中间表示和runtime program；Runtime性能枚举、线性index与switch MAY存在于compiled层，但 MUST不反向成为创建菜单、Details或C#作者参数。
 
 #### Scenario: Runtime增加优化字段
 
 - **WHEN** Pose Runtime为执行计划增加内部offset或buffer index
-- **THEN** Authoring capability、Details与Document MUST不自动暴露该字段
+- **THEN** Authoring capability、Details与C#作者API MUST不自动暴露该字段
 - **AND** Compiler MUST负责从Pose IR生成该内部值
+
+## ADDED Requirements
+
+### Requirement: FSM有效资产操作必须独立于退役协议
+
+FSM正式创建、配置、条件引用、连接顺序、owner、系统入口和业务identity恢复 MUST属于已有Skill/FSM领域模块。人工编辑、C#生成与编译 MUST消费这些正式读取/写入合同和现有局部校验，不依赖Agent DTO、Session、Reconciler或协议local表。仅在协议适配中存在的有效操作 MUST先迁出且调用者切换后再删除；MUST不将整个协议Applier换名搬迁或另建中央Validator、整包事务。
+
+#### Scenario: 清理包含真实FSM操作的旧适配器
+
+- **WHEN** 旧协议清理涉及同时拥有状态创建、条件挂接和身份处理的文件
+- **THEN** 有效操作 MUST先落到已有领域API，人工编辑和生成调用者均能使用
+- **AND** 删除后本领域 MUST不再直接或间接依赖旧Agent协议，原生FSM与Program行为保持
+
+### Requirement: FSM领域输出适配必须拒绝不完整配置
+
+公共C# exporter MUST通过正式FSM读取与配置合同输出当前拥有范围，领域适配只描述真实对象和正式调用，不再生成JSON中转模型。状态字段、生命周期、边/条件、顺序、共享引用、布局和根挂接中任一项无法表达时 MUST报告精确缺口；正式业务规则仍由原模块负责，输出器只检查输出完整性。
+
+#### Scenario: 已有业务参数缺少恢复入口
+
+- **WHEN** FSM对象能读出某个正式参数，但生成代码没有对应领域配置方法
+- **THEN** 完整导出 MUST明确失败，缺口 MUST补在所属原生领域合同
+- **AND** MUST不绕过为私有字段反射、旧JSON绑定或新增一套参数规则

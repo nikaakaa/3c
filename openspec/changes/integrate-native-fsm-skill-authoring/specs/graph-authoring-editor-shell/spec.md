@@ -1,5 +1,7 @@
 ## MODIFIED Requirements
 
+本change的FSM人工编辑继续使用现有领域Undo/保存。公共C#作者基线只提供显式export_code/generate_assets；原生窗口保存、Undo、导航或刷新不得自动导出代码、生成资产、源码同步或Build。本文件中的领域Mutation指现有业务操作，不表示新增Agent整包事务。
+
 ### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
 
 本要求对BTSMTL技能 MUST由FlowCanvas原生GraphEditor的canvas、panel和command表面及显式domain adapter履行，不再指定旧GraphView作为技能画布。Skill domain adapter只能向原生表面提供业务数据与Mutation，不得用自定义面板替换原生Panels。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。

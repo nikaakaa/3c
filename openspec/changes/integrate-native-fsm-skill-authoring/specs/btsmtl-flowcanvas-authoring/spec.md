@@ -6,7 +6,7 @@
 
 ### Requirement: BTSMTL技能必须只有一份正式作者拓扑
 
-系统 MUST以统一原生图编辑能力管理技能的正式节点、端口及连接。编辑、保存、文档导出和编译 MUST读取同一份拓扑；MUST不建立可写镜像图或通过旧作者图转换后执行。共享编辑基础 MUST不混淆不同领域的业务语义。
+系统 MUST以统一原生图编辑能力管理技能的正式节点、端口及连接。编辑、保存、显式C#导出和编译 MUST读取当前正式资产拓扑；已导出C# MUST能够通过同一领域API重建其明确范围，不建立另一份可写图模型或通过旧作者图转换后执行。共享编辑基础 MUST不混淆不同领域的业务语义。
 
 #### Scenario: 修改并构建技能图
 - **WHEN** 作者修改一个技能节点及其连接并显式构建
@@ -39,7 +39,7 @@ Skill的StateMachine子图 MUST由NodeCanvas原生FSM及正式FSMState/FSMConnec
 #### Scenario: 编辑攻击连段状态机
 
 - **WHEN** 作者从Attack入口打开Attack Combo StateMachine并修改一条转移
-- **THEN** 修改 MUST作用于原生FSM连接的唯一业务参数，Document和编译读取同一目标
+- **THEN** 修改 MUST作用于原生FSM连接的唯一业务参数，C#导出和编译读取同一目标
 - **AND** StateBody与Timeline MUST保持原调用关系，不重新生成旧状态图参与保存或编译
 
 #### Scenario: 复制包含状态机的技能
@@ -60,7 +60,7 @@ Skill的StateMachine子图 MUST由NodeCanvas原生FSM及正式FSMState/FSMConnec
 
 #### Scenario: 原生任务没有编译映射
 
-- **WHEN** 创建、粘贴、导入或Document目标包含未登记ActionTask/ConditionTask
+- **WHEN** 创建、粘贴、代码生成或导出目标包含未登记ActionTask/ConditionTask
 - **THEN** 正式能力校验 MUST拒绝该目标并定位实体
 - **AND** MUST不通过插件Execute、Condition.Check、协程或GraphOwner补足执行
 
@@ -153,13 +153,49 @@ Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Set
 - **WHEN** 两次技能释放使用相同共享子图
 - **THEN** 时间、等待、循环及中断状态 MUST隔离，一次取消不得停止另一实例
 
-### Requirement: 迁移必须原子替换正式闭包并清理旧入口
+### Requirement: FSM生成必须限定范围并复用原领域资产生命周期
 
-迁移 MUST按精确根输出实体及依赖变更计划，保留可保留的稳定身份，明确报告冲突；应用 MUST覆盖真实资产、私有子图和引用的完整事务。成功后仅新作者模型可从正式入口编辑；无消费者旧代码和转换路径 MUST删除。失败 MUST完整回滚，不得发布半迁移角色或增加兼容开关。
+迁移/生成 MUST明确根与拥有范围，保留业务identity、配置和顺序，显式恢复指定Definition/Skill根引用。资产替换、保存、清理与失败处理 MUST复用现有领域资产模块，MUST不新建整包同步事务、中央Validator或持久化对账计划。成功后仅正式原生作者模型参与编辑与编译；有效资产能力和调用者迁出后才删除无消费者旧协议。失败 MUST报告实际结果，不得宣称完整成功或发布半迁移产物，也不得增加兼容执行链。
 
 #### Scenario: 子图迁移保存失败
 - **WHEN** 根及部分子图迁移后任一保存失败
-- **THEN** 事务 MUST恢复迁移前完整资产闭包，正式产物 MUST不采用半迁移内容
+- **THEN** 原领域模块 MUST按其失败处理合同报告并处理本次明确输出，不误删范围外资源，正式产物 MUST不采用半迁移内容
+
+### Requirement: FSM完整C#输出必须保留配置闭包与明确根绑定
+
+公共显式export_code MUST从当前FSM与其正式拥有的StateBody、Condition、Macro等闭包读取全部节点类型、业务identity、参数、生命周期、条件、priority、abortPolicy、order、动态接口和布局。输出 MUST使用正式领域API，按创建、配置、引用、连接和根挂接组织；范围内共享对象只创建一次，范围外资源保持精确外部输入。MUST不经过旧Agent JSON/DTO或读取旧源码做增量合并。
+
+#### Scenario: FSM包含环与共享条件引用
+
+- **WHEN** 导出范围包含循环转移和多个引用同一内部对象的节点
+- **THEN** 输出 MUST先建立所需对象再连接，内部对象只创建一次，各引用指向同一生成对象
+- **AND** 输出排序 MUST不改变显式order、优先级、生命周期或取消行为
+
+#### Scenario: 正式字段无法输出
+
+- **WHEN** 某个原生配置、生命周期引用、参数或边没有完整读取及恢复方式
+- **THEN** 完整导出 MUST明确失败并指出对象、字段和原因
+- **AND** MUST不静默省略、调用插件runtime补足或报告部分源码为完整输出
+
+### Requirement: FSM删除输出后重建必须保持业务身份和挂接
+
+显式generate_assets MUST执行指定已编译正式入口，按明确范围创建/替换、挂接与保存，不依赖同批旧生成子资产GUID/local file ID读取内容。物理对象可以变化，状态/边/系统入口业务identity、条件、order、owner关系和指定Definition/Skill入口 MUST保持等价。源码、原始资源、范围外共享资产与未指定消费者 MUST不被自动清理或扫描修改。
+
+#### Scenario: 删除生成资产后执行同一代码
+
+- **WHEN** 在相同外部资源与正式API版本下删除已声明生成输出，再执行其完整创建代码
+- **THEN** MUST重建等价FSM结构、配置、顺序、内部共享和布局，并恢复指定根挂接
+- **AND** MUST不需要旧子资产GUID、协议local表或旧Graph镜像，也不能只创建孤立FSM
+
+### Requirement: FSM人工编辑与代码生成必须显式分离
+
+人工修改/保存FSM MUST不自动输出代码；只有显式export_code更新指定代码输出。generate_assets MUST不合并未导出的人工修改，不建立DocumentDirty/Conflict、rebase或源码同步生命周期。现有领域Undo/保存和失败报告 MUST保留，两个公共作者工具均不得自动Build；FSM不新增专属工具、中央Validator或整包事务。
+
+#### Scenario: 人工编辑后重新生成
+
+- **WHEN** 作者修改当前FSM但未显式导出，随后明确执行指定生成代码
+- **THEN** 生成范围 MUST以该代码为准，不把未导出修改自动合并进源码或重建结果
+- **AND** 人工保存本身 MUST不触发导出、生成或Build
 
 ### Requirement: 每个GA式技能必须只有一个正式入口图
 

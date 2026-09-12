@@ -150,3 +150,5 @@ ExternalDownloads/ZZZ_Studio/
 # Third-party PSD to UGUI editor asset, local reference only
 /3cDemo/Client/3C_Client/Assets/Plugins/PSD2UIForm/
 /3cDemo/Client/3C_Client/Assets/Plugins/PSD2UIForm.meta
+Tools/code_audit.py
+Tools/dead_sizes.py

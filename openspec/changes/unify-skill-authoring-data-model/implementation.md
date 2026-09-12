@@ -47,3 +47,5 @@
 3. 对新 v8包执行无修改 `dry_run_document`、`validate` 和重新 checkout；必要时才执行同hash `apply_document`。
 4. 对本 change 的现行 spec、`openspec/project.md` 和 `btsmtl-agent-authoring` 技能合同完成 v8对账；历史 archive只保留追溯，不作为当前完成证明。
 5. 清理当前工作区中明确属于本 change的剩余重复节点定义；不触碰其它 active task 的未提交文件。
+
+当前扫描还发现并行 Native FSM改动中存在 `BtsmtlSkillNativeConnection` 自己重复保存转移字段，以及未提交的 `BtsmtlSkillLegacyMigrationWorkflow` 一次性迁移入口。它们不能进入最终统一链；待对应并行改动稳定后，必须改为共享Transfer payload或删除，不能保留第二份状态机存储。

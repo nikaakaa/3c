@@ -69,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var next = new Dictionary<string, Variable>(StringComparer.Ordinal);
             foreach (CharacterPoseParameterDeclaration declaration in Parameters)
             {
-                if (declaration == null || !declaration.ParameterId.IsValid)
+                if (!IsBlackboardInput(declaration))
                     continue;
                 string id = declaration.ParameterId.Value;
                 if (!m_EditorBlackboard.variables.TryGetValue(id, out Variable variable) ||
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject)
         {
             if (ReferenceEquals(blackboard, editorBlackboard))
-                EditorGUILayout.LabelField("Pose Parameters · 只读", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Pose Inputs · 只读", EditorStyles.miniLabel);
         }
 
         public GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject)
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!ReferenceEquals(blackboard, editorBlackboard) || variable == null)
                 return;
             CharacterPoseParameterDeclaration declaration = Parameters.SingleOrDefault(value =>
-                value != null && value.ParameterId.IsValid &&
+                IsBlackboardInput(value) &&
                 string.Equals(value.ParameterId.Value, variable.ID, StringComparison.Ordinal));
             if (declaration == null)
                 throw new InvalidOperationException("Pose 参数 Blackboard 变量没有对应声明。");
@@ -135,6 +135,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             EditorWriteRouter.CreateParameterGet(declaration.ParameterId, variable.name, mousePos);
             Event.current.Use();
         }
+
+        static bool IsBlackboardInput(CharacterPoseParameterDeclaration declaration) =>
+            declaration != null &&
+            declaration.ParameterId.IsValid &&
+            declaration.Usage == CharacterPoseParameterUsage.Control;
 
         static Type VariableType(PoseParameterValueType valueType) => valueType switch
         {

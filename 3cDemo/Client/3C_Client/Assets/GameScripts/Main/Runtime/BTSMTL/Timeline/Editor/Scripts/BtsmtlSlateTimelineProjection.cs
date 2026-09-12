@@ -386,6 +386,7 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         string m_PendingTrackFocus;
         string m_PendingClipFocus;
+        BtsmtlSlateTimelineViewState? m_PendingViewState;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -1349,6 +1350,9 @@ namespace BTSMTL.Timeline.Editor
             m_RebuildQueued = false;
             if (m_Disposed)
                 return;
+            BtsmtlSlateTimelineViewState? viewState = m_EmbeddedEditor != null
+                ? CaptureViewState()
+                : m_PendingViewState;
             m_SourceClips.Clear();
             m_ProxyClips.Clear();
             m_SourceTracks.Clear();
@@ -1369,6 +1373,9 @@ namespace BTSMTL.Timeline.Editor
             m_Cutscene = null;
             BuildProjection();
             CreateEmbeddedEditor();
+            if (viewState.HasValue)
+                RestoreViewState(viewState.Value);
+            m_PendingViewState = null;
         }
 
         public void Dispose()

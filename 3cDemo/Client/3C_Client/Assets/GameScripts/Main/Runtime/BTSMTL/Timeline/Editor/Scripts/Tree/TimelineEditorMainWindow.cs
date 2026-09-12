@@ -23,6 +23,7 @@ namespace BTSMTL.Timeline.Editor
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
         internal static event Action<TimelineEditorWindow> WindowOpened;
+        public static event Action<TimelineEditorWindow> WindowClosed;
 
         [SerializeField]
         UnityEngine.Object m_SerializedOwner;
@@ -589,6 +590,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnDisable()
         {
+            WindowClosed?.Invoke(this);
             EditorApplication.update -= OnEditorUpdate;
             DisposeView();
         }

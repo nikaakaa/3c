@@ -92,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Session.Changed += OnRuntimeChanged;
             TimelineEditorWindow.AssetOpened += OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened += OnTimelineTreeOpened;
+            TimelineEditorWindow.WindowClosed += OnTimelineWindowClosed;
         }
 
         public static void Open(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, RuntimeInstanceKey instance) =>
@@ -302,6 +303,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             OpenScope(m_Definition, graph, m_Session, scope);
         }
 
+        void OnTimelineWindowClosed(TimelineEditorWindow window)
+        {
+            if (m_ActiveTimeline?.Asset == null || window == null || window.Timeline != m_ActiveTimeline.Asset.Data)
+                return;
+            ClearTimelineOverlay();
+            m_ActiveTimeline = null;
+        }
+
         FlowGraph FindGraph(string identity) => m_Definition.SkillGraphs.Where(graph => graph != null)
             .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false)).Distinct()
             .Single(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == identity);
@@ -332,6 +341,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Session.Changed -= OnRuntimeChanged;
             TimelineEditorWindow.AssetOpened -= OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened -= OnTimelineTreeOpened;
+            TimelineEditorWindow.WindowClosed -= OnTimelineWindowClosed;
             ClearTimelineOverlay();
             if (ReferenceEquals(s_Current, this))
                 s_Current = null;

@@ -609,67 +609,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool IsEmpty => string.IsNullOrEmpty(DeclarationId) && string.IsNullOrEmpty(OwnerId);
     }
 
-    public readonly struct BtsmtlSkillAuthoringFieldValue
-    {
-        public BtsmtlSkillAuthoringFieldValue(
-            GraphAuthoringFieldDescriptor field,
-            object value)
-        {
-            Field = field ?? throw new ArgumentNullException(nameof(field));
-            Value = value;
-        }
-
-        public GraphAuthoringFieldDescriptor Field { get; }
-        public object Value { get; }
-        public bool IsMissing => Value == null || Value is UnityEngine.Object asset && !asset;
-        public string CanonicalValue => BtsmtlSkillAuthoringValues.IdentityOf(Value);
-        public bool IsValid
-        {
-            get
-            {
-                if (IsMissing)
-                    return Field.Optional;
-                if (!MatchesValueKind() ||
-                    Field.Constraint.NonEmpty &&
-                    Value is string text && string.IsNullOrWhiteSpace(text))
-                    return false;
-                if (Field.Constraint.AllowedValues.Count > 0 &&
-                    !Field.Constraint.AllowedValues.Contains(CanonicalValue, StringComparer.Ordinal))
-                    return false;
-                if (Value is not IConvertible convertible ||
-                    Field.ValueKind is not GraphAuthoringFieldValueKind.Integer and
-                    not GraphAuthoringFieldValueKind.Float)
-                    return true;
-                double number = convertible.ToDouble(System.Globalization.CultureInfo.InvariantCulture);
-                return (!Field.Constraint.Finite ||
-                        !double.IsNaN(number) && !double.IsInfinity(number)) &&
-                       (!Field.Constraint.Minimum.HasValue ||
-                        number >= Field.Constraint.Minimum.Value) &&
-                       (!Field.Constraint.Maximum.HasValue ||
-                        number <= Field.Constraint.Maximum.Value);
-            }
-        }
-
-        bool MatchesValueKind()
-        {
-            return Field.ValueKind switch
-            {
-                GraphAuthoringFieldValueKind.String => Value is string,
-                GraphAuthoringFieldValueKind.Boolean => Value is bool,
-                GraphAuthoringFieldValueKind.Integer => Value is sbyte or byte or short or ushort or int or uint or long or ulong,
-                GraphAuthoringFieldValueKind.Float => Value is float or double or decimal or int,
-                GraphAuthoringFieldValueKind.Vector2 => Value is Vector2,
-                GraphAuthoringFieldValueKind.Vector3 => Value is Vector3,
-                GraphAuthoringFieldValueKind.Quaternion => Value is Quaternion,
-                GraphAuthoringFieldValueKind.Enum => Value is string || Value.GetType().IsEnum,
-                GraphAuthoringFieldValueKind.AssetReference => Value is UnityEngine.Object,
-                GraphAuthoringFieldValueKind.IdentityReference => Value is string || Value is UnityEngine.Object || Value is IBtsmtlSkillAuthoringGraph,
-                GraphAuthoringFieldValueKind.Object => true,
-                _ => false
-            };
-        }
-    }
-
     public readonly struct BtsmtlSkillAuthoringReferenceValue
     {
         public BtsmtlSkillAuthoringReferenceValue(
@@ -706,14 +645,14 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public static class BtsmtlSkillAuthoringValues
     {
-        public static IReadOnlyList<BtsmtlSkillAuthoringFieldValue> ReadFields(FlowNode node)
+        public static IReadOnlyList<GraphAuthoringFieldValue> ReadFields(FlowNode node)
         {
             if (node == null)
                 throw new ArgumentNullException(nameof(node));
             if (!BtsmtlSkillCapabilityCatalog.TryGetKind(node, out string kind))
                 throw new InvalidOperationException($"技能节点类型未登记：{node.GetType().FullName}");
             return BtsmtlSkillGraphAuthoringMetadata.Fields(kind)
-                .Select(field => new BtsmtlSkillAuthoringFieldValue(
+                .Select(field => new GraphAuthoringFieldValue(
                     field,
                     ReadField(node, field.FieldId.Value)))
                 .ToArray();

@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("A skill node must belong to its formal authoring graph.", nameof(node));
             ValidateCharacterStateNode(node, m_ControlModuleId);
             ValidateProviderOwner(node, m_ControlModuleId, m_InputProviderOwnerId, m_GameplayProviderOwnerId);
-            foreach (BtsmtlSkillAuthoringFieldValue field in
+            foreach (var field in
                      BtsmtlSkillGraphAuthoringMetadata.ReadFields(node))
                 if (!field.IsValid)
                     throw new InvalidOperationException(

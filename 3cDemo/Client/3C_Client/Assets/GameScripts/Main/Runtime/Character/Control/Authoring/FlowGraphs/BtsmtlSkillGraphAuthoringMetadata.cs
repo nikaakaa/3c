@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 : Array.Empty<BtsmtlSkillNodeAuthoringReferenceAttribute>();
         }
 
-        public static IReadOnlyList<BtsmtlSkillAuthoringFieldValue> ReadFields(
+        public static IReadOnlyList<GraphAuthoringFieldValue> ReadFields(
             FlowNode node) =>
             BtsmtlSkillAuthoringValues.ReadFields(node);
 

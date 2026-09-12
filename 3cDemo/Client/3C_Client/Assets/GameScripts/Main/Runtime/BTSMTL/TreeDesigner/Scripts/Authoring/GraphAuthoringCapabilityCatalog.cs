@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using UnityEngine;
 
@@ -225,6 +226,76 @@ namespace TreeDesigner.Authoring
         public bool AuthoringWritable => (Access & GraphAuthoringFieldAccess.AuthoringWrite) != 0;
         public bool IsVisible(Func<GraphAuthoringFieldId, object> readField) =>
             Visibility == null || Visibility.IsVisible(readField);
+    }
+
+    public readonly struct GraphAuthoringFieldValue
+    {
+        public GraphAuthoringFieldValue(
+            GraphAuthoringFieldDescriptor field,
+            object value)
+        {
+            Field = field ?? throw new ArgumentNullException(nameof(field));
+            Value = value;
+        }
+
+        public GraphAuthoringFieldDescriptor Field { get; }
+        public object Value { get; }
+        public bool IsMissing => Value == null || Value is UnityEngine.Object asset && !asset;
+        public string CanonicalValue => Value switch
+        {
+            string text => text,
+            Enum enumValue => enumValue.ToString(),
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => Value?.ToString() ?? string.Empty
+        };
+
+        public bool IsValid
+        {
+            get
+            {
+                if (IsMissing)
+                    return Field.Optional;
+                if (!MatchesValueKind() ||
+                    Field.Constraint.NonEmpty &&
+                    Value is string text && string.IsNullOrWhiteSpace(text))
+                    return false;
+                if (Field.Constraint.AllowedValues.Count > 0 &&
+                    !Field.Constraint.AllowedValues.Contains(CanonicalValue, StringComparer.Ordinal))
+                    return false;
+                if (Value is not IConvertible convertible ||
+                    Field.ValueKind is not GraphAuthoringFieldValueKind.Integer and
+                    not GraphAuthoringFieldValueKind.Float)
+                    return true;
+                double number = convertible.ToDouble(CultureInfo.InvariantCulture);
+                return (!Field.Constraint.Finite ||
+                        !double.IsNaN(number) && !double.IsInfinity(number)) &&
+                       (!Field.Constraint.Minimum.HasValue ||
+                        number >= Field.Constraint.Minimum.Value) &&
+                       (!Field.Constraint.Maximum.HasValue ||
+                        number <= Field.Constraint.Maximum.Value);
+            }
+        }
+
+        bool MatchesValueKind()
+        {
+            if (Field.ObjectType != null && !Field.ObjectType.IsInstanceOfType(Value))
+                return false;
+            return Field.ValueKind switch
+            {
+                GraphAuthoringFieldValueKind.String => Value is string,
+                GraphAuthoringFieldValueKind.Boolean => Value is bool,
+                GraphAuthoringFieldValueKind.Integer => Value is sbyte or byte or short or ushort or int or uint or long or ulong,
+                GraphAuthoringFieldValueKind.Float => Value is float or double or decimal or int,
+                GraphAuthoringFieldValueKind.Vector2 => Value is Vector2,
+                GraphAuthoringFieldValueKind.Vector3 => Value is Vector3,
+                GraphAuthoringFieldValueKind.Quaternion => Value is Quaternion,
+                GraphAuthoringFieldValueKind.Enum => Value is string || Value.GetType().IsEnum,
+                GraphAuthoringFieldValueKind.AssetReference => Value is UnityEngine.Object,
+                GraphAuthoringFieldValueKind.IdentityReference => Value is string || Value is UnityEngine.Object,
+                GraphAuthoringFieldValueKind.Object => true,
+                _ => false
+            };
+        }
     }
 
     public sealed class GraphAuthoringPortDescriptor

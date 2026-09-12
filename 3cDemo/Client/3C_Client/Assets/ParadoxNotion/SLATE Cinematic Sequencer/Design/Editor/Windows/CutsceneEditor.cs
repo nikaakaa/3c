@@ -1221,10 +1221,12 @@ namespace Slate
             }
 
             //make the layout rects
+            var timelineTop = TOOLBAR_HEIGHT + TOP_MARGIN + (embeddedSurface ? TOP_MARGIN : 0);
+            var timeInfoTop = TOOLBAR_HEIGHT + (embeddedSurface ? TOP_MARGIN : 0);
             topLeftRect = new Rect(0, TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
-            topMiddleRect = new Rect(LEFT_MARGIN, TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
-            leftRect = new Rect(0, TOOLBAR_HEIGHT + TOP_MARGIN, LEFT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
-            centerRect = new Rect(LEFT_MARGIN, TOP_MARGIN + TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
+            topMiddleRect = new Rect(LEFT_MARGIN, timeInfoTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
+            leftRect = new Rect(0, timelineTop, LEFT_MARGIN, screenHeight - timelineTop + scrollPos.y);
+            centerRect = new Rect(LEFT_MARGIN, timelineTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - timelineTop + scrollPos.y);
 
             //...
             DoKeyboardShortcuts();

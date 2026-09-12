@@ -206,6 +206,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (node is BtsmtlSkillCompositeFlowNode composite)
                     foreach (BtsmtlSkillStepPort step in composite.Steps)
                         step.Configure(step.Name, Resolve(step.Condition), step.Priority, step.AbortPolicy);
+                foreach (BtsmtlSkillFlowConnection transfer in node.outConnections.OfType<BtsmtlSkillFlowConnection>())
+                    transfer.Configure(
+                        Resolve(transfer.Condition),
+                        transfer.Priority,
+                        transfer.AbortPolicy,
+                        transfer.Order);
             }
         }
 
@@ -218,6 +224,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (node is BtsmtlSkillCompositeFlowNode composite)
                 foreach (BtsmtlSkillStepPort step in composite.Steps)
                     yield return step.Condition;
+            foreach (BtsmtlSkillFlowConnection transfer in node.outConnections.OfType<BtsmtlSkillFlowConnection>())
+                yield return transfer.Condition;
         }
     }
 }

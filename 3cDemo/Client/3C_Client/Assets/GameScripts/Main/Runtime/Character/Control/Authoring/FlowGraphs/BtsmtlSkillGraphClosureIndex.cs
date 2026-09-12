@@ -44,6 +44,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (node is BtsmtlSkillCompositeFlowNode composite)
                     foreach (BtsmtlSkillStepPort step in composite.Steps)
                         Visit(step.Condition);
+                foreach (BtsmtlSkillFlowConnection transfer in node.outConnections.OfType<BtsmtlSkillFlowConnection>())
+                    Visit(transfer.Condition);
                 if (node is BtsmtlSkillTimelineFlowNode timeline && timeline.TimelineAsset)
                 {
                     string timelineId = timeline.Timeline.AuthoringId;

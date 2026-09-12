@@ -19,9 +19,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                 "条件图", connection.Condition, typeof(BtsmtlSkillFlowGraph), false);
             var priority = EditorGUILayout.DelayedIntField("优先级", connection.Priority);
             var abort = (ProgramAbortPolicy)EditorGUILayout.EnumPopup("条件失效时中断", connection.AbortPolicy);
-            if (condition == connection.Condition && priority == connection.Priority && abort == connection.AbortPolicy)
+            var order = EditorGUILayout.DelayedIntField("并列顺序", connection.Order);
+            if (condition == connection.Condition && priority == connection.Priority && abort == connection.AbortPolicy &&
+                order == connection.Order)
                 return;
-            Change(graph, "修改技能转移", () => connection.Configure(condition, priority, abort));
+            Change(graph, "修改技能转移", () => connection.Configure(condition, priority, abort, order));
         }
 
         static void Change(BtsmtlSkillFlowGraph graph, string title, Action mutation)

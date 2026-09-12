@@ -67,48 +67,81 @@ namespace ThirdPersonCharacter.Control.Authoring
                         authoring.Role != BtsmtlSkillFlowGraphRole.StateMachine)
                         continue;
                     graphs++;
-                    var pending = new List<(BinderConnection edge, BtsmtlSkillStepPort step)>();
+                    var pending = new List<(BtsmtlSkillCompositeFlowNode node, BinderConnection edge, BtsmtlSkillStepPort step, int order)>();
+                    var stateNodes = new List<BtsmtlSkillCompositeFlowNode>();
                     foreach (FlowNode node in graph.allNodes.ToArray())
                     {
-                        if (!(node is BtsmtlSkillCompositeFlowNode composite))
+                        if (node is not BtsmtlSkillCompositeFlowNode composite ||
+                            node is not IBtsmtlSkillStateStructureNode)
                             continue;
+                        stateNodes.Add(composite);
+                        FlowOutput transferPort = node.GetOutputPort("Transfer") as FlowOutput;
+                        if (transferPort == null)
+                        {
+                            errors.Add($"{authoring.AuthoringId}/{node.name}: Transfer port missing");
+                            continue;
+                        }
+                        var steps = composite.Steps.ToList();
                         foreach (BinderConnection edge in node.outConnections.OfType<BinderConnection>().ToArray())
                         {
                             if (!(edge.sourcePort is FlowOutput))
                                 continue;
-                            if (edge is BtsmtlSkillFlowConnection)
+                            if (edge.sourcePortID == transferPort.ID)
                             {
-                                alreadyMigrated++;
+                                if (edge is not BtsmtlSkillFlowConnection)
+                                    errors.Add($"{authoring.AuthoringId}/{node.name}: Transfer port edge is not a transfer connection");
                                 continue;
                             }
+                            if (edge is BtsmtlSkillFlowConnection)
+                                alreadyMigrated++;
                             legacyEdges++;
-                            BtsmtlSkillStepPort step = composite.Steps.FirstOrDefault(value => value.Id == edge.sourcePortID);
+                            int order = steps.FindIndex(value => value.Id == edge.sourcePortID);
+                            BtsmtlSkillStepPort step = order < 0 ? null : steps[order];
                             if (step == null)
                             {
                                 errors.Add($"{authoring.AuthoringId}/{node.name}: step missing for {edge.sourcePortID}");
                                 continue;
                             }
-                            pending.Add((edge, step));
+                            pending.Add((composite, edge, step, order));
                         }
                     }
-                    if (!apply || pending.Count == 0)
+                    if (!apply)
                         continue;
                     BtsmtlSkillFlowEditorMutation.Execute(graph, "迁移状态机转移连线", () =>
                     {
-                        foreach (var (edge, step) in pending)
+                        foreach (var (node, edge, step, order) in pending)
                         {
                             Port source = edge.sourcePort;
                             Port target = edge.targetPort;
                             string uid = edge.UID;
                             if (source == null || target == null)
                                 throw new InvalidOperationException($"迁移连线端点缺失：{uid}");
-                            graph.RemoveConnection(edge, false);
-                            var created = graph.CreatePortConnection(source, target) as BtsmtlSkillFlowConnection
-                                ?? throw new InvalidOperationException($"迁移重建失败：{uid}");
-                            created.ConfigureAuthoringIdentity(uid);
-                            created.Configure(step.Condition, step.Priority, step.AbortPolicy);
+                            BtsmtlSkillFlowConnection created;
+                            if (edge is BtsmtlSkillFlowConnection existing)
+                            {
+                                created = existing;
+                                if (created.Condition != step.Condition ||
+                                    created.Priority != step.Priority ||
+                                    created.AbortPolicy != step.AbortPolicy)
+                                    throw new InvalidOperationException($"迁移连线{uid}与Step条件字段不一致，需要人工裁决。");
+                                created.Configure(step.Condition, step.Priority, step.AbortPolicy, order);
+                            }
+                            else
+                            {
+                                graph.RemoveConnection(edge, false);
+                                created = graph.CreatePortConnection(source, target) as BtsmtlSkillFlowConnection
+                                    ?? throw new InvalidOperationException($"迁移重建失败：{uid}");
+                                created.ConfigureAuthoringIdentity(uid);
+                                created.Configure(step.Condition, step.Priority, step.AbortPolicy, order);
+                            }
+                            Port transferPort = node.GetOutputPort("Transfer");
+                            if (transferPort == null)
+                                throw new InvalidOperationException($"迁移连线{uid}的Transfer端口缺失。");
+                            created.SetSourcePort(transferPort);
                             migrated++;
                         }
+                        foreach (BtsmtlSkillCompositeFlowNode node in stateNodes.Distinct())
+                            node.SetSteps(Array.Empty<BtsmtlSkillStepPort>());
                     });
                 }
             }

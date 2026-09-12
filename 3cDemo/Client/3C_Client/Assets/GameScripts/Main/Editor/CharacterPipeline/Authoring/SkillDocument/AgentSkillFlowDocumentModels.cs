@@ -42,6 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
         public string skillId;
         public string graphId;
         public string nodeId;
+        public string edgeId;
         public string referenceKey;
         public string timelineId;
         public string trackId;
@@ -94,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
         public string conditionGraphId;
         public int priority;
         public string abortPolicy;
+        public int order;
     }
 
     [Serializable]

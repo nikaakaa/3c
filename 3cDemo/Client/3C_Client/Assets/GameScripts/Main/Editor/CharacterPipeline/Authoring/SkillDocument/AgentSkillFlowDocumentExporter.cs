@@ -184,24 +184,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         string conditionGraphId = null;
                         int priority = 0;
                         string abortPolicy = null;
+                        int order = 0;
+                        if (authoring.Role == BtsmtlSkillFlowGraphRole.StateMachine && transfer == null)
+                        {
+                            m_Report.Error(graphPath + ".edges[" + connection.UID + "]",
+                                "skill_state_transfer_type_invalid",
+                                "状态机转移边必须携带唯一Transfer数据，需先完成资产迁移。");
+                            continue;
+                        }
                         if (transfer != null)
                         {
                             conditionGraphId = transfer.Condition != null ? transfer.Condition.AuthoringId : null;
                             priority = transfer.Priority;
                             abortPolicy = transfer.AbortPolicy.ToString();
-                        }
-                        else if (authoring.Role == BtsmtlSkillFlowGraphRole.StateMachine &&
-                                 connection.sourcePort is FlowOutput &&
-                                 connection.sourceNode is BtsmtlSkillCompositeFlowNode legacyComposite)
-                        {
-                            BtsmtlSkillStepPort legacy = legacyComposite.Steps.FirstOrDefault(value =>
-                                string.Equals(value.Id, connection.sourcePortID, StringComparison.Ordinal));
-                            if (legacy != null)
-                            {
-                                conditionGraphId = legacy.Condition != null ? legacy.Condition.AuthoringId : null;
-                                priority = legacy.Priority;
-                                abortPolicy = legacy.AbortPolicy.ToString();
-                            }
+                            order = transfer.Order;
                         }
                         file.edges.Add(new AgentPackageSkillFlowEdge
                         {
@@ -211,7 +207,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                             to = Endpoint(connection.targetNode as FlowNode, connection.targetPortID),
                             conditionGraphId = conditionGraphId,
                             priority = priority,
-                            abortPolicy = abortPolicy
+                            abortPolicy = abortPolicy,
+                            order = order
                         });
                     }
                 m_Layouts[authoring.AuthoringId] = new AgentPackageSkillFlowGraphLayoutFile
@@ -253,6 +250,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                 foreach (BtsmtlSkillStepPort step in composite.Steps)
                     if (step?.Condition)
                         VisitGraph(step.Condition, Owner("step", graphId: ownerId, nodeId: node.UID, referenceKey: step.Id), skillId);
+            foreach (BinderConnection connection in node.outConnections.OfType<BinderConnection>())
+                if (connection is BtsmtlSkillFlowConnection transfer && transfer.Condition)
+                    VisitGraph(transfer.Condition, Owner("edge", graphId: ownerId, nodeId: node.UID,
+                        referenceKey: "condition", edgeId: transfer.UID), skillId);
             if (node is BtsmtlSkillTimelineFlowNode timeline && timeline.TimelineAsset)
             {
                 ExportTimeline(timeline, ownerId, node.UID, skillId);
@@ -498,6 +499,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
             string skillId = null,
             string graphId = null,
             string nodeId = null,
+            string edgeId = null,
             string referenceKey = null,
             string timelineId = null,
             string trackId = null,
@@ -510,6 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                 skillId = skillId,
                 graphId = graphId,
                 nodeId = nodeId,
+                edgeId = edgeId,
                 referenceKey = referenceKey,
                 timelineId = timelineId,
                 trackId = trackId,

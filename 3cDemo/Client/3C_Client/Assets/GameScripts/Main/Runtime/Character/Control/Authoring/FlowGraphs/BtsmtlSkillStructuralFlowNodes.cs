@@ -87,6 +87,12 @@ namespace ThirdPersonCharacter.Control.Authoring
     public sealed class BtsmtlSkillStateEnterFlowNode : BtsmtlSkillCompositeFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
     {
         protected override bool HasExecutionInput => false;
+
+        protected override void RegisterPorts()
+        {
+            AddFlowOutput("转移", "Transfer");
+            base.RegisterPorts();
+        }
     }
 
     [Name("任意状态"), Category("BTSMTL/技能状态"), DoNotList]
@@ -94,6 +100,12 @@ namespace ThirdPersonCharacter.Control.Authoring
     public sealed class BtsmtlSkillStateAnyFlowNode : BtsmtlSkillCompositeFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
     {
         protected override bool HasExecutionInput => false;
+
+        protected override void RegisterPorts()
+        {
+            AddFlowOutput("转移", "Transfer");
+            base.RegisterPorts();
+        }
     }
 
     [Name("状态机出口"), Category("BTSMTL/技能状态"), DoNotList]
@@ -152,6 +164,12 @@ namespace ThirdPersonCharacter.Control.Authoring
         [SerializeField] BtsmtlSkillFlowGraph m_Body;
         public BtsmtlSkillFlowGraph Body => m_Body;
         protected override string ExecutionInputId => "StateIn";
+
+        protected override void RegisterPorts()
+        {
+            base.RegisterPorts();
+            AddFlowOutput("转移", "Transfer");
+        }
 
         public void SetBody(BtsmtlSkillFlowGraph graph)
         {

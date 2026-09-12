@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 reason = "Skill ports require matching declared types; implicit conversions are not allowed.";
             else if (source.IsFlowPort() != target.IsFlowPort())
                 reason = "Skill flow and value ports cannot be mixed.";
-            else if (source is FlowOutput && source.connections != 0)
+            else if (source is FlowOutput && source.connections != 0 && !AllowsStateTransferFanOut(graph, source))
                 reason = "Skill flow output already has a connection.";
             else if (target is ValueInput && target.connections != 0)
                 reason = "Skill value input already has a connection.";
@@ -152,6 +152,12 @@ namespace ThirdPersonCharacter.Control.Authoring
             }
             return reason == null;
         }
+
+        static bool AllowsStateTransferFanOut(FlowGraph graph, Port source) =>
+            graph is IBtsmtlSkillFlowGraph { Role: BtsmtlSkillFlowGraphRole.StateMachine } &&
+            source is FlowOutput &&
+            string.Equals(source.ID, "Transfer", StringComparison.Ordinal) &&
+            source.parent is IBtsmtlSkillStateStructureNode;
 
         public static void HandleBlackboardVariableDrop(
             FlowGraph graph,

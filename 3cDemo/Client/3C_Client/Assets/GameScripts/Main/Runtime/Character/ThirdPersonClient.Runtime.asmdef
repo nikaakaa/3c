@@ -17,6 +17,7 @@
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "RootMotion",
         "BTSMTL",
+        "BTSMTL.EventGraphs",
         "BTSMTL.Diagnostics",
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",

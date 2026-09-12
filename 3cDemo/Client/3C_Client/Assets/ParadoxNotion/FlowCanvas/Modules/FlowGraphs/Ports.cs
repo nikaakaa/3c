@@ -224,8 +224,14 @@ namespace FlowCanvas
                 Continue(f);
 
 #else
-
-				pointer(f);
+                try { pointer(f); }
+                catch ( Exception e ) {
+                    if ( parent.graph is NodeCanvas.Framework.IGraphExecutionFailureSink ) {
+                        parent.Error(e);
+                    } else {
+                        throw;
+                    }
+                }
 
 #endif
 
@@ -245,7 +251,7 @@ namespace FlowCanvas
         void Continue(Flow f) {
             try { pointer(f); }
             catch ( Exception e ) {
-                var targetNode = GetFirstOutputConnection().targetNode;
+                var targetNode = GetFirstOutputConnection()?.targetNode ?? parent;
                 targetNode.Error(e);
             }
         }
@@ -333,11 +339,21 @@ namespace FlowCanvas
 
                     try { result = getter(); }
                     catch ( Exception e ) {
-                        var targetNode = GetFirstInputConnection().sourceNode;
+                        var targetNode = GetFirstInputConnection()?.sourceNode ?? parent;
                         targetNode.Error(e);
+                        if (!(parent.graph is NodeCanvas.Framework.IGraphExecutionFailureSink)) {
+                            throw;
+                        }
                     }
 #else
-					result = getter();
+                    try { result = getter(); }
+                    catch ( Exception e ) {
+                        if ( parent.graph is NodeCanvas.Framework.IGraphExecutionFailureSink ) {
+                            parent.Error(e);
+                        } else {
+                            throw;
+                        }
+                    }
 #endif
                 }
 

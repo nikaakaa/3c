@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using FlowCanvas;
+using FlowCanvas.Macros;
+using FlowCanvas.Nodes;
+using NodeCanvas.Framework;
+
+namespace BTSMTL.EventGraphs
+{
+    public static class EventGraphAssetValidator
+    {
+        public static EventGraphVariableContract Require(
+            HostEventGraph graph,
+            EventGraphHostContract contract)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            var errors = new List<string>();
+            if (string.IsNullOrWhiteSpace(graph.AuthoringId))
+                errors.Add("graph identity is missing");
+            if (string.IsNullOrWhiteSpace(graph.ContentRevision))
+                errors.Add("graph revision is missing");
+
+            EventGraphVariableContract variables = null;
+            try
+            {
+                variables = graph.BuildVariableContract();
+            }
+            catch (Exception exception)
+            {
+                errors.Add(exception.Message);
+            }
+            if (variables != null)
+                ValidateOutputs(variables, contract, errors);
+
+            var macros = new HashSet<Macro>();
+            int startCount = 0;
+            int updateCount = 0;
+            ValidateNodes(
+                graph,
+                contract,
+                graph.allNodes,
+                macros,
+                errors,
+                ref startCount,
+                ref updateCount,
+                true);
+            if (startCount != 1)
+                errors.Add($"graph must contain exactly one StartEvent, found {startCount}");
+            if (updateCount != 1)
+                errors.Add($"graph must contain exactly one UpdateEvent, found {updateCount}");
+            if (errors.Count != 0)
+                throw new InvalidOperationException(
+                    $"Event graph '{graph.AuthoringId}' is invalid: {string.Join("; ", errors)}");
+            return variables;
+        }
+
+        static void ValidateOutputs(
+            EventGraphVariableContract variables,
+            EventGraphHostContract contract,
+            List<string> errors)
+        {
+            for (int i = 0; i < variables.Descriptors.Count; i++)
+            {
+                EventGraphVariableDescriptor variable = variables.Descriptors[i];
+                if (!contract.TryGetOutput(
+                        variable.Reference.VariableId,
+                        out EventGraphOutputDescriptor output))
+                {
+                    errors.Add(
+                        $"variable '{variable.Reference.VariableId}' is not declared as a host output");
+                    continue;
+                }
+                if (output.ValueType != variable.ValueType)
+                {
+                    errors.Add(
+                        $"output '{variable.Reference.VariableId}' type '{output.ValueType.FullName}' does not match variable type '{variable.ValueType.FullName}'");
+                }
+            }
+            if (contract.Outputs.Count != variables.Descriptors.Count)
+                errors.Add(
+                    $"host output count {contract.Outputs.Count} does not match variable declaration count {variables.Descriptors.Count}");
+        }
+
+        static void ValidateNodes(
+            HostEventGraph root,
+            EventGraphHostContract contract,
+            IReadOnlyList<Node> nodes,
+            HashSet<Macro> macros,
+            List<string> errors,
+            ref int startCount,
+            ref int updateCount,
+            bool rootGraph)
+        {
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                Node node = nodes[i];
+                if (node == null)
+                {
+                    errors.Add("graph contains a null node");
+                    continue;
+                }
+                if (!EventGraphCapabilityCatalog.TryGet(
+                        node.GetType(),
+                        out EventGraphCapabilityDescriptor capability))
+                {
+                    errors.Add($"node '{node.UID}' type '{node.GetType().FullName}' is not registered");
+                    continue;
+                }
+                switch (capability.Kind)
+                {
+                    case EventGraphCapabilityKind.InitializationEvent:
+                        if (rootGraph)
+                            startCount++;
+                        break;
+                    case EventGraphCapabilityKind.UpdateEvent:
+                        if (rootGraph)
+                        {
+                            updateCount++;
+                            ValidateUpdateEvent((UpdateEvent)node, errors);
+                        }
+                        break;
+                    case EventGraphCapabilityKind.InstantSplit:
+                        if (((Split)node).mode != Split.Mode.Instant)
+                            errors.Add($"node '{node.UID}' must use Split.Instant");
+                        break;
+                    case EventGraphCapabilityKind.VariableGet:
+                    case EventGraphCapabilityKind.VariableSet:
+                        ValidateVariableNode(root, node, errors);
+                        break;
+                    case EventGraphCapabilityKind.HostInput:
+                        ValidateHostInput(root, contract, node, errors);
+                        break;
+                    case EventGraphCapabilityKind.Macro:
+                        if (node is MacroNodeWrapper wrapper)
+                        {
+                            if (wrapper.macro == null)
+                                errors.Add($"macro node '{node.UID}' has no Macro asset");
+                            else if (wrapper.macro.usesExternalExecution)
+                                errors.Add($"macro node '{node.UID}' uses external execution");
+                            else if (macros.Add(wrapper.macro))
+                                ValidateMacro(
+                                    root,
+                                    contract,
+                                    wrapper.macro,
+                                    macros,
+                                    errors);
+                            else if (ContainsMacroReference(wrapper.macro, wrapper.macro))
+                                errors.Add($"macro '{wrapper.macro.name}' is recursive");
+                        }
+                        break;
+                    case EventGraphCapabilityKind.PureValue:
+                        ValidateConnectedValuePorts(node, errors);
+                        break;
+                }
+            }
+        }
+
+        static void ValidateMacro(
+            HostEventGraph root,
+            EventGraphHostContract contract,
+            Macro macro,
+            HashSet<Macro> macros,
+            List<string> errors)
+        {
+            if (macro.inputDefinitions.Any(value => value == null || !IsSupportedMacroType(value.type)) ||
+                macro.outputDefinitions.Any(value => value == null || !IsSupportedMacroType(value.type)))
+                errors.Add($"macro '{macro.name}' has an unsupported parameter type");
+            if (macro.allNodes.Any(node => node is EventGraphHostInputNodeMarker))
+                errors.Add($"macro '{macro.name}' cannot read host inputs directly");
+            int ignoredStartCount = 0;
+            int ignoredUpdateCount = 0;
+            ValidateNodes(
+                root,
+                contract,
+                macro.allNodes,
+                macros,
+                errors,
+                ref ignoredStartCount,
+                ref ignoredUpdateCount,
+                false);
+        }
+
+        static bool ContainsMacroReference(Macro root, Macro target)
+        {
+            var visited = new HashSet<Macro>();
+            return ContainsMacroReference(root, target, visited);
+        }
+
+        static bool IsSupportedMacroType(Type type) =>
+            type == typeof(Flow) || EventGraphValueKinds.IsSupported(type);
+
+        static bool ContainsMacroReference(
+            Macro current,
+            Macro target,
+            HashSet<Macro> visited)
+        {
+            if (!visited.Add(current))
+                return false;
+            foreach (MacroNodeWrapper wrapper in current.allNodes.OfType<MacroNodeWrapper>())
+            {
+                if (wrapper.macro == target)
+                    return true;
+                if (wrapper.macro != null &&
+                    ContainsMacroReference(wrapper.macro, target, visited))
+                    return true;
+            }
+            return false;
+        }
+
+        static void ValidateUpdateEvent(UpdateEvent update, List<string> errors)
+        {
+            if (update.updateInterval == null ||
+                update.updateInterval.useBlackboard ||
+                !float.IsFinite(update.updateInterval.value) ||
+                update.updateInterval.value != 0f)
+            {
+                errors.Add($"UpdateEvent '{update.UID}' must have a literal zero interval");
+            }
+        }
+
+        static void ValidateVariableNode(
+            HostEventGraph graph,
+            Node node,
+            List<string> errors)
+        {
+            if (node is not ParameterVariableNode parameterNode ||
+                parameterNode.parameter == null ||
+                !parameterNode.parameter.useBlackboard ||
+                parameterNode.parameter.varRef == null)
+            {
+                errors.Add($"variable node '{node.UID}' is not bound to a local Blackboard variable");
+                return;
+            }
+            if (!graph.blackboard.variables.Values.Contains(parameterNode.parameter.varRef))
+                errors.Add($"variable node '{node.UID}' references an external Blackboard variable");
+            if (parameterNode.parameter.varRef.varType != parameterNode.parameter.varType)
+                errors.Add($"variable node '{node.UID}' has a mismatched variable type");
+            if (node is SetVariable<float> floatSet && floatSet.perSecond ||
+                node is SetVariable<UnityEngine.Vector3> vectorSet && vectorSet.perSecond)
+            {
+                errors.Add($"Set node '{node.UID}' cannot use global per-second time");
+            }
+        }
+
+        static void ValidateHostInput(
+            HostEventGraph graph,
+            EventGraphHostContract contract,
+            Node node,
+            List<string> errors)
+        {
+            string inputId = null;
+            Type valueType = null;
+            if (node is EventGraphFloatInputNode floatInput)
+            {
+                inputId = floatInput.InputId;
+                valueType = typeof(float);
+            }
+            else if (node is EventGraphIntInputNode intInput)
+            {
+                inputId = intInput.InputId;
+                valueType = typeof(int);
+            }
+            else if (node is EventGraphBoolInputNode boolInput)
+            {
+                inputId = boolInput.InputId;
+                valueType = typeof(bool);
+            }
+            else if (node is EventGraphVector2InputNode vector2Input)
+            {
+                inputId = vector2Input.InputId;
+                valueType = typeof(UnityEngine.Vector2);
+            }
+            else if (node is EventGraphVector3InputNode vector3Input)
+            {
+                inputId = vector3Input.InputId;
+                valueType = typeof(UnityEngine.Vector3);
+            }
+            else if (node is EventGraphDeltaNode)
+            {
+                inputId = EventGraphHostInputIds.DeltaSeconds;
+                valueType = typeof(float);
+            }
+            if (string.IsNullOrWhiteSpace(inputId) ||
+                !contract.TryGetInput(
+                    inputId,
+                    out EventGraphInputDescriptor descriptor))
+            {
+                errors.Add($"host input node '{node.UID}' references undeclared input '{inputId}'");
+                return;
+            }
+            if (descriptor.ValueType != valueType)
+                errors.Add($"host input node '{node.UID}' type does not match '{inputId}'");
+        }
+
+        static void ValidateConnectedValuePorts(Node node, List<string> errors)
+        {
+            if (node is not FlowNode flowNode)
+                return;
+            foreach (FlowCanvas.Port port in flowNode.GetAllPorts())
+            {
+                if (!port.IsValuePort() ||
+                    !port.isConnected ||
+                    EventGraphValueKinds.IsSupported(port.type))
+                    continue;
+                errors.Add(
+                    $"node '{node.UID}' has a connected unsupported value port '{port.ID}'");
+            }
+        }
+    }
+
+    public interface EventGraphHostInputNodeMarker
+    {
+    }
+}

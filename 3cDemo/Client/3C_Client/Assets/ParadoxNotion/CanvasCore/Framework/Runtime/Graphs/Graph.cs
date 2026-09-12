@@ -16,6 +16,11 @@ using UnityEditor; // 3C: GenericMenu for domain-driven node creation menu
 namespace NodeCanvas.Framework
 {
 
+    public interface IGraphExecutionFailureSink
+    {
+        void ReportExecutionFailure(Node node, string message, System.Exception exception);
+    }
+
     ///<summary>This is the base and main class of NodeCanvas and graphs. All graph System are deriving from this.</summary>
     [System.Serializable]
     abstract public partial class Graph : ScriptableObject, ITaskSystem, ISerializationCallbackReceiver

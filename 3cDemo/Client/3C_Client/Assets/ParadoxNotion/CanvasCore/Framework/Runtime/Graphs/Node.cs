@@ -344,6 +344,12 @@ namespace NodeCanvas.Framework
                 Logger.LogError(msg, LogTag.EXECUTION, this);
             }
             status = Status.Error;
+            if ( graph is IGraphExecutionFailureSink sink ) {
+                sink.ReportExecutionFailure(
+                    this,
+                    msg?.ToString(),
+                    msg as System.Exception);
+            }
             return Status.Error;
         }
 
@@ -351,6 +357,9 @@ namespace NodeCanvas.Framework
         public Status Fail(string msg) {
             Logger.LogError(msg, LogTag.EXECUTION, this);
             status = Status.Failure;
+            if ( graph is IGraphExecutionFailureSink sink ) {
+                sink.ReportExecutionFailure(this, msg, null);
+            }
             return Status.Failure;
         }
 

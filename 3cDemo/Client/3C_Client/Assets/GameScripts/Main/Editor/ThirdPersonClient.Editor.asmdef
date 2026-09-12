@@ -33,6 +33,7 @@
         "ThirdPersonCharacter.Animation.TransitionRouting",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "BTSMTL",
+        "BTSMTL.EventGraphs",
         "BTSMTL.Diagnostics",
         "BTSMTL.Diagnostics.Editor",
         "BTSMTL.Editor",

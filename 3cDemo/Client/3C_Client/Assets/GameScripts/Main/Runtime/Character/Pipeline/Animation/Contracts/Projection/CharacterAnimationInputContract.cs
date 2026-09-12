@@ -213,7 +213,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var parameters = new List<CharacterPoseParameterDeclaration>();
             var ids = new HashSet<PoseParameterId>();
             foreach (CharacterPoseParameterDeclaration declaration in root.Parameters
-                         .Where(value => value != null && value.Usage == CharacterPoseParameterUsage.Control)
+                         .Where(value => value != null &&
+                                         value.Usage == CharacterPoseParameterUsage.Control &&
+                                         !value.ParameterId.Equals(
+                                             AnimationPoseParameterIds.FootPlacementWeight))
                          .OrderBy(value => value.ParameterId))
             {
                 if (!ids.Add(declaration.ParameterId))
@@ -232,6 +235,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     binding.ParameterId,
                     PoseParameterValueType.Float,
                     0f,
+                    "percent",
+                    CharacterPoseParameterUsage.AnimatedProperty));
+            }
+            if (profile.PoseGraph.EnumerateGraphs()
+                    .Where(value => value != null)
+                    .SelectMany(value => value.Nodes)
+                    .Any(value => value != null &&
+                                  value.Kind == CharacterPoseNodeKind.FootPlacement) &&
+                ids.Add(AnimationPoseParameterIds.FootPlacementWeight))
+            {
+                parameters.Add(new CharacterPoseParameterDeclaration(
+                    AnimationPoseParameterIds.FootPlacementWeight,
+                    PoseParameterValueType.Float,
+                    1f,
                     "percent",
                     CharacterPoseParameterUsage.AnimatedProperty));
             }

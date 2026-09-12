@@ -60,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(inputBinding.PoseParameters[parameterIndex]))
             {
                 throw new InvalidOperationException(
-                    "Foot Placement parameter input is unavailable.");
+                    "Foot Placement input Pose curve is unavailable.");
             }
             var planningFrame = new CharacterFootPlacementFrameInput(
                 actorId,

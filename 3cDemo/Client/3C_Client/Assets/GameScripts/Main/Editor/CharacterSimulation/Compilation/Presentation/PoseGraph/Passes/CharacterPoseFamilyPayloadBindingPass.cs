@@ -565,7 +565,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         CharacterPoseNodeRuntimeRequirement.Player))
                     playerIndex = state.PlayerCount++;
                 PoseParameterId declaredParameter = handler.Parameter(irNode.Payload);
-                if (declaredParameter.IsValid)
+                int parameterInputIndex = TryGetInputIndex(
+                    node,
+                    CharacterPosePortKind.Parameter,
+                    0,
+                    incoming,
+                    scope,
+                    values);
+                if (handler.Kind == CharacterPoseNodeKind.FootPlacement)
+                {
+                    if (parameterInputIndex >= 0)
+                        throw new InvalidOperationException(
+                            $"Foot Placement '{scopedNodeId}' must read its input Pose curve internally; remove the external weight port connection.");
+                    parameterIndex = state.ParameterIndices[
+                        AnimationPoseParameterIds.FootPlacementWeight];
+                }
+                else if (declaredParameter.IsValid)
                     parameterIndex = state.ParameterIndices[declaredParameter];
                 else
                 {
@@ -577,21 +592,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 port.Direction == CharacterPosePortDirection.Input);
                     if (parameterPort != null)
                     {
-                        parameterIndex = parameterPort.Required
-                            ? RequireInput(
+                            parameterIndex = parameterPort.Required
+                                ? RequireInput(
                                 node,
                                 CharacterPosePortKind.Parameter,
                                 0,
                                 incoming,
                                 scope,
                                 values).Index
-                            : TryGetInputIndex(
-                                node,
-                                CharacterPosePortKind.Parameter,
-                                0,
-                                incoming,
-                                scope,
-                                values);
+                                : parameterInputIndex;
                     }
                 }
 

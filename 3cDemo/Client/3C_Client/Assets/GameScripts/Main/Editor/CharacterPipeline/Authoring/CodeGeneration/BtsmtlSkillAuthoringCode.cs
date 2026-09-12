@@ -75,7 +75,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 .OfType<BtsmtlSkillFlowGraph>()
                 .SingleOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
             if (existing)
+            {
+                if (existing.Role != role)
+                    throw new InvalidOperationException($"Skill child graph identity '{identity}' has a different role.");
                 return existing;
+            }
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能子图", () =>
             {
                 BtsmtlSkillFlowGraph graph = BtsmtlSkillGraphAssetFactory.CreatePrivatePage(owner, role, name);
@@ -121,7 +125,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 .OfType<BtsmtlSkillNativeStateMachine>()
                 .SingleOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
             if (existing)
+            {
+                BtsmtlSkillNativeStateMachineAuthoring.RequireOwner(existing, ownerGraphId, ownerNodeId);
                 return existing;
+            }
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能状态机", () =>
             {
                 BtsmtlSkillNativeStateMachine machine =
@@ -160,57 +167,91 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             });
         }
 
+        public static TimelineAsset EnsureTimelineRoot(
+            BtsmtlAuthoringGenerationContext context,
+            string identity,
+            string name)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            string path = context.OutputAssetPath;
+            TimelineAsset existing = AssetDatabase.LoadAssetAtPath<TimelineAsset>(path);
+            if (existing)
+            {
+                if (existing.Data != null &&
+                    !string.IsNullOrEmpty(existing.Data.AuthoringId) &&
+                    !string.Equals(existing.Data.AuthoringId, identity, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Timeline output '{path}' has a different authoring identity.");
+                if (existing.Data == null)
+                    existing.SetData(TimelineData.CreateDefault(name));
+                existing.Data.ConfigureAuthoringIdentity(identity);
+                existing.Data.Name = name;
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
+            if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                throw new InvalidOperationException($"Timeline output '{path}' is occupied by another asset type.");
+            int separator = path.LastIndexOf('/');
+            string folder = separator > 0 ? path.Substring(0, separator) : string.Empty;
+            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+                throw new InvalidOperationException($"Timeline output folder '{folder}' does not exist.");
+            var asset = ScriptableObject.CreateInstance<TimelineAsset>();
+            asset.name = string.IsNullOrWhiteSpace(name) ? identity : name;
+            AssetDatabase.CreateAsset(asset, path);
+            asset.SetData(TimelineData.CreateDefault(asset.name));
+            asset.Data.ConfigureAuthoringIdentity(identity);
+            EditorUtility.SetDirty(asset);
+            return asset;
+        }
+
         public static FlowNode EnsureFlowNode(
             FlowGraph graph,
             Type nodeType,
             string identity,
+            string name,
             Vector2 position)
         {
             if (graph == null)
                 throw new ArgumentNullException(nameof(graph));
-            return BtsmtlSkillFlowEditorMutation.Execute(graph, "生成技能节点", () =>
-            {
-                FlowNode existing = graph.allNodes.OfType<FlowNode>()
-                    .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
-                if (existing != null)
-                {
-                    if (existing.GetType() != nodeType)
-                        throw new InvalidOperationException($"Skill node identity '{identity}' has a different type.");
-                    existing.position = position;
-                    return existing;
-                }
-                FlowNode node = (FlowNode)graph.AddNode(nodeType, position);
-                node.ConfigureAuthoringIdentity(identity);
-                node.position = position;
-                return node;
-            });
+            return BtsmtlSkillFlowGraphAuthoring.EnsureNode(graph, nodeType, identity, name, position);
         }
 
         public static BtsmtlSkillNativeState EnsureNativeState(
             BtsmtlSkillNativeStateMachine machine,
             Type nodeType,
             string identity,
+            string name,
             Vector2 position)
         {
             if (machine == null)
                 throw new ArgumentNullException(nameof(machine));
-            return BtsmtlSkillFlowEditorMutation.Execute(machine, "生成技能状态", () =>
-            {
-                BtsmtlSkillNativeState existing = machine.allNodes.OfType<BtsmtlSkillNativeState>()
-                    .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
-                if (existing != null)
-                {
-                    if (existing.GetType() != nodeType)
-                        throw new InvalidOperationException($"Skill state identity '{identity}' has a different type.");
-                    existing.position = position;
-                    return existing;
-                }
-                BtsmtlSkillNativeState state = (BtsmtlSkillNativeState)machine.AddNode(nodeType, position);
-                state.ConfigureAuthoringIdentity(identity);
-                state.position = position;
-                return state;
-            });
+            return BtsmtlSkillNativeStateMachineAuthoring.EnsureState(
+                machine,
+                nodeType,
+                identity,
+                name,
+                position);
         }
+
+        public static void ConfigureNativeState(
+            BtsmtlSkillNativeState state,
+            string name,
+            Vector2 position,
+            BtsmtlSkillFlowGraph body) =>
+            BtsmtlSkillNativeStateMachineAuthoring.ConfigureState(state, name, position, body);
+
+        public static void ConfigureNativeConnection(
+            BtsmtlSkillNativeConnection connection,
+            BtsmtlSkillFlowGraph condition,
+            int priority,
+            ProgramAbortPolicy abortPolicy,
+            int order) =>
+            BtsmtlSkillNativeStateMachineAuthoring.ConfigureConnection(
+                connection,
+                condition,
+                priority,
+                abortPolicy,
+                order);
 
         public static BinderConnection EnsureFlowConnection(
             FlowGraph graph,
@@ -222,29 +263,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             if (graph == null || source == null || target == null)
                 throw new ArgumentNullException(nameof(graph));
-            return BtsmtlSkillFlowEditorMutation.Execute(graph, "生成技能连线", () =>
-            {
-                BinderConnection existing = source.outConnections.OfType<BinderConnection>()
-                    .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
-                Port sourcePort = source.GetOutputPort(sourcePortId);
-                Port targetPort = target.GetInputPort(targetPortId);
-                if (sourcePort == null || targetPort == null)
-                    throw new InvalidOperationException($"Skill connection '{identity}' references a missing port.");
-                if (existing != null)
-                {
-                    if (existing.sourceNode != source || existing.targetNode != target ||
-                        existing.sourcePortID != sourcePortId || existing.targetPortID != targetPortId)
-                        throw new InvalidOperationException($"Skill connection identity '{identity}' has different endpoints.");
-                    return existing;
-                }
-                if (!BtsmtlSkillFlowEditorMutation.CanConnect(graph, sourcePort, targetPort, out string reason))
-                    throw new InvalidOperationException(reason);
-                BinderConnection connection = graph.CreatePortConnection(sourcePort, targetPort);
-                if (connection == null)
-                    throw new InvalidOperationException($"Skill connection '{identity}' could not be created.");
-                connection.ConfigureAuthoringIdentity(identity);
-                return connection;
-            });
+            return BtsmtlSkillFlowGraphAuthoring.EnsureConnection(
+                graph,
+                source,
+                sourcePortId,
+                target,
+                targetPortId,
+                identity);
         }
 
         public static BtsmtlSkillNativeConnection EnsureNativeConnection(
@@ -255,24 +280,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             if (machine == null || source == null || target == null)
                 throw new ArgumentNullException(nameof(machine));
-            return BtsmtlSkillFlowEditorMutation.Execute(machine, "生成技能状态转移", () =>
-            {
-                BtsmtlSkillNativeConnection existing = source.outConnections
-                    .OfType<BtsmtlSkillNativeConnection>()
-                    .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
-                if (existing != null)
-                {
-                    if (existing.targetNode != target)
-                        throw new InvalidOperationException($"Skill state connection identity '{identity}' has a different target.");
-                    return existing;
-                }
-                BtsmtlSkillNativeConnection connection =
-                    (BtsmtlSkillNativeConnection)machine.ConnectNodes(source, target);
-                if (connection == null)
-                    throw new InvalidOperationException($"Skill state connection '{identity}' could not be created.");
-                connection.ConfigureAuthoringIdentity(identity);
-                return connection;
-            });
+            return BtsmtlSkillNativeStateMachineAuthoring.EnsureConnection(
+                machine,
+                source,
+                target,
+                identity);
         }
 
         public static void SetValue(FlowNode node, string portId, object value)
@@ -445,23 +457,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return result;
         }
 
-        public static void PruneFlowGraph(FlowGraph graph, IEnumerable<string> identities)
+        public static void PruneFlowGraph(
+            FlowGraph graph,
+            IEnumerable<string> nodeIdentities,
+            IEnumerable<string> connectionIdentities)
         {
-            var keep = new HashSet<string>(identities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
-            BtsmtlSkillFlowEditorMutation.Execute(graph, "清理技能图输出", () =>
-            {
-                foreach (FlowNode node in graph.allNodes.OfType<FlowNode>().ToArray())
-                    if (!BtsmtlSkillCapabilityCatalog.IsAnchor(node.GetType()) && !keep.Contains(node.UID))
-                        graph.RemoveNode(node, false);
-            });
+            BtsmtlSkillFlowGraphAuthoring.Prune(graph, nodeIdentities, connectionIdentities);
         }
 
         public static void PruneNativeStateMachine(
             BtsmtlSkillNativeStateMachine machine,
-            IEnumerable<string> identities)
+            IEnumerable<string> stateIdentities,
+            IEnumerable<string> connectionIdentities)
         {
-            var keep = new HashSet<string>(identities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
-            BtsmtlSkillFlowEditorMutation.Execute(machine, "清理技能状态机输出", () =>
+            BtsmtlSkillNativeStateMachineAuthoring.PruneConnections(machine, connectionIdentities);
+            var keep = new HashSet<string>(stateIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            BtsmtlSkillFlowEditorMutation.Execute(machine, "清理技能FSM状态", () =>
             {
                 foreach (BtsmtlSkillNativeState state in machine.allNodes.OfType<BtsmtlSkillNativeState>().ToArray())
                     if (state is not BtsmtlSkillNativeEntryState && state is not BtsmtlSkillNativeAnyState &&

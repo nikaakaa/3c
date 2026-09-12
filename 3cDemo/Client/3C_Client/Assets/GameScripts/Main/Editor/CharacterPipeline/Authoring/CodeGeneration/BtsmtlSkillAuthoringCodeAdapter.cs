@@ -25,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         public bool CanHandle(object root) =>
             root is BtsmtlSkillFlowGraph ||
-            root is BtsmtlSkillNativeStateMachine ||
             root is TimelineAsset;
 
         public void Emit(BtsmtlAuthoringCodeExportContext context, object root)
@@ -37,9 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     break;
                 case TimelineAsset timeline:
                     EmitTimelineRoot(context, timeline);
-                    break;
-                case BtsmtlSkillNativeStateMachine machine:
-                    EmitNativeStateMachineRoot(context, machine);
                     break;
                 default:
                     context.ReportError("skill_root_unsupported", root?.GetType().FullName, "Skill领域不支持该导出根对象。");
@@ -96,32 +92,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 return;
             }
             RegisterTimeline(context, root, true);
-            EmitTimelineCreation(context, new[] { root }, new Dictionary<TimelineAsset, FlowGraph>(), null);
+            EmitTimelineCreation(context, new[] { root }, new Dictionary<TimelineAsset, FlowGraph>(), root);
             EmitTimelineContentCreation(context, new[] { root });
             EmitTimelineConfiguration(context, new[] { root });
             EmitPrune(context, Array.Empty<FlowGraph>(), Array.Empty<BtsmtlSkillNativeStateMachine>(), new[] { root });
-        }
-
-        void EmitNativeStateMachineRoot(
-            BtsmtlAuthoringCodeExportContext context,
-            BtsmtlSkillNativeStateMachine root)
-        {
-            try
-            {
-                BtsmtlSkillNativeStateMachineContract.Validate(root, true);
-            }
-            catch (Exception error)
-            {
-                context.ReportError("skill_state_machine_invalid", root.AuthoringId, error.Message);
-                return;
-            }
-            RegisterObject(context, root, $"fsm:{root.AuthoringId}", "stateMachine", true);
-            EmitExternalObjectReference(context, root, root.GetType());
-            RegisterMachineMembers(context, root);
-            EmitMachineNodeCreation(context, new[] { root });
-            EmitMachineConfiguration(context, new[] { root });
-            EmitMachineConnections(context, new[] { root });
-            EmitPrune(context, Array.Empty<FlowGraph>(), new[] { root }, Array.Empty<TimelineAsset>());
         }
 
         void CollectReferences(
@@ -317,31 +291,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlAuthoringCodeExportContext context,
             IEnumerable<TimelineAsset> timelines,
             IReadOnlyDictionary<TimelineAsset, FlowGraph> owners,
-            BtsmtlSkillFlowGraph root)
+            UnityEngine.Object root)
         {
             foreach (TimelineAsset timeline in timelines)
             {
                 string variable = Variable(context, timeline, $"timeline-asset:{AssetDatabase.GetAssetPath(timeline)}");
                 string expression;
-                if (owners.TryGetValue(timeline, out FlowGraph owner) && IsPrivateSubAsset(timeline, root) && owner != null)
+                if (ReferenceEquals(timeline, root))
+                    expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTimelineRoot(context, {String(timeline.Data.AuthoringId)}, {String(timeline.name)})";
+                else if (owners.TryGetValue(timeline, out FlowGraph owner) && IsPrivateSubAsset(timeline, root) && owner != null)
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTimeline({Variable(context, owner, $"graph:{((IBtsmtlSkillAuthoringGraph)owner).AuthoringId}")}, {String(timeline.Data.AuthoringId)}, {String(timeline.name)})";
                 else
                     expression = ExternalAsset(context, timeline, typeof(TimelineAsset));
                 context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Create, $"var {variable} = {expression};");
             }
-        }
-
-        void EmitExternalObjectReference(
-            BtsmtlAuthoringCodeExportContext context,
-            UnityEngine.Object asset,
-            Type type)
-        {
-            string variable = Variable(context, asset, asset is BtsmtlSkillNativeStateMachine machine
-                ? $"fsm:{machine.AuthoringId}"
-                : asset.name);
-            context.AddStatement(
-                BtsmtlAuthoringCodeEmissionPhase.Create,
-                $"var {variable} = {ExternalAsset(context, asset, type)};");
         }
 
         void EmitGraphNodeCreation(
@@ -355,7 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     string nodeVariable = Variable(context, node, $"node:{((IBtsmtlSkillAuthoringGraph)graph).AuthoringId}:{node.UID}");
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
-                        $"var {nodeVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureFlowNode({graphVariable}, {TypeName(node.GetType())}, {String(node.UID)}, {BtsmtlAuthoringCodeValues.Vector2(node.position)});");
+                        $"var {nodeVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureFlowNode({graphVariable}, {TypeName(node.GetType())}, {String(node.UID)}, {String(node.name)}, {BtsmtlAuthoringCodeValues.Vector2(node.position)});");
                 }
         }
 
@@ -370,7 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     string stateVariable = Variable(context, state, $"state:{machine.AuthoringId}:{state.UID}");
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
-                        $"var {stateVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureNativeState({machineVariable}, {TypeName(state.GetType())}, {String(state.UID)}, {BtsmtlAuthoringCodeValues.Vector2(state.position)});");
+                        $"var {stateVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureNativeState({machineVariable}, {TypeName(state.GetType())}, {String(state.UID)}, {String(state.name)}, {BtsmtlAuthoringCodeValues.Vector2(state.position)});");
                 }
         }
 
@@ -526,7 +489,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"(({TypeName(typeof(BtsmtlSkillApplyGameplayEffectFlowNode))}){nodeVariable}).Configure({ExternalAsset(context, applyEffect.Effect, typeof(GameplayEffectDefinition))}, {ExternalAsset(context, applyEffect.ActionContext, typeof(ActionContextSlot))}, {Bool(applyEffect.Predicted)}, {String(applyEffect.ProviderOwnerId)});");
             if (node is BtsmtlSkillRemoveGameplayEffectFlowNode removeEffect)
                 context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
-                    $"(({TypeName(typeof(BtsmtlSkillRemoveGameplayEffectFlowNode))}){nodeVariable}).Configure({EnumValue(typeof(GameplayEffectRemoveSelector), removeEffect.Selector)}, {removeEffect.Handle}UL, {ExternalAsset(context, removeEffect.Effect, typeof(GameplayEffectDefinition))}, {GameplayTagQuery(removeEffect.EffectTagQuery)}, {String(removeEffect.ProviderOwnerId)});");
+                    $"(({TypeName(typeof(BtsmtlSkillRemoveGameplayEffectFlowNode))}){nodeVariable}).Configure({EnumValue(typeof(ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector), removeEffect.Selector)}, {removeEffect.Handle}UL, {ExternalAsset(context, removeEffect.Effect, typeof(GameplayEffectDefinition))}, {GameplayTagQuery(removeEffect.EffectTagQuery)}, {String(removeEffect.ProviderOwnerId)});");
             if (node is BtsmtlSkillActionContextActiveFlowNode contextActive)
                 context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                     $"(({TypeName(typeof(BtsmtlSkillActionContextActiveFlowNode))}){nodeVariable}).SetActionContext({ExternalAsset(context, contextActive.ActionContext, typeof(ActionContextSlot))});");
@@ -586,7 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     if (state.Body != null)
                         context.AddStatement(
                             BtsmtlAuthoringCodeEmissionPhase.Bind,
-                            $"(({TypeName(typeof(BtsmtlSkillNativeState))}){Variable(context, state, $"state:{machine.AuthoringId}:{state.UID}")}).SetBody({GraphExpression(context, state.Body)});");
+                            $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.ConfigureNativeState(({TypeName(typeof(BtsmtlSkillNativeState))}){Variable(context, state, $"state:{machine.AuthoringId}:{state.UID}")}, {String(state.name)}, {BtsmtlAuthoringCodeValues.Vector2(state.position)}, {GraphExpression(context, state.Body)});");
         }
 
         void EmitTimelineConfiguration(
@@ -810,7 +773,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                             $"var {edgeVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureNativeConnection({machineVariable}, ({TypeName(typeof(BtsmtlSkillNativeState))}){stateVariable}, ({TypeName(typeof(BtsmtlSkillNativeState))}){targetVariable}, {String(connection.UID)});");
                         context.AddStatement(
                             BtsmtlAuthoringCodeEmissionPhase.Bind,
-                            $"(({TypeName(typeof(BtsmtlSkillNativeConnection))}){edgeVariable}).Configure({GraphExpression(context, connection.Condition)}, {connection.Priority}, {EnumValue(typeof(ProgramAbortPolicy), connection.AbortPolicy)}, {connection.Order});");
+                            $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.ConfigureNativeConnection(({TypeName(typeof(BtsmtlSkillNativeConnection))}){edgeVariable}, {GraphExpression(context, connection.Condition)}, {connection.Priority}, {EnumValue(typeof(ProgramAbortPolicy), connection.AbortPolicy)}, {connection.Order});");
                     }
             }
         }
@@ -825,9 +788,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 string graphVariable = Variable(context, graph, $"graph:{((IBtsmtlSkillAuthoringGraph)graph).AuthoringId}");
                 string ids = StringArray(graph.allNodes.OfType<FlowNode>().Select(value => value.UID));
+                string edgeIds = StringArray(graph.allNodes.OfType<FlowNode>()
+                    .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                    .Select(value => value.UID));
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.RootBinding,
-                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneFlowGraph({graphVariable}, new[] {{ {ids} }});");
+                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneFlowGraph({graphVariable}, {ids}, {edgeIds});");
             }
             foreach (BtsmtlSkillNativeStateMachine machine in machines)
             {
@@ -835,9 +801,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string ids = StringArray(machine.allNodes.OfType<BtsmtlSkillNativeState>()
                     .Where(value => value is not BtsmtlSkillNativeEntryState && value is not BtsmtlSkillNativeAnyState && value is not BtsmtlSkillNativeExitState)
                     .Select(value => value.UID));
+                string edgeIds = StringArray(machine.allNodes.OfType<BtsmtlSkillNativeState>()
+                    .SelectMany(value => value.outConnections.OfType<BtsmtlSkillNativeConnection>())
+                    .Select(value => value.UID));
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.RootBinding,
-                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneNativeStateMachine({machineVariable}, new[] {{ {ids} }});");
+                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneNativeStateMachine({machineVariable}, {ids}, {edgeIds});");
             }
             foreach (TimelineAsset timeline in timelines)
             {
@@ -850,7 +819,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string bindings = StringArray(timeline.Data.ExternalBindings.Select(value => value.AuthoringId));
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.RootBinding,
-                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneTimeline({dataVariable}, new[] {{ {tracks} }}, new[] {{ {clips} }}, new[] {{ {sections} }}, new[] {{ {bindings} }});");
+                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneTimeline({dataVariable}, {tracks}, {clips}, {sections}, {bindings});");
             }
         }
 

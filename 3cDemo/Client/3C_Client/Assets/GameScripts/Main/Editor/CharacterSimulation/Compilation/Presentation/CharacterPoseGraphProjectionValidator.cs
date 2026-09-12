@@ -376,6 +376,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     graph?.GraphId.Value ?? string.Empty);
                 return;
             }
+            try
+            {
+                CharacterPoseSubgraphSignatureValidator.RequireMatch(node, child);
+            }
+            catch (Exception exception)
+            {
+                Report(
+                    report,
+                    CharacterPoseGraphValidationCode.InterfaceBindingInvalid,
+                    $"Pose Node '{node.NodeId}': {exception.Message}",
+                    ownerGraph.GraphId,
+                    node.NodeId);
+            }
             if (traverseDependencies)
             {
                 int recursiveIndex = callPath.IndexOf(graph.GraphId);

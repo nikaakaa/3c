@@ -159,6 +159,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new PoseParameterId("character.motor.local-velocity-y");
     }
 
+    public static class CharacterPoseInternalInterfacePortIds
+    {
+        public static readonly PoseInterfacePortId FootPlacementWeight =
+            new PoseInterfacePortId("foot-placement-weight");
+    }
+
     public static class CharacterPoseAuthoringDisplayNames
     {
         public static string ForParameter(PoseParameterId parameterId) =>

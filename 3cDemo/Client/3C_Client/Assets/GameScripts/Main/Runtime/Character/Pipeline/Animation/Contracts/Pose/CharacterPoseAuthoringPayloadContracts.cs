@@ -638,6 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasNode graphOutput = RequireSingleNode(
                 child,
                 CharacterPoseNodeKind.GraphOutput);
+            RequireNoInternalPorts(callSite, child, graphInput, graphOutput);
             var expected = new Dictionary<PoseInterfacePortId, SignaturePort>();
             AddChildPorts(
                 child,
@@ -686,6 +687,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose Subgraph '{graph.GraphId}' requires exactly one {kind} node.");
             }
             return nodes[0];
+        }
+
+        static void RequireNoInternalPorts(
+            CharacterPoseCanvasNode callSite,
+            CharacterPoseCanvasGraph child,
+            CharacterPoseCanvasNode graphInput,
+            CharacterPoseCanvasNode graphOutput)
+        {
+            if (callSite.DynamicPorts.Any(value =>
+                    value != null && value.InterfacePortId ==
+                    CharacterPoseInternalInterfacePortIds.FootPlacementWeight) ||
+                graphInput.DynamicPorts.Any(value =>
+                    value != null && value.InterfacePortId ==
+                    CharacterPoseInternalInterfacePortIds.FootPlacementWeight) ||
+                graphOutput.DynamicPorts.Any(value =>
+                    value != null && value.InterfacePortId ==
+                    CharacterPoseInternalInterfacePortIds.FootPlacementWeight))
+            {
+                throw new InvalidOperationException(
+                    $"Pose Subgraph '{callSite.NodeId}' exposes the internal Foot Placement curve through '{child.GraphId}'.");
+            }
         }
 
         static void AddChildPorts(

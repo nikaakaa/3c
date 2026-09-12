@@ -1,6 +1,6 @@
 ## Why
 
-2026-09-12 交接：节点参数、完整节点定义、唯一端口与引用关系、转移双写清理及其Document版本迁移由 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 统一实施。FlowCanvas继续保存图拓扑，本change保留原生作者业务、运行观察和网络范围；精确任务映射见[交接设计](../unify-skill-authoring-data-model/design.md)。下文v7及已完成实现描述保留原阶段口径，不能作为新模型或v8已交付证明。
+2026-09-12 FSM规划更新：本change负责原生NodeCanvas FSM作者接入、对应Document v8/编译适配和Corin残余清理；普通执行图继续使用FlowCanvas，状态机子图完整替换为原生FSM，不双存。共同业务参数与节点规则消费 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 的成果，不把FSM迁移塞入其范围；旧Step/Edge阶段成果由add-skill-transfer-connections提供。本次只更新本change文档，不覆盖其它窗口正在调整的规划。旧v7与任务勾选只代表历史阶段，原生FSM和v8尚未交付。
 
 BTSMTL技能需要成熟的节点、端口、参数化子图、动作时间轴和运行观察能力，同时保留既有技能编译、ActionInstance、预测、回滚及状态恢复链。本变更把技能收敛为类似Gameplay Ability的独立业务单元，但继续使用项目自己的确定性Simulation与网络管线。
 
@@ -10,14 +10,17 @@ Character RootTree已经不是有效的角色主线入口。角色主线由C# Co
 
 - **BREAKING**：Character不再有Character RootTree主流程、黑板或技能发现入口；`CharacterPipelineDefinition`只装配C#控制合同、SkillDefinitions、SkillGraphs、输入、效果、表现和生成产物。AI不再由BTSMTL拥有，Behavior Designer由独立change负责。
 - **BREAKING**：每个GA式Skill只有一个稳定Entry Graph。`CharacterSkillAuthoringDefinition`是激活与业务合同外壳，Skill FlowGraph是执行体，Macro、State、Condition和Timeline属于该根的正式闭包。
+- **BREAKING**：StateMachine子图使用原生FSM，State/FSMConnection只保存一份状态与转移数据；删除被替代的Skill自定义状态图、旧State/anchor存储及转换补读。Skill根、StateBody、ConditionRule、Sequence/Parallel、Macro和Timeline保留各自业务，不全部改成FSM。
+- Entry、Exit、Any、FSM整体钩子与State生命周期分别映射BTSMTL合同；无条件边不得照搬插件OnFinish，未登记ActionList/ConditionTask、Stacked/Clean语义不开放。运行不启动NodeCanvas/FlowCanvas任务或GraphOwner。
+- 清理Attack无消费Setup包装、重复意图声明及其私有闭包，保留全部连段/退出条件、优先级、中止策略和稳定顺序；Dodge有效并行监控、动作窗口和目标合同按真实消费者保留。StopThreshold归属与攻击清除正式跑步意图不在迁移中擅自改变。
 - 技能编译继续沿`Skill Graph -> Semantic IR -> Numeric Program -> Simulation Session`执行，禁止启动FlowCanvas委托、协程或自动Update；ActionInstance、generation、PredictionKey和中断恢复保持唯一运行链。
 - Skill Timeline保留类似Montage/AbilityTask的动作时序，可拥有AnimationTrack、AnimationClip、Action Slot、混合进入退出请求、命中窗口和取消窗口；Presentation/PoseGraph负责Locomotion混合、Layer、IK和最终Pose，不由GA直接写Pose。
 - Blackboard不再被定义为一个万能共享字典。C# Character State作为只读typed projection；会被GameplayEffect修改的数值进入Ability Attribute；状态准入进入GameplayTag；输入与目标进入Input/TargetData；GA私有值进入Skill Local Blackboard；State、ActionInstance和Frame值按生命周期隔离。
 - FlowCanvas原生`GraphEditor`是Skill authoring的唯一UI宿主：画布、Toolbar、原生Blackboard、Inspector、创建菜单、变量拖拽、selection、Undo和下钻均由原生表面承载；Skill domain adapter只提供provider catalog、typed payload、Mutation和diagnostics，不新增Skill专用UI Toolkit右栏或旁路编辑器。统一Blackboard视图可以投影多个正式provider，但每个provider保留自己的owner、稳定ID、读写权限、生命周期、预测和回滚合同；不得把跨GA状态隐藏到某个Skill Graph，也不得通过变量名或反射猜测owner。
 - Character Program与Simulation Pipeline分离。Character Pipeline只提供Program和Actor注册；Session Composition选择ProgramRuntime、ExecutionBackend、WorldSolver、SimulationPipeline和SessionSource；网络通过Rollback或Server Authority Pass/Adapter接入，不绑定UE或单一传输。
 - 网络同步输入、canonical request、预测身份、确定性Program State、Hash和Snapshot，不复制FlowCanvas图、Blackboard名字、Timeline对象或最终Pose，不为每个技能变量增加独立RPC。
-- Skill Graph复用FlowCanvas原生端口、节点交互、Macro接口、调用节点和导航。Capability统一提供字段、类型、role及编译合同，未登记能力不开放；所有写入口进入真实owner事务和Document v7。
-- Document v7直接读写正式Skill Graph、Macro、Timeline、TreeClip和声明闭包；独立根资产、私有内容、共享owner、接口变化和失败回滚保持一套整包事务。
+- 普通Skill Graph复用FlowCanvas原生端口、节点交互、Macro接口和导航；状态机使用同一GraphEditor中的原生FSM适配。Capability统一提供字段、类型、role及编译合同，未登记能力不开放；所有写入口进入真实owner事务。
+- **BREAKING**：本次FSM外部合同以Document v8原子替代v7，包含稳定状态/转移identity、逻辑端点、edge条件owner、order和生命周期引用。Unity资产仍是正式来源，Document只作工作副本；Exporter/Reconciler/Mutation/Validator共同适配，不增加JSON直编、第二事务或旧版兼容reader。非Skill分片只切换整包版本，不重做业务。
 - 原子迁移精确技能闭包，删除被替代且无消费者的Character RootTree入口；Pose和未迁移的非AI领域保留各自合法模型，Behavior Designer不通过兼容开关恢复旧BTSMTL AI路径。
 
 ## Capabilities
@@ -32,7 +35,7 @@ Character RootTree已经不是有效的角色主线入口。角色主线由C# Co
 - `btsmtl-graph-core`：技能退出旧BaseGraph与TreeWindow作者链；未迁移领域继续原合同。
 - `graph-authoring-domain-framework`：技能采用原生作者基础、provider化变量访问和统一Mutation，保持能力、事务与领域隔离。
 - `graph-authoring-editor-shell`：技能正式入口改为Skill Graph和FlowCanvas原生provider-aware Blackboard/Inspector表面，其他领域不随之迁移。
-- `btsmtl-agent-authoring-document-sync`：v7直接读写正式技能图、Macro、Timeline、TreeClip和声明owner；不写入网络运行状态，非技能分片不改变业务语义。
+- `btsmtl-agent-authoring-document-sync`：v8统一表达FlowGraph/FSM、Macro、Timeline、TreeClip和声明owner；保留唯一事务与非Skill业务形状，正式入口拒绝v7及更早版本。
 
 ## Impact
 

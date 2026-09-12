@@ -1,8 +1,29 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Document v7必须原子替代v6`
+- TO: `### Requirement: Document v8必须原子替代v7`
+
 ## MODIFIED Requirements
+
+### Requirement: Document v8必须原子替代v7
+
+系统 MUST只接受`btsmtl-agent-authoring-document.v8`，删除v7及更早版本的正式reader、writer、manifest识别和兼容入口。五个生命周期工具及唯一资产事务 MUST保持不变；旧包 MUST显式重新checkout，不得静默覆盖未提交Document差异。非Skill分片 MUST保留各自业务形状，整包版本切换不构成其它领域的重新实现。
+
+#### Scenario: 读取v3文档包
+
+- **WHEN** service发现schema为`btsmtl-agent-authoring-document.v3`
+- **THEN** dry-run与apply MUST拒绝该文档且不修改资产
+- **AND** 调用方 MUST显式重新checkout
+
+#### Scenario: 旧v7包仍有未提交修改
+
+- **WHEN** v7包处于DocumentDirty或Conflict并请求进入新协议
+- **THEN** 系统 MUST先保留并报告差异，拒绝直接apply旧包或覆盖该目标
+- **AND** 差异裁决后 MUST经显式checkout与同一v8事务处理，不使用兼容reader
 
 ### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v7`文档包。Behavior Designer AI不以BTSMTL Document为根。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/CharacterController/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v8`文档包。Behavior Designer AI不以BTSMTL Document为根。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/CharacterController/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: AI首次编辑现有Character Controller
 
@@ -14,7 +35,7 @@
 #### Scenario: Agent首次编辑现有Character Controller
 
 - **WHEN** Agent对已有合法Character root显式checkout
-- **THEN** 系统 MUST从当前正式Skill Graph、Macro、Timeline、Presentation与可达Clip Curve生成v7规范目录包
+- **THEN** 系统 MUST从当前正式Skill FlowGraph、原生FSM、Macro、Timeline、Presentation与可达Clip Curve生成v8规范目录包
 - **AND** response MUST返回唯一文档包绝对路径
 - **AND** 系统 MUST不修改或保存Unity资产
 
@@ -27,14 +48,28 @@
 
 #### Scenario: 旧版本文档包请求写入
 
-- **WHEN** Agent使用v6或更早的Document包请求dry-run或apply
-- **THEN** 系统 MUST拒绝该包并要求从精确根重新checkout v7，不自动转换或兼容读取
+- **WHEN** Agent使用v7或更早的Document包请求dry-run或apply
+- **THEN** 系统 MUST拒绝该包并要求从精确根重新checkout v8，不自动转换或兼容读取
 
 ## ADDED Requirements
 
 ### Requirement: 文档必须直接表达正式图和Macro闭包
 
 Document MUST通过稳定业务kind、typed字段、逻辑端口和显式owner表达技能及原生参数化子图接口与调用。导出和对账 MUST直接访问正式作者图，MUST不输出第三方C#类型、私有序列化字段、执行委托或观测状态。私有子图、共享引用、接口变化与根资产 MUST进入同一整包hash、Mutation、保存和反向导出事务。
+
+原生FSM MUST使用同一Skill图文件闭包和正式能力catalog。StateBody MUST由State节点拥有；私有条件图 MUST使用`kind=edge`、`graphId`、`edgeId`、`referenceKey=condition`归属转移；FSM整体生命周期执行体 MUST由唯一系统钩子节点拥有。转移 MUST保存稳定identity、逻辑端点、condition、priority、abortPolicy和同来源唯一order，不保存State steps；非转移边不得携带转移参数。Exporter、Reconciler、Mutation、Validator和编译 MUST消费同一定义，不新增FSM专用包、第二事务或JSON直编入口。
+
+#### Scenario: 只由FSM连接拥有的条件图
+
+- **WHEN** Agent修改一条原生FSM转移的私有ConditionRule
+- **THEN** 该条件图 MUST进入完整导出、typed Mutation、owner事务、复制/删除和反向导出闭包
+- **AND** 错误edge owner、重复order或旧state steps MUST被明确拒绝，不从旧图补读
+
+#### Scenario: FSM迁移中反向导出失败
+
+- **WHEN** 原生FSM和部分StateBody已创建但后续保存或反向导出失败
+- **THEN** 同一事务 MUST恢复原有资产、引用和正式package，并回收仅本次创建的对象
+- **AND** MUST不保留半迁移状态机，不发布Program或第二份可编辑图
 
 #### Scenario: 修改共享子图接口
 - **WHEN** Agent修改可写共享子图接口及其调用连接

@@ -18,6 +18,14 @@
 
 ### Requirement: 运行观察必须选择精确实例和调用位置
 
+原生FSM观察 MUST使用同一Program SourceMap定位State、Transition与调用路径，MUST不为获取active state或转移结果启动FSM、执行插件任务或写入作者序列化状态。切换到FSM页 MUST保留当前Session、Actor、Skill instance和generation，不绑定插件GraphOwner作为第二运行来源。
+
+#### Scenario: 打开正在执行的原生FSM页
+
+- **WHEN** 作者在现有Skill观察会话中进入原生FSM
+- **THEN** 高亮 MUST来自所选Program实例的真实状态和转移事件
+- **AND** 插件图 MUST保持未运行，观察不得推进状态、Timeline或条件求值
+
 观察 MUST绑定Session、角色、技能释放实例、generation、产物及调用路径。共享子图的不同调用 MUST分别定位；父图显示调用状态，进入子图 MUST继承所选调用实例。观察绑定和页面历史 MUST保持editor-only。
 
 #### Scenario: 同一共享子图被调用两次

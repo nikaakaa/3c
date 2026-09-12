@@ -1,8 +1,8 @@
 ## 当前执行位置
 
-2026-09-12 交接说明：Skill节点参数、完整定义、唯一端口、引用生命周期和转移双写由 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md) 统一执行。原2.2.3、2.3.2—2.3.4、3.1.3、3.2.1/3.2.3保留当时实现记录，不能据此认定现在已无重复定义；新增缺口只在新change勾选。3.3.1中状态机结构节点的步骤输出由新change第4节替代，普通组合步骤不因此迁移。
+2026-09-12 FSM更新：第9节是原生NodeCanvas FSM、Document v8、编译适配和Corin清理的唯一新增执行清单。共同业务参数/规则消费unify-skill-authoring-data-model成果；既有转移线及旧Step迁移消费add-skill-transfer-connections成果，不在本表重复勾选其实现。此前向数据层交接整个FSM/版本改造的说明撤销；不修改其它窗口正在调整的文档。
 
-原2.4.2/5.3的Skill owner与迁移回滚部分接收新change 5.3/5.4/7.4结果，其余跨域/交互验收仍归本表；6.2作者来源版本接收新change 6.3/6.4结果。运行观察7.x、网络4.5.5和端到端8.1仍由本change负责。原TreeDirty和v7 job/hash只表示记录时的状态；转移专项已记录后续裁决与迁移，新阶段执行须读取当时的live状态。完整交接见[design D9/D10](../unify-skill-authoring-data-model/design.md)。
+原2.4.2/5.3、6.2及7.x中的FSM相关owner、来源映射与观察缺口分别由第9节接入，原运行观察、网络和跨域任务保持原范围。下文“当前”、TreeDirty、v7 job/hash和已勾选项均保留为旧FlowCanvas阶段记录，不能证明原生FSM、v8或本次清理完成；新阶段必须读取实际来源。最新职责与冲突见[design第9—11节](design.md)。
 
 当前：公开能力对账完成；原生技能编译、Macro参数、Timeline／TreeClip、provider合同、黑板声明、私有闭包复制、端口与边诊断、子调用代次、运行导航及Host实例选择代码已落地。Document基础已接入，按作者A选择统一独立技能根；现行全局协议为v7。旧自研AI作者/运行链已经删除，Behavior Designer不进入BTSMTL Skill Document。Corin Skill资产已完成最后迁移并通过正式checkout/dry-run闭合；Skill provider authoring已经收敛到FlowCanvas原生Blackboard、Inspector和菜单，旧自定义右侧面板已删除；本任务还剩Build、运行观察、网络和事务证据，不把编译或Clean文档状态冒充这些证据。
 
@@ -22,6 +22,27 @@
 本表只解释缺口，不替代各任务的完整完成标准。任务总量随架构决策补充而变化，不再使用固定总数推算进度；编译错误只影响对应验证，不作为停止独立代码或文档工作的理由。
 
 维护规则：每次小步提交后同步本表中的对应项和提交证据；结束一项后继续下一项，不到最后再统一补记。
+
+## 9. 原生FSM与Corin清理新增目标
+
+本节是待实施计划，此次文档更新不运行其中任何Unity/Build/Play步骤，不新增测试或手动验证任务。既有已完成代码按实际成果接收，冲突改动先裁决。
+
+- [ ] 9.1 按精确Corin Definition记录当前源码、Unity作者资产、Document同步状态及全部未提交差异；交付已有Edge与旧Step来源清单，不用截图恢复旧结构。
+- [ ] 9.2 接收共同业务定义和转移专项有效成果，列出原生FSM适配的字段、逻辑端点、引用、编译binding和插件扩展清单；交付逐能力差异，禁止新增同义定义。
+- [ ] 9.3 实现原生FSM、FSMState和FSMConnection领域适配及唯一owner，普通执行图保留FlowCanvas；交付真实资产类型/调用关系，删除可写状态图镜像方案。
+- [ ] 9.4 在同一原生GraphEditor接入创建、转移Inspector、StateBody/Condition下钻、provider、复制和Undo；交付实际Mutation调用链和插件补丁清单，Inspector不执行迁移/Build。
+- [ ] 9.5 映射Entry/Prime、Any、Exit、FSM整体钩子与State生命周期，拒绝未登记插件任务及Stacked/Clean运行语义；交付与现有停止、OnExit、Action/Timeline清理顺序的语义对照。
+- [ ] 9.6 扩展正式graph/node/reference catalog与Document v8严格合同，包含edge owner、order、FSM钩子和逻辑端点；交付所有支持类型的导出/创建/修改/删除/校验覆盖表，拒绝旧版本和非法任务。
+- [ ] 9.7 将Exporter、Mapper、Validator、OwnerCollector、Applier和Mutation接入同一FSM闭包及资产事务；交付完整planned diff与失败恢复边界，不增加第二service或JSON直编。
+- [ ] 9.8 将编译读取从全量FlowNode/BinderConnection强转改为读取各正式图的共同业务合同，发射既有IR/Program；交付状态、条件、顺序、中止、生命周期和SourceMap对照，不构造旧状态图中转。
+- [ ] 9.9 将真实Program状态与转移诊断映射到原生FSM，并接入既有实例/版本选择；交付只读观察调用链，确认无StartGraph、任务Execute或作者状态写入。
+- [ ] 9.10 生成稳定identity/端点/condition/priority/abortPolicy/order迁移计划，报告资产对象重建及所有引用重映射；交付并列转移冲突裁决，不重排已正确转移。
+- [ ] 9.11 核对Corin全部typed消费者后生成Attack Setup与图内意图副本删除闭包，保留Dodge有效并行、Hit/Recovery/IFrame与ActionTarget；交付保留/删除清单，配置归属未裁决部分明确不完成、不临时替代。
+- [ ] 9.12 在完整支持已具备后通过唯一正式事务迁移精确Skill资产、反向导出v8并重新对账；交付applied/saved/Clean及稳定引用结果，不覆盖DocumentDirty/Conflict，不手改YAML。
+- [ ] 9.13 通过已有Validator和精确Definition正式Build核对迁移后Program、Projection与来源身份，读取当次Console；交付业务语义对照，原生FSM运行始终禁用，相关运行证据接入原8.1。
+- [ ] 9.14 独立取得m_Name重复序列化错误的实际类型和继承链，按确认来源修复作者序列化；交付定位证据，不全局改名、不清缓存掩盖、不以FSM迁移完成代替。
+- [ ] 9.15 删除已替代且无消费者的Skill自定义状态机存储、旧适配、补读和一次性迁移入口；交付消费者扫描与剩余合法非Skill/普通FlowGraph类型说明。
+- [ ] 9.16 按design第11节归并版本、作者图范围、外层Action状态机、Sequence和共享View规范差异；同步实施后的current/project/技能及跨change职责，保留有效Scenario并执行严格校验，不覆盖其它窗口文档。
 
 ## 1. 基线与替代范围
 

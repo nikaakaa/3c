@@ -32,6 +32,60 @@ Skill Graph MUST以FlowCanvas原生`GraphEditor`作为唯一作者UI宿主。画
 - **THEN** Timeline MUST由原生Timeline编辑器维护Track、Clip、Action Slot和动作窗口
 - **AND** Timeline MUST只向Program/Presentation发出播放与窗口合同，不得直接混合Locomotion、IK或最终Pose
 
+### Requirement: Skill状态机必须以原生FSM作为唯一作者资产
+
+Skill的StateMachine子图 MUST由NodeCanvas原生FSM及正式FSMState/FSMConnection适配保存，普通Skill根、StateBody、ConditionRule、Macro和TimelineBody MUST保持FlowCanvas执行图职责。各图 MUST通过同一原生GraphEditor编辑和导航；同一个状态机 MUST不同时保存自定义FlowGraph、图外转移表或另一份可写投影。StateBody MUST由State唯一拥有，私有ConditionRule MUST由转移Edge唯一拥有，FSM MUST归属其正式调用owner和实际资产文件。
+
+#### Scenario: 编辑攻击连段状态机
+
+- **WHEN** 作者从Attack入口打开Attack Combo StateMachine并修改一条转移
+- **THEN** 修改 MUST作用于原生FSM连接的唯一业务参数，Document和编译读取同一目标
+- **AND** StateBody与Timeline MUST保持原调用关系，不重新生成旧状态图参与保存或编译
+
+#### Scenario: 复制包含状态机的技能
+
+- **WHEN** 作者复制含私有FSM、StateBody和Edge条件图的Skill
+- **THEN** 副本 MUST拥有独立私有闭包并重映射稳定引用，共享资产仍显式引用原目标
+- **AND** 全部owner MUST进入同一复制与Undo事务
+
+### Requirement: 原生FSM能力必须遵守BTSMTL生命周期和转移语义
+
+原生Entry/Prime、Any、Exit与整体OnFSMEnter/Exit MUST分别映射正式入口路由、任意状态路由、退出调用与FSM整体钩子，MUST不混同StateBody的OnEnter/Root/OnExit。条件、priority、abortPolicy和同来源唯一order MUST只存于转移连接。原生无condition的OnFinish行为 MUST不得代替BTSMTL无条件边或state-root-completed条件；未登记的原生任务、栈调用和执行方式 MUST拒绝。ActionList/ConditionTask只可通过正式typed定义与compiler binding表达业务，不能交给插件运行。
+
+#### Scenario: 状态尚未完成但取消条件成立
+
+- **WHEN** 恢复窗口内闪避输入、动作准入等正式取消条件成立
+- **THEN** Program MUST按既有priority/order与中止合同选择转移，不等待插件状态完成
+- **AND** MUST先停止源主体并完成其OnExit及Action/Timeline清理，再依既有合同进入目标或退出调用
+
+#### Scenario: 原生任务没有编译映射
+
+- **WHEN** 创建、粘贴、导入或Document目标包含未登记ActionTask/ConditionTask
+- **THEN** 正式能力校验 MUST拒绝该目标并定位实体
+- **AND** MUST不通过插件Execute、Condition.Check、协程或GraphOwner补足执行
+
+#### Scenario: FSM进入钩子与默认状态并存
+
+- **WHEN** FSM具有整体进入业务与带条件的入口路由
+- **THEN** 两者 MUST使用各自唯一正式引用和编译语义，OnFSMEnter不得作为状态转移端点
+- **AND** Prime或入口路由 MUST不同时保存两份默认目标，也不得丢弃入口条件
+
+### Requirement: Corin清理必须按真实消费者保留动作业务
+
+Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Setup、Clear Directional Dodge Run Intent及对应图内意图声明和失去引用的私有空图。清理 MUST先核对全部Skill、Timeline、typed目标、provider和编译消费者，不按显示名或缺少Get节点判定无消费。Dodge有效Body/Exit Monitor并行、动作窗口和目标快照 MUST保留；正式ControlModule跑步意图的设置/清理时机 MUST不因删除副本改变。StopThreshold消费者未完成正式归属裁决及迁移前 MUST不删除仍被引用的声明，也不新增临时共享provider。
+
+#### Scenario: 多条转移指向同一出口
+
+- **WHEN** Attack状态的自然完成、恢复前段闪避取消、恢复后段移动取消均指向同一Exit
+- **THEN** 系统 MUST保留每条转移identity、condition、priority、abortPolicy和order，只改善条件与目标摘要
+- **AND** MUST不合并条件、复制Exit状态或移除动作准入及连段边
+
+#### Scenario: Dodge同时播放和监控退出
+
+- **WHEN** 清理Dodge中的无消费Setup写入
+- **THEN** Timeline Body和Exit Monitor MUST保持原并行运行与停止语义
+- **AND** MUST不将整体替换成等待Timeline结束才检查退出的Sequence
+
 ### Requirement: 所有作者入口必须遵守同一能力与事务合同
 
 节点创建、字段修改、连线、改接、粘贴、删除、子图接口修改和撤销 MUST采用同一领域能力和端口规则。合法操作 MUST进入真实资产owner的一次事务；非法操作 MUST在正式数据被部分写入前拒绝。跨领域粘贴、未经声明的类型转换及未提供编译合同的节点 MUST拒绝。

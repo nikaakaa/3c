@@ -54,7 +54,7 @@ TimelineEditorWindow
 - Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
 - Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
 - Timeline 窗口新增完整构建后的 `WindowOpened` 生命周期通知，Runtime Observation Bridge 在 Slate Surface、属性区和恢复状态都建立后再刷新；不再依赖过早的 AssetOpened 时机。
-- Timeline 顶部显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
+- Timeline 顶部和对应 Graph Shell/SkillGraph Preview 区显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
 - C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。公共 binding 中剩余旧 JSON 方法由 C# authoring owner 清理。
 
 ## 正式能力对账
@@ -77,7 +77,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 ## 尚未完成
 
 - 场景预览的非 Skill 正式目标、角色目标选择和纯 Timeline 调用入口仍未完成；SceneAsset/ContextId 的精确启动定位已完成。
-- 作者 Timeline revision 与真实 Build/adoption 的精确关联仍未完成；当前只展示 coordinator 返回的真实运行版本状态。
+- 作者 Timeline revision 与真实 Build/adoption 的精确匹配仍未完成；当前两者并列显示，分别来自 TimelineData 和 coordinator，避免伪造采用关系。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
 - C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

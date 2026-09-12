@@ -46,6 +46,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly ToolbarMenu m_SkillMenu;
         readonly ToolbarButton m_InputRecordButton;
         readonly LongField m_RestoreTickField;
+        readonly IntegerField m_HistoryOffsetField;
         readonly ToolbarButton m_RestoreButton;
         readonly LongField m_ReplayFromTickField;
         readonly LongField m_ReplayToTickField;
@@ -104,6 +105,10 @@ namespace ThirdPersonCharacter.Editor.Preview
 
             m_RestoreTickField = new LongField("Restore") { value = -1 };
             m_RestoreTickField.style.width = 115f;
+            m_HistoryOffsetField = new IntegerField("Segment") { value = 0 };
+            m_HistoryOffsetField.style.width = 95f;
+            m_HistoryOffsetField.RegisterValueChangedCallback(evt =>
+                RuntimeDebugSession.Shared.SetHistoryOffset(Mathf.Max(0, evt.newValue)));
             m_RestoreButton = new ToolbarButton(Restore) { text = "Restore" };
             m_ReplayFromTickField = new LongField("Replay From") { value = -1 };
             m_ReplayFromTickField.style.width = 125f;
@@ -111,6 +116,7 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_ReplayToTickField.style.width = 90f;
             m_ReplayButton = new ToolbarButton(Replay) { text = "Replay" };
             historyControls.Add(m_RestoreTickField);
+            historyControls.Add(m_HistoryOffsetField);
             historyControls.Add(m_RestoreButton);
             historyControls.Add(m_ReplayFromTickField);
             historyControls.Add(m_ReplayToTickField);
@@ -354,6 +360,7 @@ namespace ThirdPersonCharacter.Editor.Preview
             RuntimeExecutionHistory history = RuntimeDebugSession.Shared.BuildExecutionHistory();
             bool hasHistory = history != null && history.Checkpoints.Count != 0;
             m_RestoreTickField.SetDisplay(hasHistory);
+            m_HistoryOffsetField.SetDisplay(hasHistory);
             m_RestoreButton.SetDisplay(hasHistory);
             m_ReplayFromTickField.SetDisplay(hasHistory);
             m_ReplayToTickField.SetDisplay(hasHistory);
@@ -363,6 +370,7 @@ namespace ThirdPersonCharacter.Editor.Preview
                 m_HistoryCaptureId = Guid.Empty;
                 m_HistoryInputsInitialized = false;
                 m_RestoreButton.SetEnabled(false);
+                m_HistoryOffsetField.SetEnabled(false);
                 m_ReplayButton.SetEnabled(false);
                 return;
             }
@@ -388,6 +396,8 @@ namespace ThirdPersonCharacter.Editor.Preview
             }
             bool running = m_Operations.Status.State == BtsmtlScenePlayState.Running ||
                            m_Operations.Status.State == BtsmtlScenePlayState.Paused;
+            m_HistoryOffsetField.SetValueWithoutNotify(RuntimeDebugSession.Shared.HistoryOffset);
+            m_HistoryOffsetField.SetEnabled(RuntimeDebugSession.Shared.HasCaptureHistory);
             m_RestoreButton.SetEnabled(running && m_Operations.SupportsPresentationCheckpointRestore && checkpoint.CanRestore);
             m_ReplayButton.SetEnabled(running && m_Operations.SupportsInputReplay && !history.HasExternalResults);
         }

@@ -279,6 +279,7 @@ namespace Slate
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
         [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
+        [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
 #if UNITY_6000_5_OR_NEWER
@@ -658,6 +659,11 @@ namespace Slate
             embeddedRuntimeTime = runtimeTime;
         }
 
+        public void ConfigureEmbeddedHistoryTime(System.Func<float?> historyTime)
+        {
+            embeddedHistoryTime = historyTime;
+        }
+
         public void InitializeStandalone(
             Cutscene newCutscene,
             System.Action repaint,
@@ -758,6 +764,7 @@ namespace Slate
             endWindows = null;
             embeddedFrameRate = null;
             embeddedRuntimeTime = null;
+            embeddedHistoryTime = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             embeddedSurface = false;
@@ -1348,6 +1355,7 @@ namespace Slate
             ///---
 
             DrawRuntimeOverlay();
+            DrawHistoryOverlay();
             DrawGuides();
             AcceptDrops();
 
@@ -1450,6 +1458,20 @@ namespace Slate
             GUI.color = new Color(0.25f, 0.85f, 1f, 0.9f);
             GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
             GUI.Label(new Rect(x + 4f, centerRect.y + 2f, 64f, 18f), "Runtime", EditorStyles.label);
+            GUI.color = Color.white;
+        }
+
+        void DrawHistoryOverlay()
+        {
+            if (!embeddedSurface || embeddedHistoryTime == null)
+                return;
+            float? historyTime = embeddedHistoryTime();
+            if (!historyTime.HasValue || historyTime.Value < viewTimeMin || historyTime.Value > viewTimeMax)
+                return;
+            float x = TimeToPos(historyTime.Value) + centerRect.x;
+            GUI.color = new Color(0.85f, 0.45f, 1f, 0.9f);
+            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
+            GUI.Label(new Rect(x + 4f, centerRect.y + 20f, 64f, 18f), "History", EditorStyles.label);
             GUI.color = Color.white;
         }
 

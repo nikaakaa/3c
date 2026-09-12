@@ -394,6 +394,7 @@ namespace BTSMTL.Timeline.Editor
         Clip m_CopiedClip;
         BtsmtlSlateTimelineViewState? m_PendingViewState;
         float? m_RuntimeVisualTime;
+        float? m_HistoryVisualTime;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -733,6 +734,7 @@ namespace BTSMTL.Timeline.Editor
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
             m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null, () => m_Session.FrameRate, ShowAddTrackMenu, CopyProxyClip);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
+            m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);
             if (!string.IsNullOrEmpty(m_PendingTrackFocus) || !string.IsNullOrEmpty(m_PendingClipFocus))
             {
                 FocusSource(m_PendingTrackFocus, m_PendingClipFocus);
@@ -1433,6 +1435,7 @@ namespace BTSMTL.Timeline.Editor
             if (m_Cutscene == null)
                 return;
             m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
+            m_HistoryVisualTime = null;
             foreach (KeyValuePair<string, BtsmtlSlateTrack> pair in m_ProxyTracks)
             {
                 bool active = activeTracks != null && activeTracks.ContainsKey(pair.Key);
@@ -1451,10 +1454,30 @@ namespace BTSMTL.Timeline.Editor
         public void ClearRuntimeOverlay()
         {
             m_RuntimeVisualTime = null;
+            m_HistoryVisualTime = null;
             foreach (BtsmtlSlateTrack track in m_ProxyTracks.Values)
                 track.SetRuntimeActive(true);
             foreach (BtsmtlSlateActionClip clip in m_ProxyClips.Values)
                 clip.SetRuntimeStatus(string.Empty);
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
+        }
+
+        public void ApplyHistoryOverlay(
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (m_Cutscene == null)
+                return;
+            m_HistoryVisualTime = Mathf.Max(0f, visualTime);
+            foreach (KeyValuePair<string, BtsmtlSlateTrack> pair in m_ProxyTracks)
+                pair.Value.SetRuntimeActive(activeTracks != null && activeTracks.ContainsKey(pair.Key));
+            foreach (KeyValuePair<string, BtsmtlSlateActionClip> pair in m_ProxyClips)
+            {
+                string status = string.Empty;
+                activeClips?.TryGetValue(pair.Key, out status);
+                pair.Value.SetRuntimeStatus(status);
+            }
             m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 

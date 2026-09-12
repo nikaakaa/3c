@@ -147,6 +147,14 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
         }
 
+        public void ApplyHistoryObservation(
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
+        }
+
         public void ClearRuntimeObservation()
         {
             m_SlateProjection?.ClearRuntimeOverlay();

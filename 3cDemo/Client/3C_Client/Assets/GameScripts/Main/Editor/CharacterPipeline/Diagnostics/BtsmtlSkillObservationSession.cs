@@ -191,12 +191,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RuntimeSourceElementKey source = item.Source;
                 if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
-                    activeTracks[source.TrackAuthoringId] = item.Status;
+                    activeTracks[source.TrackAuthoringId] = item.Event.Payload.Status;
                 else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
-                    activeClips[source.ClipAuthoringId] = item.Status;
+                    activeClips[source.ClipAuthoringId] = item.Event.Payload.Status;
             }
-            window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
+            if (m_Session.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
+                window.ApplyHistoryObservation(summary.VisualTime, activeTracks, activeClips);
+            else
+                window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
         }
 
         void ClearTimelineOverlay()

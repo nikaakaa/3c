@@ -35,17 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public IReadOnlyList<UnityEngine.Object> GetTransactionOwners(CharacterPresentationMutationTransaction transaction)
         {
             var owners = new List<UnityEngine.Object> { m_Profile };
-            foreach (CharacterPresentationMutation mutation in transaction?.Mutations ?? Array.Empty<CharacterPresentationMutation>())
-            {
-                if (mutation is SetAnimationEventGraphMutation eventGraph &&
-                    eventGraph.Graph &&
-                    !owners.Contains(eventGraph.Graph))
-                    owners.Add(eventGraph.Graph);
-                if (mutation is SetAnimationEventGraphContentMutation content &&
-                    content.Graph &&
-                    !owners.Contains(content.Graph))
-                    owners.Add(content.Graph);
-            }
             return owners;
         }
 
@@ -221,32 +210,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"Mutation '{mutation.Kind}' is not owned by the Presentation Profile surface.");
             }
-        }
-
-        public void ApplyEventGraphMutation(CharacterPresentationMutation mutation)
-        {
-            if (mutation == null ||
-                !string.Equals(mutation.OwnerId, m_ProfileId, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Animation Event Graph mutation does not target '{m_ProfileId}'.");
-            }
-            if (mutation is SetAnimationEventGraphMutation eventGraph)
-            {
-                m_Profile.SetEventGraph(eventGraph.Graph);
-                return;
-            }
-            if (mutation is SetAnimationEventGraphContentMutation content)
-            {
-                content.Graph.ApplyAuthoringDocument(
-                    AgentAuthoringEventGraphDocumentMapper.Map(
-                        content.Target,
-                        content.Layout,
-                        content.Macros));
-                return;
-            }
-            throw new InvalidOperationException(
-                $"Mutation '{mutation.Kind}' is not owned by the Animation Event Graph surface.");
         }
 
         void CreateLinkedPoseImplementation(
@@ -937,9 +900,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public void ApplyProfileMutation(CharacterPresentationMutation mutation) =>
             throw new InvalidOperationException("Presentation Profile mutations require the Profile owner surface.");
-
-        public void ApplyEventGraphMutation(CharacterPresentationMutation mutation) =>
-            throw new InvalidOperationException("Animation Event Graph mutations require the Profile owner surface.");
 
         CharacterPoseStateMachineDefinition FindStateMachine(string id)
         {

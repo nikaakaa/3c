@@ -61,6 +61,15 @@ namespace ThirdPersonCharacter.Editor.Preview
             AddToClassList("btsmtl-scene-play-graph-shell-toolbar");
             style.flexGrow = 1f;
 
+            var sceneControls = new Foldout { text = "场景控制", value = true };
+            var experimentControls = new Foldout { text = "试验与采用", value = true };
+            var observationControls = new Foldout { text = "观察", value = true };
+            var historyControls = new Foldout { text = "历史与录制", value = false };
+            Add(sceneControls);
+            Add(experimentControls);
+            Add(observationControls);
+            Add(historyControls);
+
             m_ContextField = new ObjectField("Scene Play")
             {
                 objectType = typeof(BtsmtlScenePlayContext),
@@ -68,30 +77,30 @@ namespace ThirdPersonCharacter.Editor.Preview
             };
             m_ContextField.style.width = 250f;
             m_ContextField.RegisterValueChangedCallback(_ => Refresh());
-            Add(m_ContextField);
+            sceneControls.Add(m_ContextField);
 
             m_StartPaused = new Toggle("Paused") { value = false };
             m_StartPaused.style.width = 70f;
-            Add(m_StartPaused);
+            sceneControls.Add(m_StartPaused);
 
             m_StartButton = new ToolbarButton(Start) { text = "Start" };
             m_PauseButton = new ToolbarButton(Pause) { text = "Pause" };
             m_ResumeButton = new ToolbarButton(Resume) { text = "Resume" };
             m_ResetButton = new ToolbarButton(Reset) { text = "Reset" };
             m_StopButton = new ToolbarButton(Stop) { text = "Stop" };
-            Add(m_StartButton);
-            Add(m_PauseButton);
-            Add(m_ResumeButton);
-            Add(m_ResetButton);
-            Add(m_StopButton);
+            sceneControls.Add(m_StartButton);
+            sceneControls.Add(m_PauseButton);
+            sceneControls.Add(m_ResumeButton);
+            sceneControls.Add(m_ResetButton);
+            sceneControls.Add(m_StopButton);
 
             m_BuildMenu = new ToolbarMenu { text = "Build" };
             m_SkillMenu = new ToolbarMenu { text = "Skill" };
-            Add(m_BuildMenu);
-            Add(m_SkillMenu);
+            experimentControls.Add(m_BuildMenu);
+            experimentControls.Add(m_SkillMenu);
 
             m_InputRecordButton = new ToolbarButton(ToggleInputRecording) { text = "Record Input" };
-            Add(m_InputRecordButton);
+            observationControls.Add(m_InputRecordButton);
 
             m_RestoreTickField = new LongField("Restore") { value = -1 };
             m_RestoreTickField.style.width = 115f;
@@ -101,11 +110,11 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_ReplayToTickField = new LongField("To") { value = -1 };
             m_ReplayToTickField.style.width = 90f;
             m_ReplayButton = new ToolbarButton(Replay) { text = "Replay" };
-            Add(m_RestoreTickField);
-            Add(m_RestoreButton);
-            Add(m_ReplayFromTickField);
-            Add(m_ReplayToTickField);
-            Add(m_ReplayButton);
+            historyControls.Add(m_RestoreTickField);
+            historyControls.Add(m_RestoreButton);
+            historyControls.Add(m_ReplayFromTickField);
+            historyControls.Add(m_ReplayToTickField);
+            historyControls.Add(m_ReplayButton);
 
             m_Status = new Label();
             m_Status.style.marginLeft = 6f;

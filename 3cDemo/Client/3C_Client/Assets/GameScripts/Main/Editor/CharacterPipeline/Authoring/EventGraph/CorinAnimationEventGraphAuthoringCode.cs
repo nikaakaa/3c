@@ -48,23 +48,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 throw new InvalidOperationException(
                     $"Corin Animation Event Graph generation requires output path '{OutputPath}'.");
 
-            EnsureFolder();
             CharacterAnimationEventGraph graph =
-                AssetDatabase.LoadAssetAtPath<CharacterAnimationEventGraph>(
-                    OutputPath);
-            if (!graph)
-            {
-                if (AssetDatabase.LoadMainAssetAtPath(OutputPath))
-                    throw new InvalidOperationException(
-                        $"Output path '{OutputPath}' is occupied by another asset type.");
-                graph = ScriptableObject.CreateInstance<CharacterAnimationEventGraph>();
-                graph.name = "CorinAnimationEventGraph";
-                AssetDatabase.CreateAsset(graph, OutputPath);
-            }
-            else
-            {
-                graph.ClearAuthoringContent();
-            }
+                EventGraphAuthoringCode.EnsureRoot<CharacterAnimationEventGraph>(
+                    context,
+                    GraphIdentity,
+                    ContentRevision,
+                    "CorinAnimationEventGraph");
 
             Variable<float> actionWeight = graph.DeclareVariable<float>(
                 "animation.action-weight",
@@ -154,13 +143,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             return context.Complete(graph);
         }
 
-        static void EnsureFolder()
-        {
-            const string parent =
-                "Assets/Configs/Character/Corin/Pipeline/Presentation";
-            const string folder = "EventGraphs";
-            if (!AssetDatabase.IsValidFolder(parent + "/" + folder))
-                AssetDatabase.CreateFolder(parent, folder);
-        }
     }
 }

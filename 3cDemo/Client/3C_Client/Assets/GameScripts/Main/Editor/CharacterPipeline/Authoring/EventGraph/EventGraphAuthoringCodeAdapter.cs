@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
 
             context.AddStatement(
                 BtsmtlAuthoringCodeEmissionPhase.Create,
-                $"var {graphVariable} = UnityEngine.ScriptableObject.CreateInstance<{TypeExpression(graph.GetType())}>();");
+                $"var {graphVariable} = EventGraphAuthoringCode.EnsureRoot<{TypeExpression(graph.GetType())}>(context, {StringLiteral(graph.AuthoringId)}, {StringLiteral(graph.ContentRevision)}, {StringLiteral(graph.name)});");
             EmitCanvas(context, graphVariable, graph);
             EmitVariables(context, graphVariable, graph);
 
@@ -116,9 +116,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             foreach (Connection connection in graph.GetAllConnections())
                 EmitConnection(context, graphVariable, connection, nodeVariables);
 
-            context.AddStatement(
-                BtsmtlAuthoringCodeEmissionPhase.RootBinding,
-                $"{graphVariable}.ConfigureAuthoringIdentity({StringLiteral(graph.AuthoringId)}, {StringLiteral(graph.ContentRevision)});");
         }
 
         static void AddUsings(BtsmtlAuthoringCodeExportContext context)
@@ -129,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             context.AddUsing("FlowCanvas.Nodes");
             context.AddUsing("NodeCanvas.Framework");
             context.AddUsing("ParadoxNotion");
+            context.AddUsing("ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph");
             context.AddUsing("UnityEngine");
         }
 

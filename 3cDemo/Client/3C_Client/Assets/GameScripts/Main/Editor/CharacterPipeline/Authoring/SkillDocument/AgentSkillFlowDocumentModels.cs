@@ -58,16 +58,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
     }
 
     [Serializable]
-    public sealed class AgentPackageSkillFlowStep
-    {
-        public string id;
-        public string name;
-        public string conditionGraphId;
-        public int priority;
-        public string abortPolicy;
-    }
-
-    [Serializable]
     public sealed class AgentPackageSkillFlowNode
     {
         public string id;
@@ -91,6 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
         public string kind;
         public AgentPackageSkillFlowEdgeEndpoint from;
         public AgentPackageSkillFlowEdgeEndpoint to;
+        public AgentPackageSkillGraphOwner owner;
         public string conditionGraphId;
         public int priority;
         public string abortPolicy;

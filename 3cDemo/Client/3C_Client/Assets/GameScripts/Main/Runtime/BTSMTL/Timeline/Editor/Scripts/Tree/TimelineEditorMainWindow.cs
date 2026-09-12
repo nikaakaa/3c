@@ -66,6 +66,9 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         BtsmtlSlateTimelineViewState m_ViewState;
 
+        [SerializeField]
+        float m_DetailsHeight = 180f;
+
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
@@ -259,13 +262,15 @@ namespace BTSMTL.Timeline.Editor
             rootVisualElement.Add(m_SlateSurface);
             m_DetailsHost = new VisualElement { name = "timeline-details" };
             m_DetailsHost.style.flexShrink = 0f;
-            m_DetailsHost.style.maxHeight = 260f;
+            m_DetailsHost.style.height = Mathf.Clamp(m_DetailsHeight, 80f, 320f);
+            m_DetailsHost.style.maxHeight = 320f;
             m_DetailsHost.style.paddingLeft = 8f;
             m_DetailsHost.style.paddingRight = 8f;
             m_DetailsHost.style.paddingTop = 4f;
             m_DetailsHost.style.paddingBottom = 4f;
             rootVisualElement.Add(m_DetailsHost);
             m_SlateProjection.SelectionChanged += RebuildDetails;
+            m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
             RebuildDetails(m_SlateProjection.Selection);
             if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
                 m_SlateProjection.RestoreViewState(m_ViewState);
@@ -387,12 +392,20 @@ namespace BTSMTL.Timeline.Editor
         {
             CaptureViewState();
             if (m_SlateProjection != null)
+            {
                 m_SlateProjection.SelectionChanged -= RebuildDetails;
+                m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
+            }
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
             m_DetailsHost = null;
             m_Timeline = null;
+        }
+
+        void OnAuthoringIssue(string message)
+        {
+            SetStatus(string.IsNullOrEmpty(message) ? $"Frame {TimelineUtility.FrameRate}" : message);
         }
 
         void CaptureViewState()

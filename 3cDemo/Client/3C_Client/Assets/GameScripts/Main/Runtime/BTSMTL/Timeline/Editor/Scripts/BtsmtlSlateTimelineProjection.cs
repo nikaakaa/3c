@@ -15,6 +15,7 @@ namespace BTSMTL.Timeline.Editor
     {
         [SerializeField] float m_ViewTimeMin;
         [SerializeField] float m_ViewTimeMax;
+        [SerializeField] float m_CurrentTime;
         [SerializeField] Vector2 m_ScrollPosition;
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] string m_ClipAuthoringId;
@@ -22,12 +23,14 @@ namespace BTSMTL.Timeline.Editor
         public BtsmtlSlateTimelineViewState(
             float viewTimeMin,
             float viewTimeMax,
+            float currentTime,
             Vector2 scrollPosition,
             string trackAuthoringId,
             string clipAuthoringId)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
+            m_CurrentTime = currentTime;
             m_ScrollPosition = scrollPosition;
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
@@ -35,6 +38,7 @@ namespace BTSMTL.Timeline.Editor
 
         public float ViewTimeMin => m_ViewTimeMin;
         public float ViewTimeMax => m_ViewTimeMax;
+        public float CurrentTime => m_CurrentTime;
         public Vector2 ScrollPosition => m_ScrollPosition;
         public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
         public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
@@ -472,6 +476,7 @@ namespace BTSMTL.Timeline.Editor
         public Cutscene Cutscene => m_Cutscene;
         public TimelineEditorSelection Selection => m_Session.Selection;
         public event Action<TimelineEditorSelection> SelectionChanged;
+        public event Action<string> AuthoringIssue;
 
         public BtsmtlSlateTimelineViewState CaptureViewState()
         {
@@ -479,6 +484,7 @@ namespace BTSMTL.Timeline.Editor
             return new BtsmtlSlateTimelineViewState(
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMin : 0f,
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMax : 0f,
+                m_EmbeddedEditor != null && m_EmbeddedEditor.cutscene != null ? m_EmbeddedEditor.cutscene.currentTime : 0f,
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
                 selection.Track?.AuthoringId,
                 selection.Clip?.AuthoringId);
@@ -493,6 +499,8 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor.viewTimeMin = state.ViewTimeMin;
                 m_EmbeddedEditor.viewTimeMax = state.ViewTimeMax;
             }
+            if (m_EmbeddedEditor.cutscene != null)
+                m_EmbeddedEditor.cutscene.currentTime = Mathf.Clamp(state.CurrentTime, 0f, m_EmbeddedEditor.cutscene.length);
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
                 FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);
@@ -725,15 +733,26 @@ namespace BTSMTL.Timeline.Editor
         {
             Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
             string authoringId = string.Empty;
-            m_Session.Apply(() =>
+            Track addedTrack = null;
+            try
             {
-                int count = m_Request.Timeline.Tracks.Count;
-                m_Request.Timeline.AddTrack(trackType, m_Request.ContractCatalog);
-                Track track = m_Request.Timeline.Tracks[count];
-                authoringId = track.AuthoringId;
-                track.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
-                TimelineAuthoringTrackBinding.Apply(track, channelId, slotId);
-            }, "Add Timeline Track");
+                m_Session.Apply(() =>
+                {
+                    int count = m_Request.Timeline.Tracks.Count;
+                    m_Request.Timeline.AddTrack(trackType, m_Request.ContractCatalog);
+                    addedTrack = m_Request.Timeline.Tracks[count];
+                    authoringId = addedTrack.AuthoringId;
+                    addedTrack.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
+                    TimelineAuthoringTrackBinding.Apply(addedTrack, channelId, slotId);
+                }, "Add Timeline Track");
+            }
+            catch (Exception exception)
+            {
+                if (addedTrack != null)
+                    m_Request.Timeline.RemoveTrack(addedTrack);
+                ReportIssue($"新增 Track 失败：{exception.Message}");
+                return;
+            }
             m_PendingTrackFocus = authoringId;
             QueueRebuildProjection();
         }
@@ -786,38 +805,49 @@ namespace BTSMTL.Timeline.Editor
             if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
                 return;
             string authoringId = string.Empty;
-            m_Session.Apply(() =>
+            Clip addedClip = null;
+            try
             {
-                Clip clip;
-                if (request.Kind == TimelineContractKinds.AnimationClip)
+                m_Session.Apply(() =>
                 {
-                    clip = TimelineAuthoringTrackBinding.CreateClip(
+                    if (request.Kind == TimelineContractKinds.AnimationClip)
+                    {
+                        addedClip = TimelineAuthoringTrackBinding.CreateClip(
+                            m_Request.Timeline,
+                            m_Request.ContractCatalog,
+                            track,
+                            request.Resource as UnityEngine.AnimationClip,
+                            request.StartFrame);
+                    }
+                    else
+                    {
+                        addedClip = request.Resource != null
+                            ? m_Request.Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
+                            : m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
+                    }
+                    authoringId = addedClip.AuthoringId;
+                    addedClip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                    if (addedClip is MotionCurveClip motion)
+                    {
+                        motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
+                    }
+                    TimelineAuthoringClipBinding.Apply(
                         m_Request.Timeline,
-                        m_Request.ContractCatalog,
-                        track,
-                        request.Resource as UnityEngine.AnimationClip,
-                        request.StartFrame);
-                }
-                else
-                {
-                    clip = request.Resource != null
-                        ? m_Request.Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
-                        : m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
-                }
-                authoringId = clip.AuthoringId;
-                clip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
-                if (clip is MotionCurveClip motion)
-                {
-                    motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
-                }
-                TimelineAuthoringClipBinding.Apply(
-                    m_Request.Timeline,
-                    clip,
-                    BuildClipProperties(request),
-                    null,
-                    this);
-                clip.Track.UpdateMix();
-            }, "Add Timeline Clip");
+                        addedClip,
+                        BuildClipProperties(request),
+                        null,
+                        this);
+                    addedClip.Track.UpdateMix();
+                    m_Request.Timeline.Init();
+                }, "Add Timeline Clip");
+            }
+            catch (Exception exception)
+            {
+                if (addedClip != null)
+                    m_Request.Timeline.RemoveClip(addedClip);
+                ReportIssue($"新增 Clip 失败：{exception.Message}");
+                return;
+            }
             m_PendingTrackFocus = request.TrackAuthoringId;
             m_PendingClipFocus = authoringId;
             QueueRebuildProjection();
@@ -1081,8 +1111,16 @@ namespace BTSMTL.Timeline.Editor
             ProjectionSnapshot begin,
             ProjectionSnapshot end)
         {
-            if (m_ReadOnly || end.Unsupported)
+            if (m_ReadOnly)
+            {
+                ReportIssue("Timeline 当前只读，不能提交作者修改。");
                 return;
+            }
+            if (end.Unsupported)
+            {
+                ReportIssue("该 Slate 操作没有正式 Timeline 映射，已丢弃。");
+                return;
+            }
             var changes = new List<(Clip Clip, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
             foreach (KeyValuePair<string, ProxyClipSnapshot> pair in end.Clips)
             {
@@ -1090,7 +1128,10 @@ namespace BTSMTL.Timeline.Editor
                     !m_SourceClips.TryGetValue(pair.Key, out Clip sourceClip))
                     continue;
                 if (!string.Equals(before.TrackAuthoringId, FindProxyTrackAuthoringId(pair.Key), StringComparison.Ordinal))
+                {
+                    ReportIssue("Clip 所属 Track 已过期，已丢弃本次修改。");
                     return;
+                }
                 int startFrame = Mathf.Max(0, Mathf.RoundToInt(pair.Value.StartTime * TimelineUtility.FrameRate));
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(pair.Value.EndTime * TimelineUtility.FrameRate));
                 int beforeStartFrame = Mathf.RoundToInt(before.StartTime * TimelineUtility.FrameRate);
@@ -1124,9 +1165,15 @@ namespace BTSMTL.Timeline.Editor
                     TimelineCurveChannelId channelId = new TimelineCurveChannelId(curvePair.Key);
                     if (!TimelineCurveChannelCatalog.TryGet(curvePair.Key, out TimelineCurveChannelDescriptor descriptor) ||
                         !descriptor.Supports(sourceClip))
+                    {
+                        ReportIssue($"曲线通道 '{curvePair.Key}' 没有正式映射，已丢弃本次修改。");
                         return;
+                    }
                     if (!m_ProxyClips.TryGetValue(pair.Key, out BtsmtlSlateActionClip proxyClip))
+                    {
+                        ReportIssue("曲线所属 Clip 已过期，已丢弃本次修改。");
                         return;
+                    }
                     float curveDuration = proxyClip.TryGetCurveDuration(channelId.Value, out float mappedDuration)
                         ? mappedDuration
                         : proxyClip.length;
@@ -1210,6 +1257,11 @@ namespace BTSMTL.Timeline.Editor
                 }
                 m_Request.Timeline.Init();
             }, "Slate Timeline Edit");
+        }
+
+        void ReportIssue(string message)
+        {
+            AuthoringIssue?.Invoke(message ?? string.Empty);
         }
 
         string FindProxyTrackAuthoringId(string clipAuthoringId)
@@ -1336,6 +1388,7 @@ namespace BTSMTL.Timeline.Editor
             }
             m_Session.Dispose();
             SelectionChanged = null;
+            AuthoringIssue = null;
             if (m_Host != null)
                 UnityEngine.Object.DestroyImmediate(m_Host);
             m_Host = null;

@@ -8,7 +8,6 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation;
 using ThirdPersonSimulation;
 using TreeDesigner.Editor;
 using UnityEditor;

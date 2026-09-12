@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Diagnostics;
 using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline;
@@ -24,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterBodyPresentationRuntime m_Body;
         readonly CharacterPresentationFactProjector m_FactProjector;
+        readonly CharacterAnimationEventGraphHost m_EventGraphHost;
         readonly CharacterAnimationPresentationRuntime m_Animation;
         readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
@@ -72,6 +74,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
             m_FactProjector = new CharacterPresentationFactProjector(actorId);
+            m_EventGraphHost = projection.AnimationEventGraph
+                ? new CharacterAnimationEventGraphHost(
+                    projection.AnimationEventGraph,
+                    actorId)
+                : null;
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(actorId, projection);
@@ -127,6 +134,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Animation.ClearPendingTuningCandidate();
         public ulong BodyResetSequence => m_Body.ResetSequence;
         public CharacterPosePlanStageSnapshot PosePlanStages => m_PosePlanStages;
+        internal CharacterAnimationVariableFrame LastAnimationVariableFrame =>
+            m_EventGraphHost?.LastFrame;
 
         public bool TryGetLatestBody(out CharacterPresentationBodyState body) =>
             m_Body.TryGetLatestBody(out body);
@@ -437,6 +446,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_LastBodyResetSequence)
                 {
                     m_AnimationClockInitialized = false;
+                    m_EventGraphHost?.Reset();
                     if (m_PendingBodyFrame.ResetReason ==
                         CharacterBodyPresentationResetReason
                             .CommittedBranchReplacement)
@@ -476,9 +486,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LastProjectedFactFrame = factFrame;
                 try
                 {
-                    CharacterPresentationProgramParameterFrame parameterFrame =
-                        CharacterPresentationProgramParameterFrame.FromFact(
-                            in factFrame);
+                    CharacterPresentationProgramParameterFrame parameterFrame;
+                    if (m_EventGraphHost != null)
+                    {
+                        CharacterAnimationVariableUpdateResult variables =
+                            m_EventGraphHost.Update(
+                                in factFrame,
+                                animationDeltaSeconds,
+                                context.RenderFrame);
+                        if (!variables.Succeeded)
+                            throw new InvalidOperationException(
+                                variables.Failure?.ToString() ??
+                                "Animation Event Graph update failed.");
+                        parameterFrame =
+                            CharacterPresentationProgramParameterFrame.FromEventGraph(
+                                variables.Frame,
+                                m_Projection.PosePlan.Parameters
+                                    .Where(value => value.Usage == CharacterPoseParameterUsage.Control)
+                                    .Select(value => value.ParameterId)
+                                    .ToArray());
+                    }
+                    else
+                    {
+                        parameterFrame =
+                            CharacterPresentationProgramParameterFrame.FromFact(
+                                in factFrame);
+                    }
                     m_PendingAnimationFrame = m_Animation.BeginPresentation(
                         context.RenderFrame,
                         m_PendingBodyFrame.AnimationSampleTick,
@@ -690,6 +723,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootPlacementResetReason.PresentationReset,
                 CharacterBodyPresentationResetReason.Initialization));
             m_Animation.Reset();
+            m_EventGraphHost?.Reset();
             m_Body.Reset();
             m_FactProjector.Reset();
             m_PoseHasOutput = false;
@@ -707,7 +741,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_Disposed = true;
             m_CurrentFrameSignals.Clear();
-            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_Equipment, m_Animation, m_Body);
+            try
+            {
+                m_EventGraphHost?.Dispose();
+            }
+            finally
+            {
+                CharacterPresentationModuleLifetime.Dispose(
+                    m_Camera,
+                    m_Equipment,
+                    m_Animation,
+                    m_Body);
+            }
         }
 
         float ResolveAnimationDeltaSeconds(

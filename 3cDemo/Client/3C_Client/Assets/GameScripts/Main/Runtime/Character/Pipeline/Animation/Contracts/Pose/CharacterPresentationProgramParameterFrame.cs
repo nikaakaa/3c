@@ -13,6 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly float m_MotorLocalVelocityY;
         readonly PoseParameterId[] m_DirectIds;
         readonly float[] m_DirectValues;
+        readonly CharacterAnimationVariableFrame m_EventGraphFrame;
+        readonly PoseParameterId[] m_EventGraphParameterIds;
 
         CharacterPresentationProgramParameterFrame(
             bool hasMotorValues,
@@ -26,6 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotorLocalVelocityY = motorLocalVelocityY;
             m_DirectIds = null;
             m_DirectValues = null;
+            m_EventGraphFrame = null;
+            m_EventGraphParameterIds = null;
         }
 
         CharacterPresentationProgramParameterFrame(
@@ -38,6 +42,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotorLocalVelocityY = 0f;
             m_DirectIds = directIds;
             m_DirectValues = directValues;
+            m_EventGraphFrame = null;
+            m_EventGraphParameterIds = null;
+        }
+
+        CharacterPresentationProgramParameterFrame(
+            CharacterAnimationVariableFrame eventGraphFrame,
+            PoseParameterId[] eventGraphParameterIds)
+        {
+            m_HasMotorValues = false;
+            m_MotorPlanarSpeed = 0f;
+            m_MotorLocalVelocityX = 0f;
+            m_MotorLocalVelocityY = 0f;
+            m_DirectIds = null;
+            m_DirectValues = null;
+            m_EventGraphFrame = eventGraphFrame;
+            m_EventGraphParameterIds = eventGraphParameterIds;
         }
 
         internal bool IsValid =>
@@ -45,7 +65,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DirectIds != null &&
             m_DirectIds.Length > 0 &&
             m_DirectValues != null &&
-            m_DirectIds.Length == m_DirectValues.Length;
+            m_DirectIds.Length == m_DirectValues.Length ||
+            m_EventGraphFrame != null &&
+            m_EventGraphParameterIds != null;
 
         internal static CharacterPresentationProgramParameterFrame FromBody(
             in CharacterBodyPresentationFrame bodyFrame)
@@ -116,6 +138,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new CharacterPresentationProgramParameterFrame(ids, copiedValues);
         }
 
+        internal static CharacterPresentationProgramParameterFrame FromEventGraph(
+            CharacterAnimationVariableFrame frame,
+            IReadOnlyList<PoseParameterId> parameterIds)
+        {
+            if (frame == null || parameterIds == null)
+                throw new ArgumentException("Animation Event Graph variable frame is incomplete.");
+            var ids = new PoseParameterId[parameterIds.Count];
+            for (int i = 0; i < parameterIds.Count; i++)
+            {
+                PoseParameterId parameterId = parameterIds[i];
+                if (!parameterId.IsValid ||
+                    !frame.TryRead(parameterId.Value, out _))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Event Graph variable '{parameterId}' is missing from the published frame.");
+                }
+                for (int prior = 0; prior < i; prior++)
+                    if (ids[prior].Equals(parameterId))
+                        throw new ArgumentException(
+                            $"Animation Event Graph variable frame contains duplicate '{parameterId}'.");
+                ids[i] = parameterId;
+            }
+            return new CharacterPresentationProgramParameterFrame(frame, ids);
+        }
+
         internal float Require(PoseParameterId parameterId)
         {
             if (!parameterId.IsValid)
@@ -127,6 +174,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (parameterId.Equals(m_DirectIds[i]))
                         return m_DirectValues[i];
                 }
+            }
+            if (m_EventGraphFrame != null)
+            {
+                bool declared = false;
+                for (int i = 0; i < m_EventGraphParameterIds.Length; i++)
+                {
+                    if (m_EventGraphParameterIds[i].Equals(parameterId))
+                    {
+                        declared = true;
+                        break;
+                    }
+                }
+                if (!declared)
+                    throw new InvalidOperationException(
+                        $"Animation Event Graph variable '{parameterId}' is outside the Pose input scope.");
+                if (!m_EventGraphFrame.TryRead(
+                        parameterId.Value,
+                        out BTSMTL.EventGraphs.EventGraphValue value) ||
+                    value.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Float32)
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Event Graph variable '{parameterId}' is unavailable or not Float32.");
+                }
+                return value.Float32Value;
             }
             if (m_HasMotorValues)
             {

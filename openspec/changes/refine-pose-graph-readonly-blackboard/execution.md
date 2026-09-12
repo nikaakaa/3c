@@ -109,3 +109,16 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 
 - `LocomotionFullBodyPoseGraph.asset` 有 9 个目录引用图；各图 `m_Parameters` 均为空，根图无 Foot Get/内部 Foot 动态接口，Body 图只保留输入 Pose 到 Foot Placement、Full Body IK 和输出的正式拓扑。
 - BlendShape 仍由 Profile 的 AnimationPropertyBindings 和正式曲线资源合同提供，不再复制进任何 Pose Graph 参数列表；黑板/Transition 普通变量只接受 EventGraph 的精确 Bool、Int32、Float32 声明。
+
+## 2026-09-13 C# authoring 与旧链删除
+
+已确认：
+
+- `62eb28721`、`95eea34ff`、`bb5005be3`、`d5af35ba4`：公共 `export_code/generate_assets` 已注册 Pose 正式 C# 薄适配；它读取 `CharacterPresentationPoseGraphAsset` 的 Graph、Node、Edge、Slot、StateMachine、Transition Rule、动态端口和正式资源引用，不读取旧 JSON 或 Agent DTO。Pose 根生成会恢复 Profile/Definition 挂接，并保持业务 identity。
+- Pose 正式 `generate_assets` 已对 `LocomotionFullBodyPoseGraph.asset` 执行成功，返回 0 diagnostics；回写后 9 个有效图仍保持 `m_Parameters=0`、Foot 内部接口/Get=0、Body 输入 Pose 曲线链完整。
+- `6b7be5c7b`、`9c9520afa`、`ad698053a` 及后续清理已移除 Pose EventGraph 旧 Mutation/Agent Mapper、Presentation/Skill Document 链和 EventGraphAuthoringDocument；业务代码中的旧入口扫描为 0。公共 authoring 注册表现在只保留正式 `export_code`、`generate_assets` 和非 authoring 的 Scene Play 工具。
+- 项目 `.codex/skills/btsmtl-agent-authoring` 是执行规则资源，不属于已退役的 Assets Agent 工具链，已保留；旧业务工具和过时 current spec 的删除不影响该 skill 文件。
+
+未把以下结果写成 Pose 完成证据：
+
+- 最后一轮完整 Character Float32/Projection 在 Pose、Foot、Inertialization 均通过后，仍有 Definition/Skill `AuthoringDiscovery` 的 null key 诊断；该错误位于并行 Skill/Definition 清理，不是 Pose compiler。作者可自行进行最终端到端验证。

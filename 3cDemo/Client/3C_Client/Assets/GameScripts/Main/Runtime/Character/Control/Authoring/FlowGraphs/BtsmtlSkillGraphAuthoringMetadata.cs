@@ -478,7 +478,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 mutationBindingId: systemOwned ? string.Empty : "btsmtl.skill.node",
                 validationBindingId: "btsmtl.skill.node",
                 compilerBindingId: "btsmtl.skill." + kind,
-                documentCodecId: "btsmtl.skill-node",
                 authoringType: type,
                 externalKind: kind,
                 systemOwned: systemOwned,

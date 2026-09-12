@@ -160,7 +160,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(
+                character,
+                projection,
+                state.Target);
             AgentAuthoringResponse response = FromReport(request, preparation.Report, projection, path, state);
             response.documentHash = state.DocumentHash;
             response.planHash = AgentAuthoringDocumentCodec.Hash(preparation.Report.plannedDiff);
@@ -193,7 +196,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return FromReport(request, report, projection, path, state);
             }
 
-            AgentDocumentPreparation preparation = m_Reconciler.Prepare(character, projection, state.Target);
+            AgentDocumentPreparation preparation = m_Reconciler.Prepare(
+                character,
+                projection,
+                state.Target);
             if (!preparation.IsValid)
                 return FromReport(request, preparation.Report, projection, path, state);
             if (!TryCollectOwners(

@@ -148,10 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                     if (AgentSkillPackageProjection.TryGetKind(node, out string kind) &&
                         AgentSkillPackageProjection.IsAnchor(kind))
                     {
-                        var anchor = new AgentPackageSkillGraphAnchor { kind = kind, nodeId = node.UID };
-                        if (node is BtsmtlSkillCompositeFlowNode composite)
-                            anchor.steps = composite.Steps.Select(ExportStep).ToList();
-                        file.anchors.Add(anchor);
+                        file.anchors.Add(new AgentPackageSkillGraphAnchor { kind = kind, nodeId = node.UID });
                         ExportReferences(node, file, skillId);
                         continue;
                     }
@@ -189,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         {
                             m_Report.Error(graphPath + ".edges[" + connection.UID + "]",
                                 "skill_state_transfer_type_invalid",
-                                "状态机转移边必须携带唯一Transfer数据，需先完成资产迁移。");
+                                "状态机转移边必须携带Transfer数据。");
                             continue;
                         }
                         if (transfer != null)

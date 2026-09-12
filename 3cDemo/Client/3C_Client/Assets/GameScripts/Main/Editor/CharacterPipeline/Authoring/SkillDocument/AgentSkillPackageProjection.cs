@@ -221,19 +221,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
             var dynamic = new List<GraphAuthoringDynamicPortProjection>();
             switch (capability.DynamicPortSource)
             {
-                case GraphAuthoringDynamicPortSource.OrderedSteps:
-                    int stepOrder = 100;
-                    foreach (AgentPackageSkillFlowStep step in
-                             anchor.steps ?? new List<AgentPackageSkillFlowStep>())
-                    {
-                        dynamic.Add(
-                            BtsmtlSkillGraphAuthoringMetadata.ProjectAnchorStepPort(
-                                anchor.kind,
-                                step.id,
-                                step.name,
-                                stepOrder++));
-                    }
-                    break;
                 case GraphAuthoringDynamicPortSource.MacroInputs:
                 case GraphAuthoringDynamicPortSource.MacroOutputs:
                     AgentPackageSkillMacroFile macro = (macros ??

@@ -55,7 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
     {
         public string kind;
         public string nodeId;
-        public List<AgentPackageSkillFlowStep> steps = new List<AgentPackageSkillFlowStep>();
     }
 
     [Serializable]

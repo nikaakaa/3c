@@ -348,8 +348,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                     throw new InvalidOperationException($"Skill Graph anchor '{anchor.nodeId}'的identity与正式节点不一致。");
                 if (anchorNode != null && anchor.nodeId.StartsWith("local:", StringComparison.Ordinal))
                     m_LocalNodes[NodeKey(target.id, anchor.nodeId)] = anchorNode;
-                if (anchorNode is BtsmtlSkillCompositeFlowNode composite)
-                    ConfigureSteps(target.id, anchorNode.UID, composite, AgentAuthoringDocumentCodec.ToToken(anchor.steps) as JArray);
             }
             var targetNodeIds = (target.nodes ?? new List<AgentPackageSkillFlowNode>()).Select(value => value.id).ToHashSet(StringComparer.Ordinal);
             foreach (FlowNode existing in graph.allNodes.OfType<FlowNode>().ToArray())
@@ -497,12 +495,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
             }
             BtsmtlSkillFlowGraph condition = null;
             if (!string.IsNullOrEmpty(edge.conditionGraphId))
-                condition = ResolveGraph(edge.conditionGraphId)
-                    ?? throw new InvalidOperationException($"Skill Edge '{edge.id}'的条件图'{edge.conditionGraphId}'未应用或顺序错误。");
+                condition = ResolveGraph(edge.conditionGraphId) as BtsmtlSkillFlowGraph
+                    ?? throw new InvalidOperationException($"Skill Edge '{edge.id}'的条件图'{edge.conditionGraphId}'未应用、顺序错误或不是条件规则图。");
             transfer.Configure(condition, edge.priority,
                 string.IsNullOrEmpty(edge.abortPolicy)
                     ? ProgramAbortPolicy.None
-                    : Enum.Parse<ProgramAbortPolicy>(edge.abortPolicy, false));
+                    : Enum.Parse<ProgramAbortPolicy>(edge.abortPolicy, false),
+                edge.order);
         }
 
         public void ValidateAppliedIdentityContracts()

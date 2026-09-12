@@ -119,10 +119,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         valid = false;
                     }
                     if (anchor != null &&
-                        BtsmtlSkillGraphAuthoringMetadata.HasOrderedStepPorts(anchor.kind) &&
-                        !ValidateSteps(anchor.steps, path + ".anchors[" + anchor.kind + "].steps", report))
-                        valid = false;
-                    if (anchor != null &&
                         !BtsmtlSkillGraphAuthoringMetadata.IsAnchorAllowed(
                             anchor.kind,
                             role))
@@ -309,13 +305,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
             }
             if (graph.owner.kind == "shared")
                 return ownership == AgentGraphOwnership.SharedAsset && Asset(graph.asset);
-            if (graph.owner.kind != "node" && graph.owner.kind != "step" && graph.owner.kind != "timeline-clip")
+            if (graph.owner.kind != "node" && graph.owner.kind != "step" && graph.owner.kind != "edge" && graph.owner.kind != "timeline-clip")
             {
                 report.Error(path + ".owner", "skill_graph_owner_kind_invalid", "Skill Graph owner kind无效。");
                 return false;
             }
             if (!IsIdentity(graph.owner.graphId) || !IsIdentity(graph.owner.nodeId) ||
                 !IsIdentity(graph.owner.referenceKey) ||
+                graph.owner.kind == "edge" && !IsIdentity(graph.owner.edgeId) ||
                 graph.owner.kind == "timeline-clip" &&
                 (!IsIdentity(graph.owner.timelineId) || !IsIdentity(graph.owner.trackId) ||
                  !IsIdentity(graph.owner.clipId)))
@@ -1048,20 +1045,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         }
                     }
                 }
-                foreach (AgentPackageSkillGraphAnchor anchor in graph.anchors ?? new List<AgentPackageSkillGraphAnchor>())
-                    foreach (AgentPackageSkillFlowStep step in anchor?.steps ?? new List<AgentPackageSkillFlowStep>())
-                        if (!string.IsNullOrEmpty(step?.conditionGraphId) && !graphs.ContainsKey(step.conditionGraphId))
-                        {
-                            report.Error(AgentSkillFlowDocumentMapper.GraphPath(graph.id) + ".anchors[" + anchor.kind + "].steps", "skill_condition_graph_missing", $"Condition Graph不存在：{step.conditionGraphId}");
-                            valid = false;
-                        }
-                        else if (!string.IsNullOrEmpty(step?.conditionGraphId) &&
-                                 graphs.TryGetValue(step.conditionGraphId, out AgentPackageSkillFlowGraphFile anchorCondition) &&
-                                 anchorCondition.role != BtsmtlSkillFlowGraphRole.ConditionRule.ToString())
-                        {
-                            report.Error(AgentSkillFlowDocumentMapper.GraphPath(graph.id) + ".anchors[" + anchor.kind + "].steps", "skill_condition_graph_role_invalid", "Step condition必须引用ConditionRule Graph。");
-                            valid = false;
-                        }
+                foreach (AgentPackageSkillFlowEdge edge in graph.edges ?? new List<AgentPackageSkillFlowEdge>())
+                {
+                    if (edge == null || string.IsNullOrEmpty(edge.conditionGraphId))
+                        continue;
+                    string edgePath = AgentSkillFlowDocumentMapper.GraphPath(graph.id) + ".edges[" + edge.id + "].conditionGraphId";
+                    if (!graphs.ContainsKey(edge.conditionGraphId))
+                    {
+                        report.Error(edgePath, "skill_condition_graph_missing", $"Condition Graph不存在：{edge.conditionGraphId}");
+                        valid = false;
+                    }
+                    else if (graphs[edge.conditionGraphId].role != BtsmtlSkillFlowGraphRole.ConditionRule.ToString())
+                    {
+                        report.Error(edgePath, "skill_condition_graph_role_invalid", "Edge condition必须引用ConditionRule Graph。");
+                        valid = false;
+                    }
+                }
             }
             foreach (AgentPackageSkillFlowGraphFile graph in document.graphs ??
                          new List<AgentPackageSkillFlowGraphFile>())
@@ -1082,8 +1081,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                     continue;
                 AgentPackageSkillFlowNode ownerNode = (ownerGraph.nodes ?? new List<AgentPackageSkillFlowNode>())
                     .FirstOrDefault(value => value != null && value.id == graph.owner.nodeId);
-                AgentPackageSkillGraphAnchor ownerAnchor = (ownerGraph.anchors ?? new List<AgentPackageSkillGraphAnchor>())
-                    .FirstOrDefault(value => value != null && value.nodeId == graph.owner.nodeId);
                 bool referenced = false;
                 if (ownerNode != null)
                 {
@@ -1093,10 +1090,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                                      .Any(value => value.Value<string>("id") == graph.owner.referenceKey &&
                                                   value.Value<string>("conditionGraphId") == graph.id) == true;
                 }
-                if (ownerAnchor != null && graph.owner.kind == "step")
-                    referenced = (ownerAnchor.steps ?? new List<AgentPackageSkillFlowStep>())
-                        .Any(value => value != null && value.id == graph.owner.referenceKey &&
-                                      value.conditionGraphId == graph.id);
+                if (graph.owner.kind == "edge")
+                    referenced = (ownerGraph.edges ?? new List<AgentPackageSkillFlowEdge>())
+                        .Any(value => value != null && value.id == graph.owner.edgeId &&
+                                      value.conditionGraphId == graph.id &&
+                                      string.Equals(value.from?.port, "Transfer", StringComparison.Ordinal) &&
+                                      value.from.node == graph.owner.nodeId);
                 if (graph.owner.kind == "timeline-clip")
                     referenced = timelines.Values.SelectMany(value => value.tracks ?? new List<AgentPackageSkillTimelineTrack>())
                         .SelectMany(value => value?.clips ?? new List<AgentPackageSkillTimelineClip>())
@@ -1139,10 +1138,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         if (!string.IsNullOrEmpty(clip.treeGraphId))
                             pending.Push(clip.treeGraphId);
                 }
-                foreach (AgentPackageSkillGraphAnchor anchor in graph.anchors ?? new List<AgentPackageSkillGraphAnchor>())
-                    foreach (AgentPackageSkillFlowStep step in anchor?.steps ?? new List<AgentPackageSkillFlowStep>())
-                        if (!string.IsNullOrEmpty(step?.conditionGraphId))
-                            pending.Push(step.conditionGraphId);
+                foreach (AgentPackageSkillFlowEdge edge in graph.edges ?? new List<AgentPackageSkillFlowEdge>())
+                    if (!string.IsNullOrEmpty(edge?.conditionGraphId))
+                        pending.Push(edge.conditionGraphId);
             }
             foreach (string graphId in graphs.Keys)
                 if (!reachable.Contains(graphId) && graphs[graphId].owner?.kind != "shared")
@@ -1300,10 +1298,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Skill
                         if (!string.IsNullOrEmpty(clip.treeGraphId))
                             result &= Visit(clip.treeGraphId, AgentSkillFlowDocumentMapper.TimelinePath(timeline.id) + ".tracks.clips[" + clip.id + "]");
                 }
-                foreach (AgentPackageSkillGraphAnchor anchor in graph.anchors ?? new List<AgentPackageSkillGraphAnchor>())
-                    foreach (AgentPackageSkillFlowStep step in anchor?.steps ?? new List<AgentPackageSkillFlowStep>())
-                        if (!string.IsNullOrEmpty(step?.conditionGraphId))
-                            result &= Visit(step.conditionGraphId, AgentSkillFlowDocumentMapper.GraphPath(graph.id) + ".anchors[" + anchor.kind + "].steps");
+                foreach (AgentPackageSkillFlowEdge edge in graph.edges ?? new List<AgentPackageSkillFlowEdge>())
+                    if (!string.IsNullOrEmpty(edge?.conditionGraphId))
+                        result &= Visit(edge.conditionGraphId, AgentSkillFlowDocumentMapper.GraphPath(graph.id) + ".edges[" + edge.id + "]");
                 states[graphId] = 2;
                 return result;
             }

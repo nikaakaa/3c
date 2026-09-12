@@ -98,10 +98,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         public static bool IsAnchor(string kind) =>
             BtsmtlSkillCapabilityCatalog.IsAnchor(kind);
 
-        public static bool HasOrderedStepPorts(string kind) =>
-            BtsmtlSkillCapabilityCatalog.TryResolveType(kind, out Type type) &&
-            DynamicPortSource(type) == GraphAuthoringDynamicPortSource.OrderedSteps;
-
         public static IReadOnlyList<BtsmtlSkillGraphReferenceAttribute> GraphReferences(string kind)
         {
             if (BtsmtlSkillCapabilityCatalog.TryResolveType(
@@ -226,15 +222,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 GraphAuthoringPortCapacity.Single,
                 false,
                 order);
-        }
-
-        public static GraphAuthoringDynamicPortProjection ProjectAnchorStepPort(
-            string kind,
-            string id,
-            string name,
-            int order)
-        {
-            return ProjectCompositeStepPort(kind, id, name, order);
         }
 
         public static GraphAuthoringDynamicPortProjection ProjectMacroParameterPort(

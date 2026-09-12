@@ -793,7 +793,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 CharacterPoseTopologyValidator.Validate(
                     plan.PoseGraph,
                     plan.Profile.RigDefinition,
-                    CharacterPoseAuthoringPortProjection.Get);
+                    CharacterPoseAuthoringPortProjection.Get,
+                    animationInputParameters:
+                        CharacterAnimationInputContract.Create(plan.Profile).Parameters);
             for (int i = 0; i < graphValidation.Issues.Count; i++)
             {
                 CharacterPoseGraphValidationIssue issue =

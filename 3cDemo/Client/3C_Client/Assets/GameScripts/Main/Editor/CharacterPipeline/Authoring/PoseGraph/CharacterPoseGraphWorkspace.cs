@@ -1372,11 +1372,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ClearValidationHighlights();
             IReadOnlyList<string> capabilityErrors =
                 CharacterPoseGraphCapabilityValidator.Validate(m_Asset);
+            IReadOnlyList<CharacterPoseParameterDeclaration>
+                animationInputParameters = m_Profile
+                    ? CharacterAnimationInputContract.Create(m_Profile).Parameters
+                    : null;
             CharacterPoseGraphValidationReport report =
             CharacterPoseTopologyValidator.Validate(
                     m_Asset,
                     m_Profile ? m_Profile.RigDefinition : null,
-                    CharacterPoseAuthoringPortProjection.Get);
+                    CharacterPoseAuthoringPortProjection.Get,
+                    animationInputParameters: animationInputParameters);
             int issueCount = capabilityErrors.Count + report.Issues.Count;
             if (TryFindStateMachineValidationIssue(
                     out CharacterPoseCanvasGraph ownerGraph,

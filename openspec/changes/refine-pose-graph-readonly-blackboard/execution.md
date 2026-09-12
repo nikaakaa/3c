@@ -76,3 +76,5 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 当前工作区的Character Document package尚未checkout，不能绕过Document/Mutation直接编辑PoseGraph YAML；旧的Action/Foot声明、根图Get、Body透传端口和孤立重复子图仍需在正式Document/Mutation流程中删除。
 - `CharacterPoseGraphProjectionValidator` 的子图签名门禁已进入代码，但尚未对当前资产执行Unity Validate/Build；编辑器交叉编译仍受工作区既有Timeline改动影响。
 - 上述 Transition Rule 作者接入仍处于共享 worktree 的未提交小步，待同批 EventGraph 输入合同相关文件统一落盘后再单独提交；没有改动 PoseGraph 资产或覆盖其它窗口的未提交文件。
+- 以 Unity MCP 实例 `e852139597e42532` 复查时，Editor 已退出 Play、没有编译或资源刷新进行中；当前 Console 没有新增 Pose runtime 错误，但正式生成入口仍受 EventGraph `SourceCodePath` 合同和 Skill emitter 类型引用错误阻塞。
+- 当前 `LocomotionFullBodyPoseGraph.asset` 仍统计到 11 个 `animation.action-weight`、13 个 `animation.foot-placement-weight` 和 451 个 `animation.blendshape.*` 声明；因此 Action/Foot 旧声明、BlendShape 复制声明及根图/Body 边界的资产迁移尚未完成，不能提前标记本 change 完成。

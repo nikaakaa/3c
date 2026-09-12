@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using Newtonsoft.Json.Linq;
 using Slate;
 using UnityEditor;
 using UnityEngine;
@@ -917,11 +916,12 @@ namespace BTSMTL.Timeline.Editor
                     {
                         motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
                     }
-                    TimelineAuthoringClipBinding.Apply(
+                    TimelineAuthoringClipConfiguration configuration =
+                        BuildClipConfiguration(addedClip, request);
+                    TimelineAuthoringClipBinding.Configure(
                         m_Request.Timeline,
                         addedClip,
-                        BuildClipProperties(addedClip, request),
-                        null,
+                        configuration,
                         this);
                     addedClip.Track.UpdateMix();
                     m_Request.Timeline.Init();
@@ -949,63 +949,65 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
-        static JObject BuildClipProperties(Clip clip, TimelineClipCreationRequest request)
+        static TimelineAuthoringClipConfiguration BuildClipConfiguration(
+            Clip clip,
+            TimelineClipCreationRequest request)
         {
-            JObject properties = TimelineAuthoringClipBinding.Export(clip).Properties;
+            TimelineAuthoringClipConfiguration configuration = TimelineAuthoringClipBinding.Read(clip);
             if (request.Kind == TimelineContractKinds.AnimationClip)
             {
-                properties["extraPolationMode"] = request.Extrapolation.ToString();
-                properties["blendProfileId"] = request.BlendProfileId;
+                configuration.Extrapolation = request.Extrapolation;
+                configuration.BlendProfileId = request.BlendProfileId;
             }
             if (request.Kind == TimelineContractKinds.MotionCurveClip)
             {
-                properties["curveId"] = request.CurveId;
-                properties["curveEndFrame"] = request.CurveEndFrame;
-                properties["space"] = request.Space.ToString();
-                properties["channel"] = request.Channel.ToString();
-                properties["blendMode"] = request.BlendMode.ToString();
-                properties["priority"] = request.Priority;
-                properties["consumeLowerChannels"] = request.ConsumeLowerChannels;
+                configuration.CurveId = request.CurveId;
+                configuration.CurveEndFrame = request.CurveEndFrame;
+                configuration.Space = request.Space;
+                configuration.Channel = request.Channel;
+                configuration.BlendMode = request.BlendMode;
+                configuration.Priority = request.Priority;
+                configuration.ConsumeLowerChannels = request.ConsumeLowerChannels;
             }
             if (request.Kind == TimelineContractKinds.MotionWarpClip)
-                properties["sourceMotionClipId"] = request.SourceMotionClipId;
+                configuration.SourceMotionClipId = request.SourceMotionClipId;
             if (request.Kind == TimelineContractKinds.ActionCueClip)
             {
-                properties["cueId"] = request.CueId;
-                properties["cueType"] = request.CueType;
+                configuration.CueId = request.CueId;
+                configuration.CueType = request.CueType;
             }
             if (request.Kind == TimelineContractKinds.CameraStateClip)
             {
-                properties["mode"] = request.CameraMode.ToString();
-                properties["priority"] = request.CameraPriority;
-                properties["blendInSeconds"] = request.CameraBlendInSeconds;
-                properties["blendOutSeconds"] = request.CameraBlendOutSeconds;
-                properties["targetKey"] = request.CameraTargetKey;
-                properties["interruptPolicy"] = request.CameraInterruptPolicy.ToString();
+                configuration.CameraMode = request.CameraMode;
+                configuration.Priority = request.CameraPriority;
+                configuration.CameraBlendInSeconds = request.CameraBlendInSeconds;
+                configuration.CameraBlendOutSeconds = request.CameraBlendOutSeconds;
+                configuration.CameraTargetKey = request.CameraTargetKey;
+                configuration.CameraInterruptPolicy = request.CameraInterruptPolicy;
             }
             if (request.Kind == TimelineContractKinds.CameraCueClip)
             {
-                properties["cueId"] = request.CueId;
-                properties["cueKind"] = request.CameraCueKind.ToString();
-                properties["cueType"] = request.CueType;
-                properties["intensity"] = request.CameraIntensity;
-                properties["durationSeconds"] = request.CameraDurationSeconds;
-                properties["priority"] = request.CameraPriority;
+                configuration.CueId = request.CueId;
+                configuration.CameraCueKind = request.CameraCueKind;
+                configuration.CueType = request.CueType;
+                configuration.CameraIntensity = request.CameraIntensity;
+                configuration.CameraDurationSeconds = request.CameraDurationSeconds;
+                configuration.Priority = request.CameraPriority;
             }
             if (request.Kind == TimelineContractKinds.CameraResponseClip)
             {
-                properties["lookResponse"] = request.CameraLookResponse.ToString();
-                properties["manualOrbitWeight"] = request.ManualOrbitWeight;
-                properties["pitchResponseWeight"] = request.PitchResponseWeight;
-                properties["yawResponseWeight"] = request.YawResponseWeight;
-                properties["priority"] = request.CameraPriority;
+                configuration.CameraLookResponse = request.CameraLookResponse;
+                configuration.ManualOrbitWeight = request.ManualOrbitWeight;
+                configuration.PitchResponseWeight = request.PitchResponseWeight;
+                configuration.YawResponseWeight = request.YawResponseWeight;
+                configuration.Priority = request.CameraPriority;
             }
             if (request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
             {
-                properties["targetBindingId"] = request.TargetBindingId;
-                properties["parameterBindingId"] = request.ParameterBindingId;
+                configuration.TargetBindingId = request.TargetBindingId;
+                configuration.ParameterBindingId = request.ParameterBindingId;
             }
-            return properties;
+            return configuration;
         }
 
         public bool TryResolveMotionClip(TimelineData timeline, string identity, out MotionCurveClip clip)

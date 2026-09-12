@@ -51,6 +51,7 @@ TimelineEditorWindow
 - 观察区已把正式 `RuntimeDebugSession` 的诊断 Capture 与输入录制拆成两个独立按钮；Capture 使用正式 All/Continuous 合同，恢复/回放仍显示 coordinator 返回的接受与失败结果。
 - Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
 - Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
+- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。公共 binding 中剩余旧 JSON 方法由 C# authoring owner 清理。
 
 ## 正式能力对账
 
@@ -74,5 +75,5 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 - 场景预览的非 Skill 正式目标、角色目标选择和纯 Timeline 调用入口仍未完成；SceneAsset/ContextId 的精确启动定位已完成。
 - 作者 Timeline revision 与真实 Build/adoption 的精确关联仍未完成；当前只展示 coordinator 返回的真实运行版本状态。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
-- C# authoring r2 尚未交付 `TimelineAuthoringClipBinding` 正式强类型配置合同，因此第10节仍未实施；当前 projection 的 JSON 中转不能在本任务内复制替换。
+- C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

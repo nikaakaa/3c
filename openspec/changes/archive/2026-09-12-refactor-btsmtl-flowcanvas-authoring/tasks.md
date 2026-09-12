@@ -1,5 +1,7 @@
 ## 当前执行位置
 
+> 2026-09-12 已拆分替代归档。59项已勾选与26项未完成按原状保留；26项全部转交，未伪装成完成。后续只维护[交接记录](split-handoff.md)中的新任务，本表不再作为active执行清单。
+
 2026-09-12 FSM更新：第9节是原生NodeCanvas FSM、Document v8、编译适配和Corin清理的唯一新增执行清单。共同业务参数/规则消费unify-skill-authoring-data-model成果；既有转移线及旧Step迁移消费add-skill-transfer-connections成果，不在本表重复勾选其实现。此前向数据层交接整个FSM/版本改造的说明撤销；不修改其它窗口正在调整的文档。
 
 原2.4.2/5.3、6.2及7.x中的FSM相关owner、来源映射与观察缺口分别由第9节接入，原运行观察、网络和跨域任务保持原范围。下文“当前”、TreeDirty、v7 job/hash和已勾选项均保留为旧FlowCanvas阶段记录，不能证明原生FSM、v8或本次清理完成；新阶段必须读取实际来源。最新职责与冲突见[design第9—11节](design.md)。

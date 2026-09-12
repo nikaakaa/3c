@@ -1,8 +1,13 @@
 ## Why
 
+2026-09-12 拆分接收：旧refactor-btsmtl-flowcanvas-authoring的4.5.5网络Pass/Adapter收尾和8.1正式Skill运行证据归本change第6节，最终汇总归5.1。FSM/Agent/资产迁移由integrate-native-fsm-skill-authoring负责，通用图观察由finish-skill-runtime-observation负责；本change不再反向要求旧总任务保持active。
+
 Corin当前的数据来源分散在外部Dump、Unity正式作者资产、BTSMTL Document、Character Build产物、Session配置和固定输入Replay之间，缺少一条能审计来源、身份、依赖和运行结果的完整闭环。现在Pose/Agent作者重构正在改变资源归属，正好需要把Dump source重新定义为上游输入，把Corin正式配置和Replay固定为同一组可追溯版本。
 
 ## What Changes
+
+- 接收Corin正式Rollback/Server Authority Pass与Adapter的剩余集成及载荷核对，复用既有Composition和运行入口；检查只传Input、Canonical Request、Hash/Snapshot，不复制作者Graph、Blackboard名称、Timeline对象或最终Pose。
+- 将Skill启动、Timeline等待、正常结束、取消和中断链证据并入现有Runtime Dump/Replay闭环；来源绑定同一发布产物，不以结构兼容或旧Build结果代替本次运行结果。
 
 - 新增Corin Dump Source Manifest，记录Dump根目录、来源版本、文件哈希、模型/Rig、AnimationClip、Binding、Foot Analysis和渲染/运行快照的来源关系；运行时不直接读取Dump路径。
 - 定义Corin最终配置闭包：Definition、Control/Input、Skill/Action、GameplayEffect/Tag/Attribute、Motion、Presentation/Pose、Foot/IK/Blend、Timeline、Session Composition、Prefab/Scene和生成产物的唯一依赖方向。

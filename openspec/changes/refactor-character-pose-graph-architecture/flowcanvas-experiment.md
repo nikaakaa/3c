@@ -2,7 +2,7 @@
 
 2026-09-08最终决定：只复用FlowCanvas作者UI，保留现有Pose Compiler、Program Image、Native数据、Burst／Job及帧输出链。Unity进入Play后观察实际角色，不创建独立预览场景或运行实例。
 
-正式作者与观察规划见[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)及其[任务清单](../integrate-pose-flowcanvas-editor-preview/tasks.md)。技能继续由[技能提案](../refactor-btsmtl-flowcanvas-authoring/proposal.md)管理；技能预览同样只是普通运行结果显示。
+正式作者与观察规划见[独立提案](../integrate-pose-flowcanvas-editor-preview/proposal.md)及其[任务清单](../integrate-pose-flowcanvas-editor-preview/tasks.md)。技能作者迁移由[技能提案](../integrate-native-fsm-skill-authoring/proposal.md)管理，通用观察归[观察收尾](../finish-skill-runtime-observation/proposal.md)；技能预览同样只是普通运行结果显示。
 
 ## 已撤回的路线
 

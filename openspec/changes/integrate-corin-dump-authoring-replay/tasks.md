@@ -14,7 +14,7 @@
 
 ## 3. Document与正式产物
 
-- [ ] 3.1 在Agent/Pose相关重构稳定后，对精确Corin Definition执行v7 checkout，确认SourceManifestHash、AuthoringClosureHash和Document context一致；保留机器job证据。
+- [ ] 3.1 在Agent/Pose相关重构稳定后，对精确Corin Definition按当次唯一正式schema执行checkout，确认SourceManifestHash、AuthoringClosureHash和Document context一致；FSM发布v8后只消费v8，保留机器job证据，不独立保留旧版reader。
 - [ ] 3.2 对同一Document执行dry-run、apply、re-checkout，确认documentHash/planHash、stable identity、owner和`syncState=Clean`一致；失败时保留ApplyFailed或结构化诊断。
 - [x] 3.3 通过唯一Character Build入口发布Float32 Program、Fixed Program和Presentation Projection，核对ProgramHash、LayoutHash、ProjectionHash、Numeric Target、Source Resource和wrapper路径；不得引用其他worktree产物。证据：2026-09-11 主线 `3C_Client@e852139597e42532` 精确Definition发布 Float32/Fixed；共同ProgramId=`character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`、SourceRevision=`139c7eda5f4aa04e29ea2f713855f95fbeb0d9d47ad0ddcccb013648fcc80c30`、StateSlots=1127；Float32 ProgramHash=`94cc87fae8d4aa930d4fb69a4cff104bd00ea1a4c13537184a12e5c1a79cb60e`、LayoutHash=`e175d6635a0dbe9ca0f1896b96d7d54dae51417831d0803ec1e1c537b4776d0e`，ProjectionRevision=`e16b2c88868aabda90ecf93340aef455d834b1a8b78a13a9dc9ef699f733d476`；Fixed ProgramHash=`ac1d724ed66d44061eff6be11b9e10f965deb6af3f8ecdebacbe18990ab71a2c`、LayoutHash=`ffc4a1761e0abf315ce795d2cb1ad1bc1474bc57d59ccb4f62cdbaf72b8c0529`，wrapper=`Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset`。Generated Program/Projection、Fixed wrapper和ACL source artifacts均来自主线Build时间窗，未引用parallel-test产物。
 - [ ] 3.4 对Local、Fixed/Rollback及Server Authority所需精确Composition执行正式兼容校验，确认ProgramRuntime、Backend、Pipeline、SessionSource、WorldSolver、Snapshot Codec和Network Model身份一致。
@@ -29,6 +29,13 @@
 
 ## 5. 交付与规范同步
 
+本节5.1同时接收旧refactor-btsmtl-flowcanvas-authoring的8.4.2中网络和正式运行证据汇总部分；作者与观察各自由对应新change交付，不要求一个总任务重复汇总实现状态。
+
 - [ ] 5.1 汇总SourceManifest、AuthoringClosure、Document、Build、Session、Runtime Dump、Replay和Compare的hash/RunId，生成Corin闭环交付记录；所有失败Gate必须带原始机器诊断。
 - [ ] 5.2 更新受影响current specs、project/change implementation记录和tasks状态，核对不存在Dump路径fallback、旧产物替换、目录扫描或第二Replay执行器；通过OpenSpec strict validate。
 - [ ] 5.3 形成独立小步提交并检查最终工作区、产物路径和交付记录没有混入其他worktree改动；提交前输出完整文件范围和未验证项。
+
+## 6. 接收Skill网络与正式运行收尾
+
+- [ ] 6.1 接收旧4.5.5：盘点并补齐Corin Rollback与Server Authority正式Pass/Adapter集成，复用既有Session链；通过现有正式运行入口核对实际载荷只包含Input、Canonical Request、Hash/Snapshot，交付网络身份和载荷证据，不复制作者Graph、Blackboard名称、Timeline对象或最终Pose。
+- [ ] 6.2 接收旧8.1：与本表4.2/4.3共享同一精确运行记录，覆盖Skill启动、Timeline等待、正常结束、取消和中断，核对父子调用与状态/Body结果并记录业务差异；交付当前产物身份下的正式CLI/Runtime证据，不新增测试、临时执行器或重复Replay任务。

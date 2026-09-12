@@ -1,6 +1,6 @@
 # Change: 重构角色Pose Graph架构
 
-BTSMTL技能接入FlowCanvas由[独立技能提案](../refactor-btsmtl-flowcanvas-authoring/proposal.md)管理；本目录只负责PoseGraph，不要求两者采用相同runtime。
+BTSMTL技能后续作者迁移由[独立技能提案](../integrate-native-fsm-skill-authoring/proposal.md)管理，通用观察归[观察收尾](../finish-skill-runtime-observation/proposal.md)；本目录只负责PoseGraph，不要求两者采用相同runtime。
 
 ## 2026-09-08 当前增量范围
 

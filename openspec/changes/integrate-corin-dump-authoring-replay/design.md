@@ -6,6 +6,10 @@ Corin正式根是 `Assets/Configs/Character/Corin/Pipeline/Definition/CorinChara
 
 ## Goals / Non-Goals
 
+2026-09-12 接收边界：除下述来源闭环外，本change第6节接收旧FlowCanvas任务4.5.5的网络Pass/Adapter收尾和8.1的正式Skill运行对账。网络只接现有SessionSource/Pipeline/Adapter，不能新增Skill专用网络语义或第二运行链。FSM节点、Document v8与作者资产迁移消费integrate-native-fsm-skill-authoring成果；通用观察消费finish-skill-runtime-observation成果，不在本change实现。
+
+网络校验输入为精确Composition、Program及同一请求/输入，输出为兼容结果、实际网络载荷、状态/hash/snapshot及运行事件关联。业务取舍：统一Program使本地、Rollback和Authority复用技能语义，代价是必须核对各正式Pass的输入确认与恢复边界；只做静态兼容检查不能替代实际载荷和中断证据。此前v7记录只表示当时协议，后续Run固定采用作者change正式发布的唯一schema，不独立维护兼容版本。
+
 **Goals:**
 
 - 用一个不可变Dump Source Manifest描述外部来源及归一化后的正式Unity资产。

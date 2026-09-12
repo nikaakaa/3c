@@ -1,5 +1,7 @@
 ## Context
 
+> 2026-09-12 已拆分替代归档。以下设计保留历史上下文，实际实施以[交接记录](split-handoff.md)中的后继change为准，不再从本目录执行apply或同步delta。
+
 2026-09-12 FSM范围更新：本change负责第9—11节原生FSM作者迁移、对应Document v8和编译适配、Corin清理；普通执行图继续用FlowCanvas，状态机子图唯一使用NodeCanvas FSM。共同业务参数/定义消费unify-skill-authoring-data-model成果；既有转移线与旧Step迁移消费add-skill-transfer-connections成果，不重复实施已经完成的工作。此前把这些工作全部交给数据层change的说明已撤销，本次不修改其它窗口文档；跨change剩余旧交接文字列为归并差异。
 
 本变更的正式对象是Character技能，不是AI Controller，也不是PoseGraph本体。Character RootTree已经从正式资产和Definition合同中删除；Character主线由C# ControlModule、编译后的Character Program以及Simulation Pipeline执行。AI自研RootTree已由独立`replace-btsmtl-ai-with-behavior-designer` change退役，Behavior Designer不进入本Skill Document或BTSMTL Graph。

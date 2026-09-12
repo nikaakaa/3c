@@ -1,6 +1,6 @@
 ## Context
 
-2026-09-12 职责对账：此前向共同定义提案转交状态存储、端口和版本迁移的安排撤销。总FlowCanvas change现有第9—11节规划原生FSM、最终v8和旧状态存储清理，本专项向其提供已完成转移成果，剩余验证/删除/归并按tasks接收该计划结果。下文保留原Step/Edge阶段设计，不证明最终FSM完成；共同定义提案只负责业务参数与规则去重。
+2026-09-12 职责对账：此前向共同定义提案转交状态存储、端口和版本迁移的安排撤销。integrate-native-fsm-skill-authoring负责原生FSM、最终v8和旧状态存储清理，本专项向其提供已完成转移成果，剩余验证/删除/归并按tasks接收该计划结果。下文保留原Step/Edge阶段设计，不证明最终FSM完成；共同定义提案只负责业务参数与规则去重。
 
 技能图状态机转移现由 `BtsmtlSkillCompositeFlowNode.Steps`（`BtsmtlSkillStepPort`）承载：端口名 = 步骤名 = 目标节点名，条件图/优先级/中止策略在源节点内部，画布不可见。编译主干（`BtsmtlSkillGraphOccurrence.ReadOccurrence`）沿 `outConnections` 遍历后按 `sourcePortID` 反查 steps。插件侧事实：`Connection` 可继承；FSM 模块 `FSMConnection` 为"线带条件"先例；`FlowGraph.CreatePortConnection`（virtual，项目自加钩子）是全部连线创建的必经点（`BinderConnection.Create` L79）；`BinderConnection.CreateValidated` 为 internal。Document v7 已有技能图身份/codec/validator 合同。约束沿 `openspec/project.md`：不写兼容层、迁移不留旧数据、编辑写入口唯一走 `BtsmtlSkillFlowEditorMutation`。
 
@@ -15,7 +15,7 @@
 - 谓词节点黑板化（`action-window-active` 等替换为事实槽）—— 另立变更。
 - `btsmtl`/`btsmtl.skill` 双域语义目录合并、状态机数据模型中立化 —— 另立变更。
 - 老库（TreeDesigner）状态机模型与 `btsmtl-sm-node-authoring` spec 的任何修改。
-- 运行观察、网络证据（归 `refactor-btsmtl-flowcanvas-authoring` 收尾项）。
+- 通用运行观察（归finish-skill-runtime-observation）与网络证据（归integrate-corin-dump-authoring-replay）。
 
 ## Decisions
 

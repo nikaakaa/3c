@@ -9,7 +9,7 @@ FlowCanvas接入后，原业务节点与新画布节点重复定义同一种业�
 - 仍有正式消费者的原节点改用共同定义，每个节点实例保留自己的参数值；原节点没有消费者时删除。迁移后删除重复字段、校验、目录声明和同义编译分支。
 - 保留FlowCanvas正式图、Node/Edge identity、连接、布局、原生Macro接口和保存方式，不建立自有图拓扑或第二份可写图。
 - 原生编辑、Document读写、复制引用与编译改为消费共同定义。这里只调整受参数抽取影响的消费代码，不重做Agent工具、事务服务、运行执行器或完整引用架构。
-- 本次不自行改变Document公开kind、字段、端点、owner或版本，当前基线为v7。状态转移、原生FSM、最终Document v8与清理由refactor-btsmtl-flowcanvas-authoring的在途FSM计划负责，既有Step/Edge成果由转移专项提供；若该计划先正式落地，本项按其已发布的唯一合同接入，不恢复旧版或双读。布局hash改造也不在本change中实施。
+- 本次不自行改变Document公开kind、字段、端点、owner或版本，当前基线为v7。状态转移、原生FSM、最终Document v8与清理由integrate-native-fsm-skill-authoring负责，既有Step/Edge成果由转移专项提供；若该计划先正式落地，本项按其已发布的唯一合同接入，不恢复旧版或双读。布局hash改造也不在本change中实施。
 
 ## Capabilities
 
@@ -28,4 +28,4 @@ FlowCanvas接入后，原业务节点与新画布节点重复定义同一种业�
 - 画布接入：Runtime/Character/Control/Authoring/FlowGraphs及相关旧作者适配。保留框架基类与明确端口映射，删除重复业务声明。
 - 消费代码：既有Capability、Inspector、SkillDocument和Compilation/Skills；复用现有业务lowering与Program Builder，保留运行语义。
 - 资产：仅迁移受参数存储位置变化影响的精确节点实例，保留参数值、UID、端点和引用；不借此迁移状态机拓扑。
-- 文档：原节点定义、FlowCanvas与metadata工作的交接见design；原生FSM和最终协议迁移归总FlowCanvas change，转移专项保留其阶段成果及对应接收记录。只更新规划，不修改代码、资产或现行spec正文，不归档未完成change。
+- 文档：原节点定义、FlowCanvas与metadata工作的交接见design；原生FSM和最终协议迁移归integrate-native-fsm-skill-authoring，转移专项保留其阶段成果及对应接收记录。只更新规划，不修改代码、资产或现行spec正文，不归档未完成change。

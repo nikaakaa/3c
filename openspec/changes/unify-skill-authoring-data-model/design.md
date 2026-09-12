@@ -2,7 +2,7 @@
 
 范围按用户澄清收窄：原业务节点已经存在，接入FlowCanvas后又出现一套同义定义。本change把业务定义保留一份，FlowCanvas使用它，不自行迁移图拓扑或Document版本。动机见[proposal.md](proposal.md)。
 
-并行规划对账：总FlowCanvas change正在规划原生NodeCanvas FSM与最终v8；该目标尚非已发布事实。本项只提供共同业务定义，图后端和版本选择归该change；其先落地时按正式新基线接入，不能把本项“保持当前合同”解释为恢复v7或强制状态机继续使用FlowGraph。
+并行规划对账：integrate-native-fsm-skill-authoring负责原生NodeCanvas FSM与最终v8；该目标尚非已发布事实。本项只提供共同业务定义，图后端和版本选择归该change；其先落地时按正式新基线接入，不能把本项“保持当前合同”解释为恢复v7或强制状态机继续使用FlowGraph。
 
 ### 已核对的重复实例
 
@@ -88,7 +88,7 @@
 
 只修改受共同参数/字段访问影响的现有SkillDocument适配；保持实施基线的kind、typed properties、values、逻辑端点、owner和完整包生命周期。当前基线为v7；原生FSM change正式切换后的唯一协议若成为新基线，则按该合同消费，不能恢复旧版。Parser、Exporter与Apply使用共同定义，不增加Agent业务模型、节点MCP工具或第二事务。
 
-如果某个字段无法在既有公开形状下无损映射，报告精确冲突，不能在本change自动新增字段、owner或升级版本。原生FSM的公开合同迁移由总FlowCanvas change第9节负责；本change不预定迁移实现，也不让两种协议并行读取。
+如果某个字段无法在既有公开形状下无损映射，报告精确冲突，不能在本change自动新增字段、owner或升级版本。原生FSM的公开合同迁移由integrate-native-fsm-skill-authoring负责；本change不预定迁移实现，也不让两种协议并行读取。
 
 业务取舍：保持包形状让这次改造聚焦业务定义去重；不能通过放宽parser或双读旧字段掩盖无法映射的问题。
 
@@ -102,9 +102,9 @@
 
 | 文档 | 本change承接 | 原文档继续负责 |
 |---|---|---|
-| refactor-btsmtl-flowcanvas-authoring | 原节点/FlowCanvas重复定义、字段与端口投影、必要消费代码；对应本tasks 1—6 | 在途第9节的原生FSM、最终v8/闭包迁移和清理，以及原运行观察、网络与整体事务职责 |
+| integrate-native-fsm-skill-authoring（接收旧FlowCanvas作者任务） | 原节点/FlowCanvas重复定义、字段与端口投影、必要消费代码；对应本tasks 1—6 | 原生FSM、最终v8/闭包迁移和作者事务；通用观察归finish-skill-runtime-observation，网络/正式运行归integrate-corin-dump-authoring-replay |
 | refactor-agent-authoring-attribute-driven | Skill参数定义变化引起的Document消费适配；对应本tasks 5 | 已完成的Agent清理、非Skill领域、现行v7与通用事务证据 |
-| add-skill-transfer-connections | 只消费最终共同定义，双方接口变更须对账 | 保留既有Step/Edge阶段成果；4.4、5.1、5.3、6.1、6.3对接总FlowCanvas第9节的最终FSM验证/清理，不再转交本change或重复实现旧目标 |
+| add-skill-transfer-connections | 只消费最终共同定义，双方接口变更须对账 | 保留既有Step/Edge阶段成果；4.4、5.1、5.3、6.1、6.3对接integrate-native-fsm-skill-authoring的最终FSM验证/清理，不再转交本change或重复实现旧目标 |
 | refactor-btsmtl-authoring-architecture | 同义节点业务编译输入和支持集对照；对应本tasks 1.1/4.1/4.2 | 其他领域编译、runtime、产品装配与总重构 |
 | Pose、Scene Play、Foot、AI等 | 不转入新任务 | 各自业务职责 |
 
@@ -115,7 +115,7 @@
 | 规范或决定 | 本次处理 |
 |---|---|
 | graph-authoring-domain-framework的唯一metadata要求 | 补充原业务节点和FlowCanvas必须共用业务定义；完整保留原Scenario |
-| btsmtl-agent-authoring-document-sync的完整闭包和版本规则 | 仅补共同定义消费要求，不自行升级版本；删除上一稿v8/edge owner/order delta，由总FlowCanvas在途FSM change负责最终协议迁移 |
+| btsmtl-agent-authoring-document-sync的完整闭包和版本规则 | 仅补共同定义消费要求，不自行升级版本；删除上一稿v8/edge owner/order delta，由integrate-native-fsm-skill-authoring负责最终协议迁移 |
 | btsmtl-graph-core与原FlowCanvas change的Skill适用范围 | 保持现有图存储选择，不复制或提前安装原change的拓扑范围delta |
 | 原转移专项的“条件在Edge、普通步骤保留” | 不改变其业务决定；本次不迁移步骤、端口或顺序，其自身仍需完成公开合同对账 |
 | 内部实现变化不得自动升级schema | 本次严格遵守；不能把Agent工作包版本升级当作参数抽取前置条件 |

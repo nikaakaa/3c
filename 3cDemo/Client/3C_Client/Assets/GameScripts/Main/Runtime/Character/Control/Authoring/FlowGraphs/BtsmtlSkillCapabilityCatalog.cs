@@ -486,13 +486,21 @@ namespace ThirdPersonCharacter.Control.Authoring
                 allowedValues = Enum.GetNames(field.EnumType);
             BtsmtlSkillNodeAuthoringReferenceAttribute reference =
                 AuthoringReferences(type).FirstOrDefault(value => value.FieldId == field.FieldId);
+            bool required =
+                field.NonEmpty ||
+                reference != null && !reference.Optional ||
+                GraphReferences(type).Any(value => value.FieldId == field.FieldId && !field.Optional) ||
+                field.FieldId == "providerOwnerId" && ProviderKind(type) != BtsmtlSkillProviderKind.None ||
+                typeof(IBtsmtlSkillBlackboardAccessNode).IsAssignableFrom(type) &&
+                (field.FieldId == "declarationId" || field.FieldId == "ownerId") ||
+                AuthoringRules(type).Any(value =>
+                    value.Rule == BtsmtlSkillNodeAuthoringRule.CharacterStateFieldType &&
+                    value.FieldId == field.FieldId);
             GraphAuthoringFieldConstraint constraint = new GraphAuthoringFieldConstraint(
                 field.HasMinimum ? field.Minimum : (double?)null,
                 field.HasMaximum ? field.Maximum : (double?)null,
                 field.Finite,
-                field.NonEmpty ||
-                reference != null && !reference.Optional ||
-                GraphReferences(type).Any(value => value.FieldId == field.FieldId && !field.Optional),
+                required,
                 allowedValues);
             return new GraphAuthoringFieldDescriptor(
                 new GraphAuthoringFieldId(field.FieldId),

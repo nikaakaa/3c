@@ -42,17 +42,17 @@ namespace ThirdPersonCharacter.Control.Authoring
 
             menu.AddSeparator("BTSMTL/Provider/");
             string controlOwner = $"control-module:{definition.ControlModuleId}";
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Facing Angle", typeof(BtsmtlSkillMoveFacingAngleFlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Facing Angle", RequireType("character-move-facing-angle"), position, context,
                 node => ((BtsmtlSkillMoveFacingAngleFlowNode)node).Configure(controlOwner));
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Position", typeof(BtsmtlSkillCharacterStateVector3FlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Position", RequireType("character-state-vector3"), position, context,
                 node => ((BtsmtlSkillCharacterStateVector3FlowNode)node).Configure(CharacterStateProviderFields.Position, controlOwner));
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Velocity", typeof(BtsmtlSkillCharacterStateVector3FlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Velocity", RequireType("character-state-vector3"), position, context,
                 node => ((BtsmtlSkillCharacterStateVector3FlowNode)node).Configure(CharacterStateProviderFields.Velocity, controlOwner));
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Vertical Velocity", typeof(BtsmtlSkillCharacterStateScalarFlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Vertical Velocity", RequireType("character-state-scalar"), position, context,
                 node => ((BtsmtlSkillCharacterStateScalarFlowNode)node).Configure(CharacterStateProviderFields.VerticalVelocity, controlOwner));
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Body Yaw", typeof(BtsmtlSkillCharacterStateYawFlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Body Yaw", RequireType("character-state-yaw"), position, context,
                 node => ((BtsmtlSkillCharacterStateYawFlowNode)node).Configure(CharacterStateProviderFields.BodyYaw, controlOwner));
-            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Grounded", typeof(BtsmtlSkillCharacterStateBooleanFlowNode), position, context,
+            AppendConfigured(graph, menu, "BTSMTL/Provider/Character State/Get Grounded", RequireType("character-state-bool"), position, context,
                 node => ((BtsmtlSkillCharacterStateBooleanFlowNode)node).Configure(CharacterStateProviderFields.Grounded, controlOwner));
 
             AppendInputNodes(graph, menu, position, context, definition.InputProfile);
@@ -74,13 +74,14 @@ namespace ThirdPersonCharacter.Control.Authoring
                 CharacterInputValueDefinition input = inputProfile.InputValues[i];
                 if (input == null || string.IsNullOrWhiteSpace(input.InputValueId))
                     continue;
-                Type nodeType = input.ValueType switch
+                string kind = input.ValueType switch
                 {
-                    CharacterInputValueType.Bool => typeof(BtsmtlSkillBooleanInputFlowNode),
-                    CharacterInputValueType.Float => typeof(BtsmtlSkillScalarInputFlowNode),
-                    CharacterInputValueType.Vector2 => typeof(BtsmtlSkillVector2InputFlowNode),
-                    _ => null
+                    CharacterInputValueType.Bool => "character-input-bool",
+                    CharacterInputValueType.Float => "character-input-float",
+                    CharacterInputValueType.Vector2 => "character-input-vector2",
+                    _ => string.Empty
                 };
+                Type nodeType = string.IsNullOrEmpty(kind) ? null : RequireType(kind);
                 if (nodeType == null)
                     continue;
                 string inputId = input.InputValueId;
@@ -95,7 +96,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     continue;
                 string requestId = request.RequestId;
                 AppendConfigured(graph, menu, "BTSMTL/Provider/TargetData / " + requestId,
-                    typeof(BtsmtlSkillActionRequestFlowNode), position, context,
+                    RequireType("character-action-request"), position, context,
                     node => ((IBtsmtlSkillInputNode)node).SetInputId(requestId, owner));
             }
         }
@@ -118,7 +119,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 GameplayAttributeId attributeId = attribute.AttributeId;
                 string label = string.IsNullOrWhiteSpace(attribute.DisplayName) ? attribute.name : attribute.DisplayName;
                 AppendConfigured(graph, menu, "BTSMTL/Provider/Ability Attribute/Get / " + label,
-                    typeof(BtsmtlSkillGameplayAttributeFlowNode), position, context,
+                    RequireType("gameplay-attribute-read"), position, context,
                     node => ((BtsmtlSkillGameplayAttributeFlowNode)node).Configure(attributeId, owner));
             }
 
@@ -132,7 +133,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     GameplayTagId tagId = tag.TagId;
                     string label = string.IsNullOrWhiteSpace(tag.DisplayName) ? tagId.Value : tag.DisplayName;
                     AppendConfigured(graph, menu, "BTSMTL/Provider/Gameplay Tag/Get / " + label,
-                        typeof(BtsmtlSkillGameplayTagFlowNode), position, context,
+                        RequireType("gameplay-tag-has"), position, context,
                         node => ((BtsmtlSkillGameplayTagFlowNode)node).Configure(tagId, owner));
                 }
             }
@@ -145,10 +146,10 @@ namespace ThirdPersonCharacter.Control.Authoring
                 GameplayEffectDefinition selected = effect;
                 string label = string.IsNullOrWhiteSpace(effect.DisplayName) ? effect.name : effect.DisplayName;
                 AppendConfigured(graph, menu, "BTSMTL/Provider/Gameplay Effect/Apply / " + label,
-                    typeof(BtsmtlSkillApplyGameplayEffectFlowNode), position, context,
+                    RequireType("gameplay-effect-apply"), position, context,
                     node => ((BtsmtlSkillApplyGameplayEffectFlowNode)node).Configure(selected, null, false, owner));
                 AppendConfigured(graph, menu, "BTSMTL/Provider/Gameplay Effect/Remove / " + label,
-                    typeof(BtsmtlSkillRemoveGameplayEffectFlowNode), position, context,
+                    RequireType("gameplay-effect-remove"), position, context,
                     node => ((BtsmtlSkillRemoveGameplayEffectFlowNode)node).Configure(
                         GameplayEffectRemoveSelector.EffectId, 0, selected, null, owner));
             }
@@ -164,6 +165,13 @@ namespace ThirdPersonCharacter.Control.Authoring
             Action<FlowNode> configure) =>
             BtsmtlSkillFlowEditorMutation.AppendConfiguredCreationItem(
                 graph, menu, category, nodeType, position, context, configure);
+
+        static Type RequireType(string kind)
+        {
+            if (!BtsmtlSkillGraphAuthoringMetadata.TryResolveType(kind, out Type type))
+                throw new InvalidOperationException($"技能节点kind无法解析：{kind}");
+            return type;
+        }
 
         static bool TryResolveDefinition(
             FlowGraph graph,

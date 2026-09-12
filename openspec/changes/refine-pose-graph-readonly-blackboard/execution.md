@@ -28,3 +28,17 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - EventGraph正式变量Contract/Layout/Frame尚未交付，本change没有创建第二变量更新器。
 - 当前Corin Pose资产仍需要通过正式Document/Mutation删除旧的Action/Foot声明、根图Get、Body透传端口和确认无引用的重复子图。
 - Subgraph/Linked Pose跨图可访问范围、完整曲线依赖编译收口、全部Document/Exporter/Reconciler/Validator同步和最终现行spec更新仍待继续。
+
+## 2026-09-13 当前小步
+
+已完成：
+
+- `d82a7afbb`、`3e788506a`：为Pose子图接口增加内部Foot曲线端口门禁，并修正签名校验调用位置；内部曲线不得通过GraphInput、GraphOutput或Subgraph Call公开透传。
+- `32f2cbba1`：原生Pose Blackboard主菜单不再显示内部Owner identity，只显示作者需要的输入信息。
+- `9a448cfb8`、`4a8625e95`、`43cfcb34c`：纯十六进制稳定身份不进入作者主显示；Root、Animation Layer、Control Rig、Transition Rule及参数/骨骼下拉统一使用语义名称。
+
+当前约束：
+
+- 上述代码提交未修改当前用户未提交的PoseGraph、Profile、Definition或Scene资产。
+- 当前工作区的Character Document package尚未checkout，不能绕过Document/Mutation直接编辑PoseGraph YAML；旧的Action/Foot声明、根图Get、Body透传端口和孤立重复子图仍需在正式Document/Mutation流程中删除。
+- `CharacterPoseGraphProjectionValidator` 的子图签名门禁已进入代码，但尚未对当前资产执行Unity Validate/Build；编辑器交叉编译仍受工作区既有Timeline改动影响。

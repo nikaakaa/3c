@@ -2,7 +2,7 @@
 
 动机见 [proposal](proposal.md)。本设计是用户在讨论“通用可视化事件图，当前先给动画使用”后明确调用 openspec-propose 生成的正式草案。用户没有补充第一版必备事件；首个应用采用已经讨论的初始化、每帧更新、角色数据、作者 Get/Set 与 Pose 消费，不把此前未经确认的长草案当作已批准决定。
 
-规划修订为 r1，状态待审阅。规划窗口为 01a095f2-ed45-7502-93f7-e9c9df0b7279，本目录 proposal/design/specs/tasks 由该窗口唯一维护。未来实现只维护本目录 execution.md；目前尚未派生实现，没有创建实现记录或 confirmed_by_user 的 PLANNING_DOCUMENT。确认文档后仍按既有 dual-workflow，由用户在本窗口显式调用 derive-implementation，不能自动实施。
+规划修订为 r1，用户已在确认“事件图直接用 FlowCanvas runtime、PoseGraph 保持编译执行”后回复“可以”并显式调用 derive-implementation，授权按本修订开始实现。确认业务基线为提交 3c7ad533273175f25df6bc063fc278a899707e12；以下确认与窗口绑定记录不改变业务方案。规划窗口为 01a095f2-ed45-7502-93f7-e9c9df0b7279，本目录 proposal/design/specs/tasks 由该窗口唯一维护，实现窗口只维护本目录 execution.md。
 
 ### 已核对的当前代码
 
@@ -204,4 +204,47 @@ Build 冻结事件图/宿主/变量依赖版本和 AOT 要求，Pose 编译仍�
 - 正式内容接入时的显示名称、现有角色/Fixture及具体消费位置，由消费侧既有迁移清单确定；不得改变本提案的变量生产职责或顺便重做关卡/Locomotion。
 - Document发布使用的具体版本号取决于实施时已发布基线；协议必须遵守D8的同批一次升级或下一版，不存在兼容模式选项。
 
-上述是内容登记与版本编号，不留原生/编译双选或状态回滚等会改变规范的未决实现路线。整份方案仍待用户审阅。
+上述是内容登记与版本编号，不留原生/编译双选或状态回滚等会改变规范的未决实现路线。用户已确认 r1；已有跨change依赖继续按D7/D8处理，不扩大实现范围或建立临时路径。
+
+## Workflow Binding
+
+实现开始前必须完整读取 C:/Users/Lenovo/.codex/skills/derive-implementation/references/implementation-protocol.md。实现只改授权代码和自己的 execution.md，不修改本目录规划文件，也不改其它任务的规划。任务5.2的“提供合同”通过代码和实现记录完成，不是跨窗口报进度。
+
+正常实现、工具/权限问题、编译、运行、验证、提交与完成都留在实现窗口和 execution.md，不发送回执、进度或完成汇报，不查找或联系其它任务。只有确认文档与真实代码/规范/公共合同无法同时成立，且继续必须改变业务方向、公共所有权或范围时，才在 execution.md 写全 ACTUAL_CONFLICT_REPORT，并向本规划窗口发送一次 ACTUAL_CONFLICT 文档指针。无关工作继续，被阻塞部分不绕行。
+
+```text
+PLANNING_DOCUMENT
+planner_thread_id: 01a095f2-ed45-7502-93f7-e9c9df0b7279
+planning_document_paths:
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/proposal.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/design.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/tasks.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/flowcanvas-event-graph/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/character-animation-event-graph/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/graph-authoring-domain-framework/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/character-animation-pipeline/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/btsmtl-agent-authoring-document-sync/spec.md
+implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/execution.md
+confirmed_by_user: true
+confirmed_revision: r1@3c7ad533273175f25df6bc063fc278a899707e12
+```
+
+```text
+IMPLEMENTATION_LINK
+planner_thread_id: 01a095f2-ed45-7502-93f7-e9c9df0b7279
+implementation_thread_id: 01a09627-3d34-7e61-822f-76aafa68765e
+task_title: FlowCanvas事件图
+shared_directory: D:/Unity_Project_1/3C
+planning_document_paths:
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/proposal.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/design.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/tasks.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/flowcanvas-event-graph/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/character-animation-event-graph/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/graph-authoring-domain-framework/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/character-animation-pipeline/spec.md
+  - D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/specs/btsmtl-agent-authoring-document-sync/spec.md
+implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/execution.md
+model: gpt-5.6-luna
+reasoning_effort: max
+```

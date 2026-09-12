@@ -32,4 +32,4 @@
 - 作者与 Document：原生 GraphEditor/Blackboard 适配、共享 Capability、PresentationDocument、typed Mutation/Validator 及依赖修订。
 - 关联边界：本 change 唯一拥有变量声明、更新和输出合同；[Pose 只读输入 change](../refine-pose-graph-readonly-blackboard/proposal.md)拥有 Get、输入范围、消费者编译与曲线迁移。两者完成接口接入前，不宣称动画闭环已完成。
 - 不接管 Skill/FSM、关卡内容、Timeline/Montage、Foot/IK 算法、Source 资源改革或整个 Pose runtime。实际动画内容只使用明确的正式角色/Fixture，不为了示例改写 Corin 状态机。
-- 本次仅产出 proposal、design、delta specs 和 tasks。文档待用户审阅；没有实施代码，不新增测试。现行规范冲突和未决内容集中列在 design。
+- 本提案阶段仅产出 proposal、design、delta specs 和 tasks，没有实施代码。用户随后确认 r1 并显式调用 derive-implementation，授权按正式文档派生实现；确认及唯一窗口绑定见 design 的 Workflow Binding。不新增测试，关联规范和依赖继续按 design 处理。

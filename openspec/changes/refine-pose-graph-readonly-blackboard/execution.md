@@ -45,6 +45,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 
 - 已通过 Unity MCP CLI 以实例 `e852139597e42532` 调用 `btsmtl.checkout_document`，目标为 `Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`。
 - checkout 在 SkillDefinition 完整性检查阶段失败，报告缺少原生状态机资产以及 Blackboard/ActionTargetSnapshot declaration；没有进入 Pose Document 写入或资产 Apply，也没有生成 `AgentAuthoring` 半成品目录。
+- 随后以同一实例调用只读 `btsmtl.validate`，在相同 SkillDefinition 入口返回相同错误；因此当前还没有可用于 Pose 资产迁移的有效 Document hash 或 Mutation plan。
 
 当前约束：
 

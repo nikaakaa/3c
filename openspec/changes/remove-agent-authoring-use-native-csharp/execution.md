@@ -89,6 +89,10 @@
 
 该首步还没有接入具体 Skill、Timeline、Pose 或 EventGraph 薄适配，也没有写入源码文件。后续适配必须直接消费正式对象/API；导出失败时由公共服务阻止源码替换，生成时由正式领域入口负责创建、替换、根挂接、保存和业务校验。
 
+当前已继续接入 Skill 正式对象：`BtsmtlSkillAuthoringCodeAdapter` 直接遍历 `BtsmtlSkillGraphClosure`，按对象身份收集 Skill Graph、Macro、原生 FSM、Timeline、节点、连线、Blackboard、Track、Clip、Section 与外部 Binding，并按五个代码阶段输出正式 API 调用。`BtsmtlSkillAuthoringCode` 只包装已有 Graph mutation、GraphAssetFactory、TimelineData 与 Curve Catalog，不创建第二套节点或字段模型；生成范围清理也只接收当前导出的稳定 identity 集合。
+
+该适配器已覆盖当前正式 Skill/Timeline 节点和片段的类型化配置、动态步骤、FSM Transfer、MotionWarp source、完整 AnimationCurve、外部资源引用与根绑定表达。遇到内联旧 Tree 或未持久化资源时返回明确不支持诊断，不用默认值或旧 JSON 补齐。
+
 ## 4. 当前验证记录
 
 - 规划文档已由规划窗口执行 `openspec validate remove-agent-authoring-use-native-csharp --strict` 并通过；本首步未修改规划文件。
@@ -97,5 +101,6 @@
 - 编译结束后立即执行 `dotnet build-server shutdown`，MSBuild 与 VB/C# 编译器服务器均成功关闭。
 - `git diff --check` 对首步 execution 与 CodeGeneration 文件通过。
 - 关键词合法性修正后的同一 Editor 增量编译再次成功：`0 个警告`、`0 个错误`，成功生成 `ThirdPersonClient.Editor.dll`；随后 `dotnet build-server shutdown` 成功关闭全部编译服务器。该结果只证明静态程序集编译，不替代 Unity Editor Console 或运行验证。
+- 接入 Skill 适配器后，使用 Unity 2022 Editor 引用与当前 `Temp/bin/Debug` 程序集直接编译 CodeGeneration 全部 `.cs`，结果为 `0` 错误；该检查覆盖新文件自身语法和类型引用。完整 `ThirdPersonClient.Editor.csproj` 编译另有并行任务现存错误：`BtsmtlScenePlayGraphShellToolbar.cs:37` 找不到 `BtsmtlScenePlayPreviewPresenter`，不是本任务新增文件的诊断，已保留未覆盖。
 - 尚未运行 Unity、Unity MCP、Play、Build 或资产生成；本首步未新增测试代码。
 - 待完成验证：Editor 程序集编译、具体领域适配、两个 MCP 显式入口、导出/删除重建往返、D7.1 删除门槛以及 Unity Console 实际状态。

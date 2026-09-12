@@ -54,14 +54,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
     public readonly struct BtsmtlAuthoringCodeExternalDependency
     {
-        public BtsmtlAuthoringCodeExternalDependency(string assetPath, string typeName)
+        public BtsmtlAuthoringCodeExternalDependency(string assetPath, string typeName, long localFileId = 0)
         {
             AssetPath = assetPath ?? string.Empty;
             TypeName = typeName ?? string.Empty;
+            LocalFileId = localFileId;
         }
 
         public string AssetPath { get; }
         public string TypeName { get; }
+        public long LocalFileId { get; }
     }
 
     public interface IBtsmtlAuthoringCodeDomainAdapter
@@ -192,8 +194,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return variableName;
         }
 
-        public bool TryGetVariable(object source, out string variableName) =>
-            source != null && m_ObjectVariables.TryGetValue(source, out variableName);
+        public bool TryGetVariable(object source, out string variableName)
+        {
+            variableName = null;
+            return source != null && m_ObjectVariables.TryGetValue(source, out variableName);
+        }
 
         public string RequireVariable(object source, string subject)
         {
@@ -218,17 +223,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             m_Usings.Add(namespaceName);
         }
 
-        public void AddExternalDependency(string assetPath, string typeName)
+        public void AddExternalDependency(string assetPath, string typeName, long localFileId = 0)
         {
             if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(typeName))
             {
                 ReportError("external_dependency_missing", assetPath, "外部资源依赖必须包含路径和正式类型。");
                 return;
             }
-            string key = $"{typeName}\n{assetPath}";
+            string key = $"{typeName}\n{assetPath}\n{localFileId}";
             if (!m_ExternalDependencyKeys.Add(key))
                 return;
-            m_ExternalDependencies.Add(new BtsmtlAuthoringCodeExternalDependency(assetPath, typeName));
+            m_ExternalDependencies.Add(new BtsmtlAuthoringCodeExternalDependency(assetPath, typeName, localFileId));
         }
 
         public void AddStatement(BtsmtlAuthoringCodeEmissionPhase phase, string statement)
@@ -263,6 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         internal IReadOnlyCollection<string> Usings => m_Usings;
 
         internal IReadOnlyList<string> Statements(BtsmtlAuthoringCodeEmissionPhase phase) => m_Statements[phase];
+
+        internal IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> Diagnostics => m_Diagnostics;
 
         internal BtsmtlAuthoringCodeExportResult CreateResult(string sourceCode) =>
             new(
@@ -365,6 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public abstract string RecipeType { get; }
         public abstract string DefinitionAssetPath { get; }
         public abstract string OutputAssetPath { get; }
+        public abstract T ResolveExternalAsset<T>(string assetPath, long localFileId);
         public abstract BtsmtlAuthoringGenerationResult Complete(object rootOutput);
         public abstract BtsmtlAuthoringGenerationResult Fail(BtsmtlAuthoringCodeDiagnostic diagnostic);
     }
@@ -559,9 +567,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return true;
         }
 
-        public static bool IsQualifiedIdentifier(string value) =>
-            !string.IsNullOrWhiteSpace(value) &&
-            value.Split('.').All(IsIdentifier);
+        public static bool IsQualifiedIdentifier(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            if (value.StartsWith("global::", StringComparison.Ordinal))
+                value = value.Substring("global::".Length);
+            return value.Split('.').All(IsIdentifier);
+        }
 
         public static string Identifier(string value)
         {
@@ -632,6 +645,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (!IsQualifiedIdentifier(qualifiedTypeName) || !IsIdentifier(memberName))
                 throw new ArgumentException("Enum type and member must be C# identifiers.");
             return $"{qualifiedTypeName}.{memberName}";
+        }
+
+        public static string TypeName(Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+            if (type.IsArray)
+                return $"{TypeName(type.GetElementType())}[]";
+            if (type.IsGenericType)
+            {
+                string name = type.GetGenericTypeDefinition().FullName;
+                int tick = name.IndexOf('`');
+                name = name.Substring(0, tick).Replace('+', '.');
+                return $"global::{name}<{string.Join(", ", type.GetGenericArguments().Select(TypeName))}>";
+            }
+            return $"global::{type.FullName.Replace('+', '.')}";
         }
 
         internal static string IdentityToken(string identity)

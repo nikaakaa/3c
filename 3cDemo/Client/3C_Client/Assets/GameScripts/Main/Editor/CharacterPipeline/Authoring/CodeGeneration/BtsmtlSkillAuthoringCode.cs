@@ -25,25 +25,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
             if (!definition)
                 throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
-            BtsmtlSkillFlowGraph graph = definition.SkillGraphs.SingleOrDefault(value =>
-                value && string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+            string outputPath = context.OutputAssetPath;
+            BtsmtlSkillFlowGraph graph = AssetDatabase.LoadAssetAtPath<BtsmtlSkillFlowGraph>(outputPath);
             if (graph)
-                return graph;
-
-            string path = AssetDatabase.GetAssetPath(definition);
-            if (string.IsNullOrEmpty(path))
-                throw new InvalidOperationException("Character Pipeline Definition must be a saved asset.");
-            graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
-            graph.name = string.IsNullOrWhiteSpace(name) ? identity : name;
-            graph.ConfigureIdentity(identity, BtsmtlSkillFlowGraphRole.Skill);
-            AssetDatabase.AddObjectToAsset(graph, path);
-            BtsmtlSkillFlowEditorMutation.Apply(
-                graph,
-                "创建技能根图",
-                () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph),
-                false);
-            definition.SetSkillGraphs(definition.SkillGraphs.Concat(new[] { graph }).ToArray());
-            EditorUtility.SetDirty(definition);
+            {
+                if (!string.Equals(graph.AuthoringId, identity, StringComparison.Ordinal) ||
+                    graph.Role != BtsmtlSkillFlowGraphRole.Skill)
+                    throw new InvalidOperationException($"Skill output '{outputPath}' has a different identity or role.");
+            }
+            else
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(outputPath) != null)
+                    throw new InvalidOperationException($"Skill output '{outputPath}' is occupied by another asset type.");
+                int separator = outputPath.LastIndexOf('/');
+                string folder = separator > 0 ? outputPath.Substring(0, separator) : string.Empty;
+                if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+                    throw new InvalidOperationException($"Skill output folder '{folder}' does not exist.");
+                BtsmtlSkillFlowGraph existing = definition.SkillGraphs.SingleOrDefault(value =>
+                    value && string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+                if (existing)
+                    throw new InvalidOperationException($"Skill identity '{identity}' already belongs to '{AssetDatabase.GetAssetPath(existing)}'.");
+                graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
+                graph.name = string.IsNullOrWhiteSpace(name) ? identity : name;
+                graph.ConfigureIdentity(identity, BtsmtlSkillFlowGraphRole.Skill);
+                AssetDatabase.CreateAsset(graph, outputPath);
+                BtsmtlSkillFlowEditorMutation.Apply(
+                    graph,
+                    "创建技能根图",
+                    () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph),
+                    false);
+            }
+            if (!definition.SkillGraphs.Contains(graph))
+            {
+                definition.SetSkillGraphs(definition.SkillGraphs.Concat(new[] { graph }).ToArray());
+                EditorUtility.SetDirty(definition);
+            }
             EditorUtility.SetDirty(graph);
             return graph;
         }

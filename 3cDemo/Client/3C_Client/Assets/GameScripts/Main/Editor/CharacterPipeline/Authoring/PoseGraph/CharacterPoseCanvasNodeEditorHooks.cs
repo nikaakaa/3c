@@ -282,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     var used = new HashSet<string>(policies.Select(value => value.ParameterId.Value), StringComparer.Ordinal);
                     CharacterPoseParameterDeclaration[] choices = poseGraph.Parameters
-                        .Where(value => value != null && value.ParameterId.IsValid &&
+                        .Where(value => CharacterPoseParameterAccess.IsBlackboardInput(value) &&
                                         !used.Contains(value.ParameterId.Value))
                         .ToArray();
                     if (choices.Length > 0)

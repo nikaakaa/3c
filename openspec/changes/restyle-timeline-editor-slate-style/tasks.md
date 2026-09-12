@@ -21,7 +21,7 @@
 - [x] 2.4 完成 diff -> Session -> 正式 owner 的校验/提交/刷新；拒绝操作给出原因，删除 Unsupported 静默吞修改路径
 - [x] 2.5 收口取消、关闭、Undo/Redo、外部 owner 修改和过期草稿；无效草稿不覆盖正式数据
 - [x] 2.6 核对 Clip、Curve、属性和菜单路径只产生一个正式 Undo，隔离临时 Slate Undo/dirty，并保留取消和失败事务结果
-- [ ] 2.7 将删除、复制、排序、跨轨道移动统一接正式 contract/引用校验，复制生成新 identity，排序保留 identity
+- [x] 2.7 将删除、复制、排序、跨轨道移动统一接正式 contract/引用校验，复制生成新 identity，排序保留 identity
 
 ## 3. 正式新增
 

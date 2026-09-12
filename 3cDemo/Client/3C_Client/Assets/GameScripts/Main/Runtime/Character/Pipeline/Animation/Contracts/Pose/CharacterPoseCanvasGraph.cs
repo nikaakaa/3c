@@ -160,9 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static bool IsBlackboardInput(CharacterPoseParameterDeclaration declaration) =>
-            declaration != null &&
-            declaration.ParameterId.IsValid &&
-            declaration.Usage == CharacterPoseParameterUsage.Control;
+            CharacterPoseParameterAccess.IsBlackboardInput(declaration);
 
         int ParameterConsumerCount(PoseParameterId parameterId)
         {
@@ -315,6 +313,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(role));
             m_Role = role;
             m_Parameters = parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
+            var parameterIds = new HashSet<PoseParameterId>();
+            foreach (CharacterPoseParameterDeclaration parameter in m_Parameters)
+            {
+                if (parameter == null)
+                    throw new InvalidOperationException(
+                        $"Pose Canvas graph '{GraphId}' contains a missing parameter.");
+                parameter.RequireValid();
+                if (!parameterIds.Add(parameter.ParameterId))
+                    throw new InvalidOperationException(
+                        $"Pose Canvas graph '{GraphId}' contains duplicate parameter '{parameter.ParameterId}'.");
+            }
             CharacterPoseCanvasNode[] nodeValues = nodes ?? Array.Empty<CharacterPoseCanvasNode>();
             CharacterPoseCanvasConnection[] connectionValues =
                 connections ?? Array.Empty<CharacterPoseCanvasConnection>();
@@ -423,6 +432,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose Canvas graph '{GraphId}' contains a node outside the Pose Canvas node catalog.");
             RequireNodeSet(nodes);
+            var parameterIds = new HashSet<PoseParameterId>();
+            foreach (CharacterPoseParameterDeclaration parameter in Parameters)
+            {
+                if (parameter == null)
+                    throw new InvalidOperationException(
+                        $"Pose Canvas graph '{GraphId}' contains a missing parameter.");
+                parameter.RequireValid();
+                if (!parameterIds.Add(parameter.ParameterId))
+                    throw new InvalidOperationException(
+                        $"Pose Canvas graph '{GraphId}' contains duplicate parameter '{parameter.ParameterId}'.");
+            }
             var edges = new HashSet<string>(StringComparer.Ordinal);
             foreach (CharacterPoseCanvasConnection connection in Connections)
             {

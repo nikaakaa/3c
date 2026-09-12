@@ -514,6 +514,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Unit = unit?.Trim() ?? string.Empty;
             m_DefaultValue = defaultValue;
         }
+
+        public void RequireValid()
+        {
+            if (!ParameterId.IsValid || string.IsNullOrWhiteSpace(DisplayName) ||
+                !Enum.IsDefined(typeof(PoseParameterValueType), ValueType) ||
+                !Enum.IsDefined(typeof(CharacterPoseParameterUsage), Usage) ||
+                !float.IsFinite(DefaultValue))
+                throw new InvalidOperationException("Pose parameter declaration is invalid.");
+        }
     }
 
     [Serializable]

@@ -9,6 +9,7 @@ using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
@@ -18,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     [McpForUnityTool(
         "btsmtl.export_code",
-        Description = "从一个精确的正式 Skill Graph、Timeline 或 EventGraph 资产完整导出可重建的 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
+        Description = "从一个精确的正式 Skill Graph、Timeline、Pose Graph 或 EventGraph 资产完整导出可重建的 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -98,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             new IBtsmtlAuthoringCodeDomainAdapter[]
             {
                 new BtsmtlSkillAuthoringCodeAdapter(),
+                new BtsmtlPoseAuthoringCodeAdapter(),
                 EventGraphAuthoringCodeAdapter.Instance
             };
 
@@ -245,7 +247,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             UnityEngine.Object[] supported = assets
-                .Where(value => value is BtsmtlSkillFlowGraph || value is TimelineAsset || value is HostEventGraph)
+                .Where(value => value is BtsmtlSkillFlowGraph ||
+                                value is TimelineAsset ||
+                                value is CharacterPresentationPoseGraphAsset ||
+                                value is HostEventGraph)
                 .ToArray();
             if (localFileId != 0L)
             {
@@ -256,7 +261,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"Asset '{assetPath}' has no supported authoring root with local id {localFileId}.");
             }
             UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(assetPath);
-            if (main is BtsmtlSkillFlowGraph || main is TimelineAsset || main is HostEventGraph)
+            if (main is BtsmtlSkillFlowGraph ||
+                main is TimelineAsset ||
+                main is CharacterPresentationPoseGraphAsset ||
+                main is HostEventGraph)
                 return main;
             if (supported.Length == 1)
                 return supported[0];

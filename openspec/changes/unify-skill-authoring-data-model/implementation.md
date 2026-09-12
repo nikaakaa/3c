@@ -101,6 +101,7 @@
 ## 验证记录
 
 - Runtime 与 Editor 的 `dotnet build` 已通过；编译使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后执行了 `dotnet build-server shutdown`。
+- 上述通过是既有记录；本轮r2代码完成后，`BTSMTL.TreeDesigner.csproj`重新编译为0错误，`ThirdPersonClient.Editor.csproj`的Skill相关代码无错误，当前剩余3条并行Pose错误（`CharacterPoseGraphWorkspace.cs`调用缺失的`SetEditorAnimationVariables`）。
 - Unity 正确实例为 `3C_Client@e852139597e42532`；没有向并行测试实例 apply。
 - v8代码加载后，MCP tool description 已显示 Document v8。
 - 当前最新正式 `checkout_document` 没有生成 package，返回真实 authoring错误：当前未提交 Native FSM/相关节点闭包存在缺失，且当前目录有并行 Timeline 改动；这是正确阻断。

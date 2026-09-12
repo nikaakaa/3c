@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Diagnostics;
+using BTSMTL.Diagnostics.Editor;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -695,6 +697,59 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_Status.text = value ?? string.Empty;
             m_Status.tooltip = value ?? string.Empty;
+        }
+    }
+
+    [InitializeOnLoad]
+    static class TimelineRuntimeObservationBridge
+    {
+        static TimelineRuntimeObservationBridge()
+        {
+            RuntimeDebugSession.Shared.Changed += Refresh;
+            TimelineEditorWindow.AssetOpened += _ => Refresh();
+        }
+
+        static void Refresh()
+        {
+            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
+            for (int index = 0; index < windows.Length; index++)
+                Refresh(windows[index]);
+        }
+
+        static void Refresh(TimelineEditorWindow window)
+        {
+            if (!window || window.Timeline == null)
+                return;
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
+                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(window.Timeline.AuthoringId);
+            if (summaries.Count != 1 || !summaries[0].Playback.IsValid)
+            {
+                if (summaries.Count == 0)
+                    window.ClearRuntimeObservation();
+                return;
+            }
+
+            RuntimeTimelinePlaybackDebugSummary summary = summaries[0];
+            var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
+            var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (RuntimeDebugEventView item in RuntimeDebugSession.Shared.ViewModel.GetTimelineCurrentEvents(
+                         window.Timeline.AuthoringId,
+                         summary.Playback))
+            {
+                RuntimeSourceElementKey source = item.Source;
+                string status = !string.IsNullOrEmpty(item.Event.Payload.Status)
+                    ? item.Event.Payload.Status
+                    : item.Event.Kind.ToString();
+                if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
+                    activeTracks[source.TrackAuthoringId] = status;
+                else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
+                         !string.IsNullOrEmpty(source.ClipAuthoringId))
+                    activeClips[source.ClipAuthoringId] = status;
+            }
+            if (RuntimeDebugSession.Shared.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
+                window.ApplyHistoryObservation(summary.VisualTime, activeTracks, activeClips);
+            else
+                window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
         }
     }
 }

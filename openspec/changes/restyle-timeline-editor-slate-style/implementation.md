@@ -58,6 +58,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 
 ## 尚未完成
 
+- 预览宿主边界审计：Scene Play presenter 当前挂在 `GraphAuthoringEditorShell/BaseTreeWindow`；Skill FlowCanvas 仍通过 `BtsmtlSkillFlowGraph.OnGraphEditorToolbar` 绘制自己的 IMGUI 入口，项目没有现成的共同 presenter 挂载点。因此 P1 不能只凭 BaseTreeWindow 上出现分组控件宣称完成，后续需要由预览 change 提供正式共享宿主合同。
 - 场景预览 coordinator 的精确 SceneAsset/context/非 Skill 目标接线。
 - Timeline runtime binding 的 Follow/Pin、多调用选择和历史位置独立显示。
 - 编辑 revision 到真实 Build/adoption 状态的 Graph Shell 展示。

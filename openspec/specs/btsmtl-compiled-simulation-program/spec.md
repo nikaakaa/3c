@@ -210,13 +210,13 @@ Character Simulation Build MUST按`Frontend artifact -> Presentation contract ->
 - **THEN** Build MUST从同一Frontend artifact生成唯一Projection与Fixed Program并验证相同Presentation contract
 - **AND** MUST不生成Float32 Program作为Projection编译的隐藏前置产物
 
-### Requirement: Compiler Diagnostics 与 Agent 必须复用正式 Frontend 和 Target 阶段
+### Requirement: Compiler Diagnostics 与 Editor 作者入口必须复用正式 Frontend 和 Target 阶段
 
-Definition diagnostics、Agent validator 和其它 Editor caller MAY执行不发布 Program/Projection 的 dry-run，但 MUST复用正式 Authoring Discovery、Semantic Emission、artifact codec 和 Target Compiler。Dry-run result MUST以 artifact descriptor/identity 和分阶段 report 表达 Semantic 成功，不得依赖旧 `CharacterSimulationCompileResult.SemanticIr` 直通对象，也不得维护第二个 validator operation table。
+Definition diagnostics、C#作者API和其它 Editor caller MAY执行不发布 Program/Projection 的 dry-run，但 MUST复用正式 Authoring Discovery、Semantic Emission、artifact codec 和 Target Compiler。Dry-run result MUST以 artifact descriptor/identity 和分阶段 report 表达 Semantic 成功，不得依赖旧 `CharacterSimulationCompileResult.SemanticIr` 直通对象，也不得维护第二个 validator operation table。
 
-#### Scenario: Agent 校验 Corin Patch
+#### Scenario: C#作者入口校验Corin authoring
 
-- **WHEN** Agent validator 对修改后的 Corin authoring 执行正式编译校验
+- **WHEN** C#作者入口对修改后的 Corin authoring 执行正式编译校验
 - **THEN** MUST通过同一 Frontend 生成并校验 Semantic artifact payload
 - **AND** MUST不自行发射 Semantic operations 或直接调用 raw Float32 lowerer
 

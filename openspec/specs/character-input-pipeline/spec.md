@@ -124,13 +124,13 @@ Input history MUST不再由公共CharacterInputStage、Program Runtime或标准P
 
 ### Requirement: 动作 Request 必须由 Authoring 声明业务 Timing Class
 
-`CharacterActionRequestDefinition` MUST为每个离散request保存稳定timing class，当前正式值为`Immediate`与`Offensive`。Timing class MUST表达request的业务类别，不得保存具体Network Model、Tick延迟或packet policy。CharacterInputProfile Inspector与Agent authoring MUST读写同一字段；缺失或非法值 MUST作为配置错误，MUST不按request id、InputAction显示名或字符串前缀推断类别。
+`CharacterActionRequestDefinition` MUST为每个离散request保存稳定timing class，当前正式值为`Immediate`与`Offensive`。Timing class MUST表达request的业务类别，不得保存具体Network Model、Tick延迟或packet policy。CharacterInputProfile Inspector与C#作者API MUST读写同一字段；缺失或非法值 MUST作为配置错误，MUST不按request id、InputAction显示名或字符串前缀推断类别。
 
 #### Scenario: 作者配置攻击请求
 
 - **WHEN** 作者把Corin Attack request标记为Offensive
 - **THEN** CharacterInputProfile MUST保存该timing class
-- **AND** Agent snapshot与Inspector MUST读取同一配置
+- **AND** C#作者入口与Inspector MUST读取同一配置
 
 #### Scenario: 请求没有合法 Timing Class
 

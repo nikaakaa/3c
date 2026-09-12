@@ -311,7 +311,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph 必须拥有统一稳定 authoring identity
 
-每个 `BaseGraph` MUST 持有稳定 `GraphAuthoringId`，Node 和 Edge MUST 继续持有各自稳定 authoring GUID。Graph runtime clone MUST 保留这些 source identities，但 MUST 使用独立 runtime instance identity。Pipeline Blackboard declaration owner、Agent Snapshot、Debug Source Map 和 editor navigation MUST 引用同一个 Graph authoring identity。
+每个 `BaseGraph` MUST 持有稳定 `GraphAuthoringId`，Node 和 Edge MUST 继续持有各自稳定 authoring GUID。Graph runtime clone MUST 保留这些 source identities，但 MUST 使用独立 runtime instance identity。Pipeline Blackboard declaration owner、C#作者导出上下文、Debug Source Map 和 editor navigation MUST 引用同一个 Graph authoring identity。
 
 #### Scenario: 创建 inline Graph
 
@@ -379,7 +379,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph节点兼容性必须由稳定Authoring Capability裁决
 
-每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。系统 MUST为后续自动authoring暴露同一只读policy查询，但本change MUST NOT修改Agent schema。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
+每个可进入受限Graph的节点类型 MUST声明稳定authoring capability。Graph Role MUST通过唯一policy定义允许的capability；`CanCreateNodeType`、Node Search、拖拽、粘贴、脚本创建与Compiler Validator MUST复用该policy。系统 MUST为后续C# authoring暴露同一只读policy查询，但本change MUST NOT复制另一份作者合同。系统 MUST NOT按NodePath字符串、显示名、继承层次或窗口类型猜测节点兼容性。
 
 #### Scenario: 已退役AI图尝试进入BTSMTL
 

@@ -25,7 +25,7 @@
 #### Scenario: World-space source尝试使用MotionWarp
 
 - **WHEN** 作者把World-space MotionCurve绑定为MotionWarp source
-- **THEN** Inspector、Agent Validator与Compiler MUST拒绝发布
+- **THEN** Inspector、C#作者API与Compiler MUST拒绝发布
 - **AND** Runtime MUST不猜测如何把world轨迹转换成warp-start局部轨迹
 
 #### Scenario: Scale source在窗口内没有位移
@@ -38,7 +38,7 @@
 #### Scenario: Warp source配置Gameplay淡入淡出
 
 - **WHEN** 作者给Warp引用的MotionCurve配置非零Ease或非单位WeightCurve
-- **THEN** Inspector、Agent Validator与Semantic发布 MUST拒绝该source
+- **THEN** Inspector、C#作者API与Semantic发布 MUST拒绝该source
 - **AND** MUST不按权重缩放Warp终点或在Runtime忽略该配置
 - **AND** 动画表现淡入淡出 MAY继续由AnimationTrack与Presentation配置
 
@@ -67,7 +67,7 @@
 
 ### Requirement: MotionWarp 修正必须使用 canonical 累计进度曲线
 
-MotionWarpClip MUST只为当前solver实际消费的进度保存canonical normalized cumulative progress curve。`SkewToTarget`与`LinearToTarget` MUST使用Position Progress；`ProgressCurve` rotation method MUST使用Yaw Progress。曲线 MUST只包含有限值，时间域 MUST为`[0,1]`，首值 MUST为0，末值 MUST为1并单调不下降。Timeline Curve Catalog与Agent MUST复用唯一MotionWarp校验，不得静默Clamp、补端点、重排非法key或为不消费curve的mode生成默认数据。`ScaleToTarget`、`ConstantRate`与`ScaleSourceYaw` MUST不把未消费curve写入SemanticHash或Program。
+MotionWarpClip MUST只为当前solver实际消费的进度保存canonical normalized cumulative progress curve。`SkewToTarget`与`LinearToTarget` MUST使用Position Progress；`ProgressCurve` rotation method MUST使用Yaw Progress。曲线 MUST只包含有限值，时间域 MUST为`[0,1]`，首值 MUST为0，末值 MUST为1并单调不下降。Timeline Curve Catalog与C#作者API MUST复用唯一MotionWarp校验，不得静默Clamp、补端点、重排非法key或为不消费curve的mode生成默认数据。`ScaleToTarget`、`ConstantRate`与`ScaleSourceYaw` MUST不把未消费curve写入SemanticHash或Program。
 
 #### Scenario: 旋转早于位置完成
 
@@ -88,15 +88,15 @@ MotionWarpClip MUST只为当前solver实际消费的进度保存canonical normal
 - **AND** MotionWarp validator MUST重新校验端点、范围和单调性
 - **AND** 非法结果 MUST拒绝整个mutation而不是自动修复
 
-#### Scenario: Agent修改MotionWarp进度
+#### Scenario: C#作者API修改MotionWarp进度
 
-- **WHEN** Agent v17通过registered ChannelId提交Yaw Progress完整curve
+- **WHEN** C#作者API通过registered ChannelId提交Yaw Progress完整curve
 - **THEN** handler MUST调用同一MotionWarp mutation与validator
 - **AND** MUST不使用MotionWarp专用第二curve patch入口
 
 ### Requirement: MotionWarp authoring 必须在发布前拒绝不完整配置
 
-Timeline Inspector、Semantic Compiler与Agent Validator MUST复用同一套MotionWarp校验。source、owner、window、Translation Mode、Offset Space、Rotation Mode、Rotation Method、offset、limit、所需curve、ConstantRate、Action Context与Action target requirement任一无效时，artifact发布 MUST失败。系统 MUST不猜目标空间、不替换solver、不自动生成curve或建立fallback配置。
+Timeline Inspector、Semantic Compiler与C#作者API MUST复用同一套MotionWarp校验。source、owner、window、Translation Mode、Offset Space、Rotation Mode、Rotation Method、offset、limit、所需curve、ConstantRate、Action Context与Action target requirement任一无效时，artifact发布 MUST失败。系统 MUST不猜目标空间、不替换solver、不自动生成curve或建立fallback配置。
 
 MotionWarp所属动作 MAY声明`OptionalSnapshot`或`SnapshotRequired`。`None`与MotionWarp组合 MUST在发布前拒绝。`OptionalSnapshot`动作无目标时 MUST保留resolved source并产生typed无目标结果；合法Limit Policy导致的`AppliedClamped`或`PreservedByLimitPolicy` MUST与目标缺失、配置错误明确区分。
 

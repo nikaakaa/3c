@@ -278,7 +278,7 @@ Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeli
 
 Curve Lane MUST支持单选、Shift追加、框选、双击或右键新增、一个或多个key拖动、Delete或右键删除、复制粘贴、数值Inspector以及Auto、Clamped Auto、Linear、Constant、Free和Weighted tangent编辑。横轴 MUST通过descriptor在Timeline frame与curve local time之间映射，并按整数Timeline frame吸附；纵轴 MUST按typed value domain处理。一次手势或Inspector提交 MUST只修改本地完整curve草稿并通过descriptor MutationAdapter生成一个Undo事务。Pointer Cancel MUST丢弃草稿；Pointer Up或意外Capture Out MUST提交最后草稿。提交后 MUST重新读取owner并刷新Timeline、Inspector、领域validation、Projection stale状态和可用Authoring Preview。
 
-Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、in/out tangent、in/out weight和WeightedMode。Curve key不获得持久AuthoringId；Editor MAY在当前owner revision内使用临时key index选择，Agent与持久Patch MUST以`OwnerAuthoringId + ChannelId + Full Curve`替换完整channel，不得按key index跨revision修改。
+Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、in/out tangent、in/out weight和WeightedMode。Curve key不获得持久AuthoringId；Editor MAY在当前owner revision内使用临时key index选择，C#作者API与持久作者代码 MUST以`OwnerAuthoringId + ChannelId + Full Curve`替换完整channel，不得按key index跨revision修改。
 
 #### Scenario: 拖动多个curve key
 
@@ -301,7 +301,7 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 
 #### Scenario: 外部修改使key选择过期
 
-- **WHEN** owner curve revision在编辑手势外被Agent或其它正式入口替换
+- **WHEN** owner curve revision在编辑手势外被C#作者API或其它正式入口替换
 - **THEN** Editor MUST使临时key选择失效并重新读取完整curve
 - **AND** MUST不按旧key index写入新revision
 

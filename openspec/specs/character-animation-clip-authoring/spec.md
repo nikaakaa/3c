@@ -40,7 +40,7 @@ L/R Contact / Lock Mode / Lock Weight / Support
 
 稳定channel identity MUST使用完整领域名称；可见短名不得成为查找identity。`Step Time` MUST使用秒且非负，`Step Dist`、`Foot Height`、`Toe Speed`与Pos/Rot Error MUST非负，Contact、Lock Weight与Support MUST位于`[0,1]`，Lock Mode MUST只取`0/1/2`并使用Constant切线。Step Time与Step Dist的Event边界 MUST按规范离散规则表达，不得用平滑曲线跨越事件跳变。
 
-Direct Clip、Action、Blend Space、Motion Matching、Agent Document与Foot Analysis Apply MUST消费同一catalog，MUST不按Runtime参数名、可见短名或仅按`propertyName`查找第二条Clip Curve。缺失、重复、旧property binding或非法Curve MUST阻止正式Apply或依赖该数据的后续Build，不得生成默认Curve。
+Direct Clip、Action、Blend Space、Motion Matching、C#作者API与Foot Analysis Apply MUST消费同一catalog，MUST不按Runtime参数名、可见短名或仅按`propertyName`查找第二条Clip Curve。缺失、重复、旧property binding或非法Curve MUST阻止正式Apply或依赖该数据的后续Build，不得生成默认Curve。
 
 本change内只有`Foot IK`继续降低为Runtime `animation.foot-placement-weight`，`Gait Phase`只供正式Sync Group；新增22条Foot Motion Curve MUST进入Registered Curve Hash但不得生成Runtime payload。
 

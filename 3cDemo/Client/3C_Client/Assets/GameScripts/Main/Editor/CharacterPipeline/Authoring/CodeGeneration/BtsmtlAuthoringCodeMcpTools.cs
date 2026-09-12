@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         public sealed class Parameters
         {
-            [ToolParameter("精确 Assets/... Skill Graph、Timeline 或 EventGraph 资产路径。", Required = true)]
+            [ToolParameter("精确 Assets/... Skill Graph、Timeline、Pose Graph 或 EventGraph 资产路径。", Required = true)]
             public string asset_path { get; set; }
 
             [ToolParameter("当 asset_path 指向含多个子资产的文件时，填写精确 local file id。", Required = false)]

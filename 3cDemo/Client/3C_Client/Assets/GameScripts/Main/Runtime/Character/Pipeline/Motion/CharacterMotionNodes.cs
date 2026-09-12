@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         Vector2PropertyPort m_MoveInput = new Vector2PropertyPort();
 
         [SerializeField, ShowInPanel("Move Speed")]
-        float m_MoveSpeed = LocomotionInputMotionAuthoringRules.DefaultMoveSpeed;
+        float m_MoveSpeed = 4f;
 
         [SerializeField, ShowInPanel("Displacement Mode")]
         LocomotionInputMotionDisplacementMode m_DisplacementMode;
@@ -26,10 +26,10 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         RootMotionCurveAsset m_ActionMotionCurve;
 
         [SerializeField, ShowInPanel("Turn Speed Degrees")]
-        float m_TurnSpeedDegrees = LocomotionInputMotionAuthoringRules.DefaultTurnSpeedDegrees;
+        float m_TurnSpeedDegrees = 720f;
 
         [SerializeField, ShowInPanel("Camera Relative")]
-        bool m_CameraRelative = LocomotionInputMotionAuthoringRules.DefaultCameraRelative;
+        bool m_CameraRelative = true;
 
         [SerializeField, ShowInPanel("Execution Mode")]
         LocomotionInputMotionExecutionMode m_ExecutionMode;
@@ -55,13 +55,35 @@ namespace ThirdPersonCharacter.Pipeline.Motion
             LocomotionInputMotionExecutionMode executionMode,
             float durationSeconds)
         {
-            LocomotionInputMotionAuthoringRules.Validate(
-                moveSpeed,
-                displacementMode,
-                actionMotionCurve,
-                turnSpeedDegrees,
-                executionMode,
-                durationSeconds);
+            if (float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed) || moveSpeed < 0f)
+                throw new ArgumentOutOfRangeException(nameof(moveSpeed));
+            if (!Enum.IsDefined(typeof(LocomotionInputMotionDisplacementMode), displacementMode))
+                throw new ArgumentOutOfRangeException(nameof(displacementMode));
+            if (displacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed && actionMotionCurve)
+                throw new ArgumentException("Constant Speed locomotion cannot declare an Action Motion Curve.", nameof(actionMotionCurve));
+            if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve)
+            {
+                if (!actionMotionCurve)
+                    throw new ArgumentNullException(nameof(actionMotionCurve));
+                if (moveSpeed != 0f)
+                    throw new ArgumentOutOfRangeException(nameof(moveSpeed), "Action Motion Curve locomotion must not declare Move Speed.");
+                if (actionMotionCurve.EvaluationMode != RootMotionCurveEvaluationMode.FullLocalDelta)
+                    throw new ArgumentException("Action Motion Curve locomotion requires FullLocalDelta evaluation.", nameof(actionMotionCurve));
+            }
+            if (float.IsNaN(turnSpeedDegrees) || float.IsInfinity(turnSpeedDegrees) || turnSpeedDegrees <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(turnSpeedDegrees));
+            if (!Enum.IsDefined(typeof(LocomotionInputMotionExecutionMode), executionMode))
+                throw new ArgumentOutOfRangeException(nameof(executionMode));
+            if (!float.IsFinite(durationSeconds) || durationSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            if (executionMode == LocomotionInputMotionExecutionMode.Timed && durationSeconds <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            if (executionMode != LocomotionInputMotionExecutionMode.Timed && durationSeconds != 0f)
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+            if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve &&
+                executionMode == LocomotionInputMotionExecutionMode.Timed &&
+                durationSeconds > actionMotionCurve.Duration + 0.0001f)
+                throw new ArgumentOutOfRangeException(nameof(durationSeconds), "Timed locomotion cannot exceed its Action Motion Curve duration.");
             m_MoveSpeed = moveSpeed;
             m_DisplacementMode = displacementMode;
             m_ActionMotionCurve = actionMotionCurve;

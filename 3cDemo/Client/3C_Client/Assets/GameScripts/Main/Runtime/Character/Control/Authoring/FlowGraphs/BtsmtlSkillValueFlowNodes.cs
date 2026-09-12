@@ -1,12 +1,11 @@
 #if UNITY_EDITOR
 using System;
-using ThirdPersonCharacter.Pipeline.Motion;
 using ParadoxNotion.Design;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
-    public interface IBtsmtlSkillInputNode : ICharacterInputValueAuthoring
+    public interface IBtsmtlSkillInputNode
     {
         string InputId { get; }
         string ProviderOwnerId { get; }
@@ -25,7 +24,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void SetInputId(string inputId, string providerOwnerId = "")
         {
-            inputId = CharacterInputAuthoringRules.RequireInputId(inputId);
+            if (string.IsNullOrWhiteSpace(inputId))
+                throw new ArgumentException("A skill input requires its declared identity.", nameof(inputId));
             if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("A skill input requires its provider owner identity.", nameof(providerOwnerId));
             m_InputId = inputId;
@@ -86,9 +86,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         BtsmtlSkillNodeAuthoringReferenceKind.ActionRequest,
         "skill_action_request_unresolved",
         "Skill Action Request节点的inputId无法解析。")]
-    public sealed class BtsmtlSkillActionRequestFlowNode : BtsmtlSkillInputFlowNode<bool>, ICharacterActionRequestAuthoring
+    public sealed class BtsmtlSkillActionRequestFlowNode : BtsmtlSkillInputFlowNode<bool>
     {
-        public string RequestId => InputId;
     }
 
 }

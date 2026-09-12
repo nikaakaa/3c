@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
-using ThirdPersonCharacter.Pipeline.Motion;
 using TreeDesigner;
 using UnityEngine;
 
@@ -13,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Activate Action Instance")]
     [NodePath("Base/Action/Low Level/Activate Action Instance")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ActivateActionInstanceNode : ActionNode, IActionContextAuthoring
+    public sealed class ActivateActionInstanceNode : ActionNode
     {
         [SerializeField, ShowInPanel("Action Profile")]
         ActionProfile m_ActionProfile;
@@ -85,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Submit Action Lifecycle Transition")]
     [NodePath("Base/Action/Low Level/Submit Action Lifecycle Transition")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class SubmitActionLifecycleTransitionNode : ActionNode, ISubmitActionLifecycleAuthoring
+    public sealed class SubmitActionLifecycleTransitionNode : ActionNode
     {
         [SerializeField, ShowInPanel("Action Context")]
         ActionContextSlot m_ActionContext;
@@ -112,7 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 #if UNITY_EDITOR
         public void ConfigureAuthoring(ActionContextSlot actionContext, ActionLifecycleTransitionType transitionType, string reason)
         {
-            CharacterActionAuthoringRules.ValidateLifecycle(transitionType);
             m_ActionContext = actionContext;
             m_TransitionType = transitionType;
             m_Reason = reason ?? string.Empty;
@@ -138,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Action Window Active Info")]
     [NodePath("Base/Value/Action/Window Active")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ActionWindowActiveInfoNode : ValueNode, IActionWindowAuthoring
+    public sealed class ActionWindowActiveInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Window Type")]
         string m_WindowType;
@@ -166,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Can Activate Action Info")]
     [NodePath("Base/Value/Action/Can Activate")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class CanActivateActionInfoNode : ValueNode, ICanActivateActionAuthoring
+    public sealed class CanActivateActionInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Target Action Profile")]
         ActionProfile m_ActionProfile;
@@ -179,17 +177,12 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         public ActionProfile ActionProfile => m_ActionProfile;
         public PipelineBlackboardVariableReference TargetSnapshotVariable => m_TargetSnapshotVariable;
-        public string TargetSnapshotDeclarationId => m_TargetSnapshotVariable.DeclarationId;
-        public string TargetSnapshotOwnerId => m_TargetSnapshotVariable.DeclarationOwnerId;
 
 #if UNITY_EDITOR
         public void ConfigureAuthoring(
             ActionProfile actionProfile,
             PipelineBlackboardVariableReference targetSnapshotVariable)
         {
-            CharacterActionAuthoringRules.ValidateTargetSnapshot(
-                targetSnapshotVariable.DeclarationId,
-                targetSnapshotVariable.DeclarationOwnerId);
             m_ActionProfile = actionProfile;
             m_TargetSnapshotVariable = targetSnapshotVariable;
             OnNodeChangedCallback();

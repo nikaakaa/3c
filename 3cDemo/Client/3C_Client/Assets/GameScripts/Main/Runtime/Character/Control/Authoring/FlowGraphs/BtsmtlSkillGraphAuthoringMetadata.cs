@@ -67,59 +67,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 new GraphAuthoringCapabilityId("btsmtl.skill." + kind));
         }
 
-        public static bool TryGetCapability(
-            string kind,
-            out GraphAuthoringCapabilityDescriptor descriptor)
-        {
-            EnsureRegistered();
-            return Catalog.TryGetByExternalKind(Domain, kind, out descriptor);
-        }
-
-        public static IReadOnlyList<GraphAuthoringFieldDescriptor> Fields(
-            string kind)
-        {
-            return Require(kind).Fields
-                .OrderBy(value => value.FieldId.Value, StringComparer.Ordinal)
-                .ToArray();
-        }
-
-        public static GraphAuthoringFieldDescriptor RequireField(
-            string kind,
-            string fieldId,
-            bool requireWritable = false)
-        {
-            return Catalog.RequireField(
-                Require(kind).CapabilityId,
-                new GraphAuthoringFieldId(fieldId),
-                requireWritable);
-        }
-
-        public static IReadOnlyList<BtsmtlSkillNodeAuthoringReferenceAttribute>
-            References(string kind)
-        {
-            return TryGetCapability(kind, out GraphAuthoringCapabilityDescriptor descriptor)
-                ? BtsmtlSkillCapabilityCatalog.AuthoringReferences(descriptor.AuthoringType)
-                : Array.Empty<BtsmtlSkillNodeAuthoringReferenceAttribute>();
-        }
-
-        public static IReadOnlyList<BtsmtlSkillAuthoringFieldValue> ReadFields(
-            FlowNode node) =>
-            BtsmtlSkillAuthoringValues.ReadFields(node);
-
-        public static object ReadField(FlowNode node, string fieldId) =>
-            BtsmtlSkillAuthoringValues.ReadField(node, fieldId);
-
-        public static IReadOnlyList<BtsmtlSkillAuthoringReferenceValue> ReadReferences(
-            FlowNode node) =>
-            BtsmtlSkillAuthoringValues.ReadReferences(node);
-
-        public static IReadOnlyList<BtsmtlSkillAuthoringGraphReferenceValue>
-            ReadGraphReferences(FlowNode node) =>
-            BtsmtlSkillAuthoringValues.ReadGraphReferences(node);
-
-        public static string ConfigurationBindingId(string kind) =>
-            Require(kind).MutationBindingId;
-
         public static bool TryGetKind(Type type, out string kind)
         {
             return BtsmtlSkillCapabilityCatalog.TryGetKind(type, out kind);

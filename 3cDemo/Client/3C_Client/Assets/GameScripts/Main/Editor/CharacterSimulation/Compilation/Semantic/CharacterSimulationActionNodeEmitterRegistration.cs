@@ -11,9 +11,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static void Register(CharacterSimulationNodeEmitterRegistry registry)
         {
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CharacterMoveFacingAngleInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActionContextActiveInfoNode>(node => ActionContext(node)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActionWindowActiveInfoNode>(node => ActionWindow(node)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CanActivateActionInfoNode>(node => CanActivate(node)));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActionContextActiveInfoNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ActionContextActive,
+                text0: CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActionWindowActiveInfoNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ActionWindowActive,
+                text0: node.WindowType)));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CanActivateActionInfoNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.CanActivateAction,
+                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionProfile)),
+                    ("TargetSnapshotDeclaration", node.TargetSnapshotVariable.DeclarationId),
+                    ("TargetSnapshotOwner", node.TargetSnapshotVariable.DeclarationOwnerId)))));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActivateActionInstanceNode>(node => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActivateActionInstance,
                 text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
@@ -24,38 +34,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ("TargetKey", node.TargetKey),
                     ("TargetSnapshotDeclaration", node.TargetSnapshotVariable.DeclarationId),
                     ("TargetSnapshotOwner", node.TargetSnapshotVariable.DeclarationOwnerId),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(
-                        ((IActionContextAuthoring)node).ActionContext))))));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SubmitActionLifecycleTransitionNode>(node => Lifecycle(node)));
-        }
-
-        static CharacterSimulationNodeEmission ActionContext(IActionContextAuthoring node) =>
-            new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionContextActive,
-                text0: CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext));
-
-        static CharacterSimulationNodeEmission ActionWindow(IActionWindowAuthoring node) =>
-            new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionWindowActive,
-                text0: node.WindowType);
-
-        static CharacterSimulationNodeEmission CanActivate(ICanActivateActionAuthoring node) =>
-            new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CanActivateAction,
-                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionProfile)),
-                    ("TargetSnapshotDeclaration", node.TargetSnapshotDeclarationId),
-                    ("TargetSnapshotOwner", node.TargetSnapshotOwnerId)));
-
-        static CharacterSimulationNodeEmission Lifecycle(ISubmitActionLifecycleAuthoring node)
-        {
-            CharacterActionAuthoringRules.ValidateLifecycle(node.TransitionType);
-            return new CharacterSimulationNodeEmission(
+                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))))));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SubmitActionLifecycleTransitionNode>(node => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.SubmitActionLifecycle,
                 integer0: (int)node.TransitionType,
                 text0: node.Reason,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))))));
         }
     }
 }

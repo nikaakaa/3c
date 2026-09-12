@@ -3,7 +3,6 @@ using System;
 using BTSMTL.Timeline;
 using ParadoxNotion.Design;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -14,7 +13,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillAuthoringField(
         "actionContext",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
-    public sealed class BtsmtlSkillActionContextActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IActionContextAuthoring
+    public sealed class BtsmtlSkillActionContextActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
         [SerializeField] ActionContextSlot m_ActionContext;
         public ActionContextSlot ActionContext => m_ActionContext;
@@ -27,7 +26,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillAuthoringField(
         "windowType",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String)]
-    public sealed class BtsmtlSkillActionWindowActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IActionWindowAuthoring
+    public sealed class BtsmtlSkillActionWindowActiveFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
         [SerializeField] string m_WindowType;
         public string WindowType => m_WindowType ?? string.Empty;
@@ -50,7 +49,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         "targetSnapshot",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
         Optional = true)]
-    public sealed class BtsmtlSkillCanActivateActionFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, ICanActivateActionAuthoring
+    public sealed class BtsmtlSkillCanActivateActionFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode
     {
         [SerializeField] ActionProfile m_ActionProfile;
         [SerializeField] string m_TargetSnapshotDeclarationId;
@@ -61,7 +60,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(ActionProfile profile, string snapshotDeclarationId, string snapshotOwnerId)
         {
-            CharacterActionAuthoringRules.ValidateTargetSnapshot(snapshotDeclarationId, snapshotOwnerId);
+            if (string.IsNullOrWhiteSpace(snapshotDeclarationId) != string.IsNullOrWhiteSpace(snapshotOwnerId))
+                throw new ArgumentException("目标快照声明与所属作用域必须一起指定。");
             m_ActionProfile = profile;
             m_TargetSnapshotDeclarationId = snapshotDeclarationId ?? string.Empty;
             m_TargetSnapshotOwnerId = snapshotOwnerId ?? string.Empty;
@@ -86,7 +86,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         "reason",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,
         Optional = true)]
-    public sealed class BtsmtlSkillSubmitActionLifecycleFlowNode : BtsmtlSkillFlowNode, ISubmitActionLifecycleAuthoring
+    public sealed class BtsmtlSkillSubmitActionLifecycleFlowNode : BtsmtlSkillFlowNode
     {
         [SerializeField] ActionContextSlot m_ActionContext;
         [SerializeField] ActionLifecycleTransitionType m_TransitionType = ActionLifecycleTransitionType.Complete;
@@ -97,7 +97,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public void Configure(ActionContextSlot context, ActionLifecycleTransitionType transitionType, string reason)
         {
-            CharacterActionAuthoringRules.ValidateLifecycle(transitionType);
+            if (!Enum.IsDefined(typeof(ActionLifecycleTransitionType), transitionType) || transitionType == ActionLifecycleTransitionType.None)
+                throw new ArgumentOutOfRangeException(nameof(transitionType));
             m_ActionContext = context;
             m_TransitionType = transitionType;
             m_Reason = reason ?? string.Empty;

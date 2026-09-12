@@ -217,8 +217,6 @@ namespace BTSMTL.EventGraphs
                 targetNode,
                 targetPortId);
 
-        public void ApplyAuthoringDocument(EventGraphAuthoringDocument document) =>
-            HostEventGraphEditorMutation.ApplyDocument(this, document);
 #endif
 
         internal void AdvanceContentRevision()

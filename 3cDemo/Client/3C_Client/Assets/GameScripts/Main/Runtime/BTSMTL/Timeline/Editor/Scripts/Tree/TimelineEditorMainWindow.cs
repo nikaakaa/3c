@@ -309,7 +309,7 @@ namespace BTSMTL.Timeline.Editor
             SetStatus(message);
         }
 
-        internal void ApplyRuntimeLocator(string graphAuthoringId, string sourceNodeAuthoringId)
+        public void ApplyRuntimeLocator(string graphAuthoringId, string sourceNodeAuthoringId)
         {
             m_SourceGraphAuthoringId = graphAuthoringId ?? string.Empty;
             m_SourceNodeGuid = sourceNodeAuthoringId ?? string.Empty;

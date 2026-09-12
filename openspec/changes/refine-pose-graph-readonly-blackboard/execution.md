@@ -42,6 +42,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `9427ba641`、`b0672667d`：Blackboard重命名同步到复用的原生变量对象；State与Subgraph页面标题过滤不透明GUID名称。
 - `8b2d611d4`：拓扑校验要求跨图复用的同一外部参数保持类型、单位、默认值和Usage一致，避免形成第二份输入定义。
 - `90df0a710`：Animation Input Contract从所有可达Pose Graph收集正式外部变量，按稳定ParameterId形成唯一运行时布局并拒绝跨图声明冲突；原有EventGraph合同改动保持未提交。
+- `a42d1275e`：简化输入合同的根图存在校验；该提交同时包含索引中另一条已暂存的Skill规范变更，未回退其内容。
 
 正式 Document 流程：
 

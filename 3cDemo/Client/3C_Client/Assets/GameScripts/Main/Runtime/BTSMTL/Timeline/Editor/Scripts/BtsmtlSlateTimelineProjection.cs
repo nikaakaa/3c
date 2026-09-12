@@ -1212,13 +1212,14 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("该 Slate 操作没有正式 Timeline 映射，已丢弃。");
                 return;
             }
-            var changes = new List<(Clip Clip, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
+            var changes = new List<(Clip Clip, string TrackAuthoringId, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
             foreach (KeyValuePair<string, ProxyClipSnapshot> pair in end.Clips)
             {
                 if (!begin.Clips.TryGetValue(pair.Key, out ProxyClipSnapshot before) ||
                     !m_SourceClips.TryGetValue(pair.Key, out Clip sourceClip))
                     continue;
-                if (!string.Equals(before.TrackAuthoringId, FindProxyTrackAuthoringId(pair.Key), StringComparison.Ordinal))
+                string trackAuthoringId = FindProxyTrackAuthoringId(pair.Key);
+                if (string.IsNullOrEmpty(trackAuthoringId))
                 {
                     ReportIssue("Clip 所属 Track 已过期，已丢弃本次修改。");
                     return;
@@ -1239,7 +1240,9 @@ namespace BTSMTL.Timeline.Editor
                 int beforeEaseOutFrame = Mathf.RoundToInt(before.BlendOut * TimelineUtility.FrameRate);
                 if (startFrame != beforeStartFrame || endFrame != beforeEndFrame ||
                     easeInFrame != beforeEaseInFrame || easeOutFrame != beforeEaseOutFrame)
-                    changes.Add((sourceClip, startFrame, endFrame, easeInFrame, easeOutFrame));
+                    changes.Add((sourceClip, trackAuthoringId, startFrame, endFrame, easeInFrame, easeOutFrame));
+                else if (!string.Equals(before.TrackAuthoringId, trackAuthoringId, StringComparison.Ordinal))
+                    changes.Add((sourceClip, trackAuthoringId, beforeStartFrame, beforeEndFrame, easeInFrame, easeOutFrame));
             }
 
             var curveChanges = new List<(Clip Clip, TimelineCurveChannelId ChannelId, AnimationCurve Curve)>();
@@ -1315,7 +1318,15 @@ namespace BTSMTL.Timeline.Editor
                     m_Request.Timeline.RemoveSection(removedSections[index]);
                 for (int index = 0; index < changes.Count; index++)
                 {
-                    (Clip clip, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
+                    (Clip clip, string trackAuthoringId, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
+                    if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
+                        throw new InvalidOperationException("Timeline target Track identity is stale.");
+                    if (!ReferenceEquals(clip.Track, targetTrack))
+                    {
+                        m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clip);
+                        clip.Track.Clips.Remove(clip);
+                        targetTrack.Clips.Add(clip);
+                    }
                     clip.StartFrame = startFrame;
                     clip.EndFrame = endFrame;
                     clip.SelfEaseInFrame = easeInFrame;

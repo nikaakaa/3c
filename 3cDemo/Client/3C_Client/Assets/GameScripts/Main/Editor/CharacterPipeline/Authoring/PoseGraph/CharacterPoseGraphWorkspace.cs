@@ -146,11 +146,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         GraphAuthoringSelectionBinding m_SelectionBinding;
         GraphAuthoringSelection? m_LastSelection;
         string m_LastContentRevision = string.Empty;
+        CharacterAnimationVariableContract m_EditorAnimationVariables;
 
         internal CharacterPipelineDefinition DefinitionContext => m_Definition;
         internal CharacterAnimationPresentationProfile ProfileContext => m_Profile;
         internal static CharacterAnimationRigDefinition CurrentRigDefinition =>
             s_Current?.m_Profile?.RigDefinition;
+        internal static CharacterAnimationVariableContract CurrentAnimationVariables =>
+            s_Current?.m_EditorAnimationVariables;
 
         internal static void DrawNativeToolbar(CharacterPoseCanvasGraph graph)
         {
@@ -251,6 +254,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationPresentationProfile profile, CharacterPresentationProjectionAsset projection, CharacterPipelineDefinition definition)
         {
             s_Current?.Dispose();
+            asset.Graph.SetEditorAnimationVariables(
+                CreateEditorAnimationVariables(profile));
             NodeCanvas.Editor.GraphEditor editor = NodeCanvas.Editor.GraphEditor.OpenWindow(asset.Graph);
             editor.minSize = new Vector2(1000f, 680f);
             var workspace = new CharacterPoseGraphWorkspace { m_Editor = editor };
@@ -372,6 +377,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             NodeCanvas.Editor.GraphEditor.onEditorNavigationChanged -= SaveWorkspace;
             NodeCanvas.Editor.GraphEditor.onEditorClosed -= Dispose;
             EditorApplication.projectChanged -= OnAuthoringAssetsChanged;
+            if (m_Asset)
+            {
+                foreach (CharacterPoseCanvasGraph graph in m_Asset.EnumerateGraphs())
+                    graph?.SetEditorAnimationVariables(null);
+            }
+            m_EditorAnimationVariables = null;
             m_Canvas?.Dispose();
             m_StateMachineSurface?.Dispose();
             rootVisualElement.RemoveFromHierarchy();
@@ -403,9 +414,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Profile = profile;
             m_Projection = projection;
             m_Definition = definition;
+            m_EditorAnimationVariables = CreateEditorAnimationVariables(profile);
+            if (asset && asset.Graph != null)
+                asset.Graph.SetEditorAnimationVariables(m_EditorAnimationVariables);
             ResetPoseTuningAuthoringState();
             if (asset && asset.Graph != null)
                 m_CurrentGraphId = asset.Graph.GraphId.Value;
+        }
+
+        static CharacterAnimationVariableContract CreateEditorAnimationVariables(
+            CharacterAnimationPresentationProfile profile)
+        {
+            if (!profile || !profile.EventGraph)
+                return null;
+            return new CharacterAnimationVariableContract(
+                profile.EventGraph.BuildVariableContract());
         }
 
         public void FocusStatePlayer(
@@ -487,6 +510,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? m_Asset.Graph.GraphId
                 : new PoseGraphId(m_CurrentGraphId);
             CharacterPoseCanvasGraph graph = m_Asset.RequireGraph(graphId);
+            graph.SetEditorAnimationVariables(m_EditorAnimationVariables);
             m_ObservationPanel.SetRuleContext(false);
             m_RuleDocument = null;
             m_RuleMutation = null;
@@ -1073,7 +1097,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new CharacterPoseTransitionRuleDocument(
                     m_Asset,
                     machine,
-                    transitionId);
+                    transitionId,
+                    m_Profile && m_Profile.EventGraph
+                        ? new CharacterAnimationVariableContract(
+                            m_Profile.EventGraph.BuildVariableContract())
+                        : null);
             m_RuleMutation =
                 new CharacterPoseTransitionRuleMutationAdapter
                 {

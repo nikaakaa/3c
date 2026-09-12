@@ -281,11 +281,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (poseGraph != null)
                 {
                     var used = new HashSet<string>(policies.Select(value => value.ParameterId.Value), StringComparer.Ordinal);
-                    CharacterPoseParameterDeclaration[] choices = poseGraph.Parameters
-                        .Where(value => CharacterPoseParameterAccess.IsBlackboardInput(value) &&
-                                        !used.Contains(value.ParameterId.Value))
-                        .ToArray();
-                    if (choices.Length > 0)
+                    var choices = new List<(PoseParameterId Id, string DisplayName)>();
+                    CharacterAnimationVariableContract animationVariables =
+                        CharacterPoseGraphWorkspace.CurrentAnimationVariables;
+                    if (animationVariables != null)
+                    {
+                        foreach (BTSMTL.EventGraphs.EventGraphVariableDescriptor variable in
+                                 animationVariables.Variables)
+                        {
+                            string id = variable.Reference.VariableId;
+                            if ((variable.ValueKind != BTSMTL.EventGraphs.EventGraphValueKind.Bool &&
+                                 variable.ValueKind != BTSMTL.EventGraphs.EventGraphValueKind.Int32 &&
+                                 variable.ValueKind != BTSMTL.EventGraphs.EventGraphValueKind.Float32) ||
+                                id == AnimationPoseParameterIds.ActionWeight.Value ||
+                                id == AnimationPoseParameterIds.FootPlacementWeight.Value ||
+                                !used.Add(id))
+                                continue;
+                            choices.Add((new PoseParameterId(id), variable.Name));
+                        }
+                    }
+                    if (choices.Count > 0)
                     {
                         int selected = EditorGUILayout.Popup(
                             "参数",
@@ -298,7 +313,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         {
                             ApplyNodeField(node, graph, field.FieldId.Value, policies.Append(
                                 new CharacterPoseParameterPolicy(
-                                    choices[selected].ParameterId,
+                                    choices[selected].Id,
                                     policy)).ToArray());
                             return false;
                         }

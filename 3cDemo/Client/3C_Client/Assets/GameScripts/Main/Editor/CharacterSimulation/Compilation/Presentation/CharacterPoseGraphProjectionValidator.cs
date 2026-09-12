@@ -1101,13 +1101,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !Enum.IsDefined(
                         typeof(PoseParameterValueType),
                         parameter.ValueType) ||
+                    !Enum.IsDefined(
+                        typeof(CharacterPoseParameterUsage),
+                        parameter.Usage) ||
+                    !CharacterPoseParameterAccess.IsBlackboardInput(parameter) ||
                     !float.IsFinite(parameter.DefaultValue))
                 {
                     Report(
                         report,
                         CharacterPoseGraphValidationCode
                             .ParameterInvalid,
-                        $"Pose Graph '{graph.GraphId}' Parameter #{i} is invalid.",
+                        $"Pose Graph '{graph.GraphId}' Parameter #{i} is not a valid external Pose input.",
                         graph.GraphId);
                     continue;
                 }

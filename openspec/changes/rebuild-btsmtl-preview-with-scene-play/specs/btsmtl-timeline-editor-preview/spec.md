@@ -205,7 +205,8 @@ Timeline Editor MUST保留现有窗口、Timeline Field、Inspector 和真实运
 #### Scenario: 作者页面连接场景运行
 
 - **WHEN** 页面开始观察受控预览场景的真实 playback
-- **THEN** 本地 adapter MUST建立准确运行绑定，结构交互 MUST进入只读状态
+- **THEN** 本地 adapter MUST建立准确运行绑定，运行事实和 overlay MUST只读；Timeline 作者结构、Clip、Section 和曲线 MUST继续经正式 Mutation/Undo 编辑
+- **AND** 作者修改 MUST不直接改写当前运行状态；新内容由既有 Build/adoption 合同在同一 Session 采用，缺少即时采用能力不能被解释为禁止作者编辑
 - **AND** geometry 与 rendering MUST复用同一作者 identity 显示真实 overlay，不创建预览 evaluator
 
 #### Scenario: 多个playback overlay

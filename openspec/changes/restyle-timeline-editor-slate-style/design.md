@@ -1,142 +1,182 @@
 ## Context
 
-用户要求使用 Slate 插件的真实 Timeline UI，并且最终只有一个 Timeline 窗口。Slate 原始入口是 `Slate.CutsceneEditor.ShowWindow(Cutscene)`，实现为独立的 IMGUI `EditorWindow`，内部读取 `Cutscene` 的 Group/Track/ActionClip 层级并自行处理时间尺、Clip 命中、拖动、缩放、Undo 和播放状态。BTSMTL 路径修改 Slate Editor 源码，把这套 OnGUI 时间轴抽成可嵌入的 Surface，由唯一 `TimelineEditorWindow` 承载。
+目标是让作者在唯一 Timeline 窗口里完成：新增轨道 → 添加 Clip → 调整帧范围 → 编辑属性/曲线 → 撤销重做 → 保存重开，并通过已有 SkillGraph 场景预览查看实际效果。使用 Slate 的真实 Track/Clip/Curve UI，正式数据仍属于 BTSMTL TimelineData。
 
-BTSMTL Timeline 的正式数据仍由 `TimelineData`、Track、Clip、Section、TreeClip、Session、Mutation、Undo、Preview 和 Live Debug 拥有。两套模型不能直接互换：Slate UI 不能直接读取 `TimelineData`，BTSMTL 也不能把普通 Clip 直接当成 Slate `ActionClip`。
+2026-09-12 对账：已有临时投影、Clip/部分曲线显示和部分回写代码；新增、帧几何、视图恢复与整体布局未完成。此前编译通过、截图显示和任务勾选不能证明编辑闭环成立。以下是实施目标，不是实现完成报告。
 
-BTSMTL 的 Skill、Timeline、Preview 和 Runtime 不依赖 Slate 的 GameObject Actor、DirectorGroup、PlayableGraph 或 Slate 播放内核。Projection 中的 Slate 对象只是满足 Slate Surface 的 Editor-only 兼容对象，不拥有 BTSMTL 领域数据、不拥有角色、不拥有预览时钟。
-
-因此本 change 采用一个 Editor-only bridge。Slate UI 作为作者看到和操作的真实编辑表面；BTSMTL TimelineData 作为唯一持久化真相。临时 Slate 对象只负责满足 Slate 编辑器的读取和交互要求，不能保存、编译或进入运行时。
+用户已确认单窗口、真实 Slate UI、项目自有数据/运行内核、预览期间可编辑且不更换 Session。用户尚未确认 Timeline 内 Play 的具体意义，不能把此前“只让游标线移动”的建议当成需求。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 在唯一 `TimelineEditorWindow` 内直接使用 Slate `CutsceneEditor` 的时间尺、Group/Track、Clip、拖动、缩放、选择、Curve/DopeSheet 和 Inspector 编辑 UI；Timeline 不拥有运行时播放控制。
-- 修改 Slate Editor 源码提供可嵌入 Surface；BTSMTL Timeline 入口不创建第二个 Slate `EditorWindow`。
-- Embedded Surface 不创建 Slate 默认 DirectorGroup、Camera/Audio/Director Track，不显示 Actor 创建入口，也不调用 Slate Preview/PlayableGraph。
-- 将当前 BTSMTL Timeline 投影为 Slate 能编辑的临时层级，并保留每个 Track、Clip、Section、TreeClip 的 authoring identity 映射。
-- 将 Slate UI 的有效改动转换为 BTSMTL `TimelineEditorSessionContext` 和 `ITimelineEditorMutationPort` 操作，使用正式 owner 和 Undo。
-- Slate Surface 重绘、Undo/Redo、外部 Timeline 刷新或 owner 切换时，能够销毁并重建临时投影。
-- Timeline 只保留作者编辑与被动 Runtime Trace overlay；Scene Play、Build、Skill、Live Debug、Capture、History、Restore 和 Replay 由 SkillGraph/Graph Shell 与 Scene Play coordinator 拥有。
-- Scene Play 期间允许继续编辑 Timeline；正式 Mutation 后由 Graph Shell 发起 Build，在同一 Session 的 adoption barrier 采用兼容的新 ProgramEpoch。
+- 从空文档完成正式 Track/Clip 新增、字段和曲线编辑、撤销、保存重开。
+- 统一 GUI 区域、帧映射和鼠标命中，清理漂浮按钮、重复信息及无关菜单。
+- 使用正式 identity、contract、字段绑定和同一 Mutation/Undo，保持编辑状态。
+- 观察运行只读，作者内容继续可编辑，版本采用交给已有 Graph Shell 合同。
 
 **Non-Goals:**
 
-- 不把 Slate Cutscene 保存成项目资产。
-- 不把 Slate `ActionClip` 当成 BTSMTL runtime clip、Timeline compiler 输入或第二个正式数据源。
-- 不复制 Slate 的 `CutsceneEditor` UI 到 UI Toolkit，不重新实现 Slate 的绘制和时间轴交互。
-- 不修改 Slate runtime、Cutscene 数据语义或播放器；允许在 Slate Editor 目录增加最小 transaction sink hook。
-- 不把 Slate GameObject、Actor、Director 或 Preview 状态写入 BTSMTL Skill、Timeline、Character 或 Runtime。
-- 不在本 change 内改 Character Build、PoseGraph、SkillGraph、Blackboard 或 Timeline runtime。
+- 不创建另一套持久化 Timeline、mutation service 或 UI Toolkit 时间轴。
+- 不改模拟频率、技能执行、Pose Graph、相机算法和 Scene Play 执行语义。
+- 不新增测试代码，不自动 Build 角色产物、启动 Play 或迁移资产。
+- 不把旧 worktree 的代码状态当成主线已交付。
 
 ## Decisions
 
-### 1. Slate `CutsceneEditor` Surface 是实际 UI owner
-
-Timeline 打开命令只创建或刷新 Editor-only Slate Cutscene projection，然后在唯一 `TimelineEditorWindow` 的 `IMGUIContainer` 中调用 Slate `CutsceneEditor.DrawEmbeddedGUI`. Slate Surface 负责真实的视觉和交互；当前 BTSMTL `TimelineEditorView` 不再作为正式 Timeline UI 入口。
-
-不使用 Slate 图片、GUI skin 或自定义 USS 仿制，因为那仍然会产生第二套 UI。BTSMTL 只承载 Slate Surface，不复制 Slate 绘制和时间轴交互。
-
-Slate 原生 `EditorWindow` 仍可供 Slate 插件自身入口使用，但 BTSMTL Timeline 路径不得调用它；BTSMTL 只使用修改后的可嵌入 Surface。
-
-### 2. BTSMTL TimelineData 是唯一持久化真相
-
-投影层为每个正式 Timeline 建立临时 Slate Cutscene、Group、Track 和 ActionClip wrapper，并保存以下映射：
+### 1. 作者可见布局
 
 ```text
-BTSMTL Timeline / Track / Clip / Section identity
-    <-> temporary Slate Cutscene / Group / Track / ActionClip
+Timeline：资产名                                      共享/私有
+[＋轨道] [上一帧] [下一帧] [当前帧：24] [显示全部] [属性]
+轨道搜索          │ 缩放范围条
+                  │ 0       10       20       30       40
+轨道名称          │ [Clip────────────────────]
+  曲线通道        │ 曲线与关键帧
+──────────────────────────────────────────────────────
+可收起属性区：选中轨道 / Clip / 曲线关键帧的正式属性
 ```
 
-临时对象使用 `HideFlags.HideAndDontSave`，不进入 AssetDatabase、不写入 Document、不进入 runtime build。Slate 只读写临时对象，适配层负责将结果转换回 BTSMTL owner。
+- 文档名显示一次，ownership 为短标记，路径放 tooltip。删除独立 Source、Timeline Ownership 大行和“作者预览”长说明。
+- 文档行、工具行以各 24–28 个编辑器逻辑像素为基准，适应字体/控件高度；不为隐藏的原生工具栏保留空白。
+- 搜索区与右侧标尺区共用顶边。缩放条、帧号分区，游标命中不覆盖缩放条。
+- 左轨道与右 Clip/Curve 使用同一行高度表和垂直滚动值；展开曲线时两侧同步。
+- 属性区在同窗口底部，可调高度、可收起；无选择显示短提示，不为缺失领域工具占空行。
+- 支持最小 600×360 逻辑像素；空间不足优先收起属性区。长标题省略、次要工具进入“更多”，主要按钮和帧输入不互相挤压。
+- 背景、分隔线、裁剪、控件和命中范围从同一布局结果读取。不能只增加 TOP_MARGIN；当前背景还使用旧坐标的路径必须一并迁移。
+- 直接修改 Slate Editor Surface 和现有控件，外层 UI Toolkit 只负责承载、文档绑定及既有属性工具，不重画时间轴。
 
-这些对象即使在 Editor 中采用 Slate 所需的组件形态，也只能是 UI 兼容层；它们不是 BTSMTL 的 GameObject authoring、Actor binding 或 Runtime object。
+取舍：新增轨道使用显式按钮，新增 Clip 放对应轨道右键菜单，作者能确定添加位置；空轨道提示“右键添加 Clip”。底部属性区减少横向时间轴占用，代价是展开时减少可见轨道数量。
 
-### 2.1 BTSMTL Embedded Surface 不使用 Slate 内核
+### 2. 唯一帧时间
 
-Projection 只向 Slate 提供 Track/Clip/Curve 的显示和编辑形态。BTSMTL 不创建或读取 Slate DirectorGroup、CameraTrack、DirectorAudioTrack、DirectorActionTrack、ActorGroup、PlayableGraph 或 Slate Preview output。
+正式内容已有 StartFrame、EndFrame、ClipInFrame、Section.Frame；当前 TimelineUtility.FrameRate 为 60。Surface 从正式 Session/FrameRate 合同取得帧率，不自行保存另一份 60，也不依赖 Slate 全局 Prefs 的 FPS/秒吸附。
 
-Scene Play Session 与领域 owner 是唯一时间推进和表现执行 owner；Slate Surface 的 current time 只用于编辑游标和被动 overlay。Slate 的 Play、Sample、Scene binding 和 Actor 语义在 Embedded Surface 中必须关闭或隐藏。Timeline 不创建 `TimelinePreviewSession`、独立 evaluator 或私有 clock。
+- 标尺、当前帧、Clip 开始/结束/长度、Section 位置和关键帧横轴显示 Timeline 帧；秒只作补充 tooltip。
+- 上一帧/下一帧严格加减 1。跳到相邻关键帧若保留必须另名，不能冒充单步。
+- 统一“像素 ↔ Timeline 帧 ↔ Slate 秒”。移动/裁剪/新增/游标/key 在草稿阶段吸附，释放后不跳到另一个取整位置。
+- 标尺缩小时采用整数主刻度间隔，放大到逐帧，避免重叠标签；修改 Slate 全局偏好不改变 BTSMTL 的显示和保存。
+- 曲线时间转换服从正式 descriptor 的 domain；Motion 的 CurveEndFrame 等范围不能统一误用 Clip 总长度。局部秒与 normalized time 互换时同步换算切线。
+- 仅编辑的 key 时间按帧吸附，不能打开或重建一次就整体量化原曲线；完整保留 tangent、weight、WeightedMode、wrap mode。
+- 内容终点取真实 MaxFrame/Section，不用“至少 1 秒”伪造长度，也不默认多加 1 秒视野。空文档可有编辑视窗，但视窗不成为正式内容。
+- “显示全部”取内容范围并留少量像素边距；边距不写数据。终点线和编辑游标颜色/说明不同；没有正式长度字段的终点不能提供假拖动保存。
 
-Projection 必须清理 `Cutscene.Reset/TryReset` 自动创建的默认 Director 内容，并把每个 `BtsmtlSlateActionClip` 直接挂到 Slate Track 能发现的 ActionClip 集合中；不能用子 GameObject 层级导致 Slate `Validate` 丢失 Clip。
+作者帧与 Runtime Logic Tick 不自动等同。沿用当前作者帧可保持素材时长和资产含义；按模拟 Tick 作者有利于逐 Tick 窗口定位，但会涉及频率、倍率和旧内容迁移。本次只落实既有作者帧，真实 Tick 作为来源明确的运行观察字段。若用户要求合并两者，必须先确定业务变化，不由 UI 偷改。
 
-### 3. Slate 改动通过 snapshot/diff 转换为正式 Mutation
+### 3. 模块和桥接
 
-Slate 插件直接修改它自己的 wrapper。适配层在 Slate 编辑操作结束、Undo/Redo 或 Editor update 检测到变化时，对比 wrapper snapshot，将变化转换为 BTSMTL 命令：
+现有打开链：
 
 ```text
-Slate pointer edit
-    -> temporary wrapper change
-    -> projection diff by authoring identity
-    -> TimelineEditorSessionContext / Mutation
-    -> one BTSMTL Undo transaction
-    -> rebuild projection from BTSMTL owner
+TimelineEditorWindow 的正式 owner/path
+  -> BtsmtlSlateTimelineProjection
+  -> 临时 Slate Group/Track/ActionClip/AnimatedParameter
+  -> CutsceneEditorSurface
 ```
 
-不把 Slate 的 Undo 当成 BTSMTL 正式 Undo。Slate 的临时 Undo 只用于窗口交互回滚；正式提交必须进入 BTSMTL owner。发生 Pointer Cancel、窗口关闭或 stale identity 时丢弃临时修改并从 BTSMTL 重新投影。
+临时 GameObject/组件仅满足 Slate UI 的接口，使用 HideAndDontSave；不保存、不进入 Document/Compiler、不绑定角色。SourceAuthoringId 映射到正式对象，不能用显示名、组件 instance id 或数组下标替代。
 
-### 4. 能力映射必须显式处理
+在现有 Editor 模块内明确五项责任：窗口布局/生命周期、帧映射、创建及字段命令、identity/快照转换、视图状态恢复。使用现有 TimelineEditorSessionContext 调度唯一 Mutation/Undo，不另建 service。各模块输入分别为窗口尺寸、正式帧率、typed 用户输入、正式数据/草稿、稳定 ID 视图状态；输出分别为区域、帧坐标、正式修改、显示投影、恢复后的视图。
 
-- Timeline length、time range、Track 顺序、Clip start/end、Section frame 映射到 Slate 对应字段。
-- Timeline Curve Channel 只投影当前 Clip 实际拥有的 typed channel。BTSMTL 的 normalized curve 在 proxy 中转换为 Slate ActionClip 的 local seconds，Slate 修改提交时再转换回 normalized curve，并保留 wrap mode、key、tangent、weight 与 WeightedMode。
-- BTSMTL Clip 的正式类型、TreeClip、ActionContext、Curve channel 和 owner identity保存在 projection map，不伪装成 Slate runtime 语义。
-- Slate 不支持的 BTSMTL 字段显示为只读或 unavailable；不得静默写入默认值。
-- 双击 Clip、TreeClip 下钻、AnimationClip 导航和 BTSMTL Details 由 adapter 处理，不依赖 Slate 的 runtime player。
-- Timeline 不提供 Preview/Live Debug 的控制按钮。运行状态通过 Graph Shell 建立的正式 binding 以只读 overlay 投影到 Slate Surface；Slate 播放按钮不能启动任何时钟。
-
-### 4.1 运行控制归属 Graph Shell
-
-Graph Shell/SkillGraph 页面是 Scene Play 控制面，统一持有 Start、Pause、Resume、Reset、Stop、Build、Skill request、Runtime Trace/Live Debug、Capture、History、Restore 和 Replay。它们调用同一个 Scene Play coordinator，不在 Timeline 窗口复制一套命令或状态机。
-
-Timeline 窗口只持有 authoring owner、Slate projection、selection、geometry、Mutation/Undo 和被动 overlay。作者在 Play 期间拖动 Clip、修改 Curve 或 Section 时，提交仍进入 BTSMTL 正式 Mutation；Graph Shell 负责显示 dirty/build/adoption 状态并在同一 Session 中发布新 Program。当前 Action 不兼容时继续使用旧 Epoch，下一次 Action 才采用新版本。
-
-### 4.2 新增Track与Clip必须由BTSMTL contract提供
-
-Slate 原生 Add Track/Add Action 菜单不能直接作为 BTSMTL 新增入口。Slate 只能创建临时代理对象，而临时对象没有正式 `AuthoringId`、`ContractKind`、Typed Binding 和 owner，直接保存会形成第二套 Timeline 数据源。
-
-新增入口由 Timeline adapter 提供 Slate 风格的菜单，但数据操作走 BTSMTL 正式链：
+已有内容修改：
 
 ```text
-Slate Add menu
-    -> TimelineContractCatalog 合法候选
-    -> 正式资源选择/typed creation input
-    -> TimelineData.AddTrack / AddClip
-    -> TimelineEditorSessionContext / Mutation / Undo
-    -> owner revision + rebuild projection
+开始手势记录 source revision 和草稿基线
+  -> Slate 临时字段变化
+  -> 提交时按正式 ID 求差异并校验
+  -> Session.Apply / Timeline.ApplyModify / 正式 owner Undo
+  -> 从正式数据更新显示并恢复视图
 ```
 
-Add Track 只显示当前 Timeline owner 支持的 Track contract。Add Clip 只显示当前 Track contract 的 allowed clip kinds。Animation Clip 只能选择已经存在的原生 AnimationClip；TreeClip 必须选择正式 Graph/Tree 来源；Camera、Motion、Cue 和其它 Clip 必须使用各自 typed authoring binding。新增对象的正式 identity 由 Timeline owner/API 生成，不能把 Slate proxy 的 GameObject、组件 instance id 或显示名称写入作者数据。
+有效手势一个正式 Undo；选择、游标、缩放、搜索、运行观察不产生 authoring Undo，不因每次 MouseUp 无条件重建。取消/关闭/owner 过期丢弃草稿；Unsupported 必须给出原因，不能静默吞操作。
 
-新增提交成功后，adapter 必须销毁旧 proxy 并从最新 Timeline owner 重建；selection 应按新 authoring identity恢复。取消资源选择或 contract 校验失败时，只丢弃菜单草稿，不创建空 Track、空 Clip 或默认资源。
+### 4. 新增与字段编辑
 
-### 5. 删除错误的 UI Toolkit 仿制链
+打开请求显式携带当前 owner 的正式 contract composition。菜单消费现有 TimelineContractCatalog、TimelineAuthoringTypeCatalog 和字段 binding，不在 UI 复制类型名单。
 
-当前 change 之前为仿 Slate 添加的 Timeline UXML/USS、viewport、zoom、interaction 和 rendering 新路径不再作为正式实现。Apply 阶段必须先删除或恢复这些错误改动，再接入 Slate projection 和 bridge，避免同时保留 Slate 真 UI、旧 UI Toolkit 和仿 Slate UI 三条路径。
+```text
+＋轨道 / 轨道空白处右键“在第 N 帧添加 Clip”
+  -> 合法候选与 typed 创建表单
+  -> 完整输入校验
+  -> Session 的同一事务内创建正式对象及 identity
+  -> 从正式对象生成 Slate 显示并选中新对象
+```
 
-### 6. 明确投影的双写与 Undo 边界
+| 类型 | 必须明确的输入 |
+|---|---|
+| Track | contract、名称及必填字段；Animation Channel/Slot 使用正式绑定 |
+| Animation Clip | 已有原生 AnimationClip、插入帧；长度按正式资源规则计算 |
+| TreeClip | 现有正式 inline/shared ownership、Graph/Tree 来源和阶段；inline 创建只走已有正式 API |
+| MotionCurve | 合法帧范围、CurveEndFrame、空间/通道等必填字段；初值遵循正式类型规则 |
+| MotionWarp | 当前 Timeline 中合法源 Motion Clip、窗口及 required target binding |
+| Camera/Cue/Scene 参数 | 该类型现有资源、参数或目标声明，不用 Slate Actor/Camera 替代 |
 
-投影不会把临时 Slate Cutscene 保存成正式资产，因此持久化数据可以保持单一：正式 Timeline 只写 BTSMTL owner。临时 Slate proxy 使用 `HideFlags.HideAndDontSave`，不得绑定 BTSMTL 的 `SerializedObject`，不得进入 AssetDatabase、Document 或 runtime build。
+主动创建无 Clip 的合法空 Track 是正常操作。“不得留下空对象”只针对取消/失败残留。取消 picker、输入非法、owner 过期时不写入、不产生 Undo；跨对象校验先验证完整草稿，提交失败在同一事务回滚。
 
-但是 Slate 原生 `CutsceneEditor` 在 `OnGUI` 中会直接对 proxy 调用 `Undo.RecordObject`、`Undo.RegisterFullObjectHierarchyUndo`、修改 Group/Track/ActionClip 并调用 `EditorUtility.SetDirty`。因此未经扩展的 Slate 原生窗口必然存在一次临时 proxy 写入和一组 Slate Undo 记录。它们不是 BTSMTL 持久化双写，但仍是第二个编辑状态来源。
+属性区编辑正式字段，资源为精确引用，时间字段按帧，TreeClip 保留正式下钻。曲线仅来自已注册 Timeline-local channel，不纳入素材骨骼/Foot Analysis。
 
-要满足“一个用户动作只产生一个 BTSMTL 正式 Undo”，bridge MUST拥有明确的提交边界：要么扩展 Slate Editor 提供 proxy transaction begin/commit/cancel 和自定义 Undo sink，要么在 apply 阶段显式承认 Slate proxy Undo 只是临时层并禁止它影响 BTSMTL。不能在没有提交边界的情况下宣称完全无双写。
+删除、复制、排序和跨轨道移动都必须走正式命令和 contract：复制生成新 ID，排序保留 ID；删除前检查 MotionWarp/Section 等引用，按既有 validator 接受或拒绝。未接通的原生命令不能作为可用入口暴露，已支持的类型缺创建绑定时补正式绑定，不靠隐藏类型宣称完整。
+
+### 5. 曲线与刷新状态
+
+- 复用 Slate Curve/DopeSheet；通道名称、单位、颜色来自正式 descriptor，Track 名不再拼 “[Curves: N]”，使用明确曲线展开入口。
+- 展开仅显示当前 Clip 的有效通道；无曲线 Clip 不出现大片“No Clip Selected”参数区域。
+- 密集 key 根据缩放优化显示，不减少正式 key；选中 key 支持时间、值和切线精确编辑。
+- 按稳定 ID 保存选择、选中曲线、展开状态、编辑帧、横向范围、纵向滚动、属性高度。提交、Undo/Redo、外部刷新恢复仍有效的状态。
+- 删除所选对象时清空对应选择，不自动改选首个 Clip；另一个文档才采用其初始视图。
+- 重绘不得抢走文本输入和合法草稿；外部变更使草稿过期时明确提示。
+- 截图中的 GUI、序列化重复字段和 proxy 生命周期错误需要完整堆栈定位，不以隐藏 Console 或泛化 null 检查代替修复。
+
+### 6. 游标和角色预览
+
+已确认：Timeline 保留编辑游标；Scene Play、暂停、Build、Skill request、LiveDebug/Capture/History/Restore/Replay 由 SkillGraph/Graph Shell 和正式 owner 控制。运行事实只读，作者内容可编辑；编辑后是否生效由现有 Build/adoption 合同报告，不自动改当前运行。
+
+本次默认工具栏提供帧定位和逐帧操作。精确来源存在时，“更多”可提供“返回 SkillGraph 预览”导航；无来源不猜测 Actor/调用方。导航不启动或重建 Session。
+
+Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play 的 Play 快捷按钮，都尚未确认，不作为已批准功能。后续若要求 Timeline 内 Play，应接已有正式命令并明确目标，同时修订控制入口约定，不能用 Slate Play/Sample 代替。
+
+清理嵌入路径的 Slate Play/Sample/ReSample/Stop、AutoKey 和场景副作用，覆盖按钮、快捷键、EditorUpdate、初始化、释放、保存和 delayCall。静态曲线值显示直接读取正式曲线，不调用 Cutscene 采样。独立 Slate 插件窗口保留其自身行为。
+
+### 7. 保留、删除和实施边界
+
+保留真实 Slate Clip/Track/Curve UI、正式 identity/数据、Mutation/Undo、Graph/AnimationClip 导航、已有场景预览。
+
+替换临时 ShowEmbeddedPlaybackControls、重复 Source/Ownership、“作者预览”标签、无关 Actor/Director/Render 菜单、未映射创建/复制命令、Slate 私有播放、假长度编辑和无变化也重建的路径。不删除项目自己的 Camera Track。
+
+只在主线执行。预览 change 的 2026-09-11 约定要求旧 worktree 停写，后者仅供历史追溯和未集成内容参考，不自动双写。相同文件存在其它未提交改动时报告冲突，不覆盖。
 
 ## Risks / Trade-offs
 
-- [适配层复杂] → 换来的收益是真正使用 Slate UI；identity map、snapshot/diff 和生命周期必须集中在一个 Editor-only 模块，不把桥接扩散到 runtime。
-- [Slate 临时 Undo 与 BTSMTL Undo 不同] → Slate wrapper 只作为草稿，正式提交统一由 BTSMTL Mutation/Undo 完成。
-- [Slate 不覆盖全部 BTSMTL 字段] → 未映射字段由 BTSMTL Details/adapter 保留，显示 typed unavailable，不静默丢数据。
-- [Slate 插件升级] → transaction sink 是局部 Editor patch；需要固定补丁点并在插件升级后重新对照 `CutsceneEditor.OnGUI` 的 Undo/dirty 入口，版本不兼容时 Timeline editor 明确 unavailable。
-- [Slate Editor 源码维护] → 需要维护 `CutsceneEditor` 的 Surface 抽取点，Slate 插件升级时必须重新对照 OnGUI、Undo 和输入事件；换来的收益是 Timeline 作者最终只面对一个窗口。
+- 修改 Slate 源码需要维护插件升级差异，换来复用真实 UI；补丁集中于 Editor Surface，领域规则留在 BTSMTL。
+- 临时对象是内存草稿，正式保存只有 TimelineData；新增先建正式对象，编辑只提交一次事务。
+- 底部属性区减少横向占用，可收起以释放垂直空间。
+- 作者帧沿用已有语义，逐 Tick 运行定位消费真实 trace；本次不做时钟迁移。
+
+## 文档对账
+
+| 来源 | 处理 |
+|---|---|
+| current btsmtl-timeline-editor-preview | 仍描述 TimelinePreviewSession、互斥 Preview/LiveDebug 和只读；由 rebuild 场景预览 change 的 REMOVED/MODIFIED delta 替换。尚未归档，不把目标直接写成 current 已交付。 |
+| restyle 本 change | 负责 Slate GUI、帧、新增、正式编辑及桥接，旧完成勾选按代码证据纠正。 |
+| rebuild 场景预览 change | 同步改正“观察后结构只读”为“观察只读、作者可编辑”；场景控制和采用实现仍归该 change。 |
+| current timeline-animation-authoring-surface | 保留独立作者能力、typed context、按需工具和不占空行规则。 |
+| 当前代码 | f1287b44c 接回 Slate Play/Sample；639ba8253 只增加垂直偏移；两者均未完成本设计，需要替换。 |
 
 ## Migration Plan
 
-1. 删除上一轮错误的 UI Toolkit 仿 Slate实现及其 change 任务，不把它们继续当作正式 Timeline UI。
-2. 登记 Slate `CutsceneEditor` 的公开入口、生命周期、可编辑字段和 Undo 行为。
-3. 抽取 Slate Editor 可嵌入 Surface，并由唯一 TimelineEditorWindow 承载。
-4. 建立 Editor-only projection host、identity map 和临时 Cutscene 生命周期。
-5. 实现 Timeline/Track/Clip/Section 到 Slate Group/Track/ActionClip 的读取投影。
-6. 实现 Slate wrapper snapshot/diff 到 BTSMTL Session/Mutation/Undo 的回写桥。
-7. 接入 Skill Timeline owner、TreeClip、Graph Shell 的 Scene Play/Build/Live Debug binding 和 Surface 重建生命周期；Timeline 只接收只读运行 overlay。
-8. 删除旧 UI Toolkit Timeline 正式入口，运行 OpenSpec 严格校验；不在本 change 内执行 Character Build 或用户端到端验收。
+1. 接通正式新增、字段编辑及取消/失败/Undo，替换无正式回写的菜单。
+2. 统一帧几何、曲线 domain 转换、逐帧和视图状态恢复。
+3. 整体整理 GUI，审计嵌入生命周期，移除 Slate 内核和无关控件。
+4. 运行已有编译/validator，记录真实窗口证据与未完成项，分模块中文小步提交；不新增测试代码。
+
+## 完成标准
+
+以下是交付行为标准，人工操作不写入 tasks.md：
+
+- 从空文档新增合法空 Track、有资源 Clip，保存重开后 ID/资源/帧不变；取消选择不留对象或 Undo。
+- Clip 从第 12 帧移动到 13，草稿、属性、正式保存和重开均为 13；一次 Undo 返回 12。
+- 曲线新增/删除/移动/数值/切线完整往返，未编辑 key/tangent/weight/wrap 不变。
+- 连续编辑、撤销、刷新保留有效选择、展开、滚动和缩放。
+- 600×360、截图近似尺寸和宽窗口及不同编辑器缩放下没有遮挡，命中与显示一致。
+- Scene Play 观察期间可编辑，游标不运行角色；运行时间来自真实绑定，采用状态由 Graph Shell 报告。
+- 没有新增 GUI/序列化/生命周期错误；完整堆栈和处理结果可追溯。编译和文档结构校验不能替代上述行为证明。

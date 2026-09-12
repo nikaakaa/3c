@@ -10,6 +10,12 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 
 ## What Changes
 
+- 2026-09-12 收口范围：新增/属性编辑、统一整数帧、整体 GUI 布局、曲线与视图状态恢复必须共同完成；已有投影和编译通过不代表这些能力已交付。
+- 将重复的文档/来源/ownership 行合并，明确工具栏、搜索/标尺、左右同步轨道和可收起底部属性区；背景、裁剪与命中使用同一布局结果，窄窗口次要操作折叠。
+- 标尺、游标、逐帧、Clip/Section 和曲线时间编辑使用正式 Timeline FrameRate；不读取 Slate 全局 FPS 作为 BTSMTL 时间权威，不将作者帧擅自等同于 Runtime Logic Tick。
+- 编辑游标与真实运行标记分开；本次不把尚未确认的 Timeline 内 Play 快捷按钮或本地自动播放游标列为交付能力。删除当前误接的嵌入 Slate Play/Sample 链，已有场景预览仍归 Graph Shell。
+- 正式创建允许作者主动建立无 Clip 的合法空 Track；取消/失败不留下半成品。修改后按稳定 identity 恢复选择、展开、游标、缩放、滚动和属性区状态。
+
 - 正式 Timeline 打开入口只创建一个 `TimelineEditorWindow`，由该窗口的 IMGUI Surface 调用 Slate `CutsceneEditor` 的真实绘制和交互；BTSMTL 路径不得再调用 `CutsceneEditor.ShowWindow(Cutscene)` 创建第二个窗口。
 - 修改 Slate Editor 源码，提供可嵌入的 `InitializeEmbedded` / `DrawEmbeddedGUI` Surface API，同时保留 Slate 原生 EditorWindow 供插件自身其它入口使用。
 - 增加 BTSMTL Embedded Surface policy：禁止 Slate 默认 DirectorGroup、Camera/Audio/Director Track、Actor 创建和 Slate 播放控件进入 BTSMTL Timeline Surface。
@@ -38,6 +44,9 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 - `btsmtl-timeline-editor-preview`: 增加 contract-driven Add Track/Add Clip 的作者入口，新增对象仍由 Timeline owner 和 typed Mutation 拥有。
 
 ## Impact
+
+- 本次只更新现有 change，并同步修正场景预览 delta 的“结构只读”冲突；不安装未完成的 active delta 到 current specs，不把文档更新当成实施或验收完成。
+- 实施在主线单线推进，已有预览 worktree 仅作历史/未集成内容参考，不自动双写。具体行为、业务取舍和完成标准见 design.md。
 
 - 主要入口：`Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineEditorMainWindow.cs` 和 Timeline editor open request composition。
 - 新增范围：Editor-only Slate projection、identity map、snapshot/diff、BTSMTL mutation bridge 和临时 Cutscene 生命周期管理。

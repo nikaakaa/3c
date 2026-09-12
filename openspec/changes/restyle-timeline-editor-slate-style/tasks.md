@@ -64,7 +64,7 @@
 
 - [x] 8.1 2026-09-12 完成 proposal/design/delta 对账，记录 current spec 待替换条款与待确认 Play 语义，并同步修正场景预览 delta 的结构只读冲突
 - [x] 8.2 2026-09-12 对 restyle-timeline-editor-slate-style 和 rebuild-btsmtl-preview-with-scene-play 执行 openspec validate --type change --strict，均返回 is valid；结构合法不代表实现完成
-- [ ] 8.3 实施结束交付模块输入/输出、实际代码链、编译与已有 validator 结果、删除范围及未完成项，不用旧交付说明代替
+- [x] 8.3 `implementation.md` 已交付模块输入/输出、实际代码链、编译与严格校验结果、删除范围及未完成项，不用旧交付说明代替
 - [x] 8.4 Scene valueCurve 与 typed binding 已对照正式 catalog/binding、Skill Document exporter/applier/validator；UI 与 Document 共用正式能力，不复制 schema
 - [x] 8.5 分模块中文小步提交，保留其它任务改动；dotnet build 按 AGENTS 禁用构建服务器并立即 shutdown，不新增测试代码
 

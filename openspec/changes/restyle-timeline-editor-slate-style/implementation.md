@@ -46,6 +46,7 @@ TimelineEditorWindow
 - 四组入口在两个宿主保持一致：场景控制、试验与采用、观察、历史与录制。SkillGraph 原有的端口采集、执行实例选择和父调用导航仍是 Graph 观察专属项，不与 Scene Play 命令重复。
 - Timeline 运行观察现在按 Timeline、Graph 和绑定的 SourceNode 精确筛选；0 条或多条调用都会清空旧 overlay，多条时提示从 SkillGraph 选择实例，不再使用第一条 summary 猜测。
 - Timeline 顶部 `Runtime` 菜单提供“自动（仅唯一调用）”“跟随最新调用”和按 playback identity 固定实例；固定项消失时明确提示，不自动换到新调用。运行源导航、SkillGraph 父调用导航和 Timeline 打开请求都携带 Graph/Node locator。
+- Graph Shell 与 SkillGraph 的共享 Presenter 现在显示 coordinator 的真实 Build/adoption 状态：构建中、等待采用、已采用 Epoch 或失败；这只是运行版本事实，不把作者 revision 伪装成已采用。
 
 ## 正式能力对账
 
@@ -67,7 +68,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 ## 尚未完成
 
 - 场景预览 coordinator 的精确 SceneAsset/context/非 Skill 目标接线。
-- 编辑 revision 到真实 Build/adoption 状态的 Graph Shell 展示。
+- 作者 Timeline revision 与真实 Build/adoption 的精确关联仍未完成；当前只展示 coordinator 返回的真实运行版本状态。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
 - C# authoring r2 尚未交付 `TimelineAuthoringClipBinding` 正式强类型配置合同，因此第10节仍未实施；当前 projection 的 JSON 中转不能在本任务内复制替换。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

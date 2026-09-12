@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly ToolbarButton m_StopButton;
         readonly ToolbarMenu m_BuildMenu;
         readonly ToolbarMenu m_SkillMenu;
+        readonly Label m_BuildStatus;
         readonly ToolbarButton m_InputRecordButton;
         readonly LongField m_RestoreTickField;
         readonly IntegerField m_HistoryOffsetField;
@@ -97,8 +98,12 @@ namespace ThirdPersonCharacter.Editor.Preview
 
             m_BuildMenu = new ToolbarMenu { text = "Build" };
             m_SkillMenu = new ToolbarMenu { text = "Skill" };
+            m_BuildStatus = new Label();
+            m_BuildStatus.style.marginLeft = 6f;
+            m_BuildStatus.style.flexGrow = 1f;
             experimentControls.Add(m_BuildMenu);
             experimentControls.Add(m_SkillMenu);
+            experimentControls.Add(m_BuildStatus);
 
             m_InputRecordButton = new ToolbarButton(() => m_Presenter.ToggleInputRecording()) { text = "Record Input" };
             observationControls.Add(m_InputRecordButton);
@@ -148,6 +153,8 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_StopButton.SetEnabled(m_Presenter.HasOperations && active);
             RefreshBuildMenu(status);
             RefreshSkillMenu(status);
+            m_BuildStatus.text = m_Presenter.BuildStatusDescription;
+            m_BuildStatus.tooltip = m_Presenter.BuildStatus.Message;
             m_InputRecordButton.SetEnabled(m_Presenter.HasOperations &&
                                            m_Presenter.SupportsInputReplay &&
                                            (status.State == BtsmtlScenePlayState.Running ||

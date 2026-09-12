@@ -104,6 +104,7 @@ namespace ThirdPersonCharacter.Editor.Preview
 
         public BtsmtlScenePlayStatus Status => m_Operations?.Status ?? BtsmtlScenePlayStatus.Idle;
         public BtsmtlScenePlayBuildStatus BuildStatus => m_Operations?.BuildStatus ?? BtsmtlScenePlayBuildStatus.Idle;
+        public string BuildStatusDescription => DescribeBuildStatus(BuildStatus);
         public bool HasOperations => m_Operations != null;
         public bool IsInputRecording => m_Operations?.IsInputRecording == true;
         public bool SupportsInputReplay => m_Operations?.SupportsInputReplay == true;
@@ -274,6 +275,7 @@ namespace ThirdPersonCharacter.Editor.Preview
                 ShowBuildMenu();
             if (GUILayout.Button("Skill", EditorStyles.toolbarButton))
                 ShowSkillMenu();
+            EditorGUILayout.LabelField(BuildStatusDescription, EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
         }
 
@@ -445,6 +447,21 @@ namespace ThirdPersonCharacter.Editor.Preview
                 BtsmtlScenePlayState.NeedsBuild => "需要构建",
                 BtsmtlScenePlayState.Faulted => "失败",
                 _ => status.State.ToString()
+            };
+        }
+
+        static string DescribeBuildStatus(BtsmtlScenePlayBuildStatus status)
+        {
+            return status.State switch
+            {
+                BtsmtlScenePlayBuildState.Building => "构建中",
+                BtsmtlScenePlayBuildState.Published =>
+                    $"构建完成，等待采用 Epoch {status.RequestedProgramEpoch}",
+                BtsmtlScenePlayBuildState.Adopted =>
+                    $"已采用 Epoch {status.AdoptedProgramEpoch}",
+                BtsmtlScenePlayBuildState.Failed =>
+                    string.IsNullOrEmpty(status.Message) ? "构建失败" : $"构建失败：{status.Message}",
+                _ => "未构建"
             };
         }
 

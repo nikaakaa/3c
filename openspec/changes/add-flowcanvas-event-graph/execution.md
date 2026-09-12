@@ -83,7 +83,7 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 - `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
 - `ThirdPersonClient.Editor.csproj` Rebuild：0 error，32 个现有 ACL artifact identity warning；此前 Pose 编辑器的 3 个跨程序集可见性错误已由 Pose 任务将 `SetEditorAnimationVariables` 正式公开后清零。
 - 公共 `btsmtl.export_code` 已针对 Corin EventGraph 现场执行成功；生成源码的根创建语句已确认是 `EventGraphAuthoringCode.EnsureRoot<...>(context, ...)`，随后删除验证用输出文件，没有留下第二个 authoring 入口。
-- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入后再次执行；Foot Placement 内部曲线暴露诊断已消失，但当前仍被两项既有链路拒绝：AuthoringDiscovery 对 Corin Definition 返回 `Object reference not set to an instance of an object`，Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 State `12a31544976ddf152639d62c6d19142c` 参数合同不完整；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
+- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入并同步 Pose 状态参数校验后再次执行；Foot Placement 暴露诊断和 State 参数合同错误均已消失，但当前仍被两项既有链路拒绝：Attack skill 缺少原生状态机资产，Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 `corin.locomotion.inertialization` 规则没有按当前参数合同逐项声明；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
 - Unity Editor 日志已记录本轮 Tundra 编译成功、无 C# 编译 error；域重载后出现 RendererFeature/空对象编辑器警告，属于当前编辑器状态，不是 EventGraph 编译证据。
 - Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；更新后的正式 `btsmtl.generate_assets` 成功替换事件图，磁盘复核确认 Action/Foot 变量、Set 节点和连接均已移除，Profile 仍绑定同一事件图 GUID。Projection 因上一条既有资产链诊断仍未生成。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。

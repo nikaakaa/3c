@@ -804,11 +804,6 @@ namespace BTSMTL.Timeline.Editor
             for (int index = 0; index < trackContract.AllowedClipKinds.Count; index++)
             {
                 string kind = trackContract.AllowedClipKinds[index];
-                if (kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
-                {
-                    menu.AddDisabledItem(new GUIContent($"{DisplayKind(kind)} (需要正式绑定)"));
-                    continue;
-                }
                 string clipKind = kind;
                 menu.AddItem(new GUIContent(DisplayKind(clipKind)), false, () => ShowClipCreationPopup(trackAuthoringId, clipKind, frame));
             }
@@ -877,7 +872,7 @@ namespace BTSMTL.Timeline.Editor
             };
             PopupWindow.Show(
                 new Rect(0, 0, 1, 1),
-                new TimelineClipCreationPopup(request, motionClipIds, AddClip));
+                new TimelineClipCreationPopup(request, motionClipIds, m_Request.Timeline.ExternalBindings, AddClip));
         }
 
         void AddClip(TimelineClipCreationRequest request)
@@ -916,7 +911,7 @@ namespace BTSMTL.Timeline.Editor
                     TimelineAuthoringClipBinding.Apply(
                         m_Request.Timeline,
                         addedClip,
-                        BuildClipProperties(request),
+                        BuildClipProperties(addedClip, request),
                         null,
                         this);
                     addedClip.Track.UpdateMix();
@@ -944,13 +939,13 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
-        static JObject BuildClipProperties(TimelineClipCreationRequest request)
+        static JObject BuildClipProperties(Clip clip, TimelineClipCreationRequest request)
         {
-            var properties = new JObject();
+            JObject properties = TimelineAuthoringClipBinding.Export(clip).Properties;
             if (request.Kind == TimelineContractKinds.AnimationClip)
             {
-                properties["extraPolationMode"] = ExtraPolationMode.None.ToString();
-                properties["blendProfileId"] = string.Empty;
+                properties["extraPolationMode"] = request.Extrapolation.ToString();
+                properties["blendProfileId"] = request.BlendProfileId;
             }
             if (request.Kind == TimelineContractKinds.MotionCurveClip)
             {
@@ -968,6 +963,37 @@ namespace BTSMTL.Timeline.Editor
             {
                 properties["cueId"] = request.CueId;
                 properties["cueType"] = request.CueType;
+            }
+            if (request.Kind == TimelineContractKinds.CameraStateClip)
+            {
+                properties["mode"] = request.CameraMode.ToString();
+                properties["priority"] = request.CameraPriority;
+                properties["blendInSeconds"] = request.CameraBlendInSeconds;
+                properties["blendOutSeconds"] = request.CameraBlendOutSeconds;
+                properties["targetKey"] = request.CameraTargetKey;
+                properties["interruptPolicy"] = request.CameraInterruptPolicy.ToString();
+            }
+            if (request.Kind == TimelineContractKinds.CameraCueClip)
+            {
+                properties["cueId"] = request.CueId;
+                properties["cueKind"] = request.CameraCueKind.ToString();
+                properties["cueType"] = request.CueType;
+                properties["intensity"] = request.CameraIntensity;
+                properties["durationSeconds"] = request.CameraDurationSeconds;
+                properties["priority"] = request.CameraPriority;
+            }
+            if (request.Kind == TimelineContractKinds.CameraResponseClip)
+            {
+                properties["lookResponse"] = request.CameraLookResponse.ToString();
+                properties["manualOrbitWeight"] = request.ManualOrbitWeight;
+                properties["pitchResponseWeight"] = request.PitchResponseWeight;
+                properties["yawResponseWeight"] = request.YawResponseWeight;
+                properties["priority"] = request.CameraPriority;
+            }
+            if (request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
+            {
+                properties["targetBindingId"] = request.TargetBindingId;
+                properties["parameterBindingId"] = request.ParameterBindingId;
             }
             return properties;
         }

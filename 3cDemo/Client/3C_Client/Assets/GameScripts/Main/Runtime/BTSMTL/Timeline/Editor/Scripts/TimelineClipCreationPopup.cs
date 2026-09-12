@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,6 +15,8 @@ namespace BTSMTL.Timeline.Editor
         public int EndFrame;
         public int CurveEndFrame;
         public UnityEngine.Object Resource;
+        public ExtraPolationMode Extrapolation = ExtraPolationMode.None;
+        public string BlendProfileId = string.Empty;
         public string CurveId = "MotionCurve";
         public TimelineMotionContributionSpace Space = TimelineMotionContributionSpace.Local;
         public TimelineMotionChannel Channel = TimelineMotionChannel.Action;
@@ -23,26 +26,44 @@ namespace BTSMTL.Timeline.Editor
         public string SourceMotionClipId;
         public string CueId = "Cue";
         public string CueType = "Cue";
+        public TimelineCameraMode CameraMode = TimelineCameraMode.SkillCloseup;
+        public int CameraPriority = 100;
+        public float CameraBlendInSeconds = 0.15f;
+        public float CameraBlendOutSeconds = 0.2f;
+        public string CameraTargetKey = string.Empty;
+        public TimelineCameraInterruptPolicy CameraInterruptPolicy = TimelineCameraInterruptPolicy.BlendOut;
+        public TimelineCameraCueKind CameraCueKind = TimelineCameraCueKind.Shake;
+        public float CameraIntensity = 1f;
+        public float CameraDurationSeconds = 0.2f;
+        public TimelineCameraLookResponseMode CameraLookResponse = TimelineCameraLookResponseMode.Suppressed;
+        public float ManualOrbitWeight;
+        public float PitchResponseWeight = 1f;
+        public float YawResponseWeight = 1f;
+        public string TargetBindingId = string.Empty;
+        public string ParameterBindingId = string.Empty;
     }
 
     sealed class TimelineClipCreationPopup : PopupWindowContent
     {
         readonly TimelineClipCreationRequest m_Request;
         readonly IReadOnlyList<string> m_MotionClipIds;
+        readonly IReadOnlyList<TimelineExternalBindingDeclaration> m_Bindings;
         readonly Action<TimelineClipCreationRequest> m_Create;
         string m_Error;
 
         public TimelineClipCreationPopup(
             TimelineClipCreationRequest request,
             IReadOnlyList<string> motionClipIds,
+            IReadOnlyList<TimelineExternalBindingDeclaration> bindings,
             Action<TimelineClipCreationRequest> create)
         {
             m_Request = request;
             m_MotionClipIds = motionClipIds ?? Array.Empty<string>();
+            m_Bindings = bindings ?? Array.Empty<TimelineExternalBindingDeclaration>();
             m_Create = create;
         }
 
-        public override Vector2 GetWindowSize() => new Vector2(360, 320);
+        public override Vector2 GetWindowSize() => new Vector2(380, 420);
 
         public override void OnGUI(Rect rect)
         {
@@ -51,7 +72,11 @@ namespace BTSMTL.Timeline.Editor
             m_Request.EndFrame = EditorGUILayout.IntField("End Frame", m_Request.EndFrame);
 
             if (m_Request.Kind == TimelineContractKinds.AnimationClip)
+            {
                 m_Request.Resource = EditorGUILayout.ObjectField("Animation Clip", m_Request.Resource, typeof(UnityEngine.AnimationClip), false);
+                m_Request.Extrapolation = (ExtraPolationMode)EditorGUILayout.EnumPopup("Extrapolation", m_Request.Extrapolation);
+                m_Request.BlendProfileId = EditorGUILayout.TextField("Blend Profile", m_Request.BlendProfileId);
+            }
             else if (m_Request.Kind == TimelineContractKinds.TreeClip)
                 m_Request.Resource = EditorGUILayout.ObjectField("Graph / Tree", m_Request.Resource, typeof(UnityEngine.Object), false);
 
@@ -84,6 +109,37 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.CueId = EditorGUILayout.TextField("Cue Id", m_Request.CueId);
                 m_Request.CueType = EditorGUILayout.TextField("Cue Type", m_Request.CueType);
             }
+            else if (m_Request.Kind == TimelineContractKinds.CameraStateClip)
+            {
+                m_Request.CameraMode = (TimelineCameraMode)EditorGUILayout.EnumPopup("Mode", m_Request.CameraMode);
+                m_Request.CameraPriority = EditorGUILayout.IntField("Priority", m_Request.CameraPriority);
+                m_Request.CameraBlendInSeconds = EditorGUILayout.FloatField("Blend In", m_Request.CameraBlendInSeconds);
+                m_Request.CameraBlendOutSeconds = EditorGUILayout.FloatField("Blend Out", m_Request.CameraBlendOutSeconds);
+                m_Request.CameraTargetKey = EditorGUILayout.TextField("Target Key", m_Request.CameraTargetKey);
+                m_Request.CameraInterruptPolicy = (TimelineCameraInterruptPolicy)EditorGUILayout.EnumPopup("Interrupt", m_Request.CameraInterruptPolicy);
+            }
+            else if (m_Request.Kind == TimelineContractKinds.CameraCueClip)
+            {
+                m_Request.CueId = EditorGUILayout.TextField("Cue Id", m_Request.CueId);
+                m_Request.CameraCueKind = (TimelineCameraCueKind)EditorGUILayout.EnumPopup("Cue Kind", m_Request.CameraCueKind);
+                m_Request.CueType = EditorGUILayout.TextField("Cue Type", m_Request.CueType);
+                m_Request.CameraIntensity = EditorGUILayout.FloatField("Intensity", m_Request.CameraIntensity);
+                m_Request.CameraDurationSeconds = EditorGUILayout.FloatField("Duration", m_Request.CameraDurationSeconds);
+                m_Request.CameraPriority = EditorGUILayout.IntField("Priority", m_Request.CameraPriority);
+            }
+            else if (m_Request.Kind == TimelineContractKinds.CameraResponseClip)
+            {
+                m_Request.CameraLookResponse = (TimelineCameraLookResponseMode)EditorGUILayout.EnumPopup("Look Response", m_Request.CameraLookResponse);
+                m_Request.ManualOrbitWeight = EditorGUILayout.Slider("Manual Orbit", m_Request.ManualOrbitWeight, 0f, 1f);
+                m_Request.PitchResponseWeight = EditorGUILayout.Slider("Pitch Response", m_Request.PitchResponseWeight, 0f, 1f);
+                m_Request.YawResponseWeight = EditorGUILayout.Slider("Yaw Response", m_Request.YawResponseWeight, 0f, 1f);
+                m_Request.CameraPriority = EditorGUILayout.IntField("Priority", m_Request.CameraPriority);
+            }
+            else if (m_Request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
+            {
+                BuildBindingPopup("Target Binding", true, ref m_Request.TargetBindingId);
+                BuildBindingPopup("Parameter Binding", false, ref m_Request.ParameterBindingId);
+            }
 
             m_Error = Validate();
             if (!string.IsNullOrEmpty(m_Error))
@@ -115,7 +171,27 @@ namespace BTSMTL.Timeline.Editor
             if (m_Request.Kind == TimelineContractKinds.ActionCueClip &&
                 (string.IsNullOrWhiteSpace(m_Request.CueId) || string.IsNullOrWhiteSpace(m_Request.CueType)))
                 return "Cue Id 和 Cue Type 必须填写。";
+            if (m_Request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip &&
+                (string.IsNullOrEmpty(m_Request.TargetBindingId) || string.IsNullOrEmpty(m_Request.ParameterBindingId)))
+                return "Scene 参数 Clip 必须选择 Target 和 Parameter binding。";
             return string.Empty;
+        }
+
+        void BuildBindingPopup(string label, bool target, ref string value)
+        {
+            var options = new List<string> { "Select binding" };
+            for (int index = 0; index < m_Bindings.Count; index++)
+            {
+                TimelineExternalBindingDeclaration binding = m_Bindings[index];
+                bool valid = target
+                    ? binding.ValueKind == TimelineBindingValueKind.Target && binding.Access == TimelineBindingAccess.Input && binding.Lifetime == TimelineBindingLifetime.Call
+                    : (binding.ValueKind == TimelineBindingValueKind.Scalar || binding.ValueKind == TimelineBindingValueKind.Boolean) && binding.Access == TimelineBindingAccess.Write && binding.Lifetime == TimelineBindingLifetime.Tick;
+                if (valid)
+                    options.Add(binding.BindingId);
+            }
+            int selected = Mathf.Max(0, options.IndexOf(value) >= 0 ? options.IndexOf(value) : 0);
+            int next = EditorGUILayout.Popup(label, selected, options.ToArray());
+            value = next > 0 ? options[next] : string.Empty;
         }
     }
 }

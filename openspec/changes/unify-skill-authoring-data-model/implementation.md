@@ -17,7 +17,7 @@
 - 原业务节点与FlowCanvas节点共享输入身份、ActionContext、ActionWindow、CanActivate目标快照、生命周期、Gameplay、Blackboard和Locomotion authoring合同；Locomotion默认值与组合校验集中到同一业务规则。
 - 固定、条件和动态端口继续由共享Capability与唯一`GraphAuthoringNodePortShapeProjector`投影；已有TransferPayload、真实端口和普通组合步骤未被改写。
 
-当前已完成tasks 1.1、1.2、1.3、2.1、2.2、2.3、3.1、3.2、3.3和4.3。4.1仍未完成，因为`DocumentCodecId`仍有其它正式领域调用方；4.2仅完成本任务已确认的重复端口/字段模型清理，待对本目录剩余旧适配做最终边界审计。并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。
+当前已完成tasks 1.1、1.2、1.3、2.1、2.2、2.3、3.1、3.2、3.3、4.2和4.3。4.1仍未完成，因为共享`GraphAuthoringCapabilityDescriptor.DocumentCodecId`仍有其它正式领域调用方；Skill descriptor自身已不再写入该协议参数。并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。
 
 ## 2026-09-13 r2字段与引用链收口
 
@@ -32,6 +32,8 @@
 本轮补齐的业务配置入口包括：原生Gameplay Tag、Tag Query、Attribute、Apply/Remove Gameplay Effect节点的`ConfigureAuthoring`，以及原生与Skill Action Window、Gameplay节点共用的合法性规则。Locomotion两类节点的位移模式、执行模式和持续时间默认值也由同一业务规则提供。
 
 本轮没有修改`BtsmtlSkillNodeAuthoringBinding.cs`、`TimelineAuthoringClipBinding.cs`、JSON/Agent协议、FSM状态迁移或事件图路径。C# authoring负责的代码输出与JSON退役只消费本轮提供的typed metadata/API，不由本change新增第二套模型。
+
+本任务拥有的重复实现已审计并清理：Skill专用端口Shape、独立字段值包装、重复Macro输入/输出注册和旧Skill迁移器/菜单入口均无代码消费者；普通组合步骤和既有TransferPayload仍保留。JSON binding/validator及共享descriptor的其它领域协议字段不属于本任务，不能用“清理残余”的名义删除。
 
 ## r2同义字段对照与宿主差异
 

@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     [McpForUnityTool(
         "btsmtl.export_code",
-        Description = "从一个精确的正式 Skill Graph 或 Timeline 资产完整导出可重建的 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
+        Description = "从一个精确的正式 Skill Graph、Timeline 或 EventGraph 资产完整导出可重建的 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         public sealed class Parameters
         {
-            [ToolParameter("精确 Assets/... Graph 或 Timeline 资产路径。", Required = true)]
+            [ToolParameter("精确 Assets/... Skill Graph、Timeline 或 EventGraph 资产路径。", Required = true)]
             public string asset_path { get; set; }
 
             [ToolParameter("当 asset_path 指向含多个子资产的文件时，填写精确 local file id。", Required = false)]

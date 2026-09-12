@@ -1,8 +1,8 @@
 ## 后续Skill数据层交接
 
-2026-09-12：本表原完成记录和6.1—6.3的v7 apply/validate证据保持不变。2.1—2.3、3.1—3.3、4.1、5.1中Skill完整定义/字段访问/端口/引用的后续差异统一交给 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md) 第2、3、5、6节；不得因原任务已勾选而跳过新审计发现的缺口，也不在这里再建同一实施任务。Presentation、Control、Clip、通用Document事务继续按原职责保留。
+2026-09-12：本表原完成记录和6.1—6.3的v7 apply/validate证据保持不变。原业务节点与FlowCanvas共同定义引起的Skill字段/端口消费适配，接收 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md) 第2、3、5节结果，不再建立第二份同义节点定义。Presentation、Control、Clip及通用Document事务继续按原职责保留。
 
-新change承接参数抽取与状态机外部合同变化：内部改动仍不单独触发schema升级；其v8是新owner/端口/steps形状的明确迁移，不是对本表v7结果的改写。交接及规范冲突见[新设计D9/D10](../unify-skill-authoring-data-model/design.md)。
+共同定义change不自行改变公开包形状或版本；原生FSM与最终协议迁移归总FlowCanvas change。此处v7证据只属于原阶段，后续消费其实际已发布的唯一合同，不能回退或双读。交接及规范对账见[新设计D8/D9](../unify-skill-authoring-data-model/design.md)。
 
 ## 1. 现有语义盘点
 

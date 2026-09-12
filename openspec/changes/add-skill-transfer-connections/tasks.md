@@ -1,6 +1,6 @@
 ## 当前交接位置
 
-2026-09-12：底层未完成实现集中到 [unify-skill-authoring-data-model/tasks.md](../unify-skill-authoring-data-model/tasks.md)。本表4.4、5.1、5.3、6.1、6.3只接收其交付结果，不再并行实施；保留未勾选状态，转交不表示完成。原commit、migrated=20与v7 Clean记录仍为当时证据，不能证明新payload、edge owner、order和v8已收口。
+2026-09-12：本专项保留既有Step/Edge成果；最终FSM、协议迁移与旧状态存储清理由 [refactor-btsmtl-flowcanvas-authoring/tasks.md](../refactor-btsmtl-flowcanvas-authoring/tasks.md) 第9节负责。本表未完成项接收对应结果，不再转交共同定义提案或重复实施中间模型。原commit、migrated=20与v7 Clean记录仍为当时证据，转交不表示最终迁移完成。
 
 ## 1. 连接类型与工厂钩子
 
@@ -26,16 +26,16 @@
 - [x] 4.1 前置裁决：确认 `refactor-btsmtl-flowcanvas-authoring` 记录的 `syncState=TreeDirty` 外部改动归属，未裁决前不执行任何 checkout。交付：裁决结论记录。（git diff 查明 = 两个技能根的编辑器视图改动 + Attack `@any` 一个未连线空步骤，语义零变化；裁决为保留并入基线）
 - [x] 4.2 迁移映射实现：按 `step.Id == 连线.sourcePortID` 将条件/优先级/中止策略写入连线，随后删除节点步骤数据；走 Document 事务与失败回滚。交付：编译通过。（f28f30cfe + 5034053ca；迁移器落地，节点步骤数据删除归 5.x）
 - [x] 4.3 三项技能根（Attack/DodgeBack/DodgeForward）checkout → dry-run → apply → re-checkout，收口证据含 `applied=true`、`saved=true`、`syncState=Clean`、零差异 hash。交付：正式 CLI 输出记录。（经 Unity MCP execute_custom_tool 执行：checkout syncState=Clean、dry-run/apply 走包闭环、re-checkout Clean documentHash=016c6226…/34ae8080…；实际连线重建由迁移器完成 migrated=20 errors=[]——仅 Attack 含状态机图，DodgeBack/DodgeForward 为纯流程图无状态机可迁移）
-- [ ] 4.4 接收新change 7.3的迁移后正式validate/技能编译及条件、优先级、中止策略、顺序一致报告；本表不重复执行。历史阻塞：原MCP validate会话曾三次断开，该记录不表示当前通道状态。
+- [ ] 4.4 接收总FlowCanvas 9.10/9.12/9.13的转移映射、最终迁移验证与编译语义报告，确认条件、优先级、中止策略和顺序；不再依赖共同定义提案7.x。历史MCP断开仅为当时记录。
 
 ## 5. 状态机结构节点退役步骤端口（迁移后执行；先删字段会让旧资产条件图被序列化器静默丢弃）
 
-- [ ] 5.1 接收新change 4.1/8.1的状态机结构节点去Composite化、固定Transfer端口及旧steps删除结果；以正式参数/端口清单和编译结果确认，不再另写同一实现。
+- [ ] 5.1 接收总FlowCanvas 9.3/9.15的最终原生FSM存储及旧Skill状态机/steps清理结果；不再单独实现一套中间FlowGraph固定转移端口，完成依据为实际存储、消费者扫描与编译结果。
 - [x] 5.2 `BtsmtlSkillStepInspector` 移除状态机分支（"状态转换"区），步骤编辑仅服务 sequence/selector/parallel/loop。交付：编译通过。（提前于迁移执行——纯 UI 分支，迁移器只读数据不读 UI；状态机节点步骤区自此显示为普通"执行步骤"）
-- [ ] 5.3 接收新change 8.1的FlowGraphs/Compilation/Document/Copy全链旧steps消费者归零扫描与删除清单；不以旧6.2局部扫描代替。
+- [ ] 5.3 接收总FlowCanvas 9.15对FlowGraphs/Compilation/Document/Copy的旧状态steps消费者扫描与删除清单；普通流程步骤按合法用途保留，不以旧6.2局部扫描代替。
 
 ## 6. 清理与对账
 
-- [ ] 6.1 接收新change 4.4/8.1的旧转移字段、补读与一次性迁移器删除结果；普通组合步骤保留其实际业务字段，以源码清单和编译结果确认。
+- [ ] 6.1 接收总FlowCanvas 9.7/9.15的最终转移闭包、旧字段补读及一次性迁移入口删除结果；普通组合步骤保留实际业务字段，以源码清单和编译结果确认。
 - [x] 6.2 `rg` 审计无"步骤反查转移"残留（`Steps`/`sourcePortID` 在状态机语境的引用为零），记录扫描结果。交付：扫描记录。（f28f30cfe：`record.Step`/`BtsmtlSkillEdgeOccurrence(` 全库零残留；`BtsmtlSkillFlowConnection` 11 处消费者均为本次落位文件；其余 `.Step` 命中均为 SimulationPipeline/WorldFeature 等无关领域）
-- [ ] 6.3 接收新change 8.2/8.3的正式spec归并与任务交接结果；总FlowCanvas 3.3.1替代入口已在规划阶段补充，功能完成仍以新模型交付、转移调度/旧状态机规范对账和严格校验为准。
+- [ ] 6.3 接收总FlowCanvas 9.16的最终spec与任务归并，保留本专项转移业务合同及历史证据；共同定义提案不承担转移版本决定，完成仍以实际交付、规范对账和严格校验为准。

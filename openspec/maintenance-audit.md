@@ -4,9 +4,9 @@
 
 本次只更新Skill节点数据规划入口，不重做下方2026-09-08全仓审计，也不把创建提案当作实现完成。
 
-- [unify-skill-authoring-data-model](changes/unify-skill-authoring-data-model/proposal.md) 是节点参数、节点定义、字段/端口规则、引用生命周期、转移双写和相关Document版本迁移的唯一新增实施入口；用户已确定保留FlowCanvas正式图拓扑。
-- 总FlowCanvas change保留原生作者业务、运行观察和网络；metadata change保留既有通用适配/非Skill成果与v7证据；转移专项4.4/5.1/5.3/6.1/6.3改为接收新change结果，未完成框不勾选。
-- 精确来源、任务映射和current/delta冲突见[新design D9/D10](changes/unify-skill-authoring-data-model/design.md)。当前正式包仍为v7；v8是新提案对Edge owner/端口形状变化的目标，不是已发布合同。
+- [unify-skill-authoring-data-model](changes/unify-skill-authoring-data-model/proposal.md) 收窄为原业务节点与FlowCanvas节点共用参数/规则定义及必要消费适配，不自行迁移状态机、协议或布局hash。
+- 总FlowCanvas change在途第9节负责原生FSM、最终v8与清理；metadata保留原有适配/事务及v7证据；转移专项提供Step/Edge阶段成果，未完成项对接总FlowCanvas对应任务，不再指向共同定义提案的已删除任务。
+- 精确职责和current/delta对账见[design D8/D9](changes/unify-skill-authoring-data-model/design.md)。共同定义消费实施基线的唯一公开合同，不能自行升级或恢复旧版；当前与待实施版本分别记录。
 - 下方旧数量、TreeDirty、目录与版本判断仅保留其原审计时间含义。本次不归档change、不移动无关Foot/Pose/AI文档、不修改现行spec正文。
 
 ## 2026-09-08 全仓审计记录

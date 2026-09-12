@@ -10,7 +10,7 @@
 
 ## Current State
 
-- Skill数据层新增规划入口为 [`unify-skill-authoring-data-model`](changes/unify-skill-authoring-data-model/proposal.md)：用户选择集中节点参数、节点定义与引用规则，继续由FlowCanvas保存正式图拓扑。该change统一承接原FlowCanvas、metadata与转移专项的相关未收口工作；原证据和非数据层任务保持原归属。节点payload/定义与Document v8均是待实施目标，当前v7与代码状态不因提案创建改变；详细交接与规范冲突见其design D9/D10。
+- 节点定义去重的规划入口为 [`unify-skill-authoring-data-model`](changes/unify-skill-authoring-data-model/proposal.md)：从原业务节点抽共同参数/规则，FlowCanvas使用同一定义，各实例保留自己的值。本项不迁移图拓扑或自行升级Document；总FlowCanvas change的在途第9节负责原生FSM、最终v8和清理，转移专项提供既有Step/Edge成果。当前已发布协议仍按现行spec，待实施目标不等于完成；职责与对账见共同定义design D8/D9。
 
 - `openspec/specs/`与本文件共同表达现行能力合同；目录、关联change与已知差异见`openspec/maintenance-audit.md`。active change只记录尚未收口的实施增量；孤立类型或未完成配置不能单独成为current truth。archive保留已交付能力及明确标注“已撤销”的实验；撤销实验的delta不安装，不能从archive目录存在推断能力已交付。
 - Foot Placement当前工作区已经收敛为唯一深模块、单数Goal/FBBIK/Writer和根Bank事务；旧中央`CharacterFootStateMachine`已经删除，现行Foot内部固定为Transition Resolver/Runtime、State Target、唯一Interpolation与Post Constraint阶段。`build-character-foot-motion-data-foundation`已经由用户验收并归档，原生AnimationClip正式保存左右脚Step、Foot Height、Contact、Lock和Support数据。active `stabilize-character-foot-path-and-landing`已经完成Releasing到Swing顺序、Path Revision分型、Swing/Contact Landing所有权、canonical Observation、历史Surface偏好删除和共享Prediction Motion唯一运行链接管；Prediction当前速度来自committed Body Target，Continuation来自移动计划，合法输入在1044帧Replay中零诊断回归。当前优先让PreSwing、Swing和Approach Contact持续更新Prediction Landing，并在首次正式Contact Rising用一次Plant Verification建立Verified LastLanding与冻结Anchor；完成该边界后再闭合Landing/Lock垂直连续，使Ground目标不得绕过唯一Interpolation同帧抬升，普通Contact帧允许Profile显式的小范围穿透，超预算连续追赶且禁止Full Lock，Swing仍保留Ground Envelope硬最低约束，Reach只发布逐腿与交集观察并参与原Landing完成资格，不硬改Pelvis或Foot Goal。正式Foot Height、Support/Pelvis、Landing Reach和Contact/Lock旧语义清理仍未完成，停止边界显式静止移动计划由后续移动系统change处理。

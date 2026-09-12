@@ -1,6 +1,6 @@
 ## Why
 
-2026-09-12 交接：本change继续拥有转移线上显示/编辑及调度的可见行为合同。未完成的旧steps退役、完整条件引用、迁移后验证和对账集中由 [unify-skill-authoring-data-model](../unify-skill-authoring-data-model/proposal.md) 第4、7、8节承接；原tasks改为接收结果，保留已完成commit与v7迁移证据。下文“不抽中立层/v7迁移”是当时局部范围，不限制已由用户选定的后续节点参数/定义抽取；FlowCanvas图拓扑仍不迁出。
+2026-09-12 职责对账：本change保留转移线上编辑/调度合同及既有Step/Edge阶段成果。剩余最终验证、旧状态存储删除和协议归并对接 [refactor-btsmtl-flowcanvas-authoring/tasks.md](../refactor-btsmtl-flowcanvas-authoring/tasks.md) 第9节的原生FSM计划；不再转交unify-skill-authoring-data-model，也不为中间态再做一套最终模型。原commit与v7迁移证据保持不变，未完成项只在收到相应结果后勾选。
 
 技能图（FlowCanvas 域）的状态机转移目前由 state 节点的有序步骤端口（`BtsmtlSkillStepPort`）表达：条件图、优先级、中止策略全部塞在源节点的端口定义里，画布上表现为多条同名端口（如 Attack1 的三个 `@exit`），条件与优先级完全不可见，作者无法从图上判断转移语义。同一插件家族中 FSM 模块的 `FSMConnection` 已验证"转移线携带条件"是框架支持的成熟形态，且 `FlowGraph.CreatePortConnection` 钩子（项目已加）允许在不魔改插件的前提下让 FlowCanvas 连线携带业务数据。
 

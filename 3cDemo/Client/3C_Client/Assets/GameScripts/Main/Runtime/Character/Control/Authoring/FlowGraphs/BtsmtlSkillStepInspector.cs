@@ -28,8 +28,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (body != state.Body)
                     Change(graph, "修改状态内容", () => state.SetBody(body));
             }
-            bool transition = graph is IBtsmtlSkillFlowGraph owner && owner.Role == BtsmtlSkillFlowGraphRole.StateMachine;
-            EditorGUILayout.LabelField(transition ? "状态转换" : "执行步骤", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("执行步骤", EditorStyles.boldLabel);
             for (int index = 0; index < node.Steps.Count; index++)
             {
                 BtsmtlSkillStepPort step = node.Steps[index];
@@ -37,8 +36,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 EditorGUI.BeginChangeCheck();
                 string name = EditorGUILayout.DelayedTextField($"{index + 1}. 名称", step.Name);
                 var condition = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField("条件页面", step.Condition, typeof(BtsmtlSkillFlowGraph), false);
-                int priority = transition ? EditorGUILayout.DelayedIntField("转换优先级", step.Priority) : step.Priority;
-                var abort = transition ? step.AbortPolicy : (ProgramAbortPolicy)EditorGUILayout.EnumPopup("条件失效时中断", step.AbortPolicy);
+                int priority = step.Priority;
+                var abort = (ProgramAbortPolicy)EditorGUILayout.EnumPopup("条件失效时中断", step.AbortPolicy);
                 if (EditorGUI.EndChangeCheck())
                 {
                     int position = index;
@@ -71,11 +70,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                         return;
                     }
             }
-            if (GUILayout.Button(transition ? "添加状态转换" : "添加执行步骤"))
+            if (GUILayout.Button("添加执行步骤"))
                 Change(graph, "添加技能步骤", () =>
                 {
                     var steps = node.Steps.ToList();
-                    steps.Add(new BtsmtlSkillStepPort(Guid.NewGuid().ToString("N"), transition ? "转换" : "步骤"));
+                    steps.Add(new BtsmtlSkillStepPort(Guid.NewGuid().ToString("N"), "步骤"));
                     node.SetSteps(steps);
                 });
         }

@@ -61,6 +61,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Unity MCP Console 轻量检查返回的新增错误仅为工作区既有 Timeline `RuntimeDebugEventView.Status` 缺失，以及上述 SkillDefinition 缺失；未发现本change最近Pose文件的编译错误。
 - 后续同一实例的轻量 Console 读取返回 `SerializedObjectNotCreatableException`、`ArgumentNullException`、`NullReferenceException` 和上述 SkillDefinition 错误；MCP/Console 未提供堆栈，暂不能把前三项归因到本change。
 - 在 Skill 侧提交 `654327ce0` 后重新调用同一实例 `btsmtl.validate`，仍在同一 SkillDefinition 节点返回相同的原生状态机/声明缺失错误；Pose 校验和资产计划仍未开始。
+- Native EventGraph API、Pose typed Frame和输入Contract提交后再次调用 `btsmtl.validate`，仍在同一 SkillDefinition 节点失败；没有进入Pose阶段。
 
 当前约束：
 

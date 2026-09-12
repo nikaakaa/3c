@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.EventGraphs;
 using NodeCanvas.Framework;
 using ParadoxNotion;
 using ParadoxNotion.Design;
@@ -57,29 +58,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
 #if UNITY_EDITOR
         [NonSerialized] BlackboardSource m_EditorBlackboard;
+        [NonSerialized] CharacterAnimationVariableContract m_EditorAnimationVariables;
 
         public override IBlackboard editorBlackboard => GetEditorBlackboard();
         public bool IsReadOnly => true;
         public bool AllowVariablePick => true;
+
+        internal void SetEditorAnimationVariables(
+            CharacterAnimationVariableContract animationVariables) =>
+            m_EditorAnimationVariables = animationVariables;
 
         BlackboardSource GetEditorBlackboard()
         {
             m_EditorBlackboard ??= new BlackboardSource();
             m_EditorBlackboard.unityContextObject = this;
             var next = new Dictionary<string, Variable>(StringComparer.Ordinal);
-            foreach (CharacterPoseParameterDeclaration declaration in Parameters)
+            foreach (EventGraphVariableDescriptor descriptor in
+                     m_EditorAnimationVariables?.Variables ??
+                     Array.Empty<EventGraphVariableDescriptor>())
             {
-                if (!IsBlackboardInput(declaration))
+                if (!TryGetVariableType(descriptor.ValueKind, out Type variableType) ||
+                    descriptor.Reference.VariableId == AnimationPoseParameterIds.ActionWeight.Value ||
+                    descriptor.Reference.VariableId == AnimationPoseParameterIds.FootPlacementWeight.Value)
                     continue;
-                string id = declaration.ParameterId.Value;
+                string id = descriptor.Reference.VariableId;
                 if (!m_EditorBlackboard.variables.TryGetValue(id, out Variable variable) ||
-                    variable == null || variable.varType != VariableType(declaration.ValueType) ||
+                    variable == null || variable.varType != variableType ||
                     !string.Equals(variable.ID, id, StringComparison.Ordinal))
-                    variable = CreateEditorVariable(declaration);
+                    variable = CreateEditorVariable(descriptor);
                 else
                 {
-                    variable.name = declaration.DisplayName;
-                    variable.value = DefaultValue(declaration);
+                    variable.name = descriptor.Name;
+                    variable.value = DefaultValue(descriptor);
                 }
                 next.Add(id, variable);
             }
@@ -95,13 +105,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void DrawBlackboardExtensions(IBlackboard blackboard, UnityEngine.Object contextObject)
         {
             if (ReferenceEquals(blackboard, editorBlackboard))
-                EditorGUILayout.LabelField("Pose Inputs · 只读", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Animation Inputs · 只读", EditorStyles.miniLabel);
         }
 
         public GenericMenu GetAddVariableMenu(IBlackboard blackboard, UnityEngine.Object contextObject)
         {
             var menu = new GenericMenu();
-            menu.AddDisabledItem(new GUIContent("Pose 参数由声明提供"));
+            menu.AddDisabledItem(new GUIContent("动画实例变量由 EventGraph 声明提供"));
             return menu;
         }
 
@@ -112,26 +122,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index)
         {
             var menu = new GenericMenu();
-            CharacterPoseParameterDeclaration declaration = Parameters.SingleOrDefault(value =>
-                IsBlackboardInput(value) &&
-                string.Equals(value.ParameterId.Value, variable?.ID, StringComparison.Ordinal));
-            if (declaration == null)
+            EventGraphVariableDescriptor descriptor =
+                FindEditorVariable(variable?.ID);
+            if (descriptor == null)
             {
-                menu.AddDisabledItem(new GUIContent("缺少正式 Pose 输入声明"));
+                menu.AddDisabledItem(new GUIContent("缺少正式 EventGraph 输入声明"));
                 return menu;
             }
-            CharacterPoseParameterAccessDescriptor access =
-                CharacterPoseParameterAccess.Describe(this, declaration);
             menu.AddDisabledItem(new GUIContent(
-                $"名称: {access.DisplayName}"));
+                $"名称: {descriptor.Name}"));
             menu.AddDisabledItem(new GUIContent(
-                $"类型: {VariableType(access.ValueType).Name}"));
+                $"类型: {descriptor.ValueType.Name}"));
             menu.AddDisabledItem(new GUIContent(
-                $"来源: {CharacterPoseParameterAccess.CategoryDisplayName(access.Category)}"));
+                "来源: 动画实例变量"));
             menu.AddDisabledItem(new GUIContent(
-                $"范围: {CharacterPoseParameterAccess.ScopeDisplayName(access.Scope)}"));
+                $"范围: {CharacterPoseParameterAccess.ScopeDisplayName(Role)}"));
             menu.AddDisabledItem(new GUIContent(
-                $"使用: {ParameterConsumerCount(access.ParameterId)} 个节点"));
+                $"使用: {ParameterConsumerCount(new PoseParameterId(descriptor.Reference.VariableId))} 个节点"));
             menu.AddSeparator("");
             menu.AddDisabledItem(new GUIContent("拖拽变量以创建 Get 节点"));
             return menu;
@@ -146,22 +153,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!ReferenceEquals(blackboard, editorBlackboard) || variable == null)
                 return;
-            CharacterPoseParameterDeclaration declaration = Parameters.SingleOrDefault(value =>
-                IsBlackboardInput(value) &&
-                string.Equals(value.ParameterId.Value, variable.ID, StringComparison.Ordinal));
-            if (declaration == null)
-                throw new InvalidOperationException("Pose 参数 Blackboard 变量没有对应声明。");
+            EventGraphVariableDescriptor descriptor = FindEditorVariable(variable.ID) ??
+                throw new InvalidOperationException("Blackboard 变量没有对应的 EventGraph 声明。");
             if (isEditorReadOnly || EditorWriteRouter == null)
             {
                 NodeCanvas.Editor.GraphEditor.current?.ShowNotification(new GUIContent("Pose Graph 当前不可编辑。"));
                 return;
             }
-            EditorWriteRouter.CreateParameterGet(declaration.ParameterId, variable.name, mousePos);
+            EditorWriteRouter.CreateParameterGet(
+                new PoseParameterId(descriptor.Reference.VariableId),
+                descriptor.Name,
+                mousePos);
             Event.current.Use();
         }
 
-        static bool IsBlackboardInput(CharacterPoseParameterDeclaration declaration) =>
-            CharacterPoseParameterAccess.IsBlackboardInput(declaration);
+        EventGraphVariableDescriptor FindEditorVariable(string variableId)
+        {
+            if (m_EditorAnimationVariables == null || string.IsNullOrWhiteSpace(variableId))
+                return null;
+            return m_EditorAnimationVariables.Variables.SingleOrDefault(value =>
+                value != null &&
+                string.Equals(value.Reference.VariableId, variableId, StringComparison.Ordinal));
+        }
 
         int ParameterConsumerCount(PoseParameterId parameterId)
         {
@@ -171,45 +184,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 .Sum(node => node.outConnections.Count);
         }
 
-        static Type VariableType(PoseParameterValueType valueType) => valueType switch
+        static bool TryGetVariableType(
+            EventGraphValueKind valueKind,
+            out Type type)
         {
-            PoseParameterValueType.Float => typeof(float),
-            PoseParameterValueType.Int => typeof(int),
-            PoseParameterValueType.Bool => typeof(bool),
-            _ => throw new InvalidOperationException("Pose 参数类型无效。")
-        };
-
-        static Variable CreateEditorVariable(CharacterPoseParameterDeclaration declaration) =>
-            declaration.ValueType switch
+            switch (valueKind)
             {
-                PoseParameterValueType.Float => new Variable<float>(
-                    declaration.DisplayName,
-                    declaration.ParameterId.Value)
+                case EventGraphValueKind.Float32:
+                    type = typeof(float);
+                    return true;
+                case EventGraphValueKind.Int32:
+                    type = typeof(int);
+                    return true;
+                case EventGraphValueKind.Bool:
+                    type = typeof(bool);
+                    return true;
+                default:
+                    type = null;
+                    return false;
+            }
+        }
+
+        static Variable CreateEditorVariable(EventGraphVariableDescriptor descriptor) =>
+            descriptor.ValueKind switch
+            {
+                EventGraphValueKind.Float32 => new Variable<float>(
+                    descriptor.Name,
+                    descriptor.Reference.VariableId)
                 {
-                    value = declaration.DefaultValue
+                    value = descriptor.InitialValue.Float32Value
                 },
-                PoseParameterValueType.Int => new Variable<int>(
-                    declaration.DisplayName,
-                    declaration.ParameterId.Value)
+                EventGraphValueKind.Int32 => new Variable<int>(
+                    descriptor.Name,
+                    descriptor.Reference.VariableId)
                 {
-                    value = Convert.ToInt32(declaration.DefaultValue)
+                    value = descriptor.InitialValue.Int32Value
                 },
-                PoseParameterValueType.Bool => new Variable<bool>(
-                    declaration.DisplayName,
-                    declaration.ParameterId.Value)
+                EventGraphValueKind.Bool => new Variable<bool>(
+                    descriptor.Name,
+                    descriptor.Reference.VariableId)
                 {
-                    value = declaration.DefaultValue > 0.5f
+                    value = descriptor.InitialValue.BoolValue
                 },
-                _ => throw new InvalidOperationException("Pose 参数类型无效。")
+                _ => throw new InvalidOperationException("EventGraph 变量类型不能作为 Pose 输入。")
             };
 
-        static object DefaultValue(CharacterPoseParameterDeclaration declaration) =>
-            declaration.ValueType switch
+        static object DefaultValue(EventGraphVariableDescriptor descriptor) =>
+            descriptor.ValueKind switch
             {
-                PoseParameterValueType.Float => declaration.DefaultValue,
-                PoseParameterValueType.Int => Convert.ToInt32(declaration.DefaultValue),
-                PoseParameterValueType.Bool => declaration.DefaultValue > 0.5f,
-                _ => throw new InvalidOperationException("Pose 参数类型无效。")
+                EventGraphValueKind.Float32 => descriptor.InitialValue.Float32Value,
+                EventGraphValueKind.Int32 => descriptor.InitialValue.Int32Value,
+                EventGraphValueKind.Bool => descriptor.InitialValue.BoolValue,
+                _ => throw new InvalidOperationException("EventGraph 变量类型不能作为 Pose 输入.")
             };
 
         protected override void OnGraphEditorToolbar() =>

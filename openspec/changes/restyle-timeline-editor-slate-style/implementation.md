@@ -80,4 +80,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 - 作者 Timeline revision 与真实 Build/adoption 的精确匹配仍未完成；当前两者并列显示，分别来自 TimelineData 和 coordinator，避免伪造采用关系。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
 - C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
+- 当前仍可定位到旧 JSON 消费者：`AgentSkillFlowDocumentExporter.cs:547` 调用 `TimelineAuthoringClipBinding.Export`，`BtsmtlSkillTimelineAuthoringApplier.cs:379` 调用 `TimelineAuthoringClipBinding.Apply`；在 C# authoring 的 Skill/FSM/Pose/EventGraph 迁移完成前，本 change 不删除这些共享路径。
+- 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
+- authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

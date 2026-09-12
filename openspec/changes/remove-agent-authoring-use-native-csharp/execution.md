@@ -34,6 +34,8 @@ D7.1 门槛已经满足：作者调用者已转到正式 C# / UI / domain API，
 - `9c9520afa` `删除Presentation旧Agent文档链`：删除 `Authoring/PresentationDocument` 目录下的 codec、exporter、reconciler、validator、mutation plan 和协议模型，共 27 个文件；Pose 正式 adapter/mutation 保留。
 - `6b7be5c7b` 与 `ad698053a`：删除 Pose/EventGraph 侧旧文档桥接和调用者，EventGraph 保留正式运行、变量和 mutation 业务。
 - 删除 `.codex/skills/btsmtl-agent-authoring/` 下的 `SKILL.md`、`references/current-contract.md` 和 `agents/openai.yaml`；新的作者合同归当前 change 文档和正式 API，不保留旧 skill 别名。
+- `89084a7f9` `接通原生FSM编译生命周期`：把 Native FSM 的 State Body、转移 Condition、Entry/Any/Exit owner 和 edge Source identity 接入正式编译生命周期。
+- `4997648fa` `事件图：修复原生FSM发现与来源映射`：修复 Native FSM discovery、源状态可见范围、SourceMap content hash、程序级容器和 GraphInvocation caller 解析；不改变旧 Agent 协议兼容行为。
 
 删除后源码扫描结果：
 
@@ -106,7 +108,7 @@ Unity 返回：`saved=true`、`replaced_asset_paths` 包含精确 Pose 根、`cr
 
 ### 4.5 Unity 边界
 
-Unity 实例为 `3C_Client@e852139597e42532`，项目路径为 `D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`。最近状态为非 Play、idle、未编译、未进行 AssetDatabase 刷新，`ready_for_tools=true`。
+Unity 实例为 `3C_Client@e852139597e42532`，项目路径为 `D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`。最近状态为非 Play、idle、未编译、AssetDatabase 刷新已完成，`external_changes_dirty=false`，`ready_for_tools=true`。
 
 当前 Console 中保留了此前已有的 Unity 内部 Inspector 空对象异常：`GameObjectInspector.OnEnable`、`SerializedObjectNotCreatableException` 和 `GameObjectInspector.OnDisable`；本次 C# authoring 生成响应没有新增领域 diagnostic 或 authoring 堆栈。该 Console 状态不被静态编译结果掩盖，仍需用户按自己的端到端流程处理或复核。
 

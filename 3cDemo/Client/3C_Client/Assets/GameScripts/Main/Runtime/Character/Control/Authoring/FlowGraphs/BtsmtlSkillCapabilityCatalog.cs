@@ -251,6 +251,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     typeof(BtsmtlSkillNodeAuthoringRuleAttribute),
                     true)
                 .OfType<BtsmtlSkillNodeAuthoringRuleAttribute>()
+                .OrderBy(value => value.FieldId, StringComparer.Ordinal)
+                .ThenBy(value => value.Rule)
                 .ToArray() ??
             Array.Empty<BtsmtlSkillNodeAuthoringRuleAttribute>();
 
@@ -260,6 +262,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     typeof(BtsmtlSkillNodeAuthoringReferenceAttribute),
                     true)
                 .OfType<BtsmtlSkillNodeAuthoringReferenceAttribute>()
+                .OrderBy(value => value.FieldId, StringComparer.Ordinal)
                 .ToArray() ??
             Array.Empty<BtsmtlSkillNodeAuthoringReferenceAttribute>();
 
@@ -269,6 +272,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     typeof(BtsmtlSkillGraphReferenceAttribute),
                     true)
                 .OfType<BtsmtlSkillGraphReferenceAttribute>()
+                .OrderBy(value => value.FieldId, StringComparer.Ordinal)
+                .ThenBy(value => value.Role)
                 .ToArray() ??
             Array.Empty<BtsmtlSkillGraphReferenceAttribute>();
 

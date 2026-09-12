@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             internal TimelineAsset Asset;
             internal string NodeId;
+            internal string GraphAuthoringId;
             internal Scope Scope;
         }
         sealed class Scope
@@ -70,6 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly FlowGraph m_RootGraph;
         readonly Scope m_RootScope;
         Scope m_PageScope;
+        string m_PageGraphAuthoringId = string.Empty;
         BtsmtlSkillFlowObservation m_Observation;
         bool m_NavigationDirty = true;
         bool m_Disposed;
@@ -87,6 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             GraphEditor.onEditorClosed += OnEditorClosed;
             GraphEditor.onEditorNavigationChanged += OnNavigationChanged;
+            m_Session.Changed += OnRuntimeChanged;
             TimelineEditorWindow.AssetOpened += OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened += OnTimelineTreeOpened;
         }
@@ -104,6 +107,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void OnNavigationChanged() => m_NavigationDirty = true;
 
+        void OnRuntimeChanged() => UpdateTimelineOverlay();
+
         void Update()
         {
             if (m_Disposed)
@@ -114,7 +119,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (!m_NavigationDirty)
+            {
+                UpdateTimelineOverlay();
                 return;
+            }
             m_NavigationDirty = false;
             m_CaptureValues = m_Observation?.CaptureValues ?? m_CaptureValues;
             m_Observation?.Dispose();
@@ -137,6 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     graph = child;
                 }
                 m_PageScope = scope;
+                m_PageGraphAuthoringId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
                 var request = new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(((IBtsmtlSkillFlowGraph)graph).AuthoringId),
                     new BtsmtlSkillGraphFingerprint().Compute(graph));
                 m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
@@ -144,11 +153,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
                 m_Observation.SetInstanceSelection(() => BtsmtlSkillHostEntry.ShowInstances(
                     m_Definition, graph, m_Session, scope.Root.CharacterRuntimeId, m_Observation.Instance));
+                UpdateTimelineOverlay();
             }
             catch (InvalidOperationException error)
             {
+                ClearTimelineOverlay();
                 GraphEditor.current.ShowNotification(new GUIContent(error.Message));
             }
+        }
+
+        void UpdateTimelineOverlay()
+        {
+            if (m_ActiveTimeline?.Asset == null || string.IsNullOrEmpty(m_ActiveTimeline.GraphAuthoringId))
+                return;
+            TimelineEditorWindow window = TimelineEditorWindow.FindOpen(m_ActiveTimeline.Asset);
+            if (window == null)
+                return;
+            TimelineData timeline = m_ActiveTimeline.Asset.Data;
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
+                m_Session.ViewModel.GetTimelinePlaybackSummaries(
+                    timeline.AuthoringId,
+                    m_ActiveTimeline.GraphAuthoringId);
+            RuntimeTimelinePlaybackDebugSummary summary = summaries.FirstOrDefault(value =>
+                string.Equals(value.Provenance.SourceNodeAuthoringId, m_ActiveTimeline.NodeId, StringComparison.Ordinal));
+            if (!summary.Playback.IsValid)
+            {
+                window.ClearRuntimeObservation();
+                return;
+            }
+
+            var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
+            var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (RuntimeDebugEventView item in m_Session.ViewModel.GetTimelineCurrentEvents(
+                         timeline.AuthoringId,
+                         summary.Playback,
+                         m_ActiveTimeline.GraphAuthoringId))
+            {
+                RuntimeSourceElementKey source = item.Source;
+                if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
+                    activeTracks[source.TrackAuthoringId] = item.Status;
+                else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
+                         !string.IsNullOrEmpty(source.ClipAuthoringId))
+                    activeClips[source.ClipAuthoringId] = item.Status;
+            }
+            window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
+        }
+
+        void ClearTimelineOverlay()
+        {
+            if (m_ActiveTimeline?.Asset != null)
+                TimelineEditorWindow.FindOpen(m_ActiveTimeline.Asset)?.ClearRuntimeObservation();
         }
 
         bool CanNavigateParent()
@@ -200,14 +254,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 Asset = node.TimelineAsset,
                 NodeId = node.UID,
+                GraphAuthoringId = m_PageGraphAuthoringId,
                 Scope = m_PageScope
             };
         }
 
         void OnTimelineAssetOpened(TimelineAsset asset)
         {
+            ClearTimelineOverlay();
             m_ActiveTimeline = m_PendingTimeline?.Asset == asset ? m_PendingTimeline : null;
             m_PendingTimeline = null;
+            UpdateTimelineOverlay();
         }
 
         void OnTimelineTreeOpened(TimelineAsset asset, TreeClip clip)
@@ -255,8 +312,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             GraphEditor.onEditorClosed -= OnEditorClosed;
             GraphEditor.onEditorNavigationChanged -= OnNavigationChanged;
+            m_Session.Changed -= OnRuntimeChanged;
             TimelineEditorWindow.AssetOpened -= OnTimelineAssetOpened;
             TimelineEditorWindow.AssetTreeOpened -= OnTimelineTreeOpened;
+            ClearTimelineOverlay();
             if (ReferenceEquals(s_Current, this))
                 s_Current = null;
         }

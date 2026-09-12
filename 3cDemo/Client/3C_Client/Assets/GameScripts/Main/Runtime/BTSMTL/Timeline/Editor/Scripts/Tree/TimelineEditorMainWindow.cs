@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -125,6 +126,30 @@ namespace BTSMTL.Timeline.Editor
             window.Show();
             window.Focus();
             return window;
+        }
+
+        public static TimelineEditorWindow FindOpen(TimelineAsset asset)
+        {
+            if (!asset)
+                return null;
+            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
+            for (int index = 0; index < windows.Length; index++)
+                if (windows[index] && ReferenceEquals(windows[index].m_SerializedOwner, asset))
+                    return windows[index];
+            return null;
+        }
+
+        public void ApplyRuntimeObservation(
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
+        }
+
+        public void ClearRuntimeObservation()
+        {
+            m_SlateProjection?.ClearRuntimeOverlay();
         }
 
         void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)

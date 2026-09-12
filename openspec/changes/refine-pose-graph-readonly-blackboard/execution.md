@@ -39,6 +39,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `67e688fad`：FootPlacement和普通参数节点在输入合同缺项时返回带图/节点范围的明确编译诊断。
 - `6034ba2a0`、`3367b6495`：拓扑校验接收同一动画输入合同，允许合法输入Pose曲线参与Resolve策略校验，并同步编辑器 Validate 与 Document Apply 的合同来源。
 - `f612f8449`：节点和动态端口缺少显式作者名时使用语义显示名兜底，连接与稳定identity不变。
+- `9427ba641`、`b0672667d`：Blackboard重命名同步到复用的原生变量对象；State与Subgraph页面标题过滤不透明GUID名称。
 
 正式 Document 流程：
 

@@ -22,6 +22,8 @@
 
 状态机条件图的 owner 使用 `kind=edge`、`graphId`、`nodeId`、`edgeId` 和 `referenceKey=condition`。旧的 anchor.steps 已从 package DTO、Exporter、Projection、Applier、Validator、Closure 和循环检查中删除。
 
+- 旧的 `AgentPackageSkillFlowStep` DTO、`ExportStep` 和无调用方的 `ValidateSteps` 已删除；普通组合仍由 `BtsmtlSkillStepPort` 和 `properties.steps` 处理。
+
 ### Document v8代码合同
 
 - `AgentAuthoringSchema.Version` 已切换为 `btsmtl-agent-authoring-document.v8`。

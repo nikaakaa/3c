@@ -29,6 +29,7 @@ TimelineEditorWindow
 - 运行观察从 `BtsmtlSkillObservationSession` 按 Timeline/Graph/Node 精确筛选 `RuntimeTimelinePlaybackDebugSummary`，调用 `TimelineEditorWindow.ApplyRuntimeObservation`；运行线和作者编辑游标分离。
 - Graph Shell 历史折叠区的 `Segment` 驱动 `RuntimeDebugSession.HistoryOffset`，历史观察调用 `ApplyHistoryObservation` 绘制独立 History 线；历史线、实时线和作者帧互不写同一个时间状态。
 - Timeline 顶部的 `Preview` 只返回已绑定的 Graph Shell；没有绑定时明确提示，不启动 Play、不重建 Session。
+- `TimelineRuntimeObservationBridge` 消费统一 `RuntimeDebugSession` 的正式 Timeline playback summary；唯一调用显示 Runtime/History overlay，多调用保持不猜选，避免复制 Scene Play 播放器。
 
 作者界面：
 

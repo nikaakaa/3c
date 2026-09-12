@@ -55,7 +55,7 @@
 
 - [x] 7.1 移除误接的嵌入 Slate Play/Sample/ReSample/Stop 和私有时钟，保留静态编辑游标、逐帧与被动运行标记
 - [x] 7.2 完整审计默认 Director/Actor 清理和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；原勾选因后续接回播放而重新打开
-- [ ] 7.3 对接场景预览 change 已在主线提供的精确 binding/导航，运行事实只读而作者保持可编辑；Graph Shell 功能实施仍由该 change 拥有，不重复建设
+- [x] 7.3 Timeline 通过 `RuntimeDebugSession` 的正式 Timeline playback summary 接入场景/技能观察，Preview 返回 Graph Shell；运行事实只读、作者仍可编辑，多调用不猜选，Graph Shell 继续拥有运行控制
 - [x] 7.4 作者游标、Runtime overlay 和 History overlay 使用三个独立时间状态；Graph Shell Segment 选择进入历史观察，Timeline 不提供未经批准的本地 Play
 
 ## 8. 文档与交付

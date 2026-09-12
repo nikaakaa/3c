@@ -241,12 +241,6 @@ namespace BTSMTL.Timeline.Editor
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateAuthoringToolbar());
-            Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
-            ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
-            ownership.style.paddingLeft = 8f;
-            ownership.style.paddingTop = 4f;
-            ownership.style.paddingBottom = 4f;
-            rootVisualElement.Add(ownership);
             m_SlateSurface = new IMGUIContainer(DrawSlateSurface)
             {
                 name = "slate-timeline-surface"
@@ -410,10 +404,10 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSummary = new Label(CurrentSourceSummary());
             m_SourceSummary.style.minWidth = 180f;
             m_SourceSummary.style.marginLeft = 6f;
-            m_Status = new Label("作者预览：游标与播放在 Timeline 内");
+            m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
             m_Status.style.marginLeft = 6f;
             m_Status.style.flexGrow = 1f;
-            m_Status.tooltip = "Timeline 内的游标、拖动、播放、暂停和单步只预览当前文档时间，不启动角色运行时。角色 Scene Play、Build、Skill 和运行观察仍由 Skill Graph / Graph Shell 管理。";
+            m_Status.tooltip = "Timeline 使用正式作者帧编辑。角色 Scene Play、Build、Skill 和运行观察由 Skill Graph / Graph Shell 管理。";
             toolbar.Add(m_BackButton);
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
@@ -495,7 +489,7 @@ namespace BTSMTL.Timeline.Editor
             if (m_Timeline == null)
                 return "Source: None";
             string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
-            return $"Source: {ownership} / {m_Timeline.Name}";
+            return ownership;
         }
 
         void SetStatus(string value)

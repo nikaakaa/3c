@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
+using Newtonsoft.Json.Linq;
 using Slate;
 using UnityEditor;
 using UnityEngine;
@@ -11,16 +12,18 @@ namespace BTSMTL.Timeline.Editor
 {
     readonly struct BtsmtlSlateCurveBinding
     {
-        public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve)
+        public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve, float duration)
         {
             ChannelId = channelId ?? string.Empty;
             ParameterName = parameterName ?? string.Empty;
             Curve = curve ?? throw new ArgumentNullException(nameof(curve));
+            Duration = Mathf.Max(0.0001f, duration);
         }
 
         public string ChannelId { get; }
         public string ParameterName { get; }
         public AnimationCurve Curve { get; }
+        public float Duration { get; }
     }
 
     [AddComponentMenu("")]
@@ -229,6 +232,13 @@ namespace BTSMTL.Timeline.Editor
             return curve != null;
         }
 
+        public bool TryGetCurveDuration(string channelId, out float duration)
+        {
+            duration = length;
+            return m_CurveBindings.TryGetValue(channelId ?? string.Empty, out BtsmtlSlateCurveBinding binding) &&
+                   (duration = binding.Duration) > 0f;
+        }
+
         protected override void OnCreate()
         {
             SyncConfiguredCurves(true);
@@ -310,7 +320,7 @@ namespace BTSMTL.Timeline.Editor
         }
     }
 
-    public sealed class BtsmtlSlateTimelineProjection : IDisposable
+    public sealed class BtsmtlSlateTimelineProjection : IDisposable, ITimelineAuthoringClipResolver
     {
         readonly TimelineEditorOpenRequest m_Request;
         readonly TimelineEditorSessionContext m_Session;
@@ -538,9 +548,7 @@ namespace BTSMTL.Timeline.Editor
                     continue;
                 var curveChannels = new List<TimelineCurveChannelDescriptor>();
                 TimelineCurveChannelCatalog.CollectForTrack(sourceTrack, curveChannels);
-                string trackDisplayName = curveChannels.Count == 0
-                    ? sourceTrack.Name
-                    : $"{sourceTrack.Name}  [Curves: {curveChannels.Count}]";
+                string trackDisplayName = sourceTrack.Name;
                 GameObject trackObject = CreateChild(group.transform, trackDisplayName);
                 BtsmtlSlateTrack proxyTrack = trackObject.AddComponent<BtsmtlSlateTrack>();
                 proxyTrack.hideFlags = HideFlags.HideAndDontSave;
@@ -560,8 +568,6 @@ namespace BTSMTL.Timeline.Editor
                     BtsmtlSlateActionClip proxyClip = trackObject.AddComponent<BtsmtlSlateActionClip>();
                     proxyClip.hideFlags = HideFlags.HideAndDontSave;
                     string displayName = sourceClip.Name;
-                    if (sourceClip is ITimelineOwnedAuthoringIdentity)
-                        displayName = $"{displayName} [{sourceClip.ContractKind}]";
                     proxyClip.Configure(
                         displayName,
                         sourceClip.Duration / (float)TimelineUtility.FrameRate,
@@ -577,7 +583,8 @@ namespace BTSMTL.Timeline.Editor
                         curveBindings.Add(new BtsmtlSlateCurveBinding(
                             descriptor.ChannelId.Value,
                             BtsmtlSlateActionClip.ParameterNameFor(descriptor.ChannelId),
-                            ToSlateCurve(descriptor.Read(sourceClip), proxyClip.length)));
+                            ToSlateCurve(descriptor.Read(sourceClip), CurveDuration(sourceClip, descriptor)),
+                            CurveDuration(sourceClip, descriptor)));
                     }
                     proxyClip.ConfigureCurves(curveBindings);
                     proxyClip.startTime = sourceClip.StartFrame / (float)TimelineUtility.FrameRate;
@@ -628,17 +635,23 @@ namespace BTSMTL.Timeline.Editor
                     .GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true)
                     .Length > 0;
                 string label = DisplayKind(candidate.Kind);
-                if (requiresFields)
-                {
-                    menu.AddDisabledItem(new GUIContent($"{label} (需要正式字段)"));
-                    continue;
-                }
-                menu.AddItem(new GUIContent(label), false, () => AddTrack(candidate.Kind));
+                menu.AddItem(new GUIContent(label), false, () => ShowTrackCreationPopup(candidate.Kind, requiresFields));
             }
             menu.ShowAsContext();
         }
 
-        void AddTrack(string kind)
+        void ShowTrackCreationPopup(string kind, bool requiresFields)
+        {
+            PopupWindow.Show(
+                new Rect(0, 0, 1, 1),
+                new TimelineTrackCreationPopup(
+                    kind,
+                    DisplayKind(kind),
+                    requiresFields,
+                    (name, channelId, slotId) => AddTrack(kind, name, channelId, slotId)));
+        }
+
+        void AddTrack(string kind, string name, string channelId, string slotId)
         {
             Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
             string authoringId = string.Empty;
@@ -648,7 +661,8 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Timeline.AddTrack(trackType, m_Request.ContractCatalog);
                 Track track = m_Request.Timeline.Tracks[count];
                 authoringId = track.AuthoringId;
-                track.Name = DisplayKind(kind);
+                track.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
+                TimelineAuthoringTrackBinding.Apply(track, channelId, slotId);
             }, "Add Timeline Track");
             m_PendingTrackFocus = authoringId;
             QueueRebuildProjection();
@@ -666,36 +680,114 @@ namespace BTSMTL.Timeline.Editor
             for (int index = 0; index < trackContract.AllowedClipKinds.Count; index++)
             {
                 string kind = trackContract.AllowedClipKinds[index];
-                if (kind == TimelineContractKinds.AnimationClip ||
-                    kind == TimelineContractKinds.TreeClip ||
-                    kind == TimelineContractKinds.MotionWarpClip)
+                if (kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
                 {
-                    menu.AddDisabledItem(new GUIContent($"{DisplayKind(kind)} (需要资源/来源)"));
+                    menu.AddDisabledItem(new GUIContent($"{DisplayKind(kind)} (需要正式绑定)"));
                     continue;
                 }
-                menu.AddItem(new GUIContent(DisplayKind(kind)), false, () => AddClip(trackAuthoringId, kind, frame));
+                string clipKind = kind;
+                menu.AddItem(new GUIContent(DisplayKind(clipKind)), false, () => ShowClipCreationPopup(trackAuthoringId, clipKind, frame));
             }
             menu.ShowAsContext();
         }
 
-        void AddClip(string trackAuthoringId, string kind, int frame)
+        void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
         {
-            if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track track))
+            var motionClipIds = m_Request.Timeline.Tracks
+                .SelectMany(track => track.Clips)
+                .OfType<MotionCurveClip>()
+                .Select(clip => clip.AuthoringId)
+                .ToArray();
+            var request = new TimelineClipCreationRequest
+            {
+                TrackAuthoringId = trackAuthoringId,
+                Kind = kind,
+                StartFrame = frame,
+                EndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20),
+                CurveEndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20)
+            };
+            PopupWindow.Show(
+                new Rect(0, 0, 1, 1),
+                new TimelineClipCreationPopup(request, motionClipIds, AddClip));
+        }
+
+        void AddClip(TimelineClipCreationRequest request)
+        {
+            if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
                 return;
             string authoringId = string.Empty;
             m_Session.Apply(() =>
             {
-                Clip clip = m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, frame);
+                Clip clip;
+                if (request.Kind == TimelineContractKinds.AnimationClip)
+                {
+                    clip = TimelineAuthoringTrackBinding.CreateClip(
+                        m_Request.Timeline,
+                        m_Request.ContractCatalog,
+                        track,
+                        request.Resource as UnityEngine.AnimationClip,
+                        request.StartFrame);
+                }
+                else
+                {
+                    clip = request.Resource != null
+                        ? m_Request.Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
+                        : m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
+                }
                 authoringId = clip.AuthoringId;
+                clip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
                 if (clip is MotionCurveClip motion)
                 {
-                    motion.CurveEndFrame = motion.EndFrame;
-                    motion.CurveId = $"MotionCurve_{authoringId.Substring(0, Mathf.Min(8, authoringId.Length))}";
+                    motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
                 }
+                TimelineAuthoringClipBinding.Apply(
+                    m_Request.Timeline,
+                    clip,
+                    BuildClipProperties(request),
+                    null,
+                    this);
+                clip.Track.UpdateMix();
             }, "Add Timeline Clip");
-            m_PendingTrackFocus = trackAuthoringId;
+            m_PendingTrackFocus = request.TrackAuthoringId;
             m_PendingClipFocus = authoringId;
             QueueRebuildProjection();
+        }
+
+        static JObject BuildClipProperties(TimelineClipCreationRequest request)
+        {
+            var properties = new JObject();
+            if (request.Kind == TimelineContractKinds.AnimationClip)
+            {
+                properties["extraPolationMode"] = ExtraPolationMode.None.ToString();
+                properties["blendProfileId"] = string.Empty;
+            }
+            if (request.Kind == TimelineContractKinds.MotionCurveClip)
+            {
+                properties["curveId"] = request.CurveId;
+                properties["curveEndFrame"] = request.CurveEndFrame;
+                properties["space"] = request.Space.ToString();
+                properties["channel"] = request.Channel.ToString();
+                properties["blendMode"] = request.BlendMode.ToString();
+                properties["priority"] = request.Priority;
+                properties["consumeLowerChannels"] = request.ConsumeLowerChannels;
+            }
+            if (request.Kind == TimelineContractKinds.MotionWarpClip)
+                properties["sourceMotionClipId"] = request.SourceMotionClipId;
+            if (request.Kind == TimelineContractKinds.ActionCueClip)
+            {
+                properties["cueId"] = request.CueId;
+                properties["cueType"] = request.CueType;
+            }
+            return properties;
+        }
+
+        public bool TryResolveMotionClip(TimelineData timeline, string identity, out MotionCurveClip clip)
+        {
+            clip = timeline?.Tracks
+                .SelectMany(track => track.Clips)
+                .OfType<MotionCurveClip>()
+                .FirstOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+            return clip != null;
         }
 
         static string DisplayKind(string kind)
@@ -708,6 +800,20 @@ namespace BTSMTL.Timeline.Editor
         static AnimationCurve ToSlateCurve(AnimationCurve normalizedCurve, float duration)
         {
             return ConvertCurveTime(normalizedCurve, duration, false);
+        }
+
+        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor)
+        {
+            if (sourceClip is MotionCurveClip motion &&
+                (descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionX ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionY ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionZ ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionYaw))
+            {
+                return Mathf.Max(1f / TimelineUtility.FrameRate,
+                    (motion.CurveEndFrame - motion.StartFrame) / (float)TimelineUtility.FrameRate);
+            }
+            return Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
         }
 
         static AnimationCurve ToAuthoringCurve(AnimationCurve slateCurve, float duration)
@@ -918,7 +1024,10 @@ namespace BTSMTL.Timeline.Editor
                         return;
                     if (!m_ProxyClips.TryGetValue(pair.Key, out BtsmtlSlateActionClip proxyClip))
                         return;
-                    curveChanges.Add((sourceClip, channelId, ToAuthoringCurve(curvePair.Value.Curve, proxyClip.length)));
+                    float curveDuration = proxyClip.TryGetCurveDuration(channelId.Value, out float mappedDuration)
+                        ? mappedDuration
+                        : proxyClip.length;
+                    curveChanges.Add((sourceClip, channelId, ToAuthoringCurve(curvePair.Value.Curve, curveDuration)));
                 }
             }
 

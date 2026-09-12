@@ -25,16 +25,16 @@
 
 ## 3. 正式新增
 
-- [ ] 3.1 打开请求显式携带 owner contract composition，Add Track 候选来自正式 catalog/type metadata，收集 Track 必填字段
+- [x] 3.1 打开请求显式携带 owner contract composition，Add Track 候选来自正式 catalog/type metadata，收集 Track 必填字段
 - [ ] 3.2 接通各 Track 允许的 Add Clip 输入：Animation 资源、TreeClip ownership/来源、Motion/Camera/Cue/Scene typed binding
 - [ ] 3.3 在唯一 Session 事务内创建正式对象；合法空 Track 可保存，取消 picker/输入非法/owner 过期不留半成品或 Undo
-- [ ] 3.4 用 Slate Surface 的“＋轨道”和轨道右键“在第 N 帧添加 Clip”替换原生无正式身份创建入口，成功后恢复新对象选择
+- [x] 3.4 用 Slate Surface 的“＋轨道”和轨道右键“在第 N 帧添加 Clip”替换原生无正式身份创建入口，成功后恢复新对象选择
 
 ## 4. 帧几何
 
 - [x] 4.1 由正式 Session FrameRate 提供统一像素/帧/Slate秒换算，删除嵌入路径对 Slate 全局 FPS/timeStepMode/snapInterval 的时间权威依赖
 - [x] 4.2 标尺、游标输入、逐帧、Clip/Section 拖动与裁剪使用整数帧；区分一帧移动与关键帧跳转
-- [ ] 4.3 按 Curve descriptor domain 换算 key time/tangent，保留未编辑 key、weight、WeightedMode 和 wrap，不全量量化资产
+- [x] 4.3 按 Curve descriptor domain 换算 key time/tangent，保留未编辑 key、weight、WeightedMode 和 wrap，不全量量化资产
 - [x] 4.4 内容终点使用真实 MaxFrame，移除最少一秒和额外一秒；显示全部只改变视窗，终点线不提供无正式数据对应的编辑
 
 ## 5. GUI 布局和生命周期
@@ -42,7 +42,7 @@
 - [ ] 5.1 合并文档名/ownership/来源，工具栏统一高度；清掉重复标题和隐藏控件的空白占位
 - [ ] 5.2 一次计算工具栏、搜索、缩放、标尺、左右轨道、属性区域；背景/分隔线/裁剪/命中共用结果
 - [ ] 5.3 左右共同行高度与垂直滚动，曲线展开同步；属性区可收起/调高，窄窗口次要操作折叠
-- [ ] 5.4 删除临时 Auto、“作者预览”、无关 Actor/Director/Render 和未映射菜单；曲线入口不再拼入 Track 名
+- [x] 5.4 删除临时 Auto、“作者预览”、无关 Actor/Director/Render 和未映射菜单；曲线入口不再拼入 Track 名
 - [ ] 5.5 根据完整堆栈修复重复序列化字段、GUI 和 proxy 生命周期异常，销毁时释放临时宿主/选择/回调，不隐藏错误代替处理
 
 ## 6. 刷新与属性

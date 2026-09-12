@@ -1266,8 +1266,8 @@ namespace Slate
             }
 
             //make the layout rects
-            var timelineTop = TOOLBAR_HEIGHT + TOP_MARGIN;
-            var timeInfoTop = TOOLBAR_HEIGHT;
+            var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
+            var timeInfoTop = embeddedSurface ? 0 : TOOLBAR_HEIGHT;
             topLeftRect = new Rect(0, TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
             topMiddleRect = new Rect(LEFT_MARGIN, timeInfoTop, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
             leftRect = new Rect(0, timelineTop, LEFT_MARGIN, screenHeight - timelineTop + scrollPos.y);
@@ -2359,7 +2359,7 @@ namespace Slate
             var e = Event.current;
 
             //bg graphic
-            var bgRect = Rect.MinMaxRect(centerRect.xMin, TOP_MARGIN + TOOLBAR_HEIGHT + scrollPos.y, centerRect.xMax, screenHeight - TOOLBAR_HEIGHT + scrollPos.y);
+            var bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
             GUI.color = Color.black.WithAlpha(0.03f);

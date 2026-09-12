@@ -2,7 +2,6 @@
 using System;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
-using ThirdPersonCharacter.Pipeline;
 using ThirdPersonGameplay.ScenePlay;
 using TreeDesigner.Editor;
 using UnityEditor;
@@ -35,7 +34,8 @@ namespace ThirdPersonCharacter.Editor.Preview
     sealed class BtsmtlScenePlayGraphShellToolbar : VisualElement
     {
         readonly BtsmtlScenePlayPreviewPresenter m_Presenter;
-        readonly ObjectField m_ContextField;
+        readonly ObjectField m_SceneField;
+        readonly TextField m_ContextIdField;
         readonly Toggle m_StartPaused;
         readonly ToolbarButton m_StartButton;
         readonly ToolbarButton m_PauseButton;
@@ -71,14 +71,19 @@ namespace ThirdPersonCharacter.Editor.Preview
             Add(observationControls);
             Add(historyControls);
 
-            m_ContextField = new ObjectField("Scene Play")
+            m_SceneField = new ObjectField("Scene")
             {
-                objectType = typeof(BtsmtlScenePlayContext),
-                allowSceneObjects = true
+                objectType = typeof(SceneAsset),
+                allowSceneObjects = false
             };
-            m_ContextField.style.width = 250f;
-            m_ContextField.RegisterValueChangedCallback(evt => m_Presenter.Context = evt.newValue as BtsmtlScenePlayContext);
-            sceneControls.Add(m_ContextField);
+            m_SceneField.style.width = 250f;
+            m_SceneField.RegisterValueChangedCallback(evt => m_Presenter.SceneAsset = evt.newValue as SceneAsset);
+            sceneControls.Add(m_SceneField);
+
+            m_ContextIdField = new TextField("ContextId");
+            m_ContextIdField.style.width = 180f;
+            m_ContextIdField.RegisterValueChangedCallback(evt => m_Presenter.ContextId = evt.newValue);
+            sceneControls.Add(m_ContextIdField);
 
             m_StartPaused = new Toggle("Paused") { value = m_Presenter.StartPaused };
             m_StartPaused.style.width = 70f;

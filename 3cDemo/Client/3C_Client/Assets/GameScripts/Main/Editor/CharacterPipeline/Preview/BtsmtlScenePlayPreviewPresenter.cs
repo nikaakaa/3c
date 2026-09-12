@@ -6,7 +6,6 @@ using BTSMTL.Diagnostics.Editor;
 using FlowCanvas;
 using NodeCanvas.Editor;
 using ThirdPersonCharacter.Control.Authoring;
-using ThirdPersonCharacter.Pipeline;
 using ThirdPersonGameplay.ScenePlay;
 using UnityEditor;
 using UnityEngine;
@@ -56,7 +55,8 @@ namespace ThirdPersonCharacter.Editor.Preview
     sealed class BtsmtlScenePlayPreviewPresenter : IDisposable
     {
         IBtsmtlScenePlayPreviewOperations m_Operations;
-        BtsmtlScenePlayContext m_Context;
+        SceneAsset m_SceneAsset;
+        string m_ContextId = string.Empty;
         bool m_StartPaused;
         bool m_ImmediateExpanded = true;
         bool m_Disposed;
@@ -78,14 +78,27 @@ namespace ThirdPersonCharacter.Editor.Preview
 
         public event Action Changed;
 
-        public BtsmtlScenePlayContext Context
+        public SceneAsset SceneAsset
         {
-            get => m_Context;
+            get => m_SceneAsset;
             set
             {
-                if (ReferenceEquals(m_Context, value))
+                if (ReferenceEquals(m_SceneAsset, value))
                     return;
-                m_Context = value;
+                m_SceneAsset = value;
+                NotifyChanged();
+            }
+        }
+
+        public string ContextId
+        {
+            get => m_ContextId;
+            set
+            {
+                string next = value?.Trim() ?? string.Empty;
+                if (string.Equals(m_ContextId, next, StringComparison.Ordinal))
+                    return;
+                m_ContextId = next;
                 NotifyChanged();
             }
         }
@@ -154,19 +167,20 @@ namespace ThirdPersonCharacter.Editor.Preview
         {
             if (m_Operations == null)
                 return;
-            if (!m_Context)
+            if (!m_SceneAsset)
             {
-                SetStatus("Scene Play 需要明确的场景上下文。");
+                SetStatus("Scene Play 需要明确的 SceneAsset。");
                 return;
             }
-            if (string.IsNullOrWhiteSpace(m_Context.ScenePath) || string.IsNullOrWhiteSpace(m_Context.ContextId))
+            string scenePath = AssetDatabase.GetAssetPath(m_SceneAsset);
+            if (string.IsNullOrWhiteSpace(scenePath) || string.IsNullOrWhiteSpace(m_ContextId))
             {
-                SetStatus("Scene Play 上下文必须属于已保存场景，并具有 ContextId。");
+                SetStatus("Scene Play 必须填写已保存 SceneAsset 和精确 ContextId。");
                 return;
             }
             Execute(m_Operations.Start(new BtsmtlScenePlayRequest(
-                m_Context.ScenePath,
-                m_Context.ContextId,
+                scenePath,
+                m_ContextId,
                 startPaused: m_StartPaused)));
         }
 
@@ -235,11 +249,12 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_ImmediateExpanded = EditorGUILayout.Foldout(m_ImmediateExpanded, "预览", true);
             if (m_ImmediateExpanded)
             {
-                m_Context = (BtsmtlScenePlayContext)EditorGUILayout.ObjectField(
-                    "场景上下文",
-                    m_Context,
-                    typeof(BtsmtlScenePlayContext),
-                    true);
+                m_SceneAsset = (SceneAsset)EditorGUILayout.ObjectField(
+                    "场景",
+                    m_SceneAsset,
+                    typeof(SceneAsset),
+                    false);
+                m_ContextId = EditorGUILayout.TextField("ContextId", m_ContextId);
                 m_StartPaused = EditorGUILayout.Toggle("启动后暂停", m_StartPaused);
                 DrawSceneControls();
                 DrawExperimentControls();

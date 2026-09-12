@@ -1535,6 +1535,9 @@ namespace BTSMTL.Timeline.Editor
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            if (m_RebuildQueued)
+                EditorApplication.delayCall -= RebuildProjection;
+            m_RebuildQueued = false;
             CutsceneEditor.OnEditTransactionBegin -= OnEditTransactionBegin;
             CutsceneEditor.OnEditTransactionCommit -= OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;

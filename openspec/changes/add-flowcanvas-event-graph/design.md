@@ -4,7 +4,7 @@
 
 此前 r1 已确认原生 FlowCanvas 事件执行、动画宿主、变量生产与 Pose 分工，仍是本次运行设计基础。r2 只替换作者调用与代码输出接入，不重新选择原生/编译路线，不增加变量声明或运行布局副本。
 
-本窗口 01a095f2-ed45-7502-93f7-e9c9df0b7279 唯一维护本目录 proposal/design/tasks/specs；实现窗口只维护 execution.md。本次是 PLAN 广播，仅修订文档，不改代码/资产、不向任何窗口发送回执、结果或执行消息；r2 尚未下发实现。
+本窗口 01a095f2-ed45-7502-93f7-e9c9df0b7279 唯一维护本目录 proposal/design/tasks/specs；实现窗口只维护 execution.md。r2 最初通过 PLAN 广播修订；用户随后明确要求“让实现窗口做”，授权原已绑定实现窗口按 r2 继续。此次仅向该实现窗口发送一次正式文档更新，不联系协调或其它窗口。
 
 ### 已核对的当前代码
 
@@ -193,7 +193,7 @@ Build 继续独立校验事件图/宿主/唯一变量合同与消费者依赖、
 7. **固定 motor 桥独立等待**：当前 CharacterPoseStateSourceRuntime、AnimationBlendSpacePlayerRuntime、Pose Program、AnimationPreviewEngine、PoseSourcePlanCompiler 和运行入口仍引用 CharacterPresentationProgramParameterFrame。只有 Pose/条件/BlendSpace/运行/Preview 全部改用同一变量合同后，本任务才删除旧帧、Supports、FromBody/FromFact/FromDirect 与注册配置。保留真实坐标语义，不默认补值。
 8. 确认无消费者的旧协调类只在固定桥清理依赖内删除；不顺便重做状态机、曲线、Foot/IK或资源作者。原生资产及范围外素材不在本轮删除。
 9. 正式作者保存与运行产品 Build 分开。显式生成成功不等于 Program/Projection 已发布，正式 Build/运行证据仍分别记录；代码/生成失败按既有范围保存能力如实报告，不恢复整包同步事务。
-10. 本轮仅把上述要求写入本任务规划，不执行任何迁移，不通知实现。后续执行记录继续归原实现窗口；本次PLAN不能被解释为新实现指令。
+10. 上述要求最初只作为PLAN更新；现按用户后续明确实施授权由原实现窗口执行，记录继续归其execution.md。依赖未就绪的删除不提前做，能够独立实施的部分继续推进，不以等待其它任务为由停下全部工作。
 
 ### 完成定义与验证条件
 
@@ -234,17 +234,21 @@ Build 继续独立校验事件图/宿主/唯一变量合同与消费者依赖、
 
 ## Workflow Binding
 
-本次用户广播为单向 PLAN，不发回执、不联系协调/规划/实现窗口，不发送 DOCUMENT_UPDATED 或其它执行消息。原已派生实现关系保留；下列 r2 文档不是新的实施派发。历史 r1 确认与派发内容可由 Git 追溯，不能将本次作者协议修订套用到旧确认记录中。
+原用户广播的PLAN阶段已完成且未发送跨窗口回执。用户随后明确要求“让实现窗口做”，现确认并授权按r2实施；复用唯一实现窗口并只发送一次DOCUMENT_UPDATED。历史r1派发保留追溯，不再作为本次实施基线。
 
 - planning_revision: r2
 - revision_date: 2026-09-13
 - revision_source: USER_BROADCAST / 2026-09-13-authoring-r2-plan
 - coordination_proposal: 2026-09-13-eventgraph-authoring-r2
 - authoring_baseline: remove-agent-authoring-use-native-csharp/design.md r2
-- action: PLAN
+- action: IMPLEMENT
+- authorization_source: 用户明确要求“让实现窗口做”
+- confirmed_by_user: true
+- confirmed_revision: r2@fb937f4415ff6593e1c9affbea37e465c77d617f
 - planning_document_owner: 01a095f2-ed45-7502-93f7-e9c9df0b7279
-- last_dispatched_implementation_revision: r1@3c7ad533273175f25df6bc063fc278a899707e12
-- implementation_dispatched_for_r2: false
+- last_dispatched_implementation_revision: r2@fb937f4415ff6593e1c9affbea37e465c77d617f
+- implementation_dispatched_for_r2: true
+- implementation_dispatch_status: DOCUMENT_UPDATED_sent
 - planning_document_paths: 本目录 proposal.md、design.md、tasks.md 和 specs 下四份当前规范增量
 - implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/execution.md
 

@@ -35,4 +35,4 @@ r2 按用户单向广播 2026-09-13-authoring-r2-plan 更新作者入口：事�
 - Pose 任务负责 CharacterPoseGraphAuthoringAdapter 等消费调用适配；C# authoring 任务负责 AgentAuthoringEventGraphDocumentMapper 等公共协议退役。各任务不同时覆盖同一文件。
 - 动画根事件图引用、变量声明/更新/输出属于本任务；Pose 只读输入和曲线清理仍属于 [独立 Pose 任务](../refine-pose-graph-readonly-blackboard/proposal.md)。
 - 不接管 Skill/FSM、关卡内容、Timeline/Montage、Foot/IK 算法或其它角色改造。不因生成源码需要正常 C# 编译而重开事件图 runtime 路线。
-- 本轮按广播只修订本目录规划，不改业务代码或资产，不向实现窗口发消息；已有实现绑定保留，本次 r2 未下发实施。
+- r2 最初由 PLAN 广播形成，只修改规划。用户随后明确要求“让实现窗口做”，现授权原已绑定实现窗口按 r2 继续；不新建窗口，不扩大文件所有权和删除范围。派发状态见 design 的 Workflow Binding。

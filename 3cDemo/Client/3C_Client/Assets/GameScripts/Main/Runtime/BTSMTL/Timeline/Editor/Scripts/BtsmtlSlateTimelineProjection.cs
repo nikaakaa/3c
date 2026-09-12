@@ -387,6 +387,7 @@ namespace BTSMTL.Timeline.Editor
         string m_PendingTrackFocus;
         string m_PendingClipFocus;
         string m_SourceRevision = string.Empty;
+        Clip m_CopiedClip;
         BtsmtlSlateTimelineViewState? m_PendingViewState;
 
         static BtsmtlSlateTimelineProjection s_Current;
@@ -725,7 +726,7 @@ namespace BTSMTL.Timeline.Editor
         void CreateEmbeddedEditor()
         {
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
-            m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null, () => m_Session.FrameRate, ShowAddTrackMenu);
+            m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null, () => m_Session.FrameRate, ShowAddTrackMenu, CopyProxyClip);
             if (!string.IsNullOrEmpty(m_PendingTrackFocus) || !string.IsNullOrEmpty(m_PendingClipFocus))
             {
                 FocusSource(m_PendingTrackFocus, m_PendingClipFocus);
@@ -811,7 +812,52 @@ namespace BTSMTL.Timeline.Editor
                 string clipKind = kind;
                 menu.AddItem(new GUIContent(DisplayKind(clipKind)), false, () => ShowClipCreationPopup(trackAuthoringId, clipKind, frame));
             }
+            if (m_CopiedClip != null && trackContract.AllowsClip(m_CopiedClip.ContractKind))
+            {
+                menu.AddSeparator("/");
+                menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => PasteClip(trackAuthoringId, frame));
+            }
             menu.ShowAsContext();
+        }
+
+        void CopyProxyClip(ActionClip proxyClip)
+        {
+            if (proxyClip is BtsmtlSlateActionClip slateClip &&
+                m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
+                m_CopiedClip = sourceClip;
+        }
+
+        void PasteClip(string trackAuthoringId, int frame)
+        {
+            if (m_CopiedClip == null || !m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
+                return;
+            if (!IsSourceCurrent())
+                return;
+            string authoringId = string.Empty;
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip);
+                    clone.RegenerateAuthoringIdentity();
+                    if (clone is ITimelineOwnedAuthoringIdentity owned)
+                        owned.RegenerateOwnedAuthoringIdentity();
+                    clone.StartFrame = Mathf.Max(0, frame);
+                    clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Duration);
+                    m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clone);
+                    targetTrack.Clips.Add(clone);
+                    m_Request.Timeline.Init();
+                    authoringId = clone.AuthoringId;
+                }, "Paste Timeline Clip");
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"粘贴 Clip 失败：{exception.Message}");
+                return;
+            }
+            m_PendingTrackFocus = trackAuthoringId;
+            m_PendingClipFocus = authoringId;
+            QueueRebuildProjection();
         }
 
         void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)

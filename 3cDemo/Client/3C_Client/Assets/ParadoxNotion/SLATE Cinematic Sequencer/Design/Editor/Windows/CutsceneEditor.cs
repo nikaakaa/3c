@@ -279,6 +279,7 @@ namespace Slate
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
         [System.NonSerialized] private System.Action embeddedAddTrack;
+        [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -600,19 +601,21 @@ namespace Slate
 
         public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
         {
-            InitializeEmbedded(newCutscene, repaint, null, null);
+            InitializeEmbedded(newCutscene, repaint, null, null, null);
         }
 
         public void InitializeEmbedded(
             Cutscene newCutscene,
             System.Action repaint,
             System.Func<int> frameRate,
-            System.Action addTrack)
+            System.Action addTrack,
+            System.Action<ActionClip> copyClip)
         {
             embeddedSurface = true;
             embeddedRepaint = repaint;
             embeddedFrameRate = frameRate;
             embeddedAddTrack = addTrack;
+            embeddedCopyClip = copyClip;
             Styles.Load();
             showDragDropInfo = false;
             willRepaint = true;
@@ -720,6 +723,7 @@ namespace Slate
             endWindows = null;
             embeddedFrameRate = null;
             embeddedAddTrack = null;
+            embeddedCopyClip = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -3597,6 +3601,9 @@ namespace Slate
                 if ( !editor.embeddedSurface ) {
                     menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
                     menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
+                }
+                else if ( editor.embeddedCopyClip != null ) {
+                    menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => { editor.embeddedCopyClip(action); });
                 }
 
                 if ( allowScale ) {

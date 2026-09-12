@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -156,6 +157,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public static readonly PoseParameterId MotorLocalVelocityY =
             new PoseParameterId("character.motor.local-velocity-y");
+    }
+
+    public static class CharacterPoseAuthoringDisplayNames
+    {
+        public static string ForParameter(PoseParameterId parameterId) =>
+            ForIdentity(parameterId.Value);
+
+        public static string ForIdentity(string identity)
+        {
+            if (string.IsNullOrWhiteSpace(identity))
+                return "Unnamed";
+            string value = identity.Trim();
+            int separator = Math.Max(value.LastIndexOf('.'), value.LastIndexOf('/'));
+            string segment = separator >= 0 && separator + 1 < value.Length
+                ? value.Substring(separator + 1)
+                : value;
+            var result = new StringBuilder(segment.Length + 8);
+            for (int i = 0; i < segment.Length; i++)
+            {
+                char current = segment[i];
+                if (current == '-' || current == '_')
+                {
+                    if (result.Length > 0 && result[result.Length - 1] != ' ')
+                        result.Append(' ');
+                    continue;
+                }
+                if (i > 0 && char.IsUpper(current) &&
+                    (char.IsLower(segment[i - 1]) ||
+                     char.IsDigit(segment[i - 1]) && !char.IsDigit(current)))
+                    result.Append(' ');
+                result.Append(current);
+            }
+            if (result.Length == 0)
+                return "Unnamed";
+            result[0] = char.ToUpperInvariant(result[0]);
+            return result.ToString();
+        }
     }
 
     public static class AnimationAdditiveReferencePoseIds

@@ -109,6 +109,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index)
         {
             var menu = new GenericMenu();
+            CharacterPoseParameterDeclaration declaration = Parameters.SingleOrDefault(value =>
+                IsBlackboardInput(value) &&
+                string.Equals(value.ParameterId.Value, variable?.ID, StringComparison.Ordinal));
+            if (declaration == null)
+            {
+                menu.AddDisabledItem(new GUIContent("缺少正式 Pose 输入声明"));
+                return menu;
+            }
+            menu.AddDisabledItem(new GUIContent(
+                $"类型: {VariableType(declaration.ValueType).Name}"));
+            menu.AddDisabledItem(new GUIContent(
+                $"来源: {SourceLabel(declaration)}"));
+            menu.AddDisabledItem(new GUIContent(
+                $"范围: {ScopeLabel(Role)}"));
+            menu.AddDisabledItem(new GUIContent(
+                $"使用: {ParameterConsumerCount(declaration.ParameterId)} 个节点"));
+            menu.AddSeparator("");
             menu.AddDisabledItem(new GUIContent("拖拽变量以创建 Get 节点"));
             return menu;
         }
@@ -141,6 +158,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             declaration.ParameterId.IsValid &&
             declaration.Usage == CharacterPoseParameterUsage.Control;
 
+        int ParameterConsumerCount(PoseParameterId parameterId)
+        {
+            return Nodes
+                .Where(node => node.Payload is CharacterProgramParameterInputPosePayload parameter &&
+                               parameter.ParameterId.Equals(parameterId))
+                .Sum(node => node.outConnections.Count);
+        }
+
+        static string SourceLabel(CharacterPoseParameterDeclaration declaration) =>
+            declaration.Usage == CharacterPoseParameterUsage.Control
+                ? "动画实例输入 · 只读"
+                : "Pose 曲线";
+
+        static string ScopeLabel(CharacterPoseAuthoringGraphRole role) => role switch
+        {
+            CharacterPoseAuthoringGraphRole.AnimGraph => "Root",
+            CharacterPoseAuthoringGraphRole.StatePose => "State Pose",
+            CharacterPoseAuthoringGraphRole.AnimationLayer => "Animation Layer",
+            CharacterPoseAuthoringGraphRole.ControlRig => "Control Rig",
+            CharacterPoseAuthoringGraphRole.Subgraph => "Subgraph",
+            CharacterPoseAuthoringGraphRole.LinkedPoseEntry => "Linked Pose",
+            CharacterPoseAuthoringGraphRole.TransitionRule => "Transition Rule",
+            _ => "Unknown"
+        };
+
         static Type VariableType(PoseParameterValueType valueType) => valueType switch
         {
             PoseParameterValueType.Float => typeof(float),
@@ -152,15 +194,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static Variable CreateEditorVariable(CharacterPoseParameterDeclaration declaration) =>
             declaration.ValueType switch
             {
-                PoseParameterValueType.Float => new Variable<float>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                PoseParameterValueType.Float => new Variable<float>(
+                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.ParameterId.Value)
                 {
                     value = declaration.DefaultValue
                 },
-                PoseParameterValueType.Int => new Variable<int>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                PoseParameterValueType.Int => new Variable<int>(
+                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.ParameterId.Value)
                 {
                     value = Convert.ToInt32(declaration.DefaultValue)
                 },
-                PoseParameterValueType.Bool => new Variable<bool>(declaration.ParameterId.Value, declaration.ParameterId.Value)
+                PoseParameterValueType.Bool => new Variable<bool>(
+                    CharacterPoseAuthoringDisplayNames.ForParameter(declaration.ParameterId),
+                    declaration.ParameterId.Value)
                 {
                     value = declaration.DefaultValue > 0.5f
                 },

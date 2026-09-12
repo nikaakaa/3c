@@ -33,11 +33,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void DrawBody(CharacterPoseCanvasNode node)
         {
             if (node.Payload is CharacterProgramParameterInputPosePayload parameter)
-                GUILayout.Label($"Get: {parameter.ParameterId.Value}", EditorStyles.miniLabel);
+                GUILayout.Label(
+                    $"Get: {CharacterPoseAuthoringDisplayNames.ForParameter(parameter.ParameterId)}",
+                    EditorStyles.miniLabel);
 
             if (node.Payload is CharacterAnimationSlotPosePayload slot)
             {
-                GUILayout.Label($"Slot: {slot.SlotId.Value}", EditorStyles.miniLabel);
+                GUILayout.Label(
+                    $"Slot: {CharacterPoseAuthoringDisplayNames.ForIdentity(slot.SlotId.Value)}",
+                    EditorStyles.miniLabel);
                 GUILayout.Label(
                     $"Blend Policy Slot: {(slot.BlendPolicySlot ? slot.BlendPolicySlot.name : "Missing")}",
                     EditorStyles.miniLabel);
@@ -250,7 +254,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     CharacterPoseParameterPolicy policy = policies[index];
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField(policy.ParameterId.Value, GUILayout.MinWidth(120f));
+                    EditorGUILayout.LabelField(
+                        CharacterPoseAuthoringDisplayNames.ForParameter(policy.ParameterId),
+                        GUILayout.MinWidth(120f));
                     EditorGUI.BeginChangeCheck();
                     PoseParameterResolvePolicy nextPolicy = (PoseParameterResolvePolicy)EditorGUILayout.EnumPopup(policy.Policy);
                     bool remove = GUILayout.Button("−", GUILayout.Width(24f));

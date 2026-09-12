@@ -39,6 +39,12 @@ TimelineEditorWindow
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
+共享预览宿主：
+
+- `BtsmtlScenePlayPreviewPresenter` 统一持有 `IBtsmtlScenePlayPreviewOperations`、状态变化、Build/Skill 请求、输入录制和历史 Tick 输入；它不创建新的 Scene Play coordinator，也不推进运行时钟。
+- `BaseTreeWindow` 的 UI Toolkit 工具条和实际 FlowCanvas SkillGraph 的 IMGUI 工具条都只绘制同一个 Presenter；FlowCanvas 通过 `BtsmtlSkillGraphPreviewToolbarRegistry` 挂载，不再把 SkillGraph 误导到旧树窗口。
+- 四组入口在两个宿主保持一致：场景控制、试验与采用、观察、历史与录制。SkillGraph 原有的端口采集、执行实例选择和父调用导航仍是 Graph 观察专属项，不与 Scene Play 命令重复。
+
 ## 正式能力对账
 
 Skill Document exporter、Timeline authoring applier 和 validator 继续消费 `TimelineAuthoringTrackBinding`、`TimelineAuthoringClipBinding`、`TimelineContractCatalog` 与 Scene external binding contract。UI 没有复制 Document schema；Scene `valueCurve` 也使用同一正式曲线 descriptor。
@@ -54,13 +60,13 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 
 结果为 0 errors；仅有项目及第三方既有 warnings。每次构建后执行 `dotnet build-server shutdown`。
 
-主 Editor 工程的联合编译仍受工作区已有状态影响：当前可复现的错误来自 `AgentAuthoringPresentationPackageExporter/Validator` 找不到 `BTSMTL.EventGraphs`，以及部分构建轮次的 `ThirdPersonSimulation.Core.dll` 文件锁；这些不属于 Timeline 改动，未在本 change 中引入 fallback 或旁路。
+主 Editor 工程的联合编译在本轮使用临时编译项把新增 Presenter 纳入生成的 `ThirdPersonClient.Editor.csproj`，结果为 0 errors；该生成项目修改已撤销，不属于提交内容。其余警告为项目及第三方既有 warnings。该验证不替代 Unity Editor 端到端验收。
 
 ## 尚未完成
 
-- 预览宿主边界审计：Scene Play presenter 当前挂在 `GraphAuthoringEditorShell/BaseTreeWindow`；Skill FlowCanvas 仍通过 `BtsmtlSkillFlowGraph.OnGraphEditorToolbar` 绘制自己的 IMGUI 入口，项目没有现成的共同 presenter 挂载点。因此 P1 不能只凭 BaseTreeWindow 上出现分组控件宣称完成，后续需要由预览 change 提供正式共享宿主合同。
 - 场景预览 coordinator 的精确 SceneAsset/context/非 Skill 目标接线。
 - Timeline runtime binding 的 Follow/Pin、多调用选择和历史位置独立显示。
 - 编辑 revision 到真实 Build/adoption 状态的 Graph Shell 展示。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
+- C# authoring r2 尚未交付 `TimelineAuthoringClipBinding` 正式强类型配置合同，因此第10节仍未实施；当前 projection 的 JSON 中转不能在本任务内复制替换。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

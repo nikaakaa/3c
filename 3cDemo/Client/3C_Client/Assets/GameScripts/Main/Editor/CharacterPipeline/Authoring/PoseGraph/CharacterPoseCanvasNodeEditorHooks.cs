@@ -281,13 +281,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (poseGraph != null)
                 {
                     var used = new HashSet<string>(policies.Select(value => value.ParameterId.Value), StringComparer.Ordinal);
-                    string[] choices = poseGraph.Parameters
-                        .Select(value => value.ParameterId.Value)
-                        .Where(value => !used.Contains(value))
+                    CharacterPoseParameterDeclaration[] choices = poseGraph.Parameters
+                        .Where(value => value != null && value.ParameterId.IsValid &&
+                                        !used.Contains(value.ParameterId.Value))
                         .ToArray();
                     if (choices.Length > 0)
                     {
-                        int selected = EditorGUILayout.Popup("参数", 0, choices);
+                        int selected = EditorGUILayout.Popup(
+                            "参数",
+                            0,
+                            choices.Select(value => value.DisplayName).ToArray());
                         PoseParameterResolvePolicy policy = (PoseParameterResolvePolicy)EditorGUILayout.EnumPopup(
                             "混合策略",
                             PoseParameterResolvePolicy.Weighted);
@@ -295,7 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         {
                             ApplyNodeField(node, graph, field.FieldId.Value, policies.Append(
                                 new CharacterPoseParameterPolicy(
-                                    new PoseParameterId(choices[selected]),
+                                    choices[selected].ParameterId,
                                     policy)).ToArray());
                             return false;
                         }
@@ -323,16 +326,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return true;
             }
 
-            string[] bones = rig.PhysicalBones
+            string[] boneIds = rig.PhysicalBones
                 .Select(value => value.BoneId.Value)
                 .Concat(rig.VirtualBones.Select(value => value.VirtualBoneId.Value))
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
-            if (bones.Length == 0)
+            if (boneIds.Length == 0)
             {
                 EditorGUILayout.HelpBox("Unavailable: Rig has no pose bones.", MessageType.Info);
                 return true;
             }
+            string[] boneLabels = boneIds
+                .Select(CharacterPoseAuthoringDisplayNames.ForIdentity)
+                .ToArray();
 
             using (new EditorGUI.DisabledScope(graph.isEditorReadOnly || !field.AuthoringWritable))
             {
@@ -344,11 +350,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFullBodyIkEffectorSlot effector = (CharacterFullBodyIkEffectorSlot)EditorGUILayout.EnumPopup(
                         "效应器",
                         binding.EffectorSlot);
-                    int boneIndex = Array.IndexOf(bones, binding.TargetPoseBoneId.Value);
+                    int boneIndex = Array.IndexOf(boneIds, binding.TargetPoseBoneId.Value);
                     int nextBoneIndex = EditorGUILayout.Popup(
                         "目标骨骼",
                         Mathf.Max(0, boneIndex),
-                        bones);
+                        boneLabels);
                     Vector3 position = EditorGUILayout.Vector3Field("位置偏移", binding.PositionOffset);
                     Vector3 rotation = EditorGUILayout.Vector3Field("旋转偏移", binding.RotationOffset.eulerAngles);
                     float positionWeight = EditorGUILayout.Slider("位置权重", binding.PositionWeight, 0f, 1f);
@@ -367,7 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterPoseBoneIkGoalBinding[] next = bindings.ToArray();
                         next[index] = new CharacterPoseBoneIkGoalBinding(
                             effector,
-                            new AnimationBoneId(bones[nextBoneIndex]),
+                            new AnimationBoneId(boneIds[nextBoneIndex]),
                             position,
                             rotation,
                             positionWeight,
@@ -390,13 +396,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         "新效应器",
                         0,
                         availableSlots.Select(value => value.ToString()).ToArray());
-                    int selectedBone = EditorGUILayout.Popup("目标骨骼", 0, bones);
+                    int selectedBone = EditorGUILayout.Popup("目标骨骼", 0, boneLabels);
                     if (GUILayout.Button("添加效应器绑定"))
                     {
                         ApplyNodeField(node, graph, field.FieldId.Value, bindings.Append(
                             new CharacterPoseBoneIkGoalBinding(
                                 availableSlots[selectedSlot],
-                                new AnimationBoneId(bones[selectedBone]),
+                                new AnimationBoneId(boneIds[selectedBone]),
                                 Vector3.zero,
                                 Vector3.zero,
                                 1f,

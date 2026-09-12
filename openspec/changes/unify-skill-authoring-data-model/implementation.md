@@ -1,6 +1,10 @@
 # Skill authoring 数据模型统一实施记录
 
-## 当前基线
+## 当前记录范围
+
+以下内容来自范围收窄前的阶段记录，对应提交73f4b59de。当前执行范围以[proposal.md](proposal.md)和[tasks.md](tasks.md)为准：原业务节点与FlowCanvas节点共用参数和规则，当前25项任务尚未记录完成；本文件没有提供该窄范围的实际实施交付证据。状态机迁移和最终协议升级已归独立integrate-native-fsm-skill-authoring，不再按下方旧顺序在本change实施。保留下方资产数量、hash口径和检查结论作历史追溯，不当作当前源码、包状态或完成证明。
+
+## 历史基线
 
 本记录从 2026-09-12 开始维护，目标是落实本 change 的数据层与状态机转移收口。正式 Unity authoring asset 仍是唯一真相，Agent Document 只作为 v8 工作副本，FlowCanvas 继续拥有图拓扑、Node/Edge identity 与布局。
 

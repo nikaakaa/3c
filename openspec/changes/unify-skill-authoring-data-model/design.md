@@ -2,6 +2,20 @@
 
 动机见 [proposal.md](proposal.md)。用户于 2026-09-12 选择“集中节点参数和规则，继续让 FlowCanvas 保存图”。本设计是待实施目标；代码审计基准为主工作区 `6c6c82a94`，不覆盖工作区未提交改动。
 
+范围澄清：用户指出的首要重复是“原业务节点定义”和“FlowCanvas新节点定义”。本设计的共同业务层必须同时取代两侧重复声明，而不是只整理Agent内部模型或另外建立一个FlowCanvas专用定义层。Document/v8、转移清理仍是原已列范围中的接入工作，不作为业务节点统一的完成证明。
+
+### 原业务节点与FlowCanvas节点的对应关系
+
+| 业务 | 原节点 | FlowCanvas节点 | 必须统一的定义 |
+|---|---|---|---|
+| 移动输入运动 | `LocomotionInputMotionNode` | `BtsmtlSkillLocomotionFlowNode` | 七项移动参数、默认值、模式/曲线/时长约束、输入端口与既有lowering |
+| 动作窗口条件 | `ActionWindowActiveInfoNode` | `BtsmtlSkillActionWindowActiveFlowNode` | 窗口类型、条件输出和动作窗口查询语义 |
+| 动作准入 | `CanActivateActionInfoNode` | `BtsmtlSkillCanActivateActionFlowNode` | ActionProfile、目标快照引用、合法性及准入语义；不同引用外壳只由适配处理 |
+| 输入与动作请求 | `CharacterInput*InfoNode`、`CharacterActionRequestInfoNode` | `BtsmtlSkill*InputFlowNode`、`BtsmtlSkillActionRequestFlowNode` | 输入身份、值类型、provider归属及对应操作语义 |
+| 状态与组合 | 原State/Sequence/Selector等节点 | 对应Skill结构节点 | 先核对等价行为，再共用状态/分支参数和规则；框架生命周期与图数据结构各自适配 |
+
+源码已确认移动节点两侧分别保存速度、位移模式、曲线、转向速度、相机相对、执行模式与时长。旧ConfigureAuthoring有模式/数值/曲线组合检查，新Configure仅赋值；ILocomotionInputMotionAuthoring和Locomotion lowering已共享，但并未消除作者字段和写入校验重复。统一必须承接已正确的旧规则，不能以较弱的新写入口替代。
+
 ### 已核对的数据链
 
 | 位置 | 当前实际职责 | 本次要处理的差异 |
@@ -22,6 +36,7 @@
 
 **Goals:**
 
+- 原业务节点与FlowCanvas节点的同义部分共用一个业务定义；改动一条已核对的业务规则后，两侧适配采用同一结果。
 - 一个节点参数只保存一次；节点定义是字段读写、默认值、端口、约束和引用语义的唯一来源。
 - 增加一个普通字段或节点时，扩展对应业务族定义与编译 binding，不要求修改多个集中类型分支。
 - UI、Document 与编译接受同一合法目标；复制、删除、事务和诊断使用同一稳定身份与引用关系。
@@ -40,7 +55,7 @@
 
 ### D1 参数独立，拓扑继续由 FlowCanvas 保存
 
-正式 Skill Node/Connection 是插件承载壳，持有唯一 typed payload。payload 保存业务参数和强类型引用，不包含 position、selection、委托、FlowCanvas Port 或运行状态；相同参数不得同时保留在壳字段和 payload 内。Node/Edge UID、端点、图集合、布局仍只保存于原生图。Macro 的 inputDefinitions/outputDefinitions、Blackboard 原生 Variable 的 identity/name/type/default 继续是现有各自来源，不复制成另一份可写列表。
+先从原业务模块抽出正式参数与定义，FlowCanvas Node/Connection和仍有合法消费者的原作者Node都只是各自框架的承载壳。两侧使用同一种typed payload与校验，各节点实例分别持有自己的参数值；不得将旧BaseNode整个嵌进FlowNode，也不得让不同实例共用可变参数对象。payload保存业务参数和强类型引用，不包含position、selection、委托、插件Port或运行状态；同一实例的参数不得同时保留在壳字段和payload内。Skill的Node/Edge UID、端点、图集合、布局仍只保存于原生图。Macro的inputDefinitions/outputDefinitions、Blackboard原生Variable的identity/name/type/default继续是现有各自来源，不复制成另一份可写列表。
 
 例如 Locomotion 的速度、位移模式、转向速度、时长与曲线进入同一个业务参数对象；原生节点仅提供端口物化和事件接入。对仅表达标记的节点允许无字段 payload，但不能创造虚假参数。
 
@@ -50,7 +65,9 @@
 
 ### D2 每个节点种类由一个定义提供完整作者规则
 
-按结构/条件、Input/Blackboard/CharacterState、Action/Ability、Motion、Macro/Timeline 引用组织定义模块。正式注册根只聚合这些模块，不能形成另一个包含全部业务 switch 的总定义文件。
+按原业务的结构/条件、Input/Blackboard/CharacterState、Action/Ability、Motion、Macro/Timeline引用组织共同定义模块，不能把共同规则放在FlowCanvas或Agent专属目录。旧作者目录与Skill Capability目录只投影共同定义及本宿主映射，不各自登记同义字段、默认值和校验。正式注册根只聚合这些模块，不能形成另一个包含全部业务switch的总定义文件。
+
+两种框架的基类、资产组织、UI端口对象和本地端口ID可以不同。适配器负责明确的“本地端口ID到业务逻辑端口”映射与框架事件，不复制业务约束或通过旧节点转换执行。新增映射不等于保留兼容reader；未知身份仍必须拒绝。只有经过行为对照确认同义的节点才共用定义，类型/生命周期不同的能力显式区分。
 
 每个定义提供稳定 kind 与 variant、payload 类型、默认构造、字段读取/写入与值约束、条件可见性、固定/条件/动态端口、引用访问及重映射、编译 binding identity。字段身份通过同一访问定义连接到真实参数；特性可以作为声明语法，共享 Capability 是投影，不能另外维护相同字段的人工白名单。参数和字段定义层不依赖 JObject、AgentPackage 或 Unity SerializedProperty 路径。
 
@@ -90,7 +107,7 @@ Sequence/Selector/Parallel 保留步骤参数及各自顺序/条件/中止语义
 
 各业务族 compiler binding 接收这些业务数据和现有编译 context，发射既有操作与 typed port 映射。Occurrence 只负责调用路径、owner 和来源信息；Program Builder 继续负责通用 IR 写入。停止在多个 emitter 内识别 FlowNode 的 C# 类型或调用实际 Port getter决定语义。原生逻辑到操作码的转换、Semantic IR、Numeric Program 是必要派生产物，不视为作者双写。
 
-复用 `ILocomotionInputMotionAuthoring` 等已有业务合同及 Pose 共用的字段/端口基础。旧 BaseGraph 节点逐项记录实际消费者：仅剩旧 Skill 用途的迁移后删除；被合法非 Skill 领域使用的类型保留其业务边界，语义相同的参数/校验可以共用，不能因为 kind 名称相同而合并不同执行模型。
+复用`ILocomotionInputMotionAuthoring`等已有业务合同及Pose共用的字段/端口基础。旧BaseGraph节点逐项记录实际消费者：仅剩旧Skill用途的迁移后删除；被合法领域使用且与新节点同义的原节点必须接入同一个参数/定义/校验与适用lowering，不允许仅登记为“可保留”就继续维护第二份定义。不同业务语义保持独立，不因为kind名称相同而合并执行模型。
 
 业务取舍：注册式 lowering 保留各业务实现独立演进，同时减少插件耦合；代价是需要维护清晰的编译输入接口。让所有节点直接引用 Builder 会把编译实现塞回作者数据层，不采用。
 
@@ -118,6 +135,7 @@ v8 正式 checkout/rebase/dry-run/apply/validate 不接受 v7 文件，旧包需
 
 | 原文档与条目 | 本 change 承接 | 原文档保留 |
 |---|---|---|
+| 原业务节点与FlowCanvas同义节点定义 | tasks 1.2、2.1/2.2/2.7、6.2、8.5；共同定义抽取与两侧接入是主交付 | 真实框架适配和不同业务语义，不能保留重复业务规则 |
 | `refactor-btsmtl-flowcanvas-authoring` 2.2.3、2.3.2/2.3.3/2.3.4、3.1.3、3.2.1/3.2.3 的 Skill 定义、端口与引用一致性 | tasks 2、3、4、5、6；已实现原生接入作为基线，补齐实际分散规则 | 原生 UI 宿主、宏业务行为及历史代码记录 |
 | 同 change 2.4.2、5.3 的 Skill owner/失败回滚部分 | tasks 5.3、5.4、7.4；原任务保留结果接收入口 | 非本次数据迁移引起的完整交互/跨域事务验收 |
 | 同 change 3.3.1 状态机步骤、6.2 作者来源版本部分 | tasks 4、6.3/6.4；普通步骤与运行身份保持原合同 | generation、运行观察、7.x、网络4.5.5与端到端8.1 |
@@ -132,6 +150,7 @@ v8 正式 checkout/rebase/dry-run/apply/validate 不接受 v7 文件，旧包需
 
 | 文档 | 一致部分 | 冲突或缺口与处置 |
 |---|---|---|
+| 原节点字段/校验与FlowCanvas新声明 | 同义节点可复用既有业务参数和lowering | 原计划只把旧节点列为消费者盘点不够；现要求两侧同义定义实际合并，原有效规则不能被较弱新实现覆盖 |
 | current `graph-authoring-domain-framework` 的 Formal metadata requirement | 唯一语义来源、拒绝未声明字段 | 本 change delta补充payload/definition与插件适配边界，完整保留原Scenario |
 | current `btsmtl-agent-authoring-document-sync` | 完整Skill/Presentation、五工具、唯一事务 | current固定v7，与目标v8冲突；本change修改所有受版本影响的Requirement并保留原Scenario；current在实施前仍表示v7 |
 | current `btsmtl-graph-core` 与 FlowCanvas 原 change delta | 一个正式拓扑、不恢复旧运行路径 | current仍有BaseGraph宽泛条款；旧change已有Skill适用范围修正，本次不重复造第二份delta，回写时必须先完成该边界对账 |

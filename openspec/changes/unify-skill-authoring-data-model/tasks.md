@@ -1,19 +1,19 @@
 ## 1. 完整盘点与迁移来源
 
 - [ ] 1.1 对实际Skill注册集合逐项盘点kind、variant、系统anchor、payload字段、端口、引用、UI、Document与compiler binding；交付覆盖43个现有kind声明、15个原生wrapper登记及Macro额外登记的完整差异表，不用Corin节点数量代替公开能力集合。
-- [ ] 1.2 对旧btsmtl与新Skill的同义节点逐项列出实际代码/资产消费者，区分共用业务合同、合法独立领域与可删除旧Skill类型；交付带调用位置的归属/删除清单，不恢复旧Character RootTree。
+- [ ] 1.2 逐对建立原业务节点与FlowCanvas节点的参数、默认值、校验、逻辑端口、引用与编译行为对照，列出实际代码/资产消费者；交付共同定义抽取位置、两侧适配去向、行为差异裁决和零消费者删除清单，不能只盘点旧类型后保留重复定义。
 - [ ] 1.3 在旧参数与steps仍可读取时，按精确Definition封存作者数据、v7包状态、identity、端点、条件引用、Macro/Timeline/Blackboard闭包和来源hash；交付迁移输入清单及未提交差异记录，拒绝覆盖DocumentDirty/Conflict。
 - [ ] 1.4 核对每条状态转移的Step/Edge字段、端口对应和实际并列选择顺序；交付冲突/歧义报告，分别标记字段相同、仅旧值存在、两侧不同、私有条件多owner及顺序变化，未裁决项不得自动迁移。
 
 ## 2. 正式参数与节点定义
 
-- [ ] 2.1 建立Skill typed payload与稳定引用值合同，让原生节点/边只持有一份业务参数；交付字段归属表和源码扫描，确认没有壳字段与payload重复保存且没有新增可写图集合。
-- [ ] 2.2 在既有共享Capability基础上建立按业务族注册的节点定义，集中kind/variant、默认构造、字段访问/约束/可见性、引用和编译binding；交付注册完整性报告，拒绝缺失binding及重复kind/variant。
+- [ ] 2.1 从原节点有效业务参数抽出共同typed payload与稳定引用合同，迁移FlowCanvas节点和仍有合法消费者的对应原节点；每个实例各自保存一份值，交付两侧字段归属及重复字段删除扫描，不把BaseNode嵌入FlowNode或新增可写图集合。
+- [ ] 2.2 在原业务模块与既有共享Capability基础上建立按业务族注册的共同节点定义，让旧作者目录和Skill目录投影同一定义；交付两侧kind/variant、默认值、字段/端口/引用/校验及编译binding对照，删除两套人工业务声明，保留明确宿主映射。
 - [ ] 2.3 提供不依赖JObject、AgentPackage和插件Port的正式字段读取/修改接口，并接入现有typed Mutation；交付UI与Document使用同一字段访问的调用链和旧字段读写分支删除清单。
 - [ ] 2.4 迁移结构、状态生命周期、条件结果、Loop和组合节点的参数定义；交付各kind参数/默认值/端口对照，保留普通步骤语义且不为Loop新增steps。
 - [ ] 2.5 迁移Input、Action Request、Blackboard Get/Set与Character State节点定义，复用现有provider/声明合同；交付owner、值类型、访问权限与动态端口覆盖报告，不复制外部provider值。
 - [ ] 2.6 迁移Action、Tag、TagQuery、Attribute和Effect节点参数与定义，将5个Ability节点移出Inspector文件；交付字段/资源引用/默认值覆盖表和原定义删除记录。
-- [ ] 2.7 迁移Locomotion参数与定义，复用ILocomotionInputMotionAuthoring及现有motion合法性规则；交付ConstantSpeed/曲线位移和执行时长组合的现有Validator/编译结果。
+- [ ] 2.7 将原LocomotionInputMotionNode与BtsmtlSkillLocomotionFlowNode的七项参数、默认值和原有效写入校验统一到共同业务定义，复用ILocomotionInputMotionAuthoring及既有lowering；交付两侧对相同合法/非法ConstantSpeed、曲线和时长目标的一致结果，不以已有共享编译接口代替作者定义统一。
 - [ ] 2.8 为15个原生逻辑wrapper登记正式定义与作者端口到Program端口映射；交付完整登记对照及现有编译端口校验结果，不执行Simplex运行逻辑。
 - [ ] 2.9 把Macro、State/Condition与Timeline调用参数和TreeClip引用接入正式定义，保留原生Macro接口与Timeline数据唯一来源；交付接口identity、私有/共享owner及typed引用映射表。
 
@@ -44,7 +44,7 @@
 ## 6. 编译与作者版本
 
 - [ ] 6.1 建立单一原生图读取适配，把正式参数、端口、引用与UID暴露给Occurrence和业务lowering；交付实际调用链，确认无持久化第二图、旧作者节点构造或实际Port getter求值。
-- [ ] 6.2 将叶节点与业务域参数发射迁入按族注册的compiler binding，保留现有Semantic IR/Builder与Float32/Fixed运行链；交付公开能力、UI/Document与编译支持集一致报告，以及集中FlowNode类型分支删除清单。
+- [ ] 6.2 让原节点与FlowCanvas节点的同义参数消费同一业务族compiler binding，保留已有共用lowering及Semantic IR/Builder/Float32/Fixed运行链；交付两侧业务发射、公开能力、UI/Document与编译支持集一致报告及重复发射分支删除清单。
 - [ ] 6.3 分离作者语义hash和画布布局hash，让引用图/Timeline语义经正式关系参与计算；交付纯位置/分组变化与参数/顺序变化的hash对照，Document整包hash仍包含layout。
 - [ ] 6.4 接通Node/Port/Edge/调用路径的SourceMap与观察版本，区分画布布局hash和Program State LayoutHash；交付同业务目标编译语义与来源identity对照，正常运行仍只消费Program。
 
@@ -62,3 +62,4 @@
 - [ ] 8.2 合并本change与原FlowCanvas、metadata、转移change的独有规范增量，保留全部有效Requirement/Scenario并同步current/project/技能的v8与owner说明；交付差异对账和严格校验，禁止旧v7 delta覆盖新合同，任务转交不得当作归档完成。
 - [ ] 8.3 回填design交接表中各原任务的实际接收结果和剩余范围；交付精确任务链接，不重复创建数据层实施任务，不改原完成证据。
 - [ ] 8.4 汇总代码小步提交、资产/包迁移、正式编译与结构检查结果；交付仍未完成的运行观察/网络/跨域事项清单，不新增手动验证任务或用文档工件齐全宣称功能完成。
+- [ ] 8.5 逐对验收原业务节点与FlowCanvas适配：同一参数合同、同一规则来源、明确本地端口映射和一致业务发射；交付源码跳转及已删除重复定义清单，原壳有消费者则使用共同定义，无消费者则删除。Agent往返正常不能代替本项。

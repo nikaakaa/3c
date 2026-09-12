@@ -144,7 +144,7 @@ Agent Document MUST支持从零创建或完整修改Character Skill与Presentati
 
 正式作者类型、字段、引用关系和正式Mutation写入方法上的metadata MUST是上述字段可见性、可写性、类型、端口、owner和闭包规则的唯一来源。Agent Document MUST不维护第二份节点模型、字段表、端口表、Pose模型或owner推断。
 
-Skill字段访问、端口与引用关系 MUST由正式节点定义提供；Document包对象只负责格式转换，不得维护同义作者配置。状态机转移的字段、端口、条件owner与顺序 MUST采用当前整包版本明确的形状，不能因内部payload重构而丢失完整引用闭包。
+Skill字段访问、端口与引用关系 MUST由原业务节点和FlowCanvas适配共用的正式业务定义提供；Document包对象只负责格式转换，不得维护同义作者配置，也不得成为连接两套重复业务定义的唯一桥。状态机转移的字段、端口、条件owner与顺序 MUST采用当前整包版本明确的形状，不能因内部payload重构而丢失完整引用闭包。
 
 #### Scenario: Agent从空目标创建完整Skill
 

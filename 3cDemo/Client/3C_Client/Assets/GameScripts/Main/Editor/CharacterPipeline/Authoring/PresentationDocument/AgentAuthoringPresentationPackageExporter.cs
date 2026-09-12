@@ -282,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
         {
             if (selector is not CharacterEquipmentLinkedPoseSelectionBinding equipment)
                 throw new InvalidOperationException(
-                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v7 codec.");
+                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v8 codec.");
             AgentPackageObjectReference asset = Asset(equipment, true);
             return new AgentPackageLinkedPoseSelectorBinding
             {

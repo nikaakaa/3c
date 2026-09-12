@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                         report.Error(
                             pair.Key,
                             "presentation_readonly_file_unknown",
-                    "Document v7包含未知Presentation readonly文件。");
+                    "Document v8包含未知Presentation readonly文件。");
                         valid = false;
                     }
                     valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.Presentation
                     report.Error(
                         pair.Key,
                         "presentation_file_unknown",
-                    "Document v7包含未知Presentation文件。");
+                    "Document v8包含未知Presentation文件。");
                     valid = false;
                 }
                 valid &= RejectInternalFields(pair.Value, pair.Key, report);

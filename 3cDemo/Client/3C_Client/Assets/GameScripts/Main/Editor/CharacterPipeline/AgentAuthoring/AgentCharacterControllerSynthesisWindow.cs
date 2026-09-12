@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static void Open(CharacterPipelineDefinition definition)
         {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v7");
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v8");
             window.m_Root = definition;
             window.Show();
         }

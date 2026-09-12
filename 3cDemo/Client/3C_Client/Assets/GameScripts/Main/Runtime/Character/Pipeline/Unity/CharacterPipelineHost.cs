@@ -669,12 +669,10 @@ namespace ThirdPersonCharacter.Pipeline
 			float verticalSpeed,
 			Vector2 movementDirection,
 			Vector2 desiredDirection,
-			float facingError,
-			CharacterPresentationMotionPhase motionPhase,
-			IReadOnlyList<PoseParameterId> directParameterIds = null,
-			IReadOnlyList<float> directParameterValues = null,
-			Guid poseWatchOwnerId = default,
-			IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
+            float facingError,
+            CharacterPresentationMotionPhase motionPhase,
+            Guid poseWatchOwnerId = default,
+            IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
 		{
 			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
 			{
@@ -692,13 +690,11 @@ namespace ThirdPersonCharacter.Pipeline
 				horizontalAcceleration,
 				verticalSpeed,
 				movementDirection,
-				desiredDirection,
-				facingError,
-				motionPhase,
-				directParameterIds,
-				directParameterValues,
-				poseWatchOwnerId,
-				poseWatchInterests);
+                desiredDirection,
+                facingError,
+                motionPhase,
+                poseWatchOwnerId,
+                poseWatchInterests);
 		}
 
 		public void ClearPoseGraphPreview(Guid sessionId)

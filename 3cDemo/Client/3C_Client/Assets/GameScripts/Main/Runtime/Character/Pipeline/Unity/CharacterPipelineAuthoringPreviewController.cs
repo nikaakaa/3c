@@ -219,8 +219,6 @@ namespace ThirdPersonCharacter.Pipeline
             Vector2 desiredDirection,
             float facingError,
             CharacterPresentationMotionPhase motionPhase,
-            IReadOnlyList<PoseParameterId> directParameterIds = null,
-            IReadOnlyList<float> directParameterValues = null,
             Guid poseWatchOwnerId = default,
             IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
         {
@@ -254,9 +252,7 @@ namespace ThirdPersonCharacter.Pipeline
                 movementDirection,
                 desiredDirection,
                 facingError,
-                motionPhase,
-                directParameterIds,
-                directParameterValues);
+                motionPhase);
         }
 
         public bool TrySetPoseWatchInterests(

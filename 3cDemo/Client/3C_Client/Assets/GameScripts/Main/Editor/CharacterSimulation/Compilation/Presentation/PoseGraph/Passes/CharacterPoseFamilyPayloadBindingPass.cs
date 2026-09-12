@@ -600,12 +600,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     }
                     else
                     {
-                        parameterIndex = state.ParameterIndices[
-                            AnimationPoseParameterIds.FootPlacementWeight];
+                        if (!state.ParameterIndices.TryGetValue(
+                                AnimationPoseParameterIds.FootPlacementWeight,
+                                out parameterIndex))
+                        {
+                            throw new InvalidOperationException(
+                                $"Foot Placement '{scopedNodeId}' requires the Foot Placement curve in the animation input contract.");
+                        }
                     }
                 }
                 else if (declaredParameter.IsValid)
-                    parameterIndex = state.ParameterIndices[declaredParameter];
+                {
+                    if (!state.ParameterIndices.TryGetValue(
+                            declaredParameter,
+                            out parameterIndex))
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Node '{scopedNodeId}' references parameter '{declaredParameter}' missing from the animation input contract.");
+                    }
+                }
                 else
                 {
                     CharacterPosePortDefinition parameterPort =

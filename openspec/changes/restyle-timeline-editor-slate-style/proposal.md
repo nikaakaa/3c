@@ -16,6 +16,8 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 - 增加 Editor-only BTSMTL-to-Slate projection，将 Timeline owner、Track、Clip、Section、Timeline-local Curve Channel、完整关键帧和稳定 authoring identity映射到临时 Slate Cutscene 层级。
 - Clip wrapper 必须以 Slate `CutsceneTrack` 能发现的正式 ActionClip 形态挂载；不得因子 GameObject 层级错误而让 Clip 或 Curve 静默丢失。
 - 增加 Slate-to-BTSMTL mutation bridge：Slate UI 的移动、裁剪、删除、添加、Section 和时间编辑先转换成 BTSMTL 编辑命令，再经 `TimelineEditorSessionContext`、正式 owner、Mutation 和 Undo 写回。
+- 补齐 Timeline 编辑器的新增内容入口：Add Track 与 Add Clip 菜单必须由 `TimelineContractCatalog` 提供合法类型，并调用正式 `TimelineData.AddTrack` / `AddClip` 和唯一 Mutation/Undo；不得直接让 Slate 创建无 BTSMTL identity 的任意 `CutsceneTrack` / `ActionClip`。
+- 新增 Clip 必须按 Track contract 提供准确创建方式：Animation 使用已有原生 AnimationClip 引用，TreeClip 使用正式 Graph/Tree 来源，Camera、Motion 和其它 typed Clip 使用各自 authoring binding；不得创建替代资源或默认 Clip。
 - 明确 proxy 的双写边界：BTSMTL 是唯一持久化真相，但 Slate 原生 UI 会先修改临时 proxy；若要一个动作只有一个正式 Undo，必须提供 Slate transaction/Undo sink 扩展，不能假设原生窗口自动完成同步。
 - Slate 临时层级关闭、Timeline owner 变化、Undo/Redo 或外部刷新时重新建立投影，禁止把临时 Slate 对象保存成资产或进入运行时编译链。
 - 保留 BTSMTL 的 Skill Timeline、TreeClip、ActionContext、AnimationSlot、Document v7、Source Map 和 authoring identity；Timeline 页面只显示作者内容与被动运行标记。
@@ -33,11 +35,13 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 ### Modified Capabilities
 
 - `btsmtl-timeline-editor-preview`: Timeline 的正式编辑表面改由 Slate `CutsceneEditor` 拥有，BTSMTL 继续拥有正式数据、Mutation、Undo 和只读运行 overlay；Scene Play/Build/Live Debug 控制归 Graph Shell。
+- `btsmtl-timeline-editor-preview`: 增加 contract-driven Add Track/Add Clip 的作者入口，新增对象仍由 Timeline owner 和 typed Mutation 拥有。
 
 ## Impact
 
 - 主要入口：`Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineEditorMainWindow.cs` 和 Timeline editor open request composition。
 - 新增范围：Editor-only Slate projection、identity map、snapshot/diff、BTSMTL mutation bridge 和临时 Cutscene 生命周期管理。
+- 新增范围：Slate Add Track/Add Clip 的 contract menu、资源选择和正式 authoring mutation bridge。
 - 删除范围：上一轮 UI Toolkit 仿制 Slate 的 UXML/USS、Timeline 自定义 viewport/interaction/rendering 路径中仅为仿制 UI 新增的代码。
 - 保留范围：`TimelineData`、Track/Clip/Section/TreeClip identity、`TimelineEditorSessionContext`、`ITimelineEditorMutationPort`、Undo、被动 Runtime Trace overlay 和 Skill Timeline owner；Scene Play Session、Build/adoption、Live Debug 命令由 Graph Shell/Scene Play coordinator 提供。
 - 不修改 `Assets/ParadoxNotion/SLATE Cinematic Sequencer` 的 runtime、Cutscene 数据语义或播放器；允许修改其 Editor 目录抽出可嵌入 Surface 和 transaction hook，不保存临时 Cutscene，不增加 Slate runtime player、第二个时钟或第二个正式 Timeline compiler。

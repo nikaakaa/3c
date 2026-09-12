@@ -91,6 +91,25 @@ Graph Shell/SkillGraph 页面是 Scene Play 控制面，统一持有 Start、Pau
 
 Timeline 窗口只持有 authoring owner、Slate projection、selection、geometry、Mutation/Undo 和被动 overlay。作者在 Play 期间拖动 Clip、修改 Curve 或 Section 时，提交仍进入 BTSMTL 正式 Mutation；Graph Shell 负责显示 dirty/build/adoption 状态并在同一 Session 中发布新 Program。当前 Action 不兼容时继续使用旧 Epoch，下一次 Action 才采用新版本。
 
+### 4.2 新增Track与Clip必须由BTSMTL contract提供
+
+Slate 原生 Add Track/Add Action 菜单不能直接作为 BTSMTL 新增入口。Slate 只能创建临时代理对象，而临时对象没有正式 `AuthoringId`、`ContractKind`、Typed Binding 和 owner，直接保存会形成第二套 Timeline 数据源。
+
+新增入口由 Timeline adapter 提供 Slate 风格的菜单，但数据操作走 BTSMTL 正式链：
+
+```text
+Slate Add menu
+    -> TimelineContractCatalog 合法候选
+    -> 正式资源选择/typed creation input
+    -> TimelineData.AddTrack / AddClip
+    -> TimelineEditorSessionContext / Mutation / Undo
+    -> owner revision + rebuild projection
+```
+
+Add Track 只显示当前 Timeline owner 支持的 Track contract。Add Clip 只显示当前 Track contract 的 allowed clip kinds。Animation Clip 只能选择已经存在的原生 AnimationClip；TreeClip 必须选择正式 Graph/Tree 来源；Camera、Motion、Cue 和其它 Clip 必须使用各自 typed authoring binding。新增对象的正式 identity 由 Timeline owner/API 生成，不能把 Slate proxy 的 GameObject、组件 instance id 或显示名称写入作者数据。
+
+新增提交成功后，adapter 必须销毁旧 proxy 并从最新 Timeline owner 重建；selection 应按新 authoring identity恢复。取消资源选择或 contract 校验失败时，只丢弃菜单草稿，不创建空 Track、空 Clip 或默认资源。
+
 ### 5. 删除错误的 UI Toolkit 仿制链
 
 当前 change 之前为仿 Slate 添加的 Timeline UXML/USS、viewport、zoom、interaction 和 rendering 新路径不再作为正式实现。Apply 阶段必须先删除或恢复这些错误改动，再接入 Slate projection 和 bridge，避免同时保留 Slate 真 UI、旧 UI Toolkit 和仿 Slate UI 三条路径。

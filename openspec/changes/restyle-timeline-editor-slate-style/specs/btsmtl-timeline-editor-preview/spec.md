@@ -103,6 +103,38 @@ Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 
 - **THEN** Timeline MAY显示 active Track/Clip、logic/visual time、TreeClip phase 和 playback identity overlay
 - **AND** overlay MUST只读，Timeline 不得暂停、恢复、重置、恢复历史或回放运行对象
 
+### Requirement: Timeline新增Track与Clip必须使用正式typed authoring contract
+
+Timeline Editor MUST提供正式的 Add Track/Add Clip 作者入口；候选类型 MUST来自当前 Timeline owner 的 `TimelineContractCatalog` 和 Track contract 的 allowed clip kinds。新增操作 MUST调用正式 `TimelineData.AddTrack`、`TimelineData.AddClip` 或其等价的唯一 typed Mutation API，并进入同一个 `TimelineEditorSessionContext`、Undo 和 owner revision。
+
+Slate 原生创建的临时 `CutsceneTrack`、`ActionClip`、GameObject、组件 instance id、显示名称和 proxy local state MUST NOT直接成为 BTSMTL authoring 数据。新增对象的正式 identity、ContractKind、Track/Clip relationship、typed properties 和外部资源引用 MUST由 Timeline owner/API生成并校验；新增完成后 MUST从 owner 重建 Slate projection。
+
+Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST选择正式 Graph/Tree 来源；Camera、Motion、Cue 和其它 typed Clip MUST使用对应的 authoring binding。系统 MUST不创建替代 AnimationClip、默认 Tree、空 Track、空 Clip 或 fallback contract。
+
+#### Scenario: 新增合法Track
+
+- **WHEN** 作者在 Timeline Surface 的 Add Track 菜单选择当前 owner 支持的 Track contract
+- **THEN** adapter MUST通过正式 Timeline Mutation 创建 Track 并生成正式 identity
+- **AND** 新 Track MUST进入 owner revision、Undo 和重建后的 Slate projection
+
+#### Scenario: 新增不允许的Clip
+
+- **WHEN** 作者在一个 Track 上打开 Add Clip 菜单
+- **THEN** 菜单 MUST只显示该 Track contract 允许的 Clip kind
+- **AND** 不允许的 Clip MUST无法通过 Slate 原生菜单创建或写入 authoring
+
+#### Scenario: 新增Animation或TreeClip
+
+- **WHEN** 作者选择一个已有 AnimationClip 或正式 Graph/Tree 作为新增内容来源
+- **THEN** adapter MUST通过对应 typed binding 创建 Animation Segment 或 TreeClip
+- **AND** proxy对象、GameObject层级和显示名称 MUST不进入正式 Timeline 数据
+
+#### Scenario: 新增取消或校验失败
+
+- **WHEN** 作者取消资源选择或新增输入未通过 contract validation
+- **THEN** 系统 MUST丢弃临时菜单状态
+- **AND** MUST不留下空 Track、空 Clip、无效 identity 或半成品 Undo
+
 ## ADDED Requirements
 
 ### Requirement: 旧UI Toolkit仿制Timeline路径必须删除

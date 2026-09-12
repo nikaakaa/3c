@@ -249,13 +249,38 @@ export_code覆盖的是调用方明确指定的完整目标代码文件，先完
 - planning_date: 2026-09-13
 - coordination_revision: r2-coordination-2026-09-13
 - coordination_proposal: 2026-09-13-eventgraph-authoring-r2
-- planning_status: ready_for_implementation_request
+- planning_status: confirmed_for_implementation
 - planner_thread_id: 01a09634-fc59-7192-8cda-25fdd142b82d
 - implementation_thread_id: 01a09635-2024-74b2-98b4-28c1e17d548b
-- implementation_status: WAITING_FOR_PLANNING_DOCUMENT
+- implementation_status: IMPLEMENT_FROM_DOCUMENT_SENT
 - planning_document_paths: 当前目录proposal.md、design.md、specs/、tasks.md
 - implementation_document_path: 当前目录execution.md
 - direction_confirmed_by_user: true
-- implementation_dispatched: false
+- confirmed_by_user: true
+- implementation_authorization: 用户于2026-09-13明确要求“开始实现啊”
+- implementation_dispatched: true
 
-本轮仅执行用户单向PLAN广播，更新本任务唯一规划文档；不修改业务代码、资产或其他任务文档，不回复广播或向任何窗口发送消息，不下发IMPLEMENT_FROM_DOCUMENT。后续实施仍以已绑定实现窗口及新的明确授权为准。
+此前PLAN广播已完成；用户随后明确授权开始实现。本规划窗口向已有实现窗口下发一次IMPLEMENT_FROM_DOCUMENT，不创建新窗口，不修改其他领域任务拥有的文件。
+
+```text
+PLANNING_DOCUMENT
+planner_thread_id: 01a09634-fc59-7192-8cda-25fdd142b82d
+implementation_thread_id: 01a09635-2024-74b2-98b4-28c1e17d548b
+planning_document_paths: openspec/changes/remove-agent-authoring-use-native-csharp/{proposal.md,design.md,tasks.md,specs/}
+implementation_document_path: openspec/changes/remove-agent-authoring-use-native-csharp/execution.md
+confirmed_by_user: true
+confirmed_revision: r2-coordination-2026-09-13
+```
+
+### 首个小步与可修改文件
+
+首步先读取完整文档、当前diff与领域代码，在execution.md完成tasks 1.1—1.4的基线、文件归属和生成闭包记录；然后实现tasks 3.1与4.1中的公共薄扩展合同和最小Editor生成入口合同，不提前删除Agent或改领域规则。
+
+首步允许创建或修改：
+
+- `openspec/changes/remove-agent-authoring-use-native-csharp/execution.md`。
+- `3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/`内本任务新的正式C#文件及配套`.meta`，以及该目录的`.meta`。
+
+公共合同直接引用正式对象/API，不新增领域DTO、中央Validator、总事务或临时实现。使用现有Editor程序集，不为首步改共享asmdef、插件文件或生成资产。该目录若在实际基线中已有其他工作，先核对所有权，不覆盖。
+
+首步提交后继续执行本change已授权范围，不等待进度回执；依D0维护本任务的两份binding、公共导出/生成和两个MCP。旧协议删除仍须满足D7.1。其他任务拥有的共享文件、规划文档和资产不属于首步许可，后续也不得越过D0归属；真实无法消解的合同冲突按既有ACTUAL_CONFLICT协议处理。实现记录由实现窗口维护，规划文档由本窗口维护，不回传普通状态或完成消息。

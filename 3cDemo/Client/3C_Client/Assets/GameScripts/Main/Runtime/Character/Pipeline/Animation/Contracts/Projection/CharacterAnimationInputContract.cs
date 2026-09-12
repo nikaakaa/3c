@@ -139,7 +139,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Animation Input Contract requires one Pose Graph and Rig Definition.");
             if (profile.PoseGraph.Graph == null)
                 throw new InvalidOperationException("Animation Input Contract requires a Pose Graph root.");
+            if (!profile.EventGraph)
+                throw new InvalidOperationException(
+                    "Animation Input Contract requires a Character Animation Event Graph.");
             CharacterPoseParameterDeclaration[] parameters = BuildParameters(profile);
+            CharacterAnimationVariableContract animationVariables =
+                new CharacterAnimationVariableContract(
+                    profile.EventGraph.BuildVariableContract());
+            ValidateAnimationVariables(
+                profile,
+                parameters,
+                animationVariables);
             var facts = new Dictionary<string, CharacterPresentationFactDeclaration>(StringComparer.Ordinal);
             var slots = new List<CharacterAnimationInputSlot>();
             var slotsByKey = new Dictionary<string, CharacterAnimationInputSlot>(StringComparer.Ordinal);
@@ -231,6 +241,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 movementModeStateIdentities.OrderBy(value => value, StringComparer.Ordinal).ToArray());
         }
 
+        static void ValidateAnimationVariables(
+            CharacterAnimationPresentationProfile profile,
+            IReadOnlyList<CharacterPoseParameterDeclaration> parameters,
+            CharacterAnimationVariableContract animationVariables)
+        {
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                CharacterPoseParameterDeclaration parameter = parameters[i];
+                if (parameter.Usage != CharacterPoseParameterUsage.Control)
+                    continue;
+                if (!animationVariables.TryGet(
+                        parameter.ParameterId.Value,
+                        out EventGraphVariableDescriptor variable))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Input Contract parameter '{parameter.ParameterId}' is not published by the Character Animation Event Graph.");
+                }
+                if (variable.ValueKind != EventGraphKind(parameter.ValueType))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Input Contract parameter '{parameter.ParameterId}' type does not match the Event Graph variable.");
+                }
+            }
+            foreach (CharacterPoseCanvasGraph graph in profile.PoseGraph.EnumerateGraphs())
+            {
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
+                {
+                    if (node?.Payload is not CharacterPoseStateMachineNodePayload stateMachine)
+                        continue;
+                    foreach (CharacterPoseStateTransition transition in stateMachine.StateMachine.Transitions)
+                    {
+                        if (transition?.Rule == null)
+                            continue;
+                        foreach (CharacterPoseTransitionRuleOperation operation in transition.Rule.Operations)
+                        {
+                            if (operation?.Kind != PoseTransitionRuleOperationKind.AnimationVariableInput)
+                                continue;
+                            if (IsPoseOwnedParameter(operation.ParameterId))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Pose Transition Rule animation variable '{operation.ParameterId}' is owned by Pose and cannot come from the Character Animation Event Graph.");
+                            }
+                            if (!operation.ParameterId.IsValid ||
+                                !animationVariables.TryGet(
+                                    operation.ParameterId.Value,
+                                    out EventGraphVariableDescriptor _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Pose Transition Rule animation variable '{operation?.ParameterId}' is not published by the Character Animation Event Graph.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        static EventGraphValueKind EventGraphKind(PoseParameterValueType valueType) =>
+            valueType switch
+            {
+                PoseParameterValueType.Float => EventGraphValueKind.Float32,
+                PoseParameterValueType.Int => EventGraphValueKind.Int32,
+                PoseParameterValueType.Bool => EventGraphValueKind.Bool,
+                _ => throw new InvalidOperationException(
+                    $"Pose parameter type '{valueType}' is unsupported by the Character Animation Event Graph.")
+            };
+
         static CharacterPoseParameterDeclaration[] BuildParameters(
             CharacterAnimationPresentationProfile profile)
         {
@@ -238,6 +314,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var ids = new HashSet<PoseParameterId>();
             var declarations =
                 new Dictionary<PoseParameterId, CharacterPoseParameterDeclaration>();
+            CharacterAnimationVariableContract animationVariables =
+                new CharacterAnimationVariableContract(
+                    profile.EventGraph.BuildVariableContract());
+            foreach (EventGraphVariableDescriptor variable in animationVariables.Variables)
+            {
+                if (IsPoseOwnedParameter(
+                        new PoseParameterId(variable.Reference.VariableId)))
+                    continue;
+                CharacterPoseParameterDeclaration declaration =
+                    variable.ValueKind switch
+                    {
+                        EventGraphValueKind.Float32 => new CharacterPoseParameterDeclaration(
+                            new PoseParameterId(variable.Reference.VariableId),
+                            PoseParameterValueType.Float,
+                            variable.InitialValue.Float32Value,
+                            displayName: variable.Name),
+                        EventGraphValueKind.Int32 => new CharacterPoseParameterDeclaration(
+                            new PoseParameterId(variable.Reference.VariableId),
+                            PoseParameterValueType.Int,
+                            variable.InitialValue.Int32Value,
+                            displayName: variable.Name),
+                        EventGraphValueKind.Bool => new CharacterPoseParameterDeclaration(
+                            new PoseParameterId(variable.Reference.VariableId),
+                            PoseParameterValueType.Bool,
+                            variable.InitialValue.BoolValue ? 1f : 0f,
+                            displayName: variable.Name),
+                        _ => null
+                    };
+                if (declaration == null)
+                    continue;
+                if (declarations.TryGetValue(
+                        declaration.ParameterId,
+                        out CharacterPoseParameterDeclaration existing))
+                {
+                    if (existing.ValueType != declaration.ValueType ||
+                        existing.DefaultValue != declaration.DefaultValue)
+                    {
+                        throw new InvalidOperationException(
+                            $"Animation Input Contract contains conflicting Event Graph variable '{declaration.ParameterId}'.");
+                    }
+                    continue;
+                }
+                declarations.Add(declaration.ParameterId, declaration);
+            }
             foreach (CharacterPoseParameterDeclaration declaration in
                      profile.PoseGraph.EnumerateGraphs()
                          .Where(value => value != null)
@@ -293,6 +413,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             return parameters.ToArray();
         }
+
+        static bool IsPoseOwnedParameter(PoseParameterId parameterId) =>
+            parameterId.Equals(AnimationPoseParameterIds.ActionWeight) ||
+            parameterId.Equals(AnimationPoseParameterIds.FootPlacementWeight) ||
+            parameterId.Value.StartsWith("animation.blendshape.", StringComparison.Ordinal);
 
         static void AddFact(
             Dictionary<string, CharacterPresentationFactDeclaration> facts,

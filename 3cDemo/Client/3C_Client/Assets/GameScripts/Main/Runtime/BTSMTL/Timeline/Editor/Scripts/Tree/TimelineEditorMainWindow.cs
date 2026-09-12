@@ -567,6 +567,8 @@ namespace BTSMTL.Timeline.Editor
             var toolbar = new Toolbar();
             m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
             m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
+            var previewButton = new ToolbarButton(ReturnToPreview) { text = "Preview" };
+            previewButton.style.display = m_SourceGraphWindow ? DisplayStyle.Flex : DisplayStyle.None;
             m_SharedTimelineField = new ObjectField("Document")
             {
                 objectType = typeof(UnityEngine.Object),
@@ -584,10 +586,22 @@ namespace BTSMTL.Timeline.Editor
             m_Status.style.flexGrow = 1f;
             m_Status.tooltip = "Timeline 使用正式作者帧编辑。角色 Scene Play、Build、Skill 和运行观察由 Skill Graph / Graph Shell 管理。";
             toolbar.Add(m_BackButton);
+            toolbar.Add(previewButton);
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
             toolbar.Add(m_Status);
             return toolbar;
+        }
+
+        void ReturnToPreview()
+        {
+            if (!m_SourceGraphWindow)
+            {
+                SetStatus("当前 Timeline 没有绑定 Graph Shell 上下文。");
+                return;
+            }
+            m_SourceGraphWindow.Show();
+            m_SourceGraphWindow.Focus();
         }
 
         bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);

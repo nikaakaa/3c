@@ -183,8 +183,11 @@ namespace ThirdPersonCharacter.Pipeline.Motion
             LocomotionInputMotionExecutionMode.Once;
         public const float DefaultDurationSeconds = 0f;
         public const string DefaultMoveSpeedText = "4";
+        public const string DefaultDisplacementModeText = "ConstantSpeed";
         public const string DefaultTurnSpeedDegreesText = "720";
         public const string DefaultCameraRelativeText = "true";
+        public const string DefaultExecutionModeText = "Once";
+        public const string DefaultDurationSecondsText = "0";
 
         public static void Validate(ILocomotionInputMotionAuthoring node)
         {

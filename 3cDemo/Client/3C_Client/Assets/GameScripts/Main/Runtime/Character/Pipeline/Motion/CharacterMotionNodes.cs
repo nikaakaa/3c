@@ -20,7 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         float m_MoveSpeed = LocomotionInputMotionAuthoringRules.DefaultMoveSpeed;
 
         [SerializeField, ShowInPanel("Displacement Mode")]
-        LocomotionInputMotionDisplacementMode m_DisplacementMode;
+        LocomotionInputMotionDisplacementMode m_DisplacementMode = LocomotionInputMotionAuthoringRules.DefaultDisplacementMode;
 
         [SerializeField, ShowInPanel("Action Motion Curve")]
         RootMotionCurveAsset m_ActionMotionCurve;
@@ -32,10 +32,10 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         bool m_CameraRelative = LocomotionInputMotionAuthoringRules.DefaultCameraRelative;
 
         [SerializeField, ShowInPanel("Execution Mode")]
-        LocomotionInputMotionExecutionMode m_ExecutionMode;
+        LocomotionInputMotionExecutionMode m_ExecutionMode = LocomotionInputMotionAuthoringRules.DefaultExecutionMode;
 
         [SerializeField, ShowInPanel("Duration Seconds")]
-        float m_DurationSeconds;
+        float m_DurationSeconds = LocomotionInputMotionAuthoringRules.DefaultDurationSeconds;
 
         public float MoveSpeed => m_MoveSpeed;
         public LocomotionInputMotionDisplacementMode DisplacementMode => m_DisplacementMode;

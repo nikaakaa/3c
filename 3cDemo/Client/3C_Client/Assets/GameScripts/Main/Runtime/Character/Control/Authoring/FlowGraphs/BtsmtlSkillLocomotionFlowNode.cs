@@ -17,7 +17,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         Finite = true,
         HasDefaultValue = true,
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultMoveSpeedText)]
-    [BtsmtlSkillAuthoringField("displacementMode", typeof(LocomotionInputMotionDisplacementMode))]
+    [BtsmtlSkillAuthoringField(
+        "displacementMode",
+        typeof(LocomotionInputMotionDisplacementMode),
+        HasDefaultValue = true,
+        DefaultValue = LocomotionInputMotionAuthoringRules.DefaultDisplacementModeText)]
     [BtsmtlSkillAuthoringField(
         "turnSpeedDegrees",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
@@ -31,13 +35,19 @@ namespace ThirdPersonCharacter.Control.Authoring
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Boolean,
         HasDefaultValue = true,
         DefaultValue = LocomotionInputMotionAuthoringRules.DefaultCameraRelativeText)]
-    [BtsmtlSkillAuthoringField("executionMode", typeof(LocomotionInputMotionExecutionMode))]
+    [BtsmtlSkillAuthoringField(
+        "executionMode",
+        typeof(LocomotionInputMotionExecutionMode),
+        HasDefaultValue = true,
+        DefaultValue = LocomotionInputMotionAuthoringRules.DefaultExecutionModeText)]
     [BtsmtlSkillAuthoringField(
         "durationSeconds",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Float,
         HasMinimum = true,
         Minimum = 0d,
-        Finite = true)]
+        Finite = true,
+        HasDefaultValue = true,
+        DefaultValue = LocomotionInputMotionAuthoringRules.DefaultDurationSecondsText)]
     [BtsmtlSkillAuthoringField(
         "actionMotionCurve",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.AssetReference,
@@ -52,12 +62,12 @@ namespace ThirdPersonCharacter.Control.Authoring
     public sealed class BtsmtlSkillLocomotionFlowNode : BtsmtlSkillFlowNode, ILocomotionInputMotionAuthoring
     {
         [SerializeField] float m_MoveSpeed = LocomotionInputMotionAuthoringRules.DefaultMoveSpeed;
-        [SerializeField] LocomotionInputMotionDisplacementMode m_DisplacementMode;
+        [SerializeField] LocomotionInputMotionDisplacementMode m_DisplacementMode = LocomotionInputMotionAuthoringRules.DefaultDisplacementMode;
         [SerializeField] RootMotionCurveAsset m_ActionMotionCurve;
         [SerializeField] float m_TurnSpeedDegrees = LocomotionInputMotionAuthoringRules.DefaultTurnSpeedDegrees;
         [SerializeField] bool m_CameraRelative = LocomotionInputMotionAuthoringRules.DefaultCameraRelative;
-        [SerializeField] LocomotionInputMotionExecutionMode m_ExecutionMode;
-        [SerializeField] float m_DurationSeconds;
+        [SerializeField] LocomotionInputMotionExecutionMode m_ExecutionMode = LocomotionInputMotionAuthoringRules.DefaultExecutionMode;
+        [SerializeField] float m_DurationSeconds = LocomotionInputMotionAuthoringRules.DefaultDurationSeconds;
 
         public float MoveSpeed => m_MoveSpeed;
         public LocomotionInputMotionDisplacementMode DisplacementMode => m_DisplacementMode;

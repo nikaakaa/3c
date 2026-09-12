@@ -80,4 +80,17 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseGraphProjectionValidator` 的子图签名门禁已进入代码，但尚未对当前资产执行Unity Validate/Build；编辑器交叉编译仍受工作区既有Timeline改动影响。
 - 上述 Transition Rule 作者接入仍处于共享 worktree 的未提交小步，待同批 EventGraph 输入合同相关文件统一落盘后再单独提交；没有改动 PoseGraph 资产或覆盖其它窗口的未提交文件。
 - 以 Unity MCP 实例 `e852139597e42532` 复查时，Editor 已退出 Play、没有编译或资源刷新进行中；EventGraph `SourceCodePath` 合同错误已在后续刷新中消失，当前 Console 没有新增 Pose runtime 错误，剩余是其它窗口的旧 Agent 导航、Skill emitter 类型引用和 Timeline 运行观察接口错误。
-- 当前 `LocomotionFullBodyPoseGraph.asset` 仍统计到 11 个 `animation.action-weight`、13 个 `animation.foot-placement-weight` 和 451 个 `animation.blendshape.*` 声明；因此 Action/Foot 旧声明、BlendShape 复制声明及根图/Body 边界的资产迁移尚未完成，不能提前标记本 change 完成。
+- 上述资产统计是维护前快照；`LocomotionFullBodyPoseGraph.asset` 已通过 Unity MCP 正式维护入口完成边界清理，结果为 `declarations=387`、`ports=2`、`gets=1`、`orphanGraphs=2`。维护后磁盘复核显示 9 个目录引用图的旧 Action/Foot/BlendShape 声明、Foot 内部接口和根 Foot Get 均为 0；Body 图保留 Foot 节点读取输入 Pose 曲线的正常拓扑。
+
+## 2026-09-13 Pose 输入边界维护
+
+已完成：
+
+- `e73e107b2`：增加 `CharacterPoseGraphAuthoringMaintenance` 正式维护入口，复用 `CharacterPresentationMutationService` 清理指定 Pose 资产的废弃输入声明、根图 Foot Get、Body/Call 内部 Foot 曲线接口，并删除同业务 Graph ID 的未引用重复图子资产。
+- Unity MCP 以实例 `e852139597e42532` 调用该入口，未运行 Build 或 Play；资产写入范围仅为 `Assets/Configs/Animation/Presentation/PoseGraphs/LocomotionFullBodyPoseGraph.asset`。
+- 清理后根图从 `5` 条边变为 `4` 条边，Body 子图从 `7` 条边变为 `6` 条边；Foot 节点的 `pose -> Foot Placement -> Full Body IK` 曲线读取链保留，权重不再由根图或子图接口透传。
+
+当前仍未完成：
+
+- Unity 维护入口只解决当前 Corin 资产的正式边界迁移；Pose 对旧 Agent EventGraph Mapper/DTO 的正式替换、完整 Pose C# 输出适配、跨图输入作用域和最终 spec 对账仍需继续。
+- 当前 Unity 工程仍有其它窗口的 Skill/编辑器改动在编译或刷新，不能把本次资产维护结果等同于完整 Character Build 已通过。

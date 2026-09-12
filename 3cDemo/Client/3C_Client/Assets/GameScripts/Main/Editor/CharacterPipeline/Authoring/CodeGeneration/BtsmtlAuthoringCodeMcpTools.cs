@@ -243,7 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             UnityEngine.Object[] supported = assets
-                .Where(value => value is BtsmtlSkillFlowGraph || value is BtsmtlSkillNativeStateMachine || value is TimelineAsset || value is HostEventGraph)
+                .Where(value => value is BtsmtlSkillFlowGraph || value is TimelineAsset || value is HostEventGraph)
                 .ToArray();
             if (localFileId != 0L)
             {
@@ -254,7 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"Asset '{assetPath}' has no supported authoring root with local id {localFileId}.");
             }
             UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(assetPath);
-            if (main is BtsmtlSkillFlowGraph || main is BtsmtlSkillNativeStateMachine || main is TimelineAsset || main is HostEventGraph)
+            if (main is BtsmtlSkillFlowGraph || main is TimelineAsset || main is HostEventGraph)
                 return main;
             if (supported.Length == 1)
                 return supported[0];

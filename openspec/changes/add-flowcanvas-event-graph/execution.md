@@ -9,7 +9,7 @@
 本步提交：`873c497eb`，`事件图：收口原生直接作者API与C#输出适配`。
 后续小步提交：`746ce0c67` 补齐目录元数据，`01194e852` 改用公共生成上下文恢复外部Macro引用。
 
-本轮继续基于最新工作树推进：公共 C# 输出入口已在 `6c80aee6` 接入事件图适配器；Pose 旧参数帧链路由 `f1dc9f9eb` 及后续预览收口提交退役。本轮没有重建已完成的旧链路，只补齐了变量帧在 Pose 收尾阶段的传递，并新增 Corin 正式事件图生成入口。
+本轮继续基于最新工作树推进：公共 C# 输出入口已在 `6c80aee6` 接入事件图适配器；Pose 旧参数帧链路由 `f1dc9f9eb` 及后续预览收口提交退役。本轮没有重建已完成的旧链路，只补齐了变量帧在 Pose 收尾阶段的传递，并新增 Corin 正式事件图生成入口。C# authoring 窗口随后完成公共 Agent、Skill、Presentation 旧文档链迁出；本窗口再删除最后没有调用者的 EventGraph Document API。
 
 ## 本步已完成
 
@@ -46,7 +46,7 @@
 
 原生 FlowScript Manual 执行、动画宿主、typed variable frame、实例隔离、Reset/Replacement 和 Graph failure sink 保持上一有效实现。r2 只收口作者路径，没有把事件图重新编译为第二套 runtime，也没有修改 Skill/Pose 作者图的运行禁令。
 
-`EventGraphAuthoringDocument`、`HostEventGraph.ApplyAuthoringDocument` 和 `HostEventGraphEditorMutation.ApplyDocument` 当前仍存在，是因为工作树中的 Pose adapter 和 Agent Presentation 调用者尚未迁出。它们是明确的待删除旧调用链，不是新的兼容入口；调用者迁出后必须直接删除，不能保留转发或改名。
+`EventGraphAuthoringDocument`、`HostEventGraph.ApplyAuthoringDocument` 和 `HostEventGraphEditorMutation.ApplyDocument` 已在 `ad698053a` 删除。删除前全局引用核对只剩这三个定义及其专用辅助代码，没有保留转发、改名或兼容入口；当前 HostEventGraph 的直接 API 是唯一事件图作者链。
 
 ### 4. Pose 只读变量消费者接入
 
@@ -66,14 +66,14 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 
 生成代码先通过 `EnsureRoot` 按上下文输出路径创建或替换持久化根并恢复 graph identity/revision，再创建变量/节点、配置节点和外部 Macro，随后绑定 Get/Set、建立连接。内部引用使用本次调用创建的局部对象，范围外 Macro 使用明确资产路径。
 
-## 尚未满足的删除依赖
+## 尚未满足的闭环条件
 
-- Pose 任务仍需将 `CharacterPoseGraphAuthoringAdapter.ApplyEventGraphMutation` 迁移为直接 API 调用，并完成其自身输入消费归属。
-- C# authoring 任务仍需迁出 Agent Mapper 和 Presentation/Skill 的公共协议调用，随后才能删除 `EventGraphAuthoringDocument`、`AgentAuthoringEventGraphDocumentMapper` 以及事件图 Document 分片处理。
+- EventGraph 旧 Document、Mapper 和 Presentation/Skill 旧文档调用者已经迁出；全局 `rg` 不再发现 `EventGraphAuthoringDocument`、`ApplyAuthoringDocument`、`HostEventGraphEditorMutation.ApplyDocument` 或事件图 Mapper 的调用。
 - 公共 C# authoring 任务已把 `EventGraphAuthoringCodeAdapter.Instance` 接入公共 `export_code` adapter 集合，两个公共 MCP 均已注册并完成事件图现场验证。当前不复制公共 MCP，也不调用旧 Document MCP。
-- 固定 motor 参数桥、Pose 条件/BlendSpace/运行/Preview consumer 属于独立运行闭环，不能作为本步作者协议删除的理由，也不能因为作者 API 已有就提前删除。
+- 固定 motor 参数桥、Pose 条件/BlendSpace/运行/Preview consumer 属于独立运行闭环，不能作为本步作者协议删除的理由，也不能因为作者 API 已有就重新引入旁路。
+- Character Float32/Projection 正式构建仍需在当前 C# authoring 清理落稳后重跑，并查明剩余 `AuthoringDiscovery` 的 `Value cannot be null (Parameter name: key)`；Corin Profile 已绑定事件图，但 Projection 是否成功生成尚未形成新的成功证据。
 
-在这些调用者和公共入口迁出前，本窗口不删除共享 Agent/Presentation 文件，不删除 `EventGraphAuthoringDocument` 及其 mapper，不通过 fallback 或旁路保持旧协议。Corin 资产只由正式 C# generation recipe 创建。
+Corin 资产只由正式 C# generation recipe 创建；旧 EventGraph Document 路径已经删除，不再作为兼容入口恢复。
 
 ## 验证记录
 
@@ -83,7 +83,8 @@ Pose 的只读 Blackboard 来源现在来自动画 EventGraph 的正式变量合
 - `ThirdPersonClient.Runtime.csproj` Rebuild，`/p:BuildProjectReferences=false`：0 error，1 个现有 `CharacterInputValueNodes.cs` warning。
 - `ThirdPersonClient.Editor.csproj` Rebuild：0 error，32 个现有 ACL artifact identity warning；此前 Pose 编辑器的 3 个跨程序集可见性错误已由 Pose 任务将 `SetEditorAnimationVariables` 正式公开后清零。
 - 公共 `btsmtl.export_code` 已针对 Corin EventGraph 现场执行成功；生成源码的根创建语句已确认是 `EventGraphAuthoringCode.EnsureRoot<...>(context, ...)`，随后删除验证用输出文件，没有留下第二个 authoring 入口。
-- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入并同步 Pose 状态参数校验后再次执行；Foot Placement 暴露诊断和 State 参数合同错误均已消失，但当前仍被两项既有链路拒绝：Attack skill 缺少原生状态机资产，Pose Graph `ed8ff472330e4057a900af3eae5dfb8f` 的 `corin.locomotion.inertialization` 规则没有按当前参数合同逐项声明；因此 Presentation Projection 未生成。本窗口没有给 EventGraph 增加旁路。
+- 正式 `character.build_float32_products` 在移除 Corin EventGraph 的 Action/Foot 写入并同步 Pose 状态参数校验后，最新已知结果只剩 `AuthoringDiscovery authoring_discovery_failed: Value cannot be null. Parameter name: key`；此前的 Foot Placement、State 参数和稀疏惯性化错误已消失，Projection 因发现阶段中断尚未形成生成成功证据。本窗口没有给 EventGraph 增加旁路。
+- 删除旧 EventGraph Document 后，`BTSMTL.EventGraphs.csproj` 源码构建通过：0 warning，0 error。一次完整 Runtime 构建首先命中 Unity 生成的旧 csproj 文件列表，仍引用已删除的 `EventGraphAuthoringDocument.cs`；Unity 刷新需重新生成项目文件后再复跑完整源码构建。
 - Unity Editor 日志已记录本轮 Tundra 编译成功、无 C# 编译 error；域重载后出现 RendererFeature/空对象编辑器警告，属于当前编辑器状态，不是 EventGraph 编译证据。
 - Unity MCP 目标实例 `3C_Client@e852139597e42532` 已恢复；更新后的正式 `btsmtl.generate_assets` 成功替换事件图，磁盘复核确认 Action/Foot 变量、Set 节点和连接均已移除，Profile 仍绑定同一事件图 GUID。Projection 因上一条既有资产链诊断仍未生成。
 - `git diff --check`：没有发现空白错误；LF/CRLF 输出只是 Git 行尾提示。

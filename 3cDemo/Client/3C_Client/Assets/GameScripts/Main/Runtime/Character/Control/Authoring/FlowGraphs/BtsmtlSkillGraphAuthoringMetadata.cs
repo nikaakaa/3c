@@ -94,6 +94,16 @@ namespace ThirdPersonCharacter.Control.Authoring
                 requireWritable);
         }
 
+        public static Type AuthoringType(string kind) =>
+            Require(kind).AuthoringType ??
+            throw new InvalidOperationException($"Skill能力 '{kind}' 没有正式authoring类型。");
+
+        public static string ValidationBindingId(string kind) =>
+            Require(kind).ValidationBindingId;
+
+        public static string CompilerBindingId(string kind) =>
+            Require(kind).CompilerBindingId;
+
         public static IReadOnlyList<BtsmtlSkillNodeAuthoringReferenceAttribute>
             References(string kind)
         {
@@ -105,6 +115,15 @@ namespace ThirdPersonCharacter.Control.Authoring
         public static IReadOnlyList<GraphAuthoringFieldValue> ReadFields(
             FlowNode node) =>
             BtsmtlSkillAuthoringValues.ReadFields(node);
+
+        public static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ReadTypedProperties(FlowNode node) =>
+            ReadFields(node)
+                .Select(value => new GraphAuthoringTypedPropertyValue(
+                    value.Field.FieldId,
+                    value.Field.ValueKind,
+                    value.CanonicalValue))
+                .ToArray();
 
         public static object ReadField(FlowNode node, string fieldId) =>
             BtsmtlSkillAuthoringValues.ReadField(node, fieldId);

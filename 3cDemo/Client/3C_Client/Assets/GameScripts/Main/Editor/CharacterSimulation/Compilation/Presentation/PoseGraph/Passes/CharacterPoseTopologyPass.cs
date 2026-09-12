@@ -168,7 +168,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                     role ==
                                     CharacterPoseIrGraphRole.MotionMatchingEntry
                                         ? null
-                                        : reachableSources);
+                                        : reachableSources,
+                                    request.AnimationInputContract.Parameters);
                         for (int issueIndex = 0;
                              issueIndex < validation.Issues.Count;
                              issueIndex++)

@@ -117,7 +117,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyCollection<AnimationChannelId>
                 reachableChannels = null,
             IReadOnlyCollection<CharacterPresentationPoseSourceSlot>
-                reachableSources = null)
+                reachableSources = null,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters = null)
         {
             if (portResolver == null)
                 throw new ArgumentNullException(nameof(portResolver));
@@ -251,7 +253,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new List<PoseGraphId>(),
                 reachableGraphs,
                 report,
-                true);
+                true,
+                animationInputParameters);
             int fullBodyIkCount = 0;
             foreach (PoseGraphId graphId in reachableGraphs)
             {
@@ -301,7 +304,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 IReadOnlyCollection<AnimationChannelId>
                     reachableChannels,
                 IReadOnlyCollection<CharacterPresentationPoseSourceSlot>
-                    reachableSources)
+                    reachableSources,
+                IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                    animationInputParameters = null)
         {
             if (!ownerAsset)
                 throw new ArgumentNullException(nameof(ownerAsset));
@@ -344,7 +349,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new List<PoseGraphId>(),
                 new HashSet<PoseGraphId>(),
                 report,
-                false);
+                false,
+                animationInputParameters);
             return report;
         }
 
@@ -362,7 +368,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
             CharacterPoseGraphValidationReport report,
-            bool traverseDependencies)
+            bool traverseDependencies,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters)
         {
             if (graph == null ||
                 !graph.GraphId.IsValid ||
@@ -496,6 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         node,
                         handler.ParameterPolicies(node.Payload),
                         parameters,
+                        animationInputParameters,
                         report);
                 }
 
@@ -562,7 +571,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         callPath,
                         reachableGraphs,
                         report,
-                        traverseDependencies);
+                        traverseDependencies,
+                        animationInputParameters);
                 }
                 else if (handler.NativeRole ==
                          CharacterPoseNativeNodeRole.Subgraph)
@@ -580,7 +590,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         callPath,
                         reachableGraphs,
                         report,
-                        traverseDependencies);
+                        traverseDependencies,
+                        animationInputParameters);
                 }
                 else if (node.Payload is CharacterMotionMatchingPosePayload motionMatching)
                 {
@@ -595,7 +606,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         callPath,
                         reachableGraphs,
                         report,
-                        traverseDependencies);
+                        traverseDependencies,
+                        animationInputParameters);
                 }
 
                 IReadOnlyList<CharacterPosePortDefinition>
@@ -758,7 +770,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
             CharacterPoseGraphValidationReport report,
-            bool traverseDependencies)
+            bool traverseDependencies,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters)
         {
             try
             {
@@ -816,7 +830,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         callPath,
                         reachableGraphs,
                         report,
-                        true);
+                        true,
+                        animationInputParameters);
                 }
             }
         }
@@ -895,7 +910,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
             CharacterPoseGraphValidationReport report,
-            bool traverseDependencies)
+            bool traverseDependencies,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters)
         {
             CharacterPoseCanvasGraph child = null;
             try
@@ -945,7 +962,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     callPath,
                     reachableGraphs,
                     report,
-                    true);
+                    true,
+                    animationInputParameters);
             }
         }
 
@@ -960,7 +978,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
             CharacterPoseGraphValidationReport report,
-            bool traverseDependencies)
+            bool traverseDependencies,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters)
         {
             CharacterPoseCanvasGraph entryGraph = null;
             try
@@ -1010,7 +1030,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     callPath,
                     reachableGraphs,
                     report,
-                    true);
+                    true,
+                    animationInputParameters);
             }
         }
 
@@ -1146,14 +1167,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasNode node,
             IReadOnlyList<CharacterPoseParameterPolicy> policies,
             HashSet<PoseParameterId> parameters,
+            IReadOnlyCollection<CharacterPoseParameterDeclaration>
+                animationInputParameters,
             CharacterPoseGraphValidationReport report)
         {
+            var curveParameters = new HashSet<PoseParameterId>(
+                animationInputParameters?.Where(value =>
+                        value != null &&
+                        value.Usage == CharacterPoseParameterUsage.AnimatedProperty &&
+                        value.ParameterId.IsValid)
+                    .Select(value => value.ParameterId) ??
+                Enumerable.Empty<PoseParameterId>());
             var covered = new HashSet<PoseParameterId>();
             for (int i = 0; i < policies.Count; i++)
             {
                 CharacterPoseParameterPolicy policy = policies[i];
                 if (policy == null ||
-                    !parameters.Contains(policy.ParameterId) ||
+                    !(parameters.Contains(policy.ParameterId) ||
+                      curveParameters.Contains(policy.ParameterId)) ||
                     !covered.Add(policy.ParameterId) ||
                     !Enum.IsDefined(
                         typeof(PoseParameterResolvePolicy),

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
+using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
@@ -15,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Has Gameplay Tag")]
     [NodePath("Base/Value/Gameplay Effect/Has Tag")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class HasGameplayTagNode : ValueNode
+    public sealed class HasGameplayTagNode : ValueNode, IGameplayTagAuthoring
     {
         [SerializeField, ShowInPanel("Tag")]
         GameplayTagId m_Tag;
@@ -35,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Match Gameplay Tag Query")]
     [NodePath("Base/Value/Gameplay Effect/Match Tag Query")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class MatchGameplayTagQueryNode : ValueNode
+    public sealed class MatchGameplayTagQueryNode : ValueNode, IGameplayTagQueryAuthoring
     {
         [SerializeField]
         GameplayTagQuery m_Query = new GameplayTagQuery();
@@ -55,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Read Gameplay Attribute")]
     [NodePath("Base/Value/Gameplay Effect/Read Attribute")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ReadGameplayAttributeNode : ValueNode
+    public sealed class ReadGameplayAttributeNode : ValueNode, IGameplayAttributeAuthoring
     {
         [SerializeField, ShowInPanel("Attribute")]
         GameplayAttributeId m_Attribute;
@@ -81,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Apply Gameplay Effect")]
     [NodePath("Base/Action/Gameplay Effect/Apply")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ApplyGameplayEffectNode : ActionNode
+    public sealed class ApplyGameplayEffectNode : ActionNode, IGameplayEffectApplicationAuthoring
     {
         [SerializeField, ShowInPanel("Effect")]
         GameplayEffectDefinition m_Effect;
@@ -115,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Remove Gameplay Effect")]
     [NodePath("Base/Action/Gameplay Effect/Remove")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class RemoveGameplayEffectNode : ActionNode
+    public sealed class RemoveGameplayEffectNode : ActionNode, IGameplayEffectRemovalAuthoring
     {
         [SerializeField, ShowInPanel("Selector")]
         GameplayEffectRemoveSelector m_Selector = GameplayEffectRemoveSelector.EffectId;

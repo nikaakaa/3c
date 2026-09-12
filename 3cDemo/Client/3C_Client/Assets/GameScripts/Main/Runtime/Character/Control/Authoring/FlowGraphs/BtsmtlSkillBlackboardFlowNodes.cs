@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using ParadoxNotion.Design;
+using ThirdPersonCharacter.Pipeline.Motion;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -24,11 +25,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool IsValid => !string.IsNullOrWhiteSpace(m_DeclarationId) && !string.IsNullOrWhiteSpace(m_OwnerId);
     }
 
-    public interface IBtsmtlSkillBlackboardAccessNode
+    public interface IBtsmtlSkillBlackboardAccessNode : ICharacterBlackboardAuthoring
     {
         BtsmtlSkillBlackboardReference Variable { get; }
-        Type ValueType { get; }
-        bool Writes { get; }
+        new Type ValueType { get; }
+        new bool Writes { get; }
     }
 
     public interface IBtsmtlSkillBlackboardReadNode : IBtsmtlSkillBlackboardAccessNode { }
@@ -47,6 +48,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         public BtsmtlSkillBlackboardReference Variable => m_Variable;
         public Type ValueType => typeof(T);
         public bool Writes => false;
+        public string DeclarationId => m_Variable.DeclarationId;
+        public string OwnerId => m_Variable.OwnerId;
 
         public void SetVariable(BtsmtlSkillBlackboardReference variable)
         {
@@ -114,6 +117,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         public UnityEngine.Object FactContext => m_FactContext;
         public abstract bool Writes { get; }
         public Type ValueType => ClrType(m_ValueType);
+        public string DeclarationId => m_Variable.DeclarationId;
+        public string OwnerId => m_Variable.OwnerId;
 
         public void Configure(BtsmtlSkillBlackboardReference variable, BtsmtlSkillBlackboardValueType type, UnityEngine.Object factContext)
         {

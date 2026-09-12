@@ -1,12 +1,13 @@
 using System;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.Pipeline.Motion;
 using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Input
 {
     [Serializable]
-    public abstract class CharacterInputValueInfoNode : ValueNode
+    public abstract class CharacterInputValueInfoNode : ValueNode, ICharacterInputValueAuthoring
     {
         [SerializeField, ShowInPanel("Input Value Id"), ReadOnly]
         string m_InputValueId;
@@ -18,10 +19,11 @@ namespace ThirdPersonCharacter.Pipeline.Input
         bool m_ReportedReadError;
 
         public string InputValueId => m_InputValueId;
+        public string InputId => m_InputValueId;
 
         public void BindInputValue(string inputValueId)
         {
-            m_InputValueId = inputValueId;
+            m_InputValueId = CharacterInputAuthoringRules.RequireInputId(inputValueId);
             ResetReports();
 #if UNITY_EDITOR
             OnNodeChangedCallback();
@@ -125,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
     [Serializable]
     [NodeView("PipelineBlackboardValueNodeView")]
-    public abstract class PipelineBlackboardValueInfoNode : ValueNode
+    public abstract class PipelineBlackboardValueInfoNode : ValueNode, ICharacterBlackboardAuthoring
     {
         [SerializeField]
         PipelineBlackboardVariableReference m_BlackboardVariable;
@@ -138,6 +140,10 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         public PipelineBlackboardVariableReference BlackboardVariable => m_BlackboardVariable;
         public abstract Type BlackboardValueType { get; }
+        public string DeclarationId => m_BlackboardVariable.DeclarationId;
+        public string OwnerId => m_BlackboardVariable.DeclarationOwnerId;
+        public Type ValueType => BlackboardValueType;
+        public bool Writes => false;
 
 #if UNITY_EDITOR
         public void ConfigureAuthoring(BaseExposedProperty declaration)
@@ -285,7 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [NodeName("Character Action Request Info")]
     [NodePath("Base/Value/Input/Action Request Info/Has Request")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class CharacterActionRequestInfoNode : ValueNode
+    public sealed class CharacterActionRequestInfoNode : ValueNode, ICharacterActionRequestAuthoring
     {
         [SerializeField, ShowInPanel("Request Id"), ReadOnly]
         string m_RequestId;
@@ -303,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         public void BindActionRequest(string requestId)
         {
-            m_RequestId = requestId;
+            m_RequestId = CharacterInputAuthoringRules.RequireInputId(requestId);
             ResetReports();
 #if UNITY_EDITOR
             OnNodeChangedCallback();
@@ -372,7 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [NodeName("Action Context Active Info")]
     [NodePath("Base/Value/Action/Context Active")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ActionContextActiveInfoNode : ValueNode
+    public sealed class ActionContextActiveInfoNode : ValueNode, IActionContextAuthoring
     {
         [SerializeField, ShowInPanel("Action Context")]
         ActionContextSlot m_ActionContext;

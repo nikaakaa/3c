@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.Timeline;
 using FlowCanvas;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using UnityEngine;
+using GameplayEffectDefinition = ThirdPersonGameplay.Effects.GameplayEffectDefinition;
+using GameplayEffectRemoveSelector = ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -34,6 +38,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("A skill node must belong to its formal authoring graph.", nameof(node));
             ValidateCharacterStateNode(node, m_ControlModuleId);
             ValidateProviderOwner(node, m_ControlModuleId, m_InputProviderOwnerId, m_GameplayProviderOwnerId);
+            foreach (BtsmtlSkillAuthoringFieldValue field in
+                     BtsmtlSkillGraphAuthoringMetadata.ReadFields(node))
+                if (!field.IsValid)
+                    throw new InvalidOperationException(
+                        $"Skill node '{node.UID}' field '{field.Field.FieldId.Value}' is invalid.");
             CharacterSimulationNodeEmission emission = Describe(node);
             BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract native);
             OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(emission.Code);
@@ -77,93 +86,119 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillStateOnEnterFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.StateOnEnter),
             BtsmtlSkillStateOnExitFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.StateOnExit),
             BtsmtlSkillStateRootCompletedFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.StateRootCompleted),
-            BtsmtlSkillStateExitCauseFlowNode cause => new CharacterSimulationNodeEmission(SimulationOperationCode.StateExitCause, integer0: (int)cause.Cause),
-            BtsmtlSkillLoopFlowNode loop => new CharacterSimulationNodeEmission(SimulationOperationCode.Loop, integer0: (int)loop.StopType),
+            BtsmtlSkillStateExitCauseFlowNode cause => new CharacterSimulationNodeEmission(SimulationOperationCode.StateExitCause, integer0: (int)Field<BtsmtlSkillStateExitCauseFlowNode, BtsmtlSkillStateExitCause>(cause, "cause")),
+            BtsmtlSkillLoopFlowNode loop => new CharacterSimulationNodeEmission(SimulationOperationCode.Loop, integer0: (int)Field<BtsmtlSkillLoopFlowNode, BtsmtlSkillLoopStopType>(loop, "stopType")),
             BtsmtlSkillTimelineHookFlowNode hook => new CharacterSimulationNodeEmission(SimulationOperationCode.TimelineEnter, integer0: (int)hook.Hook),
             BtsmtlSkillTimelineFlowNode timeline => new CharacterSimulationNodeEmission(SimulationOperationCode.Timeline,
-                integer0: (int)timeline.PlaybackMode, text0: timeline.Timeline?.AuthoringId,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(timeline.ActionContext)))),
-            BtsmtlSkillStateMachineFlowNode machine => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: machine.StateMachine?.AuthoringId),
-            BtsmtlSkillStateFlowNode state => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: state.Body?.AuthoringId),
+                integer0: (int)Field<BtsmtlSkillTimelineFlowNode, TimelinePlaybackMode>(timeline, "playbackMode"), text0: Field<BtsmtlSkillTimelineFlowNode, string>(timeline, "timelineId"),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillTimelineFlowNode, ActionContextSlot>(timeline, "actionContext"))))),
+            BtsmtlSkillStateMachineFlowNode machine => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: Field<BtsmtlSkillStateMachineFlowNode, string>(machine, "graphId")),
+            BtsmtlSkillStateFlowNode state => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: Field<BtsmtlSkillStateFlowNode, string>(state, "bodyGraphId")),
             BtsmtlSkillSequenceFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Sequence),
             BtsmtlSkillSelectorFlowNode => new CharacterSimulationNodeEmission(SimulationOperationCode.Selector),
-            BtsmtlSkillParallelFlowNode parallel => new CharacterSimulationNodeEmission(SimulationOperationCode.Parallel, integer0: (int)parallel.Mode),
-            BtsmtlSkillBooleanInputFlowNode input => Input(SimulationOperationCode.InputBoolean, input.InputId, input.ProviderOwnerId),
-            BtsmtlSkillScalarInputFlowNode input => Input(SimulationOperationCode.InputScalar, input.InputId, input.ProviderOwnerId),
-            BtsmtlSkillVector2InputFlowNode input => Input(SimulationOperationCode.InputVector2, input.InputId, input.ProviderOwnerId),
-            BtsmtlSkillInputMagnitudeFlowNode input => Input(SimulationOperationCode.InputVector2Magnitude, input.InputId, input.ProviderOwnerId),
-            BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, input.InputId, input.ProviderOwnerId),
+            BtsmtlSkillParallelFlowNode parallel => new CharacterSimulationNodeEmission(SimulationOperationCode.Parallel, integer0: (int)Field<BtsmtlSkillParallelFlowNode, BtsmtlSkillParallelMode>(parallel, "mode")),
+            BtsmtlSkillBooleanInputFlowNode input => Input(SimulationOperationCode.InputBoolean, Field<BtsmtlSkillBooleanInputFlowNode, string>(input, "inputId"), Field<BtsmtlSkillBooleanInputFlowNode, string>(input, "providerOwnerId")),
+            BtsmtlSkillScalarInputFlowNode input => Input(SimulationOperationCode.InputScalar, Field<BtsmtlSkillScalarInputFlowNode, string>(input, "inputId"), Field<BtsmtlSkillScalarInputFlowNode, string>(input, "providerOwnerId")),
+            BtsmtlSkillVector2InputFlowNode input => Input(SimulationOperationCode.InputVector2, Field<BtsmtlSkillVector2InputFlowNode, string>(input, "inputId"), Field<BtsmtlSkillVector2InputFlowNode, string>(input, "providerOwnerId")),
+            BtsmtlSkillInputMagnitudeFlowNode input => Input(SimulationOperationCode.InputVector2Magnitude, Field<BtsmtlSkillInputMagnitudeFlowNode, string>(input, "inputId"), Field<BtsmtlSkillInputMagnitudeFlowNode, string>(input, "providerOwnerId")),
+            BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, Field<BtsmtlSkillActionRequestFlowNode, string>(input, "inputId"), Field<BtsmtlSkillActionRequestFlowNode, string>(input, "providerOwnerId")),
             IBtsmtlSkillBlackboardReadNode blackboard => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.BlackboardGet, text0: blackboard.Variable.DeclarationId,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId))),
+                SimulationOperationCode.BlackboardGet, text0: Field<IBtsmtlSkillBlackboardReadNode, string>(blackboard, "declarationId"),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", Field<IBtsmtlSkillBlackboardReadNode, string>(blackboard, "ownerId")))),
             BtsmtlSkillBlackboardAccessFlowNode blackboard => new CharacterSimulationNodeEmission(
-                blackboard.Writes ? SimulationOperationCode.BlackboardSet : SimulationOperationCode.BlackboardGet,
-                integer0: blackboard.Writes ? 1 : 0, text0: blackboard.Variable.DeclarationId,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", blackboard.Variable.OwnerId),
-                    ("FactContext", CharacterSimulationNodeEmitterContext.AssetIdentity(blackboard.FactContext)))),
+                Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "accessMode") == "set" ? SimulationOperationCode.BlackboardSet : SimulationOperationCode.BlackboardGet,
+                integer0: Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "accessMode") == "set" ? 1 : 0,
+                text0: Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "declarationId"),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("DeclarationOwner", Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "ownerId")),
+                    ("FactContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillBlackboardAccessFlowNode, UnityEngine.Object>(blackboard, "factContext"))))),
             BtsmtlSkillMoveFacingAngleFlowNode move => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.MoveFacingAngle,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", move.ProviderOwnerId))),
-            BtsmtlSkillCharacterStateVector3FlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
-            BtsmtlSkillCharacterStateScalarFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
-            BtsmtlSkillCharacterStateYawFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
-            BtsmtlSkillCharacterStateBooleanFlowNode state => CharacterState(state.FieldId, state.ProviderOwnerId),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillMoveFacingAngleFlowNode, string>(move, "providerOwnerId")))),
+            BtsmtlSkillCharacterStateVector3FlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(state, "providerOwnerId")),
+            BtsmtlSkillCharacterStateScalarFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(state, "providerOwnerId")),
+            BtsmtlSkillCharacterStateYawFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateYawFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateYawFlowNode, string>(state, "providerOwnerId")),
+            BtsmtlSkillCharacterStateBooleanFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(state, "providerOwnerId")),
             BtsmtlSkillLocomotionFlowNode motion => CharacterSimulationMotionNodeEmitterRegistration.Locomotion(motion, motion.UID),
             BtsmtlSkillActionContextActiveFlowNode context => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(context.ActionContext)),
+                SimulationOperationCode.ActionContextActive, text0: CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillActionContextActiveFlowNode, ActionContextSlot>(context, "actionContext"))),
             BtsmtlSkillActionWindowActiveFlowNode window => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionWindowActive, text0: window.WindowType),
-            BtsmtlSkillCanActivateActionFlowNode action => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CanActivateAction,
-                text0: action.ActionProfile ? action.ActionProfile.ActionId : string.Empty,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(action.ActionProfile)),
-                    ("TargetSnapshotDeclaration", action.TargetSnapshotDeclarationId),
-                    ("TargetSnapshotOwner", action.TargetSnapshotOwnerId))),
+                SimulationOperationCode.ActionWindowActive, text0: Field<BtsmtlSkillActionWindowActiveFlowNode, string>(window, "windowType")),
+            BtsmtlSkillCanActivateActionFlowNode action => CanActivate(action),
             BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.SubmitActionLifecycle,
-                integer0: (int)lifecycle.TransitionType,
-                text0: lifecycle.Reason,
+                integer0: (int)Field<BtsmtlSkillSubmitActionLifecycleFlowNode, ActionLifecycleTransitionType>(lifecycle, "transitionType"),
+                text0: Field<BtsmtlSkillSubmitActionLifecycleFlowNode, string>(lifecycle, "reason"),
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(lifecycle.ActionContext)))),
+                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillSubmitActionLifecycleFlowNode, ActionContextSlot>(lifecycle, "actionContext"))))),
             BtsmtlSkillGameplayTagFlowNode tag => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectHasTag,
-                text0: TagIdentity(tag.Tag.Value),
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", tag.ProviderOwnerId))),
+                text0: TagIdentity(Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "tagId")),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "providerOwnerId")))),
             BtsmtlSkillGameplayTagQueryFlowNode query => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectMatchTags,
-                constants: QueryFields(query.Query, "Query", query.ProviderOwnerId)),
+                constants: QueryFields(Field<BtsmtlSkillGameplayTagQueryFlowNode, GameplayTagQuery>(query, "query"), "Query", Field<BtsmtlSkillGameplayTagQueryFlowNode, string>(query, "providerOwnerId"))),
             BtsmtlSkillGameplayAttributeFlowNode attribute => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayAttributeRead,
-                text0: AttributeIdentity(attribute.Attribute.Value),
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", attribute.ProviderOwnerId))),
+                text0: AttributeIdentity(Field<BtsmtlSkillGameplayAttributeFlowNode, string>(attribute, "attributeId")),
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayAttributeFlowNode, string>(attribute, "providerOwnerId")))),
             BtsmtlSkillApplyGameplayEffectFlowNode apply => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectApply,
-                text0: EffectIdentity(apply.Effect ? apply.Effect.EffectId.Value : string.Empty),
+                text0: EffectIdentity(EffectId(Field<BtsmtlSkillApplyGameplayEffectFlowNode, GameplayEffectDefinition>(apply, "effect"))),
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("DefinitionRevision", apply.Effect ? apply.Effect.DefinitionRevision : 0U),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(apply.ActionContext)),
-                    ("Predicted", apply.Predicted),
-                    ("ProviderOwner", apply.ProviderOwnerId))),
+                    ("DefinitionRevision", DefinitionRevision(Field<BtsmtlSkillApplyGameplayEffectFlowNode, GameplayEffectDefinition>(apply, "effect"))),
+                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillApplyGameplayEffectFlowNode, ActionContextSlot>(apply, "actionContext"))),
+                    ("Predicted", Field<BtsmtlSkillApplyGameplayEffectFlowNode, bool>(apply, "predicted")),
+                    ("ProviderOwner", Field<BtsmtlSkillApplyGameplayEffectFlowNode, string>(apply, "providerOwnerId")))),
             BtsmtlSkillRemoveGameplayEffectFlowNode remove => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectRemove,
-                integer0: (int)remove.Selector,
+                integer0: (int)Field<BtsmtlSkillRemoveGameplayEffectFlowNode, GameplayEffectRemoveSelector>(remove, "selector"),
                 constants: RemoveEffectFields(remove)),
             _ => throw new InvalidOperationException($"Skill node '{node.GetType().Name}' has no leaf emission contract.")
             };
         }
 
+        static TValue Field<TNode, TValue>(TNode node, string fieldId) =>
+            (TValue)BtsmtlSkillGraphAuthoringMetadata.ReadField(
+                (FlowNode)(object)node,
+                fieldId);
+
+        static CharacterSimulationNodeEmission CanActivate(
+            BtsmtlSkillCanActivateActionFlowNode node)
+        {
+            ActionProfile profile = Field<BtsmtlSkillCanActivateActionFlowNode, ActionProfile>(node, "actionProfile");
+            BtsmtlSkillTargetSnapshotReference snapshot =
+                Field<BtsmtlSkillCanActivateActionFlowNode, BtsmtlSkillTargetSnapshotReference>(node, "targetSnapshot");
+            return new CharacterSimulationNodeEmission(
+                SimulationOperationCode.CanActivateAction,
+                text0: profile ? profile.ActionId : string.Empty,
+                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(profile)),
+                    ("TargetSnapshotDeclaration", snapshot.DeclarationId),
+                    ("TargetSnapshotOwner", snapshot.OwnerId)));
+        }
+
         static IReadOnlyList<KeyValuePair<string, object>> RemoveEffectFields(BtsmtlSkillRemoveGameplayEffectFlowNode node)
         {
+            GameplayEffectDefinition effect =
+                Field<BtsmtlSkillRemoveGameplayEffectFlowNode, GameplayEffectDefinition>(node, "effect");
             var fields = new List<KeyValuePair<string, object>>
             {
-                new KeyValuePair<string, object>("Handle", node.Handle),
-                new KeyValuePair<string, object>("Effect", EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty)),
-                new KeyValuePair<string, object>("ProviderOwner", node.ProviderOwnerId)
+                new KeyValuePair<string, object>("Handle", Field<BtsmtlSkillRemoveGameplayEffectFlowNode, ulong>(node, "handle")),
+                new KeyValuePair<string, object>("Effect", EffectIdentity(EffectId(effect))),
+                new KeyValuePair<string, object>("ProviderOwner", Field<BtsmtlSkillRemoveGameplayEffectFlowNode, string>(node, "providerOwnerId"))
             };
-            fields.AddRange(QueryFields(node.EffectTagQuery, "Query", node.ProviderOwnerId));
+            fields.AddRange(QueryFields(
+                Field<BtsmtlSkillRemoveGameplayEffectFlowNode, GameplayTagQuery>(node, "query"),
+                "Query",
+                Field<BtsmtlSkillRemoveGameplayEffectFlowNode, string>(node, "providerOwnerId")));
             return fields;
         }
+
+        static string EffectId(GameplayEffectDefinition effect) =>
+            effect ? effect.EffectId.Value : string.Empty;
+
+        static uint DefinitionRevision(GameplayEffectDefinition effect) =>
+            effect ? effect.DefinitionRevision : 0U;
 
         static IReadOnlyList<KeyValuePair<string, object>> QueryFields(
             GameplayTagQuery query,
@@ -216,20 +251,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             string field = node switch
             {
-                BtsmtlSkillCharacterStateVector3FlowNode value => value.FieldId,
-                BtsmtlSkillCharacterStateScalarFlowNode value => value.FieldId,
-                BtsmtlSkillCharacterStateYawFlowNode value => value.FieldId,
-                BtsmtlSkillCharacterStateBooleanFlowNode value => value.FieldId,
+                BtsmtlSkillCharacterStateVector3FlowNode value => Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(value, "fieldId"),
+                BtsmtlSkillCharacterStateScalarFlowNode value => Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(value, "fieldId"),
+                BtsmtlSkillCharacterStateYawFlowNode value => Field<BtsmtlSkillCharacterStateYawFlowNode, string>(value, "fieldId"),
+                BtsmtlSkillCharacterStateBooleanFlowNode value => Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(value, "fieldId"),
                 _ => string.Empty
             };
             if (string.IsNullOrEmpty(field))
                 return;
             string owner = node switch
             {
-                BtsmtlSkillCharacterStateVector3FlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateScalarFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateYawFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateBooleanFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillCharacterStateVector3FlowNode value => Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateScalarFlowNode value => Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateYawFlowNode value => Field<BtsmtlSkillCharacterStateYawFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateBooleanFlowNode value => Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(value, "providerOwnerId"),
                 _ => string.Empty
             };
             bool valid = node switch
@@ -252,17 +287,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             string owner = node switch
             {
-                BtsmtlSkillMoveFacingAngleFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateVector3FlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateScalarFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateYawFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillCharacterStateBooleanFlowNode value => value.ProviderOwnerId,
-                IBtsmtlSkillInputNode value => value.ProviderOwnerId,
-                BtsmtlSkillGameplayTagFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillGameplayTagQueryFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillGameplayAttributeFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillApplyGameplayEffectFlowNode value => value.ProviderOwnerId,
-                BtsmtlSkillRemoveGameplayEffectFlowNode value => value.ProviderOwnerId,
+                BtsmtlSkillMoveFacingAngleFlowNode value => Field<BtsmtlSkillMoveFacingAngleFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateVector3FlowNode value => Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateScalarFlowNode value => Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateYawFlowNode value => Field<BtsmtlSkillCharacterStateYawFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillCharacterStateBooleanFlowNode value => Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(value, "providerOwnerId"),
+                IBtsmtlSkillInputNode value => Field<IBtsmtlSkillInputNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillGameplayTagFlowNode value => Field<BtsmtlSkillGameplayTagFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillGameplayTagQueryFlowNode value => Field<BtsmtlSkillGameplayTagQueryFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillGameplayAttributeFlowNode value => Field<BtsmtlSkillGameplayAttributeFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillApplyGameplayEffectFlowNode value => Field<BtsmtlSkillApplyGameplayEffectFlowNode, string>(value, "providerOwnerId"),
+                BtsmtlSkillRemoveGameplayEffectFlowNode value => Field<BtsmtlSkillRemoveGameplayEffectFlowNode, string>(value, "providerOwnerId"),
                 _ => string.Empty
             };
             if (string.IsNullOrEmpty(owner))

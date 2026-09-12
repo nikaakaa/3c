@@ -128,8 +128,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             menu.AddDisabledItem(new GUIContent(
                 $"范围: {CharacterPoseParameterAccess.ScopeDisplayName(access.Scope)}"));
             menu.AddDisabledItem(new GUIContent(
-                $"Owner: {access.OwnerIdentity}"));
-            menu.AddDisabledItem(new GUIContent(
                 $"使用: {ParameterConsumerCount(access.ParameterId)} 个节点"));
             menu.AddSeparator("");
             menu.AddDisabledItem(new GUIContent("拖拽变量以创建 Get 节点"));

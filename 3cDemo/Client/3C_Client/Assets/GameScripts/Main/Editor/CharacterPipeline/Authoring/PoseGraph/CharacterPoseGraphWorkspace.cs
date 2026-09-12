@@ -578,11 +578,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (ReferenceEquals(graph, m_Asset.Graph))
                 return "Root Pose Graph";
             if (graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer)
-                return $"{graph.GraphId} Animation Layer";
+                return "Animation Layer";
             if (graph.Role == CharacterPoseAuthoringGraphRole.ControlRig)
-                return $"{graph.GraphId} Control Rig";
+                return "Control Rig";
             if (graph.Role == CharacterPoseAuthoringGraphRole.TransitionRule)
-                return $"{graph.GraphId} Transition Rule";
+                return "Transition Rule";
             string[] stateNames = m_Asset.EnumerateStateMachines()
                 .SelectMany(value => value.States)
                 .Where(value => value.PoseGraphId == graph.GraphId)

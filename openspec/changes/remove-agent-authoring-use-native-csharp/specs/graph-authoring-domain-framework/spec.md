@@ -54,6 +54,16 @@ Graph Authoring Domain Framework MUST只理解稳定作者identity、typed paylo
 
 ## ADDED Requirements
 
+### Requirement: 图代码导出必须复用正式对象与配置合同
+
+正式Graph代码导出 MUST读取当前领域对象、metadata、端口与引用合同，输出对应正式创建和配置调用。导出所需的支持判定、字段读取、依赖/身份、特殊值表达、连接与根挂接 MUST由该领域薄适配提供，公共输出只处理依赖排序、对象变量和C#表达式；系统 MUST不建立第二套节点/字段/owner模型，不先构造Agent JSON或读取旧源码。生成代码 MUST与人工交互共用同一业务规则；缺少任何正式内容的完整输出支持 MUST明确失败，不能通过修改共享定义或省略内容绕过。
+
+#### Scenario: 新增正式节点配置
+
+- **WHEN** 某节点通过正式领域合同增加一个作者配置
+- **THEN** 图导出 MUST从该合同及对应配置调用表达该字段
+- **AND** 若尚无完整输出方式 MUST明确拒绝导出，不静默使用默认值或另建Agent字段表
+
 ### Requirement: Authoring Capability Catalog必须是人工与C#作者共享的唯一语义目录
 
 唯一Framework MUST继续通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、固定端口、条件`portVariants`、动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider与Mutation入口。Pose领域 MUST由唯一`CharacterPoseNodeDefinitionModule`为每个正式Node Kind集中声明Payload、字段、端口、Graph Role、Execution Domain、Operation Family、Graph dependency、局部校验与typed lowering，并向共享Capability投影同一节点局部语义；Capability MUST不再保存与Pose Definition重复的Compiler Handler或布尔能力矩阵。

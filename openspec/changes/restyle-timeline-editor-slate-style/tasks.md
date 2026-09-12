@@ -32,10 +32,10 @@
 
 ## 4. 帧几何
 
-- [ ] 4.1 由正式 Session FrameRate 提供统一像素/帧/Slate秒换算，删除嵌入路径对 Slate 全局 FPS/timeStepMode/snapInterval 的时间权威依赖
-- [ ] 4.2 标尺、游标输入、逐帧、Clip/Section 拖动与裁剪使用整数帧；区分一帧移动与关键帧跳转
+- [x] 4.1 由正式 Session FrameRate 提供统一像素/帧/Slate秒换算，删除嵌入路径对 Slate 全局 FPS/timeStepMode/snapInterval 的时间权威依赖
+- [x] 4.2 标尺、游标输入、逐帧、Clip/Section 拖动与裁剪使用整数帧；区分一帧移动与关键帧跳转
 - [ ] 4.3 按 Curve descriptor domain 换算 key time/tangent，保留未编辑 key、weight、WeightedMode 和 wrap，不全量量化资产
-- [ ] 4.4 内容终点使用真实 MaxFrame，移除最少一秒和额外一秒；显示全部只改变视窗，终点线不提供无正式数据对应的编辑
+- [x] 4.4 内容终点使用真实 MaxFrame，移除最少一秒和额外一秒；显示全部只改变视窗，终点线不提供无正式数据对应的编辑
 
 ## 5. GUI 布局和生命周期
 

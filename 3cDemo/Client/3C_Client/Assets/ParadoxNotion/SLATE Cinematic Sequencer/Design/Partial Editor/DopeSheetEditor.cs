@@ -289,10 +289,11 @@ namespace Slate
                         GUIUtility.hotControl = controlID;
                         var lastTime = currentTimes[pickIndex];
                         var newTime = PosToTime(e.mousePosition.x);
-                        newTime = Mathf.Round(newTime / Prefs.snapInterval) * Prefs.snapInterval;
+                        var snapInterval = CutsceneEditorSurface.CurrentSnapInterval;
+                        newTime = Mathf.Round(newTime / snapInterval) * snapInterval;
                         newTime = Mathf.Clamp(newTime, startTime, startTime + length);
                         if ( e.shift || Prefs.rippleMode ) {
-                            var max = pickIndex > 0 ? currentTimes[pickIndex - 1] + Prefs.snapInterval : startTime;
+                            var max = pickIndex > 0 ? currentTimes[pickIndex - 1] + snapInterval : startTime;
                             newTime = Mathf.Max(newTime, max);
                             for ( var i = 0; i < currentTimes.Count; i++ ) {
                                 if ( currentTimes[i] > lastTime ) {

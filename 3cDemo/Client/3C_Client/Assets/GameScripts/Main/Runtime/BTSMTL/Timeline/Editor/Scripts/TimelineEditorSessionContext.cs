@@ -177,7 +177,8 @@ namespace BTSMTL.Timeline.Editor
             string serializedPropertyPath,
             string ownershipLabel,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding,
-            TimelineEditorToolCatalog toolCatalog)
+            TimelineEditorToolCatalog toolCatalog,
+            TimelineContractCatalog contractCatalog)
         {
             Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             SerializedOwner = serializedOwner ? serializedOwner : throw new ArgumentNullException(nameof(serializedOwner));
@@ -187,6 +188,7 @@ namespace BTSMTL.Timeline.Editor
             OwnershipLabel = ownershipLabel ?? string.Empty;
             RuntimeDebugBinding = runtimeDebugBinding;
             ToolCatalog = toolCatalog ?? TimelineEditorToolCatalog.Empty;
+            ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
         }
 
         public TimelineData Timeline { get; }
@@ -195,6 +197,7 @@ namespace BTSMTL.Timeline.Editor
         public string OwnershipLabel { get; }
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding { get; }
         public TimelineEditorToolCatalog ToolCatalog { get; }
+        public TimelineContractCatalog ContractCatalog { get; }
     }
 
     public sealed class TimelineEditorSessionContext :

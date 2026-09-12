@@ -201,6 +201,8 @@ namespace BTSMTL.Timeline.Editor
         public float CameraResponseEaseIn;
         [AnimatableParameter("Camera Response Ease Out", 0f, 1f)]
         public float CameraResponseEaseOut;
+        [AnimatableParameter("Scene Presentation Value")]
+        public float ScenePresentationValue;
 
         public override float length
         {
@@ -355,6 +357,8 @@ namespace BTSMTL.Timeline.Editor
                 return nameof(CameraResponseEaseIn);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut)
                 return nameof(CameraResponseEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.ScenePresentationValue)
+                return nameof(ScenePresentationValue);
             throw new InvalidOperationException($"Timeline curve channel '{channelId}' has no Slate proxy field.");
         }
     }

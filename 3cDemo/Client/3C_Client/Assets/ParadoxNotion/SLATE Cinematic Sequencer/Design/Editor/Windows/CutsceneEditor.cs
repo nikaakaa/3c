@@ -1432,6 +1432,10 @@ namespace Slate
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
             if (GUILayout.Button("+ Track", EditorStyles.toolbarButton, GUILayout.Width(62)))
                 embeddedAddTrack?.Invoke();
+            if (GUILayout.Button("‹", EditorStyles.toolbarButton, GUILayout.Width(24)))
+                StepBackward();
+            if (GUILayout.Button("›", EditorStyles.toolbarButton, GUILayout.Width(24)))
+                StepForward();
             if (GUILayout.Button("Fit", EditorStyles.toolbarButton, GUILayout.Width(36)))
             {
                 viewTimeMin = 0f;

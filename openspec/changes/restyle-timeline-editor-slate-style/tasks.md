@@ -15,7 +15,7 @@
 
 ## 2. 投影和数据编辑收口
 
-- [ ] 2.1 对齐 Clip/Section/Curve 全部显示与 domain 映射，尤其 Motion CurveEndFrame 和真实内容终点；未支持字段明确报告
+- [x] 2.1 对齐 Clip/Section/Curve 全部显示与 domain 映射，包含 Motion CurveEndFrame、Scene Presentation valueCurve 和真实内容终点；未支持字段明确报告
 - [x] 2.2 将正式 selection、属性、TreeClip ownership/下钻和 AnimationClip 资源导航接入同一 adapter，不仅保存在临时名称中
 - [x] 2.3 完成有效手势 begin/commit/cancel 与 source revision 校验；选择/游标/缩放不生成 mutation，不因每次 MouseUp 重建
 - [x] 2.4 完成 diff -> Session -> 正式 owner 的校验/提交/刷新；拒绝操作给出原因，删除 Unsupported 静默吞修改路径
@@ -41,7 +41,7 @@
 
 - [x] 5.1 合并文档名/ownership/来源，工具栏统一高度；清掉重复标题和隐藏控件的空白占位
 - [ ] 5.2 一次计算工具栏、搜索、缩放、标尺、左右轨道、属性区域；背景/分隔线/裁剪/命中共用结果
-- [ ] 5.3 左右共同行高度与垂直滚动，曲线展开同步；属性区可收起/调高，窄窗口次要操作折叠
+- [x] 5.3 左右共同行高度与垂直滚动，曲线展开同步；属性区可收起/调高，窄窗口自动收起属性区
 - [x] 5.4 删除临时 Auto、“作者预览”、无关 Actor/Director/Render 和未映射菜单；曲线入口不再拼入 Track 名
 - [x] 5.5 根据完整堆栈修复重复序列化字段、GUI 和 proxy 生命周期异常，销毁时释放临时宿主/选择/回调，不隐藏错误代替处理
 

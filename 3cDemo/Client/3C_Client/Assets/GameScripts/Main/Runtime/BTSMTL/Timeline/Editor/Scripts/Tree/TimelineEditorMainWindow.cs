@@ -160,9 +160,22 @@ namespace BTSMTL.Timeline.Editor
 
         public void CreateGUI()
         {
+            rootVisualElement.RegisterCallback<GeometryChangedEvent>(OnRootGeometryChanged);
             TryRestoreBinding();
             if (m_SlateProjection == null)
                 BuildUnboundView();
+        }
+
+        void OnRootGeometryChanged(GeometryChangedEvent evt)
+        {
+            if (evt.newRect.width < 600f || evt.newRect.height < 360f)
+            {
+                if (!m_DetailsCollapsed)
+                {
+                    m_DetailsCollapsed = true;
+                    ApplyDetailsVisibility();
+                }
+            }
         }
 
         void OnEnable()

@@ -49,6 +49,8 @@ namespace BTSMTL.Timeline.Editor
                 BuildCameraResponse(cameraResponse);
             else if (m_Clip is ActionCueClip actionCue)
                 BuildActionCue(actionCue);
+            else if (m_Clip is ScenePresentationParameterCurveClip sceneParameter)
+                BuildScenePresentation(sceneParameter);
         }
 
         void BuildMotionCurve(MotionCurveClip clip)
@@ -113,6 +115,14 @@ namespace BTSMTL.Timeline.Editor
         {
             AddText("Cue Id", clip.CueId, value => Modify("Set Action Cue Id", () => clip.CueId = value));
             AddText("Cue Type", clip.CueType, value => Modify("Set Action Cue Type", () => clip.CueType = value));
+        }
+
+        void BuildScenePresentation(ScenePresentationParameterCurveClip clip)
+        {
+            AddText("Target Binding", clip.TargetBindingId, value => Modify("Set Scene Target Binding", () =>
+                clip.ConfigureBindings(value, clip.ParameterBindingId, clip.ValueCurve)));
+            AddText("Parameter Binding", clip.ParameterBindingId, value => Modify("Set Scene Parameter Binding", () =>
+                clip.ConfigureBindings(clip.TargetBindingId, value, clip.ValueCurve)));
         }
 
         void Modify(string name, Action action)

@@ -104,6 +104,14 @@ namespace BTSMTL.Timeline
 #endif
         }
 
+        public void SetValueCurve(AnimationCurve valueCurve)
+        {
+            m_ValueCurve = valueCurve ?? throw new ArgumentNullException(nameof(valueCurve));
+#if UNITY_EDITOR
+            OnNameChanged?.Invoke();
+#endif
+        }
+
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
 

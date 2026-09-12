@@ -57,6 +57,8 @@
 
 ## 6. 作者窗口与真实运行观察
 
+2026-09-12 联合规划：用户要求预览窗口随 Timeline 一起实施。窗口布局、技能/纯 Timeline 入口、实际 SkillGraph 宿主、双向导航、采用状态、历史面板统一按 [Timeline 预览联动计划](../restyle-timeline-editor-slate-style/preview-integration-plan.md) 的 P1–P5 排期；本清单保留运行 owner 内部任务，Timeline 第9节负责联动集成。既有勾选不表示最新 FlowCanvas 宿主或完整联动已经通过验收，不因计划更新补勾实现项。
+
 - [x] 6.0 将 Scene Play Start/Pause/Resume/Reset/Stop、Build、Skill、Live Debug、Capture、History、Restore 和 Replay 从 Timeline toolbar 移入共享 Graph Shell/SkillGraph 控制面；Timeline 只保留 Slate authoring Surface、Mutation/Undo 和被动 Runtime Trace overlay，并在同一 Session 内保持可编辑。代码提交 `ab2498864`。
 - [ ] 6.1 在共享Graph Shell/技能工作区装配领域提供的场景操作与目标表面，角色控制显示配置与代码来源、技能显示Root/子图，独立内容消费其作者入口；保留现有交互组件，不在外壳新增角色必需检查或恢复已退役领域。
 - [x] 6.2 将inline/shared Timeline的运行观察改为被动消费 Graph Shell 建立的正式 binding；技能观察ActionInstance/调用路径/generation/playback/cycle，独立内容消费正式owner/播放identity/调用点/generation与来源；Timeline 不提交 Scene Play 命令、不拥有窗口 evaluator 或独立 clock，内容与独立根入口仍归Timeline owner。代码提交 `ab2498864`。

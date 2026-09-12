@@ -10,6 +10,9 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 
 ## What Changes
 
+- 用户后续要求预览窗口随 Timeline 联合实施：增加 preview-integration-plan.md 作为唯一跨窗口体验与联合排期入口，覆盖 SkillGraph 预览分组布局、技能/纯 Timeline 两类正式入口、实例选择、双向导航、运行标记、编辑后采用以及历史/恢复/回放交互。
+- 复用现有场景协调器和正式运行 owner；Timeline 扩展本地观察/导航，不复制运行命令。实际 FlowCanvas SkillGraph 宿主必须接入，不能仅在旧 BaseTreeWindow 上显示工具条便宣称技能预览可用。
+
 - 2026-09-12 收口范围：新增/属性编辑、统一整数帧、整体 GUI 布局、曲线与视图状态恢复必须共同完成；已有投影和编译通过不代表这些能力已交付。
 - 将重复的文档/来源/ownership 行合并，明确工具栏、搜索/标尺、左右同步轨道和可收起底部属性区；背景、裁剪与命中使用同一布局结果，窄窗口次要操作折叠。
 - 标尺、游标、逐帧、Clip/Section 和曲线时间编辑使用正式 Timeline FrameRate；不读取 Slate 全局 FPS 作为 BTSMTL 时间权威，不将作者帧擅自等同于 Runtime Logic Tick。
@@ -46,6 +49,7 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 ## Impact
 
 - 本次只更新现有 change，并同步修正场景预览 delta 的“结构只读”冲突；不安装未完成的 active delta 到 current specs，不把文档更新当成实施或验收完成。
+- 联合实施消费 rebuild-btsmtl-preview-with-scene-play 原任务的公开合同；共享预览 UI 与接线纳入本次交付，底层启动、adoption、checkpoint 和领域执行仍由原 owner 实现，具体映射见预览联动计划。
 - 实施在主线单线推进，已有预览 worktree 仅作历史/未集成内容参考，不自动双写。具体行为、业务取舍和完成标准见 design.md。
 
 - 主要入口：`Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Editor/Scripts/Tree/TimelineEditorMainWindow.cs` 和 Timeline editor open request composition。

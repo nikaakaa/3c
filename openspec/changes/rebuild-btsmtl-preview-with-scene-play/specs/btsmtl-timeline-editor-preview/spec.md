@@ -122,6 +122,50 @@ Timeline Live Debug MUST从正式 provider 显示实际播放 identity/generatio
 
 ## ADDED Requirements
 
+### Requirement: 共享预览表面必须按作者任务分组并接入实际技能宿主
+
+共享预览表面 MUST在实际 SkillGraph/Graph Shell 宿主提供场景/目标、常用运行控制、技能或合法独立调用、Build/采用状态、运行观察和默认折叠历史区域。主控制栏 MUST不堆放 Restore/Replay Tick 输入。实际 FlowCanvas SkillGraph 和已有 Graph Shell MUST复用同一 operations/status presenter，不分别创建协调器。画面 MUST来自正式 Game/Scene 结果，不新增私有渲染播放器。
+
+#### Scenario: 打开实际SkillGraph
+
+- **WHEN** 作者打开项目当前正式 SkillGraph 编辑器
+- **THEN** 预览入口 MUST在该宿主可达，不要求改开旧 BaseTreeWindow
+- **AND** 开始场景与执行技能 MUST分为语义明确的操作，请求拒绝 MUST显示正式原因
+
+#### Scenario: 窗口变窄
+
+- **WHEN** 宿主宽度不足显示全部预览工具
+- **THEN** 同组控件 MUST换行或将次要工具折叠，暂停/继续 MUST固定占位
+- **AND** 主图、标签和输入 MUST不重叠，折叠 MUST不改变运行状态
+
+#### Scenario: 选择未打开的预览场景
+
+- **WHEN** 作者选择一个正式 SceneAsset 并请求开始
+- **THEN** 系统 MUST沿唯一启动器加载并按本次请求和登记 context 解析目标
+- **AND** MUST不要求先手动打开该场景拖入 Context GameObject，不猜测其它场景首个目标
+
+### Requirement: 历史浏览与真实恢复必须有独立操作和完成反馈
+
+历史位置 MUST只读浏览正式记录；诊断 Capture、端口值采集、输入录制 MUST分别说明。恢复并继续及输入回放 MUST消费既有 owner 的 checkpoint、版本、目标能力和区间验证。刷新 MUST不覆盖作者正在输入或已选择的 Tick/区间；命令 Accepted MUST不冒充已恢复完成。能力不足 MUST显示原因并保留对应未完成能力记录。
+
+#### Scenario: 新诊断数据到达
+
+- **WHEN** 作者正在编辑恢复 Tick 或回放区间时收到新的历史记录
+- **THEN** UI MUST保留输入和选择，仅更新只读数据与有效性
+- **AND** 只有首次进入或明确使用最新范围时 MAY初始化字段
+
+#### Scenario: 查看历史后恢复
+
+- **WHEN** 作者先浏览一个历史位置，再明确执行恢复并继续
+- **THEN** 浏览阶段 MUST不改现场，执行阶段 MUST核对所选位置的完整 Simulation/Presentation 能力和记录
+- **AND** UI MUST显示实际 checkpoint、目标 Tick、新执行分支及正式完成/失败结果，不能仅因历史非空而启用任意恢复
+
+#### Scenario: 纯Timeline调用方无角色恢复合同
+
+- **WHEN** 非 Skill 正式调用方没有相应恢复或输入回放能力
+- **THEN** UI MUST给出该调用方的缺失原因
+- **AND** MUST不要求创建假 Character Session 或通过 Timeline 游标执行替代恢复
+
 ### Requirement: Timeline必须区分作者编辑与真实运行观察
 
 Timeline 页面 MUST明确区分编辑游标、当前正式运行标记和 Capture 历史位置。场景预览和外部 Live MUST复用正式增量诊断与窗口本地运行绑定；运行观察内容 MUST只读。领域允许的作者调参 MUST位于明确的作者字段，通过共享 Mutation 和该领域精确运行目标的正式参数端口执行，不能修改观察字段或其它窗口绑定。非 Skill 没有局内更新合同时 MUST要求正式构建采用，不借用 Actor Pose 参数端口。

@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-12 联合实施修订：按用户要求，预览窗口与 Timeline 的 GUI/接线由 [Timeline 预览联动计划](../restyle-timeline-editor-slate-style/preview-integration-plan.md) 统一排期，复用本 change 的正式场景操作和运行 owner。本文件中的 v5 迁移名称属于历史基线；实际接线必须消费主线当前正式发布的 Document/Capability，不恢复旧 reader，也不预先实现未发布 schema。下述作者编辑、同 Session 采用和正式历史恢复条款按本次修订统一。
+
 动机和范围见 `proposal.md`。2026-09-05 修订以已确认的角色代码控制、技能 Root、唯一 ActionInstance 和 Document v5 为目标接口，并消费已批准的 Timeline 非 Skill 独立使用方向。主重构与 Timeline 接口仍在实施，本文件不把目标表述为已安装事实。场景运行编排由本 change 独立拥有，非 Skill 内容执行不在本 change 的实现范围。
 
 ### 迁移前代码观察
@@ -47,7 +49,7 @@
 
 - 控制 FSM、技能 Root/Program、ActionInstance、状态 ABI 与 Document v5 的迁移由主重构提供；本 change 消费新合同，不复制其编译器、解释器、发布和恢复逻辑，不重写正确的 Motion/KCC/Pose/IK/相机/渲染算法。
 - 共用 Timeline 内容编译、独立 Build 根、非 Skill 执行生命周期/状态/输出和正式样例由 Timeline change 提供；预览不实现 Advance、TreeClip 调度或独立领域输出，也不通过假角色复用角色播放器。
-- 不添加任意时间 seek、Gameplay 倒放、状态快照恢复或新的输入录制格式。已有 Capture 历史仍只读浏览。
+- 不添加任意时间 seek、Gameplay 倒放、窗口私有快照恢复或新的输入录制格式。Capture 历史浏览保持只读；已有正式 Session checkpoint/Presentation restore 与输入回放合同按目标能力提供明确命令，缺少完整能力时报告原因，不能从 UI 补实现。
 - 不实现 C# 热更新，不安装插件，不自动关闭 Domain Reload 或 Scene Reload，不承诺启动毫秒数。
 - 不修补 TrainingEnemy，不实现缺失的战斗或表现 consumer，不在本变更启动网络进程、匹配或多实例联调。
 - 原生 Animation Window 的素材与注册曲线编辑、Blend Space 采样点/几何绘制仍是作者数据工具，不归入待删除的完整角色播放器。
@@ -181,13 +183,13 @@ flowchart LR
     F --> G[只读运行状态确认采用]
 ```
 
-SkillDefinition/技能参数、控制 binding/配置虽然在 v5 中可写，也不自动等于运行可热更新；技能 Program、控制代码语义/状态 schema 与 Session 已锁定的目录仍须正式 Build/发布后由新 Session 采用。主重构没有承诺局内无损换代码或换技能模板，预览不得添加该路径。现有 Pose 参数采用按其原作用域接入；控制运行 State、ActionInstance 进度、技能调用 frame 与生成数据只读。
+SkillDefinition/技能参数、控制 binding/配置可写不自动等于运行可热更新。已有正式参数端口按原作用域采用；内容结构经 Build/发布，由正式 compatibility 与 ProgramEpoch adoption 报告决定在同 Session 的边界或下一次 Action 采用。只有正式合同明确要求重启、C# 代码/运行环境变化时才显示重启要求，不因普通作者编辑一律创建新 Session。控制运行 State、ActionInstance 进度、技能调用 frame 与生成数据只读，预览不实现无损换代码或私有目录迁移。
 
 角色 Pose 候选必须携带准确 Actor、已发布角色运行包/Projection、正式参数布局、稳定作者 owner 和候选 generation；运行侧复用现有 `CharacterPoseTuningCoordinator`，不修改共享 Program Image、Execution View 或静态 Projection。非 Skill 作者字段消费同一 v5/Mutation 体系与该领域的采用资格；没有正式局内更新合同的字段只提供构建采用，不借用 Actor Pose 调参端口。输入合法但运行应用失败时，作者修改与 Undo 仍成立，运行保持上一份已提交参数，UI 显示“作者数据已修改，运行未应用”及原因，不回退用户编辑。
 
 UI 使用业务状态“已修改作者参数”“等待下一帧／下一次激活”“运行已采用”“需要构建”“运行应用失败”；revision/hash/generation 只在折叠 Diagnostics 中提供。单纯收到提交成功不能显示已生效，必须等待运行端确认。暂停期间可以保存作者参数，但只显示待生效，不在 Inspector 绘制中主动执行一帧。
 
-Undo/Redo 同样从真实作者数据生成新候选，不从缓存恢复运行对象。共享 Profile 只提交到明确选中的 Actor，其它 Actor 不被暗中更新；资产的默认值对后续 Build 和运行有效，当前其它 Actor 的采用状态必须单独显示。结构修改、布局改变或外部资产变更导致已发布拓扑不匹配时，停止相应的可执行预览并要求显式构建，不能把它当成参数变更绕过。
+Undo/Redo 同样从真实作者数据生成新候选，不从缓存恢复运行对象。共享 Profile 只提交到明确选中的 Actor，其它 Actor 不被暗中更新；资产的默认值对后续 Build 和运行有效，当前其它 Actor 的采用状态必须单独显示。结构修改或外部变更导致内容与运行版本不同，保留作者编辑和已发布的当前运行，显示需要显式 Build/采用；只有正式运行合同判定必须停止时才停止，不把结构变化当参数更新绕过。
 
 **取舍：** 直接保存便于持续调好角色，也与现有 Pose 作者流程一致；独立试用再保存便于丢弃实验，但增加作者默认值、运行试用值和保存事务的区分。用户选择前者，系统通过 Undo 和明确生效状态支持撤回与排查。
 
@@ -201,7 +203,7 @@ Undo/Redo 同样从真实作者数据生成新候选，不从缓存恢复运行�
 
 重建前必须通过正式产物匹配检查。运行中调参后，作者默认值与已发布产物可能不同；若正式检查要求重新发布，则显示“需要构建并重启”，使用下一条决策的明确操作，不拿旧 Projection 创建新 Actor 后再补参数绕过构造校验。同一个已经存活且成功采用参数的 Actor 可以继续接收输入、重复动作，不需要为了每次动作重新进入 Play。
 
-编辑游标可以定位 Clip、Curve 和作者内容，不再 Evaluate 角色。Capture 历史位置只选择历史 snapshot，不改变当前角色。实时运行标记使用真实 logic tick/visual time。原先依赖拖动游标查看任意角色时刻的功能明确撤除；以后需要确定性 seek，应另行基于完整正式输入及状态合同设计。
+编辑游标只定位 Clip、Curve 和作者内容，不 Evaluate 角色。Capture 历史位置只选择历史 snapshot，不改变当前角色。实时运行标记使用真实 logic tick/visual time，三种位置分别保存。恢复并继续/输入回放必须是独立显式命令，消费现有正式 Session、checkpoint、完整目标能力及记录；不能通过拖动编辑或历史游标隐式执行，不新建任意时刻 seek。
 
 **取舍：** 只重置 Actor 更快，但容易漏掉目标、场景物理或效果状态；重载完整独立场景更容易得到可重复的初始条件，代价是一次场景重载。此选择不引入第二种运行算法，也不要求反复进入 Play。
 
@@ -209,11 +211,11 @@ Undo/Redo 同样从真实作者数据生成新候选，不从缓存恢复运行�
 
 “开始预览”只检查配置、已发布产物和运行环境，不隐式 Build。缺少或过期时给出该领域的精确内容根/Target 与原因，显示“构建并开始”。“构建并重启”是一个明确操作：结束受控 Play、恢复 Edit Mode、调用该领域的正式 Build、成功后再次启动原预览场景。角色调用精确 Character Definition/Target Build；独立 Timeline 调用其 owner 提供的精确 shared TimelineAsset/Target/发布目标构建，不伪造 Character Definition、TimelineNode 或 Skill Root。构建失败保留编辑状态和诊断，不自动进入 Play。
 
-窗口运行观察保持只读；支持的参数在独立作者字段中编辑，需要 Build 的结构编辑在 Edit Mode 完成。其它入口或 Undo 引起结构变更时，同样失效当前绑定并要求明确构建。保存参数不等于发布 Program，这一点在状态中保持可见。
+窗口运行观察保持只读；Timeline 作者字段、结构、Clip 和曲线在 Scene Play 期间仍可通过正式 Mutation/Undo 编辑。需要 Build 的修改、其它入口或 Undo 引起的变化均显示作者/运行版本差异；按版本保存有效运行观察，不用新 SourceMap 解释旧运行。保存不等于发布或采用。内容 Build/采用沿已有正式工作流，不在 Inspector 中触发 C# 编译/AssetDatabase 刷新。
 
 目标 `CharacterSimulationProgram` 是角色只读组合包，保存控制 binding/参数/语义与状态版本、SkillProgram 目录、既有策略与资源目录、完整状态布局和来源映射。C# 控制代码不翻译成角色 RootTree；技能作者内容仍经 Semantic IR、Float32/Fixed lowering 与正式发布。PipelineCompiler 和正式运行装配继续保留。
 
-角色开始/重建检查消费主重构发布清单，覆盖控制代码实现及版本、角色包、每项技能/共享子图闭包、ActionProfile、Program/State schema、Numeric Target、能力与 Projection；不能只核对旧 Graph content hash 或角色壳 ProgramId。独立 Timeline 检查消费其正式内容闭包、状态/绑定合同、数值目标、能力与来源版本，不要求角色 Projection。共享内容改变时按正式发布组重新构建受影响产物；新内容只由新调用环境采用，活动播放不原地换 Program。缺少正式接口或产物时显示对应未就绪原因，不建立旧 v4/RootTree/ABI reader 继续预览。
+角色开始/重建检查消费主重构发布清单，覆盖控制代码实现及版本、角色包、每项技能/共享子图闭包、ActionProfile、Program/State schema、Numeric Target、能力与 Projection；不能只核对旧 Graph content hash 或角色壳 ProgramId。独立 Timeline 检查消费其正式内容闭包、状态/绑定合同、数值目标、能力与来源版本，不要求角色 Projection。共享内容改变时按正式发布组重新构建受影响产物；角色由正式 adoption barrier 决定兼容采用，不兼容活动 Action 保留旧 Epoch，下一次 Action 采用。非 Skill 按其 owner 的采用合同处理，不借用角色端口。缺少正式接口或产物时显示未就绪原因，不恢复旧 reader。
 
 在现有报告和任务结果中分别记录实际内容依赖检查、前端/确定性检查、Numeric Target lowering、组合与发布；角色路径另记录控制合同、分析复用/生成、表现计划及已有 PipelineCompiler 的实际准备工作，独立内容按其正式构建报告显示适用阶段。预览请求记录检查、进入 Play、对应 owner 准备、目标连接和场景重建耗时。C# 编译/Domain Reload 另按其真实来源报告，不称为内容数据编译；不为计时增加一条构建入口。只记录真实经过的阶段，未发生的角色阶段不套用到独立内容，并区分缓存复用与重新生成，不用轮询等待总时间代表编译本身。没有测量值显示未测量，不预设耗时目标，不为了“优化”删除确定性检查或修改算法。
 
@@ -283,7 +285,7 @@ Timeline 游标只编辑定位和浏览历史。试验重建经场景正式 Sess
 | Camera Document段及其它Graph来源描述 | 仍引用v4和旧角色图来源 | Camera owner消费主重构v5及技能/代码来源；不由本次改写相机文件 |
 | `refactor-character-pose-graph-architecture` 与 `add-acl-animation-runtime` | 已完成模块/事务/Tuning；ACL使用同一资源合同 | 使用精确已安装公开接口；不复制Pose或ACL预览路径 |
 
-本次仅修改本 change。主重构、相机和其它窗口的文件不在本次写入范围；已确认的共享方向立即生效于本提案，具体代码签名由后续精确提交固定。规范安装时先合并各owner的共享条款再应用本change增量，不能用旧全文覆盖新合同。OpenSpec单份格式通过不等于其它change已经更新或接口全部可用。
+2026-09-12 起本 change 与 Timeline restyle 的窗口/联动规划共同维护，具体职责和批次见 preview-integration-plan.md；主重构、相机算法和其它领域迁移不因此扩大范围。规范安装时先合并各 owner 的共享条款再应用本 change 增量，不能用旧全文覆盖新合同。OpenSpec 单份格式通过不等于接口或真实窗口已完成。
 
 `TimelineEditorWorkspaceView.cs` 与 `Tree/TimelineEditorMainWindow.cs` 中，场景生命周期按钮和运行观察绑定归预览；内容编辑、输入声明和独立根作者入口归 Timeline。共享文件只改己方职责所在段，同段改动先报告具体冲突，不整体替换。旧 `TimelinePreviewRuntimeSession`、`TimelinePreviewTarget`、`AnimationPreviewEngine/Adapters/Controller` 与 Pose fixture 的完整角色迁移删除归预览，不作为主重构或 Timeline 的独立完成条件。
 

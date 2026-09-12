@@ -145,6 +145,28 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 
 ## ADDED Requirements
 
+### Requirement: Timeline必须与共享预览区完成跨窗口联动
+
+Timeline 与 SkillGraph/Graph Shell MUST按同一联动计划交付导航、运行 binding、作者/运行版本状态及生命周期。Timeline MUST提供“预览”导航与精确关联说明；共享预览区 MUST支持从实际调用打开对应 Timeline。角色结果 MUST来自正式 Scene Play，Timeline 编辑游标 MUST不执行角色或 Slate 内核。
+
+#### Scenario: 技能产生多个Timeline调用
+
+- **WHEN** 作者从正在预览的技能打开 Timeline
+- **THEN** 系统 MUST根据真实 ActionInstance、完整调用路径、generation 和内容版本关联 Timeline
+- **AND** 多个合法调用 MUST明确选择，不按列表首项猜测；Tree-only 技能 MUST正常显示无 Timeline
+
+#### Scenario: 编辑后返回预览
+
+- **WHEN** 作者修改 Timeline 并返回共享预览区
+- **THEN** 作者数据 MUST保持，预览区 MUST显示正式待采用/已采用/下一次激活/失败状态
+- **AND** 切页、折叠和关闭 Timeline MUST不停止或更换 Session；runtime overlay 和编辑帧 MUST分别保存
+
+#### Scenario: 独立内容预览
+
+- **WHEN** 作者从 shared Timeline 请求查看预览
+- **THEN** 系统 MUST使用其精确正式非 Skill 调用方或已明确关联的技能来源
+- **AND** 无合法绑定时 MUST保留编辑并解释缺项，不伪造 Actor、Skill 或 Timeline 播放器
+
 ### Requirement: Timeline布局必须统一计算并适应窗口尺寸
 
 嵌入 Surface MUST以单一布局结果提供背景、分隔线、控件、裁剪和命中范围。窗口 MUST包含紧凑文档行、编辑工具栏、左侧搜索/轨道、右侧缩放/帧标尺/Clip/Curve 和可收起底部属性区。左右内容 MUST共享行高度和垂直滚动；MUST不为隐藏的 Slate 控件或不存在的工具保留空白。文档名称只显示一次，ownership 为短标记，长路径在 tooltip。

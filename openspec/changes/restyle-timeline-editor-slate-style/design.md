@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-12 后续授权：用户要求将“预览”任务一起规划、后续随 Timeline 实施。跨窗口布局、场景/目标选择、技能与纯 Timeline 预览、运行标记、编辑后采用和历史操作的统一计划见 [预览联动计划](preview-integration-plan.md)。本文件继续定义 Timeline 编辑表面，两边使用同一排期而保持已有数据/运行归属。
+
 目标是让作者在唯一 Timeline 窗口里完成：新增轨道 → 添加 Clip → 调整帧范围 → 编辑属性/曲线 → 撤销重做 → 保存重开，并通过已有 SkillGraph 场景预览查看实际效果。使用 Slate 的真实 Track/Clip/Curve UI，正式数据仍属于 BTSMTL TimelineData。
 
 2026-09-12 对账：已有临时投影、Clip/部分曲线显示和部分回写代码；新增、帧几何、视图恢复与整体布局未完成。此前编译通过、截图显示和任务勾选不能证明编辑闭环成立。以下是实施目标，不是实现完成报告。
@@ -131,7 +133,7 @@ TimelineEditorWindow 的正式 owner/path
 
 已确认：Timeline 保留编辑游标；Scene Play、暂停、Build、Skill request、LiveDebug/Capture/History/Restore/Replay 由 SkillGraph/Graph Shell 和正式 owner 控制。运行事实只读，作者内容可编辑；编辑后是否生效由现有 Build/adoption 合同报告，不自动改当前运行。
 
-本次默认工具栏提供帧定位和逐帧操作。精确来源存在时，“更多”可提供“返回 SkillGraph 预览”导航；无来源不猜测 Actor/调用方。导航不启动或重建 Session。
+本次工具栏提供帧定位、逐帧和“预览”导航。精确来源存在时返回对应 SkillGraph/共享预览区；独立内容使用其正式调用方上下文，无绑定给出缺项说明，不猜测 Actor。导航不启动或重建 Session。联合计划已纳入该导航与真实观察 binding，不能只提供一条不可操作的说明文字。
 
 Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play 的 Play 快捷按钮，都尚未确认，不作为已批准功能。后续若要求 Timeline 内 Play，应接已有正式命令并明确目标，同时修订控制入口约定，不能用 Slate Play/Sample 代替。
 
@@ -168,6 +170,8 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 2. 统一帧几何、曲线 domain 转换、逐帧和视图状态恢复。
 3. 整体整理 GUI，审计嵌入生命周期，移除 Slate 内核和无关控件。
 4. 运行已有编译/validator，记录真实窗口证据与未完成项，分模块中文小步提交；不新增测试代码。
+
+5. 与 preview-integration-plan.md 的 P1–P5 联合排期和交付：共享预览区、实际 SkillGraph 宿主接入、场景/目标、Timeline 调用观察、编辑后采用与历史交互一起核对。原预览任务按该计划映射执行，不另建重复任务/播放器。
 
 ## 完成标准
 

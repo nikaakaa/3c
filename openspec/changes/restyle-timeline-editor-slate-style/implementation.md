@@ -45,6 +45,7 @@ TimelineEditorWindow
 - `BaseTreeWindow` 的 UI Toolkit 工具条和实际 FlowCanvas SkillGraph 的 IMGUI 工具条都只绘制同一个 Presenter；FlowCanvas 通过 `BtsmtlSkillGraphPreviewToolbarRegistry` 挂载，不再把 SkillGraph 误导到旧树窗口。
 - 四组入口在两个宿主保持一致：场景控制、试验与采用、观察、历史与录制。SkillGraph 原有的端口采集、执行实例选择和父调用导航仍是 Graph 观察专属项，不与 Scene Play 命令重复。
 - Timeline 运行观察现在按 Timeline、Graph 和绑定的 SourceNode 精确筛选；0 条或多条调用都会清空旧 overlay，多条时提示从 SkillGraph 选择实例，不再使用第一条 summary 猜测。
+- Timeline 顶部 `Runtime` 菜单提供“自动（仅唯一调用）”“跟随最新调用”和按 playback identity 固定实例；固定项消失时明确提示，不自动换到新调用。运行源导航、SkillGraph 父调用导航和 Timeline 打开请求都携带 Graph/Node locator。
 
 ## 正式能力对账
 
@@ -61,12 +62,11 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 
 结果为 0 errors；仅有项目及第三方既有 warnings。每次构建后执行 `dotnet build-server shutdown`。
 
-主 Editor 工程的联合编译在本轮使用临时编译项把新增 Presenter 纳入生成的 `ThirdPersonClient.Editor.csproj`，结果为 0 errors；该生成项目修改已撤销，不属于提交内容。其余警告为项目及第三方既有 warnings。该验证不替代 Unity Editor 端到端验收。
+主 Editor 工程的联合编译在本轮使用临时编译项把新增 Presenter 纳入生成的 `ThirdPersonClient.Editor.csproj`；编译继续被工作区已有的两个缺失 Runtime 源文件阻断：`CharacterPresentationProgramParameterFrame.cs`、`CharacterPresentationFrameCoordinator.cs`。该生成项目修改已撤销，不属于提交内容；Timeline Tree Editor 自身编译为 0 errors。其余警告为项目及第三方既有 warnings。该验证不替代 Unity Editor 端到端验收。
 
 ## 尚未完成
 
 - 场景预览 coordinator 的精确 SceneAsset/context/非 Skill 目标接线。
-- Timeline runtime binding 的 Follow/Pin、多调用选择和历史位置独立显示。
 - 编辑 revision 到真实 Build/adoption 状态的 Graph Shell 展示。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
 - C# authoring r2 尚未交付 `TimelineAuthoringClipBinding` 正式强类型配置合同，因此第10节仍未实施；当前 projection 的 JSON 中转不能在本任务内复制替换。

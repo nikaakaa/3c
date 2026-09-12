@@ -253,7 +253,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 var track = timeline.Timeline.Tracks.Single(value => value.Clips.Any(clip => clip.AuthoringId == invocation.CallerClipId));
                 s_Current.OnTimelineOpening(timeline);
-                TimelineEditorWindow.Open(timeline.TimelineAsset).FocusSource(track.AuthoringId, invocation.CallerClipId);
+                TimelineEditorWindow.Open(
+                    timeline.TimelineAsset,
+                    ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
+                    timeline.UID).FocusSource(track.AuthoringId, invocation.CallerClipId);
                 s_Current.OnTimelineOpening(null);
             }
         }
@@ -274,6 +277,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ClearTimelineOverlay();
             m_ActiveTimeline = m_PendingTimeline?.Asset == asset ? m_PendingTimeline : null;
             m_PendingTimeline = null;
+            if (m_ActiveTimeline != null)
+                TimelineEditorWindow.FindOpen(asset)?.ApplyRuntimeLocator(
+                    m_ActiveTimeline.GraphAuthoringId,
+                    m_ActiveTimeline.NodeId);
             UpdateTimelineOverlay();
         }
 

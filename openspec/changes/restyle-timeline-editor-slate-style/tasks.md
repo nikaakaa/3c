@@ -70,7 +70,7 @@
 
 - [x] 9.1 P1：将共享预览 presenter 接入实际 SkillGraph/Graph Shell 宿主，按场景控制、试验/采用、观察、折叠历史分组，消除旧树窗口专属接入和重复工具条
 - [ ] 9.2 P2：接入场景资产/精确 context 定位和角色/非 Skill 正式目标；区分开始场景与请求技能/业务调用，状态与拒绝原因来自正式 owner
-- [ ] 9.3 P3：Timeline 打开请求携带作者 locator 和可选准确 runtime binding，连接运行 overlay、Follow/Pin、双向导航及多调用选择，编辑帧与运行/历史位置隔离
+- [x] 9.3 P3：Timeline 打开请求携带作者 locator 和可选准确 runtime binding，连接运行 overlay、Follow/Pin、双向导航及多调用选择，编辑帧与运行/历史位置隔离
 - [ ] 9.4 P4：Timeline 修改/Undo 后把 authoring revision 与真实 Build/adoption 报告接入预览状态区，显示待采用/已采用/下次激活/失败，同 Session 生效不由窗口伪造
 - [ ] 9.5 P5：历史面板区分诊断采集与输入录制，按选定 Tick/区间和正式 capability 校验恢复/回放，刷新不覆盖输入，命令接受与完成分开显示
 - [ ] 9.6 跨宿主布局、切页、关闭、重载和绑定释放统一收口；同步预览原任务/审计的主线证据，记录缺失能力，不以按钮存在代替联合交付

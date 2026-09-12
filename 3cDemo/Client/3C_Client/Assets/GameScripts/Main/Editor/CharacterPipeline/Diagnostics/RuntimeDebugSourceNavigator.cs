@@ -89,7 +89,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GraphEditor.FocusElement(element, true);
             if (element is BtsmtlSkillTimelineFlowNode timelineNode)
             {
-                TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(timelineNode.TimelineAsset);
+                TimelineEditorWindow timelineWindow = TimelineEditorWindow.Open(
+                    timelineNode.TimelineAsset,
+                    ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
+                    timelineNode.UID);
                 return timelineWindow != null && timelineWindow.FocusSource(
                     source.Kind == RuntimeSourceElementKind.Timeline ? string.Empty : source.TrackAuthoringId,
                     source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);

@@ -13,6 +13,13 @@ namespace BTSMTL.Timeline.Editor
 {
     public sealed class TimelineEditorWindow : EditorWindow
     {
+        enum RuntimeObservationSelectionMode : byte
+        {
+            Automatic = 0,
+            FollowLatest = 1,
+            Pinned = 2
+        }
+
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
 
@@ -76,6 +83,9 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         bool m_DetailsCollapsed;
 
+        [SerializeField]
+        RuntimeObservationSelectionMode m_RuntimeObservationSelectionMode;
+
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
@@ -84,14 +94,136 @@ namespace BTSMTL.Timeline.Editor
         ObjectField m_SharedTimelineField;
         Label m_SourceSummary;
         Label m_Status;
+        ToolbarMenu m_RuntimeObservationMenu;
         VisualElement m_DetailsHost;
         ToolbarButton m_DetailsToggle;
         bool m_DetailsAvailable;
+        RuntimeInstanceKey m_PinnedRuntimePlayback;
+        bool m_HasPinnedRuntimePlayback;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
         public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
+
+        internal IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetRuntimeObservationSummaries()
+        {
+            if (m_Timeline == null)
+                return Array.Empty<RuntimeTimelinePlaybackDebugSummary>();
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
+                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(
+                    m_Timeline.AuthoringId,
+                    SourceGraphAuthoringId);
+            if (string.IsNullOrEmpty(SourceNodeAuthoringId))
+                return summaries;
+            return summaries
+                .Where(value => string.Equals(
+                    value.Provenance.SourceNodeAuthoringId,
+                    SourceNodeAuthoringId,
+                    StringComparison.Ordinal))
+                .ToArray();
+        }
+
+        internal bool TryResolveRuntimeObservation(
+            out RuntimeTimelinePlaybackDebugSummary summary,
+            out string message)
+        {
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
+            if (m_RuntimeObservationSelectionMode == RuntimeObservationSelectionMode.Pinned)
+            {
+                for (int index = 0; index < summaries.Count; index++)
+                    if (summaries[index].Playback.Equals(m_PinnedRuntimePlayback) && summaries[index].Playback.IsValid)
+                    {
+                        summary = summaries[index];
+                        message = string.Empty;
+                        return true;
+                    }
+                summary = default;
+                message = "固定的运行调用已不在当前诊断记录中。";
+                return false;
+            }
+            if (summaries.Count != 0 &&
+                (m_RuntimeObservationSelectionMode == RuntimeObservationSelectionMode.FollowLatest || summaries.Count == 1) &&
+                summaries[0].Playback.IsValid)
+            {
+                summary = summaries[0];
+                message = string.Empty;
+                return true;
+            }
+            summary = default;
+            message = summaries.Count > 1
+                ? "当前 Timeline 对应多个运行调用，请选择跟随最新或固定具体实例。"
+                : string.Empty;
+            return false;
+        }
+
+        internal void RefreshRuntimeObservationMenu()
+        {
+            if (m_RuntimeObservationMenu == null)
+                return;
+            m_RuntimeObservationMenu.menu.MenuItems().Clear();
+            m_RuntimeObservationMenu.menu.AppendAction(
+                "自动（仅唯一调用）",
+                _ => SetRuntimeObservationAutomatic());
+            m_RuntimeObservationMenu.menu.AppendAction(
+                "跟随最新调用",
+                _ => SetRuntimeObservationFollowLatest());
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
+            for (int index = 0; index < summaries.Count; index++)
+            {
+                RuntimeTimelinePlaybackDebugSummary candidate = summaries[index];
+                RuntimeInstanceKey playback = candidate.Playback;
+                m_RuntimeObservationMenu.menu.AppendAction(
+                    RuntimeObservationLabel(candidate),
+                    _ => SetRuntimeObservationPinned(playback));
+            }
+            m_RuntimeObservationMenu.text = RuntimeObservationSelectionLabel(summaries);
+            m_RuntimeObservationMenu.tooltip = summaries.Count == 0
+                ? "没有 Timeline 运行调用"
+                : "选择自动、跟随最新或固定具体运行调用";
+        }
+
+        void SetRuntimeObservationAutomatic()
+        {
+            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Automatic;
+            m_HasPinnedRuntimePlayback = false;
+            RefreshRuntimeObservationMenu();
+            TimelineRuntimeObservationBridge.RefreshWindow(this);
+        }
+
+        void SetRuntimeObservationFollowLatest()
+        {
+            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.FollowLatest;
+            m_HasPinnedRuntimePlayback = false;
+            RefreshRuntimeObservationMenu();
+            TimelineRuntimeObservationBridge.RefreshWindow(this);
+        }
+
+        void SetRuntimeObservationPinned(RuntimeInstanceKey playback)
+        {
+            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Pinned;
+            m_PinnedRuntimePlayback = playback;
+            m_HasPinnedRuntimePlayback = playback.IsValid;
+            RefreshRuntimeObservationMenu();
+            TimelineRuntimeObservationBridge.RefreshWindow(this);
+        }
+
+        static string RuntimeObservationLabel(RuntimeTimelinePlaybackDebugSummary summary)
+        {
+            RuntimeInstanceKey playback = summary.Playback;
+            return $"固定 #{playback.TimelinePlaybackId} / Action {playback.ActionInstanceId} / Tick {summary.LatestLogicTick}";
+        }
+
+        string RuntimeObservationSelectionLabel(IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries)
+        {
+            return m_RuntimeObservationSelectionMode switch
+            {
+                RuntimeObservationSelectionMode.FollowLatest => "Runtime: 跟随最新",
+                RuntimeObservationSelectionMode.Pinned when m_HasPinnedRuntimePlayback =>
+                    $"Runtime: 固定 #{m_PinnedRuntimePlayback.TimelinePlaybackId}",
+                _ => summaries.Count == 1 ? "Runtime: 自动" : "Runtime: 选择调用"
+            };
+        }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
@@ -168,6 +300,13 @@ namespace BTSMTL.Timeline.Editor
         public void SetRuntimeObservationStatus(string message)
         {
             SetStatus(message);
+        }
+
+        internal void ApplyRuntimeLocator(string graphAuthoringId, string sourceNodeAuthoringId)
+        {
+            m_SourceGraphAuthoringId = graphAuthoringId ?? string.Empty;
+            m_SourceNodeGuid = sourceNodeAuthoringId ?? string.Empty;
+            RefreshRuntimeObservationMenu();
         }
 
         void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)
@@ -289,6 +428,8 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
+            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Automatic;
+            m_HasPinnedRuntimePlayback = false;
 
             TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
                 timeline,
@@ -591,6 +732,8 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSummary.style.minWidth = 180f;
             m_SourceSummary.style.marginLeft = 6f;
             m_SourceSummary.tooltip = CurrentSourceTooltip();
+            m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
+            m_RuntimeObservationMenu.style.width = 150f;
             m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
             m_Status.style.marginLeft = 6f;
             m_Status.style.flexGrow = 1f;
@@ -599,7 +742,9 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(previewButton);
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
+            toolbar.Add(m_RuntimeObservationMenu);
             toolbar.Add(m_Status);
+            RefreshRuntimeObservationMenu();
             return toolbar;
         }
 
@@ -724,37 +869,31 @@ namespace BTSMTL.Timeline.Editor
                 Refresh(windows[index]);
         }
 
+        internal static void RefreshWindow(TimelineEditorWindow window)
+        {
+            Refresh(window);
+        }
+
         static void Refresh(TimelineEditorWindow window)
         {
             if (!window || window.Timeline == null)
                 return;
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
-                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(
-                    window.Timeline.AuthoringId,
-                    window.SourceGraphAuthoringId);
-            if (!string.IsNullOrEmpty(window.SourceNodeAuthoringId))
-            {
-                summaries = summaries
-                    .Where(value => string.Equals(
-                        value.Provenance.SourceNodeAuthoringId,
-                        window.SourceNodeAuthoringId,
-                        StringComparison.Ordinal))
-                    .ToArray();
-            }
-            if (summaries.Count != 1 || !summaries[0].Playback.IsValid)
+            window.RefreshRuntimeObservationMenu();
+            if (!window.TryResolveRuntimeObservation(
+                    out RuntimeTimelinePlaybackDebugSummary summary,
+                    out string observationMessage))
             {
                 window.ClearRuntimeObservation();
-                if (summaries.Count > 1)
-                    window.SetRuntimeObservationStatus("当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。");
+                if (!string.IsNullOrEmpty(observationMessage))
+                    window.SetRuntimeObservationStatus(observationMessage);
                 return;
             }
-
-            RuntimeTimelinePlaybackDebugSummary summary = summaries[0];
             var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
             var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (RuntimeDebugEventView item in RuntimeDebugSession.Shared.ViewModel.GetTimelineCurrentEvents(
                          window.Timeline.AuthoringId,
-                         summary.Playback))
+                         summary.Playback,
+                         window.SourceGraphAuthoringId))
             {
                 RuntimeSourceElementKey source = item.Source;
                 string status = !string.IsNullOrEmpty(item.Event.Payload.Status)

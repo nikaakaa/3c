@@ -1,20 +1,26 @@
+本轮规划补充：已勾选1.1—1.3保留原交付事实；其仍复用旧容器，不代表最终领域工厂／准备采用接口可用。Timeline直接内容运行的增量由1.5—1.7和新增接入任务交付，implementation.md由实现窗口维护。
+
 ## 1. 独立技能数据与领域合同
 
 - [x] 1.1 将技能构建根迁为 GameplayAbilityDefinition，交付只包含其私有 Graph／FSM／条件／子图引用／Timeline 的发现模型与实际依赖修订。
 - [x] 1.2 将原 Character Builder 中的技能操作、调用帧、局部状态、常量、来源与能力要求迁为独立 Ability 数据接口，不携带角色控制或全角色目录。
 - [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
 - [ ] 1.4 将 Input／Effect／Equipment／角色状态等技能外部引用迁为 typed provider 合同，使缺失引用在角色绑定时明确失败。
-- [ ] 1.5 保留既有独立 Timeline 内容处理和产品入口，令其复用唯一内容语义实现，不依赖被删除的 Character 根。
+- [ ] 1.5 将技能调用与独立Timeline产品统一接到直接内容调度入口，保留正式时钟、窗口、循环／Section、取消及TreeClip阶段。
+- [ ] 1.6 删除Timeline轨道／Clip／MotionWarp到IR与operation的发射，技能只保存调用和内容引用，TreeClip图继续独立编译。
+- [ ] 1.7 交付同一Timeline字段合同的portable内容导出、资源引用与Float32／Fixed绑定，使普通.NET直接运行而不回读Unity或生成临时程序。
 
 ## 2. 角色领域运行与状态
 
 - [ ] 2.1 交付角色领域运行实例工厂与 Evaluate／Finalize 接口，保持控制、技能、效果、运动和提交顺序，由现有 Pass 调用。
 - [ ] 2.2 将 ControlModule 参数、静态 Motion 描述和控制状态迁出 Program catalog／slots，保留 C# UnityHFSM 及全部已有走跑转身规则。
-- [ ] 2.3 接入独立控制 SourceCurve 资源与输入适配绑定，保留 MovingTurn 的位移／yaw、时间换算及 CameraRelative 输入行为。
+- [ ] 2.3 消费曲线任务提供的RootMotionCurveAsset及Timeline唯一时间映射，将C# Control／Motion接到正式portable绑定，删除CharacterControlMotionCatalogEmitter依赖并保留MovingTurn和CameraRelative行为。
 - [ ] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。
 - [ ] 2.5 将 Effect／Equipment 的目录和运行状态交回对应模块，技能只保留请求接口，不复制全角色配置。
 - [ ] 2.6 交付领域分区的 Capture／Restore 和统一角色 Step 事务，完整覆盖控制机器内部状态、请求、技能调用、目标、效果、装备与跨 Tick MotionWarp。
 - [ ] 2.7 将 Actor roster、内容 identity 与状态 schema 接到完整领域状态，清除快照对整个 Character Program Layout 的依赖。
+
+- [ ] 2.8 交付D10的Ability／Pose／Camera／Motion分型准备请求、状态、缺失原因及实际采用结果，由角色领域实例工厂执行装配并发布真实版本。
 
 ## 3. 网络Pipeline与产品接线
 
@@ -25,6 +31,8 @@
 - [ ] 3.5 更新握手与兼容 Pair，分别锁定控制／技能／配置内容、状态格式、NumericProfile、World／Solver 与 Pipeline／Backend 身份。
 - [ ] 3.6 迁移 Unity Authority、普通 .NET Authority、Local／Fixed／Rollback 的显式 launch 和 manifest 读取；保留产品分工及原不支持能力的拒绝行为。
 - [ ] 3.7 升级实际改变的网络／状态／产品格式并删除旧 reader，使旧角色 Program 产物不能被新会话隐式接受。
+
+- [ ] 3.8 将直接Timeline的cursor、loop／section、活动Clip及TreeClip调用状态接入原网络快照和重放，不通过每Clip的Program状态槽恢复。
 
 ## 4. 原生Pose图与节点
 
@@ -54,14 +62,18 @@
 - [ ] 6.4 将角色 Host 的启动依赖从 Program／Projection 改为领域运行与原生表现绑定，保留显式资源错误、角色隔离及 World owner。
 - [ ] 6.5 保留 ACL、Motion Matching 与 Foot 数据的独立产品和加载入口，移除无关技能构建对其扫描和重建的依赖。
 
+- [ ] 6.6 调用Camera任务的只读绑定准备／采用接口并迁出旧总Projection挂接，保留其字段、资源、求解与目标规则，不修改Camera Builder／payload／Timeline.Camera.cs。
+
 ## 7. 作者工具、预览与观察
 
 - [ ] 7.1 将 Definition／Ability／Pose 的状态和操作入口按领域分离，取消整角色 Program／Projection 构建 UI，保持 Inspector 轻量读取。
 - [ ] 7.2 将 Pose 预览与正式运行接到同一原生 Factory 和节点算法，Timeline 预览继续通过正式 Action adapter，移除旧 Image 预览路径。
 - [ ] 7.3 将 Live Debug／Pose Watch 映射到原生图、节点、端口、调用实例和已完成结果，保留按需诊断和采样 owner。
 - [ ] 7.4 将技能 Inspector／普通 .NET Reader 改为独立 Ability 产物入口，保留精确来源导航和结构化值输入观察。
-- [ ] 7.5 将 Scene Play 的版本、刷新、暂停／推进和观察接到领域内容及原生实例，交付明确的 Pose 实例重建／历史重置语义。
+- [ ] 7.5 向预览任务交付领域公开操作及准备／采用／运行观察结果，显示请求版本与实际版本；ScenePlay协调器由预览owner接入，不保留Character Build／ProgramEpoch或假全局版本。
 - [ ] 7.6 迁移两个显式 C# authoring 入口的技能／Pose 输出与重建支持，保留业务 identity、端口、子图引用和作者布局。
+
+- [ ] 7.7 发布活动技能固定启动内容、Pose重建重置历史、玩法内容／schema变更重新准备Session的实际采用结果，不由预览推断成功。
 
 ## 8. 资产迁移与旧链清理
 

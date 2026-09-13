@@ -52,7 +52,7 @@ Foot Analysis 资源 MUST保存所消费内容的 canonical Hash，以及动画�
 
 ### Requirement: Authoring type 必须通过唯一 Emitter 生成 Operation
 
-每个可执行 Node、Module、Track 和 Clip authoring type MUST在 Compiler Frontend registry 中对应唯一 emitter。一个 Emitter MAY生成多个 Semantic IR operation 或引用共享 catalog entry，但每个 operation MUST声明 source map、state declaration、input、world request 和 output。Emitter MUST不按 Local、ServerAuthoritative、Rollback 或 Numeric Target 生成不同业务规则；Target Compiler 只负责 lowering 与 capability validation。
+每个可执行技能图节点 MUST由唯一技能 emitter 生成调用／逻辑操作并保存来源、状态与接口要求，不按网络模型改变规则。Timeline轨道、Clip、MotionCurve和MotionWarp MUST不经过该 emitter；它们直接作为正式内容由唯一 Timeline Runtime 调度。TreeClip 引用的技能图仍通过同一技能 compiler 编译。
 
 #### Scenario: 缺少 Emitter
 
@@ -162,32 +162,32 @@ AbilityDataHash MUST只覆盖 Numeric 目标技能数据语义和 ABI，MUST不�
 
 ### Requirement: Program 必须声明 Motion Modifier descriptor 与固定顺序
 
-目标技能数据 MUST保存按channel索引的canonical Motion Modifier descriptor，包含operation、source Motion operation、Timeline owner、Action Context owner和state slot range。AbilityDataHash与AbilityLayoutHash MUST覆盖descriptor内容和顺序。Runtime MUST不扫描authoring asset、按字符串发现handler或根据Network Model改变顺序。
+Motion Modifier 的类型、参数、源Clip、Timeline／动作调用和顺序 MUST由正式 Timeline 内容与运动绑定提供，不再编码为技能Program中的 operation descriptor。运行 MUST保留原 channel 仲裁、固定处理顺序与MotionWarp累计差值规则，不能扫描Unity作者资产或根据网络模型改变行为。
 
 #### Scenario: 同一 Authoring 编译两个 Target
 
-- **WHEN** 同一Semantic IR分别降低为Float32与Fixed Program
-- **THEN** 两个Program MUST包含同语义modifier descriptor和source关系
+- **WHEN** 同一正式Timeline内容分别准备Float32与Fixed运行绑定
+- **THEN** 两个绑定 MUST包含同语义modifier数据和source Clip关系
 - **AND** 数值表示差异 MUST不改变modifier eligibility与顺序
 
 
 ### Requirement: MotionWarp 跨 Tick 数据必须进入 Character State Layout
 
-技能执行状态 MUST为 MotionWarp 保存恢复所需的 active／initialized、generation、动作实例、窗口起点 Body／source pose、有效目标、限制结果、前一累计位姿和进度。全角色其它领域状态由对应模块拥有；同 Step 贡献、resolved motion 和 world request MUST保持 transient。恢复后 MUST继续按原累计轨迹差值算法执行，不恢复冻结 total correction 或 nominal residual。
+MotionWarp 的当前实例状态 MUST保存 active／initialized、generation、动作实例、窗口起点 Body／source pose、有效目标、限制结果、前一累计位姿和进度，并通过 Timeline／Motion 的正式领域状态接入完整角色快照。技能图只保存 Timeline 调用及返回状态，不为每个 WarpClip 生成操作状态槽。同 Step 运动贡献 MUST保持 transient，不恢复冻结 total correction 或 nominal residual。
 
 #### Scenario: 检查 MotionWarp state layout
 
-- **WHEN** Compiler生成包含MotionWarp的Program
-- **THEN** Program MUST声明完整Warp state slots和默认值
+- **WHEN** Timeline Runtime准备一个包含MotionWarp的播放实例
+- **THEN** Timeline／Motion领域 MUST提供完整Warp实例状态和初始值
 
 
 ### Requirement: MotionWarp 版本变化必须拒绝旧 Artifact
 
-增加MotionWarp operation、descriptor、ActionTargetRequirement或Warp state schema时，Frontend、Operation Set、Target ABI、技能执行产物与State codec identity MUST按实际payload变化提升。旧reader、旧state payload、兼容operation分派和字段猜测 MUST删除。
+Timeline内容字段、Motion源／映射、Target数值绑定或MotionWarp状态格式改变时，负责该内容的模块 MUST升级实际受影响的版本并拒绝旧数据，不再要求为TimelineClip增加operation-set opcode或角色Program ABI。旧Clip-operation reader、字段猜测和兼容分派 MUST删除。
 
 #### Scenario: Session 加载旧 Program
 
-- **WHEN** composition读取MotionWarp版本升级前的Program或State payload
+- **WHEN** composition读取MotionWarp版本升级前的Timeline内容、运动绑定或State payload
 - **THEN** composition MUST在Session启动前明确失败
 - **AND** MUST不把缺失descriptor解释为无Modifier
 
@@ -246,7 +246,7 @@ AbilityDataHash MUST只覆盖 Numeric 目标技能数据语义和 ABI，MUST不�
 
 ### Requirement: 技能产物与角色领域状态必须独立发布和绑定
 
-技能 MUST独立发布；Control、BodyMotion、Input、Effect、Equipment 配置与状态 MUST由各自模块拥有，角色绑定在 Session Active 前检查完整引用和能力。技能局部状态 MUST包含执行恢复所需的流程、Timeline、Blackboard、调用帧与计时；角色快照 MUST组合所有领域的同次提交状态。纯 Pose 或资源问题 MUST不阻止合法技能构建，但非法角色资源绑定 MUST阻止对应角色运行。
+技能 MUST独立发布；Control、BodyMotion、Input、Effect、Equipment 配置与状态 MUST由各自模块拥有，角色绑定在 Session Active 前检查完整引用和能力。技能局部状态 MUST包含图流程、Blackboard、调用帧与计时；Timeline播放状态由正式Timeline Runtime独立拥有并参与同一角色恢复；角色快照 MUST组合所有领域的同次提交状态。纯 Pose 或资源问题 MUST不阻止合法技能构建，但非法角色资源绑定 MUST阻止对应角色运行。
 
 #### Scenario: Pose配置缺失但技能合法
 - **WHEN** 作者构建一个依赖完整的技能，而某角色的动画配置无效
@@ -255,3 +255,11 @@ AbilityDataHash MUST只覆盖 Numeric 目标技能数据语义和 ABI，MUST不�
 #### Scenario: 多角色使用不同装备配置
 - **WHEN** 相同技能分别绑定两个合法角色装备目录
 - **THEN** 技能数据 MUST复用，装备状态和整体玩法一致性身份 MUST分别归各角色正式模块
+
+### Requirement: Timeline内容必须作为独立直接数据交付
+
+Timeline发布 MUST只保存正式轨道／片段字段、时间区间、稳定身份和资源／TreeClip图引用；内容校验、portable导出和目标数值准备 MUST不生成时间轴IR或操作表。技能发布只记录实际内容依赖，独立Timeline调用使用同一数据与运行入口。旧独立Timeline IR／Program构建入口 MUST迁移为内容发布，不能因此删除独立调用能力。
+
+#### Scenario: 普通DotNet加载独立Timeline
+- **WHEN** 调用方提供合法portable时间轴内容、资源和上下文
+- **THEN** 正式Timeline Runtime MUST直接调度该内容，不加载Unity对象或生成临时Program

@@ -16,6 +16,38 @@
 
 完整分工见 design.md“并行工作与冲突边界”。Pose 编辑器的作者分层／原生资源与 Mutation、事件图变量生产、已完成只读输入、技能 FSM／生命周期、Timeline 与算法任务均保留原 owner。本 change 仅替换与角色总 Program／Pose Image 耦合的接口；出现双方正在修改同一公共合同的实际冲突，记录具体路径后由用户裁决。
 
+## 2026-09-13 Timeline直接运行与公共接入补充
+
+本节对应用户关于 Timeline 不再编译的明确规划结论，以及 USER_BROADCAST `camera-preview-timeline-domain-runtime-plan-2026-09-13`。本轮只改本任务已有规划文档，不改代码／资产／implementation.md，不向实现窗口下发新指令，也不回复协调窗口。
+
+### 已确定合同
+
+- Timeline直接调度正式轨道／Clip内容，不生成Timeline IR或Clip operation；技能只保留调用和内容依赖，TreeClip图仍独立编译。普通.NET的一对一内容导出、资源绑定和目标数值准备继续保留，不能换名恢复Compiler。
+- 技能、Pose、Camera、Motion各自提供分型准备状态、缺失原因、实际采用版本／实例。预览只消费这些事实；不能维持旧Character Build／ProgramEpoch或计算假全局版本。
+- Camera准备／求解／资源规则归Camera任务，本任务只负责角色装配调用和旧Projection挂接迁出。
+- 运动源统一使用RootMotionCurveAsset与Timeline唯一时间映射。技能侧以直接Timeline内容消费实际依赖，C# Control／Motion消费正式portable绑定，撤销旧CharacterControlMotionCatalogEmitter依赖。
+- 活动技能固定启动时的技能／Timeline／Motion内容版本；Pose显式重建并重置历史；玩法内容或state schema变化按原Session规则重新准备。
+
+### 本轮规范替换
+
+| 位置 | 旧要求或遗漏 | 新口径 |
+| --- | --- | --- |
+| btsmtl-gameplay-semantic-ir 的 MotionWarp 四项要求 | Clip必须变成TimelineMotionWarp／MotionCurve operation并在IR中绑定 | 直接Timeline字段与稳定Clip引用，内容校验／绑定时闭合，原数值算法和能力拒绝保留；全部原Scenario名称保留 |
+| btsmtl-compiled-simulation-program 的Emitter／Modifier／Warp状态 | Timeline内部操作、descriptor与每Clip状态槽 | 只有技能图Emitter；Timeline／Motion Runtime拥有直接内容、实例状态和实际格式版本 |
+| character-domain-runtime | 没有可消费的领域准备／采用接口要求 | 新增Timeline直接内容、RootMotionCurveAsset映射、四领域准备／采用、预览事实和生命周期要求 |
+| character-animation-pipeline 的Timeline回绕 | Compiled Timeline operation承担loop边界 | 同一正式Timeline Runtime直接遍历内容边界，原回绕场景和输出顺序保留 |
+| btsmtl-timeline-editor-preview 的Curve消费与接入 | Motion进入IR且预览没有真实采用结果 | 直接Timeline／Motion内容；Camera由其领域准备，预览消费实际版本与原因 |
+| design D10／D11 | 只说“工厂／绑定”但未说明输入输出与现状 | 明确四类请求／准备／采用结果，列出已存在的Compile／Target／Store方法和尚未交付边界 |
+| tasks | 1.1—1.3可能被误认为全部角色运行可用 | 保留勾选事实，新增直接Timeline与公共接口增量；领域工厂和采用结果仍是未完成项 |
+
+### 与其它任务的对账
+
+`unify-timeline-motion-curve-source` 当前设计仍写 Timeline semantic／ControlMotion catalog → Numeric Program，这一接入方向由D9明确替换；其正式源、Clip、Warp和时间映射算法仍归曲线任务，不由本任务覆盖。character-root-motion-curves／character-motion-semantics等运动领域文档中的旧operation措辞由曲线owner按该合同同步；不得把保留字段和算法解释为仍保留旧发射入口。Camera文档中的总Projection挂接由本任务迁出，但Camera Builder／payload／Timeline.Camera.cs归Camera。ScenePlay协调器和窗口会话迁移归预览，本任务提供接口，不能把旧Preview独立状态实现当成公共工厂已完成。Slate源码归Timeline UI，C#输出／生成接口变更明确依赖原owner。
+
+### 当前实现事实
+
+实现记录中1.1—1.3只交付Ability前端、两个Target入口和store，仍借用旧容器。不存在本规划已经交付四领域工厂、原生Pose／直接Timeline完整运行或预览接入的结论。新规划不会把旧小步标记为失败或回退它们；增量在新增未完成任务中接续，运行结果尚无本轮证明。
+
 ## 增量清单
 
 | 能力 | 操作 | 原Requirement | 保留原场景数 | 迁移说明 |

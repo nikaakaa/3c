@@ -1,6 +1,6 @@
 ## Context
 
-动机见 `proposal.md`。本设计采用本轮用户确认的组合：角色总 Program 退役、技能数据独立、网络 Pass 保留、Pose 原生 FlowCanvas Runtime。此前 `docs/locomotion-skill-compilation-boundary-plan-2026-09-13.md` 中保留角色 Program、扩展统一 artifact 的方案只作历史评估，不作为本 change 的实施依据。
+动机见 `proposal.md`。本设计采用本轮用户确认的组合：角色总 Program 退役、技能图独立编译、Timeline 内容直接调度、网络 Pass 保留、Pose 原生 FlowCanvas Runtime。此前 `docs/locomotion-skill-compilation-boundary-plan-2026-09-13.md` 中保留角色 Program、扩展统一 artifact 的方案只作历史评估，不作为本 change 的实施依据。
 
 调查基于共享工作区，开始规划时仍有大量并行修改。以下源码定位是职责依据，实施前按当前文件内容接续，不回退其它窗口已正确工作。
 
@@ -41,7 +41,7 @@
 
 角色执行接口保留 `Evaluate → WorldResolveBatch → Finalize` 关系。Evaluate 依次消费输入、推进 C# Control 与 Ability、处理效果及运动贡献；WorldResolveBatch 仍一次处理同 Tick 全部 actor；Finalize 成功后才发布角色、世界与事实结果。业务调用用窄接口，不能把 Profile、World、network packet 和所有状态塞进万能 Context。
 
-Ability 输入是对应 `GameplayAbilityDefinition` 的私有图／FSM／条件／子图引用／Timeline 与真实技能参数引用。共享技能只构建一次；授予、装备选择和实例目标在绑定／运行时提供，不为每个 Character Definition 复制技能。
+Ability 编译输入是对应 `GameplayAbilityDefinition` 的私有图／FSM／条件／子图引用和 TreeClip 引用的技能图；Timeline 只作为精确内容依赖与调用接口输入，轨道／Clip 不进入技能 IR。共享技能只构建一次；授予、装备选择和实例目标在绑定／运行时提供，不为每个 Character Definition 复制技能。
 
 现有数值中立语义处理只保留技能内容，产出独立可校验的 Ability 数据；Float32／Fixed 仅降低技能数值、状态和运算。目标执行数据不保存 C# Locomotion、BodyMotion、全装备目录或动画表现图。所有技能引用的领域 ID 在绑定时由对应模块解析，并在 Session Active 前报告缺失，不在每 Tick 扫描。
 
@@ -53,7 +53,7 @@ Control、Ability instances、Input requests、Effect、Equipment 和跨 Tick Mo
 
 恢复是先解析并核对完整候选，再原子安装 Character／World／Pipeline 状态。C# 控制模块必须同时恢复其可读字段和 UnityHFSM 内部当前状态；技能必须恢复调用帧、Timeline cursor、请求及动作实例，不只恢复位置或 active skill id。不会跨 Tick 读取的派生索引从同一正式输入重建，不再进入快照。
 
-Control 的模块 ID／语义版本、参数与 state schema 在实例绑定中保留，但不再通过 ControlModule catalog 和全角色 slot 编码。控制 Motion 描述直接来自 C# Contract；作者可调数值来自明确配置。SourceCurve 仍是独立运动资源，保留现有帧／秒／Tick 映射、坐标空间和数值转换次序；输入适配器的 CameraRelative 判断同步改读该唯一合同。
+Control 的模块 ID／语义版本、参数与 state schema 在实例绑定中保留，但不再通过 ControlModule catalog 和全角色 slot 编码。控制 Motion 描述直接来自 C# Contract；作者可调数值来自明确配置。SourceCurve 唯一引用现有 RootMotionCurveAsset，并消费 Timeline 领域拥有的同一源区间／播放时间映射；控制侧与技能侧分别取得正式资源绑定，保留帧／秒／Tick、空间和数值转换次序。portable 运行不回读 Unity 资产。旧 CharacterControlMotionCatalogEmitter 不再承担资源供给；输入适配器的 CameraRelative 判断同步改读控制合同。
 
 **取舍：**分型状态减少全局 slot/schema 联动，但需要各模块提供完整 Capture／Restore；保留统一槽表实现简单的整体 codec，却继续让所有模块依赖一份编译产物，因此不选择。不会以反射序列化任意 C# 对象代替正式状态。
 
@@ -89,7 +89,7 @@ Ability／Timeline 自动产生带实例和 generation 的有限动作播放、�
 
 ### D6. 资源和绑定按真实领域保存，不再统一生成 Character Projection 总包
 
-动画 Profile、Rig、原生图和明确资源引用是表现输入；实例创建时建立只读运行绑定，供 Player、Slot、Constraint、Camera 使用。静态资源的加载／骨骼索引解析属于正式初始化，不能在每帧遍历资产。已有 ACL、Motion Matching、Foot 数据与相机资源产品保留自己的构建、身份和加载合同。
+动画 Profile、Rig、原生图和明确资源引用是表现输入；实例创建时建立只读运行绑定，供 Player、Slot、Constraint、Camera 使用。静态资源的加载／骨骼索引解析属于正式初始化，不能在每帧遍历资产。已有 ACL、Motion Matching、Foot 数据与相机资源产品保留自己的构建、身份和加载合同。Camera 任务唯一拥有 Profile／资源到只读 Camera 绑定的准备能力及现有求解／资源规则；本任务只调用它并迁出旧总 Projection 中的挂接，不修改 Camera Builder、payload 或 Timeline.Camera.cs。
 
 `CharacterPresentationProjection` 不再作为必须发布的全角色 Pose 程序容器；移除 Image、ProgramId／SemanticHash 和按整角色产物生成的重复配置。其仍被消费的 Rig／源资源／Slot／有限动作／Camera 数据按实际领域迁回正式配置、资源产品或不可序列化实例绑定，禁止复制成另一个统一编译总包。最终旧 Projection wrapper／codec／字段在无消费者后删除。Action 的源和 Slot 对应关系来自技能播放合同与动画配置，必须验证，但不再要求技能与全部动画资源共享同一个内容 Hash。
 
@@ -116,6 +116,48 @@ Pose 编辑器不再提供生成 ProgramImage 的 Compile 动作；已有轻量�
 正式运行、预览和 Live Debug 通过同一个原生 Pose Factory 与节点运行结果观察；NodeId、PortId、调用实例和求值身份直接定位原图，不为恢复旧 Debug SourceMap 而编译一份隐藏 Image。技能仍保留自己的来源映射，既有 Scene Play 的观察／暂停／推进能力按各自 owner 迁移，不能用 Preview 专用播放器替代。
 
 C# authoring 继续两个显式调用，使用同一领域字段、端口、Mutation 和共享节点定义，保留完整资产身份与子图引用。此次原生运行节点迁移不是新增作者协议。
+
+### D9. Timeline直接调度正式内容，不编译轨道与Clip
+
+这是本轮明确决策，不留给实现选择：删除 Timeline 轨道／Clip 到 Semantic operation 的发射，正式 Timeline Runtime 直接消费只读轨道、区间、片段类型、参数、稳定 ClipId 和资源引用。技能图上的“调用 Timeline”节点仍可作为技能调用操作存在，但它只绑定 Timeline identity／内容版本／入参；不把 Timeline 内部再次展开成操作图。TreeClip 只引用已独立编译的技能执行入口，Decision／Commit、调用实例和取消传播继续由原生命周期管理。
+
+不复活旧 TimelinePlayer，也不改用 Slate Cutscene Runtime。把现有正式 Timeline 调度、边界遍历、窗口和取消算法从读取 Program operations 改为读取正式时间轴内容，形成唯一 Timeline Runtime；技能调用与非 Skill 调用都经这个入口，只在调用上下文上不同。共享内容只读，每次播放拥有独立 cursor、loop／section、活动片段、目标、generation 与结束状态。
+
+Unity 作者资产仍由 TimelineData 的正式 API 拥有；普通 .NET 所需的 portable Timeline 内容由同一字段／类型合同一对一序列化，Unity 对象转换为稳定资源或技能引用。它只保存作者已有内容，不生成 IR、控制流、状态槽或操作码，不建立另一份可写时间轴。导出不调用 Character Frontend，加载不回读 Unity。Float32／Fixed 在正式实例准备中按同一内容合同做数值和资源绑定，两个目标不得重写时间映射或片段逻辑。
+
+唯一 Timeline 时间 owner 负责作者帧／秒／Logic Tick、ClipIn、源区间、播放速率、Section／loop 和前后采样边界。一次 Tick 跨过多个边界时保持原稳定顺序；取消后关闭该实例窗口／TreeClip 和 Gameplay 输出，纯动画尾部由原 Slot／播放 owner 继续处理。Snapshot 保存各次播放和 TreeClip 调用的跨 Tick 状态，重放复用同一 Runtime，不自行推进表现图。
+
+RootMotionCurveAsset 唯一保存累计 XYZ／Yaw、源时长和求值模式；Clip 只拥有引用、源区间、Timeline位置、混合与 Weight／Ease。时间映射由曲线／Timeline任务唯一提供，控制 Motion 消费相同映射的正式绑定；不在 Control emitter、Warp、预览或导出器复制公式。源区间到达末尾时保持累计终值，后续 delta 为零，Clip 权重／占用仍按自身结束边界；同一源被两次使用仍有两个 Clip／Warp 调用身份。技能发布将实际 Timeline／Motion 内容版本列入依赖或携带其只读数据，C#控制从运动资源准备结果取得绑定，均不依赖角色 Program。
+
+**取舍：**直接调度保留一份 Timeline 内容模型，省掉 Clip→operation／SourceMap／布局发射；仍要维护 Timeline 业务运行和 portable 数据序列化。继续编成技能 operation 可复用旧执行器但继续维护双表示；直接读取 Unity Timeline 资产会破坏普通 .NET 和数值目标边界，两者本次都不选择。
+
+### D10. 领域准备、采用与预览接入必须给出具体结果
+
+以下是待实现的正式合同，不是声称当前已有接口。每个领域使用自己的请求／结果类型，共享稳定状态枚举而不共享任意 object 字典或统一可执行包。
+
+| 领域操作 | 输入 | 准备就绪结果 | 实际采用结果 |
+| --- | --- | --- | --- |
+| Ability Prepare／Install | AbilityId、请求内容版本、NumericTarget、实际 Timeline／Motion 依赖、provider 合同 | 已校验技能数据、直接 Timeline 内容绑定、依赖身份、能力要求 | 实际安装技能版本；每个活动 AbilityInstance 固定启动版本 |
+| Pose Prepare／ReplaceInstance | GraphId／图版本、Rig与资源绑定、动画输入合同、actor | 已绑定原生图与合法资源、可创建实例的分型结果 | 实际 GraphRevision、InstanceId、ResetGeneration；替换显式重置历史 |
+| Camera Prepare／AdoptBinding | 角色需要的 Camera Profile、资源引用、目标绑定与使用角色 | Camera owner 返回只读相机运行绑定及精确资源版本 | 实际 CameraBindingId、ProfileRevision、资源版本，由原 Camera owner 采用 |
+| Motion Prepare／Bind | RootMotionCurveAsset稳定引用、源内容版本、Timeline唯一映射、使用身份、NumericTarget | portable 运动数据与本次使用的映射绑定 | 实际 SourceRevision、MappingIdentity、Target 与绑定身份 |
+
+准备结果必须带本次 RequestId、RequestedSource identity／revision、Status、typed Missing／Invalid reason（来源、字段／资源、原因码）以及仅在 Ready 时存在的 PreparedBinding。Pending 表示 owner 的实际未完成准备；Missing／Invalid／Failed 不得读旧总包伪装 Ready。明确不需要相机的 actor 可以由正式角色职责返回 NotRequired，不能把缺失已配置相机当成不需要。
+
+准备完成和采用完成是两种事实。只有对应 owner 实际安装成功后才能发布 AdoptedResult，包含 Actor／Instance、实际采用的内容／资源版本及该 owner 的采用边界；准备失败不改写当前实例身份。预览只发起公开领域操作、读取这些状态和原 runtime observation，不创建工厂、不计算 fake ProgramEpoch、不调用旧 Character Build，也不因资产已保存就显示“已采用”。
+
+玩法内容／状态 schema 改变时按原 Session规则重新准备，网络锁定会话不能热换；本地合法的新技能版本只影响后续实例。Pose明确重建实例并重置历史。Camera 的采用边界与状态由其模块提供，本任务不以重置 Pose 或重建整个角色代替相机采用。Motion 的新绑定只在对应正式实例创建／内容重新准备时使用，不悄悄改变活动技能的轨迹。
+
+本任务拥有角色领域实例工厂、这些装配调用与结果发布。Camera Builder／payload／Timeline.Camera.cs 由 Camera 任务实现；ScenePlay协调器由预览任务接入；运动源／Clip／Warp／映射由曲线迁移任务提供；Slate源码由 Timeline UI任务维护。C#输出／生成的字段和接口变化作为明确依赖交给其 owner，不覆盖已正确的输出实现。
+
+### D11. 当前可消费接口与完成边界
+
+本轮读取 implementation.md 和源码后，只确认已有：
+- `GameplayAbilitySemanticFrontendCompiler.Compile(GameplayAbilityDefinition)`：返回独立 Ability 的语义结果。
+- `GameplayAbilityTargetCompiler.CompileFloat32/CompileFixed(ValidatedSemanticIrArtifact)`：提供两个目标入口。
+- `GameplayAbilityFloat32TargetProgramArtifactStore` 与 Fixed 对应类的 `Stage/Write/Load`：按 Ability identity 处理产物。
+
+这些仍复用旧 Semantic／CharacterSimulationProgram 容器，不能当作最终领域 runtime 或预览 API。任务1.1—1.3的已勾选记录保留；D9的 Timeline operation 删除、最终技能数据接口、D10四个领域准备／采用结果和角色工厂均由后续未完成任务交付。编译命令曾失败及未运行验证的边界仍按实现记录保留，本规划不改写 implementation.md 的事实。
 
 ## Risks / Trade-offs
 
@@ -164,7 +206,10 @@ C# authoring 继续两个显式调用，使用同一领域字段、端口、Muta
 | `refactor-character-pose-graph-architecture` | 已正确的算法、Source／Constraint／Final Publication、状态与事务所有权 | ProgramImage／操作索引／全图 Worker 专属工作被原生节点迁移替代；不能把已完成算法回退 |
 | `refine-pose-graph-readonly-blackboard`、`add-flowcanvas-event-graph` | 唯一变量声明／Set／typed Frame 和 Pose 只读消费 | 只把 Pose 编译句柄绑定改为原生节点绑定，不接管变量写入业务 |
 | `integrate-native-fsm-skill-authoring`、`add-skill-transfer-connections` | GameplayAbilityDefinition、原生 FSM 作者组织、生命周期、条件／连线语义 | 技能输出从角色总 Program 迁为独立技能数据；不复活旧 ActionExit 或其它已清理作者结构 |
-| `rebuild-btsmtl-preview-with-scene-play`、`finish-skill-runtime-observation` | 正式会话观察、暂停／推进、身份与来源、用户交互 | 将角色 ProgramEpoch 与 Pose Image 来源接到领域版本和原生图实例；不创建新预览会话 |
-| ACL／Camera／Foot 相关任务 | 资源构建、算法与已有行为改动 | 只迁移被取消总包的绑定，不扩大到未完成算法或资产 |
+| `rebuild-btsmtl-preview-with-scene-play`、`finish-skill-runtime-observation` | 正式会话观察、暂停／推进、身份与来源、用户交互 | 由本任务提供真实领域操作与采用结果，预览任务自己接 ScenePlay协调器；不保留 Character Build／ProgramEpoch，也不构造假全局版本 |
+| `rebuild-character-camera-from-zzz` | Camera Builder／payload／Timeline.Camera.cs、Profile／资源准备与求解 | 本任务仅调用其分型准备接口、迁移角色装配与旧 Projection 挂接 |
+| `unify-timeline-motion-curve-source` | RootMotionCurveAsset、MotionCurveClip／MotionWarp、源时间映射与相关绑定 | 本任务消费其唯一资源／映射合同，迁移技能内容依赖与 C# Control／Motion 接口，删除旧 ControlMotion catalog 依赖 |
+| `restyle-timeline-editor-slate-style` | Slate 源码、Timeline内容 UI／编辑／保存 | 本任务不接管 Slate 编辑代码；播放仍由正式 Timeline Runtime 拥有 |
+| ACL／Foot 相关任务 | 资源构建、算法与已有行为改动 | 只迁移被取消总包的绑定，不扩大到未完成算法或资产 |
 
 本轮不写上述 change 的 tasks／execution，不发日常窗口消息。已有代码如与本设计所需合同直接冲突，先记录具体文件、双方 owner 和业务取舍，再按用户约定提出一次实际冲突；不能把旧规范文字本身当成要求用户重复批准本次规划。

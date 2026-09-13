@@ -76,7 +76,7 @@ Timeline Editor MUST显示 TreeClip的 Decision/Commit阶段、inline/shared own
 
 ### Requirement: Timeline、Track 和 Clip 必须拥有稳定 authoring identity
 
-`TimelineData`、每个 Track 和每个 Clip MUST 持有稳定 authoring identity。authoring 重排 MUST 保持 identity，复制 Track/Clip MUST 生成新 identity，技能执行操作、动画绑定 producer 与 Debug Source Map MUST保留对应 source identity。TrackIndex 和 ClipIndex MUST NOT 作为 Debug Source Map 的 source identity。
+`TimelineData`、每个 Track 和每个 Clip MUST 持有稳定 authoring identity。authoring 重排 MUST 保持 identity，复制 Track/Clip MUST 生成新 identity，Timeline内容记录、技能调用、动画播放源与运行观察 MUST保留对应 source identity。TrackIndex 和 ClipIndex MUST NOT 作为 Debug Source Map 的 source identity。
 
 #### Scenario: 重排 Track
 
@@ -92,7 +92,7 @@ Timeline Editor MUST显示 TreeClip的 Decision/Commit阶段、inline/shared own
 
 #### Scenario: 编译 Timeline
 
-- **WHEN** Compiler 从 TimelineData 生成 技能执行操作 与 动画绑定 producer
+- **WHEN** 正式Timeline内容导出与运行绑定读取 TimelineData 与 动画绑定 producer
 - **THEN** Timeline、Track 和 Clip authoring identity MUST进入正式 Source Map
 - **AND** runtime activation、EventId、cycle 和 playback generation MUST独立生成
 
@@ -161,7 +161,7 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 
 ### Requirement: Curve Editor必须保持领域运行链唯一
 
-Timeline Curve Editor MUST只提供Timeline-local作者投影与正式mutation，不得创建`GenericTimelineCurveRuntime`。Animation Segment Weight/Ease MUST继续进入Action Presentation计划；MotionCurve和MotionWarp曲线 MUST继续进入Semantic IR、Numeric Program与各自evaluator/modifier；Camera曲线 MUST继续进入既有Camera compile/presentation链。AnimationClip注册表现Curve MUST由Clip Curve catalog、Animation Window入口与Character 动画实例绑定链拥有，MUST不经过Timeline Curve MutationAdapter。RootMotionCurveAsset、导入AnimationClip骨骼/BlendShape/属性曲线和没有正式consumer的任意Float Curve MUST不进入Timeline Curve Channel Catalog。
+Timeline Curve Editor MUST只提供Timeline-local作者投影与正式mutation，不得创建`GenericTimelineCurveRuntime`。Animation Segment Weight/Ease MUST继续进入Action Presentation计划；MotionCurve和MotionWarp曲线 MUST作为直接Timeline内容及正式运动源绑定交给唯一Timeline／Motion Runtime，不生成IR或Clip operation；Camera曲线 MUST由Camera领域准备为只读运行绑定并由原求解链消费。AnimationClip注册表现Curve MUST由Clip Curve catalog、Animation Window入口与Character 动画实例绑定链拥有，MUST不经过Timeline Curve MutationAdapter。RootMotionCurveAsset、导入AnimationClip骨骼/BlendShape/属性曲线和没有正式consumer的任意Float Curve MUST不进入Timeline Curve Channel Catalog。
 
 #### Scenario: 编辑MotionWarp progress
 
@@ -186,3 +186,11 @@ Timeline Curve Editor MUST只提供Timeline-local作者投影与正式mutation�
 - **WHEN** 作者预览一个合法有限动作 Timeline
 - **THEN** 预览 MUST通过动作请求进入原生 Pose 实例，保留动作时间与 Slot 混合语义
 - **AND** MUST不创建另一套动画执行器或生成临时角色 Program
+
+### Requirement: 预览接入必须以领域实际准备和采用事实为准
+
+预览 MUST消费角色领域工厂提供的技能、Pose、Camera、Motion准备与采用事实，分别显示请求来源／版本、Pending／Ready／Missing／Invalid／Failed及精确原因，并显示当前actor真正采用的版本和实例。预览 MUST不重建Character Build／ProgramEpoch，不计算假全局版本，不实现Camera或Motion准备，不因作者保存或准备Ready就显示已采用。原独立作者预览的会话实现迁移由预览任务唯一负责；本任务只提供正式实例／输入／结果合同，不扩建窗口私有执行路径。
+
+#### Scenario: Camera尚未采用新绑定
+- **WHEN** Camera资源准备已Ready但当前actor仍使用旧BindingId
+- **THEN** 预览 MUST明确显示当前实际BindingId和待采用状态，不显示整个角色已更新

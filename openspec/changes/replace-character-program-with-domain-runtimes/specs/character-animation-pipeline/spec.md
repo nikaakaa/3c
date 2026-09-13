@@ -182,3 +182,13 @@ Final Publication MUST唯一拥有 Committed／Pending 最终姿态、完整物�
 - **WHEN** Slot usage消失、retirement permission和backend release依赖全部在成功帧内匹配
 - **THEN** Runtime MUST在Seal后执行唯一deferred release command
 - **AND** MUST不在原生Pose图成功前销毁旧Playable或复用其workspace槽位
+
+### Requirement: Timeline回绕必须完整采样Gameplay边界
+
+正式Timeline Runtime MUST在一个SimulationTick跨越loop边界时按尾段、中间cycle和头段稳定采样Gameplay tracks。Presentation sampler MAY按visual time回绕Action动画，但 MUST不补发Gameplay facts。持续Pose source的cycle MUST由state-local Player独立维护。
+
+#### Scenario: 一Tick跨越Loop终点
+
+- **WHEN** logic time从cycle尾部前进到下一cycle头部
+- **THEN** Timeline Runtime MUST按正式区间顺序采样两侧Gameplay segment
+- **AND** Presentation MUST不重复提交Window或Cue

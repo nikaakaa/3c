@@ -2,7 +2,7 @@
 
 ### Requirement: Character Authoring 必须先编译为 Numeric-Neutral Semantic IR
 
-技能 Frontend MUST以 GameplayAbilityDefinition 为根，只发现其私有 Graph／FSM／Condition／子图引用／Timeline、局部状态与实际领域引用，生成不可变且通过 canonical 编解码和身份校验的 numeric-neutral 技能 IR。IR MUST不包含控制状态机、角色 BodyMotion 或装备总目录，不包含 Pose／Camera／ACL 资源内容。Numeric Target MUST只消费正式已校验技能 artifact，不重新读取 Unity 作者图。既有独立 Timeline 内容处理继续复用同一内容实现，不能借角色总 Program 退役删除该产品。
+技能 Frontend MUST以 GameplayAbilityDefinition 为根，只编译其私有 Graph／FSM／Condition／子图引用和 TreeClip 引用的技能图、局部状态与实际领域调用，生成不可变且通过 canonical 编解码和身份校验的 numeric-neutral 技能 IR。IR MUST不包含控制状态机、角色 BodyMotion 或装备总目录，不包含 Pose／Camera／ACL 资源内容。Numeric Target MUST只消费正式已校验技能 artifact，不重新读取 Unity 作者图。Timeline轨道／Clip／MotionWarp直接按正式内容运行，不进入IR；技能IR只保存调用与精确内容引用。独立Timeline产品继续使用同一内容Runtime，不再生成独立Timeline IR。
 
 #### Scenario: 编译 Corin Semantic IR Artifact
 
@@ -66,6 +66,59 @@ Gameplay Semantic IR MUST只存在于编译和诊断边界。Unity Editor MAY将
 - **WHEN** 新 artifact 在 encode、磁盘写入或重新读取校验阶段失败
 - **THEN** 当前 cache MUST不被部分文件替换
 - **AND** Target build MUST失败而不是读取临时文件或旧版本兼容格式
+
+
+### Requirement: MotionWarp authoring 必须编译为唯一 numeric-neutral operation
+
+MotionWarpClip MUST作为正式 Timeline 内容保存 Translation Mode、Target Offset Space、目标参数、Rotation Mode／Method、Limit Policy、实际曲线／rate 和对同 owner MotionCurveClip 的稳定引用，不生成 TimelineMotionWarp operation 或到 MotionCurve operation 的引用。技能只保留 Timeline 调用；MotionWarp Runtime 按内容和正式资源绑定执行，Unity对象和 mutable target 不进入 portable 内容。
+
+#### Scenario: 编译带 MotionWarp 的动作 Timeline
+
+- **WHEN** Timeline包含合法MotionCurveClip和引用它的MotionWarpClip
+- **THEN** 正式Timeline内容 MUST保留两个独立Clip记录，技能IR不包含它们的operation
+- **AND** MotionWarpClip MUST通过稳定引用唯一指向同owner的MotionCurveClip
+- **AND** 内容来源定位 MUST能返回两个authoring clip
+
+
+### Requirement: MotionWarp轨迹solver必须保持Numeric-Neutral
+
+MotionWarp MUST保持唯一数值中立算法和既有源轨迹、目标、空间、限制与累计差值规则。Float32／Fixed MUST从相同正式 Timeline 内容及 RootMotionCurveAsset 映射准备自己的数值绑定，不遍历作者资产、不发明目标专用mode，也不生成另一份时间轴操作程序。累计状态只属于当前 Timeline／动作实例并接入领域快照。
+
+#### Scenario: 同一Corin IR降低两个Numeric Target
+
+- **WHEN** Corin Timeline内容包含SkewToTarget、ApproachDirection与ProgressCurve rotation
+- **THEN** Float32与Fixed 内容运行 MUST包含相同业务mode、offset空间、窗口和Limit Policy
+- **AND** 两者 MAY使用各自数值常量、curve codec和领域状态格式
+- **AND** Fixed Target MUST不降级为旧总残差算法
+
+#### Scenario: IR包含未消费字段
+
+- **WHEN** Translation Mode或Rotation Method不消费某条curve或rate
+- **THEN** 内容校验与绑定 MUST拒绝含糊配置或从canonical descriptor中排除该字段
+- **AND** Timeline内容Hash MUST不依赖Editor残留的未消费数据
+
+
+### Requirement: MotionWarp 必须成为两个 Numeric Target 的显式 capability
+
+MotionWarp 内容和资源绑定 MUST声明实际需要的能力。Float32／Fixed 的准备入口 MUST明确支持或拒绝不支持的内容，不依赖操作集中的 TimelineMotionWarp opcode；Network Model 不得忽略不支持的 Warp 内容或改变模式。
+
+#### Scenario: Target backend 缺少 MotionWarp
+
+- **WHEN** 待绑定Timeline内容包含MotionWarpClip
+- **AND** 某Numeric Target没有完整实现该运动模式和状态格式
+- **THEN** Target内容准备 MUST失败
+- **AND** MUST不生成会在运行时跳过Warp的内容运行
+
+
+### Requirement: MotionWarp source 与 Action Context 必须在 Semantic 阶段闭合
+
+MotionWarp source Clip、调用上下文、激活目标和目标模式要求 MUST在正式 Timeline 内容校验及实例绑定时闭合。缺失、重复或跨 owner 引用 MUST失败；技能 IR 不重新编译 Timeline，不通过源资产相同推断相同 Clip 调用。运行只消费成功绑定的内容。
+
+#### Scenario: Shared Timeline 被普通状态复用
+
+- **WHEN** 一个包含MotionWarp的shared Timeline同时被动作状态和无Action Context状态引用
+- **THEN** 内容校验与绑定 MUST拒绝该内容运行
+- **AND** MUST不假定运行时只会走合法call site
 
 
 ## REMOVED Requirements

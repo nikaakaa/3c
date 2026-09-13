@@ -15,11 +15,11 @@
 
 ### Requirement: 技能构建必须只处理自身可达玩法内容
 
-技能构建 MUST以明确的 Ability 为根，只处理其私有图、FSM、条件、子图引用、Timeline、局部状态、数值和实际使用的领域引用。控制状态机、BodyMotion、全角色装备目录、Pose 图、相机和动画资源内容 MUST不进入技能执行数据。角色与装备授予 MUST引用同一技能数据，不按角色复制。缺失实际技能依赖 MUST明确报错。
+技能构建 MUST以明确的 Ability 为根，只编译其私有图、FSM、条件、子图引用及 TreeClip 引用的技能图、局部状态和数值；Timeline／Motion 只作为真实内容和资源依赖，轨道／Clip 不编成技能操作。控制状态机、BodyMotion、全角色装备目录、Pose 图、相机和动画资源内容 MUST不进入技能执行数据。角色与装备授予 MUST引用同一技能数据，不按角色复制。缺失实际技能依赖 MUST明确报错。
 
 #### Scenario: 只修改攻击窗口
 - **WHEN** 作者修改一个 Ability 的攻击窗口且其公共接口未改变
-- **THEN** 系统 MUST只使该技能及真实依赖它的技能内容失效
+- **THEN** 系统 MUST更新该 Timeline 内容和引用它的实际技能依赖版本，不重新编译未改变的技能图操作
 - **AND** MUST不重建 Locomotion、Pose、ACL 或网络 Pass 计划
 
 #### Scenario: 同一技能授予两个角色
@@ -77,3 +77,52 @@ Pose、节点实例和播放表现内存 MUST只属于本地表现。技能命�
 - **WHEN** 本地作者显式安装一个接口兼容的技能版本
 - **THEN** 已活动技能 MUST继续消费其原版本，后续实例使用新版本
 - **AND** 网络锁定会话 MUST不隐式接受改变后的玩法内容
+
+### Requirement: Timeline必须直接调度内容而非生成操作程序
+
+Timeline MUST使用唯一正式运行时直接调度轨道、Clip、区间、播放参数和资源引用，不生成 Timeline Semantic IR、Clip operation、操作控制流或全图状态布局。技能调用节点 MUST只保存调用和精确内容绑定；TreeClip 图 MUST仍走独立技能编译与执行。Unity 与普通 .NET MUST消费同一正式内容合同的只读表示，portable 运行不读 Unity 资产，不接入 Slate Runtime 或第二播放器。
+
+#### Scenario: 修改Timeline片段区间
+- **WHEN** 作者修改合法片段的区间但不改变技能图逻辑
+- **THEN** 系统 MUST更新正式 Timeline 内容和实际依赖身份
+- **AND** MUST不重新把轨道和Clip发射成操作程序
+
+#### Scenario: 一次Tick跨过多个边界
+- **WHEN** 正式时钟在一次 Tick 跨过多个 Clip／loop／section 边界
+- **THEN** 唯一 Timeline Runtime MUST按既有稳定顺序处理进入、采样和退出，并保持窗口、Decision／Commit和取消语义
+
+### Requirement: Motion源与时间映射必须由唯一正式合同提供
+
+MotionCurve MUST引用 RootMotionCurveAsset 的正式源内容，源区间和播放时间映射 MUST由 Timeline 领域唯一提供。技能侧 MUST消费直接 Timeline 内容的实际运动依赖，C# Control／Motion MUST消费正式资源绑定；两者不得依赖旧 ControlMotion catalog 或整个角色 Program，不得在 portable 数值运行中读取 Unity 资产。源的累计终值和 Clip 自身生命周期 MUST分别保持，Weight／Ease 与 Warp 参数继续归原 owner。
+
+#### Scenario: 同一曲线被技能和控制使用
+- **WHEN** 技能 Timeline 与 C# 控制引用同一源的明确区间
+- **THEN** 两者 MUST通过同一正式映射规则取得目标数值数据与绑定
+- **AND** Clip到达源区间末尾后 MUST保持累计终值、后续运动delta为零，不能提前结束尚有效的Clip生命周期
+
+### Requirement: 各领域必须分别提供准备与实际采用结果
+
+技能、Pose、Camera、Motion MUST各自返回请求身份、请求来源与版本、Ready／Pending／Missing／Invalid／Failed 状态和 typed 原因；只有 Ready 才能提供合法准备结果。采用 MUST由实际 owner 单独完成，返回 actor／实例和实际采用版本。明确不需要某领域的角色只能依据正式角色职责返回 NotRequired，不能把缺失配置当成不需要。
+
+#### Scenario: 资源准备失败但角色仍有旧实例
+- **WHEN** 请求版本的资源缺失或无效
+- **THEN** owner MUST返回真实失败原因，不能以旧实例版本伪装 Ready 或已采用
+- **AND** 当前运行实例身份 MUST保持真实状态
+
+### Requirement: 预览必须只消费领域真实状态与操作
+
+预览 MUST只调用公开领域操作并显示对应准备／采用／运行观察事实；不得维护 Character Build、ProgramEpoch、统一假版本或自建领域工厂。准备就绪不等于实际采用，保存作者数据不等于运行实例已更新。Camera准备由其领域拥有，角色装配只调用和挂接，预览不得重写其求解或资源规则。
+
+#### Scenario: Pose准备完成但尚未替换实例
+- **WHEN** 新图准备 Ready 但当前 actor 仍运行旧实例
+- **THEN** 预览 MUST分别显示请求图版本和实际运行实例版本
+- **AND** MUST只在正式替换成功后显示新的 InstanceId／ResetGeneration
+
+### Requirement: 领域采用必须遵守实例和会话生命周期
+
+活动技能 MUST固定启动时的技能与 Timeline／Motion 内容版本；Pose 显式重建 MUST重置对应历史；玩法内容或状态格式变化 MUST按原 Session 规则重新准备。Camera采用 MUST使用其模块的实际采用边界，不得通过重建整个角色冒充相机更新。不同领域 MUST不合成为另一个可执行包或假全局Epoch。
+
+#### Scenario: 修改活动技能引用的运动源
+- **WHEN** 作者更新源数据但当前技能实例仍活动
+- **THEN** 当前实例 MUST继续使用启动时绑定的内容，正式重新准备后新实例采用新版本
+- **AND** 网络锁定会话不得偷偷更换轨迹或内容身份

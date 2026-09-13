@@ -82,6 +82,9 @@ namespace ThirdPersonCamera
                     plan.WorldBasicData,
                     target,
                     envelope))
+                .WithLens(new CameraLensPlan(
+                    Mathf.LerpUnclamped(plan.NearClipPlane, payload.NearClipPlane, envelope),
+                    Mathf.LerpUnclamped(plan.FarClipPlane, payload.FarClipPlane, envelope)))
                 .WithIgnoreCollision(payload.IgnoreCameraCollision && envelope > 0f)
                 .WithShotId(envelope > 0f ? payload.ShotId : string.Empty);
         }

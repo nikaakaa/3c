@@ -112,6 +112,13 @@ namespace ThirdPersonCamera
             return WithWorldBasicData(m_WorldBasicData.WithFieldOfView(fieldOfView));
         }
 
+        public CameraFramePlan WithLens(CameraLensPlan lens)
+        {
+            CameraFramePlan result = this;
+            result.m_Lens = lens;
+            return result;
+        }
+
         public CameraFramePlan WithLookDelta(Vector2 lookDelta)
         {
             CameraFramePlan result = this;

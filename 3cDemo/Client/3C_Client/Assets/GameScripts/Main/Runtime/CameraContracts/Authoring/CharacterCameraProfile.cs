@@ -260,17 +260,6 @@ namespace ThirdPersonCamera
             value.Append('|').Append((byte)collision.TriggerMode);
         }
 
-        static void AppendOrbit(StringBuilder value, CameraOrbitDescriptor orbit)
-        {
-            if (orbit == null)
-            {
-                value.Append("|missing-orbit");
-                return;
-            }
-            value.Append('|').Append(orbit.Height.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(orbit.Radius.ToString("R", CultureInfo.InvariantCulture));
-        }
-
         CameraFrameOnePointByTrackStage RequireDefaultTrack()
         {
             CameraFrameOnePointByTrackStage result = null;

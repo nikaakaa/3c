@@ -99,6 +99,7 @@ namespace ThirdPersonCamera
             result = default;
             if (virtualCamera != null)
                 virtualCamera.PreviousStateIsValid = false;
+            shotRigs ??= Array.Empty<CameraShotRigBinding>();
             for (int i = 0; i < shotRigs.Length; i++)
                 if (shotRigs[i]?.VirtualCamera != null)
                     shotRigs[i].VirtualCamera.PreviousStateIsValid = false;
@@ -155,6 +156,7 @@ namespace ThirdPersonCamera
             {
                 CameraShotRigBinding binding = shotRigs[i];
                 if (binding == null || string.IsNullOrWhiteSpace(binding.ShotId) ||
+                    !string.Equals(binding.ShotId, binding.ShotId.Trim(), StringComparison.Ordinal) ||
                     binding.VirtualCamera == null ||
                     !shotIds.Add(binding.ShotId) ||
                     !cameras.Add(binding.VirtualCamera.GetInstanceID()))

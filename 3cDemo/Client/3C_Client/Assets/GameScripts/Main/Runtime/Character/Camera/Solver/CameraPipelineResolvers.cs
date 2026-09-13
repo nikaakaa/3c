@@ -183,7 +183,10 @@ namespace ThirdPersonCamera
                 return candidate.SourceActionInstanceId > selected.SourceActionInstanceId;
             if (candidate.Cycle != selected.Cycle)
                 return candidate.Cycle > selected.Cycle;
-            return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
+            int source = string.CompareOrdinal(candidate.SourceId, selected.SourceId);
+            return source != 0
+                ? source < 0
+                : string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
         }
 
         static string FirstKey(params string[] keys)
@@ -254,7 +257,10 @@ namespace ThirdPersonCamera
                 return candidate.SourceActionInstanceId > selected.SourceActionInstanceId;
             if (candidate.Cycle != selected.Cycle)
                 return candidate.Cycle > selected.Cycle;
-            return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
+            int source = string.CompareOrdinal(candidate.SourceId, selected.SourceId);
+            return source != 0
+                ? source < 0
+                : string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
         }
     }
 

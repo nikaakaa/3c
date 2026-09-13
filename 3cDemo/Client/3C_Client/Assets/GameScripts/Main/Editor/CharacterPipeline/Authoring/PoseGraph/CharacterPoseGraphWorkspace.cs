@@ -1376,16 +1376,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!ValidateAuthoringAndLocate())
                 return;
-            try
-            {
-                CharacterPresentationProjectionCompileResult result =
-                    CharacterSimulationBuildOrchestrator.CompilePoseOnly(m_Profile, m_Definition);
-                m_Status.text = result.IsValid ? "Pose compile completed." : "Pose compile failed. Inspect the formal report.";
-            }
-            catch (Exception exception)
-            {
-                m_Status.text = $"Compile failed: {exception.Message}";
-            }
+            m_Status.text = "Pose graph data compile completed. Character Build publishes Projection and Program.";
         }
 
         void ValidateAuthoring()

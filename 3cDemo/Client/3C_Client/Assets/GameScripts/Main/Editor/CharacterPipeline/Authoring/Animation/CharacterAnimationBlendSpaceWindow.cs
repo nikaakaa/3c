@@ -1650,13 +1650,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string message;
             try
             {
-                CharacterPresentationProjectionCompileResult result =
-                    CharacterSimulationBuildOrchestrator.CompilePoseOnly(m_Profile, m_Definition);
-                message = result.IsValid ? "Pose compile completed." : "Pose compile failed. Inspect the formal compile report.";
-            }
-            catch (Exception exception)
-            {
-                message = $"Compile failed: {exception.Message}";
+                CharacterAnimationBlendSpaceValidationReport report =
+                    CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
+                message = report.IsValid
+                    ? "Blend Space graph data compile completed. Character Build publishes Projection and Program."
+                    : $"Blend Space graph data compile failed: {report.Issues[0]}";
             }
             finally
             {

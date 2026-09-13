@@ -54,10 +54,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 for (int i = 0; i < Producers.Count; i++)
                 {
-                    if (Producers[i] == null || Producers[i].ProgramProducerIndex != i || !Producers[i].IsValid)
+                    CharacterPresentationProducerEntry producer = Producers[i];
+                    if (producer == null || producer.ProgramProducerIndex != i || !producer.IsValid ||
+                        producer.Kind == CharacterPresentationProducerKind.Camera &&
+                        !IsCameraProducerClosed(producer.Camera))
                         return false;
                 }
                 return true;
+            }
+        }
+
+        bool IsCameraProducerClosed(
+            ThirdPersonCamera.CharacterPresentationCameraBinding binding)
+        {
+            if (m_Camera == null || binding == null)
+                return false;
+            switch (binding.Kind)
+            {
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Response:
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Target:
+                    return true;
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Sequence:
+                    return m_Camera.TryGetSequence(binding.SequenceId, out _);
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Override:
+                    return m_Camera.TryGetOverride(binding.ResourceId, out _);
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom:
+                    return m_Camera.TryGetZoom(binding.ResourceId, out _);
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch:
+                    return m_Camera.TryGetStretch(binding.ResourceId, out _);
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shake:
+                    return m_Camera.TryGetShake(binding.ResourceId, out _);
+                case ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shot:
+                    return m_Camera.TryGetShot(binding.ResourceId, out _);
+                default:
+                    return false;
             }
         }
 

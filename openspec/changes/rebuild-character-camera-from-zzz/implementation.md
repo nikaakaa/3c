@@ -31,7 +31,7 @@
 | 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；Camera Resource Track 已注册为 typed Camera request；当前 Corin 只有 Zoom/Stretch 正式资源，Shake/Override 没有来源触发闭包。 |
 | 4.4-4.5 Shot 与固定效果顺序 | 部分完成 | Shot 编译要求真实 prefab 和标准 VCam，Adapter 支持显式 Shot rig binding；已知来源 prefab 尚未进入工程；顺序固定为 Override→Zoom→Stretch→Shake→Shot→Environment。 |
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
-| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
+| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Presentation Projection 现在还会校验每个 Camera Producer 的 Sequence/Effect ResourceId 属于同一 Camera Projection；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
 | 6.3 Corin 动作资源可达性 | 部分完成 | ZZZ 动作资料已证明 34 个 Shake、10 个 Stretch、10 个 Zoom 资源键能反查到具体动作；工程已保留 18 Zoom/18 Stretch 资源，但现有 Corin ActionCue 仍没有正式 ResourceId，尚未把这些来源映射接入正式 Camera request，也不能虚构剩余 81 Shake/4 Override 的项目触发关系。 |
 | 6.4-6.5 正式发布与 Preview/ScenePlay | 暂停全量入口 | 用户明确要求删除会触发十几分钟全量 Character Build 的入口；已移除 Character Float32/Fixed MCP 注册与 CLI 入口，底层正式 Orchestrator 保留但当前没有新的增量发布入口，旧 job 不接受其产物。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/Sequence 退出/目标退出/碰撞字段和 Effect table/operator 已接入；Camera PresentationCaptureFrame 从正式 PresentationFrameContext 写入 RenderFrame/LocalLogicTick，输入回放仍改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动；Unity 重载后的实时证据仍待返回。 |
@@ -81,5 +81,6 @@
 - Camera plan continuity operator 已消费并校验 `SequenceRetiring/SequenceStopReason` 与 `TargetRetired/TargetStopReason/TargetRetiredKey`，退出合同异常会进入诊断失败结果；尚未取得 Unity 运行时采样证据。
 - Camera `ForceTeardown` 已从同 scope 直接清除改为 `Cancel` 退休，效果 owner 继续按各自 RetireDuration 淡出；未改变 Sequence force cut 的职责。
 - 当前 Corin `CorinAttack1Timeline.asset` 的 `Attack1CameraCue` 仍是通用 `ActionCueClip`，只有 `CueId: Attack1CameraCue` 与 `CueType: Camera`，没有正式 `CameraCueClip.ResourceId`；因此外部动作资料中的 camera key 仍不能直接迁成正式 Camera request，避免伪造资源映射。
+- `CharacterPresentationProjection.IsValid` 已把 Camera Producer 与 Camera Projection 的资源闭包绑定起来；旧/混合 Projection 不再能仅凭 Producer 自身字段通过有效性检查。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

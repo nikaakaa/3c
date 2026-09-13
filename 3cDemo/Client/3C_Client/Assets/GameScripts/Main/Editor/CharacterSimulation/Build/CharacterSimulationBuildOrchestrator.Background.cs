@@ -264,9 +264,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             try
             {
                 semanticStage = CharacterSemanticIrArtifactStore.Stage(result.RootGuid, result.Artifact);
-                stages.Add(new CharacterAclAnimationArtifactPublishStage(
-                    result.RootGuid,
-                    result.AnimationCatalog));
                 for (int i = 0; i < result.Products.Count; i++)
                     stages.Add(result.Targets[i].Stage(result.RootGuid, result.Products[i]));
                 Publish(

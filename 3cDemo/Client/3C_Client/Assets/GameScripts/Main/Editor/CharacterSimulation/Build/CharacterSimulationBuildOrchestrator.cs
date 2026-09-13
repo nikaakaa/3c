@@ -55,9 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var phaseWatch = System.Diagnostics.Stopwatch.StartNew();
                 string definitionGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(request.Definition));
                 semanticStage = CharacterSemanticIrArtifactStore.Stage(definitionGuid, semanticArtifact);
-                stages.Add(new CharacterAclAnimationArtifactPublishStage(
-                    definitionGuid,
-                    result.AnimationCatalog));
                 for (int i = 0; i < request.Targets.Count; i++)
                     stages.Add(request.Targets[i].Stage(definitionGuid, result.TargetProducts[i]));
                 phaseWatch.Stop();

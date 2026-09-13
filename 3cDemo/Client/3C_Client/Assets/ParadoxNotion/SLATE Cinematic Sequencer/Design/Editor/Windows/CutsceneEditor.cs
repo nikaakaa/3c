@@ -746,6 +746,13 @@ namespace Slate
             cutscene = null;
         }
 
+        public void ConfigureEmbeddedBinding(IEmbeddedTimelineBinding binding)
+        {
+            embeddedTimeline = binding;
+            if (binding != null)
+                embeddedAddTrack = binding.AddTrack;
+        }
+
         public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
         {
             embeddedRuntimeTime = runtimeTime;
@@ -2546,8 +2553,14 @@ namespace Slate
                     menu.AddItem(new GUIContent("Delete Track"), false, () =>
                         {
                             if ( EditorUtility.DisplayDialog("Delete Track", "Are you sure?", "YES", "NO!") ) {
-                                group.DeleteTrack(track);
-                                InitClipWrappers();
+                                if (embeddedTimeline != null && track is IEmbeddedTimelineProxyIdentity proxy &&
+                                    embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding formalTrack))
+                                    embeddedTimeline.DeleteTrack(formalTrack);
+                                else
+                                {
+                                    group.DeleteTrack(track);
+                                    InitClipWrappers();
+                                }
                             }
                         });
                     menu.ShowAsContext();
@@ -2556,7 +2569,11 @@ namespace Slate
 
                 //REORDERING
                 if ( e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition) ) {
-                    CutsceneUtility.selectedObject = track;
+                    if (embeddedTimeline != null && track is IEmbeddedTimelineProxyIdentity proxy &&
+                        embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding formalTrack))
+                        embeddedTimeline.Select(formalTrack);
+                    else
+                        CutsceneUtility.selectedObject = track;
                     pickedTrack = track;
                     e.Use();
                 }

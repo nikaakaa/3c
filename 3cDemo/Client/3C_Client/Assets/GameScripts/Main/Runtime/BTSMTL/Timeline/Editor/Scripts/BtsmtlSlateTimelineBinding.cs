@@ -313,6 +313,22 @@ namespace BTSMTL.Timeline.Editor
                    (track = binding.Source) != null;
         }
 
+        public bool TryGetTrackBinding(string authoringId, out IEmbeddedTimelineTrackBinding binding)
+        {
+            if (m_Tracks.TryGetValue(authoringId ?? string.Empty, out BtsmtlTimelineTrackBinding value))
+            {
+                binding = value;
+                return true;
+            }
+            binding = null;
+            return false;
+        }
+
+        bool IEmbeddedTimelineBinding.TryGetTrack(string authoringId, out IEmbeddedTimelineTrackBinding track)
+        {
+            return TryGetTrackBinding(authoringId, out track);
+        }
+
         public bool TryGetClip(string authoringId, out Clip clip)
         {
             clip = null;
@@ -453,8 +469,7 @@ namespace BTSMTL.Timeline.Editor
                 FrameRate = FrameRate,
                 StartFrame = frame,
                 EndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                CurveEndFrame = frame + Mathf.Max(1, FrameRate / 20)
+                DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20)
             };
             PopupWindow.Show(new Rect(0, 0, 1, 1), new TimelineClipCreationPopup(
                 request,
@@ -473,12 +488,12 @@ namespace BTSMTL.Timeline.Editor
                 {
                     Clip added = request.Kind == TimelineContractKinds.AnimationClip
                         ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
+                        : request.Kind == TimelineContractKinds.MotionCurveClip
+                            ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, request.StartFrame)
                         : request.Resource != null
                             ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartFrame)
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartFrame);
                     added.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
-                    if (added is MotionCurveClip motion)
-                        motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip");
@@ -502,7 +517,9 @@ namespace BTSMTL.Timeline.Editor
             if (request.Kind == TimelineContractKinds.MotionCurveClip)
             {
                 configuration.CurveId = request.CurveId;
-                configuration.CurveEndFrame = request.CurveEndFrame;
+                configuration.SourceCurve = request.SourceCurve;
+                configuration.SourceStartTime = request.SourceStartTime;
+                configuration.SourceEndTime = request.SourceEndTime;
                 configuration.Space = request.Space;
                 configuration.Channel = request.Channel;
                 configuration.BlendMode = request.BlendMode;
@@ -722,7 +739,7 @@ namespace BTSMTL.Timeline.Editor
             public string DisplayName => m_Descriptor.DisplayName;
             public AnimationCurve Curve => m_Curve;
             public int StartFrame => m_Clip.Source.StartFrame;
-            public int EndFrame => m_Clip.Source is MotionCurveClip motion && IsMotionPosition(m_Descriptor.ChannelId) ? motion.CurveEndFrame : m_Clip.Source.EndFrame;
+            public int EndFrame => m_Clip.Source.EndFrame;
             public float Duration => m_Duration;
             public void Replace(AnimationCurve curve) => m_Curve = TimelineCurveAuthoring.CopyCurve(curve);
             public void Trim(float min, float max)
@@ -733,18 +750,8 @@ namespace BTSMTL.Timeline.Editor
             }
             public void CommitSource() => m_Descriptor.Replace(m_Clip.Source, ConvertCurveTime(m_Curve, m_Duration, true));
 
-            static bool IsMotionPosition(TimelineCurveChannelId id) =>
-                id == TimelineCurveChannelCatalog.MotionPositionX ||
-                id == TimelineCurveChannelCatalog.MotionPositionY ||
-                id == TimelineCurveChannelCatalog.MotionPositionZ ||
-                id == TimelineCurveChannelCatalog.MotionYaw;
-
-            static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate)
-            {
-                if (clip is MotionCurveClip motion && IsMotionPosition(descriptor.ChannelId))
-                    return Mathf.Max(1f / frameRate, (motion.CurveEndFrame - motion.StartFrame) / (float)frameRate);
-                return Mathf.Max(1f / frameRate, clip.Duration / (float)frameRate);
-            }
+            static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate) =>
+                Mathf.Max(1f / frameRate, clip.Duration / (float)frameRate);
 
             static AnimationCurve ConvertCurveTime(AnimationCurve source, float duration, bool toNormalized)
             {

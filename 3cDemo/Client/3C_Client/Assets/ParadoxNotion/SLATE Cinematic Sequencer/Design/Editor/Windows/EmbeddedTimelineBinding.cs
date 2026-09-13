@@ -5,6 +5,11 @@ using UnityEngine;
 
 namespace Slate
 {
+    public interface IEmbeddedTimelineProxyIdentity
+    {
+        string AuthoringId { get; }
+    }
+
     public interface IEmbeddedTimelineBinding
     {
         string DisplayName { get; }
@@ -17,6 +22,7 @@ namespace Slate
         IReadOnlyList<IEmbeddedTimelineGroupBinding> Groups { get; }
         IReadOnlyList<IEmbeddedTimelineSectionBinding> Sections { get; }
         IEmbeddedTimelineElementBinding Selected { get; }
+        bool TryGetTrack(string authoringId, out IEmbeddedTimelineTrackBinding track);
         void Select(IEmbeddedTimelineElementBinding element);
         void AddTrack();
         void AddClip(IEmbeddedTimelineTrackBinding track, int frame);

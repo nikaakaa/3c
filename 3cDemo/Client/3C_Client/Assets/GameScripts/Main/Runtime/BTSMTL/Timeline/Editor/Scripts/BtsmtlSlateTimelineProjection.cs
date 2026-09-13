@@ -102,13 +102,14 @@ namespace BTSMTL.Timeline.Editor
     }
 
     [AddComponentMenu("")]
-    sealed class BtsmtlSlateTrack : CutsceneTrack
+    sealed class BtsmtlSlateTrack : CutsceneTrack, IEmbeddedTimelineProxyIdentity
     {
         [SerializeField] string m_SourceAuthoringId;
         bool m_RuntimeActive = true;
         Action<float> m_AddClip;
 
         public string SourceAuthoringId => m_SourceAuthoringId ?? string.Empty;
+        public string AuthoringId => SourceAuthoringId;
 
         public void Configure(string sourceAuthoringId)
         {
@@ -151,7 +152,7 @@ namespace BTSMTL.Timeline.Editor
     }
 
     [AddComponentMenu("")]
-    sealed class BtsmtlSlateActionClip : ActionClip
+    sealed class BtsmtlSlateActionClip : ActionClip, IEmbeddedTimelineProxyIdentity
     {
         [SerializeField] string m_DisplayName = "Clip";
         [SerializeField] float m_Length = 1f;
@@ -218,6 +219,7 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public string SourceAuthoringId => m_SourceAuthoringId ?? string.Empty;
+        public string AuthoringId => SourceAuthoringId;
 
         public override bool isValid => true;
 
@@ -729,7 +731,7 @@ namespace BTSMTL.Timeline.Editor
                 null,
                 () => m_Session.FrameRate,
                 m_Binding.AddTrack,
-                CopyProxyClip,
+                CopyFormalProxyClip,
                 () => m_CurrentFrame,
                 SetCurrentFrame,
                 () => m_Request.Timeline.Duration,
@@ -737,6 +739,7 @@ namespace BTSMTL.Timeline.Editor
                 value => m_ViewTimeMin = value,
                 () => m_ViewTimeMax,
                 value => m_ViewTimeMax = value);
+            m_EmbeddedEditor.ConfigureEmbeddedBinding(m_Binding);
             m_EmbeddedEditor.viewTimeMin = m_ViewTimeMin;
             m_EmbeddedEditor.viewTimeMax = m_ViewTimeMax;
             SetCurrentFrame(m_CurrentFrame);
@@ -767,7 +770,7 @@ namespace BTSMTL.Timeline.Editor
             return clip != null;
         }
 
-        void CopyProxyClip(ActionClip proxyClip)
+        void CopyFormalProxyClip(ActionClip proxyClip)
         {
             if (proxyClip is BtsmtlSlateActionClip slateClip &&
                 m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))

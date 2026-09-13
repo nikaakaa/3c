@@ -2565,7 +2565,11 @@ namespace Slate
             menu.AddItem(new GUIContent("Open Source"), false, () => embeddedTimeline.OpenSource(clip));
             menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => embeddedTimeline.CopyClip(clip));
             if (clip.CanScale)
+            {
                 menu.AddItem(new GUIContent("Fit Clip"), false, () => ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip"));
+                int splitFrame = Mathf.RoundToInt(SnapTime(EmbeddedCurrentTime()) * embeddedTimeline.FrameRate);
+                menu.AddItem(new GUIContent("Split At Cursor"), false, () => embeddedTimeline.SplitClip(clip, splitFrame));
+            }
             if (clip.Keyable?.animationData != null)
             {
                 menu.AddItem(new GUIContent("Key At Cursor"), false, () => ApplyEmbeddedCommand(

@@ -826,6 +826,45 @@ namespace BTSMTL.Timeline.Editor
             RebuildBindings();
         }
 
+        public void SplitClip(IEmbeddedTimelineClipBinding clip, int frame)
+        {
+            if (IsReadOnly || !(clip is BtsmtlTimelineClipBinding directClip))
+                return;
+            Clip source = directClip.Source;
+            if (frame <= source.StartFrame || frame >= source.EndFrame || source.Track == null)
+                return;
+            try
+            {
+                Clip clone = ManagedReferenceCloneUtility.Clone(source);
+                clone.RegenerateAuthoringIdentity();
+                if (clone is ITimelineOwnedAuthoringIdentity owned)
+                    owned.RegenerateOwnedAuthoringIdentity();
+                int originalEndFrame = source.EndFrame;
+                source.EndFrame = frame;
+                source.SelfEaseOutFrame = 0;
+                clone.StartFrame = frame;
+                clone.EndFrame = originalEndFrame;
+                clone.SelfEaseInFrame = 0;
+                clone.SelfEaseOutFrame = 0;
+                if (clone is MotionCurveClip cloneMotion)
+                    cloneMotion.CurveEndFrame = Mathf.Clamp(cloneMotion.CurveEndFrame, clone.StartFrame + 1, clone.EndFrame);
+                m_Session.Apply(() =>
+                {
+                    m_Request.ContractCatalog.RequireClipPlacement(source.Track, clone);
+                    source.Track.Clips.Add(clone);
+                    source.Track.UpdateMix();
+                    Timeline.Init();
+                }, "Split Timeline Clip");
+                m_BeginSelectionId = clone.AuthoringId;
+                RebuildBindings();
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"Split Clip 失败：{exception.Message}");
+                RebuildBindings();
+            }
+        }
+
         public void MoveTrack(IEmbeddedTimelineTrackBinding track, int index)
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding directTrack))

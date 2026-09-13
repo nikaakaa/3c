@@ -944,12 +944,14 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (!profile)
                 throw new InvalidOperationException("Gameplay Lab camera rig requires the formal Character Camera Profile.");
             profile.RequireValid();
+            CharacterCameraProjectionPayload cameraProjection =
+                CharacterCameraProjectionBuilder.Build(profile);
             var virtualCameraObject = new GameObject("Character Camera Virtual");
             virtualCameraObject.transform.SetParent(parent, false);
             CinemachineVirtualCamera virtualCamera = virtualCameraObject.AddComponent<CinemachineVirtualCamera>();
             virtualCamera.m_Priority = 10;
             LensSettings lens = virtualCamera.m_Lens;
-            lens.FieldOfView = profile.DefaultFieldOfView;
+            lens.FieldOfView = cameraProjection.DefaultFieldOfView;
             lens.NearClipPlane = profile.NearClipPlane;
             lens.FarClipPlane = profile.FarClipPlane;
             virtualCamera.m_Lens = lens;

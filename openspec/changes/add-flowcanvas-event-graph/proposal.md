@@ -1,37 +1,37 @@
 ## Why
 
-当前问题是动画输入职责尚未收口：FactProjector 同时处理数据对齐和动画分类，Pose 输入合同仍混合不同来源的声明，Blackboard 与实际 Fact 消费不一致；Corin EventGraph 没有业务节点，却已成为动画装配的强制依赖。继续补一个新动画效果不能解决这些问题。
+用户明确确认参考UE动画蓝图的作者分工：现有动画层的计算、判断和变量更新尽量在EventGraph中表达，C#负责正式数据接入和底层执行，PoseGraph读取结果计算姿势。本提案必须完成真实的既有逻辑迁移，不能以清理输入、移除空图或暂时找不到业务为由结束。
 
-r3 按用户要求先整理现有数据、计算和消费者，再保持原行为完成职责迁移。不新增步频、播放倍率、速度平滑或其它未经提出的动画需求；没有实际需求时不强制挂空事件图。
+本版替代上一版“MotionPhase继续留在C#、Corin可能无需事件图”的收窄方向。迁移当前已有速度/方向/加速度/朝向误差及运动阶段计算，保持原公式、阈值和动作表现，不新增步频、播放倍率、平滑或新的状态策略。
 
 ## What Changes
 
-- 先建立现有输入职责表，区分正式角色事实、动画派生判断、作者实例变量、子图公开输入、随姿势传播的曲线和节点/资源配置，记录真实生产者和消费者。
-- 只迁移已有且明确归为作者逻辑的动画计算，保持原公式、阈值、时钟、状态判断和消费者。FactFrame 继续是正式只读输入，不把其中全部计算搬到 EventGraph，也不为制造非空图复制事实或恢复 Action/Foot 变量。
-- **BREAKING**：EventGraph 按正式需求装配。没有绑定图且没有动画变量需求时，动画沿同一正式 Fact/Pose 链执行，不要求占位图或虚构变量帧；存在变量需求但缺少图/变量绑定时仍明确失败，绝不补默认值。显式绑定的图按其原生逻辑执行，不因输出变量为空被偷偷跳过。
-- 与 Pose 任务统一来源合同：变量引用同一原生声明，Fact 直接读正式事实，子图参数遵循调用接口，曲线从输入姿势读取，配置留在原节点/资源。删除无用途的重复声明和按固定名称推断来源的规则，不禁止编译器为执行生成只读索引。
-- 补齐实际所需的 Fact 输入节点目录和直接 API 接线，复用正式 Fact schema/读取能力；未支持类型明确报告，不再维护脱离正式事实合同的第二清单。
-- 保留已确认的 FlowCanvas 原生事件执行、实例隔离、错误/Reset、唯一 Contract/Layout/Frame、C# authoring 两个显式工具和现有 Pose 编译运行。
-- 公共 C# 输出器继续通过事件图薄适配读取完整对象并输出正式 API，保持稳定逻辑身份和明确根绑定；不恢复 Document、整图 DTO、中央 Validator、自动源码同步或另一个 MCP。
-- 当前已删除的固定 motor 桥和 EventGraph Document 不重新引入。只清理新职责表证实多余的占位绑定、重复输入处理及无消费者内容，保护已正确的曲线、状态机与运行算法。
+- 参考UE的事件更新、动画变量和AnimGraph消费分工，保留FlowCanvas原生runtime；不复制UE虚拟机，不增加事件图Compiler，也不把节点相关的Pose求值和底层调度搬进全局事件图。
+- 将当前FactProjector中动画专用派生量迁入原生图：水平速度、垂直速度、移动方向、期望方向、水平加速度、朝向误差、MotionPhase。原实现、公式、历史和消费者去向在design中逐项固定。
+- C#只提供对齐后的Body/Intent原始观测、已提交状态、时钟和身份；保留Grounded、MovementMode等既有Gameplay事实。输出动画变量不反写Gameplay，也不回填FactFrame作为兼容读取。
+- **BREAKING**：取消动画派生量作为外部Fact与EventGraph变量同时生产的路径。实例历史迁到同一原生图状态，Pose/条件/RootOrientationWarp/MM等原消费者通过唯一变量合同读取原值；不改变其算法和决策。
+- 补齐迁移必需的向量、旋转只读输入及MotionPhase枚举类型，保持Float/Int32/Bool精确交接。原生变量、配置、导出、帧和Pose绑定必须使用同一类型与声明，不以Float或不透明object模拟其它类型。
+- Corin事件图必须有正式输入、计算、Set和执行连接，并至少把MotionPhase接入现有Pose预测状态选择、将朝向误差等接回原消费者；保留原MovementMode状态规则，不换成新速度规则。空Start/Update图或Profile绑定不构成完成。
+- 保留公共C# authoring的export_code/generate_assets、直接API、完整输出和明确根绑定。Corin recipe改为表达真实既有逻辑，不删除整个接入目标；旧Document和motor桥保持退役。
+- 原无变量需求的其它动画根可以按正式合同不装配事件宿主，但这不免除Corin现有动画更新逻辑的迁移，不作为本次退出条件。
+- 不新增测试或验证任务；任务只列接口、图内容、消费者迁移、删除和文档工作，用户自行端到端验证。
 
 ## Capabilities
 
 ### New Capabilities
 
-- flowcanvas-event-graph：可复用原生事件图、宿主、变量与正式直接作者/C#输出能力，保留既有路线。
-- character-animation-event-graph：按真实需求装配的动画事件能力，现有输入分类、只读Fact接入和同次变量交接。
+- flowcanvas-event-graph：复用原生事件、typed变量和作者API，承载真实动画更新内容与公共C#输出。
+- character-animation-event-graph：UE式动画更新分工、现有派生量的明确迁移、实例历史、类型和Pose消费合同。
 
 ### Modified Capabilities
 
-- graph-authoring-domain-framework：保留原生EventGraph与编译Pose/Skill的职责边界。
-- character-animation-pipeline：按正式输入需求决定是否需要事件宿主，保持唯一Fact/Pose链和可选的唯一变量生产者。
-
-Pose Blackboard、Get、条件、BlendSpace、参数/曲线声明和编译绑定的完整修改仍归 [Pose 只读输入任务](../refine-pose-graph-readonly-blackboard/proposal.md)；本任务提供接口要求与生产侧接入，不重复维护它的同名规范增量。
+- graph-authoring-domain-framework：保持原生EventGraph与编译Pose/Skill的执行边界和正式作者入口。
+- character-animation-pipeline：原始Fact接入 → 一次原生动画更新 → 唯一变量帧 → 既有Pose/动画消费者；移除旧派生Fact生产与消费。
 
 ## Impact
 
-- 本任务：正式Fact到宿主的适配、原生事件图作者 API/薄适配、动画根图引用与生产端合同，以及 Corin 占位事件图/recipe 的明确处理。
-- Pose/Presentation 所属任务：FactProjector 的既有事实/判断消费者边界，CharacterAnimationInputContract、Blackboard、Get/条件/BlendSpace、编译输入绑定与完整Preview消费。需要移动公共事实或改变动画行为时先由用户决定，不在本任务越权改动。
-- C# authoring 任务：保留公共export_code/generate_assets、通用输出及生成保存；事件图仍只作薄扩展。
-- r2 的运行与作者基础作为已有基线，不以空图、Profile引用或构建成功宣称业务整理完成。用户已明确要求原实现窗口按当前r3继续实施；确认和派发状态见design的Workflow Binding，不新增窗口或业务用途。
+- 本任务：Host输入节点与类型、原生变量/帧、动画宿主、CorinAnimationEventGraphAuthoringCode及真实图内容、事件图输出薄适配。
+- Pose/Presentation任务：CharacterPresentationFactFrame/Projector拆分原始接入与派生字段，CharacterAnimationInputContract及Pose/条件/RootOrientationWarp/MM读取、静态绑定和作者输入视图。职责不因本次更新而交叉写同一文件。
+- C# authoring任务：公共代码输出/生成入口和基础表达能力；本任务只补事件图领域薄适配，不另建输出器或MCP。
+- 现有MovementMode、Action/Slot、曲线、Foot/IK、Pose时钟/混合和最终Writer保持原职责；只更换已确定派生值的唯一生产/读取来源。
+- 当前文档依据用户在已授权实施过程中确认的UE方向修订；更新后向原实现窗口发送一次正式文档指针，替代上一版取消Corin事件图内容的实施方向。

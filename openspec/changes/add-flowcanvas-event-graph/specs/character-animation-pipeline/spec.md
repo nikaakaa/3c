@@ -1,25 +1,35 @@
 ## ADDED Requirements
 
-### Requirement: 动画事件宿主必须按正式输入需求装配
+### Requirement: 动画更新必须遵循原始事实到作者变量再到Pose的链路
 
-显式绑定事件图的动画实例 MUST由唯一宿主在本次Fact准备后、Pose推进前执行一次合法事件调用，并向需要变量的消费者发布完整只读结果。没有绑定图且没有变量或事件需求时，实例 MUST沿同一正式Fact/Pose链运行，不创建占位图、宿主或虚构变量结果；存在必需变量而缺失生产者时 MUST失败，不切换为默认补值。
+正式事实层 MUST提供对齐后的原始Body/Intent观测、已提交状态和时钟身份；动画事件图 MUST唯一拥有当前确定迁移的速度、方向、加速度、朝向误差及运动阶段计算。Pose及其它原动画消费者 MUST读取同次完整变量结果，旧C#派生生产与同义Fact读取 MUST移除，不回填、不默认补值、不保留并行生产。
 
-事实、动画变量、子图输入、曲线与节点配置 MUST保持各自正式来源。依赖发现和变量消费绑定 MUST属于既有编译或实例装配，运行帧只传递本次实际输入。Pose根事务、Action、source、混合、Foot、FBBIK、Evaluate、Seal和最终Writer MUST继续由现有唯一链路承担，事件图 MUST不接管这些引擎职责。
+EventGraph MUST继续使用原生runtime。Pose根事务、Action、source、混合、曲线、Foot/FBBIK、Evaluate、Seal与最终Writer MUST保持原执行链；节点局部求值与时钟不能整体搬入全局事件更新。变量消费需求与静态绑定 MUST由既有Compiler或实例装配确定。
 
-#### Scenario: 无作者变量需求
+#### Scenario: 正式动画更新
 
-- **WHEN** 角色未绑定事件图且Pose仅使用正式Fact、曲线与配置
-- **THEN** 正式动画运行与完整Preview MUST使用同一无事件需求合同
-- **AND** MUST不通过空EventGraph或伪造变量帧满足非空检查
+- **WHEN** 对齐原始事实后执行本次原生事件更新
+- **THEN** 系统 MUST冻结本次完整动画变量供同次Pose及原消费者读取
+- **AND** 相同动画派生量 MUST不再由FactProjector重复计算
 
-#### Scenario: 已装配事件图正常更新
+#### Scenario: 原已提交状态直接消费
 
-- **WHEN** 正式Fact到达且事件调用成功
-- **THEN** 同次Pose MUST读取本次实际需要的只读变量
-- **AND** 事件更新、Pose求值和最终写入各自只执行所属工作一次
+- **WHEN** 既有规则使用MovementMode或Grounded等正式外部状态
+- **THEN** MUST保持其原始事实来源和Gameplay含义
+- **AND** MUST不因本次迁移新增动作或移动策略
 
-#### Scenario: 事件输入失败
+#### Scenario: 事件更新失败
 
-- **WHEN** 已需要的事件调用发生节点错误或输出非法
-- **THEN** 部分变量 MUST不发布，Pose MUST不以旧值或默认值继续
-- **AND** MUST保持既有实例Fault/Reset规则，不能回退到无事件需求模式
+- **WHEN** 原生更新发生节点错误或输出非法
+- **THEN** MUST不发布部分变量或以旧Fact结果继续
+- **AND** MUST保持原实例Fault/Reset与Pose事务边界
+
+### Requirement: Corin更新内容必须与原消费者共同迁移
+
+Corin事件图的已确定派生计算、类型和变量引用 MUST与原Pose/条件/修正/选择等消费者共同接入。未迁移消费者不能被静默绕过；缺少真实图内容不能以Profile绑定、序列化或产品发布作为完成。
+
+#### Scenario: 迁移部分完成
+
+- **WHEN** 只有宿主或变量声明存在，原计算或原消费者尚未迁移
+- **THEN** MUST保留该部分未完成状态
+- **AND** MUST不删除Corin接入目标、生成空图或恢复旧提供者来宣称完成

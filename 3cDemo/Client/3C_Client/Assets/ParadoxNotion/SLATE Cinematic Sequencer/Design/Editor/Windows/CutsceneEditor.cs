@@ -1732,7 +1732,7 @@ namespace Slate
                 //split at scrubber
                 if ( e.keyCode == KeyCode.S ) {
                     if (embeddedTimeline != null && embeddedTimeline.Selected is IEmbeddedTimelineClipBinding formalClip)
-                        ApplyEmbeddedCommand(() => embeddedTimeline.SplitClip(formalClip, Mathf.RoundToInt(EmbeddedCurrentTime() * embeddedTimeline.FrameRate)), "Split Clip");
+                        embeddedTimeline.SplitClip(formalClip, Mathf.RoundToInt(EmbeddedCurrentTime() * embeddedTimeline.FrameRate));
                     else if (CutsceneUtility.selectedObject is ActionClip clip) {
                         var wrapper = clipWrappersMap[clip];
                         SafeDoAction(() => wrapper?.Split(cutscene.currentTime));
@@ -1771,7 +1771,7 @@ namespace Slate
                             .Where(value => value != null)
                             .ToArray();
                         if (selectedFormalClips.Length != 0)
-                            ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClips(selectedFormalClips), "Delete Clips");
+                            embeddedTimeline.DeleteClips(selectedFormalClips);
                         multiSelection = null;
                         e.Use();
                     }
@@ -2542,7 +2542,7 @@ namespace Slate
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
-                        menu.AddItem(new GUIContent("Delete Track"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteTrack(track), "Delete Track"));
+                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
                         menu.ShowAsContext();
                         e.Use();
                     }
@@ -2557,7 +2557,7 @@ namespace Slate
                         if (e.rawType == EventType.MouseUp && trackRect.Contains(e.mousePosition))
                         {
                             int destination = trackIndex;
-                            ApplyEmbeddedCommand(() => embeddedTimeline.MoveTrack(formalPickedTrack, destination), "Move Track");
+                            embeddedTimeline.MoveTrack(formalPickedTrack, destination);
                             formalPickedTrack = null;
                             e.Use();
                         }
@@ -3385,7 +3385,7 @@ namespace Slate
             {
                 int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                 GenericMenu menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Add Section Here"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.AddSection(frame), "Add Section"));
+                menu.AddItem(new GUIContent("Add Section Here"), false, () => embeddedTimeline.AddSection(frame));
                 menu.ShowAsContext();
                 e.Use();
             }
@@ -3414,7 +3414,7 @@ namespace Slate
                     if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
                     {
                         GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Delete Section"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteSection(section), "Delete Section"));
+                        menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
                         menu.ShowAsContext();
                         e.Use();
                     }
@@ -4376,7 +4376,7 @@ namespace Slate
                 {
                     if (formalClip != null)
                     {
-                        editor.ApplyEmbeddedCommand(() => editor.embeddedTimeline.DeleteClip(formalClip), "Delete Timeline Clip");
+                        editor.embeddedTimeline.DeleteClip(formalClip);
                     }
                     else
                     {

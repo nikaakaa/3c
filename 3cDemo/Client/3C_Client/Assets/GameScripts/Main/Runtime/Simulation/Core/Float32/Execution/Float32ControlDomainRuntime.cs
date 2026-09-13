@@ -23,8 +23,7 @@ namespace ThirdPersonSimulation
             Float32EquipmentRuntime equipment,
             Float32LocomotionRuntime locomotion,
             Float32StatePort state,
-            CharacterControlModuleCatalog controlModules,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            CharacterControlModuleCatalog controlModules)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -39,23 +38,16 @@ namespace ThirdPersonSimulation
             locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
             state = state ?? throw new ArgumentNullException(nameof(state));
             controlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
-            if (!program.Manifest.Root.IsCharacter)
-            {
-                if (controlRuntimeBinding != null)
-                    throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
+            if (!program.ControlModuleBinding.IsValid)
                 return;
-            }
-            if (controlRuntimeBinding == null)
-                throw new ArgumentNullException(nameof(controlRuntimeBinding));
-            m_Control = controlModules.Require(controlRuntimeBinding.ModuleId);
-            if (m_Control.Contract.SemanticVersion != controlRuntimeBinding.SemanticVersion)
-                throw new InvalidOperationException($"Character control runtime binding '{controlRuntimeBinding.ModuleId}/{controlRuntimeBinding.SemanticVersion}' does not match installed module version '{m_Control.Contract.SemanticVersion}'.");
-            controlRuntimeBinding.RequireContract(m_Control.Contract);
+            m_Control = controlModules.Require(program.ControlModuleBinding);
+            ProgramCatalogEntry controlCatalog =
+                program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
             CharacterControlStateLayout controlLayout = layout.CreateControlStateLayout(m_Control.Contract);
             m_Read = new Float32CharacterControlReadPort(
                 input,
                 m_Frame,
-                parameter => ReadControlParameter(controlRuntimeBinding.Parameters, parameter),
+                parameter => ReadControlParameter(program, controlCatalog, parameter),
                 skill => actions.IsAbilityActive(skill),
                 skill => (m_ActionStore.TryGetActiveAbilityInstanceId(skill, out ulong instanceId), instanceId),
                 skill => actions.IsAbilityCompleted(skill),
@@ -90,12 +82,25 @@ namespace ThirdPersonSimulation
         }
 
         static Float32Scalar ReadControlParameter(
-            CharacterControlParameterSet parameters,
+            CharacterSimulationProgram program,
+            ProgramCatalogEntry controlCatalog,
             CharacterControlParameterId parameter)
         {
-            if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
-            return Float32Scalar.FromDouble(parameters.ReadNumeric(parameter));
+            string name = $"Parameter:{parameter.Value}:NumericValue";
+            for (int i = 0; i < controlCatalog.Fields.Count; i++)
+            {
+                ProgramCatalogField field = controlCatalog.Fields[i];
+                if (!string.Equals(field.Name, name, StringComparison.Ordinal))
+                    continue;
+                if (field.Kind != ProgramCatalogFieldKind.Constant || field.ConstantIndex < 0 ||
+                    field.ConstantIndex >= program.Constants.Count)
+                    throw new InvalidOperationException($"Control module field '{name}' is not a valid constant.");
+                ProgramConstant value = program.Constants[field.ConstantIndex];
+                if (value.Kind != ProgramConstantKind.Scalar)
+                    throw new InvalidOperationException($"Control module field '{name}' is not Scalar.");
+                return value.Scalar;
+            }
+            throw new InvalidOperationException($"Control module '{controlCatalog.Identity}' has no '{name}' field.");
         }
     }
 }

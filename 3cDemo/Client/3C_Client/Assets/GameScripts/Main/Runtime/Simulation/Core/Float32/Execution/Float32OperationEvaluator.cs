@@ -403,8 +403,7 @@ namespace ThirdPersonSimulation
 			ProgramExecutionLayout layout,
 			ActorId actorId,
 			Float32EvaluationWorkspace workspace,
-			CharacterControlModuleCatalog controlModules,
-			CharacterControlRuntimeBinding controlRuntimeBinding)
+			CharacterControlModuleCatalog controlModules)
 		{
 			if (controlModules == null)
 				throw new ArgumentNullException(nameof(controlModules));
@@ -539,8 +538,7 @@ namespace ThirdPersonSimulation
 				m_Equipment,
 				locomotion,
 				m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy),
-				controlModules,
-				controlRuntimeBinding);
+				controlModules);
         }
 
         public bool Matches(SimulationEvaluateRequest request)

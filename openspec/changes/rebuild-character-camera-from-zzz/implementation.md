@@ -33,7 +33,7 @@
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
 | 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
 | 6.3 Corin 动作资源可达性 | 未完成 | 已保留 18 Zoom/18 Stretch 资源；现有 Corin ActionCue 的 Camera 标记仍没有正式 ResourceId，不能虚构 81 Shake/4 Override 的触发关系。 |
-| 6.4-6.5 正式发布与 Preview/ScenePlay | 阻塞中 | 生成产物待 Character Build 正式重发布；job `004c30412ff14008b3db55cdfd5a215c` 仍保留 `Character Camera Profile 'CorinCharacterCameraProfile' is incomplete` 的旧域失败证据。之后已补齐实际 `BTSMTL.Timeline.Tree.Editor` 的 Camera Contracts 引用与作者命名空间；当前有两个同名 Unity 实例且均未 ready，尚未取得新的正式 Build/ScenePlay 结果。 |
+| 6.4-6.5 正式发布与 Preview/ScenePlay | 阻塞中 | 生成产物待 Character Build 正式重发布；修复实际 Tree Editor 程序集依赖后，e852 实例 Console 已无 Camera/Timeline 错误，只剩用户 Character 文件错误；新的正式 Fixed Build job `81133763a5a84dee83cdc91a7d57d761` 正在运行，尚未取得终态或 ScenePlay 结果。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/碰撞字段和 Effect table/operator 已接入；输入回放已改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动，文件仍未单独提交。 |
 | 7.3-7.4 删除与合同同步 | 部分完成 | 已删除无引用 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入引用和无消费者 Locking/ChangeAvatar 配置；生成 Projection 和部分历史文档仍需正式发布后对账。 |
 
@@ -61,7 +61,9 @@
 - `ThirdPersonClient.Runtime.csproj` 同参数检查到工作区既有错误：`CharacterControlProgramContracts.cs(636)` 缺少 `CharacterSkillDependency`；直接项目重编译另有用户新增 `GameplayAbilityDefinition` 未实现 `IGameplayBehaviorProfile.DebugCategory/Tags`。本次未修改这些文件。
 - `ThirdPersonClient.Editor.csproj` 在 Runtime 因既有错误未产出 DLL 后无法继续编译；没有把该结果解释为摄像机代码已通过 Editor 编译。
 - Unity MCP 当前发现两个同名实例 `3C_Client@e852139597e42532` 与 `3C_Client@1e41b3a3e2ded45f`；两者当前都未 ready，未把旧 Console 日志当作新的源码结论。另有 Timeline implementation 记录表明精确重导入后 Timeline/Slate/Camera 引用错误已清除，剩余为工作区 Character 文件错误；本窗口未据此宣称完整 Unity Console 或 ScenePlay 通过。
+- 后续显式读取 e852 实例 Console 得到 4 条记录：`CharacterSkillAuthoringDefinition.cs(10)` 重复 `Serializable`、`GameplayAbilityDefinition.cs(71)` 缺少 `DebugCategory/Tags`，以及一次旧 ExecuteCode 长命令错误；没有 Camera/Timeline 源码错误。
 - 已按精确 Definition/Wrapper 路径启动 Fixed Character Build，job `a5d9ddca7fc44bf7b863f8aedcd15629` 返回 `character_build_exception`：`Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.` 原因是 Unity 因工作区既有编译错误仍使用旧域程序集，而 Profile 已删除正式 owner 字段；没有接受旧域状态并伪造发布产物。
 - 在当前 Editor 状态下再次按同一 Definition/Wrapper 启动 Fixed Character Build，job `004c30412ff14008b3db55cdfd5a215c` 最终返回同一 `Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.`；没有接受任何生成 Projection/Program 产物。
+- 在 Camera/Timeline 编译错误清除后按同一 Definition/Wrapper 启动 Fixed Character Build，job `81133763a5a84dee83cdc91a7d57d761` 已进入 running；在终态返回前不接受任何生成 Projection/Program 产物。
 - 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

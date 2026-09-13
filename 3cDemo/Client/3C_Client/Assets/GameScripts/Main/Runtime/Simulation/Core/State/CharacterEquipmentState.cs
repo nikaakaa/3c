@@ -126,22 +126,22 @@ namespace ThirdPersonSimulation
         public EquipmentProgramRouteImplementation(
             EquipmentFeatureId featureId,
             EquipmentActionRouteId routeId,
-            CharacterSkillId skillId,
+            CharacterSkillId abilityId,
             IEnumerable<EquipmentParameterId> requiredParameterIds = null,
             IEnumerable<string> requiredProducerIds = null)
         {
-            if (!featureId.IsValid || !routeId.IsValid || !skillId.IsValid)
+            if (!featureId.IsValid || !routeId.IsValid || !abilityId.IsValid)
                 throw new ArgumentException("Equipment Route implementation is invalid.");
             FeatureId = featureId;
             RouteId = routeId;
-            SkillId = skillId;
+            AbilityId = abilityId;
             m_RequiredParameterIds = StableParameters(requiredParameterIds);
             m_RequiredProducerIds = StableIdentities(requiredProducerIds, "Equipment required Producer");
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentActionRouteId RouteId { get; }
-        public CharacterSkillId SkillId { get; }
+        public CharacterSkillId AbilityId { get; }
         public IReadOnlyList<EquipmentParameterId> RequiredParameterIds => m_RequiredParameterIds;
         public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds;
 
@@ -457,7 +457,7 @@ namespace ThirdPersonSimulation
             {
                 writer.WriteString(m_RouteImplementations[i].FeatureId.Value);
                 writer.WriteString(m_RouteImplementations[i].RouteId.Value);
-                writer.WriteString(m_RouteImplementations[i].SkillId.Value);
+                writer.WriteString(m_RouteImplementations[i].AbilityId.Value);
                 writer.WriteInt32(m_RouteImplementations[i].RequiredParameterIds.Count);
                 for (int parameter = 0; parameter < m_RouteImplementations[i].RequiredParameterIds.Count; parameter++)
                     writer.WriteString(m_RouteImplementations[i].RequiredParameterIds[parameter].Value);

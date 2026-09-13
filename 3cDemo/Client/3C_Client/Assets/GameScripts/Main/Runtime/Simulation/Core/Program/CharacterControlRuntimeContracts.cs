@@ -34,11 +34,11 @@ namespace ThirdPersonSimulation
     public interface ICharacterControlReadPort
     {
         bool HasInputRequest(string requestId);
-        bool IsSkillActive(CharacterSkillId skillId);
-        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
-        bool IsSkillCompleted(CharacterSkillId skillId);
-        ulong CompletedSkillInstanceId(CharacterSkillId skillId);
-        bool IsActionWindowActive(CharacterSkillId skillId, string windowType);
+        bool IsAbilityActive(CharacterSkillId abilityId);
+        bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId);
+        bool IsAbilityCompleted(CharacterSkillId abilityId);
+        ulong CompletedAbilityInstanceId(CharacterSkillId abilityId);
+        bool IsAbilityWindowActive(CharacterSkillId abilityId, string windowType);
         bool TryReadEquipmentActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context);
         bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
@@ -69,11 +69,11 @@ namespace ThirdPersonSimulation
         void WriteUInt64(CharacterControlStateFieldId field, ulong value);
     }
 
-    public readonly struct CharacterControlSkillRequest
+    public readonly struct CharacterControlAbilityRequest
     {
-        public CharacterControlSkillRequest(
+        public CharacterControlAbilityRequest(
             SimulationExecutionSource source,
-            CharacterSkillId skillId,
+            CharacterSkillId abilityId,
             string sourceInputRequestId,
             bool consumeSourceInputRequest,
             string targetInputValueId = "",
@@ -81,10 +81,10 @@ namespace ThirdPersonSimulation
             EquipmentActionContext equipmentContext = default,
             ulong replacementActionInstanceId = 0)
         {
-            if (!source.IsCharacterControl || !skillId.IsValid)
-                throw new ArgumentException("Character control skill request identity is incomplete.");
+            if (!source.IsCharacterControl || !abilityId.IsValid)
+                throw new ArgumentException("Character control Ability request identity is incomplete.");
             Source = source;
-            SkillId = skillId;
+            AbilityId = abilityId;
             SourceInputRequestId = sourceInputRequestId ?? string.Empty;
             ConsumeSourceInputRequest = consumeSourceInputRequest;
             TargetInputValueId = targetInputValueId ?? string.Empty;
@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationExecutionSource Source { get; }
-        public CharacterSkillId SkillId { get; }
+        public CharacterSkillId AbilityId { get; }
         public string SourceInputRequestId { get; }
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
@@ -103,35 +103,38 @@ namespace ThirdPersonSimulation
         public ulong ReplacementActionInstanceId { get; }
     }
 
-    public enum CharacterControlSkillStopMode : byte
+    public enum CharacterControlAbilityStopMode : byte
     {
         Graceful = 1,
         Force = 2
     }
 
-    public readonly struct CharacterControlSkillStopRequest
+    public readonly struct CharacterControlAbilityStopRequest
     {
-        public CharacterControlSkillStopRequest(
+        public CharacterControlAbilityStopRequest(
             SimulationExecutionSource source,
-            CharacterSkillId skillId,
-            CharacterControlSkillStopMode mode,
+            CharacterSkillId abilityId,
+            CharacterControlAbilityStopMode mode,
             string reason = "",
-            ulong actionInstanceId = 0)
+            ulong actionInstanceId = 0,
+            string actionWindowType = "")
         {
-            if (!source.IsCharacterControl || !skillId.IsValid || !Enum.IsDefined(typeof(CharacterControlSkillStopMode), mode))
-                throw new ArgumentException("Character control skill stop request is incomplete.");
+            if (!source.IsCharacterControl || !abilityId.IsValid || !Enum.IsDefined(typeof(CharacterControlAbilityStopMode), mode))
+                throw new ArgumentException("Character control Ability stop request is incomplete.");
             Source = source;
-            SkillId = skillId;
+            AbilityId = abilityId;
             Mode = mode;
             Reason = reason ?? string.Empty;
             ActionInstanceId = actionInstanceId;
+            ActionWindowType = actionWindowType ?? string.Empty;
         }
 
         public SimulationExecutionSource Source { get; }
-        public CharacterSkillId SkillId { get; }
-        public CharacterControlSkillStopMode Mode { get; }
+        public CharacterSkillId AbilityId { get; }
+        public CharacterControlAbilityStopMode Mode { get; }
         public string Reason { get; }
         public ulong ActionInstanceId { get; }
+        public string ActionWindowType { get; }
     }
 
     public readonly struct CharacterControlMotionRequest
@@ -167,8 +170,8 @@ namespace ThirdPersonSimulation
     public interface ICharacterControlOutputPort
     {
         void SubmitMotion(CharacterControlMotionRequest request);
-        bool SubmitSkill(CharacterControlSkillRequest request);
-        void SubmitSkillStop(CharacterControlSkillStopRequest request);
+        bool SubmitAbility(CharacterControlAbilityRequest request);
+        void SubmitAbilityStop(CharacterControlAbilityStopRequest request);
         void Trace(SimulationExecutionSource source, string code, string detail, ulong generation);
     }
 }

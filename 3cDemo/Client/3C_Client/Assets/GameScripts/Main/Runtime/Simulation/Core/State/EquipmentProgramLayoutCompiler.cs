@@ -100,9 +100,9 @@ namespace ThirdPersonSimulation
             {
                 EquipmentFeatureId featureId = new EquipmentFeatureId(Trim(Identity(entry, "Feature"), "equipment:feature:"));
                 EquipmentActionRouteId routeId = new EquipmentActionRouteId(Trim(Identity(entry, "Route"), "equipment:route:"));
-                CharacterSkillId skillId = new CharacterSkillId(Trim(Identity(entry, "Skill"), "skill:"));
-                if (!catalog.Any(value => value.Kind == ProgramCatalogEntryKind.SkillProgram && string.Equals(value.Identity, $"skill:{skillId.Value}", StringComparison.Ordinal)))
-                    throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references an unknown Skill '{skillId}'.");
+                CharacterSkillId abilityId = new CharacterSkillId(Trim(Identity(entry, "Ability"), "ability:"));
+                if (!catalog.Any(value => value.Kind == ProgramCatalogEntryKind.AbilityProgram && string.Equals(value.Identity, $"ability:{abilityId.Value}", StringComparison.Ordinal)))
+                    throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references an unknown Ability '{abilityId}'.");
                 var requiredParameters = new List<EquipmentParameterId>();
                 foreach (string identity in Identities(entry, "RequiredParameter:"))
                 {
@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation
                 routeImplementations.Add(new EquipmentProgramRouteImplementation(
                     featureId,
                     routeId,
-                    skillId,
+                    abilityId,
                     requiredParameters,
                     requiredProducers));
             }

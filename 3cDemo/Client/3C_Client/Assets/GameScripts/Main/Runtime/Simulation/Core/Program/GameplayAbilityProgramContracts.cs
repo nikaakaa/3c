@@ -6,9 +6,58 @@ using System.Linq;
 
 namespace ThirdPersonSimulation
 {
-    public readonly struct CharacterSkillDependency : IEquatable<CharacterSkillDependency>
+    public readonly struct GameplayAbilityProgramEndRule
     {
-        public CharacterSkillDependency(string subgraphIdentity, string callSiteIdentity)
+        public GameplayAbilityProgramEndRule(
+            string trigger,
+            int transition,
+            string actionWindowType,
+            string reason)
+        {
+            Trigger = SimulationIdentity.Require(trigger, nameof(trigger));
+            if (!IsKnownTrigger(Trigger))
+                throw new ArgumentException("Gameplay Ability end trigger is invalid.", nameof(trigger));
+            if (!IsTerminalTransition(transition))
+                throw new ArgumentOutOfRangeException(nameof(transition));
+            Transition = transition;
+            ActionWindowType = actionWindowType ?? string.Empty;
+            Reason = reason ?? string.Empty;
+            if (Trigger == GameplayAbilityEndTriggerNames.ActionWindowClosed &&
+                string.IsNullOrWhiteSpace(ActionWindowType))
+                throw new ArgumentException("Action window end rule requires a window type.", nameof(actionWindowType));
+        }
+
+        public string Trigger { get; }
+        public int Transition { get; }
+        public string ActionWindowType { get; }
+        public string Reason { get; }
+
+        static bool IsTerminalTransition(int transition) =>
+            transition == 2 ||
+            transition == 3 ||
+            transition == 4 ||
+            transition == 7;
+
+        static bool IsKnownTrigger(string trigger) =>
+            string.Equals(trigger, GameplayAbilityEndTriggerNames.ExecutionCompleted, StringComparison.Ordinal) ||
+            string.Equals(trigger, GameplayAbilityEndTriggerNames.CancelRequested, StringComparison.Ordinal) ||
+            string.Equals(trigger, GameplayAbilityEndTriggerNames.InterruptRequested, StringComparison.Ordinal) ||
+            string.Equals(trigger, GameplayAbilityEndTriggerNames.AbortRequested, StringComparison.Ordinal) ||
+            string.Equals(trigger, GameplayAbilityEndTriggerNames.ActionWindowClosed, StringComparison.Ordinal);
+    }
+
+    public static class GameplayAbilityEndTriggerNames
+    {
+        public const string ExecutionCompleted = "ExecutionCompleted";
+        public const string CancelRequested = "CancelRequested";
+        public const string InterruptRequested = "InterruptRequested";
+        public const string AbortRequested = "AbortRequested";
+        public const string ActionWindowClosed = "ActionWindowClosed";
+    }
+
+    public readonly struct GameplayAbilityDependency : IEquatable<GameplayAbilityDependency>
+    {
+        public GameplayAbilityDependency(string subgraphIdentity, string callSiteIdentity)
         {
             SubgraphIdentity = SimulationIdentity.Require(subgraphIdentity, nameof(subgraphIdentity));
             CallSiteIdentity = SimulationIdentity.Require(callSiteIdentity, nameof(callSiteIdentity));
@@ -17,18 +66,18 @@ namespace ThirdPersonSimulation
         public string SubgraphIdentity { get; }
         public string CallSiteIdentity { get; }
         public bool IsValid => !string.IsNullOrEmpty(SubgraphIdentity) && !string.IsNullOrEmpty(CallSiteIdentity);
-        public bool Equals(CharacterSkillDependency other) =>
+        public bool Equals(GameplayAbilityDependency other) =>
             string.Equals(SubgraphIdentity, other.SubgraphIdentity, StringComparison.Ordinal) &&
             string.Equals(CallSiteIdentity, other.CallSiteIdentity, StringComparison.Ordinal);
-        public override bool Equals(object obj) => obj is CharacterSkillDependency other && Equals(other);
+        public override bool Equals(object obj) => obj is GameplayAbilityDependency other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(SubgraphIdentity, CallSiteIdentity);
     }
 
-    public sealed class CharacterSkillEntrySignature
+    public sealed class GameplayAbilityEntrySignature
     {
         readonly ReadOnlyCollection<CharacterControlParameterDescriptor> m_Parameters;
 
-        public CharacterSkillEntrySignature(IEnumerable<CharacterControlParameterDescriptor> parameters)
+        public GameplayAbilityEntrySignature(IEnumerable<CharacterControlParameterDescriptor> parameters)
         {
             var values = parameters == null
                 ? new List<CharacterControlParameterDescriptor>()
@@ -46,17 +95,17 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlParameterDescriptor> Parameters => m_Parameters;
     }
 
-    public sealed class CharacterSkillDefinition
+    public sealed class GameplayAbilityProgramDefinition
     {
-        readonly ReadOnlyCollection<CharacterSkillDependency> m_Dependencies;
+        readonly ReadOnlyCollection<GameplayAbilityDependency> m_Dependencies;
         readonly ReadOnlyCollection<CharacterSkillId> m_AllowedFollowUps;
 
-        public CharacterSkillDefinition(
+        public GameplayAbilityProgramDefinition(
             CharacterSkillId skillId,
-            string actionProfileId,
+            string admissionProfileId,
             string entryIdentity,
-            CharacterSkillEntrySignature entrySignature,
-            IEnumerable<CharacterSkillDependency> dependencies,
+            GameplayAbilityEntrySignature entrySignature,
+            IEnumerable<GameplayAbilityDependency> dependencies,
             IEnumerable<CharacterSkillId> allowedFollowUps,
             string sourceInputRequestId = "",
             bool consumeSourceInputRequest = true,
@@ -66,7 +115,7 @@ namespace ThirdPersonSimulation
             if (!skillId.IsValid)
                 throw new ArgumentException("Character skill identity is invalid.", nameof(skillId));
             SkillId = skillId;
-            ActionProfileId = SimulationIdentity.Require(actionProfileId, nameof(actionProfileId));
+            AdmissionProfileId = SimulationIdentity.Require(admissionProfileId, nameof(admissionProfileId));
             EntryIdentity = SimulationIdentity.Require(entryIdentity, nameof(entryIdentity));
             EntrySignature = entrySignature ?? throw new ArgumentNullException(nameof(entrySignature));
             SourceInputRequestId = sourceInputRequestId ?? string.Empty;
@@ -78,23 +127,23 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterSkillId SkillId { get; }
-        public string ActionProfileId { get; }
+        public string AdmissionProfileId { get; }
         public string EntryIdentity { get; }
-        public CharacterSkillEntrySignature EntrySignature { get; }
+        public GameplayAbilityEntrySignature EntrySignature { get; }
         public string SourceInputRequestId { get; }
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
         public string TargetKey { get; }
-        public IReadOnlyList<CharacterSkillDependency> Dependencies => m_Dependencies;
+        public IReadOnlyList<GameplayAbilityDependency> Dependencies => m_Dependencies;
         public IReadOnlyList<CharacterSkillId> AllowedFollowUps => m_AllowedFollowUps;
 
-        static ReadOnlyCollection<CharacterSkillDependency> FreezeDependencies(
-            IEnumerable<CharacterSkillDependency> dependencies)
+        static ReadOnlyCollection<GameplayAbilityDependency> FreezeDependencies(
+            IEnumerable<GameplayAbilityDependency> dependencies)
         {
             var values = dependencies == null
-                ? new List<CharacterSkillDependency>()
-                : new List<CharacterSkillDependency>(dependencies);
-            var seen = new HashSet<CharacterSkillDependency>();
+                ? new List<GameplayAbilityDependency>()
+                : new List<GameplayAbilityDependency>(dependencies);
+            var seen = new HashSet<GameplayAbilityDependency>();
             for (int i = 0; i < values.Count; i++)
             {
                 if (!values[i].IsValid || !seen.Add(values[i]))
@@ -128,11 +177,11 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class CharacterSkillProgramBinding
+    public sealed class GameplayAbilityProgramBinding
     {
-        public CharacterSkillProgramBinding(
+        public GameplayAbilityProgramBinding(
             CharacterSkillId skillId,
-            string actionProfileId,
+            string admissionProfileId,
             string entryIdentity,
             OperationHandle entryOperation,
             string actionContextId,
@@ -140,13 +189,14 @@ namespace ThirdPersonSimulation
             bool consumeSourceInputRequest,
             string targetInputValueId,
             string targetKey,
-            IEnumerable<CharacterSkillDependency> dependencies,
-            IEnumerable<CharacterSkillId> allowedFollowUps)
+            IEnumerable<GameplayAbilityDependency> dependencies,
+            IEnumerable<CharacterSkillId> allowedFollowUps,
+            IEnumerable<GameplayAbilityProgramEndRule> endRules = null)
         {
             if (!skillId.IsValid || !entryOperation.IsValid)
                 throw new ArgumentException("Character SkillProgram binding is incomplete.");
             SkillId = skillId;
-            ActionProfileId = SimulationIdentity.Require(actionProfileId, nameof(actionProfileId));
+            AdmissionProfileId = SimulationIdentity.Require(admissionProfileId, nameof(admissionProfileId));
             EntryIdentity = SimulationIdentity.Require(entryIdentity, nameof(entryIdentity));
             EntryOperation = entryOperation;
             ActionContextId = SimulationIdentity.Require(actionContextId, nameof(actionContextId));
@@ -156,13 +206,15 @@ namespace ThirdPersonSimulation
             TargetKey = targetKey ?? string.Empty;
             m_Dependencies = FreezeDependencies(dependencies);
             m_AllowedFollowUps = FreezeFollowUps(skillId, allowedFollowUps);
+            m_EndRules = FreezeEndRules(endRules);
         }
 
-        readonly ReadOnlyCollection<CharacterSkillDependency> m_Dependencies;
+        readonly ReadOnlyCollection<GameplayAbilityDependency> m_Dependencies;
         readonly ReadOnlyCollection<CharacterSkillId> m_AllowedFollowUps;
+        readonly ReadOnlyCollection<GameplayAbilityProgramEndRule> m_EndRules;
 
         public CharacterSkillId SkillId { get; }
-        public string ActionProfileId { get; }
+        public string AdmissionProfileId { get; }
         public string EntryIdentity { get; }
         public OperationHandle EntryOperation { get; }
         public string ActionContextId { get; }
@@ -170,16 +222,39 @@ namespace ThirdPersonSimulation
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
         public string TargetKey { get; }
-        public IReadOnlyList<CharacterSkillDependency> Dependencies => m_Dependencies;
+        public IReadOnlyList<GameplayAbilityDependency> Dependencies => m_Dependencies;
         public IReadOnlyList<CharacterSkillId> AllowedFollowUps => m_AllowedFollowUps;
+        public IReadOnlyList<GameplayAbilityProgramEndRule> EndRules => m_EndRules;
 
-        static ReadOnlyCollection<CharacterSkillDependency> FreezeDependencies(
-            IEnumerable<CharacterSkillDependency> dependencies)
+        public bool TryGetEndRule(
+            string trigger,
+            string actionWindowType,
+            out GameplayAbilityProgramEndRule rule)
+        {
+            string triggerName = SimulationIdentity.Require(trigger, nameof(trigger));
+            string windowType = actionWindowType ?? string.Empty;
+            for (int i = 0; i < m_EndRules.Count; i++)
+            {
+                GameplayAbilityProgramEndRule candidate = m_EndRules[i];
+                if (string.Equals(candidate.Trigger, triggerName, StringComparison.Ordinal) &&
+                    (triggerName != GameplayAbilityEndTriggerNames.ActionWindowClosed ||
+                     string.Equals(candidate.ActionWindowType, windowType, StringComparison.Ordinal)))
+                {
+                    rule = candidate;
+                    return true;
+                }
+            }
+            rule = default;
+            return false;
+        }
+
+        static ReadOnlyCollection<GameplayAbilityDependency> FreezeDependencies(
+            IEnumerable<GameplayAbilityDependency> dependencies)
         {
             var values = dependencies == null
-                ? new List<CharacterSkillDependency>()
-                : new List<CharacterSkillDependency>(dependencies);
-            var seen = new HashSet<CharacterSkillDependency>();
+                ? new List<GameplayAbilityDependency>()
+                : new List<GameplayAbilityDependency>(dependencies);
+            var seen = new HashSet<GameplayAbilityDependency>();
             for (int i = 0; i < values.Count; i++)
             {
                 if (!values[i].IsValid || !seen.Add(values[i]))
@@ -211,13 +286,27 @@ namespace ThirdPersonSimulation
             values.Sort();
             return values.AsReadOnly();
         }
+
+        static ReadOnlyCollection<GameplayAbilityProgramEndRule> FreezeEndRules(
+            IEnumerable<GameplayAbilityProgramEndRule> endRules)
+        {
+            var values = endRules == null
+                ? new List<GameplayAbilityProgramEndRule>()
+                : new List<GameplayAbilityProgramEndRule>(endRules);
+            values.Sort((left, right) =>
+            {
+                int byTrigger = string.CompareOrdinal(left.Trigger, right.Trigger);
+                return byTrigger != 0 ? byTrigger : left.Transition.CompareTo(right.Transition);
+            });
+            return values.AsReadOnly();
+        }
     }
 
-    public sealed class CharacterSkillProgramCatalog
+    public sealed class GameplayAbilityProgramCatalog
     {
-        readonly ReadOnlyCollection<CharacterSkillProgramBinding> m_Bindings;
+        readonly ReadOnlyCollection<GameplayAbilityProgramBinding> m_Bindings;
 
-        public CharacterSkillProgramCatalog(
+        public GameplayAbilityProgramCatalog(
             IReadOnlyList<ProgramCatalogEntry> entries,
             IReadOnlyList<ProgramReference> references)
         {
@@ -225,11 +314,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(entries));
             if (references == null)
                 throw new ArgumentNullException(nameof(references));
-            var values = new List<CharacterSkillProgramBinding>();
+            var values = new List<GameplayAbilityProgramBinding>();
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramCatalogEntry entry = entries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.SkillProgram)
+                if (entry.Kind != ProgramCatalogEntryKind.AbilityProgram)
                     continue;
                 OperationHandle operation = OperationHandle.Invalid;
                 for (int referenceIndex = 0; referenceIndex < references.Count; referenceIndex++)
@@ -239,19 +328,23 @@ namespace ThirdPersonSimulation
                         reference.TargetIndex != entry.Index || !reference.SourceOperation.IsValid)
                         continue;
                     if (operation.IsValid)
-                        throw new InvalidDataException($"SkillProgram '{entry.Identity}' has multiple entry operations.");
+                        throw new InvalidDataException($"AbilityProgram '{entry.Identity}' has multiple entry operations.");
                     operation = reference.SourceOperation;
                 }
                 if (!operation.IsValid)
-                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no entry operation reference.");
-                string skillValue = RequirePrefix(entry.Identity, "skill:");
-                string actionProfileIdentity = RequireIdentity(entry, "ActionProfile", "action:");
-                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, $"action:{actionProfileIdentity}"))
-                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' references missing Action profile '{actionProfileIdentity}'.");
-                ReadRelations(entry, out List<CharacterSkillDependency> dependencies, out List<CharacterSkillId> allowedFollowUps);
-                values.Add(new CharacterSkillProgramBinding(
+                    throw new InvalidDataException($"AbilityProgram '{entry.Identity}' has no entry operation reference.");
+                string skillValue = RequirePrefix(entry.Identity, "ability:");
+                string admissionProfileIdentity = RequireIdentity(entry, "AdmissionProfile", "action:");
+                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, $"action:{admissionProfileIdentity}"))
+                    throw new InvalidDataException($"AbilityProgram '{entry.Identity}' references missing admission profile '{admissionProfileIdentity}'.");
+                ReadRelations(
+                    entry,
+                    out List<GameplayAbilityDependency> dependencies,
+                    out List<CharacterSkillId> allowedFollowUps,
+                    out List<GameplayAbilityProgramEndRule> endRules);
+                values.Add(new GameplayAbilityProgramBinding(
                     new CharacterSkillId(skillValue),
-                    actionProfileIdentity,
+                    admissionProfileIdentity,
                     RequireIdentity(entry, "EntryIdentity", null),
                     operation,
                     RequireIdentity(entry, "ActionContext", null),
@@ -260,33 +353,34 @@ namespace ThirdPersonSimulation
                     OptionalIdentity(entry, "TargetInputValue", null),
                     OptionalIdentity(entry, "TargetKey", null),
                     dependencies,
-                    allowedFollowUps));
+                    allowedFollowUps,
+                    endRules));
             }
             values.Sort((left, right) => left.SkillId.CompareTo(right.SkillId));
             for (int i = 1; i < values.Count; i++)
             {
                 if (values[i - 1].SkillId == values[i].SkillId)
-                    throw new InvalidDataException($"SkillProgram '{values[i].SkillId}' is duplicated.");
+                    throw new InvalidDataException($"AbilityProgram '{values[i].SkillId}' is duplicated.");
             }
             m_Bindings = values.AsReadOnly();
         }
 
-        public IReadOnlyList<CharacterSkillProgramBinding> Bindings => m_Bindings;
+        public IReadOnlyList<GameplayAbilityProgramBinding> Bindings => m_Bindings;
 
-        public CharacterSkillProgramBinding Require(CharacterSkillId skillId)
+        public GameplayAbilityProgramBinding Require(CharacterSkillId skillId)
         {
             for (int i = 0; i < m_Bindings.Count; i++)
             {
                 if (m_Bindings[i].SkillId == skillId)
                     return m_Bindings[i];
             }
-            throw new InvalidOperationException($"SkillProgram '{skillId}' is absent from the Program catalog.");
+            throw new InvalidOperationException($"AbilityProgram '{skillId}' is absent from the Program catalog.");
         }
 
         static string RequirePrefix(string value, string prefix)
         {
             if (value == null || !value.StartsWith(prefix, StringComparison.Ordinal))
-                throw new InvalidDataException($"SkillProgram identity '{value}' has no '{prefix}' prefix.");
+                throw new InvalidDataException($"AbilityProgram identity '{value}' has no '{prefix}' prefix.");
             return SimulationIdentity.Require(value.Substring(prefix.Length), nameof(value));
         }
 
@@ -307,7 +401,7 @@ namespace ThirdPersonSimulation
         {
             string value = OptionalIdentity(entry, name, prefix);
             return value.Length == 0
-                ? throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no '{name}' field.")
+                ? throw new InvalidDataException($"AbilityProgram '{entry.Identity}' has no '{name}' field.")
                 : value;
         }
 
@@ -319,7 +413,7 @@ namespace ThirdPersonSimulation
                 if (!string.Equals(field.Name, name, StringComparison.Ordinal))
                     continue;
                 if (field.Kind != ProgramCatalogFieldKind.Identity)
-                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' field '{name}' is not an identity.");
+                    throw new InvalidDataException($"AbilityProgram '{entry.Identity}' field '{name}' is not an identity.");
                 if (string.IsNullOrEmpty(field.Identity))
                     return string.Empty;
                 if (prefix != null)
@@ -338,7 +432,7 @@ namespace ThirdPersonSimulation
                     continue;
                 if (field.Kind != ProgramCatalogFieldKind.Identity ||
                     !bool.TryParse(field.Identity, out bool value))
-                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' field '{name}' is not a Boolean identity.");
+                    throw new InvalidDataException($"AbilityProgram '{entry.Identity}' field '{name}' is not a Boolean identity.");
                 return value;
             }
             return defaultValue;
@@ -346,12 +440,14 @@ namespace ThirdPersonSimulation
 
         static void ReadRelations(
             ProgramCatalogEntry entry,
-            out List<CharacterSkillDependency> dependencies,
-            out List<CharacterSkillId> allowedFollowUps)
+            out List<GameplayAbilityDependency> dependencies,
+            out List<CharacterSkillId> allowedFollowUps,
+            out List<GameplayAbilityProgramEndRule> endRules)
         {
             var subgraphs = new Dictionary<int, string>();
             var callSites = new Dictionary<int, string>();
             var followUps = new Dictionary<int, CharacterSkillId>();
+            var endRuleValues = new Dictionary<int, GameplayAbilityProgramEndRule>();
             for (int i = 0; i < entry.Fields.Count; i++)
             {
                 ProgramCatalogField field = entry.Fields[i];
@@ -366,28 +462,77 @@ namespace ThirdPersonSimulation
                     continue;
                 }
                 if (!field.Name.StartsWith("FollowUp:", StringComparison.Ordinal))
+                {
+                    if (field.Name.StartsWith("EndRule:", StringComparison.Ordinal))
+                    {
+                        ReadEndRuleField(entry, field, endRuleValues);
+                    }
                     continue;
+                }
                 if (field.Kind != ProgramCatalogFieldKind.Identity)
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' follow-up field '{field.Name}' is not an identity.");
                 int followUpIndex = ReadIndexedField(entry, field.Name, "FollowUp:");
-                CharacterSkillId followUp = new CharacterSkillId(RequirePrefix(field.Identity, "skill:"));
+                CharacterSkillId followUp = new CharacterSkillId(RequirePrefix(field.Identity, "ability:"));
                 if (!followUps.TryAdd(followUpIndex, followUp))
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' follow-up index '{followUpIndex}' is duplicated.");
             }
 
-            dependencies = new List<CharacterSkillDependency>();
+            dependencies = new List<GameplayAbilityDependency>();
             var dependencyIndexes = new HashSet<int>(subgraphs.Keys);
             dependencyIndexes.UnionWith(callSites.Keys);
             foreach (int index in dependencyIndexes.OrderBy(value => value))
             {
                 if (!subgraphs.TryGetValue(index, out string subgraph) || !callSites.TryGetValue(index, out string callSite))
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' dependency index '{index}' is incomplete.");
-                dependencies.Add(new CharacterSkillDependency(subgraph, callSite));
+                dependencies.Add(new GameplayAbilityDependency(subgraph, callSite));
             }
             allowedFollowUps = followUps
                 .OrderBy(value => value.Key)
                 .Select(value => value.Value)
                 .ToList();
+            endRules = endRuleValues
+                .OrderBy(value => value.Key)
+                .Select(value => value.Value)
+                .ToList();
+        }
+
+        static void ReadEndRuleField(
+            ProgramCatalogEntry entry,
+            ProgramCatalogField field,
+            IDictionary<int, GameplayAbilityProgramEndRule> values)
+        {
+            if (field.Kind != ProgramCatalogFieldKind.Identity)
+                throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is not an identity.");
+            string suffix = field.Name.Substring("EndRule:".Length);
+            int separator = suffix.IndexOf(':');
+            if (separator <= 0 || !int.TryParse(suffix.Substring(0, separator), out int index) || index < 0)
+                throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is malformed.");
+            string component = suffix.Substring(separator + 1);
+            if (!values.TryGetValue(index, out GameplayAbilityProgramEndRule current))
+                current = new GameplayAbilityProgramEndRule("ExecutionCompleted", 2, string.Empty, string.Empty);
+            string trigger = current.Trigger;
+            int transition = current.Transition;
+            string actionWindowType = current.ActionWindowType;
+            string reason = current.Reason;
+            switch (component)
+            {
+                case "Trigger":
+                    trigger = field.Identity;
+                    break;
+                case "Transition":
+                    if (!int.TryParse(field.Identity, out transition) || transition <= 0)
+                        throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' has an invalid transition.");
+                    break;
+                case "Window":
+                    actionWindowType = field.Identity;
+                    break;
+                case "Reason":
+                    reason = field.Identity;
+                    break;
+                default:
+                    throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' has an unknown component.");
+            }
+            values[index] = new GameplayAbilityProgramEndRule(trigger, transition, actionWindowType, reason);
         }
 
         static void ReadDependencyField(
@@ -420,15 +565,15 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class CharacterSkillCatalog
+    public sealed class GameplayAbilityCatalog
     {
-        readonly ReadOnlyCollection<CharacterSkillDefinition> m_Definitions;
+        readonly ReadOnlyCollection<GameplayAbilityProgramDefinition> m_Definitions;
 
-        public CharacterSkillCatalog(IEnumerable<CharacterSkillDefinition> definitions)
+        public GameplayAbilityCatalog(IEnumerable<GameplayAbilityProgramDefinition> definitions)
         {
             var values = definitions == null
-                ? new List<CharacterSkillDefinition>()
-                : new List<CharacterSkillDefinition>(definitions);
+                ? new List<GameplayAbilityProgramDefinition>()
+                : new List<GameplayAbilityProgramDefinition>(definitions);
             for (int i = 0; i < values.Count; i++)
             {
                 if (values[i] == null)
@@ -443,9 +588,9 @@ namespace ThirdPersonSimulation
             m_Definitions = values.AsReadOnly();
         }
 
-        public IReadOnlyList<CharacterSkillDefinition> Definitions => m_Definitions;
+        public IReadOnlyList<GameplayAbilityProgramDefinition> Definitions => m_Definitions;
 
-        public CharacterSkillDefinition Require(CharacterSkillId skillId)
+        public GameplayAbilityProgramDefinition Require(CharacterSkillId skillId)
         {
             for (int i = 0; i < m_Definitions.Count; i++)
             {
@@ -455,13 +600,13 @@ namespace ThirdPersonSimulation
             throw new InvalidOperationException($"Character skill '{skillId}' is absent from the catalog.");
         }
 
-        public IReadOnlyList<CharacterSkillDefinition> FindByActionProfile(string actionProfileId)
+        public IReadOnlyList<GameplayAbilityProgramDefinition> FindByAdmissionProfile(string admissionProfileId)
         {
-            string identity = SimulationIdentity.Require(actionProfileId, nameof(actionProfileId));
-            var result = new List<CharacterSkillDefinition>();
+            string identity = SimulationIdentity.Require(admissionProfileId, nameof(admissionProfileId));
+            var result = new List<GameplayAbilityProgramDefinition>();
             for (int i = 0; i < m_Definitions.Count; i++)
             {
-                if (string.Equals(m_Definitions[i].ActionProfileId, identity, StringComparison.Ordinal))
+                if (string.Equals(m_Definitions[i].AdmissionProfileId, identity, StringComparison.Ordinal))
                     result.Add(m_Definitions[i]);
             }
             return result.AsReadOnly();

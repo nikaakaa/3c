@@ -22,6 +22,7 @@ namespace ThirdPersonCamera
         float m_RetireElapsed;
         float m_RetireDuration;
         CameraTimeDomain m_RetireTimeDomain;
+        CameraPresentationStopReason m_RetireReason;
         bool m_Retiring;
 
         public CharacterCameraSequenceTransition(
@@ -48,8 +49,12 @@ namespace ThirdPersonCamera
             m_RetireElapsed = 0f;
             m_RetireDuration = 0f;
             m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
+            m_RetireReason = CameraPresentationStopReason.NaturalComplete;
             m_Retiring = false;
         }
+
+        public bool IsRetiring => m_Retiring;
+        public CameraPresentationStopReason RetireReason => m_RetireReason;
 
         public bool Retire(
             string sourceId,
@@ -71,6 +76,7 @@ namespace ThirdPersonCamera
             m_RetireDuration = blendOutSeconds > 0f
                 ? blendOutSeconds
                 : m_Projection.RotationTransitionSeconds;
+            m_RetireReason = reason;
             m_Retiring = true;
             return true;
         }
@@ -91,6 +97,7 @@ namespace ThirdPersonCamera
             m_BlendFrom = default;
             m_TransitionElapsed = 0f;
             m_TransitionDuration = 0f;
+            m_RetireReason = CameraPresentationStopReason.NaturalComplete;
         }
 
         public CameraFramePlan Evaluate(
@@ -107,6 +114,7 @@ namespace ThirdPersonCamera
                     m_RetireElapsed = 0f;
                     m_RetireDuration = 0f;
                     m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
+                    m_RetireReason = CameraPresentationStopReason.NaturalComplete;
                     m_CurrentSequenceId = string.Empty;
                     m_BlendFrom = default;
                     m_TransitionElapsed = 0f;
@@ -134,6 +142,7 @@ namespace ThirdPersonCamera
                         m_RetireElapsed = 0f;
                         m_RetireDuration = 0f;
                         m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
+                        m_RetireReason = CameraPresentationStopReason.NaturalComplete;
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = request.SourceId;
                         m_CurrentGeneration = request.Generation;

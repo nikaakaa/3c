@@ -529,6 +529,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.LookDelta,
                 in response,
                 resetReason,
+                m_SequenceEvaluator.IsRetiring,
+                m_SequenceEvaluator.RetireReason,
                 targetRetired,
                 targetRetired
                     ? CameraPresentationStopReason.TargetInvalid
@@ -565,6 +567,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 response.PitchWeight,
                 response.YawWeight,
                 resetReason,
+                m_SequenceEvaluator.IsRetiring,
+                m_SequenceEvaluator.RetireReason,
                 targetRetired,
                 targetRetired
                     ? CameraPresentationStopReason.TargetInvalid

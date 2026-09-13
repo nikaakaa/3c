@@ -530,6 +530,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float pitchResponseWeight = 1f,
             float yawResponseWeight = 1f,
             CameraResetReason resetReason = CameraResetReason.None,
+            bool sequenceRetiring = false,
+            CameraPresentationStopReason sequenceStopReason = CameraPresentationStopReason.NaturalComplete,
             bool targetRetired = false,
             CameraPresentationStopReason targetStopReason = CameraPresentationStopReason.NaturalComplete,
             string targetRetiredKey = "",
@@ -563,6 +565,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PitchResponseWeight = pitchResponseWeight;
             YawResponseWeight = yawResponseWeight;
             ResetReason = (int)resetReason;
+            SequenceRetiring = sequenceRetiring;
+            SequenceStopReason = (int)sequenceStopReason;
             TargetRetired = targetRetired;
             TargetStopReason = (int)targetStopReason;
             TargetRetiredKey = targetRetiredKey ?? string.Empty;
@@ -624,6 +628,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PitchResponseWeight,
                 YawResponseWeight,
                 (CameraResetReason)ResetReason,
+                SequenceRetiring,
+                (CameraPresentationStopReason)SequenceStopReason,
                 TargetRetired,
                 (CameraPresentationStopReason)TargetStopReason,
                 TargetRetiredKey,
@@ -745,6 +751,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("reset-reason")]
         [DiagnosticGroup("camera-frame")]
         public int ResetReason { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("sequence-retiring")]
+        [DiagnosticGroup("camera-plan")]
+        public bool SequenceRetiring { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("sequence-stop-reason")]
+        [DiagnosticGroup("camera-plan")]
+        public int SequenceStopReason { get; }
 
         [DiagnosticField]
         [DiagnosticKey("target-retired")]

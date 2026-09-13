@@ -137,6 +137,8 @@ namespace ThirdPersonCamera
         public Vector2 ConsumedLook { get; private set; }
         public CameraResponseRequest Response { get; private set; }
         public CameraResetReason ResetReason { get; private set; }
+        public CameraPresentationStopReason SequenceStopReason { get; private set; }
+        public bool SequenceRetiring { get; private set; }
         public CameraPresentationStopReason TargetStopReason { get; private set; }
         public string TargetRetiredKey { get; private set; } = string.Empty;
         public bool TargetRetired { get; private set; }
@@ -154,6 +156,8 @@ namespace ThirdPersonCamera
             Vector2 consumedLook,
             in CameraResponseRequest response,
             CameraResetReason resetReason,
+            bool sequenceRetiring,
+            CameraPresentationStopReason sequenceStopReason,
             bool targetRetired,
             CameraPresentationStopReason targetStopReason,
             string targetRetiredKey,
@@ -169,6 +173,8 @@ namespace ThirdPersonCamera
             ConsumedLook = consumedLook;
             Response = response;
             ResetReason = resetReason;
+            SequenceRetiring = sequenceRetiring;
+            SequenceStopReason = sequenceStopReason;
             TargetRetired = targetRetired;
             TargetStopReason = targetStopReason;
             TargetRetiredKey = targetRetiredKey ?? string.Empty;
@@ -195,6 +201,8 @@ namespace ThirdPersonCamera
             ConsumedLook = Vector2.zero;
             Response = default;
             ResetReason = CameraResetReason.None;
+            SequenceRetiring = false;
+            SequenceStopReason = CameraPresentationStopReason.NaturalComplete;
             TargetRetired = false;
             TargetStopReason = CameraPresentationStopReason.NaturalComplete;
             TargetRetiredKey = string.Empty;

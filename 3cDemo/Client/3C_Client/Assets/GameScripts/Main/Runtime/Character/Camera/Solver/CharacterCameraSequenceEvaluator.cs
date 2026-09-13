@@ -57,6 +57,9 @@ namespace ThirdPersonCamera
                 reason);
         }
 
+        public bool IsRetiring => m_Transition.IsRetiring;
+        public CameraPresentationStopReason RetireReason => m_Transition.RetireReason;
+
         public void ForceTeardown(
             string sourceId,
             ulong generation,

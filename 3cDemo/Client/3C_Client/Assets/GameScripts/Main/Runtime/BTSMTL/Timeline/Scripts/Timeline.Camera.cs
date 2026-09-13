@@ -33,7 +33,9 @@ namespace BTSMTL.Timeline
         FovKick,
         Recoil,
         CollisionCorrection,
-        Custom
+        Custom,
+        Override,
+        Shot
     }
 
     public readonly struct TimelineCameraStateSample
@@ -196,12 +198,21 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
+    [TimelineAuthoringProperty("mode", typeof(TimelineCameraMode))]
+    [TimelineAuthoringProperty("sequenceId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
+    [TimelineAuthoringProperty("blendInSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("blendOutSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("targetKey", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
+    [TimelineAuthoringProperty("interruptPolicy", typeof(TimelineCameraInterruptPolicy))]
     public sealed class CameraStateClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraStateClip;
 
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineCameraMode Mode = TimelineCameraMode.SkillCloseup;
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public string SequenceId;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority = 100;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -265,6 +276,13 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(255, 168, 214)]
+    [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("cueKind", typeof(TimelineCameraCueKind))]
+    [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("resourceId", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
+    [TimelineAuthoringProperty("intensity", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("durationSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     public sealed class CameraCueClip : SignalClip
     {
         public override string ContractKind => TimelineContractKinds.CameraCueClip;
@@ -276,11 +294,19 @@ namespace BTSMTL.Timeline
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CueType = "Camera";
         [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public string ResourceId;
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
         public float Intensity = 1f;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public float DurationSeconds = 0.2f;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority;
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
 #if UNITY_EDITOR
         public CameraCueClip(Track track, int frame) : base(track, frame)
@@ -340,6 +366,11 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(170, 225, 255)]
+    [TimelineAuthoringProperty("lookResponse", typeof(TimelineCameraLookResponseMode))]
+    [TimelineAuthoringProperty("manualOrbitWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("pitchResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("yawResponseWeight", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, HasMaximum = true, Maximum = 1d, Finite = true)]
+    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     public sealed class CameraResponseClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.CameraResponseClip;
@@ -389,7 +420,27 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.CameraResponseTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Camera,
-                    TimelineContractKinds.CameraResponseClip)
+                    TimelineContractKinds.CameraResponseClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraOverrideTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraOverrideClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraZoomTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraZoomClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraStretchTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraStretchClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraShotTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraShotClip)
             },
             new[]
             {
@@ -410,6 +461,34 @@ namespace BTSMTL.Timeline
                 new TimelineClipContract(
                     TimelineContractKinds.CameraResponseClip,
                     TimelineContractKinds.CameraResponseTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraOverrideClip,
+                    TimelineContractKinds.CameraOverrideTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraZoomClip,
+                    TimelineContractKinds.CameraZoomTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraStretchClip,
+                    TimelineContractKinds.CameraStretchTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraShotClip,
+                    TimelineContractKinds.CameraShotTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,

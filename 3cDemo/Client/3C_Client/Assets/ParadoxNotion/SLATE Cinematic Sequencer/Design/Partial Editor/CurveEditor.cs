@@ -117,8 +117,8 @@ namespace Slate
                 var settings = GetCurveEditorSettings();
                 cEditorType.GetProperty("settings").SetValue(cEditor, settings, null);
 
-                invSnap = 1f / CutsceneEditorSurface.CurrentSnapInterval;
-                lastSnapPref = CutsceneEditorSurface.CurrentSnapInterval;
+                invSnap = 1f / Prefs.snapInterval;
+                lastSnapPref = Prefs.snapInterval;
                 ignoreScrollWheelUntilClicked = true;
 
                 RecalculateBounds();
@@ -335,10 +335,9 @@ namespace Slate
                     axisLock = 2;
                 }
 
-                var snapInterval = CutsceneEditorSurface.CurrentSnapInterval;
-                if ( snapInterval != lastSnapPref ) {
-                    lastSnapPref = snapInterval;
-                    invSnap = 1 / snapInterval;
+                if ( Prefs.snapInterval != lastSnapPref ) {
+                    lastSnapPref = Prefs.snapInterval;
+                    invSnap = 1 / Prefs.snapInterval;
                 }
 
                 if ( e.rawType == EventType.MouseUp ) {

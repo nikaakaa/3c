@@ -101,14 +101,4 @@ namespace BTSMTL.Timeline
         }
     }
 
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-    public class ClipInspectorView : Attribute 
-    {
-        public string Name;
-
-        public ClipInspectorView(string name)
-        {
-            Name = name;
-        }
-    }
 }

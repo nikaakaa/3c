@@ -368,11 +368,6 @@ namespace BTSMTL.Timeline.Editor
             ApplyDetailsVisibility();
         }
 
-        void OnEnable()
-        {
-            EditorApplication.update += OnEditorUpdate;
-        }
-
         [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
         public static void OpenStandalone()
         {
@@ -449,6 +444,7 @@ namespace BTSMTL.Timeline.Editor
             if (!BtsmtlSlateTimelineEditorAdapter.TryOpen(
                     openRequest,
                     OpenClip,
+                    () => m_SlateSurface?.MarkDirtyRepaint(),
                     out m_SlateProjection,
                     out string unavailableReason))
             {
@@ -623,7 +619,6 @@ namespace BTSMTL.Timeline.Editor
         void OnDisable()
         {
             WindowClosed?.Invoke(this);
-            EditorApplication.update -= OnEditorUpdate;
             DisposeView();
         }
 
@@ -673,11 +668,6 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_ViewTimelineAuthoringId = m_Timeline.AuthoringId;
             m_ViewState = m_SlateProjection.CaptureViewState();
-        }
-
-        void OnEditorUpdate()
-        {
-            m_SlateSurface?.MarkDirtyRepaint();
         }
 
         void DrawSlateSurface()

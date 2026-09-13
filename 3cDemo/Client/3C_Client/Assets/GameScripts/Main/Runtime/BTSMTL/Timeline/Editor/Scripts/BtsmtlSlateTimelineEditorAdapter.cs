@@ -58,6 +58,7 @@ namespace BTSMTL.Timeline.Editor
         readonly TimelineEditorSessionContext m_Session;
         readonly SlateTimelineEditorSurface m_Surface = new SlateTimelineEditorSurface();
         readonly Action<Clip> m_OpenSourceClip;
+        readonly Action m_RequestRepaint;
         readonly Dictionary<string, Track> m_SourceTracks = new Dictionary<string, Track>(StringComparer.Ordinal);
         readonly Dictionary<string, Clip> m_SourceClips = new Dictionary<string, Clip>(StringComparer.Ordinal);
         readonly HashSet<string> m_ActiveTrackIds = new HashSet<string>(StringComparer.Ordinal);
@@ -71,10 +72,12 @@ namespace BTSMTL.Timeline.Editor
 
         public BtsmtlSlateTimelineEditorAdapter(
             TimelineEditorOpenRequest request,
-            Action<Clip> openSourceClip)
+            Action<Clip> openSourceClip,
+            Action requestRepaint)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_OpenSourceClip = openSourceClip;
+            m_RequestRepaint = requestRepaint ?? throw new ArgumentNullException(nameof(requestRepaint));
             m_Session = new TimelineEditorSessionContext(request);
             m_Session.BindView(() => m_ReadOnly, () => 1f, _ => 0, _ => 0f);
             m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
@@ -87,20 +90,22 @@ namespace BTSMTL.Timeline.Editor
 
         public static BtsmtlSlateTimelineEditorAdapter Open(
             TimelineEditorOpenRequest request,
-            Action<Clip> openSourceClip = null)
+            Action<Clip> openSourceClip,
+            Action requestRepaint)
         {
-            return new BtsmtlSlateTimelineEditorAdapter(request, openSourceClip);
+            return new BtsmtlSlateTimelineEditorAdapter(request, openSourceClip, requestRepaint);
         }
 
         public static bool TryOpen(
             TimelineEditorOpenRequest request,
             Action<Clip> openSourceClip,
+            Action requestRepaint,
             out BtsmtlSlateTimelineEditorAdapter adapter,
             out string unavailableReason)
         {
             try
             {
-                adapter = Open(request, openSourceClip);
+                adapter = Open(request, openSourceClip, requestRepaint);
                 unavailableReason = string.Empty;
                 return true;
             }
@@ -262,6 +267,7 @@ namespace BTSMTL.Timeline.Editor
             SlateTimelineEditorContentView content = BuildContent();
             m_Surface.SetContent(content);
             SelectionChanged?.Invoke(Selection);
+            m_RequestRepaint();
         }
 
         SlateTimelineEditorContentView BuildContent()
@@ -693,6 +699,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void RequestRepaint()
         {
+            m_RequestRepaint();
         }
 
         public void ShowNotification(string message)

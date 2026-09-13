@@ -47,6 +47,7 @@ TimelineEditorWindow
 - Track Inspector 直接编辑正式 Track 名称和 `PersistentMuted`；曲线关键帧选择会保留所属 Clip 的 Inspector 上下文，不再因为纯 Surface 的 `Key` 选择被清空。
 - 一个 Track 内只有当前编辑 Clip 的 Curve 区会展开；未选 Clip 时取该 Track 第一条有曲线的 Clip。左侧参数名与右侧曲线行共享同一高度，避免多个 Clip 的 Curve 互相覆盖或出现漂浮的无归属曲线。
 - Curve 区高度以 72px 为下限、每个通道至少 20px；通道数量增加时只扩展当前 Track，不压缩参数名和关键帧行。
+- Surface 的重绘由窗口 host 回调按需触发；编辑提交、运行/历史 overlay 和手势变化主动请求重绘，Timeline 窗口不再挂常驻 `EditorApplication.update` 刷新循环。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

@@ -25,7 +25,6 @@ namespace ThirdPersonCamera
         [SerializeField] float m_NearClipPlane = 0.05f;
         [SerializeField] float m_FarClipPlane = 1000f;
         [SerializeField] float m_CameraLocateRadius = 3f;
-        [SerializeField] float m_DefaultFieldOfView = 60f;
         [SerializeField] float m_DefaultSmoothTime = 0.08f;
         [SerializeField] float m_RotationTransitionSeconds = 0.2f;
         [SerializeField] CameraInputSettings m_Input = new CameraInputSettings();
@@ -45,7 +44,6 @@ namespace ThirdPersonCamera
         public float NearClipPlane => m_NearClipPlane;
         public float FarClipPlane => m_FarClipPlane;
         public float CameraLocateRadius => m_CameraLocateRadius;
-        public float DefaultFieldOfView => m_DefaultFieldOfView;
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
         public CameraInputSettings Input => m_Input;
@@ -89,7 +87,6 @@ namespace ThirdPersonCamera
                 value.Append('|').Append(NearClipPlane.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(FarClipPlane.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(CameraLocateRadius.ToString("R", CultureInfo.InvariantCulture));
-                value.Append('|').Append(DefaultFieldOfView.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(DefaultSmoothTime.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(RotationTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
                 AppendInput(value, Input);
@@ -126,7 +123,6 @@ namespace ThirdPersonCamera
                 !DefaultSequence || Input == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
-                !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||
                 !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f)
                 throw new InvalidOperationException($"Character Camera Profile '{name}' is incomplete.");
@@ -146,7 +142,8 @@ namespace ThirdPersonCamera
             for (int i = 0; i < TargetSlots.Count; i++)
             {
                 CameraTargetSlot slot = TargetSlots[i];
-                if (slot == null || !slots.Add(slot.SlotId))
+                if (slot == null || string.Equals(slot.SlotId, CameraTargetBindingKeys.Body, StringComparison.Ordinal) ||
+                    !slots.Add(slot.SlotId))
                     throw new InvalidOperationException($"Character Camera Profile '{name}' target slot #{i} is missing or duplicated.");
                 slot.RequireValid($"{name}.TargetSlots[{i}]");
             }

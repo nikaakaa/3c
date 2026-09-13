@@ -23,7 +23,6 @@ namespace ThirdPersonCamera
         [SerializeField] float m_NearClipPlane;
         [SerializeField] float m_FarClipPlane;
         [SerializeField] float m_CameraLocateRadius;
-        [SerializeField] float m_DefaultFieldOfView;
         [SerializeField] float m_DefaultSmoothTime;
         [SerializeField] float m_RotationTransitionSeconds;
         [SerializeField] CameraInputSettings m_Input;
@@ -55,7 +54,6 @@ namespace ThirdPersonCamera
             m_NearClipPlane = profile.NearClipPlane;
             m_FarClipPlane = profile.FarClipPlane;
             m_CameraLocateRadius = profile.CameraLocateRadius;
-            m_DefaultFieldOfView = profile.DefaultFieldOfView;
             m_DefaultSmoothTime = profile.DefaultSmoothTime;
             m_RotationTransitionSeconds = profile.RotationTransitionSeconds;
             m_Input = new CameraInputSettings(profile.Input);
@@ -78,7 +76,7 @@ namespace ThirdPersonCamera
         public float NearClipPlane => m_NearClipPlane;
         public float FarClipPlane => m_FarClipPlane;
         public float CameraLocateRadius => m_CameraLocateRadius;
-        public float DefaultFieldOfView => m_DefaultFieldOfView;
+        public float DefaultFieldOfView => ResolveDefaultFieldOfView();
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
         public CameraInputSettings Input => m_Input;
@@ -147,7 +145,6 @@ namespace ThirdPersonCamera
                 !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(FarClipPlane) || FarClipPlane <= NearClipPlane ||
                 !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
-                !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||
                 !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f)
                 throw new InvalidOperationException("Character Camera Projection payload is incomplete.");
@@ -209,7 +206,9 @@ namespace ThirdPersonCamera
             for (int i = 0; i < TargetSlots.Count; i++)
             {
                 CameraTargetSlotPayload slot = TargetSlots[i];
-                if (slot == null || string.IsNullOrWhiteSpace(slot.SlotId) || !slots.Add(slot.SlotId) ||
+                if (slot == null || string.IsNullOrWhiteSpace(slot.SlotId) ||
+                    string.Equals(slot.SlotId, CameraTargetBindingKeys.Body, StringComparison.Ordinal) ||
+                    !slots.Add(slot.SlotId) ||
                     !Enum.IsDefined(typeof(CameraSpace), slot.Space))
                     throw new InvalidOperationException($"Character Camera Projection TargetSlots[{i}] is invalid.");
                 slot.RequireValid($"Character Camera Projection TargetSlots[{i}]");
@@ -263,6 +262,28 @@ namespace ThirdPersonCamera
                 return new CameraOrbitPayload(orbit.Height, orbit.Radius);
             }
             throw new InvalidOperationException("Character Camera Projection default Sequence has no track stage.");
+        }
+
+        float ResolveDefaultFieldOfView()
+        {
+            for (int i = 0; i < DefaultSequence.Stages.Count; i++)
+            {
+                switch (DefaultSequence.Stages[i])
+                {
+                    case CameraFrameOnePointByHeightPayload value:
+                        return value.FieldOfView;
+                    case CameraFrameOnePointByScreenOffsetPayload value:
+                        return value.FieldOfView;
+                    case CameraFrameOnePointByTrackPayload value:
+                        return value.FieldOfView;
+                    case CameraFrameTwoPointsPayload value:
+                        return value.FieldOfView;
+                    case CameraFrameMultiplePointsPayload value:
+                        return value.FieldOfView;
+                }
+            }
+            throw new InvalidOperationException(
+                "Character Camera Projection default Sequence has no stage-owned field of view.");
         }
     }
 }

@@ -51,6 +51,8 @@
 
 - `8db41c4fbcc925c1df83e66aea18f304b12368dc`：统一 Camera Projection、FramePlanner、Effect、Environment Constraint、Producer binding 和唯一默认轨道 owner。
 - `393066dda`：收口 Reset/暂停/碰撞/效果采样诊断，删除旧 Controller、无消费者 Locking/ChangeAvatar 配置，并让不闭合阶段在编译/求值时明确失败。
+- `6915f39bf`：将 Camera Resource Track 接入统一 Timeline Contract/Program/Presentation 请求链，移除旧的未调用资源轨道采样路径。
+- `594ea0a92`、`200cb7ed3`、`70f77421b`：补齐 Timeline 作者对象/曲线 owner、切镜平滑职责和 CameraCue 曲线采样；这些提交均未包含用户仍在修改的 `BtsmtlSkillAuthoringCodeAdapter.cs` 与输入回放文件。
 - `ThirdPersonCamera.Contracts.csproj` 使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，2 个 Unity 包警告，0 个错误。
 - `ThirdPersonClient.Runtime.csproj` 同参数检查到工作区既有错误：`CharacterControlProgramContracts.cs(636)` 缺少 `CharacterSkillDependency`；直接项目重编译另有用户新增 `GameplayAbilityDefinition` 未实现 `IGameplayBehaviorProfile.DebugCategory/Tags`。本次未修改这些文件。
 - `ThirdPersonClient.Editor.csproj` 在 Runtime 因既有错误未产出 DLL 后无法继续编译；没有把该结果解释为摄像机代码已通过 Editor 编译。

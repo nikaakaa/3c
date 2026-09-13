@@ -26,10 +26,20 @@ namespace ThirdPersonCamera
 
         public void RequireValid(string source)
         {
-            if (string.IsNullOrWhiteSpace(SlotId) || !Enum.IsDefined(typeof(CameraSpace), Space) ||
+            if (string.IsNullOrWhiteSpace(SlotId) || !string.Equals(SlotId, SlotId.Trim(), StringComparison.Ordinal) ||
+                !Enum.IsDefined(typeof(CameraSpace), Space) ||
                 string.IsNullOrWhiteSpace(AnchorKey) && string.IsNullOrWhiteSpace(AimPointKey) &&
                 string.IsNullOrWhiteSpace(PreferredBoneKey))
                 throw new InvalidOperationException($"{source} contains an invalid Camera target slot.");
+            RequireKey(AnchorKey, source + ".AnchorKey");
+            RequireKey(AimPointKey, source + ".AimPointKey");
+            RequireKey(PreferredBoneKey, source + ".PreferredBoneKey");
+        }
+
+        static void RequireKey(string key, string source)
+        {
+            if (!string.IsNullOrEmpty(key) && !string.Equals(key, key.Trim(), StringComparison.Ordinal))
+                throw new InvalidOperationException($"{source} contains whitespace around its identity.");
         }
     }
 }

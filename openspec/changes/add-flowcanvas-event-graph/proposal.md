@@ -34,4 +34,4 @@ Pose Blackboard、Get、条件、BlendSpace、参数/曲线声明和编译绑定
 - 本任务：正式Fact到宿主的适配、原生事件图作者 API/薄适配、动画根图引用与生产端合同，以及 Corin 占位事件图/recipe 的明确处理。
 - Pose/Presentation 所属任务：FactProjector 的既有事实/判断消费者边界，CharacterAnimationInputContract、Blackboard、Get/条件/BlendSpace、编译输入绑定与完整Preview消费。需要移动公共事实或改变动画行为时先由用户决定，不在本任务越权改动。
 - C# authoring 任务：保留公共export_code/generate_assets、通用输出及生成保存；事件图仍只作薄扩展。
-- r2 的运行与作者基础作为已有基线，不以空图、Profile引用或构建成功宣称业务整理完成。本轮只更新本任务文档，不改代码/资产，不发送实施指令。
+- r2 的运行与作者基础作为已有基线，不以空图、Profile引用或构建成功宣称业务整理完成。用户已明确要求原实现窗口按当前r3继续实施；确认和派发状态见design的Workflow Binding，不新增窗口或业务用途。

@@ -4,7 +4,7 @@ r3（2026-09-13）按用户“先说现有实现哪些混杂、改一下文档�
 
 r1 的原生 FlowCanvas runtime、动画宿主和变量交接方向保持；r2 的公共 C# authoring 双工具、直接 API 与协议退役方向保持。r3 不重做这些已有基础，而是修正输入分类、空图强制装配和内容迁移口径。
 
-本窗口唯一维护本目录规划。当前请求只修改文档，r3 不自动下发实现；已有实现仍以最后明确派发的 r2 为历史基线。普通运行记录不作为新的业务需求或方案确认。
+本窗口唯一维护本目录规划。用户在了解本版内容后明确要求“让实现窗口做吧”，现确认并授权原实现窗口按r3继续；仅更新确认和派发状态，不改变既定业务范围。普通运行记录不作为新的业务需求或方案确认。
 
 ### 当前源码事实与职责表
 
@@ -251,21 +251,23 @@ Build 继续独立校验事件图/宿主/唯一变量合同与消费者依赖、
 
 ## Workflow Binding
 
-r2曾按用户明确要求下发实现。当前用户要求“改一下文档”，本次只完成r3职责整理与范围修订，不发送执行消息或触发代码工作；已有实现绑定保留，最后明确派发版本仍为r2。
+r3文档修订后，用户明确要求“让实现窗口做吧”，授权按本版继续实施。复用原唯一实现窗口并只发送一次DOCUMENT_UPDATED，不联系协调或其它任务；历史r2作为已保留基础，不继续执行与r3相矛盾的空图强制装配要求。
 
 - planning_revision: r3
 - revision_date: 2026-09-13
 - revision_source: 用户要求整理现有动画输入职责并修改文档
 - coordination_proposal: 2026-09-13-eventgraph-authoring-r2
 - authoring_baseline: remove-agent-authoring-use-native-csharp/design.md r2
-- action: PLAN
-- authorization_source: 用户明确要求“改一下文档吧”
-- planning_status: revised_for_review
-- implementation_dispatched_for_r3: false
+- action: IMPLEMENT
+- authorization_source: 用户明确要求“让实现窗口做吧”
+- planning_status: confirmed_for_implementation
+- confirmed_by_user: true
+- confirmed_revision: r3@8fca9312ea3b096a750e42081765c7cf60f8a627
+- implementation_dispatched_for_r3: true
 - planning_document_owner: 01a095f2-ed45-7502-93f7-e9c9df0b7279
-- last_dispatched_implementation_revision: r2@fb937f4415ff6593e1c9affbea37e465c77d617f
+- last_dispatched_implementation_revision: r3@8fca9312ea3b096a750e42081765c7cf60f8a627
 - implementation_dispatched_for_r2: true
-- implementation_dispatch_status: r2_sent_r3_not_dispatched
+- implementation_dispatch_status: DOCUMENT_UPDATED_r3_sent
 - planning_document_paths: 本目录 proposal.md、design.md、tasks.md 和 specs 下四份当前规范增量
 - implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/execution.md
 

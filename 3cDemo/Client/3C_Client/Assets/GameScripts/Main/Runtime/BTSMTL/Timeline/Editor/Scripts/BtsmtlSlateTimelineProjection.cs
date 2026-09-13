@@ -366,6 +366,7 @@ namespace BTSMTL.Timeline.Editor
     {
         readonly TimelineEditorOpenRequest m_Request;
         readonly TimelineEditorSessionContext m_Session;
+        readonly BtsmtlSlateTimelineBinding m_Binding;
         readonly Action<Clip> m_OpenSourceClip;
         readonly Dictionary<string, Clip> m_SourceClips = new Dictionary<string, Clip>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlSlateActionClip> m_ProxyClips =
@@ -464,6 +465,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Session = new TimelineEditorSessionContext(request);
+            m_Binding = new BtsmtlSlateTimelineBinding(request, m_Session);
             m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
             m_PlaybackPolicy = cutscene => !ReferenceEquals(cutscene, m_Cutscene);
@@ -641,7 +643,7 @@ namespace BTSMTL.Timeline.Editor
 
         void BuildProjection()
         {
-            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Request.Timeline);
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Binding.Timeline);
             m_Host = new GameObject("__BTSMTL_SlateTimelineProjection__");
             m_Host.hideFlags = HideFlags.HideAndDontSave;
             m_Cutscene = m_Host.AddComponent<Cutscene>();
@@ -654,7 +656,7 @@ namespace BTSMTL.Timeline.Editor
                     UnityEngine.Object.DestroyImmediate(defaultGroups[index].gameObject);
             }
             float frameDuration = 1f / Mathf.Max(1, m_Session.FrameRate);
-            m_Cutscene.length = Mathf.Max(frameDuration, m_Request.Timeline.Duration);
+            m_Cutscene.length = Mathf.Max(frameDuration, m_Binding.Duration);
             m_Cutscene.viewTimeMin = 0f;
             m_Cutscene.viewTimeMax = Mathf.Max(m_Cutscene.length + frameDuration, frameDuration);
 
@@ -664,13 +666,12 @@ namespace BTSMTL.Timeline.Editor
             group.name = m_Request.Timeline.Name;
             m_Cutscene.groups.Add(group);
 
-            for (int trackIndex = 0; trackIndex < m_Request.Timeline.Tracks.Count; trackIndex++)
+            for (int trackIndex = 0; trackIndex < m_Binding.Tracks.Count; trackIndex++)
             {
-                Track sourceTrack = m_Request.Timeline.Tracks[trackIndex];
+                Track sourceTrack = m_Binding.Tracks[trackIndex];
                 if (sourceTrack == null)
                     continue;
-                var curveChannels = new List<TimelineCurveChannelDescriptor>();
-                TimelineCurveChannelCatalog.CollectForTrack(sourceTrack, curveChannels);
+                List<TimelineCurveChannelDescriptor> curveChannels = m_Binding.CollectCurveChannels(sourceTrack);
                 string trackDisplayName = sourceTrack.Name;
                 GameObject trackObject = CreateChild(group.transform, trackDisplayName);
                 BtsmtlSlateTrack proxyTrack = trackObject.AddComponent<BtsmtlSlateTrack>();
@@ -718,9 +719,9 @@ namespace BTSMTL.Timeline.Editor
                 }
             }
 
-            for (int sectionIndex = 0; sectionIndex < m_Request.Timeline.Sections.Count; sectionIndex++)
+            for (int sectionIndex = 0; sectionIndex < m_Binding.Sections.Count; sectionIndex++)
             {
-                TimelineSection section = m_Request.Timeline.Sections[sectionIndex];
+                TimelineSection section = m_Binding.Sections[sectionIndex];
                 if (section != null)
                 {
                     Slate.Section proxySection = new Slate.Section(

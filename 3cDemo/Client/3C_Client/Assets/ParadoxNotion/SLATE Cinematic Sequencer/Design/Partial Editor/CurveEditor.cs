@@ -37,6 +37,13 @@ namespace Slate
             instance.Draw(posRect, timeRect);
         }
 
+        public static void ClearEmbeddedCache() {
+            foreach ( var instance in embeddedCache.Values ) {
+                instance.Dispose();
+            }
+            embeddedCache.Clear();
+        }
+
 
         static CurveEditor() {
             AnimatedParameter.onParameterChanged += RefreshCurvesOf;
@@ -96,27 +103,41 @@ namespace Slate
 
             private object cEditor;
             private Action rawOnCurvesUpdated;
+            private Action undoRedoHandler;
 
             public CurveRenderer(IAnimatableData animatable, IKeyable keyable, Rect posRect) {
                 this.animatable = animatable;
                 this.keyable = keyable;
                 this.curves = animatable.GetCurves();
                 this.posRect = posRect;
-                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                SubscribeUndoRedo();
                 Init();
             }
 
             public CurveRenderer(AnimationCurve[] curves, Rect posRect) {
                 this.curves = curves;
-                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                SubscribeUndoRedo();
                 Init();
             }
 
             public CurveRenderer(AnimationCurve[] curves, Rect posRect, Action onCurvesUpdated) {
                 this.curves = curves;
                 rawOnCurvesUpdated = onCurvesUpdated;
-                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                SubscribeUndoRedo();
                 Init();
+            }
+
+            void SubscribeUndoRedo() {
+                undoRedoHandler = RefreshCurves;
+                Undo.undoRedoPerformed += undoRedoHandler;
+            }
+
+            public void Dispose() {
+                if ( undoRedoHandler == null ) {
+                    return;
+                }
+                Undo.undoRedoPerformed -= undoRedoHandler;
+                undoRedoHandler = null;
             }
 
             public void SetRawCurves(AnimationCurve[] curves, Action onCurvesUpdated) {

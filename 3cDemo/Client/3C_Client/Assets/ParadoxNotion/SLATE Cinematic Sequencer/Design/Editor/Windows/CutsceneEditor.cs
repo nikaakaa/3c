@@ -374,6 +374,7 @@ namespace Slate
         [System.NonSerialized] private System.Action postWindowsGUI;
         [System.NonSerialized] private Dictionary<string, int> formalInspectedParameters;
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalPickedTrack;
+        [System.NonSerialized] private IEmbeddedTimelineSectionBinding formalDraggedSection;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
 
@@ -767,6 +768,7 @@ namespace Slate
             clipWrappersMap = null;
             formalInspectedParameters = new Dictionary<string, int>(System.StringComparer.Ordinal);
             formalPickedTrack = null;
+            formalDraggedSection = null;
             cutscene = null;
         }
 
@@ -924,9 +926,11 @@ namespace Slate
             embeddedRuntimeClipStatus = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
+            CurveEditor.ClearEmbeddedCache();
             embeddedTimeline = null;
             formalInspectedParameters = null;
             formalPickedTrack = null;
+            formalDraggedSection = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -3236,6 +3240,8 @@ namespace Slate
             GUI.BeginGroup(centerRect);
             float nextY = FIRST_GROUP_TOP_MARGIN;
             IReadOnlyList<IEmbeddedTimelineGroupBinding> groups = embeddedTimeline.Groups;
+            Rect sectionsRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)), 3, TimeToPos(viewTimeMax), 18);
+            ShowFormalSections(sectionsRect);
             BeginWindows();
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
@@ -3366,6 +3372,64 @@ namespace Slate
             {
                 interactingClip.ResetInteraction();
                 interactingClip = null;
+            }
+        }
+
+        void ShowFormalSections(Rect rect)
+        {
+            Event e = Event.current;
+            List<IEmbeddedTimelineSectionBinding> sections = embeddedTimeline.Sections
+                .OrderBy(section => section.Time)
+                .ToList();
+            if (e.type == EventType.ContextClick && rect.Contains(e.mousePosition))
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
+                GenericMenu menu = new GenericMenu();
+                menu.AddItem(new GUIContent("Add Section Here"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.AddSection(frame), "Add Section"));
+                menu.ShowAsContext();
+                e.Use();
+            }
+
+            float previous = 0f;
+            for (int index = 0; index <= sections.Count; index++)
+            {
+                IEmbeddedTimelineSectionBinding section = index < sections.Count ? sections[index] : null;
+                float next = section != null ? Mathf.Clamp(section.Time, previous, length) : length;
+                Rect sectionRect = Rect.MinMaxRect(TimeToPos(previous), rect.y, TimeToPos(next) - 2f, rect.yMax);
+                GUI.color = section != null ? section.Color : Color.black.WithAlpha(0.2f);
+                GUI.DrawTexture(sectionRect, whiteTexture);
+                GUI.color = section != null && section.Color.grayscale >= 0.5f ? Color.black : Color.white;
+                GUI.Label(sectionRect, section != null ? $" <i>{section.Name}</i>" : " <i>Outro</i>");
+                GUI.color = Color.white;
+                if (section != null)
+                {
+                    Rect markerRect = Rect.MinMaxRect(TimeToPos(section.Time) - 5f, rect.y, TimeToPos(section.Time) + 5f, rect.yMax);
+                    AddCursorRect(markerRect, MouseCursor.SlideArrow);
+                    if (e.type == EventType.MouseDown && e.button == 0 && markerRect.Contains(e.mousePosition) && !embeddedTimeline.IsReadOnly)
+                    {
+                        formalDraggedSection = section;
+                        embeddedTimeline.BeginEdit("Move Timeline Section");
+                        e.Use();
+                    }
+                    if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
+                    {
+                        GenericMenu menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Delete Section"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteSection(section), "Delete Section"));
+                        menu.ShowAsContext();
+                        e.Use();
+                    }
+                }
+                previous = next;
+            }
+
+            if (formalDraggedSection != null)
+            {
+                formalDraggedSection.Time = Mathf.Clamp(SnapTime(PosToTime(mousePosition.x)), 0f, length);
+                if (e.rawType == EventType.MouseUp)
+                {
+                    embeddedTimeline.CommitEdit();
+                    formalDraggedSection = null;
+                }
             }
         }
 

@@ -1,39 +1,35 @@
 ## Why
 
-用户要求真实 Slate Timeline UI，且打开窗口不得创建临时 Slate GameObject/Cutscene/Group/Track/ActionClip 组件树。当前 BuildProjection 仍创建隐藏宿主和组件，Surface 及 Curve/DopeSheet 直接依赖 Cutscene.Validate、Transform、IKeyable/runtime root。隐藏对象不是解耦；这是先前适配实现的选择错误，不是 Timeline 的业务依赖。
+用户要求直接使用 Slate 已有的完整 Timeline UI。此前规划把数据适配扩大为纯内存 Editor Model、新 Surface API、交互与 Curve/DopeSheet 输入全面改造，实际成为重做编辑器，用户已明确否决；实现窗口已通过 0aa52f209 按用户要求回退。
 
-本次将现有 Slate Editor 绘制/交互代码的输入改为纯内存 Editor Model/adapter。TimelineData 继续是唯一持久化 Timeline 业务模型，正式创建、字段、曲线、Mutation/Undo 不变。已有右侧 Inspector、布局、帧单位、选择、曲线交互和 Camera Track 保留，不重新仿制 UI。
+本 change 撤销该方案，复用真实 Slate 已提供的时间尺、轨道/Clip、选择、拖动、裁剪、缩放、曲线和切线编辑。TimelineData 继续是正式业务数据，现有 typed 配置、Mutation/Undo、右侧 Inspector 与预览边界保留。
 
 ## What Changes
 
-- 将 CutsceneEditorSurface 改为普通可释放的 SlateTimelineEditorSurface，Bind 接收纯内存读视图、编辑命令 port 和 UI host，不接受 Cutscene、Transform 或 ScenePlay。
-- 在现有 Timeline adapter 中生成轻量行视图、稳定 ID、曲线 descriptor 和当前手势草稿；不继承 MonoBehaviour/ScriptableObject，不保存或导出 Editor Model，不复制 Clip 业务配置。
-- 迁移 Surface 的选择/拖动/裁剪/排序/复制/Section/快捷键/Undo/生命周期，以及 CurveEditor/DopeSheet/参数列表的组件输入；保留 Slate 的实际绘制、命中、关键帧和切线算法。
-- 正式新增仍调用 TimelineData.AddTrack/AddClip/AddSection 和共同强类型配置；手势只修改内存草稿，提交仍走既有 TimelineEditorSessionContext/Mutation/正式 owner Undo。
-- 删除 __BTSMTL_SlateTimelineProjection__、BtsmtlSlateGroup/Track/ActionClip 组件类、groupsRoot/Transform/组件扫描/Cutscene.Validate、proxy Undo 与销毁路径，重命名 adapter 并迁移调用者；不保留隐藏场景、代用组件或 fallback。
-- 将全局组件 selection/current、runtime root.currentTime 和曲线永久回调迁到窗口局部 state/selection、帧映射、可释放缓存与实例命令。
-- Timeline 无 ScenePlay、Actor、Director 或插件运行内核时完整可编辑；现有预览联动只作为外部可选观察/导航，保留正式 Session/adoption。
-- 仍使用 Slate 自身 Cutscene 窗口的真实消费者如存在，只在插件边界读取真实 Cutscene，复用同一个纯内存 Surface；BTSMTL 不创建替代 Cutscene，不维护第二套 UI。
-- r2 作者合同保留：只有公共 export_code 显式从正式资产完整写 C#，generate_assets 显式执行已编译入口、保存明确范围和根挂接。人工编辑不写源码，编译不生成资产，两工具不自动 Build/Play。
-- 本任务维护 projection/Editor adapter；公共 TimelineAuthoringClipBinding.cs 与代码输出/生成仍由 C# authoring 任务负责，保留已经完成的强类型接线，不恢复 JSON/五工具或第二事务。
-- tasks 第11节单独记录本次尚未实施的纯内存迁移，原组件投影完成记录只作为历史，不把文档改写列为代码完成。
+- 删除上一轮纯内存 Surface/Editor Model、Clip包装器/选择系统和曲线工具整体迁移任务，不换名称继续实现。
+- 实现窗口负责恢复用户要求的真实 Slate 基线；本规划不执行代码回退，不指定未经核对的回退提交，也不把文档更新当成已恢复。
+- 只在现有 Slate 功能上继续数据和操作适配：稳定 ID、正式 Track/Clip/Section、完整曲线、资源和 typed 字段，提交走既有 TimelineData.AddTrack/AddClip/AddSection、Session/owner Undo。
+- 原有帧显示、吸附、右侧 Inspector、布局和必要菜单接线保持；缺陷针对现成实现局部修改，不重建时间轴、交互或曲线渲染器。
+- 直接修改 Slate 原源码的数据绑定：原时间尺/Track/Clip/Curve/DopeSheet 函数继续使用，所读写的 Cutscene/组件字段换为正式 Timeline/薄 adapter 输入和原 Mutation 输出。函数参数可以改，原绘制与交互算法保留。
+- 删除临时 Cutscene/GameObject/组件树及专属创建、层级扫描和销毁；Actor/Director/运行采样等无关绑定直接清除。不能保留代用组件绕过接线，也不能另写一套 UI 来达成去依赖。
+- Slate 对象无论何种承载均不能成为第二份持久化 Timeline、compiler输入或角色运行 owner；本地编辑不依赖启动 ScenePlay。
+- 预览继续归正式 SkillGraph/Graph Shell、Session/adoption，Timeline 只编辑和显示已接入的真实观察。
+- r2 C# authoring 分工继续：人工编辑不写源码，export_code/generate_assets 各显式调用，编译不生成资产，两工具不自动 Character Build/Play。公共 typed binding 与代码输出由原任务拥有，不恢复 UI JSON 或旧五工具。
 
 ## Capabilities
 
 ### New Capabilities
 
-- Slate Editor 的纯内存 Timeline 内容/曲线输入与正式 BTSMTL adapter。
+- 无新增编辑器框架；撤销上一轮声明的纯内存 Slate Surface 架构能力。
 
 ### Modified Capabilities
 
-- `btsmtl-timeline-editor-preview`：实际 Slate UI 改为无组件输入，编辑 Session/Undo 保留，ScenePlay 为可选外部观察。
-- `btsmtl-timeline-animation-authoring-surface`：本地作者能力不依赖场景的现有合同由纯内存实现满足；本轮不直接安装未完成实现到 current specs。
+- `btsmtl-timeline-editor-preview`：复用现成 Slate UI，通过现有数据/命令适配完成正式编辑；撤销强制新模型、曲线输入与组件迁移条款。
 
 ## Impact
 
-- 主要修改位置：Slate Editor Surface、Clip交互、CurveEditor、DopeSheetEditor、参数绘制/缓存，以及 BTSMTL TimelineEditorWindow、Editor adapter 与其调用者。
-- 删除对象仅为错误 UI 宿主、组件代理和相关无消费者 Editor 路径，不删除真实 Timeline/资源/生成内容，不修改技能、相机、Pose 或运行内核。
-- Shared UI 的输入和程序集单向依赖须迁移，不能只改 BuildProjection；大于原“最小 transaction hook”的改动范围，是本次明确允许的 Editor 解耦。
-- 单窗口、现有右侧 Inspector、帧几何和实际作者交互保持。preview-integration-plan.md 更新输入边界，原运行控制任务不重做。
-- 与旧 design/spec 的“HideAndDontSave 兼容对象”“Cutscene.Validate 发现 Clip”“必须 AnimatedParameter 组件参数”冲突，已在本 change 替换。current 独立作者合同保留；current 旧 PreviewSession 条款由原场景预览 change 的 delta 退役，不以旧规范恢复临时组件树。
-- 本轮只修改本任务规划文档，不修改业务代码/资产或其它任务文档，不新增测试和验证任务。迁移顺序、API 职责和用户行为标准见 design.md。
+- 本轮只修改本 change 的 proposal/design/tasks/specs 与 preview-integration-plan.md。实现窗口已提交 0aa52f209 回退，代码恢复状态仍由其实际结果记录。
+- 保留正式 TimelineData/identity/资源/Curve/typed Mutation/Undo/Session、真实 Slate UI、右侧 Inspector、既有 Camera Track 和已正确的预览。
+- 删除文档中“必须新建 SlateTimelineEditorSurface/Editor Model”“必须改造全部 IKeyable/AnimatedParameter”“必须拆 UI 程序集”的指令，避免错误规划继续驱动实现。
+- 与 current specs 对比：独立作者能力、合法字段、稳定 identity、正式 Undo 等业务合同继续成立；旧 PreviewSession 条款仍归预览 change 处理。本轮不安装未完成 delta，也不修改其它任务的规范。
+- 不新增测试或验证任务；design 第3节明确原函数保留与接线替换清单。原重做第11节撤销，新第11节仅记录原源码接线任务且保持未勾选，不能把回退或规划更新当成代码完成。

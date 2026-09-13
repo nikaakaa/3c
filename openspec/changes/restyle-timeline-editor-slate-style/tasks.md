@@ -2,7 +2,7 @@
 
 ## 1. 已有接入基础
 
-2026-09-13 纯内存修订：本节勾选只记录原接入基础，不代表新的无组件 Surface 已实现。原 HideAndDontSave 宿主/组件树方案已被否决并从目标清单移除，历史见 Git；第11节负责完整替换。现有布局、右侧 Inspector、帧、typed 配置和 Undo 行为保留。
+2026-09-13 用户纠正：撤销原第11节纯内存编辑器重做任务，实现窗口已提交 0aa52f209 回退。其历史进度不作为当前目标；本清单保留原功能和联动项，不因改文档声称原功能已恢复。恢复提交为 0aa52f209，原入口已恢复；组件树接线整改仍未实现，以下新任务不得复用旧改造勾选。
 
 - [x] 1.1 已有 CutsceneEditorSurface 的 InitializeEmbedded/DrawEmbeddedGUI 和 transaction callback；后续布局/播放清理分别由布局和预览边界章节承担
 - [x] 1.2 已有 TimelineData 正式 owner 与 Editor-only Slate projection 的身份映射基础，不把临时对象作为保存资产
@@ -85,13 +85,12 @@
 
 依赖仅阻止第10节对应接线，无关 UI 继续原范围。领域规则是业务实现，不是中央 Agent Validator；不新增验证任务。按中文小步提交，命令执行遵守 AGENTS。
 
-## 11. 无组件 Slate Editor 输入迁移
+原第11节的替代编辑器方案已撤销，不是将其标为完成。回退由实现窗口按实际 diff 执行，保护已正确的 typed 数据、布局和预览修改。以下是按用户最新指令重写的原源码接线任务，不沿用被回退实现的勾选。
 
-- [ ] 11.1 从现有 Slate 绘制/交互提炼普通 C# 内容读视图、稳定元素ID、帧/曲线输入、手势草稿和实例命令/UI host合同；不继承组件或实现 runtime IDirectable/IKeyable
-- [ ] 11.2 将 CutsceneEditorSurface 改为普通可释放 SlateTimelineEditorSurface，迁移 Bind/DrawGUI/Refresh/Dispose、行列表、Clip包装器、Section与快捷键，移除 Cutscene/Transform/Validate 依赖
-- [ ] 11.3 将 CurveEditor/DopeSheet/参数列表改接完整曲线草稿、time-domain/帧映射和命令 port，保留 Slate 算法，移除组件参数反射、root.currentTime、AutoKey和 proxy Undo
-- [ ] 11.4 将现有 projection 改名为 BtsmtlSlateTimelineEditorAdapter，纯读取 TimelineData 并调用既有 typed 新增/字段/Curve/Session/Undo；迁移右侧 Inspector 和按稳定 ID 的选择/视图恢复
-- [ ] 11.5 单次切换全部正式打开/刷新入口，删除隐藏宿主、BtsmtlSlateGroup/Track/ActionClip组件类、CreateChild/AddComponent/groupsRoot/组件扫描及旧签名/fallback路径，更新命名/meta/引用
-- [ ] 11.6 按窗口释放 curve/DopeSheet缓存、事件、GUI capture和命令引用；Undo/Redo单点刷新，关闭/重绑/Domain Reload不创建场景或Unity代理对象
-- [ ] 11.7 有真实 Slate 原生窗口消费者时将其对象读取/播放隔离到插件边界 adapter，复用同一纯内存Surface；移除无消费者旧Editor封装，不提供BTSMTL组件兼容入口
-- [ ] 11.8 保留可选运行/历史标记与预览导航的外部adapter，ScenePlay不进入Surface必需输入；r2导出始终读取TimelineData，更新实际删除范围和实施记录
+## 11. 直接修改Slate原源码的数据绑定
+
+- [ ] 11.1 在原窗口/嵌入入口、ShowTimeInfo、列表和ShowTimeLines中接正式Timeline/Track/Clip/Section及帧数据，保留原绘制、行高、滚动和命中逻辑
+- [ ] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为
+- [ ] 11.3 在原CurveEditor/DopeSheetEditor/参数工具中替换曲线读写、编辑时间和提交绑定，保留原关键帧/切线算法及全部曲线数据，不另写渲染器或曲线编辑器
+- [ ] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接
+- [ ] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、右侧Inspector和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback

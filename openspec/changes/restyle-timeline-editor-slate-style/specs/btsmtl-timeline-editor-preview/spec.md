@@ -2,11 +2,11 @@
 
 ### Requirement: Timeline Editor必须直接使用Slate CutsceneEditor作为实际编辑表面
 
-正式 Timeline 编辑入口 MUST使用从现有 Slate Editor 绘制代码迁移的普通 C# `SlateTimelineEditorSurface` 真实 IMGUI 编辑 UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放和 Curve/DopeSheet。属性区 MUST使用正式 typed 字段绑定，不把 Slate proxy Inspector 的私有参数作为作者字段。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格时间轴，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。Slate 播放、暂停、场景绑定和运行控制在 BTSMTL Embedded Surface 中 MUST被隐藏或禁用。
+正式 Timeline 编辑入口 MUST使用Slate 已提供的 `CutsceneEditor` 绘制和交互功能 真实 IMGUI 编辑 UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放和 Curve/DopeSheet。属性区 MUST使用正式 typed 字段绑定，不把 Slate proxy Inspector 的私有参数作为作者字段。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格时间轴，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。Slate 播放、暂停、场景绑定和运行控制在 BTSMTL Embedded Surface 中 MUST被隐藏或禁用。
 
-BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview 和 Live Debug MUST继续由原业务模块拥有。Slate UI MUST只接收普通 C# Editor Model/adapter，MUST NOT通过创建临时 Cutscene、Group、Track 或 ActionClip 组件满足绘制输入。显式导出的 C# MAY作为声明生成范围的重建来源，生成 MUST仍产出正式 TimelineData 并恢复 owner 挂接。
+BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview 和 Live Debug MUST继续由原业务模块拥有。Slate UI MUST通过现有数据适配读写正式内容，MUST不新建替代 Surface/Editor Model 来重做已有功能。Slate 编辑对象 MUST不保存为第二份业务资产。显式导出的 C# MAY作为声明生成范围的重建来源，生成 MUST仍产出正式 TimelineData 并恢复 owner 挂接。
 
-BTSMTL Skill、Timeline、Preview 和 Runtime MUST NOT依赖 Slate GameObject Actor、DirectorGroup、Camera/Audio/Director Track、PlayableGraph 或 Slate Preview。Timeline 打开、编辑、曲线、刷新和关闭链 MUST NOT创建隐藏 GameObject、MonoBehaviour/ScriptableObject代理、Director、Actor、场景或 Slate runtime。ScenePlay MUST NOT成为本地作者能力的必要依赖。
+BTSMTL Skill、Timeline、Preview 和 Runtime MUST NOT依赖 Slate GameObject Actor、DirectorGroup、Camera/Audio/Director Track、PlayableGraph 或 Slate Preview。ScenePlay MUST NOT成为本地作者能力的必要依赖。Timeline MUST通过直接修改 Slate 原源码的数据绑定去掉临时代用组件树及无关运行依赖，MUST保留原绘制和交互，不另写替代编辑器。
 
 Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runtime Trace overlay。Scene Play 的 Start、Pause、Resume、Reset、Stop、Build、Skill request、Live Debug、Capture、History、Restore 和 Replay MUST由 SkillGraph/Graph Shell 调用唯一 Scene Play coordinator；Timeline 不得创建 `TimelinePreviewSession`、独立 evaluator、私有 clock 或同类运行命令。
 
@@ -14,17 +14,17 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 
 - **WHEN** 作者从正式 Skill Graph 调用点打开 Timeline
 - **THEN** 系统 MUST 为当前 BTSMTL Timeline 创建或刷新 Editor-only Slate projection
-- **AND** MUST在唯一 `TimelineEditorWindow` 的嵌入 Surface 中调用 纯内存 `SlateTimelineEditorSurface.DrawGUI`
+- **AND** MUST在唯一 `TimelineEditorWindow` 的嵌入 Surface 中调用 Slate 原有编辑 Surface
 - **AND** 该窗口 MUST显示当前 Timeline 的 Track、Clip、Section和identity映射
 - **AND** BTSMTL Timeline入口 MUST NOT 创建独立的 Slate `EditorWindow`
 - **AND** 不得同时打开或维护上一轮 UI Toolkit Timeline 作为第二个正式编辑表面
 
-#### Scenario: 打开Timeline不创建场景对象
+#### Scenario: 恢复现成Slate编辑能力
 
-- **WHEN** 作者从任意正式入口打开空或已有 Timeline
-- **THEN** 系统 MUST只建立纯内存视图/状态，MUST NOT调用 GameObject构造、AddComponent、Cutscene.Reset/TryReset/Validate 或创建临时场景
-- **AND** MUST不先创建 Director 再清理，Actor/New Cutscene/Runtime Playback入口 MUST不存在
-- **AND** Surface MUST显示正式 adapter 提供的行、Clip、Section 和曲线
+- **WHEN** 实现按用户要求回退扩大范围的编辑器重做
+- **THEN** Timeline MUST复用 Slate 原有时间尺、轨道/Clip、选择/拖动/缩放和 Curve/DopeSheet
+- **AND** 正式 typed 编辑、资源、Undo 和已正确的布局/Inspector MUST保持
+- **AND** 后续 MUST在原函数内替换正式数据读写并删除临时代用对象，不能把回退或文档更新当成接线已完成
 
 #### Scenario: Slate UI编辑Clip范围
 
@@ -41,14 +41,14 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 
 ### Requirement: Slate Projection必须是Editor-only桥接而不是第二个正式数据源
 
-Editor adapter MUST把正式 BTSMTL identity 映射为轻量内容读视图和当次 UI 元素标识；Editor Model MUST仅包含绘制输入、窗口状态与手势草稿，不继承 MonoBehaviour/ScriptableObject，不保存或进入 C#导出/Compiler。正式 owner/SerializedObject MUST只由 BTSMTL 事务和资源导航使用，Surface MUST不对临时视图执行组件 Undo。
+现有 adapter MUST保留正式 BTSMTL identity 与 Slate 编辑对象的映射，编辑数据 MUST不保存成另一份 Timeline 或进入 C#导出/Compiler。正式写入和 Undo MUST仍由原业务 owner 及 Session 管理，MUST不为适配新增一套业务对象或编辑器框架。
 
-Track/Clip/Section MUST从普通有序行数据读取，不通过 Transform、GetComponentsInChildren 或 Cutscene.Validate 发现。曲线 MUST由正式 descriptor 和完整 AnimationCurve 草稿提供；CurveEditor/DopeSheet MUST迁移掉 IKeyable/runtime root、AnimatedParameter组件反射和采样依赖，不以假 runtime 接口包装内存模型。
+Track/Clip/Section 和曲线 MUST复用原 Slate 显示、交互与编辑工具，通过现有 adapter 对应正式字段和曲线。MUST保留 CurveEditor/DopeSheet 已有关键帧与切线功能；其参数、曲线访问、编辑时间和提交绑定 MAY按需要修改，MUST不重写绘制/交互算法或增加另一个曲线工具。
 
 #### Scenario: 关闭Slate窗口
 
 - **WHEN** Slate Surface 被销毁或切换到其它 Timeline owner
-- **THEN** adapter MUST释放内存视图、手势、事件与curve/DopeSheet缓存，不存在待销毁的临时组件树
+- **THEN** adapter MUST沿现有生命周期清理本窗口持有的临时状态、引用及回调，不改写正式数据
 - **AND** MUST保留已提交的 BTSMTL Timeline 修改
 - **AND** MUST不产生 Slate Cutscene 资产或残留的可运行 GameObject
 
@@ -107,7 +107,7 @@ Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 
 
 Timeline Editor MUST提供正式的 Add Track/Add Clip 作者入口；候选类型 MUST来自当前 Timeline owner 的 `TimelineContractCatalog` 和 Track contract 的 allowed clip kinds。新增操作 MUST调用正式 `TimelineData.AddTrack`、`TimelineData.AddClip` 或其等价的唯一 typed Mutation API，并进入同一个 `TimelineEditorSessionContext`、Undo 和 owner revision。
 
-正式编辑路径 MUST NOT创建 Slate 组件代理；内存行对象、GUI整数ID和显示名称 MUST NOT成为 BTSMTL authoring identity 或第二业务数据。新增对象的正式 identity、ContractKind、Track/Clip relationship、typed properties 和外部资源引用 MUST由 Timeline owner/API生成并校验；新增完成后 MUST从 owner 重建 Slate projection。
+Slate 编辑对象、GUI整数ID和显示名称 MUST NOT成为 BTSMTL authoring identity 或第二业务数据。新增对象的正式 identity、ContractKind、Track/Clip relationship、typed properties 和外部资源引用 MUST由 Timeline owner/API生成并校验；新增完成后 MUST从 owner 重建 Slate projection。
 
 Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST使用正式支持的 inline/shared ownership 和 Graph/Tree 来源，inline 创建 MUST走既有正式 authoring API；Camera、Motion、Cue 和其它 typed Clip MUST使用对应的 authoring binding。系统 MUST允许作者主动创建不含 Clip 的合法 Track；MUST不因取消或失败留下半成品，不创建替代 AnimationClip、默认 Tree 或 fallback contract。
 
@@ -145,35 +145,21 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 
 ## ADDED Requirements
 
-### Requirement: Slate共享编辑UI必须使用纯内存合同
+### Requirement: Timeline必须直接复用现成Slate编辑功能
 
-SlateTimelineEditorSurface MUST为普通可释放 C#对象，Bind MUST只接内容读视图、编辑命令port和UI host；DrawGUI/Refresh/Dispose MUST不使用Cutscene、Transform、组件扫描、ScenePlay或Director。选择/交互/Curve/DopeSheet MUST共享窗口局部ID、帧映射和命令边界，不通过全局CutsceneUtility.selectedObject或runtime root.currentTime写状态。MUST复用现有Slate绘制和曲线算法，不另建UI Toolkit时间轴或无效时回退组件树的兼容路径。
+Timeline MUST保留 Slate 已提供的绘制、交互、Curve/DopeSheet 和切线编辑，直接在原源码修改正式数据/命令、帧显示、必要布局和具体缺陷。函数签名和数据绑定 MAY更换，Actor/Director/组件扫描/运行采样等无关绑定 MUST删除。MUST不新建替代 Surface、通用 Editor Model、选择/拖动框架或曲线渲染器，再以相似外观称为复用 Slate。此前整套替换输入体系和强制拆分程序集的方案 MUST撤销。
 
-#### Scenario: 曲线关键帧编辑
+#### Scenario: 后续适配需要解除依赖
 
-- **WHEN** 作者通过Slate Curve/DopeSheet修改关键帧或切线
-- **THEN** UI MUST只修改本次完整曲线草稿并经原Timeline Curve/Mutation/Undo提交
-- **AND** MUST保留time domain、CurveEndFrame、tangent、weight、WeightedMode和wrap，不调用AnimatedParameter组件值采样或Undo.RecordObject(proxy)
+- **WHEN** 一项现成 Slate 功能依赖其原对象结构
+- **THEN** 实施 MUST在对应原函数修改数据访问或必要参数，将正式数据和编辑命令接入
+- **AND** 临时GameObject/Cutscene/Group/Track/ActionClip组件承载及专属生命周期 MUST删除，MUST不自动转为整体 UI/模型重写
 
-#### Scenario: 选择与撤销
+#### Scenario: 原有功能恢复
 
-- **WHEN** 作者选择/拖动Clip、修改右侧Inspector或执行Undo/Redo
-- **THEN** UI MUST用正式元素ID定位并恢复仍有效选择，属性修改 MUST沿原typed业务入口和唯一owner Undo
-- **AND** 普通选择/游标/缩放 MUST不写资产，取消/失效草稿 MUST沿现有规则处理
-- **AND** Undo订阅和曲线缓存 MUST可释放，不为每个renderer永久登记匿名事件
-
-#### Scenario: 原生Slate窗口仍有真实消费者
-
-- **WHEN** 插件自身窗口编辑已经存在的真实Cutscene
-- **THEN** 对象读取和播放 MUST隔离在插件边界，绘制 MUST复用同一个纯内存Surface
-- **AND** BTSMTL路径 MUST不创建代用Cutscene或进入该运行adapter，MUST不保留第二套UI或模型失败fallback
-
-#### Scenario: 组件代理迁移完成
-
-- **WHEN** 正式入口切换到纯内存adapter
-- **THEN** 原隐藏宿主、BtsmtlSlateGroup/Track/ActionClip组件、CreateChild/AddComponent/groupsRoot/Validate调用及兼容签名 MUST从BTSMTL编辑链删除
-- **AND** TimelineData、已有右侧Inspector/布局/帧/选择行为、正式Camera轨道和r2作者入口 MUST保持，不因模型迁移改写业务数据
-
+- **WHEN** 编辑器重做代码回退完成
+- **THEN** 实施记录 MUST区分原有 Slate 功能恢复、正式数据适配和剩余问题
+- **AND** 绑定替换 MUST同时达到原UI功能保留、正式数据写入和无代用组件树，MUST不抹掉同期正确的业务修改
 
 ### Requirement: Timeline作者输入必须遵守两个显式C#操作边界
 
@@ -193,7 +179,7 @@ Timeline MUST消费公共 C# authoring r2 的 export_code 与 generate_assets，
 
 ### Requirement: Timeline UI配置必须直接使用共同强类型入口
 
-Timeline 任务 MUST唯一维护原 BtsmtlSlateTimelineProjection.cs 及其纯内存迁移后的 BtsmtlSlateTimelineEditorAdapter；C# authoring 任务 MUST提供 TimelineAuthoringClipBinding.cs 的 JSON 退役与正式 typed 读取/配置合同。UI MUST移除 BuildClipProperties -> Export -> JObject -> Apply 中转，直接调用同一配置入口，保留原字段、值、引用、校验、取消/失败和编辑行为。MUST不建立 UI DTO/第二业务规则或并行修改公共文件。
+Timeline 任务 MUST维护现有 BTSMTL-to-Slate 数据适配文件，不要求强制改名或新建纯内存 adapter；C# authoring 任务 MUST提供 TimelineAuthoringClipBinding.cs 的 JSON 退役与正式 typed 读取/配置合同。UI MUST移除 BuildClipProperties -> Export -> JObject -> Apply 中转，直接调用同一配置入口，保留原字段、值、引用、校验、取消/失败和编辑行为。MUST不建立 UI DTO/第二业务规则或并行修改公共文件。
 
 #### Scenario: 强类型合同接通
 
@@ -318,7 +304,7 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 
 ### Requirement: 临时投影必须正确释放且没有无关编辑入口
 
-纯内存 Surface MUST按窗口释放选择、回调、GUI capture和缓存，MUST不新建宿主对象/代理组件，也不使用 DestroyImmediate 清理虚构数据树。嵌入路径 MUST移除 Actor/Director/Render 等无业务入口及未映射原生命令；MUST保留项目正式 Camera Track。曲线密集显示优化 MUST不改写正式 key，无曲线内容 MUST不创建空参数面板。
+现有 Slate 窗口适配 MUST正确释放所属选择、回调、GUI capture和临时资源，MUST不泄漏引用或删除用户正式资产。嵌入路径 MUST移除 Actor/Director/Render 等无业务入口及未映射原生命令；MUST保留项目正式 Camera Track。曲线密集显示优化 MUST不改写正式 key，无曲线内容 MUST不创建空参数面板。
 
 #### Scenario: 关闭与重新打开
 
@@ -333,5 +319,5 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 #### Scenario: 检查Timeline编辑入口
 
 - **WHEN** 工程编译并打开正式 Timeline入口
-- **THEN** 调用链 MUST能追溯到唯一 `TimelineEditorWindow` 中的 纯内存 `SlateTimelineEditorSurface.DrawGUI`
+- **THEN** 调用链 MUST能追溯到唯一 `TimelineEditorWindow` 中的 Slate 原有编辑 Surface
 - **AND** MUST不存在并行的旧 UI Toolkit Timeline窗口、仿 Slate皮肤或兼容开关

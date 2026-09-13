@@ -2,7 +2,7 @@
 
 ## 目标与归属
 
-2026-09-13 无场景对象修订：Timeline 本地打开/编辑改为“正式 TimelineData → 纯内存 Editor adapter → Slate UI”，不创建隐藏 GameObject/Cutscene/Group/Track/ActionClip 或场景。此前组件 projection 是错误适配方案，不是预览需要。ScenePlay/Actor/Director 不属于本地编辑的必需输入；本计划运行能力仅通过可选外部观察/导航 adapter 连接。
+2026-09-13 用户纠正：撤销另做 Slate Surface/Editor Model/曲线交互的方案，实现窗口已提交 0aa52f209 回退。改为直接修改 Slate 原源码：原绘制和操作保留，数据绑定换为正式 Timeline/薄 adapter，Actor/Director和临时组件树相关无关绑定清除。本地编辑不依赖启动 ScenePlay，预览联动使用原正式运行链。
 
 2026-09-13 r2：作者输入采用 [公共 C# authoring 方案](../remove-agent-authoring-use-native-csharp/design.md)，不再依赖 Agent Document 版本或五工具生命周期。现有 Timeline 编辑 Session、运行 Session、owner、Undo、时钟、Build/adoption 和已正确界面保持原归属，不按 Document/JSON 名字整目录删除业务代码。
 
@@ -13,7 +13,7 @@
 - Unity Game/Scene 视图：显示实际角色、地形、相机和场景结果，不新增一个有自己相机/播放器的 Timeline 预览窗口。
 - 原场景预览 change 继续拥有协调器、启动器、Session/adoption/restore 等运行合同。联合排期不复制其状态机，不重写已正确的运行算法。
 
-已有真实预览场景、角色和相机是预览正式 owner 的对象，不属于要删除的 UI 代理。删除范围仅为 Timeline 打开链创建的代用对象及依赖；原本正确的 Session、Build/采用与三种时间状态保持。
+已有真实预览场景、角色和相机由原正式 owner 管理，Session、Build/采用与三种时间状态保持。不得为恢复 Slate UI 或去依赖重做预览，具体代码回退范围由实现窗口核对。
 
 ## 已核对证据与可靠性
 
@@ -70,7 +70,7 @@ Tree-only 技能可正常试验，不要求必须打开 Timeline。控制用 Mot
 
 ## Timeline 与预览如何连起来
 
-Slate Surface 只接纯内存内容、窗口局部编辑状态和可选运行标记值，不持有 ScenePlay coordinator/Context/Actor。外部 adapter 从真实 diagnostics 抽取标记并注入；没有运行 binding 时同一 Surface 完整编辑。新 Editor Model 不执行、存储或模拟运行 Timeline，也不成为 C# 导出输入。
+Timeline 继续通过现有适配层接正式内容、编辑状态与外部运行观察，复用 Slate 已有 UI。没有运行绑定时仍可编辑；不新建 Editor Model/Surface，也不把预览接线当成改造曲线框架的理由。
 
 ```text
 SkillGraph 选定作者技能/调用点
@@ -122,7 +122,7 @@ Timeline 修改并保存
 
 ## 联合实施批次与输入输出
 
-Timeline tasks 第11节先迁移组件输入、选择/拖动、Curve/DopeSheet和生命周期到纯内存，切换后既有 P1–P5 联动继续复用。不得用“预览尚未接通”保留旧隐藏组件树，也不以无场景对象迁移重建已有正确预览。
+Timeline 原第11节替代编辑器方案已撤销，重写后的第11节只负责原 Slate 源码的数据绑定替换和无关对象清理。实现窗口恢复原功能后按该清单就地改接，P1–P5 保留已正确联动，不再等待一个新 Editor Model。
 
 | 批次 | 输入 | 输出 | 原任务归属 |
 |---|---|---|---|
@@ -136,7 +136,7 @@ P1/P3 与 Timeline 布局、帧、新增一起排期；P2/P4/P5 逐项核对主�
 
 ## 联合完成标准
 
-新增行为条件：在不加载或启动任何预览场景时，Timeline 打开、曲线编辑、Undo/Redo、重绑和关闭均不创建临时场景对象；连接预览前后仍使用同一纯内存 Surface，无组件 fallback。此条件不作为验证 tasks，也不因规划完成勾选实现项。
+本轮行为条件：Timeline 使用 Slate 原有绘制/交互/曲线代码，数据绑定接正式 Timeline，打开/编辑不创建临时代用组件树；没有新写的替代编辑器。现有预览场景对象保留，不能把删除UI代理误扩为删除真实运行对象。
 
 人工行为标准放本文件，不加入 tasks 的手动测试项：
 

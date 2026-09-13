@@ -1,8 +1,8 @@
 ## Context
 
-2026-09-13 无场景对象修订：用户明确要求打开 Timeline 不创建临时 Slate GameObject、Cutscene、Group、Track 或 ActionClip 组件树。此前用 HideAndDontSave 包装组件树是适配实现选择错误，不是 Timeline 业务依赖。本次替换该输入模型和关联 UI 调用链；保留现有右侧 Inspector、布局、帧编辑、选择与正式 Mutation/Undo 行为。下面第3节是唯一目标输入设计，旧组件投影条款全部退役，当前代码尚未完成该替换。
+2026-09-13 方向纠正：用户否决将 Slate 改造成另一套纯内存编辑器，实现窗口已通过 0aa52f209 回退这轮改造。本 change 撤销纯内存 Surface、Editor Model、Clip交互和 Curve/DopeSheet 全面改造任务。以用户要求回退到的真实 Slate 功能为实施基础，复用原有绘制、交互、曲线工具，只做正式数据/命令和必要布局适配。回退完成情况由实现窗口记录，代码回退由该提交记录，本次规划更新不代表后续绑定替换已完成。
 
-2026-09-13 公共作者基线采用 [remove-agent-authoring-use-native-csharp/design.md r2](../remove-agent-authoring-use-native-csharp/design.md)。TimelineData 是正式业务对象，Slate 是现有编辑投影；显式 C# 导出/生成替代旧 Agent Document/五工具。旧日期的 UI 问题记录仅作历史，已完成交互、布局、选择、Undo、owner、时钟和 Camera 轨道按最新实现保留。该轮只涉及作者协议；本轮进一步按用户授权移除组件投影，已正确 UI 行为和预览仍保留。
+2026-09-13 公共作者基线采用 [remove-agent-authoring-use-native-csharp/design.md r2](../remove-agent-authoring-use-native-csharp/design.md)。TimelineData 是正式业务对象，Slate 是现有编辑投影；显式 C# 导出/生成替代旧 Agent Document/五工具。旧日期的 UI 问题记录仅作历史，已完成交互、布局、选择、Undo、owner、时钟和 Camera 轨道按最新实现保留。该轮作者协议分工继续有效，本轮仅撤销扩大成重做编辑器的错误规划，既有 UI 行为与预览保持。
 
 2026-09-12 后续授权：用户要求将“预览”任务一起规划、后续随 Timeline 实施。跨窗口布局、场景/目标选择、技能与纯 Timeline 预览、运行标记、编辑后采用和历史操作的统一计划见 [预览联动计划](preview-integration-plan.md)。本文件继续定义 Timeline 编辑表面，两边使用同一排期而保持已有数据/运行归属。
 
@@ -68,87 +68,60 @@ Timeline：资产名                                      共享/私有
 
 作者帧与 Runtime Logic Tick 不自动等同。沿用当前作者帧可保持素材时长和资产含义；按模拟 Tick 作者有利于逐 Tick 窗口定位，但会涉及频率、倍率和旧内容迁移。本次只落实既有作者帧，真实 Tick 作为来源明确的运行观察字段。若用户要求合并两者，必须先确定业务变化，不由 UI 偷改。
 
-### 3. 纯内存 Slate Editor Model 与 adapter
+### 3. 在 Slate 原源码里更换数据绑定
 
-#### 3.1 当前实现与错误原因
+用户最新明确要求：Slate 已有 UI 本身可用，直接修改它的源码，绑定该换的换、无关的该删的删。实施不是另做一个看起来像 Slate 的编辑器，而是沿 Slate 原有绘制/交互函数修改数据入口、出口和必要参数。
 
-当前 BtsmtlSlateTimelineProjection.BuildProjection 创建 __BTSMTL_SlateTimelineProjection__ GameObject，AddComponent<Cutscene>，再从 groupsRoot 创建 Group/Track 子物体及 BtsmtlSlateActionClip 组件。CutsceneEditorSurface 还是 ScriptableObject，初始化和绘制直接使用 Cutscene.Validate、Transform、GetComponentsInChildren 和组件选择。隐藏对象并没有解除依赖，创建后再删除 Director 仍然属于错误链路。
+#### 3.1 保留哪些现成代码
 
-曲线也存在直接耦合：CurveEditor.DrawCurves 与 DopeSheetEditor.DrawDopeSheet 接收 IAnimatableData/IKeyable；AnimatableParameterEditor 依赖 targetObject、animationData 和 root.currentTime；DopeSheet 把 keyable 转成 UnityEngine.Object 记录 Undo。必须把绘制所需数据与组件求值行为分离，不用纯 C# 假对象实现完整 IDirectable/IKeyable 来保留旧内核。
+保留原时间尺、Group/Track 列表布局、Clip 窗口、GUI.Window 命中、鼠标选择/框选、拖动/裁剪、缩放/平移、CurveEditor、DopeSheetEditor、关键帧/切线编辑及样式资源。除明确的布局缺陷或数据依赖外，不改其算法和操作行为。
 
-#### 3.2 正式对象、视图、草稿分别是什么
+禁止重新写一套 DrawTrack/DrawClip/DrawCurve、手势状态机或行渲染器去替代这些代码。不是把 Slate 的皮肤或图片拿过来，也不是保留旧 UI 再另开纯内存 UI 路径。
+
+#### 3.2 原函数逐处改什么
+
+| 原代码区域 | 保留 | 绑定替换/删除 |
+|---|---|---|
+| CutsceneEditor 的窗口/嵌入绘制入口 | 原绘制调度和单窗口承载 | 输入改接当前正式 Timeline/adapter；不为了满足输入创建临时 Cutscene 和组件树 |
+| ShowTimeInfo、SnapTime、DoZoomAndPan | 标尺、缩放条、刻度和手势逻辑 | 正式 FrameRate、内容帧范围、现有窗口视野；编辑游标不写 runtime clock |
+| ShowListGroups/ShowListTracks、ShowTimeLines | 列表、行高、背景、滚动和原 Clip 绘制 | 从正式 Track/Clip 集合或现有薄适配读取，移除 Transform/groupsRoot/GetComponentsInChildren 的数据发现 |
+| ActionClipWindow/既有 Clip wrapper | 原选择、拖动、裁剪、混合手柄等行为 | 正式元素 ID、Start/End/Ease/ClipIn 和编辑能力，释放时写原 Timeline Mutation |
+| 原新增/删除/复制/排序菜单 | 菜单和交互入口 | 调正式 AddTrack/AddClip/AddSection、typed 配置/引用规则；删除原生任意组件创建命令 |
+| CurveEditor/DopeSheetEditor/参数列表 | 原曲线绘制、关键帧操作、切线、缩放和工具 | 曲线来自正式 descriptor/AnimationCurve；参数/回调改接现有曲线草稿与提交，不依赖 AnimatedParameter 的场景对象反射或运行采样 |
+| CutsceneUtility 的选择/时间/刷新调用点 | 原选中反馈和编辑后的刷新行为 | 接现有 Timeline selection/编辑游标/owner 通知；资源导航才操作 Unity Selection，不选临时 GameObject |
+| Undo/SetDirty/Validate | 用户原撤销/重做和合法性行为 | 接现有 Session/owner Undo、Timeline 业务规则；删除组件层级 Undo 和 Cutscene.Validate |
+| 初始化/释放/SceneGUI/播放 | 正常 GUI 生命周期 | 删临时 GameObject/Cutscene/组件创建、Actor/Director/场景播放回调及专用销毁，保留原资源/事件的必要释放 |
+
+函数签名、输入接口和绑定代码可以按上述目的修改。需要适配时，只用能提供这些原函数所需字段/动作的薄 adapter；不新造通用 Editor Model、第二套业务对象、序列化格式或绘制框架。不能为了“函数名不变”保留无用组件，也不能以改参数为名重写函数主体的交互算法。
+
+#### 3.3 数据如何来回传
 
 ```text
-TimelineData + 正式 serialized owner/path
-  -> BTSMTL Editor adapter（只读业务内容，提交调用原 Session）
-  -> Slate 纯内存视图 + 窗口局部状态 + 当前手势草稿
-  -> Slate 时间尺/轨道/Clip/Curve/DopeSheet
-  -> 结束手势按正式 ID 提交
-  -> 既有 TimelineEditorSessionContext / Mutation / Undo
-  -> 从正式 TimelineData 刷新视图
+TimelineData 正式轨道/Clip/Section/曲线
+  -> 现有 adapter 供应原 Slate UI 所需字段
+  -> Slate 原绘制与交互函数
+  -> 当前编辑草稿/明确创建命令
+  -> 原 Timeline typed API / Session / 正式 owner Undo
+  -> 原选择和视图恢复，刷新 Slate UI
 ```
 
-TimelineData 仍是唯一持久化 Timeline 业务模型，r2 显式生成 C# 的重建规则继续有效。Editor Model 不是第二份业务模型或可运行 Timeline：不复制各种 Clip 配置类、不序列化、不导出、不入 Compiler。它只提供绘制需要的读视图、稳定 identity 和当前交互草稿。
+TimelineData 仍是唯一持久化 Timeline 业务对象，完整曲线、业务 identity 和资源引用保持。原 UI 修改期间的草稿可以在内存中存在，但不作为新 Editor Model 工程，不进入代码导出、Compiler 或 runtime。Curve 引用不可被 UI 在未提交时直接改正式数据。
 
-| 输入/状态 | 必需内容 | 写入责任 |
-|---|---|---|
-| 内容读视图 | Timeline ID/revision、FrameRate、真实帧范围、按正式顺序的 Track/Clip/Section；名称、颜色、编辑能力 | adapter 从正式数据读取，Surface 不直接写 |
-| Track/Clip 行 | 稳定 ID、父 Track ID、帧范围、显示标记、合法交互能力；可选 UI 分组仅为行分组 | adapter 生成轻量普通 C# 行记录；无 Actor/Transform |
-| 曲线读输入 | Clip ID、ChannelId、名称/单位/值域、完整曲线、正式 time-domain 映射 | 由原 descriptor 提供，不反射组件字段 |
-| 手势草稿 | 本次变更的帧范围/排序/复制意图/完整曲线和原 revision | Surface 只改草稿，未编辑内容不额外复制 |
-| 窗口状态 | 编辑游标、选择、展开、缩放、滚动、Inspector宽度 | 当前窗口独占，不进入 TimelineData |
-| 可选运行标记 | 精确调用 ID、版本和已发布位置/状态 | 外部 adapter 被动注入；无数据时本地编辑完整可用 |
+现有帧换算、右侧 Inspector、ID选择、曲线 descriptor、typed 配置和 Undo 提交已经正确的部分继续用。r2 C# 输出仍从正式 TimelineData 读取，不从 Slate 绘制状态导出。
 
-普通 C# 对象不继承 MonoBehaviour/ScriptableObject，也不通过 ScriptableObject 或隐藏场景伪装组件。可以引用 UnityEngine.AnimationCurve、GUIStyle、Texture 以及已有资源，但这些不是为 UI 新建的场景/角色对象。正式 owner 的 UnityEngine.Object 只由 BTSMTL Mutation/资源导航持有，不下放给 Surface 做 proxy Undo。
+#### 3.4 无关绑定直接清除
 
-内容读视图按 revision 更新；AnimationCurve 是可变对象，UI 不得直接修改正式曲线引用。开始手势只复制要编辑的完整曲线，取消丢弃、提交交正式 owner；不在每次 OnGUI 全量克隆 Timeline 或发现对象。
+Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行。删除 __BTSMTL_SlateTimelineProjection__ 宿主、临时 Cutscene/Group/Track/ActionClip 组件承载及仅为它们存在的创建/扫描/销毁路径；依赖它们的现成 UI 函数按上表改接正式数据，而不是另建 UI。
 
-#### 3.3 Surface API 与单向依赖
+实际角色预览由原 Graph Shell/Session 运行，Timeline 只接外部观察和导航。已有正式 Camera Track、角色、资源或用户真实 Cutscene 不属于临时代理删除范围。若插件自身仍有真实 Cutscene 窗口消费者，复用相同原 UI 函数并将其绑定隔离在插件入口；BTSMTL 不走该绑定，不保留失败时回到组件代理的 fallback。
 
-下列为设计接口职责，实施时在现有 Editor 模块内采用清楚命名并迁移全部调用者，不保留旧签名 fallback：
+某个原函数耦合比预计深时，记录该函数的具体绑定并在原源码内处理；不能自动扩成替代编辑器工程，不能再声称整体重写只是轻量适配。
 
-| 当前入口/依赖 | 目标 API/责任 |
-|---|---|
-| CutsceneEditorSurface : ScriptableObject | 改为普通可释放的 SlateTimelineEditorSurface；构造、Bind、DrawGUI、Refresh、Dispose 由窗口管理 |
-| InitializeEmbedded(Cutscene, ...) | Bind(只读 Editor Model, 编辑命令 port, 窗口 UI host)；不接受 Cutscene/ScenePlay 对象 |
-| 静态 Action<Cutscene> transaction events | 实例级 BeginEdit/CommitEdit/CancelEdit，传正式 ID、revision 和 UI 差异，最终调用既有 Session |
-| ActionClipWrapper/Dictionary<ActionClip,...> | 按正式元素 ID 的 Clip 交互状态；GUI.Window 如继续复用，只用当次绘制整数 ID 映射，不保存组件 ID |
-| CutsceneUtility.selectedObject/current 全局状态 | 窗口局部 selection port，使用元素 kind/ID、ChannelId、key选择；原 Unity Selection 只在显式资源导航使用 |
-| cutscene.currentTime、length、viewTimeMin/Max | 窗口游标/视野和内容模型帧范围；真实运行/历史标记单独输入 |
-| group.tracks/track.clips 和 Cutscene.Validate | 读有序行列表；正式 mutation 后按 revision 重读，禁止 Transform 遍历和组件 Validate |
-| Curve/DopeSheet 的 IKeyable/AnimatedParameter 输入 | 曲线编辑输入、帧映射和草稿/提交 port；保留原绘制、关键帧/切线算法 |
-| BeginWindows/EndWindows、Repaint、通知 | 注入 UI host delegate，不传完整 EditorWindow/角色上下文；只属于 GUI |
-| Undo.RecordObject(proxy)、SetDirty(proxy) | 从 UI 删除；唯一正式 owner Undo 仍在原 Timeline Session |
+#### 3.5 回退与继续
 
-Slate 共享 UI 代码只依赖 Unity 编辑器绘制和上述纯 Editor 合同，不引用 BTSMTL 业务、ScenePlay、Cutscene/Actor/Director runtime。UI 合同和 adapter 按程序集单向依赖放置；必要的 Editor 程序集拆分只为隔离这一边界，不新增 runtime ABI。
+实现窗口已提交 0aa52f209《回退Timeline纯内存自制UI链》，回退 7bc392cd3 及后续自制 Surface/Curve/DopeSheet/缩放/手势改造，保留同期无关相机等业务提交。正式入口恢复为 TimelineEditorWindow → BtsmtlSlateTimelineProjection → Slate CutsceneEditorSurface。实现窗口报告 BTSMTL.Timeline.Tree.Editor 编译 0 errors/0 warnings；本规划未重复执行编译。原 projection 仍有临时组件树，这是下一步绑定适配要处理的问题，不是最终方案。
 
-BtsmtlSlateTimelineProjection.cs 当前由本任务独占维护；迁移后改为准确命名的 BtsmtlSlateTimelineEditorAdapter，移除组件 projection 类与旧打开签名，并更新调用者/meta/程序集引用。公共 typed binding 文件继续由 C# authoring 任务负责；本次不重复修改已接好的强类型业务入口。
-
-若工程仍实际使用 Slate 自身 Cutscene 编辑窗口，它只能由插件自身边界 adapter 读取其已经存在的真实 Cutscene，调用同一个纯内存 Surface；这不是 BTSMTL 的运行路径，不允许创建代用 Cutscene，也不保留第二套 UI。Cutscene 的 Play/SceneGUI 等由插件自身窗口隔离，不进入共享 Surface。无消费者的旧 Editor 封装直接删除。禁止保留“纯内存失败转组件树”或开关双轨。
-
-#### 3.4 选择、手势和正式提交
-
-保留现有 layout/frame/command 行为，替换其对象来源。选择、框选、拖动、裁剪、复制、排序、跨轨道、Section、曲线快捷键全部通过 UI ID/port；合法性仍由已有 Timeline contract 决定。
-
-一次手势开始记录 source revision；PointerMove 只更新本次草稿；提交通过原 Session 产生一次正式 Undo，成功后恢复稳定 ID 选择/视图。取消、关闭、失效 revision 丢弃草稿；按已存在 PointerUp/CaptureOut 规则完成或取消，不为迁移偷偷改交互语义。没有正式数据变化不记录 Undo，不重建内容。
-
-Undo/Redo 监听由 adapter 单点管理，重读正式数据并使对应 UI 缓存失效，不给每个 curve renderer 注册匿名永久回调。属性修改仍在现有右侧 Inspector 调原 typed API，同一 selection 定位正式对象。
-
-#### 3.5 曲线与生命周期
-
-CurveEditor/DopeSheetEditor 保留 Slate 真实绘制、关键帧选择/移动、切线和缩放算法，改为直接消费完整 AnimationCurve 草稿。AnimatedParameter 的组件值反射、自动录制、生命周期采样和 root.currentTime 写入从该路径删除；参数列表取正式 descriptor，当前值以曲线 Evaluate 读取，不执行 Cutscene。
-
-Curve key/time/tangent/weight/WeightedMode/wrap、CurveEndFrame domain 和帧吸附保持现有规则。草稿提交使用既有 TimelineCurveAuthoring/typed 配置，不把 normalized 曲线换成第二份持久化秒域曲线。
-
-窗口 Bind 只分配 managed 内容视图/状态，重绑/关闭 Dispose 释放事件订阅、GUI capture、curve/DopeSheet 缓存和命令引用；不创建或销毁 GameObject、Component、Cutscene、Scene/PhysicsScene。删除 ClearEmbedded/ClearCutscene 中仅为临时对象存在的选择清理和 DestroyImmediate 路径；不删除用户真实资源。
-
-曲线 renderer 的静态缓存改为实例拥有或可明确移除的缓存，键不持有旧组件/窗口。Domain Reload 后从已有正式 owner/path 重建内存视图，不序列化 Editor Model、不建立新的恢复服务。
-
-Timeline 能在没有任何 ScenePlay/Context/Actor/Director 的情况下打开和编辑。预览联动是可选外部观察/导航输入；缺失它不阻塞创建、曲线、Undo 或保存。
-
-#### 3.6 剩余实现决策
-
-纯内存输入、无组件树、唯一正式数据与 Undo、右侧 Inspector 和 Slate UI 复用均已确定，不再作为待选路线。实施需按真实引用确定原生 Cutscene 窗口的有效消费者、可直接保留的曲线绘制辅助和 Editor 合同程序集落点。这些是调用图/接口落点，不允许恢复 runtime 模型或另建 UI。同段文件有其它任务修改时报告具体冲突，不整体覆盖。
+原第11节的“新建 SlateTimelineEditorSurface/纯内存 Editor Model、替换整套交互和曲线工具”已撤销。新的第11节只记录原源码的数据绑定替换和无关代码清理，全部未勾选，不沿用被回退实现的完成状态。
 
 ### 4. 新增与字段编辑
 
@@ -201,7 +174,7 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 
 保留真实 Slate Clip/Track/Curve UI、正式 identity/数据、Mutation/Undo、Graph/AnimationClip 导航、已有场景预览。
 
-删除组件 projection host、BtsmtlSlateGroup/Track/ActionClip、Cutscene 创建/Validate、Transform/组件扫描和相应 Undo/Selection/销毁路径；迁移必要的绘制代码为第3节纯内存输入。此前已清理的播放控件和无关菜单保持删除，不重做已正确右侧 Inspector/布局，不删除项目自己的 Camera Track。
+撤销替代编辑器改造，清理因此新增且被用户要求回退的专用代码由实现窗口按实际 diff 负责；现有 Slate 功能、正确的 typed 配置/帧/右侧 Inspector 与正式 Camera Track 保留。无用菜单和真实缺陷继续局部处理，不列整套 Surface/曲线输入迁移。
 
 只在主线执行。预览 change 的 2026-09-11 约定要求旧 worktree 停写，后者仅供历史追溯和未集成内容参考，不自动双写。相同文件存在其它未提交改动时报告冲突，不覆盖。
 
@@ -211,7 +184,7 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 | 文件/能力 | 唯一负责方 | 本任务边界 |
 |---|---|---|
 | TimelineAuthoringClipBinding.cs | C# authoring | 等待其正式强类型读取/配置接口；该任务删除 JSON，保留原 Configure/Set 和字段规则 |
-| BtsmtlSlateTimelineProjection.cs → BtsmtlSlateTimelineEditorAdapter | Timeline | 本任务独占纯内存迁移及调用者，公共任务不并行修改 |
+| 现有 BTSMTL Slate 数据适配文件 | Timeline | 本任务维护正式配置和 UI 接线，不再要求纯内存模型或强制改名；公共任务不并行修改 |
 | 两个作者 MCP、公共输出/生成 | C# authoring | 不在 Timeline/Slate 新建工具、输出器、源码 Undo 或导出界面 |
 | TimelineData.AddTrack/AddClip/AddSection、Curve/引用规则 | 原 Timeline 模块 | 人工编辑和代码生成继续使用同一正式业务 API |
 | Scene Play、Build/adoption | 原预览/运行 owner | 保留现有 Session、owner、时钟、已正确 UI 和 Camera Track |
@@ -252,7 +225,7 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 
 ## 文档对账
 
-无场景对象修订的冲突与迁移：本 change 原设计/spec 明确允许 HideAndDontSave 组件树、要求通过 Cutscene.Validate/AnimatedParameter 发现 Clip，这些是已否决的实现方案，本次全部替换。current timeline-animation-authoring-surface 要求独立作者能力、typed Session 和可选运行输入，与纯内存模型一致；current timeline-editor-preview 的旧 PreviewSession/target/runtime 依赖仍由场景预览 delta 退役，不能因旧 current 条款恢复组件树。本轮仅更新本任务规划，不安装未实现 delta 或修改其它 owner 的 current specs。
+本次冲突纠正：上一版本 change 要求全面替换 Slate 的模型、交互与曲线输入，违背用户直接使用现成 UI 的要求，现已撤销。current 独立作者能力、typed Session、合法字段和预览边界保持；current 旧 PreviewSession 描述仍由原预览 change 处理，本轮不改其它任务文档。数据绑定替换和无关组件清理按第3节在原 Slate 源码内完成，不能改成另一套 UI。
 
 2026-09-13 r2 补充：current Agent 专属规范中的目录包、五工具和中央 Agent Validator 与 r2 冲突，删除/替换 delta 由 C# authoring 任务拥有。本任务只清理自己规划里的协议依赖；正式 Timeline 校验、编辑 Session 和预览 Session 不属于旧 Agent 协议。原“资产永久为唯一来源”被明确生成范围的 C# 重建规则替代，TimelineData 作为正式对象、Slate 作为临时投影不变。implementation.md 中旧 Document 对账属于历史实现记录，不作为新接线前提。
 
@@ -262,26 +235,23 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 | restyle 本 change | 负责 Slate GUI、帧、新增、正式编辑及桥接，旧完成勾选按代码证据纠正。 |
 | rebuild 场景预览 change | 同步改正“观察后结构只读”为“观察只读、作者可编辑”；场景控制和采用实现仍归该 change。 |
 | current timeline-animation-authoring-surface | 保留独立作者能力、typed context、按需工具和不占空行规则。 |
-| 当前代码 | 新 UI/帧/强类型输入已有完成记录；BuildProjection 仍创建组件树，Surface/Curve 输入仍耦合 Slate runtime，这部分纯内存迁移未实施。 |
+| 当前代码 | 0aa52f209 已恢复原 Slate 入口；旧完成记录不证明新的绑定替换已完成，组件树仍待处理。 |
 
 ## Migration Plan
 
-1. 在 Slate Editor 内把已用的绘制输入、选择、帧与命令参数提炼为普通内存合同，确定组件/运行类型只留在各自边界；保留现有可用帧和 SurfaceLayout。
-2. 同步迁移 Surface、Clip交互包装器、Section、CurveEditor/DopeSheet/参数列表到内存输入及实例命令/选择 port。不能只迁移 BuildProjection 留下曲线隐式依赖。
-3. 在现有 BTSMTL adapter 中接 TimelineData、正式 typed 新增/字段/曲线 Mutation 和 owner Undo；右侧 Inspector 与新 ID selection 连通，复用现有视图恢复。
-4. 单次切换所有正式打开入口到内存 Surface，删除旧组件 projection 和兼容签名/分支。中间提交可以尚未接通，但不发布可选双路径，不以 fallback 保持旧实现。
-5. 清掉缓存/事件/初始化/关闭/Undo 生命周期中的组件及内核依赖；仍有真实 Slate 原生窗口消费者时只通过插件边界 adapter 复用同一 Surface。
-6. 预览联动仅接可选运行标记和导航，保留原 Session/adoption，不让本地作者依赖场景。r2 C# 导出仍直接读取正式 TimelineData，不读取新 Editor Model。
-7. 更新实施记录和实际删除范围，未实现条目保持未勾选。不新增测试或验证 tasks，行为验收由用户完成。
+1. 实现窗口按用户授权回退替代编辑器改造，恢复真实 Slate 原有绘制、交互和曲线功能；本任务只同步文档，不操作代码或资产。
+2. 在恢复后的实际基线上继续原有正式数据、typed 新增/字段/曲线回写、帧显示和布局修复；已有正确功能不重做。
+3. 按第3节逐处替换原 Slate 函数的数据读写，删除临时对象树和无关运行绑定；保留原绘制/交互/曲线算法，不建立替代框架。
+4. 继续原预览联动和 r2 作者协议接线。运行归原正式 owner，不增加第二播放器、源码同步或编辑器实现。
+5. 实施记录区分“回退已完成”“原功能恢复”“剩余接线”，不以编译或文档更新代替功能状态，不新增验证任务。
 
 ## 完成标准
 
 以下是交付行为标准，人工操作不写入 tasks.md：
 
-- 打开空/已有 Timeline、曲线展开、添加/编辑、Undo/Redo、重绑和关闭全程不新建任何临时 GameObject、Cutscene、Group/Track/ActionClip 组件或场景，Hierarchy/场景 dirty 不因 UI 打开变化。
-- 无 ScenePlay/Actor/Director 时本地新增、曲线、选择、帧和保存完整可用；ScenePlay 不进入 Surface 必需输入。
-- 主线不再存在旧 projection 创建链、类型/签名兼容入口、失败后回组件树分支；曲线与选择也不经 IKeyable runtime root 或组件 Undo。
-- 仅替换 UI 输入不改变原 Track/Clip/Section/Curve/typed binding 的业务内容、identity、右侧 Inspector、正式 Undo 和 r2 代码输出。
+- 使用 Slate 原有时间尺、Clip/Track、选择、拖动、缩放和 Curve/DopeSheet 功能，无另写的替代编辑器；不得仅以相似外观称为 Slate。
+- 原 Slate UI 函数已改接正式 Timeline 数据，打开/编辑不创建代用组件树；没有 Actor/Director/ScenePlay 也可编辑。删除组件通过修改绑定达成，不以新 Surface/渲染器替代原功能。
+
 
 - 从空文档新增合法空 Track、有资源 Clip，保存重开后 ID/资源/帧不变；取消选择不留对象或 Undo。
 - Clip 从第 12 帧移动到 13，草稿、属性、正式保存和重开均为 13；一次 Undo 返回 12。

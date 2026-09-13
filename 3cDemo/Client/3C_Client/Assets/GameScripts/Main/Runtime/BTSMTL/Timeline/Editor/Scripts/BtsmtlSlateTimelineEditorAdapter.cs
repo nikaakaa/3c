@@ -422,14 +422,6 @@ namespace BTSMTL.Timeline.Editor
             RebuildContent();
         }
 
-        public void SetTrackActive(string trackId, bool active)
-        {
-        }
-
-        public void SetTrackLocked(string trackId, bool locked)
-        {
-        }
-
         public void RequestAddTrack(int frame)
         {
             if (m_ReadOnly)
@@ -498,10 +490,6 @@ namespace BTSMTL.Timeline.Editor
                 motionIds,
                 m_Request.Timeline.ExternalBindings,
                 AddClip));
-        }
-
-        public void CopyClip(string clipId)
-        {
         }
 
         public void OpenSource(string clipId)

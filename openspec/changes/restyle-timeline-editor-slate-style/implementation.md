@@ -50,6 +50,7 @@ TimelineEditorWindow
 - Surface 的重绘由窗口 host 回调按需触发；编辑提交、运行/历史 overlay 和手势变化主动请求重绘，Timeline 窗口不再挂常驻 `EditorApplication.update` 刷新循环。
 - 删除 Session 中只返回 `1f/0/0f` 的旧帧几何占位 port；作者帧、像素和吸附只由纯 Surface 管理，Session 保留正式 FrameRate、selection 和 mutation owner。
 - 删除 BTSMTL 唯一 Timeline 窗口不使用的 `BeginWindows/EndWindows` 嵌入兼容签名，Surface 只保留普通两参数绘制入口。
+- 删除纯 Surface 命令 port 中没有任何调用方的 `SetTrackActive`、`SetTrackLocked`、`CopyClip` 空实现，避免把未交付能力伪装成可用作者操作。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

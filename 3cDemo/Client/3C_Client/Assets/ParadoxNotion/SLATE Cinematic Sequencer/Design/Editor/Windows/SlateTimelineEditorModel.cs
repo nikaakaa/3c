@@ -279,12 +279,9 @@ namespace Slate
         void SetClipRange(string clipId, int startFrame, int endFrame, int blendInFrame, int blendOutFrame);
         void ReplaceCurve(string clipId, string curveId, AnimationCurve curve);
         void SetGroupCollapsed(string groupId, bool collapsed);
-        void SetTrackActive(string trackId, bool active);
-        void SetTrackLocked(string trackId, bool locked);
         void RequestAddTrack(int frame);
         void RequestAddClip(string trackId, int frame);
         void SetSectionFrame(string sectionId, int frame);
-        void CopyClip(string clipId);
         void OpenSource(string clipId);
         void Select(SlateTimelineEditorSelection selection);
     }

@@ -31,6 +31,7 @@ namespace Slate
         string m_Search = string.Empty;
         SlateTimelineEditorSelection m_Selection;
         string m_DragClipId;
+        bool m_DragClipChanged;
         int m_DragClipStart;
         int m_DragClipEnd;
         int m_DragClipBlendIn;
@@ -38,12 +39,14 @@ namespace Slate
         int m_DragClipAnchorFrame;
         int m_DragClipDelta;
         string m_DragSectionId;
+        bool m_DragSectionChanged;
         int m_DragSectionFrame;
         int m_DragSectionAnchorFrame;
         int m_DragSectionDelta;
         string m_DopeClipId;
         string m_DopeCurveId;
         AnimationCurve m_DopeCurve;
+        bool m_DopeChanged;
         Keyframe[] m_DopeOriginalKeys;
         readonly List<int> m_DopeSelectedKeys = new List<int>();
         float m_DopeAnchorX;
@@ -351,6 +354,7 @@ namespace Slate
                     m_DragClipBlendOut = clip.BlendOutFrame;
                     m_DragClipAnchorFrame = PositionToFrame(Event.current.mousePosition.x - timelineRect.x, timelineWidth);
                     m_DragClipDelta = 0;
+                    m_DragClipChanged = false;
                     m_Commands.BeginGesture("Move Timeline Clip");
                 }
                 Event.current.Use();
@@ -488,6 +492,7 @@ namespace Slate
                     m_DopeAnchorX = Event.current.mousePosition.x;
                     m_DopeCurveStartFrame = startFrame;
                     m_DopeCurveEndFrame = endFrame;
+                    m_DopeChanged = false;
                     m_Commands.BeginGesture("Move Timeline Keys");
                     m_Commands.Select(new SlateTimelineEditorSelection(
                         SlateTimelineEditorElementKind.Key,
@@ -543,7 +548,9 @@ namespace Slate
                 if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
                 {
                     float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
-                    m_DragClipDelta = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth) - m_DragClipAnchorFrame;
+                    int delta = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth) - m_DragClipAnchorFrame;
+                    m_DragClipChanged |= delta != m_DragClipDelta;
+                    m_DragClipDelta = delta;
                     m_Host.RequestRepaint();
                     Event.current.Use();
                 }
@@ -552,14 +559,20 @@ namespace Slate
                     int maxDelta = m_Content.LengthFrame - m_DragClipEnd;
                     int minDelta = -m_DragClipStart;
                     int delta = Mathf.Clamp(m_DragClipDelta, minDelta, maxDelta);
-                    m_Commands.SetClipRange(
-                        m_DragClipId,
-                        m_DragClipStart + delta,
-                        m_DragClipEnd + delta,
-                        m_DragClipBlendIn,
-                        m_DragClipBlendOut);
-                    m_Commands.CommitGesture();
+                    if (m_DragClipChanged && delta != 0)
+                    {
+                        m_Commands.SetClipRange(
+                            m_DragClipId,
+                            m_DragClipStart + delta,
+                            m_DragClipEnd + delta,
+                            m_DragClipBlendIn,
+                            m_DragClipBlendOut);
+                        m_Commands.CommitGesture();
+                    }
+                    else
+                        m_Commands.CancelGesture();
                     m_DragClipId = null;
+                    m_DragClipChanged = false;
                     m_DragClipDelta = 0;
                     Event.current.Use();
                 }
@@ -569,15 +582,24 @@ namespace Slate
                 if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
                 {
                     float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
-                    m_DragSectionDelta = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth) - m_DragSectionAnchorFrame;
+                    int delta = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth) - m_DragSectionAnchorFrame;
+                    m_DragSectionChanged |= delta != m_DragSectionDelta;
+                    m_DragSectionDelta = delta;
                     m_Host.RequestRepaint();
                     Event.current.Use();
                 }
                 if (Event.current.rawType == EventType.MouseUp)
                 {
-                    m_Commands.SetSectionFrame(m_DragSectionId, Mathf.Max(0, m_DragSectionFrame + m_DragSectionDelta));
-                    m_Commands.CommitGesture();
+                    int frame = Mathf.Max(0, m_DragSectionFrame + m_DragSectionDelta);
+                    if (m_DragSectionChanged && frame != m_DragSectionFrame)
+                    {
+                        m_Commands.SetSectionFrame(m_DragSectionId, frame);
+                        m_Commands.CommitGesture();
+                    }
+                    else
+                        m_Commands.CancelGesture();
                     m_DragSectionId = null;
+                    m_DragSectionChanged = false;
                     m_DragSectionDelta = 0;
                     Event.current.Use();
                 }
@@ -589,6 +611,7 @@ namespace Slate
                     float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
                     int anchorFrame = PositionToFrame(m_DopeAnchorX - m_LeftMargin, timelineWidth);
                     int currentFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
+                    m_DopeChanged |= currentFrame != anchorFrame;
                     float delta = (currentFrame - anchorFrame) /
                                   (float)Mathf.Max(1, m_DopeCurveEndFrame - m_DopeCurveStartFrame);
                     Keyframe[] keys = (Keyframe[])m_DopeOriginalKeys.Clone();
@@ -602,6 +625,7 @@ namespace Slate
                         keys[keyIndex] = key;
                     }
                     m_DopeCurve = new AnimationCurve(keys);
+                    m_DopeChanged = true;
                     string rendererKey = $"{m_DopeClipId}:{m_DopeCurveId}";
                     if (m_CurveRenderers.TryGetValue(rendererKey, out CurveEditor.CurveRenderer renderer))
                         renderer.SetPureCurves(new[] { TimelineCurveAuthoringCopy(m_DopeCurve) });
@@ -610,11 +634,17 @@ namespace Slate
                 }
                 if (Event.current.rawType == EventType.MouseUp)
                 {
-                    m_Commands.ReplaceCurve(m_DopeClipId, m_DopeCurveId, m_DopeCurve);
-                    m_Commands.CommitGesture();
+                    if (m_DopeChanged)
+                    {
+                        m_Commands.ReplaceCurve(m_DopeClipId, m_DopeCurveId, m_DopeCurve);
+                        m_Commands.CommitGesture();
+                    }
+                    else
+                        m_Commands.CancelGesture();
                     m_DopeClipId = null;
                     m_DopeCurveId = null;
                     m_DopeCurve = null;
+                    m_DopeChanged = false;
                     m_DopeOriginalKeys = null;
                     m_DopeSelectedKeys.Clear();
                     Event.current.Use();
@@ -668,6 +698,7 @@ namespace Slate
                         m_DragSectionFrame = section.Frame;
                         m_DragSectionAnchorFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
                         m_DragSectionDelta = 0;
+                        m_DragSectionChanged = false;
                         m_Commands.BeginGesture("Move Timeline Section");
                         Event.current.Use();
                     }
@@ -759,11 +790,14 @@ namespace Slate
             m_Commands = null;
             m_Host = null;
             m_DragClipId = null;
+            m_DragClipChanged = false;
             m_DragSectionId = null;
+            m_DragSectionChanged = false;
             m_DragCursor = false;
             m_DopeClipId = null;
             m_DopeCurveId = null;
             m_DopeCurve = null;
+            m_DopeChanged = false;
             m_DopeOriginalKeys = null;
             m_DopeSelectedKeys.Clear();
             m_DopeCurveStartFrame = 0;

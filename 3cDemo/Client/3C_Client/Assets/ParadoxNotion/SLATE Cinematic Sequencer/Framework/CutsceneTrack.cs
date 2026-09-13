@@ -372,67 +372,18 @@ namespace Slate
 
         //default track info gui 
         protected void DoDefaultInfoGUI(Event e, Rect trackRect) {
-
-            var iconBGRect = new Rect(0, 0, BOX_WIDTH, defaultHeight);
-            iconBGRect = iconBGRect.ExpandBy(-1);
-            var textInfoRect = Rect.MinMaxRect(iconBGRect.xMax + 2, 0, trackRect.width - BOX_WIDTH - 2, defaultHeight);
-            var curveButtonRect = new Rect(trackRect.width - BOX_WIDTH, 0, BOX_WIDTH, defaultHeight);
-
-
-            GUI.color = Color.black.WithAlpha(UnityEditor.EditorGUIUtility.isProSkin ? 0.1f : 0.1f);
-            GUI.DrawTexture(iconBGRect, Texture2D.whiteTexture);
-            GUI.color = Color.white;
-
-            if ( icon != null ) {
-                var iconRect = new Rect(0, 0, 16, 16);
-                iconRect.center = iconBGRect.center;
-                GUI.color = ReferenceEquals(CutsceneUtility.selectedObject, this) ? Color.white : new Color(1, 1, 1, 0.8f);
-                GUI.DrawTexture(iconRect, icon);
-                GUI.color = Color.white;
-            }
-
-
-            var nameString = string.Format("<size=11>{0}</size>", name);
-            var infoString = string.Format("<size=9><color=#909090>{0}</color></size>", info);
-            GUI.color = isActive ? Color.white : Color.grey;
-            GUI.Label(textInfoRect, string.Format("{0}\n{1}", nameString, infoString));
-            GUI.color = Color.white;
-
-            var wasEnable = GUI.enabled;
-            GUI.enabled = true;
-            var curveIconRect = new Rect(0, 0, 16, 16);
-            curveIconRect.center = curveButtonRect.center - new Vector2(0, 1);
-            var curveIconColor = UnityEditor.EditorGUIUtility.isProSkin ? Color.white : Color.black;
-            curveIconColor.a = showCurves ? 1 : 0.3f;
-
-            if ( GUI.Button(curveButtonRect, string.Empty, GUIStyle.none) ) {
-                showCurves = !showCurves;
-            }
-
-            curveButtonRect = curveButtonRect.ExpandBy(-4);
-            GUI.color = ColorUtility.Grey(UnityEditor.EditorGUIUtility.isProSkin ? 0.2f : 1f).WithAlpha(0.2f);
-            GUI.Box(curveButtonRect, string.Empty, Styles.clipBoxStyle);
-
-            GUI.color = curveIconColor;
-            GUI.DrawTexture(curveIconRect, Styles.curveIcon);
-
-            GUI.color = UnityEditor.EditorGUIUtility.isProSkin ? Color.grey : Color.grey;
-            if ( !isActive ) {
-                var hiddenRect = new Rect(0, 0, 16, 16);
-                hiddenRect.center = curveButtonRect.center - new Vector2(curveButtonRect.width, 0);
-                if ( GUI.Button(hiddenRect, Styles.hiddenIcon, GUIStyle.none) ) { isActive = !isActive; }
-            }
-
-            if ( isLocked ) {
-                var lockRect = new Rect(0, 0, 16, 16);
-                lockRect.center = curveButtonRect.center - new Vector2(curveButtonRect.width, 0);
-                if ( !isActive ) { lockRect.center -= new Vector2(16, 0); }
-                if ( GUI.Button(lockRect, Styles.lockIcon, GUIStyle.none) ) { isLocked = !isLocked; }
-            }
-
-
-            GUI.color = Color.white;
-            GUI.enabled = wasEnable;
+            TrackEditorGUI.DrawDefaultInfoGUI(
+                trackRect,
+                name,
+                info,
+                icon,
+                ReferenceEquals(CutsceneUtility.selectedObject, this),
+                isActive,
+                isLocked,
+                showCurves,
+                value => isActive = value,
+                value => isLocked = value,
+                value => showCurves = value);
         }
 
         //show selected clip animated parameters list info

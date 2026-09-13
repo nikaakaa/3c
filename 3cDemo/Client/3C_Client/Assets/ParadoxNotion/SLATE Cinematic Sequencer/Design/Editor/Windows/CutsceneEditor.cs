@@ -360,8 +360,11 @@ namespace Slate
         [System.NonSerialized] private List<GuideLine> pendingGuides;
         [System.NonSerialized] private System.Action postWindowsGUI;
         [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedInteractingClip;
+        [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedBlendClip;
         [System.NonSerialized] private bool embeddedScalingStart;
         [System.NonSerialized] private bool embeddedScalingEnd;
+        [System.NonSerialized] private bool embeddedBlendingIn;
+        [System.NonSerialized] private bool embeddedBlendingOut;
         [System.NonSerialized] private float embeddedDragOffset;
         [System.NonSerialized] private float embeddedDragStart;
         [System.NonSerialized] private float embeddedDragEnd;
@@ -879,8 +882,11 @@ namespace Slate
             embeddedCopyClip = null;
             embeddedTimeline = null;
             embeddedInteractingClip = null;
+            embeddedBlendClip = null;
             embeddedScalingStart = false;
             embeddedScalingEnd = false;
+            embeddedBlendingIn = false;
+            embeddedBlendingOut = false;
             embeddedDragStart = 0f;
             embeddedDragEnd = 0f;
             embeddedEditStarted = false;
@@ -2096,6 +2102,9 @@ namespace Slate
                     embeddedScalingStart = false;
                     embeddedScalingEnd = false;
                 }
+                embeddedBlendClip = null;
+                embeddedBlendingIn = false;
+                embeddedBlendingOut = false;
                 if (embeddedEditStarted)
                 {
                     embeddedEditStarted = false;
@@ -2304,6 +2313,22 @@ namespace Slate
                         GUI.color = Color.white;
                         clip.DrawClipGUI(clipRect);
                         GUI.Label(clipRect.ExpandBy(-4, -2), clip.Info, Styles.leftLabel);
+                        if (clip.Length > 0f)
+                        {
+                            float blendInPosition = clipRect.xMin + clipRect.width * Mathf.Clamp01(clip.BlendIn / clip.Length);
+                            float blendOutPosition = clipRect.xMax - clipRect.width * Mathf.Clamp01(clip.BlendOut / clip.Length);
+                            if (clip.BlendIn > 0f)
+                            {
+                                Handles.color = Color.black.WithAlpha(0.5f);
+                                Handles.DrawAAPolyLine(2f, new Vector2(clipRect.xMin, clipRect.yMax), new Vector2(blendInPosition, clipRect.yMin));
+                            }
+                            if (clip.BlendOut > 0f)
+                            {
+                                Handles.color = Color.black.WithAlpha(0.5f);
+                                Handles.DrawAAPolyLine(2f, new Vector2(blendOutPosition, clipRect.yMin), new Vector2(clipRect.xMax, clipRect.yMax));
+                            }
+                            Handles.color = Color.white;
+                        }
                         if (clipRect.width <= 20)
                             GUI.Label(new Rect(clipRect.xMax + 2, clipRect.y, 120, clipRect.height), clip.Info, Styles.leftLabel);
                         if (selected && clip.Keyable?.animationData != null && clipRect.width > 12f)
@@ -2333,14 +2358,39 @@ namespace Slate
                             else if (e.button == 0 && !track.IsLocked && !clip.IsLocked && !embeddedTimeline.IsReadOnly)
                             {
                                 float pointerTime = PosToTime(e.mousePosition.x + rect.x);
+                                bool nearStart = Mathf.Abs(e.mousePosition.x - clipRect.xMin) <= 5f;
+                                bool nearEnd = Mathf.Abs(e.mousePosition.x - clipRect.xMax) <= 5f;
+                                if (e.control && nearStart && clip.CanBlendIn)
+                                {
+                                    embeddedBlendClip = clip;
+                                    embeddedBlendingIn = true;
+                                    e.Use();
+                                    continue;
+                                }
+                                if (e.control && nearEnd && clip.CanBlendOut)
+                                {
+                                    embeddedBlendClip = clip;
+                                    embeddedBlendingOut = true;
+                                    e.Use();
+                                    continue;
+                                }
                                 embeddedInteractingClip = clip;
                                 embeddedDragStart = clip.StartTime;
                                 embeddedDragEnd = clip.EndTime;
                                 embeddedDragOffset = pointerTime - clip.StartTime;
-                                embeddedScalingStart = Mathf.Abs(e.mousePosition.x - clipRect.xMin) <= 5f && clip.CanScale;
-                                embeddedScalingEnd = Mathf.Abs(e.mousePosition.x - clipRect.xMax) <= 5f && clip.CanScale;
+                                embeddedScalingStart = nearStart && clip.CanScale;
+                                embeddedScalingEnd = nearEnd && clip.CanScale;
                                 e.Use();
                             }
+                        }
+                        if (embeddedBlendClip == clip && e.type == EventType.MouseDrag)
+                        {
+                            float pointerTime = SnapTime(PosToTime(e.mousePosition.x + rect.x));
+                            if (embeddedBlendingIn)
+                                clip.BlendIn = Mathf.Clamp(pointerTime - clip.StartTime, 0f, clip.Length - clip.BlendOut);
+                            if (embeddedBlendingOut)
+                                clip.BlendOut = Mathf.Clamp(clip.EndTime - pointerTime, 0f, clip.Length - clip.BlendIn);
+                            e.Use();
                         }
                         if (embeddedInteractingClip == clip && e.type == EventType.MouseDrag)
                         {

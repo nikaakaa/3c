@@ -70,6 +70,8 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 
 ## 编译证据
 
+2026-09-13 当前 Unity Editor 在精确重导入 `BTSMTL.Timeline.Tree.Editor.asmdef` 与 `TimelineFormalClipDetailsView.cs` 后，Console 已清除 Timeline/Slate/Camera 引用错误；剩余错误来自工作区其它 Character 文件的重复 `Serializable` 与 `IGameplayBehaviorProfile` 缺失成员，不归本 change。
+
 已通过（Timeline Editor 程序集）：
 
 ```text

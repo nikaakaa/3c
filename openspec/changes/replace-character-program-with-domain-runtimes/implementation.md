@@ -41,6 +41,7 @@
 - `9828d7afa`：记录 Ability Module 从总 Evaluator 拆出的边界。
 - `e7f8c7fe3`：将 Float32／Fixed ControlModule 装配、参数读取、StateLayout、读写端口和 UnityHFSM Tick 移入独立 `ControlDomainRuntime` Module。
 - `5e72ea7be`：将每个 Actor 的 Workspace／Evaluator 组合移入 `CharacterDomainRuntimeFactory`，Kernel 只保留 roster/binding 选择和实例生命周期。
+- `65f588944`：让 Float32／Fixed Control 输出端口直接读取已安装 `CharacterControlModuleContract.Motions`，删除从旧 Program catalog 解码静态 Motion 描述的路径。
 
 ## 当前实现边界
 
@@ -51,7 +52,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 与 Ability 的装配／生命周期已分别进入独立 Module。Effect／Equipment／Timeline／Motion 的 owner 迁移和旧 Program 数据清理仍未完成。
+- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion 和 Ability 的生命周期已分别进入独立 Module。Control 参数、控制状态及 Effect／Equipment／Timeline／Motion 的其余 owner 迁移和旧 Program 数据清理仍未完成。
 
 ## 编译证据与阻断
 
@@ -64,4 +65,4 @@
 
 ## 下一小步
 
-下一步迁移 Effect、Equipment、Timeline、Motion 的实例 owner，再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，清除 Character catalog／slot 对 Ability 的承载。
+下一步把 Control 参数从 Program catalog 改为 Definition／模块合同的 runtime binding，再迁移控制状态；随后迁移 Effect、Equipment、Timeline、Motion 的实例 owner，最后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。

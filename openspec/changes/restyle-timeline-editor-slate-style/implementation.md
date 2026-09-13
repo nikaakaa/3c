@@ -2,7 +2,7 @@
 
 ## 当前边界
 
-Timeline 的持久化真相仍是 `BTSMTL.Timeline.TimelineData`。BTSMTL 路径只创建 Slate 的 `CutsceneEditorSurface` UI ScriptableObject 和短生命周期曲线编辑数据，不创建 `GameObject`、`Cutscene`、Director、Group、Track 或 ActionClip 组件代理，也不把 Slate 编辑对象写入资产、Document 或运行时编译产物。
+Timeline 的持久化真相仍是 `BTSMTL.Timeline.TimelineData`。BTSMTL 路径只创建 Slate 的 `CutsceneEditorSurface` UI ScriptableObject 和短生命周期曲线编辑数据，不创建 `GameObject`、`Cutscene`、Director、Group、Track 或 ActionClip 对象代理，也不把 Slate 编辑对象写入资产、Document 或运行时编译产物。
 
 Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 Graph Shell 与正式预览 coordinator 拥有。Timeline 只显示作者帧、编辑曲线，并接收精确运行观察标记。
 
@@ -44,6 +44,7 @@ TimelineEditorWindow
 - 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换作者时间、调用正式 Clip 编辑或绘制引导，不启用 Slate 播放或采样。
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。
 - 正式 Timeline 的快捷键在 `CutsceneEditor.DoKeyboardShortcuts` 入口先分流：逗号/句号只逐帧移动，K/S/F/C 分别进入正式 Clip 的加 key、拆分、适配和清理曲线；Space 被明确消费，不进入原生 Slate 播放。删除 Track/Clip/Section 等已经由 binding 自己调用正式 Session 的命令，不再被外层 Slate 草稿事务重复包裹。
+- `BtsmtlTimelineDirectorBinding` 已删除；Projection 自身只实现 Slate `IDirector` 所要求的 root 合同，所有播放、采样和受影响 Actor 接口保持空实现，不再分配第二个 Director 对象或第二套时钟。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
@@ -71,7 +72,7 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 
 ## 编译证据
 
-2026-09-13 当前 Unity Editor 在重新编译 Slate 与 Timeline 编辑程序集后，Console 已清除 Timeline/Slate/Camera 引用错误；当前剩余 1 个错误来自工作区其它 Character 文件的 `GameplayAbilityDefinition.IsTerminalTransition` 访问级别，不归本 change。
+2026-09-13 当前 Unity Editor 在重新编译 Slate 与 Timeline 编辑程序集后，Console 未出现 Timeline/Slate 错误；最新刷新中的工作区错误来自其它 Character/Camera 生成链（`CollisionStatus` 合同无效、`CameraShotProjectionCompiler` 缺少 Cinemachine 引用），不归本 change。
 
 已通过（Timeline Editor 程序集）：
 

@@ -86,38 +86,6 @@ namespace BTSMTL.Timeline.Editor
         public float ScenePresentationValue;
     }
 
-    sealed class BtsmtlTimelineDirectorBinding : IDirector
-    {
-        readonly BtsmtlSlateTimelineDirectProjection m_Owner;
-
-        public BtsmtlTimelineDirectorBinding(BtsmtlSlateTimelineDirectProjection owner)
-        {
-            m_Owner = owner;
-        }
-
-        public IEnumerable<IDirectable> children => m_Owner.Groups.Cast<IDirectable>();
-        public GameObject context => null;
-        public float length => m_Owner.Length;
-        public float currentTime
-        {
-            get => m_Owner.CurrentFrame / (float)m_Owner.FrameRate;
-            set => m_Owner.CurrentFrame = Mathf.RoundToInt(value * m_Owner.FrameRate);
-        }
-        public float previousTime => currentTime;
-        public float playbackSpeed { get; set; } = 1f;
-        public bool isActive => false;
-        public bool isPaused => false;
-        public bool isReSampleFrame => false;
-        public IEnumerable<GameObject> GetAffectedActors() => Array.Empty<GameObject>();
-        public void Play() { }
-        public void Pause() { }
-        public void Stop() { }
-        public void Sample(float time) => currentTime = time;
-        public void ReSample() { }
-        public void Validate() { }
-        public void SendGlobalMessage(string message, object value) { }
-    }
-
     sealed class BtsmtlTimelineGroupBinding : IEmbeddedTimelineGroupBinding, IDirectable
     {
         readonly BtsmtlSlateTimelineDirectProjection m_Owner;
@@ -141,7 +109,7 @@ namespace BTSMTL.Timeline.Editor
         public BtsmtlSlateTimelineDirectProjection Owner => m_Owner;
         public void AddTrack(BtsmtlTimelineTrackBinding track) => m_Tracks.Add(track);
 
-        IDirector IDirectable.root => m_Owner.Director;
+        IDirector IDirectable.root => m_Owner.SlateRoot;
         IDirectable IDirectable.parent => null;
         IEnumerable<IDirectable> IDirectable.children => m_Tracks.Cast<IDirectable>();
         GameObject IDirectable.actor => null;
@@ -208,7 +176,7 @@ namespace BTSMTL.Timeline.Editor
         public BtsmtlTimelineGroupBinding Group => m_Group;
         public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
 
-        IDirector IDirectable.root => m_Owner.Director;
+        IDirector IDirectable.root => m_Owner.SlateRoot;
         IDirectable IDirectable.parent => m_Group;
         IEnumerable<IDirectable> IDirectable.children => m_Clips.Cast<IDirectable>();
         GameObject IDirectable.actor => null;
@@ -353,7 +321,7 @@ namespace BTSMTL.Timeline.Editor
             return result;
         }
 
-        IDirector IDirectable.root => m_Owner.Director;
+        IDirector IDirectable.root => m_Owner.SlateRoot;
         IDirectable IDirectable.parent => m_Track;
         IEnumerable<IDirectable> IDirectable.children => Array.Empty<IDirectable>();
         GameObject IDirectable.actor => null;
@@ -479,7 +447,7 @@ namespace BTSMTL.Timeline.Editor
         public TimelineSection Source => m_Source;
     }
 
-    public sealed class BtsmtlSlateTimelineDirectProjection : IDisposable, IEmbeddedTimelineBinding, ITimelineAuthoringClipResolver
+    public sealed class BtsmtlSlateTimelineDirectProjection : IDisposable, IEmbeddedTimelineBinding, ITimelineAuthoringClipResolver, IDirector
     {
         readonly TimelineEditorOpenRequest m_Request;
         readonly TimelineEditorSessionContext m_Session;
@@ -489,7 +457,6 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, BtsmtlTimelineTrackBinding> m_Tracks = new Dictionary<string, BtsmtlTimelineTrackBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineClipBinding> m_Clips = new Dictionary<string, BtsmtlTimelineClipBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineSectionBinding> m_SectionsById = new Dictionary<string, BtsmtlTimelineSectionBinding>(StringComparer.Ordinal);
-        readonly BtsmtlTimelineDirectorBinding m_Director;
         CutsceneEditorSurface m_EmbeddedEditor;
         TimelineEditorSelection m_Selection;
         BtsmtlTimelineClipBinding m_CopiedClip;
@@ -547,7 +514,6 @@ namespace BTSMTL.Timeline.Editor
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Session = new TimelineEditorSessionContext(request);
             m_OpenSourceClip = openSourceClip;
-            m_Director = new BtsmtlTimelineDirectorBinding(this);
             m_ViewTimeMin = 0f;
             m_ViewTimeMax = Mathf.Max(1f / FrameRate, request.Timeline.Duration);
             try
@@ -567,7 +533,7 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public TimelineData Timeline => m_Request.Timeline;
-        internal BtsmtlTimelineDirectorBinding Director => m_Director;
+        internal IDirector SlateRoot => this;
         internal IReadOnlyList<BtsmtlTimelineGroupBinding> Groups => m_Groups;
         public string DisplayName => Timeline.Name;
         public int FrameRate => Mathf.Max(1, m_Session.FrameRate);
@@ -603,6 +569,32 @@ namespace BTSMTL.Timeline.Editor
 
         public event Action<TimelineEditorSelection> SelectionChanged;
         public event Action<string> AuthoringIssue;
+
+        IEnumerable<IDirectable> IDirector.children => m_Groups.Cast<IDirectable>();
+        GameObject IDirector.context => null;
+        float IDirector.length => Length;
+        float IDirector.currentTime
+        {
+            get => CurrentFrame / (float)FrameRate;
+            set => CurrentFrame = Mathf.RoundToInt(value * FrameRate);
+        }
+        float IDirector.previousTime => ((IDirector)this).currentTime;
+        float IDirector.playbackSpeed
+        {
+            get => 1f;
+            set { }
+        }
+        bool IDirector.isActive => false;
+        bool IDirector.isPaused => false;
+        bool IDirector.isReSampleFrame => false;
+        IEnumerable<GameObject> IDirector.GetAffectedActors() => Array.Empty<GameObject>();
+        void IDirector.Play() { }
+        void IDirector.Pause() { }
+        void IDirector.Stop() { }
+        void IDirector.Sample(float time) => ((IDirector)this).currentTime = time;
+        void IDirector.ReSample() { }
+        void IDirector.Validate() { }
+        void IDirector.SendGlobalMessage(string message, object value) { }
 
         public static bool TryOpen(
             TimelineEditorOpenRequest request,

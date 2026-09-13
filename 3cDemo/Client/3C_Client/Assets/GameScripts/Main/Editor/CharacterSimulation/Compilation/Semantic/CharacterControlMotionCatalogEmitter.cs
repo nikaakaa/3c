@@ -72,10 +72,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             builder.ConstantField(trackSource, "CurveEndFrame", clip.CurveEndFrame)
                         };
                         TryAddCurveField(builder, fields, trackSource, clip, "WeightCurve", clip.WeightCurve);
-                        TryAddCurveField(builder, fields, trackSource, clip, "PositionX", clip.PositionX);
-                        TryAddCurveField(builder, fields, trackSource, clip, "PositionY", clip.PositionY);
-                        TryAddCurveField(builder, fields, trackSource, clip, "PositionZ", clip.PositionZ);
-                        TryAddCurveField(builder, fields, trackSource, clip, "Yaw", clip.Yaw);
+                        TryAddCurveField(builder, fields, trackSource, clip, "PositionX", clip.ProgramPositionX);
+                        TryAddCurveField(builder, fields, trackSource, clip, "PositionY", clip.ProgramPositionY);
+                        TryAddCurveField(builder, fields, trackSource, clip, "PositionZ", clip.ProgramPositionZ);
+                        TryAddCurveField(builder, fields, trackSource, clip, "Yaw", clip.ProgramYaw);
                         TryAddCurveField(builder, fields, trackSource, clip, "EaseInCurve", clip.EaseInCurve);
                         TryAddCurveField(builder, fields, trackSource, clip, "EaseOutCurve", clip.EaseOutCurve);
                         builder.DeclareCatalogEntry(

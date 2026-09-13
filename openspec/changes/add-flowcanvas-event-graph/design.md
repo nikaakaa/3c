@@ -1,51 +1,83 @@
 ## Context
 
-动机见 [proposal](proposal.md)。当前规划修订 r2（2026-09-13）执行用户广播 2026-09-13-authoring-r2-plan，协调来源为 2026-09-13-eventgraph-authoring-r2。公共基线为 [remove-agent-authoring-use-native-csharp/design.md 的 r2](../remove-agent-authoring-use-native-csharp/design.md)：只提供显式 export_code 与 generate_assets，不保留 Agent Document、五工具、重复 Validator 或同步中转。
+r3（2026-09-13）按用户“先说现有实现哪些混杂、改一下文档”的要求修订。目标是整理现有动画输入与作者逻辑，保持当前表现，不为事件图增加一个未提出的业务用途。此前建议的“根据速度调整步频/播放倍率”撤回；通用Get/Set能力存在，不等于必须给Corin编造一个使用场景。
 
-此前 r1 已确认原生 FlowCanvas 事件执行、动画宿主、变量生产与 Pose 分工，仍是本次运行设计基础。r2 只替换作者调用与代码输出接入，不重新选择原生/编译路线，不增加变量声明或运行布局副本。
+r1 的原生 FlowCanvas runtime、动画宿主和变量交接方向保持；r2 的公共 C# authoring 双工具、直接 API 与协议退役方向保持。r3 不重做这些已有基础，而是修正输入分类、空图强制装配和内容迁移口径。
 
-本窗口 01a095f2-ed45-7502-93f7-e9c9df0b7279 唯一维护本目录 proposal/design/tasks/specs；实现窗口只维护 execution.md。r2 最初通过 PLAN 广播修订；用户随后明确要求“让实现窗口做”，授权原已绑定实现窗口按 r2 继续。此次仅向该实现窗口发送一次正式文档更新，不联系协调或其它窗口。
+本窗口唯一维护本目录规划。当前请求只修改文档，r3 不自动下发实现；已有实现仍以最后明确派发的 r2 为历史基线。普通运行记录不作为新的业务需求或方案确认。
 
-### 已核对的当前代码
+### 当前源码事实与职责表
 
-所有 Assets 路径均位于 3cDemo/Client/3C_Client；源码表中的路径相对 Assets/GameScripts/Main。
+以下路径相对 Assets/GameScripts/Main；Assets 根位于 3cDemo/Client/3C_Client。本表是当前源码核对，不是新增玩法设计，也不由任务勾选或产物发布结果替代。
 
-| 入口 | 已知事实 |
-|---|---|
-| 原生 FlowScript / Graph | FlowScript 已收集 IUpdatable 并绑定端口；Graph.StartGraph 支持 Manual，UpdateGraph(float) 可由宿主传时间 |
-| 原生 GetVariable / SetVariable | Get 在读取时取当前变量，Set 沿执行线赋值；部分 perSecond 选项直接读取 Time.deltaTime |
-| 原生 SwitchBool / Split / Sequence | SwitchBool 执行选中分支后执行 Then；Split Instant 才是同次顺序分支；Sequence 是跨次 Flip Flop |
-| 原生 Ports / Node.Error | Editor 条件路径可能捕获异常并继续返回值，与 Player 直接抛错不同；不能只依赖外层 try/catch |
-| Runtime/Character/Control/Authoring/FlowGraphs/BtsmtlSkillFlowGraph.cs | 现有 Skill 作者图禁止原生运行；NativeNodeCatalog 的少量比较/逻辑映射不是通用事件编译能力 |
-| Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseCanvasGraph.cs | 现有 Pose 作者图禁止原生运行，Blackboard 为只读投影，Get 经正式写入路由生成 |
-| Runtime/Character/Pipeline/Presentation/CharacterSimulationPresentationRuntime.cs | 当前主链为 FactProjector.Project → 固定 FromFact 参数帧 → Animation.BeginPresentation |
-| Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPresentationProgramParameterFrame.cs | 只支持三个 motor ID；FromBody、FromFact、FromDirect 都存在；Preview 也有调用 |
-| Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseCompilerModule.cs | Pose 继续通过现有固定 Pass 编成 Program Image |
-| Runtime/BTSMTL/EventGraphs/HostEventGraph.cs / HostEventGraphEditorMutation.cs | 已有原生创建/连接、身份及局部 Undo；仍暴露 ApplyAuthoringDocument → ApplyDocument 旧入口 |
-| Runtime/BTSMTL/EventGraphs/EventGraphAuthoringDocument.cs | 保存变量/节点/边的中间结构，属于本次需退役的必经模型 |
-| Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs | ApplyEventGraphMutation 仍调用 Agent Mapper 再进入事件图 ApplyDocument，不能只删 Agent 目录 |
+| 数据/工作 | 当前生产位置 | 当前消费位置 | r3处理 |
+|---|---|---|---|
+| Body/Intent对齐、采样时间、Reset代际 | CharacterPresentationFactProjector.Project / SampleIntent | 正式Fact、动画运行与各Pose消费者 | 保留正式事实层，不迁入作者图，不让每张图另做时间对齐 |
+| 水平/垂直速度、方向、加速度、朝向误差 | 同一Projector从Body/Intent计算 | FactFrame、RootOrientationWarp、条件/MM等 | 先按现有公共只读事实保留，图需要时直接读；不复制成无消费者的动画变量 |
+| MotionPhase | Projector.ResolveMotionPhase：落地、hasMotion、速度阈值和垂直速度分类 | CharacterPoseStateMachineRuntime.SelectPredictiveTarget及正式Fact消费者 | 属于需要辨明的动画分类判断；本轮不迁移、不改阈值。若改成作者变量，会改变公共Fact合同及多处消费，先单独交用户决定 |
+| MovementMode | 正式Intent的MovementModeId进入FactFrame | Corin当前21处规则读取presentation.movement-mode | 保持现有Fact身份和状态规则，不改成基于速度的新判断，也不转抄成EventGraph变量 |
+| 动画实例变量 | 原生EventGraph声明/更新及唯一Contract/Layout/Frame已存在 | Pose有typed读取代码，Corin当前没有对应变量/Get | 保留能力；只给已有明确作者逻辑建立变量及原消费者，不为消除空图新增效果 |
+| Pose参数声明 | CharacterAnimationInputContract.BuildParameters先转写EventGraph变量，再合并各图Parameters | Pose编译与参数消费 | 取消对同一实例变量的第二作者声明和旧合并入口；允许从唯一合同派生只读编译索引 |
+| 曲线、BlendShape、Foot权重 | 正式Clip/Pose采样及混合；BuildParameters仍拼入同一参数表 | 原Pose/Foot/最终属性Writer | 保留原运行数学，清理作者/输入层来源混用，不把曲线改为EventGraph Set |
+| 节点配置和子图公开输入 | 原Payload、资源及调用接口 | 原节点/调用点 | 留在各自正式位置，不并成共享变量；Blackboard只读投影实际可访问输入 |
+| 变量消费绑定 | CharacterAnimationPoseInputFrame.FromPublishedVariables当前每帧扫描Program参数和转换规则 | 同次Pose运行 | 依赖/索引属于已有编译或实例绑定阶段；每帧只交接值，不重复发现消费者 |
 
-共享工作树有其它任务提交及未提交改动。尤其 PoseGraph 资产、BlackboardEditor、Agent 通用事务和 Skill 作者模块已有交叉改动；实施前必须重读差异，不能覆盖。静态源码核对不能证明当前运行成功。
+当前 CorinAnimationEventGraph.asset 只有 Start/Update、零变量、零连接；其 recipe 也只创建这两个节点。Corin Pose 图当前有9处空参数列表、零变量读取标记，主要状态规则仍读取MovementMode Fact。空图不会改变动作表现。
+
+CharacterAnimationInputContract.Create 与 CharacterSimulationPresentationRuntime 构造当前都强制要求EventGraph，所以即使没有变量需求也必须提供一张占位图。r3明确修改这一装配约束。
+
+Host当前把8项Fact加delta逐项登记并在TryRead再映射一次；MotionPhase、MovementMode等正式Fact类型不在该图输入列表中。Pose Blackboard当前只投影EventGraph变量，并按Action/Foot固定ID排除，不完整表达实际Fact/子图输入。这里是接口/作者视图尚未收口，不能被空Blackboard或成功Build掩盖。
+
+当前代码搜索已无 CharacterPresentationProgramParameterFrame、EventGraphAuthoringDocument、ApplyAuthoringDocument及旧事件图Mapper链。旧协议和motor桥删除属于已有清理结果，不再写成尚待删除的阻塞，也不回退已正确成果。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 作者直接用原生节点表达事件逻辑，先完成动画变量生产；不同宿主通过事件与数据合同扩展。
+- 作者在有真实事件逻辑需求时使用原生节点；当前先完成现有动画输入职责整理，不强制所有角色创建变量或占位事件图。
 - 输入是正式角色表现事实、本次 delta 和图内状态；输出是同一次完整更新后的 typed 只读变量帧。
-- 从原来的固定 motor 提供者，改为作者可创建变量、计算、写入，并由唯一 Pose 输入合同消费。
+- 将现有事实、动画判断、作者变量、曲线和配置按真实消费者分责；保持现有公式、阈值、时序与动作表现，删除重复来源表述。
 - 原生 UI 和生成代码使用同一正式配置 API 与既有局部 Undo/保存；公共工具显式导出/生成，Build 独立，不做 UI-only 能力或临时变量表。
 
 **Non-Goals:**
 
 - 本次不实际接关卡、相机或其它 Gameplay 宿主，不增加全局事件总线。
-- 不提供动画播放/停止、技能请求、伤害、角色移动、世界查询、Foot/IK 或骨骼写入节点。
+- 不新增播放倍率、步频调节、速度平滑、状态阈值或其它未提出的效果；不提供动画播放/停止、技能请求、伤害、角色移动、世界查询、Foot/IK或骨骼写入节点。
 - 不重写 Pose/Skill runtime，不增加 EventGraph IR、节点 lowering、虚拟机或 fallback。
 - 不接管 Pose 只读输入、曲线分类、Body Foot 入口、资源作者改革和旧重复 Pose 子图清理。
 - 不增加中央 Validator、整包同步事务、结构 DTO 中转、自动源码同步或事件图专用 MCP。
-- 不新增测试代码，不在 tasks 写手动验证。本文记录未来验收条件，不声称本轮已运行。
+- 不新增测试或验证任务；用户自行做端到端验证。源码Build、MCP可用性和反复回放不作为本次职责整理的新增任务。
 
 ## Decisions
+
+### D0. 先整理已有职责，不添加新业务来填满图
+
+本次已确定的清理是输入来源和装配规则；尚未确定的不是“再找一种动画效果”，而是哪些既有动画判断适合交给作者。公共事实计算不因为能画成节点就必须迁入EventGraph，Pose中的状态机、source选择和姿势混合也不整体搬出。
+
+一个计算只有同时具备“当前已有生产逻辑、真实消费者、明确动画作者职责”才进入迁移清单。保留原表达式、阈值、delta、初值、Reset及消费者，迁出后删除原重复计算。未发现这样的计算时允许本轮没有Corin业务事件图，不复制Fact或接常量节点来凑结果。
+
+MotionPhase保持当前正式Fact语义。将它变成作者状态涉及条件/MM/预测转换，不属于已经确认的例行搬迁；本轮只记录候选与影响，不要求为此停止其它输入清理。
+
+**装配规则：**
+- 没有绑定EventGraph且没有动画变量或事件执行需求：合法的同一动画链，不创建事件宿主、不虚构变量帧；Fact、曲线与Pose照常由原机制处理。
+- 有变量需求但缺图、缺变量或类型不匹配：明确失败，不提供旧motor值或默认补值。
+- 显式绑定了事件图：按图原生逻辑执行，不能因零输出就自动略过。空图可以是尚在编辑的内容，但不代表业务接入。
+- 当前Corin仅为满足强制装配而产生的占位图/绑定/专用recipe，在确认没有实际依赖后按明确内容范围移除；保留通用创建、EnsureRoot、导出/生成和运行能力，不扫描删除其它作者图。
+
+业务取舍是按需求装配会增加明确的“没有变量输入”合同表达，但可避免无业务用途的资产和每帧空执行。统一强制空图能减少一种装配情况，却让作者为了运行角色维护无意义内容。本次选择前者；它不是运行失败时启用的fallback，也不增加另一Pose执行链。
+
+### D0.1 每种输入只有一份正式来源
+
+- 事实引用原Fact schema和FactFrame，不把相同值再声明为EventGraph变量。
+- 动画变量引用同一原生声明及唯一Contract/Layout/Frame，不再允许每张Pose图重声明同一实例变量并参与冲突合并。
+- 子图公开参数属于调用接口，节点常量与资源属于原Payload/资源owner。
+- 曲线绑定指定输入Pose，保留采样、混合、惯性与最终属性写入；不再靠Action/Foot固定ID或BlendShape名称前缀判断其来源。
+
+这里整理的是作者语义和输入合同。Compiler仍可从这些正式来源生成只读索引、类型页与固定绑定；这种执行布局不是第二份可写变量真相。引用/类型/consumer需求应在现有编译或实例绑定阶段确定，运行帧不重新扫描全部参数及转换规则。
+
+Fact输入节点由现有EventGraphFloatInputNode等正式类型、AddAuthoringNode、ConfigureHostInput和ConnectAuthoringPorts建立。节点输入引用已有Fact identity，Value口在原生逻辑真正消费时读取当前宿主Fact；仅把FactFrame放进HostContext不代表已接入业务图。
+
+宿主准入从正式Fact声明投影受支持类型，并使用既有typed读取能力，避免另建字段清单与业务分支。当前不支持的Enum/Identity/UInt64若没有实际EventGraph消费者，不为填满菜单额外扩类型；有真实需求时必须完整支持或明确报告，不能静默转成字符串/Float。Pose已有合法Fact读取不依赖EventGraph是否开放该类型。
 
 ### D1. 原生执行事件图，编译执行PoseGraph
 
@@ -53,7 +85,7 @@
 
 业务收益是作者直接使用原生节点与执行顺序，不需要每增加一个计算节点再做一次项目指令翻译。另一条有价值的路线是将原生作者节点编译进动画 Program，可共享现有状态事务和密集布局，但要逐个维护节点 lowering，覆盖范围会受它约束。本提案选择直接复用，并明确承担 D5 的原生状态推进规则；不同时保留两种执行模式。
 
-仍需正式 Build 校验和发布：它验证图/宿主/变量/消费者接口、版本及运行依赖，并使修改后的内容成为可使用版本。它不把事件连线翻译为另一份事件程序；Pose 自己的 Compiler 保持原链。
+运行产物继续由原正式Build发布，接口/类型检查属于该已有产品生命周期，本轮不新增Build或验证任务。Build不把事件连线翻译为另一份事件程序；Pose自己的Compiler保持原链。
 
 ### D2. 通用基础只接宿主，动画提供业务数据
 
@@ -82,7 +114,7 @@
 | CharacterAnimationVariableLayout | 发布前生成的唯一密集列及类型，不保存运行值；所有消费者引用同一 layout identity |
 | CharacterAnimationVariableFrame | Actor/实例、表现采样身份、Simulation sample tick、Reset generation、图/合同/layout 版本、typed 只读值 |
 
-首个 Pose 交接支持数值 Float、开关 Bool、计数 Int；Int 不以 float 中转。Vector2/Vector3 在事件图内保持原生类型，按实际需要提取分量交给当前标量 Pose 输入。对象、集合、任意枚举和直接 Pose 向量口不在首个输出合同中，不把“通用”理解成所有 CLR 类型天然能送进 Pose 程序。这是面向当前速度/判断业务的可审阅范围，不是用户已逐项选择过的类型限制。
+保留既有 Pose 交接的 Float、Bool、Int32 精确类型，Int32 不以 float 中转。Vector2/Vector3 在事件图内保持原生类型，需要时按正式消费接口提取分量。对象、集合、任意枚举和直接 Pose 向量口不因本次整理自动扩展；这些是可用基础能力，不是必须给Corin新增变量的需求。
 
 Pose 可见变量及跨图权限由独立只读 change 按同一合同投影。事件图负责 Get/Set，PoseGraph 只 Get；变量重命名保留 ID。曲线、BlendShape 与脚权重继续由 Pose 采样/混合链拥有，不能按当前 Usage.Control 标签直接迁入事件图。
 
@@ -104,12 +136,13 @@ Pose 可见变量及跨图权限由独立只读 change 按同一合同投影。�
 
 实际顺序：
 
-1. 现有 FactProjector 完成本次 Body/Intent 时间对齐。
-2. 首次有效输入先绑定数据、原生 Start，再执行同次 Update；以后只执行一次 UpdateGraph(animationDeltaSeconds)。
-3. 原生调用完整成功后冻结变量输出；失败不发布，不启动本次 Pose。
-4. 既有 Animation.BeginPresentation 接收该只读输入，继续 Action、PoseAdvance、Source、Evaluate 和 Seal。
+1. 现有FactProjector完成本次Body/Intent时间对齐及当前仍归它拥有的正式事实计算。
+2. 按D0装配了事件图时，首次有效输入先绑定数据、原生Start，再执行同次Update；以后只执行一次UpdateGraph(animationDeltaSeconds)。
+3. 配置了事件图时，原生调用完整成功后冻结其输出；失败不发布，不启动本次Pose。
+4. 未配置事件图且正式输入合同不要求它时，跳过宿主创建和事件调用，不构造假的变量发布结果；仍由同一Animation.BeginPresentation及Pose链消费正式Fact和其它输入。
+5. Pose按编译/实例绑定的消费合同读取实际所需输入，继续Action、PoseAdvance、Source、Evaluate和Seal。
 
-更新成功后，如果 Pose source 尚未准备好，图中的平滑、计数与 Flip Flop 状态仍然保留；下一次表现事件继续更新。业务上，速度平滑跟随已经经过的时间，不等待资源准备才前进。Pose 的 Pending、Committed 和 Physical Writer 保持原有规则，输入“更新完成”不能被标成姿势“显示完成”。
+更新成功后，如果Pose source尚未准备好，该图实际拥有的变量和原生节点状态仍然保留，下一次表现事件继续推进；这里没有新增任何计算内容。Pose的Pending、Committed和Physical Writer保持原规则，输入“更新完成”不能被标成姿势“显示完成”。
 
 另一种业务要求是计数等也随 Pose 成功才前进。这需要完整的图状态事务或编译路线，不能只备份 Blackboard：原生 Sequence、事件计时、Macro 等另有状态。本提案明确选择原生推进，不引入反射快照、每帧克隆或失败后重放。
 
@@ -129,18 +162,19 @@ Actor/Body discontinuity、Reset、Replacement 结束旧图实例及其节点状
 
 | 事项或文件 | 本任务唯一职责 | 其它任务职责 |
 |---|---|---|
-| Runtime/BTSMTL/EventGraphs/EventGraphAuthoringDocument.cs | 正式 API 可表达其有效配置后删除结构模型与附属 DTO；不得换名保留 | C# authoring 删除 Agent Mapper 等公共调用者；Pose 改自身调用 |
-| Runtime/BTSMTL/EventGraphs/HostEventGraph.cs | 保留原生运行/身份/创建/连接，取消 ApplyAuthoringDocument 强制中转，暴露有效直接 API | 其它任务消费 API，不同时编辑本文件 |
-| Runtime/BTSMTL/EventGraphs/HostEventGraphEditorMutation.cs | 从原有效实现抽出直接变量/节点/连接/配置能力，保留局部 Undo 与真实规则，删除 ApplyDocument 及协议解析 | 不将该文件整体移入公共输出器或另建事件图事务 |
+| 原EventGraphAuthoringDocument及ApplyDocument | 当前已无旧链代码引用；保持删除结果，不重建模型 | 不再将已清理协议列为新的等待前置 |
+| Runtime/BTSMTL/EventGraphs/HostEventGraph.cs | 保留已形成的原生运行/身份/创建/连接与直接API，已删除的ApplyAuthoringDocument不恢复 | 其它任务消费 API，不同时编辑本文件 |
+| Runtime/BTSMTL/EventGraphs/HostEventGraphEditorMutation.cs | 保留直接变量/节点/连接/配置、局部Undo与真实规则，已删除的ApplyDocument不重做 | 不将该文件整体移入公共输出器或另建事件图事务 |
 | Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphAuthoringAdapter.cs | 提供替代 API 和事件图类型合同，不接管该文件 | Pose 任务将 ApplyEventGraphMutation 调用改为直接 API |
 | Editor/CharacterPipeline/Authoring/PresentationDocument/AgentAuthoringEventGraphDocumentMapper.cs 及公共 Agent 协议 | 不接管公共文件，不搬迁其中完整结构模型 | C# authoring 任务在调用方迁出后删除 Mapper、协议 DTO 和五工具等 |
 | 事件图完整对象读取及正式 API 输出薄适配 | 读取原生变量/节点/配置/连接/Macro/布局，向共同代码输出器提供薄扩展 | C# authoring 拥有通用遍历/语句输出、生成上下文、两个 MCP、文件写入和保存编排 |
 | 动画根事件图引用、Contract/Layout/Frame、事件更新 | 本任务唯一拥有；生成后根引用通过正式 API 明确恢复 | Pose 只读取同一声明/布局，不自建更新器或变量表 |
 | Pose Get、作用范围、条件、BlendSpace、Compiler/Program消费和曲线 | 提供唯一输出与身份合同，不重做消费 | Pose 任务唯一负责全部消费适配和曲线/Body清理 |
-| 固定 motor 桥 | 全部真实消费者迁入同一输入合同后，删除旧生产类型/方法/配置 | Pose 任务完成 Get/条件/BlendSpace/运行及Preview读取与签名迁移 |
+| 原固定motor桥 | 当前已无旧类型代码引用；保持清理结果 | 不恢复FromFact/FromDirect作为缺变量补值 |
 
-本次真实冲突链已重新读取：
-CharacterPoseGraphAuthoringAdapter.ApplyEventGraphMutation → AgentAuthoringEventGraphDocumentMapper.Map → EventGraphAuthoringDocument → HostEventGraph.ApplyAuthoringDocument → HostEventGraphEditorMutation.ApplyDocument。后者先 ClearNativeNodes 和 blackboard.variables.Clear，再按 DTO 重建变量、节点及边。只删除 Agent 目录仍留下领域中的结构模型和强制重建入口，不能满足 r2。
+r2曾存在的Agent Mapper → EventGraphAuthoringDocument → ApplyDocument整图重建链已在当前代码清理。历史记录保留其来由，r3不重新列为当前缺口。
+
+r3新增接口清理分工：本任务维护EventGraph可选装配的生产侧、Fact宿主适配与占位recipe/根引用；Pose任务维护CharacterAnimationInputContract、Blackboard来源展示、参数/曲线分类、静态消费绑定及运行/Preview的无变量输入表达。FactProjector仍由原Presentation/Pose事实所属模块维护，本任务不擅自接管它或改变MotionPhase。两侧接口需共同表达D0规则，不各自增加一个空Frame或默认提供者。
 
 直接 API 的参数应是该操作所需的对象、稳定 ID 和 typed 配置；不能仍收取一份包含整图变量/节点/边的“新配置模型”，再清空整图执行它。有效的 AddNode、CreatePortConnection、变量绑定、ConfigureIdentity、局部 Apply/Undo、dirty 和失败恢复继续服务人工编辑与 C# 调用，不为去 Agent 而删除这些正确能力。
 
@@ -171,88 +205,71 @@ Build 继续独立校验事件图/宿主/唯一变量合同与消费者依赖、
 
 ## Risks / Trade-offs
 
-- [原生行为与Pose提交不同] → D5 明确规定事件状态保留，诊断分别显示输入和Pose完成，不冒充共同回滚。
-- [节点能在Editor运行却不能在目标Player运行] → 合规成员、泛型和AOT保留纳入原发布链；原生错误通知覆盖Editor/Player差异。
-- [限定动画节点导致通用性被误解] → 限制属于动画宿主；原生等待、关卡事件等不从通用基础删除，本轮也不声称完成第二宿主。
-- [原参数名称掩盖坐标差异] → FromBody 按旋转逆变换取局部速度，FromFact 当前按 MovementDirection 分量生成值；迁移先对照真实消费者坐标，不借清理静默改变方向语义。
-- [公共输出与领域直接API交叉] → 按D7逐文件分工，API与调用者未完成迁出时不先删旧模型，不用同义DTO或临时接口维持两条链。
-- [完整输出遗漏或仍引用旧生成资产] → 未支持内容明确失败；逻辑ID写入C#，内部引用使用本次对象，根挂接明确恢复。
-- [人工修改与源码被误当同步] → 两个工具各自显式执行，生成不合并未导出的人工修改，不新增自动导出或源码同步。
-- [误把当前资源存在当成演示就绪] → 已按脚本GUID搜索 Assets/Configs，未发现正式 BlendSpace 资产引用；BlendSpace 是能力检验例子，不据此宣称 Corin 已运行该链，不新增独立八向演示。
+- 把所有可计算Fact搬进EventGraph会改变公共事实合同，并影响既有Pose/MM/预测逻辑；本轮保留正式事实，只记录已存在的作者逻辑候选。
+- 只改Blackboard显示而保留混合声明表，作者仍无法理解实际来源；输入合同、只读视图和消费绑定按同一分类修改，编译器内部布局可继续服务执行。
+- 删除EventGraph强制依赖时若只放开null检查，会留下运行/Preview仍强制要求变量帧的问题；D0要求生产、编译合同和消费一起表达“未请求变量”，不能补一个空成功结果。
+- 用新步频、播放倍率或平滑示例证明图非空，会改变用户原有表现；本次禁止这种范围扩张。真实迁移清单为空是允许的结果。
+- 占位图也可能被其它内容引用；只按明确Profile/recipe及对象引用清理，保留有效公共生成能力与范围外资产。
+- 原生Get/Set、Reset/失败和同次输出规则继续采用r2，不重新选择运行路线，不恢复旧协议或motor桥。
 
 ## Migration Plan
 
-两项删除拥有不同先决条件，不按“去掉旧代码”合并执行：
+1. 以本设计职责表为当前事实基线，补齐涉及改动的生产者、消费者、类型、时序和文件owner。已经删除的旧链不重做，不把其它任务完成计数当成本轮职责已经统一。
+2. 先收口来源合同：正式Fact、原生变量、子图输入、曲线、节点配置各自拥有明确身份；Pose消费侧清理重复声明合并和按名称分类，本任务提供同一原生变量/Fact读取接口。
+3. 把消费需求解析与索引绑定留在原Compiler或实例绑定阶段；每帧交接只读值，取消运行帧重复发现全部参数与规则消费者的工作。
+4. 同一动画运行和完整Preview按D0表达有/无EventGraph需求。缺必需变量继续失败，无需求时不创建占位宿主或伪造变量输出，不增加第二动画执行链。
+5. 仅在职责表确认存在应迁移的已有动画作者计算时，才修改事件图内容及原消费者；保持原公式/阈值/时钟/Reset。会改变公共MotionPhase或既有动作表现的选择先交用户裁定，不编造新Fixture。
+6. 对当前无业务内容的Corin占位Graph/Profile引用/专用recipe按明确引用范围清理；删除或解绑的实际工作属于后续实施，本轮不动资产。保留通用Host/API/EnsureRoot/公共输出器。
+7. 原生UI和C#输出/生成适配当前正式分类和可选根引用，内部引用使用本次对象，按原共享合同保存。源码导出/生成不自动Build。
+8. 同步本任务实际完成范围；用户自行端到端验证。tasks只列实现、迁移与文档工作，不列测试、验证、反复Build或回放任务。
 
-1. 读取当前调用关系，按D7固定领域API、Pose调用适配与Agent Mapper文件归属；确认共同输出器实际扩展合同。原生运行、动画变量合同和已正确代码作为保留基线。
-2. 在 HostEventGraph 与 HostEventGraphEditorMutation 补齐直接声明/读取/配置/连接和稳定身份 API，从旧处理链复用有效局部规则与 Undo；不把整图 DTO 换名为 API 参数。
-3. Pose 任务将 CharacterPoseGraphAuthoringAdapter 的旧内容修改调用迁到直接 API；C# authoring 任务删除/替换 Agent Mapper 等公共协议调用。两侧实际消费者脱离后，本任务删除 EventGraphAuthoringDocument、ApplyAuthoringDocument/ApplyDocument 及无消费者解析代码。
-4. 事件图薄适配加入共同代码输出器：读取当前完整闭包，输出直接 API 调用，恢复内部对象引用、逻辑 ID、Macro 和布局；未知正式内容必须拒绝完整导出。公共任务拥有两个 MCP 和生成范围/保存服务，本任务不另建入口。
-5. 在同一正式外部资源/API版本下，完整导出代码必须能在旧生成范围不存在时重建等价图，并显式恢复指定 Profile 根引用和跨 Pose Get 身份。人工编辑不隐式导出，再生成不自动合并人工修改；不以原位更新替代删除重建能力。
-6. 动画生产接入保持正式 Fact → 一次原生事件更新 → 发布只读变量 → Pose。输出仍按实例、表现采样、Simulation tick、Reset 代际和合同/layout版本交接，消费完成前不覆盖。Pending 不回退成功事件状态，失败不发布部分值。
-7. **固定 motor 桥独立等待**：当前 CharacterPoseStateSourceRuntime、AnimationBlendSpacePlayerRuntime、Pose Program、AnimationPreviewEngine、PoseSourcePlanCompiler 和运行入口仍引用 CharacterPresentationProgramParameterFrame。只有 Pose/条件/BlendSpace/运行/Preview 全部改用同一变量合同后，本任务才删除旧帧、Supports、FromBody/FromFact/FromDirect 与注册配置。保留真实坐标语义，不默认补值。
-8. 确认无消费者的旧协调类只在固定桥清理依赖内删除；不顺便重做状态机、曲线、Foot/IK或资源作者。原生资产及范围外素材不在本轮删除。
-9. 正式作者保存与运行产品 Build 分开。显式生成成功不等于 Program/Projection 已发布，正式 Build/运行证据仍分别记录；代码/生成失败按既有范围保存能力如实报告，不恢复整包同步事务。
-10. 上述要求最初只作为PLAN更新；现按用户后续明确实施授权由原实现窗口执行，记录继续归其execution.md。依赖未就绪的删除不提前做，能够独立实施的部分继续推进，不以等待其它任务为由停下全部工作。
+### 完成定义
 
-### 完成定义与验证条件
+输入职责可从当前正式数据追踪到实际消费者，作者看到的来源与运行使用一致；同一动画变量不在Pose图重新声明，曲线和配置不混成共享变量。没有需求时不强制空图，有需求但缺绑定时明确失败。已决定迁移的计算保持原行为且删除重复生产，尚未决定迁移的公共事实保持原合同。
 
-不新增测试代码，不在 tasks 列手动验证。未来实际执行记录必须区分静态、生成/保存和运行证据：
-
-| 场景 | 需要保留的完成证据 |
-|---|---|
-| 原生编辑与直接API | 创建/配置变量和节点、Get/Set、连接与Undo行为保持；调用不再必经Agent Mapper或整图DTO |
-| 完整对象往返 | 所有变量/节点/配置/接口/动态端口/边/布局/内部与外部引用均可读出并重建；不支持内容使导出明确失败 |
-| 删除重建与身份 | 相同外部输入下不依赖旧生成GUID；图ID、Variable.ID和内部共享关系恢复，Profile根显式重绑，生成后Pose Get解析正确 |
-| 显式非同步 | 人工修改/保存不导出；指定代码重新生成不合并未导出修改；作者工具不自动Build |
-| 同次变量交接 | Set(2)后同次Pose读取2，平滑例子得到0.2；Float/Int32/Bool精确且没有第二布局 |
-| 实例/时间/错误 | 两Actor隔离，Source Pending保留更新状态，错误不发布部分值，Reset重建变量及原生历史，消费期只读帧不被覆盖 |
-| 两项删除 | Agent调用脱离旧模型与motor桥全部消费者迁移各有独立证据，不互相替代 |
-| 曲线与发布 | Foot/BlendShape仍沿原链，独立Build/Stale与真实姿势显示分别有证据，不以生成成功冒充运行完成 |
+保留原生事件、typed帧、实例隔离、错误/Reset与C#完整输出/重建能力。这些是系统行为合同，具体端到端验证由用户完成，不成为额外验证任务。Profile引用、空图生成和成功发布Program/Projection都不能被写作“现有动画输入职责已整理完成”。
 
 ## Current Spec Comparison
 
-| 正式规范或并行计划 | 当前交叉 | 本r2处理 |
+| 当前规范/并行计划 | 交叉或不一致 | 本r3处理 |
 |---|---|---|
-| remove-agent-authoring-use-native-csharp r2 / character-csharp-authoring | 两个显式工具、完整输出/删除重建、直接API和协议退役是新公共基线 | 复用其公共合同，仅新增事件图读取/输出薄适配，不重复输出器、MCP或中央Validator |
-| graph-authoring-domain-framework 的 Authoring节点与Runtime执行描述必须分离 | C# authoring 的同名MODIFIED仍笼统要求领域图编译，与本任务已确认原生事件运行不完整一致 | 本任务delta采用C#作者术语并保留原生EventGraph例外；最终归并必须保留这个合并条款，不能由另一份笼统条款覆盖；不修改对方文档 |
-| 现行Agent专属规范与原本任务Document增量 | 现行仍有目录包、五工具、Reconciler等；新基线明确删除 | 撤下本任务 btsmtl-agent-authoring-document-sync 增量，公共删除delta归C# authoring；不再为事件图追加协议目录/版本 |
-| character-animation-pipeline | 唯一生产入口与原Pose提交保证仍需明确区分 | 保持事件运行及变量输出delta，不因作者协议改变移动运行职责 |
-| refine-pose-graph-readonly-blackboard | Get/条件/BlendSpace/曲线消费与Profile调用适配属Pose，旧桥仍有调用 | 本任务只维护生产合同及D7三份领域文件；条件允许变量和消费者规范由Pose维护 |
-| 原生FSM / 共同节点定义 / attribute-driven | 保留类型、稳定端口、元数据、规则与编译，Document扩展退役 | 不再以文档版本为任务依赖，不整体回退已正确作者能力 |
-| project.md与既有原生Pose替换实验 | 现行仍强调Program边界，旧Pose原生替换已撤回 | 只保留EventGraph的原生输入生产；Pose继续编译，项目口径由后续正式归并同步 |
-| 现行Source Slot/直接资源、旧Shell等差异 | 已有其它作者计划范围，不是协议退役本身 | 不借代码输出回退资源/曲线或重做画布，实际使用当前有效正式API |
+| 本change原动画事件条款 | 泛化成每个动画实例都必须经过事件宿主，示例易被误当Corin内容要求 | 改成D0按需求装配；删除强制新平滑用例，保留有图时的运行保证 |
+| character-presentation-pose-graph现行参数及Fact条款 | 仍有统一参数页和Transition Fact合同；不能因新增EventGraph全面改写事实/曲线 | Pose任务维护其输入分类、Get/条件/静态绑定delta；本任务不重复接管同名条款 |
+| refine-pose-graph-readonly-blackboard的完成状态 | 文档要求多来源输入，而当前Blackboard主要只投影EventGraph变量；BuildParameters仍合并旧声明 | 如实列为尚需收口的源码问题，不修改对方完成标记，也不拿任务勾选证明结构已干净 |
+| 当前CharacterAnimationInputContract与Runtime | 两处强制要求图，Corin仅有空图 | 本r3明确修改为无需求可不装配、有需求缺失则失败，后续由两侧按D7落实 |
+| 当前FactProjector及MotionPhase消费者 | 时间对齐、运动事实和阶段判断在同一类；阶段判断已有正式消费者 | 记录不同职责，不全量搬移；MotionPhase保持当前来源，行为取舍由用户另定 |
+| 公共C# authoring / graph-authoring-domain-framework | 两工具、直接API、原生EventGraph与编译Pose边界继续有效 | 保留r2，现行同名共享Requirement归并仍须保留原生EventGraph边界 |
+| 旧Document/motor桥、Action/Foot重复变量 | 代码与Corin内容已清理 | 保持删除，不再以它们缺失为理由恢复变量或重复执行迁移 |
 
-本轮仅修改本change的规划与delta，不把公共r2或其它任务的文档收敛声称为已实施。上表同名共享Requirement的归并覆盖风险已明确指出。
+本次只改本任务规划，现行主spec、其它任务文档、业务代码和资产没有因此被修改。可选装配与Pose来源统一仍需对应owner修改其正式入口，不能以本提案更新声称代码已完成。
 
 ## Open Questions
 
-- 公共输出器的确切扩展类型/方法名取决于 C# authoring 的实际交付；职责固定为通用遍历/输出/生成合同，事件图只作完整读取与调用输出薄适配，不保留原Document方案作为备选。
-- 具体角色/Fixture、生成范围与明确根绑定参数沿现有内容迁移清单登记，不全局扫描或扩大为重建所有角色。
-
-以上仅是正式接口名称和内容登记，不重开原生runtime、双工具、唯一变量、非同步语义或删除条件。
+- MotionPhase当前保持正式Fact；是否将其中已有判断开放给动画作者，需在说明现有全部消费者和行为影响后单独由用户决定。本轮不以该候选阻塞其它来源/装配清理，也不先行迁移。
+- Corin占位图的精确删除对象由后续实施依据实际引用确认；已绑定且存在真实事件操作的其它图不按“变量为空”删除。
+- 若最终没有需要迁入图的现有作者计算，本轮就不增加Corin业务变量。这不影响通用事件图能力保留，也不构成寻找新效果的任务。
 
 ## Workflow Binding
 
-原用户广播的PLAN阶段已完成且未发送跨窗口回执。用户随后明确要求“让实现窗口做”，现确认并授权按r2实施；复用唯一实现窗口并只发送一次DOCUMENT_UPDATED。历史r1派发保留追溯，不再作为本次实施基线。
+r2曾按用户明确要求下发实现。当前用户要求“改一下文档”，本次只完成r3职责整理与范围修订，不发送执行消息或触发代码工作；已有实现绑定保留，最后明确派发版本仍为r2。
 
-- planning_revision: r2
+- planning_revision: r3
 - revision_date: 2026-09-13
-- revision_source: USER_BROADCAST / 2026-09-13-authoring-r2-plan
+- revision_source: 用户要求整理现有动画输入职责并修改文档
 - coordination_proposal: 2026-09-13-eventgraph-authoring-r2
 - authoring_baseline: remove-agent-authoring-use-native-csharp/design.md r2
-- action: IMPLEMENT
-- authorization_source: 用户明确要求“让实现窗口做”
-- confirmed_by_user: true
-- confirmed_revision: r2@fb937f4415ff6593e1c9affbea37e465c77d617f
+- action: PLAN
+- authorization_source: 用户明确要求“改一下文档吧”
+- planning_status: revised_for_review
+- implementation_dispatched_for_r3: false
 - planning_document_owner: 01a095f2-ed45-7502-93f7-e9c9df0b7279
 - last_dispatched_implementation_revision: r2@fb937f4415ff6593e1c9affbea37e465c77d617f
 - implementation_dispatched_for_r2: true
-- implementation_dispatch_status: DOCUMENT_UPDATED_sent
+- implementation_dispatch_status: r2_sent_r3_not_dispatched
 - planning_document_paths: 本目录 proposal.md、design.md、tasks.md 和 specs 下四份当前规范增量
 - implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/add-flowcanvas-event-graph/execution.md
 
-实现仍只修改获授权代码和自己的 execution.md，不修改规划文件。普通工具、编译、验证、提交和完成结果留在实现窗口；只有实际合同矛盾按既有文档实施协议处理。任务5.2“提供合同”通过代码与实现记录完成，不是跨窗口发送进度。
+实现仍只修改获授权代码和自己的 execution.md，不修改规划文件。普通工具、编译、验证、提交和完成结果留在实现窗口；只有实际合同矛盾按既有文档实施协议处理。接口交付通过正式代码与实现记录完成，不是跨窗口发送进度。
 
 ```text
 IMPLEMENTATION_LINK

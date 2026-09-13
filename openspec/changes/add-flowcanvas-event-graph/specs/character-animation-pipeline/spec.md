@@ -1,24 +1,25 @@
 ## ADDED Requirements
 
-### Requirement: 动画变量必须由唯一事件宿主在Pose推进前提供
+### Requirement: 动画事件宿主必须按正式输入需求装配
 
-每个动画实例所需作者变量 MUST由其唯一事件图宿主生产，在同次正式表现输入准备后、Pose推进前完成一次更新并发布只读值。该值 MUST替换旧固定参数生产，不能与按名称补值的旧桥同时作为提供者。
+显式绑定事件图的动画实例 MUST由唯一宿主在本次Fact准备后、Pose推进前执行一次合法事件调用，并向需要变量的消费者发布完整只读结果。没有绑定图且没有变量或事件需求时，实例 MUST沿同一正式Fact/Pose链运行，不创建占位图、宿主或虚构变量结果；存在必需变量而缺失生产者时 MUST失败，不切换为默认补值。
 
-输入更新成功与最终姿势提交 MUST有各自明确身份；成功更新的原生状态 MUST不因随后Pose未就绪而回退。Pose根事务、Action生命周期、source准备、混合、Foot、FBBIK、Evaluate Barrier、Seal和最终写入 MUST继续由现有唯一链路拥有；事件图 MUST不能执行这些引擎调度职责。
+事实、动画变量、子图输入、曲线与节点配置 MUST保持各自正式来源。依赖发现和变量消费绑定 MUST属于既有编译或实例装配，运行帧只传递本次实际输入。Pose根事务、Action、source、混合、Foot、FBBIK、Evaluate、Seal和最终Writer MUST继续由现有唯一链路承担，事件图 MUST不接管这些引擎职责。
 
-#### Scenario: 一次正常动画表现更新
+#### Scenario: 无作者变量需求
 
-- **WHEN** 正式角色事实到达并且事件更新成功
-- **THEN** 系统 MUST将本次只读变量交给同次Pose推进
-- **AND** 更新图、Pose求值和最终写入 MUST各自只执行其所属工作一次
+- **WHEN** 角色未绑定事件图且Pose仅使用正式Fact、曲线与配置
+- **THEN** 正式动画运行与完整Preview MUST使用同一无事件需求合同
+- **AND** MUST不通过空EventGraph或伪造变量帧满足非空检查
 
-#### Scenario: 原生输入更新失败
+#### Scenario: 已装配事件图正常更新
 
-- **WHEN** 事件图发生节点错误或输出不合法
-- **THEN** 本次变量 MUST不发布，本次Pose MUST不从部分结果启动
-- **AND** 系统 MUST保留该实例的明确故障，不以旧值、默认值或旧生产链继续
+- **WHEN** 正式Fact到达且事件调用成功
+- **THEN** 同次Pose MUST读取本次实际需要的只读变量
+- **AND** 事件更新、Pose求值和最终写入各自只执行所属工作一次
 
-#### Scenario: Pose进入Faulted
+#### Scenario: 事件输入失败
 
-- **WHEN** 现有Pose事务因Barrier内或之后失败使该Actor动画运行Faulted
-- **THEN** 事件宿主 MUST停止该Actor后续更新，直到其正式Reset或Replacement
+- **WHEN** 已需要的事件调用发生节点错误或输出非法
+- **THEN** 部分变量 MUST不发布，Pose MUST不以旧值或默认值继续
+- **AND** MUST保持既有实例Fault/Reset规则，不能回退到无事件需求模式

@@ -1,38 +1,37 @@
 ## Why
 
-项目已有 FlowCanvas 的事件、变量、计算、分支和执行能力。本提案以动画为第一个应用，提供作者可视化更新变量并交给 PoseGraph 的正式接入；以后关卡等业务复用宿主机制，不重建事件执行器。
+当前问题是动画输入职责尚未收口：FactProjector 同时处理数据对齐和动画分类，Pose 输入合同仍混合不同来源的声明，Blackboard 与实际 Fact 消费不一致；Corin EventGraph 没有业务节点，却已成为动画装配的强制依赖。继续补一个新动画效果不能解决这些问题。
 
-r2 按用户单向广播 2026-09-13-authoring-r2-plan 更新作者入口：事件图沿正式直接配置 API 接入公共 C# 输出/生成能力，退出已决定退役的 Agent Document 链。原生运行和动画输入合同保持已确认方向。
+r3 按用户要求先整理现有数据、计算和消费者，再保持原行为完成职责迁移。不新增步频、播放倍率、速度平滑或其它未经提出的动画需求；没有实际需求时不强制挂空事件图。
 
 ## What Changes
 
-- 直接复用原生 FlowScript、GraphEditor、事件、执行线、计算、分支、Get/Set、Blackboard 和 Macro；事件图仍由 FlowCanvas runtime 执行，不增加事件图 Compiler、IR 或备用执行器。
-- 保持动画初始化/每帧更新、只读角色事实、实例隔离、错误/Reset，以及唯一 Contract/Layout/Frame 生产。Pose 的 Get、条件、BlendSpace、曲线和编译消费继续由 Pose 任务负责。
-- **BREAKING**：取消事件图 PresentationDocument 分片、Document 升版、Reconciler/反向导出和整包同步事务要求。移除 EventGraphAuthoringDocument 及其必经 ApplyDocument 中转，不能只删除 Agent 目录或改名保留结构模型。
-- 保留原生创建、变量声明、配置、连接、身份、局部规则和已有 Undo，形成原生 UI 与 C# 生成共用的直接 API；不新建中央 Validator，不复制业务规则。
-- 为公共代码输出器提供事件图薄适配，完整读取变量、节点、配置、Macro、动态端口、连线、布局和引用，输出正式 API 调用；不另建事件图导出器或 EventGraph MCP。未支持的正式内容明确拒绝完整导出。
-- 仅复用公共 btsmtl.export_code 和 btsmtl.generate_assets。人工编辑不自动导出，生成不自动合并未导出的修改，两者不自动 Build；C# 是明确生成范围的可重建内容来源。
-- 生成代码保持图和 Variable.ID 等逻辑身份；内部引用使用本次生成对象，真正外部资源明确传入，Profile 根绑定显式恢复，不依赖旧生成资产 GUID 重建内部对象。
-- **BREAKING**：保留原生 EventGraph 输入生产与编译 PoseGraph 求值的明确边界；固定 motor 桥只在全部 Pose、条件、BlendSpace、运行和 Preview 消费者迁移后删除，不能与 Agent 协议删除混为一步。
+- 先建立现有输入职责表，区分正式角色事实、动画派生判断、作者实例变量、子图公开输入、随姿势传播的曲线和节点/资源配置，记录真实生产者和消费者。
+- 只迁移已有且明确归为作者逻辑的动画计算，保持原公式、阈值、时钟、状态判断和消费者。FactFrame 继续是正式只读输入，不把其中全部计算搬到 EventGraph，也不为制造非空图复制事实或恢复 Action/Foot 变量。
+- **BREAKING**：EventGraph 按正式需求装配。没有绑定图且没有动画变量需求时，动画沿同一正式 Fact/Pose 链执行，不要求占位图或虚构变量帧；存在变量需求但缺少图/变量绑定时仍明确失败，绝不补默认值。显式绑定的图按其原生逻辑执行，不因输出变量为空被偷偷跳过。
+- 与 Pose 任务统一来源合同：变量引用同一原生声明，Fact 直接读正式事实，子图参数遵循调用接口，曲线从输入姿势读取，配置留在原节点/资源。删除无用途的重复声明和按固定名称推断来源的规则，不禁止编译器为执行生成只读索引。
+- 补齐实际所需的 Fact 输入节点目录和直接 API 接线，复用正式 Fact schema/读取能力；未支持类型明确报告，不再维护脱离正式事实合同的第二清单。
+- 保留已确认的 FlowCanvas 原生事件执行、实例隔离、错误/Reset、唯一 Contract/Layout/Frame、C# authoring 两个显式工具和现有 Pose 编译运行。
+- 公共 C# 输出器继续通过事件图薄适配读取完整对象并输出正式 API，保持稳定逻辑身份和明确根绑定；不恢复 Document、整图 DTO、中央 Validator、自动源码同步或另一个 MCP。
+- 当前已删除的固定 motor 桥和 EventGraph Document 不重新引入。只清理新职责表证实多余的占位绑定、重复输入处理及无消费者内容，保护已正确的曲线、状态机与运行算法。
 
 ## Capabilities
 
 ### New Capabilities
 
-- flowcanvas-event-graph：原生事件图、宿主合同、变量身份、直接作者 API，以及接入公共 C# 输出/生成的领域薄适配。
-- character-animation-event-graph：动画事件、只读事实、精确变量输出、身份重建和同次 Pose 交接。
+- flowcanvas-event-graph：可复用原生事件图、宿主、变量与正式直接作者/C#输出能力，保留既有路线。
+- character-animation-event-graph：按真实需求装配的动画事件能力，现有输入分类、只读Fact接入和同次变量交接。
 
 ### Modified Capabilities
 
-- graph-authoring-domain-framework：在公共 C# 作者基线上保留原生 EventGraph 执行域，现有编译领域与其运行描述继续分离。
-- character-animation-pipeline：唯一动画变量生产入口，区分输入更新和 Pose 提交，保持现有最终姿势链。
+- graph-authoring-domain-framework：保留原生EventGraph与编译Pose/Skill的职责边界。
+- character-animation-pipeline：按正式输入需求决定是否需要事件宿主，保持唯一Fact/Pose链和可选的唯一变量生产者。
 
-本 change 撤下原 btsmtl-agent-authoring-document-sync 增量，不再扩展将退役的协议。通用输出/生成、两个 MCP 及 Agent 协议整体删除由 remove-agent-authoring-use-native-csharp 的 r2 拥有，本任务不重复声明该能力。
+Pose Blackboard、Get、条件、BlendSpace、参数/曲线声明和编译绑定的完整修改仍归 [Pose 只读输入任务](../refine-pose-graph-readonly-blackboard/proposal.md)；本任务提供接口要求与生产侧接入，不重复维护它的同名规范增量。
 
 ## Impact
 
-- 本任务唯一维护 Runtime/BTSMTL/EventGraphs/EventGraphAuthoringDocument.cs、HostEventGraph.cs、HostEventGraphEditorMutation.cs 的直接 API 收口及事件图输出薄适配；完整路径和先后依赖见 design D7/D8。
-- Pose 任务负责 CharacterPoseGraphAuthoringAdapter 等消费调用适配；C# authoring 任务负责 AgentAuthoringEventGraphDocumentMapper 等公共协议退役。各任务不同时覆盖同一文件。
-- 动画根事件图引用、变量声明/更新/输出属于本任务；Pose 只读输入和曲线清理仍属于 [独立 Pose 任务](../refine-pose-graph-readonly-blackboard/proposal.md)。
-- 不接管 Skill/FSM、关卡内容、Timeline/Montage、Foot/IK 算法或其它角色改造。不因生成源码需要正常 C# 编译而重开事件图 runtime 路线。
-- r2 最初由 PLAN 广播形成，只修改规划。用户随后明确要求“让实现窗口做”，现授权原已绑定实现窗口按 r2 继续；不新建窗口，不扩大文件所有权和删除范围。派发状态见 design 的 Workflow Binding。
+- 本任务：正式Fact到宿主的适配、原生事件图作者 API/薄适配、动画根图引用与生产端合同，以及 Corin 占位事件图/recipe 的明确处理。
+- Pose/Presentation 所属任务：FactProjector 的既有事实/判断消费者边界，CharacterAnimationInputContract、Blackboard、Get/条件/BlendSpace、编译输入绑定与完整Preview消费。需要移动公共事实或改变动画行为时先由用户决定，不在本任务越权改动。
+- C# authoring 任务：保留公共export_code/generate_assets、通用输出及生成保存；事件图仍只作薄扩展。
+- r2 的运行与作者基础作为已有基线，不以空图、Profile引用或构建成功宣称业务整理完成。本轮只更新本任务文档，不改代码/资产，不发送实施指令。

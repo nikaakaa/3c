@@ -40,6 +40,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             });
             registry.RegisterClip<CameraCueClip>((clip, context) =>
             {
+                if (string.IsNullOrWhiteSpace(clip.ResourceId))
+                    throw new InvalidOperationException(
+                        $"Camera cue clip '{context.ClipIdentity(clip)}' has no ResourceId.");
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
                 return DeclarePresentationClip(
                     clip,

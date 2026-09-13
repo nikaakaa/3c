@@ -85,6 +85,7 @@ namespace BTSMTL.Timeline
             string cueId,
             TimelineCameraCueKind cueKind,
             string cueType,
+            string resourceId,
             float intensity,
             float durationSeconds,
             int priority)
@@ -95,6 +96,7 @@ namespace BTSMTL.Timeline
             CueId = cueId ?? string.Empty;
             CueKind = cueKind;
             CueType = cueType ?? string.Empty;
+            ResourceId = resourceId ?? string.Empty;
             Intensity = Mathf.Max(0f, intensity);
             DurationSeconds = Mathf.Max(0f, durationSeconds);
             Priority = priority;
@@ -106,6 +108,7 @@ namespace BTSMTL.Timeline
         public string CueId { get; }
         public TimelineCameraCueKind CueKind { get; }
         public string CueType { get; }
+        public string ResourceId { get; }
         public float Intensity { get; }
         public float DurationSeconds { get; }
         public int Priority { get; }
@@ -263,6 +266,7 @@ namespace BTSMTL.Timeline
                         cueClip.CueId,
                         cueClip.CueKind,
                         cueClip.CueType,
+                        cueClip.ResourceId,
                         cueClip.Intensity,
                         cueClip.DurationSeconds,
                         cueClip.Priority));
@@ -279,7 +283,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("cueKind", typeof(TimelineCameraCueKind))]
     [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("resourceId", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
+    [TimelineAuthoringProperty("resourceId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("intensity", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("durationSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]

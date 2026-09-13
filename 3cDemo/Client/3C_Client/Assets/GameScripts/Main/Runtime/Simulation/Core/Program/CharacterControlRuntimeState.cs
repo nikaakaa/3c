@@ -308,6 +308,12 @@ namespace ThirdPersonSimulation
             m_Values[index] = value;
         }
 
+        internal CharacterControlRuntimeState Preview()
+        {
+            RequireActive();
+            return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, m_Values);
+        }
+
         public CharacterControlRuntimeState Commit()
         {
             RequireActive();

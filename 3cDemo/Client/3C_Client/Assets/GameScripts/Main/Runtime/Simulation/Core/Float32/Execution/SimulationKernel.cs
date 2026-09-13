@@ -329,8 +329,7 @@ namespace ThirdPersonSimulation
                     world.FinalBody,
                     world.AppliedDisplacement,
                     world.AppliedYawDegrees);
-                CharacterControlRuntimeState finalControlState = controlStateTransaction.Commit();
-                CharacterSimulationState finalState = CommitState(transaction, finalControlState);
+                CharacterSimulationState finalState = CommitState(transaction, controlStateTransaction);
                 return CreateFinalResult(
                     pending,
                     finalState,
@@ -367,9 +366,9 @@ namespace ThirdPersonSimulation
         [PerformanceProbe("simulation.kernel.state-commit")]
         CharacterSimulationState CommitState(
             Float32CharacterStateTransaction transaction,
-            CharacterControlRuntimeState controlState)
+            CharacterControlRuntimeStateTransaction controlStateTransaction)
         {
-            return transaction.Commit(controlState);
+            return transaction.Commit(controlStateTransaction);
         }
 
         [PerformanceProbe("simulation.kernel.result-freeze")]

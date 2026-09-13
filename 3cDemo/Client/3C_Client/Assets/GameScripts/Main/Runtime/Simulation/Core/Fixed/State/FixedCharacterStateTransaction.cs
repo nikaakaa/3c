@@ -455,6 +455,22 @@ namespace ThirdPersonSimulation.Fixed
             m_Savepoints.Pop();
         }
 
+        public CharacterSimulationState Commit(CharacterControlRuntimeStateTransaction controlStateTransaction)
+        {
+            RequireActive();
+            if (controlStateTransaction == null)
+                throw new ArgumentNullException(nameof(controlStateTransaction));
+            if (controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active ||
+                !ReferenceEquals(controlStateTransaction.BaseState, m_BaseState.ControlState) ||
+                controlStateTransaction.Tick != m_Tick)
+            {
+                throw new InvalidOperationException("Character Step transactions are not bound to the same Control state and Tick.");
+            }
+            CharacterSimulationState committed = Commit(controlStateTransaction.Preview());
+            controlStateTransaction.Commit();
+            return committed;
+        }
+
         public CharacterSimulationState Commit(CharacterControlRuntimeState controlState)
         {
             RequireActive();

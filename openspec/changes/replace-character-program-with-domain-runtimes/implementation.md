@@ -31,6 +31,7 @@
 - `833c8082a`：补齐本实施记录，写明 Ability 迁移边界与编译证据。
 - `27bf006c0`：发布 `GameplayAbilityProviderContract`，把 Input、Gameplay Effect、Equipment、Character State 依赖收敛为 typed requirement，并在 Ability Target 发布入口校验。
 - `90b7c2cb2`：让 Float32 `GameplayAbilityDataAsset.Load` 必须接收并校验 typed provider binding。
+- `30518b1c9`：让 Fixed `FixedGameplayAbilityDataAsset.Load` 采用同一 typed provider binding；同时固化该文件已有的 Fixed 类型限定。
 
 ## 当前实现边界
 
@@ -47,8 +48,9 @@
 - Fixed core：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonSimulation.Fixed.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 warnings、0 errors。
 - Full Editor build：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 errors、94 warnings；警告来自现有项目／依赖代码，不能替代 Unity Console、PlayMode 或端到端行为验证。
 - Float32 runtime build：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 errors、34 warnings；警告来自现有项目／依赖代码。
+- Fixed provider 接入使用同一 `ThirdPersonClient.Runtime.csproj` 编译通过，0 errors、34 warnings；尚未运行 Unity、测试或端到端行为验证。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步
 
-下一步让 Character Host／Session 在准备阶段以 typed binding 解析 Input／Effect／Equipment／状态依赖并报告实际采用结果；之后再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。
+下一步让 Character Host／Session 在准备阶段以 typed binding 解析 Input／Effect／Equipment／状态依赖并报告实际采用结果；目前两种 Numeric Target 的独立 Ability 资源入口已完成，但角色实际装配仍未接入。之后再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。

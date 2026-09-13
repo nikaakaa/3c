@@ -47,6 +47,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             DotRecastAuthorityEndpointDescriptor data = ReadEndpoint(payloadReader);
             DotRecastAuthorityProgramArtifactBinding program = ReadProgram(payloadReader);
             CharacterControlRuntimeBinding controlRuntimeBinding = ReadControlRuntimeBinding(payloadReader);
+            CharacterBodyMotionBinding bodyMotionBinding = ReadBodyMotionBinding(payloadReader);
             DotRecastAuthorityPipelineBinding pipeline = ReadPipeline(payloadReader);
             DotRecastAuthorityWorldBinding world = ReadWorld(payloadReader);
             DotRecastAuthorityRuntimeIdentitySet runtime = ReadRuntime(payloadReader);
@@ -63,6 +64,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 data,
                 program,
                 controlRuntimeBinding,
+                bodyMotionBinding,
                 pipeline,
                 world,
                 runtime,
@@ -89,6 +91,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             WriteEndpoint(writer, manifest.DataEndpoint);
             WriteProgram(writer, manifest.Program);
             WriteControlRuntimeBinding(writer, manifest.ControlRuntimeBinding);
+            WriteBodyMotionBinding(writer, manifest.BodyMotionBinding);
             WritePipeline(writer, manifest.Pipeline);
             WriteWorld(writer, manifest.World);
             WriteRuntime(writer, manifest.Runtime);
@@ -198,6 +201,30 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             var expectedBindingHash = new StableHash(reader.ReadString());
             if (!binding.BindingHash.Equals(expectedBindingHash))
                 throw new InvalidDataException("Manifest Control runtime binding hash does not match its canonical values.");
+            return binding;
+        }
+
+        static void WriteBodyMotionBinding(CanonicalWriter writer, CharacterBodyMotionBinding binding)
+        {
+            writer.WriteString(binding.SourceIdentity);
+            writer.WriteString(binding.ContentRevision.Value);
+            writer.WriteInt32(binding.SemanticVersion);
+            writer.WriteDouble(binding.GravityAcceleration);
+            writer.WriteDouble(binding.MaximumFallSpeed);
+            writer.WriteString(binding.BindingHash.Value);
+        }
+
+        static CharacterBodyMotionBinding ReadBodyMotionBinding(CanonicalReader reader)
+        {
+            var binding = new CharacterBodyMotionBinding(
+                reader.ReadString(),
+                new StableHash(reader.ReadString()),
+                reader.ReadInt32(),
+                reader.ReadDouble(),
+                reader.ReadDouble());
+            StableHash expectedBindingHash = new StableHash(reader.ReadString());
+            if (!binding.BindingHash.Equals(expectedBindingHash))
+                throw new InvalidDataException("Manifest Body Motion binding hash does not match its canonical values.");
             return binding;
         }
 

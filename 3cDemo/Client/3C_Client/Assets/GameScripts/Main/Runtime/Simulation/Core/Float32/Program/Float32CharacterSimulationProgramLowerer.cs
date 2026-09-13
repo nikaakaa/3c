@@ -150,22 +150,6 @@ namespace ThirdPersonSimulation
                 target.Profile,
                 semanticIr.Manifest.Capabilities,
                 semanticIr.Manifest.Root);
-            ProgramBodyMotionDescriptor bodyMotion = semanticIr.BodyMotion == null
-                ? null
-                : new ProgramBodyMotionDescriptor(
-                    semanticIr.BodyMotion.SourceIdentity,
-                    semanticIr.BodyMotion.ContentRevision,
-                    semanticIr.BodyMotion.SemanticVersion,
-                    LowerNumber(
-                        semanticIr.BodyMotion.GravityAcceleration,
-                        $"{semanticIr.BodyMotion.SourceIdentity}/gravity-acceleration",
-                        SemanticNumericPrecision.TargetRounded,
-                        conversions),
-                    LowerNumber(
-                        semanticIr.BodyMotion.MaximumFallSpeed,
-                        $"{semanticIr.BodyMotion.SourceIdentity}/maximum-fall-speed",
-                        SemanticNumericPrecision.TargetRounded,
-                        conversions));
             var constantInputs = new ProgramConstantInputBinding[semanticIr.ConstantInputBindings.Count];
             for (int i = 0; i < constantInputs.Length; i++)
             {
@@ -178,7 +162,6 @@ namespace ThirdPersonSimulation
             }
             var program = new CharacterSimulationProgram(
                 manifest,
-                bodyMotion,
                 definitions,
                 operations,
                 constants,

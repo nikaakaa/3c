@@ -2,9 +2,9 @@ using System;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class CharacterBodyMotionSemanticDescriptor
+    public sealed class CharacterBodyMotionBinding
     {
-        public CharacterBodyMotionSemanticDescriptor(
+        public CharacterBodyMotionBinding(
             string sourceIdentity,
             StableHash contentRevision,
             int semanticVersion,
@@ -25,6 +25,13 @@ namespace ThirdPersonSimulation
             SemanticVersion = semanticVersion;
             GravityAcceleration = gravityAcceleration;
             MaximumFallSpeed = maximumFallSpeed;
+            BindingHash = StableHash.Compute(
+                "character-body-motion-binding/1",
+                SourceIdentity,
+                ContentRevision.Value,
+                SemanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                GravityAcceleration.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                MaximumFallSpeed.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
         }
 
         public string SourceIdentity { get; }
@@ -33,5 +40,6 @@ namespace ThirdPersonSimulation
         public double GravityAcceleration { get; }
         public double MaximumFallSpeed { get; }
         public WorldCapability RequiredWorldCapability => WorldCapability.AirborneVerticalMotion;
+        public StableHash BindingHash { get; }
     }
 }

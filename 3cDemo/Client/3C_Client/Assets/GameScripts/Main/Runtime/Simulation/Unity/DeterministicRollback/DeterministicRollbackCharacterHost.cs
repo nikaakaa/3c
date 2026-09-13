@@ -161,6 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Character Host '{name}' Definition and Program TickRate must match.");
             CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
                 CharacterControlRuntimeModuleCatalog.Create());
+            CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
             ICharacterPresentationRuntime presentation = null;
@@ -272,7 +273,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     diagnosticsContext,
                     diagnosticsTarget,
                     m_MaximumActivePresentationRecords,
-                    controlRuntimeBinding);
+                    controlRuntimeBinding,
+                    bodyMotionBinding);
                 input = null;
                 presentation = null;
                 diagnosticsTarget = null;

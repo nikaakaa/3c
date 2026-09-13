@@ -187,6 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Program TickRate must match.");
             CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
                 CharacterControlRuntimeModuleCatalog.Create());
+            CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
             ICharacterPresentationRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
@@ -281,7 +282,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     diagnosticsTarget,
                     m_MaximumActivePresentationRecords,
                     presentationRuntimeFactory,
-                    controlRuntimeBinding);
+                    controlRuntimeBinding,
+                    bodyMotionBinding);
                 controlSource = null;
                 presentation = null;
                 diagnosticsTarget = null;

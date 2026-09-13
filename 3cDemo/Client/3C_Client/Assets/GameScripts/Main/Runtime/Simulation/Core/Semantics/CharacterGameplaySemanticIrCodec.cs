@@ -334,7 +334,7 @@ namespace ThirdPersonSimulation
             if (reader.ReadInt32() != PayloadVersion)
                 throw new SemanticIrArtifactVersionException("Gameplay Semantic IR payload version is unsupported.");
             CharacterGameplaySemanticIrManifest manifest = ReadManifest(reader);
-            CharacterBodyMotionSemanticDescriptor bodyMotion = reader.ReadBoolean()
+            CharacterBodyMotionBinding bodyMotion = reader.ReadBoolean()
                 ? ReadBodyMotion(reader)
                 : null;
             SemanticLiteral[] literals = ReadTable(reader, ReadLiteral);
@@ -369,7 +369,7 @@ namespace ThirdPersonSimulation
                 graphCallFrames);
         }
 
-        static void WriteBodyMotion(CanonicalWriter writer, CharacterBodyMotionSemanticDescriptor descriptor)
+        static void WriteBodyMotion(CanonicalWriter writer, CharacterBodyMotionBinding descriptor)
         {
             writer.WriteString(descriptor.SourceIdentity);
             writer.WriteString(descriptor.ContentRevision.Value);
@@ -378,9 +378,9 @@ namespace ThirdPersonSimulation
             writer.WriteDouble(descriptor.MaximumFallSpeed);
         }
 
-        static CharacterBodyMotionSemanticDescriptor ReadBodyMotion(CanonicalReader reader)
+        static CharacterBodyMotionBinding ReadBodyMotion(CanonicalReader reader)
         {
-            return new CharacterBodyMotionSemanticDescriptor(
+            return new CharacterBodyMotionBinding(
                 reader.ReadString(),
                 new StableHash(reader.ReadString()),
                 reader.ReadInt32(),

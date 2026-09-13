@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation
             CharacterSimulationState currentState,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterControlRuntimeState controlState,
+            CharacterBodyMotionBinding bodyMotionBinding,
             WorldBodyState previousBody,
             bool diagnosticsEnabled,
             bool valueTraceEnabled = false,
@@ -37,8 +38,13 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
             if (!Program.Manifest.Root.IsCharacter && controlState != null)
                 throw new ArgumentException("Non-Character Program cannot carry Control runtime state.", nameof(controlState));
+            if (Program.Manifest.Root.IsCharacter && bodyMotionBinding == null)
+                throw new ArgumentNullException(nameof(bodyMotionBinding));
+            if (!Program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Body Motion binding.", nameof(bodyMotionBinding));
             ControlRuntimeBinding = controlRuntimeBinding;
             ControlState = controlState;
+            BodyMotionBinding = bodyMotionBinding;
             if (controlState != null)
             {
                 controlState.RequireBinding(controlRuntimeBinding);
@@ -85,6 +91,7 @@ namespace ThirdPersonSimulation
         public CharacterSimulationState CurrentState { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterControlRuntimeState ControlState { get; }
+        public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
         public bool ValueTraceEnabled { get; }
@@ -141,6 +148,7 @@ namespace ThirdPersonSimulation
             Float32CharacterStateTransaction transaction,
             CharacterControlRuntimeState controlState,
             CharacterControlRuntimeStateTransaction controlStateTransaction,
+            CharacterBodyMotionBinding bodyMotionBinding,
             ActorOutputWorkspaceLease outputLease,
             CharacterWorldSolveRequest worldRequest,
             bool diagnosticsEnabled)
@@ -154,6 +162,7 @@ namespace ThirdPersonSimulation
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
             m_ControlStateTransaction = controlStateTransaction ?? throw new ArgumentNullException(nameof(controlStateTransaction));
+            BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             OutputLease = outputLease;
             if (!ReferenceEquals(transaction.Program, Program) ||
                 !ReferenceEquals(transaction.Layout, ExecutionLayout) ||
@@ -165,7 +174,8 @@ namespace ThirdPersonSimulation
                 transaction.Status != Float32CharacterStateTransactionStatus.Active ||
                 !ReferenceEquals(controlStateTransaction.BaseState, controlState) ||
                 controlStateTransaction.Tick.Value != tick.Value ||
-                controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active)
+                controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active ||
+                !Program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
             {
                 throw new InvalidOperationException("Pending evaluation transaction binding is invalid.");
             }
@@ -181,6 +191,7 @@ namespace ThirdPersonSimulation
         public bool DiagnosticsEnabled { get; }
         internal CharacterSimulationState SourceState { get; }
         internal CharacterControlRuntimeState ControlState { get; }
+        internal CharacterBodyMotionBinding BodyMotionBinding { get; }
         internal ProgramExecutionLayout ExecutionLayout { get; }
         internal ActorOutputWorkspaceLease OutputLease { get; }
 

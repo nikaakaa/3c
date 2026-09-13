@@ -29,13 +29,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.HelpBox(m_LoadError, MessageType.Error);
                 return;
             }
-            ProgramBodyMotionDescriptor bodyMotion = m_Program.BodyMotion;
-            EditorGUILayout.LabelField("Body Motion", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Source", bodyMotion.SourceIdentity);
-            EditorGUILayout.LabelField("Revision", bodyMotion.ContentRevision.ToString());
-            EditorGUILayout.LabelField("Semantic Version", bodyMotion.SemanticVersion.ToString());
-            EditorGUILayout.LabelField("Gravity Acceleration", bodyMotion.GravityAcceleration.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
-            EditorGUILayout.LabelField("Maximum Fall Speed", bodyMotion.MaximumFallSpeed.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             EditorGUILayout.LabelField("Required World Capabilities", m_Program.Manifest.Capabilities.RequiredWorldCapabilities.ToString());
             EditorGUILayout.LabelField("Motion Modifiers", m_Program.MotionModifiers.Count.ToString());
             for (int i = 0; i < m_Program.MotionModifiers.Count; i++)

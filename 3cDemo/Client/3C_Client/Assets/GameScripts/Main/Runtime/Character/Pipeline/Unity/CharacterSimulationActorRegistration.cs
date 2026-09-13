@@ -37,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline
 		CharacterPresentationSemanticContract m_PendingPresentationContract;
 		ICharacterPresentationRuntime m_PendingPresentationRuntime;
 		readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
+		readonly CharacterBodyMotionBinding m_BodyMotionBinding;
 		readonly Func<
 			CharacterPresentationSemanticContract,
 			CharacterPresentationProjection,
@@ -63,7 +64,8 @@ namespace ThirdPersonCharacter.Pipeline
 				CharacterPresentationSemanticContract,
 				CharacterPresentationProjection,
 				CharacterPresentationRuntimeBinding> presentationRuntimeFactory,
-			CharacterControlRuntimeBinding controlRuntimeBinding)
+			CharacterControlRuntimeBinding controlRuntimeBinding,
+			CharacterBodyMotionBinding bodyMotionBinding)
 		{
 			if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
 				throw new ArgumentException("Actor registration owner identity is incomplete.");
@@ -76,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline
 			Projection = projection ?? throw new ArgumentNullException(nameof(projection));
 			PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
 			m_ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
+			m_BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
 			Projection.RequireContract(PresentationContract);
 			WorldBodyBinding = worldBodyBinding ? worldBodyBinding : throw new ArgumentNullException(nameof(worldBodyBinding));
 			if (worldBodyBinding.ActorId != actorId || initialBody.ActorId != actorId)
@@ -100,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline
 				new AnimationPresentationProgramIdentity(projection),
 				animationSnapshotProvider);
 			VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
-			ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId, m_ControlRuntimeBinding);
+			ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId, m_ControlRuntimeBinding, m_BodyMotionBinding);
 			VisualRootIdentity = BuildTransformIdentity(visualRoot);
 			SourceMapRevision = diagnostics.Context.Revision;
 			m_PresentationTarget = new CharacterPresentationFrameTarget(presentationRuntime);
@@ -127,6 +130,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public CharacterSimulationProgramAsset ProgramAsset { get; private set; }
 		public CharacterSimulationProgram Program { get; private set; }
 		public CharacterControlRuntimeBinding ControlRuntimeBinding => m_ControlRuntimeBinding;
+		public CharacterBodyMotionBinding BodyMotionBinding => m_BodyMotionBinding;
 		public CharacterPresentationProjectionAsset ProjectionAsset { get; private set; }
 		public CharacterPresentationProjection Projection { get; private set; }
 		public CharacterPresentationSemanticContract PresentationContract { get; private set; }
@@ -241,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline
 			}
 			m_PendingProgramAsset = programAsset;
 			m_PendingProgram = program;
-			m_PendingProgramIdentity = new SimulationActorBinding(ActorId, program, WorldBodyBinding.BindingId, m_ControlRuntimeBinding);
+			m_PendingProgramIdentity = new SimulationActorBinding(ActorId, program, WorldBodyBinding.BindingId, m_ControlRuntimeBinding, m_BodyMotionBinding);
 			return true;
 		}
 

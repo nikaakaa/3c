@@ -318,7 +318,7 @@ namespace ThirdPersonSimulation
 
         public CharacterGameplaySemanticIr(
             CharacterGameplaySemanticIrManifest manifest,
-            CharacterBodyMotionSemanticDescriptor bodyMotion,
+            CharacterBodyMotionBinding bodyMotion,
             IEnumerable<SemanticOperation> operations,
             IEnumerable<SemanticLiteral> literals,
             IEnumerable<SemanticConstantInputBinding> constantInputBindings,
@@ -369,7 +369,7 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterGameplaySemanticIrManifest Manifest { get; }
-        public CharacterBodyMotionSemanticDescriptor BodyMotion { get; }
+        public CharacterBodyMotionBinding BodyMotion { get; }
         public IReadOnlyList<SemanticOperation> Operations => m_Operations;
         public IReadOnlyList<SemanticLiteral> Literals => m_Literals;
         public IReadOnlyList<SemanticConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;

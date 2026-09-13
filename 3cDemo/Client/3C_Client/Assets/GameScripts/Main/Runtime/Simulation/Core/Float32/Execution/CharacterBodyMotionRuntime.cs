@@ -70,20 +70,20 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             WorldBodyState beforeBody,
             ResolvedGameplayMotion gameplayMotion,
-            ProgramBodyMotionDescriptor descriptor,
+            CharacterBodyMotionBinding binding,
             Float32Scalar tickDelta)
         {
             if (!actorId.IsValid || !tick.IsValid || beforeBody.ActorId != actorId)
                 throw new ArgumentException("Body Motion Prepare identity is inconsistent.");
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (binding == null)
+                throw new ArgumentNullException(nameof(binding));
             if (tickDelta <= Float32Scalar.Zero)
                 throw new ArgumentOutOfRangeException(nameof(tickDelta));
 
             Float32Scalar previous = beforeBody.VerticalVelocity;
             Float32Scalar candidate = Float32Scalar.Max(
-                previous + descriptor.GravityAcceleration * tickDelta,
-                -descriptor.MaximumFallSpeed);
+                previous + Float32Scalar.FromDouble(binding.GravityAcceleration) * tickDelta,
+                -Float32Scalar.FromDouble(binding.MaximumFallSpeed));
             Float32Scalar gravityDisplacement = candidate * tickDelta;
             Float32Vector3 gameplayDisplacement = gameplayMotion.Displacement;
             var requestedDisplacement = new Float32Vector3(
@@ -97,9 +97,9 @@ namespace ThirdPersonSimulation
             StableHash identity = ComputeIdentity(
                 actorId,
                 tick,
-                descriptor.SourceIdentity,
-                descriptor.ContentRevision,
-                descriptor.SemanticVersion,
+                binding.SourceIdentity,
+                binding.ContentRevision,
+                binding.SemanticVersion,
                 tickDelta,
                 previous,
                 candidate,
@@ -110,9 +110,9 @@ namespace ThirdPersonSimulation
                 actorId,
                 tick,
                 identity,
-                descriptor.SourceIdentity,
-                descriptor.ContentRevision,
-                descriptor.SemanticVersion,
+                binding.SourceIdentity,
+                binding.ContentRevision,
+                binding.SemanticVersion,
                 tickDelta,
                 previous,
                 candidate,

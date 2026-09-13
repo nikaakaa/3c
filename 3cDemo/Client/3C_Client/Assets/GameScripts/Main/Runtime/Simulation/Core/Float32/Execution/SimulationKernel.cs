@@ -200,7 +200,7 @@ namespace ThirdPersonSimulation
                         request.Tick,
                         request.PreviousBody,
                         evaluation.GameplayMotion,
-                        request.Program.BodyMotion,
+                        request.BodyMotionBinding,
                         tickDelta);
                     var worldRequest = new CharacterWorldSolveRequest(
                         request.Program.Manifest.NumericProfile,
@@ -260,6 +260,7 @@ namespace ThirdPersonSimulation
                 evaluation.Transaction,
                 request.ControlState,
                 evaluation.ControlStateTransaction,
+                request.BodyMotionBinding,
                 outputLease,
                 worldRequest,
                 request.DiagnosticsEnabled);
@@ -463,7 +464,7 @@ namespace ThirdPersonSimulation
                 "world_result_applied",
                 $"prepare=descriptor:{plan.DescriptorSourceIdentity}@{plan.SemanticVersion}/{plan.DescriptorContentRevision}," +
                 $"gameplayY:{plan.GameplayVerticalDisplacement},previousVertical:{plan.PreviousVerticalVelocity}," +
-                $"gravityAcceleration:{pending.Program.BodyMotion.GravityAcceleration},gravityDelta:{plan.GravityDisplacement}," +
+                $"gravityAcceleration:{pending.BodyMotionBinding.GravityAcceleration},gravityDelta:{plan.GravityDisplacement}," +
                 $"candidateVertical:{plan.CandidateVerticalVelocity},requestedY:{plan.RequestedDisplacement.Y};" +
                 $"solve=request:{world.RequestId},solver:{world.SolverId.Value},appliedY:{world.AppliedDisplacement.Y}," +
                 $"grounded:{world.FinalBody.Grounded},collision:{world.FinalBody.Collision};" +

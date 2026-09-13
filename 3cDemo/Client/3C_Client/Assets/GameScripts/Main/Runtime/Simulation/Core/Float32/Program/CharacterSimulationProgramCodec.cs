@@ -124,8 +124,8 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x4d495343;
-        const int ArtifactVersion = 17;
-        const int ProgramFormatVersion = 22;
+        const int ArtifactVersion = 18;
+        const int ProgramFormatVersion = 23;
         const int LayoutFormatVersion = 10;
         const int SourceMapStringTableVersion = 6;
 
@@ -290,9 +290,6 @@ namespace ThirdPersonSimulation
         {
             writer.WriteInt32(ProgramFormatVersion);
             WriteManifest(writer, program.Manifest);
-            writer.WriteBoolean(program.BodyMotion != null);
-            if (program.BodyMotion != null)
-                WriteBodyMotion(writer, program.BodyMotion);
             writer.WriteString(program.LayoutHash.ToString());
             WriteTable(writer, program.Constants, WriteConstant);
             WriteTable(writer, program.OperationDefinitions, WriteOperationDefinition);
@@ -317,9 +314,6 @@ namespace ThirdPersonSimulation
             if (reader.ReadInt32() != ProgramFormatVersion)
                 throw new InvalidDataException("Character Simulation Program payload version is unsupported.");
             CharacterSimulationProgramManifest manifest = ReadManifest(reader);
-            ProgramBodyMotionDescriptor bodyMotion = reader.ReadBoolean()
-                ? ReadBodyMotion(reader)
-                : null;
             var expectedLayoutHash = new LayoutHash(new StableHash(reader.ReadString()));
             ProgramConstant[] constants = ReadTable(reader, ReadConstant);
             SimulationOperationDefinition[] operationDefinitions = ReadTable(reader, ReadOperationDefinition);
@@ -342,7 +336,6 @@ namespace ThirdPersonSimulation
             reader.RequireComplete();
             var program = new CharacterSimulationProgram(
                 manifest,
-                bodyMotion,
                 operationDefinitions,
                 operations,
                 constants,
@@ -361,25 +354,6 @@ namespace ThirdPersonSimulation
             if (!program.LayoutHash.Equals(expectedLayoutHash))
                 throw new InvalidDataException($"Program payload layout hash mismatch. Expected '{expectedLayoutHash}', actual '{program.LayoutHash}'.");
             return program;
-        }
-
-        static void WriteBodyMotion(CanonicalWriter writer, ProgramBodyMotionDescriptor descriptor)
-        {
-            writer.WriteString(descriptor.SourceIdentity);
-            writer.WriteString(descriptor.ContentRevision.Value);
-            writer.WriteInt32(descriptor.SemanticVersion);
-            writer.WriteScalar(descriptor.GravityAcceleration);
-            writer.WriteScalar(descriptor.MaximumFallSpeed);
-        }
-
-        static ProgramBodyMotionDescriptor ReadBodyMotion(CanonicalReader reader)
-        {
-            return new ProgramBodyMotionDescriptor(
-                reader.ReadString(),
-                new StableHash(reader.ReadString()),
-                reader.ReadInt32(),
-                reader.ReadScalar(),
-                reader.ReadScalar());
         }
 
         static void WriteConstantInputBinding(CanonicalWriter writer, ProgramConstantInputBinding binding)

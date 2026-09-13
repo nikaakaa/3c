@@ -140,6 +140,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
             CharacterControlRuntimeBinding controlRuntimeBinding = definition.BuildControlRuntimeBinding(
                 controlModules);
+            CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
             LoadedCharacterTargetProgramArtifact inspectedProgram = CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, programBytes);
             if (!inspectedProgram.Program.ProgramHash.Equals(program.ProgramHash) ||
                 !inspectedProgram.Program.LayoutHash.Equals(program.LayoutHash))
@@ -250,6 +251,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.DataEndpoint,
                 programBinding,
                 controlRuntimeBinding,
+                bodyMotionBinding,
                 pipelineBinding,
                 worldBinding,
                 runtimeIdentities,

@@ -58,6 +58,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 var diagnostics = new CharacterSimulationDiagnosticsAdapter(diagnosticsContext, program);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
                 WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
+                CharacterControlRuntimeBinding controlRuntimeBinding = m_CharacterDefinition.BuildControlRuntimeBinding(
+                    CharacterControlRuntimeModuleCatalog.Create());
+                CharacterBodyMotionBinding bodyMotionBinding = m_CharacterDefinition.BuildBodyMotionRuntimeBinding();
                 registration = new ServerAuthoritativeAuthorityActorRegistration(
                     GetInstanceID(),
                     name,
@@ -68,8 +71,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     initialBody,
                     diagnostics,
                     diagnosticsTarget,
-                    m_CharacterDefinition.BuildControlRuntimeBinding(
-                        ThirdPersonCharacter.Control.Rules.CorinCharacterControlModuleCatalog.Create()));
+                    controlRuntimeBinding,
+                    bodyMotionBinding);
                 diagnosticsTarget = null;
                 m_SessionHost.RegisterActor(registration);
                 m_Registration = registration;

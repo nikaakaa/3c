@@ -71,6 +71,7 @@ namespace ThirdPersonSimulation
                 if (!program.Manifest.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion))
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program operation-set does not match the Float32 Kernel.");
                 ValidateControlRuntimeBinding(binding, program, controlModules);
+                ValidateBodyMotionBinding(binding, program);
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -136,6 +137,12 @@ namespace ThirdPersonSimulation
                 {
                     throw new InvalidOperationException($"Actor '{next.ActorId}' Control runtime binding changed during adoption.");
                 }
+                if ((current.BodyMotionBinding == null) != (next.BodyMotionBinding == null) ||
+                    current.BodyMotionBinding != null &&
+                    !current.BodyMotionBinding.BindingHash.Equals(next.BodyMotionBinding.BindingHash))
+                {
+                    throw new InvalidOperationException($"Actor '{next.ActorId}' Body Motion binding changed during adoption.");
+                }
             }
             var kernelBindings = new KernelProgramBinding[catalog.Programs.Count];
             var bindingsByProgram = new Dictionary<ProgramId, KernelProgramBinding>();
@@ -180,6 +187,7 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program binding is stale or incompatible.");
                 }
                 ValidateControlRuntimeBinding(binding, program, controlModules);
+                ValidateBodyMotionBinding(binding, program);
                 if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
                 {
                     if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
@@ -212,6 +220,22 @@ namespace ThirdPersonSimulation
                 module.Contract,
                 program.AbilityPrograms,
                 program.GraphCallFrames);
+        }
+
+        static void ValidateBodyMotionBinding(
+            SimulationActorBinding binding,
+            CharacterSimulationProgram program)
+        {
+            if (!program.Manifest.Root.IsCharacter)
+            {
+                if (binding.BodyMotionBinding != null)
+                    throw new InvalidOperationException("Non-Character Program cannot carry a Body Motion binding.");
+                return;
+            }
+            CharacterBodyMotionBinding bodyMotion = binding.BodyMotionBinding ??
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has no Body Motion binding.");
+            if ((program.Manifest.Capabilities.RequiredWorldCapabilities & bodyMotion.RequiredWorldCapability) != bodyMotion.RequiredWorldCapability)
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Body Motion binding requires an unregistered World capability.");
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)

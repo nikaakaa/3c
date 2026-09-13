@@ -151,37 +151,6 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class ProgramBodyMotionDescriptor
-    {
-        public ProgramBodyMotionDescriptor(
-            string sourceIdentity,
-            StableHash contentRevision,
-            int semanticVersion,
-            Float32Scalar gravityAcceleration,
-            Float32Scalar maximumFallSpeed)
-        {
-            SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
-            if (!contentRevision.IsValid)
-                throw new ArgumentException("Body Motion content revision is required.", nameof(contentRevision));
-            if (semanticVersion != 1)
-                throw new ArgumentOutOfRangeException(nameof(semanticVersion), "Body Motion semantic version is unsupported.");
-            if (gravityAcceleration >= Float32Scalar.Zero)
-                throw new ArgumentOutOfRangeException(nameof(gravityAcceleration));
-            if (maximumFallSpeed <= Float32Scalar.Zero)
-                throw new ArgumentOutOfRangeException(nameof(maximumFallSpeed));
-            ContentRevision = contentRevision;
-            SemanticVersion = semanticVersion;
-            GravityAcceleration = gravityAcceleration;
-            MaximumFallSpeed = maximumFallSpeed;
-        }
-
-        public string SourceIdentity { get; }
-        public StableHash ContentRevision { get; }
-        public int SemanticVersion { get; }
-        public Float32Scalar GravityAcceleration { get; }
-        public Float32Scalar MaximumFallSpeed { get; }
-    }
-
     public sealed class CharacterSimulationProgramManifest
     {
         public CharacterSimulationProgramManifest(
@@ -243,7 +212,6 @@ namespace ThirdPersonSimulation
 
         public CharacterSimulationProgram(
             CharacterSimulationProgramManifest manifest,
-            ProgramBodyMotionDescriptor bodyMotion,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
             IEnumerable<SimulationOperation> operations,
             IEnumerable<ProgramConstant> constants,
@@ -261,14 +229,9 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            if (Manifest.Root.IsCharacter && bodyMotion == null)
-                throw new ArgumentNullException(nameof(bodyMotion));
-            if (Manifest.Root.IsTimeline && bodyMotion != null)
-                throw new ArgumentException("Timeline Program cannot contain Character Body Motion.", nameof(bodyMotion));
-            BodyMotion = bodyMotion;
             if (Manifest.Root.IsCharacter &&
                 (Manifest.Capabilities.RequiredWorldCapabilities & WorldCapability.AirborneVerticalMotion) == 0)
-                throw new ArgumentException("Program Body Motion requires AirborneVerticalMotion capability.", nameof(manifest));
+                throw new ArgumentException("Character Program requires AirborneVerticalMotion capability.", nameof(manifest));
             m_OperationDefinitions = SortIndexed(operationDefinitions, value => value.Index, "operation definition");
             m_Operations = SortIndexed(operations, value => value.Handle.Value, "operation");
             m_Constants = SortIndexed(constants, value => value.Index, "constant");
@@ -297,7 +260,6 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterSimulationProgramManifest Manifest { get; }
-        public ProgramBodyMotionDescriptor BodyMotion { get; }
         public IReadOnlyList<SimulationOperationDefinition> OperationDefinitions => m_OperationDefinitions;
         public IReadOnlyList<SimulationOperation> Operations => m_Operations;
         public IReadOnlyList<ProgramConstant> Constants => m_Constants;

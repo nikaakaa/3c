@@ -104,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     report,
                     root);
                 builder.SetBodyMotion(
-                    new CharacterBodyMotionSemanticDescriptor(
+                    new CharacterBodyMotionBinding(
                         model.BodyMotionSourceIdentity,
                         model.BodyMotionContentRevision,
                         CharacterBodyMotionProfile.SemanticVersion,

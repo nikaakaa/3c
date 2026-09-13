@@ -124,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly HashSet<string> m_GameplayCapabilities = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<ProgramStateValueKind, int> m_DefaultConstants = new Dictionary<ProgramStateValueKind, int>();
         WorldCapability m_RequiredWorldCapabilities;
-        CharacterBodyMotionSemanticDescriptor m_BodyMotion;
+        CharacterBodyMotionBinding m_BodyMotion;
 
         public CharacterSimulationProgramBuilder(
             ProgramId programId,
@@ -537,7 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return index;
         }
 
-        public void SetBodyMotion(CharacterBodyMotionSemanticDescriptor descriptor, CharacterSimulationSourceLocation source)
+        public void SetBodyMotion(CharacterBodyMotionBinding descriptor, CharacterSimulationSourceLocation source)
         {
             if (m_BodyMotion != null)
                 throw new InvalidOperationException("Body Motion descriptor was already emitted.");

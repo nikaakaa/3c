@@ -391,15 +391,16 @@ namespace BTSMTL.Timeline.Editor
             throw new InvalidOperationException($"Timeline curve channel '{channelId}' has no editor field.");
         }
 
-        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor)
+        float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor)
         {
+            int frameRate = m_Owner.FrameRate;
             if (sourceClip is MotionCurveClip motion &&
                 (descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionX ||
                  descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionY ||
                  descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionZ ||
                  descriptor.ChannelId == TimelineCurveChannelCatalog.MotionYaw))
-                return Mathf.Max(1f / TimelineUtility.FrameRate, (motion.CurveEndFrame - motion.StartFrame) / (float)TimelineUtility.FrameRate);
-            return Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
+                return Mathf.Max(1f / frameRate, (motion.CurveEndFrame - motion.StartFrame) / (float)frameRate);
+            return Mathf.Max(1f / frameRate, sourceClip.Duration / (float)frameRate);
         }
 
         static AnimationCurve ConvertCurveTime(AnimationCurve source, float duration, bool toNormalized)
@@ -432,11 +433,11 @@ namespace BTSMTL.Timeline.Editor
     sealed class BtsmtlTimelineSectionBinding : IEmbeddedTimelineSectionBinding
     {
         readonly TimelineSection m_Source;
-        public BtsmtlTimelineSectionBinding(TimelineSection source)
+        public BtsmtlTimelineSectionBinding(BtsmtlSlateTimelineDirectProjection owner, TimelineSection source)
         {
             m_Source = source;
             Name = source.Name;
-            Time = source.Frame / (float)TimelineUtility.FrameRate;
+            Time = source.Frame / (float)owner.FrameRate;
         }
         public string AuthoringId => m_Source.AuthoringId;
         public string DisplayName => Name;
@@ -1136,7 +1137,7 @@ namespace BTSMTL.Timeline.Editor
                 TimelineSection sourceSection = Timeline.Sections[sectionIndex];
                 if (sourceSection == null)
                     continue;
-                var directSection = new BtsmtlTimelineSectionBinding(sourceSection);
+                var directSection = new BtsmtlTimelineSectionBinding(this, sourceSection);
                 m_Sections.Add(directSection);
                 m_SectionsById[sourceSection.AuthoringId] = directSection;
             }

@@ -225,7 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 producer.ProgramProducerIdentity,
                 command.ProducerGeneration,
                 command.SourceActionInstanceId);
-            m_EffectEvaluator.StopScope(scope);
+            m_EffectEvaluator.RetireScope(
+                scope,
+                CameraPresentationStopReason.Cancel);
             RemoveScopeInstances(command);
             RemovePendingEffectsAllCycles(
                 producer.ProgramProducerIdentity,

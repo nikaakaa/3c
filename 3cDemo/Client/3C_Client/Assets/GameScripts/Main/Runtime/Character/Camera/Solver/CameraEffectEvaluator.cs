@@ -42,17 +42,22 @@ namespace ThirdPersonCamera
             m_VisibleStates.Clear();
         }
 
-        public void StopScope(CameraPresentationScopeKey scope)
+        public void RetireScope(
+            CameraPresentationScopeKey scope,
+            CameraPresentationStopReason reason)
         {
-            m_States.ClearScope(scope);
-            for (int i = m_PendingRetirements.Count - 1; i >= 0; i--)
+            for (int i = 0; i < m_States.Active.Count; i++)
             {
-                PendingRetirement pending = m_PendingRetirements[i];
-                if (new CameraPresentationScopeKey(
-                        pending.SourceId,
-                        pending.Generation,
-                        pending.SourceActionInstanceId).Equals(scope))
-                    m_PendingRetirements.RemoveAt(i);
+                CameraEffectRuntimeState state = m_States.Active[i];
+                if (!state.Request.Scope.Equals(scope))
+                    continue;
+                m_States.Retire(
+                    state.Request.EventId,
+                    state.Request.Generation,
+                    state.Request.SourceId,
+                    state.Request.SourceActionInstanceId,
+                    state.Request.Cycle,
+                    reason);
             }
         }
 

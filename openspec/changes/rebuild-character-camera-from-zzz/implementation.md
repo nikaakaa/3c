@@ -26,7 +26,7 @@
 | 1.1-1.2 基础构图与唯一轨道 owner | 部分完成 | 默认轨道仍由 DefaultSequence 唯一拥有；Profile/Projection schema 已升到 v2，重复 DefaultSphere/DefaultOrbitGroup 已删除；多点/双点无消费者的 BeginCameraDataId 与 LayerMask 已删除；生成 Projection 仍是旧 v1，必须正式重发布。 |
 | 1.3-1.4 配置消费者与输入合同 | 部分完成 | CameraLocateRadius、RotationTransitionSeconds、Offset/AspectRatio、响应权、最终俯仰限幅和 Reset 原因已接入；无消费者的 Locking 与 ChangeAvatar 配置已删除；无时钟/上下文消费者的 MakeContextDependent、PlayLength 已从 Camera authoring/payload/compiler 和 Corin 默认资产删除；失焦专用来源仍未形成。 |
 | 2.1-2.3 平滑、裁决与连续性 | 完成 | WorldBasicHistory 普通推进保留速度；Sequence/Response/Target 同权裁决统一，零权 Sequence 不再抢占；切镜使用显式 BlendIn，未配置时使用 Profile RotationTransitionSeconds。 |
-| 2.4 生命周期 | 部分完成 | Sequence/Effect 请求保留 source/generation/action/cycle/event 身份并区分结束原因；Unity Owner 销毁和正式产物运行尚未取得当前 Editor 证据。 |
+| 2.4 生命周期 | 部分完成 | Sequence/Effect 请求保留 source/generation/action/cycle/event 身份并区分结束原因；ForceTeardown 现在按 `Cancel` 退休同 scope 的效果，保留已有 FadeOut/诊断链；Unity Owner 销毁和正式产物运行尚未取得当前 Editor 证据。 |
 | 3.1-3.2 锁定和多目标构图 | 部分完成 | 目标槽、显式目标切换、双点/多点/实体计划已接线；运行中目标 Transform 失效会按 `TargetInvalid` 移除对应目标请求并重新解析默认/剩余目标，启动时漏绑仍作为配置错误抛出；不自动选敌；未被 Planner 消费的 Entity frame/rotation policy 字段已删除，当前内置实体构图公式仍没有 ZZZ 来源闭包。 |
 | 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；Camera Resource Track 已注册为 typed Camera request；当前 Corin 只有 Zoom/Stretch 正式资源，Shake/Override 没有来源触发闭包。 |
 | 4.4-4.5 Shot 与固定效果顺序 | 部分完成 | Shot 编译要求真实 prefab 和标准 VCam，Adapter 支持显式 Shot rig binding；已知来源 prefab 尚未进入工程；顺序固定为 Override→Zoom→Stretch→Shake→Shot→Environment。 |
@@ -79,6 +79,7 @@
 - Camera Sequence transition 现在保留 `SequenceRetiring` 与最后一次 `SequenceStopReason`，并同步进入 DebugSnapshot/PresentationCaptureFrame；自然结束、取消和事件撤销不再只影响内部转场而丢失最终采样帧的退出原因。
 - Camera 最终输出在 Effect 求值后统一按 Profile `Input.PitchLimit` 限制俯仰，再进入环境约束与 Adapter；避免后续 Stretch/Override/Shot 改写越过基础输入合同。
 - Camera plan continuity operator 已消费并校验 `SequenceRetiring/SequenceStopReason` 与 `TargetRetired/TargetStopReason/TargetRetiredKey`，退出合同异常会进入诊断失败结果；尚未取得 Unity 运行时采样证据。
+- Camera `ForceTeardown` 已从同 scope 直接清除改为 `Cancel` 退休，效果 owner 继续按各自 RetireDuration 淡出；未改变 Sequence force cut 的职责。
 - 当前 Corin `CorinAttack1Timeline.asset` 的 `Attack1CameraCue` 仍是通用 `ActionCueClip`，只有 `CueId: Attack1CameraCue` 与 `CueType: Camera`，没有正式 `CameraCueClip.ResourceId`；因此外部动作资料中的 camera key 仍不能直接迁成正式 Camera request，避免伪造资源映射。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

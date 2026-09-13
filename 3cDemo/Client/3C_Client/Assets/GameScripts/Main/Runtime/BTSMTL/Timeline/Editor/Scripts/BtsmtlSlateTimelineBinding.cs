@@ -72,6 +72,11 @@ namespace BTSMTL.Timeline.Editor
         public IReadOnlyList<IEmbeddedTimelineSectionBinding> Sections => m_Sections;
         public IEmbeddedTimelineElementBinding Selected => m_Selected;
 
+        public void SetReadOnly(bool readOnly)
+        {
+            m_ReadOnly = readOnly;
+        }
+
         public bool IsSourceCurrent()
         {
             return string.Equals(

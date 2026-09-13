@@ -2,6 +2,7 @@
 
 using UnityEditor;
 using UnityEngine;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -297,6 +298,8 @@ namespace Slate
         [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMax;
         [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
+        [System.NonSerialized] private System.Func<string, bool> embeddedRuntimeTrackActive;
+        [System.NonSerialized] private System.Func<string, string> embeddedRuntimeClipStatus;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
         [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
@@ -852,6 +855,14 @@ namespace Slate
             embeddedHistoryTime = historyTime;
         }
 
+        public void ConfigureEmbeddedRuntimeState(
+            System.Func<string, bool> trackActive,
+            System.Func<string, string> clipStatus)
+        {
+            embeddedRuntimeTrackActive = trackActive;
+            embeddedRuntimeClipStatus = clipStatus;
+        }
+
         public void InitializeStandalone(
             Cutscene newCutscene,
             System.Action repaint,
@@ -960,6 +971,8 @@ namespace Slate
             embeddedSetViewTimeMax = null;
             embeddedRuntimeTime = null;
             embeddedHistoryTime = null;
+            embeddedRuntimeTrackActive = null;
+            embeddedRuntimeClipStatus = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             embeddedTimeline = null;
@@ -2550,13 +2563,14 @@ namespace Slate
                 if (group.IsCollapsed)
                     continue;
 
-                IReadOnlyList<IEmbeddedTimelineTrackBinding> tracks = group.Tracks;
+                    IReadOnlyList<IEmbeddedTimelineTrackBinding> tracks = group.Tracks;
                 for (int trackIndex = 0; trackIndex < tracks.Count; trackIndex++)
                 {
                     IEmbeddedTimelineTrackBinding track = tracks[trackIndex];
                     Rect trackRect = new Rect(10, nextY, leftRect.width - TRACK_RIGHT_MARGIN - 10, track.FinalHeight);
                     nextY += track.FinalHeight + TRACK_MARGINS;
-                    GUI.color = track.IsActive ? ColorUtility.Grey(isProSkin ? 0.25f : 0.9f) : ColorUtility.Grey(isProSkin ? 0.2f : 0.8f);
+                    bool runtimeActive = embeddedRuntimeTrackActive == null || embeddedRuntimeTrackActive(track.AuthoringId);
+                    GUI.color = track.IsActive && runtimeActive ? ColorUtility.Grey(isProSkin ? 0.25f : 0.9f) : ColorUtility.Grey(isProSkin ? 0.2f : 0.8f);
                     GUI.DrawTexture(trackRect, whiteTexture);
                     GUI.color = ReferenceEquals(embeddedTimeline.Selected, track) ? LIST_SELECTION_COLOR : Color.white.WithAlpha(0.25f);
                     GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
@@ -3413,6 +3427,9 @@ namespace Slate
                         GUI.color = wrapper.editorBinding.IsValid ? Color.white : new Color(1, 0.3f, 0.3f);
                         GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
                         wrapper.rect = GUI.Window(id, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
+                        string runtimeStatus = embeddedRuntimeClipStatus?.Invoke(clip.AuthoringId);
+                        if (!string.IsNullOrEmpty(runtimeStatus))
+                            GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
                         GUI.color = Color.white;
                     }
                 }

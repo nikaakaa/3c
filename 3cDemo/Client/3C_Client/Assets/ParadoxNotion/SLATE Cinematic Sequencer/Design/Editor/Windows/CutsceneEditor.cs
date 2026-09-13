@@ -484,6 +484,24 @@ namespace Slate
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
         }
 
+        float EmbeddedCurrentTime()
+        {
+            if (embeddedCurrentFrame != null)
+                return embeddedCurrentFrame() / (float)Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
+            return cutscene.currentTime;
+        }
+
+        void SetEmbeddedCurrentTime(float time)
+        {
+            if (embeddedSetCurrentFrame != null)
+            {
+                int frame = Mathf.RoundToInt(Mathf.Max(0f, time) * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+                embeddedSetCurrentFrame(frame);
+                return;
+            }
+            cutscene.currentTime = time;
+        }
+
         public static float CurrentSnapInterval {
             get
             {
@@ -1615,8 +1633,9 @@ namespace Slate
             DrawGuideLine(length, isProSkin ? Color.white : Color.black);
 
             //draw a vertical line at current time
-            if ( cutscene.currentTime > 0 ) {
-                DrawGuideLine(cutscene.currentTime, scruberColor);
+            var embeddedCurrentTime = EmbeddedCurrentTime();
+            if ( embeddedCurrentTime > 0 ) {
+                DrawGuideLine(embeddedCurrentTime, scruberColor);
             }
 
             //draw a vertical line at dragging clip start/end time
@@ -1856,8 +1875,8 @@ namespace Slate
 
             var pointerTime = PosToTime(mousePosition.x);
             if ( isMovingScrubCarret ) {
-                cutscene.currentTime = SnapTime(pointerTime);
-                cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
+                var scrubTime = Mathf.Clamp(SnapTime(pointerTime), Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
+                SetEmbeddedCurrentTime(scrubTime);
             }
 
             if ( isMovingEndCarret ) {
@@ -2122,13 +2141,14 @@ namespace Slate
                 }
 
                 //the number showing current time when scubing
-                if ( cutscene.currentTime > 0 ) {
+                var embeddedCurrentTime = EmbeddedCurrentTime();
+                if ( embeddedCurrentTime > 0 ) {
                     var label = doFrames
-                        ? Mathf.RoundToInt(cutscene.currentTime * frameRate).ToString("0") + "F"
-                        : cutscene.currentTime.ToString("0.00");
+                        ? Mathf.RoundToInt(embeddedCurrentTime * frameRate).ToString("0") + "F"
+                        : embeddedCurrentTime.ToString("0.00");
                     var text = "<b><size=17>" + label + "</size></b>";
                     var size = Styles.headerBoxStyle.CalcSize(new GUIContent(text));
-                    var posX = TimeToPos(cutscene.currentTime);
+                    var posX = TimeToPos(embeddedCurrentTime);
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y / 2);
 

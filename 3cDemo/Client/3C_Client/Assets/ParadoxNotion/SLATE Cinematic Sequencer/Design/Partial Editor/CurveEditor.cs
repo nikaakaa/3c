@@ -103,7 +103,7 @@ namespace Slate
 
             private object cEditor;
             private Action rawOnCurvesUpdated;
-            private Action undoRedoHandler;
+            private UnityEditor.Undo.UndoRedoCallback undoRedoHandler;
 
             public CurveRenderer(IAnimatableData animatable, IKeyable keyable, Rect posRect) {
                 this.animatable = animatable;
@@ -128,8 +128,12 @@ namespace Slate
             }
 
             void SubscribeUndoRedo() {
-                undoRedoHandler = RefreshCurves;
+                undoRedoHandler = OnUndoRedo;
                 Undo.undoRedoPerformed += undoRedoHandler;
+            }
+
+            void OnUndoRedo() {
+                RefreshCurves();
             }
 
             public void Dispose() {

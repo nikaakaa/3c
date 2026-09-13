@@ -41,8 +41,9 @@ TimelineEditorWindow
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与正式右侧 Inspector，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；前者只提供 Slate 编辑器 UI/接口，后者只提供正式 Camera Resource 字段类型，均不改变 TimelineData owner，也不引入 Slate 组件树。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
-- 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换时间/引导数据，不启用 Slate 播放或采样。
+- 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换作者时间、调用正式 Clip 编辑或绘制引导，不启用 Slate 播放或采样。
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。
+- 正式 Timeline 的快捷键在 `CutsceneEditor.DoKeyboardShortcuts` 入口先分流：逗号/句号只逐帧移动，K/S/F/C 分别进入正式 Clip 的加 key、拆分、适配和清理曲线；Space 被明确消费，不进入原生 Slate 播放。删除 Track/Clip/Section 等已经由 binding 自己调用正式 Session 的命令，不再被外层 Slate 草稿事务重复包裹。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
@@ -70,7 +71,7 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 
 ## 编译证据
 
-2026-09-13 当前 Unity Editor 在精确重导入 `BTSMTL.Timeline.Tree.Editor.asmdef` 与 `TimelineFormalClipDetailsView.cs` 后，Console 已清除 Timeline/Slate/Camera 引用错误；剩余错误来自工作区其它 Character 文件的重复 `Serializable` 与 `IGameplayBehaviorProfile` 缺失成员，不归本 change。
+2026-09-13 当前 Unity Editor 在重新编译 Slate 与 Timeline 编辑程序集后，Console 已清除 Timeline/Slate/Camera 引用错误；当前剩余 1 个错误来自工作区其它 Character 文件的 `GameplayAbilityDefinition.IsTerminalTransition` 访问级别，不归本 change。
 
 已通过（Timeline Editor 程序集）：
 
@@ -81,7 +82,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj \
 
 结果为 0 errors；仅有项目及第三方既有 warnings。该次编译使用了生成项目所需的 `LangVersion=11.0` 覆盖；每次构建后执行 `dotnet build-server shutdown`。
 
-`BTSMTL.Timeline.Tree.Editor` 的联合编译仍被工作区已有的 `ThirdPersonCamera.Contracts` 生成源问题阻断：当前生成项目还缺少 `CameraFrameTwoPointsPayload.RequireValid`。这不是 Timeline 绑定代码错误，且不替代 Unity Editor 端到端验收。
+`BTSMTL.Timeline.Tree.Editor` 目标程序集本轮以 0 错误、0 警告通过；主 Editor 工程仍可能被工作区其它 Character/Camera 生成项目的错误阻断，这不是 Timeline 绑定代码错误，且不替代 Unity Editor 端到端验收。
 
 主 Editor 工程的联合编译仍可能被工作区其它生成项目的现有 Camera 合同缺失成员阻断；本轮不修改这些无关业务文件，也不把该失败归因于 Timeline 绑定。该验证不替代 Unity Editor 端到端验收。
 

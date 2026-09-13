@@ -363,7 +363,39 @@ namespace Slate
             */
 
         }
+
+        public static void DrawTimelineGUI(
+            Event e,
+            Rect posRect,
+            Rect timeRect,
+            float cursorTime,
+            System.Func<float, float> timeToPosition,
+            bool showCurves,
+            IKeyable keyable,
+            ref int inspectedParameterIndex,
+            Action<Event, Rect, float> drawContextMenu,
+            Func<UnityEngine.Object, bool> canAcceptDrop,
+            Func<UnityEngine.Object, float, bool> acceptDrop)
+        {
+            var clipsPosRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin, posRect.xMax, posRect.yMin + 32f);
+            drawContextMenu?.Invoke(e, clipsPosRect, cursorTime);
+
+            if (showCurves)
+            {
+                var curvesPosRect = Rect.MinMaxRect(posRect.xMin, clipsPosRect.yMax, posRect.xMax, posRect.yMax);
+                DrawClipCurves(e, curvesPosRect, timeRect, timeToPosition, keyable, () => keyable != null, ref inspectedParameterIndex);
+            }
+
+            if (e.type == EventType.DragUpdated && posRect.Contains(e.mousePosition) &&
+                UnityEditor.DragAndDrop.objectReferences.Length == 1 && canAcceptDrop != null &&
+                canAcceptDrop(UnityEditor.DragAndDrop.objectReferences[0]))
+                UnityEditor.DragAndDrop.visualMode = UnityEditor.DragAndDropVisualMode.Link;
+
+            if (e.type == EventType.DragPerform && posRect.Contains(e.mousePosition) &&
+                UnityEditor.DragAndDrop.objectReferences.Length == 1 && acceptDrop != null &&
+                acceptDrop(UnityEditor.DragAndDrop.objectReferences[0], cursorTime))
+                UnityEditor.DragAndDrop.AcceptDrag();
+        }
     }
 }
 #endif
-

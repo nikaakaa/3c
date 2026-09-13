@@ -407,27 +407,18 @@ namespace Slate
 
         ///<summary>The Editor GUI within the timeline rectangle</summary>
         virtual public void OnTrackTimelineGUI(Rect posRect, Rect timeRect, float cursorTime, System.Func<float, float> TimeToPos) {
-            var e = Event.current;
-
-            var clipsPosRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin, posRect.xMax, posRect.yMin + defaultHeight);
-            DoTrackContextMenu(e, clipsPosRect, cursorTime);
-
-            if ( showCurves ) {
-                var curvesPosRect = Rect.MinMaxRect(posRect.xMin, clipsPosRect.yMax, posRect.xMax, posRect.yMax);
-                DoClipCurves(e, curvesPosRect, timeRect, TimeToPos, showCurvesClip);
-            }
-
-            if ( e.type == EventType.DragUpdated && posRect.Contains(e.mousePosition) ) {
-                if ( UnityEditor.DragAndDrop.objectReferences.Length == 1 && OnCanAcceptDrop(UnityEditor.DragAndDrop.objectReferences[0]) ) {
-                    UnityEditor.DragAndDrop.visualMode = UnityEditor.DragAndDropVisualMode.Link;
-                }
-            }
-
-            if ( e.type == EventType.DragPerform && posRect.Contains(e.mousePosition) ) {
-                if ( UnityEditor.DragAndDrop.objectReferences.Length == 1 && OnAcceptDrop(UnityEditor.DragAndDrop.objectReferences[0], cursorTime) ) {
-                    UnityEditor.DragAndDrop.AcceptDrag();
-                }
-            }
+            TrackEditorGUI.DrawTimelineGUI(
+                Event.current,
+                posRect,
+                timeRect,
+                cursorTime,
+                TimeToPos,
+                showCurves,
+                showCurvesClip,
+                ref inspectedParameterIndex,
+                DoTrackContextMenu,
+                OnCanAcceptDrop,
+                OnAcceptDrop);
         }
 
         //...
@@ -492,4 +483,3 @@ namespace Slate
 #endif
     }
 }
-

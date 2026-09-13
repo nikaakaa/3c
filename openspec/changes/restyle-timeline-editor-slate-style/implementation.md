@@ -42,6 +42,7 @@ TimelineEditorWindow
 - DopeSheet key strip 从纯内存完整曲线快照读取；支持关键帧多选和按作者帧整体拖动，正式 key、切线、权重和 wrap 不被删除或量化，CurveRenderer 负责切线与细节编辑。
 - DopeSheet key strip 以 `ClipId + CurveId` 区分活动曲线，使用每个曲线自己的作者帧域显示关键帧；拖动草稿会同步刷新 Slate CurveRenderer，提交仍只经过正式曲线命令 port。
 - Section 标记支持选中，右侧 Inspector 直接编辑名称、作者帧和下一个 Section 引用，提交使用 `TimelineData.ConfigureSection/ConfigureSectionNext`，不再留下只能拖动、不能查看属性的漂浮标记。
+- Track Inspector 直接编辑正式 Track 名称和 `PersistentMuted`；曲线关键帧选择会保留所属 Clip 的 Inspector 上下文，不再因为纯 Surface 的 `Key` 选择被清空。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

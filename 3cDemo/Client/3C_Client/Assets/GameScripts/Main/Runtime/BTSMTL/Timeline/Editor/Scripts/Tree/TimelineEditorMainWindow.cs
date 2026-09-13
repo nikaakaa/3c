@@ -728,6 +728,24 @@ namespace BTSMTL.Timeline.Editor
             {
                 Track track = selection.Track;
                 m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
+                var name = new TextField("Name") { value = track.Name };
+                name.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
+                    () =>
+                    {
+                        track.Name = evt.newValue;
+                        m_Timeline.Init();
+                    },
+                    "Set Timeline Track Name"));
+                m_DetailsHost.Add(name);
+                var muted = new Toggle("Muted") { value = track.PersistentMuted };
+                muted.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
+                    () =>
+                    {
+                        track.PersistentMuted = evt.newValue;
+                        m_Timeline.Init();
+                    },
+                    "Set Timeline Track Muted"));
+                m_DetailsHost.Add(muted);
             }
             if (selection.Section != null)
             {

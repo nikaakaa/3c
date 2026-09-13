@@ -317,7 +317,7 @@ namespace BTSMTL.Timeline.Editor
                     sourceTrack.Name,
                     sourceTrack.ContractKind,
                     Color.white,
-                    true,
+                    !sourceTrack.PersistentMuted,
                     false,
                     false,
                     descriptors.Count != 0,
@@ -512,6 +512,10 @@ namespace BTSMTL.Timeline.Editor
         public void Select(SlateTimelineEditorSelection selection)
         {
             if (selection.Kind == SlateTimelineEditorElementKind.Clip && m_SourceClips.TryGetValue(selection.ClipId, out Clip clip))
+                m_Session.SetSelection(clip);
+            else if ((selection.Kind == SlateTimelineEditorElementKind.Key ||
+                      selection.Kind == SlateTimelineEditorElementKind.Curve) &&
+                     m_SourceClips.TryGetValue(selection.ClipId, out clip))
                 m_Session.SetSelection(clip);
             else if (selection.Kind == SlateTimelineEditorElementKind.Track && m_SourceTracks.TryGetValue(selection.TrackId, out Track track))
                 m_Session.SetSelection(track);

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
-using Slate;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -42,15 +41,40 @@ namespace BTSMTL.Timeline.Editor
         UnityEngine.Object m_SourceGraphOwner;
 
         [SerializeField]
-        string m_ViewTimelineAuthoringId;
+        UnityEngine.Object m_NavigationOwner;
 
         [SerializeField]
-        BtsmtlSlateTimelineViewState m_ViewState;
+        string m_NavigationPropertyPath;
+
+        [SerializeField]
+        string m_NavigationOwnershipLabel;
+
+        [SerializeField]
+        string m_NavigationTrackAuthoringId;
+
+        [SerializeField]
+        string m_NavigationClipAuthoringId;
+
+        [SerializeField]
+        string m_NavigationSourceNodeGuid;
+
+        [SerializeField]
+        BaseTreeWindow m_NavigationSourceGraphWindow;
+
+        [SerializeField]
+        UnityEngine.Object m_NavigationSourceGraphOwner;
+
+        [SerializeField]
+        Vector2 m_NavigationViewport;
 
         TimelineNode m_SourceNode;
-        BtsmtlSlateTimelineDirectProjection m_SlateProjection;
+        BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
+        ToolbarButton m_BackButton;
+        ObjectField m_SharedTimelineField;
+        Label m_SourceSummary;
+        Label m_Status;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
@@ -108,6 +132,7 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
             window.Focus();
@@ -128,6 +153,7 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
             window.BindAsset(asset, sourceGraphAuthoringId, sourceNodeGuid);
             window.Show();
             window.Focus();
@@ -158,7 +184,7 @@ namespace BTSMTL.Timeline.Editor
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
-            m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
+            m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
         }
 
         public void ClearRuntimeObservation()
@@ -260,7 +286,6 @@ namespace BTSMTL.Timeline.Editor
             if (timeline == null || !serializedOwner || string.IsNullOrEmpty(serializedPropertyPath))
                 throw new InvalidOperationException("TimelineEditorWindow requires a bound TimelineData owner/path.");
 
-            CaptureViewState();
             DisposeView();
             timeline.BindSerializedOwner(serializedOwner, serializedPropertyPath);
             timeline.OnValueChanged += OnTimelineValueChanged;
@@ -284,7 +309,6 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
-            Selection.activeObject = null;
 
             TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
                 timeline,
@@ -292,13 +316,14 @@ namespace BTSMTL.Timeline.Editor
                 serializedPropertyPath,
                 ownershipLabel,
                 sourceGraphWindow);
-            if (!BtsmtlSlateTimelineDirectProjection.TryOpen(
+            if (!BtsmtlSlateTimelineProjection.TryOpen(
                     openRequest,
                     OpenClip,
                     out m_SlateProjection,
                     out string unavailableReason))
             {
                 rootVisualElement.Clear();
+                rootVisualElement.Add(CreateAuthoringToolbar());
                 rootVisualElement.Add(new HelpBox(
                     $"Slate Timeline unavailable: {unavailableReason}",
                     HelpBoxMessageType.Error));
@@ -306,7 +331,15 @@ namespace BTSMTL.Timeline.Editor
             }
 
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
+            WindowOpened?.Invoke(this);
             rootVisualElement.Clear();
+            rootVisualElement.Add(CreateAuthoringToolbar());
+            Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
+            ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
+            ownership.style.paddingLeft = 8f;
+            ownership.style.paddingTop = 4f;
+            ownership.style.paddingBottom = 4f;
+            rootVisualElement.Add(ownership);
             m_SlateSurface = new IMGUIContainer(DrawSlateSurface)
             {
                 name = "slate-timeline-surface"
@@ -314,22 +347,20 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexGrow = 1f;
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
-            m_SlateProjection.ConfigureRepaint(() => m_SlateSurface?.MarkDirtyRepaint());
-            m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
             rootVisualElement.Add(m_SlateSurface);
-            if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
-                m_SlateProjection.RestoreViewState(m_ViewState);
-            WindowOpened?.Invoke(this);
         }
 
         void BuildUnboundView()
         {
             titleContent = new GUIContent("Timeline Editor");
             rootVisualElement.Clear();
+            rootVisualElement.Add(CreateAuthoringToolbar());
+            SetStatus("选择一个 Timeline 资产或从 Skill Graph 打开 Timeline。");
         }
 
         void ClearBinding()
         {
+            ClearNavigation();
             DisposeView();
             m_SerializedOwner = null;
             m_SerializedPropertyPath = string.Empty;
@@ -434,35 +465,12 @@ namespace BTSMTL.Timeline.Editor
 
         void DisposeView()
         {
-            CaptureViewState();
             if (m_Timeline != null)
                 m_Timeline.OnValueChanged -= OnTimelineValueChanged;
-            if (m_SlateProjection != null)
-            {
-                m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
-            }
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
             m_Timeline = null;
-        }
-
-        void OnTimelineValueChanged()
-        {
-            AuthoringRevisionChanged?.Invoke(this);
-        }
-
-        void OnAuthoringIssue(string message)
-        {
-            SetStatus(message);
-        }
-
-        void CaptureViewState()
-        {
-            if (m_SlateProjection == null || m_Timeline == null)
-                return;
-            m_ViewTimelineAuthoringId = m_Timeline.AuthoringId;
-            m_ViewState = m_SlateProjection.CaptureViewState();
         }
 
         void OnEditorUpdate()
@@ -482,10 +490,121 @@ namespace BTSMTL.Timeline.Editor
                 EndWindows);
         }
 
+        VisualElement CreateAuthoringToolbar()
+        {
+            var toolbar = new Toolbar();
+            m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
+            m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
+            m_SharedTimelineField = new ObjectField("Document")
+            {
+                objectType = typeof(UnityEngine.Object),
+                allowSceneObjects = false
+            };
+            m_SharedTimelineField.style.width = 280f;
+            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
+            m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
+            m_SourceSummary = new Label(CurrentSourceSummary());
+            m_SourceSummary.style.minWidth = 180f;
+            m_SourceSummary.style.marginLeft = 6f;
+            m_Status = new Label("运行控制：Skill Graph / Graph Shell");
+            m_Status.style.marginLeft = 6f;
+            m_Status.style.flexGrow = 1f;
+            m_Status.tooltip = "Timeline 只负责作者编辑；Scene Play、Build、Skill 和运行观察由 Graph Shell 管理。";
+            toolbar.Add(m_BackButton);
+            toolbar.Add(m_SharedTimelineField);
+            toolbar.Add(m_SourceSummary);
+            toolbar.Add(m_Status);
+            return toolbar;
+        }
+
+        bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
+
+        void CaptureTimelineNavigation(AnimationClip clip)
+        {
+            if (m_SlateProjection == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
+                throw new InvalidOperationException("Sequence navigation requires a bound Action Timeline.");
+            m_NavigationOwner = m_SerializedOwner;
+            m_NavigationPropertyPath = m_SerializedPropertyPath;
+            m_NavigationOwnershipLabel = m_OwnershipLabel;
+            m_NavigationTrackAuthoringId = clip.Track?.AuthoringId ?? string.Empty;
+            m_NavigationClipAuthoringId = clip.AuthoringId;
+            m_NavigationSourceNodeGuid = m_SourceNodeGuid;
+            m_NavigationSourceGraphWindow = m_SourceGraphWindow;
+            m_NavigationSourceGraphOwner = m_SourceGraphOwner;
+            m_NavigationViewport = Vector2.zero;
+        }
+
+        void ReturnToTimeline()
+        {
+            if (!HasTimelineNavigation)
+                return;
+            UnityEngine.Object owner = m_NavigationOwner;
+            string propertyPath = m_NavigationPropertyPath;
+            string ownershipLabel = m_NavigationOwnershipLabel;
+            string trackAuthoringId = m_NavigationTrackAuthoringId;
+            string clipAuthoringId = m_NavigationClipAuthoringId;
+            string sourceNodeGuid = m_NavigationSourceNodeGuid;
+            BaseTreeWindow sourceGraphWindow = m_NavigationSourceGraphWindow;
+            UnityEngine.Object sourceGraphOwner = m_NavigationSourceGraphOwner;
+            TimelineData timeline = ResolveTimelineData(owner, propertyPath);
+            if (timeline == null)
+                throw new InvalidOperationException("The source Action Timeline can no longer be resolved.");
+            ClearNavigation();
+            Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
+            m_SourceGraphOwner = sourceGraphOwner;
+            m_SlateProjection?.FocusSource(trackAuthoringId, clipAuthoringId);
+        }
+
+        void ClearNavigation()
+        {
+            m_NavigationOwner = null;
+            m_NavigationPropertyPath = string.Empty;
+            m_NavigationOwnershipLabel = string.Empty;
+            m_NavigationTrackAuthoringId = string.Empty;
+            m_NavigationClipAuthoringId = string.Empty;
+            m_NavigationSourceNodeGuid = string.Empty;
+            m_NavigationSourceGraphWindow = null;
+            m_NavigationSourceGraphOwner = null;
+            m_NavigationViewport = Vector2.zero;
+            if (m_BackButton != null)
+                m_BackButton.style.display = DisplayStyle.None;
+        }
+
+        void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
+        {
+            TimelineAsset asset = evt.newValue as TimelineAsset;
+            if (asset)
+            {
+                ClearNavigation();
+                BindAsset(asset, m_SourceGraphAuthoringId, m_SourceNodeGuid);
+                return;
+            }
+
+            if (m_SerializedOwner is TimelineAsset)
+                ClearBinding();
+            else
+                m_SharedTimelineField.SetValueWithoutNotify(null);
+        }
+
+        string CurrentSourceSummary()
+        {
+            if (m_Timeline == null)
+                return "Source: None";
+            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
+            return $"Source: {ownership} / {m_Timeline.Name}";
+        }
+
         void SetStatus(string value)
         {
-            if (!string.IsNullOrEmpty(value))
-                ShowNotification(new GUIContent(value));
+            if (m_Status == null)
+                return;
+            m_Status.text = value ?? string.Empty;
+            m_Status.tooltip = value ?? string.Empty;
+        }
+
+        void OnTimelineValueChanged()
+        {
+            AuthoringRevisionChanged?.Invoke(this);
         }
     }
 
@@ -540,10 +659,7 @@ namespace BTSMTL.Timeline.Editor
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
                     activeClips[source.ClipAuthoringId] = status;
             }
-            if (RuntimeDebugSession.Shared.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
-                window.ApplyHistoryObservation(summary.VisualTime, activeTracks, activeClips);
-            else
-                window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
+            window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
         }
     }
 }

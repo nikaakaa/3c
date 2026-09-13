@@ -36,6 +36,12 @@ namespace Slate
         string m_DragCurveId;
         AnimationCurve m_DragCurve;
         int m_DragCurveKeyIndex = -1;
+        Rect m_DragCurveRect;
+        float m_DragCurveMin;
+        float m_DragCurveMax;
+        float m_DragCurveTimelineWidth;
+        int m_DragCurveStartFrame;
+        int m_DragCurveEndFrame;
 
         public SlateTimelineEditorContentView Content => m_Content;
         public SlateTimelineEditorSelection Selection => m_Selection;
@@ -112,6 +118,9 @@ namespace Slate
                 m_ViewEndFrame = Mathf.Max(1, m_Content.LengthFrame);
                 m_Host.RequestRepaint();
             }
+            Rect addTrackRect = new Rect(50f, 4f, 78f, 20f);
+            if (GUI.Button(addTrackRect, "+ Track", EditorStyles.toolbarButton))
+                m_Commands.RequestAddTrack(m_Content.CurrentFrame);
 
             Rect sliderRect = new Rect(m_LeftMargin + 4f, 7f, Mathf.Max(30f, surface.width - m_LeftMargin - 12f), 18f);
             float start = m_ViewStartFrame;
@@ -351,6 +360,12 @@ namespace Slate
                         m_DragCurveId = curve.CurveId;
                         m_DragCurve = new AnimationCurve(source.keys);
                         m_DragCurveKeyIndex = keyIndex;
+                        m_DragCurveRect = rect;
+                        m_DragCurveMin = min;
+                        m_DragCurveMax = max;
+                        m_DragCurveTimelineWidth = timelineWidth;
+                        m_DragCurveStartFrame = clip.StartFrame;
+                        m_DragCurveEndFrame = clip.EndFrame;
                         m_Commands.BeginGesture("Edit Timeline Curve");
                         m_Commands.Select(new SlateTimelineEditorSelection(
                             SlateTimelineEditorElementKind.Key,
@@ -399,10 +414,15 @@ namespace Slate
                 if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
                 {
                     Keyframe key = m_DragCurve.keys[m_DragCurveKeyIndex];
-                    float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
-                    float frame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
-                    key.time = Mathf.Clamp01((frame - m_Content.CurrentFrame) / Mathf.Max(1f, m_Content.LengthFrame));
-                    key.value = Mathf.Clamp(Event.current.mousePosition.y / Mathf.Max(1f, surface.height), -1000f, 1000f);
+                    float contentMouseY = Event.current.mousePosition.y - TopHeight + m_ScrollPosition.y;
+                    float framePosition = Event.current.mousePosition.x - m_DragCurveRect.x;
+                    float frame = Mathf.Lerp(
+                        m_ViewStartFrame,
+                        m_ViewEndFrame,
+                        Mathf.Clamp01((framePosition + FrameToX(m_DragCurveStartFrame, m_DragCurveTimelineWidth)) / m_DragCurveTimelineWidth));
+                    key.time = Mathf.Clamp01(Mathf.InverseLerp(m_DragCurveStartFrame, m_DragCurveEndFrame, frame));
+                    float valuePosition = Mathf.InverseLerp(m_DragCurveRect.yMax - 8f, m_DragCurveRect.yMin + 8f, contentMouseY);
+                    key.value = Mathf.Lerp(m_DragCurveMin, m_DragCurveMax, valuePosition);
                     m_DragCurveKeyIndex = m_DragCurve.MoveKey(m_DragCurveKeyIndex, key);
                     m_Host.RequestRepaint();
                     Event.current.Use();
@@ -520,6 +540,7 @@ namespace Slate
             m_DragClipId = null;
             m_DragCurveClipId = null;
             m_DragCurveId = null;
+            m_DragCurveKeyIndex = -1;
         }
     }
 }

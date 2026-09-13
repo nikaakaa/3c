@@ -11,11 +11,9 @@ namespace ThirdPersonCamera
 
         public CameraRotationEulerOffsetPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             Vector3 offset,
             bool flipForward)
-            : base(stageId, CameraSequenceStageKind.RotationEulerOffset, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.RotationEulerOffset)
         {
             m_Offset = offset;
             m_FlipForward = flipForward;

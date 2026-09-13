@@ -15,15 +15,13 @@ namespace ThirdPersonCamera
         [SerializeField] CameraTrackOrbitPayload[] m_CameraOrbits;
         public CameraFrameOnePointByTrackPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             CameraTrackOrbitPayload[] cameraOrbits,
             float aspectRatio,
             float fieldOfView,
             Vector2[] screenOffsets,
             float elevationRatio,
             float polarAngle)
-            : base(stageId, CameraSequenceStageKind.FrameOnePointByTrack, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FrameOnePointByTrack)
         {
             m_CameraOrbits = cameraOrbits ?? Array.Empty<CameraTrackOrbitPayload>();
             m_AspectRatio = aspectRatio;

@@ -27,19 +27,11 @@ namespace ThirdPersonCamera
             CameraProjectionCompilationContext context)
         {
             stage.RequireValid(stage.GetType().Name);
-            if (stage.MakeContextDependent)
-                throw new InvalidOperationException(
-                    $"Camera Sequence stage '{stage.StageId}' requires a formal context provider.");
-            if (stage.PlayLength >= 0f)
-                throw new InvalidOperationException(
-                    $"Camera Sequence stage '{stage.StageId}' uses finite PlayLength without a formal stage clock consumer.");
             switch (stage)
             {
                 case CameraFrameOnePointByHeightStage byHeight:
                     return new CameraFrameOnePointByHeightPayload(
                         byHeight.StageId,
-                        byHeight.MakeContextDependent,
-                        byHeight.PlayLength,
                         byHeight.EntityHeight,
                         byHeight.HeightRatio,
                         byHeight.FieldOfView,
@@ -47,8 +39,6 @@ namespace ThirdPersonCamera
                 case CameraFrameOnePointByScreenOffsetStage byScreen:
                     return new CameraFrameOnePointByScreenOffsetPayload(
                         byScreen.StageId,
-                        byScreen.MakeContextDependent,
-                        byScreen.PlayLength,
                         byScreen.AspectRatio,
                         byScreen.FieldOfView,
                         byScreen.ScreenOffset,
@@ -65,8 +55,6 @@ namespace ThirdPersonCamera
                         screenOffsets[i] = byTrack.ScreenOffsets[i];
                     return new CameraFrameOnePointByTrackPayload(
                         byTrack.StageId,
-                        byTrack.MakeContextDependent,
-                        byTrack.PlayLength,
                         cameraOrbits,
                         byTrack.AspectRatio,
                         byTrack.FieldOfView,
@@ -78,8 +66,6 @@ namespace ThirdPersonCamera
                 case CameraFrameMultiplePointsStage multiplePoints:
                     return new CameraFrameMultiplePointsPayload(
                         multiplePoints.StageId,
-                        multiplePoints.MakeContextDependent,
-                        multiplePoints.PlayLength,
                         multiplePoints.Radius,
                         multiplePoints.HeightOffset,
                         multiplePoints.HeightRatio,
@@ -105,8 +91,6 @@ namespace ThirdPersonCamera
                 case CameraRotationEulerOffsetStage euler:
                     return new CameraRotationEulerOffsetPayload(
                         euler.StageId,
-                        euler.MakeContextDependent,
-                        euler.PlayLength,
                         euler.Offset,
                         euler.FlipForward);
                 default:
@@ -120,8 +104,6 @@ namespace ThirdPersonCamera
             stage.RequireValid(stage.GetType().Name);
             return new CameraFrameTwoPointsPayload(
                 stage.StageId,
-                stage.MakeContextDependent,
-                stage.PlayLength,
                 stage.AspectRatio,
                 stage.HeightRatio,
                 stage.MinPlayerHeightRatio,
@@ -146,8 +128,6 @@ namespace ThirdPersonCamera
             return new CameraEntityFramePayload(
                 stage.StageId,
                 stage.Kind,
-                stage.MakeContextDependent,
-                stage.PlayLength,
                 stage.MainTargetSlotId,
                 subTargetSlotIds,
                 stage.FramePolicyId,

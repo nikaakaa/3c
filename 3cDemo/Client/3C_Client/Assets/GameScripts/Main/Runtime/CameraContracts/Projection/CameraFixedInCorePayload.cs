@@ -11,11 +11,9 @@ namespace ThirdPersonCamera
 
         public CameraFixedInCorePayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             string fixedPolicyId,
             string activeChannel)
-            : base(stageId, CameraSequenceStageKind.FixedInCoreSpace, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FixedInCoreSpace)
         {
             m_FixedPolicyId = fixedPolicyId ?? string.Empty;
             m_ActiveChannel = activeChannel ?? string.Empty;

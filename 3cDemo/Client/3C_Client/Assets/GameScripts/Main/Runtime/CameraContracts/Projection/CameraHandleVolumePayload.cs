@@ -12,12 +12,10 @@ namespace ThirdPersonCamera
 
         public CameraHandleVolumePayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             string collisionDataId,
             bool handleLineOfSightCollision,
             float nearClipPlane)
-            : base(stageId, CameraSequenceStageKind.HandleCameraVolume, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.HandleCameraVolume)
         {
             m_CollisionDataId = collisionDataId ?? string.Empty;
             m_HandleLineOfSightCollision = handleLineOfSightCollision;

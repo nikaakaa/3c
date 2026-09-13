@@ -13,13 +13,11 @@ namespace ThirdPersonCamera
 
         public CameraFrameOnePointByHeightPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             float entityHeight,
             float heightRatio,
             float fieldOfView,
             Vector2 screenOffset)
-            : base(stageId, CameraSequenceStageKind.FrameOnePointByHeight, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FrameOnePointByHeight)
         {
             m_EntityHeight = entityHeight;
             m_HeightRatio = heightRatio;

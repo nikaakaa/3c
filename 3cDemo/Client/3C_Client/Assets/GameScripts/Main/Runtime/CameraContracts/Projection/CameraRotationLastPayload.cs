@@ -13,13 +13,11 @@ namespace ThirdPersonCamera
 
         public CameraRotationLastPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             Vector3 overrideRotation,
             Vector3 rotation,
             bool useRelativeYaw,
             string lastCameraDataId)
-            : base(stageId, CameraSequenceStageKind.RotationLast, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.RotationLast)
         {
             m_OverrideRotation = overrideRotation;
             m_Rotation = rotation;

@@ -11,12 +11,8 @@ namespace ThirdPersonCamera
     public abstract class CameraSequenceStage
     {
         [SerializeField] string m_StageId = string.Empty;
-        [SerializeField] bool m_MakeContextDependent;
-        [SerializeField] float m_PlayLength = -1f;
 
         public string StageId => m_StageId ?? string.Empty;
-        public bool MakeContextDependent => m_MakeContextDependent;
-        public float PlayLength => m_PlayLength;
         public abstract CameraSequenceStageKind Kind { get; }
 
         public void ConfigureIdentity(string stageId)
@@ -28,8 +24,7 @@ namespace ThirdPersonCamera
 
         public virtual void RequireValid(string source)
         {
-            if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind) ||
-                !float.IsFinite(PlayLength) || PlayLength == 0f || PlayLength < -1f)
+            if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind))
                 throw new InvalidOperationException($"{source} contains an invalid Camera Sequence stage.");
         }
     }

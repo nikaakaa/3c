@@ -13,13 +13,11 @@ namespace ThirdPersonCamera
 
         public CameraFrameOnePointByScreenOffsetPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             float aspectRatio,
             float fieldOfView,
             Vector2 screenOffset,
             float radius)
-            : base(stageId, CameraSequenceStageKind.FrameOnePointByScreenOffset, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FrameOnePointByScreenOffset)
         {
             m_AspectRatio = aspectRatio;
             m_FieldOfView = fieldOfView;

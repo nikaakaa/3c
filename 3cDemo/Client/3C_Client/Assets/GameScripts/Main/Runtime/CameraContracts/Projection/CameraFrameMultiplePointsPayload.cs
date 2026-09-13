@@ -19,8 +19,6 @@ namespace ThirdPersonCamera
 
         public CameraFrameMultiplePointsPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             float radius,
             float heightOffset,
             float heightRatio,
@@ -31,7 +29,7 @@ namespace ThirdPersonCamera
             string beginCameraDataId,
             CameraCurvePayload deltaHeightToPitch,
             CameraFrameTwoPointsPayload fallbackTwoPoints)
-            : base(stageId, CameraSequenceStageKind.FrameMultiplePointsChat, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FrameMultiplePointsChat)
         {
             m_Radius = radius;
             m_HeightOffset = heightOffset;

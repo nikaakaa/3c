@@ -15,13 +15,11 @@ namespace ThirdPersonCamera
         public CameraEntityFramePayload(
             string stageId,
             CameraSequenceStageKind kind,
-            bool makeContextDependent,
-            float playLength,
             string mainTargetSlotId,
             string[] subTargetSlotIds,
             string framePolicyId,
             string rotationPolicyId)
-            : base(stageId, kind, makeContextDependent, playLength)
+            : base(stageId, kind)
         {
             m_MainTargetSlotId = mainTargetSlotId ?? string.Empty;
             m_SubTargetSlotIds = subTargetSlotIds ?? Array.Empty<string>();

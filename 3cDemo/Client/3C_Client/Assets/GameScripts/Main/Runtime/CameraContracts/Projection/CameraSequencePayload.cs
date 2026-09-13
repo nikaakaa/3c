@@ -31,15 +31,8 @@ namespace ThirdPersonCamera
             {
                 CameraSequenceStagePayload stage = Stages[i];
                 if (stage == null || string.IsNullOrWhiteSpace(stage.StageId) ||
-                    !Enum.IsDefined(typeof(CameraSequenceStageKind), stage.Kind) ||
-                    !float.IsFinite(stage.PlayLength) || stage.PlayLength == 0f || stage.PlayLength < -1f)
+                    !Enum.IsDefined(typeof(CameraSequenceStageKind), stage.Kind))
                     throw new InvalidOperationException($"{source}.Stages[{i}] is invalid.");
-                if (stage.MakeContextDependent)
-                    throw new InvalidOperationException(
-                        $"{source}.Stages[{i}] requires a formal context provider.");
-                if (stage.PlayLength >= 0f)
-                    throw new InvalidOperationException(
-                        $"{source}.Stages[{i}] uses finite PlayLength without a formal stage clock consumer.");
                 RequireStage(stage, $"{source}.Stages[{i}]");
             }
         }

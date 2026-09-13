@@ -22,8 +22,6 @@ namespace ThirdPersonCamera
 
         public CameraFrameTwoPointsPayload(
             string stageId,
-            bool makeContextDependent,
-            float playLength,
             float aspectRatio,
             float heightRatio,
             float minPlayerHeightRatio,
@@ -37,7 +35,7 @@ namespace ThirdPersonCamera
             Vector2 pitchRange,
             float playerHeight,
             string beginCameraDataId)
-            : base(stageId, CameraSequenceStageKind.FrameTwoPointsChat, makeContextDependent, playLength)
+            : base(stageId, CameraSequenceStageKind.FrameTwoPointsChat)
         {
             m_AspectRatio = aspectRatio;
             m_HeightRatio = heightRatio;
@@ -71,7 +69,6 @@ namespace ThirdPersonCamera
         public void RequireValid(string source)
         {
             if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind) ||
-                !float.IsFinite(PlayLength) || PlayLength == 0f || PlayLength < -1f ||
                 !float.IsFinite(AspectRatio) || AspectRatio <= 0f || !float.IsFinite(HeightRatio) || HeightRatio <= 0f ||
                 !float.IsFinite(MinPlayerHeightRatio) || !float.IsFinite(MaxPlayerHeightRatio) ||
                 MinPlayerHeightRatio > MaxPlayerHeightRatio || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||

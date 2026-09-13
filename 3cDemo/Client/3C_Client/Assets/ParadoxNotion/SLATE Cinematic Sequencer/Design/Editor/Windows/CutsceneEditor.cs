@@ -2368,7 +2368,7 @@ namespace Slate
 
             if (embeddedTimeline != null)
             {
-                ShowFormalGroupsAndTracksList(leftRect);
+                ShowGroupsAndTracksList(leftRect, embeddedTimeline);
                 return;
             }
 
@@ -2440,7 +2440,7 @@ namespace Slate
             GUI.color = Color.white;
         }
 
-        void ShowFormalGroupsAndTracksList(Rect leftRect)
+        void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
             Rect scaleRect = new Rect(leftRect.xMax - 4, leftRect.yMin, 4, leftRect.height);
@@ -2814,7 +2814,7 @@ namespace Slate
 
             if (embeddedTimeline != null)
             {
-                ShowFormalTimeLines(centerRect);
+                ShowTimeLines(centerRect, embeddedTimeline);
                 return;
             }
 
@@ -3222,7 +3222,7 @@ namespace Slate
             }
         }
 
-        void ShowFormalTimeLines(Rect centerRect)
+        void ShowTimeLines(Rect centerRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
             Rect bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
@@ -3238,7 +3238,7 @@ namespace Slate
             float nextY = FIRST_GROUP_TOP_MARGIN;
             IReadOnlyList<IEmbeddedTimelineGroupBinding> groups = embeddedTimeline.Groups;
             Rect sectionsRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)), 3, TimeToPos(viewTimeMax), 18);
-            ShowFormalSections(sectionsRect);
+            ShowSections(sectionsRect, timeline);
             BeginWindows();
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
@@ -3383,7 +3383,7 @@ namespace Slate
             }
         }
 
-        void ShowFormalSections(Rect rect)
+        void ShowSections(Rect rect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
             List<IEmbeddedTimelineSectionBinding> sections = embeddedTimeline.Sections

@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
             Catalog = runtime.Catalog;
-            CharacterRuntime = runtime.Kernel;
+            CharacterRuntime = runtime.CharacterRuntime;
             var bindings = new List<SimulationActorBinding>(runtime.Roster);
             for (int i = 0; i < bindings.Count; i++)
             {

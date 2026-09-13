@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public SimulationWorldStateSet InitialState { get; }
         public SimulationPipelineInitialStateSource PipelineInitialState { get; }
-        public SimulationKernel Kernel => ProgramRuntime.Kernel;
+        public IFloat32CharacterDomainRuntime CharacterRuntime => ProgramRuntime.CharacterRuntime;
         public SimulationRuntimePortSet SourcePorts { get; }
         public IReadOnlyList<SimulationPortDescriptor> ExpectedSourcePorts => m_ExpectedSourcePorts;
         public IFloat32SimulationRestoreSource RestoreSource { get; }
@@ -141,13 +141,13 @@ namespace ThirdPersonSimulation
             {
                 throw Failure("backend_execution_support_mismatch", "Execution Backend Target support does not cover the compiled Pipeline.");
             }
-            if (!Kernel.Specialization.NumericProfile.Equals(profile) ||
-                !Kernel.Specialization.OperationSetVersion.Equals(Catalog.OperationSetVersion))
+            if (!CharacterRuntime.Specialization.NumericProfile.Equals(profile) ||
+                !CharacterRuntime.Specialization.OperationSetVersion.Equals(Catalog.OperationSetVersion))
             {
                 throw Failure("kernel_specialization_mismatch", "Kernel specialization does not match ProgramCatalog.");
             }
             for (int i = 0; i < Catalog.Programs.Count; i++)
-                Kernel.Specialization.RequireProgram(Catalog.Programs[i]);
+                CharacterRuntime.Specialization.RequireProgram(Catalog.Programs[i]);
             ValidateRoster();
             ValidateInitialState();
             ValidateSourcePorts();

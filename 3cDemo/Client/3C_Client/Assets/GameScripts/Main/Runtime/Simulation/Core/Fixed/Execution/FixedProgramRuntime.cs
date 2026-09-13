@@ -14,6 +14,7 @@ namespace ThirdPersonSimulation.Fixed
         ReadOnlyCollection<SimulationActorBinding> m_Roster;
         IReadOnlyDictionary<ProgramId, KernelProgramBinding> m_Bindings;
         readonly CharacterControlModuleCatalog m_ControlModules;
+        readonly SimulationKernel m_CharacterRuntime;
 
         FixedProgramRuntime(
             SimulationProgramCatalog catalog,
@@ -24,7 +25,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             Descriptor = s_Descriptor;
             Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            Kernel = kernel ?? throw new ArgumentNullException(nameof(kernel));
+            m_CharacterRuntime = kernel ?? throw new ArgumentNullException(nameof(kernel));
             var values = new List<SimulationActorBinding>(roster ?? throw new ArgumentNullException(nameof(roster)));
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             m_Roster = values.AsReadOnly();
@@ -35,7 +36,7 @@ namespace ThirdPersonSimulation.Fixed
         public static SimulationProgramRuntimeDescriptor DescriptorDefinition => s_Descriptor;
         public SimulationProgramRuntimeDescriptor Descriptor { get; }
         public SimulationProgramCatalog Catalog { get; private set; }
-        public SimulationKernel Kernel { get; }
+        public IFixedCharacterDomainRuntime CharacterRuntime => m_CharacterRuntime;
         public CharacterControlModuleCatalog ControlModules => m_ControlModules;
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public KernelProgramBinding GetBinding(ProgramId programId)
@@ -146,11 +147,11 @@ namespace ThirdPersonSimulation.Fixed
                 KernelProgramBinding binding = new KernelProgramBinding(
                     program,
                     ProgramExecutionLayout.GetOrCreate(program),
-                    Kernel);
+                    m_CharacterRuntime);
                 kernelBindings[i] = binding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, binding);
             }
-            Kernel.AdoptPrograms(kernelBindings);
+            m_CharacterRuntime.AdoptPrograms(kernelBindings);
             Catalog = catalog;
             m_Roster = values.AsReadOnly();
             m_Bindings = bindingsByProgram;

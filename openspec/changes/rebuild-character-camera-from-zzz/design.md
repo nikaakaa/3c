@@ -1,10 +1,27 @@
 ## Context
 
-修订 v2，2026-09-13。文档重写已授权，代码实施未启动。当前工作区为 D:/Unity_Project_1/3C；旧 camera-zzz worktree 中的执行批次和审批记录仅属于历史，不作为本修订的调度入口。
+修订 v3，2026-09-13。用户明确“让实现窗口做吧”，已确认当前规划范围并授权配套实现窗口实施。当前工作区为 D:/Unity_Project_1/3C；旧 camera-zzz worktree 中的执行批次和审批记录仅属于历史，不作为本修订的调度入口。
 
 本 change 的 proposal 定义范围，本文定义职责和设计，tasks 只列剩余工作。当前源码状态与动态证据边界见 evidence/current-implementation.md。独立的 docs/character-camera-plan-2026-09-13.md 已合并删除，不维护第二份规划。旧协调文档未在本次修改，其 9 月 6 日版本/接线状态不能直接作为今天的事实。
 
-当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。未发送实施指针；用户这次允许重写文档，不等于授权所有未决行为或启动代码实施。
+当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。实现窗口执行 tasks 的全部剩余范围，创建并维护 implementation.md，记录各任务实际完成状态、修改、提交、证据和冲突；不自行改写规划合同。独立且已授权的部分持续推进，不等待普通进度回执。
+
+授权包含补齐来源消费者和真实资源接线，不包含放弃来源还原、猜测缺失公式或覆盖已有正确代码。当前产品方向为玩家控制的第三人称环绕相机，默认轨道提供基础构图，动作、锁定和碰撞共用同一求解链。未决项先按来源取证与现行合同解决；无法同时满足真实代码、来源和规划时，在 implementation.md 写明冲突与业务取舍，再发送一次 ACTUAL_CONFLICT。
+
+```text
+PLANNING_DOCUMENT
+planner_thread_id: 01a098bd-a5c1-7283-8aab-59736bab97f5
+implementation_thread_id: 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d
+planning_document_paths:
+  - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/proposal.md
+  - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/design.md
+  - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/tasks.md
+  - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/specs/
+  - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/evidence/
+implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/implementation.md
+confirmed_by_user: true
+confirmed_revision: v3
+```
 
 ## Goals / Non-Goals
 

@@ -4,7 +4,7 @@
 
 尚缺的部分是：连续平滑和构图合同收口、锁定与多目标构图、碰撞、Override/Shake/Shot 的真实求值、作者能力与真实动作引用的完整交付，以及旧 Controller/诊断路径清理。旧 change 的执行批次、worktree 指令、Document v4/v5 计划和进度已过时。
 
-2026-09-13 按用户“可以删除重写”授权重写本 change，并合并删除独立的摄像机规划文档。此次授权仅针对文档，不启动代码实施。当前源码证据见 `evidence/current-implementation.md`；原始来源证据继续由 `evidence/source-baseline.md`、`evidence/source-behavior.md` 保存。
+2026-09-13 按用户“可以删除重写”授权重写本 change，并合并删除独立的摄像机规划文档。用户随后明确“让实现窗口做吧”，现已授权配套实现窗口按 v3 文档范围实施。当前源码证据见 `evidence/current-implementation.md`；原始来源证据继续由 `evidence/source-baseline.md`、`evidence/source-behavior.md` 保存。
 
 ## Scope
 
@@ -45,4 +45,4 @@
 
 当前规范冲突：`character-camera-pipeline` 仍有 Cinemachine 必须负责全部 orbit/damping 的文字，而当前 Planner/History 已负责求值；本 delta 明确由项目求解、Adapter 落地。现行 C# 作者规范已删除旧目录包，本 change 不再要求恢复它。当前 spec 已没有旧 CameraStateResolver/Camera modifier requirement，不再保留针对不存在 requirement 的删除条目。
 
-本次只更新 change，不把未来能力写成已实现的 current spec。全部冲突、依赖、业务取舍见 design；下次实施以届时用户授权及工作区为准，不恢复旧 worktree 的自动执行指令。
+文档重写未把未来能力写成已实现的 current spec。现已授权实施，全部冲突、依赖、业务取舍见 design；实现前重新核对当前工作区，不恢复旧 worktree 的自动执行指令。

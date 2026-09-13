@@ -168,6 +168,12 @@ namespace BTSMTL.Timeline.Editor
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
         }
 
+        public void AddClipAt(string trackAuthoringId, int frame)
+        {
+            if (m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track))
+                AddClip(track, frame);
+        }
+
         public void DeleteTrack(IEmbeddedTimelineTrackBinding track)
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
@@ -258,6 +264,13 @@ namespace BTSMTL.Timeline.Editor
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {
             m_CopiedClip = clip as BtsmtlTimelineClipBinding;
+        }
+
+        public void CopySourceClip(Clip clip)
+        {
+            m_CopiedClip = clip != null && m_Clips.TryGetValue(clip.AuthoringId, out BtsmtlTimelineClipBinding value)
+                ? value
+                : null;
         }
 
         public void PasteClip(IEmbeddedTimelineTrackBinding track, int frame)

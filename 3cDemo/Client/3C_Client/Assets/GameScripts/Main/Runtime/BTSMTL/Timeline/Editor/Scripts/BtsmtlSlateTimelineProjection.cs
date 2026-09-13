@@ -678,7 +678,9 @@ namespace BTSMTL.Timeline.Editor
                 proxyTrack.hideFlags = HideFlags.HideAndDontSave;
                 proxyTrack.name = trackDisplayName;
                 proxyTrack.Configure(sourceTrack.AuthoringId);
-                proxyTrack.ConfigureAuthoringMenu(time => ShowAddClipMenu(sourceTrack.AuthoringId, time));
+                proxyTrack.ConfigureAuthoringMenu(time => m_Binding.AddClipAt(
+                    sourceTrack.AuthoringId,
+                    Mathf.Max(0, Mathf.RoundToInt(time * m_Binding.FrameRate))));
                 group.tracks.Add(proxyTrack);
                 proxyTrack.PostCreate(group);
                 m_SourceTracks[sourceTrack.AuthoringId] = sourceTrack;
@@ -743,7 +745,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Cutscene,
                 null,
                 () => m_Session.FrameRate,
-                ShowAddTrackMenu,
+                m_Binding.AddTrack,
                 CopyProxyClip,
                 () => m_CurrentFrame,
                 SetCurrentFrame,
@@ -858,7 +860,10 @@ namespace BTSMTL.Timeline.Editor
         {
             if (proxyClip is BtsmtlSlateActionClip slateClip &&
                 m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
+            {
                 m_CopiedClip = sourceClip;
+                m_Binding.CopySourceClip(sourceClip);
+            }
         }
 
         void PasteClip(string trackAuthoringId, int frame)

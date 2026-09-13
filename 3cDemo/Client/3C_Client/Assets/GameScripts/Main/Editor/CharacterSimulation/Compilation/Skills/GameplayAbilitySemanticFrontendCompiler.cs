@@ -74,24 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "action:event-sequence");
                 builder.DeclareStandaloneStateSlot(
                     abilitySource,
-                    ProgramStateValueKind.UInt64,
-                    ProgramStateOwnerKind.Random,
-                    ProgramStateSemantic.RandomState,
-                    "runtime:rng");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
-                    ProgramStateValueKind.UInt64,
-                    ProgramStateOwnerKind.Runtime,
-                    ProgramStateSemantic.HandleAllocator,
-                    "runtime:handle-allocator");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
-                    ProgramStateValueKind.UInt64,
-                    ProgramStateOwnerKind.Fact,
-                    ProgramStateSemantic.FactSequence,
-                    "runtime:fact-sequence");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
                     ProgramStateValueKind.AbilityExecutionState,
                     ProgramStateOwnerKind.Action,
                     ProgramStateSemantic.AbilityExecutionState,

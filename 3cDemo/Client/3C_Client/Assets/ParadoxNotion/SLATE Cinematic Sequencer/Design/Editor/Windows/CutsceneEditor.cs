@@ -3446,8 +3446,18 @@ namespace Slate
             public float preScaleSubclipOffset;
             public float preScaleSubclipSpeed;
 
-            public ActionClip previousClip;
-            public ActionClip nextClip;
+            IClipEditorBinding previousBinding;
+            IClipEditorBinding nextBinding;
+            public ActionClip previousClip
+            {
+                get => previousBinding?.NativeAction;
+                set => previousBinding = value != null ? new NativeClipEditorBinding(value) : null;
+            }
+            public ActionClip nextClip
+            {
+                get => nextBinding?.NativeAction;
+                set => nextBinding = value != null ? new NativeClipEditorBinding(value) : null;
+            }
 
             private Event e;
             private int windowID;
@@ -3489,6 +3499,12 @@ namespace Slate
                 editorBinding = new FormalClipEditorBinding(clip);
             }
 
+            public void SetNeighbors(IClipEditorBinding previous, IClipEditorBinding next)
+            {
+                previousBinding = previous;
+                nextBinding = next;
+            }
+
             public void ResetInteraction() {
                 isWaitingMouseDrag = false;
                 isDragging = false;
@@ -3502,8 +3518,8 @@ namespace Slate
                 this.windowID = windowID;
                 e = Event.current;
 
-                overlapIn = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
-                overlapOut = nextClip != null ? Mathf.Max(action.endTime - nextClip.startTime, 0) : 0;
+                overlapIn = previousBinding != null ? Mathf.Max(previousBinding.EndTime - editorBinding.StartTime, 0) : 0;
+                overlapOut = nextBinding != null ? Mathf.Max(editorBinding.EndTime - nextBinding.StartTime, 0) : 0;
                 blendInPosX = ( editorBinding.BlendIn / editorBinding.Length ) * rect.width;
                 blendOutPosX = ( ( editorBinding.Length - editorBinding.BlendOut ) / editorBinding.Length ) * rect.width;
                 hasParameters = editorBinding.HasParameters;
@@ -3536,11 +3552,11 @@ namespace Slate
                 //set crossblend overlap properties. Do this when no clip is interacting or no clip is dragging
                 //this way avoid issue when moving clip on the other side of another, but keep overlap interactive when scaling a clip at least.
                 if ( editor.interactingClip == null || !editor.interactingClip.isDragging ) {
-                    var overlap = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
-                    if ( overlap > 0 ) {
-                        action.blendIn = overlap;
-                        previousClip.blendOut = overlap;
-                    }
+                        var overlap = previousBinding != null ? Mathf.Max(previousBinding.EndTime - editorBinding.StartTime, 0) : 0;
+                        if ( overlap > 0 ) {
+                        editorBinding.BlendIn = overlap;
+                        previousBinding.BlendOut = overlap;
+                        }
                 }
 
 
@@ -3551,7 +3567,8 @@ namespace Slate
                             isWaitingMouseDrag = true;
                         }
                         editor.interactingClip = this;
-                        editor.CacheMagnetSnapTimes(action);
+                        if (action != null)
+                            editor.CacheMagnetSnapTimes(action);
                     }
 
                     if ( e.control && dragRect.Contains(e.mousePosition) ) {
@@ -3564,19 +3581,21 @@ namespace Slate
                             multiSelection.Add(this);
                         }
                     } else {
-                        if (editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy &&
-                            editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
-                            editor.embeddedTimeline.Select(formalClip);
-                        else
+                        if (editor.embeddedTimeline != null && editorBinding.FormalClip != null)
+                            editor.embeddedTimeline.Select(editorBinding.FormalClip);
+                        else if (action != null)
                             CutsceneUtility.selectedObject = action;
-                        if ( multiSelection != null && !multiSelection.Select(cw => cw.action).Contains(action) ) {
+                        if ( multiSelection != null && !multiSelection.Select(cw => cw.editorBinding).Contains(editorBinding) ) {
                             multiSelection = null;
                         }
                     }
 
                     if ( e.clickCount == 2 ) {
-                        OnActionDoubleClick?.Invoke(action);
-                        if (!editor.embeddedSurface)
+                        if (action != null)
+                            OnActionDoubleClick?.Invoke(action);
+                        else if (editor.embeddedTimeline != null && editorBinding.FormalClip != null)
+                            editor.embeddedTimeline.OpenSource(editorBinding.FormalClip);
+                        if (!editor.embeddedSurface && action != null)
                             Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
                     }
                 }
@@ -3663,11 +3682,11 @@ namespace Slate
                     }
                 }
 
-                if ( isControlingBlendIn ) { action.blendIn = Mathf.Clamp(pointerTime - action.startTime, 0, action.length - action.blendOut); }
-                if ( isControlingBlendOut ) { action.blendOut = Mathf.Clamp(action.endTime - pointerTime, 0, action.length - action.blendIn); }
+                if ( isControlingBlendIn ) { editorBinding.BlendIn = Mathf.Clamp(pointerTime - editorBinding.StartTime, 0, editorBinding.Length - editorBinding.BlendOut); }
+                if ( isControlingBlendOut ) { editorBinding.BlendOut = Mathf.Clamp(editorBinding.EndTime - pointerTime, 0, editorBinding.Length - editorBinding.BlendIn); }
 
                 if ( isScalingStart ) {
-                    var prevTime = previousClip != null ? previousClip.endTime : 0;
+                    var prevTime = previousBinding != null ? previousBinding.EndTime : 0;
                     //magnet snap
                     if ( Prefs.magnetSnapping && !e.control ) {
                         var snapStart = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
@@ -3677,17 +3696,17 @@ namespace Slate
                         }
                     }
 
-                    if ( action.CanCrossBlend(previousClip) ) { prevTime -= Mathf.Min(action.length / 2, previousClip.length / 2); }
+                    if ( editorBinding.CanCrossBlend(previousBinding) ) { prevTime -= Mathf.Min(editorBinding.Length / 2, previousBinding.Length / 2); }
 
-                    action.startTime = snapedPointerTime;
-                    action.startTime = Mathf.Clamp(action.startTime, prevTime, preScaleEndTime);
-                    action.endTime = preScaleEndTime;
+                    editorBinding.StartTime = snapedPointerTime;
+                    editorBinding.StartTime = Mathf.Clamp(editorBinding.StartTime, prevTime, preScaleEndTime);
+                    editorBinding.EndTime = preScaleEndTime;
 
                     UpdateClipAdjustContents();
                 }
 
                 if ( isScalingEnd ) {
-                    var nextTime = nextClip != null ? nextClip.startTime : editor.maxTime;
+                    var nextTime = nextBinding != null ? nextBinding.StartTime : editor.maxTime;
                     //magnet snap
                     if ( Prefs.magnetSnapping && !e.control ) {
                         var snapEnd = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
@@ -3697,10 +3716,10 @@ namespace Slate
                         }
                     }
 
-                    if ( action.CanCrossBlend(nextClip) ) { nextTime += Mathf.Min(action.length / 2, nextClip.length / 2); }
+                    if ( editorBinding.CanCrossBlend(nextBinding) ) { nextTime += Mathf.Min(editorBinding.Length / 2, nextBinding.Length / 2); }
 
-                    action.endTime = snapedPointerTime;
-                    action.endTime = Mathf.Clamp(action.endTime, 0, nextTime);
+                    editorBinding.EndTime = snapedPointerTime;
+                    editorBinding.EndTime = Mathf.Clamp(editorBinding.EndTime, 0, nextTime);
 
                     UpdateClipAdjustContents();
                 }
@@ -3709,11 +3728,11 @@ namespace Slate
 
             //store pre adjust values
             public void BeginClipAdjust() {
-                preScaleStartTime = action.startTime;
-                preScaleEndTime = action.endTime;
+                preScaleStartTime = editorBinding.StartTime;
+                preScaleEndTime = editorBinding.EndTime;
 
                 preScaleKeys = new Dictionary<int, Keyframe[]>();
-                var curves = action.GetCurvesAll();
+                var curves = editorBinding.Curves;
                 for ( var i = 0; i < curves.Length; i++ ) {
                     preScaleKeys[i] = curves[i].keys;
                 }
@@ -3722,7 +3741,10 @@ namespace Slate
                     preScaleSubclipOffset = ( action as ISubClipContainable ).subClipOffset;
                     preScaleSubclipSpeed = ( action as ISubClipContainable ).subClipSpeed;
                 }
-                editor.CacheMagnetSnapTimes(action);
+                if (action != null)
+                    editor.CacheMagnetSnapTimes(action);
+                else
+                    editor.embeddedTimeline?.BeginEdit("Adjust Timeline Clip");
             }
 
             //retime keys lerp between start/end time.
@@ -3734,21 +3756,22 @@ namespace Slate
                 var trim = !Event.current.shift && !Prefs.rippleMode && !retime;
 
                 ClipEditorGUI.UpdateScaledCurves(
-                    action.GetCurvesAll(),
+                    editorBinding.Curves,
                     preScaleKeys,
                     preScaleStartTime,
                     preScaleEndTime,
-                    action.startTime,
-                    action.length,
+                    editorBinding.StartTime,
+                    editorBinding.Length,
                     retime,
                     trim);
 
-                CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
+                if (action != null)
+                    CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
 
                 if ( action is ISubClipContainable ) {
                     if ( trim ) {
                         var subClip = (ISubClipContainable)action;
-                        var delta = preScaleStartTime - action.startTime;
+                        var delta = preScaleStartTime - editorBinding.StartTime;
                         var newOffset = preScaleSubclipOffset + delta;
                         subClip.subClipOffset = newOffset;
                     }
@@ -3761,6 +3784,8 @@ namespace Slate
                 if ( Prefs.autoCleanKeysOffRange ) {
                     CleanKeysOffRange();
                 }
+                if (editorBinding.FormalClip != null)
+                    editor.embeddedTimeline?.CommitEdit();
             }
 
 
@@ -3833,6 +3858,11 @@ namespace Slate
 
             ///<summary>Clean keys off clip range after adding a key at 0 and length if there is any key outside that range</summary>
             public void CleanKeysOffRange() {
+                if (editorBinding.FormalClip != null)
+                {
+                    editorBinding.FormalClip.CleanKeysOffRange();
+                    return;
+                }
                 if ( hasParameters ) {
                     foreach ( var param in action.animationData.animatedParameters ) {
                         if ( param.HasAnyKey() ) {
@@ -3858,6 +3888,11 @@ namespace Slate
                 GUI.color = isProSkin ? new Color(0, 0.2f, 0.2f, 0.5f) : new Color(0, 0.8f, 0.8f, 0.5f);
                 GUI.Box(dopeRect, string.Empty, Slate.Styles.clipBoxHorizontalStyle);
                 GUI.color = Color.white;
+                if (editorBinding.FormalClip != null)
+                {
+                    GUI.Label(dopeRect, editorBinding.Info, Styles.centerLabel);
+                    return;
+                }
                 DopeSheetEditor.DrawDopeSheet(action.animationData, action, dopeRect, 0, action.length, false);
             }
 

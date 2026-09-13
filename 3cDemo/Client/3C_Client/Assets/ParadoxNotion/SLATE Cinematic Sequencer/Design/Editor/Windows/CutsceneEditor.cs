@@ -3994,6 +3994,9 @@ namespace Slate
 
                 if ( e.type == EventType.MouseDrag && isWaitingMouseDrag ) {
                     isDragging = true;
+                    isWaitingMouseDrag = false;
+                    if (editorBinding.FormalClip != null)
+                        editor.embeddedTimeline.BeginEdit("Move Timeline Clip");
                 }
 
                 if ( e.rawType == EventType.ContextClick ) {

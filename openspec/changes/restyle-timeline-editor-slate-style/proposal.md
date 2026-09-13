@@ -19,7 +19,7 @@ BTSMTL Skill、Timeline、Preview 和 Runtime 不使用 Slate 的 GameObject Act
 - 复用现有场景协调器和正式运行 owner；Timeline 扩展本地观察/导航，不复制运行命令。实际 FlowCanvas SkillGraph 宿主必须接入，不能仅在旧 BaseTreeWindow 上显示工具条便宣称技能预览可用。
 
 - 2026-09-12 收口范围：新增/属性编辑、统一整数帧、整体 GUI 布局、曲线与视图状态恢复必须共同完成；已有投影和编译通过不代表这些能力已交付。
-- 将重复的文档/来源/ownership 行合并，明确工具栏、搜索/标尺、左右同步轨道和可收起底部属性区；背景、裁剪与命中使用同一布局结果，窄窗口次要操作折叠。
+- 将重复的文档/来源/ownership 行合并，明确工具栏、搜索/标尺、左右同步轨道和右侧可收起 Inspector；背景、裁剪与命中使用同一布局结果，窄窗口次要操作折叠。
 - 标尺、游标、逐帧、Clip/Section 和曲线时间编辑使用正式 Timeline FrameRate；不读取 Slate 全局 FPS 作为 BTSMTL 时间权威，不将作者帧擅自等同于 Runtime Logic Tick。
 - 编辑游标与真实运行标记分开；本次不把尚未确认的 Timeline 内 Play 快捷按钮或本地自动播放游标列为交付能力。删除当前误接的嵌入 Slate Play/Sample 链，已有场景预览仍归 Graph Shell。
 - 正式创建允许作者主动建立无 Clip 的合法空 Track；取消/失败不留下半成品。修改后按稳定 identity 恢复选择、展开、游标、缩放、滚动和属性区状态。

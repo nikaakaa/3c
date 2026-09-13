@@ -34,7 +34,7 @@ TimelineEditorWindow
 作者界面：
 
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
-- 左右轨道共享行高和滚动，曲线展开同步；属性区可折叠、调高，窄窗口自动收起属性区。
+- 左右轨道共享行高和滚动，曲线展开同步；右侧 Inspector 可折叠、拖拽调宽，窄窗口自动收起 Inspector。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。

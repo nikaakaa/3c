@@ -218,12 +218,12 @@ Timeline 与 SkillGraph/Graph Shell MUST按同一联动计划交付导航、运�
 
 ### Requirement: Timeline布局必须统一计算并适应窗口尺寸
 
-嵌入 Surface MUST以单一布局结果提供背景、分隔线、控件、裁剪和命中范围。窗口 MUST包含紧凑文档行、编辑工具栏、左侧搜索/轨道、右侧缩放/帧标尺/Clip/Curve 和可收起底部属性区。左右内容 MUST共享行高度和垂直滚动；MUST不为隐藏的 Slate 控件或不存在的工具保留空白。文档名称只显示一次，ownership 为短标记，长路径在 tooltip。
+嵌入 Surface MUST以单一布局结果提供背景、分隔线、控件、裁剪和命中范围。窗口 MUST包含紧凑文档行、编辑工具栏、左侧搜索/轨道、中间缩放/帧标尺/Clip/Curve 和右侧可收起 Inspector。左右轨道内容 MUST共享行高度和垂直滚动；MUST不为隐藏的 Slate 控件或不存在的工具保留空白。文档名称只显示一次，ownership 为短标记，长路径在 tooltip。
 
 #### Scenario: 窄窗口与曲线展开
 
 - **WHEN** 窗口缩到 600×360 逻辑像素或作者展开曲线
-- **THEN** 左轨道和右内容 MUST保持对齐，属性区 MAY收起，次要工具 MUST折叠或省略文字
+- **THEN** 左轨道和中间内容 MUST保持对齐，右侧 Inspector MAY收起，次要工具 MUST折叠或省略文字
 - **AND** 主要按钮、数值输入、标尺 MUST不重叠，命中位置 MUST与显示一致
 
 #### Scenario: 缩放条与游标
@@ -256,7 +256,7 @@ Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数�
 
 ### Requirement: Timeline刷新必须保留有效作者状态
 
-编辑视图状态 MUST按正式 identity 保存选择、曲线通道、展开、当前编辑帧、缩放、滚动和属性高度。提交、Undo/Redo、外部更新 MUST恢复仍有效状态，不自动改选首个 Clip。选择、游标、缩放和搜索 MUST不产生 authoring Undo 或无条件重建。属性区 MUST显示正式 typed 字段，不编辑 proxy 私有参数。
+编辑视图状态 MUST按正式 identity 保存选择、曲线通道、展开、当前编辑帧、缩放、滚动和 Inspector 宽度。提交、Undo/Redo、外部更新 MUST恢复仍有效状态，不自动改选首个 Clip。选择、游标、缩放和搜索 MUST不产生 authoring Undo 或无条件重建。Inspector MUST显示正式 typed 字段，不编辑 proxy 私有参数。
 
 #### Scenario: 修改后继续编辑
 

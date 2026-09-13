@@ -95,7 +95,7 @@ namespace BTSMTL.Timeline.Editor
         RuntimeObservationSelectionMode m_RuntimeObservationSelectionMode;
 
         TimelineNode m_SourceNode;
-        BtsmtlSlateTimelineProjection m_SlateProjection;
+        BtsmtlSlateTimelineEditorAdapter m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
         ToolbarButton m_BackButton;
@@ -446,7 +446,7 @@ namespace BTSMTL.Timeline.Editor
                 serializedPropertyPath,
                 ownershipLabel,
                 sourceGraphWindow);
-            if (!BtsmtlSlateTimelineProjection.TryOpen(
+            if (!BtsmtlSlateTimelineEditorAdapter.TryOpen(
                     openRequest,
                     OpenClip,
                     out m_SlateProjection,

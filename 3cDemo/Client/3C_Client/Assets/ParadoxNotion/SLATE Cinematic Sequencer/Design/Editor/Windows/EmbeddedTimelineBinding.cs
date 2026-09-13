@@ -62,11 +62,11 @@ namespace Slate
         float DefaultHeight { get; }
         float FinalHeight { get; }
         IReadOnlyList<IEmbeddedTimelineClipBinding> Clips { get; }
+        IEmbeddedTimelineClipBinding SelectedClip { get; }
     }
 
     public interface IEmbeddedTimelineClipBinding : IEmbeddedTimelineElementBinding
     {
-        IKeyable Keyable { get; }
         string Info { get; }
         bool IsActive { get; }
         bool IsValid { get; }
@@ -79,15 +79,38 @@ namespace Slate
         bool CanScale { get; }
         bool CanBlendIn { get; }
         bool CanBlendOut { get; }
+        IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters { get; }
+        IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves { get; }
         bool CanCrossBlend(IEmbeddedTimelineClipBinding other);
-        void DrawClipGUI(Rect rect);
-        void DrawClipGUIExternal(Rect leftRect, Rect rightRect);
-        void ApplyCurveEdits();
         void AddIdentityKey(float time);
         void Split(float time);
         void StretchFit();
         void CleanKeysOffRange();
         void ResetAnimation();
+    }
+
+    public interface IEmbeddedTimelineParameterBinding
+    {
+        string ParameterId { get; }
+        string DisplayName { get; }
+        bool Enabled { get; set; }
+        float CurrentValue { get; }
+        IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves { get; }
+        void AddKey(float localTime);
+        void RemoveKey(float localTime);
+        void SelectPreviousKey(float localTime);
+        void SelectNextKey(float localTime);
+    }
+
+    public interface IEmbeddedTimelineCurveBinding
+    {
+        string ChannelId { get; }
+        string DisplayName { get; }
+        AnimationCurve Curve { get; }
+        int StartFrame { get; }
+        int EndFrame { get; }
+        float Duration { get; }
+        void Replace(AnimationCurve curve);
     }
 
     public interface IEmbeddedTimelineSectionBinding : IEmbeddedTimelineElementBinding

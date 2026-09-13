@@ -1,4 +1,4 @@
-2026-09-14审查口径：保留1.1—1.3的前端／目标／存储小步与1.4的Provider身份检查成果；1.2和1.4的已完成描述按实际交付收窄，原完整要求由1.8—1.10接续。2.1重新标为未完成，现有Factory仅封装旧Program的Workspace／Evaluator，不等于最终领域工厂。2.4已完成，BodyMotion已由Definition运行绑定接入原数值目标运动链；2.5已完成，Effect／Equipment目录、aggregate状态和Equipment local-state已由对应领域持有。2.6及后续仍未完成。审查依据与代码链见design D12及spec-audit；implementation.md的历史记录由实现窗口维护。
+2026-09-14审查口径：保留1.1—1.3的前端／目标／存储小步与1.4的Provider身份检查成果；1.2和1.4的已完成描述按实际交付收窄，1.8已完成，1.9—1.10仍未完成。2.1重新标为未完成，现有Factory仅封装旧Program的Workspace／Evaluator，不等于最终领域工厂。2.4已完成，BodyMotion已由Definition运行绑定接入原数值目标运动链；2.5已完成，Effect／Equipment目录、aggregate状态和Equipment local-state已由对应领域持有。2.6及后续仍未完成。审查依据与代码链见design D12及spec-audit；implementation.md的历史记录由实现窗口维护。
 
 ## 1. 独立技能数据与领域合同
 
@@ -10,7 +10,7 @@
 - [ ] 1.6 删除Timeline轨道／Clip／MotionWarp到IR与operation的发射，技能只保存调用和内容引用，TreeClip图继续独立编译。
 - [ ] 1.7 交付同一Timeline字段合同的portable内容导出、资源引用与Float32／Fixed绑定，使普通.NET直接运行而不回读Unity或生成临时程序。
 
-- [ ] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
+- [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
 - [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄，拒绝同GUID下已删除或类型不符的依赖。
 - [ ] 1.10 将AbilityDataAsset／FixedAbilityDataAsset的Load结果和消费接口迁为真正独立技能执行数据，删除对CharacterSimulationProgram／角色全局布局的返回和解码依赖。
 

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
@@ -6,6 +7,39 @@ namespace Slate
 {
     static class ClipEditorGUI
     {
+        public static void UpdateScaledCurves(
+            AnimationCurve[] curves,
+            Dictionary<int, Keyframe[]> preScaleKeys,
+            float preScaleStartTime,
+            float preScaleEndTime,
+            float newStartTime,
+            float newLength,
+            bool retime,
+            bool trim)
+        {
+            if (curves == null || preScaleKeys == null)
+                return;
+            for (int curveIndex = 0; curveIndex < curves.Length; curveIndex++)
+            {
+                AnimationCurve curve = curves[curveIndex];
+                if (!preScaleKeys.TryGetValue(curveIndex, out Keyframe[] keys))
+                    continue;
+                for (int keyIndex = 0; keyIndex < curve.keys.Length && keyIndex < keys.Length; keyIndex++)
+                {
+                    Keyframe key = keys[keyIndex];
+                    if (retime)
+                    {
+                        float preLength = preScaleEndTime - preScaleStartTime;
+                        key.time = Mathf.LerpUnclamped(0f, newLength, key.time / preLength);
+                    }
+                    if (trim)
+                        key.time -= newStartTime - preScaleStartTime;
+                    curve.MoveKey(keyIndex, key);
+                }
+                curve.UpdateTangentsFromMode();
+            }
+        }
+
         public static void DrawBlendGraphics(
             Rect rect,
             float blendInPosX,

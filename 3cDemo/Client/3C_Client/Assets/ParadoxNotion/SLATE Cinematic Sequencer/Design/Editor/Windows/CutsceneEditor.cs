@@ -3603,27 +3603,15 @@ namespace Slate
                 var retime = Event.current.control || Prefs.retimeMode;
                 var trim = !Event.current.shift && !Prefs.rippleMode && !retime;
 
-                var curveIndex = -1;
-                foreach ( var curve in action.GetCurvesAll() ) {
-                    curveIndex++;
-                    for ( var i = 0; i < curve.keys.Length; i++ ) {
-                        var preKey = preScaleKeys[curveIndex][i];
-
-                        if ( retime ) {
-                            var preLength = preScaleEndTime - preScaleStartTime;
-                            var newTime = Mathf.LerpUnclamped(0, action.length, preKey.time / preLength);
-                            preKey.time = newTime;
-                        }
-
-                        if ( trim ) {
-                            preKey.time -= action.startTime - preScaleStartTime;
-                        }
-
-                        curve.MoveKey(i, preKey);
-                    }
-
-                    curve.UpdateTangentsFromMode();
-                }
+                ClipEditorGUI.UpdateScaledCurves(
+                    action.GetCurvesAll(),
+                    preScaleKeys,
+                    preScaleStartTime,
+                    preScaleEndTime,
+                    action.startTime,
+                    action.length,
+                    retime,
+                    trim);
 
                 CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
 

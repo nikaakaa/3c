@@ -110,8 +110,8 @@ namespace ThirdPersonSimulation
 
         readonly object m_WorkspaceGate = new object();
         readonly HashSet<KernelProgramBinding> m_BoundPrograms = new HashSet<KernelProgramBinding>();
-        readonly Dictionary<ActorId, ActorEvaluator> m_Evaluators =
-            new Dictionary<ActorId, ActorEvaluator>();
+        readonly Dictionary<ActorId, Float32CharacterDomainRuntimeInstance> m_Evaluators =
+            new Dictionary<ActorId, Float32CharacterDomainRuntimeInstance>();
         readonly CharacterControlModuleCatalog m_ControlModules;
         bool m_ProgramBindingsSealed;
 
@@ -183,7 +183,7 @@ namespace ThirdPersonSimulation
         PendingCharacterEvaluation EvaluateMeasured(SimulationEvaluateRequest request)
         {
             ValidateProgramBinding(request.Binding);
-            ActorEvaluator actorEvaluator = GetEvaluatorForEvaluate(request);
+            Float32CharacterDomainRuntimeInstance actorEvaluator = GetEvaluatorForEvaluate(request);
             ActorOutputWorkspaceLease outputLease = actorEvaluator.Workspace.Begin(
                 request.ActorId,
                 request.Tick,
@@ -239,7 +239,7 @@ namespace ThirdPersonSimulation
         }
 
         [PerformanceProbe("simulation.kernel.workspace")]
-        ActorEvaluator GetEvaluatorForEvaluate(SimulationEvaluateRequest request)
+        Float32CharacterDomainRuntimeInstance GetEvaluatorForEvaluate(SimulationEvaluateRequest request)
         {
             return GetEvaluator(request);
         }
@@ -262,37 +262,18 @@ namespace ThirdPersonSimulation
                 request.DiagnosticsEnabled);
         }
 
-        ActorEvaluator GetEvaluator(SimulationEvaluateRequest request)
+        Float32CharacterDomainRuntimeInstance GetEvaluator(SimulationEvaluateRequest request)
         {
             lock (m_WorkspaceGate)
             {
-                if (!m_Evaluators.TryGetValue(request.ActorId, out ActorEvaluator evaluator) ||
+                if (!m_Evaluators.TryGetValue(request.ActorId, out Float32CharacterDomainRuntimeInstance evaluator) ||
                     !evaluator.Evaluator.Matches(request))
                 {
-                    evaluator = new ActorEvaluator(request, m_ControlModules);
+                    evaluator = Float32CharacterDomainRuntimeFactory.Create(request, m_ControlModules);
                     m_Evaluators[request.ActorId] = evaluator;
                 }
                 return evaluator;
             }
-        }
-
-        sealed class ActorEvaluator
-        {
-            public ActorEvaluator(
-                SimulationEvaluateRequest request,
-                CharacterControlModuleCatalog controlModules)
-            {
-                Workspace = new Float32EvaluationWorkspace(request.ExecutionLayout);
-                Evaluator = new Float32OperationEvaluator(
-                    request.Program,
-                    request.ExecutionLayout,
-                    request.ActorId,
-                    Workspace,
-                    controlModules);
-            }
-
-            public Float32EvaluationWorkspace Workspace { get; }
-            public Float32OperationEvaluator Evaluator { get; }
         }
 
         [PerformanceProbe("simulation.kernel.finalize")]
@@ -307,7 +288,7 @@ namespace ThirdPersonSimulation
         {
             PendingCharacterEvaluation pending = request.Pending;
             ValidateProgramBinding(pending.Binding);
-            ActorEvaluator actorEvaluator = GetEvaluatorForFinalize(pending);
+            Float32CharacterDomainRuntimeInstance actorEvaluator = GetEvaluatorForFinalize(pending);
             Float32CharacterStateTransaction transaction = null;
             try
             {
@@ -364,9 +345,9 @@ namespace ThirdPersonSimulation
         }
 
         [PerformanceProbe("simulation.kernel.workspace")]
-        ActorEvaluator GetEvaluatorForFinalize(PendingCharacterEvaluation pending)
+        Float32CharacterDomainRuntimeInstance GetEvaluatorForFinalize(PendingCharacterEvaluation pending)
         {
-            ActorEvaluator actorEvaluator = GetEvaluator(pending);
+            Float32CharacterDomainRuntimeInstance actorEvaluator = GetEvaluator(pending);
             actorEvaluator.Workspace.Require(pending.OutputLease);
             return actorEvaluator;
         }
@@ -404,7 +385,7 @@ namespace ThirdPersonSimulation
             RequireBoundProgram(pending.Binding);
             if (!pending.TryClaimForAbort(Specialization, out Float32CharacterStateTransaction transaction))
                 return;
-            ActorEvaluator actorEvaluator = GetEvaluator(pending);
+            Float32CharacterDomainRuntimeInstance actorEvaluator = GetEvaluator(pending);
             bool leaseHeld = false;
             try
             {
@@ -421,11 +402,11 @@ namespace ThirdPersonSimulation
             }
         }
 
-        ActorEvaluator GetEvaluator(PendingCharacterEvaluation pending)
+        Float32CharacterDomainRuntimeInstance GetEvaluator(PendingCharacterEvaluation pending)
         {
             lock (m_WorkspaceGate)
             {
-                if (!m_Evaluators.TryGetValue(pending.ActorId, out ActorEvaluator evaluator) ||
+                if (!m_Evaluators.TryGetValue(pending.ActorId, out Float32CharacterDomainRuntimeInstance evaluator) ||
                     !evaluator.Evaluator.Matches(pending))
                 {
                     throw new InvalidOperationException(

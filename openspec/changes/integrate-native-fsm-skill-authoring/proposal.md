@@ -1,12 +1,17 @@
 ## Why
 
+r5下一轮只补齐共享准入命名迁移与StateBody三个系统锚点合同。第1—7节已勾选工作保留为对应阶段记录，不据此宣称本轮增量完成。
+
 原生FSM、Program编译和C#图输出已在任务表记录完成，但完整技能外壳仍与图分散保存。本change继续采用[原生C#作者基线r2](../remove-agent-authoring-use-native-csharp/design.md)的两个显式工具，在已有成果上补齐完整Ability作者入口。
 
-r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完整技能的入口，集中拥有技能规则和执行图。现有SkillDefinition、ActionProfile、ActionContext与角色图列表分散表达同一技能，新C#生成也只登记图；本阶段收敛这些所有权和命名，不把只重建Graph称为完整Ability。
+r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完整技能的入口，集中呈现技能配置和执行图，准入规则通过独立共享资产引用。现有SkillDefinition、ActionProfile、ActionContext与角色图列表分散表达同一技能，新C#生成也只登记图；本阶段收敛这些所有权和命名，不把只重建Graph称为完整Ability。
 
 2026-09-13 Dodge交接补充：DodgeBack/DodgeForward已通过正式generate_assets写回Native FSM + StateBody + Timeline，根图Setup清理已完成；StateBody内仍有旧Action Exit Selector和空Action Exit_To_Succeed_Rule。该结构是迁移中间态，不是Native FSM必需组件，也不代表退出生命周期已最终收敛。
 
 ## What Changes
+
+- r5将旧ActionProfile类型、API、资产目录/文件名及正式消费者整体迁为GameplayAbilityAdmissionProfile；覆盖AbilityGrant、CanActivate/ActionTarget、Program Catalog和公共C#双工具，保持原共享规则与准入分组，不留兼容别名。
+- StateBody固定生成OnEnter、Root、OnExit三个系统锚点；OnExit不进入作者节点菜单、不可删除，只由运行时代码在状态停止完成屏障中调用清理，不决定Ability终态，也不恢复旧Action Exit/Submit作者清理图。
 
 - r4撤销“OnExit分派终态”方案：Ability规则和统一生命周期代码决定Complete/Cancel/Interrupt/Abort，先记住结果再停止执行内容；State.OnExit仅为代码内部退出阶段，不让作者编排清理、结束或动画释放。内部状态切换不结束整个Ability。
 - 系统按原owner自动停止StateBody/Timeline、关闭相关窗口并释放运行资源；将旧ActionExit里的有效结束条件迁回Ability规则/请求入口，再删除Selector、空条件、被替代Submit分支及空作者OnExit页，不以新分派节点换壳。
@@ -15,7 +20,7 @@ r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完
 - 技能逻辑停止后可保留纯表现淡出，新Ability不必等旧动画权重为零；旧表现不能继续命中、效果或技能位移。无接替动画时自然显露基础姿态，不在OnExit播放Idle，也不用淡出时间代替玩法恢复时间。
 
 - **BREAKING**：将完整技能作者入口收敛为独立`GameplayAbilityDefinition`资产；其唯一`AbilityGraph`和私有FSM、条件、Macro、Timeline归该Ability拥有。角色通过`AbilityGrant`引用、授予并绑定输入，不再分别维护SkillDefinitions与SkillGraphs两套登记。
-- 技能专用的激活、阻断、取消、目标要求及效果引用收进Ability配置；真正需要共同维护的激活规则才显式共享，专用与共享只允许一个有效来源。输入映射与已有授予参数归角色/装备，当前目标、释放代次和执行状态归运行上下文。
+- 激活、阻断、取消准入、并发分组与目标要求统一保存于独立`GameplayAbilityAdmissionProfile`资产，由`GameplayAbilityDefinition.AdmissionProfile`精确引用；即使只有一个消费者也不复制字段到Ability。Ability继续拥有结束规则、效果引用与执行图。输入映射与已有授予参数归角色/装备，当前目标、释放代次和执行状态归运行上下文。
 - Skill专属命名统一为Ability：作者使用GameplayAbilityDefinition/AbilityGraph，授予使用AbilityGrant，一次释放使用AbilityExecution/AbilityExecutionContext。它们分别迁移现有职责，不额外复制一套运行状态；AbilityGrant不是执行实例，运行也不照搬UE UObject。
 - 普通Ability不要求作者创建空ActionContextSlot；节点和Timeline绑定当前AbilityExecutionContext。保留已确认的非Skill调用上下文，只有实际无消费者的旧Action/Skill专属配置、类型、入口和名字才删除，不保留兼容别名。
 - 完整Ability的C#输出必须包含外壳、规则、私有执行内容和明确授予/根挂接；子图输出只恢复该子图及owner，不创建另一个Ability，也不能依赖角色中残留的旧外壳。

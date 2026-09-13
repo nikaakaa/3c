@@ -1,6 +1,8 @@
-## 当前执行边界：r4完整Ability入口及退出职责
+## 当前执行边界：r5共享准入命名与StateBody系统锚点
 
-用户已确认GameplayAbilityDefinition是完整技能作者入口。第1—6节已勾选项保留历史状态；只执行第7节新增实现，不重新打开r2任务，也不把图范围生成完成解释成完整Ability外壳完成。任务只列实现、迁移、删除及必要规范修改，不列验证、证据收集、Build验收或手动测试任务。
+第1—7节勾选保留阶段完成记录；下一轮只执行第8节增量。旧任务中的“删除作者OnExit”指删除作者清理图及包装，不删除OnExit系统锚点；准入规则统一以独立GameplayAbilityAdmissionProfile为唯一来源。
+
+r3/r4阶段以GameplayAbilityDefinition为完整技能作者入口，第7节记录该阶段实现；当前新增要求以第8节为准，不重新打开r2任务，也不以历史勾选代替r5交付。任务只列实现、迁移、删除及必要规范修改，不列验证、证据收集、Build验收或手动测试任务。
 
 r4固定分工：Ability决定结束，代码自动停止清理；Timeline保留片段内部混合，动作Slot管理跨播放接替，Pose状态机管理基础转移，动画EventGraph只计算动画变量/判断，不转发所有播放或退出。7.8—7.12替换旧OnExit分派及强制事件图草案，已有勾选不变，不新增验证任务。
 
@@ -66,3 +68,11 @@ r4固定分工：Ability决定结束，代码自动停止清理；Timeline保留
 - [ ] 7.10 在原生命周期与播放通知中保持明确Ability/执行实例、结果/原因、Tick和producer关联，播放采样保留Timeline时间与局部片段权重，停止由代码自动请求；直接进入正式Presentation/Slot接口，不新增全局总线或动画EventGraph必经转发。
 - [ ] 7.11 对接现有动作Slot精确源/目标过渡及混合历史接口，保留Timeline局部混合、Slot跨播放规则与Pose基础转移各自唯一owner；旧逻辑停止后不继续窗口/效果/Motion，不因表现淡出等待，不在Ability/事件图中维护混合栈或复制动画算法。
 - [ ] 7.12 将两个Dodge旧ActionExit分支的有效条件迁入Ability结束规则/请求入口，删除Action Exit Selector、空Action Exit_To_Succeed_Rule、被替代Submit实例/私有包装及空作者OnExit；保持已清理根图、四种终态和正常连段，不重新生成旧壳或默认Complete兜底。
+
+## 8. r5共享准入命名与StateBody系统锚点
+
+- [ ] 8.1 将ActionProfile类型、配置API、Inspector/菜单及GameplayAbilityDefinition.AdmissionProfile统一为GameplayAbilityAdmissionProfile；保留独立共享规则资产，移除准入内联/覆盖副本及旧类型别名。
+- [ ] 8.2 迁移Corin准入资产到Abilities/AdmissionProfiles及明确新文件名，更新AbilityGrant、角色/Equipment、CanActivate/ActionTarget与全部正式序列化引用；保留Dodge单一共享对象、原分组identity和业务行为，删除废弃资产、.meta及无人使用的旧目录。
+- [ ] 8.3 统一依赖发现、语义编译、Program Catalog与Fixed/Float32所有准入消费者的命名和身份映射；公共export_code/generate_assets及生成源码输出新Profile合同和范围内唯一共享对象，移除旧入口，不新增并行catalog或执行状态。
+- [ ] 8.4 保留StateBody工厂已正确生成的OnEnter/Root/OnExit三系统锚点，补齐不可删除、OnExit不进作者菜单、正式图合同及C#重建/编译映射；仅由运行代码在State stop barrier调用OnExit清理，保留ForceStop释放，不恢复Action Exit/Submit作者清理链。
+- [ ] 8.5 同步btsmtl-sm-node-authoring、character-pipeline-definition-authoring、btsmtl-flowcanvas-authoring及所有受影响正式spec条款，清除两锚点例外、旧ActionProfile命名和准入内联要求，保留非Ability合法场景及既有完成记录。

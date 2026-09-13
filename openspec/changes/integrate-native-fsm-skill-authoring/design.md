@@ -4,6 +4,8 @@
 
 此前只读源码已确认原生FSM类型、配置/创建及领域合同存在，插件runtime被拒绝。当前任务表已将r2各项勾选，本轮保留这些实现记录；它们只说明当时的图/FSM范围，不能扩大为r3的完整Ability外壳已输出。当前`BindSkillRoot`仍只登记`Definition.SkillGraphs`，角色外壳另存于`SkillDefinitions`。实施前重读实际差异，不从旧截图恢复steps、不覆盖其它窗口正确改动。
 
+本轮r5以D13为下一轮实现边界：共享准入资产整体命名迁移，以及StateBody三系统锚点合同。第1—7节已勾选进展保持，前文源码现状描述属于对应阶段快照。
+
 ## Goals / Non-Goals
 
 **Goals:** 保留已正确原生FSM与Program链；把旧Applier内真实资产操作落到正式Skill/FSM API；让公共C#作者入口完整输出、重建明确FSM拥有范围并恢复根挂接；迁离旧Agent调用依赖。
@@ -16,7 +18,7 @@
 
 | 作者内容 | 唯一存储与owner |
 |---|---|
-| GameplayAbilityDefinition | r3独立技能主资产，拥有规则及唯一AbilityGraph；角色通过AbilityGrant引用 |
+| GameplayAbilityDefinition | 独立技能主资产，引用GameplayAbilityAdmissionProfile，拥有结束规则及唯一AbilityGraph；角色通过AbilityGrant引用 |
 | AbilityGraph（原Skill执行图） | Ability私有执行根，保存于Ability文件；不再与外壳分开登记为第二个技能入口 |
 | StateMachine | 原生FSM，唯一属于调用它的节点，私有内容保存于Ability或正式共享Macro实际文件 |
 | State | FSMState业务适配，唯一引用StateBody |
@@ -66,7 +68,7 @@ r2盘点曾发现缺失State/Edge创建受`local:`限制、系统入口只能对
 
 每个正式状态字段、生命周期引用、原生配置、条件、边顺序、动态接口、布局和根绑定都须有输出/恢复办法；没有对应调用时报告精确对象/字段/原因，拒绝完整导出，不静默丢字段或临时用插件runtime解释。公共写出器在完整性检查成功后写源码，FSM适配只提供所需读取与调用描述。
 
-r4正式作者模型不再包含用于系统清理/终态推导的OnExit执行图；内部退出函数属于代码，不导出成作者节点。旧资产通过明确领域操作迁移后输出新模型，不能一边保留旧字段一边静默省略。完整Ability输出逻辑规则、执行内容、Timeline片段局部混合及明确Slot/表现引用；跨动作过渡和基础姿态规则随其对应动画作者根输出。
+r4正式作者模型不再包含用于系统清理/终态推导的OnExit执行图；内部退出函数属于代码；StateBody仍固定生成OnEnter/Root/OnExit系统锚点，C#通过正式工厂建立或复用，不导出作者清理链。旧资产通过明确领域操作迁移后输出新模型，不能一边保留旧字段一边静默省略。完整Ability输出逻辑规则、执行内容、Timeline片段局部混合及明确Slot/表现引用；跨动作过渡和基础姿态规则随其对应动画作者根输出。
 
 ### D3.3 原模块的保存、失败和Build边界
 
@@ -119,7 +121,7 @@ m_Name问题已在任务4.5记录归属Slate.CutsceneGroupInspector；不再作�
 
 | 业务对象 | 正式职责 | 从现有模型迁移 |
 |---|---|---|
-| GameplayAbilityDefinition | 可独立打开的技能资产；唯一拥有技能身份、激活/阻断/取消/目标要求、效果引用、后续能力关系和执行图 | CharacterSkillAuthoringDefinition及ActionProfile中对应技能规则；从角色内联配置迁到明确Ability资产 |
+| GameplayAbilityDefinition | 可独立打开的技能资产；拥有技能身份、结束规则、效果引用、后续能力关系和执行图，引用独立AdmissionProfile | 旧SkillDefinition职责迁入Ability；ActionProfile准入职责留在独立共享规则资产并改名 |
 | AbilityGraph | 激活后的执行内容，保留原生FSM、Sequence/Parallel/Macro/Timeline语义 | 原Skill执行图；私有图归Ability文件，共享资源保持明确外部引用 |
 | AbilityGrant | 某角色/装备授予哪个Ability、输入映射及已有授予参数 | 角色侧Skill登记和输入绑定；不复制技能规则/执行图，不新增等级系统 |
 | AbilityExecution | 一次实际释放的身份、阶段和生命周期 | 复用现有Skill相关Action实例状态和Program布局，不并行创建第二实例 |
@@ -127,15 +129,15 @@ m_Name问题已在任务4.5记录归属Slate.CutsceneGroupInspector；不再作�
 
 AbilityGrant对应授予记录，不是一次执行，不把UE AbilitySpec当成AbilityExecution。命名借用UE的职责划分，执行仍是本项目的Program/Simulation Pipeline。
 
-作者打开一个Ability页面即可编辑基本信息、激活规则、目标要求、执行图和资源引用。专用规则随Ability保存；实际共同维护的规则可显式共享，并直接在该入口显示其来源，禁止本地副本加共享副本同时生效。独立动画、效果和共享Macro保持资源身份，不将整个角色或素材库塞入Ability。业务取舍：聚合入口减少拼配置的负担；显式共享能统一多个技能的策略，但修改会影响全部消费者，必须显示共享关系。同值不自动等于应共享。
+作者打开一个Ability页面即可编辑基本信息、激活规则、目标要求、执行图和资源引用。准入规则始终保存在独立GameplayAbilityAdmissionProfile；多个Ability可精确引用同一对象，并直接在该入口显示其来源，禁止本地副本加共享副本同时生效。独立动画、效果和共享Macro保持资源身份，不将整个角色或素材库塞入Ability。业务取舍：聚合入口减少拼配置的负担；显式共享能统一多个技能的策略，但修改会影响全部消费者，必须显示共享关系。同值不自动等于应共享。
 
-规则只有一个正式对象来源：默认由Ability拥有，真正共享时引用明确共享对象，不同时保存内联值和外部覆盖。共享规则identity与Ability identity分开；DodgeBack/DodgeForward不能因迁入两个Ability就改变原Dodge准入分组、并发上限、互斥和取消边界。旧ActionId等仍参与执行的身份按业务角色明确映射，不机械替换成AbilityId。
+准入规则只有一个正式对象来源：GameplayAbilityAdmissionProfile独立资产；Ability只保存AdmissionProfile引用，禁止内联准入字段或外部覆盖。结束规则仍归Ability，不能把结束结果与准入混为一份策略。共享规则identity与Ability identity分开；DodgeBack/DodgeForward不能因迁入两个Ability就改变原Dodge准入分组、并发上限、互斥和取消边界。旧ActionId等仍参与执行的身份按业务角色明确映射，不机械替换成AbilityId。
 
 Action不再作为技能作者层与Ability并列的“另一种技能”。迁移ActionProfile/Context/Instance前按消费者区分：Skill专属职责迁入以上对象；若通用Action确实服务独立非Skill业务，保留其明确内部职责，不全库机械改名。相同状态不因作者术语变化复制，已正确激活、取消、预测身份与Timeline停止顺序保留。专属旧类型/字段/入口迁完即删除，无兼容别名或旧新双写。
 
 ### D8 r3完整Ability的C#范围
 
-完整Ability输出从GameplayAbilityDefinition开始，覆盖外壳字段、自有激活规则、唯一执行图及私有FSM/条件/Macro/Timeline；外部共享策略、效果和素材只输出精确引用。公开export/generate工具仍只有原两个，扩展其正式领域根支持，不另造Ability MCP。
+完整Ability输出从GameplayAbilityDefinition开始，覆盖外壳字段、AdmissionProfile精确引用、Ability自有结束规则、唯一执行图及私有FSM/条件/Macro/Timeline；外部共享策略、效果和素材只输出精确引用。公开export/generate工具仍只有原两个，扩展其正式领域根支持，不另造Ability MCP。
 
 完整生成顺序为创建Ability资产和自有内容 → 配置能力规则及业务identity → 恢复资源和内部引用 → 连接执行图 → 挂接唯一AbilityGraph → 对明确指定角色/装备恢复AbilityGrant及输入映射。若本次只生成可复用Ability资产，可以明确不授予角色；若声明恢复某角色能力，则不得只返回孤立图或依赖该角色残留旧SkillDefinition。删除输出后重建遵循同一明确范围。
 
@@ -159,7 +161,7 @@ Action不再作为技能作者层与Ability并列的“另一种技能”。迁�
 
 | 责任 | 正式owner | 作者表达 |
 |---|---|---|
-| 激活、取消与替换/中断准入 | GameplayAbilityDefinition规则与既有准入模块 | 规则、窗口/输入条件及明确请求 |
+| 激活、取消与替换/中断准入 | GameplayAbilityAdmissionProfile与既有准入模块 | 规则、窗口/输入条件及明确请求 |
 | 一次执行以何种结果结束 | 同一AbilityExecution的生命周期代码 | 必要的提前结束请求，普通自然完成不要求补节点 |
 | 停止子内容、内部OnExit与资源回收 | 现有FSM/State/Timeline运行模块 | 不创建作者清理图 |
 | 一条Timeline内部的片段混合 | Timeline动画轨道/片段 | 素材、区间、重叠与局部权重曲线 |
@@ -219,9 +221,36 @@ BTSMTL不是骨骼求解器，也不是完全不认识动画的纯逻辑容器�
 
 责任迁回后删除Action Exit Selector、Action Exit_To_Succeed_Rule空图/layout、被替代Submit实例/连线/私有包装及空作者OnExit页，不用“生命周期分派节点”或另一层Macro替代旧壳。其它图仍有合法消费者的通用Selector或显式结束请求保持边界，Attack连段和真实取消条件不按名称批量删除。Ability生成源码表达最终逻辑规则、执行图、Timeline局部混合与Slot/表现引用，不重建旧清理图或复制跨动作过渡配置。
 
-现行btsmtl-sm-node-authoring要求StateBehaviorSubTree固定生成可编辑OnExit、缺失即非法，与新目标冲突。后续须明确：内部退出阶段与资源释放仍由代码拥有，Ability作者不必提供OnExit图；动画退出策略是播放数据，不是退出回调。此处不取消正常状态转移或合法非Skill生命周期。本次不写current specs或业务代码。
+最新现行btsmtl-sm-node-authoring对Ability StateBody另写了“只要求OnEnter与RootNode”的例外，与r5三系统锚点冲突。实施时替换该例外，保留普通StateBehaviorSubTree已有非Ability行为。系统OnExit必须存在不等于作者必须编排清理；动画退出策略仍属于播放数据。具体对账与范围见D13。
 
 r4由tasks 7.8—7.12承接，已有24项完成记录保持。新增任务只有实现和清理，不含测试、验证或证据收集任务。
+
+### D13 r5下一轮共享准入与StateBody锚点收口
+
+正式名称固定为`GameplayAbilityAdmissionProfile`。它表示“这一组能力在什么条件下允许进入，以及阻断、取消准入、并发和目标要求”，保留独立共享资产；`GameplayAbilityDefinition`是技能入口，`AdmissionProfile`只保存引用，不能复制准入字段。AbilityGrant只保存授予、输入和已有目标绑定，实际目标仍属于执行上下文。
+
+| 迁移对象 | 下一轮要求 |
+|---|---|
+| ActionProfile类型、Inspector、菜单、配置API和序列化引用 | 整体迁为GameplayAbilityAdmissionProfile；迁完删除旧类型、旧字段与兼容别名，不只换显示名 |
+| Corin准入资产 | 统一至`Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/`，文件为`CorinAttackAdmissionProfile.asset`与`CorinDodgeAdmissionProfile.asset`；对应.meta及所有引用随正式资产操作迁移，旧Actions目录无其他资源后删除 |
+| Definition.AdmissionProfile、AbilityGrant和角色/Equipment装配 | 贯通同一Profile引用；DodgeBack/Forward继续共享一个Dodge规则对象，输入和目标绑定不复制准入规则 |
+| CanActivate、ActionTarget相关节点/合同/编译消费者 | 技能准入与目标要求名称随Ability语义迁移，保留当前target snapshot与求值时机；有独立非Ability用途的目标合同按实际职责保留，不建立同义副本 |
+| Program Catalog、依赖发现、语义发射及Fixed/Float32运行消费 | 统一准入Profile类型、字段和身份引用；共享准入分组identity与Ability identity分开，保留原并发上限、阻断、取消和目标行为，不另建registry或运行状态 |
+| export_code/generate_assets及已有生成源码 | 输出新Profile类型、路径、引用和正式API；共享Profile在明确生成范围内只创建一次，范围外精确引用；恢复Ability和Grant引用后清除旧入口，不增加工具、自动同步或旧类型解析兼容 |
+
+StateBody固定生成且仅有一组OnEnter、Root、OnExit系统锚点。正式工厂、创建/删除能力、Graph合同、C#输出/重建和Program映射必须一致。OnExit不进入作者创建菜单且不可删除；仅由运行时代码在State stop barrier（状态停止完成屏障）中调用，完成状态及其子内容清理后才允许正常状态接替或报告停止完成。它不连接作者Action Exit/Submit清理图，不决定或修改Complete/Cancel/Interrupt/Abort，不把状态转换升级为Ability结束。ForceStop必要释放继续由原代码保证，不能依赖普通回调必达；三个锚点不建立第二执行器。
+
+业务取舍：独立共享Profile使两个闪避的准入修改保持一致，代价是修改会影响所有引用者，因此Ability入口必须显示规则来源和共享关系。三个系统锚点让状态生命周期结构固定，代价是显示一个作者不能删除的系统入口；这不增加作者清理工作，也不让结束规则分散回图里。
+
+| 冲突来源 | 修订要求 |
+|---|---|
+| 本change D7/D8及完整Ability requirement允许专用准入内联 | 替换为独立GameplayAbilityAdmissionProfile单一来源；Ability仅引用，结束规则与效果仍按原owner保存 |
+| 本change D3.2/D12及清理场景禁止空OnExit页的含糊表述 | 删除的是作者清理图/Submit包装，保留不可删除的OnExit系统锚点；不得继续据旧文字删锚点 |
+| current `btsmtl-sm-node-authoring`的Ability StateBody只要求OnEnter/RootNode例外 | 下一轮实施同步改为三个系统锚点及代码stop barrier调用；普通非Ability生命周期场景保留 |
+| current `character-pipeline-definition-authoring`的ActionProfile和Core/Feature Action catalog用语 | 同步准入Profile、装配及catalog命名，保留共享分组合并/冲突语义，不复制第二catalog |
+| current `btsmtl-flowcanvas-authoring`及其他正式spec仍使用旧Profile或两锚点条款 | 随本轮整体消费者迁移更新对应条款和完整场景；本次active delta表达目标，不声称current已完成修订 |
+
+当前只读代码显示`GameplayAbilityDefinition.AdmissionProfile`仍返回ActionProfile，CanActivate emitter及语义catalog仍写ActionProfile；StateBody工厂已生成/补齐三个锚点。下一轮保留已正确的三锚点实现，只补齐其余合同/消费者与资产，不能撤回到两锚点或把已删除Action Exit/Submit图恢复。tasks第8节承接增量，不重开第7节勾选，也不把旧完成记录当作r5完成。
 
 ## Risks / Trade-offs
 
@@ -237,7 +266,7 @@ r4由tasks 7.8—7.12承接，已有24项完成记录保持。新增任务只有
 
 ## Planning Revision
 
-- revision: r4（Ability结束、内部退出清理与动画停止策略）
+- revision: r5（共享准入资产命名与StateBody三个系统锚点）
 - baseline: remove-agent-authoring-use-native-csharp/design.md r2，2026-09-13
 - scope: 只更新本目录proposal/design/tasks/specs；r2已有勾选和implementation记录保留，新增Ability任务不含验证任务。
 - dispatch: 未向规划、实现或协调窗口发送消息；本次不修改业务代码/资产。

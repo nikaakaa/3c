@@ -107,7 +107,7 @@ Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Set
 #### Scenario: Ability没有作者OnExit图
 - **WHEN** 正常完成、取消、中断或强制终止没有配置作者OnExit图的Ability
 - **THEN** 对应运行模块 MUST完成其拥有内容的停止和释放，缺少作者清理图不能成为资源残留原因
-- **AND** 不得自动生成空OnExit页补齐旧结构约束
+- **AND** StateBody MUST仍由系统生成OnEnter、Root、OnExit三个锚点；不得生成作者清理页或恢复旧Submit链
 
 #### Scenario: 退出时Ability结果已经确定
 - **WHEN** Ability已接受Cancel或Interrupt，状态层随后收到统一停止上下文
@@ -269,7 +269,7 @@ Timeline动画轨道/片段 MUST拥有素材、时间区间、片段重叠及Wei
 
 ### Requirement: GameplayAbilityDefinition必须是完整技能作者入口
 
-每个GameplayAbilityDefinition MUST拥有稳定Ability identity、技能激活/阻断/取消规则、目标要求、已有消耗/冷却/效果引用、后续能力关系和唯一AbilityGraph。作者 MUST能从该入口编辑规则、执行图和资源；专用规则归Ability拥有，显式共享规则只有一个正式来源，不同时保存本地副本和外部覆盖。AbilityGraph MUST保留原生FSM及组合/Timeline业务，系统 MUST拒绝第二能力外壳、多个执行根或旧Character RootTree入口。此作者合同不要求新增尚不存在的效果或等级系统。
+每个GameplayAbilityDefinition MUST拥有稳定Ability identity、结束规则、已有消耗/冷却/效果引用、后续能力关系和唯一AbilityGraph，并通过AdmissionProfile精确引用独立GameplayAbilityAdmissionProfile。激活/阻断/取消准入、并发分组与目标要求 MUST只保存在该独立共享规则资产中，单消费者也不得复制到Ability。作者 MUST能从Ability入口编辑正式规则、执行图和资源并看清共享来源，不同时保存本地副本和外部覆盖。AbilityGraph MUST保留原生FSM及组合/Timeline业务，系统 MUST拒绝第二能力外壳、多个执行根或旧Character RootTree入口。此作者合同不要求新增尚不存在的效果或等级系统。
 
 #### Scenario: 激活技能
 - **WHEN** 输入或正式控制规则请求一个已授予Ability
@@ -283,7 +283,7 @@ Timeline动画轨道/片段 MUST拥有素材、时间区间、片段重叠及Wei
 
 ### Requirement: Ability授予与一次执行必须各自归属
 
-AbilityGrant MUST表示明确角色/装备授予的Ability引用、输入映射和已有授予参数，不复制技能规则或执行图。AbilityExecution MUST表示一次释放，AbilityExecutionContext MUST承载当前目标、来源和执行关联；二者 MUST复用现有对应状态，不另造Skill/Action并行状态。目标要求属于定义，实际目标属于执行。普通Ability节点及Timeline MUST绑定当前执行上下文，不要求作者创建空ActionContextSlot。合法非Skill上下文 MUST保留其业务边界。
+AbilityGrant MUST表示明确角色/装备授予的Ability引用、输入映射和已有授予参数，不复制技能规则或执行图。AbilityExecution MUST表示一次释放，AbilityExecutionContext MUST承载当前目标、来源和执行关联；二者 MUST复用现有对应状态，不另造Skill/Action并行状态。目标要求属于定义引用的AdmissionProfile，实际目标属于执行。普通Ability节点及Timeline MUST绑定当前执行上下文，不要求作者创建空ActionContextSlot。合法非Skill上下文 MUST保留其业务边界。
 
 #### Scenario: 相同Ability授予不同角色
 - **WHEN** 两个角色引用同一Ability但使用不同输入映射
@@ -292,7 +292,7 @@ AbilityGrant MUST表示明确角色/装备授予的Ability引用、输入映射�
 
 ### Requirement: 完整Ability代码生成必须包含外壳与执行内容
 
-完整Ability导出 MUST以GameplayAbilityDefinition为根，覆盖定义字段、自有规则、唯一执行图及私有闭包，显式引用外部共享规则/效果/素材；生成 MUST恢复完整定义和声明范围内的角色授予/输入绑定。MUST不以只登记Graph、只恢复FSM或依赖旧SkillDefinition残留作为完整能力生成。子图范围 MUST只处理指定子图和已有owner，不克隆或覆盖能力外壳。公共工具继续为export_code/generate_assets，不新增Ability专用MCP。
+完整Ability导出 MUST以GameplayAbilityDefinition为根，覆盖定义字段、自有结束规则、唯一执行图及私有闭包，显式引用独立GameplayAbilityAdmissionProfile及外部效果/素材；生成 MUST恢复完整定义和声明范围内的角色授予/输入绑定。MUST不以只登记Graph、只恢复FSM或依赖旧SkillDefinition残留作为完整能力生成。子图范围 MUST只处理指定子图和已有owner，不克隆或覆盖能力外壳。公共工具继续为export_code/generate_assets，不新增Ability专用MCP。
 
 #### Scenario: 角色尚无该Ability记录
 - **WHEN** 完整生成目标明确包含Ability资产及对指定角色的授予，而角色尚未登记该能力
@@ -340,3 +340,31 @@ Skill Timeline MUST能够表达动作AnimationTrack、AnimationClip、指定动�
 - **WHEN** 同一Character Program被不同正式Session Pipeline加载
 - **THEN** Skill语义、ActionInstance身份和状态恢复合同 MUST保持一致
 - **AND** 网络层 MUST同步输入、权威状态、Hash或Snapshot，不得复制作者Graph或最终Pose
+
+### Requirement: 准入Profile必须整体迁移为唯一Ability业务合同
+
+系统 MUST将ActionProfile整体迁为GameplayAbilityAdmissionProfile，保留独立共享资产和原准入分组identity。类型、配置API、资产目录/文件名及引用、AbilityGrant、CanActivate/ActionTarget相关消费者、Program Catalog、Fixed/Float32与C# export_code/generate_assets MUST使用一致正式合同；旧名称只可作为迁移来源记录，MUST不保留兼容别名、内联准入副本或第二registry。Ability identity不得替代共享准入分组identity。
+
+#### Scenario: 两个Dodge迁移共享准入资产
+- **WHEN** 原CorinDodgeActionProfile迁为Abilities/AdmissionProfiles/CorinDodgeAdmissionProfile.asset
+- **THEN** 两个Dodge Ability MUST精确引用同一新命名规则资产，所有正式消费者和生成源码 MUST同步迁移
+- **AND** 原准入、目标、并发、阻断和取消行为 MUST保持，旧资产路径及失去用途的旧类型 MUST删除
+
+#### Scenario: 完整导出引用共享准入规则
+- **WHEN** Ability导出范围包含或引用一个GameplayAbilityAdmissionProfile
+- **THEN** 范围内规则 MUST只创建一次并复用生成变量，范围外规则 MUST输出精确资源引用
+- **AND** MUST不把规则字段复制进GameplayAbilityDefinition或依赖旧ActionProfile类型
+
+### Requirement: StateBody必须固定保留三个系统生命周期锚点
+
+StateBody MUST固定生成OnEnter、Root和OnExit三个系统锚点，正式工厂、图合同、菜单/删除能力、C#生成和Program映射 MUST一致。OnExit MUST不可删除且不进入作者节点创建菜单，仅由运行时代码在State stop barrier调用以清理状态及子内容；MUST不恢复作者Action Exit/Submit链，不决定或覆盖Ability终态。必要ForceStop释放 MUST由原模块保证，不依赖普通回调必达。
+
+#### Scenario: 创建或重建StateBody
+- **WHEN** 人工入口或generate_assets建立StateBody
+- **THEN** 系统 MUST建立或复用唯一OnEnter、Root和OnExit，不因删除旧作者清理图而删掉OnExit锚点
+- **AND** 作者 MUST不能从菜单新增或删除OnExit，生成源码 MUST不重复创建系统锚点
+
+#### Scenario: 正常状态退出等待清理完成
+- **WHEN** 状态转移或graceful stop进入State stop barrier
+- **THEN** 运行代码 MUST停止原执行内容并调用系统OnExit清理，在正常进入下一状态或报告停止完成前完成必要回收
+- **AND** Ability已有结束结果 MUST保持；内部状态接替不得因OnExit产生Ability终结

@@ -4,7 +4,7 @@
 
 r3的完整技能入口为GameplayAbilityDefinition，AbilityGraph是其内部执行页。下文Skill Graph名称用于识别既有编辑表面，正式Ability入口不能只打开裸图或要求作者到角色Definition和空ActionContext资产中拼接技能。
 
-r4中退出与资源回收 MUST由原运行模块自动完成，作者不得被要求配置OnExit清理图或终态/释放节点。Timeline动画轨道/片段 MUST保留素材、时间、重叠与局部权重编辑；跨动作接替规则 MUST在对应动作Slot动画配置编辑，基础姿态转移属于Pose动画状态机。动画EventGraph提供动画变量/判断，不作为全部播放和停止的必经入口，同一过渡参数不得多处重复配置。
+r5作者入口 MUST展示GameplayAbilityAdmissionProfile精确来源及共享关系，不保存本地准入副本。StateBody MUST显示固定OnEnter/Root/OnExit系统锚点，OnExit不可删除且不进入作者节点创建菜单。退出与资源回收 MUST由原运行模块自动完成，作者不得被要求配置OnExit清理图或终态/释放节点。Timeline动画轨道/片段 MUST保留素材、时间、重叠与局部权重编辑；跨动作接替规则 MUST在对应动作Slot动画配置编辑，基础姿态转移属于Pose动画状态机。动画EventGraph提供动画变量/判断，不作为全部播放和停止的必经入口，同一过渡参数不得多处重复配置。
 
 ### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
 

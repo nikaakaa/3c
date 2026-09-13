@@ -129,6 +129,12 @@ namespace ThirdPersonCamera
 
     public sealed class CameraDebugSnapshot
     {
+        public bool BindingAdopted { get; private set; }
+        public string BindingId { get; private set; } = string.Empty;
+        public string BindingProfileId { get; private set; } = string.Empty;
+        public string BindingProfileRevision { get; private set; } = string.Empty;
+        public string BindingActorId { get; private set; } = string.Empty;
+        public string BindingInstanceId { get; private set; } = string.Empty;
         public CameraFramePlan Plan { get; private set; }
         public CameraRigResult Result { get; private set; }
         public string TargetSource { get; private set; } = string.Empty;
@@ -146,6 +152,16 @@ namespace ThirdPersonCamera
         public float DeltaSeconds { get; private set; }
         public IReadOnlyList<CameraEffectContribution> Effects { get; private set; } =
             Array.Empty<CameraEffectContribution>();
+
+        public void SetBinding(CameraBindingAdoptedResult binding)
+        {
+            BindingAdopted = binding.Adopted;
+            BindingId = binding.BindingId ?? string.Empty;
+            BindingProfileId = binding.ProfileId ?? string.Empty;
+            BindingProfileRevision = binding.ProfileRevision ?? string.Empty;
+            BindingActorId = binding.ActorId ?? string.Empty;
+            BindingInstanceId = binding.InstanceId ?? string.Empty;
+        }
 
         public void Set(
             CameraFramePlan plan,

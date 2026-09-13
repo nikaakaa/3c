@@ -122,6 +122,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool AcceptsTrajectoryIntent => true;
         public bool MotionMatchingRuntimeEnabled => m_Animation.MotionMatchingRuntimeEnabled;
         public CameraBasisSnapshot CameraBasisSnapshot => m_Camera?.BasisSnapshot ?? default;
+        public CameraDebugSnapshot CameraDebugSnapshot => m_Camera?.DebugSnapshot;
+        public CameraBindingAdoptedResult CameraBindingAdopted =>
+            m_Camera == null ? default : m_Camera.AdoptedBinding;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Animation.DiagnosticsInterest;
         internal CharacterPoseTuningLayout TuningLayout =>

@@ -71,6 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Camera runtime binding does not belong to the Presentation Projection.");
             m_RuntimeBinding = runtimeBinding;
             m_AdoptedBinding = adoptedBinding;
+            m_Debug.SetBinding(adoptedBinding);
             m_CameraProjection = runtimeBinding.Projection;
             m_CameraRig = runtimeBinding.RigAdapter;
             m_ResponseResolver = new CameraResponseRequestResolver(m_CameraProjection.Input);

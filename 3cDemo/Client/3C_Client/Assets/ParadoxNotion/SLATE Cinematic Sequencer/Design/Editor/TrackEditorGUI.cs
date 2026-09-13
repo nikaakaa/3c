@@ -138,7 +138,14 @@ namespace Slate
                 return;
             }
 
-            if (keyable == null || keyable.animationData == null || !keyable.animationData.isValid)
+            if (keyable == null)
+            {
+                GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
+                inspectedParameterIndex = -1;
+                return;
+            }
+
+            if (keyable.animationData == null || !keyable.animationData.isValid)
             {
                 if (keyable is ActionClip)
                 {

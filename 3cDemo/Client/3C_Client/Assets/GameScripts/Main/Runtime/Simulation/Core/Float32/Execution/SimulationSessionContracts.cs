@@ -6,7 +6,11 @@ namespace ThirdPersonSimulation
 {
     public sealed class SimulationActorBinding : ISimulationProgramBinding
     {
-        public SimulationActorBinding(ActorId actorId, CharacterSimulationProgram program, string worldBodyBindingId)
+        public SimulationActorBinding(
+            ActorId actorId,
+            CharacterSimulationProgram program,
+            string worldBodyBindingId,
+            CharacterControlRuntimeBinding controlRuntimeBinding)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
@@ -16,6 +20,11 @@ namespace ThirdPersonSimulation
             ProgramHash = program.ProgramHash;
             LayoutHash = program.LayoutHash;
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
+            if (program.Manifest.Root.IsCharacter && controlRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(controlRuntimeBinding));
+            if (!program.Manifest.Root.IsCharacter && controlRuntimeBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
+            ControlRuntimeBinding = controlRuntimeBinding;
         }
 
         public ActorId ActorId { get; }
@@ -23,6 +32,7 @@ namespace ThirdPersonSimulation
         public ProgramHash ProgramHash { get; }
         public LayoutHash LayoutHash { get; }
         public string WorldBodyBindingId { get; }
+        public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         internal CharacterSimulationProgram Program { get; }
         object ISimulationProgramBinding.ProgramObject => Program;
     }

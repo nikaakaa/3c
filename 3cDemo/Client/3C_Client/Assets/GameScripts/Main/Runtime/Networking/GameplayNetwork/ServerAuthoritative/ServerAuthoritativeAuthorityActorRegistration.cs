@@ -22,7 +22,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             Float32WorldBodyBinding worldBodyBinding,
             WorldBodyState initialBody,
             CharacterSimulationDiagnosticsAdapter diagnostics,
-            RuntimeDiagnosticsTarget diagnosticsTarget)
+            RuntimeDiagnosticsTarget diagnosticsTarget,
+            CharacterControlRuntimeBinding controlRuntimeBinding)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Authority Actor registration owner identity is incomplete.");
@@ -35,9 +36,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (worldBodyBinding.ActorId != actorId || initialBody.ActorId != actorId)
                 throw new ArgumentException("Authority Actor body identity does not match ActorId.");
             InitialBody = initialBody;
+            ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId);
+            ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId, ControlRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"server-authoritative-authority-output/{actorId.Value}",
                 "server-authoritative-authority-output",
@@ -59,6 +61,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public SimulationActorBinding ProgramIdentity { get; }
         public Float32WorldBodyBinding WorldBodyBinding { get; }
         public WorldBodyState InitialBody { get; }
+        public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterSimulationDiagnosticsAdapter Diagnostics { get; }
         public SimulationOutputRouteDescriptor OutputRoute { get; }
         public StableHash DiagnosticsConfigurationHash => StableHash.Compute(

@@ -23,7 +23,7 @@
 
 | 任务 | 状态 | 说明 |
 |---|---|---|
-| 1.1-1.2 基础构图与唯一轨道 owner | 部分完成 | 默认轨道仍由 DefaultSequence 唯一拥有；Profile/Projection schema 已升到 v2，重复 DefaultSphere/DefaultOrbitGroup 已删除；生成 Projection 仍是旧 v1，必须正式重发布。 |
+| 1.1-1.2 基础构图与唯一轨道 owner | 部分完成 | 默认轨道仍由 DefaultSequence 唯一拥有；Profile/Projection schema 已升到 v2，重复 DefaultSphere/DefaultOrbitGroup 已删除；多点/双点无消费者的 BeginCameraDataId 与 LayerMask 已删除；生成 Projection 仍是旧 v1，必须正式重发布。 |
 | 1.3-1.4 配置消费者与输入合同 | 部分完成 | CameraLocateRadius、RotationTransitionSeconds、Offset/AspectRatio、响应权和 Reset 原因已接入；无消费者的 Locking 与 ChangeAvatar 配置已删除；无时钟/上下文消费者的 MakeContextDependent、PlayLength 已从 Camera authoring/payload/compiler 和 Corin 默认资产删除；失焦专用来源仍未形成。 |
 | 2.1-2.3 平滑、裁决与连续性 | 完成 | WorldBasicHistory 普通推进保留速度；Sequence/Response/Target 同权裁决统一，零权 Sequence 不再抢占；切镜使用显式 BlendIn，未配置时使用 Profile RotationTransitionSeconds。 |
 | 2.4 生命周期 | 部分完成 | Sequence/Effect 请求保留 source/generation/action/cycle/event 身份并区分结束原因；Unity Owner 销毁和正式产物运行尚未取得当前 Editor 证据。 |
@@ -56,6 +56,7 @@
 - `7b9717518`、`bc5be34b1`、`b44ab51e6`：按资源叠加策略裁决 Zoom，令 Shot 接管正式 Near/Far Clip，并严格校验 Shot rig identity、重置所有 rig history；Sequence/Target 同权裁决在 SourceId 相同后继续比较 EventId。
 - `055e03736`：删除 Camera 阶段没有消费者的 `MakeContextDependent/PlayLength` 字段，清理 authoring、Projection payload、compiler 和 Corin 默认相机资产；Contracts 编译 0 错误。
 - `ee58359c0`：删除 Entity frame/rotation policy 的悬空 authoring/payload/compiler 字段，实体取景只保留当前正式 Planner 的显式目标输入和内置公式。
+- `4a962d409`：删除双点/多点取景没有消费者的 BeginCameraDataId、LayerMask 字段，清理 authoring、payload、validator 和 compiler；Contracts 编译 0 错误。
 - `9f6b9e025`、`f0f173ca6`、`d213c26ce`：将 Camera Contracts 引用和类型命名空间接到实际 `BTSMTL.Timeline.Tree.Editor`；外层 Timeline Editor 不保留重复依赖。
 - `ThirdPersonCamera.Contracts.csproj` 使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，2 个 Unity 包警告，0 个错误；最近一次在删除 DefaultFOV 存储和补充阶段合同后仍通过。
 - `BTSMTL.Timeline.Editor.csproj` 使用 `--no-restore /p:BuildProjectReferences=false --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，31 个既有未赋值字段警告，0 个错误；新增 Camera 曲线 owner 没有编译错误。

@@ -372,10 +372,6 @@ namespace Slate
                 Rect rowRect = new Rect(rect.x, rect.y + curveIndex * curveHeight, rect.width, curveHeight);
                 DrawCurveKeyStrip(clip, curve, rowRect, curve.StartFrame, curve.EndFrame);
                 Rect curveRect = new Rect(rowRect.x, rowRect.y + CurveKeyStripHeight, rowRect.width, rowRect.height - CurveKeyStripHeight);
-                if (string.Equals(m_DopeClipId, clip.ClipId, StringComparison.Ordinal) &&
-                    string.Equals(m_DopeCurveId, curve.CurveId, StringComparison.Ordinal) &&
-                    m_DopeCurve != null && m_CurveRenderers.TryGetValue(key, out renderer))
-                    renderer.SetPureCurves(new[] { TimelineCurveAuthoringCopy(m_DopeCurve) });
                 renderer.Draw(curveRect, Rect.MinMaxRect(0f, 0f, 1f, 1f));
             }
         }
@@ -557,10 +553,22 @@ namespace Slate
                     float x = m_LeftMargin + FrameToX(sectionFrame, timelineWidth);
                     GUI.color = new Color(0.4f, 0.8f, 1f, 0.65f);
                     GUI.DrawTexture(new Rect(x, 28f, 1f, contentHeight - 28f), Styles.whiteTexture);
+                    GUI.color = IsSelected(SlateTimelineEditorElementKind.Section, section.SectionId, string.Empty)
+                        ? Color.cyan
+                        : new Color(0.65f, 0.85f, 1f);
                     GUI.Label(new Rect(x + 3f, 30f, 120f, 18f), section.DisplayName, EditorStyles.miniLabel);
+                    GUI.color = Color.white;
                     if (Event.current.type == EventType.MouseDown && Event.current.button == 0 &&
                         Mathf.Abs(Event.current.mousePosition.x - x) <= 6f)
                     {
+                        Select(new SlateTimelineEditorSelection(
+                            SlateTimelineEditorElementKind.Section,
+                            group.GroupId,
+                            string.Empty,
+                            string.Empty,
+                            section.SectionId,
+                            string.Empty,
+                            -1));
                         m_DragSectionId = section.SectionId;
                         m_DragSectionFrame = section.Frame;
                         m_DragSectionAnchorFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
@@ -588,6 +596,8 @@ namespace Slate
                 return string.Equals(m_Selection.TrackId, primaryId, StringComparison.Ordinal);
             if (kind == SlateTimelineEditorElementKind.Clip)
                 return string.Equals(m_Selection.ClipId, secondaryId, StringComparison.Ordinal);
+            if (kind == SlateTimelineEditorElementKind.Section)
+                return string.Equals(m_Selection.SectionId, primaryId, StringComparison.Ordinal);
             return string.Equals(m_Selection.GroupId, primaryId, StringComparison.Ordinal);
         }
 

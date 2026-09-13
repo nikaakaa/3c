@@ -515,6 +515,9 @@ namespace BTSMTL.Timeline.Editor
                 m_Session.SetSelection(clip);
             else if (selection.Kind == SlateTimelineEditorElementKind.Track && m_SourceTracks.TryGetValue(selection.TrackId, out Track track))
                 m_Session.SetSelection(track);
+            else if (selection.Kind == SlateTimelineEditorElementKind.Section)
+                m_Session.SetSelection(m_Request.Timeline.Sections.FirstOrDefault(value =>
+                    value != null && string.Equals(value.AuthoringId, selection.SectionId, StringComparison.Ordinal)));
             else
                 m_Session.SetSelection(null);
             SelectionChanged?.Invoke(Selection);

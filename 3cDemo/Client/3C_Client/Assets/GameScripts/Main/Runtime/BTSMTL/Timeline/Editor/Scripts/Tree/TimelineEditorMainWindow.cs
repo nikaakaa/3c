@@ -729,6 +729,26 @@ namespace BTSMTL.Timeline.Editor
                 Track track = selection.Track;
                 m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
             }
+            if (selection.Section != null)
+            {
+                TimelineSection section = selection.Section;
+                m_DetailsHost.Add(new Label("Timeline Section"));
+                var name = new TextField("Name") { value = section.Name };
+                name.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
+                    () => m_Timeline.ConfigureSection(section, evt.newValue, section.Frame),
+                    "Set Timeline Section Name"));
+                m_DetailsHost.Add(name);
+                var frame = new IntegerField("Frame") { value = section.Frame };
+                frame.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
+                    () => m_Timeline.ConfigureSection(section, section.Name, Mathf.Max(0, evt.newValue)),
+                    "Set Timeline Section Frame"));
+                m_DetailsHost.Add(frame);
+                var next = new TextField("Next Section Id") { value = section.NextSectionId };
+                next.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
+                    () => m_Timeline.ConfigureSectionNext(section, evt.newValue),
+                    "Set Timeline Section Next"));
+                m_DetailsHost.Add(next);
+            }
             ApplyDetailsVisibility();
         }
 

@@ -41,6 +41,7 @@ TimelineEditorWindow
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet key strip 从纯内存完整曲线快照读取；支持关键帧多选和按作者帧整体拖动，正式 key、切线、权重和 wrap 不被删除或量化，CurveRenderer 负责切线与细节编辑。
 - DopeSheet key strip 以 `ClipId + CurveId` 区分活动曲线，使用每个曲线自己的作者帧域显示关键帧；拖动草稿会同步刷新 Slate CurveRenderer，提交仍只经过正式曲线命令 port。
+- Section 标记支持选中，右侧 Inspector 直接编辑名称、作者帧和下一个 Section 引用，提交使用 `TimelineData.ConfigureSection/ConfigureSectionNext`，不再留下只能拖动、不能查看属性的漂浮标记。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：
@@ -86,5 +87,5 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 - 当前仍可定位到旧 JSON 消费者：`AgentSkillFlowDocumentExporter.cs:547` 调用 `TimelineAuthoringClipBinding.Export`，`BtsmtlSkillTimelineAuthoringApplier.cs:379` 调用 `TimelineAuthoringClipBinding.Apply`；在 C# authoring 的 Skill/FSM/Pose/EventGraph 迁移完成前，本 change 不删除这些共享路径。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
-- 纯内存 Surface 的 Section 专用可编辑行、原生 DopeSheet 参数列表/缓存迁移、TreeClip 专用下钻和最终 Unity Editor 视觉证据仍未闭合；这些属于 tasks 11.2/11.3/11.7 的剩余实施，不恢复旧组件树。
+- 纯内存 Surface 的原生 DopeSheet 参数列表/缓存迁移、TreeClip 专用下钻和最终 Unity Editor 视觉证据仍未闭合；这些属于 tasks 11.3/11.7 的剩余实施，不恢复旧组件树。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

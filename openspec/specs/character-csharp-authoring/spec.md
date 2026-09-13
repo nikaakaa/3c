@@ -28,7 +28,7 @@
 
 ### Requirement: 导出必须读取正式资产并完整输出创建代码
 
-`export_code` MUST 接受精确输入资产、Definition 上下文及明确输出代码路径，直接读取正式 Graph、Timeline、Pose 或 EventGraph 及其完整闭包，输出可编译且调用正式业务 API 的 C# 创建代码。导出 MUST 不读取或解析旧 C#，不先导出 JSON，不生成第二份可编辑领域模型，不 dirty 输入资产。旧源码的循环、条件、变量命名、注释和手写组织 MUST 不作为保持要求。
+`export_code` MUST 接受精确输入资产、Definition 上下文及明确入口代码路径，直接读取正式 Graph、Timeline、Pose 或 EventGraph 及其完整闭包，输出可编译且调用正式业务 API 的一组 C# 创建文件。入口路径 MUST 位于该根专属的 Generated/<Root>/<Root>.cs 目录；入口只负责资源加载、阶段顺序和根完成，局部对象的创建、配置和连接放在稳定的局部文件中。导出 MUST 不读取或解析旧 C#，不先导出 JSON，不生成第二份可编辑领域模型，不 dirty 输入资产。旧源码的循环、条件、变量命名、注释和手写组织 MUST 不作为保持要求。
 
 #### Scenario: 从没有历史源码的正式图导出
 
@@ -60,7 +60,7 @@
 
 ### Requirement: 导出必须只保留最小重建闭包
 
-输出 MUST 只包含正式 API 恢复目标资产所需的类型、拓扑、业务顺序、owner、根绑定、有效作者配置、正式引用和必要身份。默认值、固定端口/结构、可推导值、编辑器视口/选中态、生成过程、历史日志、诊断 hash 和变量名中的 identity/hash 后缀 MUST 省略。graph、node、edge、variable identity 只有在正式引用、稳定拓扑或 owner 关系需要时才 MUST 保留原值；外部资源需要精确定位时 MUST 保留正式路径和 localFileId。同一外部资源 MUST 在生成代码中声明一次并复用，不能通过压缩字符串或第二份数据模型隐藏字段。
+输出 MUST 只包含正式 API 恢复目标资产所需的类型、拓扑、业务顺序、owner、根绑定、有效作者配置、正式引用和必要身份。默认值、固定端口/结构、可推导值、编辑器视口/选中态、生成过程、历史日志、诊断 hash 和变量名中的 identity/hash 后缀 MUST 省略。graph、node、edge、variable identity 只有在正式引用、稳定拓扑或 owner 关系需要时才 MUST 保留原值；外部资源需要精确定位时 MUST 保留正式路径和 localFileId。同一外部资源 MUST 在生成代码中声明一次并复用，不能通过压缩字符串或第二份数据模型隐藏字段。分文件只表达执行组织，不新增持久化领域字段、阶段对象或运行入口；跨文件对象通过一次性执行状态传递，不复制作者数据。
 
 #### Scenario: 默认配置不进入生成源码
 
@@ -136,7 +136,7 @@ Timeline 输出 MUST 表达正式 Clip/数据段引用、RootMotionCurveAsset �
 
 ### Requirement: 生成必须执行明确代码入口并保存指定输出
 
-`generate_assets` MUST 接受精确源码路径、对应已编译的正式创建入口类型、Definition 上下文与输出资产路径。入口 MUST 使用正式创建合同与业务 API，工具 MUST 保存生成结果并返回实际资产路径和诊断。系统 MUST 不接受任意 C# 正文、任意方法调用或反射字段修改参数。源码尚未成功编译或 Unity 处于编译、导入、Play 或切换 Play 时 MUST 拒绝生成，不得执行不匹配的旧编译结果。
+`generate_assets` MUST 接受精确入口源码路径、对应已编译的正式创建入口类型、Definition 上下文与输出资产路径；入口所在目录的局部 C# 文件 MUST 作为同一编译关联一起参与。入口 MUST 使用正式创建合同与业务 API，工具 MUST 保存生成结果并返回实际资产路径和诊断。系统 MUST 不接受任意 C# 正文、任意方法调用或反射字段修改参数。源码尚未成功编译或 Unity 处于编译、导入、Play 或切换 Play 时 MUST 拒绝生成，不得执行不匹配的旧编译结果。
 
 #### Scenario: C# 入口已经编译
 
@@ -204,7 +204,7 @@ Timeline 输出 MUST 表达正式 Clip/数据段引用、RootMotionCurveAsset �
 
 ### Requirement: 结果必须如实报告且不触发运行产物 Build
 
-`export_code` MUST 在完整输出检查成功后写目标源码，失败不得以半份输出替换已有文件；响应 MUST 返回代码文件、正式入口和依赖诊断。`generate_assets` MUST 使用实际生成范围的正式编辑和保存能力，响应 MUST 区分创建和保存结果；失败或恢复未完成 MUST 指出影响对象，不报告完整成功。两者 MUST 不自动发布 Program、Projection、Play 或修改源码之外的无关文件。
+`export_code` MUST 在完整输出检查成功后写目标源码，失败不得以半份输出替换已有文件；响应 MUST 返回唯一入口、完整代码文件集、创建/修改/未变/删除文件清单、正式依赖和诊断。逐文件内容相同 MUST 不重写且保留已有 .meta；只允许在入口所属的明确专属生成目录内清理退役 .cs 及其 .meta，不得接管混合目录或删除范围外资源。`generate_assets` MUST 使用实际生成范围的正式编辑和保存能力，响应 MUST 区分创建和保存结果；失败或恢复未完成 MUST 指出影响对象，不报告完整成功。两者 MUST 不自动发布 Program、Projection、Play 或修改源码之外的无关文件。
 
 #### Scenario: 导出中途发现未知内容
 
@@ -282,7 +282,7 @@ Timeline 源码 MUST 表达精确 Clip 数据段引用、源区间、时间轴�
 
 ### Requirement: 创建源码必须采用链式 builder 表达作者配置
 
-生成 C# MUST 以偏函数式的链式 builder 组织节点及配置、Timeline 片段和连接，直接调用正式创建能力。源码 MUST 表达当前最终的作者选择、非默认值和有意义的显式覆盖，不依赖作者编辑历史，不区分 AI 与人工编辑来源。固定端口、默认值和派生内容 MUST 由正式系统恢复。每个节点的位置 MUST 仅表达一次，MUST 不复制选中态、视口与重绘缓存。Builder MUST 不建立第二份持久化领域模型、操作日志或执行路径。
+生成 C# MUST 以偏函数式的链式 builder 组织节点及配置、Timeline 片段和连接，直接调用正式创建能力。源码 MUST 表达当前最终的作者选择、非默认值和有意义的显式覆盖，不依赖作者编辑历史，不区分 AI 与人工编辑来源。固定端口、默认值和派生内容 MUST 由正式系统恢复。每个节点的位置 MUST 仅表达一次，MUST 不复制选中态、视口与重绘缓存。Builder MUST 不建立第二份持久化领域模型、操作日志或执行路径。多文件只按正式根的局部维护边界组织；入口按原阶段顺序调用局部方法，不能因拆文件改变创建、配置、连接或根绑定顺序。
 
 #### Scenario: 创建带有 Timeline 的节点
 

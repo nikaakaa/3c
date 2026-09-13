@@ -88,5 +88,22 @@ namespace ThirdPersonCamera
         public bool BlendWithIgnoreLookAtTarget => m_BlendWithIgnoreLookAtTarget;
         public int Priority => m_Priority;
         public string Tag => m_Tag ?? string.Empty;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(ShotId) || string.IsNullOrWhiteSpace(CinePrefabPath) ||
+                string.IsNullOrWhiteSpace(FollowTargetSlotId) || string.IsNullOrWhiteSpace(LookAtTargetSlotId) ||
+                !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
+                FarClipPlane <= NearClipPlane || !float.IsFinite(Duration) || Duration == 0f || Duration < -1f ||
+                !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) || !Finite(FollowOffset) ||
+                !Finite(LookAtOffset) || !Finite(OffsetRotation) || !float.IsFinite(FieldOfView) ||
+                FieldOfView <= 0f || BlendIn == null || BlendOut == null || string.IsNullOrWhiteSpace(Tag))
+                throw new InvalidOperationException($"{source} contains an invalid Camera Shot payload.");
+            BlendIn.RequireValid(source + ".BlendIn");
+            BlendOut.RequireValid(source + ".BlendOut");
+        }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 }

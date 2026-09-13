@@ -16,6 +16,7 @@ namespace ThirdPersonCamera
         [SerializeField, Min(0f)] float m_NearClipPlane = 0.05f;
         [SerializeField, Min(0f)] float m_SmoothTime = 0.08f;
         [SerializeField] CameraTimeDomain m_TimeDomain = CameraTimeDomain.PresentationScaled;
+        [SerializeField] CameraCollisionTriggerMode m_TriggerMode = CameraCollisionTriggerMode.Ignore;
 
         public bool Enabled => m_Enabled;
         public LayerMask LayerMask => m_LayerMask;
@@ -23,6 +24,7 @@ namespace ThirdPersonCamera
         public float NearClipPlane => m_NearClipPlane;
         public float SmoothTime => m_SmoothTime;
         public CameraTimeDomain TimeDomain => m_TimeDomain;
+        public CameraCollisionTriggerMode TriggerMode => m_TriggerMode;
 
         public CameraCollisionSettings() { }
 
@@ -34,13 +36,15 @@ namespace ThirdPersonCamera
             m_NearClipPlane = source.NearClipPlane;
             m_SmoothTime = source.SmoothTime;
             m_TimeDomain = source.TimeDomain;
+            m_TriggerMode = source.TriggerMode;
         }
 
         public void RequireValid(string source)
         {
             if (!float.IsFinite(Radius) || Radius < 0f || !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(SmoothTime) || SmoothTime < 0f ||
-                !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain))
+                !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) ||
+                !Enum.IsDefined(typeof(CameraCollisionTriggerMode), TriggerMode))
                 throw new InvalidOperationException($"{source} contains invalid Camera collision settings.");
         }
     }

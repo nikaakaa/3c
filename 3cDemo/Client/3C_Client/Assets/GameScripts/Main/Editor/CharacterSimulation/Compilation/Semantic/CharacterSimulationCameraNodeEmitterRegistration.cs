@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterSimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
         {
             RequireDefined(node.Mode, nameof(node.Mode));
+            RequireIdentity(node.SequenceId, nameof(node.SequenceId));
             RequireDefined(node.InterruptPolicy, nameof(node.InterruptPolicy));
             RequireUnit(node.Weight, nameof(node.Weight));
             RequireNonNegative(node.BlendInSeconds, nameof(node.BlendInSeconds));
@@ -32,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
                     ("Priority", node.Priority),
                     ("Weight", node.Weight),
+                    ("SequenceId", node.SequenceId),
                     ("BlendInSeconds", node.BlendInSeconds),
                     ("BlendOutSeconds", node.BlendOutSeconds),
                     ("TargetKey", node.TargetKey),
@@ -43,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireIdentity(node.CueId, nameof(node.CueId));
             RequireDefined(node.CueKind, nameof(node.CueKind));
             RequireIdentity(node.CueType, nameof(node.CueType));
+            RequireOptionalIdentity(node.ResourceId, nameof(node.ResourceId));
             RequireNonNegative(node.Intensity, nameof(node.Intensity));
             RequireNonNegative(node.DurationSeconds, nameof(node.DurationSeconds));
             return new CharacterSimulationNodeEmission(
@@ -52,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
                     ("CueId", node.CueId),
                     ("CueType", node.CueType),
+                    ("ResourceId", node.ResourceId),
                     ("Intensity", node.Intensity),
                     ("DurationSeconds", node.DurationSeconds),
                     ("Priority", node.Priority),

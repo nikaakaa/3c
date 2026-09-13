@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraResponseRequestResolver m_ResponseResolver;
         readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
         readonly CameraEffectEvaluator m_EffectEvaluator;
+        readonly CameraEnvironmentConstraintSolver m_EnvironmentSolver;
         readonly Vector3 m_FollowBindPosition;
         readonly Vector3 m_AimBindPosition;
         readonly ICharacterPresentationLookInput m_InputAdapter;
@@ -47,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform followAnchor,
             Transform aimAnchor,
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
+            ICameraEnvironmentQuery environmentQuery,
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             bool initializeExternalState = true)
@@ -69,6 +71,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireCameraTargetBindings(projection, m_TargetResolver);
             m_SequenceEvaluator = new CharacterCameraSequenceEvaluator(m_CameraProjection);
             m_EffectEvaluator = new CameraEffectEvaluator(m_CameraProjection);
+            m_EnvironmentSolver = new CameraEnvironmentConstraintSolver(
+                m_CameraProjection,
+                environmentQuery);
             Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
             m_FollowBindPosition = inverse * (followAnchor.position - initialBody.Position);
             m_AimBindPosition = inverse * (aimAnchor.position - initialBody.Position);
@@ -80,6 +85,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CameraRigResult RigResult => m_CameraRig.Result;
         public CameraDebugSnapshot DebugSnapshot => m_Debug;
         internal CharacterCameraPresentationCaptureFrame LastPresentationFrame => m_LastPresentationFrame;
+
+        public void SetInitialState(in CameraInitialState state)
+        {
+            RequireAlive();
+            m_SequenceEvaluator.SetInitialState(in state);
+            m_CameraRig.Reset();
+            m_LastBodyResetSequence = 0;
+        }
 
         public void Publish(
             CharacterPresentationCommand command,
@@ -347,6 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_FrameTargets.Clear();
             m_SequenceEvaluator.Reset();
             m_EffectEvaluator.Reset();
+            m_EnvironmentSolver.Reset();
             m_CameraRig.Reset();
             m_Debug.Clear();
             m_LastBodyResetSequence = 0;
@@ -411,15 +425,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3.zero,
                 true,
                 false));
+            m_TargetResolver.CaptureSlotSnapshots(
+                m_CameraProjection.TargetSlots,
+                m_FrameTargets);
             if (!string.IsNullOrEmpty(resolvedTarget.SourceKey))
             {
-                m_FrameTargets.Add(new CameraTargetSnapshot(
-                    resolvedTarget.SourceKey,
-                    resolvedTarget.HasFollowPoint ? resolvedTarget.FollowPoint : follow,
-                    resolvedTarget.HasAimPoint ? resolvedTarget.AimPoint : aim,
-                    Vector3.zero,
-                    true,
-                    resolvedTarget.HasAimPoint));
+                bool duplicate = false;
+                for (int i = 0; i < m_FrameTargets.Count; i++)
+                {
+                    if (string.Equals(m_FrameTargets[i].Key, resolvedTarget.SourceKey, StringComparison.Ordinal))
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate)
+                    m_FrameTargets.Add(new CameraTargetSnapshot(
+                        resolvedTarget.SourceKey,
+                        resolvedTarget.HasFollowPoint ? resolvedTarget.FollowPoint : follow,
+                        resolvedTarget.HasAimPoint ? resolvedTarget.AimPoint : aim,
+                        Vector3.zero,
+                        true,
+                        resolvedTarget.HasAimPoint));
                 sequence = sequence.WithTargetKey(resolvedTarget.SourceKey);
             }
             var frameInput = new CameraFrameInput(
@@ -443,8 +470,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ApplyPendingSequenceTerminations();
             plan = m_EffectEvaluator.Resolve(plan, m_PendingEffects, in frameInput);
             m_PendingEffects.Clear();
+            plan = m_EnvironmentSolver.Apply(plan, in frameInput);
             m_CameraRig.Apply(in plan);
-            m_Debug.Set(plan, m_CameraRig.Result, resolvedTarget.SourceKey, m_CameraProjection.ProfileRevision);
+            m_Debug.Set(
+                plan,
+                m_CameraRig.Result,
+                resolvedTarget.SourceKey,
+                m_CameraProjection.ProfileRevision,
+                look,
+                in response,
+                m_EffectEvaluator.Contributions);
             CameraBasisSnapshot basis = m_CameraRig.BasisSnapshot;
             CameraRigResult rig = m_CameraRig.Result;
             m_LastPresentationFrame = new CharacterCameraPresentationCaptureFrame(
@@ -611,6 +646,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationProjection projection,
             CameraTargetBindingResolver resolver)
         {
+            IReadOnlyList<CameraTargetSlotPayload> slots = projection.Camera.TargetSlots;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                CameraTargetSlotPayload slot = slots[i];
+                resolver.RequireKey(slot.AnchorKey, $"Camera target slot '{slot.SlotId}'");
+                resolver.RequireKey(slot.AimPointKey, $"Camera target slot '{slot.SlotId}'");
+                resolver.RequireKey(slot.PreferredBoneKey, $"Camera target slot '{slot.SlotId}'");
+            }
             IReadOnlyList<CharacterPresentationProducerEntry> producers = projection.Producers;
             for (int i = 0; i < producers.Count; i++)
             {

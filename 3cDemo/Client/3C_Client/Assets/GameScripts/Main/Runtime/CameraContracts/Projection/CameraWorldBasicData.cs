@@ -44,6 +44,17 @@ namespace ThirdPersonCamera
         public CameraWorldBasicData WithFieldOfView(float fieldOfView) =>
             new CameraWorldBasicData(PivotLocation, Rotation, Radius, Offset, fieldOfView);
 
+        public CameraWorldBasicData WithLocation(Vector3 location)
+        {
+            Vector3 localCameraToPivot = Quaternion.Inverse(Rotation) * (PivotLocation - location);
+            return new CameraWorldBasicData(
+                PivotLocation,
+                Rotation,
+                localCameraToPivot.z,
+                new Vector2(localCameraToPivot.x, localCameraToPivot.y),
+                FieldOfView);
+        }
+
         public static CameraWorldBasicData Lerp(
             CameraWorldBasicData source,
             CameraWorldBasicData target,

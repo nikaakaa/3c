@@ -7,6 +7,22 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    internal static class CameraAssetRevision
+    {
+        public static string Compute(UnityEngine.Object value)
+        {
+            if (!value)
+                return string.Empty;
+            string json = value.GetType().FullName + "|" + JsonUtility.ToJson(value);
+            using SHA256 algorithm = SHA256.Create();
+            byte[] hash = algorithm.ComputeHash(Encoding.UTF8.GetBytes(json));
+            var result = new StringBuilder(hash.Length * 2);
+            for (int i = 0; i < hash.Length; i++)
+                result.Append(hash[i].ToString("x2", CultureInfo.InvariantCulture));
+            return result.ToString();
+        }
+    }
+
 [CreateAssetMenu(fileName = "CameraCurve", menuName = "3C/Character/Camera/Curve")]
     public sealed class CameraCurveAsset : ScriptableObject
     {

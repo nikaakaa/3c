@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using KK.GeneratedDiagnosticSampling;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -35,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly Guid m_RuntimeInstanceId;
         CharacterPresentationFactFrame m_LastProjectedFactFrame;
+        CharacterAnimationVariableFrame m_LastAnimationVariableFrame;
         readonly CharacterPoseWorkerPresentationSession
             m_WorkerPresentationSession;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
@@ -119,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public bool AcceptsTrajectoryIntent => true;
         public bool MotionMatchingRuntimeEnabled => m_Animation.MotionMatchingRuntimeEnabled;
+        public CameraBasisSnapshot CameraBasisSnapshot => m_Camera?.BasisSnapshot ?? default;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Animation.DiagnosticsInterest;
         internal CharacterPoseTuningLayout TuningLayout =>
@@ -127,6 +130,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Animation.ActiveTuningBlock;
         internal CharacterPoseTuningRuntimeState TuningState =>
             m_Animation.TuningState;
+
+        public void SetCameraInitialState(in CameraInitialState state)
+        {
+            RequireAlive();
+            if (m_Camera == null)
+                throw new InvalidOperationException("Camera initial state requires an explicit Camera Presentation runtime.");
+            m_Camera.SetInitialState(in state);
+        }
         internal bool SubmitTuningCandidate(
             CharacterPoseTuningCandidate candidate,
             out string error) =>
@@ -496,13 +507,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         throw new InvalidOperationException(
                             variables.Failure?.ToString() ??
                             "Animation Event Graph update failed.");
+                    m_LastAnimationVariableFrame = variables.Frame;
                     CharacterAnimationPoseInputFrame parameterFrame =
                         CharacterAnimationPoseInputFrame.FromPublishedVariables(
                             variables.Frame,
-                            m_Projection.PosePlan.Parameters
-                                .Where(value => value.Usage == CharacterPoseParameterUsage.Control)
-                                .Select(value => value.ParameterId)
-                                .ToArray());
+                            m_Projection.PosePlan);
                     m_PendingAnimationFrame = m_Animation.BeginPresentation(
                         context.RenderFrame,
                         m_PendingBodyFrame.AnimationSampleTick,
@@ -625,7 +634,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var commandFacts = new CharacterPresentationCommandCaptureFacts(
                 m_CurrentFrameSignals);
             var factFacts = new CharacterPresentationFactCaptureFrame(
-                in m_LastProjectedFactFrame);
+                in m_LastProjectedFactFrame,
+                m_LastAnimationVariableFrame);
             var lineage = new DiagnosticLineageKey(
                 CharacterPresentationReplicationDiagnosticEvent.LineageTypeIdentity,
                 m_PendingPresentationContext.RenderFrame,
@@ -717,6 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_EventGraphHost.Reset();
             m_Body.Reset();
             m_FactProjector.Reset();
+            m_LastAnimationVariableFrame = null;
             m_PoseHasOutput = false;
             m_LastBodyResetSequence = 0;
             m_LastAnimationSampleTick = 0d;

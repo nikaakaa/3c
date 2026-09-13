@@ -5,20 +5,26 @@ namespace ThirdPersonCamera
 {
     internal static class CameraSequenceProjectionCompiler
     {
-        public static CameraSequencePayload Compile(CameraSequenceAsset asset)
+        public static CameraSequencePayload Compile(
+            CameraSequenceAsset asset,
+            CameraProjectionCompilationContext context)
         {
             asset.RequireValid();
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
             if (asset.TimeDomain == CameraTimeDomain.OwnerScaled ||
                 asset.TimeDomain == CameraTimeDomain.LocalAvatarScaled)
                 throw new InvalidOperationException(
                     $"Camera Sequence '{asset.SequenceId}' uses '{asset.TimeDomain}', but the current Presentation Tick has no formal source for that time domain.");
             var stages = new CameraSequenceStagePayload[asset.Stages.Count];
             for (int i = 0; i < stages.Length; i++)
-                stages[i] = CompileStage(asset.Stages[i]);
+                stages[i] = CompileStage(asset.Stages[i], context);
             return new CameraSequencePayload(asset.SequenceId, asset.TimeDomain, stages);
         }
 
-        static CameraSequenceStagePayload CompileStage(CameraSequenceStage stage)
+        static CameraSequenceStagePayload CompileStage(
+            CameraSequenceStage stage,
+            CameraProjectionCompilationContext context)
         {
             stage.RequireValid(stage.GetType().Name);
             switch (stage)
@@ -61,6 +67,44 @@ namespace ThirdPersonCamera
                         screenOffsets,
                         byTrack.ElevationRatio,
                         byTrack.PolarAngle);
+                case CameraFrameTwoPointsStage twoPoints:
+                    return CompileTwoPoints(twoPoints);
+                case CameraFrameMultiplePointsStage multiplePoints:
+                    return new CameraFrameMultiplePointsPayload(
+                        multiplePoints.StageId,
+                        multiplePoints.MakeContextDependent,
+                        multiplePoints.PlayLength,
+                        multiplePoints.Radius,
+                        multiplePoints.HeightOffset,
+                        multiplePoints.HeightRatio,
+                        multiplePoints.PlayerHeight,
+                        multiplePoints.AngleRange,
+                        multiplePoints.FieldOfView,
+                        multiplePoints.LayerMask,
+                        multiplePoints.BeginCameraDataId,
+                        context.CompileCurve(context.RequireCurve(multiplePoints.DeltaHeightToPitch)),
+                        CompileTwoPoints(multiplePoints.FallbackTwoPoints));
+                case CameraTwoEntitiesFrameStage twoEntities:
+                    return CompileEntityFrame(twoEntities);
+                case CameraMultipleEntitiesFrameStage multipleEntities:
+                    return CompileEntityFrame(multipleEntities);
+                case CameraEntityFrameStage entity:
+                    return CompileEntityFrame(entity);
+                case CameraFixedInCoreStage fixedInCore:
+                    return new CameraFixedInCorePayload(
+                        fixedInCore.StageId,
+                        fixedInCore.MakeContextDependent,
+                        fixedInCore.PlayLength,
+                        fixedInCore.FixedPolicyId,
+                        fixedInCore.ActiveChannel);
+                case CameraHandleVolumeStage volume:
+                    return new CameraHandleVolumePayload(
+                        volume.StageId,
+                        volume.MakeContextDependent,
+                        volume.PlayLength,
+                        volume.CollisionDataId,
+                        volume.HandleLineOfSightCollision,
+                        volume.NearClipPlane);
                 case CameraRotationEulerOffsetStage euler:
                     return new CameraRotationEulerOffsetPayload(
                         euler.StageId,
@@ -72,6 +116,45 @@ namespace ThirdPersonCamera
                     throw new InvalidOperationException(
                         $"Camera Sequence stage '{stage.StageId}' kind '{stage.Kind}' has no closed source evaluator.");
             }
+        }
+
+        static CameraFrameTwoPointsPayload CompileTwoPoints(CameraFrameTwoPointsStage stage)
+        {
+            stage.RequireValid(stage.GetType().Name);
+            return new CameraFrameTwoPointsPayload(
+                stage.StageId,
+                stage.MakeContextDependent,
+                stage.PlayLength,
+                stage.AspectRatio,
+                stage.HeightRatio,
+                stage.MinPlayerHeightRatio,
+                stage.MaxPlayerHeightRatio,
+                stage.FieldOfView,
+                stage.Pitch,
+                stage.MainHorizontalOffset,
+                stage.SubHorizontalOffset,
+                stage.MainVerticalOffset,
+                stage.TargetVerticalOffset,
+                stage.PitchRange,
+                stage.PlayerHeight,
+                stage.BeginCameraDataId);
+        }
+
+        static CameraEntityFramePayload CompileEntityFrame(CameraEntityFrameStage stage)
+        {
+            stage.RequireValid(stage.GetType().Name);
+            var subTargetSlotIds = new string[stage.SubTargetSlotIds.Count];
+            for (int i = 0; i < subTargetSlotIds.Length; i++)
+                subTargetSlotIds[i] = stage.SubTargetSlotIds[i] ?? string.Empty;
+            return new CameraEntityFramePayload(
+                stage.StageId,
+                stage.Kind,
+                stage.MakeContextDependent,
+                stage.PlayLength,
+                stage.MainTargetSlotId,
+                subTargetSlotIds,
+                stage.FramePolicyId,
+                stage.RotationPolicyId);
         }
     }
 }

@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     new[]
                     {
                         context.Builder.ConstantField(source, "Mode", clip.Mode),
+                        context.Builder.ConstantField(source, "SequenceId", clip.SequenceId),
                         context.Builder.ConstantField(source, "Priority", clip.Priority),
                         context.Builder.ConstantField(source, "BlendInSeconds", clip.BlendInSeconds),
                         context.Builder.ConstantField(source, "BlendOutSeconds", clip.BlendOutSeconds),
@@ -45,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         context.Builder.ConstantField(source, "CueId", clip.CueId),
                         context.Builder.ConstantField(source, "CueKind", clip.CueKind),
                         context.Builder.ConstantField(source, "CueType", clip.CueType),
+                        context.Builder.ConstantField(source, "ResourceId", clip.ResourceId),
                         context.Builder.ConstantField(source, "Intensity", clip.Intensity),
                         context.Builder.ConstantField(source, "DurationSeconds", clip.DurationSeconds),
                         context.Builder.ConstantField(source, "Priority", clip.Priority)

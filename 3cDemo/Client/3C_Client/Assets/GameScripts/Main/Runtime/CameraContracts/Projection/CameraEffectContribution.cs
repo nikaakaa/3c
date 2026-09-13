@@ -12,7 +12,13 @@ public readonly struct CameraEffectContribution
             float weight,
             float remainingSeconds,
             int priority,
-            bool active)
+            bool active,
+            string sourceId = "",
+            ulong generation = 0,
+            ulong sourceActionInstanceId = 0,
+            int cycle = 0,
+            string eventId = "",
+            CameraPresentationStopReason stopReason = CameraPresentationStopReason.NaturalComplete)
         {
             Stage = stage;
             ResourceId = resourceId ?? string.Empty;
@@ -20,6 +26,12 @@ public readonly struct CameraEffectContribution
             RemainingSeconds = remainingSeconds;
             Priority = priority;
             Active = active;
+            SourceId = sourceId ?? string.Empty;
+            Generation = generation;
+            SourceActionInstanceId = sourceActionInstanceId;
+            Cycle = cycle;
+            EventId = eventId ?? string.Empty;
+            StopReason = stopReason;
         }
 
         public CameraEffectStage Stage { get; }
@@ -28,5 +40,11 @@ public readonly struct CameraEffectContribution
         public float RemainingSeconds { get; }
         public int Priority { get; }
         public bool Active { get; }
+        public string SourceId { get; }
+        public ulong Generation { get; }
+        public ulong SourceActionInstanceId { get; }
+        public int Cycle { get; }
+        public string EventId { get; }
+        public CameraPresentationStopReason StopReason { get; }
     }
 }

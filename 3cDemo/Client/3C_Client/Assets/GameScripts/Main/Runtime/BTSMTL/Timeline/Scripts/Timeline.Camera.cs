@@ -197,6 +197,7 @@ namespace BTSMTL.Timeline
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
     [TimelineAuthoringProperty("mode", typeof(TimelineCameraMode))]
+    [TimelineAuthoringProperty("sequenceId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     [TimelineAuthoringProperty("blendInSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("blendOutSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
@@ -208,6 +209,8 @@ namespace BTSMTL.Timeline
 
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineCameraMode Mode = TimelineCameraMode.SkillCloseup;
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public string SequenceId;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority = 100;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -274,6 +277,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("cueId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("cueKind", typeof(TimelineCameraCueKind))]
     [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
+    [TimelineAuthoringProperty("resourceId", TimelineAuthoringPropertyKind.Text, Optional = true, Trimmed = true)]
     [TimelineAuthoringProperty("intensity", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("durationSeconds", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0d, Finite = true)]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
@@ -287,6 +291,8 @@ namespace BTSMTL.Timeline
         public TimelineCameraCueKind CueKind = TimelineCameraCueKind.Shake;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CueType = "Camera";
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public string ResourceId;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public float Intensity = 1f;
         [ShowInInspector, OnValueChanged("RebindTimeline")]

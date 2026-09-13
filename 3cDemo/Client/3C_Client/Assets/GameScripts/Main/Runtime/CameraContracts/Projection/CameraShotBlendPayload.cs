@@ -32,5 +32,12 @@ namespace ThirdPersonCamera
         public CameraCurvePayload Curve => m_Curve;
         public bool UseCoreSpace => m_UseCoreSpace;
         public bool UseDelta => m_UseDelta;
+
+        public void RequireValid(string source)
+        {
+            if (!float.IsFinite(Duration) || Duration < 0f || Curve == null)
+                throw new InvalidOperationException($"{source} is incomplete.");
+            Curve.RequireValid(source + ".Curve");
+        }
     }
 }

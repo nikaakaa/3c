@@ -7,7 +7,7 @@ namespace ThirdPersonCamera
 [Serializable]
     public sealed class CharacterCameraProjectionPayload
     {
-        public const string SchemaVersion = "character-camera-projection/v1";
+        public const string SchemaVersion = "character-camera-projection/v2";
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_ProfileId = string.Empty;
@@ -20,8 +20,6 @@ namespace ThirdPersonCamera
         [SerializeField] CameraShakePayload[] m_Shakes = Array.Empty<CameraShakePayload>();
         [SerializeField] CameraShotPayload[] m_Shots = Array.Empty<CameraShotPayload>();
         [SerializeField] CameraCurvePayload[] m_Curves = Array.Empty<CameraCurvePayload>();
-        [SerializeField] CameraOrbitPayload m_DefaultSphere;
-        [SerializeField] CameraOrbitPayload[] m_DefaultOrbitGroup = Array.Empty<CameraOrbitPayload>();
         [SerializeField] float m_NearClipPlane;
         [SerializeField] float m_FarClipPlane;
         [SerializeField] float m_CameraLocateRadius;
@@ -44,8 +42,6 @@ namespace ThirdPersonCamera
             CameraShakePayload[] shakes,
             CameraShotPayload[] shots,
             CameraCurvePayload[] curves,
-            CameraOrbitPayload defaultSphere,
-            CameraOrbitPayload[] defaultOrbitGroup,
             CameraTargetSlotPayload[] targetSlots)
         {
             m_ProfileId = profile.ProfileId;
@@ -58,8 +54,6 @@ namespace ThirdPersonCamera
             m_Shakes = shakes ?? Array.Empty<CameraShakePayload>();
             m_Shots = shots ?? Array.Empty<CameraShotPayload>();
             m_Curves = curves ?? Array.Empty<CameraCurvePayload>();
-            m_DefaultSphere = defaultSphere;
-            m_DefaultOrbitGroup = defaultOrbitGroup ?? Array.Empty<CameraOrbitPayload>();
             m_NearClipPlane = profile.NearClipPlane;
             m_FarClipPlane = profile.FarClipPlane;
             m_CameraLocateRadius = profile.CameraLocateRadius;
@@ -84,8 +78,7 @@ namespace ThirdPersonCamera
         public IReadOnlyList<CameraShakePayload> Shakes => m_Shakes ?? Array.Empty<CameraShakePayload>();
         public IReadOnlyList<CameraShotPayload> Shots => m_Shots ?? Array.Empty<CameraShotPayload>();
         public IReadOnlyList<CameraCurvePayload> Curves => m_Curves ?? Array.Empty<CameraCurvePayload>();
-        public CameraOrbitPayload DefaultSphere => m_DefaultSphere;
-        public IReadOnlyList<CameraOrbitPayload> DefaultOrbitGroup => m_DefaultOrbitGroup ?? Array.Empty<CameraOrbitPayload>();
+        public CameraOrbitPayload DefaultSphere => ResolveDefaultSphere();
         public float NearClipPlane => m_NearClipPlane;
         public float FarClipPlane => m_FarClipPlane;
         public float CameraLocateRadius => m_CameraLocateRadius;
@@ -156,7 +149,7 @@ namespace ThirdPersonCamera
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
                 string.IsNullOrWhiteSpace(ProfileRevision) || DefaultSequence == null || DefaultSphere == null ||
-                Input == null || Locking == null || Collision == null || DefaultOrbitGroup.Count != 3 ||
+                Input == null || Locking == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(FarClipPlane) || FarClipPlane <= NearClipPlane ||
                 !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
@@ -165,16 +158,111 @@ namespace ThirdPersonCamera
                 !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f ||
                 !float.IsFinite(ChangeAvatarTransitionSeconds) || ChangeAvatarTransitionSeconds < 0f)
                 throw new InvalidOperationException("Character Camera Projection payload is incomplete.");
-            DefaultSphere.RequireValid("Character Camera Projection DefaultSphere");
-            for (int i = 0; i < DefaultOrbitGroup.Count; i++)
+            DefaultSequence.RequireValid("Character Camera Projection DefaultSequence");
+            for (int i = 0; i < Sequences.Count; i++)
             {
-                CameraOrbitPayload orbit = DefaultOrbitGroup[i];
-                if (orbit == null)
-                    throw new InvalidOperationException($"Character Camera Projection DefaultOrbitGroup[{i}] is missing.");
-                orbit.RequireValid($"Character Camera Projection DefaultOrbitGroup[{i}]");
+                CameraSequencePayload sequence = Sequences[i];
+                if (sequence == null)
+                    throw new InvalidOperationException($"Character Camera Projection Sequences[{i}] is missing.");
+                sequence.RequireValid($"Character Camera Projection Sequences[{i}]");
+                if (string.Equals(sequence.SequenceId, DefaultSequence.SequenceId, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Character Camera Projection contains the default Sequence twice.");
             }
-            if (Collision.Enabled)
-                throw new InvalidOperationException("Character Camera Projection enables collision, but the formal camera collision consumer is not published.");
+            Input.RequireValid("Character Camera Projection Input");
+            Locking.RequireValid("Character Camera Projection Locking");
+            Collision.RequireValid("Character Camera Projection Collision");
+            DefaultSphere.RequireValid("Character Camera Projection DefaultSphere");
+            RequirePayloads();
+        }
+
+        void RequirePayloads()
+        {
+            for (int i = 0; i < OverrideTracks.Count; i++)
+            {
+                if (OverrideTracks[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection OverrideTracks[{i}] is missing.");
+                OverrideTracks[i].RequireValid($"Character Camera Projection OverrideTracks[{i}]");
+            }
+            for (int i = 0; i < Zooms.Count; i++)
+            {
+                if (Zooms[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection Zooms[{i}] is missing.");
+                Zooms[i].RequireValid($"Character Camera Projection Zooms[{i}]");
+            }
+            for (int i = 0; i < Stretches.Count; i++)
+            {
+                if (Stretches[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection Stretches[{i}] is missing.");
+                Stretches[i].RequireValid($"Character Camera Projection Stretches[{i}]");
+            }
+            for (int i = 0; i < Shakes.Count; i++)
+            {
+                if (Shakes[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection Shakes[{i}] is missing.");
+                Shakes[i].RequireValid($"Character Camera Projection Shakes[{i}]");
+            }
+            for (int i = 0; i < Shots.Count; i++)
+            {
+                if (Shots[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection Shots[{i}] is missing.");
+                Shots[i].RequireValid($"Character Camera Projection Shots[{i}]");
+            }
+            for (int i = 0; i < Curves.Count; i++)
+            {
+                if (Curves[i] == null)
+                    throw new InvalidOperationException($"Character Camera Projection Curves[{i}] is missing.");
+                Curves[i].RequireValid($"Character Camera Projection Curves[{i}]");
+            }
+            var slots = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < TargetSlots.Count; i++)
+            {
+                CameraTargetSlotPayload slot = TargetSlots[i];
+                if (slot == null || string.IsNullOrWhiteSpace(slot.SlotId) || !slots.Add(slot.SlotId) ||
+                    !Enum.IsDefined(typeof(CameraSpace), slot.Space))
+                    throw new InvalidOperationException($"Character Camera Projection TargetSlots[{i}] is invalid.");
+                slot.RequireValid($"Character Camera Projection TargetSlots[{i}]");
+                if (slot.Space != CameraSpace.World)
+                    throw new InvalidOperationException(
+                        $"Character Camera Projection TargetSlots[{i}] uses unsupported space '{slot.Space}'.");
+            }
+            RequireEntityStageSlots(slots);
+        }
+
+        void RequireEntityStageSlots(HashSet<string> slots)
+        {
+            RequireEntityStageSlots(DefaultSequence, slots);
+            for (int i = 0; i < Sequences.Count; i++)
+                RequireEntityStageSlots(Sequences[i], slots);
+        }
+
+        static void RequireEntityStageSlots(CameraSequencePayload sequence, HashSet<string> slots)
+        {
+            for (int i = 0; i < sequence.Stages.Count; i++)
+            {
+                if (sequence.Stages[i] is not CameraEntityFramePayload entity)
+                    continue;
+                if (!slots.Contains(entity.MainTargetSlotId))
+                    throw new InvalidOperationException(
+                        $"Camera Sequence '{sequence.SequenceId}' references missing target slot '{entity.MainTargetSlotId}'.");
+                for (int subIndex = 0; subIndex < entity.SubTargetSlotIds.Count; subIndex++)
+                    if (!slots.Contains(entity.SubTargetSlotIds[subIndex]))
+                        throw new InvalidOperationException(
+                            $"Camera Sequence '{sequence.SequenceId}' references missing target slot '{entity.SubTargetSlotIds[subIndex]}'.");
+            }
+        }
+
+        CameraOrbitPayload ResolveDefaultSphere()
+        {
+            for (int i = 0; i < DefaultSequence.Stages.Count; i++)
+            {
+                if (DefaultSequence.Stages[i] is not CameraFrameOnePointByTrackPayload track)
+                    continue;
+                if (track.CameraOrbits.Count != 3)
+                    throw new InvalidOperationException("Character Camera Projection default track must contain three orbits.");
+                CameraTrackOrbitPayload orbit = track.CameraOrbits[1];
+                return new CameraOrbitPayload(orbit.Height, orbit.Radius);
+            }
+            throw new InvalidOperationException("Character Camera Projection default Sequence has no track stage.");
         }
     }
 }

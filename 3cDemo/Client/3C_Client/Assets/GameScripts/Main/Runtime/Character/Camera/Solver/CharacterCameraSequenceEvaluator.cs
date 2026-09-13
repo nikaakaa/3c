@@ -30,6 +30,14 @@ namespace ThirdPersonCamera
             m_Initialized = false;
         }
 
+        public void SetInitialState(in CameraInitialState state)
+        {
+            m_FramePlanner.SetInitialState(in state);
+            m_Transition.Reset();
+            m_WorldBasicHistory.Reset();
+            m_Initialized = false;
+        }
+
         public bool Retire(
             string sourceId,
             ulong generation,
@@ -108,7 +116,7 @@ namespace ThirdPersonCamera
                 return target;
             if (!m_Initialized || input.ResetHistory || m_SmoothTime <= 0f)
             {
-                SetCurrent(target.WorldBasicData);
+                SetCurrent(target.WorldBasicData, true);
                 return target;
             }
 
@@ -149,17 +157,20 @@ namespace ThirdPersonCamera
                 m_Current.Rotation,
                 target.Rotation,
                 rotationAlpha);
-            SetCurrent(new CameraWorldBasicData(pivot, rotation, radius, offset, fieldOfView));
+            SetCurrent(new CameraWorldBasicData(pivot, rotation, radius, offset, fieldOfView), false);
             return target.WithWorldBasicData(m_Current);
         }
 
-        void SetCurrent(CameraWorldBasicData data)
+        void SetCurrent(CameraWorldBasicData data, bool resetVelocity)
         {
             m_Current = data;
-            m_PivotVelocity = Vector3.zero;
-            m_RadiusVelocity = 0f;
-            m_OffsetVelocity = Vector2.zero;
-            m_FieldOfViewVelocity = 0f;
+            if (resetVelocity)
+            {
+                m_PivotVelocity = Vector3.zero;
+                m_RadiusVelocity = 0f;
+                m_OffsetVelocity = Vector2.zero;
+                m_FieldOfViewVelocity = 0f;
+            }
             m_Initialized = true;
         }
 

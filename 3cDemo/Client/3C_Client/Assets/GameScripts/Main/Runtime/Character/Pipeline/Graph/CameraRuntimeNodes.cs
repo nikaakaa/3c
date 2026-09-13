@@ -31,6 +31,9 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, ShowInPanel("Mode")]
         CameraMode m_Mode = CameraMode.FreeLook;
 
+        [SerializeField, ShowInPanel("Sequence Id")]
+        string m_SequenceId;
+
         [SerializeField, ShowInPanel("Priority")]
         int m_Priority;
 
@@ -56,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
         public CameraMode Mode => m_Mode;
+        public string SequenceId => m_SequenceId;
         public int Priority => m_Priority;
         public float Weight => m_Weight;
         public float BlendInSeconds => m_BlendInSeconds;
@@ -82,6 +86,9 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, ShowInPanel("Cue Type")]
         string m_CueType = "Camera";
 
+        [SerializeField, ShowInPanel("Resource Id")]
+        string m_ResourceId;
+
         [SerializeField, Min(0f), ShowInPanel("Intensity")]
         float m_Intensity = 1f;
 
@@ -100,6 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         public string CueId => m_CueId;
         public CameraCueKind CueKind => m_CueKind;
         public string CueType => m_CueType;
+        public string ResourceId => m_ResourceId;
         public float Intensity => m_Intensity;
         public float DurationSeconds => m_DurationSeconds;
         public int Priority => m_Priority;

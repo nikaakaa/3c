@@ -1,8 +1,23 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    public readonly struct CameraInitialState
+    {
+        public CameraInitialState(float yaw, float pitch)
+        {
+            if (!float.IsFinite(yaw) || !float.IsFinite(pitch))
+                throw new ArgumentOutOfRangeException(nameof(yaw));
+            Yaw = yaw;
+            Pitch = pitch;
+        }
+
+        public float Yaw { get; }
+        public float Pitch { get; }
+    }
+
     public static class CameraTargetBindingKeys
     {
         public const string Body = "camera.body";
@@ -90,17 +105,35 @@ namespace ThirdPersonCamera
         public CameraRigResult Result { get; private set; }
         public string TargetSource { get; private set; } = string.Empty;
         public string ProjectionRevision { get; private set; } = string.Empty;
+        public Vector2 RawLook { get; private set; }
+        public CameraResponseRequest Response { get; private set; }
+        public IReadOnlyList<CameraEffectContribution> Effects { get; private set; } =
+            Array.Empty<CameraEffectContribution>();
 
         public void Set(
             CameraFramePlan plan,
             CameraRigResult result,
             string targetSource,
-            string projectionRevision)
+            string projectionRevision,
+            Vector2 rawLook,
+            in CameraResponseRequest response,
+            IReadOnlyList<CameraEffectContribution> effects)
         {
             Plan = plan;
             Result = result;
             TargetSource = targetSource ?? string.Empty;
             ProjectionRevision = projectionRevision ?? string.Empty;
+            RawLook = rawLook;
+            Response = response;
+            if (effects == null || effects.Count == 0)
+            {
+                Effects = Array.Empty<CameraEffectContribution>();
+                return;
+            }
+            var copy = new CameraEffectContribution[effects.Count];
+            for (int i = 0; i < copy.Length; i++)
+                copy[i] = effects[i];
+            Effects = copy;
         }
 
         public void Clear()
@@ -109,6 +142,9 @@ namespace ThirdPersonCamera
             Result = default;
             TargetSource = string.Empty;
             ProjectionRevision = string.Empty;
+            RawLook = Vector2.zero;
+            Response = default;
+            Effects = Array.Empty<CameraEffectContribution>();
         }
     }
 }

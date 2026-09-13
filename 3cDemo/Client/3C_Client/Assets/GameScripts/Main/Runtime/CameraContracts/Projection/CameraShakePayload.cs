@@ -128,5 +128,23 @@ namespace ThirdPersonCamera
         public int PlayPriority => m_PlayPriority;
         public int DataPriority => m_DataPriority;
         public string StandardConfigKey => m_StandardConfigKey ?? string.Empty;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(ShakeId) || !float.IsFinite(AngleVertical) ||
+                !float.IsFinite(NoiseAngle) || !float.IsFinite(RadiusLength) || RadiusLength < 0f ||
+                !float.IsFinite(DistanceToPlane) || !float.IsFinite(NoiseRatio) || NoiseRatio < 0f ||
+                !float.IsFinite(ShakeTotalTime) || ShakeTotalTime <= 0f || !float.IsFinite(Frequency) || Frequency < 0f ||
+                !float.IsFinite(RollAmplitude) || !float.IsFinite(PitchAmplitude) || !float.IsFinite(YawAmplitude) ||
+                !Enum.IsDefined(typeof(CameraSpace), ShakeCenterSpace) || !float.IsFinite(ImpactRadius) || ImpactRadius < 0f ||
+                !float.IsFinite(DissipationDistance) || DissipationDistance < 0f || !float.IsFinite(FadeInDuration) ||
+                FadeInDuration < 0f || !float.IsFinite(FadeOutDuration) || FadeOutDuration < 0f ||
+                FadeInCurve == null || FadeOutCurve == null || Curve == null ||
+                !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType))
+                throw new InvalidOperationException($"{source} contains an invalid Camera Shake payload.");
+            FadeInCurve.RequireValid(source + ".FadeInCurve");
+            FadeOutCurve.RequireValid(source + ".FadeOutCurve");
+            Curve.RequireValid(source + ".Curve");
+        }
     }
 }

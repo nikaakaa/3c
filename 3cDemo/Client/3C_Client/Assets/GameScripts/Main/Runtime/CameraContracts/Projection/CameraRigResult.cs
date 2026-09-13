@@ -4,15 +4,22 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
-public readonly struct CameraRigResult
+    public readonly struct CameraRigResult
     {
-        public CameraRigResult(CameraBasisSnapshot basis, Vector3 position, Quaternion rotation, float fieldOfView, bool valid)
+        public CameraRigResult(
+            CameraBasisSnapshot basis,
+            Vector3 position,
+            Quaternion rotation,
+            float fieldOfView,
+            bool valid,
+            CameraCollisionResult collision = default)
         {
             Basis = basis;
             Position = position;
             Rotation = rotation;
             FieldOfView = fieldOfView;
             Valid = valid;
+            Collision = collision;
         }
 
         public CameraBasisSnapshot Basis { get; }
@@ -20,5 +27,6 @@ public readonly struct CameraRigResult
         public Quaternion Rotation { get; }
         public float FieldOfView { get; }
         public bool Valid { get; }
+        public CameraCollisionResult Collision { get; }
     }
 }

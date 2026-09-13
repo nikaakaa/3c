@@ -48,13 +48,27 @@ namespace ThirdPersonCamera
             envelope *= state.Request.Weight;
             float radiusScale = 1f + payload.RadiusRatio * envelope;
             Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
+            if (payload.ApplyRuntimeCamFollowYOffset)
+                offset += input.BodyRotation * Vector3.up *
+                    (payload.RuntimeCamFollowYOffsetRatio * plan.Radius * envelope);
+            if (payload.ApplyAimPointsCameraFollowYOffset)
+                offset += Vector3.up * (payload.RuntimeCamFollowYPoints * envelope);
             Vector3 euler = plan.Rotation.eulerAngles;
             float pitch = NormalizeAngle(euler.x);
-            if (payload.IsElevationAngleAbsolute)
-                pitch = Mathf.LerpUnclamped(pitch, payload.ElevationAngleMax, envelope);
-            else
-                pitch += Mathf.LerpUnclamped(payload.ElevationAngleMin, payload.ElevationAngleMax, envelope);
-            Quaternion rotation = Quaternion.Euler(pitch, euler.y, euler.z);
+            bool useEndAngle = payload.IsAppliedEndElevationAngle && envelope > 0.5f;
+            float angleMin = useEndAngle ? payload.EndElevationAngleMin : payload.ElevationAngleMin;
+            float angleMax = useEndAngle ? payload.EndElevationAngleMax : payload.ElevationAngleMax;
+            bool useAbsoluteAngle = useEndAngle
+                ? payload.IsEndElevationAngleAbsolute
+                : payload.IsElevationAngleAbsolute;
+            if (payload.IsAppliedElevationRatio)
+            {
+                float targetPitch = Mathf.LerpUnclamped(angleMin, angleMax, 0.5f);
+                pitch = useAbsoluteAngle
+                    ? Mathf.LerpUnclamped(pitch, targetPitch, envelope)
+                    : pitch + targetPitch * envelope;
+            }
+            Quaternion rotation = Quaternion.Euler(pitch, euler.y, euler.z + payload.RotationZ * envelope);
             return plan.WithWorldBasicData(
                 plan.WorldBasicData
                     .WithPivotLocation(plan.PivotLocation + offset)

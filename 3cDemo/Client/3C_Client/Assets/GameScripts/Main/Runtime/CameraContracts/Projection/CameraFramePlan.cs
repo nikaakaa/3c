@@ -26,6 +26,9 @@ namespace ThirdPersonCamera
         float m_BlendProgress;
         bool m_ResetHistory;
         bool m_Valid;
+        CameraCollisionResult m_Collision;
+        bool m_IgnoreCollision;
+        string m_ShotId;
 
         public CameraFramePlan(
             CameraWorldBasicData worldBasicData,
@@ -47,12 +50,17 @@ namespace ThirdPersonCamera
             m_BlendProgress = Mathf.Clamp01(blendProgress);
             m_ResetHistory = resetHistory;
             m_Valid = valid;
+            m_Collision = default;
+            m_IgnoreCollision = false;
+            m_ShotId = string.Empty;
         }
 
         public CameraWorldBasicData WorldBasicData => m_WorldBasicData;
         public Vector3 PivotLocation => m_WorldBasicData.PivotLocation;
         public Vector3 Location => m_WorldBasicData.Location;
         public Quaternion Rotation => m_WorldBasicData.Rotation;
+        public float Yaw => ResolveYaw(Rotation);
+        public float Pitch => ResolvePitch(Rotation);
         public Vector3 AimPoint => m_WorldBasicData.PivotLocation;
         public float FieldOfView => m_WorldBasicData.FieldOfView;
         public float NearClipPlane => m_Lens.NearClipPlane;
@@ -66,6 +74,9 @@ namespace ThirdPersonCamera
         public float BlendProgress => m_BlendProgress;
         public bool ResetHistory => m_ResetHistory;
         public bool Valid => m_Valid;
+        public CameraCollisionResult Collision => m_Collision;
+        public bool IgnoreCollision => m_IgnoreCollision;
+        public string ShotId => m_ShotId ?? string.Empty;
 
         public static CameraFramePlan Invalid => default;
 
@@ -114,6 +125,46 @@ namespace ThirdPersonCamera
             result.m_ResetHistory = resetHistory;
             return result;
         }
+
+        public CameraFramePlan WithCollision(CameraCollisionResult collision)
+        {
+            CameraFramePlan result = this;
+            result.m_Collision = collision;
+            return result;
+        }
+
+        public CameraFramePlan WithValidity(bool valid)
+        {
+            CameraFramePlan result = this;
+            result.m_Valid = valid;
+            return result;
+        }
+
+        public CameraFramePlan WithIgnoreCollision(bool ignoreCollision)
+        {
+            CameraFramePlan result = this;
+            result.m_IgnoreCollision = ignoreCollision;
+            return result;
+        }
+
+        public CameraFramePlan WithShotId(string shotId)
+        {
+            CameraFramePlan result = this;
+            result.m_ShotId = shotId ?? string.Empty;
+            return result;
+        }
+
+        static float ResolveYaw(Quaternion rotation)
+        {
+            Vector3 forward = rotation * Vector3.forward;
+            Vector3 planar = Vector3.ProjectOnPlane(forward, Vector3.up);
+            return planar.sqrMagnitude <= 0.000001f
+                ? 0f
+                : Mathf.Atan2(planar.x, planar.z) * Mathf.Rad2Deg;
+        }
+
+        static float ResolvePitch(Quaternion rotation) =>
+            Mathf.Asin(Mathf.Clamp((rotation * Vector3.forward).y, -1f, 1f)) * Mathf.Rad2Deg;
 
     }
 }

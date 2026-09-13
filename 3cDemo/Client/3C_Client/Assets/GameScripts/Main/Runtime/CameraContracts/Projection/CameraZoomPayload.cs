@@ -76,5 +76,19 @@ namespace ThirdPersonCamera
         public float DelayTime => m_DelayTime;
         public float EndTime => m_EndTime;
         public CameraEffectStackingType PlayStackingType => m_PlayStackingType;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(ZoomId) || StartCurve == null || EndCurve == null ||
+                !float.IsFinite(LastTime) || LastTime < -1f || !float.IsFinite(StartTime) || StartTime < 0f ||
+                !float.IsFinite(DelayTime) || DelayTime < 0f || !float.IsFinite(EndTime) || EndTime < 0f ||
+                !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
+                !Enum.IsDefined(typeof(CameraEffectStackingType), StackingType) ||
+                !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType) ||
+                !Enum.IsDefined(typeof(CameraFovVariationType), FovVariationType))
+                throw new InvalidOperationException($"{source} contains an invalid Camera Zoom payload.");
+            StartCurve.RequireValid(source + ".StartCurve");
+            EndCurve.RequireValid(source + ".EndCurve");
+        }
     }
 }

@@ -404,7 +404,7 @@ namespace ThirdPersonSimulation
 
     public static class CameraProgramOperationSchema
     {
-        public const int PayloadVersion = 1;
+        public const int PayloadVersion = 2;
         public static readonly AnimationChannelId ChannelId = new AnimationChannelId("Camera");
         public const string OutputPortId = "Submitted";
         public const string BasisValidPortId = "Valid";
@@ -492,19 +492,21 @@ namespace ThirdPersonSimulation
                     RequireNonNegative(operation, literals, "BlendInSeconds");
                     RequireNonNegative(operation, literals, "BlendOutSeconds");
                     RequireString(operation, literals, "TargetKey", false);
+                    RequireString(operation, literals, "SequenceId", true);
                     RequireString(operation, literals, "ActionContext", false);
-                    RequireFieldCount(operation, 6);
+                    RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraCue:
                     RequireEnum(operation, operation.Integer1, 0, 4, "CueKind");
                     RequireFlags(operation, 0);
                     RequireString(operation, literals, "CueId", true);
                     RequireString(operation, literals, "CueType", true);
+                    RequireString(operation, literals, "ResourceId", false);
                     RequireNonNegative(operation, literals, "Intensity");
                     RequireNonNegative(operation, literals, "DurationSeconds");
                     RequireInt32(operation, literals, "Priority");
                     RequireString(operation, literals, "ActionContext", false);
-                    RequireFieldCount(operation, 6);
+                    RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraResponse:
                     RequireEnum(operation, operation.Integer1, 0, 2, "LookResponse");

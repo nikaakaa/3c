@@ -67,5 +67,22 @@ namespace ThirdPersonCamera
         public Vector2 PitchRange => m_PitchRange;
         public float PlayerHeight => m_PlayerHeight;
         public string BeginCameraDataId => m_BeginCameraDataId ?? string.Empty;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind) ||
+                !float.IsFinite(PlayLength) || PlayLength == 0f || PlayLength < -1f ||
+                !float.IsFinite(AspectRatio) || AspectRatio <= 0f || !float.IsFinite(HeightRatio) || HeightRatio <= 0f ||
+                !float.IsFinite(MinPlayerHeightRatio) || !float.IsFinite(MaxPlayerHeightRatio) ||
+                MinPlayerHeightRatio > MaxPlayerHeightRatio || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
+                !float.IsFinite(Pitch) || !Finite(MainHorizontalOffset) || !Finite(SubHorizontalOffset) ||
+                !float.IsFinite(MainVerticalOffset) || !Finite(TargetVerticalOffset) || !Finite(PitchRange) ||
+                PitchRange.x >= PitchRange.y || !float.IsFinite(PlayerHeight) || PlayerHeight <= 0f ||
+                string.IsNullOrWhiteSpace(BeginCameraDataId))
+                throw new InvalidOperationException($"{source} contains invalid two-point framing.");
+        }
+
+        static bool Finite(Vector2 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y);
     }
 }

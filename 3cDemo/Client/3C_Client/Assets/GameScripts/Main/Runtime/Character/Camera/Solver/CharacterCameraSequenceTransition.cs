@@ -248,7 +248,7 @@ namespace ThirdPersonCamera
         static CameraFramePlan Blend(CameraFramePlan from, CameraFramePlan to, float progress)
         {
             float t = Mathf.Clamp01(progress);
-            return new CameraFramePlan(
+            CameraFramePlan result = new CameraFramePlan(
                 CameraWorldBasicData.Lerp(from.WorldBasicData, to.WorldBasicData, t),
                 new CameraLensPlan(
                     Mathf.LerpUnclamped(from.NearClipPlane, to.NearClipPlane, t),
@@ -260,6 +260,9 @@ namespace ThirdPersonCamera
                 t,
                 to.ResetHistory,
                 to.Valid);
+            return result
+                .WithIgnoreCollision(from.IgnoreCollision || to.IgnoreCollision)
+                .WithShotId(to.ShotId);
         }
 
     }

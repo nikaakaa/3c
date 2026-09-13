@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
+        public ICharacterPresentationRuntime PresentationRuntime => m_Registration?.PresentationRuntime;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position

@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (kind.Value != CharacterPresentationProducerKind.Animation)
             {
                 ThirdPersonCamera.CharacterPresentationCameraBinding camera = kind.Value == CharacterPresentationProducerKind.Camera
-                    ? BuildCameraBinding(reader, producer, source, timelines, errors)
+                    ? BuildCameraBinding(reader, producer, source, timelines, profile, errors)
                     : null;
                 CharacterPresentationCueBinding cue = kind.Value == CharacterPresentationProducerKind.Cue
                     ? BuildCueBinding(producer, source, timelines, errors)
@@ -467,17 +467,172 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CollectTimelineCallSites(occurrence.GraphReferences[i].Child, result);
         }
 
-static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraBinding(
+        static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraBinding(
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             ProgramSourceMapEntry source,
             IReadOnlyDictionary<string, TimelineData> timelines,
+            CharacterCameraProfile cameraProfile,
             List<string> errors)
         {
-            errors?.Add(
-                $"Camera producer '{producer.Identity}' requires the camera projection builder integration; timeline camera clip compilation is not supported on this pipeline.");
-            return null;
+            if (TryFindSourceClip(source, timelines, out Clip clip))
+            {
+                switch (clip)
+                {
+                    case CameraStateClip state:
+                        if (string.IsNullOrWhiteSpace(state.SequenceId))
+                        {
+                            errors?.Add($"Camera producer '{producer.Identity}' CameraStateClip has no SequenceId.");
+                            return null;
+                        }
+                        if (cameraProfile == null || !cameraProfile.HasSequence(state.SequenceId))
+                        {
+                            errors?.Add($"Camera producer '{producer.Identity}' references missing Camera Sequence '{state.SequenceId}'.");
+                            return null;
+                        }
+                        return ThirdPersonCamera.CharacterPresentationCameraBinding.Sequence(
+                            state.SequenceId,
+                            state.Priority,
+                            state.BlendInSeconds,
+                            state.BlendOutSeconds,
+                            state.TargetKey,
+                            ToInterruptPolicy(state.InterruptPolicy));
+                    case CameraResponseClip response:
+                        return ThirdPersonCamera.CharacterPresentationCameraBinding.Response(
+                            ToResponseMode(response.LookResponse),
+                            response.ManualOrbitWeight,
+                            response.PitchResponseWeight,
+                            response.YawResponseWeight,
+                            response.Priority);
+                    case CameraCueClip cue:
+                        return BuildCameraCueBinding(producer, cue, errors);
+                    default:
+                        errors?.Add($"Camera producer '{producer.Identity}' source clip type '{clip.GetType().Name}' is unsupported.");
+                        return null;
+                }
+            }
+
+            SemanticOperation operation;
+            try
+            {
+                operation = reader.RequireProducerOperation(producer);
+            }
+            catch (Exception exception)
+            {
+                errors?.Add($"Camera producer '{producer.Identity}' cannot resolve its semantic operation: {exception.Message}");
+                return null;
+            }
+            try
+            {
+                switch (operation.Code)
+                {
+                    case SimulationOperationCode.CameraStateRequest:
+                        string sequenceId = reader.RequireString(operation, "SequenceId");
+                        if (cameraProfile == null || !cameraProfile.HasSequence(sequenceId))
+                            throw new InvalidOperationException($"Camera Sequence '{sequenceId}' is absent from the Character Camera Profile.");
+                        return ThirdPersonCamera.CharacterPresentationCameraBinding.Sequence(
+                            sequenceId,
+                            reader.RequireInt32(operation, "Priority"),
+                            reader.RequireScalar(operation, "BlendInSeconds"),
+                            reader.RequireScalar(operation, "BlendOutSeconds"),
+                            reader.RequireString(operation, "TargetKey"),
+                            (CameraSequenceInterruptPolicy)operation.Flags);
+                    case SimulationOperationCode.CameraCue:
+                        return BuildCameraCueBinding(
+                            producer,
+                            (CameraCueKind)operation.Integer1,
+                            reader.RequireString(operation, "CueId"),
+                            reader.RequireString(operation, "ResourceId"),
+                            reader.RequireInt32(operation, "Priority"),
+                            errors);
+                    case SimulationOperationCode.CameraResponse:
+                        return ThirdPersonCamera.CharacterPresentationCameraBinding.Response(
+                            (CameraResponseMode)operation.Integer1,
+                            reader.RequireScalar(operation, "ManualOrbitWeight"),
+                            reader.RequireScalar(operation, "PitchResponseWeight"),
+                            reader.RequireScalar(operation, "YawResponseWeight"),
+                            reader.RequireInt32(operation, "Priority"));
+                    case SimulationOperationCode.CameraTarget:
+                        return ThirdPersonCamera.CharacterPresentationCameraBinding.Target(
+                            reader.RequireString(operation, "TargetKey"),
+                            reader.RequireString(operation, "AnchorKey"),
+                            reader.RequireString(operation, "AimPointKey"),
+                            reader.RequireString(operation, "PreferredBoneKey"),
+                            reader.RequireInt32(operation, "Priority"));
+                    default:
+                        throw new InvalidOperationException($"Operation '{operation.Code}' is not a Camera presentation operation.");
+                }
+            }
+            catch (Exception exception)
+            {
+                errors?.Add($"Camera producer '{producer.Identity}' has an invalid binding: {exception.Message}");
+                return null;
+            }
         }
+
+        static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraCueBinding(
+            ProgramProducer producer,
+            CameraCueClip cue,
+            List<string> errors)
+        {
+            return BuildCameraCueBinding(
+                producer,
+                ToCueKind(cue.CueKind),
+                cue.CueId,
+                cue.ResourceId,
+                cue.Priority,
+                errors);
+        }
+
+        static CameraCueKind ToCueKind(TimelineCameraCueKind value) =>
+            value switch
+            {
+                TimelineCameraCueKind.Shake => CameraCueKind.Shake,
+                TimelineCameraCueKind.FovKick => CameraCueKind.FovKick,
+                TimelineCameraCueKind.Recoil => CameraCueKind.Recoil,
+                _ => throw new InvalidOperationException($"Camera cue kind '{value}' has no Camera effect owner.")
+            };
+
+        static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraCueBinding(
+            ProgramProducer producer,
+            CameraCueKind cueKind,
+            string cueId,
+            string resourceId,
+            int priority,
+            List<string> errors)
+        {
+            if (string.IsNullOrWhiteSpace(resourceId))
+            {
+                errors?.Add($"Camera producer '{producer.Identity}' cue '{cueId}' has no effect ResourceId.");
+                return null;
+            }
+            ThirdPersonCamera.CharacterPresentationCameraBindingKind kind = cueKind switch
+            {
+                CameraCueKind.Shake => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shake,
+                CameraCueKind.FovKick => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom,
+                CameraCueKind.Recoil => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch,
+                _ => throw new InvalidOperationException($"Camera cue kind '{cueKind}' has no Camera effect owner.")
+            };
+            return ThirdPersonCamera.CharacterPresentationCameraBinding.Effect(kind, resourceId, priority);
+        }
+
+        static CameraResponseMode ToResponseMode(TimelineCameraLookResponseMode value) =>
+            value switch
+            {
+                TimelineCameraLookResponseMode.Full => CameraResponseMode.Full,
+                TimelineCameraLookResponseMode.Suppressed => CameraResponseMode.Suppressed,
+                TimelineCameraLookResponseMode.Weighted => CameraResponseMode.Weighted,
+                _ => throw new InvalidOperationException($"Camera response mode '{value}' is unsupported.")
+            };
+
+        static CameraSequenceInterruptPolicy ToInterruptPolicy(TimelineCameraInterruptPolicy value) =>
+            value switch
+            {
+                TimelineCameraInterruptPolicy.BlendOut => CameraSequenceInterruptPolicy.BlendOut,
+                TimelineCameraInterruptPolicy.Cut => CameraSequenceInterruptPolicy.Cut,
+                TimelineCameraInterruptPolicy.HoldUntilSourceEnds => CameraSequenceInterruptPolicy.HoldUntilSourceEnds,
+                _ => throw new InvalidOperationException($"Camera interrupt policy '{value}' is unsupported.")
+            };
 
         static CharacterPresentationCueBinding BuildCueBinding(
             ProgramProducer producer,

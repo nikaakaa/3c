@@ -6,6 +6,7 @@ namespace ThirdPersonCamera
 {
     public sealed class CameraEffectEvaluator
     {
+        readonly CharacterCameraProjectionPayload m_Projection;
         readonly CameraEffectRuntimeStateStore m_States =
             new CameraEffectRuntimeStateStore();
         readonly ICameraEffectOwner[] m_Owners;
@@ -20,6 +21,7 @@ namespace ThirdPersonCamera
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            m_Projection = projection;
             m_Owners = new ICameraEffectOwner[]
             {
                 new CameraOverrideEffectEvaluator(projection),
@@ -106,7 +108,13 @@ namespace ThirdPersonCamera
                     active.Request.Weight,
                     remaining,
                     active.Request.Priority,
-                    visible && active.Request.Active && !active.Retired));
+                    visible && active.Request.Active && !active.Retired,
+                    active.Request.SourceId,
+                    active.Request.Generation,
+                    active.Request.SourceActionInstanceId,
+                    active.Request.Cycle,
+                    active.Request.EventId,
+                    active.RetireReason));
             }
             Advance(in input);
             return plan;
@@ -126,9 +134,11 @@ namespace ThirdPersonCamera
                     if (existing != null)
                     {
                         existing.Request = request;
+                        existing.Tag = ResolveTag(request);
                         existing.Retired = false;
                         existing.RetireElapsed = 0f;
                         existing.RetireStartElapsed = 0f;
+                        existing.RetireReason = CameraPresentationStopReason.NaturalComplete;
                         RemovePendingRetirement(request);
                         continue;
                     }
@@ -141,9 +151,11 @@ namespace ThirdPersonCamera
                     if (existing != null)
                     {
                         existing.Request = request;
+                        existing.Tag = ResolveTag(request);
                         existing.Retired = false;
                         existing.RetireElapsed = 0f;
                         existing.RetireStartElapsed = 0f;
+                        existing.RetireReason = CameraPresentationStopReason.NaturalComplete;
                         RemovePendingRetirement(request);
                         continue;
                     }
@@ -151,9 +163,22 @@ namespace ThirdPersonCamera
                 if (!owner.HasResource(request.ResourceId))
                     throw new InvalidOperationException(
                         $"Camera effect resource '{request.ResourceId}' is not present in the Projection.");
+                if (request.Kind == CameraEffectKind.Override &&
+                    m_Projection.TryGetOverride(request.ResourceId, out CameraOverrideTrackPayload overridePayload))
+                    m_States.ClearOverrideTracks(
+                        overridePayload.ClearTracks,
+                        overridePayload.ClearTags);
                 RemovePendingRetirement(request);
-                m_States.Add(request);
+                m_States.Add(request, ResolveTag(request));
             }
+        }
+
+        string ResolveTag(CameraEffectRequest request)
+        {
+            return request.Kind == CameraEffectKind.Override &&
+                   m_Projection.TryGetOverride(request.ResourceId, out CameraOverrideTrackPayload overridePayload)
+                ? overridePayload.Tag
+                : string.Empty;
         }
 
         void Advance(in CameraFrameInput input)

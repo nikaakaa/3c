@@ -25,11 +25,65 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            for (int i = 0; i < active.Count; i++)
-                if (active[i].Request.Kind == Kind)
-                    throw new InvalidOperationException(
-                        "Camera Shot evaluation is unavailable before its CinePrefab and virtual-camera consumer semantics are closed.");
-            return plan;
+            CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
+            if (state == null || !m_Projection.TryGetShot(state.Request.ResourceId, out CameraShotPayload payload))
+                return plan;
+            if (!FindTarget(input.Targets, payload.FollowTargetSlotId, out CameraTargetSnapshot follow))
+                throw new InvalidOperationException(
+                    $"Camera Shot '{payload.ShotId}' requires follow target slot '{payload.FollowTargetSlotId}'.");
+            if (!FindTarget(input.Targets, payload.LookAtTargetSlotId, out CameraTargetSnapshot lookAt))
+                throw new InvalidOperationException(
+                    $"Camera Shot '{payload.ShotId}' requires look-at target slot '{payload.LookAtTargetSlotId}'.");
+            float envelope = state.Retired
+                ? CameraEffectEvaluationMath.ResolveRetiredWeight(
+                    state,
+                    0f,
+                    payload.BlendIn.Duration,
+                    payload.Duration < 0f
+                        ? -1f
+                        : Mathf.Max(0f, payload.Duration - payload.BlendIn.Duration - payload.BlendOut.Duration),
+                    payload.BlendOut.Duration,
+                    payload.BlendIn.Curve,
+                    payload.BlendOut.Curve)
+                : CameraEffectEvaluationMath.ResolvePhaseWeight(
+                    state.Elapsed,
+                    0f,
+                    payload.BlendIn.Duration,
+                    payload.Duration < 0f
+                        ? -1f
+                        : Mathf.Max(0f, payload.Duration - payload.BlendIn.Duration - payload.BlendOut.Duration),
+                    payload.BlendOut.Duration,
+                    payload.BlendIn.Curve,
+                    payload.BlendOut.Curve);
+            envelope *= state.Request.Weight;
+            Vector3 followPoint = follow.AnchorPoint + payload.FollowOffset;
+            Vector3 aimPoint = lookAt.AimPoint + payload.LookAtOffset;
+            Vector3 location = plan.Location;
+            Vector3 direction = aimPoint - location;
+            Quaternion rotation = direction.sqrMagnitude > 0.000001f
+                ? Quaternion.LookRotation(direction.normalized, Vector3.up)
+                : plan.Rotation;
+            rotation = rotation * Quaternion.Euler(payload.OffsetRotation);
+            if (payload.BlendWithIgnoreLookAtTarget && envelope < 1f)
+                rotation = plan.Rotation;
+            float radius = Mathf.Max(
+                0.01f,
+                Vector3.Dot(followPoint - location, -(rotation * Vector3.forward)));
+            if (!float.IsFinite(radius) || radius <= 0.01f)
+                radius = plan.Radius;
+            CameraWorldBasicData target = new CameraWorldBasicData(
+                aimPoint,
+                rotation,
+                radius,
+                Vector2.zero,
+                payload.FieldOfView);
+            return plan
+                .WithWorldBasicData(CameraWorldBasicData.Lerp(
+                    plan.WorldBasicData,
+                    target,
+                    envelope))
+                .WithIgnoreCollision(payload.IgnoreCameraCollision && envelope > 0f)
+                .WithShotId(envelope > 0f ? payload.ShotId : string.Empty);
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
@@ -40,7 +94,9 @@ namespace ThirdPersonCamera
                 ? value
                 : throw new InvalidOperationException(
                     $"Camera Shot resource '{active.Request.ResourceId}' is not present in the Projection.");
-            return input.Delta(payload.TimeDomain);
+            return payload.ApplyEntityTimeScale
+                ? input.Delta(payload.TimeDomain)
+                : input.Delta(CameraTimeDomain.PresentationScaled);
         }
 
         public bool IsExpired(CameraEffectRuntimeState active)
@@ -54,6 +110,24 @@ namespace ThirdPersonCamera
             return m_Projection.TryGetShot(active.Request.ResourceId, out CameraShotPayload payload)
                 ? Mathf.Max(0.016f, payload.BlendOut.Duration)
                 : 0.016f;
+        }
+
+        static bool FindTarget(
+            IReadOnlyList<CameraTargetSnapshot> targets,
+            string key,
+            out CameraTargetSnapshot target)
+        {
+            for (int i = 0; i < targets.Count; i++)
+            {
+                CameraTargetSnapshot candidate = targets[i];
+                if (candidate.Valid && string.Equals(candidate.Key, key, StringComparison.Ordinal))
+                {
+                    target = candidate;
+                    return true;
+                }
+            }
+            target = default;
+            return false;
         }
     }
 }

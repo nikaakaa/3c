@@ -132,5 +132,25 @@ namespace ThirdPersonCamera
         public float RadiusRatio => m_RadiusRatio;
         public float StretchTime => m_StretchTime;
         public CameraFovVariationType FovVariationType => m_FovVariationType;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(StretchId) || StartCurve == null || EndCurve == null ||
+                !float.IsFinite(RuntimeCamFollowYPoints) || !float.IsFinite(RotationZ) ||
+                !float.IsFinite(RuntimeCamFollowYOffsetRatio) || !float.IsFinite(ElevationAngleMin) ||
+                !float.IsFinite(EndElevationAngleMin) || !float.IsFinite(ElevationAngleMax) ||
+                !float.IsFinite(EndElevationAngleMax) || !float.IsFinite(RecoilTime) || RecoilTime < 0f ||
+                !float.IsFinite(HoldTime) || HoldTime < -1f || !float.IsFinite(DelayTime) || DelayTime < 0f ||
+                !Finite(CamOffset) || !float.IsFinite(RadiusRatio) || !float.IsFinite(StretchTime) || StretchTime < 0f ||
+                !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType) ||
+                !Enum.IsDefined(typeof(CameraSpace), CamOffsetSpace) ||
+                !Enum.IsDefined(typeof(CameraFovVariationType), FovVariationType))
+                throw new InvalidOperationException($"{source} contains an invalid Camera Stretch payload.");
+            StartCurve.RequireValid(source + ".StartCurve");
+            EndCurve.RequireValid(source + ".EndCurve");
+        }
+
+        static bool Finite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 }

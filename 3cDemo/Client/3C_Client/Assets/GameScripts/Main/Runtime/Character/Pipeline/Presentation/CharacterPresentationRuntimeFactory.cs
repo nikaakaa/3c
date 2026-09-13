@@ -392,6 +392,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     initializeExternalState);
                 if (cameraRig)
                 {
+                    ICameraEnvironmentQuery environmentQuery = null;
+                    if (projection.Camera != null && projection.Camera.Collision.Enabled)
+                    {
+                        if (!physicsScene.IsValid())
+                            throw new ArgumentException("Camera collision requires a valid PhysicsScene.", nameof(physicsScene));
+                        environmentQuery = new UnityCameraEnvironmentQuery(
+                            physicsScene,
+                            worldAwareBinding.SelfColliderRoot);
+                    }
                     camera = new CharacterCameraPresentationRuntime(
                         projection,
                         cameraRig,
@@ -399,6 +408,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         followAnchor,
                         aimAnchor,
                         cameraTargetBindings,
+                        environmentQuery,
                         inputAdapter,
                         lookInputId,
                         initializeExternalState);

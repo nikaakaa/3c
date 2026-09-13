@@ -12,6 +12,9 @@ namespace ThirdPersonCamera
             if (asset.CamOffsetSpace == CameraSpace.Core)
                 throw new InvalidOperationException(
                     $"Camera Stretch '{asset.StretchId}' uses Core offset space without a formal core transform input.");
+            if (asset.FovVariationType != CameraFovVariationType.Absolute)
+                throw new InvalidOperationException(
+                    $"Camera Stretch '{asset.StretchId}' uses FOV variation '{asset.FovVariationType}' without a source FOV delta field.");
             return new CameraStretchPayload(
                 asset.StretchId,
                 context.CompileCurve(context.RequireCurve(asset.StartCurve)),

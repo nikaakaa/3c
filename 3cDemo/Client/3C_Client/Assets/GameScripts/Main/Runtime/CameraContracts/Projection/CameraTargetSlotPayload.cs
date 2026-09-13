@@ -30,5 +30,13 @@ namespace ThirdPersonCamera
         public string AimPointKey => m_AimPointKey ?? string.Empty;
         public string PreferredBoneKey => m_PreferredBoneKey ?? string.Empty;
         public bool Required => m_Required;
+
+        public void RequireValid(string source)
+        {
+            if (string.IsNullOrWhiteSpace(SlotId) || !Enum.IsDefined(typeof(CameraSpace), Space) ||
+                string.IsNullOrWhiteSpace(AnchorKey) && string.IsNullOrWhiteSpace(AimPointKey) &&
+                string.IsNullOrWhiteSpace(PreferredBoneKey))
+                throw new InvalidOperationException($"{source} contains an invalid Camera target slot.");
+        }
     }
 }

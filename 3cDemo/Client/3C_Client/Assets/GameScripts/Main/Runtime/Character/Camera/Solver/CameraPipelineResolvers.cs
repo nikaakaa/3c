@@ -82,6 +82,39 @@ namespace ThirdPersonCamera
                 true);
         }
 
+        public void CaptureSlotSnapshots(
+            IReadOnlyList<CameraTargetSlotPayload> slots,
+            ICollection<CameraTargetSnapshot> destination)
+        {
+            if (slots == null || destination == null)
+                return;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                CameraTargetSlotPayload slot = slots[i] ??
+                    throw new InvalidOperationException($"Camera target slot #{i} is missing.");
+                if (slot.Space != CameraSpace.World)
+                    throw new InvalidOperationException(
+                        $"Camera target slot '{slot.SlotId}' uses '{slot.Space}', but the current Presentation target input is world-space only.");
+                string anchorKey = FirstKey(slot.AnchorKey, slot.AimPointKey, slot.PreferredBoneKey);
+                string aimKey = FirstKey(slot.AimPointKey, slot.PreferredBoneKey, slot.AnchorKey);
+                if (!TryResolvePoint(anchorKey, out Vector3 anchor) ||
+                    !TryResolvePoint(aimKey, out Vector3 aim))
+                {
+                    if (slot.Required)
+                        throw new InvalidOperationException(
+                            $"Camera target slot '{slot.SlotId}' has a missing live binding.");
+                    continue;
+                }
+                destination.Add(new CameraTargetSnapshot(
+                    slot.SlotId,
+                    anchor,
+                    aim,
+                    Vector3.zero,
+                    true,
+                    !string.IsNullOrEmpty(slot.AimPointKey)));
+            }
+        }
+
         bool TryResolvePoint(string key, out Vector3 point, out string error)
         {
             point = default;
@@ -96,6 +129,15 @@ namespace ThirdPersonCamera
                 error = $"Camera target binding '{key}' no longer references a live Transform.";
                 return false;
             }
+            point = target.position;
+            return true;
+        }
+
+        bool TryResolvePoint(string key, out Vector3 point)
+        {
+            point = default;
+            if (string.IsNullOrEmpty(key) || !m_Bindings.TryGetValue(key, out Transform target) || !target)
+                return false;
             point = target.position;
             return true;
         }
@@ -220,27 +262,30 @@ namespace ThirdPersonCamera
             for (int i = 0; i < requests.Count; i++)
             {
                 CameraResponseRequest candidate = requests[i];
-                if (!candidate.Active || candidate.Priority < selected.Priority ||
-                    candidate.Priority == selected.Priority && candidate.Weight <= selected.Weight)
-                    continue;
-                if (candidate.Priority == selected.Priority &&
-                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
-                    candidate.Generation < selected.Generation)
-                    continue;
-                if (candidate.Priority == selected.Priority &&
-                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
-                    candidate.Generation == selected.Generation &&
-                    candidate.SourceActionInstanceId < selected.SourceActionInstanceId)
-                    continue;
-                if (candidate.Priority == selected.Priority &&
-                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
-                    candidate.Generation == selected.Generation &&
-                    candidate.SourceActionInstanceId == selected.SourceActionInstanceId &&
-                    candidate.Cycle < selected.Cycle)
+                if (!candidate.Active || !ShouldReplace(selected, candidate))
                     continue;
                 selected = candidate;
             }
             return selected;
+        }
+
+        static bool ShouldReplace(
+            CameraResponseRequest selected,
+            CameraResponseRequest candidate)
+        {
+            if (candidate.Priority != selected.Priority)
+                return candidate.Priority > selected.Priority;
+            if (!Mathf.Approximately(candidate.Weight, selected.Weight))
+                return candidate.Weight > selected.Weight;
+            if (candidate.Generation != selected.Generation)
+                return candidate.Generation > selected.Generation;
+            if (candidate.SourceActionInstanceId != selected.SourceActionInstanceId)
+                return candidate.SourceActionInstanceId > selected.SourceActionInstanceId;
+            if (candidate.Cycle != selected.Cycle)
+                return candidate.Cycle > selected.Cycle;
+            if (!string.Equals(candidate.SourceId, selected.SourceId, StringComparison.Ordinal))
+                return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
+            return string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
         }
     }
 }

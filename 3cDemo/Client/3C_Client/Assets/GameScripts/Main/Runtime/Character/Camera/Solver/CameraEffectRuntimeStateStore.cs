@@ -12,8 +12,12 @@ namespace ThirdPersonCamera
 
         public void Reset() => m_Active.Clear();
 
-        public void Add(CameraEffectRequest request) =>
-            m_Active.Add(new CameraEffectRuntimeState(request));
+        public CameraEffectRuntimeState Add(CameraEffectRequest request, string tag = null)
+        {
+            var state = new CameraEffectRuntimeState(request, tag);
+            m_Active.Add(state);
+            return state;
+        }
 
         public void RemoveAt(int index) => m_Active.RemoveAt(index);
 
@@ -22,6 +26,20 @@ namespace ThirdPersonCamera
             for (int i = m_Active.Count - 1; i >= 0; i--)
                 if (m_Active[i].Request.Scope.Equals(scope))
                     m_Active.RemoveAt(i);
+        }
+
+        public void ClearOverrideTracks(bool clearTracks, IReadOnlyList<string> tags)
+        {
+            if (!clearTracks && (tags == null || tags.Count == 0))
+                return;
+            for (int i = m_Active.Count - 1; i >= 0; i--)
+            {
+                CameraEffectRuntimeState state = m_Active[i];
+                if (state.Request.Kind != CameraEffectKind.Override)
+                    continue;
+                if (clearTracks || Contains(tags, state.Tag))
+                    m_Active.RemoveAt(i);
+            }
         }
 
         public CameraEffectRuntimeState FindEvent(CameraEffectRequest request)
@@ -88,6 +106,7 @@ namespace ThirdPersonCamera
                 effect.Retired = true;
                 effect.RetireElapsed = 0f;
                 effect.RetireStartElapsed = effect.Elapsed;
+                effect.RetireReason = reason;
             }
         }
 
@@ -111,12 +130,43 @@ namespace ThirdPersonCamera
                             selected = candidate;
                         continue;
                     }
-                    if (candidate.Request.Priority <= selected.Request.Priority)
+                    if (Compare(candidate.Request, selected.Request) <= 0)
                         continue;
                 }
                 selected = candidate;
             }
             return selected;
+        }
+
+        static bool Contains(IReadOnlyList<string> values, string value)
+        {
+            for (int i = 0; i < values.Count; i++)
+                if (string.Equals(values[i], value, StringComparison.Ordinal))
+                    return true;
+            return false;
+        }
+
+        static int Compare(CameraEffectRequest left, CameraEffectRequest right)
+        {
+            int result = left.Priority.CompareTo(right.Priority);
+            if (result != 0)
+                return result;
+            result = left.Weight.CompareTo(right.Weight);
+            if (result != 0)
+                return result;
+            result = left.Generation.CompareTo(right.Generation);
+            if (result != 0)
+                return result;
+            result = left.SourceActionInstanceId.CompareTo(right.SourceActionInstanceId);
+            if (result != 0)
+                return result;
+            result = left.Cycle.CompareTo(right.Cycle);
+            if (result != 0)
+                return result;
+            result = string.CompareOrdinal(right.SourceId, left.SourceId);
+            if (result != 0)
+                return result;
+            return string.CompareOrdinal(right.EventId, left.EventId);
         }
     }
 }

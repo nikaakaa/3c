@@ -3,14 +3,26 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    [System.Serializable]
+    public sealed class CameraShotRigBinding
+    {
+        [SerializeField] string m_ShotId = string.Empty;
+        [SerializeField] CinemachineVirtualCamera m_VirtualCamera;
+
+        public string ShotId => m_ShotId ?? string.Empty;
+        public CinemachineVirtualCamera VirtualCamera => m_VirtualCamera;
+    }
+
     [DefaultExecutionOrder(-50)]
     public sealed class CinemachineCameraRigAdapter : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraRigAdapter
     {
         [SerializeField] CinemachineVirtualCamera virtualCamera;
         [SerializeField] CinemachineBrain brain;
+        [SerializeField] CameraShotRigBinding[] shotRigs = System.Array.Empty<CameraShotRigBinding>();
 
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
+        int defaultVirtualCameraPriority;
         bool missingVirtualCameraReported;
         bool invalidBrainReported;
 
@@ -37,6 +49,7 @@ namespace ThirdPersonCamera
             }
 
             virtualCamera.PreviousStateIsValid = false;
+            defaultVirtualCameraPriority = virtualCamera.Priority;
             RefreshBasisSnapshot();
         }
 
@@ -60,10 +73,18 @@ namespace ThirdPersonCamera
             if (!CanApply())
                 return;
 
-            ApplyLens(plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
-            virtualCamera.ForceCameraPosition(plan.Location, plan.Rotation);
+            CinemachineVirtualCamera targetCamera = ResolveShotCamera(plan.ShotId);
+            if (targetCamera == null)
+            {
+                basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
+                return;
+            }
+            ActivateCamera(targetCamera);
+            ApplyLens(targetCamera, plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
+            targetCamera.ForceCameraPosition(plan.Location, plan.Rotation);
             if (plan.ResetHistory)
-                virtualCamera.PreviousStateIsValid = false;
+                targetCamera.PreviousStateIsValid = false;
             UpdateBrain();
             RefreshBasisSnapshot(plan.AimPoint);
         }
@@ -74,6 +95,11 @@ namespace ThirdPersonCamera
             result = default;
             if (virtualCamera != null)
                 virtualCamera.PreviousStateIsValid = false;
+            for (int i = 0; i < shotRigs.Length; i++)
+                if (shotRigs[i]?.VirtualCamera != null)
+                    shotRigs[i].VirtualCamera.PreviousStateIsValid = false;
+            if (virtualCamera != null)
+                ActivateCamera(virtualCamera);
         }
 
         bool CanApply()
@@ -90,13 +116,49 @@ namespace ThirdPersonCamera
             return true;
         }
 
-        void ApplyLens(float fieldOfView, float nearClipPlane, float farClipPlane)
+        void ApplyLens(
+            CinemachineVirtualCamera targetCamera,
+            float fieldOfView,
+            float nearClipPlane,
+            float farClipPlane)
         {
-            LensSettings lens = virtualCamera.m_Lens;
+            LensSettings lens = targetCamera.m_Lens;
             lens.FieldOfView = Mathf.Clamp(fieldOfView, 5f, 170f);
             lens.NearClipPlane = Mathf.Max(0f, nearClipPlane);
             lens.FarClipPlane = Mathf.Max(lens.NearClipPlane + 0.001f, farClipPlane);
-            virtualCamera.m_Lens = lens;
+            targetCamera.m_Lens = lens;
+        }
+
+        CinemachineVirtualCamera ResolveShotCamera(string shotId)
+        {
+            if (string.IsNullOrEmpty(shotId))
+                return virtualCamera;
+            for (int i = 0; i < shotRigs.Length; i++)
+            {
+                CameraShotRigBinding binding = shotRigs[i];
+                if (binding != null && string.Equals(binding.ShotId, shotId, System.StringComparison.Ordinal))
+                    return binding.VirtualCamera;
+            }
+            Debug.LogError($"CinemachineCameraRigAdapter has no rig binding for Camera Shot '{shotId}'.", this);
+            return null;
+        }
+
+        void ActivateCamera(CinemachineVirtualCamera targetCamera)
+        {
+            if (targetCamera == null || virtualCamera == null)
+                return;
+            virtualCamera.Priority = targetCamera == virtualCamera
+                ? defaultVirtualCameraPriority
+                : defaultVirtualCameraPriority - 1;
+            for (int i = 0; i < shotRigs.Length; i++)
+            {
+                CameraShotRigBinding binding = shotRigs[i];
+                if (binding?.VirtualCamera == null)
+                    continue;
+                binding.VirtualCamera.Priority = binding.VirtualCamera == targetCamera
+                    ? defaultVirtualCameraPriority + 1
+                    : defaultVirtualCameraPriority - 2;
+            }
         }
 
         void RefreshBasisSnapshot(Vector3 aimPoint = default)
@@ -132,7 +194,8 @@ namespace ThirdPersonCamera
                 state.FinalPosition,
                 rotation,
                 state.Lens.FieldOfView,
-                basisSnapshot.Valid);
+                basisSnapshot.Valid,
+                plan.Collision);
         }
 
         bool HasValidBrain() => brain != null && brain.m_UpdateMethod == CinemachineBrain.UpdateMethod.ManualUpdate;

@@ -196,18 +196,44 @@ namespace ThirdPersonSimulation
 
     public sealed class EquipmentProgramLocalState
     {
-        public EquipmentProgramLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId, int stateSlotIndex)
+        public EquipmentProgramLocalState(
+            EquipmentFeatureId featureId,
+            EquipmentLocalStateId stateId,
+            EquipmentRuntimeStateValueKind valueKind,
+            EquipmentRuntimeStateValue defaultValue)
         {
-            if (!featureId.IsValid || !stateId.IsValid || stateSlotIndex < 0)
+            if (!featureId.IsValid || !stateId.IsValid || !Enum.IsDefined(typeof(EquipmentRuntimeStateValueKind), valueKind) ||
+                defaultValue == null || defaultValue.Kind != valueKind)
                 throw new ArgumentException("Equipment Program local state is invalid.");
             FeatureId = featureId;
             StateId = stateId;
-            StateSlotIndex = stateSlotIndex;
+            ValueKind = valueKind;
+            DefaultValue = defaultValue;
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentLocalStateId StateId { get; }
-        public int StateSlotIndex { get; }
+        public EquipmentRuntimeStateValueKind ValueKind { get; }
+        public EquipmentRuntimeStateValue DefaultValue { get; }
+    }
+
+    public sealed class EquipmentLocalStateValue
+    {
+        public EquipmentLocalStateValue(
+            EquipmentFeatureId featureId,
+            EquipmentLocalStateId stateId,
+            EquipmentRuntimeStateValue value)
+        {
+            if (!featureId.IsValid || !stateId.IsValid || value == null)
+                throw new ArgumentException("Equipment local state value is invalid.");
+            FeatureId = featureId;
+            StateId = stateId;
+            Value = value;
+        }
+
+        public EquipmentFeatureId FeatureId { get; }
+        public EquipmentLocalStateId StateId { get; }
+        public EquipmentRuntimeStateValue Value { get; }
     }
 
     public sealed class EquipmentProgramOperationBinding
@@ -252,6 +278,7 @@ namespace ThirdPersonSimulation
         readonly Dictionary<EquipmentActionRouteId, EquipmentProgramRoute> m_RouteById;
         readonly Dictionary<(EquipmentFeatureId, EquipmentActionRouteId), EquipmentProgramRouteImplementation> m_RouteImplementationByKey;
         readonly Dictionary<(EquipmentId, EquipmentParameterId), EquipmentProgramParameter> m_ParameterByKey;
+        readonly Dictionary<(EquipmentFeatureId, EquipmentLocalStateId), EquipmentProgramLocalState> m_LocalStateByKey;
         readonly Dictionary<int, EquipmentProgramOperationBinding> m_OperationBindingByHandle;
 
         public EquipmentProgramLayout(
@@ -291,6 +318,7 @@ namespace ThirdPersonSimulation
             m_RouteById = m_Routes.ToDictionary(value => value.RouteId);
             m_RouteImplementationByKey = m_RouteImplementations.ToDictionary(value => (value.FeatureId, value.RouteId));
             m_ParameterByKey = m_Parameters.ToDictionary(value => (value.EquipmentId, value.ParameterId));
+            m_LocalStateByKey = m_LocalStates.ToDictionary(value => (value.FeatureId, value.StateId));
             m_OperationBindingByHandle = m_OperationBindings.ToDictionary(value => value.Operation.Value);
             ValidateClosure();
             CatalogHash = ComputeHash();
@@ -323,6 +351,8 @@ namespace ThirdPersonSimulation
             m_RouteImplementationByKey.TryGetValue((featureId, routeId), out value);
         public EquipmentProgramParameter RequireParameter(EquipmentId equipmentId, EquipmentParameterId parameterId) =>
             m_ParameterByKey.TryGetValue((equipmentId, parameterId), out EquipmentProgramParameter value) ? value : throw new InvalidOperationException($"Equipment Parameter '{equipmentId}/{parameterId}' is absent from Program.");
+        public EquipmentProgramLocalState RequireLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId) =>
+            m_LocalStateByKey.TryGetValue((featureId, stateId), out EquipmentProgramLocalState value) ? value : throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent from Program.");
         public EquipmentSlotId RequireOperationSlot(OperationHandle operation)
         {
             EquipmentProgramOperationBinding binding = RequireOperationBinding(operation);
@@ -376,6 +406,9 @@ namespace ThirdPersonSimulation
                 if (!m_SlotById.ContainsKey(m_Routes[i].OwnerSlotId))
                     throw new InvalidDataException($"Equipment Route '{m_Routes[i].RouteId}' owner Slot is absent.");
             }
+            for (int i = 0; i < m_LocalStates.Count; i++)
+                if (!m_FeatureById.ContainsKey(m_LocalStates[i].FeatureId))
+                    throw new InvalidDataException($"Equipment local state '{m_LocalStates[i].FeatureId}/{m_LocalStates[i].StateId}' feature is absent.");
             for (int i = 0; i < m_RouteImplementations.Count; i++)
             {
                 EquipmentProgramRouteImplementation implementation = m_RouteImplementations[i];
@@ -413,7 +446,7 @@ namespace ThirdPersonSimulation
         StableHash ComputeHash()
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("equipment-program-layout/v2");
+            writer.WriteString("equipment-program-layout/v3");
             writer.WriteBoolean(CapabilityEnabled);
             writer.WriteInt32(m_Slots.Count);
             for (int i = 0; i < m_Slots.Count; i++)
@@ -486,7 +519,8 @@ namespace ThirdPersonSimulation
             {
                 writer.WriteString(m_LocalStates[i].FeatureId.Value);
                 writer.WriteString(m_LocalStates[i].StateId.Value);
-                writer.WriteInt32(m_LocalStates[i].StateSlotIndex);
+                writer.WriteByte((byte)m_LocalStates[i].ValueKind);
+                WriteStateValue(writer, m_LocalStates[i].DefaultValue);
             }
             writer.WriteInt32(m_OperationBindings.Count);
             for (int i = 0; i < m_OperationBindings.Count; i++)
@@ -499,6 +533,17 @@ namespace ThirdPersonSimulation
                 writer.WriteString(binding.ParameterId.Value);
             }
             return writer.ComputeHash();
+        }
+
+        static void WriteStateValue(CanonicalWriter writer, EquipmentRuntimeStateValue value)
+        {
+            writer.WriteBoolean(value.Boolean);
+            writer.WriteInt32(value.Int32);
+            writer.WriteUInt64(value.UInt64);
+            writer.WriteDouble(value.X);
+            writer.WriteDouble(value.Y);
+            writer.WriteDouble(value.Z);
+            writer.WriteString(value.Identity);
         }
 
         static ReadOnlyCollection<T> Canonical<T>(IEnumerable<T> source, Func<T, string> identity, string label)
@@ -640,10 +685,12 @@ namespace ThirdPersonSimulation
     public sealed class EquipmentStateAggregate
     {
         readonly ReadOnlyCollection<EquipmentSlotState> m_Slots;
+        readonly ReadOnlyCollection<EquipmentLocalStateValue> m_LocalStates;
 
         public EquipmentStateAggregate(
             StableHash catalogHash,
             IEnumerable<EquipmentSlotState> slots,
+            IEnumerable<EquipmentLocalStateValue> localStates,
             PendingEquipmentChange pendingChange,
             PendingEquipmentChange lastResolvedChange)
         {
@@ -657,6 +704,20 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"Equipment state Slot '{stable[i].SlotId}' is duplicated.");
             }
             m_Slots = Array.AsReadOnly(stable);
+            EquipmentLocalStateValue[] localStateValues = (localStates ?? Array.Empty<EquipmentLocalStateValue>())
+                .OrderBy(value => $"{value.FeatureId.Value}:{value.StateId.Value}", StringComparer.Ordinal)
+                .ToArray();
+            for (int i = 0; i < localStateValues.Length; i++)
+            {
+                if (localStateValues[i] == null)
+                    throw new InvalidDataException("Equipment aggregate contains a missing local state.");
+                if (i > 0 && localStateValues[i - 1].FeatureId == localStateValues[i].FeatureId &&
+                    localStateValues[i - 1].StateId == localStateValues[i].StateId)
+                {
+                    throw new InvalidDataException($"Equipment local state '{localStateValues[i].FeatureId}/{localStateValues[i].StateId}' is duplicated.");
+                }
+            }
+            m_LocalStates = Array.AsReadOnly(localStateValues);
             if (pendingChange.IsValid && !pendingChange.IsPending)
                 throw new ArgumentException("Equipment aggregate pending record is already resolved.", nameof(pendingChange));
             if (lastResolvedChange.IsValid && lastResolvedChange.IsPending)
@@ -667,6 +728,7 @@ namespace ThirdPersonSimulation
 
         public StableHash CatalogHash { get; }
         public IReadOnlyList<EquipmentSlotState> Slots => m_Slots;
+        public IReadOnlyList<EquipmentLocalStateValue> LocalStates => m_LocalStates;
         public PendingEquipmentChange PendingChange { get; }
         public PendingEquipmentChange LastResolvedChange { get; }
 
@@ -687,7 +749,16 @@ namespace ThirdPersonSimulation
                 EquipmentProgramFeature feature = layout.RequireFeature(item.FeatureId);
                 slots[i] = new EquipmentSlotState(slot.SlotId, item.EquipmentId, item.FeatureId, feature.Revision, item.VisualBindingId, 1, 1, false, string.Empty, Array.Empty<ulong>());
             }
-            return new EquipmentStateAggregate(layout.CatalogHash, slots, default, default);
+            var localStates = new EquipmentLocalStateValue[layout.LocalStates.Count];
+            for (int i = 0; i < localStates.Length; i++)
+            {
+                EquipmentProgramLocalState localState = layout.LocalStates[i];
+                localStates[i] = new EquipmentLocalStateValue(
+                    localState.FeatureId,
+                    localState.StateId,
+                    localState.DefaultValue);
+            }
+            return new EquipmentStateAggregate(layout.CatalogHash, slots, localStates, default, default);
         }
 
         public EquipmentSlotState RequireSlot(EquipmentSlotId slotId)
@@ -700,6 +771,14 @@ namespace ThirdPersonSimulation
             throw new InvalidOperationException($"Equipment state Slot '{slotId}' is absent.");
         }
 
+        public EquipmentRuntimeStateValue RequireLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
+        {
+            for (int i = 0; i < m_LocalStates.Count; i++)
+                if (m_LocalStates[i].FeatureId == featureId && m_LocalStates[i].StateId == stateId)
+                    return m_LocalStates[i].Value;
+            throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
+        }
+
         public EquipmentStateAggregate WithSlot(EquipmentSlotState slot)
         {
             var values = m_Slots.ToArray();
@@ -708,13 +787,33 @@ namespace ThirdPersonSimulation
                 if (values[i].SlotId != slot.SlotId)
                     continue;
                 values[i] = slot;
-                return new EquipmentStateAggregate(CatalogHash, values, PendingChange, LastResolvedChange);
+                return new EquipmentStateAggregate(CatalogHash, values, m_LocalStates, PendingChange, LastResolvedChange);
             }
             throw new InvalidOperationException($"Equipment state Slot '{slot.SlotId}' is absent.");
         }
 
+        public EquipmentStateAggregate WithLocalState(
+            EquipmentFeatureId featureId,
+            EquipmentLocalStateId stateId,
+            EquipmentRuntimeStateValue value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            var values = m_LocalStates.ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i].FeatureId != featureId || values[i].StateId != stateId)
+                    continue;
+                if (values[i].Value.Kind != value.Kind)
+                    throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' value kind changed.");
+                values[i] = new EquipmentLocalStateValue(featureId, stateId, value);
+                return new EquipmentStateAggregate(CatalogHash, m_Slots, values, PendingChange, LastResolvedChange);
+            }
+            throw new InvalidOperationException($"Equipment local state '{featureId}/{stateId}' is absent.");
+        }
+
         public EquipmentStateAggregate WithPending(PendingEquipmentChange pending) =>
-            new EquipmentStateAggregate(CatalogHash, m_Slots, pending, LastResolvedChange);
+            new EquipmentStateAggregate(CatalogHash, m_Slots, m_LocalStates, pending, LastResolvedChange);
 
         public EquipmentStateAggregate ResolvePending(PendingEquipmentChangeState state, ulong resolvedTick)
         {
@@ -723,6 +822,7 @@ namespace ThirdPersonSimulation
             return new EquipmentStateAggregate(
                 CatalogHash,
                 m_Slots,
+                m_LocalStates,
                 default,
                 PendingChange.Resolve(state, resolvedTick));
         }
@@ -751,6 +851,15 @@ namespace ThirdPersonSimulation
                 writer.WriteInt32(slot.PassiveEffectHandles.Count);
                 for (int handle = 0; handle < slot.PassiveEffectHandles.Count; handle++)
                     writer.WriteUInt64(slot.PassiveEffectHandles[handle]);
+            }
+            writer.WriteInt32(state.LocalStates.Count);
+            for (int i = 0; i < state.LocalStates.Count; i++)
+            {
+                EquipmentLocalStateValue localState = state.LocalStates[i];
+                writer.WriteString(localState.FeatureId.Value);
+                writer.WriteString(localState.StateId.Value);
+                writer.WriteByte((byte)localState.Value.Kind);
+                WriteStateValue(writer, localState.Value);
             }
             WriteChange(writer, state.PendingChange);
             WriteChange(writer, state.LastResolvedChange);
@@ -809,10 +918,46 @@ namespace ThirdPersonSimulation
                 }
                 slots[i] = new EquipmentSlotState(slotId, equipmentId, featureId, featureRevision, visualBindingId, revision, generation, installed, tagSource, handles);
             }
+            int localStateCount = reader.ReadInt32();
+            if (localStateCount != layout.LocalStates.Count)
+                throw new InvalidDataException("Equipment state local state count does not match the runtime layout.");
+            var localStates = new EquipmentLocalStateValue[localStateCount];
+            for (int i = 0; i < localStates.Length; i++)
+            {
+                EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
+                EquipmentLocalStateId stateId = new EquipmentLocalStateId(reader.ReadString());
+                EquipmentRuntimeStateValueKind valueKind = ReadEnum<EquipmentRuntimeStateValueKind>(reader.ReadByte());
+                EquipmentProgramLocalState definition = layout.RequireLocalState(featureId, stateId);
+                if (definition.ValueKind != valueKind)
+                    throw new InvalidDataException($"Equipment local state '{featureId}/{stateId}' value kind does not match the runtime layout.");
+                localStates[i] = new EquipmentLocalStateValue(featureId, stateId, ReadStateValue(reader, valueKind));
+            }
             PendingEquipmentChange pending = ReadChange(reader, layout);
             PendingEquipmentChange resolved = ReadChange(reader, layout);
-            return new EquipmentStateAggregate(hash, slots, pending, resolved);
+            return new EquipmentStateAggregate(hash, slots, localStates, pending, resolved);
         }
+
+        static void WriteStateValue(CanonicalWriter writer, EquipmentRuntimeStateValue value)
+        {
+            writer.WriteBoolean(value.Boolean);
+            writer.WriteInt32(value.Int32);
+            writer.WriteUInt64(value.UInt64);
+            writer.WriteDouble(value.X);
+            writer.WriteDouble(value.Y);
+            writer.WriteDouble(value.Z);
+            writer.WriteString(value.Identity);
+        }
+
+        static EquipmentRuntimeStateValue ReadStateValue(CanonicalReader reader, EquipmentRuntimeStateValueKind kind) =>
+            new EquipmentRuntimeStateValue(
+                kind,
+                reader.ReadBoolean(),
+                reader.ReadInt32(),
+                reader.ReadUInt64(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadString());
 
         static PendingEquipmentChange ReadChange(CanonicalReader reader, EquipmentProgramLayout layout)
         {

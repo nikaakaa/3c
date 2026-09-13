@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation
         EquipmentChangeId AllocateChangeId();
         bool HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId);
         bool IsActionActive(ulong actionInstanceId);
-        void ResetLocalState(int stateSlotIndex);
+        void ResetLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId);
         void SetTags(string sourceId, IReadOnlyList<string> tags);
         void RemoveTags(string sourceId);
         ulong ApplyPassiveEffect(string effectId);
@@ -306,7 +306,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<EquipmentProgramLocalState> states = Layout.LocalStates;
             for (int i = 0; i < states.Count; i++)
                 if (states[i].FeatureId == featureId)
-                    m_Port.ResetLocalState(states[i].StateSlotIndex);
+                    m_Port.ResetLocalState(states[i].FeatureId, states[i].StateId);
         }
 
         static EquipmentChangeOutcome Success(EquipmentChangeId changeId) =>

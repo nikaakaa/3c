@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 17;
-		public const string CodecIdentity = "character-state/float32/v18";
-		const string HashIdentity = "character-state-hash/float32/v16";
+		const int Version = 18;
+		public const string CodecIdentity = "character-state/float32/v19";
+		const string HashIdentity = "character-state-hash/float32/v17";
 
         public static byte[] Write(CharacterSimulationState state)
         {

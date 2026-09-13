@@ -151,15 +151,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     1,
                     Fields(
                         m_Builder.IdentityField("Feature", $"equipment:feature:{feature.FeatureIdValue}"),
-                        m_Builder.ConstantField(source, "ValueKind", state.ValueKind)),
+                        m_Builder.ConstantField(source, "ValueKind", state.ValueKind),
+                        m_Builder.ConstantField(source, "DefaultValue", ResolveLocalStateDefault(state))),
                     source);
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
-                    state.ValueKind,
-                    ProgramStateOwnerKind.Equipment,
-                    ProgramStateSemantic.EquipmentLocalState,
-                    ownerIdentity,
-                    ResolveLocalStateDefault(state));
             }
             foreach (EquipmentFeatureRouteImplementation route in feature.RouteImplementations.Where(value => value != null).OrderBy(value => value.RouteIdValue, StringComparer.Ordinal))
             {

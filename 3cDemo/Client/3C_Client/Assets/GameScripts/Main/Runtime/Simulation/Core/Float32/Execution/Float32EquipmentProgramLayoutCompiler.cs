@@ -18,14 +18,12 @@ namespace ThirdPersonSimulation
                 return EquipmentProgramLayoutCompiler.Compile(
                     false,
                     program.CatalogEntries,
-                    program.StateSlots,
                     program.References,
                     program.Producers,
                     index => Read(program, index));
             }
             return EquipmentProgramLayoutCompiler.Compile(
                 binding ?? throw new ArgumentNullException(nameof(binding)),
-                program.StateSlots,
                 program.CatalogEntries,
                 program.References,
                 program.Producers);
@@ -39,7 +37,6 @@ namespace ThirdPersonSimulation
             return EquipmentProgramLayoutCompiler.Compile(
                 enabled,
                 program.CatalogEntries,
-                program.StateSlots,
                 program.References,
                 program.Producers,
                 index => Read(program, index));

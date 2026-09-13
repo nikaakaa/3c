@@ -8,7 +8,6 @@ namespace ThirdPersonSimulation
 		IEquipmentActionContextProvider
 	{
 		readonly Float32EvaluationFrame m_Frame;
-		readonly Float32StatePort m_State;
 		readonly Float32ActionStateStore m_Actions;
 		readonly Float32HandleAllocator m_Handles;
 		readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
@@ -19,7 +18,6 @@ namespace ThirdPersonSimulation
 		public Float32EquipmentRuntime(
 			Float32ProgramAccess access,
 			Float32EvaluationFrame frame,
-			Float32StatePort state,
 			Float32ActionStateStore actions,
 			Float32HandleAllocator handles,
 			Float32GameplayEffectOperationRuntime gameplayEffects,
@@ -28,7 +26,6 @@ namespace ThirdPersonSimulation
 			: base(access)
 		{
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-			m_State = state ?? throw new ArgumentNullException(nameof(state));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
 			m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
@@ -290,7 +287,12 @@ namespace ThirdPersonSimulation
 		{
 			return m_Actions.TryGetInstance(actionInstanceId, out Float32ActionInstanceState action) && action.IsActive;
 		}
-		void IEquipmentRuntimePort.ResetLocalState(int stateSlotIndex) => m_State.Reset(stateSlotIndex);
+		void IEquipmentRuntimePort.ResetLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
+		{
+			EquipmentProgramLocalState localState = m_Layout.Equipment.RequireLocalState(featureId, stateId);
+			m_Frame.Transaction.SetEquipmentState(
+				m_Frame.Transaction.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
+		}
 		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetEquipmentTags(sourceId, tags);
 		void IEquipmentRuntimePort.RemoveTags(string sourceId) => m_GameplayEffects.RemoveEquipmentTags(sourceId);
 		ulong IEquipmentRuntimePort.ApplyPassiveEffect(string effectId) => m_GameplayEffects.ApplyEquipmentPassive(effectId);

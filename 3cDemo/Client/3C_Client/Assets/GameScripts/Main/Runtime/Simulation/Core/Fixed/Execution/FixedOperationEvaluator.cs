@@ -451,7 +451,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Equipment = new FixedEquipmentRuntime(
                 access,
                 m_Frame,
-                m_Frame.CreateStatePort("Equipment", services.EquipmentPolicy),
                 actionStore,
                 handles,
                 m_GameplayEffects,

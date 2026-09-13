@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     public sealed class NetworkCheckpointLayout
     {
-        const int SchemaVersion = 6;
+        const int SchemaVersion = 7;
         readonly CharacterSimulationProgram m_Program;
         readonly ProgramExecutionLayout m_ExecutionLayout;
 
@@ -124,8 +124,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
-        const int FullVersion = 6;
-        const int DeltaVersion = 9;
+        const int FullVersion = 7;
+        const int DeltaVersion = 10;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)

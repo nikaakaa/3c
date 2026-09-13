@@ -938,7 +938,6 @@ namespace ThirdPersonSimulation
         Random = 9,
         Fact = 10,
         Input = 11,
-        Equipment = 12
     }
 
     public enum ProgramStateSemantic : ushort
@@ -983,7 +982,6 @@ namespace ThirdPersonSimulation
         ActionRequestBuffer = 81,
         AbilityExecutionState = 82,
         ActionEventSequence = 84,
-        EquipmentLocalState = 111,
         RandomState = 122,
         HandleAllocator = 123,
         FactSequence = 124,

@@ -126,8 +126,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.MotionWarpLastPositionProgress,
                 ProgramStateSemantic.MotionWarpLastYawProgress,
                 ProgramStateSemantic.MotionWarpSourceOperation);
-            EquipmentPolicy = new Float32StateAccessPolicy(
-                ProgramStateSemantic.EquipmentLocalState);
             Access = new Float32ProgramAccess(program, layout, this);
         }
 
@@ -143,7 +141,6 @@ namespace ThirdPersonSimulation
         public Float32StateAccessPolicy BlackboardPolicy { get; }
         public Float32StateAccessPolicy TimelinePolicy { get; }
         public Float32StateAccessPolicy MotionModifierPolicy { get; }
-        public Float32StateAccessPolicy EquipmentPolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {

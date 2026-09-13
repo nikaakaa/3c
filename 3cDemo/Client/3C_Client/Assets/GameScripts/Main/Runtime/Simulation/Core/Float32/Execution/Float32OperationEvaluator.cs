@@ -446,7 +446,6 @@ namespace ThirdPersonSimulation
             m_Equipment = new Float32EquipmentRuntime(
                 access,
                 m_Frame,
-                m_Frame.CreateStatePort("Equipment", services.EquipmentPolicy),
                 actionStore,
                 handles,
                 m_GameplayEffects,

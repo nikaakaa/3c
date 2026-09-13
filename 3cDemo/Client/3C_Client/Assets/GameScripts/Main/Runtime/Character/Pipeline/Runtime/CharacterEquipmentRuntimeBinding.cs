@@ -156,6 +156,8 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 writer.WriteString(localStates[i].Feature.FeatureIdValue);
                 writer.WriteString(localStates[i].State.StateIdValue);
+                writer.WriteByte((byte)ToRuntimeStateValueKind(localStates[i].State.ValueKind));
+                WriteStateValue(writer, localStates[i].State);
             }
 
             byte[] catalogBytes = writer.ToArray();
@@ -194,6 +196,35 @@ namespace ThirdPersonCharacter.Pipeline
                 _ => value.Identity
             };
             writer.WriteString(identity);
+        }
+
+        static EquipmentRuntimeStateValueKind ToRuntimeStateValueKind(ProgramStateValueKind kind) => kind switch
+        {
+            ProgramStateValueKind.Boolean => EquipmentRuntimeStateValueKind.Boolean,
+            ProgramStateValueKind.Int32 => EquipmentRuntimeStateValueKind.Int32,
+            ProgramStateValueKind.UInt64 => EquipmentRuntimeStateValueKind.UInt64,
+            ProgramStateValueKind.Scalar => EquipmentRuntimeStateValueKind.Scalar,
+            ProgramStateValueKind.Vector2 => EquipmentRuntimeStateValueKind.Vector2,
+            ProgramStateValueKind.Vector3 => EquipmentRuntimeStateValueKind.Vector3,
+            ProgramStateValueKind.Yaw => EquipmentRuntimeStateValueKind.Yaw,
+            ProgramStateValueKind.Identity => EquipmentRuntimeStateValueKind.Identity,
+            _ => throw new InvalidOperationException($"Unsupported Equipment local state kind '{kind}'.")
+        };
+
+        static void WriteStateValue(CanonicalWriter writer, EquipmentLocalStateDeclaration state)
+        {
+            EquipmentParameterValue value = state.DefaultValue ?? throw new InvalidOperationException($"Equipment local state '{state.StateIdValue}' has no default value.");
+            writer.WriteBoolean(value.Boolean);
+            writer.WriteInt32(value.Int32);
+            writer.WriteUInt64(value.UInt64);
+            writer.WriteDouble(state.ValueKind == ProgramStateValueKind.Scalar ? value.Scalar :
+                state.ValueKind == ProgramStateValueKind.Vector2 ? value.Vector2.x :
+                state.ValueKind == ProgramStateValueKind.Vector3 ? value.Vector3.x :
+                state.ValueKind == ProgramStateValueKind.Yaw ? value.YawDegrees : 0d);
+            writer.WriteDouble(state.ValueKind == ProgramStateValueKind.Vector2 ? value.Vector2.y :
+                state.ValueKind == ProgramStateValueKind.Vector3 ? value.Vector3.y : 0d);
+            writer.WriteDouble(state.ValueKind == ProgramStateValueKind.Vector3 ? value.Vector3.z : 0d);
+            writer.WriteString(state.ValueKind == ProgramStateValueKind.Identity ? value.Identity : string.Empty);
         }
     }
 }

@@ -53,12 +53,11 @@ namespace ThirdPersonSimulation
     {
         public static EquipmentProgramLayout Compile(
             CharacterEquipmentRuntimeBinding binding,
-            IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramCatalogEntry> catalog,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramProducer> producers)
         {
-            if (binding == null || stateSlots == null || catalog == null || references == null || producers == null)
+            if (binding == null || catalog == null || references == null || producers == null)
                 throw new ArgumentNullException();
             var reader = new CanonicalReader(binding.CatalogBytes);
             if (reader.ReadInt32() != CharacterEquipmentRuntimeBinding.CatalogFormatVersion)
@@ -134,23 +133,8 @@ namespace ThirdPersonSimulation
             {
                 EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
                 EquipmentLocalStateId stateId = new EquipmentLocalStateId(reader.ReadString());
-                string ownerIdentity = $"equipment:feature:{featureId.Value}:state:{stateId.Value}";
-                int stateSlotIndex = -1;
-                for (int slotIndex = 0; slotIndex < stateSlots.Count; slotIndex++)
-                {
-                    ProgramStateSlot slot = stateSlots[slotIndex];
-                    if (slot.OwnerKind == ProgramStateOwnerKind.Equipment &&
-                        slot.Semantic == ProgramStateSemantic.EquipmentLocalState &&
-                        string.Equals(slot.OwnerIdentity, ownerIdentity, StringComparison.Ordinal))
-                    {
-                        if (stateSlotIndex >= 0)
-                            throw new InvalidDataException($"Equipment local state '{ownerIdentity}' has duplicate state slots.");
-                        stateSlotIndex = slotIndex;
-                    }
-                }
-                if (stateSlotIndex < 0)
-                    throw new InvalidDataException($"Equipment local state '{ownerIdentity}' has no typed state slot.");
-                localStates.Add(new EquipmentProgramLocalState(featureId, stateId, stateSlotIndex));
+                EquipmentRuntimeStateValueKind valueKind = ReadEnum<EquipmentRuntimeStateValueKind>(reader.ReadByte());
+                localStates.Add(new EquipmentProgramLocalState(featureId, stateId, valueKind, ReadStateValue(reader, valueKind)));
             }
             reader.RequireComplete();
             IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
@@ -162,14 +146,13 @@ namespace ThirdPersonSimulation
         public static EquipmentProgramLayout Compile(
             bool capabilityEnabled,
             IReadOnlyList<ProgramCatalogEntry> catalog,
-            IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramProducer> producers,
             Func<int, EquipmentCatalogConstant> constant)
         {
             if (!capabilityEnabled)
                 return new EquipmentProgramLayout(false, null, null, null, null, null, null, null, null);
-            if (catalog == null || stateSlots == null || references == null || producers == null || constant == null)
+            if (catalog == null || references == null || producers == null || constant == null)
                 throw new ArgumentNullException();
             var initial = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentInitialLoadout))
@@ -264,21 +247,15 @@ namespace ThirdPersonSimulation
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentFeatureLocalState))
             {
                 ParseLocalState(entry.Identity, out EquipmentFeatureId featureId, out EquipmentLocalStateId stateId);
-                int slot = -1;
-                for (int i = 0; i < stateSlots.Count; i++)
-                {
-                    if (stateSlots[i].OwnerKind == ProgramStateOwnerKind.Equipment &&
-                        stateSlots[i].Semantic == ProgramStateSemantic.EquipmentLocalState &&
-                        string.Equals(stateSlots[i].OwnerIdentity, entry.Identity, StringComparison.Ordinal))
-                    {
-                        if (slot >= 0)
-                            throw new InvalidDataException($"Equipment local state '{entry.Identity}' has duplicate state slots.");
-                        slot = i;
-                    }
-                }
-                if (slot < 0)
-                    throw new InvalidDataException($"Equipment local state '{entry.Identity}' has no typed state slot.");
-                localStates.Add(new EquipmentProgramLocalState(featureId, stateId, slot));
+                ProgramStateValueKind programKind = (ProgramStateValueKind)Int32(entry, "ValueKind", constant);
+                EquipmentRuntimeStateValueKind valueKind = ToRuntimeStateValueKind(programKind);
+                localStates.Add(new EquipmentProgramLocalState(
+                    featureId,
+                    stateId,
+                    valueKind,
+                    ToRuntimeStateValue(
+                        valueKind,
+                        constant(Field(entry, "DefaultValue", ProgramCatalogFieldKind.Constant).ConstantIndex))));
             }
             IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
             var layout = new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parameters, localStates, operationBindings);
@@ -381,6 +358,68 @@ namespace ThirdPersonSimulation
                 reader.ReadDouble(),
                 reader.ReadDouble(),
                 reader.ReadString());
+        }
+
+        static EquipmentRuntimeStateValue ReadStateValue(
+            CanonicalReader reader,
+            EquipmentRuntimeStateValueKind kind)
+        {
+            return new EquipmentRuntimeStateValue(
+                kind,
+                reader.ReadBoolean(),
+                reader.ReadInt32(),
+                reader.ReadUInt64(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadString());
+        }
+
+        static EquipmentRuntimeStateValueKind ToRuntimeStateValueKind(ProgramStateValueKind kind) => kind switch
+        {
+            ProgramStateValueKind.Boolean => EquipmentRuntimeStateValueKind.Boolean,
+            ProgramStateValueKind.Int32 => EquipmentRuntimeStateValueKind.Int32,
+            ProgramStateValueKind.UInt64 => EquipmentRuntimeStateValueKind.UInt64,
+            ProgramStateValueKind.Scalar => EquipmentRuntimeStateValueKind.Scalar,
+            ProgramStateValueKind.Vector2 => EquipmentRuntimeStateValueKind.Vector2,
+            ProgramStateValueKind.Vector3 => EquipmentRuntimeStateValueKind.Vector3,
+            ProgramStateValueKind.Yaw => EquipmentRuntimeStateValueKind.Yaw,
+            ProgramStateValueKind.Identity => EquipmentRuntimeStateValueKind.Identity,
+            _ => throw new InvalidDataException($"Equipment local state kind '{kind}' is unsupported.")
+        };
+
+        static EquipmentRuntimeStateValue ToRuntimeStateValue(
+            EquipmentRuntimeStateValueKind kind,
+            EquipmentCatalogConstant value)
+        {
+            return kind switch
+            {
+                EquipmentRuntimeStateValueKind.Boolean when value.Kind == EquipmentCatalogConstantKind.Boolean =>
+                    new EquipmentRuntimeStateValue(kind, value.Boolean, 0, 0, 0, 0, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.Int32 when value.Kind == EquipmentCatalogConstantKind.Int32 =>
+                    new EquipmentRuntimeStateValue(kind, false, value.Int32, 0, 0, 0, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.UInt64 when value.Kind == EquipmentCatalogConstantKind.UInt64 =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, value.UInt64, 0, 0, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.Scalar when value.Kind == EquipmentCatalogConstantKind.Scalar =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, 0, value.X, 0, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.Vector2 when value.Kind == EquipmentCatalogConstantKind.Vector2 =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, 0, value.X, value.Y, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.Vector3 when value.Kind == EquipmentCatalogConstantKind.Vector3 =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, 0, value.X, value.Y, value.Z, string.Empty),
+                EquipmentRuntimeStateValueKind.Yaw when value.Kind == EquipmentCatalogConstantKind.Yaw =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, 0, value.X, 0, 0, string.Empty),
+                EquipmentRuntimeStateValueKind.Identity when value.Kind == EquipmentCatalogConstantKind.String =>
+                    new EquipmentRuntimeStateValue(kind, false, 0, 0, 0, 0, 0, value.Text),
+                _ => throw new InvalidDataException($"Equipment local state '{kind}' default kind '{value.Kind}' is invalid.")
+            };
+        }
+
+        static T ReadEnum<T>(byte value) where T : struct, Enum
+        {
+            T result = (T)Enum.ToObject(typeof(T), value);
+            return Enum.IsDefined(typeof(T), result)
+                ? result
+                : throw new InvalidDataException($"Equipment state enum '{typeof(T).Name}' value '{value}' is invalid.");
         }
 
         static string[] ReadStrings(CanonicalReader reader, string label)

@@ -41,11 +41,62 @@ namespace ThirdPersonSimulation
         public string Identity { get; }
     }
 
+    public enum EquipmentRuntimeStateValueKind : byte
+    {
+        Boolean = 1,
+        Int32 = 2,
+        UInt64 = 3,
+        Scalar = 4,
+        Vector2 = 5,
+        Vector3 = 6,
+        Yaw = 7,
+        Identity = 8
+    }
+
+    public sealed class EquipmentRuntimeStateValue
+    {
+        public EquipmentRuntimeStateValue(
+            EquipmentRuntimeStateValueKind kind,
+            bool boolean,
+            int int32,
+            ulong uint64,
+            double x,
+            double y,
+            double z,
+            string identity)
+        {
+            if (!Enum.IsDefined(typeof(EquipmentRuntimeStateValueKind), kind) ||
+                double.IsNaN(x) || double.IsInfinity(x) ||
+                double.IsNaN(y) || double.IsInfinity(y) ||
+                double.IsNaN(z) || double.IsInfinity(z))
+            {
+                throw new ArgumentException("Equipment runtime state value is invalid.");
+            }
+            Kind = kind;
+            Boolean = boolean;
+            Int32 = int32;
+            UInt64 = uint64;
+            X = x;
+            Y = y;
+            Z = z;
+            Identity = identity ?? string.Empty;
+        }
+
+        public EquipmentRuntimeStateValueKind Kind { get; }
+        public bool Boolean { get; }
+        public int Int32 { get; }
+        public ulong UInt64 { get; }
+        public double X { get; }
+        public double Y { get; }
+        public double Z { get; }
+        public string Identity { get; }
+    }
+
     public sealed class CharacterEquipmentRuntimeBinding
     {
         public const int ContractSemanticVersion = 1;
-        public const int CatalogFormatVersion = 1;
-        public const string CodecIdentity = "character-equipment-runtime-binding/v1";
+        public const int CatalogFormatVersion = 2;
+        public const string CodecIdentity = "character-equipment-runtime-binding/v2";
 
         readonly byte[] m_CatalogBytes;
 

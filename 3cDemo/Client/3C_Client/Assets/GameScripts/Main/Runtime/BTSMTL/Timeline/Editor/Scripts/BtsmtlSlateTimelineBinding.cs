@@ -733,6 +733,7 @@ namespace BTSMTL.Timeline.Editor
             public Clip Source { get; }
             internal BtsmtlSlateTimelineBinding Owner => m_Owner;
             public BtsmtlTimelineTrackBinding Track => m_Track;
+            IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => m_Track;
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => Source.Name;
             public string Info => Source.Name;

@@ -74,6 +74,7 @@ namespace Slate
 
     public interface IEmbeddedTimelineClipBinding : IEmbeddedTimelineElementBinding
     {
+        IEmbeddedTimelineTrackBinding Track { get; }
         string Info { get; }
         bool IsActive { get; }
         bool IsValid { get; }
@@ -125,6 +126,119 @@ namespace Slate
         string Name { get; set; }
         float Time { get; set; }
         Color Color { get; }
+    }
+
+    interface IClipEditorBinding
+    {
+        string AuthoringId { get; }
+        string Info { get; }
+        ActionClip NativeAction { get; }
+        IEmbeddedTimelineClipBinding FormalClip { get; }
+        IEmbeddedTimelineTrackBinding Track { get; }
+        bool IsCollapsed { get; set; }
+        bool IsLocked { get; set; }
+        bool IsValid { get; }
+        bool HasParameters { get; }
+        bool HasActiveParameters { get; }
+        bool CanScale { get; }
+        bool CanBlendIn { get; }
+        bool CanBlendOut { get; }
+        float StartTime { get; set; }
+        float EndTime { get; set; }
+        float Length { get; }
+        float BlendIn { get; set; }
+        float BlendOut { get; set; }
+        AnimationCurve[] Curves { get; }
+        bool CanCrossBlend(IClipEditorBinding other);
+        void DrawClipGUI(Rect rect);
+        void DrawClipGUIExternal(Rect leftRect, Rect rightRect);
+    }
+
+    sealed class NativeClipEditorBinding : IClipEditorBinding
+    {
+        public NativeClipEditorBinding(ActionClip source)
+        {
+            NativeAction = source;
+        }
+
+        public ActionClip NativeAction { get; }
+        public IEmbeddedTimelineClipBinding FormalClip => null;
+        public string AuthoringId => NativeAction.GetInstanceID().ToString();
+        public string Info => NativeAction.info;
+        public IEmbeddedTimelineTrackBinding Track => null;
+        public bool IsCollapsed { get => NativeAction.isCollapsed; set { } }
+        public bool IsLocked { get => NativeAction.isLocked; set { } }
+        public bool IsValid => NativeAction.isValid;
+        public bool HasParameters => NativeAction.hasParameters;
+        public bool HasActiveParameters => NativeAction.hasActiveParameters;
+        public bool CanScale => NativeAction.CanScale();
+        public bool CanBlendIn => NativeAction.CanBlendIn();
+        public bool CanBlendOut => NativeAction.CanBlendOut();
+        public float StartTime { get => NativeAction.startTime; set => NativeAction.startTime = value; }
+        public float EndTime { get => NativeAction.endTime; set => NativeAction.endTime = value; }
+        public float Length => NativeAction.length;
+        public float BlendIn { get => NativeAction.blendIn; set => NativeAction.blendIn = value; }
+        public float BlendOut { get => NativeAction.blendOut; set => NativeAction.blendOut = value; }
+        public AnimationCurve[] Curves => NativeAction.GetCurvesAll();
+        public bool CanCrossBlend(IClipEditorBinding other) => other?.NativeAction != null && NativeAction.CanCrossBlend(other.NativeAction);
+        public void DrawClipGUI(Rect rect) => NativeAction.ShowClipGUI(rect);
+        public void DrawClipGUIExternal(Rect leftRect, Rect rightRect) => NativeAction.ShowClipGUIExternal(leftRect, rightRect);
+    }
+
+    sealed class FormalClipEditorBinding : IClipEditorBinding
+    {
+        public FormalClipEditorBinding(IEmbeddedTimelineClipBinding source)
+        {
+            FormalClip = source ?? throw new ArgumentNullException(nameof(source));
+        }
+
+        public ActionClip NativeAction => null;
+        public IEmbeddedTimelineClipBinding FormalClip { get; }
+        public string AuthoringId => FormalClip.AuthoringId;
+        public string Info => FormalClip.Info;
+        public IEmbeddedTimelineTrackBinding Track => FormalClip.Track;
+        public bool IsCollapsed { get => FormalClip.IsCollapsed; set => FormalClip.IsCollapsed = value; }
+        public bool IsLocked { get => FormalClip.IsLocked; set => FormalClip.IsLocked = value; }
+        public bool IsValid => FormalClip.IsValid;
+        public bool HasParameters => FormalClip.Parameters != null && FormalClip.Parameters.Count != 0;
+        public bool HasActiveParameters
+        {
+            get
+            {
+                if (!HasParameters)
+                    return false;
+                for (int index = 0; index < FormalClip.Parameters.Count; index++)
+                    if (FormalClip.Parameters[index].Enabled)
+                        return true;
+                return false;
+            }
+        }
+        public bool CanScale => FormalClip.CanScale;
+        public bool CanBlendIn => FormalClip.CanBlendIn;
+        public bool CanBlendOut => FormalClip.CanBlendOut;
+        public float StartTime { get => FormalClip.StartTime; set => FormalClip.StartTime = value; }
+        public float EndTime { get => FormalClip.EndTime; set => FormalClip.EndTime = value; }
+        public float Length => FormalClip.Length;
+        public float BlendIn { get => FormalClip.BlendIn; set => FormalClip.BlendIn = value; }
+        public float BlendOut { get => FormalClip.BlendOut; set => FormalClip.BlendOut = value; }
+        public AnimationCurve[] Curves
+        {
+            get
+            {
+                if (FormalClip.Curves == null)
+                    return Array.Empty<AnimationCurve>();
+                var curves = new AnimationCurve[FormalClip.Curves.Count];
+                for (int index = 0; index < curves.Length; index++)
+                    curves[index] = FormalClip.Curves[index].Curve;
+                return curves;
+            }
+        }
+        public bool CanCrossBlend(IClipEditorBinding other) => other?.FormalClip != null && FormalClip.CanCrossBlend(other.FormalClip);
+        public void DrawClipGUI(Rect rect)
+        {
+            GUI.Label(rect, Info, Styles.leftLabel);
+        }
+        public void DrawClipGUIExternal(Rect leftRect, Rect rightRect) { }
     }
 }
 #endif

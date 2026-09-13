@@ -3432,7 +3432,8 @@ namespace Slate
             const float CLIP_DOPESHEET_HEIGHT = 13f;
             const float SCALE_RECT_WIDTH = 5;
 
-            public ActionClip action;
+            public IClipEditorBinding editorBinding;
+            public ActionClip action => editorBinding.NativeAction;
             public bool isDragging;
             public bool isScalingStart;
             public bool isScalingEnd;
@@ -3476,12 +3477,16 @@ namespace Slate
 
             private Rect _rect;
             public Rect rect {
-                get { return action.isCollapsed ? default(Rect) : _rect; }
+                get { return editorBinding.IsCollapsed ? default(Rect) : _rect; }
                 set { _rect = value; }
             }
 
             public ActionClipWrapper(ActionClip action) {
-                this.action = action;
+                editorBinding = new NativeClipEditorBinding(action);
+            }
+
+            public ActionClipWrapper(IEmbeddedTimelineClipBinding clip) {
+                editorBinding = new FormalClipEditorBinding(clip);
             }
 
             public void ResetInteraction() {
@@ -3499,15 +3504,15 @@ namespace Slate
 
                 overlapIn = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
                 overlapOut = nextClip != null ? Mathf.Max(action.endTime - nextClip.startTime, 0) : 0;
-                blendInPosX = ( action.blendIn / action.length ) * rect.width;
-                blendOutPosX = ( ( action.length - action.blendOut ) / action.length ) * rect.width;
-                hasParameters = action.hasParameters;
-                hasActiveParameters = action.hasActiveParameters;
+                blendInPosX = ( editorBinding.BlendIn / editorBinding.Length ) * rect.width;
+                blendOutPosX = ( ( editorBinding.Length - editorBinding.BlendOut ) / editorBinding.Length ) * rect.width;
+                hasParameters = editorBinding.HasParameters;
+                hasActiveParameters = editorBinding.HasActiveParameters;
 
                 pointerTime = editor.PosToTime(editor.mousePosition.x);
                 snapedPointerTime = editor.SnapTime(pointerTime);
 
-                allowScale = action.CanScale() && action.length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
+                allowScale = editorBinding.CanScale && editorBinding.Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
                 dragRect = new Rect(0, 0, rect.width, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 )).ExpandBy(allowScale ? -SCALE_RECT_WIDTH : 0, 0);
                 controlRectIn = new Rect(0, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
                 controlRectOut = new Rect(rect.width - SCALE_RECT_WIDTH, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
@@ -3520,9 +3525,9 @@ namespace Slate
 
                 //...
                 var wholeRect = new Rect(0, 0, rect.width, rect.height);
-                if ( action.isLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
-                action.ShowClipGUI(wholeRect);
-                if ( hasActiveParameters && action.length > 0 ) {
+                if ( editorBinding.IsLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
+                editorBinding.DrawClipGUI(wholeRect);
+                if ( hasActiveParameters && editorBinding.Length > 0 ) {
                     ShowClipDopesheet(wholeRect);
                 }
                 //...
@@ -3606,7 +3611,7 @@ namespace Slate
                     var r = new Rect(1, 1, rect.width - 2, rect.height - 2);
                     if ( overlapIn > 0 ) { r.xMin = blendInPosX; }
                     if ( overlapOut > 0 ) { r.xMax = blendOutPosX; }
-                    var label = string.Format("<size=10>{0}</size>", action.info);
+                    var label = string.Format("<size=10>{0}</size>", editorBinding.Info);
                     GUI.color = Color.black;
                     GUI.Label(r, label);
                     GUI.color = Color.white;
@@ -3619,8 +3624,8 @@ namespace Slate
                     rect,
                     blendInPosX,
                     blendOutPosX,
-                    action.blendIn,
-                    action.blendOut,
+                    editorBinding.BlendIn,
+                    editorBinding.BlendOut,
                     overlapIn,
                     overlapOut);
             }
@@ -3628,8 +3633,8 @@ namespace Slate
             //clip scale/blend in/out controls
             void DoEdgeControls() {
 
-                var canBlendIn = action.CanBlendIn() && action.length > 0;
-                var canBlendOut = action.CanBlendOut() && action.length > 0;
+                var canBlendIn = editorBinding.CanBlendIn && editorBinding.Length > 0;
+                var canBlendOut = editorBinding.CanBlendOut && editorBinding.Length > 0;
                 if ( !isScalingStart && !isScalingEnd && !isControlingBlendIn && !isControlingBlendOut ) {
                     if ( allowScale || canBlendIn ) {
                         if ( controlRectIn.Contains(e.mousePosition) ) {

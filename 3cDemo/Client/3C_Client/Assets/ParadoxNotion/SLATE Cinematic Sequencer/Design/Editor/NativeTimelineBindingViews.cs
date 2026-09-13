@@ -65,6 +65,7 @@ namespace Slate
 
         public ActionClip Source { get; }
         public NativeTimelineTrackBinding Track { get; }
+        IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => Track;
         public string AuthoringId => $"slate-clip:{Source.GetInstanceID()}";
         public string DisplayName => Source.info;
         public string Info => Source.info;

@@ -711,7 +711,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 kind == ProgramStateValueKind.BlackboardWriteStamp ||
                 kind == ProgramStateValueKind.GameplayEffectAggregate ||
                 kind == ProgramStateValueKind.EquipmentAggregate ||
-                kind == ProgramStateValueKind.SkillExecutionState)
+                kind == ProgramStateValueKind.AbilityExecutionState)
             {
                 return -1;
             }

@@ -18,11 +18,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSemanticTimelineEmitter m_Timelines;
         readonly CharacterSemanticBlackboardEmitter m_Blackboard;
         readonly CharacterSemanticDomainBindingEmitter m_DomainBindings;
-        readonly CharacterSemanticSkillProgramEmitter m_SkillPrograms;
+        readonly CharacterSemanticAbilityProgramEmitter m_AbilityPrograms;
         readonly CharacterSemanticGraphFlowEmitter m_Flow;
         readonly BtsmtlSkillGraphCompiler m_NativeSkills;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_CompiledGraphOperations = new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
-        int m_SkillCompilationDepth;
+        int m_AbilityCompilationDepth;
 
         public CharacterSemanticEmitter(
             CharacterAuthoringCompilationModel model,
@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.Definition.ControlModuleId,
                 AssetProviderOwner(model, model.InputProfile),
                 AssetProviderOwner(model, model.GameplayEffectProfile));
-            m_SkillPrograms = new CharacterSemanticSkillProgramEmitter(model.SkillRecords, builder, report);
+            m_AbilityPrograms = new CharacterSemanticAbilityProgramEmitter(model.AbilityRecords, builder, report);
             m_NodeEmitters = model.NodeEmitters;
             m_Timelines = new CharacterSemanticTimelineEmitter(
                 model.TimelineEmitters,
@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Flow = new CharacterSemanticGraphFlowEmitter(builder, report, CompileGraph, TryGetCompiledOperation);
         }
 
-        public OperationHandle EmitControlSkillPrograms(
+        public OperationHandle EmitControlAbilityPrograms(
             CharacterControlModuleContract contract,
             CharacterSimulationSourceLocation controlSource,
             IReadOnlyList<CharacterControlMotionCompilationRecord> motions)
@@ -63,23 +63,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(contract));
             if (motions == null)
                 throw new ArgumentNullException(nameof(motions));
-            m_SkillPrograms.DeclareExecutionState();
+            m_AbilityPrograms.DeclareExecutionState();
             m_Blackboard.CompileDeclarations();
             for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
             {
                 if (motions[motionIndex].Graph == null)
                     continue;
-                m_SkillCompilationDepth++;
+                m_AbilityCompilationDepth++;
                 try
                 {
                     CompileGraph(motions[motionIndex].Graph, OperationHandle.Invalid);
                 }
                 finally
                 {
-                    m_SkillCompilationDepth--;
+                    m_AbilityCompilationDepth--;
                 }
             }
-            if (!m_SkillPrograms.Emit(contract, CompileSkillEntry))
+            if (!m_AbilityPrograms.Emit(contract, CompileAbilityEntry))
                 return OperationHandle.Invalid;
             m_Blackboard.DeclareScopes();
             CharacterSimulationSourceLocation rootSource = new CharacterSimulationSourceLocation(
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return m_Builder.DeclareOperation(rootSource, SimulationOperationCode.Root, Array.Empty<int>());
         }
 
-        OperationHandle CompileSkillEntry(CharacterSkillCompilationRecord record)
+        OperationHandle CompileAbilityEntry(GameplayAbilityCompilationRecord record)
         {
             return m_NativeSkills.Compile(record.EntryGraph, OperationHandle.Invalid).Entry;
         }
@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var operations = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
                 foreach (BaseNode node in occurrence.Nodes)
                 {
-                    if (m_SkillCompilationDepth != 0 && node is ActivateActionInstanceNode)
+                    if (m_AbilityCompilationDepth != 0 && node is ActivateActionInstanceNode)
                         continue;
                     if (!m_NodeEmitters.TryGet(node.GetType(), out ICharacterSimulationNodeEmitter emitter))
                         throw new InvalidOperationException($"Discovered Node '{node.GUID}' has no emitter.");
@@ -132,9 +132,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_CompiledGraphOperations[route] = operations;
 
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.Edges)
-                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_AbilityCompilationDepth != 0);
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.PropertyEdges)
-                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_AbilityCompilationDepth != 0);
 
                 foreach (CharacterAuthoringTimelineRecord timeline in occurrence.Timelines)
                 {

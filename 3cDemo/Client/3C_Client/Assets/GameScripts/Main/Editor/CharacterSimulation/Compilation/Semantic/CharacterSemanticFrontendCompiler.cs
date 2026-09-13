@@ -174,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     report);
                 if (!report.IsValid)
                     return null;
-                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, controlSource, motions);
+                OperationHandle controlRoot = emitter.EmitControlAbilityPrograms(controlModule.Contract, controlSource, motions);
                 if (!controlRoot.IsValid)
                     return null;
                 builder.DeclareReference(

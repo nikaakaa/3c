@@ -308,7 +308,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<CharacterControlParameterDescriptor> m_Parameters;
         readonly ReadOnlyCollection<SimulationInputValueId> m_InputValues;
         readonly ReadOnlyCollection<CharacterControlMotionDescriptor> m_Motions;
-        readonly ReadOnlyCollection<CharacterSkillId> m_Skills;
+        readonly ReadOnlyCollection<CharacterSkillId> m_Abilities;
 
         public CharacterControlModuleContract(
             CharacterControlModuleId moduleId,
@@ -320,7 +320,7 @@ namespace ThirdPersonSimulation
             IEnumerable<CharacterControlParameterDescriptor> parameters,
             IEnumerable<SimulationInputValueId> inputValues,
             IEnumerable<CharacterControlMotionDescriptor> motions,
-            IEnumerable<CharacterSkillId> skills)
+            IEnumerable<CharacterSkillId> abilities)
         {
             if (!moduleId.IsValid || semanticVersion <= 0)
                 throw new ArgumentException("Character control module contract is incomplete.");
@@ -343,7 +343,7 @@ namespace ThirdPersonSimulation
             m_Parameters = Freeze(parameters, value => value.Id, "parameter", (left, right) => left.Id.CompareTo(right.Id));
             m_InputValues = Freeze(inputValues, value => value, "input value");
             m_Motions = Freeze(motions, value => value.Binding, "motion", (left, right) => string.CompareOrdinal(left.Binding, right.Binding));
-            m_Skills = Freeze(skills, value => value, "skill");
+            m_Abilities = Freeze(abilities, value => value, "ability");
             InitialState = initialState;
             ValidateStateGraph();
         }
@@ -357,7 +357,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlParameterDescriptor> Parameters => m_Parameters;
         public IReadOnlyList<SimulationInputValueId> InputValues => m_InputValues;
         public IReadOnlyList<CharacterControlMotionDescriptor> Motions => m_Motions;
-        public IReadOnlyList<CharacterSkillId> Skills => m_Skills;
+        public IReadOnlyList<CharacterSkillId> Abilities => m_Abilities;
 
         public bool TryResolveParameterSet(
             IEnumerable<CharacterControlParameterValue> overrides,
@@ -588,52 +588,52 @@ namespace ThirdPersonSimulation
             return binding;
         }
 
-        public static void ValidateSkillPrograms(
+        public static void ValidateAbilityPrograms(
             CharacterControlModuleContract contract,
-            CharacterSkillProgramCatalog skills,
+            GameplayAbilityProgramCatalog abilities,
             IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
-            if (skills == null)
-                throw new ArgumentNullException(nameof(skills));
+            if (abilities == null)
+                throw new ArgumentNullException(nameof(abilities));
             if (graphCallFrames == null)
                 throw new ArgumentNullException(nameof(graphCallFrames));
-            for (int i = 0; i < contract.Skills.Count; i++)
-                skills.Require(contract.Skills[i]);
-            for (int i = 0; i < skills.Bindings.Count; i++)
+            for (int i = 0; i < contract.Abilities.Count; i++)
+                abilities.Require(contract.Abilities[i]);
+            for (int i = 0; i < abilities.Bindings.Count; i++)
             {
-                CharacterSkillProgramBinding binding = skills.Bindings[i];
-                CharacterSkillId skill = binding.SkillId;
+                GameplayAbilityProgramBinding binding = abilities.Bindings[i];
+                CharacterSkillId ability = binding.SkillId;
                 bool declared = false;
-                for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+                for (int skillIndex = 0; skillIndex < contract.Abilities.Count; skillIndex++)
                 {
-                    if (contract.Skills[skillIndex] == skill)
+                    if (contract.Abilities[skillIndex] == ability)
                     {
                         declared = true;
                         break;
                     }
                 }
                 if (!declared)
-                    throw new InvalidDataException($"SkillProgram '{skill}' is not declared by control module '{contract.ModuleId}'.");
+                    throw new InvalidDataException($"AbilityProgram '{ability}' is not declared by control module '{contract.ModuleId}'.");
                 for (int followUpIndex = 0; followUpIndex < binding.AllowedFollowUps.Count; followUpIndex++)
                 {
                     CharacterSkillId followUp = binding.AllowedFollowUps[followUpIndex];
                     bool followUpDeclared = false;
-                    for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+                    for (int skillIndex = 0; skillIndex < contract.Abilities.Count; skillIndex++)
                     {
-                        if (contract.Skills[skillIndex] == followUp)
+                        if (contract.Abilities[skillIndex] == followUp)
                         {
                             followUpDeclared = true;
                             break;
                         }
                     }
                     if (!followUpDeclared)
-                        throw new InvalidDataException($"SkillProgram '{skill}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
+                        throw new InvalidDataException($"AbilityProgram '{ability}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
                 }
                 for (int dependencyIndex = 0; dependencyIndex < binding.Dependencies.Count; dependencyIndex++)
                 {
-                    CharacterSkillDependency dependency = binding.Dependencies[dependencyIndex];
+                    GameplayAbilityDependency dependency = binding.Dependencies[dependencyIndex];
                     ProgramGraphCallFrame match = null;
                     for (int frameIndex = 0; frameIndex < graphCallFrames.Count; frameIndex++)
                     {
@@ -641,13 +641,13 @@ namespace ThirdPersonSimulation
                         if (!string.Equals(frame.Identity, dependency.CallSiteIdentity, StringComparison.Ordinal))
                             continue;
                         if (match != null)
-                            throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is duplicated.");
+                            throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' is duplicated.");
                         match = frame;
                     }
                     if (match == null)
-                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is missing from the Program.");
+                        throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' is missing from the Program.");
                     if (!string.Equals(match.ChildGraphIdentity, dependency.SubgraphIdentity, StringComparison.Ordinal))
-                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' targets '{match.ChildGraphIdentity}', expected '{dependency.SubgraphIdentity}'.");
+                        throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' targets '{match.ChildGraphIdentity}', expected '{dependency.SubgraphIdentity}'.");
                 }
             }
         }

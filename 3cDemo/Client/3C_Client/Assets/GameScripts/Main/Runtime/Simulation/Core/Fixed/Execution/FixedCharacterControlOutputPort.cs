@@ -33,9 +33,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Locomotion.SubmitControl(m_Input, request, descriptor);
         }
 
-        public bool SubmitSkill(CharacterControlSkillRequest request) => m_Actions.ActivateFromControl(request);
+        public bool SubmitAbility(CharacterControlAbilityRequest request) => m_Actions.ActivateFromControl(request);
 
-        public void SubmitSkillStop(CharacterControlSkillStopRequest request) => m_Actions.StopFromControl(request);
+        public void SubmitAbilityStop(CharacterControlAbilityStopRequest request) => m_Actions.StopFromControl(request);
 
         public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
             m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);

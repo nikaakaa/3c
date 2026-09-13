@@ -504,7 +504,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (string.IsNullOrWhiteSpace(windowType))
                 throw new ArgumentException("Action window type is missing.", nameof(windowType));
-			if (!m_Actions.TryGetActiveSkillInstanceId(skillId, out ulong activeInstanceId))
+            if (!m_Actions.TryGetActiveAbilityInstanceId(skillId, out ulong activeInstanceId))
 				return false;
             for (int i = 0; i < m_ActionWindowProjections.Count; i++)
             {

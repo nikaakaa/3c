@@ -141,15 +141,15 @@ namespace ThirdPersonSimulation.Fixed
             m_NamedConstantIndexes = BuildNamedConstantIndexes(program);
             BuildGlobalStateSlots(program, stateSemanticCount, out m_FirstStateSlots, out m_StateSlotsByOwner);
             BuildTypedStateLayout(program, out m_TypedAddresses, out m_Partitions);
-            int skillExecutionStateSlot = FindStateSlot(ProgramStateSemantic.SkillExecutionState, "action:skill-execution");
+            int skillExecutionStateSlot = FindStateSlot(ProgramStateSemantic.AbilityExecutionState, "action:ability-execution");
             if (skillExecutionStateSlot < 0)
                 throw new InvalidDataException("Program has no Skill execution state aggregate.");
             m_SkillExecutionState = m_TypedAddresses[skillExecutionStateSlot];
-            m_SkillExecutionStateSlots = ActionSkillExecutionSlotMap.Build(
+            m_SkillExecutionStateSlots = GameplayAbilityExecutionSlotMap.Build(
                 program.Operations.Count,
                 program.ControlFlow,
                 program.Scopes,
-                program.SkillPrograms,
+                program.AbilityPrograms,
                 program.References,
                 program.StateSlots,
                 operationIndex => program.Operations[operationIndex].StateSlots);

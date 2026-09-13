@@ -527,7 +527,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             if (!action.TargetSnapshot.HasTarget)
             {
-                ActionTargetRequirement requirement = Access.Services.RequireActionProfile(action.ActionId).TargetRequirement;
+                ActionTargetRequirement requirement = Access.Services.RequireAdmissionProfile(action.ActionId).TargetRequirement;
                 if (requirement == ActionTargetRequirement.OptionalSnapshot)
                 {
                     Reset(descriptor);
@@ -1480,4 +1480,3 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
-

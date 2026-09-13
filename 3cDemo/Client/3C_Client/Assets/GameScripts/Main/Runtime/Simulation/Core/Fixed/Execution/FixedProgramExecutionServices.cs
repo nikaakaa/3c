@@ -39,8 +39,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> m_GameplayCueProducers;
         readonly IReadOnlyDictionary<string, SimulationBlackboardSlotGroup> m_BlackboardGroups;
         readonly IReadOnlyDictionary<ProgramScopeLayout, IReadOnlyList<SimulationBlackboardSlotGroup>> m_ScopeBlackboardGroups;
-        readonly ActionAdmissionProfile[] m_ActionProfilesByOperation;
-        readonly IReadOnlyDictionary<string, ActionAdmissionProfile> m_ActionProfilesById;
+        readonly ActionAdmissionProfile[] m_AdmissionProfilesByOperation;
+        readonly IReadOnlyDictionary<string, ActionAdmissionProfile> m_AdmissionProfilesById;
 
         public FixedProgramExecutionServices(
             CharacterSimulationProgram program,
@@ -72,7 +72,7 @@ namespace ThirdPersonSimulation.Fixed
             m_SetByCallerValues = BuildSetByCallerValues(program);
             GameplayEffectProgram = new SimulationGameplayEffectProgram(program);
             m_GameplayCueProducers = BuildGameplayCueProducers(program, GameplayEffectProgram);
-            BuildActionProfiles(program, layout, out m_ActionProfilesByOperation, out m_ActionProfilesById);
+            BuildAdmissionProfiles(program, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(
                 program,
                 out m_BlackboardGroups,
@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation.Fixed
             ActionPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance,
-                ProgramStateSemantic.SkillExecutionState,
+                ProgramStateSemantic.AbilityExecutionState,
                 ProgramStateSemantic.ActionEventSequence);
             InputPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
             HandleAllocatorPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.HandleAllocator);
@@ -184,18 +184,18 @@ namespace ThirdPersonSimulation.Fixed
             return m_SetByCallerValues[operation.Value];
         }
 
-        public ActionAdmissionProfile RequireActionProfile(OperationHandle operation)
+        public ActionAdmissionProfile RequireAdmissionProfile(OperationHandle operation)
         {
-            if (!operation.IsValid || operation.Value >= m_ActionProfilesByOperation.Length)
+            if (!operation.IsValid || operation.Value >= m_AdmissionProfilesByOperation.Length)
                 throw new ArgumentOutOfRangeException(nameof(operation));
-            return m_ActionProfilesByOperation[operation.Value] ??
+            return m_AdmissionProfilesByOperation[operation.Value] ??
                 throw new InvalidOperationException($"Operation '{SourcePath(operation)}' has no compiled Action profile.");
         }
 
-        public ActionAdmissionProfile RequireActionProfile(string actionId)
+        public ActionAdmissionProfile RequireAdmissionProfile(string actionId)
         {
             string identity = SimulationIdentity.Require(actionId, nameof(actionId));
-            return m_ActionProfilesById.TryGetValue(identity, out ActionAdmissionProfile profile)
+            return m_AdmissionProfilesById.TryGetValue(identity, out ActionAdmissionProfile profile)
                 ? profile
                 : throw new InvalidOperationException($"Action profile '{identity}' is absent from the Program catalog.");
         }
@@ -282,7 +282,7 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static void BuildActionProfiles(
+        static void BuildAdmissionProfiles(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
             out ActionAdmissionProfile[] byOperation,

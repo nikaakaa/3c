@@ -171,7 +171,10 @@ namespace ThirdPersonSimulation.Fixed
 						result = ReadSubGraphOutput(cursor, operation, outputPort);
 						break;
 					case SimulationOperationCode.ActionContextActive:
-						result = CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
+						result = CharacterStateValue.FromBoolean(
+							string.IsNullOrEmpty(operation.Text0)
+								? m_Actions.IsCurrentExecutionContextActive()
+								: m_Actions.IsContextActive(operation.Text0));
 						break;
 					case SimulationOperationCode.ActionWindowActive:
 						result = CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));

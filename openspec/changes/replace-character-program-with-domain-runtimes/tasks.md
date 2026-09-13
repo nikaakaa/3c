@@ -1,4 +1,4 @@
-2026-09-14审查口径：保留1.1—1.3的前端／目标／存储小步与1.4的Provider身份检查成果；1.2和1.4的已完成描述按实际交付收窄，原完整要求由1.8—1.10接续。2.1重新标为未完成，现有Factory仅封装旧Program的Workspace／Evaluator，不等于最终领域工厂。审查依据与代码链见design D12及spec-audit；implementation.md的历史记录由实现窗口维护。
+2026-09-14审查口径：保留1.1—1.3的前端／目标／存储小步与1.4的Provider身份检查成果；1.2和1.4的已完成描述按实际交付收窄，原完整要求由1.8—1.10接续。2.1重新标为未完成，现有Factory仅封装旧Program的Workspace／Evaluator，不等于最终领域工厂。2.4已完成，BodyMotion已由Definition运行绑定接入原数值目标运动链，2.5及后续仍未完成。审查依据与代码链见design D12及spec-audit；implementation.md的历史记录由实现窗口维护。
 
 ## 1. 独立技能数据与领域合同
 
@@ -19,7 +19,7 @@
 - [ ] 2.1 按明确角色配置、已绑定独立技能集合和领域状态创建角色运行实例，接入正式Host及现有Pass的Evaluate／Finalize；Factory不得继续以旧Program／ExecutionLayout创建旧Evaluator作为交付终点。
 - [x] 2.2 将 ControlModule 参数、静态 Motion 描述和控制状态迁出 Program catalog／slots，保留 C# UnityHFSM 及全部已有走跑转身规则。
 - [x] 2.3 消费曲线任务提供的RootMotionCurveAsset及Timeline唯一时间映射，将C# Control／Motion接到正式portable绑定，删除CharacterControlMotionCatalogEmitter依赖并保留MovingTurn和CameraRelative行为。
-- [ ] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。
+- [x] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。
 - [ ] 2.5 将 Effect／Equipment 的目录和运行状态交回对应模块，技能只保留请求接口，不复制全角色配置。
 - [ ] 2.6 交付领域分区的 Capture／Restore 和统一角色 Step 事务，完整覆盖控制机器内部状态、请求、技能调用、目标、效果、装备与跨 Tick MotionWarp。
 - [ ] 2.7 将 Actor roster、内容 identity 与状态 schema 接到完整领域状态，清除快照对整个 Character Program Layout 的依赖。

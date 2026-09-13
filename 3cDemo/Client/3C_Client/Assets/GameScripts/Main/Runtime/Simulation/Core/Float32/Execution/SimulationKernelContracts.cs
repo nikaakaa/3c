@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterControlRuntimeState controlState,
             CharacterBodyMotionBinding bodyMotionBinding,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
             WorldBodyState previousBody,
             bool diagnosticsEnabled,
             bool valueTraceEnabled = false,
@@ -42,9 +43,15 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(bodyMotionBinding));
             if (!Program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Body Motion binding.", nameof(bodyMotionBinding));
+            if (Program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            if (!Program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectRuntimeBinding));
+            ExecutionLayout.RequireGameplayEffectBinding(gameplayEffectRuntimeBinding);
             ControlRuntimeBinding = controlRuntimeBinding;
             ControlState = controlState;
             BodyMotionBinding = bodyMotionBinding;
+            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             if (controlState != null)
             {
                 controlState.RequireBinding(controlRuntimeBinding);
@@ -92,6 +99,7 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterControlRuntimeState ControlState { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
+        public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
         public bool ValueTraceEnabled { get; }
@@ -149,6 +157,7 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeState controlState,
             CharacterControlRuntimeStateTransaction controlStateTransaction,
             CharacterBodyMotionBinding bodyMotionBinding,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
             ActorOutputWorkspaceLease outputLease,
             CharacterWorldSolveRequest worldRequest,
             bool diagnosticsEnabled)
@@ -163,6 +172,7 @@ namespace ThirdPersonSimulation
             ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
             m_ControlStateTransaction = controlStateTransaction ?? throw new ArgumentNullException(nameof(controlStateTransaction));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
+            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
             OutputLease = outputLease;
             if (!ReferenceEquals(transaction.Program, Program) ||
                 !ReferenceEquals(transaction.Layout, ExecutionLayout) ||
@@ -175,7 +185,9 @@ namespace ThirdPersonSimulation
                 !ReferenceEquals(controlStateTransaction.BaseState, controlState) ||
                 controlStateTransaction.Tick.Value != tick.Value ||
                 controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active ||
-                !Program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
+                !Program.Manifest.Root.IsCharacter && bodyMotionBinding != null ||
+                !Program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null ||
+                !ExecutionLayout.GameplayEffectBinding.BindingHash.Equals(gameplayEffectRuntimeBinding.BindingHash))
             {
                 throw new InvalidOperationException("Pending evaluation transaction binding is invalid.");
             }
@@ -192,6 +204,7 @@ namespace ThirdPersonSimulation
         internal CharacterSimulationState SourceState { get; }
         internal CharacterControlRuntimeState ControlState { get; }
         internal CharacterBodyMotionBinding BodyMotionBinding { get; }
+        internal CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         internal ProgramExecutionLayout ExecutionLayout { get; }
         internal ActorOutputWorkspaceLease OutputLease { get; }
 

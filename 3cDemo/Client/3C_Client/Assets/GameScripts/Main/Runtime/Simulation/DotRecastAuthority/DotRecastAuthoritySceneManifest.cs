@@ -300,6 +300,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             DotRecastAuthorityProgramArtifactBinding program,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
             DotRecastAuthorityPipelineBinding pipeline,
             DotRecastAuthorityWorldBinding world,
             DotRecastAuthorityRuntimeIdentitySet runtime,
@@ -317,6 +318,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             Program = program ?? throw new ArgumentNullException(nameof(program));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
+            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
             Pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             World = world ?? throw new ArgumentNullException(nameof(world));
             Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -360,6 +362,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public DotRecastAuthorityProgramArtifactBinding Program { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
+        public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public DotRecastAuthorityPipelineBinding Pipeline { get; }
         public DotRecastAuthorityWorldBinding World { get; }
         public DotRecastAuthorityRuntimeIdentitySet Runtime { get; }

@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation.Fixed
         CharacterSimulationProgram GetProgram(int actorIndex);
         CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
         CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex);
+        CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex);
         ProgramExecutionLayout GetExecutionLayout(int actorIndex);
         KernelProgramBinding GetKernelBinding(int actorIndex);
     }
@@ -126,6 +127,8 @@ namespace ThirdPersonSimulation.Fixed
             m_Roster[actorIndex].ControlRuntimeBinding;
         public CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex) =>
             m_Roster[actorIndex].BodyMotionBinding;
+        public CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex) =>
+            m_Roster[actorIndex].GameplayEffectRuntimeBinding;
         public ProgramExecutionLayout GetExecutionLayout(int actorIndex) => m_Layouts[actorIndex];
         public KernelProgramBinding GetKernelBinding(int actorIndex) => m_Bindings[actorIndex];
 

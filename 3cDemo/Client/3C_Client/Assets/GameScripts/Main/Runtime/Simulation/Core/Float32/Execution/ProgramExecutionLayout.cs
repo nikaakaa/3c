@@ -121,10 +121,17 @@ namespace ThirdPersonSimulation
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
         readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
         readonly OperationValueInputRange[] m_MotionModifierRanges;
+        readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectBinding;
 
-        ProgramExecutionLayout(CharacterSimulationProgram program)
+        ProgramExecutionLayout(
+            CharacterSimulationProgram program,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
         {
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
+            if (program.Manifest.Root.IsCharacter)
+                m_GameplayEffectBinding = gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding));
+            else if (gameplayEffectBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectBinding));
             ProgramId = program.Manifest.ProgramId;
             ProgramHash = program.ProgramHash;
             LayoutHash = program.LayoutHash;
@@ -186,7 +193,8 @@ namespace ThirdPersonSimulation
                 program,
                 this,
                 topology,
-                operationSourcePaths);
+                operationSourcePaths,
+                gameplayEffectBinding);
         }
 
         public ProgramId ProgramId { get; }
@@ -196,6 +204,7 @@ namespace ThirdPersonSimulation
         public OperationExecutionTopology Topology => Services.Topology;
         internal CharacterSimulationProgram Program => m_Program;
         internal SimulationGameplayEffectProgram GameplayEffectProgram => Services.GameplayEffectProgram;
+        public CharacterGameplayEffectRuntimeBinding GameplayEffectBinding => m_GameplayEffectBinding;
         internal Float32ProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
@@ -211,13 +220,46 @@ namespace ThirdPersonSimulation
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
-            return s_Layouts.GetValue(program, value => new ProgramExecutionLayout(value));
+            if (program.Manifest.Root.IsCharacter)
+            {
+                if (!s_Layouts.TryGetValue(program, out ProgramExecutionLayout layout))
+                    throw new InvalidOperationException("Character Program layout requires a Character Gameplay Effect runtime binding.");
+                return layout;
+            }
+            return s_Layouts.GetValue(program, value => new ProgramExecutionLayout(value, null));
+        }
+
+        public static ProgramExecutionLayout GetOrCreate(
+            CharacterSimulationProgram program,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+        {
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            if (!program.Manifest.Root.IsCharacter && gameplayEffectBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectBinding));
+            ProgramExecutionLayout layout = s_Layouts.GetValue(
+                program,
+                value => new ProgramExecutionLayout(value, gameplayEffectBinding));
+            layout.RequireGameplayEffectBinding(gameplayEffectBinding);
+            return layout;
         }
 
         public void RequireProgram(CharacterSimulationProgram program)
         {
             if (!ReferenceEquals(m_Program, program))
                 throw new InvalidOperationException($"Execution layout '{ProgramHash}' is not bound to the supplied Program instance.");
+        }
+
+        public void RequireGameplayEffectBinding(CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+        {
+            if (m_GameplayEffectBinding == null)
+            {
+                if (gameplayEffectBinding != null)
+                    throw new InvalidOperationException("Execution layout does not accept a Character Gameplay Effect binding.");
+                return;
+            }
+            if (gameplayEffectBinding == null || !m_GameplayEffectBinding.BindingHash.Equals(gameplayEffectBinding.BindingHash))
+                throw new InvalidOperationException("Execution layout Character Gameplay Effect binding is stale or mismatched.");
         }
 
         public IReadOnlyList<ProgramControlFlowEdge> Outgoing(OperationHandle source, ProgramControlFlowKind kind)

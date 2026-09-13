@@ -12,7 +12,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterSimulationProgram program,
             string worldBodyBindingId,
             CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterBodyMotionBinding bodyMotionBinding)
+            CharacterBodyMotionBinding bodyMotionBinding,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
@@ -30,8 +31,13 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(bodyMotionBinding));
             if (!program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Body Motion binding.", nameof(bodyMotionBinding));
+            if (program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            if (!program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectRuntimeBinding));
             ControlRuntimeBinding = controlRuntimeBinding;
             BodyMotionBinding = bodyMotionBinding;
+            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
         }
 
         public ActorId ActorId { get; }
@@ -41,6 +47,7 @@ namespace ThirdPersonSimulation.Fixed
         public string WorldBodyBindingId { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
+        public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         internal CharacterSimulationProgram Program { get; }
         object ISimulationProgramBinding.ProgramObject => Program;
     }

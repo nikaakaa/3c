@@ -46,7 +46,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
             OperationExecutionTopology topology,
-            string[] operationSourcePaths)
+            string[] operationSourcePaths,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -70,7 +71,9 @@ namespace ThirdPersonSimulation.Fixed
             m_ProgramCurves = BuildProgramCurves(program);
             m_TagQueries = BuildTagQueries(program);
             m_SetByCallerValues = BuildSetByCallerValues(program);
-            GameplayEffectProgram = new SimulationGameplayEffectProgram(program);
+            GameplayEffectProgram = program.Manifest.Root.IsCharacter
+                ? new SimulationGameplayEffectProgram(gameplayEffectBinding)
+                : new SimulationGameplayEffectProgram(program);
             m_GameplayCueProducers = BuildGameplayCueProducers(program, GameplayEffectProgram);
             BuildAdmissionProfiles(program, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(

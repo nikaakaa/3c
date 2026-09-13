@@ -73,6 +73,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program operation-set does not match the Fixed Kernel.");
                 ValidateControlRuntimeBinding(binding, program, controlModules);
                 ValidateBodyMotionBinding(binding, program);
+                ValidateGameplayEffectRuntimeBinding(binding, program);
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -97,7 +98,9 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < catalog.Programs.Count; i++)
             {
                 CharacterSimulationProgram program = catalog.Programs[i];
-                ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(program);
+                ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(
+                    program,
+                    FindGameplayEffectBinding(bindings, program.Manifest.ProgramId));
                 var kernelBinding = new KernelProgramBinding(program, layout, kernel);
                 kernelBindings[i] = kernelBinding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, kernelBinding);
@@ -152,7 +155,9 @@ namespace ThirdPersonSimulation.Fixed
                 CharacterSimulationProgram program = catalog.Programs[i];
                 KernelProgramBinding binding = new KernelProgramBinding(
                     program,
-                    ProgramExecutionLayout.GetOrCreate(program),
+                    ProgramExecutionLayout.GetOrCreate(
+                        program,
+                        FindGameplayEffectBinding(values, program.Manifest.ProgramId)),
                     m_CharacterRuntime);
                 kernelBindings[i] = binding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, binding);
@@ -189,6 +194,7 @@ namespace ThirdPersonSimulation.Fixed
                 }
                 ValidateControlRuntimeBinding(binding, program, controlModules);
                 ValidateBodyMotionBinding(binding, program);
+                ValidateGameplayEffectRuntimeBinding(binding, program);
                 if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
                 {
                     if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
@@ -237,6 +243,41 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has no Body Motion binding.");
             if ((program.Manifest.Capabilities.RequiredWorldCapabilities & bodyMotion.RequiredWorldCapability) != bodyMotion.RequiredWorldCapability)
                 throw new InvalidOperationException($"Actor '{binding.ActorId}' Body Motion binding requires an unregistered World capability.");
+        }
+
+        static void ValidateGameplayEffectRuntimeBinding(
+            SimulationActorBinding binding,
+            CharacterSimulationProgram program)
+        {
+            if (!program.Manifest.Root.IsCharacter)
+            {
+                if (binding.GameplayEffectRuntimeBinding != null)
+                    throw new InvalidOperationException("Non-Character Program cannot carry a Character Gameplay Effect binding.");
+                return;
+            }
+            if (binding.GameplayEffectRuntimeBinding == null)
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has no Gameplay Effect runtime binding.");
+        }
+
+        static CharacterGameplayEffectRuntimeBinding FindGameplayEffectBinding(
+            IReadOnlyList<SimulationActorBinding> bindings,
+            ProgramId programId)
+        {
+            CharacterGameplayEffectRuntimeBinding result = null;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                SimulationActorBinding binding = bindings[i];
+                if (binding == null || binding.ProgramId != programId)
+                    continue;
+                CharacterGameplayEffectRuntimeBinding candidate = binding.GameplayEffectRuntimeBinding;
+                if (candidate == null)
+                    continue;
+                if (result == null)
+                    result = candidate;
+                else if (!result.BindingHash.Equals(candidate.BindingHash))
+                    throw new InvalidOperationException($"ProgramId '{programId}' resolves to multiple Gameplay Effect runtime bindings.");
+            }
+            return result;
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)

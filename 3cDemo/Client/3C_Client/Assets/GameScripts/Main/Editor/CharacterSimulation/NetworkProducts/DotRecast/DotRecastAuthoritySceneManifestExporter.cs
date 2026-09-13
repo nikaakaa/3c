@@ -141,6 +141,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterControlRuntimeBinding controlRuntimeBinding = definition.BuildControlRuntimeBinding(
                 controlModules);
             CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = definition.BuildGameplayEffectRuntimeBinding();
+            ProgramExecutionLayout.GetOrCreate(program, gameplayEffectRuntimeBinding);
             LoadedCharacterTargetProgramArtifact inspectedProgram = CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, programBytes);
             if (!inspectedProgram.Program.ProgramHash.Equals(program.ProgramHash) ||
                 !inspectedProgram.Program.LayoutHash.Equals(program.LayoutHash))
@@ -252,6 +254,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 programBinding,
                 controlRuntimeBinding,
                 bodyMotionBinding,
+                gameplayEffectRuntimeBinding,
                 pipelineBinding,
                 worldBinding,
                 runtimeIdentities,

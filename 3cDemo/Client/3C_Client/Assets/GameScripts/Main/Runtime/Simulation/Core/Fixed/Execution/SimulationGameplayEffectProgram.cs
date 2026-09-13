@@ -418,6 +418,14 @@ namespace ThirdPersonSimulation.Fixed
             ValidateClosure();
         }
 
+        public SimulationGameplayEffectProgram(CharacterGameplayEffectRuntimeBinding binding)
+        {
+            if (binding == null)
+                throw new ArgumentNullException(nameof(binding));
+            ReadBinding(binding.CatalogBytes);
+            ValidateClosure();
+        }
+
         public IReadOnlyDictionary<string, string> TagParents => m_TagParents;
         public IReadOnlyCollection<string> InitialTags => m_InitialTags;
         public IReadOnlyDictionary<string, PortableAttributeDefinition> Attributes => m_Attributes;
@@ -503,6 +511,104 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
+        void ReadBinding(byte[] bytes)
+        {
+            var reader = new CanonicalReader(bytes);
+            if (reader.ReadInt32() != CharacterGameplayEffectRuntimeBinding.CatalogFormatVersion)
+                throw new InvalidDataException("Character Gameplay Effect runtime catalog format is unsupported.");
+            int tagCount = ReadCount(reader, "Gameplay Tag");
+            for (int i = 0; i < tagCount; i++)
+            {
+                string id = NormalizeTag(reader.ReadString());
+                string parent = reader.ReadString();
+                m_TagParents.Add(id, string.IsNullOrEmpty(parent) ? string.Empty : NormalizeTag(parent));
+                if (reader.ReadBoolean())
+                    m_InitialTags.Add(id);
+            }
+            int attributeCount = ReadCount(reader, "Gameplay Attribute");
+            for (int i = 0; i < attributeCount; i++)
+            {
+                string id = NormalizeAttribute(reader.ReadString());
+                m_Attributes.Add(
+                    id,
+                    new PortableAttributeDefinition(
+                        id,
+                        FixedScalar.FromDouble(reader.ReadDouble()),
+                        ReadBindingBound(reader),
+                        ReadBindingBound(reader)));
+            }
+            int effectCount = ReadCount(reader, "Gameplay Effect");
+            for (int i = 0; i < effectCount; i++)
+            {
+                string id = reader.ReadString();
+                uint revision = reader.ReadUInt32();
+                string[] tags = ReadStrings(reader, true);
+                PortableEffectDefinition definition = DecodeBindingEffect(id, revision, tags, reader.ReadBytes());
+                if (!m_Effects.TryAdd(definition.Id, definition))
+                    throw new InvalidDataException($"Gameplay Effect '{definition.Id}' is duplicated in the runtime catalog.");
+            }
+            reader.RequireComplete();
+        }
+
+        PortableAttributeBound ReadBindingBound(CanonicalReader reader)
+        {
+            if (!reader.ReadBoolean())
+                return default;
+            int source = reader.ReadInt32();
+            if (source == 0)
+                return new PortableAttributeBound(true, false, FixedScalar.FromDouble(reader.ReadDouble()), string.Empty);
+            if (source == 1)
+                return new PortableAttributeBound(true, true, FixedScalar.Zero, NormalizeAttribute(reader.ReadString()));
+            throw new InvalidDataException($"Gameplay Attribute bound source '{source}' is invalid.");
+        }
+
+        PortableEffectDefinition DecodeBindingEffect(
+            string entryIdentity,
+            uint entryRevision,
+            string[] tags,
+            byte[] bytes)
+        {
+            var reader = new CanonicalReader(bytes);
+            int version = reader.ReadInt32();
+            if (version != 1)
+                throw new InvalidDataException($"Gameplay Effect '{entryIdentity}' format '{version}' is unsupported.");
+            string id = NormalizeEffect(reader.ReadString());
+            uint revision = reader.ReadUInt32();
+            if (!string.Equals(id, NormalizeEffect(entryIdentity), StringComparison.Ordinal) || revision != entryRevision || revision == 0)
+                throw new InvalidDataException($"Gameplay Effect '{entryIdentity}' runtime identity or revision does not match its definition bytes.");
+            PortableEffectDurationPolicy durationPolicy = EnumValue<PortableEffectDurationPolicy>(reader.ReadInt32(), "duration policy");
+            PortableMagnitude duration = ReadMagnitude(reader, true);
+            bool hasPeriod = reader.ReadBoolean();
+            PortableMagnitude period = ReadMagnitude(reader, true);
+            bool executeOnApplication = reader.ReadBoolean();
+            PortableEffectStackingPolicy stacking = EnumValue<PortableEffectStackingPolicy>(reader.ReadInt32(), "stacking policy");
+            int maxStacks = reader.ReadInt32();
+            if (maxStacks <= 0)
+                throw new InvalidDataException($"Gameplay Effect '{id}' MaxStacks must be positive.");
+            PortableEffectDurationUpdatePolicy durationUpdate = EnumValue<PortableEffectDurationUpdatePolicy>(reader.ReadInt32(), "duration update policy");
+            PortableEffectPeriodUpdatePolicy periodUpdate = EnumValue<PortableEffectPeriodUpdatePolicy>(reader.ReadInt32(), "period update policy");
+            PortableEffectOverflowPolicy overflow = EnumValue<PortableEffectOverflowPolicy>(reader.ReadInt32(), "overflow policy");
+            string[] setByCaller = ReadStrings(reader, false);
+            PortableEffectComponent[] components = ReadComponents(reader, true);
+            reader.RequireComplete();
+            return new PortableEffectDefinition(
+                id,
+                revision,
+                tags,
+                durationPolicy,
+                duration,
+                hasPeriod,
+                period,
+                executeOnApplication,
+                stacking,
+                maxStacks,
+                durationUpdate,
+                periodUpdate,
+                overflow,
+                setByCaller,
+                components);
+        }
+
         PortableEffectDefinition DecodeEffect(ProgramCatalogEntry entry, byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
@@ -551,7 +657,7 @@ namespace ThirdPersonSimulation.Fixed
                 components);
         }
 
-        PortableEffectComponent[] ReadComponents(CanonicalReader reader)
+        PortableEffectComponent[] ReadComponents(CanonicalReader reader, bool sourceDouble = false)
         {
             int count = ReadCount(reader, "Gameplay Effect component");
             var result = new PortableEffectComponent[count];
@@ -564,7 +670,7 @@ namespace ThirdPersonSimulation.Fixed
                         reader.ReadString(),
                         EnumValue<PortableModifierApplication>(reader.ReadInt32(), "modifier application"),
                         EnumValue<PortableModifierOperation>(reader.ReadInt32(), "modifier operation"),
-                        ReadMagnitude(reader),
+                        ReadMagnitude(reader, sourceDouble),
                         reader.ReadInt32(),
                         EnumValue<PortableClampBound>(reader.ReadInt32(), "modifier clamp bound"),
                         reader.ReadBoolean());
@@ -587,7 +693,7 @@ namespace ThirdPersonSimulation.Fixed
                         EnumValue<PortableAttributeSource>(reader.ReadInt32(), "attribute requirement source"),
                         reader.ReadString(),
                         EnumValue<PortableAttributeComparison>(reader.ReadInt32(), "attribute comparison"),
-                        ReadMagnitude(reader));
+                        ReadMagnitude(reader, sourceDouble));
                 }
                 else if (type.EndsWith(".GameplayEffectExecutionComponentDefinition", StringComparison.Ordinal))
                 {
@@ -598,7 +704,7 @@ namespace ThirdPersonSimulation.Fixed
                         mutations[mutationIndex] = new PortableExecutionMutation(
                             reader.ReadString(),
                             EnumValue<PortableModifierOperation>(reader.ReadInt32(), "execution modifier operation"),
-                            ReadMagnitude(reader),
+                            ReadMagnitude(reader, sourceDouble),
                             EnumValue<PortableClampBound>(reader.ReadInt32(), "execution clamp bound"));
                     }
                     result[i] = new PortableExecutionComponent(mutations);
@@ -619,7 +725,7 @@ namespace ThirdPersonSimulation.Fixed
                                 reader.ReadString(),
                                 EnumValue<PortableAdditionalParameterSource>(reader.ReadInt32(), "additional effect parameter source"),
                                 reader.ReadString(),
-                                reader.ReadScalar());
+                                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
                         }
                         effects[effectIndex] = new PortableAdditionalEffect(trigger, effectId, bindings);
                     }
@@ -639,15 +745,15 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        PortableMagnitude ReadMagnitude(CanonicalReader reader)
+        PortableMagnitude ReadMagnitude(CanonicalReader reader, bool sourceDouble = false)
         {
             return new PortableMagnitude(
                 EnumValue<PortableMagnitudeSource>(reader.ReadInt32(), "magnitude source"),
-                reader.ReadScalar(),
+                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
                 reader.ReadString(),
                 NormalizeOptionalAttribute(reader.ReadString()),
-                reader.ReadScalar(),
-                reader.ReadScalar());
+                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
         }
 
         PortableTagQuery ReadQuery(CanonicalReader reader)

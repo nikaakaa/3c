@@ -181,7 +181,8 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                     m_Loaded.Program,
                     actor.Binding.WorldBodyBindingId,
                     manifest.ControlRuntimeBinding,
-                    manifest.BodyMotionBinding);
+                    manifest.BodyMotionBinding,
+                    manifest.GameplayEffectRuntimeBinding);
                 bodyBindings[i] = new DotRecastBodyBindingDescriptor(
                     actor.Binding.WorldBodyBindingId,
                     actor.Binding.InitialBody,

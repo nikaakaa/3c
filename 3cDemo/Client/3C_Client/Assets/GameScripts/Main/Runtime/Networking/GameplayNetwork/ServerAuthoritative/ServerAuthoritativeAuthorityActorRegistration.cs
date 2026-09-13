@@ -24,7 +24,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             CharacterSimulationDiagnosticsAdapter diagnostics,
             RuntimeDiagnosticsTarget diagnosticsTarget,
             CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterBodyMotionBinding bodyMotionBinding)
+            CharacterBodyMotionBinding bodyMotionBinding,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Authority Actor registration owner identity is incomplete.");
@@ -39,9 +40,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             InitialBody = initialBody;
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
+            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
             Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId, ControlRuntimeBinding, BodyMotionBinding);
+            ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId, ControlRuntimeBinding, BodyMotionBinding, GameplayEffectRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"server-authoritative-authority-output/{actorId.Value}",
                 "server-authoritative-authority-output",
@@ -65,6 +67,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public WorldBodyState InitialBody { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
+        public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterSimulationDiagnosticsAdapter Diagnostics { get; }
         public SimulationOutputRouteDescriptor OutputRoute { get; }
         public StableHash DiagnosticsConfigurationHash => StableHash.Compute(

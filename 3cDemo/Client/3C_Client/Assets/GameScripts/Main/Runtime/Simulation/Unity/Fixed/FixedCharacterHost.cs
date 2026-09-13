@@ -188,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
                 CharacterControlRuntimeModuleCatalog.Create());
             CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
             ICharacterPresentationRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
@@ -283,7 +284,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_MaximumActivePresentationRecords,
                     presentationRuntimeFactory,
                     controlRuntimeBinding,
-                    bodyMotionBinding);
+                    bodyMotionBinding,
+                    gameplayEffectRuntimeBinding);
                 controlSource = null;
                 presentation = null;
                 diagnosticsTarget = null;

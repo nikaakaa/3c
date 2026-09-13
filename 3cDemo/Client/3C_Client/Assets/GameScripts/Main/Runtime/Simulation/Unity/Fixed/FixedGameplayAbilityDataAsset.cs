@@ -46,14 +46,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public byte[] CopyCanonicalArtifact() =>
             m_CanonicalArtifact == null ? Array.Empty<byte>() : (byte[])m_CanonicalArtifact.Clone();
 
-        public CharacterSimulationProgram Load()
+        public ThirdPersonSimulation.Fixed.CharacterSimulationProgram Load(GameplayAbilityProviderBinding providerBinding)
         {
             if (m_CanonicalArtifact == null || m_CanonicalArtifact.Length == 0)
                 throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' has no compiled artifact.");
-            CharacterTargetProgramArtifactLoader.RequireDefinitionGuid(m_AbilityGuid);
+            ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.RequireDefinitionGuid(m_AbilityGuid);
             if (string.IsNullOrEmpty(m_AbilityId))
                 throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' has no Ability identity.");
-            StableHash bytesHash = CharacterTargetProgramArtifactLoader.ComputeBytesHash(m_CanonicalArtifact);
+            StableHash bytesHash = ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.ComputeBytesHash(m_CanonicalArtifact);
             if (!bytesHash.IsValid || !string.Equals(bytesHash.ToString(), m_CanonicalBytesHash, StringComparison.Ordinal))
                 throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' canonical bytes hash is invalid.");
             if (!string.Equals(m_NumericProfileId, FixedSimulationNumericProfile.Value.Id.Value, StringComparison.Ordinal) ||
@@ -65,9 +65,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_EntryIdentity,
                 m_ContentIdentity);
             RequireMetadataRoot(root);
-            CharacterSimulationProgram program = CharacterSimulationProgramCodec.ReadArtifact(
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = ThirdPersonSimulation.Fixed.CharacterSimulationProgramCodec.ReadArtifact(
                 m_CanonicalArtifact,
-                new ProgramLoadExpectation(
+                new ThirdPersonSimulation.Fixed.ProgramLoadExpectation(
                     m_CompilerVersion,
                     new OperationSetVersion(m_OperationSetVersion),
                     new ProgramRevision(m_SourceRevision),
@@ -76,15 +76,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     root));
             RequireProgramMetadata(program, root);
             program.AbilityPrograms.Require(new CharacterSkillId(m_AbilityId));
+            GameplayAbilityProviderContract
+                .Create(program.CatalogEntries)
+                .RequireBinding(providerBinding);
             return program;
         }
 
 #if UNITY_EDITOR
-        public void SetCompiledArtifact(LoadedCharacterTargetProgramArtifact artifact)
+        public void SetCompiledArtifact(ThirdPersonSimulation.Fixed.LoadedCharacterTargetProgramArtifact artifact)
         {
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
-            CharacterSimulationProgram program = artifact.Program;
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = artifact.Program;
             if (!program.Manifest.Root.IsAbility)
                 throw new InvalidOperationException("Fixed Gameplay Ability Data asset requires an Ability root.");
             m_AbilityGuid = artifact.Descriptor.DefinitionGuid;
@@ -114,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' root metadata is invalid.");
         }
 
-        void RequireProgramMetadata(CharacterSimulationProgram program, SimulationProgramRootDescriptor root)
+        void RequireProgramMetadata(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program, SimulationProgramRootDescriptor root)
         {
             if (!program.Manifest.Root.Equals(root) ||
                 !string.Equals(program.Manifest.ProgramId.Value, m_ProgramId, StringComparison.Ordinal) ||

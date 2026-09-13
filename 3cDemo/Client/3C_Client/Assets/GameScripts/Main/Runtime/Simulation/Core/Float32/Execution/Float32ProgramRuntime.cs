@@ -70,14 +70,7 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program is not Float32.");
                 if (!program.Manifest.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion))
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program operation-set does not match the Float32 Kernel.");
-                if (program.ControlModuleBinding.IsValid)
-                {
-                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                    CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
-                        module.Contract,
-                        program.AbilityPrograms,
-                        program.GraphCallFrames);
-                }
+                ValidateControlRuntimeBinding(binding, program, controlModules);
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -180,14 +173,7 @@ namespace ThirdPersonSimulation
                 {
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program binding is stale or incompatible.");
                 }
-                if (program.ControlModuleBinding.IsValid)
-                {
-                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                    CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
-                        module.Contract,
-                        program.AbilityPrograms,
-                        program.GraphCallFrames);
-                }
+                ValidateControlRuntimeBinding(binding, program, controlModules);
                 if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
                 {
                     if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
@@ -199,6 +185,27 @@ namespace ThirdPersonSimulation
                 }
             }
             return new SimulationProgramCatalog(programs.Values);
+        }
+
+        static void ValidateControlRuntimeBinding(
+            SimulationActorBinding binding,
+            CharacterSimulationProgram program,
+            CharacterControlModuleCatalog controlModules)
+        {
+            if (!program.Manifest.Root.IsCharacter)
+            {
+                if (binding.ControlRuntimeBinding != null)
+                    throw new InvalidOperationException("Non-Character Program cannot carry a Control runtime binding.");
+                return;
+            }
+            CharacterControlRuntimeBinding controlBinding = binding.ControlRuntimeBinding ??
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has no Control runtime binding.");
+            ICharacterControlModule module = controlModules.Require(controlBinding.ModuleId);
+            controlBinding.RequireContract(module.Contract);
+            CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
+                module.Contract,
+                program.AbilityPrograms,
+                program.GraphCallFrames);
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)

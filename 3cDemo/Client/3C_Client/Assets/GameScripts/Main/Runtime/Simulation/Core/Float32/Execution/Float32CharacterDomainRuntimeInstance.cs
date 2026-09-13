@@ -16,7 +16,8 @@ namespace ThirdPersonSimulation
                 request.ExecutionLayout,
                 request.ActorId,
                 Workspace,
-                controlModules);
+                controlModules,
+                request.ControlRuntimeBinding);
         }
 
         public Float32EvaluationWorkspace Workspace { get; }

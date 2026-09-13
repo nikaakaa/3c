@@ -347,6 +347,17 @@ namespace BTSMTL.Timeline.Editor
                    (clip = binding.Source) != null;
         }
 
+        public bool TryGetClipBinding(string authoringId, out IEmbeddedTimelineClipBinding binding)
+        {
+            if (m_Clips.TryGetValue(authoringId ?? string.Empty, out BtsmtlTimelineClipBinding value))
+            {
+                binding = value;
+                return true;
+            }
+            binding = null;
+            return false;
+        }
+
         public void Apply(Action mutation, string undoName)
         {
             m_Session.Apply(mutation, undoName);

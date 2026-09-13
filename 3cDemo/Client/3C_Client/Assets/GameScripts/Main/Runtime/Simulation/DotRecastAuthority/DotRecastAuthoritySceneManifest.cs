@@ -298,6 +298,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             ServerAuthoritativeRoomId roomId,
             DotRecastAuthorityEndpointDescriptor dataEndpoint,
             DotRecastAuthorityProgramArtifactBinding program,
+            CharacterControlRuntimeBinding controlRuntimeBinding,
             DotRecastAuthorityPipelineBinding pipeline,
             DotRecastAuthorityWorldBinding world,
             DotRecastAuthorityRuntimeIdentitySet runtime,
@@ -313,6 +314,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             RoomId = roomId;
             DataEndpoint = dataEndpoint;
             Program = program ?? throw new ArgumentNullException(nameof(program));
+            ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             Pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             World = world ?? throw new ArgumentNullException(nameof(world));
             Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -345,7 +347,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 5;
+        public const int SchemaVersion = 6;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }
@@ -354,6 +356,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public ServerAuthoritativeRoomId RoomId { get; }
         public DotRecastAuthorityEndpointDescriptor DataEndpoint { get; }
         public DotRecastAuthorityProgramArtifactBinding Program { get; }
+        public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public DotRecastAuthorityPipelineBinding Pipeline { get; }
         public DotRecastAuthorityWorldBinding World { get; }
         public DotRecastAuthorityRuntimeIdentitySet Runtime { get; }

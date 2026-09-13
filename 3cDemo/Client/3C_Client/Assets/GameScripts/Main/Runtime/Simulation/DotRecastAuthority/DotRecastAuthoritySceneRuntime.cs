@@ -175,7 +175,11 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             {
                 LoadedDotRecastAuthorityActor actor = m_Loaded.Roster[i];
                 ActorId actorId = actor.Binding.Roster.ActorId;
-                actorBindings[i] = new SimulationActorBinding(actorId, m_Loaded.Program, actor.Binding.WorldBodyBindingId);
+                actorBindings[i] = new SimulationActorBinding(
+                    actorId,
+                    m_Loaded.Program,
+                    actor.Binding.WorldBodyBindingId,
+                    manifest.ControlRuntimeBinding);
                 bodyBindings[i] = new DotRecastBodyBindingDescriptor(
                     actor.Binding.WorldBodyBindingId,
                     actor.Binding.InitialBody,

@@ -985,22 +985,22 @@ namespace BTSMTL.Timeline.Editor
                             snapshot.Unsupported = true;
                             continue;
                         }
+                        if (!m_Binding.TryGetClipBinding(proxyClip.SourceAuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                        {
+                            snapshot.Unsupported = true;
+                            continue;
+                        }
                         snapshot.Clips[proxyClip.SourceAuthoringId] =
                             new ProxyClipSnapshot(
-                                proxyClip.startTime,
-                                proxyClip.endTime,
-                                proxyClip.blendIn,
-                                proxyClip.blendOut,
+                                formalClip.StartTime,
+                                formalClip.EndTime,
+                                formalClip.BlendIn,
+                                formalClip.BlendOut,
                                 proxyTrack.SourceAuthoringId);
                         var clipCurves = new Dictionary<string, ProxyCurveSnapshot>(StringComparer.Ordinal);
-                        foreach (string channelId in proxyClip.CurveChannelIds)
+                        foreach (IEmbeddedTimelineCurveBinding formalCurve in formalClip.Curves)
                         {
-                            if (!proxyClip.TryGetCurve(channelId, out AnimationCurve curve))
-                            {
-                                snapshot.Unsupported = true;
-                                continue;
-                            }
-                            if (!clipCurves.TryAdd(channelId, new ProxyCurveSnapshot(curve)))
+                            if (!clipCurves.TryAdd(formalCurve.ChannelId, new ProxyCurveSnapshot(formalCurve.Curve)))
                                 snapshot.Unsupported = true;
                         }
                         snapshot.Curves[proxyClip.SourceAuthoringId] = clipCurves;
@@ -1094,14 +1094,19 @@ namespace BTSMTL.Timeline.Editor
                         ReportIssue($"曲线通道 '{curvePair.Key}' 没有正式映射，已丢弃本次修改。");
                         return;
                     }
-                    if (!m_ProxyClips.TryGetValue(pair.Key, out BtsmtlSlateActionClip proxyClip))
+                    if (!m_Binding.TryGetClipBinding(pair.Key, out IEmbeddedTimelineClipBinding formalClip))
                     {
                         ReportIssue("曲线所属 Clip 已过期，已丢弃本次修改。");
                         return;
                     }
-                    float curveDuration = proxyClip.TryGetCurveDuration(channelId.Value, out float mappedDuration)
-                        ? mappedDuration
-                        : proxyClip.length;
+                    IEmbeddedTimelineCurveBinding formalCurve = formalClip.Curves.FirstOrDefault(curve =>
+                        string.Equals(curve.ChannelId, channelId.Value, StringComparison.Ordinal));
+                    if (formalCurve == null)
+                    {
+                        ReportIssue("曲线所属通道已过期，已丢弃本次修改。");
+                        return;
+                    }
+                    float curveDuration = formalCurve.Duration;
                     curveChanges.Add((sourceClip, channelId, ToAuthoringCurve(curvePair.Value.Curve, curveDuration)));
                 }
             }

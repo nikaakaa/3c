@@ -9,7 +9,7 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 
 当前合同以 openspec/specs/character-csharp-authoring/spec.md 和正式领域 API 为准。C# 是一次明确执行的重建入口，不是第二份业务模型。
 
-MotionCurve 外部源所有权的后续规划见 `openspec/changes/unify-timeline-motion-curve-source/design.md` 及其四份 spec delta。该迁移尚未实施：下述源引用口径是本次目标，不得宣称当前嵌入字段已删除，也不得只手删生成 C# 中的曲线来冒充完成。
+MotionCurve 外部源所有权已按 `openspec/changes/unify-timeline-motion-curve-source/design.md` 及其四份 spec delta 实施：RootMotionCurveAsset 是唯一运动源，MotionCurveClip 只保存类型化引用、源秒区间和使用配置，Timeline 不再保存 PositionX/Y/Z/Yaw 内嵌曲线。生成 C# 只能引用源资产，不能把源关键帧重新展开。
 
 只使用两个作者 MCP：
 
@@ -35,9 +35,9 @@ MotionCurve 外部源所有权的后续规划见 `openspec/changes/unify-timelin
 - Timeline 保存源 Clip/数据段、源区间、时间轴位置和正式作者覆盖。独立作者曲线保留完整关键帧、切线、权重和时间域，不重采样。
 - Builder 直接调用正式领域 API；共享对象先声明再连接，不能复制第二棵领域树。
 
-MotionCurve 目标使用现有 `RootMotionCurveAsset`，不新建 Timeline 专属源。源拥有 PositionX/Y/Z/Yaw 等运动曲线，Clip 只拥有源区间、Timeline 位置、播放/混合与 Weight/Ease。每个源在 C# 只声明一次类型化引用；不输出源关键帧，不把嵌入运动样本当作独立作者曲线。Timeline 的 Weight/Ease 与 MotionWarp progress 仍按正式 owner 保存完整作者关键帧。
+MotionCurve 使用现有 `RootMotionCurveAsset`，不新建 Timeline 专属源。源拥有 PositionX/Y/Z/Yaw 等运动曲线和秒时间域，Clip 只拥有源区间、Timeline 位置、播放/混合与 Weight/Ease。每个源在 C# 只声明一次类型化引用；不输出源关键帧，不把嵌入运动样本当作独立作者曲线。Timeline 的 Weight/Ease 与 MotionWarp progress 仍按正式 owner 保存完整作者关键帧，CurveEndFrame 由源区间推导。
 
-export_code 不隐式提取素材；generate_assets 不复制、重烘焙或删除范围外曲线源。Attack/Dodge 嵌入数据只能通过明确的一次正式迁移无损承接到源资产，包含时间和切线换算、权重及 wrap；来源未知不伪造源动画或采样率。迁移完成删除旧字段与双读路径，缺源时明确失败。
+export_code 不隐式提取素材；generate_assets 不复制、重烘焙或删除范围外曲线源。Attack/Dodge 存量嵌入数据已通过一次正式迁移无损承接到源资产，包含时间和切线换算、权重及 wrap；来源未知不伪造源动画或采样率。迁移完成后旧字段与双读路径已删除，缺源时明确失败。
 
 未知字段或无法由正式 API 表达的内容必须报告并失败，不能用零值、占位或猜测补齐。
 

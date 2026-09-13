@@ -82,19 +82,27 @@
 
 ### Requirement: Timeline 导出必须表达 Clip 数据段和独立曲线
 
-Timeline 输出 MUST 表达正式 Clip/数据段引用、源起止区间、时间轴位置及速度、混合、循环或其它作者覆盖；不得复制源 Clip 的逐 tick 数据、烘焙/分析缓存或运行编译结果。Timeline 上独立作者曲线 MUST 保留完整关键帧、切线、权重、插值和正式时间域，不得重采样、有损抽点或用默认值替代非默认曲线。源资源和范围外共享对象 MUST 保持外部引用，不得隐式复制。
+Timeline 输出 MUST 表达正式 Clip/数据段引用、RootMotionCurveAsset 源及其源起止区间、时间轴位置及速度、混合、循环或其它作者覆盖；不得复制源 Clip 的逐 tick 数据、烘焙/分析缓存或运行编译结果。MotionCurve 的 PositionX/Y/Z/Yaw MUST 只通过类型化源引用恢复，不得输出 Timeline-local 曲线字面量。Timeline 上独立作者曲线 MUST 保留完整关键帧、切线、权重、插值和正式时间域，不得重采样、有损抽点或用默认值替代非默认曲线。源资源和范围外共享对象 MUST 保持外部引用，不得隐式复制。
 
 #### Scenario: Clip只使用源数据的一段
 
 - **WHEN** Timeline Clip 指定源资源、源区间和时间轴位置
 - **THEN** 生成代码 MUST 通过正式 Clip 创建 API 恢复该数据段
 - **AND** MUST 不生成每帧或每 tick 的时间映射数组
+- **AND** MotionCurve MUST 只生成一次类型化 RootMotionCurveAsset 外部引用
 
 #### Scenario: 独立作者曲线包含非默认关键帧
 
 - **WHEN** Clip 拥有独立作者曲线或覆盖曲线
 - **THEN** 生成代码 MUST 保留其关键帧、插值/切线/权重和时间域
 - **AND** MUST 不把曲线替换成默认曲线或密集采样结果
+- **AND** MUST 不把源运动曲线复制为局部覆盖
+
+#### Scenario: 多个 MotionCurveClip 使用同一源
+
+- **WHEN** 多个 MotionCurveClip 使用同一 RootMotionCurveAsset 的不同区间
+- **THEN** 源码 MUST 复用一次类型化源声明，并分别表达片段配置
+- **AND** generate_assets MUST 不创建多个曲线源副本
 
 ### Requirement: 生成类不得承载调度元数据
 

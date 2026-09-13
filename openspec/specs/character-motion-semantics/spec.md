@@ -47,7 +47,7 @@ Contribution MUST分别表达本Tick是否具有有效位移/yaw delta，以及�
 
 ### Requirement: MotionCurveClip 必须分开曲线结束与占权结束
 
-`MotionCurveClip` MUST显式保存满足 `StartFrame < CurveEndFrame <= EndFrame` 的CurveEndFrame。累计位置与yaw曲线 MUST只在StartFrame到CurveEndFrame之间采样；CurveEndFrame到EndFrame之间 MUST保持曲线终值，并按Override/ConsumeLowerChannels配置继续提交零delta claim。非法CurveEndFrame MUST作为配置或编译错误，不得按EndFrame猜测补齐。
+`MotionCurveClip` MUST显式保存 RootMotionCurveAsset、源起止秒数和 Timeline Clip 的占权区间；`CurveEndFrame` MUST由源区间时长和 Timeline 帧率推导，并满足 `StartFrame < CurveEndFrame <= EndFrame`。累计位置与yaw曲线 MUST只在StartFrame到CurveEndFrame之间采样；CurveEndFrame到EndFrame之间 MUST保持曲线终值，并按Override/ConsumeLowerChannels配置继续提交零delta claim。非法源引用或源区间 MUST作为配置或编译错误，不得按EndFrame猜测补齐。
 
 #### Scenario: 位移曲线早于 Recovery 结束
 

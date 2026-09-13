@@ -258,7 +258,7 @@ Timeline Editor MUST将本地作者内容明确分为占据起止区间的`Span 
 
 ### Requirement: Timeline Editor 必须完整编辑显式注册的 Continuous Curve Channel
 
-Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline owner已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST覆盖Animation Segment的Weight、Ease In和Ease Out，MotionCurve Clip的Weight、Position X/Y/Z、Yaw和Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，CameraSequenceClip与CameraResponseClip的Weight和Ease In/Out，以及CameraResourceClip的Weight和Ease In/Out。共享相机效果资源的曲线仍 MUST只提供只读引用与真实 owner 导航。`presentation.locomotion-phase`、`presentation.foot-placement-weight`、AnimationClip骨骼曲线和其它Clip内注册Curve MUST只由Unity Animation Window编辑，不得进入Timeline Catalog。
+Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline owner已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST覆盖Animation Segment的Weight、Ease In和Ease Out，MotionCurve Clip的Weight与Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，CameraSequenceClip与CameraResponseClip的Weight和Ease In/Out，以及CameraResourceClip的Weight和Ease In/Out。MotionCurve 的 Position X/Y/Z/Yaw MUST由 RootMotionCurveAsset 唯一拥有，Timeline MUST提供类型化源选择、源区间/播放配置和真实源 owner 导航，不把源曲线注册为 Timeline-local 可写 channel。共享相机效果资源的曲线仍 MUST只提供只读引用与真实 owner 导航。`presentation.locomotion-phase`、`presentation.foot-placement-weight`、AnimationClip骨骼曲线和其它Clip内注册Curve MUST只由Unity Animation Window编辑，不得进入Timeline Catalog。
 
 每个具有registered Timeline channel的Track MUST显示可折叠`CURVES`分组，展开后每个ChannelId拥有独立lane。每个Clip或Segment MUST只在自己的StartFrame..EndFrame范围显示自己的Timeline-local curve、key与边界；重叠内容 MUST不在作者层合并curve。Curve Lane MUST按完整`AnimationCurve.Evaluate`结果绘制插值，显示原始key、tangent handle、当前游标time/value、value reference与单位。
 
@@ -271,8 +271,9 @@ Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeli
 #### Scenario: 展开MotionCurve Track曲线
 
 - **WHEN** 作者展开MotionCurve Clip的CURVES分组
-- **THEN** Editor MUST显示Weight、Position X/Y/Z、Yaw与Ease In/Out
-- **AND** Position与Yaw MUST使用unbounded value view及明确单位
+- **THEN** Editor MUST显示Weight与Ease In/Out局部曲线
+- **AND** Editor MUST提供 RootMotionCurveAsset 源选择、源区间和打开真实源 owner 的入口
+- **AND** Position与Yaw MUST不生成Timeline-local可写lane
 
 ### Requirement: Curve Key编辑必须无损且原子
 
@@ -293,11 +294,11 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 - **THEN** MutationAdapter MUST原子保存完整Keyframe字段
 - **AND** 未修改的key与wrap mode MUST无损保留
 
-#### Scenario: 复制到不兼容channel
+#### Scenario: 源运动曲线不进入Timeline lane
 
-- **WHEN** 作者把unbounded Position key粘贴到bounded Weight channel
-- **THEN** Editor MUST拒绝该操作并说明time/value domain不兼容
-- **AND** MUST不Clamp、不换算单位也不部分写入
+- **WHEN** 作者试图把 RootMotionCurveAsset 源曲线粘贴到 Timeline Weight channel
+- **THEN** Editor MUST拒绝该操作并说明源 owner 不属于 Timeline-local channel
+- **AND** MUST不创建曲线副本或部分写入
 
 #### Scenario: 外部修改使key选择过期
 

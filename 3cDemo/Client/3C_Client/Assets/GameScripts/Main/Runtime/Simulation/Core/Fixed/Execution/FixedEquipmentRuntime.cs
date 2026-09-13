@@ -57,12 +57,12 @@ namespace ThirdPersonSimulation.Fixed
 			return context.IsValid;
 		}
 
-		public bool IsSkillBinding(EquipmentActionContext context, CharacterSkillId skillId)
+		public bool IsAbilityBinding(EquipmentActionContext context, CharacterSkillId abilityId)
 		{
-			if (!context.IsValid || !skillId.IsValid || !IsCurrentActionContext(context))
+            if (!context.IsValid || !abilityId.IsValid || !IsCurrentActionContext(context))
 				return false;
 			return m_Layout.Equipment.TryGetRouteImplementation(context.FeatureId, context.RouteId, out EquipmentProgramRouteImplementation implementation) &&
-				implementation.SkillId == skillId;
+				implementation.AbilityId == abilityId;
 		}
 
 		public bool IsCurrentActionContext(EquipmentActionContext context)

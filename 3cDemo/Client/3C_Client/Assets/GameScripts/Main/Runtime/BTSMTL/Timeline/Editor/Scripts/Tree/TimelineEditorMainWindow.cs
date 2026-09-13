@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using Slate;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -439,6 +440,7 @@ namespace BTSMTL.Timeline.Editor
             m_Timeline = timeline;
             m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Automatic;
             m_HasPinnedRuntimePlayback = false;
+            Selection.activeObject = null;
 
             TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
                 timeline,
@@ -720,7 +722,11 @@ namespace BTSMTL.Timeline.Editor
                     m_DetailsHost.Add(inspector);
                 }
                 else
-                    m_DetailsHost.Add(new TimelineFormalClipDetailsView(clip, m_SlateProjection.ApplyFormalMutation));
+                    m_DetailsHost.Add(new TimelineFormalClipDetailsView(
+                        clip,
+                        m_SlateProjection.ApplyFormalMutation,
+                        m_SlateProjection.Selected as IEmbeddedTimelineClipBinding,
+                        m_SlateProjection.FrameRate));
                 ApplyDetailsVisibility();
                 return;
             }

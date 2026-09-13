@@ -82,6 +82,7 @@ namespace Slate
         bool CanCrossBlend(IEmbeddedTimelineClipBinding other);
         void DrawClipGUI(Rect rect);
         void DrawClipGUIExternal(Rect leftRect, Rect rightRect);
+        void ApplyCurveEdits();
         void AddIdentityKey(float time);
         void Split(float time);
         void StretchFit();

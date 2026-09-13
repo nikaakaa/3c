@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using System;
 using BTSMTL.Timeline;
+using Slate;
+using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,11 +13,24 @@ namespace BTSMTL.Timeline.Editor
     {
         readonly Clip m_Clip;
         readonly Action<Action, string> m_Apply;
+        readonly IEmbeddedTimelineClipBinding m_SlateClip;
+        readonly int m_FrameRate;
 
         public TimelineFormalClipDetailsView(Clip clip, Action<Action, string> apply)
+            : this(clip, apply, null, TimelineUtility.FrameRate)
+        {
+        }
+
+        public TimelineFormalClipDetailsView(
+            Clip clip,
+            Action<Action, string> apply,
+            IEmbeddedTimelineClipBinding slateClip,
+            int frameRate)
         {
             m_Clip = clip ?? throw new ArgumentNullException(nameof(clip));
             m_Apply = apply ?? throw new ArgumentNullException(nameof(apply));
+            m_SlateClip = slateClip;
+            m_FrameRate = Mathf.Max(1, frameRate);
             name = "timeline-formal-clip-details";
             Build();
         }
@@ -23,6 +38,8 @@ namespace BTSMTL.Timeline.Editor
         void Build()
         {
             Add(new Label("Formal Timeline Fields"));
+            Add(new Label($"Authoring Id: {m_Clip.AuthoringId}"));
+            Add(new Label($"Contract: {m_Clip.ContractKind}  |  Length: {m_Clip.Duration}F ({m_Clip.Duration / (float)m_FrameRate:0.###}s)"));
             AddInteger("Start Frame", m_Clip.StartFrame, value =>
                 Modify("Set Clip Start Frame", () =>
                 {
@@ -36,6 +53,12 @@ namespace BTSMTL.Timeline.Editor
                     if (m_Clip is MotionCurveClip motion)
                         motion.CurveEndFrame = Mathf.Clamp(motion.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
                 }));
+            AddInteger("Blend In", m_Clip.SelfEaseInFrame, value => Modify("Set Clip Blend In", () =>
+                m_Clip.SelfEaseInFrame = Mathf.Clamp(value, 0, Mathf.Max(0, m_Clip.Duration - 1))));
+            AddInteger("Blend Out", m_Clip.SelfEaseOutFrame, value => Modify("Set Clip Blend Out", () =>
+                m_Clip.SelfEaseOutFrame = Mathf.Clamp(value, 0, Mathf.Max(0, m_Clip.Duration - m_Clip.SelfEaseInFrame - 1))));
+            AddInteger("Clip In", m_Clip.ClipInFrame, value => Modify("Set Clip In", () =>
+                m_Clip.ClipInFrame = Mathf.Max(0, value)));
 
             if (m_Clip is MotionCurveClip motionCurve)
                 BuildMotionCurve(motionCurve);
@@ -51,6 +74,32 @@ namespace BTSMTL.Timeline.Editor
                 BuildActionCue(actionCue);
             else if (m_Clip is ScenePresentationParameterCurveClip sceneParameter)
                 BuildScenePresentation(sceneParameter);
+
+            if (m_SlateClip?.Keyable?.animationData?.animatedParameters != null &&
+                m_SlateClip.Keyable.animationData.animatedParameters.Count > 0)
+            {
+                Add(new Label("Slate Curve Parameters"));
+                var parameterView = new IMGUIContainer(DrawSlateCurveParameters);
+                parameterView.style.minHeight = 28f;
+                Add(parameterView);
+            }
+        }
+
+        void DrawSlateCurveParameters()
+        {
+            IKeyable keyable = m_SlateClip?.Keyable;
+            if (keyable?.animationData?.animatedParameters == null)
+                return;
+
+            EditorGUI.BeginChangeCheck();
+            for (int index = 0; index < keyable.animationData.animatedParameters.Count; index++)
+            {
+                AnimatedParameter parameter = keyable.animationData.animatedParameters[index];
+                if (parameter != null)
+                    AnimatableParameterEditor.ShowParameter(parameter, keyable);
+            }
+            if (EditorGUI.EndChangeCheck())
+                m_Apply(m_SlateClip.ApplyCurveEdits, "Edit Timeline Curve Parameters");
         }
 
         void BuildMotionCurve(MotionCurveClip clip)

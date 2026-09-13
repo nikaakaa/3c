@@ -302,6 +302,15 @@ namespace BTSMTL.Timeline.Editor
         public void SetRuntimeStatus(string value) => m_RuntimeStatus = value ?? string.Empty;
         public void DrawClipGUI(Rect rect) { }
         public void DrawClipGUIExternal(Rect leftRect, Rect rightRect) { }
+        public void ApplyCurveEdits()
+        {
+            foreach (KeyValuePair<string, AnimationCurve> pair in CaptureCurves())
+            {
+                if (m_Descriptors.TryGetValue(pair.Key, out TimelineCurveChannelDescriptor descriptor))
+                    descriptor.Replace(m_Source, pair.Value);
+            }
+            m_Source.Track.UpdateMix();
+        }
         public bool CanCrossBlend(IEmbeddedTimelineClipBinding other) => other != null && other.GetType() == GetType() && m_Source.IsMixable();
         public void AddIdentityKey(float time) => m_AnimationData.TryKeyIdentity(Mathf.Clamp(time, 0f, Length));
         public void Split(float time) { }

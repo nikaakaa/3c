@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using BTSMTL.EventGraphs;
 using BTSMTL.Timeline;
 using MCPForUnity.Editor.Helpers;
@@ -20,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     [McpForUnityTool(
         "btsmtl.export_code",
-        Description = "从一个精确的正式 Skill Graph、Timeline、Pose Graph 或 EventGraph 资产导出最小可重建 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
+        Description = "从一个精确的正式 Skill Graph、Timeline、Pose Graph 或 EventGraph 资产导出最小可重建 C# authoring 文件集；入口位于根专属目录，不修改输入资产，不读取旧源码，不触发生成或Build。",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -39,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             [ToolParameter("精确 CharacterPipelineDefinition 资产路径。", Required = true)]
             public string definition_asset_path { get; set; }
 
-            [ToolParameter("项目 Editor 代码目录内的精确 .cs 输出路径。", Required = true)]
+            [ToolParameter("根专属 Generated/<Root>/<Root>.cs 入口输出路径；局部文件由工具在同目录生成。", Required = true)]
             public string output_code_path { get; set; }
 
             [ToolParameter("正式生成入口 recipe identity。", Required = true)]
@@ -140,7 +141,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     BtsmtlAuthoringCodeExportService.Export(request, s_Adapters);
                 if (!result.Success)
                     return Failure(operation, result.Diagnostics);
-                BtsmtlAuthoringCodeFileWriter.Write(result);
+                BtsmtlAuthoringCodeFileWriteResult writeResult =
+                    BtsmtlAuthoringCodeFileWriter.Write(result);
+                if (!writeResult.Success)
+                    return new ErrorResponse(
+                        "authoring_code_write_failed",
+                        new
+                        {
+                            operation,
+                            failed_file_path = ProjectRelativePath(writeResult.FailedFilePath),
+                            message = writeResult.ErrorMessage,
+                            created_files = ProjectRelativePaths(writeResult.CreatedFiles),
+                            modified_files = ProjectRelativePaths(writeResult.ModifiedFiles),
+                            unchanged_files = ProjectRelativePaths(writeResult.UnchangedFiles),
+                            deleted_files = ProjectRelativePaths(writeResult.DeletedFiles)
+                        });
                 return new
                 {
                     success = true,
@@ -264,6 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
             UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(assetPath);
             if (main is GameplayAbilityDefinition ||
+                main is GameplayAbilityAdmissionProfile ||
                 main is BtsmtlSkillFlowGraph ||
                 main is TimelineAsset ||
                 main is CharacterPresentationPoseGraphAsset ||
@@ -355,6 +371,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 value.Contains("..") ||
                 !value.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Parameter '{key}' must be an exact Editor .cs path.");
+            if (output || string.Equals(key, "source_code_path", StringComparison.Ordinal))
+            {
+                const string generatedRoot =
+                    "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/";
+                if (!value.StartsWith(generatedRoot, StringComparison.Ordinal) ||
+                    value.IndexOf('/', generatedRoot.Length) < 0)
+                    throw new ArgumentException(
+                        $"Parameter '{key}'必须位于每个根专属的Generated/<Root>/<Root>.cs目录。");
+                string directoryName = value.Substring(0, value.LastIndexOf('/'));
+                string fileName = Path.GetFileNameWithoutExtension(value);
+                if (!string.Equals(
+                        directoryName.Substring(directoryName.LastIndexOf('/') + 1),
+                        fileName,
+                        StringComparison.Ordinal))
+                    throw new ArgumentException(
+                        $"Parameter '{key}'必须使用Generated/<Root>/<Root>.cs入口路径。");
+            }
             if (output && string.Equals(value, "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/BtsmtlAuthoringCodeMcpTools.cs", StringComparison.Ordinal))
                 throw new ArgumentException("Generated output cannot replace the authoring MCP source.");
             return value;
@@ -383,6 +416,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static string ProjectAbsolutePath(string relativePath) =>
             Path.Combine(ProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
 
+        static string ProjectRelativePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+            string root = ProjectRoot().Replace('\\', '/').TrimEnd('/');
+            string normalized = Path.GetFullPath(path).Replace('\\', '/');
+            return normalized.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase)
+                ? normalized.Substring(root.Length + 1)
+                : normalized;
+        }
+
+        static string[] ProjectRelativePaths(IEnumerable<string> paths) =>
+            (paths ?? Enumerable.Empty<string>())
+            .Select(ProjectRelativePath)
+            .ToArray();
+
         static object Failure(string operation, IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> diagnostics) =>
             new ErrorResponse(
                 diagnostics.FirstOrDefault().Code ?? "authoring_code_failed",
@@ -400,7 +449,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 code = value.Code,
                 subject = value.Subject,
                 message = value.Message,
-                suggestion = value.Suggestion
+                suggestion = value.Suggestion,
+                file_path = ProjectRelativePath(value.FilePath)
             })
             .Cast<object>()
             .ToArray();

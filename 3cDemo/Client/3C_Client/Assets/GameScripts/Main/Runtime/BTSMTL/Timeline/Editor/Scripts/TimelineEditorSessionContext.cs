@@ -106,14 +106,6 @@ namespace BTSMTL.Timeline.Editor
         void Apply(Action mutation, string undoName);
     }
 
-    public interface ITimelineEditorFrameGeometryPort
-    {
-        int FrameRate { get; }
-        float OneFrameWidth { get; }
-        int PositionToClosestFrame(float position);
-        float FrameToPosition(int frame);
-    }
-
     public abstract class TimelineEditorToolPanel : VisualElement, IDisposable
     {
         public virtual void Dispose()
@@ -202,14 +194,10 @@ namespace BTSMTL.Timeline.Editor
 
     public sealed class TimelineEditorSessionContext :
         ITimelineEditorSelectionPort,
-        ITimelineEditorMutationPort,
-        ITimelineEditorFrameGeometryPort
+        ITimelineEditorMutationPort
     {
         readonly TimelineEditorOpenRequest m_Request;
         Func<bool> m_IsReadOnly;
-        Func<float> m_OneFrameWidth;
-        Func<float, int> m_PositionToClosestFrame;
-        Func<int, float> m_FrameToPosition;
         TimelineEditorSelection m_Selection;
 
         internal TimelineEditorSessionContext(TimelineEditorOpenRequest request)
@@ -226,19 +214,11 @@ namespace BTSMTL.Timeline.Editor
         public TimelineEditorSelection Selection => m_Selection;
         public bool IsReadOnly => m_IsReadOnly != null && m_IsReadOnly();
         public int FrameRate => TimelineUtility.FrameRate;
-        public float OneFrameWidth => m_OneFrameWidth?.Invoke() ?? 0f;
         public event Action<TimelineEditorSelection> SelectionChanged;
 
-        internal void BindView(
-            Func<bool> isReadOnly,
-            Func<float> oneFrameWidth,
-            Func<float, int> positionToClosestFrame,
-            Func<int, float> frameToPosition)
+        internal void BindReadOnly(Func<bool> isReadOnly)
         {
             m_IsReadOnly = isReadOnly ?? throw new ArgumentNullException(nameof(isReadOnly));
-            m_OneFrameWidth = oneFrameWidth ?? throw new ArgumentNullException(nameof(oneFrameWidth));
-            m_PositionToClosestFrame = positionToClosestFrame ?? throw new ArgumentNullException(nameof(positionToClosestFrame));
-            m_FrameToPosition = frameToPosition ?? throw new ArgumentNullException(nameof(frameToPosition));
         }
 
         internal void SetSelection(object target)
@@ -285,19 +265,10 @@ namespace BTSMTL.Timeline.Editor
             Timeline.ApplyModify(mutation ?? throw new ArgumentNullException(nameof(mutation)), undoName);
         }
 
-        public int PositionToClosestFrame(float position) =>
-            m_PositionToClosestFrame != null ? m_PositionToClosestFrame(position) : 0;
-
-        public float FrameToPosition(int frame) =>
-            m_FrameToPosition != null ? m_FrameToPosition(frame) : 0f;
-
         internal void Dispose()
         {
             SelectionChanged = null;
             m_IsReadOnly = null;
-            m_OneFrameWidth = null;
-            m_PositionToClosestFrame = null;
-            m_FrameToPosition = null;
             m_Selection = default;
         }
     }

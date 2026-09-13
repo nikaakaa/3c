@@ -79,7 +79,7 @@ namespace BTSMTL.Timeline.Editor
             m_OpenSourceClip = openSourceClip;
             m_RequestRepaint = requestRepaint ?? throw new ArgumentNullException(nameof(requestRepaint));
             m_Session = new TimelineEditorSessionContext(request);
-            m_Session.BindView(() => m_ReadOnly, () => 1f, _ => 0, _ => 0f);
+            m_Session.BindReadOnly(() => m_ReadOnly);
             m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
             m_Surface.Bind(BuildContent(), this, this);
         }

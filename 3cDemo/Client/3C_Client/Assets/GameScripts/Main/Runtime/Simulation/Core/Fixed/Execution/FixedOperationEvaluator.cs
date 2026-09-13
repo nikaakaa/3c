@@ -400,10 +400,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
         readonly FixedMotionAccumulator m_Motion;
         readonly OperationControlRuntime<FixedOperationTarget> m_Control;
-        readonly ICharacterControlModule m_CharacterControl;
-        readonly FixedCharacterControlReadPort m_CharacterControlRead;
-        readonly ICharacterControlStatePort m_CharacterControlState;
-        readonly FixedCharacterControlOutputPort m_CharacterControlOutput;
+        readonly FixedControlDomainRuntime m_ControlDomain;
         readonly FixedAbilityDomainRuntime m_Ability;
 
         public FixedOperationEvaluator(
@@ -492,36 +489,6 @@ namespace ThirdPersonSimulation.Fixed
                 workspace.MotionWarpSamples,
                 m_ActionStore);
             var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame);
-            if (program.ControlModuleBinding.IsValid)
-            {
-                ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
-                FixedStatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
-                CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
-                m_CharacterControl = module;
-                m_CharacterControlRead = new FixedCharacterControlReadPort(
-                    m_Input,
-                    m_Frame,
-					parameter => ReadControlParameter(controlCatalog, parameter),
-					skill => m_Actions.IsAbilityActive(skill),
-					skill => (m_ActionStore.TryGetActiveAbilityInstanceId(skill, out ulong instanceId), instanceId),
-					skill => m_Actions.IsAbilityCompleted(skill),
-					skill => m_Actions.CompletedAbilityInstanceId(skill),
-					(skill, window) => m_Blackboard.IsActionWindowActive(skill, window),
-					route =>
-					{
-						bool found = m_Equipment.TryReadActionContext(route, out EquipmentActionContext context);
-						return (found, context);
-					});
-                m_CharacterControlState = new FixedCharacterControlStatePort(characterControlState, characterControlLayout);
-                m_CharacterControlOutput = new FixedCharacterControlOutputPort(
-                    access,
-                    controlCatalog,
-                    m_Input,
-                    locomotion,
-                    m_Actions,
-                    m_Frame.Trace);
-            }
             var camera = new FixedCameraOperationRuntime(access, m_Frame.Presentation);
             FixedStatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new FixedTimelineControlStatePort(access, timelineState);
@@ -565,6 +532,19 @@ namespace ThirdPersonSimulation.Fixed
                 m_Actions,
                 m_ActionStore,
                 m_Control);
+            m_ControlDomain = new FixedControlDomainRuntime(
+                program,
+                layout,
+                access,
+                m_Frame,
+                m_Input,
+                m_Actions,
+                m_ActionStore,
+                m_Blackboard,
+                m_Equipment,
+                locomotion,
+                m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy),
+                controlModules);
         }
 
         public bool Matches(SimulationEvaluateRequest request)
@@ -593,7 +573,7 @@ namespace ThirdPersonSimulation.Fixed
                 AdvanceGameplayEffects();
                 ApplyInputRequests();
                 PrepareTimelineDecision();
-                TickCharacterControl();
+                m_ControlDomain.Tick();
                 m_Ability.Tick();
                 TickOperationControl();
                 m_Equipment.EndEvaluation();
@@ -655,7 +635,7 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.timeline-decision")]
         void PrepareTimelineDecision()
         {
-            if (m_CharacterControl == null)
+            if (!m_ControlDomain.IsInstalled)
             {
                 m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
                 return;
@@ -678,43 +658,6 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.control-tick")]
         void TickOperationControl()
         {
-        }
-
-        [PerformanceProbe("simulation.operation.character-control-tick")]
-        void TickCharacterControl()
-        {
-            if (m_CharacterControl == null)
-                return;
-            var context = new CharacterControlTickContext(
-                m_Frame.ActorId,
-                m_Frame.Tick,
-                m_Frame.Program.Manifest.TickRate);
-            m_CharacterControl.Tick(
-                in context,
-                m_CharacterControlRead,
-                m_CharacterControlState,
-                m_CharacterControlOutput);
-        }
-
-        FixedScalar ReadControlParameter(
-            ProgramCatalogEntry controlCatalog,
-            CharacterControlParameterId parameter)
-        {
-            string name = $"Parameter:{parameter.Value}:NumericValue";
-            for (int i = 0; i < controlCatalog.Fields.Count; i++)
-            {
-                ProgramCatalogField field = controlCatalog.Fields[i];
-                if (!string.Equals(field.Name, name, StringComparison.Ordinal))
-                    continue;
-                if (field.Kind != ProgramCatalogFieldKind.Constant || field.ConstantIndex < 0 ||
-                    field.ConstantIndex >= m_Frame.Program.Constants.Count)
-                    throw new InvalidOperationException($"Control module field '{name}' is not a valid constant.");
-                ProgramConstant value = m_Frame.Program.Constants[field.ConstantIndex];
-                if (value.Kind != ProgramConstantKind.Scalar)
-                    throw new InvalidOperationException($"Control module field '{name}' is not Scalar.");
-                return value.Scalar;
-            }
-            throw new InvalidOperationException($"Control module '{controlCatalog.Identity}' has no '{name}' field.");
         }
 
         [PerformanceProbe("simulation.operation.motion-resolve")]

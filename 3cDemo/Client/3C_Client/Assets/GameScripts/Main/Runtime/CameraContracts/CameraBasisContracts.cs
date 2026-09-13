@@ -4,6 +4,15 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    public enum CameraResetReason : byte
+    {
+        None = 0,
+        Initialization = 1,
+        BodyCommittedBranchReplacement = 2,
+        BodySelectedStreamReset = 3,
+        RuntimeReset = 4
+    }
+
     public readonly struct CameraInitialState
     {
         public CameraInitialState(float yaw, float pitch)
@@ -106,7 +115,11 @@ namespace ThirdPersonCamera
         public string TargetSource { get; private set; } = string.Empty;
         public string ProjectionRevision { get; private set; } = string.Empty;
         public Vector2 RawLook { get; private set; }
+        public Vector2 ConsumedLook { get; private set; }
         public CameraResponseRequest Response { get; private set; }
+        public CameraResetReason ResetReason { get; private set; }
+        public bool Paused { get; private set; }
+        public float DeltaSeconds { get; private set; }
         public IReadOnlyList<CameraEffectContribution> Effects { get; private set; } =
             Array.Empty<CameraEffectContribution>();
 
@@ -116,7 +129,11 @@ namespace ThirdPersonCamera
             string targetSource,
             string projectionRevision,
             Vector2 rawLook,
+            Vector2 consumedLook,
             in CameraResponseRequest response,
+            CameraResetReason resetReason,
+            bool paused,
+            float deltaSeconds,
             IReadOnlyList<CameraEffectContribution> effects)
         {
             Plan = plan;
@@ -124,7 +141,11 @@ namespace ThirdPersonCamera
             TargetSource = targetSource ?? string.Empty;
             ProjectionRevision = projectionRevision ?? string.Empty;
             RawLook = rawLook;
+            ConsumedLook = consumedLook;
             Response = response;
+            ResetReason = resetReason;
+            Paused = paused;
+            DeltaSeconds = deltaSeconds;
             if (effects == null || effects.Count == 0)
             {
                 Effects = Array.Empty<CameraEffectContribution>();
@@ -143,7 +164,11 @@ namespace ThirdPersonCamera
             TargetSource = string.Empty;
             ProjectionRevision = string.Empty;
             RawLook = Vector2.zero;
+            ConsumedLook = Vector2.zero;
             Response = default;
+            ResetReason = CameraResetReason.None;
+            Paused = false;
+            DeltaSeconds = 0f;
             Effects = Array.Empty<CameraEffectContribution>();
         }
     }

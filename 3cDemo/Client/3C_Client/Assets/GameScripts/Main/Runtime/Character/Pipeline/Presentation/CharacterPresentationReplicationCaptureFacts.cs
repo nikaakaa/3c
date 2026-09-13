@@ -502,6 +502,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterCameraPresentationCaptureFrame
     {
         readonly CameraBasisSnapshot m_Basis;
+        readonly CameraCollisionResult m_Collision;
+        readonly CameraEffectContribution[] m_EffectContributions;
 
         public CharacterCameraPresentationCaptureFrame(
             bool hasCamera,
@@ -514,9 +516,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool finalOutputAvailable,
             Vector3 finalPosition,
             Quaternion finalRotation,
-            float finalFieldOfView)
+            float finalFieldOfView,
+            string sequenceId = "",
+            string sourceId = "",
+            Vector2 rawLook = default,
+            Vector2 consumedLook = default,
+            CameraResponseMode responseMode = CameraResponseMode.Weighted,
+            float responseWeight = 1f,
+            float pitchResponseWeight = 1f,
+            float yawResponseWeight = 1f,
+            CameraResetReason resetReason = CameraResetReason.None,
+            bool paused = false,
+            IReadOnlyList<CameraEffectContribution> effects = null,
+            in CameraCollisionResult collision = default)
         {
             m_Basis = basis;
+            m_Collision = collision;
+            m_EffectContributions = CopyEffects(effects);
             HasCamera = hasCamera;
             PresentationFrame = presentationFrame;
             LocalLogicTick = localLogicTick;
@@ -527,6 +543,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FinalPosition = finalPosition;
             FinalRotation = finalRotation;
             FinalFieldOfView = finalFieldOfView;
+            SequenceId = sequenceId ?? string.Empty;
+            SourceId = sourceId ?? string.Empty;
+            RawLook = rawLook;
+            ConsumedLook = consumedLook;
+            ResponseMode = responseMode;
+            ResponseWeight = responseWeight;
+            PitchResponseWeight = pitchResponseWeight;
+            YawResponseWeight = yawResponseWeight;
+            ResetReason = resetReason;
+            Paused = paused;
         }
 
         public static CharacterCameraPresentationCaptureFrame Empty =>
@@ -542,6 +568,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default,
                 default,
                 0f);
+
+        static CameraEffectContribution[] CopyEffects(
+            IReadOnlyList<CameraEffectContribution> effects)
+        {
+            if (effects == null || effects.Count == 0)
+                return Array.Empty<CameraEffectContribution>();
+            var copy = new CameraEffectContribution[effects.Count];
+            for (int i = 0; i < copy.Length; i++)
+                copy[i] = effects[i];
+            return copy;
+        }
 
         public CharacterCameraPresentationCaptureFrame WithPresentationContext(
             ulong presentationFrame,
@@ -559,7 +596,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FinalOutputAvailable,
                 FinalPosition,
                 FinalRotation,
-                FinalFieldOfView);
+                FinalFieldOfView,
+                SequenceId,
+                SourceId,
+                RawLook,
+                ConsumedLook,
+                ResponseMode,
+                ResponseWeight,
+                PitchResponseWeight,
+                YawResponseWeight,
+                ResetReason,
+                Paused,
+                m_EffectContributions,
+                in m_Collision);
 
         [DiagnosticField]
         [DiagnosticKey("has-camera")]
@@ -612,6 +661,86 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FinalFieldOfView { get; }
 
         [DiagnosticField]
+        [DiagnosticKey("sequence-id")]
+        [DiagnosticGroup("camera-plan")]
+        public string SequenceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("source-id")]
+        [DiagnosticGroup("camera-plan")]
+        public string SourceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("raw-look")]
+        [DiagnosticGroup("camera-input")]
+        public Vector2 RawLook { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("consumed-look")]
+        [DiagnosticGroup("camera-input")]
+        public Vector2 ConsumedLook { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("response-mode")]
+        [DiagnosticGroup("camera-input")]
+        public CameraResponseMode ResponseMode { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("response-weight")]
+        [DiagnosticGroup("camera-input")]
+        public float ResponseWeight { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("pitch-response-weight")]
+        [DiagnosticGroup("camera-input")]
+        public float PitchResponseWeight { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("yaw-response-weight")]
+        [DiagnosticGroup("camera-input")]
+        public float YawResponseWeight { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("reset-reason")]
+        [DiagnosticGroup("camera-frame")]
+        public CameraResetReason ResetReason { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("paused")]
+        [DiagnosticGroup("camera-frame")]
+        public bool Paused { get; }
+
+        [DiagnosticTable("effects", 1, 64)]
+        [DiagnosticGroup("camera-effects")]
+        public CharacterCameraEffectCapturePage Effects =>
+            new CharacterCameraEffectCapturePage(m_EffectContributions);
+
+        [DiagnosticField]
+        [DiagnosticKey("collision-status")]
+        [DiagnosticGroup("camera-collision")]
+        public CameraCollisionStatus CollisionStatus => m_Collision.Status;
+
+        [DiagnosticField]
+        [DiagnosticKey("collision-correction-distance")]
+        [DiagnosticGroup("camera-collision")]
+        public float CollisionCorrectionDistance => m_Collision.CorrectionDistance;
+
+        [DiagnosticField]
+        [DiagnosticKey("collision-desired-position")]
+        [DiagnosticGroup("camera-collision")]
+        public Vector3 CollisionDesiredPosition => m_Collision.DesiredLocation;
+
+        [DiagnosticField]
+        [DiagnosticKey("collision-constrained-position")]
+        [DiagnosticGroup("camera-collision")]
+        public Vector3 CollisionConstrainedPosition => m_Collision.ConstrainedLocation;
+
+        [DiagnosticField]
+        [DiagnosticKey("collision-collider")]
+        [DiagnosticGroup("camera-collision")]
+        public string CollisionColliderIdentity => m_Collision.ColliderIdentity;
+
+        [DiagnosticField]
         [DiagnosticKey("basis-valid")]
         [DiagnosticGroup("camera-output")]
         public bool BasisValid => m_Basis.Valid;
@@ -630,6 +759,88 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("look-direction")]
         [DiagnosticGroup("camera-output")]
         public Vector3 LookDirection => m_Basis.LookDirection;
+    }
+
+    public readonly struct CharacterCameraEffectCapturePage
+    {
+        readonly CameraEffectContribution[] m_Source;
+
+        internal CharacterCameraEffectCapturePage(CameraEffectContribution[] source)
+        {
+            m_Source = source;
+        }
+
+        public int Count => m_Source?.Length ?? 0;
+
+        public CharacterCameraEffectCaptureRow this[int index] =>
+            new CharacterCameraEffectCaptureRow(m_Source[index]);
+    }
+
+    public readonly struct CharacterCameraEffectCaptureRow
+    {
+        internal CharacterCameraEffectCaptureRow(CameraEffectContribution source)
+        {
+            Stage = source.Stage;
+            ResourceId = source.ResourceId;
+            Weight = source.Weight;
+            RemainingSeconds = source.RemainingSeconds;
+            Priority = source.Priority;
+            Active = source.Active;
+            SourceId = source.SourceId;
+            Generation = source.Generation;
+            SourceActionInstanceId = source.SourceActionInstanceId;
+            Cycle = source.Cycle;
+            EventId = source.EventId;
+            StopReason = source.StopReason;
+        }
+
+        [DiagnosticField]
+        [DiagnosticKey("stage")]
+        public CameraEffectStage Stage { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("resource-id")]
+        public string ResourceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("weight")]
+        public float Weight { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("remaining-seconds")]
+        public float RemainingSeconds { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("priority")]
+        public int Priority { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("active")]
+        public bool Active { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("source-id")]
+        public string SourceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("generation")]
+        public ulong Generation { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("source-action-instance-id")]
+        public ulong SourceActionInstanceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("cycle")]
+        public int Cycle { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("event-id")]
+        public string EventId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("stop-reason")]
+        public CameraPresentationStopReason StopReason { get; }
     }
 
     public readonly struct CharacterPresentationCommandCaptureFacts
@@ -728,20 +939,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct CharacterPresentationFactCaptureFrame
     {
         internal CharacterPresentationFactCaptureFrame(
-            in CharacterPresentationFactFrame frame)
+            in CharacterPresentationFactFrame frame,
+            CharacterAnimationVariableFrame variables)
         {
+            if (!frame.IsValid || variables == null ||
+                variables.RenderFrame != frame.Identity.RenderFrame ||
+                variables.SimulationTick.Value != frame.SimulationTick.Value ||
+                variables.BodyDiscontinuityGeneration != frame.BodyDiscontinuityGeneration)
+                throw new ArgumentException("Presentation diagnostic Fact frame is incomplete.");
             HasFactFrame = frame.IsValid;
             SimulationTick = frame.SimulationTick.Value;
             Grounded = frame.Grounded;
-            HorizontalSpeed = frame.HorizontalSpeed;
-            HorizontalAcceleration = frame.HorizontalAcceleration;
-            VerticalSpeed = frame.VerticalSpeed;
-            MovementDirection = frame.MovementDirection;
+            HorizontalSpeed = variables.RequireFloat(CharacterAnimationVariableIds.HorizontalSpeed);
+            HorizontalAcceleration = variables.RequireFloat(CharacterAnimationVariableIds.HorizontalAcceleration);
+            VerticalSpeed = variables.RequireFloat(CharacterAnimationVariableIds.VerticalSpeed);
+            MovementDirection = variables.Require(CharacterAnimationVariableIds.MovementDirection).As<Vector2>();
             LocomotionPlanarBasis = frame.LocomotionPlanarBasis;
             DesiredPlanarVelocity = frame.DesiredPlanarVelocity;
-            DesiredDirection = frame.DesiredDirection;
-            FacingError = frame.FacingError;
-            MotionPhase = frame.MotionPhase;
+            DesiredDirection = variables.Require(CharacterAnimationVariableIds.DesiredDirection).As<Vector2>();
+            FacingError = variables.RequireFloat(CharacterAnimationVariableIds.FacingError);
+            MotionPhase = variables.Require(CharacterAnimationVariableIds.MotionPhase).As<CharacterPresentationMotionPhase>();
             MovementMode = frame.MovementModeId ?? string.Empty;
             CommittedMovementPlaybackClock clock = frame.MovementPlaybackClock;
             MovementPlaybackOwner = clock.IsValid ? clock.OwnerIdentity : string.Empty;

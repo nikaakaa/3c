@@ -15,7 +15,7 @@ namespace ThirdPersonCamera
 
         public CameraEffectKind Kind => CameraEffectKind.Zoom;
         public CameraEffectStage Stage => CameraEffectStage.Zoom;
-        public bool UpdatesBySource => true;
+        public bool UpdatesBySource => false;
 
         public bool HasResource(string resourceId) =>
             m_Projection.TryGetZoom(resourceId, out _);
@@ -25,9 +25,27 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (state == null || !m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload))
+            CameraEffectRuntimeState selected = CameraEffectRuntimeStateStore.Select(active, Kind);
+            if (selected == null)
                 return plan;
+            CameraFramePlan result = plan;
+            for (int i = 0; i < active.Count; i++)
+            {
+                CameraEffectRuntimeState state = active[i];
+                if (state.Request.Kind != Kind ||
+                    !m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload) ||
+                    state != selected && payload.PlayStackingType != CameraEffectStackingType.Add)
+                    continue;
+                result = ApplySingle(result, state, payload);
+            }
+            return result;
+        }
+
+        CameraFramePlan ApplySingle(
+            CameraFramePlan plan,
+            CameraEffectRuntimeState state,
+            CameraZoomPayload payload)
+        {
             float envelope = state.Retired
                 ? CameraEffectEvaluationMath.ResolveRetiredWeight(
                     state,

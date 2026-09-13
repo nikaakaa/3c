@@ -15,7 +15,7 @@ namespace ThirdPersonCamera
 
         public CameraEffectKind Kind => CameraEffectKind.Stretch;
         public CameraEffectStage Stage => CameraEffectStage.Stretch;
-        public bool UpdatesBySource => true;
+        public bool UpdatesBySource => false;
 
         public bool HasResource(string resourceId) =>
             m_Projection.TryGetStretch(resourceId, out _);
@@ -25,9 +25,28 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (state == null || !m_Projection.TryGetStretch(state.Request.ResourceId, out CameraStretchPayload payload))
+            CameraEffectRuntimeState selected = CameraEffectRuntimeStateStore.Select(active, Kind);
+            if (selected == null)
                 return plan;
+            CameraFramePlan result = plan;
+            for (int i = 0; i < active.Count; i++)
+            {
+                CameraEffectRuntimeState state = active[i];
+                if (state.Request.Kind != Kind ||
+                    !m_Projection.TryGetStretch(state.Request.ResourceId, out CameraStretchPayload payload) ||
+                    state != selected && payload.PlayStackingType != CameraEffectStackingType.Add)
+                    continue;
+                result = ApplySingle(result, state, payload, in input);
+            }
+            return result;
+        }
+
+        static CameraFramePlan ApplySingle(
+            CameraFramePlan plan,
+            CameraEffectRuntimeState state,
+            CameraStretchPayload payload,
+            in CameraFrameInput input)
+        {
             float envelope = state.Retired
                 ? CameraEffectEvaluationMath.ResolveRetiredWeight(
                     state,

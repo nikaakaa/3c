@@ -1,4 +1,6 @@
 using Cinemachine;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -50,6 +52,8 @@ namespace ThirdPersonCamera
 
             virtualCamera.PreviousStateIsValid = false;
             defaultVirtualCameraPriority = virtualCamera.Priority;
+            shotRigs ??= Array.Empty<CameraShotRigBinding>();
+            ValidateShotBindings();
             RefreshBasisSnapshot();
         }
 
@@ -86,7 +90,7 @@ namespace ThirdPersonCamera
             if (plan.ResetHistory)
                 targetCamera.PreviousStateIsValid = false;
             UpdateBrain();
-            RefreshBasisSnapshot(plan.AimPoint);
+            RefreshBasisSnapshot(plan.AimPoint, plan.Collision);
         }
 
         public void Reset()
@@ -139,8 +143,24 @@ namespace ThirdPersonCamera
                 if (binding != null && string.Equals(binding.ShotId, shotId, System.StringComparison.Ordinal))
                     return binding.VirtualCamera;
             }
-            Debug.LogError($"CinemachineCameraRigAdapter has no rig binding for Camera Shot '{shotId}'.", this);
-            return null;
+            throw new InvalidOperationException(
+                $"CinemachineCameraRigAdapter has no rig binding for Camera Shot '{shotId}'.");
+        }
+
+        void ValidateShotBindings()
+        {
+            var shotIds = new HashSet<string>(StringComparer.Ordinal);
+            var cameras = new HashSet<int>();
+            for (int i = 0; i < shotRigs.Length; i++)
+            {
+                CameraShotRigBinding binding = shotRigs[i];
+                if (binding == null || string.IsNullOrWhiteSpace(binding.ShotId) ||
+                    binding.VirtualCamera == null ||
+                    !shotIds.Add(binding.ShotId) ||
+                    !cameras.Add(binding.VirtualCamera.GetInstanceID()))
+                    throw new InvalidOperationException(
+                        $"CinemachineCameraRigAdapter has an invalid or duplicated Shot rig binding at index {i}.");
+            }
         }
 
         void ActivateCamera(CinemachineVirtualCamera targetCamera)
@@ -161,7 +181,9 @@ namespace ThirdPersonCamera
             }
         }
 
-        void RefreshBasisSnapshot(Vector3 aimPoint = default)
+        void RefreshBasisSnapshot(
+            Vector3 aimPoint = default,
+            CameraCollisionResult collision = default)
         {
             if (brain == null || brain.ActiveVirtualCamera == null)
             {
@@ -195,7 +217,7 @@ namespace ThirdPersonCamera
                 rotation,
                 state.Lens.FieldOfView,
                 basisSnapshot.Valid,
-                plan.Collision);
+                collision);
         }
 
         bool HasValidBrain() => brain != null && brain.m_UpdateMethod == CinemachineBrain.UpdateMethod.ManualUpdate;

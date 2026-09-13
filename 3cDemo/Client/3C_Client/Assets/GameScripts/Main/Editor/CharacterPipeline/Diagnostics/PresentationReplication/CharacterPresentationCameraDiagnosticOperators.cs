@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         const string Reset = "reset-sequence";
         const string Delta = "delta-seconds";
         const string ResetTracking = "reset-tracking";
+        const string ResetReason = "reset-reason";
         const string PlanValid = "plan-valid";
         const string TargetValid = "target-valid";
         const string FinalOutput = "final-output-available";
@@ -21,6 +22,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
         const string FinalRotation = "final-rotation";
         const string FieldOfView = "field-of-view";
         const string BasisValid = "basis-valid";
+        const string CollisionStatus = "collision-status";
+        const string CollisionCorrection = "collision-correction-distance";
         const string MinimumFieldOfView = "minimum-field-of-view";
         const string MaximumFieldOfView = "maximum-field-of-view";
         const string MaximumPositionJump = "maximum-position-jump";
@@ -38,13 +41,16 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     Main(Reset, DiagnosticValueKind.UInt64),
                     Main(Delta, DiagnosticValueKind.Float32),
                     Main(ResetTracking, DiagnosticValueKind.Boolean),
+                    Main(ResetReason, DiagnosticValueKind.Int32),
                     Main(PlanValid, DiagnosticValueKind.Boolean),
                     Main(TargetValid, DiagnosticValueKind.Boolean),
                     Main(FinalOutput, DiagnosticValueKind.Boolean),
                     Main(FinalPosition, DiagnosticValueKind.Vector3),
                     Main(FinalRotation, DiagnosticValueKind.Quaternion),
                     Main(FieldOfView, DiagnosticValueKind.Float32),
-                    Main(BasisValid, DiagnosticValueKind.Boolean)
+                    Main(BasisValid, DiagnosticValueKind.Boolean),
+                    Main(CollisionStatus, DiagnosticValueKind.Int32),
+                    Main(CollisionCorrection, DiagnosticValueKind.Float32)
                 },
                 new[]
                 {
@@ -89,13 +95,16 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                                 inputs.Reset,
                                 inputs.Delta,
                                 inputs.ResetTracking,
+                                inputs.ResetReason,
                                 inputs.PlanValid,
                                 inputs.TargetValid,
                                 inputs.FinalOutput,
                                 inputs.FinalPosition,
                                 inputs.FinalRotation,
                                 inputs.FieldOfView,
-                                inputs.BasisValid
+                                inputs.BasisValid,
+                                inputs.CollisionStatus,
+                                inputs.CollisionCorrection
                             },
                             missing))
                 {
@@ -108,16 +117,21 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     row.GetUInt64(inputs.Frame.Handle),
                     row.GetUInt64(inputs.Reset.Handle),
                     row.GetBoolean(inputs.ResetTracking.Handle),
+                    row.GetInt32(inputs.ResetReason.Handle),
                     row.GetBoolean(inputs.PlanValid.Handle),
                     row.GetBoolean(inputs.TargetValid.Handle),
                     row.GetBoolean(inputs.FinalOutput.Handle),
                     row.GetVector3(inputs.FinalPosition.Handle),
                     row.GetQuaternion(inputs.FinalRotation.Handle),
                     row.GetFloat32(inputs.FieldOfView.Handle),
-                    row.GetBoolean(inputs.BasisValid.Handle));
+                    row.GetBoolean(inputs.BasisValid.Handle),
+                    row.GetInt32(inputs.CollisionStatus.Handle),
+                    row.GetFloat32(inputs.CollisionCorrection.Handle));
                 var reasons = new List<string>();
                 if (current.Frame == 0)
                     reasons.Add("presentation-frame-missing");
+                if (current.ResetReason < 0 || current.ResetReason > 4)
+                    reasons.Add("reset-reason-invalid");
                 if (!current.PlanValid)
                     reasons.Add("plan-invalid");
                 if (!current.TargetValid)
@@ -126,6 +140,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     reasons.Add("final-output-unavailable");
                 if (!current.BasisValid && current.FinalOutput)
                     reasons.Add("camera-basis-invalid");
+                if (current.CollisionStatus < 0 || current.CollisionStatus > 4 ||
+                    float.IsNaN(current.CollisionCorrection) ||
+                    float.IsInfinity(current.CollisionCorrection) ||
+                    current.CollisionCorrection < 0f)
+                    reasons.Add("collision-result-invalid");
                 if (current.FieldOfView < minimumFov ||
                     current.FieldOfView > maximumFov)
                 {
@@ -259,7 +278,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 in DiagnosticVector3 finalPosition,
                 in DiagnosticQuaternion finalRotation,
                 float fieldOfView,
-                bool basisValid)
+                bool basisValid,
+                int resetReason,
+                int collisionStatus,
+                float collisionCorrection)
             {
                 Frame = frame;
                 ResetSequence = resetSequence;
@@ -271,6 +293,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 FinalRotation = finalRotation;
                 FieldOfView = fieldOfView;
                 BasisValid = basisValid;
+                ResetReason = resetReason;
+                CollisionStatus = collisionStatus;
+                CollisionCorrection = collisionCorrection;
             }
 
             public ulong Frame { get; }
@@ -283,6 +308,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public DiagnosticQuaternion FinalRotation { get; }
             public float FieldOfView { get; }
             public bool BasisValid { get; }
+            public int ResetReason { get; }
+            public int CollisionStatus { get; }
+            public float CollisionCorrection { get; }
         }
 
         sealed class Inputs
@@ -294,6 +322,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 Reset = context.Input("reset-sequence");
                 Delta = context.Input("delta-seconds");
                 ResetTracking = context.Input("reset-tracking");
+                ResetReason = context.Input("reset-reason");
                 PlanValid = context.Input("plan-valid");
                 TargetValid = context.Input("target-valid");
                 FinalOutput = context.Input("final-output-available");
@@ -301,6 +330,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 FinalRotation = context.Input("final-rotation");
                 FieldOfView = context.Input("field-of-view");
                 BasisValid = context.Input("basis-valid");
+                CollisionStatus = context.Input("collision-status");
+                CollisionCorrection = context.Input("collision-correction-distance");
             }
 
             public DiagnosticBoundInput HasCamera { get; }
@@ -308,6 +339,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public DiagnosticBoundInput Reset { get; }
             public DiagnosticBoundInput Delta { get; }
             public DiagnosticBoundInput ResetTracking { get; }
+            public DiagnosticBoundInput ResetReason { get; }
             public DiagnosticBoundInput PlanValid { get; }
             public DiagnosticBoundInput TargetValid { get; }
             public DiagnosticBoundInput FinalOutput { get; }
@@ -315,6 +347,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public DiagnosticBoundInput FinalRotation { get; }
             public DiagnosticBoundInput FieldOfView { get; }
             public DiagnosticBoundInput BasisValid { get; }
+            public DiagnosticBoundInput CollisionStatus { get; }
+            public DiagnosticBoundInput CollisionCorrection { get; }
         }
     }
 
@@ -730,6 +764,197 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             public DiagnosticBoundInput CommandWeight { get; }
             public DiagnosticBoundInput CueSourceId { get; }
             public DiagnosticBoundInput CueId { get; }
+        }
+    }
+
+    internal sealed class CharacterPresentationCameraEffectLifecycleOperator :
+        IDiagnosticAnalysisOperator
+    {
+        const string Stage = "stage";
+        const string ResourceId = "resource-id";
+        const string Weight = "weight";
+        const string Remaining = "remaining-seconds";
+        const string Priority = "priority";
+        const string Active = "active";
+        const string SourceId = "source-id";
+        const string Generation = "generation";
+        const string SourceActionInstanceId = "source-action-instance-id";
+        const string Cycle = "cycle";
+        const string EventId = "event-id";
+        const string StopReason = "stop-reason";
+
+        public DiagnosticOperatorDescriptor Descriptor { get; } =
+            new DiagnosticOperatorDescriptor(
+                "camera/effect-lifecycle",
+                "camera",
+                new[]
+                {
+                    Table(Stage, DiagnosticValueKind.Int32),
+                    Table(ResourceId, DiagnosticValueKind.Identity),
+                    Table(Weight, DiagnosticValueKind.Float32),
+                    Table(Remaining, DiagnosticValueKind.Float32),
+                    Table(Priority, DiagnosticValueKind.Int32),
+                    Table(Active, DiagnosticValueKind.Boolean),
+                    Table(SourceId, DiagnosticValueKind.Identity),
+                    Table(Generation, DiagnosticValueKind.UInt64),
+                    Table(SourceActionInstanceId, DiagnosticValueKind.UInt64),
+                    Table(Cycle, DiagnosticValueKind.Int32),
+                    Table(EventId, DiagnosticValueKind.Identity),
+                    Table(StopReason, DiagnosticValueKind.Int32)
+                },
+                Array.Empty<DiagnosticOperatorParameter>());
+
+        public DiagnosticOperatorResult Execute(
+            DiagnosticOperatorExecutionContext context)
+        {
+            var inputs = new Inputs(context);
+            var missing = new HashSet<string>(StringComparer.Ordinal);
+            var findings = new List<DiagnosticFinding>();
+            DiagnosticDatasetCursor cursor = context.CreateCursor(1);
+            int eligible = 0;
+            int failed = 0;
+            int findingIndex = 0;
+            while (cursor.MoveNext())
+            {
+                DiagnosticDatasetRow row = cursor.Current;
+                if (!context.IncludesDimension(row.SampleKey.DimensionId) ||
+                    !CharacterPresentationReplicationDiagnosticOperatorSupport.Require(
+                        in row,
+                        new[]
+                        {
+                            inputs.Stage,
+                            inputs.ResourceId,
+                            inputs.Weight,
+                            inputs.Remaining,
+                            inputs.Priority,
+                            inputs.Active,
+                            inputs.SourceId,
+                            inputs.Generation,
+                            inputs.SourceActionInstanceId,
+                            inputs.Cycle,
+                            inputs.EventId,
+                            inputs.StopReason
+                        },
+                        missing))
+                    continue;
+                eligible++;
+                int stage = row.GetInt32(inputs.Stage.Handle);
+                string resourceId = row.GetIdentity(inputs.ResourceId.Handle);
+                float weight = row.GetFloat32(inputs.Weight.Handle);
+                float remaining = row.GetFloat32(inputs.Remaining.Handle);
+                bool active = row.GetBoolean(inputs.Active.Handle);
+                string sourceId = row.GetIdentity(inputs.SourceId.Handle);
+                int cycle = row.GetInt32(inputs.Cycle.Handle);
+                string eventId = row.GetIdentity(inputs.EventId.Handle);
+                int stopReason = row.GetInt32(inputs.StopReason.Handle);
+                bool valid = stage >= 1 && stage <= 5 &&
+                    !string.IsNullOrEmpty(resourceId) &&
+                    !float.IsNaN(weight) && !float.IsInfinity(weight) && weight >= 0f &&
+                    !float.IsNaN(remaining) && remaining >= 0f &&
+                    cycle >= 0 && stopReason >= 1 && stopReason <= 3 &&
+                    (!active || !string.IsNullOrEmpty(sourceId) || !string.IsNullOrEmpty(eventId));
+                if (valid)
+                    continue;
+                failed++;
+                findings.Add(
+                    CharacterPresentationReplicationDiagnosticOperatorSupport.Finding(
+                        context,
+                        DiagnosticSeverity.Error,
+                        in row,
+                        $"Camera effect '{resourceId}' failed lifecycle contract.",
+                        findingIndex++,
+                        new[]
+                        {
+                            CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
+                                "resource-id",
+                                inputs.ResourceId,
+                                in row,
+                                resourceId),
+                            CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
+                                "stage",
+                                inputs.Stage,
+                                in row,
+                                stage.ToString(CultureInfo.InvariantCulture)),
+                            CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
+                                "source-id",
+                                inputs.SourceId,
+                                in row,
+                                sourceId),
+                            CharacterPresentationReplicationDiagnosticOperatorSupport.Evidence(
+                                "event-id",
+                                inputs.EventId,
+                                in row,
+                                eventId)
+                        }));
+            }
+            if (missing.Count != 0)
+            {
+                return DiagnosticOperatorResult.MissingEvidence(
+                    CharacterPresentationReplicationDiagnosticOperatorSupport.MissingSummary(
+                        missing));
+            }
+            if (eligible == 0)
+                return DiagnosticOperatorResult.NotApplicable(
+                    "No camera effect rows were captured.");
+            double score = Math.Max(0d, 1d - (double)failed / eligible);
+            return new DiagnosticOperatorResult(
+                findings.Count == 0
+                    ? DiagnosticRuleState.Passed
+                    : DiagnosticRuleState.Failed,
+                $"{failed.ToString(CultureInfo.InvariantCulture)} of {eligible.ToString(CultureInfo.InvariantCulture)} camera effect rows failed lifecycle validation.",
+                score,
+                Array.Empty<DiagnosticEvidence>(),
+                findings);
+        }
+
+        static DiagnosticOperatorInputSlot Table(
+            string id,
+            DiagnosticValueKind kind) =>
+            CharacterPresentationReplicationDiagnosticOperatorSupport.Table(id, kind);
+
+        sealed class Inputs
+        {
+            public Inputs(DiagnosticOperatorExecutionContext context)
+            {
+                Stage = context.Input(StageId);
+                ResourceId = context.Input(ResourceIdId);
+                Weight = context.Input(WeightId);
+                Remaining = context.Input(RemainingId);
+                Priority = context.Input(PriorityId);
+                Active = context.Input(ActiveId);
+                SourceId = context.Input(SourceIdId);
+                Generation = context.Input(GenerationId);
+                SourceActionInstanceId = context.Input(SourceActionInstanceIdId);
+                Cycle = context.Input(CycleId);
+                EventId = context.Input(EventIdId);
+                StopReason = context.Input(StopReasonId);
+            }
+
+            const string StageId = "stage";
+            const string ResourceIdId = "resource-id";
+            const string WeightId = "weight";
+            const string RemainingId = "remaining-seconds";
+            const string PriorityId = "priority";
+            const string ActiveId = "active";
+            const string SourceIdId = "source-id";
+            const string GenerationId = "generation";
+            const string SourceActionInstanceIdId = "source-action-instance-id";
+            const string CycleId = "cycle";
+            const string EventIdId = "event-id";
+            const string StopReasonId = "stop-reason";
+
+            public DiagnosticBoundInput Stage { get; }
+            public DiagnosticBoundInput ResourceId { get; }
+            public DiagnosticBoundInput Weight { get; }
+            public DiagnosticBoundInput Remaining { get; }
+            public DiagnosticBoundInput Priority { get; }
+            public DiagnosticBoundInput Active { get; }
+            public DiagnosticBoundInput SourceId { get; }
+            public DiagnosticBoundInput Generation { get; }
+            public DiagnosticBoundInput SourceActionInstanceId { get; }
+            public DiagnosticBoundInput Cycle { get; }
+            public DiagnosticBoundInput EventId { get; }
+            public DiagnosticBoundInput StopReason { get; }
         }
     }
 }

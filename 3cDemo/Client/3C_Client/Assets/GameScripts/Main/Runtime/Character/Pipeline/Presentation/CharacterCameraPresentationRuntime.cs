@@ -342,7 +342,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.HasOwnerTimeScale,
                 context.HasLocalAvatarTimeScale,
                 context.Paused,
-                resetHistory);
+                resetHistory,
+                resetHistory
+                    ? ResolveResetReason(bodyFrame.ResetReason)
+                    : CameraResetReason.None);
         }
 
         public void Reset()
@@ -377,7 +380,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void PresentInitial(Vector3 position, Quaternion rotation)
         {
-            Apply(position, rotation, Vector2.zero, 0f, 0f, 0f, 0f, 0f, false, false, false, true);
+            Apply(
+                position,
+                rotation,
+                Vector2.zero,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                false,
+                false,
+                false,
+                true,
+                CameraResetReason.Initialization);
         }
 
         void Apply(
@@ -392,7 +408,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool ownerTimeScaleAvailable,
             bool localAvatarTimeScaleAvailable,
             bool paused,
-            bool resetHistory)
+            bool resetHistory,
+            CameraResetReason resetReason)
         {
             Vector3 follow = position + rotation * m_FollowBindPosition;
             Vector3 aim = position + rotation * m_AimBindPosition;
@@ -413,10 +430,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             foreach (CameraTargetSelectionRequest request in m_Targets.Values)
                 if (request.Active)
                     m_TargetBuffer.Add(request);
-            CameraResolvedTargetPlan resolvedTarget = m_TargetResolver.Resolve(sequence, m_TargetBuffer);
-            if (!resolvedTarget.Valid)
-                throw new InvalidOperationException(resolvedTarget.Error);
-
             m_FrameTargets.Clear();
             m_FrameTargets.Add(new CameraTargetSnapshot(
                 CameraTargetBindingKeys.Body,
@@ -428,6 +441,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TargetResolver.CaptureSlotSnapshots(
                 m_CameraProjection.TargetSlots,
                 m_FrameTargets);
+            CameraResolvedTargetPlan resolvedTarget = m_TargetResolver.Resolve(
+                sequence,
+                m_TargetBuffer,
+                m_FrameTargets);
+            if (!resolvedTarget.Valid)
+                throw new InvalidOperationException(resolvedTarget.Error);
             if (!string.IsNullOrEmpty(resolvedTarget.SourceKey))
             {
                 bool duplicate = false;
@@ -462,6 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 localAvatarTimeScaleAvailable,
                 paused,
                 resetHistory,
+                resetReason,
                 m_FrameTargets);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(
                 in frameInput,
@@ -478,10 +498,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolvedTarget.SourceKey,
                 m_CameraProjection.ProfileRevision,
                 look,
+                plan.LookDelta,
                 in response,
+                resetReason,
+                paused,
+                presentationDeltaSeconds,
                 m_EffectEvaluator.Contributions);
             CameraBasisSnapshot basis = m_CameraRig.BasisSnapshot;
             CameraRigResult rig = m_CameraRig.Result;
+            CameraCollisionResult collision = plan.Collision;
             m_LastPresentationFrame = new CharacterCameraPresentationCaptureFrame(
                 true,
                 0,
@@ -493,7 +518,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig.Valid,
                 rig.Position,
                 rig.Rotation,
-                rig.FieldOfView);
+                rig.FieldOfView,
+                plan.SequenceId,
+                plan.SourceId,
+                look,
+                plan.LookDelta,
+                response.Mode,
+                response.Weight,
+                response.PitchWeight,
+                response.YawWeight,
+                resetReason,
+                paused,
+                m_EffectEvaluator.Contributions,
+                in collision);
+        }
+
+        static CameraResetReason ResolveResetReason(
+            CharacterBodyPresentationResetReason reason)
+        {
+            switch (reason)
+            {
+                case CharacterBodyPresentationResetReason.Initialization:
+                    return CameraResetReason.Initialization;
+                case CharacterBodyPresentationResetReason.CommittedBranchReplacement:
+                    return CameraResetReason.BodyCommittedBranchReplacement;
+                case CharacterBodyPresentationResetReason.SelectedStreamReset:
+                    return CameraResetReason.BodySelectedStreamReset;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(reason), reason, null);
+            }
         }
 
         void RemovePendingEffect(
@@ -650,6 +703,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = 0; i < slots.Count; i++)
             {
                 CameraTargetSlotPayload slot = slots[i];
+                if (!slot.Required)
+                    continue;
                 resolver.RequireKey(slot.AnchorKey, $"Camera target slot '{slot.SlotId}'");
                 resolver.RequireKey(slot.AimPointKey, $"Camera target slot '{slot.SlotId}'");
                 resolver.RequireKey(slot.PreferredBoneKey, $"Camera target slot '{slot.SlotId}'");
@@ -662,15 +717,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     continue;
                 ThirdPersonCamera.CharacterPresentationCameraBinding binding = producer.Camera;
                 if (binding.Kind == ThirdPersonCamera.CharacterPresentationCameraBindingKind.Sequence)
-                    resolver.RequireKey(binding.TargetKey, producer.SourceDisplayPath);
+                    RequireBindingOrSlot(
+                        binding.TargetKey,
+                        producer.SourceDisplayPath,
+                        projection.Camera.TargetSlots,
+                        resolver);
                 if (binding.Kind == ThirdPersonCamera.CharacterPresentationCameraBindingKind.Target)
                 {
-                    resolver.RequireKey(binding.TargetKey, producer.SourceDisplayPath);
+                    RequireBindingOrSlot(
+                        binding.TargetKey,
+                        producer.SourceDisplayPath,
+                        projection.Camera.TargetSlots,
+                        resolver);
                     resolver.RequireKey(binding.AnchorKey, producer.SourceDisplayPath);
                     resolver.RequireKey(binding.AimPointKey, producer.SourceDisplayPath);
                     resolver.RequireKey(binding.PreferredBoneKey, producer.SourceDisplayPath);
                 }
             }
+        }
+
+        static void RequireBindingOrSlot(
+            string key,
+            string source,
+            IReadOnlyList<CameraTargetSlotPayload> slots,
+            CameraTargetBindingResolver resolver)
+        {
+            if (string.IsNullOrEmpty(key))
+                return;
+            for (int i = 0; i < slots.Count; i++)
+                if (string.Equals(slots[i].SlotId, key, StringComparison.Ordinal))
+                    return;
+            resolver.RequireKey(key, source);
         }
 
         void RequireAlive()

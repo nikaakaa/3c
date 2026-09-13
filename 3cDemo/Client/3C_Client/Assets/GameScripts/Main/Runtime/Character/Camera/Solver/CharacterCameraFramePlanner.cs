@@ -192,9 +192,12 @@ namespace ThirdPersonCamera
                             : Mathf.Repeat(rotation.y, 360f);
                         evaluatedRoll = rotation.z;
                         break;
-                    case CameraFixedInCorePayload:
-                    case CameraHandleVolumePayload:
-                        break;
+                    case CameraFixedInCorePayload fixedInCore:
+                        throw new InvalidOperationException(
+                            $"Camera FixedInCore stage '{fixedInCore.StageId}' requires a formal core-space context consumer.");
+                    case CameraHandleVolumePayload handleVolume:
+                        throw new InvalidOperationException(
+                            $"Camera HandleVolume stage '{handleVolume.StageId}' requires the formal environment volume contract.");
                     default:
                         throw new InvalidOperationException(
                             $"Camera Sequence stage '{stage.StageId}' kind '{stage.Kind}' has no closed evaluator.");

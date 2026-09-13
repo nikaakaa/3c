@@ -28,9 +28,7 @@ namespace ThirdPersonCamera
         [SerializeField] float m_DefaultFieldOfView = 60f;
         [SerializeField] float m_DefaultSmoothTime = 0.08f;
         [SerializeField] float m_RotationTransitionSeconds = 0.2f;
-        [SerializeField] float m_ChangeAvatarTransitionSeconds = 0.2f;
         [SerializeField] CameraInputSettings m_Input = new CameraInputSettings();
-        [SerializeField] CameraLockingSettings m_Locking = new CameraLockingSettings();
         [SerializeField] CameraCollisionSettings m_Collision = new CameraCollisionSettings();
         [SerializeField] CameraTargetSlot[] m_TargetSlots = Array.Empty<CameraTargetSlot>();
 
@@ -50,9 +48,7 @@ namespace ThirdPersonCamera
         public float DefaultFieldOfView => m_DefaultFieldOfView;
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
-        public float ChangeAvatarTransitionSeconds => m_ChangeAvatarTransitionSeconds;
         public CameraInputSettings Input => m_Input;
-        public CameraLockingSettings Locking => m_Locking;
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlot> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlot>();
 
@@ -96,9 +92,7 @@ namespace ThirdPersonCamera
                 value.Append('|').Append(DefaultFieldOfView.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(DefaultSmoothTime.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(RotationTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
-                value.Append('|').Append(ChangeAvatarTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
                 AppendInput(value, Input);
-                AppendLocking(value, Locking);
                 AppendCollision(value, Collision);
                 AppendAssetIds(value, Sequences);
                 AppendAssetIds(value, OverrideTracks);
@@ -129,18 +123,16 @@ namespace ThirdPersonCamera
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
-                !DefaultSequence || Input == null || Locking == null || Collision == null ||
+                !DefaultSequence || Input == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||
-                !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f ||
-                !float.IsFinite(ChangeAvatarTransitionSeconds) || ChangeAvatarTransitionSeconds < 0f)
+                !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f)
                 throw new InvalidOperationException($"Character Camera Profile '{name}' is incomplete.");
             DefaultSequence.RequireValid();
             RequireDefaultTrack();
             Input.RequireValid($"{name}.Input");
-            Locking.RequireValid($"{name}.Locking");
             Collision.RequireValid($"{name}.Collision");
             RequireAssets(Sequences, "Sequence");
             RequireUniqueSequenceIdentity();
@@ -157,6 +149,17 @@ namespace ThirdPersonCamera
                 if (slot == null || !slots.Add(slot.SlotId))
                     throw new InvalidOperationException($"Character Camera Profile '{name}' target slot #{i} is missing or duplicated.");
                 slot.RequireValid($"{name}.TargetSlots[{i}]");
+            }
+            var targetSlotIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < TargetSlots.Count; i++)
+                targetSlotIds.Add(TargetSlots[i].SlotId);
+            for (int i = 0; i < Shots.Count; i++)
+            {
+                CameraShotAsset shot = Shots[i];
+                if (!targetSlotIds.Contains(shot.FollowTargetSlotId) ||
+                    !targetSlotIds.Contains(shot.LookAtTargetSlotId))
+                    throw new InvalidOperationException(
+                        $"Character Camera Profile '{name}' Shot '{shot.ShotId}' references an unregistered target slot.");
             }
         }
 
@@ -247,14 +250,6 @@ namespace ThirdPersonCamera
             value.Append('|').Append(input.DefaultResponseWeight.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append(input.PitchResponseWeight.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append(input.YawResponseWeight.ToString("R", CultureInfo.InvariantCulture));
-        }
-
-        static void AppendLocking(StringBuilder value, CameraLockingSettings locking)
-        {
-            value.Append('|').Append(locking.EnableTargetLock);
-            value.Append('|').Append(locking.EnableBossLock);
-            value.Append('|').Append(locking.TransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(locking.Weight.ToString("R", CultureInfo.InvariantCulture));
         }
 
         static void AppendCollision(StringBuilder value, CameraCollisionSettings collision)

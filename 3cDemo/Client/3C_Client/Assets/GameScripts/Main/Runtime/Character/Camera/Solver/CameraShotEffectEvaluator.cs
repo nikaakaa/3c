@@ -15,7 +15,7 @@ namespace ThirdPersonCamera
 
         public CameraEffectKind Kind => CameraEffectKind.Shot;
         public CameraEffectStage Stage => CameraEffectStage.Shot;
-        public bool UpdatesBySource => true;
+        public bool UpdatesBySource => false;
 
         public bool HasResource(string resourceId) =>
             m_Projection.TryGetShot(resourceId, out _);

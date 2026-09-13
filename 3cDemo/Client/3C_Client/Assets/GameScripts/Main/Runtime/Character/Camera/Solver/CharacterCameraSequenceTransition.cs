@@ -172,7 +172,9 @@ namespace ThirdPersonCamera
                 else
                 {
                     m_BlendFrom = m_LastPlan;
-                    m_TransitionDuration = request.BlendInSeconds;
+                    m_TransitionDuration = request.BlendInSeconds > 0f
+                        ? request.BlendInSeconds
+                        : m_Projection.RotationTransitionSeconds;
                 }
                 m_CurrentSequenceId = sequence.SequenceId;
                 m_CurrentSourceId = request.SourceId;

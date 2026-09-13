@@ -36,7 +36,8 @@ namespace ThirdPersonCamera
 
         public CameraResolvedTargetPlan Resolve(
             CameraSequenceRequest sequence,
-            IEnumerable<CameraTargetSelectionRequest> requests)
+            IEnumerable<CameraTargetSelectionRequest> requests,
+            IReadOnlyList<CameraTargetSnapshot> snapshots = null)
         {
             CameraTargetSelectionRequest selected = default;
             if (requests != null)
@@ -62,9 +63,9 @@ namespace ThirdPersonCamera
             bool hasAim = !string.IsNullOrEmpty(aimKey);
             Vector3 follow = default;
             Vector3 aim = default;
-            if (hasFollow && !TryResolvePoint(followKey, out follow, out string followError))
+            if (hasFollow && !TryResolvePoint(followKey, snapshots, out follow, out string followError))
                 return CameraResolvedTargetPlan.Invalid(sourceKey, followError);
-            if (hasAim && !TryResolvePoint(aimKey, out aim, out string aimError))
+            if (hasAim && !TryResolvePoint(aimKey, snapshots, out aim, out string aimError))
                 return CameraResolvedTargetPlan.Invalid(sourceKey, aimError);
             return new CameraResolvedTargetPlan(true, hasFollow, follow, hasAim, aim, sourceKey, string.Empty);
         }
@@ -133,6 +134,30 @@ namespace ThirdPersonCamera
             return true;
         }
 
+        bool TryResolvePoint(
+            string key,
+            IReadOnlyList<CameraTargetSnapshot> snapshots,
+            out Vector3 point,
+            out string error)
+        {
+            if (TryResolvePoint(key, out point, out error))
+                return true;
+            if (snapshots != null)
+            {
+                for (int i = 0; i < snapshots.Count; i++)
+                {
+                    CameraTargetSnapshot snapshot = snapshots[i];
+                    if (snapshot.Valid && string.Equals(snapshot.Key, key, StringComparison.Ordinal))
+                    {
+                        point = snapshot.AimPoint;
+                        error = string.Empty;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         bool TryResolvePoint(string key, out Vector3 point)
         {
             point = default;
@@ -191,7 +216,7 @@ namespace ThirdPersonCamera
                 for (int i = 0; i < requests.Count; i++)
                 {
                     CameraSequenceRequest candidate = requests[i];
-                    if (string.IsNullOrWhiteSpace(candidate.SequenceId) || !ShouldReplace(selected, candidate))
+                    if (!candidate.Active || !ShouldReplace(selected, candidate))
                         continue;
                     selected = candidate;
                 }

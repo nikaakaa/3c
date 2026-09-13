@@ -67,18 +67,12 @@ MonoBehaviour:
   m_DefaultFieldOfView: 50
   m_DefaultSmoothTime: 0.15
   m_RotationTransitionSeconds: 3
-  m_ChangeAvatarTransitionSeconds: 0.3
   m_Input:
     m_Sensitivity: {x: 0.12, y: 0.12}
     m_PitchLimit: {x: -70, y: 70}
     m_DefaultResponseWeight: 1
     m_PitchResponseWeight: 1
     m_YawResponseWeight: 1
-  m_Locking:
-    m_EnableTargetLock: 0
-    m_EnableBossLock: 0
-    m_TransitionSeconds: 0.2
-    m_Weight: 1
   m_Collision:
     m_Enabled: 0
     m_LayerMask: -1

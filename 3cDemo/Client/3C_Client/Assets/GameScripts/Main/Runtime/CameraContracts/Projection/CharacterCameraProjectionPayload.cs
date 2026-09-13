@@ -26,9 +26,7 @@ namespace ThirdPersonCamera
         [SerializeField] float m_DefaultFieldOfView;
         [SerializeField] float m_DefaultSmoothTime;
         [SerializeField] float m_RotationTransitionSeconds;
-        [SerializeField] float m_ChangeAvatarTransitionSeconds;
         [SerializeField] CameraInputSettings m_Input;
-        [SerializeField] CameraLockingSettings m_Locking;
         [SerializeField] CameraCollisionSettings m_Collision;
         [SerializeField] CameraTargetSlotPayload[] m_TargetSlots = Array.Empty<CameraTargetSlotPayload>();
 
@@ -60,9 +58,7 @@ namespace ThirdPersonCamera
             m_DefaultFieldOfView = profile.DefaultFieldOfView;
             m_DefaultSmoothTime = profile.DefaultSmoothTime;
             m_RotationTransitionSeconds = profile.RotationTransitionSeconds;
-            m_ChangeAvatarTransitionSeconds = profile.ChangeAvatarTransitionSeconds;
             m_Input = new CameraInputSettings(profile.Input);
-            m_Locking = new CameraLockingSettings(profile.Locking);
             m_Collision = new CameraCollisionSettings(profile.Collision);
             m_TargetSlots = targetSlots ?? Array.Empty<CameraTargetSlotPayload>();
         }
@@ -85,9 +81,7 @@ namespace ThirdPersonCamera
         public float DefaultFieldOfView => m_DefaultFieldOfView;
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;
-        public float ChangeAvatarTransitionSeconds => m_ChangeAvatarTransitionSeconds;
         public CameraInputSettings Input => m_Input;
-        public CameraLockingSettings Locking => m_Locking;
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlotPayload> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlotPayload>();
 
@@ -149,14 +143,13 @@ namespace ThirdPersonCamera
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
                 string.IsNullOrWhiteSpace(ProfileRevision) || DefaultSequence == null || DefaultSphere == null ||
-                Input == null || Locking == null || Collision == null ||
+                Input == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(FarClipPlane) || FarClipPlane <= NearClipPlane ||
                 !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||
-                !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f ||
-                !float.IsFinite(ChangeAvatarTransitionSeconds) || ChangeAvatarTransitionSeconds < 0f)
+                !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f)
                 throw new InvalidOperationException("Character Camera Projection payload is incomplete.");
             DefaultSequence.RequireValid("Character Camera Projection DefaultSequence");
             for (int i = 0; i < Sequences.Count; i++)
@@ -169,7 +162,6 @@ namespace ThirdPersonCamera
                     throw new InvalidOperationException("Character Camera Projection contains the default Sequence twice.");
             }
             Input.RequireValid("Character Camera Projection Input");
-            Locking.RequireValid("Character Camera Projection Locking");
             Collision.RequireValid("Character Camera Projection Collision");
             DefaultSphere.RequireValid("Character Camera Projection DefaultSphere");
             RequirePayloads();
@@ -226,6 +218,14 @@ namespace ThirdPersonCamera
                         $"Character Camera Projection TargetSlots[{i}] uses unsupported space '{slot.Space}'.");
             }
             RequireEntityStageSlots(slots);
+            for (int i = 0; i < Shots.Count; i++)
+            {
+                CameraShotPayload shot = Shots[i];
+                if (!slots.Contains(shot.FollowTargetSlotId) ||
+                    !slots.Contains(shot.LookAtTargetSlotId))
+                    throw new InvalidOperationException(
+                        $"Camera Shot '{shot.ShotId}' references an unregistered target slot.");
+            }
         }
 
         void RequireEntityStageSlots(HashSet<string> slots)

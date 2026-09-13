@@ -27,6 +27,12 @@ namespace ThirdPersonCamera
             CameraProjectionCompilationContext context)
         {
             stage.RequireValid(stage.GetType().Name);
+            if (stage.MakeContextDependent)
+                throw new InvalidOperationException(
+                    $"Camera Sequence stage '{stage.StageId}' requires a formal context provider.");
+            if (stage.PlayLength >= 0f)
+                throw new InvalidOperationException(
+                    $"Camera Sequence stage '{stage.StageId}' uses finite PlayLength without a formal stage clock consumer.");
             switch (stage)
             {
                 case CameraFrameOnePointByHeightStage byHeight:
@@ -91,20 +97,11 @@ namespace ThirdPersonCamera
                 case CameraEntityFrameStage entity:
                     return CompileEntityFrame(entity);
                 case CameraFixedInCoreStage fixedInCore:
-                    return new CameraFixedInCorePayload(
-                        fixedInCore.StageId,
-                        fixedInCore.MakeContextDependent,
-                        fixedInCore.PlayLength,
-                        fixedInCore.FixedPolicyId,
-                        fixedInCore.ActiveChannel);
+                    throw new InvalidOperationException(
+                        $"Camera FixedInCore stage '{fixedInCore.StageId}' requires a formal core-space context consumer.");
                 case CameraHandleVolumeStage volume:
-                    return new CameraHandleVolumePayload(
-                        volume.StageId,
-                        volume.MakeContextDependent,
-                        volume.PlayLength,
-                        volume.CollisionDataId,
-                        volume.HandleLineOfSightCollision,
-                        volume.NearClipPlane);
+                    throw new InvalidOperationException(
+                        $"Camera HandleVolume stage '{volume.StageId}' requires the formal environment volume contract.");
                 case CameraRotationEulerOffsetStage euler:
                     return new CameraRotationEulerOffsetPayload(
                         euler.StageId,

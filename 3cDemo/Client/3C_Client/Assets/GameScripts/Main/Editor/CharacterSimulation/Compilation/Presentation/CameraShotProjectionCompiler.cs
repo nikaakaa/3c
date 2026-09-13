@@ -15,9 +15,9 @@ namespace ThirdPersonCamera
             if (!prefab)
                 throw new InvalidOperationException(
                     $"Camera Shot '{asset.ShotId}' references missing CinePrefab '{asset.CinePrefabPath}'.");
-            if (!prefab.GetComponentInChildren<CinemachineVirtualCameraBase>(true))
+            if (!prefab.GetComponentInChildren<CinemachineVirtualCamera>(true))
                 throw new InvalidOperationException(
-                    $"Camera Shot '{asset.ShotId}' CinePrefab '{asset.CinePrefabPath}' has no CinemachineVirtualCameraBase.");
+                    $"Camera Shot '{asset.ShotId}' CinePrefab '{asset.CinePrefabPath}' has no CinemachineVirtualCamera.");
             if (asset.TimeDomain == CameraTimeDomain.OwnerScaled ||
                 asset.TimeDomain == CameraTimeDomain.LocalAvatarScaled)
                 throw new InvalidOperationException(

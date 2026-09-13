@@ -19,6 +19,7 @@ public readonly struct CameraFrameInput
             bool localAvatarTimeScaleAvailable,
             bool paused,
             bool resetHistory,
+            CameraResetReason resetReason,
             IReadOnlyList<CameraTargetSnapshot> targets)
         {
             BodyPosition = bodyPosition;
@@ -33,6 +34,9 @@ public readonly struct CameraFrameInput
             HasLocalAvatarTimeScale = localAvatarTimeScaleAvailable;
             Paused = paused;
             ResetHistory = resetHistory;
+            if (!Enum.IsDefined(typeof(CameraResetReason), resetReason))
+                throw new ArgumentOutOfRangeException(nameof(resetReason));
+            ResetReason = resetReason;
             Targets = targets ?? Array.Empty<CameraTargetSnapshot>();
         }
 
@@ -48,6 +52,7 @@ public readonly struct CameraFrameInput
         public bool HasLocalAvatarTimeScale { get; }
         public bool Paused { get; }
         public bool ResetHistory { get; }
+        public CameraResetReason ResetReason { get; }
         public IReadOnlyList<CameraTargetSnapshot> Targets { get; }
 
         public float Delta(CameraTimeDomain domain)

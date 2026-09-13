@@ -121,6 +121,16 @@ namespace Slate
             m_Surface.InitializeEmbedded(newCutscene, repaint);
         }
 
+        public void InitializeEmbedded(
+            IEmbeddedTimelineBinding binding,
+            System.Action repaint,
+            System.Action beginWindowsCallback = null,
+            System.Action endWindowsCallback = null)
+        {
+            EnsureSurface();
+            m_Surface.InitializeEmbedded(binding, repaint, beginWindowsCallback, endWindowsCallback);
+        }
+
         public void DrawEmbeddedGUI(float width, float height)
         {
             m_Surface?.DrawEmbeddedGUI(width, height);
@@ -289,6 +299,7 @@ namespace Slate
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
+        [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -705,6 +716,36 @@ namespace Slate
             InitializeAll(newCutscene);
         }
 
+        public void InitializeEmbedded(
+            IEmbeddedTimelineBinding binding,
+            System.Action repaint,
+            System.Action beginWindowsCallback = null,
+            System.Action endWindowsCallback = null)
+        {
+            embeddedSurface = true;
+            embeddedTimeline = binding ?? throw new System.ArgumentNullException(nameof(binding));
+            embeddedRepaint = repaint;
+            embeddedFrameRate = () => binding.FrameRate;
+            embeddedLength = () => binding.Length;
+            embeddedCurrentFrame = () => binding.CurrentFrame;
+            embeddedSetCurrentFrame = value => binding.CurrentFrame = value;
+            embeddedViewTimeMin = () => binding.ViewTimeMin;
+            embeddedSetViewTimeMin = value => binding.ViewTimeMin = value;
+            embeddedViewTimeMax = () => binding.ViewTimeMax;
+            embeddedSetViewTimeMax = value => binding.ViewTimeMax = value;
+            embeddedAddTrack = binding.AddTrack;
+            embeddedCopyClip = null;
+            beginWindows = beginWindowsCallback;
+            endWindows = endWindowsCallback;
+            Styles.Load();
+            showDragDropInfo = false;
+            willRepaint = true;
+            pendingGuides = new List<GuideLine>();
+            clipWrappers = null;
+            clipWrappersMap = null;
+            cutscene = null;
+        }
+
         public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
         {
             embeddedRuntimeTime = runtimeTime;
@@ -825,6 +866,7 @@ namespace Slate
             embeddedHistoryTime = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
+            embeddedTimeline = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -1326,7 +1368,7 @@ namespace Slate
             mousePosition = e.mousePosition;
             current = this;
 
-            if ( cutscene == null || isAboutButtonPressed ) {
+            if ( (cutscene == null && embeddedTimeline == null) || isAboutButtonPressed ) {
                 ShowWelcome();
                 return;
             }

@@ -767,6 +767,13 @@ namespace BTSMTL.Timeline.Editor
             return clip != null;
         }
 
+        void CopyProxyClip(ActionClip proxyClip)
+        {
+            if (proxyClip is BtsmtlSlateActionClip slateClip &&
+                m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
+                m_Binding.CopySourceClip(sourceClip);
+        }
+
         static string DisplayKind(string kind)
         {
             int separator = kind.LastIndexOf('.');
@@ -1314,4 +1321,3 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
-

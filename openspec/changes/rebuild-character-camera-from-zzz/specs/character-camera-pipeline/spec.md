@@ -14,7 +14,7 @@
 
 - **WHEN** 一个字段被填写但当前算法未实现其语义
 - **THEN** 系统 MUST 定位字段并拒绝该配置，或在已确认迁移中删除该字段及全部配置入口
-- **AND** MUST 不把拷贝进 Projection 当作字段已经生效
+- **AND** MUST 不把拷贝进 payload 或创建绑定对象当作字段已经生效
 
 #### Scenario: 默认序列
 
@@ -68,7 +68,7 @@
 
 ### Requirement: Camera debug 必须解释状态和输出
 
-系统 MUST 从同一 Runtime 状态提供原始/消费 Look、响应权、基准角和手动偏移、限幅、目标与请求来源、generation/action/cycle、时间域、blend、Reset、效果贡献、环境修正前后和最终 RigResult，并保留 Projection 身份与作者来源导航。诊断 MUST 不另算另一套相机；记录/回放 MUST 使用正式相机初始状态和输入合同，不依赖旧 Controller 或隐式场景搜索。
+系统 MUST 从同一 Runtime 状态提供原始/消费 Look、响应权、基准角和手动偏移、限幅、目标与请求来源、generation/action/cycle、时间域、blend、Reset、效果贡献、环境修正前后和最终 RigResult，并提供实际采用的资源/内容版本、绑定实例/代际与作者来源导航。诊断 MUST 不另算另一套相机；记录/回放 MUST 使用正式相机初始状态和输入合同，不依赖旧 Controller、整包 Projection 或隐式场景搜索。
 
 #### Scenario: 排查 look 不响应
 
@@ -83,6 +83,34 @@
 - **AND** 当前镜头 MUST 能追踪到仍然有效的请求来源与退出原因
 
 ## ADDED Requirements
+
+### Requirement: 相机资源与运行绑定必须按领域提供
+
+Camera MUST 提供正式相机资源、必要转换/引用检查和只读运行绑定，由角色装配调用。现有只接收 Profile 的 CharacterCameraProjectionBuilder 中仍有消费者的处理 MUST 按领域保留，payload 只表达相机需要的数据，不携带角色总 Program、非相机目录或整包 Projection。Editor-only 资源处理 MUST 不直接搬进 Player；需要加工的资源继续走原独立资源流程，不新增 Camera-only 临时发布入口、运行时补构建或另一个总包。
+
+技能 MUST 保持独立编译，控制和原生 Pose 不进入相机数据。资源/绑定身份变化 MUST 不重新打开已正确的 FramePlanner、轨道与鼠标叠加、History/Transition、Effect、Collision、Adapter、同帧 Body 和诊断算法。
+
+#### Scenario: 角色装配安装相机
+
+- **WHEN** 角色领域装配已取得 Profile、相机资源和明确环境输入
+- **THEN** 它 MUST 调用 Camera 的正式只读绑定入口并处理真实失败
+- **AND** MUST 不等待角色总 Program/整包 Projection 重发布
+
+#### Scenario: 只修改相机资源参数
+
+- **WHEN** 相机资源参数变化而技能请求种类、来源和时间合同未变
+- **THEN** 仅该资源处理及 Camera 内容/绑定身份 MUST 按真实依赖更新
+- **AND** MUST 不强制重建角色所有技能、Pose、网络 Pipeline 或其它资源
+
+### Requirement: 相机必须提供实际采用与替换结果
+
+Camera MUST 在采用前完整解析必需资源与 Rig/目标/物理上下文，失败时返回精确资源或请求来源与原因，不宣称新绑定已采用。成功采用 MUST 发布实际资源/内容版本和绑定实例/代际。Reset/替换 MUST 通过同一领域生命周期停止旧调用、重置声明的镜头历史和释放旧资源，旧实例结果不得写入新绑定。Preview 只能调用这些入口并读取结果，不自算相机、不伪造已采用。
+
+#### Scenario: 新绑定缺少资源
+
+- **WHEN** 候选绑定缺少正式效果资源或明确 Shot prefab
+- **THEN** Camera MUST 报告对应身份与失败，实际采用状态 MUST 保持真实
+- **AND** MUST 不以旧 Projection、旧 DLL 或资源名称占位作为新结果
 
 ### Requirement: 相机环境约束必须独立于平台查询实现
 

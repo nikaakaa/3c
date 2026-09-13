@@ -7,7 +7,7 @@ Character Definition MUST 装配正式 Camera Profile；Profile MUST 注册 Sequ
 #### Scenario: 作者调整默认轨道
 
 - **WHEN** 作者修改默认 Sequence 的轨道
-- **THEN** Build MUST 从该唯一配置生成运行数据
+- **THEN** 正式相机资源转换与运行绑定 MUST 消费该唯一配置
 - **AND** MUST 不存在另一份可编辑轨道覆盖其结果
 
 ### Requirement: 相机作者编辑必须复用现有领域 API
@@ -30,12 +30,22 @@ Timeline-local 权重及 Ease 曲线 MUST 由对应 Clip 拥有并进入现有 t
 - **THEN** 编辑器 MUST 导航到实际资源 owner
 - **AND** MUST 不在 Clip 中保存第二份曲线
 
-### Requirement: 作者必须能区分配置保存和运行发布
+### Requirement: 作者必须能区分配置保存和实际绑定采用
 
-作者入口 MUST 显示明确 Build 状态、当前 Projection 身份与不可用原因；生成作者资产和发布运行产物必须沿各自正式入口。Runtime/Preview MUST 只消费已发布计划，不能逐字段热读作者对象形成混合版本。
+作者入口 MUST 分别显示必要资源处理、技能编译和相机实际绑定采用状态，身份由 Camera 领域返回，不再依赖角色总 Build/整包 Projection。Runtime/Preview MUST 消费正式相机资源和只读运行绑定，不逐字段热读作者对象形成混合版本，也不能以配置保存或旧 DLL 调用成功证明新绑定已经采用。
 
-#### Scenario: 保存 Profile 后尚未 Build
+#### Scenario: 保存 Profile 后尚未采用新绑定
 
-- **WHEN** 当前运行实例仍使用旧 Projection
+- **WHEN** 配置已保存而 Camera 返回的实际绑定仍是原版本
 - **THEN** 作者界面 MUST 明确显示配置与运行版本的关系
 - **AND** MUST 不宣称新参数已经作用于当前画面
+
+### Requirement: 同批 Corin Timeline 与生成源码必须由单一任务写入
+
+Camera 任务 MUST 拥有相机资源、Builder/payload、运行绑定和 Timeline.Camera.cs，并提供精确 Cue 映射。本批 Corin Timeline 资产及生成 C# MUST 由曲线迁移任务统一消费该映射后写入，不允许双方独立生成或重建同一资产。角色装配由领域运行时迁移任务调用 Camera 提供的绑定，不复制相机资源定义。
+
+#### Scenario: 相机资源已有正式 ResourceId
+
+- **WHEN** Camera 提供已确认的 Timeline/Clip、ResourceId 和生命周期映射
+- **THEN** 曲线迁移任务 MUST 通过正式作者 API 写入本批 Timeline 与生成源码
+- **AND** Camera MUST 不并行重建相同输出范围

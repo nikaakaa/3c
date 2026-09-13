@@ -1,15 +1,15 @@
 ## Context
 
-修订 v3，2026-09-13。用户明确“让实现窗口做吧”，已确认当前规划范围并授权配套实现窗口实施。当前工作区为 D:/Unity_Project_1/3C；旧 camera-zzz worktree 中的执行批次和审批记录仅属于历史，不作为本修订的调度入口。
+修订 v4，2026-09-13。本次为用户协调通知 `camera-preview-timeline-domain-runtime-r1` 的 PLAN：仅更新本任务规划，承接 [领域运行时基线](D:/Unity_Project_1/3C/openspec/changes/replace-character-program-with-domain-runtimes/design.md) D1/D5/D6/D8。删除角色总 Program 与整包 Projection、技能独立编译、控制直接 C#、Pose 原生 FlowCanvas Runtime 已由用户批准；网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。本次不改代码/资产/生成产物、不操作 Unity、不下发实现消息、不扩大原实施授权。
 
 本 change 的 proposal 定义范围，本文定义职责和设计，tasks 只列剩余工作。当前源码状态与动态证据边界见 evidence/current-implementation.md。独立的 docs/character-camera-plan-2026-09-13.md 已合并删除，不维护第二份规划。旧协调文档未在本次修改，其 9 月 6 日版本/接线状态不能直接作为今天的事实。
 
-当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。实现窗口执行 tasks 的全部剩余范围，创建并维护 implementation.md，记录各任务实际完成状态、修改、提交、证据和冲突；不自行改写规划合同。独立且已授权的部分持续推进，不等待普通进度回执。
+当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。v3 在提交 b2c2baa8f 下发过实施授权，该事实保留；本 v4 是协调后的规划修订，不作为新的 IMPLEMENT_FROM_DOCUMENT 或 DOCUMENT_UPDATED 消息。implementation.md 的旧 Projection/旧域 DLL/构建失败属于真实迁移现场，原记录保留，不将其当成等待恢复全量 Build 的前置条件。
 
 授权包含补齐来源消费者和真实资源接线，不包含放弃来源还原、猜测缺失公式或覆盖已有正确代码。当前产品方向为玩家控制的第三人称环绕相机，默认轨道提供基础构图，动作、锁定和碰撞共用同一求解链。未决项先按来源取证与现行合同解决；无法同时满足真实代码、来源和规划时，在 implementation.md 写明冲突与业务取舍，再发送一次 ACTUAL_CONFLICT。
 
 ```text
-PLANNING_DOCUMENT
+PLANNING_REVISION
 planner_thread_id: 01a098bd-a5c1-7283-8aab-59736bab97f5
 implementation_thread_id: 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d
 planning_document_paths:
@@ -19,8 +19,11 @@ planning_document_paths:
   - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/specs/
   - D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/evidence/
 implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/implementation.md
-confirmed_by_user: true
-confirmed_revision: v3
+revision: v4
+coordination_proposal: camera-preview-timeline-domain-runtime-r1
+action: PLAN
+implementation_dispatch: none
+previous_implementation_revision: v3
 ```
 
 ## Goals / Non-Goals
@@ -40,7 +43,7 @@ confirmed_revision: v3
 
 ### 1. 保留现有链路，补齐具体缺口
 
-实际调用次序：
+保留的运行调用次序如下。装配输入改为领域资源和只读运行绑定，不修改这条链的算法及时序；下列类型沿当前源码定位，不表示需要恢复其旧总包构造入口。
 
 ```text
 InputProfile / InputActions
@@ -71,7 +74,8 @@ InputProfile / InputActions
 | 模块 | 输入 | 输出 | 边界 |
 |---|---|---|---|
 | ControlSource | 配置、设备输入、已存在的焦点状态 | 渲染帧 Look 与逻辑输入事实 | 不裁决演出抑制 |
-| Camera Runtime | committed command、visible pose、Look、正式时间 | 当帧计划、生命周期和诊断 | 唯一调度，不能成为所有算法的大类 |
+| Camera 资源与绑定 | Profile、独立资源、显式 Rig/目标/物理上下文 | 只读运行绑定或精确失败、实际采用身份 | 本领域负责；角色装配调用，不含角色总 Program/整包 Projection |
+| Camera Runtime | committed command、visible pose、Look、正式时间、有效绑定 | 当帧计划、生命周期和诊断 | 唯一调度，不能成为所有算法的大类 |
 | Resolvers | 强类型请求和目标绑定 | 胜出请求、响应权和目标 | 不依赖 Cinemachine |
 | FramePlanner | 目标、Sequence、手动偏移 | 无历史期望构图 | 不查询 Physics，不维护第二份角色插值 |
 | Transition / History | 期望构图、时间、Reset | 混合和平滑后的基础计划 | 唯一切镜/连续状态 |
@@ -84,6 +88,8 @@ InputProfile / InputActions
 查询端口名称按实际目录习惯确定；必需字段包括期望/前次位置、pivot、近裁剪保护体或半径、LayerMask、Trigger、自身过滤、delta、Reset，结果区分无命中、修正、起点重叠与无合法空间。接口不得只返回一个“成功”布尔值。
 
 ### 3. 基础构图、输入和平滑
+
+本节保留原算法目标与初次调查背景；实现窗口之后已完成的字段清理、平滑和裁决按实际代码保留，不因本次公共版本/装配迁移重新实施。这里只调整资源与运行绑定边界，不能把初次调查缺口当作今天仍未修复的证明。
 
 保留当前轨道角度与手动偏移相加、InputAction 的 Y 反转、默认 Sequence 资产及同帧 visible pose。不得把已修复的鼠标输入再次作为重建工作。
 
@@ -107,15 +113,32 @@ Override、Shake、Shot 按已有来源逐个补齐资源及消费者；先恢�
 
 原消费者的效果顺序、时钟和组合规则仍需来源对账；当前注册顺序 Override→Zoom→Stretch→Shake→Shot 只是项目现状，不能作为完整原行为已证明。碰撞与演出请求不在同一个 priority 数字域中竞争。
 
-### 5. 作者、编译、运行与诊断的统一
+### 5. 领域资源、只读绑定、作者和诊断
 
-Profile 装配资源；Graph/Timeline 表达请求；资源参数和请求时点各有真实 owner。通过现有 C# 作者入口补齐相机领域适配，不恢复目录包、MutationPlan、同步器或第三个 MCP。人工编辑不自动导出源码，生成资产不等于生成可运行 Program/Projection。
+Profile 装配相机资源，技能的 Graph/Timeline 表达请求。技能内容仍独立编译；C# 控制与 Pose 原生图不被塞回相机或角色总包。相机的资源转换/引用解析只覆盖实际领域输入，实例创建时形成只读运行绑定，不每帧遍历作者资产，也不形成另一份可编辑配置。实例绑定不可序列化成新的发布总包；已有独立资源产品保持自己的处理与身份。相机内容变化更新自己的内容/绑定身份，不要求重建角色所有技能、Pose 和非相机资源。
 
-Compiler 必须发布同一正式 Projection，保留完整非相机字段，版本、hash、依赖和加载校验一起迁移；禁止手改大型 Generated。旧 schema 明确拒绝，不写兼容解释器。不固定旧文档中的公共 ABI 数字，使用当前实际 owner 的正式版本规则。
+当前 `CharacterCameraProjectionBuilder.Build(CharacterCameraProfile)` 只接收 Profile，其必要字段转换、资源引用检查和 payload 可以按领域保留并改成合适名称，但旧名称和类型不代表必须保留整包 Projection。相机任务提供正式资源和绑定入口，领域运行时迁移任务从角色装配调用。Builder 位于 Editor 编译目录，不能因取消总包就直接搬到 Player：纯运行绑定逻辑与 Editor-only 的资源转换/导入边界要分开，真正资源处理继续走原有独立资源流程，不新增 Camera-only 临时发布入口、运行时补构建或另一个总包。
 
-UI 显示真实单位、支持范围、资源导航和明确 Build 状态；不在 OnInspectorGUI 中编译或重求值。Timeline 曲线继续由 Clip 或引用资源真实 owner 拥有，不因新增相机功能改写其它领域曲线。
+绑定在采用前完整解析候选：必需资源、类型、目标/Shot/Rig/物理上下文不满足时，由 Camera 返回带资源/请求来源的失败，不伪造新绑定已采用。成功采用后发布实际资源身份、内容版本、绑定实例/代际和状态；Reset、替换时停止旧调用、处理 History/Transition/Effect 的明确重置与资源释放，旧实例结果不得写入新实例。具体已有接口名字在迁移中统一，不为诊断再建独立状态来源。
 
-预览复用当前 ScenePlay/Preview 正式 owner，不复活旧会话。需要求值状态的重建走该 owner 的正式 Reset/重建合同；若当前入口未提供能力，作为依赖写出，不自建执行器。Runtime 与 Preview 消费同一相机模块和已发布计划。
+UI 显示真实单位、支持范围、资源处理/技能编译各自状态及 Camera 实际采用身份；不在 OnInspectorGUI 编译或求值。通过现有 C# API 表达相机作者字段，不恢复目录包/同步器。Preview/ScenePlay 只调用领域绑定、Reset/替换及正式相机求值入口，并读取实际结果，不能自己解释 Profile、求解镜头或把“按钮操作成功”当成新绑定已采用。没有资源/绑定就由领域报告具体缺失，不等待旧全量 Build 恢复。
+
+### 5.1 本批写入责任与输入输出
+
+| 责任方 | 拥有和写入 | 提供给另一方的输入/输出 |
+|---|---|---|
+| Camera 本任务 | Camera 资源、Builder/payload、运行绑定、Timeline.Camera.cs；相机算法和诊断 | 资源身份与精确 Cue 映射；绑定成功/失败、Reset/替换、实际采用身份 |
+| replace-character-program-with-domain-runtimes | 角色实例装配、总 Program/整包 Projection 退役、领域模块接线 | 调用 Camera 的正式资源/只读绑定；不重写相机算法 |
+| unify-timeline-motion-curve-source | 本批 Corin Timeline 资产及其生成 C# 的唯一写入 | 消费 Camera 精确映射，写入具体 Clip/Cue 引用；不反推来源效果公式 |
+| Preview/ScenePlay 任务 | 现有会话、交互、观察、暂停/推进 | 调用 Camera 提供的绑定/Reset/替换，展示 Camera 返回的真实采用身份 |
+
+本分工不改变未完成算法仍归相机的事实；公共版本或绑定调整不能成为重开正确 FramePlanner、轨道+鼠标偏移、History/Transition、Effect、Collision、Adapter、同帧 Body 及诊断行为的理由。同批 Timeline 资产和生成源码不能由 Camera 与曲线迁移各自重建。
+
+### 5.2 精确来源映射，禁止按动作简称猜接线
+
+本任务交付 `evidence/source-cue-mapping.md`，逐行记录源文件/对象/事件、工程 Timeline 精确路径和稳定身份、Clip/Cue 身份、效果类型、ResourceId、原时钟/帧率、时间/持续/权重/取消规则及缺口。未知项按具体资源和具体证据列出，由任务继续取证，不要求用户凭空填整张表。
+
+协调输入确认 Attack_Counter 与 Attack_Normal_05 的部分 Zoom key 和正式资源 m_ZoomId 一致；本轮磁盘核对可见 Corin_Attack_Counter_CamZoom_01、Corin_Attack_Normal_05_CamZoom_01/02。key 一致不证明工程 Timeline/Clip 映射或触发时刻。Attack_Normal_01 资料当前只列 Corin_Attack_Normal_01_CamShake_A_01，不能按 Attack1 的名字认定工程对应，更不能用 Zoom 替代缺失 Shake。映射确认后由曲线迁移任务统一写本批 Timeline 与生成源码，Camera 仅提供精确 Cue 映射和资源/合同。
 
 诊断沿现有快照和采样算子扩展：原始/消费 Look、基准角/手动偏移/限幅、请求胜出原因、来源身份、时间域、blend、Reset、效果贡献、碰撞前后及 RigResult。记录/回放迁到正式相机初始状态合同后删除旧 Controller。纯 logic 输入回放不自动证明相机重放；需要记录相机初始状态、渲染帧 Look 和时间信息。
 
@@ -136,9 +159,9 @@ UI 显示真实单位、支持范围、资源导航和明确 Build 状态；不�
 
 ## Migration Plan
 
-依赖顺序：字段/时间/来源合同 → 基础求值与状态 → 目标/效果/碰撞 → 作者与真实请求 → 正式生成产物 → 旧链删除。互不依赖的域内工作不因一个效果缺证据而全部停止。
+依赖顺序：领域资源/绑定合同与来源映射 → 相机必要转换和角色装配调用 → 曲线迁移统一写入 Timeline/生成源码 → 各领域实际采用/Reset/诊断 → 旧总包绑定与无消费者路径删除。原未完成算法继续按其来源依赖处理，已经正确的求值不重写。本轮只更新这些规划依赖，不执行此迁移序列。
 
-所有迁移都覆盖正式 authoring、validator/hash、compiler、payload、evaluator、资产引用和输出产物。删除 ThirdPersonCameraController 前必须迁移输入记录/回放调用；该诊断文件与角色 prefab 已有用户修改，实施前重读差异，冲突交用户决定，不能覆盖。
+迁移按实际受影响的 authoring、validator/hash、领域转换、payload/绑定和资源引用处理，取消整角色生成产物联动；资源加工需要的独立输出仍保留。旧 Controller/回放和 prefab 的已正确迁移保留，后续按当前差异接续，不重复删除或回退。本任务不修改 implementation.md 的真实旧域构建失败记录，也不以该记录证明新绑定已经采用。
 
 旧 Agent delta 和独立规划本次删除；原来源 evidence 保留为历史证据，当前实现状态另有唯一证据页。旧 worktree 的文件不在本次写入范围，不能把本 change 的文档重写当作跨 worktree 同步或归档。
 
@@ -151,11 +174,12 @@ UI 显示真实单位、支持范围、资源导航和明确 Build 状态；不�
 | Camera Sequence / Camera Effect owner | 已有有限算法和固定 owner，不是旧 StateResolver/Modifier | 修改现有 requirement，不删除不存在的旧 requirement |
 | Camera debug | 当前快照未覆盖全部期望原因 | 补齐现有合同，不宣称现状已满足 |
 | character-csharp-authoring | 已删除旧 Agent 目录包 | 删除废弃 capability delta，添加相机领域覆盖要求 |
-| btsmtl-compiled-simulation-program | 已有唯一 Projection 和 Build Transaction | 只补相机依赖/语义要求，不建立第二套发布协议 |
+| btsmtl-compiled-simulation-program / 旧 Camera delta | 总 Program、整包 Projection、全量 Build 与已批准领域基线冲突 | 删除本 change 的旧 compiled-simulation delta；总包退役由领域迁移 owner 处理，相机只提供资源与绑定 |
+| replace-character-program-with-domain-runtimes D1/D5/D6/D8 | 技能独立编译，C# 控制、Pose 原生运行，表现按领域绑定 | Camera 接资源/只读绑定和实际采用身份，不创建总包或 Editor 逻辑运行时搬运 |
 | btsmtl-timeline-editor-preview：Continuous Curve | 已包含相机曲线和其它领域完整要求 | 不重复改写该 requirement；只添加相机状态接入与诊断约束 |
 | source-parity（本 change 新能力） | 原行为证据与项目已写代码不能互相替代 | 保留全范围和缺口，禁止以新增现状页宣布完整移植 |
 
-本次不修改 current spec 的完成事实；delta 是目标约束。用户后续授权实施或同步时，按实际交付更新对应规范，不把剩余能力提前写成完成。
+本次不修改 current spec 或其它任务文档；delta 是协调后的目标约束。旧 current spec 尚存 Program/Projection 用语不撤销用户已批准的新基线，双方按上述 ownership 迁移。本 PLAN 不发送实施消息，不将文档修订当作代码完成。后续如操作 Unity，编译期间禁止修改代码或反复刷新，Play 时不得 Build/Refresh，且每次工具显式指定实例。
 
 ## 验收边界
 

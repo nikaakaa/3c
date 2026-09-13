@@ -1,11 +1,11 @@
 # 相机剩余实施任务
 
-修订 v3，2026-09-13。用户已明确授权配套实现窗口按本文全部剩余范围实施。此文件替换旧执行批次、审批记录和任务列表，只列剩余工作；未勾选表示未完成，不能据此否定 evidence/current-implementation.md 中已有代码。实现窗口在 implementation.md 维护实际任务状态、改动与证据，规划窗口按实际交付对账本文。所有任务默认不新增测试，不包含人工验收任务。
+修订 v4，2026-09-13，协调提案 camera-preview-timeline-domain-runtime-r1。本轮仅 PLAN，不改代码/资产/生成产物，不操作 Unity、不下发实现消息或扩大 v3 原授权。以下是调整后的领域责任与剩余合同；已有实现以 implementation.md 和当前代码为准，未勾选不是要求重做已正确算法。旧 Projection/旧 Runtime DLL 的真实记录保留，但不再等待 Character 全量 Build/整包 Projection 恢复。所有任务默认不新增测试，不包含验证或人工验收任务。
 
 ## 1. 基础构图与输入合同
 
 - [ ] 1.1 补齐默认配置键、Offset/AspectRatio、俯仰到轨道参数的消费者和单位映射，将结论落实到正式字段合同，保留已正确的轨道与鼠标偏移相加。
-- [ ] 1.2 将重复轨道数据收敛到唯一 owner；迁移 DefaultSphere/DefaultFOV 的实际 stage 消费者后删除重复初始化字段，同步 schema、hash、compiler、资产和 UI。
+- [ ] 1.2 保留已完成的唯一轨道 owner 与字段清理；将仍被消费的 Camera 数据迁到正式资源/只读领域绑定，同步实际受影响的 schema、hash、必要转换与 UI，不恢复重复轨道或整包 Projection。
 - [ ] 1.3 为 MakeContextDependent、PlayLength、CameraLocateRadius、RotationTransitionSeconds、Locking 等字段接入明确消费者，确认无用的从整条链删除；删除不属于单角色范围的无消费者换人配置。
 - [ ] 1.4 完成渲染帧输入消费身份、响应权、最终俯仰限幅和 Reset 原因合同；失焦、暂停及恢复沿正式输入/时间来源处理，不新建鼠标读取路径。
 
@@ -31,23 +31,23 @@
 
 ## 5. 碰撞与环境约束
 
-- [ ] 5.1 增加正式环境查询抽象和 Unity 实现，接通 Profile/Projection、物理场景、层/触发器/自身过滤、近裁剪保护体。
+- [ ] 5.1 保留已实现的环境查询抽象和 Unity 实现，将正式相机资源/只读绑定、物理场景、层/触发器/自身过滤和近裁剪保护体接到新装配入口，不因旧总包退役重做碰撞算法。
 - [ ] 5.2 在效果求值后、Adapter 前完成碰撞收缩与连续恢复，处理转角扫墙、起点重叠和无合法空间，输出明确约束结果。
 - [ ] 5.3 将碰撞前后计划与原因接到正式输出/诊断，完整迁移后删除 Collision.Enabled 的未发布拒绝逻辑，不改角色目标伪造避障。
 
-## 6. 作者、动作资源与正式发布
+## 6. 相机资源、精确映射与领域绑定
 
-- [ ] 6.1 在现有资源编辑与 Graph/Timeline 作者 API 中闭合相机字段、单位、引用、能力诊断、曲线 owner 导航；禁止 Inspector 重绘触发重操作。
-- [ ] 6.2 通过现有 export_code/generate_assets 的领域适配完整表达相机内容和根绑定，缺失字段明确失败，不恢复 Agent Document。
-- [ ] 6.3 将来源明确的 Corin 单角色动作/事件接到实际相机请求与资源；原 81 Shake、18 Zoom、18 Stretch、4 Override 分别记录可达调用及去向，不虚构一资源一触发点。
-- [ ] 6.4 在既有 Character Build 中完成依赖身份、完整 Profile/资源编译和 Program/Projection 原子发布，保留全部非相机字段，拒绝旧/混合产物。
-- [ ] 6.5 将 Camera 的 Rig、目标、物理输入、Reset 和只读诊断接入现有 Preview/ScenePlay owner，缺失上游合同作为明确依赖，不新建会话或 seek 执行器。
+- [ ] 6.1 在相机资源、Builder/payload、运行绑定和 Timeline.Camera.cs 中闭合本领域字段、引用、单位和能力失败合同；保留真实曲线 owner，不在 Inspector 重绘中处理资源或编译，不改由其它 owner 负责的同批资产。
+- [ ] 6.2 通过现有 C# 领域 API 表达 Camera 资源和请求合同；本批 Corin Timeline 资产及生成源码由曲线迁移任务统一写入，相机只提供精确 Cue 映射与领域能力，不各自重建同一资产。
+- [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 Timeline/Clip→效果类型/ResourceId→时间/持续/取消映射；逐资源补齐证据和缺口。Counter/Normal_05 的 Zoom key 对齐不替代 Timeline 映射；Normal_01 当前仅有指定 Shake 线索，不按 Attack1 名称猜接线或用 Zoom 代替。
+- [ ] 6.4 从只接受 Profile 的 CharacterCameraProjectionBuilder 保留必要转换/引用检查，提供给角色装配调用的正式相机资源与只读运行绑定；分开 Editor-only 处理与 Player 绑定，独立资源流程保持原归属，不恢复角色全量 Build/整包 Projection，也不新增 Camera-only 临时发布入口或换名总包。
+- [ ] 6.5 由 Camera 提供绑定失败、Reset/替换、旧实例释放与实际采用身份，角色装配/Preview 调用同一领域入口；预览只观察真实结果，不自行求解相机或伪造已采用。
 
 ## 7. 诊断、迁移与删除
 
-- [ ] 7.1 扩展现有 CameraDebugSnapshot 与采样合同，提供输入/响应/角度、来源裁决、时间、混合、Reset、效果和碰撞对实际输出的解释。
+- [ ] 7.1 保留已接通的 CameraDebugSnapshot 和采样行为，将旧 Projection 身份观察迁到 Camera 实际资源/内容/绑定实例身份，继续解释输入、来源、Reset、效果和碰撞，不重做算法或另建诊断状态源。
 - [ ] 7.2 将输入记录/回放的相机初始状态和采样迁到正式 Presentation 合同，保留现有用户改动，区分逻辑输入回放与镜头回放。
 - [ ] 7.3 在真实调用迁完后删除 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入和无引用配置/资源，所有运行与诊断只走正式链。
-- [ ] 7.4 随实际实现同步本 delta 对应的 current spec、作者配置和生成产物合同，去除旧文档要求；不将未实现项声明为完成。
+- [ ] 7.4 随实际迁移同步 Camera 自身规范与领域资源/绑定合同，配合领域运行时 owner 删除无消费者的旧总包绑定；本批 Timeline/生成源码按曲线迁移单一写入，保留旧产物失败记录，不以旧程序集结果证明新代码。
 
 任务分组表达依赖与职责，不替用户判定业务优先级。一个效果缺少来源不阻止独立且已授权的其它模块推进；删除/迁移撞到正在修改的正确代码时，记录具体冲突交用户决定。

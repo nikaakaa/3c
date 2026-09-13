@@ -2,7 +2,9 @@
 
 用户要求直接使用 Slate 已有的完整 Timeline UI。此前规划把数据适配扩大为纯内存 Editor Model、新 Surface API、交互与 Curve/DopeSheet 输入全面改造，实际成为重做编辑器，用户已明确否决；实现窗口已通过 0aa52f209 按用户要求回退。
 
-本 change 撤销该方案，复用真实 Slate 已提供的时间尺、轨道/Clip、选择、拖动、裁剪、缩放、曲线和切线编辑。TimelineData 继续是正式业务数据，现有 typed 配置、Mutation/Undo、右侧 Inspector 与预览边界保留。
+本change撤销该方案，复用真实Slate已提供的时间尺、轨道/Clip、选择、拖动、裁剪、缩放、曲线和切线编辑。TimelineData继续是正式业务数据，已有typed配置、Mutation/Undo与预览归属保持；不恢复Timeline内部右侧自制Inspector，正式属性编辑复用原Slate控件接入Unity已有Inspector。
+
+2026-09-13 已对照恢复后的原源码，具体证据、数据接口、Track内UI方法搬迁、曲线/Inspector与事务决策见[Slate原源码解耦决策](slate-source-decoupling.md)。当前ce21aec8f/afcb90056恢复原UI但仍有隐藏组件树；去组件依赖尚未完成。
 
 ## What Changes
 
@@ -11,8 +13,9 @@
 - 删除上一轮纯内存 Surface/Editor Model、Clip包装器/选择系统和曲线工具整体迁移任务，不换名称继续实现。
 - 实现窗口负责恢复用户要求的真实 Slate 基线；本规划不执行代码回退，不指定未经核对的回退提交，也不把文档更新当成已恢复。
 - 只在现有 Slate 功能上继续数据和操作适配：稳定 ID、正式 Track/Clip/Section、完整曲线、资源和 typed 字段，提交走既有 TimelineData.AddTrack/AddClip/AddSection、Session/owner Undo。
-- 原有帧显示、吸附、右侧 Inspector、布局和必要菜单接线保持；缺陷针对现成实现局部修改，不重建时间轴、交互或曲线渲染器。
+- 原有帧显示、吸附、布局和必要菜单接线保持；复用原Inspector控件、删除proxy字段与Actor前提，不新增Timeline右侧属性区。缺陷针对现成实现局部修改，不重建时间轴、交互或曲线渲染器。
 - 直接修改 Slate 原源码的数据绑定：原时间尺/Track/Clip/Curve/DopeSheet 函数继续使用，所读写的 Cutscene/组件字段换为正式 Timeline/薄 adapter 输入和原 Mutation 输出。函数参数可以改，原绘制与交互算法保留。
+- 原Track组件内的Editor方法允许搬迁到现有Editor模块并参数化，只保留一份函数主体；不以原入口提前返回到ShowEmbedded列表/时间轴冒充复用。BTSMTL编辑接口不继承运行IDirector/IKeyable，不提供空运行实现。
 - 删除临时 Cutscene/GameObject/组件树及专属创建、层级扫描和销毁；Actor/Director/运行采样等无关绑定直接清除。不能保留代用组件绕过接线，也不能另写一套 UI 来达成去依赖。
 - Slate 对象无论何种承载均不能成为第二份持久化 Timeline、compiler输入或角色运行 owner；本地编辑不依赖启动 ScenePlay。
 - 预览继续归正式 SkillGraph/Graph Shell、Session/adoption，Timeline 只编辑和显示已接入的真实观察。
@@ -30,8 +33,9 @@
 
 ## Impact
 
-- 本轮只修改本 change 的 proposal/design/tasks/specs 与 preview-integration-plan.md。实现窗口已提交 0aa52f209 回退，代码恢复状态仍由其实际结果记录。
-- 保留正式 TimelineData/identity/资源/Curve/typed Mutation/Undo/Session、真实 Slate UI、右侧 Inspector、既有 Camera Track 和已正确的预览。
+- 本轮只修改本change文档，增加slate-source-decoupling.md；当前恢复状态按ce21aec8f/afcb90056及源码记录，不修改实现或资产。
+- 保留正式TimelineData/identity/资源/Curve/typed Mutation/Undo/Session、真实Slate UI、原Inspector控件、既有Camera Track和已正确的预览；不恢复右侧自制面板。
 - 删除文档中“必须新建 SlateTimelineEditorSurface/Editor Model”“必须改造全部 IKeyable/AnimatedParameter”“必须拆 UI 程序集”的指令，避免错误规划继续驱动实现。
 - 与 current specs 对比：独立作者能力、合法字段、稳定 identity、正式 Undo 等业务合同继续成立；旧 PreviewSession 条款仍归预览 change 处理。本轮不安装未完成 delta，也不修改其它任务的规范。
+- 本次已纠正本change内部右侧Inspector与原生属性接线的冲突；current btsmtl-timeline-editor-preview仍有TimelinePreviewSession/互斥LiveDebug只读条款，和Graph Shell预览决策冲突，由原场景预览change处理。旧timeline-animation-authoring-surface引用路径本次不存在，不再作为已核对依据。
 - 不新增测试或验证任务；design 第3节明确原函数保留与接线替换清单。原重做第11节撤销，新第11节仅记录原源码接线任务且保持未勾选，不能把回退或规划更新当成代码完成。

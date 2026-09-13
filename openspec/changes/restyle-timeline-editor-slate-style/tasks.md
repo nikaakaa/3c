@@ -1,8 +1,8 @@
-2026-09-13 r2：保持已有实施勾选和正确业务链，第10节只记录强类型接线增量。只在主线实施，不继续向旧预览 worktree 双写。任务仅记录实现，不添加测试、手动验证、编译或校验任务；用户自行验收，行为条件放 design.md。原完成记录在 implementation.md 和 Git 历史保留，规划修改不代表代码完成。
+2026-09-13 源码对账：ce21aec8f/afcb90056已恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理，DirectProjection已删除。第11节按[源码解耦决策](slate-source-decoupling.md)重新展开为未完成实现项。第1–10节保留此前功能记录，但对已由当前源码证明不成立的勾选予以纠正；未重新核对的历史勾选不构成本次端到端声明。正确业务实现不回退。只在主线实施，不向旧worktree双写；不新增测试、手动验证、编译或校验任务。
 
 ## 1. 已有接入基础
 
-2026-09-13 用户纠正：撤销原第11节纯内存编辑器重做任务，实现窗口已提交 0aa52f209 回退。其历史进度不作为当前目标；本清单保留原功能和联动项，不因改文档声称原功能已恢复。恢复提交为 0aa52f209，原入口已恢复；组件树接线整改仍未实现，以下新任务不得复用旧改造勾选。
+历史上0aa52f209撤销过一次自制UI；最新恢复基线是ce21aec8f/afcb90056。两次回退均不构成组件解耦完成；第11节不得沿用已回退实现的完成勾选。
 
 - [x] 1.1 已有 CutsceneEditorSurface 的 InitializeEmbedded/DrawEmbeddedGUI 和 transaction callback；后续布局/播放清理分别由布局和预览边界章节承担
 - [x] 1.2 已有 TimelineData 正式 owner 与 Editor-only Slate projection 的身份映射基础，不把临时对象作为保存资产
@@ -18,11 +18,11 @@
 
 - [x] 2.1 对齐 Clip/Section/Curve 全部显示与 domain 映射，包含 Motion CurveEndFrame、Scene Presentation valueCurve 和真实内容终点；未支持字段明确报告
 - [x] 2.2 将正式 selection、属性、TreeClip ownership/下钻和 AnimationClip 资源导航接入同一 adapter，不仅保存在临时名称中
-- [x] 2.3 完成有效手势 begin/commit/cancel 与 source revision 校验；选择/游标/缩放不生成 mutation，不因每次 MouseUp 重建
-- [x] 2.4 完成 diff -> Session -> 正式 owner 的校验/提交/刷新；拒绝操作给出原因，删除 Unsupported 静默吞修改路径
+- [ ] 2.3 完成有效手势begin/commit/cancel与source revision处理；当前恢复基线仍对普通MouseDown抓快照、MouseUp排队重建，随11.8收口，选择/游标/缩放不产生作者事务
+- [ ] 2.4 完成diff到Session/正式owner的校验、提交与失败恢复；当前ApplyModify无自动校验/回滚，过期分支仍有静默返回，随11.8收口
 - [x] 2.5 收口取消、关闭、Undo/Redo、外部 owner 修改和过期草稿；无效草稿不覆盖正式数据
-- [x] 2.6 Clip、Curve、属性和菜单路径使用一个正式 Undo，隔离临时 Slate Undo/dirty，保留取消和失败事务结果
-- [x] 2.7 将删除、复制、排序、跨轨道移动统一接正式 contract/引用校验，复制生成新 identity，排序保留 identity
+- [ ] 2.6 Clip、Curve、属性和菜单使用同一正式Undo；当前原DopeSheet/Inspector仍有组件Undo入口，随11.6–11.8改接，不以已有Session提交推定全部隔离
+- [ ] 2.7 删除、复制、排序、跨轨道移动直接接正式contract/引用规则，复制新ID、排序保留ID；当前仍有先改组件再diff路径，随11.5收口
 
 ## 3. 正式新增
 
@@ -33,7 +33,7 @@
 
 ## 4. 帧几何
 
-- [x] 4.1 由正式 Session FrameRate 提供统一像素/帧/Slate秒换算，删除嵌入路径对 Slate 全局 FPS/timeStepMode/snapInterval 的时间权威依赖
+- [ ] 4.1 保留现有正式帧换算，将原Inspector中的Prefs.frameRate/snapInterval及曲线全局吸附读数改接同一Session上下文，随11.6–11.7收口
 - [x] 4.2 标尺、游标输入、逐帧、Clip/Section 拖动与裁剪使用整数帧；区分一帧移动与关键帧跳转
 - [x] 4.3 按 Curve descriptor domain 换算 key time/tangent，保留未编辑 key、weight、WeightedMode 和 wrap，不全量量化资产
 - [x] 4.4 内容终点使用真实 MaxFrame，移除最少一秒和额外一秒；显示全部只改变视窗，终点线不提供无正式数据对应的编辑
@@ -48,14 +48,14 @@
 
 ## 6. 刷新与属性
 
-- [x] 6.1 正式 Track/Clip/key selection 驱动原 Slate Surface，时间按帧、资源精确引用、Curve 只显示当前注册 channel；不创建独立属性区
+- [ ] 6.1 选中正式Track/Clip/key驱动原Slate控件，普通字段接Unity已有Inspector的正式owner；不恢复Timeline右侧自制面板，不再选代理Cutscene，随11.7收口
 - [x] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野和纵向滚动；删除对象不自动改选首个 Clip，不保存自制 Inspector 宽度
 - [x] 6.3 Add Track/Add Clip 弹窗在正式提交失败或 owner 过期时保留当前输入并报告原因；DopeSheet 仅按像素密度减少显示 key，不修改正式曲线
 
 ## 7. 预览边界
 
 - [x] 7.1 移除误接的嵌入 Slate Play/Sample/ReSample/Stop 和私有时钟，保留静态编辑游标、逐帧与被动运行标记
-- [x] 7.2 清理默认 Director/Actor 和嵌入 EditorUpdate、快捷键、初始化/释放、保存、delayCall 的 Slate 内核调用；r2 保留已有实现
+- [ ] 7.2 删除BTSMTL隐藏组件树与默认Director/Actor前提，清理编辑更新、保存、Inspector、delayCall和释放中的Slate运行调用，随11.9–11.10收口；原正式预览保留
 - [x] 7.3 Timeline 通过 `RuntimeDebugSession` 的正式 Timeline playback summary 接入场景/技能观察，Preview 返回 Graph Shell；运行事实只读、作者仍可编辑，多调用不猜选，Graph Shell 继续拥有运行控制
 - [x] 7.4 作者游标、Runtime overlay 和 History overlay 使用三个独立时间状态；Graph Shell Segment 选择进入历史观察，Timeline 不提供未经批准的本地 Play
 
@@ -91,9 +91,14 @@
 
 实现门槛：打开、刷新、新增、选择、编辑、关闭均不创建或依赖 Slate 组件树；原生 Cutscene/Actor/Director 规则不能阻止正式 TimelineData 的合法操作。__BTSMTL_SlateTimelineProjection__ / BuildProjection 残留不作为最终方案或 fallback。本段是实现约束，不新增验证任务。
 
-- [x] 11.1 在原窗口/嵌入入口、ShowTimeInfo、列表和ShowTimeLines中接正式Timeline/Track/Clip/Section及帧数据，保留原绘制、行高、滚动和命中逻辑；正式 binding 从原入口分派，游标/快捷键/引导线同样从原函数入口进入
-- [x] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为；formal Clip 使用同一 `ActionClipWindow` 与 `ActionClipWrapper`，菜单命令转到 `IEmbeddedTimelineBinding`
-- [x] 11.3 在原CurveEditor/DopeSheetEditor/参数工具中替换曲线读写、编辑时间和提交绑定，保留原关键帧/切线算法及全部曲线数据，不另写渲染器或曲线编辑器；无对象 binding 通过原 Slate CurveEditor/DopeSheetEditor 使用纯编辑数据，提交由 `TimelineEditorSessionContext` 完成
-- [x] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接；由 `BtsmtlSlateTimelineDirectProjection` 与 `IEmbeddedTimelineBinding` 完成，提交 `7ddde8c4e`
-- [x] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、原 Slate Surface 和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback
-- [x] 11.6 将原 Slate 原生对象/Actor/Director/Cutscene 条件门禁改接正式 Timeline contract 和编辑资格，合法新增/选择/编辑不因缺少原生组件或原生播放状态被拒绝；正式路径仅使用 binding/Session，不创建原生组件树
+- [ ] 11.1 D1/D2：在现有Slate Editor模块收窄原编辑输入，原生Cutscene入口与BTSMTL入口共用一套原函数；BTSMTL输入不继承IDirector/IKeyable运行接口，不增加空运行实现或替代绘制分支
+- [ ] 11.2 D1/D3：将CutsceneTrack原OnTrackInfoGUI、DoDefaultInfoGUI、DoParamsInfoGUI、OnTrackTimelineGUI、DoClipCurves及原展开/高度状态参数化，必要时搬入现有Editor模块；旧位置不保留第二份函数主体
+- [ ] 11.3 D2：把现有Projection中正确的ID映射、typed新增、曲线换算和提交迁移为BtsmtlSlateTimelineBinding；只引用正式对象和必要手势草稿，不恢复EditorModel/DirectProjection两条路径
+- [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase
+- [ ] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令
+- [ ] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具接正式descriptor曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy Animatable浮点字段和ParameterNameFor映射，复用现有domain及tangent换算
+- [ ] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板
+- [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务
+- [ ] 11.9 D8：原标尺/游标/步进/曲线吸附使用同一正式帧上下文，编辑资格不依赖Cutscene时间或Actor；保留原Runtime/History观察与Scene Play Session，删除BTSMTL采样与播放副作用，不擅自新增Play语义
+- [ ] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
+- [ ] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态

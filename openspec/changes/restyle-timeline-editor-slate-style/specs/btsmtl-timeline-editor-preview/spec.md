@@ -2,7 +2,7 @@
 
 ### Requirement: Timeline Editor必须直接使用Slate CutsceneEditor作为实际编辑表面
 
-正式 Timeline 编辑入口 MUST使用Slate 已提供的 `CutsceneEditor` 绘制和交互功能 真实 IMGUI 编辑 UI，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放和 Curve/DopeSheet。属性区 MUST使用正式 typed 字段绑定，不把 Slate proxy Inspector 的私有参数作为作者字段。Timeline Editor MUST不再用 UI Toolkit 重新实现一套 Slate 风格时间轴，也 MUST不把 Slate 图片或 GUI skin 当成自制 UI 的替代品。Slate 播放、暂停、场景绑定和运行控制在 BTSMTL Embedded Surface 中 MUST被隐藏或禁用。
+正式Timeline编辑入口 MUST使用Slate已有CutsceneEditor的真实IMGUI绘制和交互，包括时间尺、Group/Track列表、Clip、选择、拖动、缩放和Curve/DopeSheet。原Inspector控件 MUST通过正式typed字段接入Unity已有Inspector，MUST NOT在Timeline内部另建右侧Inspector或把proxy私有参数作为作者字段。Timeline Editor MUST NOT用UI Toolkit或另一套IMGUI函数重新实现Slate风格时间轴，也 MUST NOT只复用图片/skin。Slate播放器、场景绑定和运行控制 MUST NOT作为BTSMTL作者编辑依赖。
 
 BTSMTL `TimelineData`、Track/Clip/Section/TreeClip authoring identity、SerializedOwner、Source Map、Mutation、Undo、Preview 和 Live Debug MUST继续由原业务模块拥有。Slate UI MUST通过现有数据适配读写正式内容，MUST不新建替代 Surface/Editor Model 来重做已有功能。Slate 编辑对象 MUST不保存为第二份业务资产。显式导出的 C# MAY作为声明生成范围的重建来源，生成 MUST仍产出正式 TimelineData 并恢复 owner 挂接。
 
@@ -26,6 +26,13 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 - **AND** 正式 typed 编辑、资源、Undo 和已正确的布局/Inspector MUST保持
 - **AND** 后续 MUST在原函数内替换正式数据读写并删除临时代用对象，不能把回退或文档更新当成接线已完成
 
+#### Scenario: 数据来源共用原函数主体
+
+- **WHEN** 原生Cutscene与正式Timeline需要使用同一轨道、Clip或曲线UI
+- **THEN** 数据来源 MUST在入口明确绑定，原列表、时间轴、ActionClipWrapper及Renderer MUST共用一份原绘制/事件处理主体
+- **AND** MUST NOT在原入口提前返回另一套ShowEmbedded列表、时间轴或独立鼠标分支
+- **AND** 原CutsceneTrack中的Editor方法 MAY为解除MonoBehaviour依赖迁入现有Editor模块并参数化，旧位置 MUST NOT继续保留重复绘制主体
+
 #### Scenario: Slate UI编辑Clip范围
 
 - **WHEN** 作者在 Slate `CutsceneEditor` 中移动或裁剪一个 projection Clip
@@ -37,6 +44,7 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 
 - **WHEN** BTSMTL Timeline 被 Undo/Redo、显式 generate_assets 或其它正式业务入口修改
 - **THEN** adapter MUST销毁旧 projection 的临时状态并从最新 BTSMTL Timeline 重建
+- **AND** 临时状态 MUST仅指本窗口编辑草稿与失效引用，MUST NOT创建或销毁代用组件树；有效ID选择、展开和视野 MUST保持
 - **AND** MUST不把旧 Slate proxy 的字段覆盖回 BTSMTL
 
 ### Requirement: Slate Projection必须是Editor-only桥接而不是第二个正式数据源
@@ -44,6 +52,8 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 现有 adapter MUST保留正式 BTSMTL identity 与 Slate 编辑对象的映射，编辑数据 MUST不保存成另一份 Timeline 或进入 C#导出/Compiler。正式写入和 Undo MUST仍由原业务 owner 及 Session 管理，MUST不为适配新增一套业务对象或编辑器框架。
 
 Track/Clip/Section 和曲线 MUST复用原 Slate 显示、交互与编辑工具，通过现有 adapter 对应正式字段和曲线。MUST保留 CurveEditor/DopeSheet 已有关键帧与切线功能；其参数、曲线访问、编辑时间和提交绑定 MAY按需要修改，MUST不重写绘制/交互算法或增加另一个曲线工具。
+
+编辑输入 MUST只提供原UI需要的字段、曲线、编辑时间与正式命令，MUST NOT要求BTSMTL实现带Play/Sample/Evaluate/Actor的运行IDirector、IDirectable、IKeyable或IAnimatableData。原Editor函数所用编辑子集 MAY拆出供两种真实数据来源共用；MUST NOT使用空运行方法满足类型，也 MUST NOT创建通用Editor Model。正式对象与必要手势草稿 MUST不形成第二份序列化或运行模型。
 
 #### Scenario: 关闭Slate窗口
 
@@ -76,6 +86,13 @@ Slate 对 proxy 的字段修改 MUST仅作为手势草稿。Adapter MUST通过 s
 - **THEN** adapter MUST丢弃未提交的 proxy变化
 - **AND** MUST从 BTSMTL owner重新生成 projection
 - **AND** MUST不写入半成品 TimelineData
+
+#### Scenario: 提交与菜单事务
+
+- **WHEN** 作者完成字段输入、菜单命令、曲线编辑或多Clip手势
+- **THEN** 操作 MUST在原Session/TimelineData mutation链内完成本次完整改动的业务校验与一次正式Undo；失败 MUST恢复该次owner范围，不保留部分写入
+- **AND** 普通选择、滚动、缩放、游标和折叠 MUST NOT建立作者事务；菜单 MUST NOT依赖外层MouseUp才保存
+- **AND** MUST NOT把现有ApplyModify注册Undo视为已经实现自动校验或异常回滚，缺项 MUST在原正式链实现而非另建全局事务框架
 
 ### Requirement: Preview与Live Debug控制必须归Graph Shell
 
@@ -163,6 +180,26 @@ Timeline MUST保留 Slate 已提供的绘制、交互、Curve/DopeSheet 和切�
 - **THEN** 实施 MUST在对应原函数修改数据访问或必要参数，将正式数据和编辑命令接入
 - **AND** 临时GameObject/Cutscene/Group/Track/ActionClip组件承载及专属生命周期 MUST删除，MUST不自动转为整体 UI/模型重写
 
+#### Scenario: 原曲线工具改接正式通道
+
+- **WHEN** Timeline显示或编辑已注册的Curve channel
+- **THEN** 原DoParamsInfoGUI、DoClipCurves、AnimatableParameterEditor、CurveRenderer与DopeSheetRenderer MUST复用原控件/关键帧/切线实现，数据来自正式descriptor及隔离曲线草稿
+- **AND** MUST NOT为每个channel新建proxy Animatable浮点字段、反射场景属性或要求IKeyable运行root；前后key跳转 MUST只改编辑游标
+- **AND** 静态读取草稿AnimationCurve值 MAY用于Value显示，MUST NOT调用Cutscene采样或写Actor属性
+
+#### Scenario: 原手势消费正式重叠规则
+
+- **WHEN** 作者拖动、裁剪或调整Blend，或者原UI仅执行Repaint
+- **THEN** 原手势与图形 MUST保留，能力和合法放置 MUST来自正式Capabilities与Reject/Parallel/Blend合同，而非proxy CLR类型或组件反射
+- **AND** Repaint MUST NOT将相邻重叠写入SelfEase；派生OtherEase MUST由原正式混合规则处理
+
+#### Scenario: 无Actor的原属性控件
+
+- **WHEN** 作者选中正式Track或Clip并修改属性
+- **THEN** 原Inspector的IN/OUT、Blend和参数控件 MUST接真实serialized owner、正式选择和typed配置，MUST NOT依赖ActionClip组件target、base proxy字段序列化或CutsceneInspector重采样
+- **AND** MUST NOT创建Dummy Actor、代用Unity对象或清空全局Selection隐藏问题；仅跳过Actor报错 MUST NOT被记作解耦完成
+- **AND** 删除Timeline内部右侧自制面板 MUST NOT删除已有Clip的正式字段编辑能力
+
 #### Scenario: 原有功能恢复
 
 - **WHEN** 编辑器重做代码回退完成
@@ -242,12 +279,12 @@ Timeline 与 SkillGraph/Graph Shell MUST按同一联动计划交付导航、运�
 
 ### Requirement: Timeline布局必须统一计算并适应窗口尺寸
 
-嵌入 Surface MUST以单一布局结果提供背景、分隔线、控件、裁剪和命中范围。窗口 MUST包含紧凑文档行、编辑工具栏、左侧搜索/轨道、中间缩放/帧标尺/Clip/Curve 和右侧可收起 Inspector。左右轨道内容 MUST共享行高度和垂直滚动；MUST不为隐藏的 Slate 控件或不存在的工具保留空白。文档名称只显示一次，ownership 为短标记，长路径在 tooltip。
+嵌入Surface MUST以原Slate单一布局结果提供背景、分隔线、控件、裁剪和命中范围。窗口 MUST包含紧凑文档信息、原编辑工具、左侧搜索/轨道与时间尺/Clip/Curve，MUST NOT新增右侧自制Inspector或SplitView。选中属性 MUST复用原控件接Unity已有Inspector。左右内容 MUST共用原行高、展开和垂直滚动；隐藏控件 MUST NOT留空白，文档名称只显示一次。
 
 #### Scenario: 窄窗口与曲线展开
 
 - **WHEN** 窗口缩到 600×360 逻辑像素或作者展开曲线
-- **THEN** 左轨道和中间内容 MUST保持对齐，右侧 Inspector MAY收起，次要工具 MUST折叠或省略文字
+- **THEN** 左轨道和中间内容 MUST保持对齐，不因新增内部Inspector挤压时间轴，次要工具 MUST折叠或省略文字
 - **AND** 主要按钮、数值输入、标尺 MUST不重叠，命中位置 MUST与显示一致
 
 #### Scenario: 缩放条与游标
@@ -280,7 +317,7 @@ Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数�
 
 ### Requirement: Timeline刷新必须保留有效作者状态
 
-编辑视图状态 MUST按正式 identity 保存选择、曲线通道、展开、当前编辑帧、缩放、滚动和 Inspector 宽度。提交、Undo/Redo、外部更新 MUST恢复仍有效状态，不自动改选首个 Clip。选择、游标、缩放和搜索 MUST不产生 authoring Undo 或无条件重建。Inspector MUST显示正式 typed 字段，不编辑 proxy 私有参数。
+编辑视图状态 MUST按正式identity保存选择、曲线通道、展开、当前编辑帧、缩放和滚动，不新增Timeline内部Inspector宽度状态。提交、Undo/Redo和外部更新 MUST恢复有效状态，不自动改选首个Clip。选择、游标、缩放和搜索 MUST NOT产生authoring Undo或无条件重建。原Inspector控件 MUST显示正式typed字段，不编辑proxy私有参数。窗口关闭 MUST释放所属曲线cache与可解除订阅，不清空其它窗口状态。
 
 #### Scenario: 修改后继续编辑
 

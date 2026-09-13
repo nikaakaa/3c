@@ -1,5 +1,7 @@
 # Timeline 与预览窗口联动实施计划
 
+2026-09-13 补充：Timeline原UI的具体解除组件/Actor依赖方案见[源码解耦决策](slate-source-decoupling.md)，其中D8约束编辑游标和外部运行观察。ce21aec8f/afcb90056当前仍使用隐藏组件代理，不能视为解耦完成；本次只更新编辑侧接线决策，不重写已正确的预览运行链。下文早期实现观察按其日期理解，不是今天的逐项完成报告。
+
 ## 目标与归属
 
 2026-09-13 用户纠正：撤销另做 Slate Surface/Editor Model/曲线交互的方案，实现窗口已提交 0aa52f209 回退。改为直接修改 Slate 原源码：原绘制和操作保留，数据绑定换为正式 Timeline/薄 adapter，Actor/Director和临时组件树相关无关绑定清除。本地编辑不依赖启动 ScenePlay，预览联动使用原正式运行链。
@@ -163,6 +165,6 @@ P1/P3 与 Timeline 布局、帧、新增一起排期；P2/P4/P5 逐项核对主�
 - 人工修改/拖动/保存 Timeline 只写正式 TimelineData，经原 Undo，不生成 C#，不增加源码同步状态、源码 Undo 或导出 UI。
 - export_code 从当前资产完整输出 C#；generate_assets 执行当前已编译入口，重建并保存明确生成范围和根挂接。重新生成不会合并未导出修改，保留修改需先显式导出。
 - 源码编译不自动 generate_assets；两个作者 MCP 不自动 Character Build 或 Play。预览仍使用原显式 Build/采用入口。
-- TimelineAuthoringClipBinding.cs 的 JSON 退役、typed 配置和公共输出/生成归 C# authoring；BtsmtlSlateTimelineDirectProjection.cs 由本任务维护正式 UI 接线，不复制业务模型或中央 Validator。
+- TimelineAuthoringClipBinding.cs的JSON退役、typed配置和公共输出/生成归C# authoring；当前BtsmtlSlateTimelineProjection.cs及其向非组件BtsmtlSlateTimelineBinding的迁移由Timeline任务维护，DirectProjection已回退删除，不复制业务模型或中央Validator。
 - 生成内部引用使用新建对象，范围外共享图和原始资源作为精确外部输入。仅生成范围内物理对象可替换，业务 identity/引用和根 owner 挂接须恢复并保存。预览按已有 binding/revision 规则刷新，不把旧对象或 Slate proxy 当成生成输入。
 - 本轮只更新 Timeline 目录内规划，不修改其它预览任务文档或实现；不因协议退役重做已正确 UI/预览，也不将新接线列为完成。

@@ -395,6 +395,8 @@ namespace BTSMTL.Timeline.Editor
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
         int m_CurrentFrame;
+        float m_ViewTimeMin;
+        float m_ViewTimeMax;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -465,6 +467,8 @@ namespace BTSMTL.Timeline.Editor
             m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
             m_PlaybackPolicy = cutscene => !ReferenceEquals(cutscene, m_Cutscene);
+            m_ViewTimeMin = 0f;
+            m_ViewTimeMax = Mathf.Max(1f / Mathf.Max(1, m_Session.FrameRate), request.Timeline.Duration);
             try
             {
                 BuildProjection();
@@ -517,8 +521,8 @@ namespace BTSMTL.Timeline.Editor
         {
             TimelineEditorSelection selection = m_Session.Selection;
             return new BtsmtlSlateTimelineViewState(
-                m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMin : 0f,
-                m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMax : 0f,
+                m_EmbeddedEditor != null ? m_ViewTimeMin : 0f,
+                m_EmbeddedEditor != null ? m_ViewTimeMax : 0f,
                 m_CurrentFrame / (float)Mathf.Max(1, m_Session.FrameRate),
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
                 selection.Track?.AuthoringId,
@@ -532,8 +536,10 @@ namespace BTSMTL.Timeline.Editor
                 return;
             if (state.ViewTimeMax > state.ViewTimeMin)
             {
-                m_EmbeddedEditor.viewTimeMin = state.ViewTimeMin;
-                m_EmbeddedEditor.viewTimeMax = state.ViewTimeMax;
+                m_ViewTimeMin = state.ViewTimeMin;
+                m_ViewTimeMax = state.ViewTimeMax;
+                m_EmbeddedEditor.viewTimeMin = m_ViewTimeMin;
+                m_EmbeddedEditor.viewTimeMax = m_ViewTimeMax;
             }
             if (m_EmbeddedEditor.cutscene != null)
                 SetCurrentFrame(Mathf.RoundToInt(state.CurrentTime * Mathf.Max(1, m_Session.FrameRate)));
@@ -740,7 +746,13 @@ namespace BTSMTL.Timeline.Editor
                 CopyProxyClip,
                 () => m_CurrentFrame,
                 SetCurrentFrame,
-                () => m_Request.Timeline.Duration);
+                () => m_Request.Timeline.Duration,
+                () => m_ViewTimeMin,
+                value => m_ViewTimeMin = value,
+                () => m_ViewTimeMax,
+                value => m_ViewTimeMax = value);
+            m_EmbeddedEditor.viewTimeMin = m_ViewTimeMin;
+            m_EmbeddedEditor.viewTimeMax = m_ViewTimeMax;
             SetCurrentFrame(m_CurrentFrame);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);

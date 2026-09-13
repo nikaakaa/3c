@@ -281,6 +281,10 @@ namespace Slate
         [System.NonSerialized] private System.Func<float> embeddedLength;
         [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
         [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
+        [System.NonSerialized] private System.Func<float> embeddedViewTimeMin;
+        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMin;
+        [System.NonSerialized] private System.Func<float> embeddedViewTimeMax;
+        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMax;
         [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
@@ -401,14 +405,26 @@ namespace Slate
 
         //The min view time
         public float viewTimeMin {
-            get { return cutscene.viewTimeMin; }
-            set { cutscene.viewTimeMin = value; }
+            get { return embeddedViewTimeMin != null ? embeddedViewTimeMin() : cutscene.viewTimeMin; }
+            set
+            {
+                if (embeddedSetViewTimeMin != null)
+                    embeddedSetViewTimeMin(value);
+                else
+                    cutscene.viewTimeMin = value;
+            }
         }
 
         //The max view time
         public float viewTimeMax {
-            get { return cutscene.viewTimeMax; }
-            set { cutscene.viewTimeMax = value; }
+            get { return embeddedViewTimeMax != null ? embeddedViewTimeMax() : cutscene.viewTimeMax; }
+            set
+            {
+                if (embeddedSetViewTimeMax != null)
+                    embeddedSetViewTimeMax(value);
+                else
+                    cutscene.viewTimeMax = value;
+            }
         }
 
         public Vector2 EmbeddedScrollPosition {
@@ -664,7 +680,11 @@ namespace Slate
             System.Action<ActionClip> copyClip,
             System.Func<int> currentFrame = null,
             System.Action<int> setCurrentFrame = null,
-            System.Func<float> timelineLength = null)
+            System.Func<float> timelineLength = null,
+            System.Func<float> viewMin = null,
+            System.Action<float> setViewMin = null,
+            System.Func<float> viewMax = null,
+            System.Action<float> setViewMax = null)
         {
             embeddedSurface = true;
             embeddedRepaint = repaint;
@@ -672,6 +692,10 @@ namespace Slate
             embeddedLength = timelineLength;
             embeddedCurrentFrame = currentFrame;
             embeddedSetCurrentFrame = setCurrentFrame;
+            embeddedViewTimeMin = viewMin;
+            embeddedSetViewTimeMin = setViewMin;
+            embeddedViewTimeMax = viewMax;
+            embeddedSetViewTimeMax = setViewMax;
             embeddedAddTrack = addTrack;
             embeddedCopyClip = copyClip;
             Styles.Load();
@@ -793,6 +817,10 @@ namespace Slate
             embeddedLength = null;
             embeddedCurrentFrame = null;
             embeddedSetCurrentFrame = null;
+            embeddedViewTimeMin = null;
+            embeddedSetViewTimeMin = null;
+            embeddedViewTimeMax = null;
+            embeddedSetViewTimeMax = null;
             embeddedRuntimeTime = null;
             embeddedHistoryTime = null;
             embeddedAddTrack = null;

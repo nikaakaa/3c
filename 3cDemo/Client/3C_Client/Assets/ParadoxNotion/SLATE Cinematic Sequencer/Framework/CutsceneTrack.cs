@@ -479,160 +479,17 @@ namespace Slate
         }
 
         protected void DoClipCurves(Event e, Rect posRect, Rect timeRect, System.Func<float, float> TimeToPos, IKeyable keyable) {
-
-            //track expanded bg
-            GUI.color = Color.black.WithAlpha(0.1f);
-            GUI.Box(posRect, string.Empty, Styles.timeBoxStyle);
-            GUI.color = Color.white;
-
-            if ( ( ( keyable == null ) || !ReferenceEquals(keyable.parent, this) ) && !ReferenceEquals(keyable, this) ) {
-                GUI.color = Color.white.WithAlpha(0.3f);
-                GUI.Label(posRect, "Select a Clip of this Track to view it's Animated Parameters here", Styles.centerLabel);
-                GUI.color = Color.white;
-                return;
-            }
-
-            var finalPosRect = posRect;
-            var finalTimeRect = timeRect;
-
-            //adjust rects
-            if ( keyable is ActionClip ) {
-                finalPosRect.xMin = Mathf.Max(posRect.xMin, TimeToPos(keyable.startTime));
-                finalPosRect.xMax = Mathf.Min(posRect.xMax, TimeToPos(keyable.endTime));
-                finalTimeRect.xMin = Mathf.Max(timeRect.xMin, keyable.startTime) - keyable.startTime;
-                finalTimeRect.xMax = Mathf.Min(timeRect.xMax, keyable.endTime) - keyable.startTime;
-            }
-
-            //add some top/bottom margins
-            finalPosRect.yMin += 1;
-            finalPosRect.yMax -= 3;
-            finalPosRect.width = Mathf.Max(finalPosRect.width, 5);
-
-            //dark bg
-            GUI.color = Color.black.WithAlpha(0.4f);
-            GUI.DrawTexture(posRect, Styles.whiteTexture);
-            GUI.color = Color.white;
-
-
-            //out of view range
-            if ( keyable is ActionClip ) {
-                if ( keyable.startTime > timeRect.xMax || keyable.endTime < timeRect.xMin ) {
-                    return;
-                }
-            }
-
-
-            //keyable bg
-            GUI.color = UnityEditor.EditorGUIUtility.isProSkin ? new Color(0.25f, 0.25f, 0.25f, 0.9f) : new Color(0.7f, 0.7f, 0.7f, 0.9f);
-            GUI.Box(finalPosRect, string.Empty, Styles.clipBoxFooterStyle);
-            GUI.color = Color.white;
-
-            //if too small do nothing more
-            if ( finalPosRect.width <= 5 ) {
-                return;
-            }
-
-            if ( keyable is ActionClip && !( keyable as ActionClip ).isValid ) {
-                GUI.Label(finalPosRect, "Clip Is Invalid", Styles.centerLabel);
-                return;
-            }
-
-            if ( keyable.animationData == null || !keyable.animationData.isValid ) {
-                if ( keyable is ActionClip ) {
-                    GUI.Label(finalPosRect, "Clip has no Animatable Parameters", Styles.centerLabel);
-                } else {
-                    GUI.Label(finalPosRect, "Track has no Animated Properties. You can add some on the left side", Styles.centerLabel);
-                }
-                return;
-            }
-
-            if ( inspectedParameterIndex >= keyable.animationData.animatedParameters.Count ) {
-                inspectedParameterIndex = -1;
-            }
-
-
-            //vertical guides from params to dopesheet
-            if ( inspectedParameterIndex == -1 ) {
-                var yPos = PARAMS_TOP_MARGIN;
-                for ( var i = 0; i < keyable.animationData.animatedParameters.Count; i++ ) {
-                    // var animParam = keyable.animationData.animatedParameters[i];
-                    var paramRect = new Rect(0, posRect.yMin + yPos, finalPosRect.xMin - 2, PARAMS_LINE_HEIGHT);
-                    yPos += PARAMS_LINE_HEIGHT + PARAMS_LINE_MARGIN;
-                    paramRect.yMin += 1f;
-                    paramRect.yMax -= 1f;
-                    GUI.color = new Color(0, 0.5f, 0.5f, 0.1f);
-                    GUI.DrawTexture(paramRect, Styles.whiteTexture);
-                    GUI.color = Color.white;
-                }
-            }
-
-
-            //begin in group and neutralize rect
-            GUI.BeginGroup(finalPosRect);
-            finalPosRect = new Rect(0, 0, finalPosRect.width, finalPosRect.height);
-
-            if ( inspectedParameterIndex == -1 ) {
-                var yPos = PARAMS_TOP_MARGIN;
-                for ( var i = 0; i < keyable.animationData.animatedParameters.Count; i++ ) {
-                    var animParam = keyable.animationData.animatedParameters[i];
-                    var paramRect = new Rect(finalPosRect.xMin, finalPosRect.yMin + yPos, finalPosRect.width, PARAMS_LINE_HEIGHT);
-                    yPos += PARAMS_LINE_HEIGHT + PARAMS_LINE_MARGIN;
-                    paramRect.yMin += 1f;
-                    paramRect.yMax -= 1f;
-                    GUI.color = Color.black.WithAlpha(0.05f);
-                    GUI.DrawTexture(paramRect, Texture2D.whiteTexture);
-                    UnityEditor.Handles.color = Color.black.WithAlpha(0.2f);
-                    UnityEditor.Handles.DrawLine(new Vector2(paramRect.xMin, paramRect.yMin), new Vector2(paramRect.xMax, paramRect.yMin));
-                    UnityEditor.Handles.DrawLine(new Vector2(paramRect.xMin, paramRect.yMax), new Vector2(paramRect.xMax, paramRect.yMax));
-                    UnityEditor.Handles.color = Color.white;
-                    GUI.color = Color.white;
-
-                    if ( animParam.enabled ) {
-                        DopeSheetEditor.DrawDopeSheet(animParam, keyable, paramRect, finalTimeRect.x, finalTimeRect.width, true);
-                    } else {
-                        GUI.color = new Color(0, 0, 0, 0.2f);
-                        GUI.DrawTextureWithTexCoords(paramRect, Styles.stripes, new Rect(0, 0, paramRect.width / 7, paramRect.height / 7));
-                        GUI.color = Color.white;
-                    }
-                }
-            }
-
-            if ( inspectedParameterIndex >= 0 ) {
-                var animParam = keyable.animationData.animatedParameters[inspectedParameterIndex];
-                var dopeRect = finalPosRect;
-                dopeRect.y += 4f;
-                dopeRect.height = 16f;
-                DopeSheetEditor.DrawDopeSheet(animParam, keyable, dopeRect, finalTimeRect.x, finalTimeRect.width, true);
-                var curveRect = finalPosRect;
-                curveRect.yMin = dopeRect.yMax + 4;
-                UnityEditor.Handles.color = Color.black.WithAlpha(0.5f);
-                UnityEditor.Handles.DrawLine(new Vector2(curveRect.xMin, curveRect.yMin), new Vector2(curveRect.xMax, curveRect.yMin));
-                UnityEditor.Handles.color = Color.white;
-                CurveEditor.DrawCurves(animParam, keyable, curveRect, finalTimeRect);
-            }
-
-            //consume event
-            if ( e.type == EventType.MouseDown && finalPosRect.Contains(e.mousePosition) ) {
-                e.Use();
-            }
-
-            GUI.EndGroup();
-
-            /*
-                        //darken out of clip range time
-                        //will use if I make curve editing full-width
-                        if (Prefs.fullWidthCurveEditing){
-                            var darkBefore = Rect.MinMaxRect( posRect.xMin, posRect.yMin, Mathf.Max(posRect.xMin, TimeToPos(keyable.startTime)), posRect.yMax );
-                            var darkAfter = Rect.MinMaxRect( Mathf.Min(posRect.xMax, TimeToPos(keyable.endTime)), posRect.yMin, posRect.xMax, posRect.yMax );
-                            GUI.color = new Color(0.1f,0.1f,0.1f,0.6f);
-                            GUI.DrawTexture(darkBefore, Styles.whiteTexture);
-                            GUI.DrawTexture(darkAfter, Styles.whiteTexture);
-                            GUI.color = Color.white;
-                        }
-            */
-
+            TrackEditorGUI.DrawClipCurves(
+                e,
+                posRect,
+                timeRect,
+                TimeToPos,
+                keyable,
+                () => keyable == null || ReferenceEquals(keyable.parent, this),
+                ref inspectedParameterIndex);
         }
 
 #endif
     }
 }
+

@@ -48,22 +48,6 @@ namespace BTSMTL.Timeline.Editor
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
     }
 
-    readonly struct BtsmtlSlateCurveBinding
-    {
-        public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve, float duration)
-        {
-            ChannelId = channelId ?? string.Empty;
-            ParameterName = parameterName ?? string.Empty;
-            Curve = curve ?? throw new ArgumentNullException(nameof(curve));
-            Duration = Mathf.Max(0.0001f, duration);
-        }
-
-        public string ChannelId { get; }
-        public string ParameterName { get; }
-        public AnimationCurve Curve { get; }
-        public float Duration { get; }
-    }
-
     [AddComponentMenu("")]
     sealed class BtsmtlSlateGroup : CutsceneGroup, IEmbeddedTimelineProxyIdentity
     {
@@ -152,7 +136,18 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_EditorBinding == null)
             {
-                base.OnTrackInfoGUI(trackRect);
+                TrackEditorGUI.DrawDefaultInfoGUI(
+                    trackRect,
+                    name,
+                    "Formal binding unavailable",
+                    null,
+                    false,
+                    isActive,
+                    isLocked,
+                    false,
+                    value => isActive = value,
+                    value => isLocked = value,
+                    value => showCurves = value);
                 return;
             }
             TrackEditorGUI.DrawFormalTrackInfoGUI(
@@ -189,7 +184,7 @@ namespace BTSMTL.Timeline.Editor
                     ref m_InspectedParameterIndex);
                 return;
             }
-            base.OnTrackTimelineGUI(posRect, timeRect, cursorTime, timeToPosition);
+            GUI.Label(posRect, "Timeline binding unavailable", Styles.centerLabel);
         }
 #endif
     }
@@ -203,41 +198,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] float m_BlendOut;
         [SerializeField] string m_SourceAuthoringId;
         string m_RuntimeStatus = string.Empty;
-        readonly Dictionary<string, BtsmtlSlateCurveBinding> m_CurveBindings =
-            new Dictionary<string, BtsmtlSlateCurveBinding>(StringComparer.Ordinal);
-        readonly Dictionary<string, BtsmtlSlateCurveBinding> m_CurveBindingsByParameter =
-            new Dictionary<string, BtsmtlSlateCurveBinding>(StringComparer.Ordinal);
 
-        [AnimatableParameter("Animation Weight", 0f, 1f)]
-        public float AnimationWeight;
-        [AnimatableParameter("Animation Ease In", 0f, 1f)]
-        public float AnimationEaseIn;
-        [AnimatableParameter("Animation Ease Out", 0f, 1f)]
-        public float AnimationEaseOut;
-        [AnimatableParameter("Motion Weight", 0f, 1f)]
-        public float MotionWeight;
-        [AnimatableParameter("Motion Ease In", 0f, 1f)]
-        public float MotionEaseIn;
-        [AnimatableParameter("Motion Ease Out", 0f, 1f)]
-        public float MotionEaseOut;
-        [AnimatableParameter("Motion Warp Position Progress", 0f, 1f)]
-        public float MotionWarpPositionProgress;
-        [AnimatableParameter("Motion Warp Yaw Progress", 0f, 1f)]
-        public float MotionWarpYawProgress;
-        [AnimatableParameter("Camera State Weight", 0f, 1f)]
-        public float CameraStateWeight;
-        [AnimatableParameter("Camera State Ease In", 0f, 1f)]
-        public float CameraStateEaseIn;
-        [AnimatableParameter("Camera State Ease Out", 0f, 1f)]
-        public float CameraStateEaseOut;
-        [AnimatableParameter("Camera Response Weight", 0f, 1f)]
-        public float CameraResponseWeight;
-        [AnimatableParameter("Camera Response Ease In", 0f, 1f)]
-        public float CameraResponseEaseIn;
-        [AnimatableParameter("Camera Response Ease Out", 0f, 1f)]
-        public float CameraResponseEaseOut;
-        [AnimatableParameter("Scene Presentation Value")]
-        public float ScenePresentationValue;
 
         public override float length
         {
@@ -266,8 +227,6 @@ namespace BTSMTL.Timeline.Editor
 
         public override bool isValid => true;
 
-        public IReadOnlyCollection<string> CurveChannelIds => m_CurveBindings.Keys;
-
         public void Configure(string displayName, float duration, float blendIn = 0f, float blendOut = 0f)
         {
             m_DisplayName = string.IsNullOrEmpty(displayName) ? "Clip" : displayName;
@@ -281,113 +240,9 @@ namespace BTSMTL.Timeline.Editor
             m_SourceAuthoringId = sourceAuthoringId ?? string.Empty;
         }
 
-        public void ConfigureCurves(IReadOnlyList<BtsmtlSlateCurveBinding> bindings)
-        {
-            m_CurveBindings.Clear();
-            m_CurveBindingsByParameter.Clear();
-            if (bindings == null)
-                return;
-            for (int index = 0; index < bindings.Count; index++)
-            {
-                BtsmtlSlateCurveBinding binding = bindings[index];
-                if (string.IsNullOrEmpty(binding.ChannelId) || string.IsNullOrEmpty(binding.ParameterName))
-                    continue;
-                m_CurveBindings[binding.ChannelId] = binding;
-                m_CurveBindingsByParameter[binding.ParameterName] = binding;
-            }
-        }
-
-        public bool TryGetCurve(string channelId, out AnimationCurve curve)
-        {
-            curve = null;
-            if (!m_CurveBindings.TryGetValue(channelId ?? string.Empty, out BtsmtlSlateCurveBinding binding))
-                return false;
-            AnimatedParameter parameter = GetParameter(binding.ParameterName);
-            if (parameter == null || parameter.curves == null || parameter.curves.Length != 1)
-                return false;
-            curve = parameter.curves[0];
-            return curve != null;
-        }
-
-        public bool TryGetCurveDuration(string channelId, out float duration)
-        {
-            duration = length;
-            return m_CurveBindings.TryGetValue(channelId ?? string.Empty, out BtsmtlSlateCurveBinding binding) &&
-                   (duration = binding.Duration) > 0f;
-        }
-
-        protected override void OnCreate()
-        {
-            SyncConfiguredCurves(true);
-        }
-
-        protected override void OnAfterValidate()
-        {
-            SyncConfiguredCurves(false);
-        }
-
-        void SyncConfiguredCurves(bool copyCurves)
-        {
-            if (animationData == null || animationData.animatedParameters == null)
-                return;
-            for (int index = animationData.animatedParameters.Count - 1; index >= 0; index--)
-            {
-                AnimatedParameter parameter = animationData.animatedParameters[index];
-                if (!m_CurveBindingsByParameter.TryGetValue(parameter.parameterName, out BtsmtlSlateCurveBinding binding))
-                {
-                    animationData.RemoveParameter(parameter);
-                    continue;
-                }
-                if (parameter.curves == null || parameter.curves.Length != 1 || parameter.curves[0] == null)
-                    continue;
-                if (copyCurves)
-                {
-                    AnimationCurve target = parameter.curves[0];
-                    target.keys = binding.Curve.keys;
-                    target.preWrapMode = binding.Curve.preWrapMode;
-                    target.postWrapMode = binding.Curve.postWrapMode;
-                }
-            }
-        }
-
         public void SetRuntimeStatus(string status)
         {
             m_RuntimeStatus = status ?? string.Empty;
-        }
-
-        public static string ParameterNameFor(TimelineCurveChannelId channelId)
-        {
-            if (channelId == TimelineCurveChannelCatalog.AnimationWeight)
-                return nameof(AnimationWeight);
-            if (channelId == TimelineCurveChannelCatalog.AnimationEaseIn)
-                return nameof(AnimationEaseIn);
-            if (channelId == TimelineCurveChannelCatalog.AnimationEaseOut)
-                return nameof(AnimationEaseOut);
-            if (channelId == TimelineCurveChannelCatalog.MotionWeight)
-                return nameof(MotionWeight);
-            if (channelId == TimelineCurveChannelCatalog.MotionEaseIn)
-                return nameof(MotionEaseIn);
-            if (channelId == TimelineCurveChannelCatalog.MotionEaseOut)
-                return nameof(MotionEaseOut);
-            if (channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress)
-                return nameof(MotionWarpPositionProgress);
-            if (channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress)
-                return nameof(MotionWarpYawProgress);
-            if (channelId == TimelineCurveChannelCatalog.CameraStateWeight)
-                return nameof(CameraStateWeight);
-            if (channelId == TimelineCurveChannelCatalog.CameraStateEaseIn)
-                return nameof(CameraStateEaseIn);
-            if (channelId == TimelineCurveChannelCatalog.CameraStateEaseOut)
-                return nameof(CameraStateEaseOut);
-            if (channelId == TimelineCurveChannelCatalog.CameraResponseWeight)
-                return nameof(CameraResponseWeight);
-            if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn)
-                return nameof(CameraResponseEaseIn);
-            if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut)
-                return nameof(CameraResponseEaseOut);
-            if (channelId == TimelineCurveChannelCatalog.ScenePresentationValue)
-                return nameof(ScenePresentationValue);
-            throw new InvalidOperationException($"Timeline curve channel '{channelId}' has no Slate proxy field.");
         }
     }
 
@@ -700,7 +555,6 @@ namespace BTSMTL.Timeline.Editor
                 Track sourceTrack = m_Binding.Tracks[trackIndex];
                 if (sourceTrack == null)
                     continue;
-                List<TimelineCurveChannelDescriptor> curveChannels = m_Binding.CollectCurveChannels(sourceTrack);
                 string trackDisplayName = sourceTrack.Name;
                 GameObject trackObject = CreateChild(group.transform, trackDisplayName);
                 BtsmtlSlateTrack proxyTrack = trackObject.AddComponent<BtsmtlSlateTrack>();
@@ -731,19 +585,6 @@ namespace BTSMTL.Timeline.Editor
                         sourceClip.SelfEaseInFrame / (float)TimelineUtility.FrameRate,
                         sourceClip.SelfEaseOutFrame / (float)TimelineUtility.FrameRate);
                     proxyClip.ConfigureSource(sourceClip.AuthoringId);
-                    var curveBindings = new List<BtsmtlSlateCurveBinding>();
-                    for (int curveIndex = 0; curveIndex < curveChannels.Count; curveIndex++)
-                    {
-                        TimelineCurveChannelDescriptor descriptor = curveChannels[curveIndex];
-                        if (!descriptor.Supports(sourceClip))
-                            continue;
-                        curveBindings.Add(new BtsmtlSlateCurveBinding(
-                            descriptor.ChannelId.Value,
-                            BtsmtlSlateActionClip.ParameterNameFor(descriptor.ChannelId),
-                            ToSlateCurve(descriptor.Read(sourceClip), CurveDuration(sourceClip, descriptor)),
-                            CurveDuration(sourceClip, descriptor)));
-                    }
-                    proxyClip.ConfigureCurves(curveBindings);
                     proxyClip.startTime = sourceClip.StartFrame / (float)TimelineUtility.FrameRate;
                     proxyTrack.clips.Add(proxyClip);
                     proxyClip.PostCreate(proxyTrack);
@@ -822,21 +663,6 @@ namespace BTSMTL.Timeline.Editor
                 m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
                 m_Binding.CopySourceClip(sourceClip);
         }
-
-        static string DisplayKind(string kind)
-        {
-            int separator = kind.LastIndexOf('.');
-            string value = separator >= 0 ? kind.Substring(0, separator) : kind;
-            return value.Replace('-', ' ');
-        }
-
-        static AnimationCurve ToSlateCurve(AnimationCurve normalizedCurve, float duration)
-        {
-            return ConvertCurveTime(normalizedCurve, duration, false);
-        }
-
-        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor) =>
-            Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
 
         static AnimationCurve ToAuthoringCurve(AnimationCurve slateCurve, float duration)
         {

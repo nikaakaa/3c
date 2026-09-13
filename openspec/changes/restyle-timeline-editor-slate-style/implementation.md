@@ -40,6 +40,7 @@ TimelineEditorWindow
 - 右侧 Clip Inspector 使用正式 `Clip` 字段显示 Authoring Id、Contract、帧长、Start/End、Blend In/Out 与 Clip In；Slate 参数行只复用原参数绘制和关键帧交互，曲线修改通过 `IEmbeddedTimelineClipBinding.ApplyCurveEdits` 回写同一 `TimelineEditorSessionContext`，不创建或选中 Slate `ActionClip`。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与正式右侧 Inspector，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 程序集；该引用只提供 Slate 编辑器 UI/接口，不改变 TimelineData owner，也不引入 Slate 组件树。
+- 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。

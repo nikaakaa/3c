@@ -147,7 +147,15 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 
 ### Requirement: Timeline必须直接复用现成Slate编辑功能
 
+BTSMTL Timeline 打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路 MUST NOT创建或依赖 Slate GameObject/Cutscene/Director/Group/Track/ActionClip 组件树。隐藏、不保存或退出销毁 MUST NOT代替此约束。__BTSMTL_SlateTimelineProjection__ 与 BuildProjection 组件树 MUST作为回退后的未完成残留删除，不得成为最终方案或 fallback。全部读写和 Undo MUST使用现有 BTSMTL TimelineData/Session。
+
 Timeline MUST保留 Slate 已提供的绘制、交互、Curve/DopeSheet 和切线编辑，直接在原源码修改正式数据/命令、帧显示、必要布局和具体缺陷。函数签名和数据绑定 MAY更换，Actor/Director/组件扫描/运行采样等无关绑定 MUST删除。MUST不新建替代 Surface、通用 Editor Model、选择/拖动框架或曲线渲染器，再以相似外观称为复用 Slate。此前整套替换输入体系和强制拆分程序集的方案 MUST撤销。
+
+#### Scenario: 正式合法操作不受Slate对象规则阻止
+
+- **WHEN** TimelineData contract 允许作者新增 Track/Clip、选择或编辑正式内容
+- **THEN** UI MUST根据 BTSMTL 正式规则处理，不因缺少 Slate Actor/Director、attachable type、Cutscene 有效性或其播放状态拒绝
+- **AND** 操作及后续刷新/关闭 MUST不创建代用组件树，MUST继续复用原 Slate UI/交互算法
 
 #### Scenario: 后续适配需要解除依赖
 

@@ -6,6 +6,8 @@
 
 ## What Changes
 
+- 硬边界覆盖打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路：不得创建或依赖 Slate 组件树，原生 Cutscene/Actor/Director 约束不得拒绝正式 TimelineData 合法操作。回退后 BuildProjection 隐藏对象仅是待清理残留，不是最终方案或 fallback。
+
 - 删除上一轮纯内存 Surface/Editor Model、Clip包装器/选择系统和曲线工具整体迁移任务，不换名称继续实现。
 - 实现窗口负责恢复用户要求的真实 Slate 基线；本规划不执行代码回退，不指定未经核对的回退提交，也不把文档更新当成已恢复。
 - 只在现有 Slate 功能上继续数据和操作适配：稳定 ID、正式 Track/Clip/Section、完整曲线、资源和 typed 字段，提交走既有 TimelineData.AddTrack/AddClip/AddSection、Session/owner Undo。

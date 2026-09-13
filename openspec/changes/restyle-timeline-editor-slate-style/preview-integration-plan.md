@@ -70,6 +70,8 @@ Tree-only 技能可正常试验，不要求必须打开 Timeline。控制用 Mot
 
 ## Timeline 与预览如何连起来
 
+本地作者硬边界：打开/刷新/新增/选择/编辑/关闭不创建或依赖 Slate GameObject/Cutscene/Director/Group/Track/ActionClip 组件树，也不因没有 Slate Actor/Director 而拒绝正式 TimelineData 合法操作。回退后的 BuildProjection 组件残留必须清理，不能以预览联动为由保留；真实预览场景对象继续由原运行 owner 拥有。
+
 Timeline 继续通过现有适配层接正式内容、编辑状态与外部运行观察，复用 Slate 已有 UI。没有运行绑定时仍可编辑；不新建 Editor Model/Surface，也不把预览接线当成改造曲线框架的理由。
 
 ```text

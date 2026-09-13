@@ -70,6 +70,10 @@ Timeline：资产名                                      共享/私有
 
 ### 3. 在 Slate 原源码里更换数据绑定
 
+硬边界：BTSMTL Timeline 的打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路不得创建或依赖 Slate 的 GameObject/Cutscene/Director/Group/Track/ActionClip 组件树。仅不保存、仅隐藏或退出时销毁均不满足要求。回退后的 __BTSMTL_SlateTimelineProjection__ 和 BuildProjection 组件树是未完成残留，不是正式方案，也不能作为 fallback。
+
+Slate 原生的 Actor/Director/attachable type、Cutscene 有效性或播放状态限制不得拒绝正式 TimelineData 合同允许的操作。合法性由 BTSMTL 原业务规则决定，UI 读写及 Undo 接回原 TimelineData/Session；复用的是 Slate 原有 UI/交互算法，不是它的内容模型和运行规则。
+
 用户最新明确要求：Slate 已有 UI 本身可用，直接修改它的源码，绑定该换的换、无关的该删的删。实施不是另做一个看起来像 Slate 的编辑器，而是沿 Slate 原有绘制/交互函数修改数据入口、出口和必要参数。
 
 #### 3.1 保留哪些现成代码

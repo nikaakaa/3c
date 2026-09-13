@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
 		readonly Float32ActionActivationRequestState m_ActionActivationRequest;
 		readonly Float32ActionInstanceState m_ActionInstance;
 		readonly Float32ActionInstanceReference m_ActionInstanceReference;
-		readonly ActionSkillExecutionAggregate<CharacterStateValue> m_SkillExecutionState;
+		readonly GameplayAbilityExecutionAggregate<CharacterStateValue> m_SkillExecutionState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectAggregate;
 		readonly EquipmentStateAggregate m_EquipmentAggregate;
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
@@ -32,7 +32,7 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest,
 			Float32ActionInstanceState actionInstance,
 			Float32ActionInstanceReference actionInstanceReference,
-			ActionSkillExecutionAggregate<CharacterStateValue> skillExecutionState,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState,
 			SimulationActionTargetSnapshot actionTargetSnapshot,
 			GameplayEffectStateAggregate gameplayEffectAggregate,
 			EquipmentStateAggregate equipmentAggregate)
@@ -74,8 +74,8 @@ namespace ThirdPersonSimulation
 		internal Float32ActionActivationRequestState ActionActivationRequest => Require(ProgramStateValueKind.ActionActivationRequest, m_ActionActivationRequest);
 		internal Float32ActionInstanceState ActionInstance => Require(ProgramStateValueKind.ActionInstance, m_ActionInstance);
 		internal Float32ActionInstanceReference ActionInstanceReference => Require(ProgramStateValueKind.ActionInstanceReference, m_ActionInstanceReference);
-		internal ActionSkillExecutionAggregate<CharacterStateValue> SkillExecutionState =>
-			Kind == ProgramStateValueKind.SkillExecutionState
+		internal GameplayAbilityExecutionAggregate<CharacterStateValue> SkillExecutionState =>
+			Kind == ProgramStateValueKind.AbilityExecutionState
 				? m_SkillExecutionState ?? throw new InvalidOperationException("Skill execution state aggregate is missing.")
 				: throw new InvalidOperationException($"State value is '{Kind}', expected SkillExecutionState.");
 		internal GameplayEffectStateAggregate GameplayEffectAggregate =>
@@ -101,8 +101,8 @@ namespace ThirdPersonSimulation
 		internal static CharacterStateValue FromActionActivationRequest(Float32ActionActivationRequestState value) => Create(ProgramStateValueKind.ActionActivationRequest, actionActivationRequest: value);
 		internal static CharacterStateValue FromActionInstance(Float32ActionInstanceState value) => Create(ProgramStateValueKind.ActionInstance, actionInstance: value);
 		internal static CharacterStateValue FromActionInstanceReference(Float32ActionInstanceReference value) => Create(ProgramStateValueKind.ActionInstanceReference, actionInstanceReference: value);
-		internal static CharacterStateValue FromSkillExecutionState(ActionSkillExecutionAggregate<CharacterStateValue> value) =>
-			Create(ProgramStateValueKind.SkillExecutionState, skillExecutionState: value ?? throw new ArgumentNullException(nameof(value)));
+		internal static CharacterStateValue FromSkillExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> value) =>
+			Create(ProgramStateValueKind.AbilityExecutionState, skillExecutionState: value ?? throw new ArgumentNullException(nameof(value)));
 		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
 		internal static CharacterStateValue FromGameplayEffectAggregate(GameplayEffectStateAggregate value)
 		{
@@ -135,7 +135,7 @@ namespace ThirdPersonSimulation
 				ProgramStateValueKind.ActionActivationRequest => FromActionActivationRequest(default),
 				ProgramStateValueKind.ActionInstance => FromActionInstance(default),
 				ProgramStateValueKind.ActionInstanceReference => FromActionInstanceReference(default),
-				ProgramStateValueKind.SkillExecutionState => FromSkillExecutionState(new ActionSkillExecutionAggregate<CharacterStateValue>()),
+				ProgramStateValueKind.AbilityExecutionState => FromSkillExecutionState(new GameplayAbilityExecutionAggregate<CharacterStateValue>()),
 				ProgramStateValueKind.ActionTargetSnapshot => FromActionTargetSnapshot(SimulationActionTargetSnapshot.None),
 				ProgramStateValueKind.GameplayEffectAggregate => throw new InvalidOperationException("Gameplay Effect aggregate requires the Program catalog."),
 				ProgramStateValueKind.EquipmentAggregate => throw new InvalidOperationException("Equipment aggregate requires the Program catalog."),
@@ -181,7 +181,7 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest = default,
 			Float32ActionInstanceState actionInstance = default,
 			Float32ActionInstanceReference actionInstanceReference = default,
-			ActionSkillExecutionAggregate<CharacterStateValue> skillExecutionState = null,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState = null,
 			SimulationActionTargetSnapshot actionTargetSnapshot = default,
 			GameplayEffectStateAggregate gameplayEffectAggregate = null,
 			EquipmentStateAggregate equipmentAggregate = null)

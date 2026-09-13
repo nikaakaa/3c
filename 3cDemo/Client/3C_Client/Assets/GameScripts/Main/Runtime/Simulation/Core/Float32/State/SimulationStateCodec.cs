@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstance: WriteActionInstance(writer, value.ActionInstance); break;
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
-                case ProgramStateValueKind.SkillExecutionState: WriteSkillExecutionState(writer, value.SkillExecutionState, layout); break;
+                case ProgramStateValueKind.AbilityExecutionState: WriteSkillExecutionState(writer, value.SkillExecutionState, layout); break;
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
                     break;
@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstance: return CharacterStateValue.FromActionInstance(ReadActionInstance(reader, layout));
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
-                case ProgramStateValueKind.SkillExecutionState: return CharacterStateValue.FromSkillExecutionState(ReadSkillExecutionState(reader, layout));
+                case ProgramStateValueKind.AbilityExecutionState: return CharacterStateValue.FromSkillExecutionState(ReadSkillExecutionState(reader, layout));
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     return CharacterStateValue.FromGameplayEffectAggregate(
                         GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
@@ -404,7 +404,7 @@ namespace ThirdPersonSimulation
 
         static void WriteSkillExecutionState(
             CanonicalWriter writer,
-			ActionSkillExecutionAggregate<CharacterStateValue> value,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> value,
             ProgramExecutionLayout layout)
         {
             if (value == null)
@@ -412,7 +412,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(value.Frames.Count);
             for (int frameIndex = 0; frameIndex < value.Frames.Count; frameIndex++)
             {
-				ActionSkillExecutionFrame<CharacterStateValue> frame = value.Frames[frameIndex];
+				GameplayAbilityExecutionFrame<CharacterStateValue> frame = value.Frames[frameIndex];
                 if (frame == null || frame.Generation == 0)
                     throw new InvalidDataException("Character state Skill execution frame is incomplete.");
                 writer.WriteString(frame.SkillId.Value);
@@ -432,14 +432,14 @@ namespace ThirdPersonSimulation
             }
         }
 
-		static ActionSkillExecutionAggregate<CharacterStateValue> ReadSkillExecutionState(
+		static GameplayAbilityExecutionAggregate<CharacterStateValue> ReadSkillExecutionState(
             CanonicalReader reader,
             ProgramExecutionLayout layout)
         {
             int frameCount = reader.ReadInt32();
             if (frameCount < 0)
                 throw new InvalidDataException("Character state Skill execution frame count is invalid.");
-			var frames = new List<ActionSkillExecutionFrame<CharacterStateValue>>(frameCount);
+			var frames = new List<GameplayAbilityExecutionFrame<CharacterStateValue>>(frameCount);
             for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
             {
                 CharacterSkillId skillId = new CharacterSkillId(reader.ReadString());
@@ -464,7 +464,7 @@ namespace ThirdPersonSimulation
                         throw new InvalidDataException("Character state Skill execution frame state value kind does not match its address.");
                     values.Add(new KeyValuePair<int, CharacterStateValue>(slotIndex, value));
                 }
-				frames.Add(new ActionSkillExecutionFrame<CharacterStateValue>(
+				frames.Add(new GameplayAbilityExecutionFrame<CharacterStateValue>(
                     skillId,
                     entryOperation,
                     actionInstanceId,
@@ -472,7 +472,7 @@ namespace ThirdPersonSimulation
                     generation,
                     values));
             }
-			return new ActionSkillExecutionAggregate<CharacterStateValue>(frames);
+			return new GameplayAbilityExecutionAggregate<CharacterStateValue>(frames);
         }
 
         static void WriteTargetSnapshot(CanonicalWriter writer, SimulationActionTargetSnapshot value)

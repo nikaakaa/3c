@@ -33,7 +33,7 @@
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
 | 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
 | 6.3 Corin 动作资源可达性 | 未完成 | 已保留 18 Zoom/18 Stretch 资源；现有 Corin ActionCue 的 Camera 标记仍没有正式 ResourceId，不能虚构 81 Shake/4 Override 的触发关系。 |
-| 6.4-6.5 正式发布与 Preview/ScenePlay | 阻塞 | 生成产物待 Character Build 正式重发布；当前 Runtime 代码检查被工作区既有 `CharacterSkillDependency`/`GameplayAbilityDefinition` 编译错误阻断，Unity MCP 资源返回 `no_unity_session`，未做动态 Console/ScenePlay 验收。 |
+| 6.4-6.5 正式发布与 Preview/ScenePlay | 阻塞中 | 生成产物待 Character Build 正式重发布；最新正式 Fixed Build job `004c30412ff14008b3db55cdfd5a215c` 已启动但仍在运行；当前显式 Unity Console 只报告工作区既有 `ActionSkillExecutionRuntime.cs(904)` 的 `fallbackTransition` 编译错误，未出现摄像机源码错误，未做动态 Console/ScenePlay 验收。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/碰撞字段和 Effect table/operator 已接入；输入回放已改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动，文件仍未单独提交。 |
 | 7.3-7.4 删除与合同同步 | 部分完成 | 已删除无引用 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入引用和无消费者 Locking/ChangeAvatar 配置；生成 Projection 和部分历史文档仍需正式发布后对账。 |
 
@@ -53,10 +53,13 @@
 - `393066dda`：收口 Reset/暂停/碰撞/效果采样诊断，删除旧 Controller、无消费者 Locking/ChangeAvatar 配置，并让不闭合阶段在编译/求值时明确失败。
 - `6915f39bf`：将 Camera Resource Track 接入统一 Timeline Contract/Program/Presentation 请求链，移除旧的未调用资源轨道采样路径。
 - `594ea0a92`、`200cb7ed3`、`70f77421b`：补齐 Timeline 作者对象/曲线 owner、切镜平滑职责和 CameraCue 曲线采样；这些提交均未包含用户仍在修改的 `BtsmtlSkillAuthoringCodeAdapter.cs` 与输入回放文件。
+- `7b9717518`、`bc5be34b1`、`b44ab51e6`：按资源叠加策略裁决 Zoom，令 Shot 接管正式 Near/Far Clip，并严格校验 Shot rig identity、重置所有 rig history；Sequence/Target 同权裁决在 SourceId 相同后继续比较 EventId。
 - `ThirdPersonCamera.Contracts.csproj` 使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，2 个 Unity 包警告，0 个错误；最近一次在删除 DefaultFOV 存储和补充阶段合同后仍通过。
 - `BTSMTL.Timeline.Editor.csproj` 使用 `--no-restore /p:BuildProjectReferences=false --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，31 个既有未赋值字段警告，0 个错误；新增 Camera 曲线 owner 没有编译错误。
 - `ThirdPersonClient.Runtime.csproj` 同参数检查到工作区既有错误：`CharacterControlProgramContracts.cs(636)` 缺少 `CharacterSkillDependency`；直接项目重编译另有用户新增 `GameplayAbilityDefinition` 未实现 `IGameplayBehaviorProfile.DebugCategory/Tags`。本次未修改这些文件。
 - `ThirdPersonClient.Editor.csproj` 在 Runtime 因既有错误未产出 DLL 后无法继续编译；没有把该结果解释为摄像机代码已通过 Editor 编译。
-- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`；资源接口仍返回 `no_unity_session`，但显式工具可读取当前 Console。最近一次脚本刷新后的 Console 错误集中在既有 `ActionSkillExecutionRuntime.cs`/`CharacterSkillProgramContracts.cs` 的 `ThirdPersonCharacter`、`GameplayAbilityEndTrigger` 缺失，未出现摄像机源码错误；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
+- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`；活动场景为 `GameplayLab`，显式工具可读取当前 Console。最新 Console 只有既有 `ActionSkillExecutionRuntime.cs(904)` 的 `fallbackTransition` 缺失，未出现摄像机源码错误；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
 - 已按精确 Definition/Wrapper 路径启动 Fixed Character Build，job `a5d9ddca7fc44bf7b863f8aedcd15629` 返回 `character_build_exception`：`Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.` 原因是 Unity 因工作区既有编译错误仍使用旧域程序集，而 Profile 已删除正式 owner 字段；没有接受旧域状态并伪造发布产物。
+- 在当前 Editor 状态下再次按同一 Definition/Wrapper 启动 Fixed Character Build，job `004c30412ff14008b3db55cdfd5a215c` 已进入 running；在结果返回前不接受任何生成 Projection/Program 产物。
+- 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

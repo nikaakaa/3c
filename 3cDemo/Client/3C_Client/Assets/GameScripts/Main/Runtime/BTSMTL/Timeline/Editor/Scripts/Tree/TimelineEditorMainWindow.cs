@@ -42,33 +42,6 @@ namespace BTSMTL.Timeline.Editor
         UnityEngine.Object m_SourceGraphOwner;
 
         [SerializeField]
-        UnityEngine.Object m_NavigationOwner;
-
-        [SerializeField]
-        string m_NavigationPropertyPath;
-
-        [SerializeField]
-        string m_NavigationOwnershipLabel;
-
-        [SerializeField]
-        string m_NavigationTrackAuthoringId;
-
-        [SerializeField]
-        string m_NavigationClipAuthoringId;
-
-        [SerializeField]
-        string m_NavigationSourceNodeGuid;
-
-        [SerializeField]
-        BaseTreeWindow m_NavigationSourceGraphWindow;
-
-        [SerializeField]
-        UnityEngine.Object m_NavigationSourceGraphOwner;
-
-        [SerializeField]
-        Vector2 m_NavigationViewport;
-
-        [SerializeField]
         string m_ViewTimelineAuthoringId;
 
         [SerializeField]
@@ -135,7 +108,6 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
             window.Focus();
@@ -156,7 +128,6 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            window.ClearNavigation();
             window.BindAsset(asset, sourceGraphAuthoringId, sourceNodeGuid);
             window.Show();
             window.Focus();
@@ -359,7 +330,6 @@ namespace BTSMTL.Timeline.Editor
 
         void ClearBinding()
         {
-            ClearNavigation();
             DisposeView();
             m_SerializedOwner = null;
             m_SerializedPropertyPath = string.Empty;
@@ -510,57 +480,6 @@ namespace BTSMTL.Timeline.Editor
                 Mathf.Max(1f, rect.height),
                 BeginWindows,
                 EndWindows);
-        }
-
-        bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
-
-        void CaptureTimelineNavigation(AnimationClip clip)
-        {
-            if (m_SlateProjection == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
-                throw new InvalidOperationException("Sequence navigation requires a bound Action Timeline.");
-            m_NavigationOwner = m_SerializedOwner;
-            m_NavigationPropertyPath = m_SerializedPropertyPath;
-            m_NavigationOwnershipLabel = m_OwnershipLabel;
-            m_NavigationTrackAuthoringId = clip.Track?.AuthoringId ?? string.Empty;
-            m_NavigationClipAuthoringId = clip.AuthoringId;
-            m_NavigationSourceNodeGuid = m_SourceNodeGuid;
-            m_NavigationSourceGraphWindow = m_SourceGraphWindow;
-            m_NavigationSourceGraphOwner = m_SourceGraphOwner;
-            m_NavigationViewport = Vector2.zero;
-        }
-
-        void ReturnToTimeline()
-        {
-            if (!HasTimelineNavigation)
-                return;
-            UnityEngine.Object owner = m_NavigationOwner;
-            string propertyPath = m_NavigationPropertyPath;
-            string ownershipLabel = m_NavigationOwnershipLabel;
-            string trackAuthoringId = m_NavigationTrackAuthoringId;
-            string clipAuthoringId = m_NavigationClipAuthoringId;
-            string sourceNodeGuid = m_NavigationSourceNodeGuid;
-            BaseTreeWindow sourceGraphWindow = m_NavigationSourceGraphWindow;
-            UnityEngine.Object sourceGraphOwner = m_NavigationSourceGraphOwner;
-            TimelineData timeline = ResolveTimelineData(owner, propertyPath);
-            if (timeline == null)
-                throw new InvalidOperationException("The source Action Timeline can no longer be resolved.");
-            ClearNavigation();
-            Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
-            m_SourceGraphOwner = sourceGraphOwner;
-            m_SlateProjection?.FocusSource(trackAuthoringId, clipAuthoringId);
-        }
-
-        void ClearNavigation()
-        {
-            m_NavigationOwner = null;
-            m_NavigationPropertyPath = string.Empty;
-            m_NavigationOwnershipLabel = string.Empty;
-            m_NavigationTrackAuthoringId = string.Empty;
-            m_NavigationClipAuthoringId = string.Empty;
-            m_NavigationSourceNodeGuid = string.Empty;
-            m_NavigationSourceGraphWindow = null;
-            m_NavigationSourceGraphOwner = null;
-            m_NavigationViewport = Vector2.zero;
         }
 
         void SetStatus(string value)

@@ -172,14 +172,6 @@ namespace BTSMTL.Timeline.Editor
         public float AnimationEaseOut;
         [AnimatableParameter("Motion Weight", 0f, 1f)]
         public float MotionWeight;
-        [AnimatableParameter("Motion Position X")]
-        public float MotionPositionX;
-        [AnimatableParameter("Motion Position Y")]
-        public float MotionPositionY;
-        [AnimatableParameter("Motion Position Z")]
-        public float MotionPositionZ;
-        [AnimatableParameter("Motion Yaw")]
-        public float MotionYaw;
         [AnimatableParameter("Motion Ease In", 0f, 1f)]
         public float MotionEaseIn;
         [AnimatableParameter("Motion Ease Out", 0f, 1f)]
@@ -328,14 +320,6 @@ namespace BTSMTL.Timeline.Editor
                 return nameof(AnimationEaseOut);
             if (channelId == TimelineCurveChannelCatalog.MotionWeight)
                 return nameof(MotionWeight);
-            if (channelId == TimelineCurveChannelCatalog.MotionPositionX)
-                return nameof(MotionPositionX);
-            if (channelId == TimelineCurveChannelCatalog.MotionPositionY)
-                return nameof(MotionPositionY);
-            if (channelId == TimelineCurveChannelCatalog.MotionPositionZ)
-                return nameof(MotionPositionZ);
-            if (channelId == TimelineCurveChannelCatalog.MotionYaw)
-                return nameof(MotionYaw);
             if (channelId == TimelineCurveChannelCatalog.MotionEaseIn)
                 return nameof(MotionEaseIn);
             if (channelId == TimelineCurveChannelCatalog.MotionEaseOut)
@@ -391,7 +375,6 @@ namespace BTSMTL.Timeline.Editor
         string m_PendingTrackFocus;
         string m_PendingClipFocus;
         string m_SourceRevision = string.Empty;
-        Clip m_CopiedClip;
         BtsmtlSlateTimelineViewState? m_PendingViewState;
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
@@ -775,277 +758,6 @@ namespace BTSMTL.Timeline.Editor
             m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
-        void ShowAddTrackMenu()
-        {
-            GenericMenu menu = new GenericMenu();
-            foreach (TimelineTrackContract contract in m_Request.ContractCatalog.Tracks)
-            {
-                TimelineTrackContract candidate = contract;
-                Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(candidate.Kind);
-                bool requiresFields = trackType
-                    .GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true)
-                    .Length > 0;
-                string label = DisplayKind(candidate.Kind);
-                menu.AddItem(new GUIContent(label), false, () => ShowTrackCreationPopup(candidate.Kind, requiresFields));
-            }
-            menu.ShowAsContext();
-        }
-
-        void ShowTrackCreationPopup(string kind, bool requiresFields)
-        {
-            PopupWindow.Show(
-                new Rect(0, 0, 1, 1),
-                new TimelineTrackCreationPopup(
-                    kind,
-                    DisplayKind(kind),
-                    requiresFields,
-                    (name, channelId, slotId) => AddTrack(kind, name, channelId, slotId)));
-        }
-
-        bool AddTrack(string kind, string name, string channelId, string slotId)
-        {
-            if (!IsSourceCurrent())
-                return false;
-            Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
-            string authoringId = string.Empty;
-            Track addedTrack = null;
-            try
-            {
-                m_Session.Apply(() =>
-                {
-                    int count = m_Request.Timeline.Tracks.Count;
-                    m_Request.Timeline.AddTrack(trackType, m_Request.ContractCatalog);
-                    addedTrack = m_Request.Timeline.Tracks[count];
-                    authoringId = addedTrack.AuthoringId;
-                    addedTrack.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
-                    TimelineAuthoringTrackBinding.Apply(addedTrack, channelId, slotId);
-                }, "Add Timeline Track");
-            }
-            catch (Exception exception)
-            {
-                if (addedTrack != null)
-                    m_Request.Timeline.RemoveTrack(addedTrack);
-                ReportIssue($"新增 Track 失败：{exception.Message}");
-                return false;
-            }
-            m_PendingTrackFocus = authoringId;
-            QueueRebuildProjection();
-            return true;
-        }
-
-        void ShowAddClipMenu(string trackAuthoringId, float time)
-        {
-            if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track track))
-                return;
-            if (!m_Request.ContractCatalog.TryGetTrack(track.ContractKind, out TimelineTrackContract trackContract))
-                return;
-
-            GenericMenu menu = new GenericMenu();
-            int frame = Mathf.Max(0, Mathf.RoundToInt(time * m_Session.FrameRate));
-            for (int index = 0; index < trackContract.AllowedClipKinds.Count; index++)
-            {
-                string kind = trackContract.AllowedClipKinds[index];
-                string clipKind = kind;
-                menu.AddItem(new GUIContent(DisplayKind(clipKind)), false, () => ShowClipCreationPopup(trackAuthoringId, clipKind, frame));
-            }
-            if (m_CopiedClip != null && trackContract.AllowsClip(m_CopiedClip.ContractKind))
-            {
-                menu.AddSeparator("/");
-                menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => PasteClip(trackAuthoringId, frame));
-            }
-            menu.ShowAsContext();
-        }
-
-        void CopyProxyClip(ActionClip proxyClip)
-        {
-            if (proxyClip is BtsmtlSlateActionClip slateClip &&
-                m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
-            {
-                m_CopiedClip = sourceClip;
-                m_Binding.CopySourceClip(sourceClip);
-            }
-        }
-
-        void PasteClip(string trackAuthoringId, int frame)
-        {
-            if (m_CopiedClip == null || !m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
-                return;
-            if (!IsSourceCurrent())
-                return;
-            string authoringId = string.Empty;
-            try
-            {
-                m_Session.Apply(() =>
-                {
-                    Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip);
-                    clone.RegenerateAuthoringIdentity();
-                    if (clone is ITimelineOwnedAuthoringIdentity owned)
-                        owned.RegenerateOwnedAuthoringIdentity();
-                    clone.StartFrame = Mathf.Max(0, frame);
-                    clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Duration);
-                    m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clone);
-                    targetTrack.Clips.Add(clone);
-                    m_Request.Timeline.Init();
-                    authoringId = clone.AuthoringId;
-                }, "Paste Timeline Clip");
-            }
-            catch (Exception exception)
-            {
-                ReportIssue($"粘贴 Clip 失败：{exception.Message}");
-                return;
-            }
-            m_PendingTrackFocus = trackAuthoringId;
-            m_PendingClipFocus = authoringId;
-            QueueRebuildProjection();
-        }
-
-        void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
-        {
-            var motionClipIds = m_Request.Timeline.Tracks
-                .SelectMany(track => track.Clips)
-                .OfType<MotionCurveClip>()
-                .Select(clip => clip.AuthoringId)
-                .ToArray();
-            var request = new TimelineClipCreationRequest
-            {
-                TrackAuthoringId = trackAuthoringId,
-                Kind = kind,
-                StartFrame = frame,
-                EndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20),
-                CurveEndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20)
-            };
-            PopupWindow.Show(
-                new Rect(0, 0, 1, 1),
-                new TimelineClipCreationPopup(request, motionClipIds, m_Request.Timeline.ExternalBindings, AddClip));
-        }
-
-        bool AddClip(TimelineClipCreationRequest request)
-        {
-            if (!IsSourceCurrent())
-                return false;
-            if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
-                return false;
-            string authoringId = string.Empty;
-            Clip addedClip = null;
-            try
-            {
-                m_Session.Apply(() =>
-                {
-                    if (request.Kind == TimelineContractKinds.AnimationClip)
-                    {
-                        addedClip = TimelineAuthoringTrackBinding.CreateClip(
-                            m_Request.Timeline,
-                            m_Request.ContractCatalog,
-                            track,
-                            request.Resource as UnityEngine.AnimationClip,
-                            request.StartFrame);
-                    }
-                    else
-                    {
-                        addedClip = request.Resource != null
-                            ? m_Request.Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
-                            : m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
-                    }
-                    authoringId = addedClip.AuthoringId;
-                    addedClip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
-                    if (addedClip is MotionCurveClip motion)
-                    {
-                        motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
-                    }
-                    TimelineAuthoringClipConfiguration configuration =
-                        BuildClipConfiguration(addedClip, request);
-                    TimelineAuthoringClipBinding.Configure(
-                        m_Request.Timeline,
-                        addedClip,
-                        configuration,
-                        this);
-                    addedClip.Track.UpdateMix();
-                    m_Request.Timeline.Init();
-                }, "Add Timeline Clip");
-            }
-            catch (Exception exception)
-            {
-                if (addedClip != null)
-                    m_Request.Timeline.RemoveClip(addedClip);
-                ReportIssue($"新增 Clip 失败：{exception.Message}");
-                return false;
-            }
-            m_PendingTrackFocus = request.TrackAuthoringId;
-            m_PendingClipFocus = authoringId;
-            QueueRebuildProjection();
-            return true;
-        }
-
-        bool IsSourceCurrent()
-        {
-            if (string.Equals(m_SourceRevision, TimelineAuthoringFingerprint.Compute(m_Request.Timeline), StringComparison.Ordinal))
-                return true;
-            ReportIssue("Timeline owner 已在外部修改，当前新增输入已取消。");
-            QueueRebuildProjection();
-            return false;
-        }
-
-        static TimelineAuthoringClipConfiguration BuildClipConfiguration(
-            Clip clip,
-            TimelineClipCreationRequest request)
-        {
-            TimelineAuthoringClipConfiguration configuration = TimelineAuthoringClipBinding.Read(clip);
-            if (request.Kind == TimelineContractKinds.AnimationClip)
-            {
-                configuration.Extrapolation = request.Extrapolation;
-                configuration.BlendProfileId = request.BlendProfileId;
-            }
-            if (request.Kind == TimelineContractKinds.MotionCurveClip)
-            {
-                configuration.CurveId = request.CurveId;
-                configuration.CurveEndFrame = request.CurveEndFrame;
-                configuration.Space = request.Space;
-                configuration.Channel = request.Channel;
-                configuration.BlendMode = request.BlendMode;
-                configuration.Priority = request.Priority;
-                configuration.ConsumeLowerChannels = request.ConsumeLowerChannels;
-            }
-            if (request.Kind == TimelineContractKinds.MotionWarpClip)
-                configuration.SourceMotionClipId = request.SourceMotionClipId;
-            if (request.Kind == TimelineContractKinds.ActionCueClip)
-            {
-                configuration.CueId = request.CueId;
-                configuration.CueType = request.CueType;
-            }
-            if (request.Kind == TimelineContractKinds.CameraStateClip)
-            {
-                configuration.CameraMode = request.CameraMode;
-                configuration.Priority = request.CameraPriority;
-                configuration.CameraBlendInSeconds = request.CameraBlendInSeconds;
-                configuration.CameraBlendOutSeconds = request.CameraBlendOutSeconds;
-                configuration.CameraTargetKey = request.CameraTargetKey;
-                configuration.CameraInterruptPolicy = request.CameraInterruptPolicy;
-            }
-            if (request.Kind == TimelineContractKinds.CameraCueClip)
-            {
-                configuration.CueId = request.CueId;
-                configuration.CameraCueKind = request.CameraCueKind;
-                configuration.CueType = request.CueType;
-                configuration.CameraIntensity = request.CameraIntensity;
-                configuration.CameraDurationSeconds = request.CameraDurationSeconds;
-                configuration.Priority = request.CameraPriority;
-            }
-            if (request.Kind == TimelineContractKinds.CameraResponseClip)
-            {
-                configuration.CameraLookResponse = request.CameraLookResponse;
-                configuration.ManualOrbitWeight = request.ManualOrbitWeight;
-                configuration.PitchResponseWeight = request.PitchResponseWeight;
-                configuration.YawResponseWeight = request.YawResponseWeight;
-                configuration.Priority = request.CameraPriority;
-            }
-            if (request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
-            {
-                configuration.TargetBindingId = request.TargetBindingId;
-                configuration.ParameterBindingId = request.ParameterBindingId;
-            }
-            return configuration;
-        }
-
         public bool TryResolveMotionClip(TimelineData timeline, string identity, out MotionCurveClip clip)
         {
             clip = timeline?.Tracks
@@ -1067,19 +779,8 @@ namespace BTSMTL.Timeline.Editor
             return ConvertCurveTime(normalizedCurve, duration, false);
         }
 
-        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor)
-        {
-            if (sourceClip is MotionCurveClip motion &&
-                (descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionX ||
-                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionY ||
-                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionZ ||
-                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionYaw))
-            {
-                return Mathf.Max(1f / TimelineUtility.FrameRate,
-                    (motion.CurveEndFrame - motion.StartFrame) / (float)TimelineUtility.FrameRate);
-            }
-            return Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
-        }
+        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor) =>
+            Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
 
         static AnimationCurve ToAuthoringCurve(AnimationCurve slateCurve, float duration)
         {
@@ -1613,3 +1314,4 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
+

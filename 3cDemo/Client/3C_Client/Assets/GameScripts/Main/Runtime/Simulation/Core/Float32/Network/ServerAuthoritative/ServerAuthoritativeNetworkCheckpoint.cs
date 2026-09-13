@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     public sealed class NetworkCheckpointLayout
     {
-        const int SchemaVersion = 4;
+        const int SchemaVersion = 5;
         readonly CharacterSimulationProgram m_Program;
         readonly ProgramExecutionLayout m_ExecutionLayout;
 
@@ -58,11 +58,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         readonly ReadOnlyCollection<byte[]> m_Values;
         readonly byte[] m_ControlStateBytes;
+        readonly byte[] m_EquipmentStateBytes;
 
         internal NetworkCheckpoint(
             AuthoritativeActorBaseline baseline,
             IReadOnlyList<byte[]> values,
-            byte[] controlStateBytes)
+            byte[] controlStateBytes,
+            byte[] equipmentStateBytes)
         {
             Baseline = baseline ?? throw new ArgumentNullException(nameof(baseline));
             if (values == null || values.Count == 0)
@@ -74,21 +76,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             m_ControlStateBytes = controlStateBytes == null || controlStateBytes.Length == 0
                 ? throw new ArgumentException("Network checkpoint Control state is missing.", nameof(controlStateBytes))
                 : (byte[])controlStateBytes.Clone();
-            CheckpointHash = ComputeHash(baseline, copied, m_ControlStateBytes);
+            m_EquipmentStateBytes = equipmentStateBytes == null ? null : (byte[])equipmentStateBytes.Clone();
+            CheckpointHash = ComputeHash(baseline, copied, m_ControlStateBytes, m_EquipmentStateBytes);
         }
 
         public AuthoritativeActorBaseline Baseline { get; }
         public IReadOnlyList<byte[]> Values => m_Values;
         internal byte[] ControlStateBytes => m_ControlStateBytes;
+        internal byte[] EquipmentStateBytes => m_EquipmentStateBytes;
         public StableHash CheckpointHash { get; }
 
         static StableHash ComputeHash(
             AuthoritativeActorBaseline baseline,
             IReadOnlyList<byte[]> values,
-            byte[] controlStateBytes)
+            byte[] controlStateBytes,
+            byte[] equipmentStateBytes)
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("server-authoritative-network-checkpoint/3");
+            writer.WriteString("server-authoritative-network-checkpoint/4");
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
             writer.WriteString(baseline.StateCodecIdentity);
@@ -100,6 +105,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < values.Count; i++)
                 writer.WriteBytes(values[i]);
             writer.WriteBytes(controlStateBytes);
+            writer.WriteBoolean(equipmentStateBytes != null);
+            if (equipmentStateBytes != null)
+                writer.WriteBytes(equipmentStateBytes);
             return SimulationCanonicalPayloadHash.Compute(writer.ToArray());
         }
     }
@@ -108,8 +116,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
-        const int FullVersion = 4;
-        const int DeltaVersion = 7;
+        const int FullVersion = 5;
+        const int DeltaVersion = 8;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)
@@ -128,7 +136,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new NetworkCheckpoint(
                 baseline,
                 EncodeValues(layout, state),
-                CharacterControlRuntimeStateCodec.Write(state.ControlState));
+                CharacterControlRuntimeStateCodec.Write(state.ControlState),
+                EncodeEquipmentState(state));
         }
 
         public static byte[] WriteFull(NetworkCheckpointLayout layout, NetworkCheckpoint checkpoint)
@@ -156,6 +165,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < checkpoint.Values.Count; i++)
                 writer.WriteBytes(checkpoint.Values[i]);
             writer.WriteBytes(checkpoint.ControlStateBytes);
+            WriteOptionalBytes(writer, checkpoint.EquipmentStateBytes);
             writer.WriteString(checkpoint.CheckpointHash.ToString());
             return writer.ToArray();
         }
@@ -187,6 +197,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeEventHorizon horizon = ReadHorizon(reader);
             byte[][] values = ReadValues(reader, layout.SlotCount);
             byte[] controlStateBytes = reader.ReadBytes();
+            byte[] equipmentStateBytes = ReadOptionalBytes(reader);
             StableHash expectedCheckpointHash = new StableHash(reader.ReadString());
             reader.RequireComplete();
             AuthoritativeActorBaseline baseline = BuildBaseline(
@@ -203,8 +214,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 horizon,
                 values,
                 stateCodecIdentity,
-                controlStateBytes);
-            var checkpoint = new NetworkCheckpoint(baseline, values, controlStateBytes);
+                controlStateBytes,
+                equipmentStateBytes);
+            var checkpoint = new NetworkCheckpoint(baseline, values, controlStateBytes, equipmentStateBytes);
             if (!checkpoint.CheckpointHash.Equals(expectedCheckpointHash))
                 throw new InvalidDataException("Full Network Checkpoint hash is invalid.");
             return checkpoint;
@@ -255,6 +267,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteRawBytes(value, 1, payloadLength);
             }
             writer.WriteBytes(target.ControlStateBytes);
+            WriteOptionalBytes(writer, target.EquipmentStateBytes);
             WriteCompactRemote(writer, layout, target.Baseline.AuthorityTick, remote);
             return writer.ToArray();
         }
@@ -306,9 +319,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (readChanged != changedCount)
                 throw new InvalidDataException("Network Checkpoint delta changed value count does not match its bitset.");
             byte[] controlStateBytes = reader.ReadBytes();
+            byte[] equipmentStateBytes = ReadOptionalBytes(reader);
             remote = ReadCompactRemote(reader, layout, authorityTick, remoteActor);
             reader.RequireComplete();
-            CharacterSimulationState state = DecodeState(layout, authorityTick, values, controlStateBytes);
+            CharacterSimulationState state = DecodeState(layout, authorityTick, values, controlStateBytes, equipmentStateBytes);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
             if (!CharacterSimulationStateCodec.ComputeHash(state).Equals(stateHash))
                 throw new InvalidDataException("Network Checkpoint delta reconstructed Character state hash is invalid.");
@@ -333,7 +347,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 body,
                 confirmedInputSequence,
                 horizon);
-            return new NetworkCheckpoint(rebuilt, values, controlStateBytes);
+            return new NetworkCheckpoint(rebuilt, values, controlStateBytes, equipmentStateBytes);
         }
 
         static void WriteCompactRemote(
@@ -559,7 +573,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             NetworkCheckpointLayout layout,
             SimulationTick tick,
             IReadOnlyList<byte[]> values,
-            byte[] controlStateBytes)
+            byte[] controlStateBytes,
+            byte[] equipmentStateBytes)
         {
             if (!tick.IsValid || values == null || values.Count != layout.SlotCount)
                 throw new InvalidDataException("Network Checkpoint dense state boundary is invalid.");
@@ -575,7 +590,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             CharacterControlRuntimeState controlState = CharacterControlRuntimeStateCodec.Read(controlStateBytes);
             if (controlState.LastCompletedTick != tick.Value)
                 throw new InvalidDataException("Network Checkpoint Control state Tick does not match its authority Tick.");
-            return CharacterSimulationState.Create(layout.Program, layout.ExecutionLayout, tick.Value, decoded, controlState);
+            EquipmentStateAggregate equipmentState = null;
+            if (equipmentStateBytes != null)
+            {
+                var equipmentReader = new CanonicalReader(equipmentStateBytes);
+                equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, layout.ExecutionLayout.Equipment);
+                equipmentReader.RequireComplete();
+            }
+            if ((equipmentStateBytes != null) != layout.ExecutionLayout.Equipment.CapabilityEnabled)
+                throw new InvalidDataException("Network Checkpoint Equipment state presence does not match its runtime binding.");
+            return CharacterSimulationState.Create(layout.Program, layout.ExecutionLayout, tick.Value, decoded, controlState, equipmentState);
         }
 
         static AuthoritativeActorBaseline BuildBaseline(
@@ -592,9 +616,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeEventHorizon horizon,
             IReadOnlyList<byte[]> values,
             string stateCodecIdentity,
-            byte[] controlStateBytes)
+            byte[] controlStateBytes,
+            byte[] equipmentStateBytes)
         {
-            CharacterSimulationState state = DecodeState(layout, tick, values, controlStateBytes);
+            CharacterSimulationState state = DecodeState(layout, tick, values, controlStateBytes, equipmentStateBytes);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
             CharacterStateHash stateHash = CharacterSimulationStateCodec.ComputeHash(state);
             if (!stateHash.Equals(expectedStateHash))
@@ -629,6 +654,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 values[i] = reader.ReadBytes();
             return values;
         }
+
+        static byte[] EncodeEquipmentState(CharacterSimulationState state)
+        {
+            if (!state.TryGetEquipmentState(out EquipmentStateAggregate equipmentState))
+                return null;
+            using var writer = new CanonicalWriter();
+            EquipmentStateAggregateCodec.Write(writer, equipmentState);
+            return writer.ToArray();
+        }
+
+        static void WriteOptionalBytes(CanonicalWriter writer, byte[] bytes)
+        {
+            writer.WriteBoolean(bytes != null);
+            if (bytes != null)
+                writer.WriteBytes(bytes);
+        }
+
+        static byte[] ReadOptionalBytes(CanonicalReader reader) => reader.ReadBoolean() ? reader.ReadBytes() : null;
 
         static void WriteBody(CanonicalWriter writer, WorldBodyState body)
         {

@@ -128,7 +128,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.MotionWarpLastYawProgress,
                 ProgramStateSemantic.MotionWarpSourceOperation);
             EquipmentPolicy = new FixedStateAccessPolicy(
-                ProgramStateSemantic.EquipmentAggregate,
                 ProgramStateSemantic.EquipmentLocalState);
             Access = new FixedProgramAccess(program, layout, this);
         }

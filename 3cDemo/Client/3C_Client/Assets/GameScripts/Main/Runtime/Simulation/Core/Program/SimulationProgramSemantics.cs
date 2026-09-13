@@ -923,7 +923,6 @@ namespace ThirdPersonSimulation
         ActionInstanceReference = 23,
         ActionTargetSnapshot = 24,
         GameplayEffectAggregate = 25,
-        EquipmentAggregate = 26,
         AbilityExecutionState = 27
     }
 
@@ -986,7 +985,6 @@ namespace ThirdPersonSimulation
         AbilityExecutionState = 82,
         ActionEventSequence = 84,
         GameplayEffectAggregate = 100,
-        EquipmentAggregate = 110,
         EquipmentLocalState = 111,
         RandomState = 122,
         HandleAllocator = 123,

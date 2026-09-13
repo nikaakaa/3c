@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -239,18 +240,24 @@ namespace ThirdPersonSimulation
             int depth,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
-            GameplayEffectStateAggregate gameplayEffectSnapshot)
+            GameplayEffectStateAggregate gameplayEffectSnapshot,
+            bool hadEquipmentWorking,
+            EquipmentStateAggregate equipmentSnapshot)
         {
             Depth = depth;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
+            HadEquipmentWorking = hadEquipmentWorking;
+            EquipmentSnapshot = equipmentSnapshot;
         }
 
         internal int Depth { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
+        internal bool HadEquipmentWorking { get; }
+        internal EquipmentStateAggregate EquipmentSnapshot { get; }
     }
 
     internal sealed class Float32CharacterStateTransaction : IDisposable
@@ -266,6 +273,7 @@ namespace ThirdPersonSimulation
             new Stack<Float32CharacterStateSavepoint>();
         SimulationGameplayEffectState m_GameplayEffectWorking;
         Float32GameplayEffectExecutionScratch m_GameplayEffectScratch;
+        EquipmentStateAggregate m_EquipmentWorking;
         Float32CharacterStateTransactionStatus m_Status;
 
         Float32CharacterStateTransaction(
@@ -391,6 +399,26 @@ namespace ThirdPersonSimulation
             return Get(m_Layout.GameplayEffectAggregateAddress).GameplayEffectAggregate;
         }
 
+        public EquipmentStateAggregate GetEquipmentState()
+        {
+            RequireActive();
+            if (!m_Layout.Equipment.CapabilityEnabled)
+                throw new InvalidOperationException("Character state transaction does not install Equipment.");
+            return m_EquipmentWorking ?? m_BaseState.RequireEquipmentState();
+        }
+
+        public void SetEquipmentState(EquipmentStateAggregate state)
+        {
+            RequireActive();
+            if (!m_Layout.Equipment.CapabilityEnabled)
+                throw new InvalidOperationException("Character state transaction does not install Equipment.");
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (!state.CatalogHash.Equals(m_Layout.Equipment.CatalogHash))
+                throw new InvalidDataException("Character Equipment state does not match its runtime binding.");
+            m_EquipmentWorking = state;
+        }
+
         public Float32CharacterStateSavepoint CreateSavepoint()
         {
             RequireActive();
@@ -398,7 +426,9 @@ namespace ThirdPersonSimulation
                 m_Savepoints.Count + 1,
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
-                m_GameplayEffectWorking?.Freeze());
+                m_GameplayEffectWorking?.Freeze(),
+                m_EquipmentWorking != null,
+                m_EquipmentWorking);
             m_Savepoints.Push(savepoint);
             return savepoint;
         }
@@ -423,6 +453,7 @@ namespace ThirdPersonSimulation
                     savepoint.GameplayEffectSnapshot,
                     savepoint.GameplayEffectDirty);
             }
+            m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
 
@@ -445,6 +476,9 @@ namespace ThirdPersonSimulation
                     m_Layout.GameplayEffectAggregateAddress,
                     CharacterStateValue.FromGameplayEffectAggregate(m_GameplayEffectWorking.Freeze()));
             }
+            EquipmentStateAggregate equipmentState = m_Layout.Equipment.CapabilityEnabled
+                ? m_EquipmentWorking ?? m_BaseState.RequireEquipmentState()
+                : null;
 
             try
             {
@@ -453,6 +487,7 @@ namespace ThirdPersonSimulation
                     m_Program,
                     m_Tick,
                     controlState,
+                    equipmentState,
                     m_Workspace.Replacements,
                     m_Workspace.DirtyCount);
                 m_Workspace.CompleteCommit(m_Epoch);
@@ -529,6 +564,7 @@ namespace ThirdPersonSimulation
             m_Savepoints.Clear();
             m_GameplayEffectWorking = null;
             m_GameplayEffectScratch = null;
+            m_EquipmentWorking = null;
         }
 
     }

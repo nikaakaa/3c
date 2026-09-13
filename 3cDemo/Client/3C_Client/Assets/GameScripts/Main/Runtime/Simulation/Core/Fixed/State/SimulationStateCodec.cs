@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 16;
-		public const string CodecIdentity = "character-state/fixed-q32.32/v15";
-		const string HashIdentity = "character-state-hash/fixed-q32.32/v13";
+		const int Version = 17;
+		public const string CodecIdentity = "character-state/fixed-q32.32/v16";
+		const string HashIdentity = "character-state-hash/fixed-q32.32/v14";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -41,6 +41,10 @@ namespace ThirdPersonSimulation.Fixed
                 WriteValue(writer, state.Get(i, slot.ValueKind), layout);
             }
             writer.WriteBytes(CharacterControlRuntimeStateCodec.Write(state.ControlState));
+			bool hasEquipmentState = state.TryGetEquipmentState(out EquipmentStateAggregate equipmentState);
+			writer.WriteBoolean(hasEquipmentState);
+			if (hasEquipmentState)
+				EquipmentStateAggregateCodec.Write(writer, equipmentState);
         }
 
         public static CharacterSimulationState Read(byte[] bytes, CharacterSimulationProgram program)
@@ -79,8 +83,14 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlRuntimeState controlState = CharacterControlRuntimeStateCodec.Read(reader.ReadBytes());
             if (controlState.LastCompletedTick != lastCompletedTick)
                 throw new InvalidDataException("Character control runtime state Tick does not match Character state.");
+			bool hasEquipmentState = reader.ReadBoolean();
+			EquipmentStateAggregate equipmentState = hasEquipmentState
+				? EquipmentStateAggregateCodec.Read(reader, layout.Equipment)
+				: null;
+			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
+				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, controlState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, controlState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -124,9 +134,6 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
                     break;
-                case ProgramStateValueKind.EquipmentAggregate:
-                    EquipmentStateAggregateCodec.Write(writer, value.EquipmentAggregate);
-                    break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
         }
@@ -157,9 +164,6 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     return CharacterStateValue.FromGameplayEffectAggregate(
                         GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
-                case ProgramStateValueKind.EquipmentAggregate:
-                    return CharacterStateValue.FromEquipmentAggregate(
-                        EquipmentStateAggregateCodec.Read(reader, layout.Equipment));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
         }

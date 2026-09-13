@@ -273,8 +273,8 @@ namespace ThirdPersonSimulation
 		ActorId IEquipmentRuntimePort.ActorId => m_Frame.ActorId;
 		ulong IEquipmentRuntimePort.Tick => m_Frame.Tick.Value;
 		EquipmentProgramLayout IEquipmentRuntimePort.Layout => m_Layout.Equipment;
-		public EquipmentStateAggregate ReadState() => m_State.Get(m_Layout.EquipmentAggregateAddress.SlotIndex).EquipmentAggregate;
-		public void WriteState(EquipmentStateAggregate state) => m_State.Set(m_Layout.EquipmentAggregateAddress.SlotIndex, CharacterStateValue.FromEquipmentAggregate(state));
+		public EquipmentStateAggregate ReadState() => m_Frame.Transaction.GetEquipmentState();
+		public void WriteState(EquipmentStateAggregate state) => m_Frame.Transaction.SetEquipmentState(state);
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
 		bool IEquipmentRuntimePort.HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId)
 		{

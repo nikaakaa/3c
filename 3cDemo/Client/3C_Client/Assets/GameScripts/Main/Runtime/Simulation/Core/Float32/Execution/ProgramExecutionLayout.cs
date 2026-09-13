@@ -116,7 +116,6 @@ namespace ThirdPersonSimulation
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly TypedStateAddress m_GameplayEffectAggregate;
         readonly TypedStateAddress m_SkillExecutionState;
-        readonly TypedStateAddress m_EquipmentAggregate;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
         readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
@@ -178,10 +177,6 @@ namespace ThirdPersonSimulation
                 out m_TimelineRetention,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
                 out m_GameplayEffectAggregate);
-            int equipmentSlot = FindStateSlot(ProgramStateSemantic.EquipmentAggregate, "equipment:aggregate");
-            if (Equipment.CapabilityEnabled != (equipmentSlot >= 0))
-                throw new InvalidDataException("Equipment Program catalog and state layout capability are inconsistent.");
-            m_EquipmentAggregate = equipmentSlot >= 0 ? m_TypedAddresses[equipmentSlot] : default;
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -219,9 +214,6 @@ namespace ThirdPersonSimulation
         public TypedStateAddress SkillExecutionStateAddress => m_SkillExecutionState;
         internal bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
         public EquipmentProgramLayout Equipment { get; }
-        public TypedStateAddress EquipmentAggregateAddress => Equipment.CapabilityEnabled
-            ? m_EquipmentAggregate
-            : throw new InvalidOperationException("Program does not install Equipment capability.");
         public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;
 
         public static ProgramExecutionLayout GetOrCreate(CharacterSimulationProgram program)

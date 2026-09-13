@@ -127,7 +127,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.MotionWarpLastYawProgress,
                 ProgramStateSemantic.MotionWarpSourceOperation);
             EquipmentPolicy = new Float32StateAccessPolicy(
-                ProgramStateSemantic.EquipmentAggregate,
                 ProgramStateSemantic.EquipmentLocalState);
             Access = new Float32ProgramAccess(program, layout, this);
         }

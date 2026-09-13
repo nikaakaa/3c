@@ -301,6 +301,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
             DotRecastAuthorityPipelineBinding pipeline,
             DotRecastAuthorityWorldBinding world,
             DotRecastAuthorityRuntimeIdentitySet runtime,
@@ -319,6 +320,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            EquipmentRuntimeBinding = equipmentRuntimeBinding;
             Pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             World = world ?? throw new ArgumentNullException(nameof(world));
             Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -351,7 +353,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 7;
+        public const int SchemaVersion = 8;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }
@@ -363,6 +365,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
+        public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public DotRecastAuthorityPipelineBinding Pipeline { get; }
         public DotRecastAuthorityWorldBinding World { get; }
         public DotRecastAuthorityRuntimeIdentitySet Runtime { get; }

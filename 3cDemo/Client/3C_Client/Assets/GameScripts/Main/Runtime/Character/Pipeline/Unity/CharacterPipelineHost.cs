@@ -528,6 +528,7 @@ namespace ThirdPersonCharacter.Pipeline
 				CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
 				CharacterBodyMotionBinding bodyMotionBinding = m_Definition.BuildBodyMotionRuntimeBinding();
 				CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = m_Definition.BuildGameplayEffectRuntimeBinding();
+				CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = m_Definition.BuildEquipmentRuntimeBinding();
 				inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, program, controlModule));
 				if (inputAdapter == null)
 					throw new InvalidOperationException("Character control source returned no input adapter.");
@@ -644,7 +645,8 @@ namespace ThirdPersonCharacter.Pipeline
 					presentationRuntimeFactory,
 					controlRuntimeBinding,
 					bodyMotionBinding,
-					gameplayEffectRuntimeBinding);
+					gameplayEffectRuntimeBinding,
+					equipmentRuntimeBinding);
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;

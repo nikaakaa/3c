@@ -49,6 +49,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             CharacterControlRuntimeBinding controlRuntimeBinding = ReadControlRuntimeBinding(payloadReader);
             CharacterBodyMotionBinding bodyMotionBinding = ReadBodyMotionBinding(payloadReader);
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = ReadGameplayEffectRuntimeBinding(payloadReader);
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = ReadEquipmentRuntimeBinding(payloadReader);
             DotRecastAuthorityPipelineBinding pipeline = ReadPipeline(payloadReader);
             DotRecastAuthorityWorldBinding world = ReadWorld(payloadReader);
             DotRecastAuthorityRuntimeIdentitySet runtime = ReadRuntime(payloadReader);
@@ -67,6 +68,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding,
                 pipeline,
                 world,
                 runtime,
@@ -95,6 +97,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             WriteControlRuntimeBinding(writer, manifest.ControlRuntimeBinding);
             WriteBodyMotionBinding(writer, manifest.BodyMotionBinding);
             WriteGameplayEffectRuntimeBinding(writer, manifest.GameplayEffectRuntimeBinding);
+            WriteEquipmentRuntimeBinding(writer, manifest.EquipmentRuntimeBinding);
             WritePipeline(writer, manifest.Pipeline);
             WriteWorld(writer, manifest.World);
             WriteRuntime(writer, manifest.Runtime);
@@ -245,6 +248,28 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             StableHash expectedBindingHash = new StableHash(reader.ReadString());
             if (!binding.BindingHash.Equals(expectedBindingHash))
                 throw new InvalidDataException("Manifest Gameplay Effect runtime binding hash does not match its canonical values.");
+            return binding;
+        }
+
+        static void WriteEquipmentRuntimeBinding(
+            CanonicalWriter writer,
+            CharacterEquipmentRuntimeBinding binding)
+        {
+            writer.WriteBoolean(binding != null);
+            if (binding == null)
+                return;
+            writer.WriteBytes(CharacterEquipmentRuntimeBindingCodec.Write(binding));
+            writer.WriteString(binding.BindingHash.Value);
+        }
+
+        static CharacterEquipmentRuntimeBinding ReadEquipmentRuntimeBinding(CanonicalReader reader)
+        {
+            if (!reader.ReadBoolean())
+                return null;
+            CharacterEquipmentRuntimeBinding binding = CharacterEquipmentRuntimeBindingCodec.Read(reader.ReadBytes());
+            StableHash expectedBindingHash = new StableHash(reader.ReadString());
+            if (!binding.BindingHash.Equals(expectedBindingHash))
+                throw new InvalidDataException("Manifest Equipment runtime binding hash does not match its canonical values.");
             return binding;
         }
 

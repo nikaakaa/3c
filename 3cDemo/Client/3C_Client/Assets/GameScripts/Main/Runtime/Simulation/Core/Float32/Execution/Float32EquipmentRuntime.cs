@@ -167,8 +167,7 @@ namespace ThirdPersonSimulation
 			EquipmentProgramParameter parameter = m_Layout.Equipment.RequireParameter(slot.EquipmentId, parameterId);
 			if (parameter.FeatureId != slot.FeatureId)
 				throw new InvalidOperationException($"Equipment parameter '{parameterId}' does not belong to Feature '{slot.FeatureId}'.");
-			ProgramConstant constant = m_Program.Constants[parameter.ConstantIndex];
-			return CharacterStateValue.FromConstant(constant, ToStateKind(parameter.ValueKind));
+			return ToStateValue(parameter.Value);
 		}
 
 		EquipmentChangeRequest BuildChangeRequest(SimulationOperation operation, Float32ValueInputLease inputs)
@@ -257,18 +256,18 @@ namespace ThirdPersonSimulation
 				m_Trace.Add(source, "equipment_snapshot", SimulationTraceSeverity.Detail, $"resolved={resolved.ChangeId}:{resolved.State}:{resolved.SlotId}:{resolved.FromEquipmentId}->{resolved.ToEquipmentId}:begin={resolved.BeginTick}:tick={resolved.ResolvedTick}");
 		}
 
-		static ProgramStateValueKind ToStateKind(EquipmentParameterValueKind kind) => kind switch
+		static CharacterStateValue ToStateValue(EquipmentRuntimeParameterValue value) => value.Kind switch
 		{
-			EquipmentParameterValueKind.Boolean => ProgramStateValueKind.Boolean,
-			EquipmentParameterValueKind.Int32 => ProgramStateValueKind.Int32,
-			EquipmentParameterValueKind.Scalar => ProgramStateValueKind.Scalar,
-			EquipmentParameterValueKind.Vector2 => ProgramStateValueKind.Vector2,
-			EquipmentParameterValueKind.Vector3 => ProgramStateValueKind.Vector3,
-			EquipmentParameterValueKind.Yaw => ProgramStateValueKind.Yaw,
-			EquipmentParameterValueKind.GameplayTag => ProgramStateValueKind.Identity,
-			EquipmentParameterValueKind.GameplayEffect => ProgramStateValueKind.Identity,
-			EquipmentParameterValueKind.AnimationProducer => ProgramStateValueKind.Identity,
-			_ => throw new InvalidOperationException($"Equipment parameter kind '{kind}' is unsupported.")
+			EquipmentParameterValueKind.Boolean => CharacterStateValue.FromBoolean(value.Boolean),
+			EquipmentParameterValueKind.Int32 => CharacterStateValue.FromInt32(value.Int32),
+			EquipmentParameterValueKind.Scalar => CharacterStateValue.FromScalar(Float32Scalar.FromDouble(value.X)),
+			EquipmentParameterValueKind.Vector2 => CharacterStateValue.FromVector2(new Float32Vector2(Float32Scalar.FromDouble(value.X), Float32Scalar.FromDouble(value.Y))),
+			EquipmentParameterValueKind.Vector3 => CharacterStateValue.FromVector3(new Float32Vector3(Float32Scalar.FromDouble(value.X), Float32Scalar.FromDouble(value.Y), Float32Scalar.FromDouble(value.Z))),
+			EquipmentParameterValueKind.Yaw => CharacterStateValue.FromYaw(new Float32Yaw(Float32Scalar.FromDouble(value.X))),
+			EquipmentParameterValueKind.GameplayTag => CharacterStateValue.FromIdentity(value.Identity),
+			EquipmentParameterValueKind.GameplayEffect => CharacterStateValue.FromIdentity(value.Identity),
+			EquipmentParameterValueKind.AnimationProducer => CharacterStateValue.FromIdentity(value.Identity),
+			_ => throw new InvalidOperationException($"Equipment parameter kind '{value.Kind}' is unsupported.")
 		};
 
 		ActorId IEquipmentRuntimePort.ActorId => m_Frame.ActorId;

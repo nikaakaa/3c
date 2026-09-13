@@ -73,6 +73,7 @@ namespace ThirdPersonSimulation
                 ValidateControlRuntimeBinding(binding, program, controlModules);
                 ValidateBodyMotionBinding(binding, program);
                 ValidateGameplayEffectRuntimeBinding(binding, program);
+                ValidateEquipmentRuntimeBinding(binding, program);
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -99,7 +100,8 @@ namespace ThirdPersonSimulation
                 CharacterSimulationProgram program = catalog.Programs[i];
                 ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(
                     program,
-                    FindGameplayEffectBinding(bindings, program.Manifest.ProgramId));
+                    FindGameplayEffectBinding(bindings, program.Manifest.ProgramId),
+                    FindEquipmentBinding(bindings, program.Manifest.ProgramId));
                 var kernelBinding = new KernelProgramBinding(program, layout, kernel);
                 kernelBindings[i] = kernelBinding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, kernelBinding);
@@ -146,6 +148,12 @@ namespace ThirdPersonSimulation
                 {
                     throw new InvalidOperationException($"Actor '{next.ActorId}' Body Motion binding changed during adoption.");
                 }
+                if ((current.EquipmentRuntimeBinding == null) != (next.EquipmentRuntimeBinding == null) ||
+                    current.EquipmentRuntimeBinding != null &&
+                    !current.EquipmentRuntimeBinding.BindingHash.Equals(next.EquipmentRuntimeBinding.BindingHash))
+                {
+                    throw new InvalidOperationException($"Actor '{next.ActorId}' Equipment runtime binding changed during adoption.");
+                }
             }
             var kernelBindings = new KernelProgramBinding[catalog.Programs.Count];
             var bindingsByProgram = new Dictionary<ProgramId, KernelProgramBinding>();
@@ -156,7 +164,8 @@ namespace ThirdPersonSimulation
                     program,
                     ProgramExecutionLayout.GetOrCreate(
                         program,
-                        FindGameplayEffectBinding(values, program.Manifest.ProgramId)),
+                        FindGameplayEffectBinding(values, program.Manifest.ProgramId),
+                        FindEquipmentBinding(values, program.Manifest.ProgramId)),
                     m_CharacterRuntime);
                 kernelBindings[i] = binding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, binding);
@@ -194,6 +203,7 @@ namespace ThirdPersonSimulation
                 ValidateControlRuntimeBinding(binding, program, controlModules);
                 ValidateBodyMotionBinding(binding, program);
                 ValidateGameplayEffectRuntimeBinding(binding, program);
+                ValidateEquipmentRuntimeBinding(binding, program);
                 if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
                 {
                     if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
@@ -275,6 +285,40 @@ namespace ThirdPersonSimulation
                     result = candidate;
                 else if (!result.BindingHash.Equals(candidate.BindingHash))
                     throw new InvalidOperationException($"ProgramId '{programId}' resolves to multiple Gameplay Effect runtime bindings.");
+            }
+            return result;
+        }
+
+        static void ValidateEquipmentRuntimeBinding(
+            SimulationActorBinding binding,
+            CharacterSimulationProgram program)
+        {
+            bool enabled = program.Manifest.Capabilities.HasGameplayCapability("Equipment");
+            if (enabled && binding.EquipmentRuntimeBinding == null)
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has Equipment capability but no Equipment runtime binding.");
+            if (!enabled && binding.EquipmentRuntimeBinding != null)
+                throw new InvalidOperationException("Character Program carries an Equipment runtime binding while Equipment capability is disabled.");
+            if (!program.Manifest.Root.IsCharacter && binding.EquipmentRuntimeBinding != null)
+                throw new InvalidOperationException("Non-Character Program cannot carry an Equipment runtime binding.");
+        }
+
+        static CharacterEquipmentRuntimeBinding FindEquipmentBinding(
+            IReadOnlyList<SimulationActorBinding> bindings,
+            ProgramId programId)
+        {
+            CharacterEquipmentRuntimeBinding result = null;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                SimulationActorBinding binding = bindings[i];
+                if (binding == null || binding.ProgramId != programId)
+                    continue;
+                CharacterEquipmentRuntimeBinding candidate = binding.EquipmentRuntimeBinding;
+                if (candidate == null)
+                    continue;
+                if (result == null)
+                    result = candidate;
+                else if (!result.BindingHash.Equals(candidate.BindingHash))
+                    throw new InvalidOperationException($"ProgramId '{programId}' resolves to multiple Equipment runtime bindings.");
             }
             return result;
         }

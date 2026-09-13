@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterBodyMotionBinding m_BodyMotionBinding;
         readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectRuntimeBinding;
+        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
         public FixedCharacterRegistration(
             int ownerInstanceId,
@@ -85,7 +86,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterPresentationRuntimeBinding> presentationRuntimeFactory,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Fixed Actor registration owner identity is incomplete.");
@@ -122,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             m_BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             m_GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
@@ -138,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
-            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding);
+            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding, m_EquipmentRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"fixed-character-output/{actorId.Value}",
                 "fixed-character-output",
@@ -270,7 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 			}
 			m_PendingProgramAsset = programAsset;
 			m_PendingProgram = program;
-            m_PendingProgramIdentity = new FixedSimulationActorBinding(ActorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding);
+            m_PendingProgramIdentity = new FixedSimulationActorBinding(ActorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding, m_EquipmentRuntimeBinding);
 			return true;
 		}
 

@@ -142,7 +142,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 controlModules);
             CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = definition.BuildGameplayEffectRuntimeBinding();
-            ProgramExecutionLayout.GetOrCreate(program, gameplayEffectRuntimeBinding);
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = definition.BuildEquipmentRuntimeBinding();
+            ProgramExecutionLayout.GetOrCreate(program, gameplayEffectRuntimeBinding, equipmentRuntimeBinding);
             LoadedCharacterTargetProgramArtifact inspectedProgram = CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, programBytes);
             if (!inspectedProgram.Program.ProgramHash.Equals(program.ProgramHash) ||
                 !inspectedProgram.Program.LayoutHash.Equals(program.LayoutHash))
@@ -255,6 +256,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding,
                 pipelineBinding,
                 worldBinding,
                 runtimeIdentities,

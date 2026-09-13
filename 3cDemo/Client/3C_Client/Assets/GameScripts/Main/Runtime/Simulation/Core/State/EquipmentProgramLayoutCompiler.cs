@@ -10,18 +10,33 @@ namespace ThirdPersonSimulation
         Boolean = 1,
         Int32 = 2,
         UInt64 = 3,
-        String = 4
+        String = 4,
+        Scalar = 5,
+        Vector2 = 6,
+        Vector3 = 7,
+        Yaw = 8
     }
 
     public readonly struct EquipmentCatalogConstant
     {
-        public EquipmentCatalogConstant(EquipmentCatalogConstantKind kind, bool boolean, int int32, ulong uint64, string text)
+        public EquipmentCatalogConstant(
+            EquipmentCatalogConstantKind kind,
+            bool boolean,
+            int int32,
+            ulong uint64,
+            string text,
+            double x = 0d,
+            double y = 0d,
+            double z = 0d)
         {
             Kind = kind;
             Boolean = boolean;
             Int32 = int32;
             UInt64 = uint64;
             Text = text ?? string.Empty;
+            X = x;
+            Y = y;
+            Z = z;
         }
 
         public EquipmentCatalogConstantKind Kind { get; }
@@ -29,10 +44,121 @@ namespace ThirdPersonSimulation
         public int Int32 { get; }
         public ulong UInt64 { get; }
         public string Text { get; }
+        public double X { get; }
+        public double Y { get; }
+        public double Z { get; }
     }
 
     public static class EquipmentProgramLayoutCompiler
     {
+        public static EquipmentProgramLayout Compile(
+            CharacterEquipmentRuntimeBinding binding,
+            IReadOnlyList<ProgramStateSlot> stateSlots,
+            IReadOnlyList<ProgramCatalogEntry> catalog,
+            IReadOnlyList<ProgramReference> references,
+            IReadOnlyList<ProgramProducer> producers)
+        {
+            if (binding == null || stateSlots == null || catalog == null || references == null || producers == null)
+                throw new ArgumentNullException();
+            var reader = new CanonicalReader(binding.CatalogBytes);
+            if (reader.ReadInt32() != CharacterEquipmentRuntimeBinding.CatalogFormatVersion)
+                throw new InvalidDataException("Character Equipment runtime catalog format is unsupported.");
+            var slots = new List<EquipmentProgramSlot>(ReadCount(reader, "Equipment Slot"));
+            for (int i = 0; i < slots.Capacity; i++)
+            {
+                EquipmentSlotId slotId = new EquipmentSlotId(reader.ReadString());
+                EquipmentSlotRequirement requirement = (EquipmentSlotRequirement)reader.ReadByte();
+                string equipment = reader.ReadString();
+                slots.Add(new EquipmentProgramSlot(
+                    slotId,
+                    requirement,
+                    string.IsNullOrEmpty(equipment) ? default : new EquipmentId(equipment)));
+            }
+            var features = new List<EquipmentProgramFeature>(ReadCount(reader, "Equipment Feature"));
+            for (int i = 0; i < features.Capacity; i++)
+            {
+                EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
+                var revision = new EquipmentFeatureRevision(reader.ReadUInt64());
+                string codeBinding = reader.ReadString();
+                string[] tags = ReadStrings(reader, "Equipment granted Tag");
+                string[] passiveEffects = ReadStrings(reader, "Equipment passive Effect");
+                WorldCapability capabilities = (WorldCapability)reader.ReadUInt64();
+                features.Add(new EquipmentProgramFeature(featureId, revision, codeBinding, tags, passiveEffects, capabilities));
+            }
+            var items = new List<EquipmentProgramItem>(ReadCount(reader, "Equipment Item"));
+            for (int i = 0; i < items.Capacity; i++)
+            {
+                items.Add(new EquipmentProgramItem(
+                    new EquipmentId(reader.ReadString()),
+                    new EquipmentSlotId(reader.ReadString()),
+                    new EquipmentFeatureId(reader.ReadString()),
+                    new EquipmentVisualBindingId(reader.ReadString())));
+            }
+            var routes = new List<EquipmentProgramRoute>(ReadCount(reader, "Equipment Route"));
+            for (int i = 0; i < routes.Capacity; i++)
+            {
+                routes.Add(new EquipmentProgramRoute(
+                    new EquipmentActionRouteId(reader.ReadString()),
+                    new EquipmentSlotId(reader.ReadString()),
+                    reader.ReadString(),
+                    (EquipmentRouteRequestConsumption)reader.ReadByte(),
+                    (EquipmentRouteMissingImplementation)reader.ReadByte()));
+            }
+            var routeImplementations = new List<EquipmentProgramRouteImplementation>(ReadCount(reader, "Equipment Route implementation"));
+            for (int i = 0; i < routeImplementations.Capacity; i++)
+            {
+                EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
+                EquipmentActionRouteId routeId = new EquipmentActionRouteId(reader.ReadString());
+                CharacterSkillId abilityId = new CharacterSkillId(reader.ReadString());
+                string[] parameters = ReadStrings(reader, "Equipment required Parameter");
+                string[] requiredProducers = ReadStrings(reader, "Equipment required Producer");
+                routeImplementations.Add(new EquipmentProgramRouteImplementation(
+                    featureId,
+                    routeId,
+                    abilityId,
+                    parameters.Select(value => new EquipmentParameterId(value)),
+                    requiredProducers));
+            }
+            var parametersByValue = new List<EquipmentProgramParameter>(ReadCount(reader, "Equipment Parameter"));
+            for (int i = 0; i < parametersByValue.Capacity; i++)
+            {
+                EquipmentId equipmentId = new EquipmentId(reader.ReadString());
+                EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
+                EquipmentParameterId parameterId = new EquipmentParameterId(reader.ReadString());
+                EquipmentParameterValueKind valueKind = (EquipmentParameterValueKind)reader.ReadByte();
+                EquipmentRuntimeParameterValue value = ReadParameterValue(reader, valueKind);
+                parametersByValue.Add(new EquipmentProgramParameter(equipmentId, featureId, parameterId, valueKind, value));
+            }
+            var localStates = new List<EquipmentProgramLocalState>(ReadCount(reader, "Equipment local state"));
+            for (int i = 0; i < localStates.Capacity; i++)
+            {
+                EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
+                EquipmentLocalStateId stateId = new EquipmentLocalStateId(reader.ReadString());
+                string ownerIdentity = $"equipment:feature:{featureId.Value}:state:{stateId.Value}";
+                int stateSlotIndex = -1;
+                for (int slotIndex = 0; slotIndex < stateSlots.Count; slotIndex++)
+                {
+                    ProgramStateSlot slot = stateSlots[slotIndex];
+                    if (slot.OwnerKind == ProgramStateOwnerKind.Equipment &&
+                        slot.Semantic == ProgramStateSemantic.EquipmentLocalState &&
+                        string.Equals(slot.OwnerIdentity, ownerIdentity, StringComparison.Ordinal))
+                    {
+                        if (stateSlotIndex >= 0)
+                            throw new InvalidDataException($"Equipment local state '{ownerIdentity}' has duplicate state slots.");
+                        stateSlotIndex = slotIndex;
+                    }
+                }
+                if (stateSlotIndex < 0)
+                    throw new InvalidDataException($"Equipment local state '{ownerIdentity}' has no typed state slot.");
+                localStates.Add(new EquipmentProgramLocalState(featureId, stateId, stateSlotIndex));
+            }
+            reader.RequireComplete();
+            IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
+            var layout = new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parametersByValue, localStates, operationBindings);
+            layout.ValidateProducerBindings(producers);
+            return layout;
+        }
+
         public static EquipmentProgramLayout Compile(
             bool capabilityEnabled,
             IReadOnlyList<ProgramCatalogEntry> catalog,
@@ -130,7 +256,9 @@ namespace ThirdPersonSimulation
                     featureId,
                     parameterId,
                     (EquipmentParameterValueKind)Int32(entry, "ValueKind", constant),
-                    Field(entry, "Value", ProgramCatalogFieldKind.Constant).ConstantIndex));
+                    ToRuntimeValue(
+                        (EquipmentParameterValueKind)Int32(entry, "ValueKind", constant),
+                        constant(Field(entry, "Value", ProgramCatalogFieldKind.Constant).ConstantIndex))));
             }
             var localStates = new List<EquipmentProgramLocalState>();
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentFeatureLocalState))
@@ -210,6 +338,66 @@ namespace ThirdPersonSimulation
         {
             if (!values.TryAdd(operation, value))
                 throw new InvalidDataException($"Equipment operation '{operation}' has duplicate {kind} bindings.");
+        }
+
+        static EquipmentRuntimeParameterValue ToRuntimeValue(
+            EquipmentParameterValueKind kind,
+            EquipmentCatalogConstant value)
+        {
+            return kind switch
+            {
+                EquipmentParameterValueKind.Boolean when value.Kind == EquipmentCatalogConstantKind.Boolean =>
+                    new EquipmentRuntimeParameterValue(kind, value.Boolean, 0, 0, 0, 0, 0, string.Empty),
+                EquipmentParameterValueKind.Int32 when value.Kind == EquipmentCatalogConstantKind.Int32 =>
+                    new EquipmentRuntimeParameterValue(kind, false, value.Int32, 0, 0, 0, 0, string.Empty),
+                EquipmentParameterValueKind.Scalar when value.Kind == EquipmentCatalogConstantKind.Scalar =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, value.X, 0, 0, string.Empty),
+                EquipmentParameterValueKind.Vector2 when value.Kind == EquipmentCatalogConstantKind.Vector2 =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, value.X, value.Y, 0, string.Empty),
+                EquipmentParameterValueKind.Vector3 when value.Kind == EquipmentCatalogConstantKind.Vector3 =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, value.X, value.Y, value.Z, string.Empty),
+                EquipmentParameterValueKind.Yaw when value.Kind == EquipmentCatalogConstantKind.Yaw =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, value.X, 0, 0, string.Empty),
+                EquipmentParameterValueKind.GameplayTag when value.Kind == EquipmentCatalogConstantKind.String =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, 0, 0, 0, value.Text),
+                EquipmentParameterValueKind.GameplayEffect when value.Kind == EquipmentCatalogConstantKind.String =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, 0, 0, 0, value.Text),
+                EquipmentParameterValueKind.AnimationProducer when value.Kind == EquipmentCatalogConstantKind.String =>
+                    new EquipmentRuntimeParameterValue(kind, false, 0, 0, 0, 0, 0, value.Text),
+                _ => throw new InvalidDataException($"Equipment parameter '{kind}' value kind '{value.Kind}' is invalid.")
+            };
+        }
+
+        static EquipmentRuntimeParameterValue ReadParameterValue(
+            CanonicalReader reader,
+            EquipmentParameterValueKind kind)
+        {
+            return new EquipmentRuntimeParameterValue(
+                kind,
+                reader.ReadBoolean(),
+                reader.ReadInt32(),
+                reader.ReadUInt64(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadDouble(),
+                reader.ReadString());
+        }
+
+        static string[] ReadStrings(CanonicalReader reader, string label)
+        {
+            int count = ReadCount(reader, label);
+            var values = new string[count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = reader.ReadString();
+            return values;
+        }
+
+        static int ReadCount(CanonicalReader reader, string label)
+        {
+            int count = reader.ReadInt32();
+            if (count < 0 || count > 100000)
+                throw new InvalidDataException($"{label} count '{count}' is invalid.");
+            return count;
         }
 
 

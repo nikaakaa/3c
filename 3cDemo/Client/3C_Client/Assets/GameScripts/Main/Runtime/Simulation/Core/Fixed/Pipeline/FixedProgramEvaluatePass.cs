@@ -96,6 +96,7 @@ namespace ThirdPersonSimulation.Fixed
                             state.Actors[i].State.ControlState,
                             readPorts.ProgramRuntime.GetBodyMotionBinding(i),
                             readPorts.ProgramRuntime.GetGameplayEffectRuntimeBinding(i),
+                            readPorts.ProgramRuntime.GetEquipmentRuntimeBinding(i),
                             state.WorldState.Bodies[i],
                             readPorts.Diagnostics.Sink.IsEnabled,
                             readPorts.Diagnostics.Sink is ISimulationValueTraceInterest valueInterest &&

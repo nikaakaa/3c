@@ -62,6 +62,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     CharacterControlRuntimeModuleCatalog.Create());
                 CharacterBodyMotionBinding bodyMotionBinding = m_CharacterDefinition.BuildBodyMotionRuntimeBinding();
                 CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = m_CharacterDefinition.BuildGameplayEffectRuntimeBinding();
+                CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = m_CharacterDefinition.BuildEquipmentRuntimeBinding();
                 registration = new ServerAuthoritativeAuthorityActorRegistration(
                     GetInstanceID(),
                     name,
@@ -74,7 +75,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     diagnosticsTarget,
                     controlRuntimeBinding,
                     bodyMotionBinding,
-                    gameplayEffectRuntimeBinding);
+                    gameplayEffectRuntimeBinding,
+                    equipmentRuntimeBinding);
                 diagnosticsTarget = null;
                 m_SessionHost.RegisterActor(registration);
                 m_Registration = registration;

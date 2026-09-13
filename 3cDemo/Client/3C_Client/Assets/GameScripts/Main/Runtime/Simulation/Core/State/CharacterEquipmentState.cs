@@ -173,10 +173,10 @@ namespace ThirdPersonSimulation
             EquipmentFeatureId featureId,
             EquipmentParameterId parameterId,
             EquipmentParameterValueKind valueKind,
-            int constantIndex)
+            EquipmentRuntimeParameterValue value)
         {
             if (!equipmentId.IsValid || !featureId.IsValid || !parameterId.IsValid ||
-                !Enum.IsDefined(typeof(EquipmentParameterValueKind), valueKind) || constantIndex < 0)
+                !Enum.IsDefined(typeof(EquipmentParameterValueKind), valueKind) || value == null || value.Kind != valueKind)
             {
                 throw new ArgumentException("Equipment Program Parameter is invalid.");
             }
@@ -184,14 +184,14 @@ namespace ThirdPersonSimulation
             FeatureId = featureId;
             ParameterId = parameterId;
             ValueKind = valueKind;
-            ConstantIndex = constantIndex;
+            Value = value;
         }
 
         public EquipmentId EquipmentId { get; }
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentParameterId ParameterId { get; }
         public EquipmentParameterValueKind ValueKind { get; }
-        public int ConstantIndex { get; }
+        public EquipmentRuntimeParameterValue Value { get; }
     }
 
     public sealed class EquipmentProgramLocalState
@@ -472,7 +472,14 @@ namespace ThirdPersonSimulation
                 writer.WriteString(m_Parameters[i].FeatureId.Value);
                 writer.WriteString(m_Parameters[i].ParameterId.Value);
                 writer.WriteByte((byte)m_Parameters[i].ValueKind);
-                writer.WriteInt32(m_Parameters[i].ConstantIndex);
+                EquipmentRuntimeParameterValue value = m_Parameters[i].Value;
+                writer.WriteBoolean(value.Boolean);
+                writer.WriteInt32(value.Int32);
+                writer.WriteUInt64(value.UInt64);
+                writer.WriteDouble(value.X);
+                writer.WriteDouble(value.Y);
+                writer.WriteDouble(value.Z);
+                writer.WriteString(value.Identity);
             }
             writer.WriteInt32(m_LocalStates.Count);
             for (int i = 0; i < m_LocalStates.Count; i++)

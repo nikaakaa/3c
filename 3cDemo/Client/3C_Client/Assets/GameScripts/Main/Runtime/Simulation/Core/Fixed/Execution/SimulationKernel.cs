@@ -263,6 +263,7 @@ namespace ThirdPersonSimulation.Fixed
                 evaluation.ControlStateTransaction,
                 request.BodyMotionBinding,
                 request.GameplayEffectRuntimeBinding,
+                request.EquipmentRuntimeBinding,
                 outputLease,
                 worldRequest,
                 request.DiagnosticsEnabled);

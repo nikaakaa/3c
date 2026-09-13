@@ -123,16 +123,23 @@ namespace ThirdPersonSimulation.Fixed
         readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
         readonly OperationValueInputRange[] m_MotionModifierRanges;
         readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectBinding;
+        readonly CharacterEquipmentRuntimeBinding m_EquipmentBinding;
 
         ProgramExecutionLayout(
             CharacterSimulationProgram program,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
+            CharacterEquipmentRuntimeBinding equipmentBinding)
         {
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
             if (program.Manifest.Root.IsCharacter)
                 m_GameplayEffectBinding = gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding));
             else if (gameplayEffectBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectBinding));
+            bool equipmentEnabled = program.Manifest.Capabilities.HasGameplayCapability("Equipment");
+            if (equipmentEnabled)
+                m_EquipmentBinding = equipmentBinding ?? throw new ArgumentNullException(nameof(equipmentBinding));
+            else if (equipmentBinding != null)
+                throw new ArgumentException("Program carries an Equipment binding while Equipment capability is disabled.", nameof(equipmentBinding));
             ProgramId = program.Manifest.ProgramId;
             ProgramHash = program.ProgramHash;
             LayoutHash = program.LayoutHash;
@@ -141,7 +148,7 @@ namespace ThirdPersonSimulation.Fixed
             int stateSemanticCount = EnumValueCount(typeof(ProgramStateSemantic));
 
             m_CatalogIndex = new ProgramCatalogRuntimeIndex(operationCount, program.References, program.CatalogEntries);
-            Equipment = FixedEquipmentProgramLayoutCompiler.Compile(program);
+            Equipment = FixedEquipmentProgramLayoutCompiler.Compile(program, equipmentBinding);
             BuildMotionModifierRanges(program, out m_MotionModifiers, out m_MotionModifierRanges);
             string[] operationSourcePaths = BuildOperationSourcePaths(program);
             BuildValueInputs(program, out m_ValueInputRanges, out m_ValueInputs);
@@ -206,6 +213,7 @@ namespace ThirdPersonSimulation.Fixed
         internal CharacterSimulationProgram Program => m_Program;
         internal SimulationGameplayEffectProgram GameplayEffectProgram => Services.GameplayEffectProgram;
         public CharacterGameplayEffectRuntimeBinding GameplayEffectBinding => m_GameplayEffectBinding;
+        public CharacterEquipmentRuntimeBinding EquipmentBinding => m_EquipmentBinding;
         internal FixedProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
@@ -227,12 +235,20 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Character Program layout requires a Character Gameplay Effect runtime binding.");
                 return layout;
             }
-            return s_Layouts.GetValue(program, value => new ProgramExecutionLayout(value, null));
+            return s_Layouts.GetValue(program, value => new ProgramExecutionLayout(value, null, null));
         }
 
         public static ProgramExecutionLayout GetOrCreate(
             CharacterSimulationProgram program,
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+        {
+            return GetOrCreate(program, gameplayEffectBinding, null);
+        }
+
+        public static ProgramExecutionLayout GetOrCreate(
+            CharacterSimulationProgram program,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
+            CharacterEquipmentRuntimeBinding equipmentBinding)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -240,8 +256,9 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectBinding));
             ProgramExecutionLayout layout = s_Layouts.GetValue(
                 program,
-                value => new ProgramExecutionLayout(value, gameplayEffectBinding));
+                value => new ProgramExecutionLayout(value, gameplayEffectBinding, equipmentBinding));
             layout.RequireGameplayEffectBinding(gameplayEffectBinding);
+            layout.RequireEquipmentBinding(equipmentBinding);
             return layout;
         }
 
@@ -398,6 +415,18 @@ namespace ThirdPersonSimulation.Fixed
             }
             if (gameplayEffectBinding == null || !m_GameplayEffectBinding.BindingHash.Equals(gameplayEffectBinding.BindingHash))
                 throw new InvalidOperationException("Execution layout Character Gameplay Effect binding is stale or mismatched.");
+        }
+
+        public void RequireEquipmentBinding(CharacterEquipmentRuntimeBinding equipmentBinding)
+        {
+            if (m_EquipmentBinding == null)
+            {
+                if (equipmentBinding != null)
+                    throw new InvalidOperationException("Execution layout does not accept an Equipment binding.");
+                return;
+            }
+            if (equipmentBinding == null || !m_EquipmentBinding.BindingHash.Equals(equipmentBinding.BindingHash))
+                throw new InvalidOperationException("Execution layout Equipment binding is stale or mismatched.");
         }
 
         public TypedStateAddress Address(int slotIndex)

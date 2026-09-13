@@ -163,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 CharacterControlRuntimeModuleCatalog.Create());
             CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
             ICharacterPresentationRuntime presentation = null;
@@ -276,7 +277,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     m_MaximumActivePresentationRecords,
                     controlRuntimeBinding,
                     bodyMotionBinding,
-                    gameplayEffectRuntimeBinding);
+                    gameplayEffectRuntimeBinding,
+                    equipmentRuntimeBinding);
                 input = null;
                 presentation = null;
                 diagnosticsTarget = null;

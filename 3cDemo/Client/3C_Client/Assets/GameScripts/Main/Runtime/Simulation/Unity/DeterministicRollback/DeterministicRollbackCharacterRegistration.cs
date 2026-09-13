@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterBodyMotionBinding m_BodyMotionBinding;
         readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectRuntimeBinding;
+        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
@@ -71,7 +72,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             int maximumActivePresentationRecords,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Rollback Actor registration owner identity is incomplete.");
@@ -92,6 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             m_BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             m_GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
             PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
@@ -114,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
-            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding);
+            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding, m_EquipmentRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
                 "deterministic-rollback-fixed-output",

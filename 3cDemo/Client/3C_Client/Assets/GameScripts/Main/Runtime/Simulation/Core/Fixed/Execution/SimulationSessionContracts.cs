@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation.Fixed
             string worldBodyBindingId,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
@@ -35,9 +36,15 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
             if (!program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectRuntimeBinding));
+            bool equipmentEnabled = program.Manifest.Root.IsCharacter && program.Manifest.Capabilities.HasGameplayCapability("Equipment");
+            if (equipmentEnabled && equipmentRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
+            if (!equipmentEnabled && equipmentRuntimeBinding != null)
+                throw new ArgumentException("Program cannot carry an Equipment runtime binding while Equipment is not installed.", nameof(equipmentRuntimeBinding));
             ControlRuntimeBinding = controlRuntimeBinding;
             BodyMotionBinding = bodyMotionBinding;
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
+            EquipmentRuntimeBinding = equipmentRuntimeBinding;
         }
 
         public ActorId ActorId { get; }
@@ -48,6 +55,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
+        public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         internal CharacterSimulationProgram Program { get; }
         object ISimulationProgramBinding.ProgramObject => Program;
     }

@@ -19,6 +19,7 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeState controlState,
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
             WorldBodyState previousBody,
             bool diagnosticsEnabled,
             bool valueTraceEnabled = false,
@@ -47,11 +48,18 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
             if (!Program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectRuntimeBinding));
+            bool equipmentEnabled = Program.Manifest.Root.IsCharacter && Program.Manifest.Capabilities.HasGameplayCapability("Equipment");
+            if (equipmentEnabled && equipmentRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
+            if (!equipmentEnabled && equipmentRuntimeBinding != null)
+                throw new ArgumentException("Program cannot carry an Equipment runtime binding while Equipment is not installed.", nameof(equipmentRuntimeBinding));
             ExecutionLayout.RequireGameplayEffectBinding(gameplayEffectRuntimeBinding);
+            ExecutionLayout.RequireEquipmentBinding(equipmentRuntimeBinding);
             ControlRuntimeBinding = controlRuntimeBinding;
             ControlState = controlState;
             BodyMotionBinding = bodyMotionBinding;
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
+            EquipmentRuntimeBinding = equipmentRuntimeBinding;
             if (controlState != null)
             {
                 controlState.RequireBinding(controlRuntimeBinding);
@@ -100,6 +108,7 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeState ControlState { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
+        public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
         public bool ValueTraceEnabled { get; }
@@ -158,6 +167,7 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeStateTransaction controlStateTransaction,
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
             ActorOutputWorkspaceLease outputLease,
             CharacterWorldSolveRequest worldRequest,
             bool diagnosticsEnabled)
@@ -173,6 +183,7 @@ namespace ThirdPersonSimulation
             m_ControlStateTransaction = controlStateTransaction ?? throw new ArgumentNullException(nameof(controlStateTransaction));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
+            EquipmentRuntimeBinding = equipmentRuntimeBinding;
             OutputLease = outputLease;
             if (!ReferenceEquals(transaction.Program, Program) ||
                 !ReferenceEquals(transaction.Layout, ExecutionLayout) ||
@@ -187,7 +198,10 @@ namespace ThirdPersonSimulation
                 controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active ||
                 !Program.Manifest.Root.IsCharacter && bodyMotionBinding != null ||
                 !Program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null ||
-                !ExecutionLayout.GameplayEffectBinding.BindingHash.Equals(gameplayEffectRuntimeBinding.BindingHash))
+                !ExecutionLayout.GameplayEffectBinding.BindingHash.Equals(gameplayEffectRuntimeBinding.BindingHash) ||
+                Program.Manifest.Capabilities.HasGameplayCapability("Equipment") &&
+                (equipmentRuntimeBinding == null || !ExecutionLayout.EquipmentBinding.BindingHash.Equals(equipmentRuntimeBinding.BindingHash)) ||
+                !Program.Manifest.Capabilities.HasGameplayCapability("Equipment") && equipmentRuntimeBinding != null)
             {
                 throw new InvalidOperationException("Pending evaluation transaction binding is invalid.");
             }
@@ -205,6 +219,7 @@ namespace ThirdPersonSimulation
         internal CharacterControlRuntimeState ControlState { get; }
         internal CharacterBodyMotionBinding BodyMotionBinding { get; }
         internal CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
+        internal CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         internal ProgramExecutionLayout ExecutionLayout { get; }
         internal ActorOutputWorkspaceLease OutputLease { get; }
 

@@ -82,6 +82,6 @@
 - Camera `ForceTeardown` 已从同 scope 直接清除改为 `Cancel` 退休，效果 owner 继续按各自 RetireDuration 淡出；未改变 Sequence force cut 的职责。
 - 当前 Corin `CorinAttack1Timeline.asset` 的 `Attack1CameraCue` 仍是通用 `ActionCueClip`，只有 `CueId: Attack1CameraCue` 与 `CueType: Camera`，没有正式 `CameraCueClip.ResourceId`；因此外部动作资料中的 camera key 仍不能直接迁成正式 Camera request，避免伪造资源映射。
 - `CharacterPresentationProjection.IsValid` 已把 Camera Producer 与 Camera Projection 的资源闭包绑定起来；旧/混合 Projection 不再能仅凭 Producer 自身字段通过有效性检查。
-- v4 D10：新增 `CameraRuntimeBindingContracts.cs` 与 `CharacterCameraRuntimeBindingBuilder.cs`。Camera 现在可返回 `Ready/Missing/Invalid/Failed`、typed failure code、PreparedBinding 和 `CameraBindingAdoptedResult`（Profile/资源版本、BindingId、Actor/Instance）；当前尚未接入角色装配 owner，未宣称已采用。
+- v4 D10：新增 `CameraRuntimeBindingContracts.cs` 与 `CharacterCameraRuntimeBindingBuilder.cs`。Camera 现在可返回 `Ready/Missing/Invalid/Failed`、typed failure code、PreparedBinding 和 `CameraBindingAdoptedResult`（Profile/资源版本、BindingId、Actor/Instance），并在 Ready 前校验 Profile 声明的 required target slot 是否绑定 Anchor/Aim/PreferredBone；当前尚未接入角色装配 owner，未宣称已采用。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

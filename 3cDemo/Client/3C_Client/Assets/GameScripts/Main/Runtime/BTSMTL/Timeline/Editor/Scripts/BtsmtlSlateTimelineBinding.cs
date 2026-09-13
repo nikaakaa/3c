@@ -459,8 +459,13 @@ namespace BTSMTL.Timeline.Editor
 
         bool CreateTrack(string kind, string name, string channelId, string slotId)
         {
-            if (IsReadOnly || !IsSourceCurrent())
+            if (IsReadOnly)
                 return false;
+            if (!IsSourceCurrent())
+            {
+                Rebuild();
+                return false;
+            }
             try
             {
                 Track added = null;
@@ -520,7 +525,14 @@ namespace BTSMTL.Timeline.Editor
 
         bool CreateClip(TimelineClipCreationRequest request)
         {
-            if (IsReadOnly || !IsSourceCurrent() || !m_Tracks.TryGetValue(request.TrackAuthoringId, out BtsmtlTimelineTrackBinding track))
+            if (IsReadOnly)
+                return false;
+            if (!IsSourceCurrent())
+            {
+                Rebuild();
+                return false;
+            }
+            if (!m_Tracks.TryGetValue(request.TrackAuthoringId, out BtsmtlTimelineTrackBinding track))
                 return false;
             try
             {

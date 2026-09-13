@@ -29,12 +29,14 @@ namespace BTSMTL.Timeline.Editor
         readonly ToolbarToggle m_CommitToggle;
         readonly Label m_OwnershipLabel;
         readonly Label m_OutputSummary;
+        readonly System.Action<System.Action, string> m_Apply;
 
-        public TreeClipInspectorView(Clip clip)
+        public TreeClipInspectorView(Clip clip, System.Action<System.Action, string> apply)
         {
             m_TreeClip = clip as TreeClip;
             if (m_TreeClip == null)
                 return;
+            m_Apply = apply ?? throw new System.ArgumentNullException(nameof(apply));
 
             Add(new Label("Phase"));
             var phaseToolbar = new Toolbar();
@@ -134,12 +136,7 @@ namespace BTSMTL.Timeline.Editor
 
         void Modify(string name, System.Action action)
         {
-            TimelineData timeline = m_TreeClip.Timeline;
-            timeline.ApplyModify(() =>
-            {
-                action();
-                timeline.Init();
-            }, name);
+            m_Apply(action, name);
         }
 
         void SetPhase(ChangeEvent<bool> evt, TimelineTreeExecutionPhase phase)

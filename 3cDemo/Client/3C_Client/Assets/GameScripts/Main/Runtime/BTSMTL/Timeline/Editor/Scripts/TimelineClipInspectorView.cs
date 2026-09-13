@@ -20,12 +20,14 @@ namespace BTSMTL.Timeline.Editor
     public sealed class MotionWarpClipInspectorView : TimelineClipInspectorView
     {
         readonly MotionWarpClip m_Warp;
+        readonly Action<Action, string> m_Apply;
         readonly List<MotionCurveClip> m_Sources = new List<MotionCurveClip>();
         readonly List<MotionWarpAuthoringIssue> m_Issues = new List<MotionWarpAuthoringIssue>();
 
-        public MotionWarpClipInspectorView(Clip clip)
+        public MotionWarpClipInspectorView(Clip clip, Action<Action, string> apply)
         {
             m_Warp = clip as MotionWarpClip ?? throw new ArgumentException("MotionWarp inspector requires MotionWarpClip.", nameof(clip));
+            m_Apply = apply ?? throw new ArgumentNullException(nameof(apply));
             name = "motion-warp-inspector";
             Rebuild();
         }
@@ -49,14 +51,13 @@ namespace BTSMTL.Timeline.Editor
             sourceField.RegisterValueChangedCallback(evt =>
             {
                 int index = labels.IndexOf(evt.newValue);
-                timeline.ApplyModify(() =>
+                m_Apply(() =>
                 {
                     if (index <= 0)
                         MotionWarpAuthoring.ClearSource(timeline, m_Warp);
                     else
                         MotionWarpAuthoring.BindSource(timeline, m_Warp, m_Sources[index - 1]);
                 }, "Configure MotionWarp Source");
-                m_Warp.RepaintInspector();
             });
             Add(sourceField);
 

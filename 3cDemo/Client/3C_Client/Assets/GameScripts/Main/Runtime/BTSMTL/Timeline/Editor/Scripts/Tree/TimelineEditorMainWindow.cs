@@ -714,10 +714,10 @@ namespace BTSMTL.Timeline.Editor
                     $"{clip.Name}  |  {clip.ContractKind}  |  Frame {clip.StartFrame}..{clip.EndFrame}"));
                 m_DetailsHost.Add(new Button(() => OpenClip(clip)) { text = "Open Source" });
                 if (clip is MotionWarpClip)
-                    m_DetailsHost.Add(new MotionWarpClipInspectorView(clip));
+                    m_DetailsHost.Add(new MotionWarpClipInspectorView(clip, m_SlateProjection.ApplyFormalMutation));
                 else if (clip is TreeClip treeClip)
                 {
-                    var inspector = new TreeClipInspectorView(treeClip);
+                    var inspector = new TreeClipInspectorView(treeClip, m_SlateProjection.ApplyFormalMutation);
                     inspector.Initialize(OpenClip);
                     m_DetailsHost.Add(inspector);
                 }

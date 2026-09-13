@@ -14,6 +14,7 @@ namespace BTSMTL.Timeline.Editor
         string m_ChannelId;
         string m_SlotId;
         string m_Error;
+        string m_SubmitError;
 
         public TimelineTrackCreationPopup(
             string kind,
@@ -43,12 +44,16 @@ namespace BTSMTL.Timeline.Editor
             }
             if (!string.IsNullOrEmpty(m_Error))
                 EditorGUILayout.HelpBox(m_Error, MessageType.Error);
+            if (!string.IsNullOrEmpty(m_SubmitError))
+                EditorGUILayout.HelpBox(m_SubmitError, MessageType.Error);
             using (new EditorGUI.DisabledScope(!string.IsNullOrEmpty(m_Error)))
             {
                 if (GUILayout.Button("Create"))
                 {
                     if (m_Create(m_Name, m_ChannelId, m_SlotId))
                         editorWindow.Close();
+                    else
+                        m_SubmitError = "正式 Timeline 提交失败，可能是 owner 已更新；当前输入已保留。";
                 }
             }
         }

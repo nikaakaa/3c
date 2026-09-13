@@ -530,6 +530,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float pitchResponseWeight = 1f,
             float yawResponseWeight = 1f,
             CameraResetReason resetReason = CameraResetReason.None,
+            bool targetRetired = false,
+            CameraPresentationStopReason targetStopReason = CameraPresentationStopReason.NaturalComplete,
+            string targetRetiredKey = "",
             bool paused = false,
             IReadOnlyList<CameraEffectContribution> effects = null,
             in CameraCollisionResult collision = default)
@@ -560,6 +563,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PitchResponseWeight = pitchResponseWeight;
             YawResponseWeight = yawResponseWeight;
             ResetReason = (int)resetReason;
+            TargetRetired = targetRetired;
+            TargetStopReason = (int)targetStopReason;
+            TargetRetiredKey = targetRetiredKey ?? string.Empty;
             Paused = paused;
         }
 
@@ -618,6 +624,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PitchResponseWeight,
                 YawResponseWeight,
                 (CameraResetReason)ResetReason,
+                TargetRetired,
+                (CameraPresentationStopReason)TargetStopReason,
+                TargetRetiredKey,
                 Paused,
                 m_EffectContributions,
                 in m_Collision);
@@ -736,6 +745,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("reset-reason")]
         [DiagnosticGroup("camera-frame")]
         public int ResetReason { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("target-retired")]
+        [DiagnosticGroup("camera-target")]
+        public bool TargetRetired { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("target-stop-reason")]
+        [DiagnosticGroup("camera-target")]
+        public int TargetStopReason { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("target-retired-key")]
+        [DiagnosticGroup("camera-target")]
+        public string TargetRetiredKey { get; }
 
         [DiagnosticField]
         [DiagnosticKey("paused")]

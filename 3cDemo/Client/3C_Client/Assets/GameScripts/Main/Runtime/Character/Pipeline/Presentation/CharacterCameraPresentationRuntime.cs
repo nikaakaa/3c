@@ -565,6 +565,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 response.PitchWeight,
                 response.YawWeight,
                 resetReason,
+                targetRetired,
+                targetRetired
+                    ? CameraPresentationStopReason.TargetInvalid
+                    : CameraPresentationStopReason.NaturalComplete,
+                targetRetiredKey,
                 paused,
                 m_EffectEvaluator.Contributions,
                 in collision);

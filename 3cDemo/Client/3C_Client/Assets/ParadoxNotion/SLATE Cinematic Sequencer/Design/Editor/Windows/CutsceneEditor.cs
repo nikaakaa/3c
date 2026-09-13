@@ -535,57 +535,6 @@ namespace Slate
             cutscene.currentTime = time;
         }
 
-        bool TryGetEmbeddedGroup(CutsceneGroup source, out IEmbeddedTimelineGroupBinding group)
-        {
-            group = null;
-            if (embeddedTimeline == null || !(source is IEmbeddedTimelineProxyIdentity proxy))
-                return false;
-            for (int index = 0; index < embeddedTimeline.Groups.Count; index++)
-            {
-                IEmbeddedTimelineGroupBinding candidate = embeddedTimeline.Groups[index];
-                if (string.Equals(candidate.AuthoringId, proxy.AuthoringId, System.StringComparison.Ordinal))
-                {
-                    group = candidate;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool IsEmbeddedSelected(CutsceneGroup source)
-        {
-            return TryGetEmbeddedGroup(source, out IEmbeddedTimelineGroupBinding group) &&
-                   ReferenceEquals(embeddedTimeline.Selected, group);
-        }
-
-        bool IsEmbeddedSelected(CutsceneTrack source)
-        {
-            return embeddedTimeline != null && source is IEmbeddedTimelineProxyIdentity proxy &&
-                   embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding track) &&
-                   ReferenceEquals(embeddedTimeline.Selected, track);
-        }
-
-        bool IsEmbeddedSelected(ActionClip source)
-        {
-            return embeddedTimeline != null && source is IEmbeddedTimelineProxyIdentity proxy &&
-                   embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding clip) &&
-                   ReferenceEquals(embeddedTimeline.Selected, clip);
-        }
-
-        bool TryGetEmbeddedClipBinding(ActionClip source, out IEmbeddedTimelineClipBinding clip)
-        {
-            clip = null;
-            return embeddedTimeline != null && source is IEmbeddedTimelineProxyIdentity proxy &&
-                   embeddedTimeline.TryGetClip(proxy.AuthoringId, out clip);
-        }
-
-        IClipEditorBinding GetClipEditorBinding(ActionClip source)
-        {
-            return TryGetEmbeddedClipBinding(source, out IEmbeddedTimelineClipBinding formalClip)
-                ? new FormalClipEditorBinding(formalClip)
-                : new NativeClipEditorBinding(source);
-        }
-
         public static float CurrentSnapInterval {
             get
             {
@@ -1628,7 +1577,7 @@ namespace Slate
             if ( willDirty && ShouldRecordUndo() && cutscene != null ) {
                 willDirty = false;
                 EditorUtility.SetDirty(cutscene);
-                foreach ( var o in cutscene.GetComponentsInChildren(typeof(IDirectable), true).Cast<Object>() ) {
+                foreach ( var o in cutscene.GetComponentsInChildren(typeof(IDirectable), true).Cast<UnityEngine.Object>() ) {
                     EditorUtility.SetDirty(o);
                 }
             }
@@ -2636,7 +2585,7 @@ namespace Slate
                 nextYPos += GROUP_HEIGHT;
 
                 //highligh?
-                var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || IsEmbeddedSelected(group) || group == pickedGroup );
+                var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup );
                 GUI.color = groupSelected ? LIST_SELECTION_COLOR : GROUP_COLOR;
                 GUI.Box(groupRect, string.Empty, Styles.headerBoxStyle);
                 GUI.color = Color.white;
@@ -2723,10 +2672,7 @@ namespace Slate
 
                 //REORDERING
                 if ( e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition) ) {
-                    if ( embeddedSurface && TryGetEmbeddedGroup(group, out IEmbeddedTimelineGroupBinding formalGroup) )
-                        embeddedTimeline.Select(formalGroup);
-                    else
-                        CutsceneUtility.selectedObject = group;
+                    CutsceneUtility.selectedObject = group;
                     if ( !( group is DirectorGroup ) ) {
                         pickedGroup = group;
                     }
@@ -2781,7 +2727,7 @@ namespace Slate
                 GUI.DrawTexture(trackRect, whiteTexture);
                 GUI.color = Color.white.WithAlpha(0.25f);
                 GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
-                if ( ReferenceEquals(track, CutsceneUtility.selectedObject) || IsEmbeddedSelected(track) || track == pickedTrack ) {
+                if ( ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack ) {
                     GUI.color = LIST_SELECTION_COLOR;
                     GUI.DrawTexture(trackRect, whiteTexture);
                 }
@@ -2824,14 +2770,8 @@ namespace Slate
                     menu.AddItem(new GUIContent("Delete Track"), false, () =>
                         {
                             if ( EditorUtility.DisplayDialog("Delete Track", "Are you sure?", "YES", "NO!") ) {
-                                if (embeddedTimeline != null && track is IEmbeddedTimelineProxyIdentity proxy &&
-                                    embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding formalTrack))
-                                    embeddedTimeline.DeleteTrack(formalTrack);
-                                else
-                                {
-                                    group.DeleteTrack(track);
-                                    InitClipWrappers();
-                                }
+                                group.DeleteTrack(track);
+                                InitClipWrappers();
                             }
                         });
                     menu.ShowAsContext();
@@ -2840,11 +2780,7 @@ namespace Slate
 
                 //REORDERING
                 if ( e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition) ) {
-                    if (embeddedTimeline != null && track is IEmbeddedTimelineProxyIdentity proxy &&
-                        embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding formalTrack))
-                        embeddedTimeline.Select(formalTrack);
-                    else
-                        CutsceneUtility.selectedObject = track;
+                    CutsceneUtility.selectedObject = track;
                     pickedTrack = track;
                     e.Use();
                 }
@@ -3053,16 +2989,11 @@ namespace Slate
                     for ( int a = 0; a < track.clips.Count; a++ ) {
                         var action = track.clips[a];
                         var ID = UID(g, t, a);
-                        TryGetEmbeddedClipBinding(action, out IEmbeddedTimelineClipBinding formalClip);
-                        IClipEditorBinding currentBinding = formalClip != null
-                            ? new FormalClipEditorBinding(formalClip)
-                            : new NativeClipEditorBinding(action);
+                        IClipEditorBinding currentBinding = new NativeClipEditorBinding(action);
                         ActionClipWrapper clipWrapper = null;
 
                         if ( !clipWrappers.TryGetValue(ID, out clipWrapper) || !clipWrapper.Matches(currentBinding) ) {
-                            clipWrapper = formalClip != null
-                                ? new ActionClipWrapper(formalClip)
-                                : new ActionClipWrapper(action);
+                            clipWrapper = new ActionClipWrapper(action);
                             clipWrappers[ID] = clipWrapper;
                             if (action != null)
                                 clipWrappersMap[action] = clipWrapper;
@@ -3075,17 +3006,11 @@ namespace Slate
                         IClipEditorBinding previousBinding = null;
                         if (nextClip != null)
                         {
-                            TryGetEmbeddedClipBinding(nextClip, out IEmbeddedTimelineClipBinding formalNextClip);
-                            nextBinding = formalNextClip != null
-                                ? new FormalClipEditorBinding(formalNextClip)
-                                : new NativeClipEditorBinding(nextClip);
+                            nextBinding = new NativeClipEditorBinding(nextClip);
                         }
                         if (previousClip != null)
                         {
-                            TryGetEmbeddedClipBinding(previousClip, out IEmbeddedTimelineClipBinding formalPreviousClip);
-                            previousBinding = formalPreviousClip != null
-                                ? new FormalClipEditorBinding(formalPreviousClip)
-                                : new NativeClipEditorBinding(previousClip);
+                            previousBinding = new NativeClipEditorBinding(previousClip);
                         }
                         clipWrapper.nextClip = nextClip;
                         clipWrapper.previousClip = previousClip;
@@ -3140,8 +3065,8 @@ namespace Slate
                                     postCursorClip = null;
                                 }
 
-                                IClipEditorBinding preCursorBinding = preCursorClip != null ? GetClipEditorBinding(preCursorClip) : null;
-                                IClipEditorBinding postCursorBinding = postCursorClip != null ? GetClipEditorBinding(postCursorClip) : null;
+                                IClipEditorBinding preCursorBinding = preCursorClip != null ? new NativeClipEditorBinding(preCursorClip) : null;
+                                IClipEditorBinding postCursorBinding = postCursorClip != null ? new NativeClipEditorBinding(postCursorClip) : null;
                                 var preTime = preCursorBinding != null ? preCursorBinding.EndTime : 0;
                                 var postTime = postCursorBinding != null ? postCursorBinding.StartTime : maxTime + clipWrapper.editorBinding.Length;
 
@@ -3202,7 +3127,7 @@ namespace Slate
 
 
                         //dont draw if outside of view range and not selected
-                        var isSelected = ReferenceEquals(CutsceneUtility.selectedObject, action) || IsEmbeddedSelected(action) || ( multiSelection != null && multiSelection.Contains(clipWrapper) );
+                        var isSelected = ReferenceEquals(CutsceneUtility.selectedObject, action) || ( multiSelection != null && multiSelection.Contains(clipWrapper) );
                         var isVisible = Rect.MinMaxRect(0, scrollPos.y, centerRect.width, centerRect.height).Overlaps(clipRect);
                         if ( !isSelected && !isVisible ) {
                             clipWrapper.rect = default(Rect); //we basicaly "nullify" the rect. Too much trouble to work with nullable rect.
@@ -3630,11 +3555,7 @@ namespace Slate
                     multiSelection = clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.action.isLocked).ToList();
                     if ( multiSelection.Count == 1 ) {
                         ActionClip selectedAction = multiSelection[0].action;
-                        if (embeddedTimeline != null && selectedAction is IEmbeddedTimelineProxyIdentity proxy &&
-                            embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
-                            embeddedTimeline.Select(formalClip);
-                        else
-                            CutsceneUtility.selectedObject = selectedAction;
+                        CutsceneUtility.selectedObject = selectedAction;
                         multiSelection = null;
                     }
                 }
@@ -4003,7 +3924,7 @@ namespace Slate
                         else if (editor.embeddedTimeline != null && editorBinding.FormalClip != null)
                             editor.embeddedTimeline.OpenSource(editorBinding.FormalClip);
                         if (!editor.embeddedSurface && action != null)
-                            Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
+                            Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as UnityEngine.Object;
                     }
                 }
 
@@ -4307,28 +4228,9 @@ namespace Slate
             void DoClipContextMenu() {
                 var menu = new GenericMenu();
                 IEmbeddedTimelineClipBinding formalClip = editorBinding.FormalClip;
-                if (formalClip == null && editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy)
-                    editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out formalClip);
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
                     menu.AddItem(new GUIContent("Delete Clips"), false, () =>
                     {
-                        if (editor.embeddedTimeline != null)
-                        {
-                            var formalClips = new List<IEmbeddedTimelineClipBinding>();
-                            foreach (var act in multiSelection.Select(b => b.action).ToArray())
-                                if (act is IEmbeddedTimelineProxyIdentity proxy &&
-                                    editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
-                                    formalClips.Add(formalClip);
-                            foreach (var binding in multiSelection.Select(b => b.editorBinding.FormalClip))
-                                if (binding != null && !formalClips.Contains(binding))
-                                    formalClips.Add(binding);
-                            if (formalClips.Count != 0)
-                            {
-                                editor.ApplyEmbeddedCommand(() => editor.embeddedTimeline.DeleteClips(formalClips), "Delete Timeline Clips");
-                                multiSelection = null;
-                                return;
-                            }
-                        }
                         editor.SafeDoAction(() =>
                         {
                             foreach (var act in multiSelection.Select(b => b.action).ToArray())

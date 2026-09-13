@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace Slate
 {
-    public interface IEmbeddedTimelineProxyIdentity
-    {
-        string AuthoringId { get; }
-    }
-
     public interface IEmbeddedTimelineBinding
     {
         string DisplayName { get; }

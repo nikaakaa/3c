@@ -3,7 +3,7 @@
 ## 当前状态
 
 - change：`replace-character-program-with-domain-runtimes`
-- 本窗口已提交 19 个独立小步；当前任务仍在继续。
+- 本窗口持续按独立小步提交；当前任务仍在继续。
 - OpenSpec 任务：1.1、1.2、1.3 已完成；1.4 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终领域工厂和准备／采用接口已经完成。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
@@ -28,21 +28,25 @@
 - `b72f6926e`：补齐 Ability action／effect catalog 字段、生命周期全局状态和动作槽布局。
 - `a903df4f9`：修正 Ability Effect catalog 的重复身份字段。
 - `3a226a941`：新增 Float32／Fixed `GameplayAbilityDataAsset`，严格校验 Ability artifact metadata、root、hash 和 catalog。
+- `833c8082a`：补齐本实施记录，写明 Ability 迁移边界与编译证据。
+- `27bf006c0`：发布 `GameplayAbilityProviderContract`，把 Input、Gameplay Effect、Equipment、Character State 依赖收敛为 typed requirement，并在 Ability Target 发布入口校验。
 
 ## 当前实现边界
 
 - Ability 前端不读取 CharacterPipelineDefinition，不生成 Character 控制、Body Motion、Equipment 或 Pose 目录。
 - Ability 图通过现有 BTSMTL Skill 图编译器复用图算法；外部 Input、Gameplay Effect、Character State 只通过 provider owner 和最小 catalog 依赖接入。
 - Ability 根入口直接指向私有图的 Root operation；Float32／Fixed 的 Ability 生命周期、Action／Effect catalog、状态槽和 artifact metadata 已接通。
+- Ability 目录现在为 Input／Gameplay Effect／Equipment／Character State 外部依赖发布 typed provider requirement；缺少 owner、同一依赖绑定多个 owner 或绑定类型不符时，Target 发布直接失败。
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
+- typed provider binding 尚未接入 Character Host／Session 的实际资源采用；因此任务 1.4 仍未完成，当前提交只完成 provider 合同和发布前闭合。
 
 ## 编译证据与阻断
 
 - Float32 core：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonSimulation.Float32.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 warnings、0 errors。
 - Fixed core：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonSimulation.Fixed.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 warnings、0 errors。
-- Full Editor build：`dotnet build 3cDemo/Client/3C_Client/Assembly-CSharp-Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 仍被其他窗口迁移中的 `Assets/GameScripts/Main/Runtime/Character/Action/ActionProfile.cs` 缺失阻断；不能据此宣称全工程通过。
+- Full Editor build：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 errors、94 warnings；警告来自现有项目／依赖代码，不能替代 Unity Console、PlayMode 或端到端行为验证。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步
 
-下一步先交付 Ability 的 typed provider 合同，并让角色绑定在准备阶段解析 Input／Effect／Equipment／状态依赖；之后再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。
+下一步让 Character Host／Session 在准备阶段以 typed binding 解析 Input／Effect／Equipment／状态依赖并报告实际采用结果；之后再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。

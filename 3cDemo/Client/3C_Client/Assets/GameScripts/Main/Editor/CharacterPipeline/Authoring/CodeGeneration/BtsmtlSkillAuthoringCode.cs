@@ -8,6 +8,7 @@ using NodeCanvas.Framework;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -644,6 +645,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             clip.FrameToTime();
             clip.Track?.UpdateMix();
         }
+
+        public static void ConfigureMotionCurveSource(
+            MotionCurveClip clip,
+            RootMotionCurveAsset source,
+            float sourceStartTime,
+            float sourceEndTime) =>
+            clip.ConfigureSource(source, sourceStartTime, sourceEndTime);
 
         static int DefaultEndFrame(Clip clip, int startFrame, UnityEngine.Object referenceObject)
         {

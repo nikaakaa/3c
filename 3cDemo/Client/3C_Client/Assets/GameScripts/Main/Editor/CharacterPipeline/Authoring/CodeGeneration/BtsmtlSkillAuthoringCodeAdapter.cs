@@ -893,12 +893,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
             if (clip is MotionCurveClip motion)
             {
+                if (!motion.SourceCurve)
+                {
+                    context.ReportError(
+                        "motion_curve_source_missing",
+                        motion.AuthoringId,
+                        "MotionCurveClip缺少RootMotionCurveAsset正式源引用。");
+                }
+                else
+                {
+                    context.AddStatement(
+                        BtsmtlAuthoringCodeEmissionPhase.Configure,
+                        $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.ConfigureMotionCurveSource(({TypeName(typeof(MotionCurveClip))}){clipVariable}, {ExternalAsset(context, motion.SourceCurve, typeof(RootMotionCurveAsset))}, {BtsmtlAuthoringCodeSyntax.FloatLiteral(motion.SourceStartTime)}, {BtsmtlAuthoringCodeSyntax.FloatLiteral(motion.SourceEndTime)});");
+                }
                 if (!string.Equals(motion.CurveId, "MotionCurve", StringComparison.Ordinal))
                     context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"(({TypeName(typeof(MotionCurveClip))}){clipVariable}).CurveId = {String(motion.CurveId)};");
-                if (motion.CurveEndFrame != motion.EndFrame || NeedsClipSegmentOverride(clip))
-                    context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
-                        $"(({TypeName(typeof(MotionCurveClip))}){clipVariable}).CurveEndFrame = {motion.CurveEndFrame};");
                 if (motion.Space != TimelineMotionContributionSpace.Local)
                     context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"(({TypeName(typeof(MotionCurveClip))}){clipVariable}).Space = {EnumValue(typeof(TimelineMotionContributionSpace), motion.Space)};");
@@ -1224,6 +1234,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             if (clip is TimelineAnimationClip animation)
                 return ExternalAsset(context, animation.Clip, typeof(UnityEngine.AnimationClip));
+            if (clip is MotionCurveClip motion)
+            {
+                if (!motion.SourceCurve)
+                {
+                    context.ReportError(
+                        "motion_curve_source_missing",
+                        motion.AuthoringId,
+                        "MotionCurveClip缺少RootMotionCurveAsset正式源引用。");
+                    return "null";
+                }
+                return ExternalAsset(context, motion.SourceCurve, typeof(RootMotionCurveAsset));
+            }
             if (clip is TreeClip tree)
             {
                 if (tree.AssetTree is UnityEngine.Object asset)

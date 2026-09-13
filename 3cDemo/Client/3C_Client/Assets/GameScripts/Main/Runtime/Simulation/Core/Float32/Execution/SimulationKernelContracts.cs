@@ -15,6 +15,7 @@ namespace ThirdPersonSimulation
             CharacterSimulationInput input,
             IEnumerable<SimulationIngress> ingress,
             CharacterSimulationState currentState,
+            CharacterControlRuntimeBinding controlRuntimeBinding,
             WorldBodyState previousBody,
             bool diagnosticsEnabled,
             bool valueTraceEnabled = false,
@@ -27,6 +28,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Evaluate identity is incomplete.");
             Input = input ?? throw new ArgumentNullException(nameof(input));
             CurrentState = currentState ?? throw new ArgumentNullException(nameof(currentState));
+            if (Program.Manifest.Root.IsCharacter && controlRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(controlRuntimeBinding));
+            if (!Program.Manifest.Root.IsCharacter && controlRuntimeBinding != null)
+                throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
+            ControlRuntimeBinding = controlRuntimeBinding;
             if (previousBody.ActorId != actorId)
                 throw new ArgumentException("Evaluate body observation does not match ActorId.", nameof(previousBody));
             if (currentState.NumericProfile != Program.Manifest.NumericProfile || currentState.ProgramId != Program.Manifest.ProgramId || !currentState.ProgramHash.Equals(Program.ProgramHash) || !currentState.LayoutHash.Equals(Program.LayoutHash))
@@ -65,6 +71,7 @@ namespace ThirdPersonSimulation
         public CharacterSimulationInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress => m_Ingress;
         public CharacterSimulationState CurrentState { get; }
+        public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
         public bool ValueTraceEnabled { get; }

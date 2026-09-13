@@ -636,7 +636,9 @@ namespace ThirdPersonCharacter.Pipeline
 					diagnosticsAdapter,
 					diagnosticsTarget,
 					m_RootHierarchy.VisualRoot,
-					presentationRuntimeFactory);
+					presentationRuntimeFactory,
+					m_Definition.BuildControlRuntimeBinding(
+						ThirdPersonCharacter.Control.Rules.CorinCharacterControlModuleCatalog.Create()));
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;

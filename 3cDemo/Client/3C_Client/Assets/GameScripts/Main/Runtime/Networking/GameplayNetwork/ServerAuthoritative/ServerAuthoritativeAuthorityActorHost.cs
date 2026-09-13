@@ -67,7 +67,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     m_WorldBodyBinding,
                     initialBody,
                     diagnostics,
-                    diagnosticsTarget);
+                    diagnosticsTarget,
+                    m_CharacterDefinition.BuildControlRuntimeBinding(
+                        ThirdPersonCharacter.Control.Rules.CorinCharacterControlModuleCatalog.Create()));
                 diagnosticsTarget = null;
                 m_SessionHost.RegisterActor(registration);
                 m_Registration = registration;

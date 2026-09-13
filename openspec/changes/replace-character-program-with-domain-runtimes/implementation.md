@@ -35,6 +35,8 @@
 - `0ef3af238`：由 Character Definition 生成 typed provider binding 并接入 Float32 Ability Load；Fixed 通过 Fixed assembly extension 接入同一入口，避免共享 Definition 反向依赖 Fixed。
 - `99d7426fb`：解除 Float32／Fixed Ability 生命周期对 Character ControlModule 存在性的短路依赖。
 - `2749c9f44`：记录角色 Definition 到独立 Ability 资源的 typed binding 入口。
+- `6126fc0c0`：让 Float32／Fixed Evaluate／Finalize Pass 通过角色领域运行 Interface 调用，不再直接依赖 Kernel 属性。
+- `8dcbfb2ed`：把 Program Runtime 和 Backend composition 对外的 Kernel seam 收敛为 `CharacterRuntime`，具体 Kernel 只留在内部安装路径。
 
 ## 当前实现边界
 
@@ -45,6 +47,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
+- 当前 `SimulationKernel` 仍是角色领域 Interface 的旧 Implementation，Evaluate 内部仍同时编排 Control、Ability、Effect、Equipment、Timeline 和 Motion；2.1 的独立实例工厂及模块 owner 迁移尚未完成。
 
 ## 编译证据与阻断
 
@@ -57,4 +60,4 @@
 
 ## 下一小步
 
-下一步把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，并由角色领域工厂装配；随后迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。
+下一步交付角色领域运行实例工厂，把现有 Evaluate 内的 Control／Ability／Effect／Motion 组合迁到窄 Interface；随后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，并迁移 Equipment 和网络 Pass 的状态所有权。

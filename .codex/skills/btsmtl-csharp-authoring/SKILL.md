@@ -9,6 +9,8 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 
 当前作者合同以 `openspec/specs/character-csharp-authoring/spec.md` 和正式领域 API 为准。C# authoring 是明确执行的创建/重建代码，不是第二份业务模型。
 
+最小重建输出的后续规划见 `openspec/changes/minimize-csharp-authoring-reconstruction/design.md` 及其 spec delta。该变更尚未实施：下面的裁剪规则是目标口径，不能宣称现有导出器已经完成，也不要为了满足目标手删当前接口要求的成员或绕过正式 API。
+
 只使用两个作者 MCP：
 
 - `btsmtl.export_code`：正式资产完整导出为可编译 C#。
@@ -33,9 +35,11 @@ btsmtl.export_code(
 )
 ```
 
-导出器直接读取正式对象及其完整闭包，输出对象创建、配置、引用绑定、连线和根挂接。输出必须覆盖稳定 identity、节点值、动态端口、Blackboard、FSM 状态/转移、Timeline 轨道/片段/曲线、Pose layout 和外部资源引用。未知字段或无法表达的内容必须失败，不能用默认值补齐。
+导出器直接读取正式对象及其重建所需闭包，输出对象创建、配置、引用绑定、连线和根挂接。保留节点值、动态端口、Blackboard、FSM 状态/转移、Timeline 轨道/片段/曲线、Pose layout 和精确外部引用。graph/node/edge/variable identity 仅在正式引用、稳定拓扑或 owner 关系需要时保留旧值；不因字段可序列化或看起来像 GUID 就全量抄写。未知字段或无法表达的内容必须失败，不能用默认值补齐。
 
-3. 检查导出的源码：入口必须实现 `IBtsmtlAuthoringGenerationEntry`，并提供唯一 `RecipeType`、完整 `EntryTypeName`、精确 `SourceCodePath` 和 `Execute`。源码只调用正式领域 API；不要手工加入旧 Document 类型或局部 JSON。
+只输出影响正式重建的内容：省略正式 API 可确定恢复的默认赋值与可推导数据，不输出无消费 GUID、变量名 GUID 后缀、历史日志、诊断 hash 和生成过程信息。同一外部资源声明一次并复用；精确子资源定位需要的 GUID/localFileId 必须保留。正式作者 layout 不属于诊断缓存。重建等价内容即可，不要求复制 YAML 或旧源码文本。
+
+3. 入口使用正式创建合同，只调用正式领域 API，不加入旧 Document 类型或局部 JSON。目标合同仅保留执行入口与类型声明；recipe、入口类型和源码路径由工具请求及现有编译关联承担，不再在创建类中输出绝对 `SourceCodePath`、重复 `EntryTypeName` 和调度 `RecipeType` 属性。当前旧接口尚要求这些属性，须在正式迁移时统一修改接口、服务和生成源码，不能只删生成文件属性导致断链，也不能新增旁路注册文件。
 
 4. 编译源码。项目静态编译使用：
 

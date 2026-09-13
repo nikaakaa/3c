@@ -2371,6 +2371,7 @@ namespace Slate
                             }
                             else if (e.button == 0 && !track.IsLocked && !clip.IsLocked && !embeddedTimeline.IsReadOnly)
                             {
+                                embeddedMultiSelection = null;
                                 float pointerTime = PosToTime(e.mousePosition.x + rect.x);
                                 bool nearStart = Mathf.Abs(e.mousePosition.x - clipRect.xMin) <= 5f;
                                 bool nearEnd = Mathf.Abs(e.mousePosition.x - clipRect.xMax) <= 5f;

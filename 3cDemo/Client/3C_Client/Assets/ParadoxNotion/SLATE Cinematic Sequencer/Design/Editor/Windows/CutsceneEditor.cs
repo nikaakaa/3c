@@ -506,12 +506,12 @@ namespace Slate
 
         //Round time to nearest working snap interval
         float SnapTime(float time) {
-            //holding control for precision (ignore snap intervals)
-            if ( Event.current.control ) { return time; }
             if ( embeddedSurface ) {
                 var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
                 return Mathf.Round(time * frameRate) / frameRate;
             }
+            //holding control for precision (ignore snap intervals)
+            if ( Event.current.control ) { return time; }
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
         }
 
@@ -4325,13 +4325,14 @@ namespace Slate
                     }
                 }
 
-                if ( isControlingBlendIn ) { BlendIn = Mathf.Clamp(pointerTime - StartTime, 0, Length - BlendOut); }
-                if ( isControlingBlendOut ) { BlendOut = Mathf.Clamp(EndTime - pointerTime, 0, Length - BlendIn); }
+                var blendPointerTime = IsEmbedded ? editor.SnapTime(pointerTime) : pointerTime;
+                if ( isControlingBlendIn ) { BlendIn = Mathf.Clamp(blendPointerTime - StartTime, 0, Length - BlendOut); }
+                if ( isControlingBlendOut ) { BlendOut = Mathf.Clamp(EndTime - blendPointerTime, 0, Length - BlendIn); }
 
                 if ( isScalingStart ) {
                     var prevTime = PreviousEndTime;
                     //magnet snap
-                    if ( Prefs.magnetSnapping && !e.control ) {
+                    if ( !IsEmbedded && Prefs.magnetSnapping && !e.control ) {
                         var snapStart = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
                         if ( snapStart != null ) {
                             snapedPointerTime = snapStart.Value;
@@ -4352,7 +4353,7 @@ namespace Slate
                 if ( isScalingEnd ) {
                     var nextTime = NextStartTime;
                     //magnet snap
-                    if ( Prefs.magnetSnapping && !e.control ) {
+                    if ( !IsEmbedded && Prefs.magnetSnapping && !e.control ) {
                         var snapEnd = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
                         if ( snapEnd != null ) {
                             snapedPointerTime = snapEnd.Value;

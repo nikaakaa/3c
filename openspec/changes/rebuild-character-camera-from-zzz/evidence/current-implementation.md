@@ -17,15 +17,15 @@
 
 ## 仍缺的代码或合同
 
-1. CameraWorldBasicHistory 普通 Apply 调 SetCurrent，SetCurrent 清零全部 SmoothDamp 速度，连续历史不完整。
+1. CameraWorldBasicHistory 普通 Apply 保留 SmoothDamp 速度，只有 Reset/初始化边界清零；当前仍未取得运行时手感证据。
 2. FramePlanner 固定采样 ElevationRatio；Offset 在 CameraWorldBasicData 中按空间长度计算，AspectRatio 未进入该公式。字段单位及源语义需对账。
-3. Profile.DefaultOrbitGroup 与 Sequence.CameraOrbits 重复；其它无消费者字段不能仅凭哈希/校验被称为已生效。DefaultSphere/DefaultFOV 有实际初始化消费者，不能直接删。
-4. Response 同 priority/weight 的前置 <= 分支跳过候选，后面的同权 generation/action/cycle 规则无法处理相等权重。
-5. TargetResolver 提供明确绑定点，尚不是完整锁定、双点/多点/实体取景或选敌。
-6. CameraOverrideProjectionCompiler、CameraShakeProjectionCompiler、CameraShotProjectionCompiler 明确拒绝未闭合消费者；对应 runtime owner 也抛不可用错误。
-7. Collision.Enabled 在 CharacterCameraProjectionPayload.RequireValid 中明确抛出正式消费者未发布错误；当前输出链没有碰撞阶段。
-8. CameraDebugSnapshot 主要提供 Plan、Result、TargetSource、ProjectionRevision；已有连续性/Cue 路由诊断算子，但不是完整输入/效果/碰撞解释。
-9. ThirdPersonCameraController 仍存在；CharacterFixedInputTraceWorkflow 仍通过场景搜索该类型来记录/恢复 yaw。调查时该诊断文件已有用户修改，角色 prefab 也已修改。
+3. DefaultSequence 是默认轨道 owner；重复 DefaultSphere/DefaultOrbitGroup 存储已清理，DefaultSphere/DefaultFOV 由正式 Projection stage 消费。生成 Projection 仍需正式重发布，不能用旧 v1 产物证明闭合。
+4. Response 同 priority/weight 的裁决已继续比较 generation/action/cycle/source/event，当前没有再用前置相等权短路。
+5. TargetResolver 已提供显式目标槽、双点/多点/实体取景和运行中目标失效退出；不自动选敌，ZZZ 实体构图公式仍未闭合。
+6. Camera Override/Shake/Shot 仍要求正式资源与 Projection 闭包；Shot 缺 prefab/VCam 或不支持的时钟会明确失败，不能用占位资源补齐。
+7. Collision 已有正式 PhysicsScene 查询、收缩/恢复、起点重叠、无合法空间和输出诊断链；Corin 当前碰撞开关与 Unity 动态运行仍未验收。
+8. CameraDebugSnapshot 与 CaptureFrame 已覆盖帧/逻辑 Tick、输入/响应、Sequence/Target 退出、效果、Reset、碰撞和最终输出；连续性/Cue 算子已消费退出合同，运行采样仍未取得。
+9. 工程源码中已无 ThirdPersonCameraController/旧 FreeLook 朝向写入；CharacterFixedInputTraceWorkflow 现在通过正式 CharacterSimulationPresentationRuntime 的 CameraBasis/InitialState 记录与恢复 yaw。
 10. 当前 C# 作者规范已替换旧 Agent 包；相机各资源和请求的完整 C# 导出/生成覆盖尚未逐项证明，不能因公共入口存在就勾选完成。
 
 ## 当前 Unity 证据
@@ -48,4 +48,4 @@
 - [PresentationRuntime：姿态、请求与最终输出](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/CharacterCameraPresentationRuntime.cs:308)
 - [RigAdapter：应用与实际结果回读](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Camera/Runtime/CinemachineCameraRigAdapter.cs:51)
 - [Projection：尚未发布的碰撞消费者](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CharacterCameraProjectionPayload.cs:176)
-- [输入回放：仍引用旧 Controller](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Diagnostics/CharacterFixedInputTraceWorkflow.cs:430)
+- [输入回放：正式 Camera Presentation 初始状态](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Diagnostics/CharacterFixedInputTraceWorkflow.cs:430)

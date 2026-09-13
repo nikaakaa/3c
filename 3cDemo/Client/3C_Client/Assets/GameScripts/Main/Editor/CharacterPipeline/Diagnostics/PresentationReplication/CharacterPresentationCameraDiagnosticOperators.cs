@@ -272,6 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 ulong frame,
                 ulong resetSequence,
                 bool resetTracking,
+                int resetReason,
                 bool planValid,
                 bool targetValid,
                 bool finalOutput,
@@ -279,7 +280,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 in DiagnosticQuaternion finalRotation,
                 float fieldOfView,
                 bool basisValid,
-                int resetReason,
                 int collisionStatus,
                 float collisionCorrection)
             {
@@ -847,7 +847,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                 int cycle = row.GetInt32(inputs.Cycle.Handle);
                 string eventId = row.GetIdentity(inputs.EventId.Handle);
                 int stopReason = row.GetInt32(inputs.StopReason.Handle);
-                bool valid = stage >= 1 && stage <= 5 &&
+                bool valid = stage >= 1 && stage <= 6 &&
                     !string.IsNullOrEmpty(resourceId) &&
                     !float.IsNaN(weight) && !float.IsInfinity(weight) && weight >= 0f &&
                     !float.IsNaN(remaining) && remaining >= 0f &&

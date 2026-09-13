@@ -519,6 +519,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float finalFieldOfView,
             string sequenceId = "",
             string sourceId = "",
+            ulong sourceActionInstanceId = 0,
+            float blendProgress = 0f,
+            float planYaw = 0f,
+            float planPitch = 0f,
             Vector2 rawLook = default,
             Vector2 consumedLook = default,
             CameraResponseMode responseMode = CameraResponseMode.Weighted,
@@ -545,6 +549,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FinalFieldOfView = finalFieldOfView;
             SequenceId = sequenceId ?? string.Empty;
             SourceId = sourceId ?? string.Empty;
+            SourceActionInstanceId = sourceActionInstanceId;
+            BlendProgress = blendProgress;
+            PlanYaw = planYaw;
+            PlanPitch = planPitch;
             RawLook = rawLook;
             ConsumedLook = consumedLook;
             ResponseMode = responseMode;
@@ -599,6 +607,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FinalFieldOfView,
                 SequenceId,
                 SourceId,
+                SourceActionInstanceId,
+                BlendProgress,
+                PlanYaw,
+                PlanPitch,
                 RawLook,
                 ConsumedLook,
                 ResponseMode,
@@ -669,6 +681,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("source-id")]
         [DiagnosticGroup("camera-plan")]
         public string SourceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("source-action-instance-id")]
+        [DiagnosticGroup("camera-plan")]
+        public ulong SourceActionInstanceId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("blend-progress")]
+        [DiagnosticGroup("camera-plan")]
+        public float BlendProgress { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("plan-yaw")]
+        [DiagnosticGroup("camera-plan")]
+        public float PlanYaw { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("plan-pitch")]
+        [DiagnosticGroup("camera-plan")]
+        public float PlanPitch { get; }
 
         [DiagnosticField]
         [DiagnosticKey("raw-look")]

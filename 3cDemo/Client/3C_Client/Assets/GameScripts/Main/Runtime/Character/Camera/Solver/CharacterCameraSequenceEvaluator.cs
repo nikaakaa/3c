@@ -78,7 +78,9 @@ namespace ThirdPersonCamera
                 m_Transition.Reset();
                 m_Initialized = true;
             }
-            Vector2 look = m_FramePlanner.ResolveLook(input.LookInput, in response);
+            Vector2 look = m_FramePlanner.ResolveLook(
+                input.Paused ? Vector2.zero : input.LookInput,
+                in response);
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
             return m_WorldBasicHistory.Apply(target, in input);
         }
@@ -92,7 +94,6 @@ namespace ThirdPersonCamera
         Vector3 m_PivotVelocity;
         float m_RadiusVelocity;
         Vector2 m_OffsetVelocity;
-        float m_FieldOfViewVelocity;
         bool m_Initialized;
 
         public CameraWorldBasicHistory(float smoothTime)
@@ -106,7 +107,6 @@ namespace ThirdPersonCamera
             m_PivotVelocity = Vector3.zero;
             m_RadiusVelocity = 0f;
             m_OffsetVelocity = Vector2.zero;
-            m_FieldOfViewVelocity = 0f;
             m_Initialized = false;
         }
 
@@ -145,19 +145,7 @@ namespace ThirdPersonCamera
                 m_SmoothTime,
                 Mathf.Infinity,
                 deltaTime);
-            float fieldOfView = Mathf.SmoothDamp(
-                m_Current.FieldOfView,
-                target.FieldOfView,
-                ref m_FieldOfViewVelocity,
-                m_SmoothTime,
-                Mathf.Infinity,
-                deltaTime);
-            float rotationAlpha = 1f - Mathf.Exp(-deltaTime / m_SmoothTime);
-            Quaternion rotation = Quaternion.SlerpUnclamped(
-                m_Current.Rotation,
-                target.Rotation,
-                rotationAlpha);
-            SetCurrent(new CameraWorldBasicData(pivot, rotation, radius, offset, fieldOfView), false);
+            SetCurrent(new CameraWorldBasicData(pivot, target.Rotation, radius, offset, target.FieldOfView), false);
             return target.WithWorldBasicData(m_Current);
         }
 
@@ -169,7 +157,6 @@ namespace ThirdPersonCamera
                 m_PivotVelocity = Vector3.zero;
                 m_RadiusVelocity = 0f;
                 m_OffsetVelocity = Vector2.zero;
-                m_FieldOfViewVelocity = 0f;
             }
             m_Initialized = true;
         }

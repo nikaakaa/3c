@@ -68,7 +68,9 @@ namespace ThirdPersonCamera
             m_RetireTimeDomain = ResolveSequence(m_CurrentSequenceId).TimeDomain;
             m_RetireFrom = m_LastPlan;
             m_RetireElapsed = 0f;
-            m_RetireDuration = Mathf.Max(0f, blendOutSeconds);
+            m_RetireDuration = blendOutSeconds > 0f
+                ? blendOutSeconds
+                : m_Projection.RotationTransitionSeconds;
             m_Retiring = true;
             return true;
         }

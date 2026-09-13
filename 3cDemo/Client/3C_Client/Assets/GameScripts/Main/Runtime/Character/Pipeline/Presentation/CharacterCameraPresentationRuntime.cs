@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly List<CameraTargetSnapshot> m_FrameTargets = new List<CameraTargetSnapshot>();
         readonly CameraDebugSnapshot m_Debug = new CameraDebugSnapshot();
         ulong m_LastBodyResetSequence;
+        CameraResetReason m_PendingResetReason;
         CharacterCameraPresentationCaptureFrame m_LastPresentationFrame;
         bool m_Disposed;
 
@@ -92,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_SequenceEvaluator.SetInitialState(in state);
             m_CameraRig.Reset();
             m_LastBodyResetSequence = 0;
+            m_PendingResetReason = CameraResetReason.Initialization;
         }
 
         public void Publish(
@@ -328,7 +330,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector2 look = m_InputAdapter.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
                 ? value
                 : Vector2.zero;
-            bool resetHistory = bodyFrame.ResetSequence != m_LastBodyResetSequence;
+            bool resetHistory = m_PendingResetReason != CameraResetReason.None ||
+                bodyFrame.ResetSequence != m_LastBodyResetSequence;
+            CameraResetReason resetReason = m_PendingResetReason != CameraResetReason.None
+                ? m_PendingResetReason
+                : resetHistory
+                    ? ResolveResetReason(bodyFrame.ResetReason)
+                    : CameraResetReason.None;
+            m_PendingResetReason = CameraResetReason.None;
             m_LastBodyResetSequence = bodyFrame.ResetSequence;
             Apply(
                 bodyFrame.VisiblePosition,
@@ -343,9 +352,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.HasLocalAvatarTimeScale,
                 context.Paused,
                 resetHistory,
-                resetHistory
-                    ? ResolveResetReason(bodyFrame.ResetReason)
-                    : CameraResetReason.None);
+                resetReason);
         }
 
         public void Reset()
@@ -367,6 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CameraRig.Reset();
             m_Debug.Clear();
             m_LastBodyResetSequence = 0;
+            m_PendingResetReason = CameraResetReason.RuntimeReset;
             m_LastPresentationFrame = default;
         }
 
@@ -521,6 +529,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig.FieldOfView,
                 plan.SequenceId,
                 plan.SourceId,
+                plan.SourceActionInstanceId,
+                plan.BlendProgress,
+                plan.Yaw,
+                plan.Pitch,
                 look,
                 plan.LookDelta,
                 response.Mode,

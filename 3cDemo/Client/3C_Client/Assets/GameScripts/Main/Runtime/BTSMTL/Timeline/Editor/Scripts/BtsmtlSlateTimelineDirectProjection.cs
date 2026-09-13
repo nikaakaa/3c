@@ -68,6 +68,18 @@ namespace BTSMTL.Timeline.Editor
         public float CameraResponseWeight;
         public float CameraResponseEaseIn;
         public float CameraResponseEaseOut;
+        public float CameraOverrideWeight;
+        public float CameraOverrideEaseIn;
+        public float CameraOverrideEaseOut;
+        public float CameraZoomWeight;
+        public float CameraZoomEaseIn;
+        public float CameraZoomEaseOut;
+        public float CameraStretchWeight;
+        public float CameraStretchEaseIn;
+        public float CameraStretchEaseOut;
+        public float CameraShotWeight;
+        public float CameraShotEaseIn;
+        public float CameraShotEaseOut;
         public float ScenePresentationValue;
     }
 
@@ -389,6 +401,18 @@ namespace BTSMTL.Timeline.Editor
             if (channelId == TimelineCurveChannelCatalog.CameraResponseWeight) return nameof(BtsmtlTimelineCurveTarget.CameraResponseWeight);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraResponseEaseIn);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraResponseEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.CameraOverrideWeight) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideWeight);
+            if (channelId == TimelineCurveChannelCatalog.CameraOverrideEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideEaseIn);
+            if (channelId == TimelineCurveChannelCatalog.CameraOverrideEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.CameraZoomWeight) return nameof(BtsmtlTimelineCurveTarget.CameraZoomWeight);
+            if (channelId == TimelineCurveChannelCatalog.CameraZoomEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraZoomEaseIn);
+            if (channelId == TimelineCurveChannelCatalog.CameraZoomEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraZoomEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.CameraStretchWeight) return nameof(BtsmtlTimelineCurveTarget.CameraStretchWeight);
+            if (channelId == TimelineCurveChannelCatalog.CameraStretchEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraStretchEaseIn);
+            if (channelId == TimelineCurveChannelCatalog.CameraStretchEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraStretchEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.CameraShotWeight) return nameof(BtsmtlTimelineCurveTarget.CameraShotWeight);
+            if (channelId == TimelineCurveChannelCatalog.CameraShotEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraShotEaseIn);
+            if (channelId == TimelineCurveChannelCatalog.CameraShotEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraShotEaseOut);
             if (channelId == TimelineCurveChannelCatalog.ScenePresentationValue) return nameof(BtsmtlTimelineCurveTarget.ScenePresentationValue);
             throw new InvalidOperationException($"Timeline curve channel '{channelId}' has no editor field.");
         }

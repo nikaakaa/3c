@@ -9,7 +9,9 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 
 当前合同以 openspec/specs/character-csharp-authoring/spec.md 和正式领域 API 为准。C# 是一次明确执行的重建入口，不是第二份业务模型。
 
-MotionCurve 外部源所有权已按 `openspec/changes/unify-timeline-motion-curve-source/design.md` 及其四份 spec delta 实施：RootMotionCurveAsset 是唯一运动源，MotionCurveClip 只保存类型化引用、源秒区间和使用配置，Timeline 不再保存 PositionX/Y/Z/Yaw 内嵌曲线。生成 C# 只能引用源资产，不能把源关键帧重新展开。
+这是 Agent 作者工具：只负责调用表达、文件组织、输出管理和诊断。正式字段、默认值、身份/owner、业务校验、创建/事务/保存、编译和运行均归正式领域；不把它们复制进工具，也不在工具内新增攻击阶段、连段或其它业务模板。
+
+多文件输出优化规划见 `openspec/changes/optimize-agent-csharp-output/design.md`，尚未实施。目标是一个根一个生成目录、一个执行入口，局部对象配置就近组织、资源按使用范围复用、命名稳定、相同文件不写盘。仅清理明确生成范围，手写扩展在范围外；不解析旧 C# 或自动同步，不为分文件新增领域对象。
 
 只使用两个作者 MCP：
 
@@ -35,9 +37,7 @@ MotionCurve 外部源所有权已按 `openspec/changes/unify-timeline-motion-cur
 - Timeline 保存源 Clip/数据段、源区间、时间轴位置和正式作者覆盖。独立作者曲线保留完整关键帧、切线、权重和时间域，不重采样。
 - Builder 直接调用正式领域 API；共享对象先声明再连接，不能复制第二棵领域树。
 
-MotionCurve 使用现有 `RootMotionCurveAsset`，不新建 Timeline 专属源。源拥有 PositionX/Y/Z/Yaw 等运动曲线和秒时间域，Clip 只拥有源区间、Timeline 位置、播放/混合与 Weight/Ease。每个源在 C# 只声明一次类型化引用；不输出源关键帧，不把嵌入运动样本当作独立作者曲线。Timeline 的 Weight/Ease 与 MotionWarp progress 仍按正式 owner 保存完整作者关键帧，CurveEndFrame 由源区间推导。
-
-export_code 不隐式提取素材；generate_assets 不复制、重烘焙或删除范围外曲线源。Attack/Dodge 存量嵌入数据已通过一次正式迁移无损承接到源资产，包含时间和切线换算、权重及 wrap；来源未知不伪造源动画或采样率。迁移完成后旧字段与双读路径已删除，缺源时明确失败。
+MotionCurve 按正式 API 输出 RootMotionCurveAsset 引用与使用配置，不展开源关键帧。export_code 不隐式提取素材；generate_assets 不复制、重烘焙或删除范围外源。具体源所有权和时间规则查当前 `openspec/specs/character-root-motion-curves/spec.md`，工具不重新实现这些规则。
 
 未知字段或无法由正式 API 表达的内容必须报告并失败，不能用零值、占位或猜测补齐。
 
@@ -60,16 +60,12 @@ dotnet build-server shutdown
 
 编译失败时停止 generate_assets。生成只接受精确源码路径、已编译入口、Definition 和输出路径；不接受任意源码正文或旧同名入口。响应必须区分保存、创建、替换、删除和 diagnostic。
 
-## 领域归属
+## 正式 API 边界
 
-- Skill/FSM：正式 Graph、Macro、Blackboard、Native FSM、State Body、Timeline 和连接 API。
-- Timeline：TimelineData、正式 Track/Clip/Section、typed binding 和曲线 API。
-- 运动源：RootMotionCurveAsset 唯一拥有曲线；MotionCurveClip、MotionWarp 源读取、Timeline semantic 和 ControlMotion catalog 共用正式源与时间映射，Gameplay Runtime 继续只读 compiled Program。源修改通过既有依赖机制使相关编译产物失效。
-- Pose：正式 Pose Graph、Slot、StateMachine、Rule、layout 和 Mutation API。
-- EventGraph：正式 Host、typed adapter 和 Mutation API。
+Skill/FSM、Timeline、Pose、Motion 和 EventGraph 均消费各自正式 typed API/metadata/mutation。只在任务涉及相应业务时读取其当前 spec/API；本 skill 不定义运行链或维护领域规则副本。已有 builder 和生成入口保留，缺少能力时报告具体正式 API 缺口，不通过反射、工具业务函数或新事务填补。
 
 当前不覆盖任意未登记节点、EventGraph CanvasGroup/外部序列化、TreeClip 内联树或 Character 产品 Build；遇到无法表达的正式内容必须诊断失败。
 
-MotionWarp 继续绑定同 owner 内的具体 MotionCurveClip，不改绑共享源资产。Timeline 对源运动曲线只读展示或导航到真实 owner，不能通过 Timeline-local channel 修改源；片段 Weight/Ease 仍就地编辑。禁止在 Inspector 重绘中做烘焙、迁移或采样重操作。
+错误应保留正式诊断并附上根、局部对象、字段及对应文件位置，不能另建领域 validator。工具只消除自身重复的保存/刷新调用，不改变正式事务或在 Inspector 重绘中做重操作。
 
 人工编辑不会自动导出源码。需要更新源码时重新明确调用 export_code；需要更新资产时重新明确调用 generate_assets。没有运行、Build 或端到端证据时，不作相应完成声明。

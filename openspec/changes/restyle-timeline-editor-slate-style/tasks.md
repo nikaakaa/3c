@@ -94,4 +94,4 @@
 - [x] 11.5 BTSMTL Timeline 打开链已切换到 `BtsmtlSlateTimelineEditorAdapter`，删除隐藏宿主、BtsmtlSlateGroup/Track/ActionClip 组件类、CreateChild/AddComponent/groupsRoot/组件扫描及旧签名/fallback 路径
 - [x] 11.6 纯内存 Surface/adapter 已按窗口释放选择、拖动草稿、事件和命令引用；关闭/重绑不创建场景或 Unity 代理对象；纯曲线/DopeSheet 缓存由窗口生命周期管理
 - [ ] 11.7 有真实 Slate 原生窗口消费者时将其对象读取/播放隔离到插件边界 adapter，复用同一纯内存Surface；移除无消费者旧Editor封装，不提供BTSMTL组件兼容入口
-- [ ] 11.8 保留可选运行/历史标记与预览导航的外部adapter，ScenePlay不进入Surface必需输入；r2导出始终读取TimelineData，更新实际删除范围和实施记录
+- [x] 11.8 已由 TimelineRuntimeObservationBridge、BtsmtlSlateTimelineEditorAdapter 和 Graph Shell 导航提供可选 Runtime/History 标记；ScenePlay 不进入 Surface 输入，r2 authoring 输出读取 TimelineData，删除范围和实施记录已同步

@@ -739,7 +739,8 @@ namespace BTSMTL.Timeline.Editor
                 ShowAddTrackMenu,
                 CopyProxyClip,
                 () => m_CurrentFrame,
-                SetCurrentFrame);
+                SetCurrentFrame,
+                () => m_Request.Timeline.Duration);
             SetCurrentFrame(m_CurrentFrame);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);

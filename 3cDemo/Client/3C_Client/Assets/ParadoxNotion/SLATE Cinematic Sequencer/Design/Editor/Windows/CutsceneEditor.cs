@@ -278,6 +278,7 @@ namespace Slate
         [System.NonSerialized] private System.Action beginWindows;
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
+        [System.NonSerialized] private System.Func<float> embeddedLength;
         [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
         [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
         [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
@@ -394,7 +395,7 @@ namespace Slate
 
         //The length of the cutscene reference
         public float length {
-            get { return cutscene.length; }
+            get { return embeddedLength != null ? Mathf.Max(0f, embeddedLength()) : cutscene.length; }
             set { cutscene.length = value; }
         }
 
@@ -662,11 +663,13 @@ namespace Slate
             System.Action addTrack,
             System.Action<ActionClip> copyClip,
             System.Func<int> currentFrame = null,
-            System.Action<int> setCurrentFrame = null)
+            System.Action<int> setCurrentFrame = null,
+            System.Func<float> timelineLength = null)
         {
             embeddedSurface = true;
             embeddedRepaint = repaint;
             embeddedFrameRate = frameRate;
+            embeddedLength = timelineLength;
             embeddedCurrentFrame = currentFrame;
             embeddedSetCurrentFrame = setCurrentFrame;
             embeddedAddTrack = addTrack;
@@ -787,6 +790,7 @@ namespace Slate
             beginWindows = null;
             endWindows = null;
             embeddedFrameRate = null;
+            embeddedLength = null;
             embeddedCurrentFrame = null;
             embeddedSetCurrentFrame = null;
             embeddedRuntimeTime = null;
@@ -1833,7 +1837,7 @@ namespace Slate
                 var loopRegionMaxPos = TimeToPos(cutscene.playTimeMax) + leftRect.width;
                 var loopRegionMinPos = TimeToPos(cutscene.playTimeMin) + leftRect.width;
 
-                var isEndCarret = Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control;
+                var isEndCarret = embeddedLength == null && (Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control);
                 var isRegionMax = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
                 var isRegionMin = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMinPos) < 10;
 

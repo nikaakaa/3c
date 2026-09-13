@@ -56,7 +56,7 @@ namespace BTSMTL.Timeline
     }
 
     [Serializable]
-    [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
+    [ScriptGuid("31085f11443fe1347b871c5d69db3774"), ClipInspectorView("TreeClipInspectorView"), Color(201, 060, 032)]
     public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineNestedSerializedOwner
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;

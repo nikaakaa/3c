@@ -1,13 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace BTSMTL.Timeline
 {
@@ -64,14 +60,6 @@ namespace BTSMTL.Timeline
         public const string CameraCueClip = "camera-cue.clip";
         public const string CameraResponseTrack = "camera-response.track";
         public const string CameraResponseClip = "camera-response.clip";
-        public const string CameraOverrideTrack = "camera-override.track";
-        public const string CameraOverrideClip = "camera-override.clip";
-        public const string CameraZoomTrack = "camera-zoom.track";
-        public const string CameraZoomClip = "camera-zoom.clip";
-        public const string CameraStretchTrack = "camera-stretch.track";
-        public const string CameraStretchClip = "camera-stretch.clip";
-        public const string CameraShotTrack = "camera-shot.track";
-        public const string CameraShotClip = "camera-shot.clip";
         public const string ScenePresentationParameterTrack = "scene-presentation-parameter.track";
         public const string ScenePresentationParameterCurveClip = "scene-presentation-parameter.curve";
     }
@@ -723,59 +711,4 @@ namespace BTSMTL.Timeline
             }
         }
     }
-
-#if UNITY_EDITOR
-    public static class TimelineAuthoringTypeCatalog
-    {
-        static readonly IReadOnlyDictionary<string, Type> s_TrackTypes = BuildTrackTypes();
-        static readonly IReadOnlyDictionary<string, Type> s_ClipTypes = BuildClipTypes();
-
-        public static Type RequireTrackType(string kind)
-        {
-            return s_TrackTypes.TryGetValue(kind ?? string.Empty, out Type type)
-                ? type
-                : throw new InvalidOperationException($"Unknown Timeline Track authoring kind '{kind}'.");
-        }
-
-        public static Type RequireClipType(string kind)
-        {
-            return s_ClipTypes.TryGetValue(kind ?? string.Empty, out Type type)
-                ? type
-                : throw new InvalidOperationException($"Unknown Timeline Clip authoring kind '{kind}'.");
-        }
-
-        static IReadOnlyDictionary<string, Type> BuildTrackTypes()
-        {
-            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
-            foreach (Type type in TypeCache.GetTypesDerivedFrom<Track>()
-                         .Where(value => value != null && !value.IsAbstract && !value.ContainsGenericParameters))
-            {
-                if (Activator.CreateInstance(type) is not Track track || string.IsNullOrWhiteSpace(track.ContractKind))
-                    continue;
-                if (!result.TryAdd(track.ContractKind, type))
-                    throw new InvalidOperationException($"Timeline Track kind '{track.ContractKind}' has multiple formal authoring types.");
-            }
-            return result;
-        }
-
-        static IReadOnlyDictionary<string, Type> BuildClipTypes()
-        {
-            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
-            foreach (Type trackType in s_TrackTypes.Values.Distinct())
-            {
-                Track track = Activator.CreateInstance(trackType) as Track;
-                Type clipType = track?.ClipType;
-                if (clipType == null || clipType.IsAbstract || clipType.ContainsGenericParameters)
-                    continue;
-                if (Activator.CreateInstance(clipType, new object[] { null, 0 }) is not Clip clip ||
-                    string.IsNullOrWhiteSpace(clip.ContractKind))
-                    continue;
-                if (result.TryGetValue(clip.ContractKind, out Type existing) && existing != clipType)
-                    throw new InvalidOperationException($"Timeline Clip kind '{clip.ContractKind}' has multiple formal authoring types.");
-                result[clip.ContractKind] = clipType;
-            }
-            return result;
-        }
-    }
-#endif
 }

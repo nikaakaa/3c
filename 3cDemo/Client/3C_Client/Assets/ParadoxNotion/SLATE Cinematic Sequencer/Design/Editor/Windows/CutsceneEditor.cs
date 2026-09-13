@@ -10,222 +10,6 @@ namespace Slate
 
     public class CutsceneEditor : EditorWindow
     {
-        CutsceneEditorSurface m_Surface;
-
-        public static CutsceneEditor current;
-
-        public static event System.Action OnStopInEditor
-        {
-            add => CutsceneEditorSurface.OnStopInEditor += value;
-            remove => CutsceneEditorSurface.OnStopInEditor -= value;
-        }
-
-        public static event System.Action<Cutscene, string> OnEditTransactionBegin
-        {
-            add => CutsceneEditorSurface.OnEditTransactionBegin += value;
-            remove => CutsceneEditorSurface.OnEditTransactionBegin -= value;
-        }
-
-        public static event System.Action<Cutscene> OnEditTransactionCommit
-        {
-            add => CutsceneEditorSurface.OnEditTransactionCommit += value;
-            remove => CutsceneEditorSurface.OnEditTransactionCommit -= value;
-        }
-
-        public static event System.Action<Cutscene> OnEditTransactionCancel
-        {
-            add => CutsceneEditorSurface.OnEditTransactionCancel += value;
-            remove => CutsceneEditorSurface.OnEditTransactionCancel -= value;
-        }
-
-        public static event System.Action OnEditorClosed
-        {
-            add => CutsceneEditorSurface.OnEditorClosed += value;
-            remove => CutsceneEditorSurface.OnEditorClosed -= value;
-        }
-
-        public static event System.Action<ActionClip> OnActionDoubleClick
-        {
-            add => CutsceneEditorSurface.OnActionDoubleClick += value;
-            remove => CutsceneEditorSurface.OnActionDoubleClick -= value;
-        }
-
-        public static System.Func<Cutscene, bool> RecordUndoForCutscene
-        {
-            get => CutsceneEditorSurface.RecordUndoForCutscene;
-            set => CutsceneEditorSurface.RecordUndoForCutscene = value;
-        }
-
-        public static System.Func<Cutscene, bool> AllowPlaybackForCutscene
-        {
-            get => CutsceneEditorSurface.AllowPlaybackForCutscene;
-            set => CutsceneEditorSurface.AllowPlaybackForCutscene = value;
-        }
-
-        public Cutscene cutscene => m_Surface != null ? m_Surface.cutscene : null;
-        public float length
-        {
-            get => m_Surface != null ? m_Surface.length : 0f;
-            set
-            {
-                if (m_Surface != null)
-                    m_Surface.length = value;
-            }
-        }
-
-        public float viewTimeMin
-        {
-            get => m_Surface != null ? m_Surface.viewTimeMin : 0f;
-            set
-            {
-                if (m_Surface != null)
-                    m_Surface.viewTimeMin = value;
-            }
-        }
-
-        public float viewTimeMax
-        {
-            get => m_Surface != null ? m_Surface.viewTimeMax : 0f;
-            set
-            {
-                if (m_Surface != null)
-                    m_Surface.viewTimeMax = value;
-            }
-        }
-
-        public static bool ShouldRecordUndoFor(Cutscene target)
-        {
-            return CutsceneEditorSurface.ShouldRecordUndoFor(target);
-        }
-
-        public static bool IsPlaybackAllowedFor(Cutscene target)
-        {
-            return CutsceneEditorSurface.IsPlaybackAllowedFor(target);
-        }
-
-        public static void ShowWindow()
-        {
-            ShowWindow(null);
-        }
-
-        public static void ShowWindow(Cutscene newCutscene)
-        {
-            CutsceneEditor window = GetWindow<CutsceneEditor>();
-            window.InitializeWindow(newCutscene);
-            window.Show();
-        }
-
-        public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
-        {
-            EnsureSurface();
-            m_Surface.InitializeEmbedded(newCutscene, repaint);
-        }
-
-        public void DrawEmbeddedGUI(float width, float height)
-        {
-            m_Surface?.DrawEmbeddedGUI(width, height);
-        }
-
-        public void RequestEmbeddedRepaint()
-        {
-            m_Surface?.RequestEmbeddedRepaint();
-        }
-
-        public void ClearEmbedded()
-        {
-            m_Surface?.ClearEmbedded();
-        }
-
-        public void Play(Cutscene.WrapMode wrapMode = Cutscene.WrapMode.Loop, System.Action callback = null)
-        {
-            m_Surface?.Play(wrapMode, callback);
-        }
-
-        public void PlayReverse()
-        {
-            m_Surface?.PlayReverse();
-        }
-
-        public void Pause()
-        {
-            m_Surface?.Pause();
-        }
-
-        public void Stop(bool forceRewind)
-        {
-            m_Surface?.Stop(forceRewind);
-        }
-
-        public static void ClearCutscene(Cutscene target)
-        {
-            CutsceneEditorSurface.ClearCutscene(target);
-        }
-
-        void OnEnable()
-        {
-            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
-            wantsMouseMove = true;
-            autoRepaintOnSceneChange = false;
-            minSize = new Vector2(500, 500);
-            current = this;
-            EnsureSurface();
-            m_Surface.InitializeStandalone(
-                null,
-                Repaint,
-                ShowNotification,
-                RemoveNotification,
-                content => titleContent = content,
-                BeginWindowsHost,
-                EndWindowsHost);
-        }
-
-        void OnDisable()
-        {
-            if (m_Surface != null)
-            {
-                DestroyImmediate(m_Surface);
-                m_Surface = null;
-            }
-            if (ReferenceEquals(current, this))
-                current = null;
-        }
-
-        void OnGUI()
-        {
-            m_Surface?.DrawGUI(position.width, position.height);
-        }
-
-        void InitializeWindow(Cutscene newCutscene)
-        {
-            EnsureSurface();
-            m_Surface.InitializeStandalone(
-                newCutscene,
-                Repaint,
-                ShowNotification,
-                RemoveNotification,
-                content => titleContent = content,
-                BeginWindowsHost,
-                EndWindowsHost);
-        }
-
-        void BeginWindowsHost()
-        {
-            BeginWindows();
-        }
-
-        void EndWindowsHost()
-        {
-            EndWindows();
-        }
-
-        void EnsureSurface()
-        {
-            if (m_Surface == null)
-                m_Surface = CreateInstance<CutsceneEditorSurface>();
-        }
-    }
-    public class CutsceneEditorSurface : ScriptableObject
-    {
 
         enum EditorPlaybackState
         {
@@ -246,50 +30,20 @@ namespace Slate
 
         ///----------------------------------------------------------------------------------------------
 
-        public static CutsceneEditorSurface current;
+        public static CutsceneEditor current;
         public static event System.Action OnStopInEditor;
         public static event System.Action<Cutscene, string> OnEditTransactionBegin;
         public static event System.Action<Cutscene> OnEditTransactionCommit;
         public static event System.Action<Cutscene> OnEditTransactionCancel;
         public static event System.Action OnEditorClosed;
-        public static event System.Action<ActionClip> OnActionDoubleClick;
         public static System.Func<Cutscene, bool> RecordUndoForCutscene;
-        public static System.Func<Cutscene, bool> AllowPlaybackForCutscene;
 
         public static bool ShouldRecordUndoFor(Cutscene target)
         {
             return RecordUndoForCutscene == null || RecordUndoForCutscene(target);
         }
 
-        public static bool IsPlaybackAllowedFor(Cutscene target)
-        {
-            return AllowPlaybackForCutscene == null || AllowPlaybackForCutscene(target);
-        }
-
         private Cutscene _cutscene;
-        [System.NonSerialized] private bool embeddedSurface;
-        [System.NonSerialized] private float embeddedWidth;
-        [System.NonSerialized] private float embeddedHeight;
-        [System.NonSerialized] private System.Action embeddedRepaint;
-        [System.NonSerialized] private System.Action standaloneRepaint;
-        [System.NonSerialized] private System.Action<GUIContent> showNotification;
-        [System.NonSerialized] private System.Action removeNotification;
-        [System.NonSerialized] private System.Action<GUIContent> setTitle;
-        [System.NonSerialized] private System.Action beginWindows;
-        [System.NonSerialized] private System.Action endWindows;
-        [System.NonSerialized] private System.Func<int> embeddedFrameRate;
-        [System.NonSerialized] private System.Func<float> embeddedLength;
-        [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
-        [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
-        [System.NonSerialized] private System.Func<float> embeddedViewTimeMin;
-        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMin;
-        [System.NonSerialized] private System.Func<float> embeddedViewTimeMax;
-        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMax;
-        [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
-        [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
-        [System.NonSerialized] private System.Action embeddedAddTrack;
-        [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
-        [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -324,8 +78,6 @@ namespace Slate
 
         [System.NonSerialized] private Dictionary<int, ActionClipWrapper> clipWrappers;
         [System.NonSerialized] private Dictionary<ActionClip, ActionClipWrapper> clipWrappersMap;
-        [System.NonSerialized] private Dictionary<int, ActionClipWrapper> embeddedClipWrappers;
-        [System.NonSerialized] private Dictionary<string, ActionClipWrapper> embeddedClipWrappersMap;
         [System.NonSerialized] private EditorPlaybackState editorPlaybackState = EditorPlaybackState.Stoped;
         [System.NonSerialized] private Cutscene.WrapMode editorPlaybackWrapMode = Cutscene.WrapMode.Loop;
         [System.NonSerialized] private ActionClipWrapper interactingClip;
@@ -361,10 +113,6 @@ namespace Slate
         [System.NonSerialized] private float[] magnetSnapTimesCache;
         [System.NonSerialized] private List<GuideLine> pendingGuides;
         [System.NonSerialized] private System.Action postWindowsGUI;
-        [System.NonSerialized] private List<IEmbeddedTimelineClipBinding> embeddedMultiSelection;
-        [System.NonSerialized] private Dictionary<IEmbeddedTimelineClipBinding, float> embeddedDragOffsets;
-        [System.NonSerialized] private bool embeddedEditStarted;
-        [System.NonSerialized] private IEmbeddedTimelineSectionBinding embeddedDraggedSection;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
 
@@ -373,6 +121,8 @@ namespace Slate
         [System.NonSerialized] private float timeInfoEnd;
         [System.NonSerialized] private float timeInfoInterval;
         [System.NonSerialized] private float timeInfoHighMod;
+
+        [System.NonSerialized] private string webMessage;
 
         ///----------------------------------------------------------------------------------------------
 
@@ -406,37 +156,20 @@ namespace Slate
 
         //The length of the cutscene reference
         public float length {
-            get { return embeddedLength != null ? Mathf.Max(0f, embeddedLength()) : cutscene.length; }
+            get { return cutscene.length; }
             set { cutscene.length = value; }
         }
 
         //The min view time
         public float viewTimeMin {
-            get { return embeddedViewTimeMin != null ? embeddedViewTimeMin() : cutscene.viewTimeMin; }
-            set
-            {
-                if (embeddedSetViewTimeMin != null)
-                    embeddedSetViewTimeMin(value);
-                else
-                    cutscene.viewTimeMin = value;
-            }
+            get { return cutscene.viewTimeMin; }
+            set { cutscene.viewTimeMin = value; }
         }
 
         //The max view time
         public float viewTimeMax {
-            get { return embeddedViewTimeMax != null ? embeddedViewTimeMax() : cutscene.viewTimeMax; }
-            set
-            {
-                if (embeddedSetViewTimeMax != null)
-                    embeddedSetViewTimeMax(value);
-                else
-                    cutscene.viewTimeMax = value;
-            }
-        }
-
-        public Vector2 EmbeddedScrollPosition {
-            get => scrollPos;
-            set => scrollPos = value;
+            get { return cutscene.viewTimeMax; }
+            set { cutscene.viewTimeMax = value; }
         }
 
         //The max time currently in view
@@ -469,25 +202,18 @@ namespace Slate
         }
 
         //Screen Width. Handles retina.
-        private float screenWidth {
-            get { return embeddedSurface ? embeddedWidth : Screen.width / EditorGUIUtility.pixelsPerPoint; }
+        private static float screenWidth {
+            get { return Screen.width / EditorGUIUtility.pixelsPerPoint; }
         }
 
         //Screen Height. Hanldes retina.
-        private float screenHeight {
-            get { return embeddedSurface ? embeddedHeight : Screen.height / EditorGUIUtility.pixelsPerPoint; }
+        private static float screenHeight {
+            get { return Screen.height / EditorGUIUtility.pixelsPerPoint; }
         }
 
         //The color used in scruber
         private Color scruberColor {
-            get
-            {
-                if (embeddedSurface)
-                    return embeddedTimeline != null && embeddedTimeline.IsReadOnly
-                        ? Color.yellow
-                        : new Color(1, 0.3f, 0.3f);
-                return cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f);
-            }
+            get { return cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f); }
         }
 
         ///----------------------------------------------------------------------------------------------
@@ -506,70 +232,17 @@ namespace Slate
 
         //Round time to nearest working snap interval
         float SnapTime(float time) {
-            if ( embeddedSurface ) {
-                var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
-                return Mathf.Round(time * frameRate) / frameRate;
-            }
             //holding control for precision (ignore snap intervals)
             if ( Event.current.control ) { return time; }
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
         }
 
-        float EmbeddedCurrentTime()
-        {
-            if (embeddedCurrentFrame != null)
-                return embeddedCurrentFrame() / (float)Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
-            return cutscene.currentTime;
-        }
-
-        void SetEmbeddedCurrentTime(float time)
-        {
-            if (embeddedSetCurrentFrame != null)
-            {
-                int frame = Mathf.RoundToInt(Mathf.Max(0f, time) * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-                embeddedSetCurrentFrame(frame);
-                return;
-            }
-            cutscene.currentTime = time;
-        }
-
-        public static float CurrentSnapInterval {
-            get
-            {
-                if ( current != null && current.embeddedSurface )
-                    return 1f / Mathf.Max(1, current.embeddedFrameRate != null ? current.embeddedFrameRate() : Prefs.frameRate);
-                return Prefs.snapInterval;
-            }
-        }
-
-        readonly struct SurfaceLayout
-        {
-            public SurfaceLayout(Rect topLeft, Rect topMiddle, Rect left, Rect center)
-            {
-                TopLeft = topLeft;
-                TopMiddle = topMiddle;
-                Left = left;
-                Center = center;
-            }
-
-            public Rect TopLeft { get; }
-            public Rect TopMiddle { get; }
-            public Rect Left { get; }
-            public Rect Center { get; }
-        }
-
         //Do action safely (stop cutscene, do, resample)
         void SafeDoAction(System.Action call) {
-            bool ownsTransaction = !editTransactionActive;
-            if ( ownsTransaction ) { BeginEditTransaction("Cutscene Change", 0); }
             var time = cutscene.currentTime;
-            try {
-                Stop(true);
-                call();
-                cutscene.currentTime = time;
-            } finally {
-                if ( ownsTransaction ) { CommitEditTransaction(); }
-            }
+            Stop(true);
+            call();
+            cutscene.currentTime = time;
         }
 
         bool ShouldRecordUndo() {
@@ -668,300 +341,19 @@ namespace Slate
 
         ///----------------------------------------------------------------------------------------------
 
-        public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
-        {
-            InitializeEmbedded(newCutscene, repaint, null, null, null);
-        }
-
-        SurfaceLayout CalculateLayout()
-        {
-            var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
-            var timeInfoTop = embeddedSurface ? 0f : TOOLBAR_HEIGHT;
-            float contentWidth = screenWidth - LEFT_MARGIN - RIGHT_MARGIN;
-            float contentHeight = screenHeight - timelineTop + scrollPos.y;
-            return new SurfaceLayout(
-                new Rect(0, embeddedSurface ? 0 : TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN),
-                new Rect(LEFT_MARGIN, timeInfoTop, contentWidth, TOP_MARGIN),
-                new Rect(0, timelineTop, LEFT_MARGIN, contentHeight),
-                new Rect(LEFT_MARGIN, timelineTop, contentWidth, contentHeight));
-        }
-
-        public void InitializeEmbedded(
-            Cutscene newCutscene,
-            System.Action repaint,
-            System.Func<int> frameRate,
-            System.Action addTrack,
-            System.Action<ActionClip> copyClip,
-            System.Func<int> currentFrame = null,
-            System.Action<int> setCurrentFrame = null,
-            System.Func<float> timelineLength = null,
-            System.Func<float> viewMin = null,
-            System.Action<float> setViewMin = null,
-            System.Func<float> viewMax = null,
-            System.Action<float> setViewMax = null)
-        {
-            embeddedSurface = true;
-            embeddedRepaint = repaint;
-            embeddedFrameRate = frameRate;
-            embeddedLength = timelineLength;
-            embeddedCurrentFrame = currentFrame;
-            embeddedSetCurrentFrame = setCurrentFrame;
-            embeddedViewTimeMin = viewMin;
-            embeddedSetViewTimeMin = setViewMin;
-            embeddedViewTimeMax = viewMax;
-            embeddedSetViewTimeMax = setViewMax;
-            embeddedAddTrack = addTrack;
-            embeddedCopyClip = copyClip;
-            Styles.Load();
-            showDragDropInfo = false;
-            willRepaint = true;
-            pendingGuides = new List<GuideLine>();
-            InitializeAll(newCutscene);
-        }
-
-        public void InitializeEmbedded(
-            IEmbeddedTimelineBinding binding,
-            System.Action repaint,
-            System.Action beginWindowsCallback = null,
-            System.Action endWindowsCallback = null)
-        {
-            embeddedSurface = true;
-            embeddedTimeline = binding ?? throw new System.ArgumentNullException(nameof(binding));
-            embeddedRepaint = repaint;
-            embeddedFrameRate = () => binding.FrameRate;
-            embeddedLength = () => binding.Length;
-            embeddedCurrentFrame = () => binding.CurrentFrame;
-            embeddedSetCurrentFrame = value => binding.CurrentFrame = value;
-            embeddedViewTimeMin = () => binding.ViewTimeMin;
-            embeddedSetViewTimeMin = value => binding.ViewTimeMin = value;
-            embeddedViewTimeMax = () => binding.ViewTimeMax;
-            embeddedSetViewTimeMax = value => binding.ViewTimeMax = value;
-            embeddedAddTrack = binding.AddTrack;
-            embeddedCopyClip = null;
-            beginWindows = beginWindowsCallback;
-            endWindows = endWindowsCallback;
-            Styles.Load();
-            showDragDropInfo = false;
-            willRepaint = true;
-            pendingGuides = new List<GuideLine>();
-            clipWrappers = null;
-            clipWrappersMap = null;
-            embeddedClipWrappers = new Dictionary<int, ActionClipWrapper>();
-            embeddedClipWrappersMap = new Dictionary<string, ActionClipWrapper>();
-            cutscene = null;
-        }
-
-        public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
-        {
-            embeddedRuntimeTime = runtimeTime;
-        }
-
-        public void ConfigureEmbeddedHistoryTime(System.Func<float?> historyTime)
-        {
-            embeddedHistoryTime = historyTime;
-        }
-
-        public void ConfigureEmbeddedRepaint(System.Action repaint)
-        {
-            if (embeddedSurface)
-                embeddedRepaint = repaint;
-        }
-
-        public void InitializeStandalone(
-            Cutscene newCutscene,
-            System.Action repaint,
-            System.Action<GUIContent> notification,
-            System.Action removeNotificationCallback,
-            System.Action<GUIContent> titleCallback,
-            System.Action beginWindowsCallback,
-            System.Action endWindowsCallback)
-        {
-            embeddedSurface = false;
-            embeddedRepaint = null;
-            standaloneRepaint = repaint;
-            showNotification = notification;
-            removeNotification = removeNotificationCallback;
-            setTitle = titleCallback;
-            beginWindows = beginWindowsCallback;
-            endWindows = endWindowsCallback;
-            showDragDropInfo = true;
-            InitializeAll(newCutscene);
-        }
-
-        public void DrawGUI(float width, float height)
-        {
-            CutsceneEditorSurface previous = current;
-            current = this;
-            try
-            {
-                OnGUI();
-            }
-            finally
-            {
-                if (ReferenceEquals(current, this))
-                    current = previous;
-            }
-        }
-
-        public void DrawEmbeddedGUI(float width, float height)
-        {
-            DrawEmbeddedGUI(width, height, null, null);
-        }
-
-        public void DrawEmbeddedGUI(
-            float width,
-            float height,
-            System.Action beginWindowsCallback,
-            System.Action endWindowsCallback)
-        {
-            if (!embeddedSurface)
-                throw new System.InvalidOperationException("Slate editor is not initialized as an embedded surface.");
-            embeddedWidth = Mathf.Max(1f, width);
-            embeddedHeight = Mathf.Max(1f, height);
-            beginWindows = beginWindowsCallback;
-            endWindows = endWindowsCallback;
-            CutsceneEditorSurface previous = current;
-            current = this;
-            try
-            {
-                OnGUI();
-            }
-            finally
-            {
-                if (ReferenceEquals(current, this))
-                    current = previous;
-            }
-        }
-
-        public void RequestEmbeddedRepaint()
-        {
-            if (embeddedSurface)
-                embeddedRepaint?.Invoke();
-            else
-                standaloneRepaint?.Invoke();
-        }
-
-        public void ClearEmbedded()
-        {
-            if (!embeddedSurface)
-                return;
-            CancelEditTransaction();
-            if (cutscene != null && !embeddedSurface && !Application.isPlaying)
-                Stop(true);
-            if (cutscene != null &&
-                (ReferenceEquals(Selection.activeObject, cutscene.gameObject) ||
-                 Selection.activeObject is Component component && component.transform.IsChildOf(cutscene.transform)))
-            {
-                Selection.activeObject = null;
-            }
-            CutsceneUtility.selectedObject = null;
-            cutscene = null;
-            clipWrappers = null;
-            clipWrappersMap = null;
-            embeddedClipWrappers = null;
-            embeddedClipWrappersMap = null;
-            embeddedRepaint = null;
-            standaloneRepaint = null;
-            showNotification = null;
-            removeNotification = null;
-            setTitle = null;
-            beginWindows = null;
-            endWindows = null;
-            embeddedFrameRate = null;
-            embeddedLength = null;
-            embeddedCurrentFrame = null;
-            embeddedSetCurrentFrame = null;
-            embeddedViewTimeMin = null;
-            embeddedSetViewTimeMin = null;
-            embeddedViewTimeMax = null;
-            embeddedSetViewTimeMax = null;
-            embeddedRuntimeTime = null;
-            embeddedHistoryTime = null;
-            embeddedAddTrack = null;
-            embeddedCopyClip = null;
-            embeddedTimeline = null;
-            embeddedMultiSelection = null;
-            embeddedDragOffsets = null;
-            embeddedEditStarted = false;
-            embeddedDraggedSection = null;
-            embeddedSurface = false;
-            if (ReferenceEquals(current, this))
-                current = null;
-        }
-
-        public static void ClearCutscene(Cutscene target)
-        {
-            if (current == null || !ReferenceEquals(current.cutscene, target))
-                return;
-            current.CancelEditTransaction();
-            if (!Application.isPlaying)
-                current.Stop(true);
-            current.cutscene = null;
-            current.clipWrappers = null;
-            current.clipWrappersMap = null;
-            CutsceneUtility.selectedObject = null;
-            current.willRepaint = true;
-        }
-
-        void SyncEmbeddedCurveTrack()
-        {
-            if (!embeddedSurface || cutscene == null)
-                return;
-            CutsceneTrack selectedTrack = (CutsceneUtility.selectedObject as ActionClip)?.parent as CutsceneTrack;
-            bool changed = false;
-            foreach (CutsceneGroup group in cutscene.groups)
-            {
-                foreach (CutsceneTrack track in group.tracks)
-                {
-                    bool shouldShow = selectedTrack != null && ReferenceEquals(track, selectedTrack);
-                    if (track.showCurves == shouldShow)
-                        continue;
-                    track.showCurves = shouldShow;
-                    changed = true;
-                }
-            }
-            if (changed)
-                willRepaint = true;
-        }
-
-        void OnEmbeddedSelectionChanged(IDirectable _)
-        {
-            if (!embeddedSurface)
-                return;
-            SyncEmbeddedCurveTrack();
-            RequestEmbeddedRepaint();
-        }
-
-        void ShowNotification(GUIContent content)
-        {
-            showNotification?.Invoke(content);
-        }
-
-        void RemoveNotification()
-        {
-            removeNotification?.Invoke();
-        }
-
-        void SetTitle(GUIContent content)
-        {
-            setTitle?.Invoke(content);
-        }
-
-        void BeginWindows()
-        {
-            beginWindows?.Invoke();
-        }
-
-        void EndWindows()
-        {
-            endWindows?.Invoke();
+        ///<summary>Opens the editor :)</summary>
+        public static void ShowWindow() { ShowWindow(null); }
+        public static void ShowWindow(Cutscene newCutscene) {
+            var window = EditorWindow.GetWindow(typeof(CutsceneEditor)) as CutsceneEditor;
+            window.InitializeAll(newCutscene);
+            window.Show();
         }
 
         //...
         void OnEnable() {
             Styles.Load();
 
-            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( !embeddedSurface && cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
+            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnWillSaveScene;
 
@@ -976,19 +368,20 @@ namespace Slate
             SceneView.duringSceneGui += OnSceneGUI;
 
             Tools.hidden = false;
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
+            wantsMouseMove = true;
+            autoRepaintOnSceneChange = false;
+            minSize = new Vector2(500, 500);
             willRepaint = true;
             showDragDropInfo = true;
             pendingGuides = new List<GuideLine>();
 
             current = this;
-            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
-            CutsceneUtility.onSelectionChange += OnEmbeddedSelectionChanged;
             InitializeAll();
         }
 
         //...
         void OnDisable() {
-            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             CancelEditTransaction();
 
@@ -999,7 +392,7 @@ namespace Slate
             EditorApplication.update -= OnEditorUpdate;
             SceneView.duringSceneGui -= OnSceneGUI;
             Tools.hidden = false;
-            if ( cutscene != null && !embeddedSurface && !Application.isPlaying ) {
+            if ( cutscene != null && !Application.isPlaying ) {
                 Stop(true);
             }
             OnEditorClosed?.Invoke();
@@ -1019,7 +412,7 @@ namespace Slate
 
         //Before scene is saved we need to stop so that cutscene changes are reverted.
         void OnWillSaveScene(UnityEngine.SceneManagement.Scene scene, string path) {
-            if ( cutscene != null && !embeddedSurface && cutscene.currentTime > 0 ) {
+            if ( cutscene != null && cutscene.currentTime > 0 ) {
                 Stop(true);
                 Debug.LogWarning("Scene Saved while a cutscene was in preview mode. Cutscene was reverted before saving the scene along with changes it affected.");
             }
@@ -1031,7 +424,7 @@ namespace Slate
 
             //first stop current cut if any
             if ( cutscene != null ) {
-                if ( !embeddedSurface && !Application.isPlaying ) {
+                if ( !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -1042,7 +435,7 @@ namespace Slate
                 CutsceneUtility.selectedObject = null;
                 multiSelection = null;
                 InitClipWrappers();
-                if ( !embeddedSurface && !Application.isPlaying ) {
+                if ( !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -1060,7 +453,7 @@ namespace Slate
             multiSelection = null;
             var lastTime = cutscene.currentTime;
 
-            if ( !embeddedSurface && !Application.isPlaying ) {
+            if ( !Application.isPlaying ) {
                 Stop(true);
             }
 
@@ -1099,7 +492,7 @@ namespace Slate
         //Play button pressed or otherwise started
         public void Play(Cutscene.WrapMode wrapMode = Cutscene.WrapMode.Loop, System.Action callback = null) {
 
-            SetTitle(new GUIContent("SLATE", Styles.cutsceneIconClose));
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconClose);
 
             if ( Application.isPlaying ) {
                 var temp = cutscene.currentTime == length ? 0 : cutscene.currentTime;
@@ -1118,7 +511,7 @@ namespace Slate
         //Play reverse button pressed
         public void PlayReverse() {
 
-            SetTitle(new GUIContent("SLATE", Styles.cutsceneIconClose));
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconClose);
 
             if ( Application.isPlaying ) {
                 var temp = cutscene.currentTime == 0 ? length : cutscene.currentTime;
@@ -1140,6 +533,7 @@ namespace Slate
         //Pause button pressed
         public void Pause() {
 
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
 
             if ( Application.isPlaying ) {
                 if ( cutscene.isActive ) {
@@ -1158,11 +552,7 @@ namespace Slate
         //Stop button pressed or otherwise reset the scrubbing/previewing
         public void Stop(bool forceRewind) {
 
-            if ( embeddedSurface ) {
-                editorPlaybackState = EditorPlaybackState.Stoped;
-                willRepaint = true;
-                return;
-            }
+            titleContent = new GUIContent("SLATE", Styles.cutsceneIconOpen);
 
             if ( Application.isPlaying ) {
                 if ( cutscene.isActive ) {
@@ -1184,14 +574,6 @@ namespace Slate
 
         ///<summary>Steps time forward to the next key time</summary>
         void StepForward() {
-            if ( embeddedSurface ) {
-                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
-                    embeddedSetCurrentFrame(embeddedCurrentFrame() + 1);
-                    return;
-                }
-                cutscene.currentTime = Mathf.Min(cutscene.length, cutscene.currentTime + 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-                return;
-            }
             var keyable = CutsceneUtility.selectedObject as IKeyable;
             if ( keyable != null ) {
                 var time = keyable.animationData.GetKeyNext(keyable.RootTimeToLocalTimeUnclamped());
@@ -1207,14 +589,6 @@ namespace Slate
 
         ///<summary>Steps time backwards to the previous key time</summary>
         void StepBackward() {
-            if ( embeddedSurface ) {
-                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
-                    embeddedSetCurrentFrame(embeddedCurrentFrame() - 1);
-                    return;
-                }
-                cutscene.currentTime = Mathf.Max(0f, cutscene.currentTime - 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-                return;
-            }
             var keyable = CutsceneUtility.selectedObject as IKeyable;
             if ( keyable != null ) {
                 var time = keyable.animationData.GetKeyPrevious(keyable.RootTimeToLocalTimeUnclamped());
@@ -1230,9 +604,6 @@ namespace Slate
 
         //Sample the cutscene
         void OnEditorUpdate() {
-            if ( embeddedSurface ) {
-                return;
-            }
 
             //if cutscene playmode active, it will sample and update itself.
             if ( cutscene == null || cutscene.isActive ) {
@@ -1284,16 +655,11 @@ namespace Slate
 
             cutscene.currentTime += editorPlaybackState == EditorPlaybackState.PlayingForwards ? delta : -delta;
             cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, startTime, endTime);
-            RequestEmbeddedRepaint();
         }
 
 
         //...
         void OnSceneGUI(SceneView sceneView) {
-
-            if ( embeddedSurface ) {
-                return;
-            }
 
             if ( cutscene == null ) {
                 return;
@@ -1385,12 +751,6 @@ namespace Slate
             mousePosition = e.mousePosition;
             current = this;
 
-            if (embeddedSurface && embeddedTimeline != null)
-            {
-                OnEmbeddedTimelineGUI();
-                return;
-            }
-
             if ( cutscene == null || isAboutButtonPressed ) {
                 ShowWelcome();
                 return;
@@ -1398,8 +758,7 @@ namespace Slate
 
             //avoid edit when compiling
             if ( EditorApplication.isCompiling ) {
-                if ( !embeddedSurface )
-                    Stop(true);
+                Stop(true);
                 ShowNotification(new GUIContent("Compiling\n...Please wait..."));
                 return;
             }
@@ -1450,28 +809,16 @@ namespace Slate
             }
 
             //make the layout rects
-            SurfaceLayout layout = CalculateLayout();
-            topLeftRect = layout.TopLeft;
-            topMiddleRect = layout.TopMiddle;
-            leftRect = layout.Left;
-            centerRect = layout.Center;
+            topLeftRect = new Rect(0, TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
+            topMiddleRect = new Rect(LEFT_MARGIN, TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
+            leftRect = new Rect(0, TOOLBAR_HEIGHT + TOP_MARGIN, LEFT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
+            centerRect = new Rect(LEFT_MARGIN, TOP_MARGIN + TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
 
             //...
             DoKeyboardShortcuts();
-            if (!embeddedSurface)
-            {
-                bool guiEnabled = GUI.enabled;
-                GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
-                ShowPlaybackControls(topLeftRect);
-                GUI.enabled = guiEnabled;
-            }
-            else
-            {
-                ShowEmbeddedAuthoringToolbar(topLeftRect);
-            }
+            ShowPlaybackControls(topLeftRect);
             ShowTimeInfo(topMiddleRect);
-            if (!embeddedSurface)
-                ShowToolbar();
+            ShowToolbar();
             DoScrubControls();
             DoZoomAndPan();
 
@@ -1485,8 +832,6 @@ namespace Slate
             GUI.EndScrollView();
             ///---
 
-            DrawRuntimeOverlay();
-            DrawHistoryOverlay();
             DrawGuides();
             AcceptDrops();
 
@@ -1538,10 +883,8 @@ namespace Slate
             //resample?
             if ( willResample ) {
                 willResample = false;
-                if ( !embeddedSurface ) {
-                    //delaycall so that other gui controls are finalized before resample.
-                    EditorApplication.delayCall += () => { if ( cutscene != null ) cutscene.ReSample(); };
-                }
+                //delaycall so that other gui controls are finalized before resample.
+                EditorApplication.delayCall += () => { if ( cutscene != null ) cutscene.ReSample(); };
             }
 
             //hack to show modal popup windows
@@ -1567,7 +910,7 @@ namespace Slate
             //repaint
             if ( willRepaint ) {
                 willRepaint = false;
-                RequestEmbeddedRepaint();
+                Repaint();
             }
 
             //cleanup
@@ -1578,132 +921,16 @@ namespace Slate
             if ( viewTimeMax == 0 ) { GUI.Label(centerRect, "<size=40>:-)</size>", Styles.centerLabel); }
         }
 
-        void DrawRuntimeOverlay()
-        {
-            if (!embeddedSurface || embeddedRuntimeTime == null)
-                return;
-            float? runtimeTime = embeddedRuntimeTime();
-            if (!runtimeTime.HasValue || runtimeTime.Value < viewTimeMin || runtimeTime.Value > viewTimeMax)
-                return;
-            float x = TimeToPos(runtimeTime.Value) + centerRect.x;
-            GUI.color = new Color(0.25f, 0.85f, 1f, 0.9f);
-            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
-            GUI.Label(new Rect(x + 4f, centerRect.y + 2f, 64f, 18f), "Runtime", EditorStyles.label);
-            GUI.color = Color.white;
-        }
-
-        void DrawHistoryOverlay()
-        {
-            if (!embeddedSurface || embeddedHistoryTime == null)
-                return;
-            float? historyTime = embeddedHistoryTime();
-            if (!historyTime.HasValue || historyTime.Value < viewTimeMin || historyTime.Value > viewTimeMax)
-                return;
-            float x = TimeToPos(historyTime.Value) + centerRect.x;
-            GUI.color = new Color(0.85f, 0.45f, 1f, 0.9f);
-            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
-            GUI.Label(new Rect(x + 4f, centerRect.y + 20f, 64f, 18f), "History", EditorStyles.label);
-            GUI.color = Color.white;
-        }
-
-        void ShowEmbeddedAuthoringToolbar(Rect rect)
-        {
-            GUI.Box(rect, string.Empty, EditorStyles.toolbar);
-            GUI.BeginGroup(rect);
-            GUILayout.BeginHorizontal(EditorStyles.toolbar);
-            if (GUILayout.Button("+ Track", EditorStyles.toolbarButton, GUILayout.Width(62)))
-                embeddedAddTrack?.Invoke();
-            if (GUILayout.Button("‹", EditorStyles.toolbarButton, GUILayout.Width(24)))
-                StepBackward();
-            if (GUILayout.Button("›", EditorStyles.toolbarButton, GUILayout.Width(24)))
-                StepForward();
-            if (GUILayout.Button("Fit", EditorStyles.toolbarButton, GUILayout.Width(36)))
-            {
-                viewTimeMin = 0f;
-                viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-            }
-            int authoringFrame = embeddedCurrentFrame != null
-                ? embeddedCurrentFrame()
-                : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-            if (embeddedCurrentFrame != null && embeddedSetCurrentFrame != null)
-            {
-                GUILayout.Label("Edit", EditorStyles.miniLabel);
-                int requestedFrame = EditorGUILayout.IntField(authoringFrame, GUILayout.Width(52));
-                if (requestedFrame != authoringFrame)
-                    embeddedSetCurrentFrame(requestedFrame);
-                GUILayout.Label("F", EditorStyles.miniLabel);
-            }
-            else
-                GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
-            GUILayout.EndHorizontal();
-            GUI.EndGroup();
-        }
-
         ///----------------------------------------------------------------------------------------------
 
         //...		
         void DoKeyboardShortcuts() {
 
             var e = Event.current;
-            if (embeddedTimeline != null)
-            {
-                if (e.type != EventType.KeyDown || GUIUtility.keyboardControl != 0 || e.control || e.shift)
-                    return;
-                if (e.keyCode == KeyCode.Space)
-                {
-                    e.Use();
-                    return;
-                }
-                if (e.keyCode == KeyCode.Period)
-                {
-                    StepForward();
-                    e.Use();
-                    return;
-                }
-                if (e.keyCode == KeyCode.Comma)
-                {
-                    StepBackward();
-                    e.Use();
-                    return;
-                }
-                if (!(embeddedTimeline.Selected is IEmbeddedTimelineClipBinding clip))
-                    return;
-                if (e.keyCode == KeyCode.K && clip.Keyable?.animationData != null)
-                {
-                    ApplyEmbeddedCommand(
-                        () => clip.AddIdentityKey(clip.Keyable.ToLocalTime(EmbeddedCurrentTime())),
-                        "Key Clip");
-                    e.Use();
-                    return;
-                }
-                if (e.keyCode == KeyCode.S)
-                {
-                    int frame = Mathf.RoundToInt(SnapTime(EmbeddedCurrentTime()) * embeddedTimeline.FrameRate);
-                    embeddedTimeline.SplitClip(clip, frame);
-                    e.Use();
-                    return;
-                }
-                if (e.keyCode == KeyCode.F)
-                {
-                    ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip");
-                    e.Use();
-                    return;
-                }
-                if (e.keyCode == KeyCode.C)
-                {
-                    ApplyEmbeddedCommand(clip.CleanKeysOffRange, "Clean Keys");
-                    e.Use();
-                }
-                return;
-            }
             if ( e.type == EventType.KeyDown && GUIUtility.keyboardControl == 0 && !e.control && !e.shift ) {
 
                 //play
                 if ( e.keyCode == KeyCode.Space ) {
-                    if ( embeddedSurface ) {
-                        e.Use();
-                        return;
-                    }
                     if ( editorPlaybackState != EditorPlaybackState.Stoped ) { Stop(false); } else { Play(); }
                     e.Use();
                 }
@@ -1722,8 +949,7 @@ namespace Slate
 
                 //key at scrubber
                 if ( e.keyCode == KeyCode.K ) {
-                    if ( CutsceneUtility.selectedObject is IKeyable keyable )
-                        SafeDoAction(() => keyable.TryAddIdentityKey(keyable.RootTimeToLocalTime()));
+                    if ( CutsceneUtility.selectedObject is IKeyable keyable ) { keyable.TryAddIdentityKey(keyable.RootTimeToLocalTime()); }
                     e.Use();
                 }
 
@@ -1732,7 +958,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        SafeDoAction(() => wrapper?.Split(cutscene.currentTime));
+                        wrapper?.Split(cutscene.currentTime);
                     }
                     e.Use();
                 }
@@ -1742,7 +968,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        SafeDoAction(() => wrapper?.StretchFit());
+                        wrapper?.StretchFit();
                     }
                     e.Use();
                 }
@@ -1752,7 +978,7 @@ namespace Slate
                     var clip = CutsceneUtility.selectedObject as ActionClip;
                     if ( clip != null ) {
                         var wrapper = clipWrappersMap[clip];
-                        SafeDoAction(() => wrapper?.CleanKeysOffRange());
+                        wrapper?.CleanKeysOffRange();
                     }
                     e.Use();
                 }
@@ -1783,12 +1009,6 @@ namespace Slate
         //...
         void DrawGuides() {
 
-            if (embeddedTimeline != null)
-            {
-                DrawEmbeddedGuides();
-                return;
-            }
-
             //draw a vertical line at 0 time
             DrawGuideLine(0, isProSkin ? Color.white : Color.black);
 
@@ -1796,18 +1016,17 @@ namespace Slate
             DrawGuideLine(length, isProSkin ? Color.white : Color.black);
 
             //draw a vertical line at current time
-            var embeddedCurrentTime = EmbeddedCurrentTime();
-            if ( embeddedCurrentTime > 0 ) {
-                DrawGuideLine(embeddedCurrentTime, scruberColor);
+            if ( cutscene.currentTime > 0 ) {
+                DrawGuideLine(cutscene.currentTime, scruberColor);
             }
 
             //draw a vertical line at dragging clip start/end time
             if ( interactingClip != null ) {
                 if ( interactingClip.isDragging || interactingClip.isScalingStart ) {
-                    DrawGuideLine(interactingClip.StartTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.action.startTime, Color.white.WithAlpha(0.05f));
                 }
                 if ( interactingClip.isDragging || interactingClip.isScalingEnd ) {
-                    DrawGuideLine(interactingClip.EndTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.action.endTime, Color.white.WithAlpha(0.05f));
                 }
             }
 
@@ -1981,16 +1200,6 @@ namespace Slate
         //Scrubing....
         void DoScrubControls() {
 
-            if (embeddedTimeline != null)
-            {
-                DoEmbeddedScrubControls();
-                return;
-            }
-
-            if ( !embeddedSurface && !IsPlaybackAllowedFor(cutscene) ) {
-                return;
-            }
-
             if ( cutscene.isActive ) { //no scrubbing if playing in runtime
                 return;
             }
@@ -2002,7 +1211,7 @@ namespace Slate
                 var loopRegionMaxPos = TimeToPos(cutscene.playTimeMax) + leftRect.width;
                 var loopRegionMinPos = TimeToPos(cutscene.playTimeMin) + leftRect.width;
 
-                var isEndCarret = embeddedLength == null && (Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control);
+                var isEndCarret = Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control;
                 var isRegionMax = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
                 var isRegionMin = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMinPos) < 10;
 
@@ -2044,8 +1253,8 @@ namespace Slate
 
             var pointerTime = PosToTime(mousePosition.x);
             if ( isMovingScrubCarret ) {
-                var scrubTime = Mathf.Clamp(SnapTime(pointerTime), Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
-                SetEmbeddedCurrentTime(scrubTime);
+                cutscene.currentTime = SnapTime(pointerTime);
+                cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
             }
 
             if ( isMovingEndCarret ) {
@@ -2108,461 +1317,7 @@ namespace Slate
             }
         }
 
-        void OnEmbeddedTimelineGUI()
-        {
-            GUI.skin.label.richText = true;
-            GUI.skin.label.alignment = TextAnchor.UpperLeft;
-            EditorStyles.label.richText = true;
-            EditorStyles.textField.wordWrap = true;
-            EditorStyles.foldout.richText = true;
-
-            Event e = Event.current;
-            mousePosition = e.mousePosition;
-            if (embeddedTimeline == null)
-                return;
-
-            if (e.type == EventType.KeyDown && !e.control && !e.shift &&
-                (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace))
-            {
-                if (embeddedMultiSelection != null && embeddedMultiSelection.Count > 0)
-                    embeddedTimeline.DeleteClips(embeddedMultiSelection.ToArray());
-                else if (embeddedTimeline.Selected is IEmbeddedTimelineClipBinding selectedClip)
-                    embeddedTimeline.DeleteClip(selectedClip);
-                embeddedMultiSelection = null;
-                embeddedTimeline.Select(null);
-                e.Use();
-            }
-
-            DoKeyboardShortcuts();
-
-            if (e.type == EventType.MouseDown && (e.button == 0 || e.button == 1) && !embeddedEditStarted)
-            {
-                embeddedEditStarted = !embeddedTimeline.IsReadOnly;
-                if (embeddedEditStarted)
-                    embeddedTimeline.BeginEdit("Timeline Edit");
-            }
-
-            SurfaceLayout layout = CalculateLayout();
-            topLeftRect = layout.TopLeft;
-            topMiddleRect = layout.TopMiddle;
-            leftRect = layout.Left;
-            centerRect = layout.Center;
-
-            ShowEmbeddedAuthoringToolbar(topLeftRect);
-            ShowTimeInfo(topMiddleRect);
-            DoScrubControls();
-            DoZoomAndPan();
-
-            Rect scrollRect = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, screenHeight - 5);
-            Rect scrollView = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, totalHeight + 150);
-            scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, scrollView);
-            ShowGroupsAndTracksList(leftRect);
-            ShowTimeLines(centerRect);
-            GUI.EndScrollView();
-
-            DrawRuntimeOverlay();
-            DrawHistoryOverlay();
-            DrawGuides();
-
-            if (e.rawType == EventType.MouseUp)
-            {
-                if (embeddedEditStarted)
-                {
-                    embeddedEditStarted = false;
-                    embeddedTimeline.CommitEdit();
-                }
-                embeddedDragOffsets = null;
-            }
-
-            if (e.type == EventType.MouseDrag || e.rawType == EventType.MouseUp || GUI.changed)
-                willRepaint = true;
-        }
-
-        void DoEmbeddedScrubControls()
-        {
-            Event e = Event.current;
-            if (e.type == EventType.MouseDown && e.button == 0 && topMiddleRect.Contains(mousePosition))
-            {
-                isMovingScrubCarret = true;
-                SetEmbeddedCurrentTime(SnapTime(PosToTime(mousePosition.x)));
-                e.Use();
-            }
-            if (isMovingScrubCarret && e.button == 0 && (e.type == EventType.MouseDrag || e.type == EventType.MouseDown))
-            {
-                float time = Mathf.Clamp(
-                    SnapTime(PosToTime(mousePosition.x)),
-                    Mathf.Max(viewTimeMin, 0f),
-                    length);
-                SetEmbeddedCurrentTime(time);
-                e.Use();
-            }
-            if (e.rawType == EventType.MouseUp && e.button == 0)
-                isMovingScrubCarret = false;
-        }
-
-        void ShowEmbeddedGroupsAndTracksList(Rect rect)
-        {
-            Event e = Event.current;
-            var groups = embeddedTimeline.Groups;
-            var collapseRect = Rect.MinMaxRect(rect.x + 5, rect.y + 4, rect.x + 25, rect.y + 19);
-            var searchRect = Rect.MinMaxRect(rect.x + 20, rect.y + 4, rect.xMax - 18, rect.y + 19);
-            var cancelRect = Rect.MinMaxRect(searchRect.xMax, searchRect.y, rect.xMax - 4, searchRect.yMax);
-            bool anyExpanded = groups.Any(group => !group.IsCollapsed);
-            if (GUI.Button(collapseRect, anyExpanded ? "▼" : "►", (GUIStyle)"label"))
-            {
-                for (int index = 0; index < groups.Count; index++)
-                    groups[index].IsCollapsed = anyExpanded;
-            }
-            searchString = EditorGUI.TextField(searchRect, searchString, (GUIStyle)"ToolbarSearchTextField");
-            if (GUI.Button(cancelRect, string.Empty, (GUIStyle)"ToolbarSearchCancelButton"))
-            {
-                searchString = string.Empty;
-                GUIUtility.keyboardControl = 0;
-            }
-
-            float nextY = FIRST_GROUP_TOP_MARGIN;
-            GUI.BeginGroup(rect);
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
-                if (!string.IsNullOrEmpty(searchString) &&
-                    group.DisplayName.IndexOf(searchString, System.StringComparison.OrdinalIgnoreCase).Equals(-1) &&
-                    group.Tracks.All(track => track.DisplayName.IndexOf(searchString, System.StringComparison.OrdinalIgnoreCase).Equals(-1)))
-                    continue;
-
-                Rect groupRect = new Rect(0, nextY, rect.width - GROUP_RIGHT_MARGIN, GROUP_HEIGHT);
-                nextY += GROUP_HEIGHT;
-                GUI.color = group.IsActive ? Color.white : Color.gray;
-                GUI.Box(groupRect, string.Empty, (GUIStyle)"flow node 0");
-                GUI.color = Color.white;
-                Rect foldoutRect = new Rect(groupRect.x + 2, groupRect.y + 1, 20, groupRect.height);
-                group.IsCollapsed = !EditorGUI.Foldout(foldoutRect, !group.IsCollapsed, group.DisplayName);
-                if (e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition))
-                {
-                    embeddedTimeline.Select(group);
-                    e.Use();
-                }
-                if (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition))
-                {
-                    GenericMenu menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
-                    menu.ShowAsContext();
-                    e.Use();
-                }
-
-                if (group.IsCollapsed)
-                    continue;
-
-                IReadOnlyList<IEmbeddedTimelineTrackBinding> tracks = group.Tracks;
-                for (int trackIndex = 0; trackIndex < tracks.Count; trackIndex++)
-                {
-                    IEmbeddedTimelineTrackBinding track = tracks[trackIndex];
-                    Rect trackRect = new Rect(10, nextY, rect.width - TRACK_RIGHT_MARGIN - 10, track.FinalHeight);
-                    nextY += track.FinalHeight + TRACK_MARGINS;
-                    GUI.color = track.IsActive ? new Color(1f, 1f, 1f, 0.18f) : new Color(1f, 1f, 1f, 0.08f);
-                    GUI.DrawTexture(trackRect, whiteTexture);
-                    GUI.color = ReferenceEquals(embeddedTimeline.Selected, track) ? LIST_SELECTION_COLOR : Color.white;
-                    GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
-                    GUI.color = Color.white;
-                    GUI.Label(trackRect.ExpandBy(-6, -2), track.DisplayName, Styles.leftLabel);
-                    if (e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition))
-                    {
-                        embeddedTimeline.Select(track);
-                        e.Use();
-                    }
-                    if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
-                    {
-                        GenericMenu menu = new GenericMenu();
-                        int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
-                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
-                        menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
-                        if (trackIndex > 0)
-                            menu.AddItem(new GUIContent("Move Track Up"), false, () => embeddedTimeline.MoveTrack(track, trackIndex - 1));
-                        if (trackIndex + 1 < tracks.Count)
-                            menu.AddItem(new GUIContent("Move Track Down"), false, () => embeddedTimeline.MoveTrack(track, trackIndex + 1));
-                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
-                        menu.ShowAsContext();
-                        e.Use();
-                    }
-                }
-            }
-            GUI.EndGroup();
-            totalHeight = nextY;
-        }
-
-        void ShowEmbeddedTimeLines(Rect rect)
-        {
-            Event e = Event.current;
-            Rect bgRect = Rect.MinMaxRect(rect.xMin, rect.yMin, rect.xMax, screenHeight + scrollPos.y);
-            GUI.color = Color.black.WithAlpha(0.1f);
-            GUI.DrawTexture(bgRect, whiteTexture);
-            GUI.color = Color.black.WithAlpha(0.03f);
-            GUI.DrawTextureWithTexCoords(bgRect, Styles.stripes, new Rect(0, 0, bgRect.width / -7, bgRect.height / -7));
-            GUI.color = Color.white;
-
-            GUI.BeginGroup(rect);
-            DrawEmbeddedSections(rect);
-            float nextY = FIRST_GROUP_TOP_MARGIN;
-            IReadOnlyList<IEmbeddedTimelineGroupBinding> groups = embeddedTimeline.Groups;
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
-                Rect groupRect = new Rect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)), nextY, TimeToPos(viewTimeMax), GROUP_HEIGHT);
-                nextY += GROUP_HEIGHT;
-                if (group.IsCollapsed)
-                {
-                    GUI.color = Color.black.WithAlpha(0.15f);
-                    GUI.DrawTexture(groupRect, whiteTexture);
-                    GUI.color = Color.white;
-                    for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
-                    {
-                        IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
-                        for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                        {
-                            IEmbeddedTimelineClipBinding clip = track.Clips[clipIndex];
-                            GUI.DrawTexture(
-                                Rect.MinMaxRect(
-                                    TimeToPos(clip.StartTime),
-                                    groupRect.y + 3,
-                                    TimeToPos(clip.EndTime),
-                                    groupRect.yMax - 3),
-                                whiteTexture);
-                        }
-                    }
-                    continue;
-                }
-
-                for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
-                {
-                    IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
-                    float y = nextY;
-                    Rect trackRect = Rect.MinMaxRect(
-                        Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(track.StartTime)),
-                        y,
-                        TimeToPos(viewTimeMax),
-                        y + track.FinalHeight);
-                    nextY += track.FinalHeight + TRACK_MARGINS;
-                    GUI.color = Color.black.WithAlpha(track.IsActive ? 0.08f : 0.2f);
-                    GUI.DrawTexture(trackRect, whiteTexture);
-                    GUI.color = Color.white;
-                    if (ReferenceEquals(embeddedTimeline.Selected, track))
-                    {
-                        GUI.color = Color.grey;
-                        GUI.Box(trackRect.ExpandBy(0, 2), string.Empty, Styles.hollowFrameHorizontalStyle);
-                        GUI.color = Color.white;
-                    }
-                    if (track.IsLocked && e.isMouse && trackRect.Contains(e.mousePosition))
-                        e.Use();
-
-                    IReadOnlyList<IEmbeddedTimelineClipBinding> clips = track.Clips;
-                    for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
-                    {
-                        IEmbeddedTimelineClipBinding clip = clips[clipIndex];
-                        Rect clipRect = Rect.MinMaxRect(
-                            TimeToPos(clip.StartTime),
-                            y,
-                            Mathf.Max(TimeToPos(clip.EndTime), TimeToPos(clip.StartTime) + 6f),
-                            y + track.DefaultHeight);
-                        if (DrawEmbeddedClipWindow(track, clip, clipRect, groupIndex, trackIndex, clipIndex))
-                            continue;
-                    }
-
-                    if (track.ShowCurves && track.Clips.Count > 0)
-                    {
-                        IEmbeddedTimelineClipBinding curveClip = track.Clips.FirstOrDefault(clip => ReferenceEquals(embeddedTimeline.Selected, clip));
-                        if (curveClip?.Keyable?.animationData != null)
-                        {
-                            Rect curveRect = Rect.MinMaxRect(
-                                TimeToPos(curveClip.StartTime),
-                                y + track.DefaultHeight + 2f,
-                                TimeToPos(curveClip.EndTime),
-                                y + track.FinalHeight - 2f);
-                            CurveEditor.DrawCurves(
-                                curveClip.Keyable.animationData,
-                                curveClip.Keyable,
-                                curveRect,
-                                Rect.MinMaxRect(0f, 0f, curveClip.Length, 0f));
-                        }
-                    }
-
-                    if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
-                    {
-                        int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x + rect.x) * embeddedTimeline.FrameRate));
-                        GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
-                        menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
-                        menu.ShowAsContext();
-                        e.Use();
-                    }
-                }
-            }
-            GUI.EndGroup();
-            bool formalClipUnderPointer = embeddedClipWrappers != null && embeddedClipWrappers.Values.Any(wrapper => wrapper.rect.Contains(e.mousePosition));
-            if (e.rawType == EventType.MouseUp && !formalClipUnderPointer && rect.Contains(e.mousePosition))
-            {
-                embeddedMultiSelection = null;
-                embeddedTimeline.Select(null);
-            }
-        }
-
-        bool DrawEmbeddedClipWindow(
-            IEmbeddedTimelineTrackBinding track,
-            IEmbeddedTimelineClipBinding clip,
-            Rect clipRect,
-            int groupIndex,
-            int trackIndex,
-            int clipIndex)
-        {
-            if (embeddedClipWrappers == null)
-                embeddedClipWrappers = new Dictionary<int, ActionClipWrapper>();
-            if (embeddedClipWrappersMap == null)
-                embeddedClipWrappersMap = new Dictionary<string, ActionClipWrapper>();
-
-            int windowId = 100000 + groupIndex * 10000 + trackIndex * 100 + clipIndex;
-            if (!embeddedClipWrappersMap.TryGetValue(clip.AuthoringId, out ActionClipWrapper wrapper) ||
-                !ReferenceEquals(wrapper.embeddedClip, clip))
-            {
-                wrapper = new ActionClipWrapper(clip, track.StartTime, track.EndTime);
-                embeddedClipWrappersMap[clip.AuthoringId] = wrapper;
-            }
-            wrapper.embeddedParentStartTime = track.StartTime;
-            wrapper.embeddedParentEndTime = track.EndTime;
-            wrapper.previousEmbeddedClip = clipIndex > 0 ? track.Clips[clipIndex - 1] : null;
-            wrapper.nextEmbeddedClip = clipIndex + 1 < track.Clips.Count ? track.Clips[clipIndex + 1] : null;
-            wrapper.embeddedTrackLocked = track.IsLocked;
-            wrapper.embeddedReadOnly = embeddedTimeline.IsReadOnly;
-            embeddedClipWrappers[windowId] = wrapper;
-
-            bool selected = ReferenceEquals(embeddedTimeline.Selected, clip) ||
-                            embeddedMultiSelection != null && embeddedMultiSelection.Contains(clip);
-            if (selected)
-            {
-                GUI.color = HIGHLIGHT_COLOR;
-                GUI.DrawTexture(clipRect.ExpandBy(2), Styles.whiteTexture);
-                GUI.color = Color.white;
-            }
-            GUI.color = clip.IsValid && track.IsActive ? Color.white : Color.gray;
-            GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
-            GUI.color = Color.white;
-            wrapper.rect = GUI.Window(windowId, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
-            return true;
-        }
-
-        void DrawEmbeddedSections(Rect rect)
-        {
-            Event e = Event.current;
-            IReadOnlyList<IEmbeddedTimelineSectionBinding> sections = embeddedTimeline.Sections;
-            Rect sectionsRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0f)), 3f, TimeToPos(viewTimeMax), 19f);
-            if (e.type == EventType.ContextClick && sectionsRect.Contains(e.mousePosition))
-            {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x + rect.x) * embeddedTimeline.FrameRate));
-                GenericMenu menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Add Section"), false, () => embeddedTimeline.AddSection(frame));
-                menu.ShowAsContext();
-                e.Use();
-            }
-
-            float lastTime = 0f;
-            for (int index = 0; index <= sections.Count; index++)
-            {
-                IEmbeddedTimelineSectionBinding section = index < sections.Count ? sections[index] : null;
-                float nextTime = section != null ? Mathf.Clamp(section.Time, lastTime, length) : length;
-                Rect sectionRect = Rect.MinMaxRect(TimeToPos(lastTime), 3f, TimeToPos(nextTime) - 2f, 18f);
-                GUI.color = section != null ? section.Color : Color.gray;
-                GUI.DrawTexture(sectionRect, whiteTexture);
-                GUI.color = Color.white;
-                GUI.Label(sectionRect, section != null ? $" {section.Name}" : " Outro", Styles.leftLabel);
-                if (section != null)
-                {
-                    Rect markerRect = new Rect(TimeToPos(section.Time) - 2f, 3f, 4f, 16f);
-                    GUI.DrawTexture(markerRect, whiteTexture);
-                    if (e.type == EventType.MouseDown && e.button == 0 && markerRect.Contains(e.mousePosition))
-                    {
-                        embeddedTimeline.Select(section);
-                        if (!embeddedTimeline.IsReadOnly && !section.IsLocked)
-                            embeddedDraggedSection = section;
-                        e.Use();
-                    }
-                    if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
-                    {
-                        GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
-                        menu.AddItem(new GUIContent("Focus Section"), false, () =>
-                        {
-                            viewTimeMin = Mathf.Max(0f, section.Time - 0.1f);
-                            viewTimeMax = Mathf.Min(length, section.Time + 0.5f);
-                        });
-                        menu.ShowAsContext();
-                        e.Use();
-                    }
-                }
-                lastTime = nextTime;
-            }
-
-            if (embeddedDraggedSection != null && e.type == EventType.MouseDrag)
-            {
-                float time = Mathf.Clamp(SnapTime(PosToTime(e.mousePosition.x + rect.x)), 0f, length);
-                embeddedDraggedSection.Time = time;
-                e.Use();
-            }
-            if (e.rawType == EventType.MouseUp && embeddedDraggedSection != null)
-            {
-                embeddedDraggedSection = null;
-                e.Use();
-            }
-        }
-
-        void ShowEmbeddedClipMenu(IEmbeddedTimelineClipBinding clip, IEmbeddedTimelineTrackBinding track)
-        {
-            GenericMenu menu = new GenericMenu();
-            bool hasMultiSelection = embeddedMultiSelection != null && embeddedMultiSelection.Count > 1 && embeddedMultiSelection.Contains(clip);
-            menu.AddItem(new GUIContent("Open Source"), false, () => embeddedTimeline.OpenSource(clip));
-            menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => embeddedTimeline.CopyClip(clip));
-            if (clip.CanScale)
-            {
-                menu.AddItem(new GUIContent("Fit Clip"), false, () => ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip"));
-                int splitFrame = Mathf.RoundToInt(SnapTime(EmbeddedCurrentTime()) * embeddedTimeline.FrameRate);
-                menu.AddItem(new GUIContent("Split At Cursor"), false, () => embeddedTimeline.SplitClip(clip, splitFrame));
-            }
-            if (clip.Keyable?.animationData != null)
-            {
-                menu.AddItem(new GUIContent("Key At Cursor"), false, () => ApplyEmbeddedCommand(
-                    () => clip.AddIdentityKey(clip.Keyable.ToLocalTime(EmbeddedCurrentTime())),
-                    "Key Clip"));
-                menu.AddItem(new GUIContent("Clean Keys Off-Range"), false, () => ApplyEmbeddedCommand(clip.CleanKeysOffRange, "Clean Keys"));
-            }
-            menu.AddSeparator("/");
-            if (hasMultiSelection)
-            {
-                IEmbeddedTimelineClipBinding[] selected = embeddedMultiSelection.ToArray();
-                menu.AddItem(new GUIContent("Delete Clips"), false, () => embeddedTimeline.DeleteClips(selected));
-            }
-            else
-                menu.AddItem(new GUIContent("Delete Clip"), false, () => embeddedTimeline.DeleteClip(clip));
-            menu.ShowAsContext();
-        }
-
-        void ApplyEmbeddedCommand(System.Action command, string undoName)
-        {
-            if (embeddedTimeline == null || embeddedTimeline.IsReadOnly)
-                return;
-            embeddedTimeline.BeginEdit(undoName);
-            command?.Invoke();
-            embeddedTimeline.CommitEdit();
-        }
-
-        void DrawEmbeddedGuides()
-        {
-            DrawGuideLine(0f, isProSkin ? Color.white : Color.black);
-            DrawGuideLine(length, isProSkin ? Color.white : Color.black);
-            float time = EmbeddedCurrentTime();
-            if (time > 0f)
-                DrawGuideLine(time, scruberColor);
-            for (int index = 0; index < pendingGuides.Count; index++)
-                DrawGuideLine(pendingGuides[index].time, pendingGuides[index].color);
-            pendingGuides.Clear();
-        }
-
+        //top left controls
         void ShowPlaybackControls(Rect topLeftRect) {
 
             var autoKeyRect = new Rect(topLeftRect.xMin + 10, topLeftRect.yMin + 4, 32, 32);
@@ -2666,49 +1421,24 @@ namespace Slate
             timeInfoInterval = 1000000f;
             timeInfoHighMod = timeInfoInterval;
             var lowMod = 0.01f;
-            var doFrames = embeddedSurface || Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
-            var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
-            if ( embeddedSurface ) {
-                var frameIntervals = new[] { 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 3000, 6000 };
-                var selectedInterval = frameIntervals[frameIntervals.Length - 1];
-                var selectedHighInterval = selectedInterval;
-                for ( var i = 0; i < frameIntervals.Length; i++ ) {
-                    var count = viewTime * frameRate / frameIntervals[i];
-                    if ( centerRect.width / Mathf.Max(1f, count) > 50 ) {
-                        selectedInterval = frameIntervals[i];
-                        selectedHighInterval = i < frameIntervals.Length - 1 ? frameIntervals[i + 1] : selectedInterval;
-                        break;
-                    }
-                }
-                timeInfoInterval = selectedInterval / (float)frameRate;
-                timeInfoHighMod = selectedHighInterval / (float)frameRate;
-                lowMod = 1f / frameRate;
-            }
-            else {
-                var modulos = new float[] { 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 }; //... O.o
-                for ( var i = 0; i < modulos.Length; i++ ) {
-                    var count = viewTime / modulos[i];
-                    if ( centerRect.width / count > 50 ) { //50 is approx width of label
-                        timeInfoInterval = modulos[i];
-                        lowMod = i > 0 ? modulos[i - 1] : lowMod;
-                        timeInfoHighMod = i < modulos.Length - 1 ? modulos[i + 1] : timeInfoHighMod;
-                        break;
-                    }
+            var modulos = new float[] { 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 }; //... O.o
+            for ( var i = 0; i < modulos.Length; i++ ) {
+                var count = viewTime / modulos[i];
+                if ( centerRect.width / count > 50 ) { //50 is approx width of label
+                    timeInfoInterval = modulos[i];
+                    lowMod = i > 0 ? modulos[i - 1] : lowMod;
+                    timeInfoHighMod = i < modulos.Length - 1 ? modulos[i + 1] : timeInfoHighMod;
+                    break;
                 }
             }
 
-            var timeStep = doFrames ? ( 1f / frameRate ) : lowMod;
+            var doFrames = Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
+            var timeStep = doFrames ? ( 1f / Prefs.frameRate ) : lowMod;
 
-            if ( embeddedSurface ) {
-                timeInfoStart = Mathf.Floor(viewTimeMin * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
-                timeInfoEnd = Mathf.Ceil(viewTimeMax * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
-            }
-            else {
-                timeInfoStart = (float)Mathf.FloorToInt(viewTimeMin / timeInfoInterval) * timeInfoInterval;
-                timeInfoEnd = (float)Mathf.CeilToInt(viewTimeMax / timeInfoInterval) * timeInfoInterval;
-                timeInfoStart = Mathf.Round(timeInfoStart * 10) / 10;
-                timeInfoEnd = Mathf.Round(timeInfoEnd * 10) / 10;
-            }
+            timeInfoStart = (float)Mathf.FloorToInt(viewTimeMin / timeInfoInterval) * timeInfoInterval;
+            timeInfoEnd = (float)Mathf.CeilToInt(viewTimeMax / timeInfoInterval) * timeInfoInterval;
+            timeInfoStart = Mathf.Round(timeInfoStart * 10) / 10;
+            timeInfoEnd = Mathf.Round(timeInfoEnd * 10) / 10;
 
             GUI.BeginGroup(topMiddleRect);
             {
@@ -2743,36 +1473,28 @@ namespace Slate
                 for ( var i = timeInfoStart; i <= timeInfoEnd; i += timeInfoInterval ) {
 
                     var posX = TimeToPos(i);
-                    var rounded = embeddedSurface ? Mathf.Round(i * frameRate) / frameRate : Mathf.Round(i * 10) / 10;
+                    var rounded = Mathf.Round(i * 10) / 10;
 
                     GUI.color = isProSkin ? Color.white : Color.black;
                     var markRect = Rect.MinMaxRect(posX - 2, TOP_MARGIN - 3, posX + 2, TOP_MARGIN - 1);
                     GUI.DrawTexture(markRect, whiteTexture);
                     GUI.color = Color.white;
 
-                    var text = doFrames
-                        ? Mathf.RoundToInt(rounded * frameRate).ToString("0") + "F"
-                        : rounded.ToString("0.00");
+                    var text = doFrames ? ( rounded * Prefs.frameRate ).ToString("0") : rounded.ToString("0.00");
                     var size = GUI.skin.GetStyle("label").CalcSize(new GUIContent(text));
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y + 2);
-                    var isMajor = doFrames
-                        ? Mathf.RoundToInt(rounded * frameRate) % Mathf.Max(1, Mathf.RoundToInt(timeInfoHighMod * frameRate)) == 0
-                        : rounded % timeInfoHighMod == 0;
-                    GUI.color = isMajor ? Color.white : Color.white.WithAlpha(0.5f);
+                    GUI.color = rounded % timeInfoHighMod == 0 ? Color.white : Color.white.WithAlpha(0.5f);
                     GUI.Box(stampRect, text, (GUIStyle)"label");
                     GUI.color = Color.white;
                 }
 
                 //the number showing current time when scubing
-                var embeddedCurrentTime = EmbeddedCurrentTime();
-                if ( embeddedCurrentTime > 0 ) {
-                    var label = doFrames
-                        ? Mathf.RoundToInt(embeddedCurrentTime * frameRate).ToString("0") + "F"
-                        : embeddedCurrentTime.ToString("0.00");
+                if ( cutscene.currentTime > 0 ) {
+                    var label = doFrames ? ( cutscene.currentTime * Prefs.frameRate ).ToString("0") : cutscene.currentTime.ToString("0.00");
                     var text = "<b><size=17>" + label + "</size></b>";
                     var size = Styles.headerBoxStyle.CalcSize(new GUIContent(text));
-                    var posX = TimeToPos(embeddedCurrentTime);
+                    var posX = TimeToPos(cutscene.currentTime);
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y / 2);
 
@@ -2789,7 +1511,7 @@ namespace Slate
                 GUI.DrawTexture(lengthRect, Styles.carretIcon);
                 GUI.color = Color.white;
 
-                if ( Prefs.loopRegionMode && cutscene != null && !Application.isPlaying ) {
+                if ( Prefs.loopRegionMode && !Application.isPlaying ) {
                     //the loop region min
                     var lrMinPos = TimeToPos(cutscene.playTimeMin);
                     var lrMinRect = new Rect(0, 0, 16, 16);
@@ -2816,12 +1538,6 @@ namespace Slate
 
         //left - the groups and tracks info and option per group/track
         void ShowGroupsAndTracksList(Rect leftRect) {
-
-            if (embeddedTimeline != null)
-            {
-                ShowEmbeddedGroupsAndTracksList(leftRect);
-                return;
-            }
 
             var e = Event.current;
 
@@ -2871,14 +1587,12 @@ namespace Slate
 
 
             //Simple button to add empty group for convenience
-            if ( !embeddedSurface ) {
-                var addButtonY = totalHeight + TOP_MARGIN + TOOLBAR_HEIGHT + 20;
-                var addRect = Rect.MinMaxRect(leftRect.xMin + 10, addButtonY, leftRect.xMax - 10, addButtonY + 20);
-                GUI.color = Color.white.WithAlpha(0.5f);
-                if ( GUI.Button(addRect, "Add Actor Group") ) {
-                    var newGroup = cutscene.AddGroup<ActorGroup>(null).AddTrack<ActorActionTrack>();
-                    CutsceneUtility.selectedObject = newGroup;
-                }
+            var addButtonY = totalHeight + TOP_MARGIN + TOOLBAR_HEIGHT + 20;
+            var addRect = Rect.MinMaxRect(leftRect.xMin + 10, addButtonY, leftRect.xMax - 10, addButtonY + 20);
+            GUI.color = Color.white.WithAlpha(0.5f);
+            if ( GUI.Button(addRect, "Add Actor Group") ) {
+                var newGroup = cutscene.AddGroup<ActorGroup>(null).AddTrack<ActorActionTrack>();
+                CutsceneUtility.selectedObject = newGroup;
             }
 
             //clear picks
@@ -2935,7 +1649,7 @@ namespace Slate
                 group.isCollapsed = !EditorGUI.Foldout(foldRect, !group.isCollapsed, string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty));
                 GUI.color = Color.white;
                 //Actor Object Field
-                if ( !embeddedSurface && group.actor == null ) {
+                if ( group.actor == null ) {
                     var oRect = Rect.MinMaxRect(groupRect.xMin + 20, groupRect.yMin + 1, groupRect.xMax - 20, groupRect.yMax - 1);
                     group.actor = (GameObject)UnityEditor.EditorGUI.ObjectField(oRect, group.actor, typeof(GameObject), true);
                 }
@@ -2943,52 +1657,47 @@ namespace Slate
 
                 //CONTEXT
                 if ( ( e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition) ) || plusClicked ) {
-                    if ( embeddedSurface && embeddedAddTrack != null ) {
-                        embeddedAddTrack();
-                    }
-                    else {
-                        var menu = new GenericMenu();
-                        foreach ( var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)) ) {
-                            var info = _info;
-                            if ( info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()) ) {
-                                continue;
-                            }
-
-                            var canAdd = !info.isUnique || ( group.tracks.Find(track => track.GetType() == info.type) == null );
-                            var finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
-                            if ( canAdd ) {
-                                menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => { group.AddTrack(info.type); });
-                            } else {
-                                menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
-                            }
+                    var menu = new GenericMenu();
+                    foreach ( var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)) ) {
+                        var info = _info;
+                        if ( info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()) ) {
+                            continue;
                         }
-                        if ( group.CanAddTrack(copyTrack) ) {
-                            menu.AddItem(new GUIContent("Paste Track"), false, () => { group.DuplicateTrack(copyTrack); });
+
+                        var canAdd = !info.isUnique || ( group.tracks.Find(track => track.GetType() == info.type) == null );
+                        var finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
+                        if ( canAdd ) {
+                            menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => { group.AddTrack(info.type); });
                         } else {
-                            menu.AddDisabledItem(new GUIContent("Paste Track"));
+                            menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
                         }
-                        menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => { group.isActive = !group.isActive; });
-                        menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => { group.isLocked = !group.isLocked; });
-
-                        if ( !( group is DirectorGroup ) ) {
-                            menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => { Selection.activeObject = group.actor; });
-                            menu.AddItem(new GUIContent("Replace Actor"), false, () => { group.actor = null; });
-                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                                {
-                                    cutscene.DuplicateGroup(group);
-                                    InitClipWrappers();
-                                });
-                            menu.AddSeparator("/");
-                            menu.AddItem(new GUIContent("Delete Group"), false, () =>
-                                {
-                                    if ( EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!") ) {
-                                        cutscene.DeleteGroup(group);
-                                        InitClipWrappers();
-                                    }
-                                });
-                        }
-                        menu.ShowAsContext();
                     }
+                    if ( group.CanAddTrack(copyTrack) ) {
+                        menu.AddItem(new GUIContent("Paste Track"), false, () => { group.DuplicateTrack(copyTrack); });
+                    } else {
+                        menu.AddDisabledItem(new GUIContent("Paste Track"));
+                    }
+                    menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => { group.isActive = !group.isActive; });
+                    menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => { group.isLocked = !group.isLocked; });
+
+                    if ( !( group is DirectorGroup ) ) {
+                        menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => { Selection.activeObject = group.actor; });
+                        menu.AddItem(new GUIContent("Replace Actor"), false, () => { group.actor = null; });
+                        menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                            {
+                                cutscene.DuplicateGroup(group);
+                                InitClipWrappers();
+                            });
+                        menu.AddSeparator("/");
+                        menu.AddItem(new GUIContent("Delete Group"), false, () =>
+                            {
+                                if ( EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!") ) {
+                                    cutscene.DeleteGroup(group);
+                                    InitClipWrappers();
+                                }
+                            });
+                    }
+                    menu.ShowAsContext();
                     e.Use();
                 }
 
@@ -3077,17 +1786,15 @@ namespace Slate
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Disable Track"), !track.isActive, () => { track.isActive = !track.isActive; });
                     menu.AddItem(new GUIContent("Lock Track"), track.isLocked, () => { track.isLocked = !track.isLocked; });
-                    if ( !embeddedSurface ) {
-                        menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
-                        if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
-                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                                {
-                                    group.DuplicateTrack(track);
-                                    InitClipWrappers();
-                                });
-                        } else {
-                            menu.AddDisabledItem(new GUIContent("Duplicate"));
-                        }
+                    menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
+                    if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
+                        menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                            {
+                                group.DuplicateTrack(track);
+                                InitClipWrappers();
+                            });
+                    } else {
+                        menu.AddDisabledItem(new GUIContent("Duplicate"));
                     }
                     menu.AddSeparator("/");
                     menu.AddItem(new GUIContent("Delete Track"), false, () =>
@@ -3134,16 +1841,10 @@ namespace Slate
         //middle - the actual timeline tracks
         void ShowTimeLines(Rect centerRect) {
 
-            if (embeddedTimeline != null)
-            {
-                ShowEmbeddedTimeLines(centerRect);
-                return;
-            }
-
             var e = Event.current;
 
             //bg graphic
-            var bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
+            var bgRect = Rect.MinMaxRect(centerRect.xMin, TOP_MARGIN + TOOLBAR_HEIGHT + scrollPos.y, centerRect.xMax, screenHeight - TOOLBAR_HEIGHT + scrollPos.y);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
             GUI.color = Color.black.WithAlpha(0.03f);
@@ -3780,6 +2481,11 @@ namespace Slate
         //...
         void ShowWelcome() {
 
+            if ( webMessage == null ) {
+                webMessage = string.Empty;
+                FetchWebMessageBoard();
+            }
+
             var bgRect = Rect.MinMaxRect(0, 0, screenWidth, screenHeight);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
@@ -3813,7 +2519,7 @@ namespace Slate
             GUI.color = Color.black.WithAlpha(0.2f);
             GUI.Box(boardRect, string.Empty);
             GUI.color = Color.white;
-            GUI.Label(boardRect.ExpandBy(-5), "从 Skill Graph 打开 Timeline 进行作者编辑。\n\n角色运行预览由 Graph Shell 管理。", EditorStyles.wordWrappedLabel);
+            GUI.Label(boardRect.ExpandBy(-5), webMessage);
 
             var buttonsRect = Rect.MinMaxRect(titleRect.xMin, titleRect.yMax + 5, titleRect.xMax, screenHeight);
             var openRect = new Rect(buttonsRect.xMax - 40, buttonsRect.yMin, 40, 40);
@@ -3883,6 +2589,40 @@ namespace Slate
             }
         }
 
+        //...
+        void FetchWebMessageBoard() {
+            var url = "https://paradoxnotion.com/files/softwaremessageboard.txt";
+            var request = UnityEngine.Networking.UnityWebRequest.Get(url);
+            var op = request.SendWebRequest();
+            op.completed += (x) =>
+            {
+                webMessage = request.downloadHandler?.text;
+                if ( !string.IsNullOrEmpty(webMessage) ) {
+                    var result = string.Empty;
+                    var boards = webMessage.Split('|');
+                    foreach ( var board in boards ) {
+                        var targetPair = board.GetStringWithinOuter('<', '>').Split(':');
+                        var target = targetPair[0];
+                        var isAll = target.ToLower() == "all";
+                        if ( isAll || target.ToLower() == "slate" ) {
+                            if ( !isAll ) {
+                                var version = targetPair[1];
+                                var uptodate = Cutscene.VERSION_NUMBER == float.Parse(version);
+                                result += uptodate ? "<b>You are up to date on the latest version!</b>" : string.Format("<b>There is a new version available! ( v{0} )</b>", version);
+                            }
+                            var content = board.GetStringWithinOuter('{', '}');
+                            result += content.Replace("\t", "").TrimEnd();
+                        }
+                    }
+                    result = result.Trim();
+                    webMessage = result;
+                }
+
+                request.Dispose();
+                Repaint();
+            };
+        }
+
         ///----------------------------------------------------------------------------------------------
 
 
@@ -3890,12 +2630,9 @@ namespace Slate
         //The ID of the window is also the same as the ID to use for for clipWrappers dictionary as key to get the clipWrapper for the action that represents this window
         void ActionClipWindow(int id) {
             ActionClipWrapper wrapper = null;
-            if ( clipWrappers != null && clipWrappers.TryGetValue(id, out wrapper) ) {
+            if ( clipWrappers.TryGetValue(id, out wrapper) ) {
                 wrapper.OnClipGUI(id);
-                return;
             }
-            if ( embeddedClipWrappers != null && embeddedClipWrappers.TryGetValue(id, out wrapper) )
-                wrapper.OnClipGUI(id);
         }
 
 
@@ -3910,7 +2647,6 @@ namespace Slate
             const float SCALE_RECT_WIDTH = 5;
 
             public ActionClip action;
-            public IEmbeddedTimelineClipBinding embeddedClip;
             public bool isDragging;
             public bool isScalingStart;
             public bool isScalingEnd;
@@ -3925,13 +2661,6 @@ namespace Slate
 
             public ActionClip previousClip;
             public ActionClip nextClip;
-            public IEmbeddedTimelineClipBinding previousEmbeddedClip;
-            public IEmbeddedTimelineClipBinding nextEmbeddedClip;
-            public float embeddedParentStartTime;
-            public float embeddedParentEndTime;
-            public bool embeddedTrackLocked;
-            public bool embeddedReadOnly;
-            public float embeddedDragOffset;
 
             private Event e;
             private int windowID;
@@ -3950,8 +2679,8 @@ namespace Slate
             private Rect controlRectIn;
             private Rect controlRectOut;
 
-            private CutsceneEditorSurface editor {
-                get { return CutsceneEditorSurface.current; }
+            private CutsceneEditor editor {
+                get { return CutsceneEditor.current; }
             }
 
             private List<ActionClipWrapper> multiSelection {
@@ -3961,111 +2690,12 @@ namespace Slate
 
             private Rect _rect;
             public Rect rect {
-                get { return IsCollapsed ? default(Rect) : _rect; }
+                get { return action.isCollapsed ? default(Rect) : _rect; }
                 set { _rect = value; }
             }
 
             public ActionClipWrapper(ActionClip action) {
                 this.action = action;
-            }
-
-            public ActionClipWrapper(IEmbeddedTimelineClipBinding clip, float parentStartTime, float parentEndTime)
-            {
-                embeddedClip = clip;
-                embeddedParentStartTime = parentStartTime;
-                embeddedParentEndTime = parentEndTime;
-            }
-
-            bool IsEmbedded => embeddedClip != null;
-            bool IsLocked => IsEmbedded ? embeddedReadOnly || embeddedTrackLocked || embeddedClip.IsLocked : action.isLocked;
-            bool IsCollapsed => IsEmbedded ? embeddedClip.IsCollapsed : action.isCollapsed;
-            public float StartTime
-            {
-                get => IsEmbedded ? embeddedClip.StartTime : action.startTime;
-                set
-                {
-                    if (IsEmbedded)
-                        embeddedClip.StartTime = value;
-                    else
-                        action.startTime = value;
-                }
-            }
-            public float EndTime
-            {
-                get => IsEmbedded ? embeddedClip.EndTime : action.endTime;
-                set
-                {
-                    if (IsEmbedded)
-                        embeddedClip.EndTime = value;
-                    else
-                        action.endTime = value;
-                }
-            }
-            float Length => IsEmbedded ? embeddedClip.Length : action.length;
-            float BlendIn
-            {
-                get => IsEmbedded ? embeddedClip.BlendIn : action.blendIn;
-                set
-                {
-                    if (IsEmbedded)
-                        embeddedClip.BlendIn = value;
-                    else
-                        action.blendIn = value;
-                }
-            }
-            float BlendOut
-            {
-                get => IsEmbedded ? embeddedClip.BlendOut : action.blendOut;
-                set
-                {
-                    if (IsEmbedded)
-                        embeddedClip.BlendOut = value;
-                    else
-                        action.blendOut = value;
-                }
-            }
-            float PreviousEndTime => IsEmbedded
-                ? previousEmbeddedClip != null ? previousEmbeddedClip.EndTime : embeddedParentStartTime
-                : previousClip != null ? previousClip.endTime : action.parent.startTime;
-            float NextStartTime => IsEmbedded
-                ? nextEmbeddedClip != null ? nextEmbeddedClip.StartTime : embeddedParentEndTime
-                : nextClip != null ? nextClip.startTime : action.parent.endTime;
-            bool CanScale => IsEmbedded ? embeddedClip.CanScale : action.CanScale();
-            bool CanBlendIn => IsEmbedded ? embeddedClip.CanBlendIn : action.CanBlendIn();
-            bool CanBlendOut => IsEmbedded ? embeddedClip.CanBlendOut : action.CanBlendOut();
-            bool HasParameters => IsEmbedded
-                ? embeddedClip.Keyable?.animationData?.animatedParameters != null
-                : action.hasParameters;
-            bool HasActiveParameters
-            {
-                get
-                {
-                    if (!IsEmbedded)
-                        return action.hasActiveParameters;
-                    if (embeddedClip.Keyable?.animationData?.animatedParameters == null)
-                        return false;
-                    return embeddedClip.Keyable.animationData.animatedParameters.Any(parameter => parameter != null && parameter.enabled && parameter.HasAnyKey());
-                }
-            }
-            IKeyable Keyable => IsEmbedded ? embeddedClip.Keyable : action;
-            AnimationCurve[] CurvesAll => IsEmbedded
-                ? embeddedClip.Keyable?.animationData?.GetCurvesAll() ?? new AnimationCurve[0]
-                : action.GetCurvesAll();
-            string Info => IsEmbedded ? embeddedClip.Info : action.info;
-
-            bool CanCrossBlendPrevious => IsEmbedded
-                ? previousEmbeddedClip != null && embeddedClip.CanCrossBlend(previousEmbeddedClip)
-                : previousClip != null && action.CanCrossBlend(previousClip);
-            bool CanCrossBlendNext => IsEmbedded
-                ? nextEmbeddedClip != null && embeddedClip.CanCrossBlend(nextEmbeddedClip)
-                : nextClip != null && action.CanCrossBlend(nextClip);
-
-            void DrawClipGUI(Rect rect)
-            {
-                if (IsEmbedded)
-                    embeddedClip.DrawClipGUI(rect);
-                else
-                    action.ShowClipGUI(rect);
             }
 
             public void ResetInteraction() {
@@ -4081,17 +2711,17 @@ namespace Slate
                 this.windowID = windowID;
                 e = Event.current;
 
-                overlapIn = Mathf.Max(PreviousEndTime - StartTime, 0);
-                overlapOut = Mathf.Max(EndTime - NextStartTime, 0);
-                blendInPosX = ( BlendIn / Length ) * rect.width;
-                blendOutPosX = ( ( Length - BlendOut ) / Length ) * rect.width;
-                hasParameters = HasParameters;
-                hasActiveParameters = HasActiveParameters;
+                overlapIn = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
+                overlapOut = nextClip != null ? Mathf.Max(action.endTime - nextClip.startTime, 0) : 0;
+                blendInPosX = ( action.blendIn / action.length ) * rect.width;
+                blendOutPosX = ( ( action.length - action.blendOut ) / action.length ) * rect.width;
+                hasParameters = action.hasParameters;
+                hasActiveParameters = action.hasActiveParameters;
 
                 pointerTime = editor.PosToTime(editor.mousePosition.x);
                 snapedPointerTime = editor.SnapTime(pointerTime);
 
-                allowScale = CanScale && Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
+                allowScale = action.CanScale() && action.length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
                 dragRect = new Rect(0, 0, rect.width, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 )).ExpandBy(allowScale ? -SCALE_RECT_WIDTH : 0, 0);
                 controlRectIn = new Rect(0, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
                 controlRectOut = new Rect(rect.width - SCALE_RECT_WIDTH, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
@@ -4104,9 +2734,9 @@ namespace Slate
 
                 //...
                 var wholeRect = new Rect(0, 0, rect.width, rect.height);
-                if ( IsLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
-                DrawClipGUI(wholeRect);
-                if ( hasActiveParameters && Length > 0 ) {
+                if ( action.isLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
+                action.ShowClipGUI(wholeRect);
+                if ( hasActiveParameters && action.length > 0 ) {
                     ShowClipDopesheet(wholeRect);
                 }
                 //...
@@ -4114,18 +2744,11 @@ namespace Slate
 
                 //set crossblend overlap properties. Do this when no clip is interacting or no clip is dragging
                 //this way avoid issue when moving clip on the other side of another, but keep overlap interactive when scaling a clip at least.
-                if ( (!IsEmbedded || !embeddedReadOnly) &&
-                     (editor.interactingClip == null || !editor.interactingClip.isDragging) ) {
-                    var overlap = Mathf.Max(PreviousEndTime - StartTime, 0);
+                if ( editor.interactingClip == null || !editor.interactingClip.isDragging ) {
+                    var overlap = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
                     if ( overlap > 0 ) {
-                        BlendIn = overlap;
-                        if (IsEmbedded)
-                        {
-                            if (previousEmbeddedClip != null)
-                                previousEmbeddedClip.BlendOut = overlap;
-                        }
-                        else
-                            previousClip.blendOut = overlap;
+                        action.blendIn = overlap;
+                        previousClip.blendOut = overlap;
                     }
                 }
 
@@ -4135,102 +2758,35 @@ namespace Slate
                     if ( e.button == 0 ) {
                         if ( dragRect.Contains(e.mousePosition) ) {
                             isWaitingMouseDrag = true;
-                            if (IsEmbedded)
-                                embeddedDragOffset = editor.PosToTime(editor.mousePosition.x) - StartTime;
                         }
                         editor.interactingClip = this;
-                        if (!IsEmbedded)
-                            editor.CacheMagnetSnapTimes(action);
+                        editor.CacheMagnetSnapTimes(action);
                     }
 
-                    if (IsEmbedded)
-                    {
-                        if (e.control && dragRect.Contains(e.mousePosition))
-                        {
-                            editor.embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding>();
-                            if (!editor.embeddedMultiSelection.Remove(embeddedClip))
-                                editor.embeddedMultiSelection.Add(embeddedClip);
+                    if ( e.control && dragRect.Contains(e.mousePosition) ) {
+                        if ( multiSelection == null ) {
+                            multiSelection = new List<ActionClipWrapper>() { this };
                         }
-                        else
-                        {
-                            bool keepSelection = editor.embeddedMultiSelection != null && editor.embeddedMultiSelection.Contains(embeddedClip);
-                            if (!keepSelection)
-                                editor.embeddedMultiSelection = null;
-                            editor.embeddedTimeline.Select(embeddedClip);
-                            if (!IsLocked && dragRect.Contains(e.mousePosition))
-                            {
-                                editor.embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding> { embeddedClip };
-                                float currentPointerTime = editor.PosToTime(editor.mousePosition.x);
-                                editor.embeddedDragOffsets = new Dictionary<IEmbeddedTimelineClipBinding, float>();
-                                for (int selectionIndex = 0; selectionIndex < editor.embeddedMultiSelection.Count; selectionIndex++)
-                                {
-                                    IEmbeddedTimelineClipBinding selectedClip = editor.embeddedMultiSelection[selectionIndex];
-                                    editor.embeddedDragOffsets[selectedClip] = currentPointerTime - selectedClip.StartTime;
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if ( e.control && dragRect.Contains(e.mousePosition) ) {
-                            if ( multiSelection == null ) {
-                                multiSelection = new List<ActionClipWrapper>() { this };
-                            }
-                            if ( multiSelection.Contains(this) ) {
-                                multiSelection.Remove(this);
-                            } else {
-                                multiSelection.Add(this);
-                            }
+                        if ( multiSelection.Contains(this) ) {
+                            multiSelection.Remove(this);
                         } else {
-                            CutsceneUtility.selectedObject = action;
-                            if ( multiSelection != null && !multiSelection.Contains(this) ) {
-                                multiSelection = null;
-                            }
+                            multiSelection.Add(this);
+                        }
+                    } else {
+                        CutsceneUtility.selectedObject = action;
+                        if ( multiSelection != null && !multiSelection.Select(cw => cw.action).Contains(action) ) {
+                            multiSelection = null;
                         }
                     }
 
                     if ( e.clickCount == 2 ) {
-                        if (IsEmbedded)
-                            editor.embeddedTimeline.OpenSource(embeddedClip);
-                        else
-                        {
-                            OnActionDoubleClick?.Invoke(action);
-                            Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
-                        }
+                        //do this with reflection to get the declaring actor in case action has 'new' declaration. This is only done in Shot right now.
+                        Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
                     }
                 }
 
                 if ( e.type == EventType.MouseDrag && isWaitingMouseDrag ) {
                     isDragging = true;
-                }
-
-                if (IsEmbedded && isDragging && !IsLocked && e.type == EventType.MouseDrag)
-                {
-                    float pointerTime = editor.SnapTime(editor.PosToTime(editor.mousePosition.x));
-                    if (editor.embeddedMultiSelection != null && editor.embeddedMultiSelection.Count > 1 && editor.embeddedDragOffsets != null)
-                    {
-                        for (int selectionIndex = 0; selectionIndex < editor.embeddedMultiSelection.Count; selectionIndex++)
-                        {
-                            IEmbeddedTimelineClipBinding selectedClip = editor.embeddedMultiSelection[selectionIndex];
-                            if (!editor.embeddedClipWrappersMap.TryGetValue(selectedClip.AuthoringId, out ActionClipWrapper selectedWrapper))
-                                continue;
-                            float duration = selectedClip.EndTime - selectedClip.StartTime;
-                            float start = Mathf.Clamp(
-                                pointerTime - editor.embeddedDragOffsets[selectedClip],
-                                selectedWrapper.embeddedParentStartTime,
-                                selectedWrapper.embeddedParentEndTime - duration);
-                            selectedClip.StartTime = start;
-                            selectedClip.EndTime = start + duration;
-                        }
-                    }
-                    else
-                    {
-                        float duration = Length;
-                        float start = Mathf.Clamp(pointerTime - embeddedDragOffset, embeddedParentStartTime, embeddedParentEndTime - duration);
-                        StartTime = start;
-                        EndTime = start + duration;
-                    }
-                    e.Use();
                 }
 
                 if ( e.rawType == EventType.ContextClick ) {
@@ -4259,7 +2815,7 @@ namespace Slate
                     var r = new Rect(1, 1, rect.width - 2, rect.height - 2);
                     if ( overlapIn > 0 ) { r.xMin = blendInPosX; }
                     if ( overlapOut > 0 ) { r.xMax = blendOutPosX; }
-                    var label = string.Format("<size=10>{0}</size>", Info);
+                    var label = string.Format("<size=10>{0}</size>", action.info);
                     GUI.color = Color.black;
                     GUI.Label(r, label);
                     GUI.color = Color.white;
@@ -4268,14 +2824,14 @@ namespace Slate
 
             //blend graphics
             void DrawBlendGraphics() {
-                if ( BlendIn > 0 ) {
+                if ( action.blendIn > 0 ) {
                     Handles.color = Color.black.WithAlpha(0.5f);
                     Handles.DrawAAPolyLine(2, new Vector2(0, rect.height), new Vector2(blendInPosX, 0));
                     Handles.color = Color.black.WithAlpha(0.3f);
                     Handles.DrawAAConvexPolygon(new Vector3(0, 0), new Vector3(0, rect.height), new Vector3(blendInPosX, 0));
                 }
 
-                if ( BlendOut > 0 && overlapOut == 0 ) {
+                if ( action.blendOut > 0 && overlapOut == 0 ) {
                     Handles.color = Color.black.WithAlpha(0.5f);
                     Handles.DrawAAPolyLine(2, new Vector2(blendOutPosX, 0), new Vector2(rect.width, rect.height));
                     Handles.color = Color.black.WithAlpha(0.3f);
@@ -4292,11 +2848,8 @@ namespace Slate
             //clip scale/blend in/out controls
             void DoEdgeControls() {
 
-                if (IsEmbedded && IsLocked)
-                    return;
-
-                var canBlendIn = CanBlendIn && Length > 0;
-                var canBlendOut = CanBlendOut && Length > 0;
+                var canBlendIn = action.CanBlendIn() && action.length > 0;
+                var canBlendOut = action.CanBlendOut() && action.length > 0;
                 if ( !isScalingStart && !isScalingEnd && !isControlingBlendIn && !isControlingBlendOut ) {
                     if ( allowScale || canBlendIn ) {
                         if ( controlRectIn.Contains(e.mousePosition) ) {
@@ -4325,14 +2878,13 @@ namespace Slate
                     }
                 }
 
-                var blendPointerTime = IsEmbedded ? editor.SnapTime(pointerTime) : pointerTime;
-                if ( isControlingBlendIn ) { BlendIn = Mathf.Clamp(blendPointerTime - StartTime, 0, Length - BlendOut); }
-                if ( isControlingBlendOut ) { BlendOut = Mathf.Clamp(EndTime - blendPointerTime, 0, Length - BlendIn); }
+                if ( isControlingBlendIn ) { action.blendIn = Mathf.Clamp(pointerTime - action.startTime, 0, action.length - action.blendOut); }
+                if ( isControlingBlendOut ) { action.blendOut = Mathf.Clamp(action.endTime - pointerTime, 0, action.length - action.blendIn); }
 
                 if ( isScalingStart ) {
-                    var prevTime = PreviousEndTime;
+                    var prevTime = previousClip != null ? previousClip.endTime : 0;
                     //magnet snap
-                    if ( !IsEmbedded && Prefs.magnetSnapping && !e.control ) {
+                    if ( Prefs.magnetSnapping && !e.control ) {
                         var snapStart = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
                         if ( snapStart != null ) {
                             snapedPointerTime = snapStart.Value;
@@ -4340,20 +2892,19 @@ namespace Slate
                         }
                     }
 
-                    if (CanCrossBlendPrevious)
-                        prevTime -= Mathf.Min(Length / 2, IsEmbedded ? previousEmbeddedClip.Length / 2 : previousClip.length / 2);
+                    if ( action.CanCrossBlend(previousClip) ) { prevTime -= Mathf.Min(action.length / 2, previousClip.length / 2); }
 
-                    StartTime = snapedPointerTime;
-                    StartTime = Mathf.Clamp(StartTime, prevTime, preScaleEndTime);
-                    EndTime = preScaleEndTime;
+                    action.startTime = snapedPointerTime;
+                    action.startTime = Mathf.Clamp(action.startTime, prevTime, preScaleEndTime);
+                    action.endTime = preScaleEndTime;
 
                     UpdateClipAdjustContents();
                 }
 
                 if ( isScalingEnd ) {
-                    var nextTime = NextStartTime;
+                    var nextTime = nextClip != null ? nextClip.startTime : editor.maxTime;
                     //magnet snap
-                    if ( !IsEmbedded && Prefs.magnetSnapping && !e.control ) {
+                    if ( Prefs.magnetSnapping && !e.control ) {
                         var snapEnd = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
                         if ( snapEnd != null ) {
                             snapedPointerTime = snapEnd.Value;
@@ -4361,11 +2912,10 @@ namespace Slate
                         }
                     }
 
-                    if (CanCrossBlendNext)
-                        nextTime += Mathf.Min(Length / 2, IsEmbedded ? nextEmbeddedClip.Length / 2 : nextClip.length / 2);
+                    if ( action.CanCrossBlend(nextClip) ) { nextTime += Mathf.Min(action.length / 2, nextClip.length / 2); }
 
-                    EndTime = snapedPointerTime;
-                    EndTime = Mathf.Clamp(EndTime, 0, nextTime);
+                    action.endTime = snapedPointerTime;
+                    action.endTime = Mathf.Clamp(action.endTime, 0, nextTime);
 
                     UpdateClipAdjustContents();
                 }
@@ -4374,21 +2924,20 @@ namespace Slate
 
             //store pre adjust values
             public void BeginClipAdjust() {
-                preScaleStartTime = StartTime;
-                preScaleEndTime = EndTime;
+                preScaleStartTime = action.startTime;
+                preScaleEndTime = action.endTime;
 
                 preScaleKeys = new Dictionary<int, Keyframe[]>();
-                var curves = CurvesAll;
+                var curves = action.GetCurvesAll();
                 for ( var i = 0; i < curves.Length; i++ ) {
                     preScaleKeys[i] = curves[i].keys;
                 }
 
-                if ( !IsEmbedded && action is ISubClipContainable ) {
+                if ( action is ISubClipContainable ) {
                     preScaleSubclipOffset = ( action as ISubClipContainable ).subClipOffset;
                     preScaleSubclipSpeed = ( action as ISubClipContainable ).subClipSpeed;
                 }
-                if (!IsEmbedded)
-                    editor.CacheMagnetSnapTimes(action);
+                editor.CacheMagnetSnapTimes(action);
             }
 
             //retime keys lerp between start/end time.
@@ -4400,19 +2949,19 @@ namespace Slate
                 var trim = !Event.current.shift && !Prefs.rippleMode && !retime;
 
                 var curveIndex = -1;
-                foreach ( var curve in CurvesAll ) {
+                foreach ( var curve in action.GetCurvesAll() ) {
                     curveIndex++;
                     for ( var i = 0; i < curve.keys.Length; i++ ) {
                         var preKey = preScaleKeys[curveIndex][i];
 
                         if ( retime ) {
                             var preLength = preScaleEndTime - preScaleStartTime;
-                            var newTime = Mathf.LerpUnclamped(0, Length, preKey.time / preLength);
+                            var newTime = Mathf.LerpUnclamped(0, action.length, preKey.time / preLength);
                             preKey.time = newTime;
                         }
 
                         if ( trim ) {
-                            preKey.time -= StartTime - preScaleStartTime;
+                            preKey.time -= action.startTime - preScaleStartTime;
                         }
 
                         curve.MoveKey(i, preKey);
@@ -4421,13 +2970,12 @@ namespace Slate
                     curve.UpdateTangentsFromMode();
                 }
 
-                if (!IsEmbedded)
-                    CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
+                CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
 
-                if ( !IsEmbedded && action is ISubClipContainable ) {
+                if ( action is ISubClipContainable ) {
                     if ( trim ) {
                         var subClip = (ISubClipContainable)action;
-                        var delta = preScaleStartTime - StartTime;
+                        var delta = preScaleStartTime - action.startTime;
                         var newOffset = preScaleSubclipOffset + delta;
                         subClip.subClipOffset = newOffset;
                     }
@@ -4446,13 +2994,6 @@ namespace Slate
 
             ///<summary>Split the clip in two, at specified local time</summary>
             public ActionClip Split(float time) {
-
-                if (IsEmbedded)
-                {
-                    int frame = Mathf.RoundToInt(time * editor.embeddedTimeline.FrameRate);
-                    editor.embeddedTimeline.SplitClip(embeddedClip, frame);
-                    return null;
-                }
 
                 if ( !action.IsTimeWithinClip(time) ) {
                     return null;
@@ -4492,12 +3033,6 @@ namespace Slate
 
             ///<summary>Scale clip to fit previous and next</summary>
             public void StretchFit() {
-                if (IsEmbedded)
-                {
-                    embeddedClip.StretchFit();
-                    return;
-                }
-
                 var wasStartTime = action.startTime;
                 var wasEndTime = action.endTime;
                 var targetStart = previousClip != null ? previousClip.endTime : action.parent.startTime;
@@ -4525,12 +3060,6 @@ namespace Slate
 
             ///<summary>Clean keys off clip range after adding a key at 0 and length if there is any key outside that range</summary>
             public void CleanKeysOffRange() {
-                if (IsEmbedded)
-                {
-                    embeddedClip.CleanKeysOffRange();
-                    return;
-                }
-
                 if ( hasParameters ) {
                     foreach ( var param in action.animationData.animatedParameters ) {
                         if ( param.HasAnyKey() ) {
@@ -4556,18 +3085,11 @@ namespace Slate
                 GUI.color = isProSkin ? new Color(0, 0.2f, 0.2f, 0.5f) : new Color(0, 0.8f, 0.8f, 0.5f);
                 GUI.Box(dopeRect, string.Empty, Slate.Styles.clipBoxHorizontalStyle);
                 GUI.color = Color.white;
-                DopeSheetEditor.DrawDopeSheet(Keyable.animationData, Keyable, dopeRect, 0, Length, false);
+                DopeSheetEditor.DrawDopeSheet(action.animationData, action, dopeRect, 0, action.length, false);
             }
 
             //CONTEXT
             void DoClipContextMenu() {
-                if (IsEmbedded)
-                {
-                    editor.ShowEmbeddedClipMenu(embeddedClip, null);
-                    e.Use();
-                    return;
-                }
-
                 var menu = new GenericMenu();
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
                     menu.AddItem(new GUIContent("Delete Clips"), false, () =>
@@ -4587,17 +3109,12 @@ namespace Slate
                     return;
                 }
 
-                if ( !editor.embeddedSurface ) {
-                    menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
-                    menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
-                }
-                else if ( editor.embeddedCopyClip != null ) {
-                    menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => { editor.embeddedCopyClip(action); });
-                }
+                menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
+                menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
 
                 if ( allowScale ) {
                     menu.AddItem(new GUIContent("Fit Clip (F)"), false, () => { StretchFit(); });
-                    if ( action.length > 0 && !editor.embeddedSurface ) {
+                    if ( action.length > 0 ) {
                         menu.AddItem(new GUIContent("Split At Cursor"), false, () => { Split(snapedPointerTime); });
                         menu.AddItem(new GUIContent("Split At Scrubber (S)"), false, () => { Split(editor.cutscene.currentTime); });
                     }

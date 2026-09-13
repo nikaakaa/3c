@@ -205,13 +205,6 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Color(126, 220, 146)]
-    [TimelineAuthoringProperty("curveId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("curveEndFrame", TimelineAuthoringPropertyKind.Integer)]
-    [TimelineAuthoringProperty("space", typeof(TimelineMotionContributionSpace))]
-    [TimelineAuthoringProperty("channel", typeof(TimelineMotionChannel))]
-    [TimelineAuthoringProperty("blendMode", typeof(TimelineMotionBlendMode))]
-    [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
-    [TimelineAuthoringProperty("consumeLowerChannels", TimelineAuthoringPropertyKind.Boolean)]
     public sealed partial class MotionCurveClip : Clip
     {
         public override string ContractKind => TimelineContractKinds.MotionCurveClip;

@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
-using Slate;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -12,13 +10,27 @@ using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
 {
+    public enum TimelineWindowMode
+    {
+        AuthoringPreview,
+        LiveDebug
+    }
+
     public sealed class TimelineEditorWindow : EditorWindow
     {
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
-        internal static event Action<TimelineEditorWindow> WindowOpened;
-        public static event Action<TimelineEditorWindow> WindowClosed;
-        public static event Action<TimelineEditorWindow> AuthoringRevisionChanged;
+        sealed class TimelineRuntimeDebugBinding : ITimelineEditorRuntimeDebugBinding
+        {
+            public TimelineRuntimeDebugBinding(string timelineAuthoringId)
+            {
+                BindingId = string.IsNullOrWhiteSpace(timelineAuthoringId)
+                    ? throw new ArgumentException("Runtime Debug Timeline identity is invalid.", nameof(timelineAuthoringId))
+                    : timelineAuthoringId;
+            }
+
+            public string BindingId { get; }
+        }
 
         [SerializeField]
         UnityEngine.Object m_SerializedOwner;
@@ -33,73 +45,72 @@ namespace BTSMTL.Timeline.Editor
         string m_SourceNodeGuid;
 
         [SerializeField]
-        string m_SourceGraphAuthoringId;
-
-        [SerializeField]
         BaseTreeWindow m_SourceGraphWindow;
 
         [SerializeField]
         UnityEngine.Object m_SourceGraphOwner;
 
         [SerializeField]
-        string m_ViewTimelineAuthoringId;
+        UnityEngine.Object m_NavigationOwner;
 
         [SerializeField]
-        BtsmtlSlateTimelineViewState m_ViewState;
+        string m_NavigationPropertyPath;
+
+        [SerializeField]
+        string m_NavigationOwnershipLabel;
+
+        [SerializeField]
+        string m_NavigationTrackAuthoringId;
+
+        [SerializeField]
+        string m_NavigationClipAuthoringId;
+
+        [SerializeField]
+        string m_NavigationSourceNodeGuid;
+
+        [SerializeField]
+        BaseTreeWindow m_NavigationSourceGraphWindow;
+
+        [SerializeField]
+        UnityEngine.Object m_NavigationSourceGraphOwner;
+
+        [SerializeField]
+        Vector2 m_NavigationViewport;
 
         TimelineNode m_SourceNode;
-        BtsmtlSlateTimelineDirectProjection m_SlateProjection;
-        IMGUIContainer m_SlateSurface;
+        BtsmtlSlateTimelineProjection m_SlateProjection;
         TimelineData m_Timeline;
+
+        [SerializeField]
+        TimelineWindowMode m_Mode;
+        ToolbarToggle m_AuthoringToggle;
+        ToolbarToggle m_LiveDebugToggle;
+        ToolbarButton m_BackButton;
+        ObjectField m_SharedTimelineField;
+        Label m_SourceSummary;
+        ToolbarMenu m_TargetMenu;
+        ToolbarMenu m_PlaybackMenu;
+        ToolbarToggle m_FollowToggle;
+        ToolbarToggle m_LiveToggle;
+        ToolbarButton m_CaptureButton;
+        SliderInt m_HistorySlider;
+        Label m_Status;
+        ScrollView m_DebugDetails;
+        RuntimeDebugViewBinding m_DebugBinding;
+        RuntimeDebugTargetRequest m_DebugRequest;
+        bool m_HasDebugRequest;
+        RuntimeDebugViewModel m_LastDebugView;
+        RuntimeInstanceKey m_LastDebugPlayback;
+        long m_LastDebugRevision = -1;
+        long m_LastDebugMenuTargetRevision = -1;
+        long m_LastDebugTimelinePlaybackRevision = -1;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
-        public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
-        public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
-        public string AuthoringRevision => m_Timeline == null
-            ? string.Empty
-            : TimelineAuthoringFingerprint.Compute(m_Timeline);
-
-        internal IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetRuntimeObservationSummaries()
-        {
-            if (m_Timeline == null)
-                return Array.Empty<RuntimeTimelinePlaybackDebugSummary>();
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
-                RuntimeDebugSession.Shared.ViewModel.GetTimelinePlaybackSummaries(
-                    m_Timeline.AuthoringId,
-                    SourceGraphAuthoringId);
-            if (string.IsNullOrEmpty(SourceNodeAuthoringId))
-                return summaries;
-            return summaries
-                .Where(value => string.Equals(
-                    value.Provenance.SourceNodeAuthoringId,
-                    SourceNodeAuthoringId,
-                    StringComparison.Ordinal))
-                .ToArray();
-        }
-
-        internal bool TryResolveRuntimeObservation(
-            out RuntimeTimelinePlaybackDebugSummary summary,
-            out string message)
-        {
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
-            if (summaries.Count == 1 && summaries[0].Playback.IsValid)
-            {
-                summary = summaries[0];
-                message = string.Empty;
-                return true;
-            }
-            summary = default;
-            message = summaries.Count > 1
-                ? "当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。"
-                : string.Empty;
-            return false;
-        }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
         {
-            return m_SlateProjection != null &&
-                   m_SlateProjection.FocusSource(trackAuthoringId, clipAuthoringId);
+            return false;
         }
 
         public static TimelineEditorWindow Open(BaseTreeWindow sourceGraphWindow, TimelineNode node)
@@ -108,6 +119,7 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            window.ClearNavigation();
             window.BindNode(sourceGraphWindow, node);
             window.Show();
             window.Focus();
@@ -116,81 +128,22 @@ namespace BTSMTL.Timeline.Editor
 
         public static TimelineEditorWindow Open(TimelineAsset asset)
         {
-            return Open(asset, string.Empty, string.Empty);
-        }
-
-        public static TimelineEditorWindow Open(
-            TimelineAsset asset,
-            string sourceGraphAuthoringId,
-            string sourceNodeGuid)
-        {
             if (!asset)
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            window.BindAsset(asset, sourceGraphAuthoringId, sourceNodeGuid);
+            window.ClearNavigation();
+            window.BindAsset(asset);
             window.Show();
             window.Focus();
             return window;
         }
 
-        public static TimelineEditorWindow FindOpen(TimelineAsset asset)
-        {
-            if (!asset)
-                return null;
-            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
-            for (int index = 0; index < windows.Length; index++)
-                if (windows[index] && ReferenceEquals(windows[index].m_SerializedOwner, asset))
-                    return windows[index];
-            return null;
-        }
-
-        public void ApplyRuntimeObservation(
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
-        }
-
-        public void ApplyHistoryObservation(
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
-        }
-
-        public void ClearRuntimeObservation()
-        {
-            m_SlateProjection?.ClearRuntimeOverlay();
-        }
-
-        public void SetRuntimeObservationStatus(string message)
-        {
-            SetStatus(message);
-        }
-
-        public void ApplyRuntimeLocator(string graphAuthoringId, string sourceNodeAuthoringId)
-        {
-            m_SourceGraphAuthoringId = graphAuthoringId ?? string.Empty;
-            m_SourceNodeGuid = sourceNodeAuthoringId ?? string.Empty;
-        }
-
-        void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)
+        void BindAsset(TimelineAsset asset)
         {
             if (!asset)
                 throw new ArgumentNullException(nameof(asset));
-            m_SourceGraphOwner = null;
-            Bind(
-                asset.Data,
-                asset,
-                "m_Data",
-                AssetDatabase.IsSubAsset(asset) ? "Private Asset" : "Shared Asset",
-                null,
-                null,
-                sourceNodeGuid ?? string.Empty,
-                sourceGraphAuthoringId ?? string.Empty);
+            Bind(asset.Data, asset, "m_Data", AssetDatabase.IsSubAsset(asset) ? "Private Asset" : "Shared Asset", null, null, string.Empty);
         }
 
         public static void RebindIfOpen(TimelineNode node)
@@ -199,9 +152,9 @@ namespace BTSMTL.Timeline.Editor
                 return;
 
             TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
-            for (int index = 0; index < windows.Length; index++)
+            for (int i = 0; i < windows.Length; i++)
             {
-                TimelineEditorWindow window = windows[index];
+                TimelineEditorWindow window = windows[i];
                 if (!window || !window.MatchesSourceNode(node))
                     continue;
                 window.BindNode(window.m_SourceGraphWindow, node);
@@ -217,7 +170,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnEnable()
         {
-            EditorApplication.update += OnEditorUpdate;
+            RuntimeDebugSession.Shared.Changed += OnRuntimeDebugSessionChanged;
         }
 
         [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
@@ -235,7 +188,6 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNode = node;
             m_SourceGraphWindow = sourceGraphWindow;
             m_SourceGraphOwner = node.Owner?.SerializedOwner;
-            m_SourceGraphAuthoringId = node.Owner?.GraphAuthoringId ?? string.Empty;
             Bind(
                 node.Timeline,
                 node.Timeline.SerializedOwner,
@@ -243,8 +195,7 @@ namespace BTSMTL.Timeline.Editor
                 node.TimelineOwnership.ToString(),
                 sourceGraphWindow,
                 node,
-                node.GUID,
-                m_SourceGraphAuthoringId);
+                node.GUID);
         }
 
         void Bind(
@@ -254,88 +205,71 @@ namespace BTSMTL.Timeline.Editor
             string ownershipLabel,
             BaseTreeWindow sourceGraphWindow,
             TimelineNode sourceNode,
-            string sourceNodeGuid,
-            string sourceGraphAuthoringId = null)
+            string sourceNodeGuid)
         {
             if (timeline == null || !serializedOwner || string.IsNullOrEmpty(serializedPropertyPath))
-                throw new InvalidOperationException("TimelineEditorWindow requires a bound TimelineData owner/path.");
+                throw new System.InvalidOperationException("TimelineEditorWindow requires a bound TimelineData owner/path.");
 
-            CaptureViewState();
             DisposeView();
+            m_HasDebugRequest = false;
+            InvalidateLiveDebugOverlay();
             timeline.BindSerializedOwner(serializedOwner, serializedPropertyPath);
-            timeline.OnValueChanged += OnTimelineValueChanged;
             m_SerializedOwner = serializedOwner;
             m_SerializedPropertyPath = serializedPropertyPath;
             m_OwnershipLabel = ownershipLabel;
             m_SourceGraphWindow = sourceGraphWindow;
             m_SourceNode = sourceNode;
             if (sourceNode != null)
-            {
                 m_SourceGraphOwner = sourceNode.Owner?.SerializedOwner;
-                m_SourceGraphAuthoringId = sourceNode.Owner?.GraphAuthoringId ?? string.Empty;
-            }
             else if (string.IsNullOrEmpty(sourceNodeGuid))
-            {
                 m_SourceGraphOwner = null;
-                m_SourceGraphAuthoringId = string.Empty;
-            }
-            if (sourceGraphAuthoringId != null)
-                m_SourceGraphAuthoringId = sourceGraphAuthoringId;
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
-            Selection.activeObject = null;
-
-            TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
+            Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
+            ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
+            ownership.style.paddingLeft = 8f;
+            ownership.style.paddingTop = 4f;
+            ownership.style.paddingBottom = 4f;
+            m_SlateProjection = BtsmtlSlateTimelineProjection.Open(TimelineEditorOpenRequestComposition.Create(
                 timeline,
                 serializedOwner,
                 serializedPropertyPath,
                 ownershipLabel,
-                sourceGraphWindow);
-            if (!BtsmtlSlateTimelineDirectProjection.TryOpen(
-                    openRequest,
-                    OpenClip,
-                    out m_SlateProjection,
-                    out string unavailableReason))
-            {
-                rootVisualElement.Clear();
-                rootVisualElement.Add(new HelpBox(
-                    $"Slate Timeline unavailable: {unavailableReason}",
-                    HelpBoxMessageType.Error));
-                return;
-            }
-
+                sourceGraphWindow,
+                new TimelineRuntimeDebugBinding(timeline.AuthoringId)));
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
-            m_SlateSurface = new IMGUIContainer(DrawSlateSurface)
-            {
-                name = "slate-timeline-surface"
-            };
-            m_SlateSurface.style.flexGrow = 1f;
-            m_SlateSurface.style.flexShrink = 1f;
-            m_SlateSurface.style.minHeight = 320f;
-            m_SlateProjection.ConfigureRepaint(() => m_SlateSurface?.MarkDirtyRepaint());
-            m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
-            rootVisualElement.Add(m_SlateSurface);
-            if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
-                m_SlateProjection.RestoreViewState(m_ViewState);
-            WindowOpened?.Invoke(this);
+            rootVisualElement.Add(CreateModeToolbar());
+            rootVisualElement.Add(ownership);
+            m_DebugDetails = new ScrollView();
+            m_DebugDetails.style.maxHeight = 150;
+            m_DebugDetails.style.minHeight = 80;
+            rootVisualElement.Add(m_DebugDetails);
+            SetMode(m_Mode);
         }
 
         void BuildUnboundView()
         {
             titleContent = new GUIContent("Timeline Editor");
             rootVisualElement.Clear();
+            rootVisualElement.Add(CreateModeToolbar());
+            m_DebugDetails = null;
+            SetMode(m_Mode);
         }
 
         void ClearBinding()
         {
+            ClearNavigation();
             DisposeView();
+            m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
+            m_DebugBinding = null;
+            m_HasDebugRequest = false;
+            InvalidateLiveDebugOverlay();
             m_SerializedOwner = null;
             m_SerializedPropertyPath = string.Empty;
             m_OwnershipLabel = string.Empty;
             m_SourceNodeGuid = string.Empty;
-            m_SourceGraphAuthoringId = string.Empty;
             m_SourceGraphWindow = null;
             m_SourceGraphOwner = null;
             m_SourceNode = null;
@@ -344,7 +278,10 @@ namespace BTSMTL.Timeline.Editor
 
         void TryRestoreBinding()
         {
-            if (m_SlateProjection != null || !m_SerializedOwner || string.IsNullOrEmpty(m_SerializedPropertyPath))
+            if (m_SlateProjection != null)
+                return;
+
+            if (!m_SerializedOwner || string.IsNullOrEmpty(m_SerializedPropertyPath))
                 return;
 
             TimelineData timeline = ResolveTimelineData();
@@ -358,8 +295,7 @@ namespace BTSMTL.Timeline.Editor
                 m_OwnershipLabel,
                 m_SourceGraphWindow,
                 null,
-                m_SourceNodeGuid,
-                m_SourceGraphAuthoringId);
+                m_SourceNodeGuid);
         }
 
         TimelineData ResolveTimelineData()
@@ -371,9 +307,9 @@ namespace BTSMTL.Timeline.Editor
         {
             if (owner is TimelineAsset asset)
                 return asset.Data;
+
             if (!owner || string.IsNullOrWhiteSpace(propertyPath))
                 return null;
-
             SerializedObject serializedObject = new SerializedObject(owner);
             SerializedProperty property = serializedObject.FindProperty(propertyPath);
             return property?.propertyType == SerializedPropertyType.ManagedReference
@@ -427,123 +363,544 @@ namespace BTSMTL.Timeline.Editor
 
         void OnDisable()
         {
-            WindowClosed?.Invoke(this);
-            EditorApplication.update -= OnEditorUpdate;
+            RuntimeDebugSession.Shared.Changed -= OnRuntimeDebugSessionChanged;
+            m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
             DisposeView();
         }
 
         void DisposeView()
         {
-            CaptureViewState();
-            if (m_Timeline != null)
-                m_Timeline.OnValueChanged -= OnTimelineValueChanged;
-            if (m_SlateProjection != null)
-            {
-                m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
-            }
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
-            m_SlateSurface = null;
             m_Timeline = null;
         }
 
-        void OnTimelineValueChanged()
+        VisualElement CreateModeToolbar()
         {
-            AuthoringRevisionChanged?.Invoke(this);
+            var toolbar = new Toolbar();
+            m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
+            m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
+            m_AuthoringToggle = new ToolbarToggle { text = "Authoring Preview" };
+            m_LiveDebugToggle = new ToolbarToggle { text = "Live Debug" };
+            m_SharedTimelineField = new ObjectField("Shared Timeline")
+            {
+                objectType = typeof(UnityEngine.Object),
+                allowSceneObjects = false
+            };
+            m_SharedTimelineField.style.width = 280f;
+            m_SharedTimelineField.label = "Document";
+            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
+            m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
+            m_SourceSummary = new Label(CurrentSourceSummary());
+            m_SourceSummary.style.minWidth = 180f;
+            m_SourceSummary.style.marginLeft = 6f;
+            m_TargetMenu = new ToolbarMenu { text = "Target" };
+            m_PlaybackMenu = new ToolbarMenu { text = "Playback" };
+            m_FollowToggle = new ToolbarToggle { text = "Follow Timeline" };
+            m_LiveToggle = new ToolbarToggle { text = "Freeze" };
+            m_CaptureButton = new ToolbarButton(() =>
+            {
+                RuntimeDebugSession session = RuntimeDebugSession.Shared;
+                if (session.IsCaptureRecording)
+                    session.EndCapture();
+                else
+                    session.BeginCapture(
+                        RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation | RuntimeTraceChannel.Motion,
+                        RuntimeDiagnosticsCaptureDetail.Continuous);
+            }) { text = "Capture" };
+            m_HistorySlider = new SliderInt(0, 511);
+            m_HistorySlider.style.width = 110;
+            m_Status = new Label();
+            m_Status.style.marginLeft = 6;
+            m_Status.style.flexGrow = 1;
+
+            m_AuthoringToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue)
+                    SetMode(TimelineWindowMode.AuthoringPreview);
+                else if (m_Mode == TimelineWindowMode.AuthoringPreview)
+                    m_AuthoringToggle.SetValueWithoutNotify(true);
+            });
+            m_LiveDebugToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue)
+                    SetMode(TimelineWindowMode.LiveDebug);
+                else if (m_Mode == TimelineWindowMode.LiveDebug)
+                    m_LiveDebugToggle.SetValueWithoutNotify(true);
+            });
+            m_FollowToggle.RegisterValueChangedCallback(evt =>
+            {
+                RuntimeDebugViewBinding binding = GetRuntimeDebugBinding(out _);
+                if (binding == null)
+                    return;
+                if (evt.newValue)
+                    binding.Follow();
+                else
+                    binding.Clear();
+                RefreshLiveDebug();
+            });
+            m_LiveToggle.RegisterValueChangedCallback(evt =>
+            {
+                RuntimeDebugSession session = RuntimeDebugSession.Shared;
+                if (session.CanControlLiveTarget)
+                    session.FreezeLive();
+                else if (session.CanResumeLiveTarget)
+                    session.ResumeLive();
+            });
+            m_HistorySlider.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue != RuntimeDebugSession.Shared.HistoryOffset)
+                    RuntimeDebugSession.Shared.SetHistoryOffset(evt.newValue);
+            });
+
+            toolbar.Add(m_BackButton);
+            toolbar.Add(m_AuthoringToggle);
+            toolbar.Add(m_LiveDebugToggle);
+            toolbar.Add(m_SharedTimelineField);
+            toolbar.Add(m_SourceSummary);
+            toolbar.Add(m_TargetMenu);
+            toolbar.Add(m_PlaybackMenu);
+            toolbar.Add(m_FollowToggle);
+            toolbar.Add(m_LiveToggle);
+            toolbar.Add(m_CaptureButton);
+            toolbar.Add(m_HistorySlider);
+            toolbar.Add(m_Status);
+            return toolbar;
         }
 
-        void OnAuthoringIssue(string message)
+        bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
+
+        void CaptureTimelineNavigation(AnimationClip clip)
         {
-            SetStatus(message);
+            if (m_SlateProjection == null || !m_SerializedOwner || string.IsNullOrWhiteSpace(m_SerializedPropertyPath))
+                throw new InvalidOperationException("Sequence navigation requires a bound Action Timeline.");
+            m_NavigationOwner = m_SerializedOwner;
+            m_NavigationPropertyPath = m_SerializedPropertyPath;
+            m_NavigationOwnershipLabel = m_OwnershipLabel;
+            m_NavigationTrackAuthoringId = clip.Track?.AuthoringId ?? string.Empty;
+            m_NavigationClipAuthoringId = clip.AuthoringId;
+            m_NavigationSourceNodeGuid = m_SourceNodeGuid;
+            m_NavigationSourceGraphWindow = m_SourceGraphWindow;
+            m_NavigationSourceGraphOwner = m_SourceGraphOwner;
+            m_NavigationViewport = Vector2.zero;
         }
 
-        void CaptureViewState()
+        void ReturnToTimeline()
         {
-            if (m_SlateProjection == null || m_Timeline == null)
+            if (!HasTimelineNavigation)
                 return;
-            m_ViewTimelineAuthoringId = m_Timeline.AuthoringId;
-            m_ViewState = m_SlateProjection.CaptureViewState();
-        }
-
-        void OnEditorUpdate()
-        {
-            m_SlateSurface?.MarkDirtyRepaint();
-        }
-
-        void DrawSlateSurface()
-        {
-            if (m_SlateProjection == null || m_SlateSurface == null)
+            UnityEngine.Object owner = m_NavigationOwner;
+            string propertyPath = m_NavigationPropertyPath;
+            string ownershipLabel = m_NavigationOwnershipLabel;
+            string trackAuthoringId = m_NavigationTrackAuthoringId;
+            string clipAuthoringId = m_NavigationClipAuthoringId;
+            string sourceNodeGuid = m_NavigationSourceNodeGuid;
+            BaseTreeWindow sourceGraphWindow = m_NavigationSourceGraphWindow;
+            UnityEngine.Object sourceGraphOwner = m_NavigationSourceGraphOwner;
+            Vector2 viewport = m_NavigationViewport;
+            TimelineData timeline = ResolveTimelineData(owner, propertyPath);
+            if (timeline == null)
+                throw new InvalidOperationException("The source Action Timeline can no longer be resolved.");
+            ClearNavigation();
+            Bind(timeline, owner, propertyPath, ownershipLabel, sourceGraphWindow, null, sourceNodeGuid);
+            m_SourceGraphOwner = sourceGraphOwner;
+            if (m_SlateProjection == null)
                 return;
-            Rect rect = m_SlateSurface.contentRect;
-            m_SlateProjection.DrawEmbeddedGUI(
-                Mathf.Max(1f, rect.width),
-                Mathf.Max(1f, rect.height),
-                BeginWindows,
-                EndWindows);
+        }
+
+        void ClearNavigation()
+        {
+            m_NavigationOwner = null;
+            m_NavigationPropertyPath = string.Empty;
+            m_NavigationOwnershipLabel = string.Empty;
+            m_NavigationTrackAuthoringId = string.Empty;
+            m_NavigationClipAuthoringId = string.Empty;
+            m_NavigationSourceNodeGuid = string.Empty;
+            m_NavigationSourceGraphWindow = null;
+            m_NavigationSourceGraphOwner = null;
+            m_NavigationViewport = Vector2.zero;
+            if (m_BackButton != null)
+                m_BackButton.style.display = DisplayStyle.None;
+        }
+
+        void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
+        {
+            TimelineAsset asset = evt.newValue as TimelineAsset;
+            if (asset)
+            {
+                ClearNavigation();
+                BindAsset(asset);
+                return;
+            }
+
+            if (m_SerializedOwner is TimelineAsset)
+                ClearBinding();
+            else
+                m_SharedTimelineField.SetValueWithoutNotify(null);
+        }
+
+        string CurrentSourceSummary()
+        {
+            if (m_Timeline == null)
+                return "Source: None";
+            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
+            return $"Source: {ownership} / {m_Timeline.Name}";
+        }
+
+        void SetMode(TimelineWindowMode mode)
+        {
+            m_Mode = mode;
+            bool liveDebug = mode == TimelineWindowMode.LiveDebug;
+            m_AuthoringToggle?.SetValueWithoutNotify(!liveDebug);
+            m_LiveDebugToggle?.SetValueWithoutNotify(liveDebug);
+            m_LiveDebugToggle?.SetDisplay(true);
+            m_TargetMenu?.SetDisplay(liveDebug);
+            m_PlaybackMenu?.SetDisplay(liveDebug);
+            m_FollowToggle?.SetDisplay(liveDebug);
+            m_LiveToggle?.SetDisplay(liveDebug);
+            m_CaptureButton?.SetDisplay(liveDebug);
+            m_HistorySlider?.SetDisplay(false);
+            m_Status?.SetDisplay(liveDebug);
+            if (m_DebugDetails != null)
+                m_DebugDetails.style.display = liveDebug ? DisplayStyle.Flex : DisplayStyle.None;
+            m_SlateProjection?.SetRuntimeReadOnly(liveDebug);
+            if (liveDebug)
+            {
+                m_HasDebugRequest = false;
+                RefreshLiveDebug();
+            }
+            else
+            {
+                m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
+                m_SlateProjection?.ClearRuntimeOverlay();
+                InvalidateLiveDebugOverlay();
+            }
+        }
+
+        void RefreshLiveDebug()
+        {
+            if (Timeline == null || m_SlateProjection == null || m_TargetMenu == null)
+                return;
+
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            RuntimeDebugViewBinding binding = GetRuntimeDebugBinding(out _);
+            if (binding == null)
+                return;
+            RuntimeDebugTargetResolution resolution = binding.Refresh(
+                session,
+                RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation | RuntimeTraceChannel.Motion);
+            RuntimeDebugViewModel view = session.ViewModel;
+            RefreshMenus(view, binding);
+            RefreshLiveDebugControls(session);
+            m_FollowToggle.SetValueWithoutNotify(binding.Following);
+
+            if (!resolution.CanReadSnapshot)
+            {
+                m_SlateProjection.ClearRuntimeOverlay();
+                m_DebugDetails.Clear();
+                InvalidateLiveDebugOverlay();
+                SetStatus(resolution.Message);
+                return;
+            }
+
+            if (!view.Valid)
+            {
+                m_SlateProjection.ClearRuntimeOverlay();
+                m_DebugDetails.Clear();
+                InvalidateLiveDebugOverlay();
+                SetStatus(!string.IsNullOrEmpty(view.Error) ? view.Error : binding.StatusMessage);
+                return;
+            }
+
+            RuntimeInstanceKey playback = binding.SelectedInstance;
+            if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
+            {
+                m_SlateProjection.ClearRuntimeOverlay();
+                m_DebugDetails.Clear();
+                InvalidateLiveDebugOverlay();
+                SetStatus(binding.StatusMessage);
+                return;
+            }
+
+            if (!view.TryGetTimelinePlaybackSummary(Timeline.AuthoringId, playback, out RuntimeTimelinePlaybackDebugSummary summary))
+            {
+                m_SlateProjection.ClearRuntimeOverlay();
+                m_DebugDetails.Clear();
+                InvalidateLiveDebugOverlay();
+                SetStatus("The selected Timeline playback has no formal Trace summary.");
+                return;
+            }
+
+            IReadOnlyList<RuntimeDebugEventView> timelineEvents = view.GetTimelineCurrentEvents(Timeline.AuthoringId, playback);
+            ulong latestLogic = 0;
+            ulong latestPresentation = 0;
+            for (int i = 0; i < timelineEvents.Count; i++)
+            {
+                RuntimeTraceEvent traceEvent = timelineEvents[i].Event;
+                if (traceEvent.Domain == RuntimeTraceDomain.Logic)
+                    latestLogic = Math.Max(latestLogic, traceEvent.Position);
+                else if (traceEvent.Domain == RuntimeTraceDomain.Presentation)
+                    latestPresentation = Math.Max(latestPresentation, traceEvent.Position);
+            }
+            float logicTime = LatestTime(timelineEvents, RuntimeTraceEventKind.TimelineLogicTime, latestLogic);
+            float visualTime = LatestTime(timelineEvents, RuntimeTraceEventKind.TimelineVisualTime, latestPresentation);
+            bool resetOverlay = !ReferenceEquals(m_LastDebugView, view) ||
+                                !m_LastDebugPlayback.Equals(playback) ||
+                                view.Changes.FullSync;
+            if (resetOverlay || m_LastDebugRevision != view.Revision)
+            {
+                var tracks = new Dictionary<string, string>(StringComparer.Ordinal);
+                var clips = new Dictionary<string, string>(StringComparer.Ordinal);
+                for (int i = 0; i < timelineEvents.Count; i++)
+                {
+                    RuntimeDebugEventView eventView = timelineEvents[i];
+                    if (eventView.Event.Domain != RuntimeTraceDomain.Logic || eventView.Event.Position != latestLogic)
+                        continue;
+                    if (eventView.Event.Kind == RuntimeTraceEventKind.TrackActive)
+                        tracks[eventView.Source.TrackAuthoringId] = eventView.Event.Payload.Status;
+                    if (eventView.Event.Kind == RuntimeTraceEventKind.ClipActive || eventView.Event.Kind is RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated)
+                        clips[eventView.Source.ClipAuthoringId] = $"{eventView.Event.Kind}: {eventView.Event.Payload.Status}";
+                }
+                m_SlateProjection.ApplyRuntimeOverlay(visualTime, tracks, clips);
+                m_DebugDetails.Clear();
+                PopulateDebugDetails(
+                    timelineEvents,
+                    view.GetCurrentEvents(RuntimeTraceChannel.Motion),
+                    latestLogic,
+                    latestPresentation);
+            }
+
+            string terminalText = summary.IsTerminal
+                ? $"{summary.Terminal}: {summary.TerminalCause}"
+                : $"{summary.Lifecycle}: {summary.LifecycleStatus}";
+            m_LastDebugView = view;
+            m_LastDebugPlayback = playback;
+            m_LastDebugRevision = view.Revision;
+            string prefix = session.AttachmentState == RuntimeDebugAttachmentState.Ended ? "Ended | " :
+                session.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory ? "Capture | " :
+                session.AttachmentState == RuntimeDebugAttachmentState.Frozen ? "Frozen | " : string.Empty;
+            SetStatus($"{prefix}{view.Target.DisplayName} | {FormatPlaybackOrigin(summary.Provenance)} | Playback #{playback.TimelinePlaybackId} | logic {logicTime:0.###} | visual {visualTime:0.###} | cycle {LatestCycle(timelineEvents)} | {terminalText}");
+        }
+
+        void RefreshLiveDebugControls(RuntimeDebugSession session)
+        {
+            bool canResume = session.CanControlLiveTarget || session.CanResumeLiveTarget;
+            m_LiveToggle.text = session.CanControlLiveTarget ? "Freeze" : "Resume";
+            m_LiveToggle.SetValueWithoutNotify(session.AttachmentState == RuntimeDebugAttachmentState.Frozen);
+            m_LiveToggle.SetEnabled(canResume);
+            m_CaptureButton.text = session.IsCaptureRecording ? "Stop Capture" : "Capture";
+            m_CaptureButton.SetEnabled(session.CanStartCapture || session.CanStopCapture);
+            bool showHistory = session.HasCaptureHistory;
+            m_HistorySlider.SetDisplay(showHistory);
+            if (!showHistory)
+                return;
+
+            m_HistorySlider.highValue = Math.Max(0, session.CaptureSnapshot.SegmentCount - 1);
+            m_HistorySlider.SetValueWithoutNotify(Math.Min(session.HistoryOffset, m_HistorySlider.highValue));
+            m_HistorySlider.SetEnabled(true);
+        }
+
+        RuntimeDebugViewBinding GetRuntimeDebugBinding(out RuntimeDebugTargetRequest request)
+        {
+            request = default;
+            if (Timeline == null)
+                return null;
+
+            if (m_DebugBinding == null)
+                m_DebugBinding = new RuntimeDebugViewBinding(RuntimeDebugViewKind.Timeline);
+            if (!m_HasDebugRequest)
+            {
+                m_DebugRequest = new RuntimeDebugTargetRequest(
+                    RuntimeSourceElementKey.Timeline(Timeline.AuthoringId),
+                    TimelineAuthoringFingerprint.Compute(Timeline));
+                m_HasDebugRequest = true;
+            }
+            request = m_DebugRequest;
+            m_DebugBinding.Configure(request);
+            return m_DebugBinding;
+        }
+
+        void RefreshMenus(RuntimeDebugViewModel view, RuntimeDebugViewBinding binding)
+        {
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            bool rebuild = m_LastDebugMenuTargetRevision != session.TargetRevision ||
+                           m_LastDebugTimelinePlaybackRevision != view.GetTimelinePlaybackRevision(Timeline.AuthoringId) ||
+                           view.Changes.FullSync;
+            if (rebuild)
+            {
+                m_TargetMenu.menu.MenuItems().Clear();
+                IReadOnlyList<RuntimeDebugTargetCandidate> candidates = session.GetTargetCandidates(binding.Request);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    RuntimeDebugTargetCandidate candidate = candidates[i];
+                    RuntimeDebugTargetInfo target = candidate.Target;
+                    m_TargetMenu.menu.AppendAction(
+                        TargetLabel(target, candidate.Match),
+                        _ => session.AttachToTarget(target.CharacterRuntimeId),
+                        _ => candidate.IsExact ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                }
+
+                m_PlaybackMenu.menu.MenuItems().Clear();
+                IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = view.Attached
+                    ? view.GetTimelinePlaybackSummaries(Timeline.AuthoringId)
+                    : Array.Empty<RuntimeTimelinePlaybackDebugSummary>();
+                for (int i = 0; i < summaries.Count; i++)
+                {
+                    RuntimeTimelinePlaybackDebugSummary summary = summaries[i];
+                    m_PlaybackMenu.menu.AppendAction(FormatPlaybackSummary(summary), _ =>
+                    {
+                        if (binding.Pin(summary.Playback))
+                            RefreshLiveDebug();
+                    });
+                }
+
+                m_LastDebugMenuTargetRevision = session.TargetRevision;
+                m_LastDebugTimelinePlaybackRevision = view.GetTimelinePlaybackRevision(Timeline.AuthoringId);
+            }
+            m_TargetMenu.text = view.Attached
+                ? view.Target.DisplayName + (session.AttachmentState == RuntimeDebugAttachmentState.Ended ? " (Ended)" : string.Empty)
+                : "Target";
+            m_PlaybackMenu.text = binding.SelectedInstance.Kind == RuntimeInstanceKind.TimelinePlayback
+                ? $"Playback #{binding.SelectedInstance.TimelinePlaybackId}"
+                : "Playback";
+        }
+
+        static string TargetLabel(RuntimeDebugTargetInfo target, RuntimeDebugTargetMatch match)
+        {
+            return match switch
+            {
+                RuntimeDebugTargetMatch.Exact => target.DisplayName,
+                RuntimeDebugTargetMatch.SourceMissing => $"{target.DisplayName} (source missing)",
+                RuntimeDebugTargetMatch.RevisionMismatch => $"{target.DisplayName} (revision mismatch)",
+                _ => target.DisplayName
+            };
+        }
+
+        static string FormatPlaybackSummary(RuntimeTimelinePlaybackDebugSummary summary)
+        {
+            string lifecycle = summary.IsTerminal
+                ? $"{summary.Terminal}: {summary.TerminalCause}"
+                : $"{summary.Lifecycle}: {summary.LifecycleStatus}";
+            return $"Playback #{summary.Playback.TimelinePlaybackId} | {FormatPlaybackOrigin(summary.Provenance)} | {lifecycle}";
+        }
+
+        static string FormatPlaybackOrigin(RuntimeTimelinePlaybackProvenance provenance)
+        {
+            if (!provenance.IsValid)
+                return "missing formal origin";
+
+            string state = provenance.HasStateActivation
+                ? $" | state {provenance.StateMachineGraphAuthoringId}/{provenance.StateId} #{provenance.StateActivationGeneration}"
+                : string.Empty;
+            return $"source {provenance.SourceGraphAuthoringId}/{provenance.SourceNodeAuthoringId} #{provenance.SourceActivationGeneration}{state}";
+        }
+
+        void PopulateDebugDetails(
+            IReadOnlyList<RuntimeDebugEventView> events,
+            IReadOnlyList<RuntimeDebugEventView> motionEvents,
+            ulong latestLogic,
+            ulong latestPresentation)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                RuntimeDebugEventView eventView = events[i];
+                bool visible =
+                    eventView.Event.Domain == RuntimeTraceDomain.Logic &&
+                    eventView.Event.Position == latestLogic &&
+                    (eventView.Event.Kind is RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated or RuntimeTraceEventKind.TreeClipExited) ||
+                    eventView.Event.Domain == RuntimeTraceDomain.Lifecycle &&
+                    eventView.Event.Position == latestLogic &&
+                    eventView.Event.Channel == RuntimeTraceChannel.Animation ||
+                    eventView.Event.Domain == RuntimeTraceDomain.Presentation &&
+                    eventView.Event.Position == latestPresentation &&
+                    eventView.Event.Channel == RuntimeTraceChannel.Animation;
+                if (!visible)
+                    continue;
+                RuntimeTracePayload payload = eventView.Event.Payload;
+                string text;
+                if (eventView.Event.Kind == RuntimeTraceEventKind.AnimationPhaseSync)
+                {
+                    text = $"PhaseSync | {payload.Name} | {payload.SecondaryTime:0.000}s -> {payload.Time:0.000}s | " +
+                           $"fraction {payload.NormalizedTime:0.###} | cycle {payload.Cycle} | {payload.Status} | {payload.Detail}";
+                }
+                else
+                {
+                    text = eventView.Event.Channel == RuntimeTraceChannel.Animation
+                        ? $"{eventView.Event.Kind} | {payload.Name} | owner {payload.OwnerId} | P{payload.Priority} | w {payload.Weight:0.###} -> {payload.FinalWeight:0.###}"
+                        : $"{eventView.Event.Kind} | {eventView.SourceName} | {payload.Status} | {payload.Cause}";
+                }
+                m_DebugDetails.Add(new Label(text));
+            }
+
+            for (int i = 0; i < motionEvents.Count; i++)
+            {
+                RuntimeDebugEventView eventView = motionEvents[i];
+                if (eventView.Event.Domain != RuntimeTraceDomain.Logic ||
+                    eventView.Event.Position != latestLogic ||
+                    !IsTimelineMotionTrace(eventView))
+                    continue;
+                RuntimeTracePayload payload = eventView.Event.Payload;
+                m_DebugDetails.Add(new Label(
+                    $"{eventView.Event.Kind} | {payload.Name} | {payload.Detail}"));
+            }
+        }
+
+        bool IsTimelineMotionTrace(RuntimeDebugEventView eventView)
+        {
+            if (string.Equals(eventView.Source.TimelineAuthoringId, Timeline.AuthoringId, StringComparison.Ordinal))
+                return true;
+            return string.Equals(eventView.Event.Payload.Name, "world_result_applied", StringComparison.Ordinal);
         }
 
         void SetStatus(string value)
         {
-            if (!string.IsNullOrEmpty(value))
-                ShowNotification(new GUIContent(value));
+            m_Status.text = value ?? string.Empty;
+            m_Status.tooltip = value ?? string.Empty;
+        }
+
+        void OnRuntimeDebugSessionChanged()
+        {
+            if (m_Mode == TimelineWindowMode.LiveDebug)
+                RefreshLiveDebug();
+            Repaint();
+        }
+
+        void InvalidateLiveDebugOverlay()
+        {
+            m_LastDebugView = null;
+            m_LastDebugPlayback = default;
+            m_LastDebugRevision = -1;
+            m_LastDebugMenuTargetRevision = -1;
+            m_LastDebugTimelinePlaybackRevision = -1;
+        }
+
+        static float LatestTime(IReadOnlyList<RuntimeDebugEventView> events, RuntimeTraceEventKind kind, ulong position)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Event.Kind == kind && events[i].Event.Position == position)
+                    return events[i].Event.Payload.Time;
+            }
+            return 0f;
+        }
+
+        static int LatestCycle(IReadOnlyList<RuntimeDebugEventView> events)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Event.Kind == RuntimeTraceEventKind.TimelineLogicTime)
+                    return events[i].Event.Payload.Cycle;
+            }
+            return 0;
         }
     }
 
-    [InitializeOnLoad]
-    static class TimelineRuntimeObservationBridge
+    static class TimelineDebugVisualElementExtensions
     {
-        static TimelineRuntimeObservationBridge()
+        public static void SetDisplay(this VisualElement element, bool visible)
         {
-            RuntimeDebugSession.Shared.Changed += Refresh;
-            TimelineEditorWindow.WindowOpened += RefreshWindow;
-        }
-
-        static void Refresh()
-        {
-            TimelineEditorWindow[] windows = Resources.FindObjectsOfTypeAll<TimelineEditorWindow>();
-            for (int index = 0; index < windows.Length; index++)
-                Refresh(windows[index]);
-        }
-
-        internal static void RefreshWindow(TimelineEditorWindow window)
-        {
-            Refresh(window);
-        }
-
-        static void Refresh(TimelineEditorWindow window)
-        {
-            if (!window || window.Timeline == null)
-                return;
-            if (!window.TryResolveRuntimeObservation(
-                    out RuntimeTimelinePlaybackDebugSummary summary,
-                    out string observationMessage))
-            {
-                window.ClearRuntimeObservation();
-                if (!string.IsNullOrEmpty(observationMessage))
-                    window.SetRuntimeObservationStatus(observationMessage);
-                return;
-            }
-            var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
-            var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (RuntimeDebugEventView item in RuntimeDebugSession.Shared.ViewModel.GetTimelineCurrentEvents(
-                         window.Timeline.AuthoringId,
-                         summary.Playback,
-                         window.SourceGraphAuthoringId))
-            {
-                RuntimeSourceElementKey source = item.Source;
-                string status = !string.IsNullOrEmpty(item.Event.Payload.Status)
-                    ? item.Event.Payload.Status
-                    : item.Event.Kind.ToString();
-                if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
-                    activeTracks[source.TrackAuthoringId] = status;
-                else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
-                         !string.IsNullOrEmpty(source.ClipAuthoringId))
-                    activeClips[source.ClipAuthoringId] = status;
-            }
-            if (RuntimeDebugSession.Shared.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
-                window.ApplyHistoryObservation(summary.VisualTime, activeTracks, activeClips);
-            else
-                window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
+            if (element != null)
+                element.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }

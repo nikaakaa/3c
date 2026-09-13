@@ -4,7 +4,7 @@
 
 原剩余范围包括连续平滑和构图合同收口、锁定与多目标构图、碰撞、Override/Shake/Shot、作者和真实动作引用、旧路径清理；其中实施窗口已经做过部分代码，实际状态保留在 implementation.md，不按旧任务列表重新实现。本次协调只迁移被取消总包的资源/绑定边界并明确来源映射与单一写入分工。旧执行批次、worktree 指令、Agent Document 计划均不恢复。
 
-修订 v4，2026-09-13，协调提案 `camera-preview-timeline-domain-runtime-r1`。本修订按用户要求只更新规划，承接 `replace-character-program-with-domain-runtimes/design.md` 已批准的领域运行时基线；不修改代码/资产/生成产物，不操作 Unity，不向实现窗口发送执行消息，也不扩大 v3 原实施授权。当前源码和旧发布失败的历史记录见 `evidence/current-implementation.md` 与实现记录，不能用旧 Projection 或旧 DLL 的结果证明新绑定已经可用。
+修订 v4，2026-09-13，协调提案 `camera-preview-timeline-domain-runtime-r1`。规划更新完成后，用户明确要求实现窗口继续，现按本修订接续原实施任务，承接 `replace-character-program-with-domain-runtimes/design.md` 已批准的领域运行时基线；保持协调后的资源、角色装配及同批 Timeline/生成源码写入分工。当前源码和旧发布失败的历史记录见 `evidence/current-implementation.md` 与实现记录，不能用旧 Projection 或旧 DLL 的结果证明新绑定已经可用。
 
 ## Scope
 

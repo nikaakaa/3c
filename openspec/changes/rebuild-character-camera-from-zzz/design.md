@@ -1,10 +1,10 @@
 ## Context
 
-修订 v4，2026-09-13。本次为用户协调通知 `camera-preview-timeline-domain-runtime-r1` 的 PLAN：仅更新本任务规划，承接 [领域运行时基线](D:/Unity_Project_1/3C/openspec/changes/replace-character-program-with-domain-runtimes/design.md) D1/D5/D6/D8。删除角色总 Program 与整包 Projection、技能独立编译、控制直接 C#、Pose 原生 FlowCanvas Runtime 已由用户批准；网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。本次不改代码/资产/生成产物、不操作 Unity、不下发实现消息、不扩大原实施授权。
+修订 v4，2026-09-13。协调提案 `camera-preview-timeline-domain-runtime-r1` 的规划更新已完成，用户随后明确“更新完了让实现窗口继续做吧”，现已确认按本 v4 继续原任务。承接 [领域运行时基线](D:/Unity_Project_1/3C/openspec/changes/replace-character-program-with-domain-runtimes/design.md) D1/D5/D6/D8：删除角色总 Program 与整包 Projection、技能独立编译、控制直接 C#、Pose 原生 FlowCanvas Runtime；网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。规划窗口仅更新授权记录和发送文档指针，代码实施仍归原实现窗口，写入分工不扩大。
 
 本 change 的 proposal 定义范围，本文定义职责和设计，tasks 只列剩余工作。当前源码状态与动态证据边界见 evidence/current-implementation.md。独立的 docs/character-camera-plan-2026-09-13.md 已合并删除，不维护第二份规划。旧协调文档未在本次修改，其 9 月 6 日版本/接线状态不能直接作为今天的事实。
 
-当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。v3 在提交 b2c2baa8f 下发过实施授权，该事实保留；本 v4 是协调后的规划修订，不作为新的 IMPLEMENT_FROM_DOCUMENT 或 DOCUMENT_UPDATED 消息。implementation.md 的旧 Projection/旧域 DLL/构建失败属于真实迁移现场，原记录保留，不将其当成等待恢复全量 Build 的前置条件。
+当前配套规划窗口为 01a098bd-a5c1-7283-8aab-59736bab97f5，实现窗口为 01a098bd-bbdf-7d50-b1cc-95339d3bbf8d。v3 在提交 b2c2baa8f 下发过实施授权；用户现已授权通过一次 DOCUMENT_UPDATED 将同一实现任务接续到 v4，不创建新窗口或重做已完成部分。implementation.md 的旧 Projection/旧域 DLL/构建失败属于真实迁移现场，原记录保留，不将其当成等待恢复全量 Build 的前置条件。
 
 授权包含补齐来源消费者和真实资源接线，不包含放弃来源还原、猜测缺失公式或覆盖已有正确代码。当前产品方向为玩家控制的第三人称环绕相机，默认轨道提供基础构图，动作、锁定和碰撞共用同一求解链。未决项先按来源取证与现行合同解决；无法同时满足真实代码、来源和规划时，在 implementation.md 写明冲突与业务取舍，再发送一次 ACTUAL_CONFLICT。
 
@@ -21,8 +21,10 @@ planning_document_paths:
 implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/rebuild-character-camera-from-zzz/implementation.md
 revision: v4
 coordination_proposal: camera-preview-timeline-domain-runtime-r1
-action: PLAN
-implementation_dispatch: none
+action: CONTINUE_IMPLEMENTATION
+confirmed_by_user: true
+confirmed_revision: v4
+implementation_dispatch: DOCUMENT_UPDATED
 previous_implementation_revision: v3
 ```
 
@@ -179,7 +181,7 @@ UI 显示真实单位、支持范围、资源处理/技能编译各自状态及 
 | btsmtl-timeline-editor-preview：Continuous Curve | 已包含相机曲线和其它领域完整要求 | 不重复改写该 requirement；只添加相机状态接入与诊断约束 |
 | source-parity（本 change 新能力） | 原行为证据与项目已写代码不能互相替代 | 保留全范围和缺口，禁止以新增现状页宣布完整移植 |
 
-本次不修改 current spec 或其它任务文档；delta 是协调后的目标约束。旧 current spec 尚存 Program/Projection 用语不撤销用户已批准的新基线，双方按上述 ownership 迁移。本 PLAN 不发送实施消息，不将文档修订当作代码完成。后续如操作 Unity，编译期间禁止修改代码或反复刷新，Play 时不得 Build/Refresh，且每次工具显式指定实例。
+规划修订没有修改 current spec 或其它任务文档；delta 是协调后的目标约束。旧 current spec 尚存 Program/Projection 用语不撤销用户已批准的新基线，双方按上述 ownership 迁移。用户已授权原实现窗口继续，但文档修订不代表代码完成。后续如操作 Unity，编译期间禁止修改代码或反复刷新，Play 时不得 Build/Refresh，且每次工具显式指定实例。
 
 ## 验收边界
 

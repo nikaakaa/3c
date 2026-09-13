@@ -1,6 +1,6 @@
 # 相机剩余实施任务
 
-修订 v4，2026-09-13，协调提案 camera-preview-timeline-domain-runtime-r1。本轮仅 PLAN，不改代码/资产/生成产物，不操作 Unity、不下发实现消息或扩大 v3 原授权。以下是调整后的领域责任与剩余合同；已有实现以 implementation.md 和当前代码为准，未勾选不是要求重做已正确算法。旧 Projection/旧 Runtime DLL 的真实记录保留，但不再等待 Character 全量 Build/整包 Projection 恢复。所有任务默认不新增测试，不包含验证或人工验收任务。
+修订 v4，2026-09-13，协调提案 camera-preview-timeline-domain-runtime-r1。用户已明确“更新完了让实现窗口继续做吧”，原实现窗口按本文调整后的领域责任与剩余合同继续，遵守同批 Timeline/生成源码由曲线迁移统一写入的分工。已有实现以 implementation.md 和当前代码为准，未勾选不是要求重做已正确算法。旧 Projection/旧 Runtime DLL 的真实记录保留，但不再等待 Character 全量 Build/整包 Projection 恢复。所有任务默认不新增测试，不包含验证或人工验收任务。
 
 ## 1. 基础构图与输入合同
 

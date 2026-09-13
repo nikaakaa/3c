@@ -17,11 +17,23 @@ namespace Slate
         public static event Action<IAnimatableData> onCurvesUpdated;
 
         private static Dictionary<IAnimatableData, CurveRenderer> cache = new Dictionary<IAnimatableData, CurveRenderer>();
+        private static Dictionary<object, CurveRenderer> embeddedCache = new Dictionary<object, CurveRenderer>();
         public static void DrawCurves(IAnimatableData animatable, IKeyable keyable, Rect posRect, Rect timeRect) {
             CurveRenderer instance = null;
             if ( !cache.TryGetValue(animatable, out instance) ) {
                 cache[animatable] = instance = new CurveRenderer(animatable, keyable, posRect);
             }
+            instance.Draw(posRect, timeRect);
+        }
+
+        public static void DrawCurves(AnimationCurve[] curves, object owner, Rect posRect, Rect timeRect, Action onCurvesUpdated = null) {
+            if (owner == null)
+                return;
+            CurveRenderer instance = null;
+            if (!embeddedCache.TryGetValue(owner, out instance))
+                embeddedCache[owner] = instance = new CurveRenderer(curves, posRect, onCurvesUpdated);
+            else
+                instance.SetRawCurves(curves, onCurvesUpdated);
             instance.Draw(posRect, timeRect);
         }
 
@@ -83,6 +95,7 @@ namespace Slate
             private static ConstructorInfo cEditorCTR;
 
             private object cEditor;
+            private Action rawOnCurvesUpdated;
 
             public CurveRenderer(IAnimatableData animatable, IKeyable keyable, Rect posRect) {
                 this.animatable = animatable;
@@ -97,6 +110,19 @@ namespace Slate
                 this.curves = curves;
                 Undo.undoRedoPerformed += () => { RefreshCurves(); };
                 Init();
+            }
+
+            public CurveRenderer(AnimationCurve[] curves, Rect posRect, Action onCurvesUpdated) {
+                this.curves = curves;
+                rawOnCurvesUpdated = onCurvesUpdated;
+                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                Init();
+            }
+
+            public void SetRawCurves(AnimationCurve[] curves, Action onCurvesUpdated) {
+                this.curves = curves;
+                rawOnCurvesUpdated = onCurvesUpdated;
+                RefreshCurves();
             }
 
             public void Init() {
@@ -373,7 +399,9 @@ namespace Slate
 
             //raise event
             void OnCurvesUpdated() {
-                if ( onCurvesUpdated != null ) {
+                if ( rawOnCurvesUpdated != null ) {
+                    rawOnCurvesUpdated();
+                } else if ( onCurvesUpdated != null ) {
                     onCurvesUpdated(animatable);
                 }
             }

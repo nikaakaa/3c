@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Slate
 {
-    static class TrackEditorGUI
+    public static class TrackEditorGUI
     {
         const float PARAMS_TOP_MARGIN = 5f;
         const float PARAMS_LINE_HEIGHT = 18f;
@@ -362,6 +362,167 @@ namespace Slate
                         }
             */
 
+        }
+
+        public static void DrawFormalTrackInfoGUI(
+            Event e,
+            Rect trackRect,
+            IEmbeddedTimelineTrackBinding track,
+            bool selected,
+            ref int inspectedParameterIndex)
+        {
+            DrawDefaultInfoGUI(
+                trackRect,
+                track.DisplayName,
+                string.Empty,
+                null,
+                selected,
+                track.IsActive,
+                track.IsLocked,
+                track.ShowCurves,
+                value => track.IsActive = value,
+                value => track.IsLocked = value,
+                value => track.ShowCurves = value);
+
+            if (!track.ShowCurves)
+                return;
+
+            var expansionRect = Rect.MinMaxRect(5, track.DefaultHeight, trackRect.width - 3, track.FinalHeight - 3);
+            GUI.color = UnityEditor.EditorGUIUtility.isProSkin ? new Color(0.22f, 0.22f, 0.22f) : new Color(0.7f, 0.7f, 0.7f);
+            GUI.DrawTexture(expansionRect, Styles.whiteTexture);
+            GUI.color = Color.white;
+
+            var clip = track.SelectedClip;
+            if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+            {
+                GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
+                inspectedParameterIndex = -1;
+                return;
+            }
+
+            if (inspectedParameterIndex >= clip.Parameters.Count)
+                inspectedParameterIndex = -1;
+            float nextY = track.DefaultHeight + 5f;
+            for (int index = 0; index < clip.Parameters.Count; index++)
+            {
+                var parameter = clip.Parameters[index];
+                var parameterRect = new Rect(expansionRect.xMin + 4, nextY, expansionRect.width - 8, 18f);
+                nextY += 20f;
+                GUI.color = inspectedParameterIndex == index ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
+                GUI.Box(parameterRect, string.Empty, Styles.headerBoxStyle);
+                GUI.color = Color.white;
+                GUI.Label(parameterRect, string.Format(" <size=10><color=#252525>{0}</color></size>", parameter.DisplayName), Styles.leftLabel);
+                if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
+                {
+                    inspectedParameterIndex = inspectedParameterIndex == index ? -1 : index;
+                    e.Use();
+                }
+            }
+        }
+
+        public static void DrawFormalTimelineGUI(
+            Event e,
+            Rect posRect,
+            Rect timeRect,
+            System.Func<float, float> TimeToPos,
+            IEmbeddedTimelineTrackBinding track,
+            ref int inspectedParameterIndex)
+        {
+            if (!track.ShowCurves)
+                return;
+            var curvesRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin + track.DefaultHeight, posRect.xMax, posRect.yMax);
+            DrawFormalClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterIndex);
+        }
+
+        static void DrawFormalClipCurves(
+            Event e,
+            Rect posRect,
+            Rect timeRect,
+            System.Func<float, float> TimeToPos,
+            IEmbeddedTimelineClipBinding clip,
+            ref int inspectedParameterIndex)
+        {
+            GUI.color = Color.black.WithAlpha(0.1f);
+            GUI.Box(posRect, string.Empty, Styles.timeBoxStyle);
+            GUI.color = Color.white;
+            if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+            {
+                GUI.color = Color.white.WithAlpha(0.3f);
+                GUI.Label(posRect, "Select a Clip of this Track to view its Curves here", Styles.centerLabel);
+                GUI.color = Color.white;
+                return;
+            }
+
+            var finalPosRect = posRect;
+            finalPosRect.xMin = Mathf.Max(posRect.xMin, TimeToPos(clip.StartTime));
+            finalPosRect.xMax = Mathf.Min(posRect.xMax, TimeToPos(clip.EndTime));
+            finalPosRect.yMin += 1f;
+            finalPosRect.yMax -= 3f;
+            finalPosRect.width = Mathf.Max(finalPosRect.width, 5f);
+            var finalTimeRect = Rect.MinMaxRect(
+                Mathf.Max(timeRect.xMin, clip.StartTime) - clip.StartTime,
+                timeRect.yMin,
+                Mathf.Min(timeRect.xMax, clip.EndTime) - clip.StartTime,
+                timeRect.yMax);
+
+            GUI.color = Color.black.WithAlpha(0.4f);
+            GUI.DrawTexture(posRect, Styles.whiteTexture);
+            GUI.color = Color.white;
+            if (finalPosRect.width <= 5f)
+                return;
+
+            if (inspectedParameterIndex >= clip.Parameters.Count)
+                inspectedParameterIndex = -1;
+            if (inspectedParameterIndex < 0)
+            {
+                float y = 5f;
+                for (int index = 0; index < clip.Parameters.Count; index++)
+                {
+                    var parameter = clip.Parameters[index];
+                    var parameterRect = new Rect(finalPosRect.xMin, finalPosRect.yMin + y, finalPosRect.width, 18f);
+                    y += 20f;
+                    GUI.color = Color.black.WithAlpha(0.05f);
+                    GUI.DrawTexture(parameterRect, Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                    GUI.Label(parameterRect, string.Format(" <size=10>{0}</size>", parameter.DisplayName), Styles.leftLabel);
+                    DrawFormalKeys(parameter, parameterRect, finalTimeRect);
+                    if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
+                    {
+                        inspectedParameterIndex = index;
+                        e.Use();
+                    }
+                }
+                return;
+            }
+
+            var selectedParameter = clip.Parameters[inspectedParameterIndex];
+            if (selectedParameter.Curves == null || selectedParameter.Curves.Count == 0)
+                return;
+            var curveRect = finalPosRect;
+            curveRect.yMin += 4f;
+            CutsceneEditorSurface currentEditor = CutsceneEditorSurface.current;
+            CurveEditor.DrawCurves(
+                new[] { selectedParameter.Curves[0].Curve },
+                selectedParameter.Curves[0],
+                curveRect,
+                finalTimeRect,
+                () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));
+        }
+
+        static void DrawFormalKeys(IEmbeddedTimelineParameterBinding parameter, Rect rect, Rect timeRect)
+        {
+            if (parameter.Curves == null || parameter.Curves.Count == 0)
+                return;
+            var curve = parameter.Curves[0].Curve;
+            if (curve == null)
+                return;
+            for (int index = 0; index < curve.length; index++)
+            {
+                float normalized = timeRect.width <= 0f ? 0f : Mathf.InverseLerp(timeRect.xMin, timeRect.xMax, curve[index].time);
+                float x = Mathf.Lerp(rect.xMin, rect.xMax, normalized);
+                var keyRect = new Rect(x - 2f, rect.center.y - 2f, 4f, 4f);
+                GUI.DrawTexture(keyRect, Styles.whiteTexture);
+            }
         }
 
         public static void DrawTimelineGUI(

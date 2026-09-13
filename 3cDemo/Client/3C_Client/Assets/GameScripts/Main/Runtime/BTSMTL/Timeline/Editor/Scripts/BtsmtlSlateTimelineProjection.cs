@@ -115,6 +115,8 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] string m_SourceAuthoringId;
         bool m_RuntimeActive = true;
         Action<float> m_AddClip;
+        IEmbeddedTimelineTrackBinding m_EditorBinding;
+        int m_InspectedParameterIndex = -1;
 
         public string SourceAuthoringId => m_SourceAuthoringId ?? string.Empty;
         public string AuthoringId => SourceAuthoringId;
@@ -140,7 +142,28 @@ namespace BTSMTL.Timeline.Editor
             m_AddClip = addClip;
         }
 
+        public void ConfigureEditorBinding(IEmbeddedTimelineTrackBinding binding)
+        {
+            m_EditorBinding = binding;
+        }
+
 #if UNITY_EDITOR
+        public override void OnTrackInfoGUI(Rect trackRect)
+        {
+            if (m_EditorBinding == null)
+            {
+                base.OnTrackInfoGUI(trackRect);
+                return;
+            }
+            TrackEditorGUI.DrawFormalTrackInfoGUI(
+                Event.current,
+                trackRect,
+                m_EditorBinding,
+                false,
+                ref m_InspectedParameterIndex);
+            showCurves = m_EditorBinding.ShowCurves;
+        }
+
         public override void OnTrackTimelineGUI(
             Rect posRect,
             Rect timeRect,
@@ -153,6 +176,17 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_AddClip(cursorTime);
                 e.Use();
+                return;
+            }
+            if (m_EditorBinding != null)
+            {
+                TrackEditorGUI.DrawFormalTimelineGUI(
+                    e,
+                    posRect,
+                    timeRect,
+                    timeToPosition,
+                    m_EditorBinding,
+                    ref m_InspectedParameterIndex);
                 return;
             }
             base.OnTrackTimelineGUI(posRect, timeRect, cursorTime, timeToPosition);
@@ -673,6 +707,8 @@ namespace BTSMTL.Timeline.Editor
                 proxyTrack.hideFlags = HideFlags.HideAndDontSave;
                 proxyTrack.name = trackDisplayName;
                 proxyTrack.Configure(sourceTrack.AuthoringId);
+                if (m_Binding.TryGetTrackBinding(sourceTrack.AuthoringId, out IEmbeddedTimelineTrackBinding formalTrack))
+                    proxyTrack.ConfigureEditorBinding(formalTrack);
                 proxyTrack.ConfigureAuthoringMenu(time => m_Binding.AddClipAt(
                     sourceTrack.AuthoringId,
                     Mathf.Max(0, Mathf.RoundToInt(time * m_Binding.FrameRate))));

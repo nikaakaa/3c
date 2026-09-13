@@ -693,8 +693,6 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.ability-program-tick")]
         void TickAbilityPrograms()
         {
-            if (m_CharacterControl == null)
-                return;
             IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
             var stoppingInstances = new HashSet<ulong>();
             for (int i = 0; i < skills.Count; i++)

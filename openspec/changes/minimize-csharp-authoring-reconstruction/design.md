@@ -1,6 +1,6 @@
 ## Context
 
-原 `remove-agent-authoring-use-native-csharp` 已归档。本次是其后续精简规划，当前只更新文档和 skill，不授权开始新的代码修改。动机及现行 spec 差异见 proposal。
+原 `remove-agent-authoring-use-native-csharp` 已归档。本次是其后续精简实施，动机及现行 spec 差异见 proposal。
 
 当前 Attack 文件为 1,166,932 字节；已观察到 graph 变量名身份后缀、创建参数内图身份、外部资源路径/localFileId、入口内绝对 SourceCodePath。尚未逐字段统计体积，不能把总大小都归因于 GUID，也不承诺压缩比例。
 
@@ -114,4 +114,4 @@ graph.Connect(start, attack);
 5. 重新输出已采用的正式 C#，保留其文件和 meta；不为缩小源码删除正式素材或改写作者曲线。
 6. 实施完成后同步当前 spec 和 skill 的状态说明。无手动验证、回放或证据归集任务，验收由用户完成。
 
-本轮状态：规划已成文，代码未修改；实现任务收到 DOCUMENT_UPDATED 后只读取此调整，不因旧实施授权自动开始本后续精简。
+本轮状态：共享生成器、Skill/EventGraph 薄适配、正式 Clip 数据段入口、入口服务关联和规范已更新；已采用生成 C# 待 Unity 编译恢复后重新导出。

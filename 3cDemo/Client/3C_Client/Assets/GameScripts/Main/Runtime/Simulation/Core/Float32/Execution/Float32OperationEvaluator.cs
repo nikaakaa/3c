@@ -530,7 +530,6 @@ namespace ThirdPersonSimulation
 			m_ControlDomain = new Float32ControlDomainRuntime(
 				program,
 				layout,
-				access,
 				m_Frame,
 				m_Input,
 				m_Actions,

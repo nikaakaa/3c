@@ -15,7 +15,6 @@ namespace ThirdPersonSimulation
         public Float32ControlDomainRuntime(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
-            Float32ProgramAccess access,
             Float32EvaluationFrame frame,
             Float32InputRuntime input,
             Float32ActionRuntime actions,
@@ -30,8 +29,6 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(program));
             if (layout == null)
                 throw new ArgumentNullException(nameof(layout));
-            if (access == null)
-                throw new ArgumentNullException(nameof(access));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             input = input ?? throw new ArgumentNullException(nameof(input));
             actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -63,8 +60,7 @@ namespace ThirdPersonSimulation
                 });
             m_State = new Float32CharacterControlStatePort(state, controlLayout);
             m_Output = new Float32CharacterControlOutputPort(
-                access,
-                controlCatalog,
+                m_Control.Contract,
                 input,
                 locomotion,
                 actions,

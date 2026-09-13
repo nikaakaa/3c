@@ -535,7 +535,6 @@ namespace ThirdPersonSimulation.Fixed
             m_ControlDomain = new FixedControlDomainRuntime(
                 program,
                 layout,
-                access,
                 m_Frame,
                 m_Input,
                 m_Actions,

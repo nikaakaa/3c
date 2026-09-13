@@ -15,7 +15,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedControlDomainRuntime(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
-            FixedProgramAccess access,
             FixedEvaluationFrame frame,
             FixedInputRuntime input,
             FixedActionRuntime actions,
@@ -30,8 +29,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(program));
             if (layout == null)
                 throw new ArgumentNullException(nameof(layout));
-            if (access == null)
-                throw new ArgumentNullException(nameof(access));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             input = input ?? throw new ArgumentNullException(nameof(input));
             actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -63,8 +60,7 @@ namespace ThirdPersonSimulation.Fixed
                 });
             m_State = new FixedCharacterControlStatePort(state, controlLayout);
             m_Output = new FixedCharacterControlOutputPort(
-                access,
-                controlCatalog,
+                m_Control.Contract,
                 input,
                 locomotion,
                 actions,

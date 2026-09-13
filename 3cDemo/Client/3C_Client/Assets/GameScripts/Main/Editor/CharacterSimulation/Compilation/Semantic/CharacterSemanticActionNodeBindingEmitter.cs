@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (node is ActivateActionInstanceNode activate)
             {
-                string actionId = activate.ActionProfile ? activate.ActionProfile.ActionId : string.Empty;
+                string actionId = activate.AdmissionProfile ? activate.AdmissionProfile.ActionId : string.Empty;
                 m_Catalog.Bind(
                     operation,
                     route,
@@ -59,7 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (node is CanActivateActionInfoNode admission)
             {
-                string actionId = admission.ActionProfile ? admission.ActionProfile.ActionId : string.Empty;
+                string actionId = admission.AdmissionProfile ? admission.AdmissionProfile.ActionId : string.Empty;
                 m_Catalog.Bind(
                     operation,
                     route,

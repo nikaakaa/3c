@@ -167,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     m_Builder.IdentityField("Feature", $"equipment:feature:{feature.FeatureIdValue}"),
                     m_Builder.IdentityField("Route", $"equipment:route:{route.RouteIdValue}"),
-                    m_Builder.IdentityField("Skill", $"skill:{route.SkillIdValue}")
+                    m_Builder.IdentityField("Ability", $"ability:{route.AbilityIdValue}")
                 };
                 for (int i = 0; i < route.RequiredParameterIds.Count; i++)
                     routeFields.Add(m_Builder.IdentityField($"RequiredParameter:{i:D4}", $"equipment:feature:{feature.FeatureIdValue}:parameter:{EquipmentSlotDefinition.Normalize(route.RequiredParameterIds[i])}"));

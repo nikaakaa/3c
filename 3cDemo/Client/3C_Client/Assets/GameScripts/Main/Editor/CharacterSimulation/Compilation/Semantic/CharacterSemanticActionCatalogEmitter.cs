@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public void Emit()
         {
-            foreach (ActionProfile profile in m_Model.ActionProfiles)
+            foreach (GameplayAbilityAdmissionProfile profile in m_Model.AdmissionProfiles)
             {
                 if (!profile || string.IsNullOrEmpty(profile.ActionId))
                     continue;

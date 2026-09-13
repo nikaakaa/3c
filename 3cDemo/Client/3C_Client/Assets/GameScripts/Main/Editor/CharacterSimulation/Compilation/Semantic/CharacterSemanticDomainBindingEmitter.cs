@@ -154,7 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         m_Catalog.BindTagQuery(operation, route, source, remove.EffectTagQuery);
                     break;
                 case BtsmtlSkillCanActivateActionFlowNode action:
-                    string actionId = action.ActionProfile ? action.ActionProfile.ActionId : string.Empty;
+                    string actionId = action.AdmissionProfile ? action.AdmissionProfile.ActionId : string.Empty;
                     m_Catalog.Bind(operation, route, source, ProgramCatalogEntryKind.Action,
                         $"action:{actionId}", m_CatalogIndex.Actions.Contains(actionId));
                     if (!string.IsNullOrEmpty(action.TargetSnapshotDeclarationId))

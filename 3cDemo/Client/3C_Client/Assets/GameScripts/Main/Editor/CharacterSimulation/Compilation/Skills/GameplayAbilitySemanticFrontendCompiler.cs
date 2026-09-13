@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
@@ -64,12 +65,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     contentHash: model.SourceRevision.Value);
                 builder.RequireGameplayCapability("Action");
                 builder.RequireGameplayCapability("RunnableTree");
+                builder.RequireGameplayCapability("GameplayEffect");
+                builder.DeclareStandaloneStateSlot(
+                    abilitySource,
+                    ProgramStateValueKind.UInt64,
+                    ProgramStateOwnerKind.Action,
+                    ProgramStateSemantic.ActionEventSequence,
+                    "action:event-sequence");
+                builder.DeclareStandaloneStateSlot(
+                    abilitySource,
+                    ProgramStateValueKind.GameplayEffectAggregate,
+                    ProgramStateOwnerKind.GameplayEffect,
+                    ProgramStateSemantic.GameplayEffectAggregate,
+                    "gameplay-effect:aggregate");
+                builder.DeclareStandaloneStateSlot(
+                    abilitySource,
+                    ProgramStateValueKind.UInt64,
+                    ProgramStateOwnerKind.Random,
+                    ProgramStateSemantic.RandomState,
+                    "runtime:rng");
+                builder.DeclareStandaloneStateSlot(
+                    abilitySource,
+                    ProgramStateValueKind.UInt64,
+                    ProgramStateOwnerKind.Runtime,
+                    ProgramStateSemantic.HandleAllocator,
+                    "runtime:handle-allocator");
+                builder.DeclareStandaloneStateSlot(
+                    abilitySource,
+                    ProgramStateValueKind.UInt64,
+                    ProgramStateOwnerKind.Fact,
+                    ProgramStateSemantic.FactSequence,
+                    "runtime:fact-sequence");
                 builder.DeclareStandaloneStateSlot(
                     abilitySource,
                     ProgramStateValueKind.AbilityExecutionState,
                     ProgramStateOwnerKind.Action,
                     ProgramStateSemantic.AbilityExecutionState,
-                    $"ability:{model.AbilityId.Value}");
+                    "action:ability-execution");
                 var catalogIndex = new CharacterSimulationCatalogIndex();
                 var catalogEmitter = new GameplayAbilitySemanticDependencyCatalogEmitter(builder, report, catalogIndex);
                 GameplayAbilityProviderOwnerSet providers = catalogEmitter.Emit(model);

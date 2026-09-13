@@ -151,6 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationCatalogIndex m_Index;
+        readonly HashSet<string> m_ActionStateProfiles = new HashSet<string>(StringComparer.Ordinal);
 
         public GameplayAbilitySemanticDependencyCatalogEmitter(
             CharacterSimulationProgramBuilder builder,
@@ -241,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (node is BtsmtlSkillRemoveGameplayEffectFlowNode remove)
             {
-                if (remove.Selector == GameplayEffectRemoveSelector.EffectId)
+                if (remove.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
                     DeclareEffectReference(model, remove.Effect, owners.GameplayProviderOwnerId, source);
                 else
                     DeclareQuery(remove.EffectTagQuery, source);
@@ -268,13 +269,71 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Index.Actions.Add(actionId);
             var fields = new List<ProgramCatalogField>();
             if (profile is ThirdPersonGameplay.Contracts.IGameplayBehaviorProfile behavior)
+            {
                 fields.AddRange(CharacterSemanticBehaviorCatalogFields.Emit(behavior, m_Builder, source));
+                if (profile is GameplayAbilityAdmissionProfile admission)
+                {
+                    fields.Add(m_Builder.ConstantField(source, "TargetRequirement", admission.TargetRequirement));
+                    fields.Add(m_Builder.ConstantField(source, "MaxConcurrentInstances", admission.MaxConcurrentInstances));
+                    AddQueryFields(fields, source, "Required", admission.RequiredTags);
+                    AddQueryFields(fields, source, "Block", admission.BlockTags);
+                    AddQueryFields(fields, source, "Cancel", admission.CancelTags);
+                }
+            }
             m_Builder.DeclareCatalogEntry(
                 ProgramCatalogEntryKind.Action,
                 $"action:{actionId}",
                 4,
                 fields.Where(value => value != null),
                 source);
+            if (profile is GameplayAbilityAdmissionProfile actionProfile)
+                DeclareActionStateSlots(actionId, actionProfile.MaxConcurrentInstances, source);
+        }
+
+        void DeclareActionStateSlots(string actionId, int capacity, CharacterSimulationSourceLocation source)
+        {
+            if (!m_ActionStateProfiles.Add(actionId))
+                return;
+            for (int i = 0; i < capacity; i++)
+            {
+                string ownerIdentity = i == 0
+                    ? $"action:{actionId}"
+                    : $"action:{actionId}:slot:{i:D4}";
+                m_Builder.DeclareStandaloneStateSlot(
+                    source,
+                    ProgramStateValueKind.ActionActivationRequest,
+                    ProgramStateOwnerKind.Action,
+                    ProgramStateSemantic.ActionRequestBuffer,
+                    ownerIdentity);
+                m_Builder.DeclareStandaloneStateSlot(
+                    source,
+                    ProgramStateValueKind.ActionInstance,
+                    ProgramStateOwnerKind.Action,
+                    ProgramStateSemantic.ActionInstance,
+                    ownerIdentity);
+            }
+        }
+
+        void AddQueryFields(
+            List<ProgramCatalogField> fields,
+            CharacterSimulationSourceLocation source,
+            string prefix,
+            GameplayTagQuery query)
+        {
+            if (query == null)
+            {
+                m_Report.Error("ability_action_tag_query_missing", source.Identity, $"Ability {prefix} Tag query为空。");
+                return;
+            }
+            AddTags(fields, $"{prefix}:All", query.All);
+            AddTags(fields, $"{prefix}:Any", query.Any);
+            AddTags(fields, $"{prefix}:None", query.None);
+        }
+
+        void AddTags(List<ProgramCatalogField> fields, string prefix, IReadOnlyList<GameplayTagId> tags)
+        {
+            for (int i = 0; i < tags.Count; i++)
+                fields.Add(m_Builder.IdentityField($"{prefix}:{i:D4}", $"tag:{tags[i].Value}"));
         }
 
         void DeclareEffect(
@@ -284,6 +343,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!effect || !effect.EffectId.IsValid)
                 return;
+            SemanticDataDocument definition = CharacterSemanticGameplayEffectCatalogEmitter.EncodeDefinition(
+                effect,
+                source,
+                m_Report);
+            var fields = new List<ProgramCatalogField>
+            {
+                m_Builder.ConstantField(source, "Definition", definition),
+                m_Builder.IdentityField("ProviderOwner", providerOwner)
+            };
             DeclareIdentity(
                 ProgramCatalogEntryKind.GameplayEffect,
                 effect.EffectId.Value,
@@ -291,7 +359,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 source,
                 m_Index.GameplayEffects,
                 "effect",
-                checked((int)effect.DefinitionRevision));
+                checked((int)effect.DefinitionRevision),
+                fields);
         }
 
         void DeclareEffectReference(
@@ -351,7 +420,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationSourceLocation source,
             HashSet<string> index,
             string prefix,
-            int revision = 1)
+            int revision = 1,
+            IEnumerable<ProgramCatalogField> extraFields = null)
         {
             if (string.IsNullOrWhiteSpace(identity))
             {
@@ -360,7 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             string normalized = identity.Trim();
             index.Add(normalized);
-            var fields = new List<ProgramCatalogField>();
+            var fields = new List<ProgramCatalogField>(extraFields ?? Array.Empty<ProgramCatalogField>());
             if (!string.IsNullOrWhiteSpace(providerOwner))
                 fields.Add(m_Builder.IdentityField("ProviderOwner", providerOwner));
             m_Builder.DeclareCatalogEntry(

@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Index.Behaviors.Add(effect.BehaviorId);
                 CharacterSimulationSourceLocation source =
                     CharacterSemanticSourceFactory.Asset(m_Model, effect, $"effect:{effect.EffectId.Value}");
-                SemanticDataDocument definition = EncodeEffect(effect, source);
+                SemanticDataDocument definition = EncodeEffect(effect, source, m_Report);
                 var fields = CharacterSemanticBehaviorCatalogFields.Emit(effect, m_Builder, source).ToList();
                 fields.Add(m_Builder.ConstantField(source, "Definition", definition));
                 m_Builder.DeclareCatalogEntry(
@@ -63,7 +63,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        SemanticDataDocument EncodeEffect(GameplayEffectDefinition effect, CharacterSimulationSourceLocation source)
+        internal static SemanticDataDocument EncodeDefinition(
+            GameplayEffectDefinition effect,
+            CharacterSimulationSourceLocation source,
+            CharacterSimulationCompileReport report) =>
+            EncodeEffect(effect, source, report);
+
+        static SemanticDataDocument EncodeEffect(
+            GameplayEffectDefinition effect,
+            CharacterSimulationSourceLocation source,
+            CharacterSimulationCompileReport report)
         {
             try
             {
@@ -91,12 +100,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             catch (Exception exception)
             {
-                m_Report.Error("gameplay_effect_compile_failed", source.Identity, exception.Message);
+                report.Error("gameplay_effect_compile_failed", source.Identity, exception.Message);
                 return SemanticDataDocument.Empty;
             }
         }
 
-        void WriteComponent(
+        static void WriteComponent(
             SemanticDataWriter writer,
             GameplayEffectComponentDefinition component,
             CharacterSimulationSourceLocation source,
@@ -172,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        void WriteMagnitude(
+        static void WriteMagnitude(
             SemanticDataWriter writer,
             GameplayMagnitudeDefinition magnitude,
             CharacterSimulationSourceLocation source,

@@ -117,9 +117,7 @@ namespace Slate
             int endFrame,
             int blendInFrame,
             int blendOutFrame,
-            IReadOnlyList<SlateTimelineEditorCurveView> curves,
-            bool runtimeActive = false,
-            string runtimeLabel = "")
+            IReadOnlyList<SlateTimelineEditorCurveView> curves)
         {
             ClipId = clipId ?? string.Empty;
             TrackId = trackId ?? string.Empty;
@@ -130,8 +128,6 @@ namespace Slate
             BlendInFrame = Mathf.Clamp(blendInFrame, 0, EndFrame - StartFrame);
             BlendOutFrame = Mathf.Clamp(blendOutFrame, 0, EndFrame - StartFrame - BlendInFrame);
             Curves = curves ?? Array.Empty<SlateTimelineEditorCurveView>();
-            RuntimeActive = runtimeActive;
-            RuntimeLabel = runtimeLabel ?? string.Empty;
         }
 
         public string ClipId { get; }
@@ -143,8 +139,6 @@ namespace Slate
         public int BlendInFrame { get; }
         public int BlendOutFrame { get; }
         public IReadOnlyList<SlateTimelineEditorCurveView> Curves { get; }
-        public bool RuntimeActive { get; }
-        public string RuntimeLabel { get; }
     }
 
     public sealed class SlateTimelineEditorTrackView
@@ -158,9 +152,7 @@ namespace Slate
             bool isActive,
             bool isLocked,
             bool isCollapsed,
-            bool showCurves,
-            IReadOnlyList<SlateTimelineEditorClipView> clips,
-            bool runtimeActive = false)
+            IReadOnlyList<SlateTimelineEditorClipView> clips)
         {
             TrackId = trackId ?? string.Empty;
             GroupId = groupId ?? string.Empty;
@@ -170,9 +162,7 @@ namespace Slate
             IsActive = isActive;
             IsLocked = isLocked;
             IsCollapsed = isCollapsed;
-            ShowCurves = showCurves;
             Clips = clips ?? Array.Empty<SlateTimelineEditorClipView>();
-            RuntimeActive = runtimeActive;
         }
 
         public string TrackId { get; }
@@ -183,23 +173,7 @@ namespace Slate
         public bool IsActive { get; }
         public bool IsLocked { get; }
         public bool IsCollapsed { get; }
-        public bool ShowCurves { get; }
         public IReadOnlyList<SlateTimelineEditorClipView> Clips { get; }
-        public bool RuntimeActive { get; }
-    }
-
-    public sealed class SlateTimelineEditorSectionView
-    {
-        public SlateTimelineEditorSectionView(string sectionId, string displayName, int frame)
-        {
-            SectionId = sectionId ?? string.Empty;
-            DisplayName = displayName ?? string.Empty;
-            Frame = Mathf.Max(0, frame);
-        }
-
-        public string SectionId { get; }
-        public string DisplayName { get; }
-        public int Frame { get; }
     }
 
     public sealed class SlateTimelineEditorGroupView
@@ -208,21 +182,18 @@ namespace Slate
             string groupId,
             string displayName,
             bool isCollapsed,
-            IReadOnlyList<SlateTimelineEditorTrackView> tracks,
-            IReadOnlyList<SlateTimelineEditorSectionView> sections = null)
+            IReadOnlyList<SlateTimelineEditorTrackView> tracks)
         {
             GroupId = groupId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
             IsCollapsed = isCollapsed;
             Tracks = tracks ?? Array.Empty<SlateTimelineEditorTrackView>();
-            Sections = sections ?? Array.Empty<SlateTimelineEditorSectionView>();
         }
 
         public string GroupId { get; }
         public string DisplayName { get; }
         public bool IsCollapsed { get; }
         public IReadOnlyList<SlateTimelineEditorTrackView> Tracks { get; }
-        public IReadOnlyList<SlateTimelineEditorSectionView> Sections { get; }
     }
 
     public sealed class SlateTimelineEditorContentView
@@ -234,10 +205,7 @@ namespace Slate
             int viewStartFrame,
             int viewEndFrame,
             int currentFrame,
-            IReadOnlyList<SlateTimelineEditorGroupView> groups,
-            int runtimeFrame = -1,
-            IReadOnlyCollection<string> activeTrackIds = null,
-            IReadOnlyCollection<string> activeClipIds = null)
+            IReadOnlyList<SlateTimelineEditorGroupView> groups)
         {
             DisplayName = displayName ?? string.Empty;
             FrameRate = Mathf.Max(1, frameRate);
@@ -246,9 +214,6 @@ namespace Slate
             ViewEndFrame = Mathf.Max(ViewStartFrame + 1, Mathf.Min(LengthFrame, viewEndFrame));
             CurrentFrame = Mathf.Clamp(currentFrame, 0, LengthFrame);
             Groups = groups ?? Array.Empty<SlateTimelineEditorGroupView>();
-            RuntimeFrame = runtimeFrame;
-            ActiveTrackIds = activeTrackIds ?? Array.Empty<string>();
-            ActiveClipIds = activeClipIds ?? Array.Empty<string>();
         }
 
         public string DisplayName { get; }
@@ -258,9 +223,6 @@ namespace Slate
         public int ViewEndFrame { get; }
         public int CurrentFrame { get; }
         public IReadOnlyList<SlateTimelineEditorGroupView> Groups { get; }
-        public int RuntimeFrame { get; }
-        public IReadOnlyCollection<string> ActiveTrackIds { get; }
-        public IReadOnlyCollection<string> ActiveClipIds { get; }
     }
 
     public interface ISlateTimelineEditorHost
@@ -279,9 +241,11 @@ namespace Slate
         void SetClipRange(string clipId, int startFrame, int endFrame, int blendInFrame, int blendOutFrame);
         void ReplaceCurve(string clipId, string curveId, AnimationCurve curve);
         void SetGroupCollapsed(string groupId, bool collapsed);
+        void SetTrackActive(string trackId, bool active);
+        void SetTrackLocked(string trackId, bool locked);
         void RequestAddTrack(int frame);
         void RequestAddClip(string trackId, int frame);
-        void SetSectionFrame(string sectionId, int frame);
+        void CopyClip(string clipId);
         void OpenSource(string clipId);
         void Select(SlateTimelineEditorSelection selection);
     }

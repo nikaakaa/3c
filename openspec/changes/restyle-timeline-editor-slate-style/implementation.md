@@ -2,7 +2,7 @@
 
 ## 当前边界
 
-Timeline 的持久化真相仍是 `BTSMTL.Timeline.TimelineData`。Slate 只承担编辑表面；BTSMTL Timeline 打开链已经切换为纯内存 `SlateTimelineEditorSurface`，不创建临时 `GameObject`、`Cutscene`、Group、Track、ActionClip 或 AnimatedParameter 组件树。
+Timeline 的持久化真相仍是 `BTSMTL.Timeline.TimelineData`。Slate 只承担编辑表面，临时 `Cutscene`、Group、Track、ActionClip 和 AnimatedParameter 使用 `HideAndDontSave`，不会写入资产、Document 或运行时编译产物。
 
 Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 Graph Shell 与正式预览 coordinator 拥有。Timeline 只显示作者帧、编辑曲线，并接收精确运行观察标记。
 
@@ -12,10 +12,9 @@ Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 G
 TimelineEditorWindow
   -> TimelineEditorOpenRequest
   -> TimelineEditorSessionContext
-  -> BtsmtlSlateTimelineEditorAdapter
-  -> SlateTimelineEditorSurface
-  -> Slate 风格 Track/Clip/Curve 手势
-  -> 纯内存内容读视图与命令 port
+  -> BtsmtlSlateTimelineProjection
+  -> Slate CutsceneEditorSurface
+  -> Slate Track/Clip/Curve 手势
   -> source identity 快照
   -> Session.Apply
   -> TimelineData 正式 owner
@@ -27,7 +26,6 @@ TimelineEditorWindow
 - 轨道右键按作者帧打开 Add Clip 表单；Animation、Tree、Motion、MotionWarp、Camera、Cue 和 Scene binding 均走正式类型工厂/`TimelineAuthoringClipBinding`。
 - Add Track/Add Clip 失败或 owner revision 过期时保留表单输入，不留下半成品或额外 Undo。
 - Scene Presentation 的 `valueCurve` 已注册到正式 `TimelineCurveChannelCatalog`，Slate 编辑后通过 `TimelineCurveAuthoring.Replace` 回写正式曲线。
-- 纯内存 Surface 已接入正式 TimelineData 读视图、稳定 Track/Clip/Curve identity、整数帧游标、Clip 拖动、曲线关键帧草稿、Add Track/Add Clip 命令和运行/历史只读标记；命令通过 `TimelineEditorSessionContext` 回写正式 owner。
 - 运行观察从 `BtsmtlSkillObservationSession` 按 Timeline/Graph/Node 精确筛选 `RuntimeTimelinePlaybackDebugSummary`，调用 `TimelineEditorWindow.ApplyRuntimeObservation`；运行线和作者编辑游标分离。
 - Graph Shell 历史折叠区的 `Segment` 驱动 `RuntimeDebugSession.HistoryOffset`，历史观察调用 `ApplyHistoryObservation` 绘制独立 History 线；历史线、实时线和作者帧互不写同一个时间状态。
 - Timeline 顶部的 `Preview` 只返回已绑定的 Graph Shell；没有绑定时明确提示，不启动 Play、不重建 Session。
@@ -36,23 +34,9 @@ TimelineEditorWindow
 作者界面：
 
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
-- 作者帧现在在 Surface 内提供上一帧、下一帧、整数帧输入、总帧数和 FPS 标识；轨道左侧提供可见的 `+` Clip 入口，顶部时间范围滑块避开编辑按钮，不与控件重叠。
-- 时间尺支持按整数作者帧拖动游标，Surface 还支持左右方向键、Home 和 End 定位作者帧；这些输入不启动播放，也不改变 Graph Shell 的运行时钟。
-- 时间轴视口支持以鼠标所在作者帧为中心的 `Ctrl + 滚轮` 缩放；缩放只改变 Surface 视图范围，不写 TimelineData，也不改变作者游标或 Runtime/History 时间。
 - 左右轨道共享行高和滚动，曲线展开同步；右侧 Inspector 可折叠、拖拽调宽并保持最小可读宽度，窗口宽度不足时自动收起 Inspector。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
-- DopeSheet key strip 从纯内存完整曲线快照读取；支持关键帧多选和按作者帧整体拖动，正式 key、切线、权重和 wrap 不被删除或量化，CurveRenderer 负责切线与细节编辑。
-- DopeSheet key strip 以 `ClipId + CurveId` 区分活动曲线，使用每个曲线自己的作者帧域显示关键帧；拖动草稿会同步刷新 Slate CurveRenderer，提交仍只经过正式曲线命令 port。
-- 纯曲线 Renderer 不再订阅旧 `AnimatedParameter/DopeSheet/CutsceneUtility` 全局事件或 Slate Undo；这些订阅只在真正调用旧原生 `DrawCurves(IAnimatableData, IKeyable, ...)` 时懒加载，避免 Timeline 纯内存路径带入旧内核副作用。
-- Section 标记支持选中，右侧 Inspector 直接编辑名称、作者帧和下一个 Section 引用，提交使用 `TimelineData.ConfigureSection/ConfigureSectionNext`，不再留下只能拖动、不能查看属性的漂浮标记。
-- Track Inspector 直接编辑正式 Track 名称和 `PersistentMuted`；曲线关键帧选择会保留所属 Clip 的 Inspector 上下文，不再因为纯 Surface 的 `Key` 选择被清空。
-- 一个 Track 内只有当前编辑 Clip 的 Curve 区会展开；未选 Clip 时取该 Track 第一条有曲线的 Clip。左侧参数名与右侧曲线行共享同一高度，避免多个 Clip 的 Curve 互相覆盖或出现漂浮的无归属曲线。
-- Curve 区高度以 72px 为下限、每个通道至少 20px；通道数量增加时只扩展当前 Track，不压缩参数名和关键帧行。
-- Surface 的重绘由窗口 host 回调按需触发；编辑提交、运行/历史 overlay 和手势变化主动请求重绘，Timeline 窗口不再挂常驻 `EditorApplication.update` 刷新循环。
-- 删除 Session 中只返回 `1f/0/0f` 的旧帧几何占位 port；作者帧、像素和吸附只由纯 Surface 管理，Session 保留正式 FrameRate、selection 和 mutation owner。
-- 删除 BTSMTL 唯一 Timeline 窗口不使用的 `BeginWindows/EndWindows` 嵌入兼容签名，Surface 只保留普通两参数绘制入口。
-- 删除纯 Surface 命令 port 中没有任何调用方的 `SetTrackActive`、`SetTrackLocked`、`CopyClip` 空实现，避免把未交付能力伪装成可用作者操作。
-- Clip、Section 和 DopeSheet key 手势现在区分“选择”和“实际移动”；没有产生帧/key 位移时只取消手势，不调用正式 Mutation/Undo。
+- DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：
@@ -67,10 +51,11 @@ TimelineEditorWindow
 - 观察区已把正式 `RuntimeDebugSession` 的诊断 Capture 与输入录制拆成两个独立按钮；Capture 使用正式 All/Continuous 合同，恢复/回放仍显示 coordinator 返回的接受与失败结果。
 - Restore 现在只允许选择当前历史中真实存在且 `CanRestore` 的 checkpoint；Input Replay 只允许落在当前采集 Tick 范围内，直接命令调用也返回对应拒绝原因。
 - Timeline 窗口关闭时会通过 `WindowClosed` 通知清理 Skill Observation 的 active Timeline 和 overlay，不再只依赖下次刷新发现窗口不存在。
-- 纯内存 Surface Dispose 时释放命令、拖动草稿、选择和视图引用；Timeline 关闭不再有待销毁的 Slate 组件树或静态 Projection。
+- Projection 关闭时现在会撤销尚未执行的 `EditorApplication.delayCall` 重建回调，并清空 queued 状态，避免窗口关闭后临时 Slate proxy 继续被延迟持有。
+- Projection 自身 Dispose 时会清掉仍指向它的静态 current 引用，避免 Timeline 窗口关闭后保留一个已失效的全局 Projection 实例。
 - Timeline 窗口新增完整构建后的 `WindowOpened` 生命周期通知，Runtime Observation Bridge 在 Slate Surface、属性区和恢复状态都建立后再刷新；不再依赖过早的 AssetOpened 时机。
 - Timeline 顶部和对应 Graph Shell/SkillGraph Preview 区显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
-- C# authoring typed 合同已交付后，Timeline adapter 的新增 Clip 配置使用 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；UI 不建立第二份业务配置模型。
+- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。公共 binding 中剩余旧 JSON 方法由 C# authoring owner 清理。
 
 ## 正式能力对账
 
@@ -87,7 +72,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 
 结果为 0 errors；仅有项目及第三方既有 warnings。每次构建后执行 `dotnet build-server shutdown`。
 
-本轮 Slate、BTSMTL.Timeline.Editor 和 BTSMTL.Timeline.Tree.Editor 通过局部编译；结果为 0 errors，警告为项目及第三方既有 warnings。该验证不替代 Unity Editor 端到端验收。
+主 Editor 工程的联合编译在本轮使用临时编译项把新增 Presenter 纳入生成的 `ThirdPersonClient.Editor.csproj`；编译继续被工作区已有的两个缺失 Runtime 源文件阻断：`CharacterPresentationProgramParameterFrame.cs`、`CharacterPresentationFrameCoordinator.cs`。该生成项目修改已撤销，不属于提交内容；Timeline Tree Editor 自身编译为 0 errors。其余警告为项目及第三方既有 warnings。该验证不替代 Unity Editor 端到端验收。
 
 ## 尚未完成
 
@@ -98,6 +83,4 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 - 当前仍可定位到旧 JSON 消费者：`AgentSkillFlowDocumentExporter.cs:547` 调用 `TimelineAuthoringClipBinding.Export`，`BtsmtlSkillTimelineAuthoringApplier.cs:379` 调用 `TimelineAuthoringClipBinding.Apply`；在 C# authoring 的 Skill/FSM/Pose/EventGraph 迁移完成前，本 change 不删除这些共享路径。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
-- 插件自身的原生 Cutscene DopeSheet/参数编辑仍由 Slate 旧窗口拥有，属于 11.7 的外部消费者边界；BTSMTL 纯内存路径不进入该窗口。TreeClip 专用下钻和最终 Unity Editor 视觉证据仍未闭合，不恢复旧组件树。
-- 11.8 的外部观察边界已闭合：Runtime/History overlay 与 Preview 导航由正式 bridge/Graph Shell 提供，Surface 不接收 ScenePlay 控制；r2 authoring 读取 TimelineData，完整 Restore/Replay 仍属于 9.5。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

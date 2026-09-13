@@ -95,7 +95,7 @@ namespace BTSMTL.Timeline.Editor
         RuntimeObservationSelectionMode m_RuntimeObservationSelectionMode;
 
         TimelineNode m_SourceNode;
-        BtsmtlSlateTimelineEditorAdapter m_SlateProjection;
+        BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
         ToolbarButton m_BackButton;
@@ -368,6 +368,11 @@ namespace BTSMTL.Timeline.Editor
             ApplyDetailsVisibility();
         }
 
+        void OnEnable()
+        {
+            EditorApplication.update += OnEditorUpdate;
+        }
+
         [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
         public static void OpenStandalone()
         {
@@ -441,10 +446,9 @@ namespace BTSMTL.Timeline.Editor
                 serializedPropertyPath,
                 ownershipLabel,
                 sourceGraphWindow);
-            if (!BtsmtlSlateTimelineEditorAdapter.TryOpen(
+            if (!BtsmtlSlateTimelineProjection.TryOpen(
                     openRequest,
                     OpenClip,
-                    () => m_SlateSurface?.MarkDirtyRepaint(),
                     out m_SlateProjection,
                     out string unavailableReason))
             {
@@ -619,6 +623,7 @@ namespace BTSMTL.Timeline.Editor
         void OnDisable()
         {
             WindowClosed?.Invoke(this);
+            EditorApplication.update -= OnEditorUpdate;
             DisposeView();
         }
 
@@ -659,7 +664,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnAuthoringIssue(string message)
         {
-            SetStatus(string.IsNullOrEmpty(message) ? $"Rate {TimelineUtility.FrameRate} FPS" : message);
+            SetStatus(string.IsNullOrEmpty(message) ? $"Frame {TimelineUtility.FrameRate}" : message);
         }
 
         void CaptureViewState()
@@ -670,6 +675,11 @@ namespace BTSMTL.Timeline.Editor
             m_ViewState = m_SlateProjection.CaptureViewState();
         }
 
+        void OnEditorUpdate()
+        {
+            m_SlateSurface?.MarkDirtyRepaint();
+        }
+
         void DrawSlateSurface()
         {
             if (m_SlateProjection == null || m_SlateSurface == null)
@@ -677,7 +687,9 @@ namespace BTSMTL.Timeline.Editor
             Rect rect = m_SlateSurface.contentRect;
             m_SlateProjection.DrawEmbeddedGUI(
                 Mathf.Max(1f, rect.width),
-                Mathf.Max(1f, rect.height));
+                Mathf.Max(1f, rect.height),
+                BeginWindows,
+                EndWindows);
         }
 
         void RebuildDetails(TimelineEditorSelection selection)
@@ -716,44 +728,6 @@ namespace BTSMTL.Timeline.Editor
             {
                 Track track = selection.Track;
                 m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
-                var name = new TextField("Name") { value = track.Name };
-                name.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
-                    () =>
-                    {
-                        track.Name = evt.newValue;
-                        m_Timeline.Init();
-                    },
-                    "Set Timeline Track Name"));
-                m_DetailsHost.Add(name);
-                var muted = new Toggle("Muted") { value = track.PersistentMuted };
-                muted.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
-                    () =>
-                    {
-                        track.PersistentMuted = evt.newValue;
-                        m_Timeline.Init();
-                    },
-                    "Set Timeline Track Muted"));
-                m_DetailsHost.Add(muted);
-            }
-            if (selection.Section != null)
-            {
-                TimelineSection section = selection.Section;
-                m_DetailsHost.Add(new Label("Timeline Section"));
-                var name = new TextField("Name") { value = section.Name };
-                name.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
-                    () => m_Timeline.ConfigureSection(section, evt.newValue, section.Frame),
-                    "Set Timeline Section Name"));
-                m_DetailsHost.Add(name);
-                var frame = new IntegerField("Frame") { value = section.Frame };
-                frame.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
-                    () => m_Timeline.ConfigureSection(section, section.Name, Mathf.Max(0, evt.newValue)),
-                    "Set Timeline Section Frame"));
-                m_DetailsHost.Add(frame);
-                var next = new TextField("Next Section Id") { value = section.NextSectionId };
-                next.RegisterValueChangedCallback(evt => m_SlateProjection.ApplyFormalMutation(
-                    () => m_Timeline.ConfigureSectionNext(section, evt.newValue),
-                    "Set Timeline Section Next"));
-                m_DetailsHost.Add(next);
             }
             ApplyDetailsVisibility();
         }
@@ -811,7 +785,7 @@ namespace BTSMTL.Timeline.Editor
             m_DetailsToggle.style.width = 100f;
             m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
             m_RuntimeObservationMenu.style.width = 150f;
-            m_Status = new Label($"Rate {TimelineUtility.FrameRate} FPS");
+            m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
             m_Status.style.marginLeft = 6f;
             m_Status.style.flexGrow = 1f;
             m_Status.tooltip = "Timeline 使用正式作者帧编辑。角色 Scene Play、Build、Skill 和运行观察由 Skill Graph / Graph Shell 管理。";

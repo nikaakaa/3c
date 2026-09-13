@@ -2464,15 +2464,15 @@ namespace Slate
                         if (curveClip?.Keyable?.animationData != null)
                         {
                             Rect curveRect = Rect.MinMaxRect(
-                                TimeToPos(viewTimeMin),
+                                TimeToPos(curveClip.StartTime),
                                 y + track.DefaultHeight + 2f,
-                                TimeToPos(viewTimeMax),
+                                TimeToPos(curveClip.EndTime),
                                 y + track.FinalHeight - 2f);
                             CurveEditor.DrawCurves(
                                 curveClip.Keyable.animationData,
                                 curveClip.Keyable,
                                 curveRect,
-                                Rect.MinMaxRect(TimeToPos(viewTimeMin), 0f, TimeToPos(viewTimeMax), 0f));
+                                Rect.MinMaxRect(0f, 0f, curveClip.Length, 0f));
                         }
                     }
 

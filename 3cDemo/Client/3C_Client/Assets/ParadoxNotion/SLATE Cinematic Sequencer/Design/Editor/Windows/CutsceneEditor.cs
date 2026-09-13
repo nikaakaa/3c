@@ -2102,8 +2102,8 @@ namespace Slate
             Rect scrollRect = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, screenHeight - 5);
             Rect scrollView = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, totalHeight + 150);
             scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, scrollView);
-            ShowEmbeddedGroupsAndTracksList(leftRect);
-            ShowEmbeddedTimeLines(centerRect);
+            ShowGroupsAndTracksList(leftRect);
+            ShowTimeLines(centerRect);
             GUI.EndScrollView();
 
             DrawRuntimeOverlay();
@@ -2857,6 +2857,12 @@ namespace Slate
         //left - the groups and tracks info and option per group/track
         void ShowGroupsAndTracksList(Rect leftRect) {
 
+            if (embeddedTimeline != null)
+            {
+                ShowEmbeddedGroupsAndTracksList(leftRect);
+                return;
+            }
+
             var e = Event.current;
 
             //allow resize list width
@@ -3167,6 +3173,12 @@ namespace Slate
 
         //middle - the actual timeline tracks
         void ShowTimeLines(Rect centerRect) {
+
+            if (embeddedTimeline != null)
+            {
+                ShowEmbeddedTimeLines(centerRect);
+                return;
+            }
 
             var e = Event.current;
 

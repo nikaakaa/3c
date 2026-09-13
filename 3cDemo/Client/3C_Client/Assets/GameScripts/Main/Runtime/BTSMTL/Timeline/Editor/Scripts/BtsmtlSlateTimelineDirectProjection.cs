@@ -822,6 +822,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Timeline.RemoveTrack(directTrack.Source);
                 Timeline.Init();
             }, "Delete Timeline Track");
+            ClearSelectionIfRemoved(new[] { directTrack.Source.AuthoringId });
             RebuildBindings();
         }
 
@@ -834,6 +835,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Timeline.RemoveClip(directClip.Source);
                 Timeline.Init();
             }, "Delete Timeline Clip");
+            ClearSelectionIfRemoved(new[] { directClip.Source.AuthoringId });
             RebuildBindings();
         }
 
@@ -853,8 +855,21 @@ namespace BTSMTL.Timeline.Editor
                     Timeline.RemoveClip(directClips[index].Source);
                 Timeline.Init();
             }, "Delete Timeline Clips");
-            m_BeginSelectionId = string.Empty;
+            ClearSelectionIfRemoved(directClips.Select(value => value.Source.AuthoringId));
             RebuildBindings();
+        }
+
+        void ClearSelectionIfRemoved(IEnumerable<string> authoringIds)
+        {
+            foreach (string authoringId in authoringIds)
+            {
+                if (!string.Equals(m_BeginSelectionId, authoringId, StringComparison.Ordinal) &&
+                    !string.Equals(m_Selection.ElementAuthoringId, authoringId, StringComparison.Ordinal))
+                    continue;
+                m_BeginSelectionId = string.Empty;
+                Select(null);
+                return;
+            }
         }
 
         public void SplitClip(IEmbeddedTimelineClipBinding clip, int frame)
@@ -1125,12 +1140,24 @@ namespace BTSMTL.Timeline.Editor
                 m_Sections.Add(directSection);
                 m_SectionsById[sourceSection.AuthoringId] = directSection;
             }
+            bool restoredSelection = false;
             if (!string.IsNullOrEmpty(m_BeginSelectionId))
             {
                 if (m_Clips.TryGetValue(m_BeginSelectionId, out BtsmtlTimelineClipBinding clip))
+                {
                     Select(clip);
+                    restoredSelection = true;
+                }
                 else if (m_Tracks.TryGetValue(m_BeginSelectionId, out BtsmtlTimelineTrackBinding track))
+                {
                     Select(track);
+                    restoredSelection = true;
+                }
+            }
+            if (!restoredSelection && m_Selection.Kind != TimelineEditorSelectionKind.None)
+            {
+                m_BeginSelectionId = string.Empty;
+                Select(null);
             }
         }
 

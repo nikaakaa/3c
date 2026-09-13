@@ -66,7 +66,7 @@ namespace BTSMTL.Timeline.Editor
         int m_CurrentFrame;
         int m_RuntimeFrame = -1;
         bool m_GroupCollapsed;
-        bool m_ReadOnly;
+        bool m_ReadOnly = false;
         bool m_Disposed;
 
         public BtsmtlSlateTimelineEditorAdapter(

@@ -34,7 +34,7 @@ namespace ThirdPersonCamera
                 CameraEffectRuntimeState state = active[i];
                 if (state.Request.Kind != Kind ||
                     !m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload) ||
-                    state != selected && payload.PlayStackingType != CameraEffectStackingType.Add)
+                    state != selected && payload.StackingType != CameraEffectStackingType.Add)
                     continue;
                 result = ApplySingle(result, state, payload);
             }

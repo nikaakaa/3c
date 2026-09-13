@@ -57,6 +57,6 @@
 - `BTSMTL.Timeline.Editor.csproj` 使用 `--no-restore /p:BuildProjectReferences=false --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，31 个既有未赋值字段警告，0 个错误；新增 Camera 曲线 owner 没有编译错误。
 - `ThirdPersonClient.Runtime.csproj` 同参数检查到工作区既有错误：`CharacterControlProgramContracts.cs(636)` 缺少 `CharacterSkillDependency`；直接项目重编译另有用户新增 `GameplayAbilityDefinition` 未实现 `IGameplayBehaviorProfile.DebugCategory/Tags`。本次未修改这些文件。
 - `ThirdPersonClient.Editor.csproj` 在 Runtime 因既有错误未产出 DLL 后无法继续编译；没有把该结果解释为摄像机代码已通过 Editor 编译。
-- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`；资源接口仍返回 `no_unity_session`，但显式工具可读取当前 Console。Force refresh 后 Console 新增错误为既有 Timeline Slate 引用缺失和 `GameplayAbilityDefinition` 接口未实现，未出现摄像机源码错误；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
+- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`；资源接口仍返回 `no_unity_session`，但显式工具可读取当前 Console。最近一次脚本刷新后的 Console 错误集中在既有 `ActionSkillExecutionRuntime.cs`/`CharacterSkillProgramContracts.cs` 的 `ThirdPersonCharacter`、`GameplayAbilityEndTrigger` 缺失，未出现摄像机源码错误；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
 - 已按精确 Definition/Wrapper 路径启动 Fixed Character Build，job `a5d9ddca7fc44bf7b863f8aedcd15629` 返回 `character_build_exception`：`Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.` 原因是 Unity 因工作区既有编译错误仍使用旧域程序集，而 Profile 已删除正式 owner 字段；没有接受旧域状态并伪造发布产物。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

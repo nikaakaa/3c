@@ -70,6 +70,8 @@ namespace BTSMTL.Timeline.Editor
                 BuildCameraCue(cameraCue);
             else if (m_Clip is CameraResponseClip cameraResponse)
                 BuildCameraResponse(cameraResponse);
+            else if (m_Clip is CameraResourceClip cameraResource)
+                BuildCameraResource(cameraResource);
             else if (m_Clip is ActionCueClip actionCue)
                 BuildActionCue(actionCue);
             else if (m_Clip is ScenePresentationParameterCurveClip sceneParameter)
@@ -134,6 +136,7 @@ namespace BTSMTL.Timeline.Editor
         void BuildCameraState(CameraStateClip clip)
         {
             AddEnum("Mode", clip.Mode, value => Modify("Set Camera Mode", () => clip.Mode = (TimelineCameraMode)value));
+            AddText("Sequence Id", clip.SequenceId, value => Modify("Set Camera Sequence", () => clip.SequenceId = value));
             AddInteger("Priority", clip.Priority, value => Modify("Set Camera Priority", () => clip.Priority = value));
             AddFloat("Blend In Seconds", clip.BlendInSeconds, value => Modify("Set Camera Blend In", () => clip.BlendInSeconds = Mathf.Max(0f, value)));
             AddFloat("Blend Out Seconds", clip.BlendOutSeconds, value => Modify("Set Camera Blend Out", () => clip.BlendOutSeconds = Mathf.Max(0f, value)));
@@ -146,6 +149,7 @@ namespace BTSMTL.Timeline.Editor
             AddText("Cue Id", clip.CueId, value => Modify("Set Camera Cue Id", () => clip.CueId = value));
             AddEnum("Cue Kind", clip.CueKind, value => Modify("Set Camera Cue Kind", () => clip.CueKind = (TimelineCameraCueKind)value));
             AddText("Cue Type", clip.CueType, value => Modify("Set Camera Cue Type", () => clip.CueType = value));
+            AddText("Resource Id", clip.ResourceId, value => Modify("Set Camera Cue Resource", () => clip.ResourceId = value));
             AddFloat("Intensity", clip.Intensity, value => Modify("Set Camera Cue Intensity", () => clip.Intensity = Mathf.Max(0f, value)));
             AddFloat("Duration Seconds", clip.DurationSeconds, value => Modify("Set Camera Cue Duration", () => clip.DurationSeconds = Mathf.Max(0f, value)));
             AddInteger("Priority", clip.Priority, value => Modify("Set Camera Cue Priority", () => clip.Priority = value));
@@ -158,6 +162,41 @@ namespace BTSMTL.Timeline.Editor
             AddFloat("Pitch Response Weight", clip.PitchResponseWeight, value => Modify("Set Pitch Response Weight", () => clip.PitchResponseWeight = Mathf.Clamp01(value)));
             AddFloat("Yaw Response Weight", clip.YawResponseWeight, value => Modify("Set Yaw Response Weight", () => clip.YawResponseWeight = Mathf.Clamp01(value)));
             AddInteger("Priority", clip.Priority, value => Modify("Set Camera Response Priority", () => clip.Priority = value));
+        }
+
+        void BuildCameraResource(CameraResourceClip clip)
+        {
+            switch (clip)
+            {
+                case CameraOverrideClip cameraOverride:
+                    AddObject(
+                        "Override Track",
+                        typeof(CameraOverrideTrackAsset),
+                        cameraOverride.OverrideTrack,
+                        value => Modify("Set Camera Override Track", () => cameraOverride.OverrideTrack = value as CameraOverrideTrackAsset));
+                    break;
+                case CameraZoomClip cameraZoom:
+                    AddObject(
+                        "Zoom",
+                        typeof(CameraZoomAsset),
+                        cameraZoom.Zoom,
+                        value => Modify("Set Camera Zoom", () => cameraZoom.Zoom = value as CameraZoomAsset));
+                    break;
+                case CameraStretchClip cameraStretch:
+                    AddObject(
+                        "Stretch",
+                        typeof(CameraStretchAsset),
+                        cameraStretch.Stretch,
+                        value => Modify("Set Camera Stretch", () => cameraStretch.Stretch = value as CameraStretchAsset));
+                    break;
+                case CameraShotClip cameraShot:
+                    AddObject(
+                        "Shot",
+                        typeof(CameraShotAsset),
+                        cameraShot.Shot,
+                        value => Modify("Set Camera Shot", () => cameraShot.Shot = value as CameraShotAsset));
+                    break;
+            }
         }
 
         void BuildActionCue(ActionCueClip clip)
@@ -187,6 +226,22 @@ namespace BTSMTL.Timeline.Editor
         void AddText(string label, string value, Action<string> changed)
         {
             var field = new TextField(label) { value = value ?? string.Empty };
+            field.RegisterValueChangedCallback(evt => changed(evt.newValue));
+            Add(field);
+        }
+
+        void AddObject(
+            string label,
+            Type type,
+            UnityEngine.Object value,
+            Action<UnityEngine.Object> changed)
+        {
+            var field = new ObjectField(label)
+            {
+                objectType = type,
+                allowSceneObjects = false,
+                value = value
+            };
             field.RegisterValueChangedCallback(evt => changed(evt.newValue));
             Add(field);
         }

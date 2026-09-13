@@ -94,6 +94,6 @@
 - [ ] 11.1 在原窗口/嵌入入口、ShowTimeInfo、列表和ShowTimeLines中接正式Timeline/Track/Clip/Section及帧数据，保留原绘制、行高、滚动和命中逻辑
 - [ ] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为
 - [ ] 11.3 在原CurveEditor/DopeSheetEditor/参数工具中替换曲线读写、编辑时间和提交绑定，保留原关键帧/切线算法及全部曲线数据，不另写渲染器或曲线编辑器
-- [ ] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接
+- [x] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接；由 `BtsmtlSlateTimelineDirectProjection` 与 `IEmbeddedTimelineBinding` 完成，提交 `7ddde8c4e`
 - [ ] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、右侧Inspector和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback
 - [ ] 11.6 将原 Slate 原生对象/Actor/Director/Cutscene 条件门禁改接正式 Timeline contract 和编辑资格，合法新增/选择/编辑不因缺少原生组件或原生播放状态被拒绝

@@ -123,7 +123,7 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 #### 3.5 回退与继续
 
-实现窗口已提交 0aa52f209《回退Timeline纯内存自制UI链》，回退 7bc392cd3 及后续自制 Surface/Curve/DopeSheet/缩放/手势改造，保留同期无关相机等业务提交。正式入口恢复为 TimelineEditorWindow → BtsmtlSlateTimelineProjection → Slate CutsceneEditorSurface。实现窗口报告 BTSMTL.Timeline.Tree.Editor 编译 0 errors/0 warnings；本规划未重复执行编译。原 projection 仍有临时组件树，这是下一步绑定适配要处理的问题，不是最终方案。
+实现窗口已提交 0aa52f209《回退Timeline纯内存自制UI链》，回退 7bc392cd3 及后续自制 Surface/Curve/DopeSheet/缩放/手势改造，保留同期无关相机等业务提交。当前正式入口为 TimelineEditorWindow → BtsmtlSlateTimelineDirectProjection → Slate CutsceneEditorSurface.InitializeEmbedded(IEmbeddedTimelineBinding)。提交 7ddde8c4e 已删除旧组件代理 projection；当前代码不再创建临时 Slate GameObject/组件树。本规划不把编译结果当作 Unity Editor 端到端证据。
 
 原第11节的“新建 SlateTimelineEditorSurface/纯内存 Editor Model、替换整套交互和曲线工具”已撤销。新的第11节只记录原源码的数据绑定替换和无关代码清理，全部未勾选，不沿用被回退实现的完成状态。
 
@@ -239,7 +239,7 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 | restyle 本 change | 负责 Slate GUI、帧、新增、正式编辑及桥接，旧完成勾选按代码证据纠正。 |
 | rebuild 场景预览 change | 同步改正“观察后结构只读”为“观察只读、作者可编辑”；场景控制和采用实现仍归该 change。 |
 | current timeline-animation-authoring-surface | 保留独立作者能力、typed context、按需工具和不占空行规则。 |
-| 当前代码 | 0aa52f209 已恢复原 Slate 入口；旧完成记录不证明新的绑定替换已完成，组件树仍待处理。 |
+| 当前代码 | 7ddde8c4e 已恢复原 Slate Surface 并切换到无对象 Timeline binding；旧完成记录不替代 Unity Editor 端到端验收。 |
 
 ## Migration Plan
 

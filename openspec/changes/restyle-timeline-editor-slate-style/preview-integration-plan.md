@@ -163,6 +163,6 @@ P1/P3 与 Timeline 布局、帧、新增一起排期；P2/P4/P5 逐项核对主�
 - 人工修改/拖动/保存 Timeline 只写正式 TimelineData，经原 Undo，不生成 C#，不增加源码同步状态、源码 Undo 或导出 UI。
 - export_code 从当前资产完整输出 C#；generate_assets 执行当前已编译入口，重建并保存明确生成范围和根挂接。重新生成不会合并未导出修改，保留修改需先显式导出。
 - 源码编译不自动 generate_assets；两个作者 MCP 不自动 Character Build 或 Play。预览仍使用原显式 Build/采用入口。
-- TimelineAuthoringClipBinding.cs 的 JSON 退役、typed 配置和公共输出/生成归 C# authoring；BtsmtlSlateTimelineProjection.cs 由本任务独占修改，等待同一强类型入口后去掉 UI 的 BuildClipProperties/Export/JObject 中转，不复制业务模型或中央 Validator。
+- TimelineAuthoringClipBinding.cs 的 JSON 退役、typed 配置和公共输出/生成归 C# authoring；BtsmtlSlateTimelineDirectProjection.cs 由本任务维护正式 UI 接线，不复制业务模型或中央 Validator。
 - 生成内部引用使用新建对象，范围外共享图和原始资源作为精确外部输入。仅生成范围内物理对象可替换，业务 identity/引用和根 owner 挂接须恢复并保存。预览按已有 binding/revision 规则刷新，不把旧对象或 Slate proxy 当成生成输入。
 - 本轮只更新 Timeline 目录内规划，不修改其它预览任务文档或实现；不因协议退役重做已正确 UI/预览，也不将新接线列为完成。

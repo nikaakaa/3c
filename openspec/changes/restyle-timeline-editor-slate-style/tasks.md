@@ -92,7 +92,7 @@
 实现门槛：打开、刷新、新增、选择、编辑、关闭均不创建或依赖 Slate 组件树；原生 Cutscene/Actor/Director 规则不能阻止正式 TimelineData 的合法操作。__BTSMTL_SlateTimelineProjection__ / BuildProjection 残留不作为最终方案或 fallback。本段是实现约束，不新增验证任务。
 
 - [x] 11.1 在原窗口/嵌入入口、ShowTimeInfo、列表和ShowTimeLines中接正式Timeline/Track/Clip/Section及帧数据，保留原绘制、行高、滚动和命中逻辑；正式 binding 从原入口分派，游标/快捷键/引导线同样从原函数入口进入
-- [ ] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为
+- [x] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为；formal Clip 使用同一 `ActionClipWindow` 与 `ActionClipWrapper`，菜单命令转到 `IEmbeddedTimelineBinding`
 - [x] 11.3 在原CurveEditor/DopeSheetEditor/参数工具中替换曲线读写、编辑时间和提交绑定，保留原关键帧/切线算法及全部曲线数据，不另写渲染器或曲线编辑器；无对象 binding 通过原 Slate CurveEditor/DopeSheetEditor 使用纯编辑数据，提交由 `TimelineEditorSessionContext` 完成
 - [x] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接；由 `BtsmtlSlateTimelineDirectProjection` 与 `IEmbeddedTimelineBinding` 完成，提交 `7ddde8c4e`
 - [x] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、右侧Inspector和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback

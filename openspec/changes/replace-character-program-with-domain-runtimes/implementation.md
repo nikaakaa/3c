@@ -58,6 +58,7 @@
 - `759a49725`：把 Equipment local-state 的 kind、default、当前值、reset 和 codec 全部迁入 Equipment 领域，删除 Equipment local-state Program slot、semantic 和 state port；2.5 的 Effect／Equipment 目录与运行状态迁移完成。
 - `19eb0581c`：为 Control runtime state 增加非消费式 Preview，让 Float32／Fixed 主状态事务在同一入口校验并提交 Control、Effect、Equipment 与 Program 分区；Kernel Finalize 不再先后消费两个独立提交入口。
 - `fc30eaffb`：删除 Ability 独立前端对 Gameplay Effect aggregate、runtime:rng、runtime:handle-allocator 和 runtime:fact-sequence 的无条件状态声明，保留局部 action／execution state；1.8 的角色级状态归属清理完成。
+- `acc4b59f5`：删除 FactSequence 的 Program 槽、语义和 EventSequence 独立 state port；Float32／Fixed 的 EventSequence 与 Finalize 事件统一通过角色状态事务递增，序号由 CharacterSimulationState 持有并接入 savepoint、状态 codec、Server Authority full／delta checkpoint 与 checkpoint hash；同步升级程序、状态和 checkpoint 格式版本。
 
 ## 当前实现边界
 
@@ -78,6 +79,7 @@
 - Local Host 与 Server Authority Host 直接从 Character Definition 构造 Control／BodyMotion binding；加载后的 Authority runtime 使用 manifest 中的同一绑定，不再从 Program catalog 补参数。
 - `CharacterGameplayEffectProfile` 现在由 `CharacterPipelineDefinition.BuildGameplayEffectRuntimeBinding` 编译为带 source identity、content revision、完整 Tag／Attribute／Effect portable bytes 的 binding，进入 Program layout、Actor binding、Evaluate request 和 DotRecast manifest；Float32／Fixed 的 `SimulationGameplayEffectProgram` 对 Character 只从该 binding 解码，不再从 Character Program catalog 读取 Effect 定义。`GameplayEffectStateAggregate` 已由 `CharacterSimulationState` 独立持有，现有 Effect working state、事务 savepoint、state codec 和 Authority checkpoint 使用同一份状态；Program 内保留的 Effect identity／producer 仍服务于现有 operation 引用。
 - `CharacterEquipmentProfile` 现在由 `CharacterPipelineDefinition.BuildEquipmentRuntimeBinding` 编译为带 source identity、content revision、slots／features／items／routes／route implementations／parameter values、local-state kind 和 default 的 portable binding，进入 Program layout、Actor binding、Evaluate request 和 DotRecast manifest；Float32／Fixed 的 Equipment layout 与参数读取只消费该 binding，不再从 Character Program constants 读取 Equipment 参数。`EquipmentStateAggregate` 现在由 `CharacterSimulationState` 独立持有 slots、local-state 当前值、pending change 和 contribution handles，事务、state codec 和 Authority checkpoint 使用同一份状态；当前 operation identity references 仍复用 Program 的正式接口。
+- `FactSequence` 现在由 `CharacterSimulationState.EventSequence` 持有，Float32／Fixed 事务的 `NextEventSequence` 负责递增、溢出检查、savepoint／Restore 和最终提交；EventSequence frame 与 Finalize 事件不再查找或写入 Program state slot。角色状态 codec、Server Authority full／delta checkpoint 和 checkpoint hash 读写同一序号，旧格式由版本和 identity 变化拒绝；角色 Program 不再声明 `runtime:fact-sequence`，构建诊断明确标记 `FactSequence=external`。
 
 ## 编译证据与阻断
 
@@ -98,6 +100,7 @@
 - 2026-09-14 Equipment local-state 迁移后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 56 个既有 warning、0 errors。
 - 2026-09-14 Ability 角色级服务状态槽清理后，`ThirdPersonClient.Editor.csproj` 编译成功，93 个既有 warning、0 errors；未运行 Unity、测试或端到端行为验证。
 - 2026-09-14 统一角色 Tick 提交入口后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；Kernel 所在的 `ThirdPersonClient.Runtime.csproj` 与 `ThirdPersonClient.Editor.csproj` 未出现本次改动错误。
+- 2026-09-14 FactSequence 迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 57 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

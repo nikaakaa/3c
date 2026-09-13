@@ -103,9 +103,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var timelines = new List<TimelineAsset>();
             var timelineOwners = new Dictionary<TimelineAsset, FlowGraph>();
             CollectReferences(context, graphs, graphOwners, machines, machineOwners, timelines, timelineOwners);
-            RegisterGraphs(context, graphs, root);
-            RegisterMachines(context, machines);
-            RegisterTimelines(context, timelines);
+            RegisterGraphs(context, graphs, root, graphOwners);
+            RegisterMachines(context, machines, machineOwners, root, graphOwners);
+            RegisterTimelines(context, timelines, timelineOwners);
 
             string resolvedAbilityId = abilityRoot
                 ? string.IsNullOrWhiteSpace(abilityId)
@@ -400,7 +400,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         void RegisterGraphs(
             BtsmtlAuthoringCodeExportContext context,
             IEnumerable<FlowGraph> graphs,
-            FlowGraph root)
+            FlowGraph root,
+            IReadOnlyDictionary<FlowGraph, FlowGraph> owners)
         {
             foreach (FlowGraph graph in graphs)
             {
@@ -411,51 +412,80 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     context.ReportError("skill_graph_type_invalid", graph?.GetType().FullName, "Skill闭包包含非正式技能图。");
                     continue;
                 }
-                RegisterObject(context, graph, $"graph:{authoring.AuthoringId}", "graph", ReferenceEquals(graph, root));
+                RegisterObject(
+                    context,
+                    graph,
+                    $"graph:{authoring.AuthoringId}",
+                    "graph",
+                    ReferenceEquals(graph, root),
+                    SectionForGraph(graph, root, owners));
                 foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
                 {
                     if (IsRetiredLifecycleNode(node))
                         continue;
-                    RegisterNode(context, graph, node);
+                    RegisterNode(context, graph, node, SectionForGraph(graph, root, owners));
                 }
             }
         }
 
         void RegisterMachines(
             BtsmtlAuthoringCodeExportContext context,
-            IEnumerable<BtsmtlSkillNativeStateMachine> machines)
+            IEnumerable<BtsmtlSkillNativeStateMachine> machines,
+            IReadOnlyDictionary<BtsmtlSkillNativeStateMachine, FlowGraph> owners,
+            FlowGraph root,
+            IReadOnlyDictionary<FlowGraph, FlowGraph> graphOwners)
         {
             foreach (BtsmtlSkillNativeStateMachine machine in machines)
             {
-                RegisterObject(context, machine, $"fsm:{machine.AuthoringId}", "stateMachine");
-                RegisterMachineMembers(context, machine);
+                string sectionName = owners.TryGetValue(machine, out FlowGraph owner)
+                    ? SectionForGraph(owner, root, graphOwners)
+                    : "Root";
+                RegisterObject(context, machine, $"fsm:{machine.AuthoringId}", "stateMachine", false, sectionName);
+                RegisterMachineMembers(context, machine, sectionName);
             }
         }
 
         void RegisterMachineMembers(
             BtsmtlAuthoringCodeExportContext context,
-            BtsmtlSkillNativeStateMachine machine)
+            BtsmtlSkillNativeStateMachine machine,
+            string sectionName)
         {
             foreach (BtsmtlSkillNativeState state in machine.allNodes.OfType<BtsmtlSkillNativeState>())
             {
-                RegisterObject(context, state, $"state:{machine.AuthoringId}:{state.UID}", "state");
+                RegisterObject(
+                    context,
+                    state,
+                    $"state:{machine.AuthoringId}:{state.UID}",
+                    "state",
+                    false,
+                    sectionName,
+                    TypeName(typeof(BtsmtlSkillNativeState)));
                 foreach (BtsmtlSkillNativeConnection connection in state.outConnections.OfType<BtsmtlSkillNativeConnection>())
-                    RegisterObject(context, connection, $"state-edge:{machine.AuthoringId}:{connection.UID}", "stateEdge");
+                    RegisterObject(
+                        context,
+                        connection,
+                        $"state-edge:{machine.AuthoringId}:{connection.UID}",
+                        "stateEdge",
+                        false,
+                        sectionName,
+                        TypeName(typeof(BtsmtlSkillNativeConnection)));
             }
         }
 
         void RegisterTimelines(
             BtsmtlAuthoringCodeExportContext context,
-            IEnumerable<TimelineAsset> timelines)
+            IEnumerable<TimelineAsset> timelines,
+            IReadOnlyDictionary<TimelineAsset, FlowGraph> owners)
         {
             foreach (TimelineAsset timeline in timelines)
-                RegisterTimeline(context, timeline, false);
+                RegisterTimeline(context, timeline, false, TimelineSection(timeline));
         }
 
         void RegisterTimeline(
             BtsmtlAuthoringCodeExportContext context,
             TimelineAsset timeline,
-            bool isRoot)
+            bool isRoot,
+            string sectionName = null)
         {
             if (timeline?.Data == null)
             {
@@ -470,27 +500,85 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 context.ReportError("timeline_asset_not_persistent", timeline.name, "Timeline资产必须有稳定的本地文件身份。");
                 return;
             }
-            RegisterObject(context, timeline, $"timeline-asset:{assetPath}:{localFileId}", "timeline", isRoot);
-            RegisterObject(context, timeline.Data, $"timeline:{timelineIdentity}", "timelineData");
+            string timelineSection = isRoot ? "Root" : sectionName ?? TimelineSection(timeline);
+            RegisterObject(
+                context,
+                timeline,
+                $"timeline-asset:{assetPath}:{localFileId}",
+                "timeline",
+                isRoot,
+                timelineSection,
+                TypeName(typeof(TimelineAsset)));
+            RegisterObject(
+                context,
+                timeline.Data,
+                $"timeline:{timelineIdentity}",
+                "timelineData",
+                false,
+                timelineSection);
             foreach (Track track in timeline.Data.Tracks)
             {
-                RegisterObject(context, track, $"track:{timelineIdentity}:{track.AuthoringId}", "track");
+                RegisterObject(
+                    context,
+                    track,
+                    $"track:{timelineIdentity}:{track.AuthoringId}",
+                    "track",
+                    false,
+                    timelineSection,
+                    TypeName(typeof(Track)));
                 foreach (Clip clip in track.Clips)
-                    RegisterObject(context, clip, $"clip:{timelineIdentity}:{clip.AuthoringId}", "clip");
+                    RegisterObject(
+                        context,
+                        clip,
+                        $"clip:{timelineIdentity}:{clip.AuthoringId}",
+                        "clip",
+                        false,
+                        timelineSection,
+                        TypeName(typeof(Clip)));
             }
             foreach (TimelineSection section in timeline.Data.Sections)
-                RegisterObject(context, section, $"section:{timelineIdentity}:{section.AuthoringId}", "section");
+                RegisterObject(
+                    context,
+                    section,
+                    $"section:{timelineIdentity}:{section.AuthoringId}",
+                    "section",
+                    false,
+                    timelineSection);
             foreach (TimelineExternalBindingDeclaration binding in timeline.Data.ExternalBindings)
-                RegisterObject(context, binding, $"binding:{timelineIdentity}:{binding.AuthoringId}", "binding");
+                RegisterObject(
+                    context,
+                    binding,
+                    $"binding:{timelineIdentity}:{binding.AuthoringId}",
+                    "binding",
+                    false,
+                    timelineSection);
         }
 
-        void RegisterNode(BtsmtlAuthoringCodeExportContext context, FlowGraph graph, FlowNode node)
+        void RegisterNode(
+            BtsmtlAuthoringCodeExportContext context,
+            FlowGraph graph,
+            FlowNode node,
+            string sectionName)
         {
             string graphIdentity = (graph as IBtsmtlSkillAuthoringGraph)?.AuthoringId ?? graph.GetType().FullName;
-            RegisterObject(context, node, $"node:{graphIdentity}:{node.UID}", "node");
+            RegisterObject(
+                context,
+                node,
+                $"node:{graphIdentity}:{node.UID}",
+                "node",
+                false,
+                sectionName,
+                TypeName(typeof(FlowNode)));
             foreach (BinderConnection connection in node.outConnections.OfType<BinderConnection>()
                          .Where(value => value.targetNode is not FlowNode target || !IsRetiredLifecycleNode(target)))
-                RegisterObject(context, connection, $"edge:{graphIdentity}:{connection.UID}", "edge");
+                RegisterObject(
+                    context,
+                    connection,
+                    $"edge:{graphIdentity}:{connection.UID}",
+                    "edge",
+                    false,
+                    sectionName,
+                    TypeName(typeof(BinderConnection)));
         }
 
         void EmitGraphCreation(
@@ -1436,11 +1524,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             object source,
             string identity,
             string variableHint,
-            bool isRoot = false)
+            bool isRoot = false,
+            string sectionName = null,
+            string storageTypeName = null)
         {
             if (source != null)
-                context.RegisterObject(source, identity, variableHint, isRoot);
+                context.RegisterObject(source, identity, variableHint, isRoot, sectionName, storageTypeName);
         }
+
+        static string SectionForGraph(
+            FlowGraph graph,
+            FlowGraph root,
+            IReadOnlyDictionary<FlowGraph, FlowGraph> owners)
+        {
+            if (ReferenceEquals(graph, root))
+                return "Root";
+            FlowGraph current = graph;
+            while (owners != null &&
+                   owners.TryGetValue(current, out FlowGraph owner) &&
+                   owner != null &&
+                   !ReferenceEquals(owner, root))
+                current = owner;
+            if (current is BtsmtlSkillFlowGraph skillGraph)
+            {
+                if (skillGraph.Role == BtsmtlSkillFlowGraphRole.StateBody)
+                    return $"Stages/{ReadableSectionName(TrimSuffix(skillGraph.name, " State Body"), "StateBody")}";
+                if (skillGraph.Role == BtsmtlSkillFlowGraphRole.ConditionRule)
+                    return $"Conditions/{ReadableSectionName(skillGraph.name, "Condition")}";
+            }
+            return $"Graphs/{ReadableSectionName(current?.name, "Graph")}";
+        }
+
+        static string TimelineSection(TimelineAsset timeline) =>
+            $"Timelines/{ReadableSectionName(timeline?.name, "Timeline")}";
+
+        static string ReadableSectionName(string value, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return fallback;
+            return BtsmtlAuthoringCodeSyntax.Identifier(value.Trim());
+        }
+
+        static string TrimSuffix(string value, string suffix) =>
+            !string.IsNullOrEmpty(value) &&
+            value.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+                ? value.Substring(0, value.Length - suffix.Length)
+                : value;
 
         static string Variable(BtsmtlAuthoringCodeExportContext context, object source, string subject)
         {

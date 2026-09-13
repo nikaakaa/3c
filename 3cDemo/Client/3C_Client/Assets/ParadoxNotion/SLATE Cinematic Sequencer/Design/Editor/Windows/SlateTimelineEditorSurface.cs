@@ -45,6 +45,8 @@ namespace Slate
         Keyframe[] m_DopeOriginalKeys;
         readonly List<int> m_DopeSelectedKeys = new List<int>();
         float m_DopeAnchorX;
+        int m_DopeCurveStartFrame;
+        int m_DopeCurveEndFrame;
 
         public SlateTimelineEditorContentView Content => m_Content;
         public SlateTimelineEditorSelection Selection => m_Selection;
@@ -392,6 +394,8 @@ namespace Slate
                     m_DopeCurve = new AnimationCurve(dopeCurve.keys);
                     m_DopeOriginalKeys = dopeCurve.keys;
                     m_DopeAnchorX = Event.current.mousePosition.x;
+                    m_DopeCurveStartFrame = startFrame;
+                    m_DopeCurveEndFrame = endFrame;
                     m_Commands.BeginGesture("Move Timeline Keys");
                     m_Commands.Select(new SlateTimelineEditorSelection(
                         SlateTimelineEditorElementKind.Key,
@@ -469,7 +473,8 @@ namespace Slate
                     float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
                     int anchorFrame = PositionToFrame(m_DopeAnchorX - m_LeftMargin, timelineWidth);
                     int currentFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
-                    float delta = (currentFrame - anchorFrame) / (float)Mathf.Max(1, m_Content.LengthFrame);
+                    float delta = (currentFrame - anchorFrame) /
+                                  (float)Mathf.Max(1, m_DopeCurveEndFrame - m_DopeCurveStartFrame);
                     Keyframe[] keys = (Keyframe[])m_DopeOriginalKeys.Clone();
                     for (int index = 0; index < m_DopeSelectedKeys.Count; index++)
                     {
@@ -626,6 +631,8 @@ namespace Slate
             m_DopeCurve = null;
             m_DopeOriginalKeys = null;
             m_DopeSelectedKeys.Clear();
+            m_DopeCurveStartFrame = 0;
+            m_DopeCurveEndFrame = 0;
         }
     }
 }

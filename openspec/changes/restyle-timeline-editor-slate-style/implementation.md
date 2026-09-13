@@ -97,5 +97,5 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Tree.Editor.csproj \
 - 当前仍可定位到旧 JSON 消费者：`AgentSkillFlowDocumentExporter.cs:547` 调用 `TimelineAuthoringClipBinding.Export`，`BtsmtlSkillTimelineAuthoringApplier.cs:379` 调用 `TimelineAuthoringClipBinding.Apply`；在 C# authoring 的 Skill/FSM/Pose/EventGraph 迁移完成前，本 change 不删除这些共享路径。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
-- 纯内存 Surface 的原生 DopeSheet 参数列表/缓存迁移、TreeClip 专用下钻和最终 Unity Editor 视觉证据仍未闭合；这些属于 tasks 11.3/11.7 的剩余实施，不恢复旧组件树。
+- 插件自身的原生 Cutscene DopeSheet/参数编辑仍由 Slate 旧窗口拥有，属于 11.7 的外部消费者边界；BTSMTL 纯内存路径不进入该窗口。TreeClip 专用下钻和最终 Unity Editor 视觉证据仍未闭合，不恢复旧组件树。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

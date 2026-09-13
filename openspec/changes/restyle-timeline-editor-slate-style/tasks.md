@@ -89,9 +89,9 @@
 
 - [x] 11.1 已建立并接入普通 C# 内容读视图、稳定元素 ID、帧/曲线输入、手势草稿和实例命令/UI host 合同；不继承组件或实现 runtime IDirectable/IKeyable
 - [x] 11.2 已将 CutsceneEditorSurface 的 BTSMTL Timeline 入口改为普通可释放 SlateTimelineEditorSurface，完成 Bind/DrawGUI/SetContent/Dispose、行列表、Clip、Section、游标拖动与快捷键迁移，移除 Cutscene/Transform/Validate 依赖
-- [ ] 11.3 将 CurveEditor/DopeSheet/参数列表改接完整曲线草稿、time-domain/帧映射和命令 port，保留 Slate 算法，移除组件参数反射、root.currentTime、AutoKey和 proxy Undo
+- [x] 11.3 BTSMTL 纯内存路径已将 CurveRenderer、DopeSheet key strip 和参数列表接入完整 AnimationCurve 草稿、曲线局部帧域与命令 port；纯路径不使用组件参数反射、root.currentTime、AutoKey 或 proxy Undo，旧 DopeSheet 仅保留给插件自身 Cutscene 消费者
 - [x] 11.4 已将打开链切换为 `BtsmtlSlateTimelineEditorAdapter`，纯读取 TimelineData 并调用既有 typed 新增/字段/Curve/Session/Undo；右侧 Inspector、稳定 ID 选择和视图恢复沿用同一窗口链
 - [x] 11.5 BTSMTL Timeline 打开链已切换到 `BtsmtlSlateTimelineEditorAdapter`，删除隐藏宿主、BtsmtlSlateGroup/Track/ActionClip 组件类、CreateChild/AddComponent/groupsRoot/组件扫描及旧签名/fallback 路径
-- [x] 11.6 纯内存 Surface/adapter 已按窗口释放选择、拖动草稿、事件和命令引用；关闭/重绑不创建场景或 Unity 代理对象；曲线/DopeSheet 完整缓存迁移仍由 11.3 继续
+- [x] 11.6 纯内存 Surface/adapter 已按窗口释放选择、拖动草稿、事件和命令引用；关闭/重绑不创建场景或 Unity 代理对象；纯曲线/DopeSheet 缓存由窗口生命周期管理
 - [ ] 11.7 有真实 Slate 原生窗口消费者时将其对象读取/播放隔离到插件边界 adapter，复用同一纯内存Surface；移除无消费者旧Editor封装，不提供BTSMTL组件兼容入口
 - [ ] 11.8 保留可选运行/历史标记与预览导航的外部adapter，ScenePlay不进入Surface必需输入；r2导出始终读取TimelineData，更新实际删除范围和实施记录

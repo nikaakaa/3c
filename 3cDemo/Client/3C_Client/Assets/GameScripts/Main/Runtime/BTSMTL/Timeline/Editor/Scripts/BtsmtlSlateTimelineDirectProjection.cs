@@ -762,10 +762,64 @@ namespace BTSMTL.Timeline.Editor
             RebuildBindings();
         }
 
-        public void MoveTrack(IEmbeddedTimelineTrackBinding track, int index) { }
-        public void MoveClip(IEmbeddedTimelineClipBinding clip, int startFrame) { }
-        public void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame) { }
-        public void DeleteSection(IEmbeddedTimelineSectionBinding section) { }
+        public void MoveTrack(IEmbeddedTimelineTrackBinding track, int index)
+        {
+            if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding directTrack))
+                return;
+            int currentIndex = Timeline.Tracks.IndexOf(directTrack.Source);
+            if (currentIndex < 0 || index < 0 || index >= Timeline.Tracks.Count || currentIndex == index)
+                return;
+            m_Session.Apply(() =>
+            {
+                Timeline.Tracks.RemoveAt(currentIndex);
+                Timeline.Tracks.Insert(index, directTrack.Source);
+                Timeline.Init();
+            }, "Move Timeline Track");
+            m_BeginSelectionId = directTrack.AuthoringId;
+            RebuildBindings();
+        }
+
+        public void MoveClip(IEmbeddedTimelineClipBinding clip, int startFrame)
+        {
+            if (IsReadOnly || !(clip is BtsmtlTimelineClipBinding directClip))
+                return;
+            int duration = Mathf.Max(1, directClip.Source.Duration);
+            m_Session.Apply(() =>
+            {
+                directClip.Source.StartFrame = Mathf.Max(0, startFrame);
+                directClip.Source.EndFrame = directClip.Source.StartFrame + duration;
+                directClip.Source.Track.UpdateMix();
+                Timeline.Init();
+            }, "Move Timeline Clip");
+            m_BeginSelectionId = directClip.AuthoringId;
+            RebuildBindings();
+        }
+
+        public void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame)
+        {
+            if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding directSection))
+                return;
+            m_Session.Apply(() =>
+            {
+                directSection.Source.Configure(name, Mathf.Max(0, frame));
+                Timeline.Init();
+            }, "Edit Timeline Section");
+            m_BeginSelectionId = directSection.AuthoringId;
+            RebuildBindings();
+        }
+
+        public void DeleteSection(IEmbeddedTimelineSectionBinding section)
+        {
+            if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding directSection))
+                return;
+            m_Session.Apply(()
+            {
+                Timeline.RemoveSection(directSection.Source);
+                Timeline.Init();
+            }, "Delete Timeline Section");
+            m_BeginSelectionId = string.Empty;
+            RebuildBindings();
+        }
 
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {

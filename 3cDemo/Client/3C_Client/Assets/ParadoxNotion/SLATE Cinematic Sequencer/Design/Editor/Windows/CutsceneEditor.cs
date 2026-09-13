@@ -2197,6 +2197,10 @@ namespace Slate
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
                         menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
+                        if (trackIndex > 0)
+                            menu.AddItem(new GUIContent("Move Track Up"), false, () => embeddedTimeline.MoveTrack(track, trackIndex - 1));
+                        if (trackIndex + 1 < tracks.Count)
+                            menu.AddItem(new GUIContent("Move Track Down"), false, () => embeddedTimeline.MoveTrack(track, trackIndex + 1));
                         menu.AddItem(new GUIContent("Delete Track"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteTrack(track), "Delete Track"));
                         menu.ShowAsContext();
                         e.Use();

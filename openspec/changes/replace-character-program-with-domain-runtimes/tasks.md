@@ -1,8 +1,8 @@
 ## 1. 独立技能数据与领域合同
 
-- [ ] 1.1 将技能构建根迁为 GameplayAbilityDefinition，交付只包含其私有 Graph／FSM／条件／子图引用／Timeline 的发现模型与实际依赖修订。
-- [ ] 1.2 将原 Character Builder 中的技能操作、调用帧、局部状态、常量、来源与能力要求迁为独立 Ability 数据接口，不携带角色控制或全角色目录。
-- [ ] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
+- [x] 1.1 将技能构建根迁为 GameplayAbilityDefinition，交付只包含其私有 Graph／FSM／条件／子图引用／Timeline 的发现模型与实际依赖修订。
+- [x] 1.2 将原 Character Builder 中的技能操作、调用帧、局部状态、常量、来源与能力要求迁为独立 Ability 数据接口，不携带角色控制或全角色目录。
+- [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
 - [ ] 1.4 将 Input／Effect／Equipment／角色状态等技能外部引用迁为 typed provider 合同，使缺失引用在角色绑定时明确失败。
 - [ ] 1.5 保留既有独立 Timeline 内容处理和产品入口，令其复用唯一内容语义实现，不依赖被删除的 Character 根。
 

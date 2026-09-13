@@ -26,7 +26,7 @@ Timeline 的 MotionCurveClip 仍内嵌 PositionX/Y/Z/Yaw，导致创建源码重
 
 ## Impact
 
-影响 RootMotionCurveAsset 正式创建/导入、MotionCurveClip/TimelineData typed binding、Timeline 曲线目录与编辑入口、MotionWarp、Timeline/ControlMotion semantic 编译、源依赖失效标记、C# 薄适配和正式生成源码。无需新建程序集反向依赖，当前 Timeline 已引用 RootMotion 程序集。本轮只写规划及 skill；不启动实现，不向其它任务转发。
+影响 RootMotionCurveAsset 正式创建/导入、MotionCurveClip/TimelineData typed binding、Timeline 曲线目录与编辑入口、MotionWarp、Timeline/ControlMotion semantic 编译、源依赖失效标记、C# 薄适配和正式生成源码。无需新建程序集反向依赖，当前 Timeline 已引用 RootMotion 程序集。用户已在规划完成后明确授权绑定实现任务实施并设置 goal，具体绑定见 design；不向其它任务扩散工作。
 
 现行 spec 对照：
 

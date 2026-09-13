@@ -1,6 +1,6 @@
 ## Context
 
-本变更承接已归档的 `minimize-csharp-authoring-reconstruction`，只讨论和规划正式曲线源迁移。用户确认沿用外部源方案并要求同步文档；本轮没有实现授权，也不向其它任务转发。
+本变更承接已归档的 `minimize-csharp-authoring-reconstruction`。用户在完成讨论和文档更新后明确要求“让实现窗口做吧，设置goal”，现已授权绑定实现任务按本文完成正式曲线源迁移。
 
 当前读取到的结构：RootMotionCurveAsset 已保存累计 XYZ/Yaw、时长、采样率和求值模式，现有烘焙器按秒写关键帧；MotionCurveClip 内嵌 XYZ/Yaw 并按归一化时间读取。MotionWarp、TimelineMotionEmitterRegistration 和 CharacterControlMotionCatalogEmitter 均直接读取嵌入曲线。BTSMTL.Timeline 已引用独立 RootMotion 程序集。
 
@@ -106,4 +106,14 @@ Timeline 提供类型化源选择、源区间/播放配置和“打开源资产�
 
 ## Migration Plan
 
-先补正式源无损导入与 Clip 绑定/映射，再统一作者界面和消费者，然后迁移存量资产并删除嵌入路径，最后重新导出正式 C# 与同步当前规范。实现每步按清楚职责中文提交，只提交本步拥有的差异；不新增测试、验证或回放任务，不执行破坏性 Git 拆分。本轮仅规划，无实现调度或跨任务转发。
+先补正式源无损导入与 Clip 绑定/映射，再统一作者界面和消费者，然后迁移存量资产并删除嵌入路径，最后重新导出正式 C# 与同步当前规范。实现每步按清楚职责中文提交，只提交本步拥有的差异；不新增测试、验证或回放任务，不执行破坏性 Git 拆分。
+
+## Implementation Binding
+
+- planning_thread_id: `01a09634-fc59-7192-8cda-25fdd142b82d`
+- implementation_thread_id: `01a09635-2024-74b2-98b4-28c1e17d548b`
+- implementation_authorization: 用户明确要求“让实现窗口做吧，设置goal”。
+- goal_objective: 按 unify-timeline-motion-curve-source 的 proposal、design、specs 和 tasks 完成正式外部运动曲线源统一；无损迁移 Attack/Dodge 及受影响数据，统一 Timeline、MotionWarp、编译和作者工具，删除旧嵌入路径，重新导出正式 C# 并同步文档，按职责中文小步提交。
+- goal_budget: 用户未指定预算，不设置 token_budget。
+- completion_boundary: 全部授权实现和正式数据迁移完成后才将 goal 标为 complete；不把仅写文档、只改导出器或仅编译成功当作完成。不新增用户未要求的测试或验收任务。
+- communication: 只调度上述绑定实现任务；无须回执，不转发其它任务。实际业务冲突保留现场交用户决定。

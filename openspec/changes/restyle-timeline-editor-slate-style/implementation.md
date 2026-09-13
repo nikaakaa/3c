@@ -82,7 +82,7 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj --no-restore --disable-build-servers /nr:false /m:1 /p:UseSharedCompilation=false /p:LangVersion=11.0
 ```
 
-结果为 0 warnings、0 errors；构建后已执行 `dotnet build-server shutdown`。该结果只证明 Timeline 编辑程序集源码闭合，不替代 Unity 主工程和真实 UI 验收。
+结果为 0 errors；输出包含 Unity TestRunner、InputSystem、TreeDesigner 和 Slate 既有 warnings；构建后已执行 `dotnet build-server shutdown`。该结果只证明 Timeline 编辑程序集源码闭合，不替代 Unity 主工程和真实 UI 验收。
 
 ## 尚未完成
 

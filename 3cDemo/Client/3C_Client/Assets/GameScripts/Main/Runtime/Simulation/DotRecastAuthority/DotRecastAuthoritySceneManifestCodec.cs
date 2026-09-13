@@ -46,7 +46,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             var roomId = new ServerAuthoritativeRoomId(payloadReader.ReadString());
             DotRecastAuthorityEndpointDescriptor data = ReadEndpoint(payloadReader);
             DotRecastAuthorityProgramArtifactBinding program = ReadProgram(payloadReader);
-            CharacterControlRuntimeBinding controlRuntimeBinding = ReadControlRuntimeBinding(payloadReader);
             DotRecastAuthorityPipelineBinding pipeline = ReadPipeline(payloadReader);
             DotRecastAuthorityWorldBinding world = ReadWorld(payloadReader);
             DotRecastAuthorityRuntimeIdentitySet runtime = ReadRuntime(payloadReader);
@@ -62,7 +61,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 roomId,
                 data,
                 program,
-                controlRuntimeBinding,
                 pipeline,
                 world,
                 runtime,
@@ -88,7 +86,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(manifest.RoomId.Value);
             WriteEndpoint(writer, manifest.DataEndpoint);
             WriteProgram(writer, manifest.Program);
-            WriteControlRuntimeBinding(writer, manifest.ControlRuntimeBinding);
             WritePipeline(writer, manifest.Pipeline);
             WriteWorld(writer, manifest.World);
             WriteRuntime(writer, manifest.Runtime);
@@ -155,48 +152,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 new NumericProfileId(reader.ReadString()),
                 new TargetAbiVersion(reader.ReadInt32()),
                 (WorldCapability)reader.ReadUInt64());
-        }
-
-        static void WriteControlRuntimeBinding(CanonicalWriter writer, CharacterControlRuntimeBinding binding)
-        {
-            writer.WriteString(binding.ModuleId.Value);
-            writer.WriteInt32(binding.SemanticVersion);
-            writer.WriteInt32(binding.Parameters.Values.Count);
-            for (int i = 0; i < binding.Parameters.Values.Count; i++)
-            {
-                CharacterControlParameterValue value = binding.Parameters.Values[i];
-                writer.WriteString(value.Id.Value);
-                writer.WriteByte((byte)value.ValueKind);
-                writer.WriteDouble(value.NumericValue);
-            }
-            writer.WriteString(binding.Parameters.ContentHash.Value);
-            writer.WriteString(binding.BindingHash.Value);
-        }
-
-        static CharacterControlRuntimeBinding ReadControlRuntimeBinding(CanonicalReader reader)
-        {
-            var moduleId = new CharacterControlModuleId(reader.ReadString());
-            int semanticVersion = reader.ReadInt32();
-            int count = reader.ReadInt32();
-            if (count < 0 || count > 1024)
-                throw new InvalidDataException($"Manifest control parameter count '{count}' is invalid.");
-            var values = new CharacterControlParameterValue[count];
-            for (int i = 0; i < values.Length; i++)
-            {
-                values[i] = new CharacterControlParameterValue(
-                    new CharacterControlParameterId(reader.ReadString()),
-                    ReadEnum<SemanticValueKind>(reader.ReadByte(), "control parameter value kind"),
-                    reader.ReadDouble());
-            }
-            var parameters = new CharacterControlParameterSet(values);
-            var expectedParametersHash = new StableHash(reader.ReadString());
-            if (!parameters.ContentHash.Equals(expectedParametersHash))
-                throw new InvalidDataException("Manifest control parameter hash does not match its canonical values.");
-            var binding = new CharacterControlRuntimeBinding(moduleId, semanticVersion, parameters);
-            var expectedBindingHash = new StableHash(reader.ReadString());
-            if (!binding.BindingHash.Equals(expectedBindingHash))
-                throw new InvalidDataException("Manifest Control runtime binding hash does not match its canonical values.");
-            return binding;
         }
 
         static void WritePipeline(CanonicalWriter writer, DotRecastAuthorityPipelineBinding pipeline)

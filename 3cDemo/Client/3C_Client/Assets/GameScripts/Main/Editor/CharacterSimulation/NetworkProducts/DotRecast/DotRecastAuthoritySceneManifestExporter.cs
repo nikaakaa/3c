@@ -137,8 +137,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string definitionGuid = AssetDatabase.AssetPathToGUID(definitionPath);
             CharacterSimulationProgram program = programAsset.Load();
             byte[] programBytes = programAsset.CopyCanonicalArtifact();
-            CharacterControlRuntimeBinding controlRuntimeBinding = definition.BuildControlRuntimeBinding(
-                ThirdPersonCharacter.Control.Rules.CorinCharacterControlModuleCatalog.Create());
             LoadedCharacterTargetProgramArtifact inspectedProgram = CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, programBytes);
             if (!inspectedProgram.Program.ProgramHash.Equals(program.ProgramHash) ||
                 !inspectedProgram.Program.LayoutHash.Equals(program.LayoutHash))
@@ -244,7 +242,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.RoomId,
                 request.DataEndpoint,
                 programBinding,
-                controlRuntimeBinding,
                 pipelineBinding,
                 worldBinding,
                 runtimeIdentities,

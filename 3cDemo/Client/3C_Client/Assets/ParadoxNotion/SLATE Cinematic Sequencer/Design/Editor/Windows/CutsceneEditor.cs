@@ -324,6 +324,8 @@ namespace Slate
 
         [System.NonSerialized] private Dictionary<int, ActionClipWrapper> clipWrappers;
         [System.NonSerialized] private Dictionary<ActionClip, ActionClipWrapper> clipWrappersMap;
+        [System.NonSerialized] private Dictionary<int, ActionClipWrapper> embeddedClipWrappers;
+        [System.NonSerialized] private Dictionary<string, ActionClipWrapper> embeddedClipWrappersMap;
         [System.NonSerialized] private EditorPlaybackState editorPlaybackState = EditorPlaybackState.Stoped;
         [System.NonSerialized] private Cutscene.WrapMode editorPlaybackWrapMode = Cutscene.WrapMode.Loop;
         [System.NonSerialized] private ActionClipWrapper interactingClip;
@@ -359,17 +361,8 @@ namespace Slate
         [System.NonSerialized] private float[] magnetSnapTimesCache;
         [System.NonSerialized] private List<GuideLine> pendingGuides;
         [System.NonSerialized] private System.Action postWindowsGUI;
-        [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedInteractingClip;
-        [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedBlendClip;
         [System.NonSerialized] private List<IEmbeddedTimelineClipBinding> embeddedMultiSelection;
         [System.NonSerialized] private Dictionary<IEmbeddedTimelineClipBinding, float> embeddedDragOffsets;
-        [System.NonSerialized] private bool embeddedScalingStart;
-        [System.NonSerialized] private bool embeddedScalingEnd;
-        [System.NonSerialized] private bool embeddedBlendingIn;
-        [System.NonSerialized] private bool embeddedBlendingOut;
-        [System.NonSerialized] private float embeddedDragOffset;
-        [System.NonSerialized] private float embeddedDragStart;
-        [System.NonSerialized] private float embeddedDragEnd;
         [System.NonSerialized] private bool embeddedEditStarted;
         [System.NonSerialized] private IEmbeddedTimelineSectionBinding embeddedDraggedSection;
 
@@ -753,6 +746,8 @@ namespace Slate
             pendingGuides = new List<GuideLine>();
             clipWrappers = null;
             clipWrappersMap = null;
+            embeddedClipWrappers = new Dictionary<int, ActionClipWrapper>();
+            embeddedClipWrappersMap = new Dictionary<string, ActionClipWrapper>();
             cutscene = null;
         }
 
@@ -863,6 +858,8 @@ namespace Slate
             cutscene = null;
             clipWrappers = null;
             clipWrappersMap = null;
+            embeddedClipWrappers = null;
+            embeddedClipWrappersMap = null;
             embeddedRepaint = null;
             standaloneRepaint = null;
             showNotification = null;
@@ -883,16 +880,8 @@ namespace Slate
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             embeddedTimeline = null;
-            embeddedInteractingClip = null;
-            embeddedBlendClip = null;
             embeddedMultiSelection = null;
             embeddedDragOffsets = null;
-            embeddedScalingStart = false;
-            embeddedScalingEnd = false;
-            embeddedBlendingIn = false;
-            embeddedBlendingOut = false;
-            embeddedDragStart = 0f;
-            embeddedDragEnd = 0f;
             embeddedEditStarted = false;
             embeddedDraggedSection = null;
             embeddedSurface = false;
@@ -1764,10 +1753,10 @@ namespace Slate
             //draw a vertical line at dragging clip start/end time
             if ( interactingClip != null ) {
                 if ( interactingClip.isDragging || interactingClip.isScalingStart ) {
-                    DrawGuideLine(interactingClip.action.startTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.StartTime, Color.white.WithAlpha(0.05f));
                 }
                 if ( interactingClip.isDragging || interactingClip.isScalingEnd ) {
-                    DrawGuideLine(interactingClip.action.endTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.EndTime, Color.white.WithAlpha(0.05f));
                 }
             }
 
@@ -2126,21 +2115,12 @@ namespace Slate
 
             if (e.rawType == EventType.MouseUp)
             {
-                if (embeddedInteractingClip != null)
-                {
-                    embeddedInteractingClip = null;
-                    embeddedScalingStart = false;
-                    embeddedScalingEnd = false;
-                }
-                embeddedBlendClip = null;
-                embeddedBlendingIn = false;
-                embeddedBlendingOut = false;
-                embeddedDragOffsets = null;
                 if (embeddedEditStarted)
                 {
                     embeddedEditStarted = false;
                     embeddedTimeline.CommitEdit();
                 }
+                embeddedDragOffsets = null;
             }
 
             if (e.type == EventType.MouseDrag || e.rawType == EventType.MouseUp || GUI.changed)
@@ -2332,144 +2312,8 @@ namespace Slate
                             y,
                             Mathf.Max(TimeToPos(clip.EndTime), TimeToPos(clip.StartTime) + 6f),
                             y + track.DefaultHeight);
-                        bool selected = ReferenceEquals(embeddedTimeline.Selected, clip) ||
-                                        embeddedMultiSelection != null && embeddedMultiSelection.Contains(clip);
-                        if (selected)
-                        {
-                            GUI.color = HIGHLIGHT_COLOR;
-                            GUI.DrawTexture(clipRect.ExpandBy(2), Styles.whiteTexture);
-                            GUI.color = Color.white;
-                        }
-                        GUI.color = clip.IsValid && track.IsActive ? Color.white : Color.gray;
-                        GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
-                        GUI.color = Color.white;
-                        clip.DrawClipGUI(clipRect);
-                        GUI.Label(clipRect.ExpandBy(-4, -2), clip.Info, Styles.leftLabel);
-                        if (clip.Length > 0f)
-                        {
-                            float blendInPosition = clipRect.xMin + clipRect.width * Mathf.Clamp01(clip.BlendIn / clip.Length);
-                            float blendOutPosition = clipRect.xMax - clipRect.width * Mathf.Clamp01(clip.BlendOut / clip.Length);
-                            if (clip.BlendIn > 0f)
-                            {
-                                Handles.color = Color.black.WithAlpha(0.5f);
-                                Handles.DrawAAPolyLine(2f, new Vector2(clipRect.xMin, clipRect.yMax), new Vector2(blendInPosition, clipRect.yMin));
-                            }
-                            if (clip.BlendOut > 0f)
-                            {
-                                Handles.color = Color.black.WithAlpha(0.5f);
-                                Handles.DrawAAPolyLine(2f, new Vector2(blendOutPosition, clipRect.yMin), new Vector2(clipRect.xMax, clipRect.yMax));
-                            }
-                            Handles.color = Color.white;
-                        }
-                        if (clipRect.width <= 20)
-                            GUI.Label(new Rect(clipRect.xMax + 2, clipRect.y, 120, clipRect.height), clip.Info, Styles.leftLabel);
-                        if (selected && clip.Keyable?.animationData != null && clipRect.width > 12f)
-                        {
-                            Rect dopeRect = Rect.MinMaxRect(
-                                clipRect.xMin,
-                                clipRect.yMax - 13f,
-                                clipRect.xMax,
-                                clipRect.yMax);
-                            DopeSheetEditor.DrawDopeSheet(
-                                clip.Keyable.animationData,
-                                clip.Keyable,
-                                dopeRect,
-                                0f,
-                                Mathf.Max(clip.Length, 1f / embeddedTimeline.FrameRate),
-                                false);
-                        }
-
-                        if (e.type == EventType.MouseDown && clipRect.Contains(e.mousePosition))
-                        {
-                            embeddedTimeline.Select(clip);
-                            if (e.button == 1)
-                            {
-                                ShowEmbeddedClipMenu(clip, track);
-                                e.Use();
-                            }
-                            else if (e.button == 0 && e.control)
-                            {
-                                embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding>();
-                                if (!embeddedMultiSelection.Remove(clip))
-                                    embeddedMultiSelection.Add(clip);
-                                e.Use();
-                                continue;
-                            }
-                            else if (e.button == 0 && !track.IsLocked && !clip.IsLocked && !embeddedTimeline.IsReadOnly)
-                            {
-                                embeddedMultiSelection = null;
-                                float pointerTime = PosToTime(e.mousePosition.x + rect.x);
-                                bool nearStart = Mathf.Abs(e.mousePosition.x - clipRect.xMin) <= 5f;
-                                bool nearEnd = Mathf.Abs(e.mousePosition.x - clipRect.xMax) <= 5f;
-                                if (e.control && nearStart && clip.CanBlendIn)
-                                {
-                                    embeddedBlendClip = clip;
-                                    embeddedBlendingIn = true;
-                                    e.Use();
-                                    continue;
-                                }
-                                if (e.control && nearEnd && clip.CanBlendOut)
-                                {
-                                    embeddedBlendClip = clip;
-                                    embeddedBlendingOut = true;
-                                    e.Use();
-                                    continue;
-                                }
-                                embeddedInteractingClip = clip;
-                                embeddedDragStart = clip.StartTime;
-                                embeddedDragEnd = clip.EndTime;
-                                embeddedDragOffset = pointerTime - clip.StartTime;
-                                if (embeddedMultiSelection == null || !embeddedMultiSelection.Contains(clip))
-                                    embeddedMultiSelection = new List<IEmbeddedTimelineClipBinding> { clip };
-                                embeddedDragOffsets = new Dictionary<IEmbeddedTimelineClipBinding, float>();
-                                for (int selectionIndex = 0; selectionIndex < embeddedMultiSelection.Count; selectionIndex++)
-                                {
-                                    IEmbeddedTimelineClipBinding selectedClip = embeddedMultiSelection[selectionIndex];
-                                    embeddedDragOffsets[selectedClip] = pointerTime - selectedClip.StartTime;
-                                }
-                                embeddedScalingStart = nearStart && clip.CanScale;
-                                embeddedScalingEnd = nearEnd && clip.CanScale;
-                                e.Use();
-                            }
-                        }
-                        if (embeddedBlendClip == clip && e.type == EventType.MouseDrag)
-                        {
-                            float pointerTime = SnapTime(PosToTime(e.mousePosition.x + rect.x));
-                            if (embeddedBlendingIn)
-                                clip.BlendIn = Mathf.Clamp(pointerTime - clip.StartTime, 0f, clip.Length - clip.BlendOut);
-                            if (embeddedBlendingOut)
-                                clip.BlendOut = Mathf.Clamp(clip.EndTime - pointerTime, 0f, clip.Length - clip.BlendIn);
-                            e.Use();
-                        }
-                        if (embeddedInteractingClip == clip && e.type == EventType.MouseDrag)
-                        {
-                            float pointerTime = SnapTime(PosToTime(e.mousePosition.x + rect.x));
-                            if (embeddedScalingStart)
-                                clip.StartTime = Mathf.Clamp(pointerTime, 0f, embeddedDragEnd - 1f / embeddedTimeline.FrameRate);
-                            else if (embeddedScalingEnd)
-                                clip.EndTime = Mathf.Max(pointerTime, embeddedDragStart + 1f / embeddedTimeline.FrameRate);
-                            else if (embeddedMultiSelection != null && embeddedMultiSelection.Count > 1 && embeddedDragOffsets != null)
-                            {
-                                for (int selectionIndex = 0; selectionIndex < embeddedMultiSelection.Count; selectionIndex++)
-                                {
-                                    IEmbeddedTimelineClipBinding selectedClip = embeddedMultiSelection[selectionIndex];
-                                    float duration = selectedClip.EndTime - selectedClip.StartTime;
-                                    float start = Mathf.Clamp(
-                                        pointerTime - embeddedDragOffsets[selectedClip],
-                                        0f,
-                                        maxTime - duration);
-                                    selectedClip.StartTime = start;
-                                    selectedClip.EndTime = start + duration;
-                                }
-                            }
-                            else
-                            {
-                                float start = Mathf.Clamp(pointerTime - embeddedDragOffset, 0f, maxTime - (embeddedDragEnd - embeddedDragStart));
-                                clip.StartTime = start;
-                                clip.EndTime = start + embeddedDragEnd - embeddedDragStart;
-                            }
-                            e.Use();
-                        }
+                        if (DrawEmbeddedClipWindow(track, clip, clipRect, groupIndex, trackIndex, clipIndex))
+                            continue;
                     }
 
                     if (track.ShowCurves && track.Clips.Count > 0)
@@ -2502,11 +2346,55 @@ namespace Slate
                 }
             }
             GUI.EndGroup();
-            if (e.rawType == EventType.MouseUp && embeddedInteractingClip == null && rect.Contains(e.mousePosition))
+            bool formalClipUnderPointer = embeddedClipWrappers != null && embeddedClipWrappers.Values.Any(wrapper => wrapper.rect.Contains(e.mousePosition));
+            if (e.rawType == EventType.MouseUp && !formalClipUnderPointer && rect.Contains(e.mousePosition))
             {
                 embeddedMultiSelection = null;
                 embeddedTimeline.Select(null);
             }
+        }
+
+        bool DrawEmbeddedClipWindow(
+            IEmbeddedTimelineTrackBinding track,
+            IEmbeddedTimelineClipBinding clip,
+            Rect clipRect,
+            int groupIndex,
+            int trackIndex,
+            int clipIndex)
+        {
+            if (embeddedClipWrappers == null)
+                embeddedClipWrappers = new Dictionary<int, ActionClipWrapper>();
+            if (embeddedClipWrappersMap == null)
+                embeddedClipWrappersMap = new Dictionary<string, ActionClipWrapper>();
+
+            int windowId = 100000 + groupIndex * 10000 + trackIndex * 100 + clipIndex;
+            if (!embeddedClipWrappersMap.TryGetValue(clip.AuthoringId, out ActionClipWrapper wrapper) ||
+                !ReferenceEquals(wrapper.embeddedClip, clip))
+            {
+                wrapper = new ActionClipWrapper(clip, track.StartTime, track.EndTime);
+                embeddedClipWrappersMap[clip.AuthoringId] = wrapper;
+            }
+            wrapper.embeddedParentStartTime = track.StartTime;
+            wrapper.embeddedParentEndTime = track.EndTime;
+            wrapper.previousEmbeddedClip = clipIndex > 0 ? track.Clips[clipIndex - 1] : null;
+            wrapper.nextEmbeddedClip = clipIndex + 1 < track.Clips.Count ? track.Clips[clipIndex + 1] : null;
+            wrapper.embeddedTrackLocked = track.IsLocked;
+            wrapper.embeddedReadOnly = embeddedTimeline.IsReadOnly;
+            embeddedClipWrappers[windowId] = wrapper;
+
+            bool selected = ReferenceEquals(embeddedTimeline.Selected, clip) ||
+                            embeddedMultiSelection != null && embeddedMultiSelection.Contains(clip);
+            if (selected)
+            {
+                GUI.color = HIGHLIGHT_COLOR;
+                GUI.DrawTexture(clipRect.ExpandBy(2), Styles.whiteTexture);
+                GUI.color = Color.white;
+            }
+            GUI.color = clip.IsValid && track.IsActive ? Color.white : Color.gray;
+            GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
+            GUI.color = Color.white;
+            wrapper.rect = GUI.Window(windowId, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
+            return true;
         }
 
         void DrawEmbeddedSections(Rect rect)
@@ -2576,6 +2464,7 @@ namespace Slate
         void ShowEmbeddedClipMenu(IEmbeddedTimelineClipBinding clip, IEmbeddedTimelineTrackBinding track)
         {
             GenericMenu menu = new GenericMenu();
+            bool hasMultiSelection = embeddedMultiSelection != null && embeddedMultiSelection.Count > 1 && embeddedMultiSelection.Contains(clip);
             menu.AddItem(new GUIContent("Open Source"), false, () => embeddedTimeline.OpenSource(clip));
             menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => embeddedTimeline.CopyClip(clip));
             if (clip.CanScale)
@@ -2592,7 +2481,13 @@ namespace Slate
                 menu.AddItem(new GUIContent("Clean Keys Off-Range"), false, () => ApplyEmbeddedCommand(clip.CleanKeysOffRange, "Clean Keys"));
             }
             menu.AddSeparator("/");
-            menu.AddItem(new GUIContent("Delete Clip"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(clip), "Delete Clip"));
+            if (hasMultiSelection)
+            {
+                IEmbeddedTimelineClipBinding[] selected = embeddedMultiSelection.ToArray();
+                menu.AddItem(new GUIContent("Delete Clips"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClips(selected), "Delete Clips"));
+            }
+            else
+                menu.AddItem(new GUIContent("Delete Clip"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(clip), "Delete Clip"));
             menu.ShowAsContext();
         }
 
@@ -3944,9 +3839,12 @@ namespace Slate
         //The ID of the window is also the same as the ID to use for for clipWrappers dictionary as key to get the clipWrapper for the action that represents this window
         void ActionClipWindow(int id) {
             ActionClipWrapper wrapper = null;
-            if ( clipWrappers.TryGetValue(id, out wrapper) ) {
+            if ( clipWrappers != null && clipWrappers.TryGetValue(id, out wrapper) ) {
                 wrapper.OnClipGUI(id);
+                return;
             }
+            if ( embeddedClipWrappers != null && embeddedClipWrappers.TryGetValue(id, out wrapper) )
+                wrapper.OnClipGUI(id);
         }
 
 
@@ -3961,6 +3859,7 @@ namespace Slate
             const float SCALE_RECT_WIDTH = 5;
 
             public ActionClip action;
+            public IEmbeddedTimelineClipBinding embeddedClip;
             public bool isDragging;
             public bool isScalingStart;
             public bool isScalingEnd;
@@ -3975,6 +3874,13 @@ namespace Slate
 
             public ActionClip previousClip;
             public ActionClip nextClip;
+            public IEmbeddedTimelineClipBinding previousEmbeddedClip;
+            public IEmbeddedTimelineClipBinding nextEmbeddedClip;
+            public float embeddedParentStartTime;
+            public float embeddedParentEndTime;
+            public bool embeddedTrackLocked;
+            public bool embeddedReadOnly;
+            public float embeddedDragOffset;
 
             private Event e;
             private int windowID;
@@ -4004,12 +3910,111 @@ namespace Slate
 
             private Rect _rect;
             public Rect rect {
-                get { return action.isCollapsed ? default(Rect) : _rect; }
+                get { return IsCollapsed ? default(Rect) : _rect; }
                 set { _rect = value; }
             }
 
             public ActionClipWrapper(ActionClip action) {
                 this.action = action;
+            }
+
+            public ActionClipWrapper(IEmbeddedTimelineClipBinding clip, float parentStartTime, float parentEndTime)
+            {
+                embeddedClip = clip;
+                embeddedParentStartTime = parentStartTime;
+                embeddedParentEndTime = parentEndTime;
+            }
+
+            bool IsEmbedded => embeddedClip != null;
+            bool IsLocked => IsEmbedded ? embeddedReadOnly || embeddedTrackLocked || embeddedClip.IsLocked : action.isLocked;
+            bool IsCollapsed => IsEmbedded ? embeddedClip.IsCollapsed : action.isCollapsed;
+            public float StartTime
+            {
+                get => IsEmbedded ? embeddedClip.StartTime : action.startTime;
+                set
+                {
+                    if (IsEmbedded)
+                        embeddedClip.StartTime = value;
+                    else
+                        action.startTime = value;
+                }
+            }
+            public float EndTime
+            {
+                get => IsEmbedded ? embeddedClip.EndTime : action.endTime;
+                set
+                {
+                    if (IsEmbedded)
+                        embeddedClip.EndTime = value;
+                    else
+                        action.endTime = value;
+                }
+            }
+            float Length => IsEmbedded ? embeddedClip.Length : action.length;
+            float BlendIn
+            {
+                get => IsEmbedded ? embeddedClip.BlendIn : action.blendIn;
+                set
+                {
+                    if (IsEmbedded)
+                        embeddedClip.BlendIn = value;
+                    else
+                        action.blendIn = value;
+                }
+            }
+            float BlendOut
+            {
+                get => IsEmbedded ? embeddedClip.BlendOut : action.blendOut;
+                set
+                {
+                    if (IsEmbedded)
+                        embeddedClip.BlendOut = value;
+                    else
+                        action.blendOut = value;
+                }
+            }
+            float PreviousEndTime => IsEmbedded
+                ? previousEmbeddedClip != null ? previousEmbeddedClip.EndTime : embeddedParentStartTime
+                : previousClip != null ? previousClip.endTime : action.parent.startTime;
+            float NextStartTime => IsEmbedded
+                ? nextEmbeddedClip != null ? nextEmbeddedClip.StartTime : embeddedParentEndTime
+                : nextClip != null ? nextClip.startTime : action.parent.endTime;
+            bool CanScale => IsEmbedded ? embeddedClip.CanScale : action.CanScale();
+            bool CanBlendIn => IsEmbedded ? embeddedClip.CanBlendIn : action.CanBlendIn();
+            bool CanBlendOut => IsEmbedded ? embeddedClip.CanBlendOut : action.CanBlendOut();
+            bool HasParameters => IsEmbedded
+                ? embeddedClip.Keyable?.animationData?.animatedParameters != null
+                : action.hasParameters;
+            bool HasActiveParameters
+            {
+                get
+                {
+                    if (!IsEmbedded)
+                        return action.hasActiveParameters;
+                    if (embeddedClip.Keyable?.animationData?.animatedParameters == null)
+                        return false;
+                    return embeddedClip.Keyable.animationData.animatedParameters.Any(parameter => parameter != null && parameter.enabled && parameter.HasAnyKey());
+                }
+            }
+            IKeyable Keyable => IsEmbedded ? embeddedClip.Keyable : action;
+            AnimationCurve[] CurvesAll => IsEmbedded
+                ? embeddedClip.Keyable?.animationData?.GetCurvesAll() ?? new AnimationCurve[0]
+                : action.GetCurvesAll();
+            string Info => IsEmbedded ? embeddedClip.Info : action.info;
+
+            bool CanCrossBlendPrevious => IsEmbedded
+                ? previousEmbeddedClip != null && embeddedClip.CanCrossBlend(previousEmbeddedClip)
+                : previousClip != null && action.CanCrossBlend(previousClip);
+            bool CanCrossBlendNext => IsEmbedded
+                ? nextEmbeddedClip != null && embeddedClip.CanCrossBlend(nextEmbeddedClip)
+                : nextClip != null && action.CanCrossBlend(nextClip);
+
+            void DrawClipGUI(Rect rect)
+            {
+                if (IsEmbedded)
+                    embeddedClip.DrawClipGUI(rect);
+                else
+                    action.ShowClipGUI(rect);
             }
 
             public void ResetInteraction() {
@@ -4025,17 +4030,17 @@ namespace Slate
                 this.windowID = windowID;
                 e = Event.current;
 
-                overlapIn = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
-                overlapOut = nextClip != null ? Mathf.Max(action.endTime - nextClip.startTime, 0) : 0;
-                blendInPosX = ( action.blendIn / action.length ) * rect.width;
-                blendOutPosX = ( ( action.length - action.blendOut ) / action.length ) * rect.width;
-                hasParameters = action.hasParameters;
-                hasActiveParameters = action.hasActiveParameters;
+                overlapIn = Mathf.Max(PreviousEndTime - StartTime, 0);
+                overlapOut = Mathf.Max(EndTime - NextStartTime, 0);
+                blendInPosX = ( BlendIn / Length ) * rect.width;
+                blendOutPosX = ( ( Length - BlendOut ) / Length ) * rect.width;
+                hasParameters = HasParameters;
+                hasActiveParameters = HasActiveParameters;
 
                 pointerTime = editor.PosToTime(editor.mousePosition.x);
                 snapedPointerTime = editor.SnapTime(pointerTime);
 
-                allowScale = action.CanScale() && action.length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
+                allowScale = CanScale && Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
                 dragRect = new Rect(0, 0, rect.width, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 )).ExpandBy(allowScale ? -SCALE_RECT_WIDTH : 0, 0);
                 controlRectIn = new Rect(0, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
                 controlRectOut = new Rect(rect.width - SCALE_RECT_WIDTH, 0, SCALE_RECT_WIDTH, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 ));
@@ -4048,9 +4053,9 @@ namespace Slate
 
                 //...
                 var wholeRect = new Rect(0, 0, rect.width, rect.height);
-                if ( action.isLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
-                action.ShowClipGUI(wholeRect);
-                if ( hasActiveParameters && action.length > 0 ) {
+                if ( IsLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
+                DrawClipGUI(wholeRect);
+                if ( hasActiveParameters && Length > 0 ) {
                     ShowClipDopesheet(wholeRect);
                 }
                 //...
@@ -4058,11 +4063,18 @@ namespace Slate
 
                 //set crossblend overlap properties. Do this when no clip is interacting or no clip is dragging
                 //this way avoid issue when moving clip on the other side of another, but keep overlap interactive when scaling a clip at least.
-                if ( editor.interactingClip == null || !editor.interactingClip.isDragging ) {
-                    var overlap = previousClip != null ? Mathf.Max(previousClip.endTime - action.startTime, 0) : 0;
+                if ( (!IsEmbedded || !embeddedReadOnly) &&
+                     (editor.interactingClip == null || !editor.interactingClip.isDragging) ) {
+                    var overlap = Mathf.Max(PreviousEndTime - StartTime, 0);
                     if ( overlap > 0 ) {
-                        action.blendIn = overlap;
-                        previousClip.blendOut = overlap;
+                        BlendIn = overlap;
+                        if (IsEmbedded)
+                        {
+                            if (previousEmbeddedClip != null)
+                                previousEmbeddedClip.BlendOut = overlap;
+                        }
+                        else
+                            previousClip.blendOut = overlap;
                     }
                 }
 
@@ -4072,36 +4084,102 @@ namespace Slate
                     if ( e.button == 0 ) {
                         if ( dragRect.Contains(e.mousePosition) ) {
                             isWaitingMouseDrag = true;
+                            if (IsEmbedded)
+                                embeddedDragOffset = editor.PosToTime(editor.mousePosition.x) - StartTime;
                         }
                         editor.interactingClip = this;
-                        editor.CacheMagnetSnapTimes(action);
+                        if (!IsEmbedded)
+                            editor.CacheMagnetSnapTimes(action);
                     }
 
-                    if ( e.control && dragRect.Contains(e.mousePosition) ) {
-                        if ( multiSelection == null ) {
-                            multiSelection = new List<ActionClipWrapper>() { this };
+                    if (IsEmbedded)
+                    {
+                        if (e.control && dragRect.Contains(e.mousePosition))
+                        {
+                            editor.embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding>();
+                            if (!editor.embeddedMultiSelection.Remove(embeddedClip))
+                                editor.embeddedMultiSelection.Add(embeddedClip);
                         }
-                        if ( multiSelection.Contains(this) ) {
-                            multiSelection.Remove(this);
+                        else
+                        {
+                            bool keepSelection = editor.embeddedMultiSelection != null && editor.embeddedMultiSelection.Contains(embeddedClip);
+                            if (!keepSelection)
+                                editor.embeddedMultiSelection = null;
+                            editor.embeddedTimeline.Select(embeddedClip);
+                            if (!IsLocked && dragRect.Contains(e.mousePosition))
+                            {
+                                editor.embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding> { embeddedClip };
+                                float currentPointerTime = editor.PosToTime(editor.mousePosition.x);
+                                editor.embeddedDragOffsets = new Dictionary<IEmbeddedTimelineClipBinding, float>();
+                                for (int selectionIndex = 0; selectionIndex < editor.embeddedMultiSelection.Count; selectionIndex++)
+                                {
+                                    IEmbeddedTimelineClipBinding selectedClip = editor.embeddedMultiSelection[selectionIndex];
+                                    editor.embeddedDragOffsets[selectedClip] = currentPointerTime - selectedClip.StartTime;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if ( e.control && dragRect.Contains(e.mousePosition) ) {
+                            if ( multiSelection == null ) {
+                                multiSelection = new List<ActionClipWrapper>() { this };
+                            }
+                            if ( multiSelection.Contains(this) ) {
+                                multiSelection.Remove(this);
+                            } else {
+                                multiSelection.Add(this);
+                            }
                         } else {
-                            multiSelection.Add(this);
-                        }
-                    } else {
-                        CutsceneUtility.selectedObject = action;
-                        if ( multiSelection != null && !multiSelection.Select(cw => cw.action).Contains(action) ) {
-                            multiSelection = null;
+                            CutsceneUtility.selectedObject = action;
+                            if ( multiSelection != null && !multiSelection.Contains(this) ) {
+                                multiSelection = null;
+                            }
                         }
                     }
 
                     if ( e.clickCount == 2 ) {
-                        OnActionDoubleClick?.Invoke(action);
-                        //do this with reflection to get the declaring actor in case action has 'new' declaration. This is only done in Shot right now.
-                        Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
+                        if (IsEmbedded)
+                            editor.embeddedTimeline.OpenSource(embeddedClip);
+                        else
+                        {
+                            OnActionDoubleClick?.Invoke(action);
+                            Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
+                        }
                     }
                 }
 
                 if ( e.type == EventType.MouseDrag && isWaitingMouseDrag ) {
                     isDragging = true;
+                }
+
+                if (IsEmbedded && isDragging && !IsLocked && e.type == EventType.MouseDrag)
+                {
+                    float pointerTime = editor.SnapTime(editor.PosToTime(editor.mousePosition.x));
+                    if (editor.embeddedMultiSelection != null && editor.embeddedMultiSelection.Count > 1 && editor.embeddedDragOffsets != null)
+                    {
+                        for (int selectionIndex = 0; selectionIndex < editor.embeddedMultiSelection.Count; selectionIndex++)
+                        {
+                            IEmbeddedTimelineClipBinding selectedClip = editor.embeddedMultiSelection[selectionIndex];
+                            if (!editor.embeddedClipWrappersMap.TryGetValue(selectedClip.AuthoringId, out ActionClipWrapper selectedWrapper))
+                                continue;
+                            float duration = selectedClip.EndTime - selectedClip.StartTime;
+                            float start = Mathf.Clamp(
+                                pointerTime - editor.embeddedDragOffsets[selectedClip],
+                                selectedWrapper.embeddedParentStartTime,
+                                selectedWrapper.embeddedParentEndTime - duration);
+                            selectedClip.StartTime = start;
+                            selectedClip.EndTime = start + duration;
+                        }
+                    }
+                    else
+                    {
+                        float duration = Length;
+                        float start = Mathf.Clamp(pointerTime - embeddedDragOffset, embeddedParentStartTime, embeddedParentEndTime - duration);
+                        StartTime = start;
+                        EndTime = start + duration;
+                    }
+                    e.Use();
                 }
 
                 if ( e.rawType == EventType.ContextClick ) {
@@ -4130,7 +4208,7 @@ namespace Slate
                     var r = new Rect(1, 1, rect.width - 2, rect.height - 2);
                     if ( overlapIn > 0 ) { r.xMin = blendInPosX; }
                     if ( overlapOut > 0 ) { r.xMax = blendOutPosX; }
-                    var label = string.Format("<size=10>{0}</size>", action.info);
+                    var label = string.Format("<size=10>{0}</size>", Info);
                     GUI.color = Color.black;
                     GUI.Label(r, label);
                     GUI.color = Color.white;
@@ -4139,14 +4217,14 @@ namespace Slate
 
             //blend graphics
             void DrawBlendGraphics() {
-                if ( action.blendIn > 0 ) {
+                if ( BlendIn > 0 ) {
                     Handles.color = Color.black.WithAlpha(0.5f);
                     Handles.DrawAAPolyLine(2, new Vector2(0, rect.height), new Vector2(blendInPosX, 0));
                     Handles.color = Color.black.WithAlpha(0.3f);
                     Handles.DrawAAConvexPolygon(new Vector3(0, 0), new Vector3(0, rect.height), new Vector3(blendInPosX, 0));
                 }
 
-                if ( action.blendOut > 0 && overlapOut == 0 ) {
+                if ( BlendOut > 0 && overlapOut == 0 ) {
                     Handles.color = Color.black.WithAlpha(0.5f);
                     Handles.DrawAAPolyLine(2, new Vector2(blendOutPosX, 0), new Vector2(rect.width, rect.height));
                     Handles.color = Color.black.WithAlpha(0.3f);
@@ -4163,8 +4241,11 @@ namespace Slate
             //clip scale/blend in/out controls
             void DoEdgeControls() {
 
-                var canBlendIn = action.CanBlendIn() && action.length > 0;
-                var canBlendOut = action.CanBlendOut() && action.length > 0;
+                if (IsEmbedded && IsLocked)
+                    return;
+
+                var canBlendIn = CanBlendIn && Length > 0;
+                var canBlendOut = CanBlendOut && Length > 0;
                 if ( !isScalingStart && !isScalingEnd && !isControlingBlendIn && !isControlingBlendOut ) {
                     if ( allowScale || canBlendIn ) {
                         if ( controlRectIn.Contains(e.mousePosition) ) {
@@ -4193,11 +4274,11 @@ namespace Slate
                     }
                 }
 
-                if ( isControlingBlendIn ) { action.blendIn = Mathf.Clamp(pointerTime - action.startTime, 0, action.length - action.blendOut); }
-                if ( isControlingBlendOut ) { action.blendOut = Mathf.Clamp(action.endTime - pointerTime, 0, action.length - action.blendIn); }
+                if ( isControlingBlendIn ) { BlendIn = Mathf.Clamp(pointerTime - StartTime, 0, Length - BlendOut); }
+                if ( isControlingBlendOut ) { BlendOut = Mathf.Clamp(EndTime - pointerTime, 0, Length - BlendIn); }
 
                 if ( isScalingStart ) {
-                    var prevTime = previousClip != null ? previousClip.endTime : 0;
+                    var prevTime = PreviousEndTime;
                     //magnet snap
                     if ( Prefs.magnetSnapping && !e.control ) {
                         var snapStart = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
@@ -4207,17 +4288,18 @@ namespace Slate
                         }
                     }
 
-                    if ( action.CanCrossBlend(previousClip) ) { prevTime -= Mathf.Min(action.length / 2, previousClip.length / 2); }
+                    if (CanCrossBlendPrevious)
+                        prevTime -= Mathf.Min(Length / 2, IsEmbedded ? previousEmbeddedClip.Length / 2 : previousClip.length / 2);
 
-                    action.startTime = snapedPointerTime;
-                    action.startTime = Mathf.Clamp(action.startTime, prevTime, preScaleEndTime);
-                    action.endTime = preScaleEndTime;
+                    StartTime = snapedPointerTime;
+                    StartTime = Mathf.Clamp(StartTime, prevTime, preScaleEndTime);
+                    EndTime = preScaleEndTime;
 
                     UpdateClipAdjustContents();
                 }
 
                 if ( isScalingEnd ) {
-                    var nextTime = nextClip != null ? nextClip.startTime : editor.maxTime;
+                    var nextTime = NextStartTime;
                     //magnet snap
                     if ( Prefs.magnetSnapping && !e.control ) {
                         var snapEnd = editor.MagnetSnapTime(snapedPointerTime, editor.magnetSnapTimesCache);
@@ -4227,10 +4309,11 @@ namespace Slate
                         }
                     }
 
-                    if ( action.CanCrossBlend(nextClip) ) { nextTime += Mathf.Min(action.length / 2, nextClip.length / 2); }
+                    if (CanCrossBlendNext)
+                        nextTime += Mathf.Min(Length / 2, IsEmbedded ? nextEmbeddedClip.Length / 2 : nextClip.length / 2);
 
-                    action.endTime = snapedPointerTime;
-                    action.endTime = Mathf.Clamp(action.endTime, 0, nextTime);
+                    EndTime = snapedPointerTime;
+                    EndTime = Mathf.Clamp(EndTime, 0, nextTime);
 
                     UpdateClipAdjustContents();
                 }
@@ -4239,20 +4322,21 @@ namespace Slate
 
             //store pre adjust values
             public void BeginClipAdjust() {
-                preScaleStartTime = action.startTime;
-                preScaleEndTime = action.endTime;
+                preScaleStartTime = StartTime;
+                preScaleEndTime = EndTime;
 
                 preScaleKeys = new Dictionary<int, Keyframe[]>();
-                var curves = action.GetCurvesAll();
+                var curves = CurvesAll;
                 for ( var i = 0; i < curves.Length; i++ ) {
                     preScaleKeys[i] = curves[i].keys;
                 }
 
-                if ( action is ISubClipContainable ) {
+                if ( !IsEmbedded && action is ISubClipContainable ) {
                     preScaleSubclipOffset = ( action as ISubClipContainable ).subClipOffset;
                     preScaleSubclipSpeed = ( action as ISubClipContainable ).subClipSpeed;
                 }
-                editor.CacheMagnetSnapTimes(action);
+                if (!IsEmbedded)
+                    editor.CacheMagnetSnapTimes(action);
             }
 
             //retime keys lerp between start/end time.
@@ -4264,19 +4348,19 @@ namespace Slate
                 var trim = !Event.current.shift && !Prefs.rippleMode && !retime;
 
                 var curveIndex = -1;
-                foreach ( var curve in action.GetCurvesAll() ) {
+                foreach ( var curve in CurvesAll ) {
                     curveIndex++;
                     for ( var i = 0; i < curve.keys.Length; i++ ) {
                         var preKey = preScaleKeys[curveIndex][i];
 
                         if ( retime ) {
                             var preLength = preScaleEndTime - preScaleStartTime;
-                            var newTime = Mathf.LerpUnclamped(0, action.length, preKey.time / preLength);
+                            var newTime = Mathf.LerpUnclamped(0, Length, preKey.time / preLength);
                             preKey.time = newTime;
                         }
 
                         if ( trim ) {
-                            preKey.time -= action.startTime - preScaleStartTime;
+                            preKey.time -= StartTime - preScaleStartTime;
                         }
 
                         curve.MoveKey(i, preKey);
@@ -4285,12 +4369,13 @@ namespace Slate
                     curve.UpdateTangentsFromMode();
                 }
 
-                CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
+                if (!IsEmbedded)
+                    CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
 
-                if ( action is ISubClipContainable ) {
+                if ( !IsEmbedded && action is ISubClipContainable ) {
                     if ( trim ) {
                         var subClip = (ISubClipContainable)action;
-                        var delta = preScaleStartTime - action.startTime;
+                        var delta = preScaleStartTime - StartTime;
                         var newOffset = preScaleSubclipOffset + delta;
                         subClip.subClipOffset = newOffset;
                     }
@@ -4309,6 +4394,13 @@ namespace Slate
 
             ///<summary>Split the clip in two, at specified local time</summary>
             public ActionClip Split(float time) {
+
+                if (IsEmbedded)
+                {
+                    int frame = Mathf.RoundToInt(time * editor.embeddedTimeline.FrameRate);
+                    editor.embeddedTimeline.SplitClip(embeddedClip, frame);
+                    return null;
+                }
 
                 if ( !action.IsTimeWithinClip(time) ) {
                     return null;
@@ -4348,6 +4440,12 @@ namespace Slate
 
             ///<summary>Scale clip to fit previous and next</summary>
             public void StretchFit() {
+                if (IsEmbedded)
+                {
+                    embeddedClip.StretchFit();
+                    return;
+                }
+
                 var wasStartTime = action.startTime;
                 var wasEndTime = action.endTime;
                 var targetStart = previousClip != null ? previousClip.endTime : action.parent.startTime;
@@ -4375,6 +4473,12 @@ namespace Slate
 
             ///<summary>Clean keys off clip range after adding a key at 0 and length if there is any key outside that range</summary>
             public void CleanKeysOffRange() {
+                if (IsEmbedded)
+                {
+                    embeddedClip.CleanKeysOffRange();
+                    return;
+                }
+
                 if ( hasParameters ) {
                     foreach ( var param in action.animationData.animatedParameters ) {
                         if ( param.HasAnyKey() ) {
@@ -4400,11 +4504,18 @@ namespace Slate
                 GUI.color = isProSkin ? new Color(0, 0.2f, 0.2f, 0.5f) : new Color(0, 0.8f, 0.8f, 0.5f);
                 GUI.Box(dopeRect, string.Empty, Slate.Styles.clipBoxHorizontalStyle);
                 GUI.color = Color.white;
-                DopeSheetEditor.DrawDopeSheet(action.animationData, action, dopeRect, 0, action.length, false);
+                DopeSheetEditor.DrawDopeSheet(Keyable.animationData, Keyable, dopeRect, 0, Length, false);
             }
 
             //CONTEXT
             void DoClipContextMenu() {
+                if (IsEmbedded)
+                {
+                    editor.ShowEmbeddedClipMenu(embeddedClip, null);
+                    e.Use();
+                    return;
+                }
+
                 var menu = new GenericMenu();
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
                     menu.AddItem(new GUIContent("Delete Clips"), false, () =>

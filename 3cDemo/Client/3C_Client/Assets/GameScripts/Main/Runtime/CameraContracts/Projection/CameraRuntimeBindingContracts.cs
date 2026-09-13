@@ -259,6 +259,22 @@ namespace ThirdPersonCamera
                 }
                 bindings[i] = binding;
             }
+            for (int i = 0; i < request.Projection.TargetSlots.Count; i++)
+            {
+                CameraTargetSlotPayload slot = request.Projection.TargetSlots[i];
+                if (slot == null || !slot.Required)
+                    continue;
+                if (!keys.Contains(slot.AnchorKey) ||
+                    !keys.Contains(slot.AimPointKey) ||
+                    !keys.Contains(slot.PreferredBoneKey))
+                {
+                    return CameraBindingPreparationResult.Failure(
+                        request,
+                        CameraBindingPreparationStatus.Invalid,
+                        CameraBindingFailureCode.TargetBindingInvalid,
+                        $"Required Camera target slot '{slot?.SlotId ?? "Missing"}' has an unbound point.");
+                }
+            }
             string bindingId =
                 $"camera-binding|{request.Projection.ProfileId}|{request.Projection.ProfileRevision}";
             var prepared = new CameraRuntimeBinding(

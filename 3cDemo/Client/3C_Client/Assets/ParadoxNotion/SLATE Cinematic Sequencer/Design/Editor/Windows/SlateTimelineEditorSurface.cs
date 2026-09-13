@@ -170,6 +170,7 @@ namespace Slate
             DrawRuler(body.width);
             DrawGroupsAndTracks(body.width, contentHeight);
             DrawTimeMarkers(body.width, contentHeight);
+            HandleTimelineViewportInput(body.width, contentHeight);
             GUI.EndScrollView();
         }
 
@@ -514,6 +515,32 @@ namespace Slate
                 preWrapMode = source.preWrapMode,
                 postWrapMode = source.postWrapMode
             };
+        }
+
+        void HandleTimelineViewportInput(float width, float contentHeight)
+        {
+            if (Event.current.type != EventType.ScrollWheel || !Event.current.control)
+                return;
+            float timelineWidth = Mathf.Max(1f, width - m_LeftMargin);
+            Rect timelineRect = new Rect(m_LeftMargin, 28f, timelineWidth, Mathf.Max(1f, contentHeight - 28f));
+            if (!timelineRect.Contains(Event.current.mousePosition))
+                return;
+
+            int oldSpan = Mathf.Max(1, m_ViewEndFrame - m_ViewStartFrame);
+            int newSpan = Mathf.Clamp(
+                Mathf.RoundToInt(oldSpan * (Event.current.delta.y > 0f ? 0.85f : 1.15f)),
+                1,
+                Mathf.Max(1, m_Content.LengthFrame));
+            int focusFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
+            float focusRatio = (focusFrame - m_ViewStartFrame) / (float)oldSpan;
+            int start = Mathf.RoundToInt(focusFrame - focusRatio * newSpan);
+            start = Mathf.Clamp(start, 0, Mathf.Max(0, m_Content.LengthFrame - newSpan));
+            m_ViewStartFrame = start;
+            m_ViewEndFrame = Mathf.Min(m_Content.LengthFrame, start + newSpan);
+            if (m_ViewEndFrame <= m_ViewStartFrame)
+                m_ViewEndFrame = Mathf.Min(m_Content.LengthFrame, m_ViewStartFrame + 1);
+            m_Host.RequestRepaint();
+            Event.current.Use();
         }
 
 

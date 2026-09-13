@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal static class ActionSkillExecutionSlotMap
+    internal static class GameplayAbilityExecutionSlotMap
     {
         public static HashSet<int> Build(
             int operationCount,
             IReadOnlyList<ProgramControlFlowEdge> controlFlow,
             IReadOnlyList<ProgramScopeLayout> scopes,
-            CharacterSkillProgramCatalog skills,
+            GameplayAbilityProgramCatalog skills,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramStateSlot> stateSlots,
             Func<int, IReadOnlyList<int>> operationStateSlots)
@@ -108,12 +108,12 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class ActionSkillExecutionFrame<TValue>
+    internal sealed class GameplayAbilityExecutionFrame<TValue>
         where TValue : struct
     {
         readonly SortedDictionary<int, TValue> m_Values;
 
-        public ActionSkillExecutionFrame(
+        public GameplayAbilityExecutionFrame(
             CharacterSkillId skillId,
             OperationHandle entryOperation,
             ulong actionInstanceId,
@@ -158,8 +158,8 @@ namespace ThirdPersonSimulation
             Generation = generation;
         }
 
-        public ActionSkillExecutionFrame<TValue> Clone() =>
-            new ActionSkillExecutionFrame<TValue>(
+        public GameplayAbilityExecutionFrame<TValue> Clone() =>
+            new GameplayAbilityExecutionFrame<TValue>(
                 SkillId,
                 EntryOperation,
                 ActionInstanceId,
@@ -168,19 +168,19 @@ namespace ThirdPersonSimulation
                 m_Values);
     }
 
-    internal sealed class ActionSkillExecutionAggregate<TValue>
+    internal sealed class GameplayAbilityExecutionAggregate<TValue>
         where TValue : struct
     {
-        readonly List<ActionSkillExecutionFrame<TValue>> m_Frames;
-        readonly System.Collections.ObjectModel.ReadOnlyCollection<ActionSkillExecutionFrame<TValue>> m_ReadOnlyFrames;
+        readonly List<GameplayAbilityExecutionFrame<TValue>> m_Frames;
+        readonly System.Collections.ObjectModel.ReadOnlyCollection<GameplayAbilityExecutionFrame<TValue>> m_ReadOnlyFrames;
 
-        public ActionSkillExecutionAggregate(
-            IEnumerable<ActionSkillExecutionFrame<TValue>> frames = null)
+        public GameplayAbilityExecutionAggregate(
+            IEnumerable<GameplayAbilityExecutionFrame<TValue>> frames = null)
         {
-            m_Frames = new List<ActionSkillExecutionFrame<TValue>>();
+            m_Frames = new List<GameplayAbilityExecutionFrame<TValue>>();
             if (frames != null)
             {
-                foreach (ActionSkillExecutionFrame<TValue> frame in frames)
+                foreach (GameplayAbilityExecutionFrame<TValue> frame in frames)
                 {
                     if (frame == null || Find(frame.ActionInstanceId) != null)
                         throw new ArgumentException("Skill execution state frames are invalid or duplicated.", nameof(frames));
@@ -190,9 +190,9 @@ namespace ThirdPersonSimulation
             m_ReadOnlyFrames = m_Frames.AsReadOnly();
         }
 
-        public IReadOnlyList<ActionSkillExecutionFrame<TValue>> Frames => m_ReadOnlyFrames;
+        public IReadOnlyList<GameplayAbilityExecutionFrame<TValue>> Frames => m_ReadOnlyFrames;
 
-        public ActionSkillExecutionFrame<TValue> Find(ulong actionInstanceId)
+        public GameplayAbilityExecutionFrame<TValue> Find(ulong actionInstanceId)
         {
             for (int i = 0; i < m_Frames.Count; i++)
                 if (m_Frames[i].ActionInstanceId == actionInstanceId)
@@ -200,7 +200,7 @@ namespace ThirdPersonSimulation
             return null;
         }
 
-        public void Add(ActionSkillExecutionFrame<TValue> frame)
+        public void Add(GameplayAbilityExecutionFrame<TValue> frame)
         {
             if (frame == null || Find(frame.ActionInstanceId) != null)
                 throw new ArgumentException("Skill execution state frame is invalid or duplicated.", nameof(frame));
@@ -219,18 +219,18 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        public ActionSkillExecutionAggregate<TValue> Clone() =>
-            new ActionSkillExecutionAggregate<TValue>(m_Frames);
+        public GameplayAbilityExecutionAggregate<TValue> Clone() =>
+            new GameplayAbilityExecutionAggregate<TValue>(m_Frames);
     }
 
-    internal sealed class ActionSkillExecutionManager<TValue>
+    internal sealed class GameplayAbilityExecutionManager<TValue>
         where TValue : struct
     {
-        readonly IActionSkillExecutionStorage<TValue> m_Storage;
-        ActionSkillExecutionAggregate<TValue> m_States;
-        ActionSkillExecutionFrame<TValue> m_Active;
+        readonly IGameplayAbilityExecutionStorage<TValue> m_Storage;
+        GameplayAbilityExecutionAggregate<TValue> m_States;
+        GameplayAbilityExecutionFrame<TValue> m_Active;
 
-        public ActionSkillExecutionManager(IActionSkillExecutionStorage<TValue> storage)
+        public GameplayAbilityExecutionManager(IGameplayAbilityExecutionStorage<TValue> storage)
         {
             m_Storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
@@ -249,17 +249,17 @@ namespace ThirdPersonSimulation
             m_States = null;
         }
 
-        public IDisposable Enter(ActionSkillExecutionIdentity identity)
+        public IDisposable Enter(AbilityExecutionContext identity)
         {
             if (!identity.IsValid)
                 throw new ArgumentException("Skill execution frame identity is incomplete.", nameof(identity));
             if (m_Active != null)
                 throw new InvalidOperationException("Skill execution frames cannot be nested.");
             EnsureStates();
-            ActionSkillExecutionFrame<TValue> frame = m_States.Find(identity.ActionInstanceId);
+            GameplayAbilityExecutionFrame<TValue> frame = m_States.Find(identity.ActionInstanceId);
             if (frame == null)
             {
-                frame = new ActionSkillExecutionFrame<TValue>(
+                frame = new GameplayAbilityExecutionFrame<TValue>(
                     identity.SkillId,
                     identity.EntryOperation,
                     identity.ActionInstanceId,
@@ -308,7 +308,7 @@ namespace ThirdPersonSimulation
 
         public bool TryGet(int slotIndex, out TValue value)
         {
-            if (!m_Storage.IsSkillStateSlot(slotIndex))
+            if (!m_Storage.IsAbilityStateSlot(slotIndex))
             {
                 value = default;
                 return false;
@@ -322,7 +322,7 @@ namespace ThirdPersonSimulation
 
         public bool TrySet(int slotIndex, TValue value)
         {
-            if (!m_Storage.IsSkillStateSlot(slotIndex))
+            if (!m_Storage.IsAbilityStateSlot(slotIndex))
                 return false;
             RequireActiveFrame(slotIndex);
             if (!m_Storage.IsValueValid(slotIndex, value))
@@ -334,7 +334,7 @@ namespace ThirdPersonSimulation
 
         public bool TryReset(int slotIndex)
         {
-            if (!m_Storage.IsSkillStateSlot(slotIndex))
+            if (!m_Storage.IsAbilityStateSlot(slotIndex))
                 return false;
             RequireActiveFrame(slotIndex);
             m_Active.SetValue(slotIndex, m_Storage.DefaultValue(slotIndex));
@@ -350,7 +350,7 @@ namespace ThirdPersonSimulation
             m_Storage.WriteAggregate(m_States);
         }
 
-        void Exit(ActionSkillExecutionFrame<TValue> frame)
+        void Exit(GameplayAbilityExecutionFrame<TValue> frame)
         {
             if (!ReferenceEquals(m_Active, frame))
                 throw new InvalidOperationException("Skill execution frame scope is unbalanced.");
@@ -368,11 +368,11 @@ namespace ThirdPersonSimulation
 
         sealed class Scope : IDisposable
         {
-            readonly ActionSkillExecutionManager<TValue> m_Owner;
-            readonly ActionSkillExecutionFrame<TValue> m_Frame;
+            readonly GameplayAbilityExecutionManager<TValue> m_Owner;
+            readonly GameplayAbilityExecutionFrame<TValue> m_Frame;
             bool m_Disposed;
 
-            public Scope(ActionSkillExecutionManager<TValue> owner, ActionSkillExecutionFrame<TValue> frame)
+            public Scope(GameplayAbilityExecutionManager<TValue> owner, GameplayAbilityExecutionFrame<TValue> frame)
             {
                 m_Owner = owner;
                 m_Frame = frame;
@@ -515,8 +515,8 @@ namespace ThirdPersonSimulation
         }
 
         public bool ActivateFromControl(
-            CharacterControlSkillRequest controlRequest,
-            CharacterSkillProgramBinding skill,
+            CharacterControlAbilityRequest controlRequest,
+            GameplayAbilityProgramBinding skill,
             ActionAdmissionProfile profile)
         {
             string requestId = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
@@ -826,12 +826,12 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class ActionSkillLifecycleFlow<TActionState>
+    internal sealed class AbilityExecution<TActionState>
         where TActionState : struct
     {
-        readonly IActionSkillLifecyclePort<TActionState> m_Port;
+        readonly IAbilityLifecyclePort<TActionState> m_Port;
 
-        public ActionSkillLifecycleFlow(IActionSkillLifecyclePort<TActionState> port)
+        public AbilityExecution(IAbilityLifecyclePort<TActionState> port)
         {
             m_Port = port ?? throw new ArgumentNullException(nameof(port));
         }
@@ -844,11 +844,11 @@ namespace ThirdPersonSimulation
         {
             if (!m_Port.TryFindActive(contextId, out TActionState action))
                 return false;
-            Apply(source, action, RequireTransition(transitionValue), reason, 0);
+            Resolve(source, action, RequireTransition(transitionValue), reason, 0);
             return true;
         }
 
-        public void ApplyIngress(ActionSkillLifecycleIngress ingress)
+        public void ApplyIngress(AbilityLifecycleIngress ingress)
         {
             TActionState match = default;
             int matches = 0;
@@ -861,7 +861,7 @@ namespace ThirdPersonSimulation
             }
             if (matches != 1)
                 throw new InvalidOperationException($"Action lifecycle ingress '{ingress.Identity}' matched {matches} active Action instances.");
-            Apply(
+            Resolve(
                 m_Port.Source(match),
                 match,
                 RequireTransition(ingress.TransitionValue),
@@ -869,70 +869,96 @@ namespace ThirdPersonSimulation
                 ingress.SourceTick);
         }
 
-        public void Finish(
+        public void Resolve(
             CharacterSkillId skillId,
             SimulationExecutionSource source,
-            bool completed,
+            AbilityLifecycleTransition transition,
             string reason)
         {
             if (!m_Port.TryFindActive(skillId, out TActionState action))
                 return;
-            Apply(
-                source,
-                action,
-                completed ? ActionSkillLifecycleTransition.Complete : ActionSkillLifecycleTransition.Abort,
-                reason,
-                0);
+            Resolve(source, action, transition, reason, 0);
         }
 
-        public void Finish(
+        public void Resolve(
             TActionState action,
             SimulationExecutionSource source,
-            bool completed,
+            AbilityLifecycleTransition transition,
             string reason)
         {
             if (!m_Port.IsActive(action))
                 return;
-            Apply(
+            Resolve(source, action, transition, reason, 0);
+        }
+
+        public void Resolve(
+            CharacterSkillId skillId,
+            GameplayAbilityProgramBinding binding,
+            string trigger,
+            SimulationExecutionSource source,
+            AbilityLifecycleTransition defaultTransition,
+            string reason,
+            string actionWindowType = "")
+        {
+            if (!m_Port.TryFindActive(skillId, out TActionState action))
+                return;
+            Resolve(action, binding, trigger, source, defaultTransition, reason, actionWindowType);
+        }
+
+        public void Resolve(
+            TActionState action,
+            GameplayAbilityProgramBinding binding,
+            string trigger,
+            SimulationExecutionSource source,
+            AbilityLifecycleTransition defaultTransition,
+            string reason,
+            string actionWindowType = "")
+        {
+            AbilityLifecycleTransition transition = defaultTransition;
+            string resolvedReason = reason ?? string.Empty;
+            if (binding != null && binding.TryGetEndRule(trigger, actionWindowType, out GameplayAbilityProgramEndRule rule))
+            {
+                transition = RequireTerminalTransition(rule.Transition);
+                if (!string.IsNullOrEmpty(rule.Reason) &&
+                    (string.IsNullOrEmpty(resolvedReason) ||
+                     string.Equals(trigger, GameplayAbilityEndTriggerNames.ExecutionCompleted, StringComparison.Ordinal)))
+                    resolvedReason = rule.Reason;
+            }
+            Resolve(source, action, transition, resolvedReason, 0);
+        }
+
+        public void Stop(
+            CharacterSkillId skillId,
+            CharacterControlAbilityStopMode mode,
+            SimulationExecutionSource source,
+            string reason)
+        {
+            if (!m_Port.TryFindActive(skillId, out TActionState action))
+                return;
+            Resolve(
                 source,
                 action,
-                completed ? ActionSkillLifecycleTransition.Complete : ActionSkillLifecycleTransition.Abort,
+                mode == CharacterControlAbilityStopMode.Force
+                    ? AbilityLifecycleTransition.Abort
+                    : AbilityLifecycleTransition.Cancel,
                 reason,
                 0);
         }
 
         public void Stop(
-            CharacterSkillId skillId,
-            CharacterControlSkillStopMode mode,
-            SimulationExecutionSource source,
-            string reason)
-        {
-            if (!m_Port.TryFindActive(skillId, out TActionState action))
-                return;
-            Apply(
-                source,
-                action,
-                mode == CharacterControlSkillStopMode.Force
-                    ? ActionSkillLifecycleTransition.Abort
-                    : ActionSkillLifecycleTransition.Cancel,
-                reason,
-                0);
-        }
-
-        public void Stop(
             TActionState action,
-            CharacterControlSkillStopMode mode,
+            CharacterControlAbilityStopMode mode,
             SimulationExecutionSource source,
             string reason)
         {
             if (!m_Port.IsActive(action))
                 return;
-            Apply(
+            Resolve(
                 source,
                 action,
-                mode == CharacterControlSkillStopMode.Force
-                    ? ActionSkillLifecycleTransition.Abort
-                    : ActionSkillLifecycleTransition.Cancel,
+                mode == CharacterControlAbilityStopMode.Force
+                    ? AbilityLifecycleTransition.Abort
+                    : AbilityLifecycleTransition.Cancel,
                 reason,
                 0);
         }
@@ -942,13 +968,13 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source,
             string reason)
         {
-            Apply(source, action, ActionSkillLifecycleTransition.Interrupt, reason, 0);
+            Resolve(source, action, AbilityLifecycleTransition.Interrupt, reason, 0);
         }
 
-        void Apply(
+        void Resolve(
             SimulationExecutionSource source,
             TActionState action,
-            ActionSkillLifecycleTransition transition,
+            AbilityLifecycleTransition transition,
             string reason,
             ulong sourceTick)
         {
@@ -956,45 +982,45 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Action '{m_Port.ActionId(action)}/{m_Port.InstanceId(action)}' is not active.");
             using (m_Port.EnterExecution(action))
             {
-            ActionSkillLifecycleState previousState = m_Port.State(action);
-            if (transition == ActionSkillLifecycleTransition.Confirm &&
-                previousState != ActionSkillLifecycleState.Predicted &&
-                previousState != ActionSkillLifecycleState.Corrected)
+            AbilityLifecycleState previousState = m_Port.State(action);
+            if (transition == AbilityLifecycleTransition.Confirm &&
+                previousState != AbilityLifecycleState.Predicted &&
+                previousState != AbilityLifecycleState.Corrected)
             {
                 throw new InvalidOperationException($"Action '{m_Port.ActionId(action)}/{m_Port.InstanceId(action)}' cannot confirm from '{previousState}'.");
             }
 
-            ActionSkillLifecyclePhase phase = m_Port.Phase(action);
-            ActionSkillLifecycleState state = previousState;
+            AbilityLifecyclePhase phase = m_Port.Phase(action);
+            AbilityLifecycleState state = previousState;
             string nextReason = reason ?? string.Empty;
             switch (transition)
             {
-                case ActionSkillLifecycleTransition.Confirm:
-                    state = ActionSkillLifecycleState.Confirmed;
+                case AbilityLifecycleTransition.Confirm:
+                    state = AbilityLifecycleState.Confirmed;
                     nextReason = string.Empty;
                     break;
-                case ActionSkillLifecycleTransition.Complete:
-                    phase = ActionSkillLifecyclePhase.Ended;
-                    state = ActionSkillLifecycleState.Ended;
+                case AbilityLifecycleTransition.Complete:
+                    phase = AbilityLifecyclePhase.Ended;
+                    state = AbilityLifecycleState.Ended;
                     break;
-                case ActionSkillLifecycleTransition.Cancel:
-                    phase = ActionSkillLifecyclePhase.Cancel;
-                    state = ActionSkillLifecycleState.Cancelled;
+                case AbilityLifecycleTransition.Cancel:
+                    phase = AbilityLifecyclePhase.Cancel;
+                    state = AbilityLifecycleState.Cancelled;
                     break;
-                case ActionSkillLifecycleTransition.Interrupt:
-                    phase = ActionSkillLifecyclePhase.Cancel;
-                    state = ActionSkillLifecycleState.Interrupted;
+                case AbilityLifecycleTransition.Interrupt:
+                    phase = AbilityLifecyclePhase.Cancel;
+                    state = AbilityLifecycleState.Interrupted;
                     break;
-                case ActionSkillLifecycleTransition.Reject:
-                    phase = ActionSkillLifecyclePhase.Ended;
-                    state = ActionSkillLifecycleState.Rejected;
+                case AbilityLifecycleTransition.Reject:
+                    phase = AbilityLifecyclePhase.Ended;
+                    state = AbilityLifecycleState.Rejected;
                     break;
-                case ActionSkillLifecycleTransition.Correct:
-                    state = ActionSkillLifecycleState.Corrected;
+                case AbilityLifecycleTransition.Correct:
+                    state = AbilityLifecycleState.Corrected;
                     break;
-                case ActionSkillLifecycleTransition.Abort:
-                    phase = ActionSkillLifecyclePhase.Ended;
-                    state = ActionSkillLifecycleState.Aborted;
+                case AbilityLifecycleTransition.Abort:
+                    phase = AbilityLifecyclePhase.Ended;
+                    state = AbilityLifecycleState.Aborted;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(transition));
@@ -1002,7 +1028,7 @@ namespace ThirdPersonSimulation
 
             TActionState next = m_Port.WithLifecycle(
                 action,
-                new ActionSkillLifecycleUpdate(
+                new AbilityLifecycleUpdate(
                     phase,
                     state,
                     transition,
@@ -1032,36 +1058,45 @@ namespace ThirdPersonSimulation
                     $"{m_Port.ActionId(next)}:{m_Port.InstanceId(next)}:{transition}:{m_Port.Reason(next)}:equipment={m_Port.EquipmentContext(next)}",
                     m_Port.SourceGeneration(source));
             }
-            if (!m_Port.IsActive(next))
-                m_Port.ClearTerminalResources(m_Port.InstanceId(next));
             }
         }
 
-        bool Matches(TActionState action, ActionSkillLifecycleIngress ingress) =>
+        bool Matches(TActionState action, AbilityLifecycleIngress ingress) =>
             (ingress.ActionInstanceId == 0 || ingress.ActionInstanceId == m_Port.InstanceId(action)) &&
             (ingress.PredictionKey == 0 || ingress.PredictionKey == m_Port.PredictionKey(action)) &&
             (ingress.InputSequence == 0 || ingress.InputSequence == m_Port.InputSequence(action));
 
-        static ActionSkillLifecycleTransition RequireTransition(int value)
+        static AbilityLifecycleTransition RequireTransition(int value)
         {
             if (value < byte.MinValue || value > byte.MaxValue)
                 throw new InvalidOperationException($"Action lifecycle transition '{value}' is invalid.");
-            var transition = (ActionSkillLifecycleTransition)(byte)value;
-            if (!Enum.IsDefined(typeof(ActionSkillLifecycleTransition), transition) || transition == ActionSkillLifecycleTransition.None)
+            var transition = (AbilityLifecycleTransition)(byte)value;
+            if (!Enum.IsDefined(typeof(AbilityLifecycleTransition), transition) || transition == AbilityLifecycleTransition.None)
                 throw new InvalidOperationException($"Action lifecycle transition '{value}' is invalid.");
             return transition;
         }
 
-        static SimulationActionResultKind ResolveResult(ActionSkillLifecycleTransition transition)
+        static AbilityLifecycleTransition RequireTerminalTransition(int value)
+        {
+            AbilityLifecycleTransition transition = RequireTransition(value);
+            if (transition != AbilityLifecycleTransition.Complete &&
+                transition != AbilityLifecycleTransition.Cancel &&
+                transition != AbilityLifecycleTransition.Interrupt &&
+                transition != AbilityLifecycleTransition.Abort)
+                throw new InvalidOperationException($"Action end rule transition '{value}' is not terminal.");
+            return transition;
+        }
+
+        static SimulationActionResultKind ResolveResult(AbilityLifecycleTransition transition)
         {
             return transition switch
             {
-                ActionSkillLifecycleTransition.Complete => SimulationActionResultKind.Completed,
-                ActionSkillLifecycleTransition.Cancel => SimulationActionResultKind.Cancelled,
-                ActionSkillLifecycleTransition.Interrupt => SimulationActionResultKind.Interrupted,
-                ActionSkillLifecycleTransition.Reject => SimulationActionResultKind.Rejected,
-                ActionSkillLifecycleTransition.Correct => SimulationActionResultKind.Corrected,
-                ActionSkillLifecycleTransition.Abort => SimulationActionResultKind.Aborted,
+                AbilityLifecycleTransition.Complete => SimulationActionResultKind.Completed,
+                AbilityLifecycleTransition.Cancel => SimulationActionResultKind.Cancelled,
+                AbilityLifecycleTransition.Interrupt => SimulationActionResultKind.Interrupted,
+                AbilityLifecycleTransition.Reject => SimulationActionResultKind.Rejected,
+                AbilityLifecycleTransition.Correct => SimulationActionResultKind.Corrected,
+                AbilityLifecycleTransition.Abort => SimulationActionResultKind.Aborted,
                 _ => SimulationActionResultKind.None
             };
         }

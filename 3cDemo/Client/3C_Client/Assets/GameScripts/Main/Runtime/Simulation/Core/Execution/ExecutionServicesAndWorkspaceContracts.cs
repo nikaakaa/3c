@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation
     {
         IEnumerable<string> OwnedGameplayTags { get; }
         IEnumerable<ActionAdmissionActiveAction> ActiveActions { get; }
-        ActionAdmissionProfile RequireActionProfile(string actionId);
+        ActionAdmissionProfile RequireAdmissionProfile(string actionId);
         bool TryGetGameplayTagParent(string tag, out string parentTag);
     }
 
@@ -298,7 +298,7 @@ namespace ThirdPersonSimulation
                     if (!hasReplacementSource)
                         return Reject(ActionAdmissionRejectReason.ReplacementSourceMissing, string.Empty, 0);
 
-                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(replacementSource.ActionId);
+                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireAdmissionProfile(replacementSource.ActionId);
                     AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
                     if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
                         return Reject(ActionAdmissionRejectReason.SourceActionStillActive, replacementSource.ActionId, replacementSource.InstanceId);

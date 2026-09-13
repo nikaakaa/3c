@@ -21,9 +21,9 @@ namespace ThirdPersonSimulation
         Information = 2
     }
 
-    internal readonly struct ActionSkillExecutionIdentity
+    internal readonly struct AbilityExecutionContext
     {
-        public ActionSkillExecutionIdentity(
+        public AbilityExecutionContext(
             CharacterSkillId skillId,
             OperationHandle entryOperation,
             ulong actionInstanceId,
@@ -45,14 +45,14 @@ namespace ThirdPersonSimulation
         public bool IsValid => SkillId.IsValid && EntryOperation.IsValid && ActionInstanceId != 0 && PredictionKey != 0;
     }
 
-    internal interface IActionSkillExecutionStorage<TValue>
+    internal interface IGameplayAbilityExecutionStorage<TValue>
         where TValue : struct
     {
-        bool IsSkillStateSlot(int slotIndex);
+        bool IsAbilityStateSlot(int slotIndex);
         bool IsValueValid(int slotIndex, TValue value);
         TValue DefaultValue(int slotIndex);
-        ActionSkillExecutionAggregate<TValue> ReadAggregate();
-        void WriteAggregate(ActionSkillExecutionAggregate<TValue> aggregate);
+        GameplayAbilityExecutionAggregate<TValue> ReadAggregate();
+        void WriteAggregate(GameplayAbilityExecutionAggregate<TValue> aggregate);
     }
 
     internal readonly struct ActionSkillActivationCandidate<TTargetSnapshot, TOperation>
@@ -205,7 +205,7 @@ namespace ThirdPersonSimulation
             string reason);
     }
 
-    internal enum ActionSkillLifecyclePhase : byte
+    internal enum AbilityLifecyclePhase : byte
     {
         Startup = 0,
         Active = 1,
@@ -214,7 +214,7 @@ namespace ThirdPersonSimulation
         Ended = 4
     }
 
-    internal enum ActionSkillLifecycleState : byte
+    internal enum AbilityLifecycleState : byte
     {
         Requested = 0,
         Predicted = 1,
@@ -227,7 +227,7 @@ namespace ThirdPersonSimulation
         Corrected = 8
     }
 
-    internal enum ActionSkillLifecycleTransition : byte
+    internal enum AbilityLifecycleTransition : byte
     {
         None = 0,
         Confirm = 1,
@@ -239,9 +239,9 @@ namespace ThirdPersonSimulation
         Abort = 7
     }
 
-    internal readonly struct ActionSkillLifecycleIngress
+    internal readonly struct AbilityLifecycleIngress
     {
-        public ActionSkillLifecycleIngress(
+        public AbilityLifecycleIngress(
             string identity,
             ulong actionInstanceId,
             ulong predictionKey,
@@ -272,12 +272,12 @@ namespace ThirdPersonSimulation
         public string Reason { get; }
     }
 
-    internal readonly struct ActionSkillLifecycleUpdate
+    internal readonly struct AbilityLifecycleUpdate
     {
-        public ActionSkillLifecycleUpdate(
-            ActionSkillLifecyclePhase phase,
-            ActionSkillLifecycleState state,
-            ActionSkillLifecycleTransition transition,
+        public AbilityLifecycleUpdate(
+            AbilityLifecyclePhase phase,
+            AbilityLifecycleState state,
+            AbilityLifecycleTransition transition,
             ulong transitionTick,
             ulong sourceTick,
             string reason)
@@ -290,15 +290,15 @@ namespace ThirdPersonSimulation
             Reason = reason ?? string.Empty;
         }
 
-        public ActionSkillLifecyclePhase Phase { get; }
-        public ActionSkillLifecycleState State { get; }
-        public ActionSkillLifecycleTransition Transition { get; }
+        public AbilityLifecyclePhase Phase { get; }
+        public AbilityLifecycleState State { get; }
+        public AbilityLifecycleTransition Transition { get; }
         public ulong TransitionTick { get; }
         public ulong SourceTick { get; }
         public string Reason { get; }
     }
 
-    internal interface IActionSkillLifecyclePort<TActionState>
+    internal interface IAbilityLifecyclePort<TActionState>
         where TActionState : struct
     {
         ulong Tick { get; }
@@ -314,13 +314,12 @@ namespace ThirdPersonSimulation
         string Reason(TActionState action);
         SimulationExecutionSource Source(TActionState action);
         EquipmentActionContext EquipmentContext(TActionState action);
-        ActionSkillLifecyclePhase Phase(TActionState action);
-        ActionSkillLifecycleState State(TActionState action);
+        AbilityLifecyclePhase Phase(TActionState action);
+        AbilityLifecycleState State(TActionState action);
         IDisposable EnterExecution(TActionState action);
-        TActionState WithLifecycle(TActionState action, ActionSkillLifecycleUpdate update);
+        TActionState WithLifecycle(TActionState action, AbilityLifecycleUpdate update);
         void WriteState(TActionState action);
         void EmitActionFact(SimulationExecutionSource source, TActionState action);
-        void ClearTerminalResources(ulong actionInstanceId);
         ulong SourceGeneration(SimulationExecutionSource source);
         bool TraceEnabled { get; }
         void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail, ulong generation);

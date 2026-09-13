@@ -68,12 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 builder.RequireGameplayCapability("GameplayEffect");
                 builder.DeclareStandaloneStateSlot(
                     abilitySource,
-                    ProgramStateValueKind.UInt64,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.ActionEventSequence,
-                    "action:event-sequence");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
                     ProgramStateValueKind.AbilityExecutionState,
                     ProgramStateOwnerKind.Action,
                     ProgramStateSemantic.AbilityExecutionState,

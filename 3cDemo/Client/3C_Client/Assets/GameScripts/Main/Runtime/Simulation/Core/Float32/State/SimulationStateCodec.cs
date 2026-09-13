@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 19;
-		public const string CodecIdentity = "character-state/float32/v20";
-		const string HashIdentity = "character-state-hash/float32/v18";
+		const int Version = 20;
+		public const string CodecIdentity = "character-state/float32/v21";
+		const string HashIdentity = "character-state-hash/float32/v19";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -34,6 +34,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(state.LayoutHash.ToString());
             writer.WriteUInt64(state.LastCompletedTick);
             writer.WriteUInt64(state.EventSequence);
+            writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteInt32(state.SlotCount);
             ProgramExecutionLayout layout = state.ExecutionLayout;
             for (int i = 0; i < state.SlotCount; i++)
@@ -67,6 +68,7 @@ namespace ThirdPersonSimulation
             var layoutHash = new LayoutHash(new StableHash(reader.ReadString()));
             ulong lastCompletedTick = reader.ReadUInt64();
             ulong eventSequence = reader.ReadUInt64();
+            ulong actionEventSequence = reader.ReadUInt64();
             ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(program);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
@@ -102,7 +104,7 @@ namespace ThirdPersonSimulation
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }

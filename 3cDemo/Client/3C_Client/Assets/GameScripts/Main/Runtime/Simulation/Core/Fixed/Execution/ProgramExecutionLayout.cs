@@ -63,20 +63,18 @@ namespace ThirdPersonSimulation.Fixed
 
     public readonly struct TypedActionStateAddresses
     {
-        public TypedActionStateAddresses(string actionId, TypedStateAddress request, TypedStateAddress instance, TypedStateAddress eventSequence)
+        public TypedActionStateAddresses(string actionId, TypedStateAddress request, TypedStateAddress instance)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
-            if (!request.IsValid || !instance.IsValid || !eventSequence.IsValid)
+            if (!request.IsValid || !instance.IsValid)
                 throw new ArgumentException("Action typed state addresses are incomplete.");
             Request = request;
             Instance = instance;
-            EventSequence = eventSequence;
         }
 
         public string ActionId { get; }
         public TypedStateAddress Request { get; }
         public TypedStateAddress Instance { get; }
-        public TypedStateAddress EventSequence { get; }
     }
 
     public readonly struct BlackboardInputStateBinding
@@ -658,8 +656,6 @@ namespace ThirdPersonSimulation.Fixed
             var actionBuilders = new Dictionary<string, Dictionary<int, ActionAddressBuilder>>(StringComparer.Ordinal);
             var timeline = new Dictionary<int, TypedStateAddress>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
-            TypedStateAddress eventSequence = default;
-
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
                 ProgramStateSlot slot = program.StateSlots[i];
@@ -675,11 +671,6 @@ namespace ThirdPersonSimulation.Fixed
                     case ProgramStateSemantic.ActionInstance:
                         RequireActionBuilder(actionBuilders, slot.OwnerIdentity).Instance = address;
                         break;
-                    case ProgramStateSemantic.ActionEventSequence:
-                        if (eventSequence.IsValid)
-                            throw new InvalidDataException("Program contains duplicate Action event sequence state.");
-                        eventSequence = address;
-                        break;
                     case ProgramStateSemantic.TimelineRetentionIdentity:
                         int operation = ParseOperationOwner(slot.OwnerIdentity);
                         AddUnique(timeline, operation, address, "Timeline retention");
@@ -690,8 +681,6 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
 
-            if (!eventSequence.IsValid)
-                throw new InvalidDataException("Program has no Action event sequence state.");
             var actionValues = new Dictionary<string, TypedActionStateAddresses>(StringComparer.Ordinal);
             var actionSlotValues = new Dictionary<string, IReadOnlyList<TypedActionStateAddresses>>(StringComparer.Ordinal);
             var allActionValues = new List<TypedActionStateAddresses>();
@@ -708,8 +697,7 @@ namespace ThirdPersonSimulation.Fixed
                     TypedActionStateAddresses typedAction = new TypedActionStateAddresses(
                         pair.Key,
                         slot.Value.Request,
-                        slot.Value.Instance,
-                        eventSequence);
+                        slot.Value.Instance);
                     values.Add(typedAction);
                     allActionValues.Add(typedAction);
                 }

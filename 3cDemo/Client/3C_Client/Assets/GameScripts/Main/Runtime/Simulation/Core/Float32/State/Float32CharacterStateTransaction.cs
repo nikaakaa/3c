@@ -240,6 +240,8 @@ namespace ThirdPersonSimulation
             int depth,
             bool hadEventSequenceWorking,
             ulong eventSequenceSnapshot,
+            bool hadActionEventSequenceWorking,
+            ulong actionEventSequenceSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -249,6 +251,8 @@ namespace ThirdPersonSimulation
             Depth = depth;
             HadEventSequenceWorking = hadEventSequenceWorking;
             EventSequenceSnapshot = eventSequenceSnapshot;
+            HadActionEventSequenceWorking = hadActionEventSequenceWorking;
+            ActionEventSequenceSnapshot = actionEventSequenceSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -259,6 +263,8 @@ namespace ThirdPersonSimulation
         internal int Depth { get; }
         internal bool HadEventSequenceWorking { get; }
         internal ulong EventSequenceSnapshot { get; }
+        internal bool HadActionEventSequenceWorking { get; }
+        internal ulong ActionEventSequenceSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -282,6 +288,8 @@ namespace ThirdPersonSimulation
         EquipmentStateAggregate m_EquipmentWorking;
         ulong m_EventSequenceWorking;
         bool m_EventSequenceDirty;
+        ulong m_ActionEventSequenceWorking;
+        bool m_ActionEventSequenceDirty;
         Float32CharacterStateTransactionStatus m_Status;
 
         Float32CharacterStateTransaction(
@@ -354,6 +362,17 @@ namespace ThirdPersonSimulation
                 throw new OverflowException("Simulation event sequence overflowed.");
             m_EventSequenceWorking = sequence;
             m_EventSequenceDirty = true;
+            return sequence;
+        }
+
+        public ulong NextActionEventSequence()
+        {
+            RequireActive();
+            ulong sequence = checked((m_ActionEventSequenceDirty ? m_ActionEventSequenceWorking : m_BaseState.ActionEventSequence) + 1UL);
+            if (sequence == 0)
+                throw new OverflowException("Action event sequence overflowed.");
+            m_ActionEventSequenceWorking = sequence;
+            m_ActionEventSequenceDirty = true;
             return sequence;
         }
 
@@ -436,6 +455,8 @@ namespace ThirdPersonSimulation
                 m_Savepoints.Count + 1,
                 m_EventSequenceDirty,
                 m_EventSequenceWorking,
+                m_ActionEventSequenceDirty,
+                m_ActionEventSequenceWorking,
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -467,6 +488,8 @@ namespace ThirdPersonSimulation
             }
             m_EventSequenceDirty = savepoint.HadEventSequenceWorking;
             m_EventSequenceWorking = savepoint.EventSequenceSnapshot;
+            m_ActionEventSequenceDirty = savepoint.HadActionEventSequenceWorking;
+            m_ActionEventSequenceWorking = savepoint.ActionEventSequenceSnapshot;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -507,6 +530,7 @@ namespace ThirdPersonSimulation
                 ? m_EquipmentWorking ?? m_BaseState.RequireEquipmentState()
                 : null;
             ulong eventSequence = m_EventSequenceDirty ? m_EventSequenceWorking : m_BaseState.EventSequence;
+            ulong actionEventSequence = m_ActionEventSequenceDirty ? m_ActionEventSequenceWorking : m_BaseState.ActionEventSequence;
 
             try
             {
@@ -515,6 +539,7 @@ namespace ThirdPersonSimulation
                     m_Program,
                     m_Tick,
                     eventSequence,
+                    actionEventSequence,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -597,6 +622,8 @@ namespace ThirdPersonSimulation
             m_EquipmentWorking = null;
             m_EventSequenceWorking = 0;
             m_EventSequenceDirty = false;
+            m_ActionEventSequenceWorking = 0;
+            m_ActionEventSequenceDirty = false;
         }
 
     }

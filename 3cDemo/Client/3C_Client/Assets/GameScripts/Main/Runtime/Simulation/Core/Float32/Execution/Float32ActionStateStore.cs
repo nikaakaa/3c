@@ -682,7 +682,6 @@ namespace ThirdPersonSimulation
             {
                 ProgramStateSemantic.ActionRequestBuffer => addresses.Request.SlotIndex,
                 ProgramStateSemantic.ActionInstance => addresses.Instance.SlotIndex,
-                ProgramStateSemantic.ActionEventSequence => addresses.EventSequence.SlotIndex,
                 _ => throw new InvalidOperationException($"Action '{actionId}' has no typed '{semantic}' state.")
             };
         }
@@ -791,12 +790,7 @@ namespace ThirdPersonSimulation
 
 		public ulong NextSequence()
 		{
-			int slot = m_Layout.RequireStateSlot(ProgramStateSemantic.ActionEventSequence);
-			ulong value = checked(m_State.Get(slot).UInt64 + 1);
-            if (value == 0)
-                throw new OverflowException("Action sequence overflowed.");
-            m_State.Set(slot, CharacterStateValue.FromUInt64(value));
-			return value;
+			return m_Frame.Transaction.NextActionEventSequence();
 		}
 
 		bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsAbilityStateSlot(int slotIndex) =>

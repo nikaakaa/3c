@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4 已完成；2.1 按 D12 重新打开，1.5—1.10、2.2 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、2.2 已完成；2.1 按 D12 重新打开，1.5—1.10、2.3 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -47,6 +47,7 @@
 - `01a7a707b`：记录 Float32 Control 绑定的 Definition → Actor → Evaluate 链路，并同步实现边界。
 - `1f23251e3`：把双目标 Control 分区状态接入角色状态、快照、ServerAuthoritative 检查点、Fixed 注册和回滚装配，状态载荷升级为拒绝旧格式的版本。
 - `1dfb72acc`：删除 Control 参数、静态 Motion 字段和 Control state slots 的 Program 发射与 `CharacterControlStateLayout`，输入适配器改读正式 Control contract。
+- `d1ddde86d`：为 Control state 建立独立 value kind、semantic 和 v2 codec，删除 Program Control owner、semantic 与旧 ControlState source-map 映射。
 
 ## 当前实现边界
 
@@ -59,7 +60,7 @@
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
 - `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion 和 Ability 的生命周期已分别进入独立 Module。Effect／Equipment／Timeline／Motion 的其余 owner 迁移和旧 Program 数据清理仍未完成。
 - Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
-- Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。当前 Control state descriptor 仍复用 `ProgramStateValueKind`／`ProgramStateSemantic` 名称，旧执行服务和诊断映射也还保留，因此 2.2 仍不勾选完成。
+- Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract；Control 曲线 Catalog 仍等待 2.3 的 Timeline/Motion 唯一时间映射迁移。
 - Local Host 与 Server Authority Host 直接从 Character Definition 构造 Control binding；DotRecast Authority manifest schema 已升为 6，将模块身份、版本、参数值及两级 hash 写入 canonical payload，加载后的 Authority runtime 使用 manifest 中的同一绑定，不再从 Program catalog 补参数。
 
@@ -72,8 +73,9 @@
 - Fixed provider 接入使用同一 `ThirdPersonClient.Runtime.csproj` 编译通过，0 errors、34 warnings；尚未运行 Unity、测试或端到端行为验证。
 - Float32 Control runtime binding 变更后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.DotRecastAuthority.csproj`、`ThirdPersonClient.Runtime.csproj` 和 `ThirdPersonClient.Editor.csproj` 均编译成功，均为 0 errors；DotRecast Authority 3 warnings、Client Runtime 34 warnings、Client Editor 94 warnings，均来自现有项目或依赖代码。
 - 2026-09-14 当前 Control 分区状态与 catalog 清理后，`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warnings、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 warnings、0 errors；`ThirdPersonClient.Editor.csproj` 未出现本次改动错误，输出中的 warning 仍来自现有 Unity/package 代码。
+- 2026-09-14 Control state 类型语义拆出后，`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warnings、0 errors；`ThirdPersonClient.Runtime.csproj` 未出现本次改动错误，包内既有 warning 仍保留。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步
 
-下一步把 Control state 的 value kind／semantic 合同从 `ProgramState*` 命名中彻底拆出，并清理旧执行服务、诊断和 source-map 对 Control slots 的残留假设；随后迁移 Effect、Equipment、Timeline、Motion 的实例 owner，最后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。
+下一步消费曲线任务提供的 `RootMotionCurveAsset` 和 Timeline 唯一时间映射，把 C# Control／Motion 接到正式 portable 绑定，删除 `CharacterControlMotionCatalogEmitter` 及其 Program catalog 曲线路径，同时保留 MovingTurn 与 CameraRelative 行为；随后迁移 Effect、Equipment、Timeline 的实例 owner，最后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。

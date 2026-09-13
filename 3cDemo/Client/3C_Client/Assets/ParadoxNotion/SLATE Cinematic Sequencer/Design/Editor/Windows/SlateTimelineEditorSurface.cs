@@ -25,6 +25,7 @@ namespace Slate
         bool m_HasView;
         bool m_Disposed;
         bool m_ResizingLeftMargin;
+        bool m_DragCursor;
         float m_LeftMargin = 280f;
         string m_Search = string.Empty;
         SlateTimelineEditorSelection m_Selection;
@@ -184,12 +185,18 @@ namespace Slate
                 GUI.Label(new Rect(m_LeftMargin + x - 18f, 5f, 40f, 16f), label, EditorStyles.label);
             }
             GUI.color = Color.white;
-            if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && ruler.Contains(Event.current.mousePosition))
+            if ((Event.current.type == EventType.MouseDown ||
+                 Event.current.type == EventType.MouseDrag) &&
+                Event.current.button == 0 &&
+                (ruler.Contains(Event.current.mousePosition) || m_DragCursor))
             {
+                m_DragCursor = true;
                 int frame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, Mathf.Max(1f, ruler.width - m_LeftMargin));
                 m_Commands.SetCurrentFrame(frame);
                 Event.current.Use();
             }
+            if (Event.current.rawType == EventType.MouseUp)
+                m_DragCursor = false;
         }
 
         void DrawGroupsAndTracks(float width, float contentHeight)
@@ -443,6 +450,30 @@ namespace Slate
 
         void HandleGlobalEvents(Rect surface)
         {
+            if (Event.current.type == EventType.KeyDown && GUIUtility.keyboardControl == 0)
+            {
+                int frame = m_Content.CurrentFrame;
+                switch (Event.current.keyCode)
+                {
+                    case KeyCode.LeftArrow:
+                        frame = Mathf.Max(0, frame - 1);
+                        break;
+                    case KeyCode.RightArrow:
+                        frame = Mathf.Min(m_Content.LengthFrame, frame + 1);
+                        break;
+                    case KeyCode.Home:
+                        frame = 0;
+                        break;
+                    case KeyCode.End:
+                        frame = m_Content.LengthFrame;
+                        break;
+                    default:
+                        return;
+                }
+                m_Commands.SetCurrentFrame(frame);
+                Event.current.Use();
+                return;
+            }
             if (m_DragClipId != null)
             {
                 if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
@@ -664,6 +695,7 @@ namespace Slate
             m_Host = null;
             m_DragClipId = null;
             m_DragSectionId = null;
+            m_DragCursor = false;
             m_DopeClipId = null;
             m_DopeCurveId = null;
             m_DopeCurve = null;

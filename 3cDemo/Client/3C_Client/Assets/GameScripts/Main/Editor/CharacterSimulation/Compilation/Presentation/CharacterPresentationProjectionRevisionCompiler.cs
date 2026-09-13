@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonSimulation;
@@ -27,6 +26,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterAnimationCompiledResourceRevision.Compute(animationResources)
             };
             AddAssetRevision(animationProfile, values);
+            if (animationProfile?.EventGraph)
+            {
+                values.Add($"event-graph:{animationProfile.EventGraph.AuthoringId}:{animationProfile.EventGraph.ContentRevision}");
+                AddAssetRevision(animationProfile.EventGraph, values);
+            }
             AddAssetRevision(equipmentPresentationProfile, values);
             if (sourceResourceBindings != null)
             {
@@ -63,17 +67,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return;
             }
             string rootPath = AssetDatabase.GetAssetPath(root);
-            string[] dependencies = AssetDatabase.GetDependencies(rootPath, true)
-                .OrderBy(value => value, StringComparer.Ordinal)
-                .ToArray();
             values.Add(rootPath);
-            for (int i = 0; i < dependencies.Length; i++)
-            {
-                string path = dependencies[i];
-                values.Add(path);
-                values.Add(AssetDatabase.AssetPathToGUID(path));
-                values.Add(AssetDatabase.GetAssetDependencyHash(path).ToString());
-            }
+            values.Add(AssetDatabase.AssetPathToGUID(rootPath));
+            values.Add(AssetDatabase.GetAssetDependencyHash(rootPath).ToString());
         }
     }
 }

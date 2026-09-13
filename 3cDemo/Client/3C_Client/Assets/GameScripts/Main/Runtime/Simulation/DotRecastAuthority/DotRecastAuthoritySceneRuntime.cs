@@ -171,6 +171,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             var initialActors = new SimulationActorState[m_Loaded.Roster.Count];
             var initialBodies = new WorldBodyState[m_Loaded.Roster.Count];
             var outputRoutes = new SimulationOutputRouteDescriptor[m_Loaded.Roster.Count];
+            CharacterControlModuleCatalog controlModules = CorinCharacterControlModuleCatalog.Create();
             for (int i = 0; i < m_Loaded.Roster.Count; i++)
             {
                 LoadedDotRecastAuthorityActor actor = m_Loaded.Roster[i];
@@ -191,7 +192,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
             var programRuntime = Float32ProgramRuntime.Create(
                 actorBindings,
-                CorinCharacterControlModuleCatalog.Create());
+                controlModules);
             DotRecastWorldSolver solver = null;
             try
             {

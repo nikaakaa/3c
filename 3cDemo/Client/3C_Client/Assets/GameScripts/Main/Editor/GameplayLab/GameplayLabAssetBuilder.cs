@@ -703,6 +703,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             host.SetAuthoring(
                 sessionHost,
                 endpoint,
+                definition,
                 fixedProgram,
                 definition.PresentationProjection,
                 definition.InputProfile,
@@ -891,6 +892,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             }
             FixedCharacterHost fixedHost = instance.AddComponent<FixedCharacterHost>();
             fixedHost.SetProfileAuthoring(
+                definition,
                 fixedProgram,
                 definition.PresentationProjection,
                 controlSource,

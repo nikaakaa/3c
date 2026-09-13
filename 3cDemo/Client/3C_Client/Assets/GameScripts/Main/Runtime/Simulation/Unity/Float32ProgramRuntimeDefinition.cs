@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -26,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 bindings.Add(registrations[i].ProgramIdentity);
             return Float32ProgramRuntime.Create(
                 bindings,
-                CorinCharacterControlModuleCatalog.Create());
+                CharacterControlRuntimeModuleCatalog.Create());
         }
     }
 }

@@ -226,9 +226,15 @@ namespace ThirdPersonSimulation
                 if (!worldState.Bodies[i].ActorId.Equals(m_Roster[i].ActorId))
                     throw new ArgumentException("Initial World state Actor order does not match the Float32 Program Runtime roster.", nameof(worldState));
                 CharacterSimulationProgram program = Catalog.GetRequired(m_Roster[i].ProgramId);
+                CharacterControlRuntimeBinding controlBinding = m_Roster[i].ControlRuntimeBinding ??
+                    throw new InvalidOperationException($"Actor '{m_Roster[i].ActorId}' has no Control runtime binding.");
                 actors[i] = new SimulationActorState(
                     m_Roster[i].ActorId,
-                    CharacterSimulationState.CreateInitial(program));
+                    CharacterSimulationState.CreateInitial(
+                        program,
+                        CharacterControlRuntimeState.CreateInitial(
+                            controlBinding,
+                            m_ControlModules.RequireContract(controlBinding.ModuleId))));
             }
             return new SimulationWorldStateSet(0, actors, worldState);
         }

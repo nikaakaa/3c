@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly CharacterPresentationFrameTarget m_PresentationTarget;
+        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
@@ -65,7 +66,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
-            int maximumActivePresentationRecords)
+            int maximumActivePresentationRecords,
+            CharacterControlRuntimeBinding controlRuntimeBinding)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Rollback Actor registration owner identity is incomplete.");
@@ -83,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             OwnerName = ownerName.Trim();
             ActorId = actorId;
             Program = program ?? throw new ArgumentNullException(nameof(program));
+            m_ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
@@ -105,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
-            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId);
+            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
                 "deterministic-rollback-fixed-output",

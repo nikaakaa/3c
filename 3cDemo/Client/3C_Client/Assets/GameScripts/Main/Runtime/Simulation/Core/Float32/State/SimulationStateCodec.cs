@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 14;
-		public const string CodecIdentity = "character-state/float32/v15";
-		const string HashIdentity = "character-state-hash/float32/v13";
+		const int Version = 15;
+		public const string CodecIdentity = "character-state/float32/v16";
+		const string HashIdentity = "character-state-hash/float32/v14";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -40,6 +40,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSlot slot = layout.Program.StateSlots[i];
                 WriteValue(writer, state.Get(i, slot.ValueKind), layout);
             }
+            writer.WriteBytes(CharacterControlRuntimeStateCodec.Write(state.ControlState));
         }
 
         public static CharacterSimulationState Read(byte[] bytes, CharacterSimulationProgram program)
@@ -75,8 +76,11 @@ namespace ThirdPersonSimulation
                 if (values[i].Kind != program.StateSlots[i].ValueKind)
                     throw new InvalidDataException($"Character state slot '{i}' kind does not match Program layout.");
             }
+            CharacterControlRuntimeState controlState = CharacterControlRuntimeStateCodec.Read(reader.ReadBytes());
+            if (controlState.LastCompletedTick != lastCompletedTick)
+                throw new InvalidDataException("Character control runtime state Tick does not match Character state.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, controlState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }

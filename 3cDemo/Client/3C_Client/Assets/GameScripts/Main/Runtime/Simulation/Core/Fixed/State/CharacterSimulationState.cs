@@ -308,19 +308,24 @@ namespace ThirdPersonSimulation.Fixed
 
 		readonly CharacterStatePartition[] m_Partitions;
 		readonly ProgramExecutionLayout m_Layout;
+		readonly CharacterControlRuntimeState m_ControlState;
 		CharacterStateHash m_StateHash;
 
 		CharacterSimulationState(
 			CharacterSimulationProgram program,
 			ProgramExecutionLayout layout,
 			ulong lastCompletedTick,
+			CharacterControlRuntimeState controlState,
 			CharacterStatePartition[] partitions,
 			bool takeOwnership)
 		{
 			if (program == null)
 				throw new ArgumentNullException(nameof(program));
 			m_Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			m_Layout.RequireProgram(program);
+			if (controlState.LastCompletedTick != lastCompletedTick)
+				throw new ArgumentException("Character control runtime state Tick does not match Character state.", nameof(controlState));
 			NumericProfile = program.Manifest.NumericProfile;
 			ProgramId = program.Manifest.ProgramId;
 			ProgramHash = program.ProgramHash;
@@ -343,6 +348,7 @@ namespace ThirdPersonSimulation.Fixed
 		public ulong LastCompletedTick { get; }
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
+		public CharacterControlRuntimeState ControlState => m_ControlState;
 		public bool TryGetEquipmentState(out EquipmentStateAggregate state)
 		{
 			if (!m_Layout.Equipment.CapabilityEnabled)
@@ -370,7 +376,9 @@ namespace ThirdPersonSimulation.Fixed
 			return m_StateHash;
 		}
 
-		public static CharacterSimulationState CreateInitial(CharacterSimulationProgram program)
+		public static CharacterSimulationState CreateInitial(
+			CharacterSimulationProgram program,
+			CharacterControlRuntimeState controlState)
 		{
 			if (program == null)
 				throw new ArgumentNullException(nameof(program));
@@ -401,14 +409,15 @@ namespace ThirdPersonSimulation.Fixed
 						: CharacterStateValue.Default(slot.ValueKind);
 				}
 			}
-			return Create(program, layout, 0, values);
+			return Create(program, layout, 0, values, controlState);
 		}
 
 		internal static CharacterSimulationState Create(
 			CharacterSimulationProgram program,
 			ProgramExecutionLayout layout,
 			ulong lastCompletedTick,
-			IReadOnlyList<CharacterStateValue> values)
+			IReadOnlyList<CharacterStateValue> values,
+			CharacterControlRuntimeState controlState)
 		{
 			if (values == null || values.Count != program.StateSlots.Count)
 				throw new ArgumentException("Character state values do not match Program layout.", nameof(values));
@@ -433,7 +442,7 @@ namespace ThirdPersonSimulation.Fixed
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, controlState, partitions, true);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -459,6 +468,7 @@ namespace ThirdPersonSimulation.Fixed
 		internal CharacterSimulationState WithDirtyPages(
 			CharacterSimulationProgram program,
 			SimulationTick completedTick,
+			CharacterControlRuntimeState controlState,
 			CharacterStatePageReplacement[] replacements,
 			int replacementCount)
 		{
@@ -474,7 +484,7 @@ namespace ThirdPersonSimulation.Fixed
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, controlState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -493,7 +503,8 @@ namespace ThirdPersonSimulation.Fixed
 				program,
 				ProgramExecutionLayout.GetOrCreate(program),
 				LastCompletedTick,
-				values);
+				values,
+				ControlState);
 		}
 
 		void RequireAddress(TypedStateAddress address)

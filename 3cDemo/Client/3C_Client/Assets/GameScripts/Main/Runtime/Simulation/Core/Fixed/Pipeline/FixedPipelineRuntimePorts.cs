@@ -36,6 +36,7 @@ namespace ThirdPersonSimulation.Fixed
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
         CharacterSimulationProgram GetProgram(int actorIndex);
+        CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
         ProgramExecutionLayout GetExecutionLayout(int actorIndex);
         KernelProgramBinding GetKernelBinding(int actorIndex);
     }
@@ -120,6 +121,8 @@ namespace ThirdPersonSimulation.Fixed
             return index;
         }
         public CharacterSimulationProgram GetProgram(int actorIndex) => m_Programs[actorIndex];
+        public CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex) =>
+            m_Roster[actorIndex].ControlRuntimeBinding;
         public ProgramExecutionLayout GetExecutionLayout(int actorIndex) => m_Layouts[actorIndex];
         public KernelProgramBinding GetKernelBinding(int actorIndex) => m_Bindings[actorIndex];
 

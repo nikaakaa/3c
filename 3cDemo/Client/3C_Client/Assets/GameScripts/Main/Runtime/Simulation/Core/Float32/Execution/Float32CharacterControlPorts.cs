@@ -103,82 +103,82 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32CharacterControlStatePort : ICharacterControlStatePort
     {
-        readonly Float32StatePort m_State;
-        readonly CharacterControlStateLayout m_Layout;
+        readonly CharacterControlRuntimeStateTransaction m_State;
+        readonly CharacterControlStateSchema m_Schema;
 
         public Float32CharacterControlStatePort(
-            Float32StatePort state,
-            CharacterControlStateLayout layout)
+            CharacterControlRuntimeStateTransaction state,
+            CharacterControlStateSchema schema)
         {
             m_State = state ?? throw new ArgumentNullException(nameof(state));
-            m_Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            m_Schema = schema ?? throw new ArgumentNullException(nameof(schema));
         }
 
         public CharacterControlStateId ReadState(CharacterControlStateFieldId field)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
-            string value = m_State.Get(m_Layout.RequireSlot(field)).Identity;
+            string value = m_State.Get(field).Identity;
             return string.IsNullOrEmpty(value) ? default : new CharacterControlStateId(value);
         }
 
         public void WriteState(CharacterControlStateFieldId field, CharacterControlStateId value)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
-            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromIdentity(value.Value));
+            m_State.Set(field, CharacterControlStateValue.FromIdentity(value.Value));
         }
 
         public CharacterControlTransitionId ReadTransition(CharacterControlStateFieldId field)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
-            string value = m_State.Get(m_Layout.RequireSlot(field)).Identity;
+            string value = m_State.Get(field).Identity;
             return string.IsNullOrEmpty(value) ? default : new CharacterControlTransitionId(value);
         }
 
         public bool ReadBoolean(CharacterControlStateFieldId field)
         {
             RequireKind(field, ProgramStateValueKind.Boolean);
-            return m_State.Get(m_Layout.RequireSlot(field)).Boolean;
+            return m_State.Get(field).Boolean;
         }
 
         public void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
-            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromIdentity(value.Value));
+            m_State.Set(field, CharacterControlStateValue.FromIdentity(value.Value));
         }
 
         public void WriteBoolean(CharacterControlStateFieldId field, bool value)
         {
             RequireKind(field, ProgramStateValueKind.Boolean);
-            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromBoolean(value));
+            m_State.Set(field, CharacterControlStateValue.FromBoolean(value));
         }
 
         public int ReadInt32(CharacterControlStateFieldId field)
         {
             RequireKind(field, ProgramStateValueKind.Int32);
-            return m_State.Get(m_Layout.RequireSlot(field)).Int32;
+            return m_State.Get(field).Int32;
         }
 
         public void WriteInt32(CharacterControlStateFieldId field, int value)
         {
             RequireKind(field, ProgramStateValueKind.Int32);
-            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromInt32(value));
+            m_State.Set(field, CharacterControlStateValue.FromInt32(value));
         }
 
         public ulong ReadUInt64(CharacterControlStateFieldId field)
         {
             RequireKind(field, ProgramStateValueKind.UInt64);
-            return m_State.Get(m_Layout.RequireSlot(field)).UInt64;
+            return m_State.Get(field).UInt64;
         }
 
         public void WriteUInt64(CharacterControlStateFieldId field, ulong value)
         {
             RequireKind(field, ProgramStateValueKind.UInt64);
-            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromUInt64(value));
+            m_State.Set(field, CharacterControlStateValue.FromUInt64(value));
         }
 
         void RequireKind(CharacterControlStateFieldId field, ProgramStateValueKind expected)
         {
-            if (m_Layout.RequireKind(field) != expected)
+            if (m_Schema.RequireKind(field) != expected)
                 throw new InvalidOperationException($"Control state field '{field}' is not '{expected}'.");
         }
     }

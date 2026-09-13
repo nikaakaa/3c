@@ -408,7 +408,8 @@ namespace ThirdPersonSimulation.Fixed
             ProgramExecutionLayout layout,
             ActorId actorId,
             FixedEvaluationWorkspace workspace,
-            CharacterControlModuleCatalog controlModules)
+            CharacterControlModuleCatalog controlModules,
+            CharacterControlRuntimeBinding controlRuntimeBinding)
         {
             if (controlModules == null)
                 throw new ArgumentNullException(nameof(controlModules));
@@ -534,7 +535,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Control);
             m_ControlDomain = new FixedControlDomainRuntime(
                 program,
-                layout,
                 m_Frame,
                 m_Input,
                 m_Actions,
@@ -542,8 +542,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Blackboard,
                 m_Equipment,
                 locomotion,
-                m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy),
-                controlModules);
+                controlModules,
+                controlRuntimeBinding);
         }
 
         public bool Matches(SimulationEvaluateRequest request)

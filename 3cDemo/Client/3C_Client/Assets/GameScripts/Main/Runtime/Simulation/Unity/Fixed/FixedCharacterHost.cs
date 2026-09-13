@@ -24,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public sealed class FixedCharacterHost : MonoBehaviour, ISimulationSessionActorHost
     {
         [SerializeField] SimulationSessionHost m_SessionHost;
+        [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
         [SerializeField] FixedCharacterSimulationProgramAsset m_Program;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] FixedCharacterControlSource m_ControlSource;
@@ -48,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ActorId ActorId => new ActorId(Require(m_ActorId, nameof(m_ActorId)));
         public ActorId SimulationActorId => ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
+        public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
         public FixedCharacterSimulationProgramAsset ProgramAsset => m_Program;
         public CharacterPresentationProjectionAsset ProjectionAsset => m_PresentationProjection;
         public FixedCharacterControlSource ControlSource => m_ControlSource;
@@ -71,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
 #if UNITY_EDITOR
         public void SetProfileAuthoring(
+            CharacterPipelineDefinition characterDefinition,
             FixedCharacterSimulationProgramAsset program,
             CharacterPresentationProjectionAsset presentationProjection,
             FixedCharacterControlSource controlSource,
@@ -90,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int maximumActivePresentationRecords)
         {
             m_SessionHost = null;
+            m_CharacterDefinition = characterDefinition ? characterDefinition : throw new ArgumentNullException(nameof(characterDefinition));
             m_Program = program ? program : throw new ArgumentNullException(nameof(program));
             m_PresentationProjection = presentationProjection ? presentationProjection :
                 throw new ArgumentNullException(nameof(presentationProjection));
@@ -177,6 +181,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ActorId actorId = ActorId;
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
             FixedCharacterSimulationProgram program = programAsset.Load();
+            CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
+                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Character Pipeline Definition.");
+            if (characterDefinition.SimulationTickRate != program.Manifest.TickRate)
+                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Program TickRate must match.");
+            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
+                CharacterControlRuntimeModuleCatalog.Create());
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
             ICharacterPresentationRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
@@ -270,7 +280,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     diagnosticsContext,
                     diagnosticsTarget,
                     m_MaximumActivePresentationRecords,
-                    presentationRuntimeFactory);
+                    presentationRuntimeFactory,
+                    controlRuntimeBinding);
                 controlSource = null;
                 presentation = null;
                 diagnosticsTarget = null;

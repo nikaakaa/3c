@@ -528,19 +528,17 @@ namespace ThirdPersonSimulation
 				m_Actions,
 				m_ActionStore,
 				m_Control);
-			m_ControlDomain = new Float32ControlDomainRuntime(
-				program,
-				layout,
-				m_Frame,
+				m_ControlDomain = new Float32ControlDomainRuntime(
+					program,
+					m_Frame,
 				m_Input,
 				m_Actions,
 				m_ActionStore,
 				m_Blackboard,
-				m_Equipment,
-				locomotion,
-				m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy),
-				controlModules,
-				controlRuntimeBinding);
+					m_Equipment,
+					locomotion,
+					controlModules,
+					controlRuntimeBinding);
         }
 
         public bool Matches(SimulationEvaluateRequest request)

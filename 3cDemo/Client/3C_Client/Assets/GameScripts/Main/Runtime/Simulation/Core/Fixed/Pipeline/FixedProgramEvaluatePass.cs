@@ -92,6 +92,8 @@ namespace ThirdPersonSimulation.Fixed
                             step.Inputs[i].Value.Input,
                             m_Ingress[i],
                             state.Actors[i].State,
+                            readPorts.ProgramRuntime.GetControlRuntimeBinding(i),
+                            state.Actors[i].State.ControlState,
                             state.WorldState.Bodies[i],
                             readPorts.Diagnostics.Sink.IsEnabled,
                             readPorts.Diagnostics.Sink is ISimulationValueTraceInterest valueInterest &&

@@ -26,13 +26,16 @@ namespace ThirdPersonSimulation
     {
         public CharacterOperationEvaluation(
             Float32CharacterStateTransaction transaction,
+            CharacterControlRuntimeStateTransaction controlStateTransaction,
             ResolvedGameplayMotion gameplayMotion)
         {
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            ControlStateTransaction = controlStateTransaction;
             GameplayMotion = gameplayMotion;
         }
 
         internal Float32CharacterStateTransaction Transaction { get; }
+        internal CharacterControlRuntimeStateTransaction ControlStateTransaction { get; }
         public ResolvedGameplayMotion GameplayMotion { get; }
     }
 
@@ -91,6 +94,12 @@ namespace ThirdPersonSimulation
                 request.ActorId,
                 request.Tick,
                 m_StateTransactions);
+            ControlStateTransaction = request.ControlState == null
+                ? null
+                : CharacterControlRuntimeStateTransaction.Begin(
+                    request.ControlState,
+                    request.ControlState.Schema,
+                    request.Tick);
             Trace.Begin(request.DiagnosticsEnabled, request.ValueTraceEnabled, request.ControlTraceEnabled);
         }
 
@@ -107,6 +116,7 @@ namespace ThirdPersonSimulation
         public Float32PresentationSink Presentation { get; }
         public Float32TraceSink Trace { get; }
         internal Float32CharacterStateTransaction Transaction { get; private set; }
+        internal CharacterControlRuntimeStateTransaction ControlStateTransaction { get; private set; }
 
         public Float32StatePort CreateStatePort(string owner, Float32StateAccessPolicy policy)
         {
@@ -122,9 +132,14 @@ namespace ThirdPersonSimulation
         {
             Float32CharacterStateTransaction transaction = Transaction ??
                 throw new InvalidOperationException("Float32 evaluation has no active state transaction.");
+            if (Program.Manifest.Root.IsCharacter && ControlStateTransaction == null)
+                throw new InvalidOperationException("Float32 evaluation has no active Control state transaction.");
+            CharacterControlRuntimeStateTransaction controlStateTransaction = ControlStateTransaction;
             Transaction = null;
+            ControlStateTransaction = null;
             return new CharacterOperationEvaluation(
                 transaction,
+                controlStateTransaction,
                 gameplayMotion);
         }
 
@@ -134,6 +149,11 @@ namespace ThirdPersonSimulation
             {
                 Transaction.Dispose();
                 Transaction = null;
+            }
+            if (ControlStateTransaction != null)
+            {
+                ControlStateTransaction.Dispose();
+                ControlStateTransaction = null;
             }
             Tick = default;
             Input = null;

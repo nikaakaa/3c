@@ -43,6 +43,42 @@ namespace ThirdPersonSimulation
             SchemaHash = StableHash.Compute(hashParts.ToArray());
         }
 
+        internal CharacterControlStateSchema(
+            CharacterControlModuleId moduleId,
+            int semanticVersion,
+            IReadOnlyList<CharacterControlStateFieldDescriptor> fields)
+        {
+            if (!moduleId.IsValid || semanticVersion <= 0 || fields == null)
+                throw new ArgumentException("Character control state schema identity is incomplete.");
+            var copied = new List<CharacterControlStateFieldDescriptor>(fields.Count);
+            m_Indexes = new Dictionary<CharacterControlStateFieldId, int>();
+            m_Kinds = new Dictionary<CharacterControlStateFieldId, ProgramStateValueKind>();
+            var hashParts = new List<string>
+            {
+                "character-control-state-schema/1",
+                moduleId.Value,
+                semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            };
+            for (int i = 0; i < fields.Count; i++)
+            {
+                CharacterControlStateFieldDescriptor field = fields[i]
+                    ?? throw new ArgumentException("Character control state schema contains a missing field.", nameof(fields));
+                if (!IsSupported(field.ValueKind))
+                    throw new InvalidDataException($"Character control state field '{field.Id}' has unsupported kind '{field.ValueKind}'.");
+                copied.Add(field);
+                if (!m_Indexes.TryAdd(field.Id, i))
+                    throw new InvalidDataException($"Character control state field '{field.Id}' is duplicated.");
+                m_Kinds.Add(field.Id, field.ValueKind);
+                hashParts.Add(field.Id.Value);
+                hashParts.Add(((int)field.ValueKind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                hashParts.Add(((int)field.Semantic).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+            m_Fields = copied.AsReadOnly();
+            ModuleId = moduleId;
+            SemanticVersion = semanticVersion;
+            SchemaHash = StableHash.Compute(hashParts.ToArray());
+        }
+
         public CharacterControlModuleId ModuleId { get; }
         public int SemanticVersion { get; }
         public IReadOnlyList<CharacterControlStateFieldDescriptor> Fields => m_Fields;
@@ -234,11 +270,14 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control runtime state transaction Tick is not the next Tick.", nameof(tick));
             m_Schema = schema;
             m_Tick = tick;
+            BaseState = state;
             m_Values = new List<CharacterControlStateValue>(state.Values);
             m_Status = CharacterControlRuntimeStateTransactionStatus.Active;
         }
 
         public CharacterControlRuntimeStateTransactionStatus Status => m_Status;
+        public CharacterControlRuntimeState BaseState { get; }
+        public SimulationTick Tick => m_Tick;
 
         public static CharacterControlRuntimeStateTransaction Begin(
             CharacterControlRuntimeState state,
@@ -288,6 +327,160 @@ namespace ThirdPersonSimulation
         {
             if (m_Status != CharacterControlRuntimeStateTransactionStatus.Active)
                 throw new InvalidOperationException("Character control runtime state transaction is not active.");
+        }
+    }
+
+    public static class CharacterControlRuntimeStateCodec
+    {
+        const uint Magic = 0x54535243;
+        const int Version = 1;
+        public const string CodecIdentity = "character-control-runtime-state/v1";
+
+        public static byte[] Write(CharacterControlRuntimeState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            return writer.ToArray();
+        }
+
+        public static CharacterControlRuntimeState Read(byte[] bytes)
+        {
+            return Read(bytes, ReadSchema(bytes));
+        }
+
+        public static CharacterControlRuntimeState Read(
+            byte[] bytes,
+            CharacterControlStateSchema schema)
+        {
+            if (schema == null)
+                throw new ArgumentNullException(nameof(schema));
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
+                !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Character control runtime state header is invalid.");
+            var moduleId = new CharacterControlModuleId(reader.ReadString());
+            int semanticVersion = reader.ReadInt32();
+            var schemaHash = new StableHash(reader.ReadString());
+            ulong lastCompletedTick = reader.ReadUInt64();
+            int count = reader.ReadInt32();
+            if (moduleId != schema.ModuleId || semanticVersion != schema.SemanticVersion ||
+                !schemaHash.Equals(schema.SchemaHash) || count < 0 || count != schema.FieldCount)
+                throw new InvalidDataException("Character control runtime state schema binding is stale or mismatched.");
+            var values = new CharacterControlStateValue[count];
+            for (int i = 0; i < values.Length; i++)
+            {
+                var field = new CharacterControlStateFieldId(reader.ReadString());
+                ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte(), "control state value kind");
+                ProgramStateSemantic semantic = ReadEnum<ProgramStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                if (field != schema.Fields[i].Id || kind != schema.Fields[i].ValueKind || semantic != schema.Fields[i].Semantic)
+                    throw new InvalidDataException($"Character control runtime state field '{field}' does not match schema index '{i}'.");
+                values[i] = ReadValue(reader, kind);
+            }
+            var expectedHash = new StableHash(reader.ReadString());
+            reader.RequireComplete();
+            var result = new CharacterControlRuntimeState(schema, lastCompletedTick, values);
+            if (!result.StateHash.Equals(expectedHash))
+                throw new InvalidDataException("Character control runtime state hash is invalid.");
+            byte[] canonical = Write(result);
+            if (canonical.Length != bytes.Length)
+                throw new InvalidDataException("Character control runtime state is not canonical.");
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                if (bytes[i] != canonical[i])
+                    throw new InvalidDataException("Character control runtime state is not canonical.");
+            }
+            return result;
+        }
+
+        static CharacterControlStateSchema ReadSchema(byte[] bytes)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
+                !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Character control runtime state header is invalid.");
+            var moduleId = new CharacterControlModuleId(reader.ReadString());
+            int semanticVersion = reader.ReadInt32();
+            var schemaHash = new StableHash(reader.ReadString());
+            reader.ReadUInt64();
+            int count = reader.ReadInt32();
+            if (count < 0 || count > 1024)
+                throw new InvalidDataException($"Character control runtime state field count '{count}' is invalid.");
+            var fields = new CharacterControlStateFieldDescriptor[count];
+            for (int i = 0; i < fields.Length; i++)
+            {
+                var fieldId = new CharacterControlStateFieldId(reader.ReadString());
+                ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte(), "control state value kind");
+                ProgramStateSemantic semantic = ReadEnum<ProgramStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                ReadValue(reader, kind);
+                fields[i] = new CharacterControlStateFieldDescriptor(fieldId, kind, semantic);
+            }
+            reader.ReadString();
+            reader.RequireComplete();
+            var schema = new CharacterControlStateSchema(moduleId, semanticVersion, fields);
+            if (!schema.SchemaHash.Equals(schemaHash))
+                throw new InvalidDataException("Character control runtime state schema hash is invalid.");
+            return schema;
+        }
+
+        static void WriteCanonical(CanonicalWriter writer, CharacterControlRuntimeState state)
+        {
+            writer.WriteUInt32(Magic);
+            writer.WriteInt32(Version);
+            writer.WriteString(CodecIdentity);
+            writer.WriteString(state.ModuleId.Value);
+            writer.WriteInt32(state.SemanticVersion);
+            writer.WriteString(state.Schema.SchemaHash.Value);
+            writer.WriteUInt64(state.LastCompletedTick);
+            writer.WriteInt32(state.Values.Count);
+            for (int i = 0; i < state.Values.Count; i++)
+            {
+                CharacterControlStateValue value = state.Values[i];
+                writer.WriteString(state.Schema.Fields[i].Id.Value);
+                writer.WriteByte((byte)value.Kind);
+                writer.WriteUInt16((ushort)state.Schema.Fields[i].Semantic);
+                WriteValue(writer, value);
+            }
+            writer.WriteString(state.StateHash.Value);
+        }
+
+        static void WriteValue(CanonicalWriter writer, CharacterControlStateValue value)
+        {
+            switch (value.Kind)
+            {
+                case ProgramStateValueKind.Boolean: writer.WriteBoolean(value.Boolean); break;
+                case ProgramStateValueKind.Int32: writer.WriteInt32(value.Int32); break;
+                case ProgramStateValueKind.UInt64: writer.WriteUInt64(value.UInt64); break;
+                case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
+                default: throw new InvalidDataException($"Unsupported character control runtime state value kind '{value.Kind}'.");
+            }
+        }
+
+        static CharacterControlStateValue ReadValue(CanonicalReader reader, ProgramStateValueKind kind)
+        {
+            return kind switch
+            {
+                ProgramStateValueKind.Boolean => CharacterControlStateValue.FromBoolean(reader.ReadBoolean()),
+                ProgramStateValueKind.Int32 => CharacterControlStateValue.FromInt32(reader.ReadInt32()),
+                ProgramStateValueKind.UInt64 => CharacterControlStateValue.FromUInt64(reader.ReadUInt64()),
+                ProgramStateValueKind.Identity => CharacterControlStateValue.FromIdentity(reader.ReadString()),
+                _ => throw new InvalidDataException($"Unsupported character control runtime state value kind '{kind}'.")
+            };
+        }
+
+        static T ReadEnum<T>(byte value, string label) where T : struct
+        {
+            if (!Enum.IsDefined(typeof(T), value))
+                throw new InvalidDataException($"Character control runtime state {label} '{value}' is invalid.");
+            return (T)Enum.ToObject(typeof(T), value);
+        }
+
+        static T ReadEnum<T>(ushort value, string label) where T : struct
+        {
+            if (!Enum.IsDefined(typeof(T), value))
+                throw new InvalidDataException($"Character control runtime state {label} '{value}' is invalid.");
+            return (T)Enum.ToObject(typeof(T), value);
         }
     }
 }

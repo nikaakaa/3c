@@ -16,7 +16,8 @@ namespace ThirdPersonSimulation.Fixed
                 request.ExecutionLayout,
                 request.ActorId,
                 Workspace,
-                controlModules);
+                controlModules,
+                request.ControlRuntimeBinding);
         }
 
         public FixedEvaluationWorkspace Workspace { get; }

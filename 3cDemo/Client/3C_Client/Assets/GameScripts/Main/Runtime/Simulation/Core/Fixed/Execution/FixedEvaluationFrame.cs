@@ -27,13 +27,16 @@ namespace ThirdPersonSimulation.Fixed
     {
         public CharacterOperationEvaluation(
             FixedCharacterStateTransaction transaction,
+            CharacterControlRuntimeStateTransaction controlStateTransaction,
             ResolvedGameplayMotion gameplayMotion)
         {
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            ControlStateTransaction = controlStateTransaction;
             GameplayMotion = gameplayMotion;
         }
 
         internal FixedCharacterStateTransaction Transaction { get; }
+        internal CharacterControlRuntimeStateTransaction ControlStateTransaction { get; }
         public ResolvedGameplayMotion GameplayMotion { get; }
     }
 
@@ -92,6 +95,12 @@ namespace ThirdPersonSimulation.Fixed
                 request.ActorId,
                 request.Tick,
                 m_StateTransactions);
+            ControlStateTransaction = request.ControlState == null
+                ? null
+                : CharacterControlRuntimeStateTransaction.Begin(
+                    request.ControlState,
+                    request.ControlState.Schema,
+                    request.Tick);
             Trace.Begin(request.DiagnosticsEnabled, request.ValueTraceEnabled, request.ControlTraceEnabled);
         }
 
@@ -108,6 +117,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedPresentationSink Presentation { get; }
         public FixedTraceSink Trace { get; }
         internal FixedCharacterStateTransaction Transaction { get; private set; }
+        internal CharacterControlRuntimeStateTransaction ControlStateTransaction { get; private set; }
 
         public FixedStatePort CreateStatePort(string owner, FixedStateAccessPolicy policy)
         {
@@ -123,9 +133,14 @@ namespace ThirdPersonSimulation.Fixed
         {
             FixedCharacterStateTransaction transaction = Transaction ??
                 throw new InvalidOperationException("Fixed evaluation has no active state transaction.");
+            if (Program.Manifest.Root.IsCharacter && ControlStateTransaction == null)
+                throw new InvalidOperationException("Fixed evaluation has no active Control state transaction.");
+            CharacterControlRuntimeStateTransaction controlStateTransaction = ControlStateTransaction;
             Transaction = null;
+            ControlStateTransaction = null;
             return new CharacterOperationEvaluation(
                 transaction,
+                controlStateTransaction,
                 gameplayMotion);
         }
 
@@ -135,6 +150,11 @@ namespace ThirdPersonSimulation.Fixed
             {
                 Transaction.Dispose();
                 Transaction = null;
+            }
+            if (ControlStateTransaction != null)
+            {
+                ControlStateTransaction.Dispose();
+                ControlStateTransaction = null;
             }
             Tick = default;
             Input = null;

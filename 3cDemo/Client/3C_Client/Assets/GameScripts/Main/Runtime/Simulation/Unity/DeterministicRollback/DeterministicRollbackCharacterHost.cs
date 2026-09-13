@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     {
         [SerializeField] SimulationSessionHost m_SessionHost;
         [SerializeField] RollbackEndpointAuthoringDefinition m_Endpoint;
+        [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
         [SerializeField] FixedCharacterSimulationProgramAsset m_Program;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] CharacterInputProfile m_InputProfile;
@@ -50,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public ActorId SimulationActorId => ActorId;
         public bool IsLocalActor => m_Endpoint && m_Endpoint.ResolvePeerProfile().ActorId == ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
+        public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position
@@ -78,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public void SetAuthoring(
             SimulationSessionHost sessionHost,
             RollbackEndpointAuthoringDefinition endpoint,
+            CharacterPipelineDefinition characterDefinition,
             FixedCharacterSimulationProgramAsset program,
             CharacterPresentationProjectionAsset projection,
             CharacterInputProfile inputProfile,
@@ -89,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         {
             m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
             m_Endpoint = endpoint ? endpoint : throw new ArgumentNullException(nameof(endpoint));
+            m_CharacterDefinition = characterDefinition ? characterDefinition : throw new ArgumentNullException(nameof(characterDefinition));
             m_Program = program ? program : throw new ArgumentNullException(nameof(program));
             m_PresentationProjection = projection ? projection : throw new ArgumentNullException(nameof(projection));
             m_InputProfile = inputProfile ? inputProfile : throw new ArgumentNullException(nameof(inputProfile));
@@ -151,6 +155,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             ActorId actorId = ActorId;
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
             FixedCharacterSimulationProgram program = programAsset.Load();
+            CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Character Pipeline Definition.");
+            if (characterDefinition.SimulationTickRate != program.Manifest.TickRate)
+                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition and Program TickRate must match.");
+            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
+                CharacterControlRuntimeModuleCatalog.Create());
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
             ICharacterPresentationRuntime presentation = null;
@@ -261,7 +271,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
-                    m_MaximumActivePresentationRecords);
+                    m_MaximumActivePresentationRecords,
+                    controlRuntimeBinding);
                 input = null;
                 presentation = null;
                 diagnosticsTarget = null;

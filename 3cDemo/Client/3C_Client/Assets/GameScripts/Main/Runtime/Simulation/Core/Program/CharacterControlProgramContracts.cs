@@ -595,6 +595,15 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Character control module '{moduleId}' is not installed.");
             return entry.Factory();
         }
+
+        public CharacterControlModuleContract RequireContract(CharacterControlModuleId moduleId)
+        {
+            if (!moduleId.IsValid)
+                throw new ArgumentException("Character control module identity is invalid.", nameof(moduleId));
+            if (!m_Entries.TryGetValue(moduleId, out ModuleEntry entry))
+                throw new InvalidOperationException($"Character control module '{moduleId}' is not installed.");
+            return entry.Contract;
+        }
     }
 
     public static class CharacterControlProgramCatalogValidator

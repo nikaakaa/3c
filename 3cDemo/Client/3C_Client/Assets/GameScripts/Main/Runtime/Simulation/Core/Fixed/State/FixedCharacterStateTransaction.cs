@@ -433,9 +433,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Savepoints.Pop();
         }
 
-        public CharacterSimulationState Commit()
+        public CharacterSimulationState Commit(CharacterControlRuntimeState controlState)
         {
             RequireActive();
+            if (controlState == null)
+                throw new ArgumentNullException(nameof(controlState));
             if (m_Savepoints.Count != 0)
                 throw new InvalidOperationException("Character state transaction cannot Commit with active savepoints.");
             if (m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges)
@@ -451,6 +453,7 @@ namespace ThirdPersonSimulation.Fixed
                 CharacterSimulationState committed = m_BaseState.WithDirtyPages(
                     m_Program,
                     m_Tick,
+                    controlState,
                     m_Workspace.Replacements,
                     m_Workspace.DirtyCount);
                 m_Workspace.CompleteCommit(m_Epoch);

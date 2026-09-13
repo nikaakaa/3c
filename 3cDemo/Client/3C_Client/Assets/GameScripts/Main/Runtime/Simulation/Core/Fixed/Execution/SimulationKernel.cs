@@ -223,6 +223,7 @@ namespace ThirdPersonSimulation.Fixed
                 catch
                 {
                     evaluation.Transaction.Dispose();
+                    evaluation.ControlStateTransaction?.Dispose();
                     throw;
                 }
             }
@@ -258,6 +259,8 @@ namespace ThirdPersonSimulation.Fixed
                 request.Tick,
                 request.CurrentState,
                 evaluation.Transaction,
+                request.ControlState,
+                evaluation.ControlStateTransaction,
                 outputLease,
                 worldRequest,
                 request.DiagnosticsEnabled);
@@ -291,9 +294,10 @@ namespace ThirdPersonSimulation.Fixed
             ValidateProgramBinding(pending.Binding);
             FixedCharacterDomainRuntimeInstance actorEvaluator = GetEvaluatorForFinalize(pending);
             FixedCharacterStateTransaction transaction = null;
+            CharacterControlRuntimeStateTransaction controlStateTransaction = null;
             try
             {
-                transaction = pending.ClaimForFinalize(Specialization);
+                transaction = pending.ClaimForFinalize(Specialization, out controlStateTransaction);
                 CharacterWorldSolveResult world = request.WorldResult;
                 CharacterWorldSolveRequest expected = pending.WorldRequest;
                 if (world.ActorId != pending.ActorId ||
@@ -323,7 +327,8 @@ namespace ThirdPersonSimulation.Fixed
                     world.FinalBody,
                     world.AppliedDisplacement,
                     world.AppliedYawDegrees);
-                CharacterSimulationState finalState = CommitState(transaction);
+                CharacterControlRuntimeState finalControlState = controlStateTransaction.Commit();
+                CharacterSimulationState finalState = CommitState(transaction, finalControlState);
                 return CreateFinalResult(
                     pending,
                     finalState,
@@ -336,11 +341,15 @@ namespace ThirdPersonSimulation.Fixed
             {
                 if (transaction != null && transaction.Status == FixedCharacterStateTransactionStatus.Active)
                     transaction.Abort();
+                if (controlStateTransaction != null &&
+                    controlStateTransaction.Status == CharacterControlRuntimeStateTransactionStatus.Active)
+                    controlStateTransaction.Abort();
                 throw;
             }
             finally
             {
                 transaction?.Dispose();
+                controlStateTransaction?.Dispose();
                 actorEvaluator.Workspace.End(pending.OutputLease);
             }
         }
@@ -354,9 +363,11 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         [PerformanceProbe("simulation.kernel.state-commit")]
-        CharacterSimulationState CommitState(FixedCharacterStateTransaction transaction)
+        CharacterSimulationState CommitState(
+            FixedCharacterStateTransaction transaction,
+            CharacterControlRuntimeState controlState)
         {
-            return transaction.Commit();
+            return transaction.Commit(controlState);
         }
 
         [PerformanceProbe("simulation.kernel.result-freeze")]
@@ -384,7 +395,10 @@ namespace ThirdPersonSimulation.Fixed
             if (pending == null)
                 throw new ArgumentNullException(nameof(pending));
             RequireBoundProgram(pending.Binding);
-            if (!pending.TryClaimForAbort(Specialization, out FixedCharacterStateTransaction transaction))
+            if (!pending.TryClaimForAbort(
+                    Specialization,
+                    out FixedCharacterStateTransaction transaction,
+                    out CharacterControlRuntimeStateTransaction controlStateTransaction))
                 return;
             FixedCharacterDomainRuntimeInstance actorEvaluator = GetEvaluator(pending);
             bool leaseHeld = false;
@@ -394,10 +408,13 @@ namespace ThirdPersonSimulation.Fixed
                 leaseHeld = true;
                 if (transaction.Status == FixedCharacterStateTransactionStatus.Active)
                     transaction.Abort();
+                if (controlStateTransaction.Status == CharacterControlRuntimeStateTransactionStatus.Active)
+                    controlStateTransaction.Abort();
             }
             finally
             {
                 transaction.Dispose();
+                controlStateTransaction.Dispose();
                 if (leaseHeld)
                     actorEvaluator.Workspace.End(pending.OutputLease);
             }

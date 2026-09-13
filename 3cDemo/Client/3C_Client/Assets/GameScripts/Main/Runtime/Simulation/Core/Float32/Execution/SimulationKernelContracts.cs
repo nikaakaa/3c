@@ -16,6 +16,7 @@ namespace ThirdPersonSimulation
             IEnumerable<SimulationIngress> ingress,
             CharacterSimulationState currentState,
             CharacterControlRuntimeBinding controlRuntimeBinding,
+            CharacterControlRuntimeState controlState,
             WorldBodyState previousBody,
             bool diagnosticsEnabled,
             bool valueTraceEnabled = false,
@@ -30,9 +31,20 @@ namespace ThirdPersonSimulation
             CurrentState = currentState ?? throw new ArgumentNullException(nameof(currentState));
             if (Program.Manifest.Root.IsCharacter && controlRuntimeBinding == null)
                 throw new ArgumentNullException(nameof(controlRuntimeBinding));
+            if (Program.Manifest.Root.IsCharacter && controlState == null)
+                throw new ArgumentNullException(nameof(controlState));
             if (!Program.Manifest.Root.IsCharacter && controlRuntimeBinding != null)
                 throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
+            if (!Program.Manifest.Root.IsCharacter && controlState != null)
+                throw new ArgumentException("Non-Character Program cannot carry Control runtime state.", nameof(controlState));
             ControlRuntimeBinding = controlRuntimeBinding;
+            ControlState = controlState;
+            if (controlState != null)
+            {
+                controlState.RequireBinding(controlRuntimeBinding);
+                if (controlState.LastCompletedTick != currentState.LastCompletedTick)
+                    throw new ArgumentException("Evaluate Control state Tick does not match Character state.", nameof(controlState));
+            }
             if (previousBody.ActorId != actorId)
                 throw new ArgumentException("Evaluate body observation does not match ActorId.", nameof(previousBody));
             if (currentState.NumericProfile != Program.Manifest.NumericProfile || currentState.ProgramId != Program.Manifest.ProgramId || !currentState.ProgramHash.Equals(Program.ProgramHash) || !currentState.LayoutHash.Equals(Program.LayoutHash))
@@ -72,6 +84,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationIngress> Ingress => m_Ingress;
         public CharacterSimulationState CurrentState { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
+        public CharacterControlRuntimeState ControlState { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
         public bool ValueTraceEnabled { get; }
@@ -117,6 +130,7 @@ namespace ThirdPersonSimulation
     public sealed class PendingCharacterEvaluation
     {
         readonly Float32CharacterStateTransaction m_Transaction;
+        readonly CharacterControlRuntimeStateTransaction m_ControlStateTransaction;
         bool m_Consumed;
 
         internal PendingCharacterEvaluation(
@@ -125,6 +139,8 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             CharacterSimulationState sourceState,
             Float32CharacterStateTransaction transaction,
+            CharacterControlRuntimeState controlState,
+            CharacterControlRuntimeStateTransaction controlStateTransaction,
             ActorOutputWorkspaceLease outputLease,
             CharacterWorldSolveRequest worldRequest,
             bool diagnosticsEnabled)
@@ -136,6 +152,8 @@ namespace ThirdPersonSimulation
             Tick = tick;
             SourceState = sourceState ?? throw new ArgumentNullException(nameof(sourceState));
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
+            m_ControlStateTransaction = controlStateTransaction ?? throw new ArgumentNullException(nameof(controlStateTransaction));
             OutputLease = outputLease;
             if (!ReferenceEquals(transaction.Program, Program) ||
                 !ReferenceEquals(transaction.Layout, ExecutionLayout) ||
@@ -144,7 +162,10 @@ namespace ThirdPersonSimulation
                 transaction.Tick != tick ||
                 !outputLease.IsValid || outputLease.ActorId != actorId || outputLease.Tick != tick ||
                 !ReferenceEquals(outputLease.Binding, binding) ||
-                transaction.Status != Float32CharacterStateTransactionStatus.Active)
+                transaction.Status != Float32CharacterStateTransactionStatus.Active ||
+                !ReferenceEquals(controlStateTransaction.BaseState, controlState) ||
+                controlStateTransaction.Tick.Value != tick.Value ||
+                controlStateTransaction.Status != CharacterControlRuntimeStateTransactionStatus.Active)
             {
                 throw new InvalidOperationException("Pending evaluation transaction binding is invalid.");
             }
@@ -159,12 +180,15 @@ namespace ThirdPersonSimulation
         public CharacterWorldSolveRequest WorldRequest { get; }
         public bool DiagnosticsEnabled { get; }
         internal CharacterSimulationState SourceState { get; }
+        internal CharacterControlRuntimeState ControlState { get; }
         internal ProgramExecutionLayout ExecutionLayout { get; }
         internal ActorOutputWorkspaceLease OutputLease { get; }
 
         internal Float32CharacterStateTransaction ClaimForFinalize(
-            SimulationKernelSpecializationManifest specialization)
+            SimulationKernelSpecializationManifest specialization,
+            out CharacterControlRuntimeStateTransaction controlStateTransaction)
         {
+            controlStateTransaction = null;
             if (specialization == null)
                 throw new ArgumentNullException(nameof(specialization));
             if (m_Consumed)
@@ -173,6 +197,7 @@ namespace ThirdPersonSimulation
             if (m_Transaction.Status != Float32CharacterStateTransactionStatus.Active)
             {
                 m_Transaction.Dispose();
+                m_ControlStateTransaction.Dispose();
                 throw new InvalidOperationException("Pending Character evaluation does not match the active Kernel specialization.");
             }
             try
@@ -182,8 +207,10 @@ namespace ThirdPersonSimulation
             catch
             {
                 m_Transaction.Dispose();
+                m_ControlStateTransaction.Dispose();
                 throw;
             }
+            controlStateTransaction = m_ControlStateTransaction;
             return m_Transaction;
         }
 
@@ -194,9 +221,11 @@ namespace ThirdPersonSimulation
 
         internal bool TryClaimForAbort(
             SimulationKernelSpecializationManifest specialization,
-            out Float32CharacterStateTransaction transaction)
+            out Float32CharacterStateTransaction transaction,
+            out CharacterControlRuntimeStateTransaction controlStateTransaction)
         {
             transaction = null;
+            controlStateTransaction = null;
             if (m_Consumed)
                 return false;
             m_Consumed = true;
@@ -204,11 +233,13 @@ namespace ThirdPersonSimulation
             {
                 Binding.Require(Program, ExecutionLayout, specialization);
                 transaction = m_Transaction;
+                controlStateTransaction = m_ControlStateTransaction;
                 return true;
             }
             catch
             {
                 m_Transaction.Dispose();
+                m_ControlStateTransaction.Dispose();
                 throw;
             }
         }

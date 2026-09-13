@@ -71,14 +71,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program is not Fixed.");
                 if (!program.Manifest.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion))
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program operation-set does not match the Fixed Kernel.");
-                if (program.ControlModuleBinding.IsValid)
-                {
-                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                    CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
-                        module.Contract,
-                        program.AbilityPrograms,
-                        program.GraphCallFrames);
-                }
+                ValidateControlRuntimeBinding(binding, program, controlModules);
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -138,6 +131,12 @@ namespace ThirdPersonSimulation.Fixed
                 }
                 if (!next.LayoutHash.Equals(current.LayoutHash))
                     throw new InvalidOperationException($"Actor '{next.ActorId}' Program LayoutHash changed during adoption.");
+                if ((current.ControlRuntimeBinding == null) != (next.ControlRuntimeBinding == null) ||
+                    current.ControlRuntimeBinding != null &&
+                    !current.ControlRuntimeBinding.BindingHash.Equals(next.ControlRuntimeBinding.BindingHash))
+                {
+                    throw new InvalidOperationException($"Actor '{next.ActorId}' Control runtime binding changed during adoption.");
+                }
             }
             var kernelBindings = new KernelProgramBinding[catalog.Programs.Count];
             var bindingsByProgram = new Dictionary<ProgramId, KernelProgramBinding>();
@@ -181,14 +180,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program binding is stale or incompatible.");
                 }
-                if (program.ControlModuleBinding.IsValid)
-                {
-                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                    CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
-                        module.Contract,
-                        program.AbilityPrograms,
-                        program.GraphCallFrames);
-                }
+                ValidateControlRuntimeBinding(binding, program, controlModules);
                 if (programs.TryGetValue(program.Manifest.ProgramId, out CharacterSimulationProgram existing))
                 {
                     if (!existing.ProgramHash.Equals(program.ProgramHash) || !existing.LayoutHash.Equals(program.LayoutHash))
@@ -200,6 +192,27 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
             return new SimulationProgramCatalog(programs.Values);
+        }
+
+        static void ValidateControlRuntimeBinding(
+            SimulationActorBinding binding,
+            CharacterSimulationProgram program,
+            CharacterControlModuleCatalog controlModules)
+        {
+            if (!program.Manifest.Root.IsCharacter)
+            {
+                if (binding.ControlRuntimeBinding != null)
+                    throw new InvalidOperationException("Non-Character Program cannot carry a Control runtime binding.");
+                return;
+            }
+            CharacterControlRuntimeBinding controlBinding = binding.ControlRuntimeBinding ??
+                throw new InvalidOperationException($"Actor '{binding.ActorId}' Character Program has no Control runtime binding.");
+            ICharacterControlModule module = controlModules.Require(controlBinding.ModuleId);
+            controlBinding.RequireContract(module.Contract);
+            CharacterControlProgramCatalogValidator.ValidateAbilityPrograms(
+                module.Contract,
+                program.AbilityPrograms,
+                program.GraphCallFrames);
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)
@@ -214,9 +227,15 @@ namespace ThirdPersonSimulation.Fixed
                 if (!worldState.Bodies[i].ActorId.Equals(m_Roster[i].ActorId))
                     throw new ArgumentException("Initial World state Actor order does not match the Fixed Program Runtime roster.", nameof(worldState));
                 CharacterSimulationProgram program = Catalog.GetRequired(m_Roster[i].ProgramId);
+                CharacterControlRuntimeBinding controlBinding = m_Roster[i].ControlRuntimeBinding ??
+                    throw new InvalidOperationException($"Actor '{m_Roster[i].ActorId}' has no Control runtime binding.");
                 actors[i] = new SimulationActorState(
                     m_Roster[i].ActorId,
-                    CharacterSimulationState.CreateInitial(program));
+                    CharacterSimulationState.CreateInitial(
+                        program,
+                        CharacterControlRuntimeState.CreateInitial(
+                            controlBinding,
+                            m_ControlModules.RequireContract(controlBinding.ModuleId))));
             }
             return new SimulationWorldStateSet(0, actors, worldState);
         }

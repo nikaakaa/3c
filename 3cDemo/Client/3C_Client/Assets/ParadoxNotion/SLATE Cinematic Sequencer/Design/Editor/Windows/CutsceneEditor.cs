@@ -277,6 +277,18 @@ namespace Slate
         [System.NonSerialized] private System.Action<GUIContent> setTitle;
         [System.NonSerialized] private System.Action beginWindows;
         [System.NonSerialized] private System.Action endWindows;
+        [System.NonSerialized] private System.Func<int> embeddedFrameRate;
+        [System.NonSerialized] private System.Func<float> embeddedLength;
+        [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
+        [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
+        [System.NonSerialized] private System.Func<float> embeddedViewTimeMin;
+        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMin;
+        [System.NonSerialized] private System.Func<float> embeddedViewTimeMax;
+        [System.NonSerialized] private System.Action<float> embeddedSetViewTimeMax;
+        [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
+        [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
+        [System.NonSerialized] private System.Action embeddedAddTrack;
+        [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -355,8 +367,6 @@ namespace Slate
         [System.NonSerialized] private float timeInfoInterval;
         [System.NonSerialized] private float timeInfoHighMod;
 
-        [System.NonSerialized] private string webMessage;
-
         ///----------------------------------------------------------------------------------------------
 
         //The current cutscene reference
@@ -389,20 +399,37 @@ namespace Slate
 
         //The length of the cutscene reference
         public float length {
-            get { return cutscene.length; }
+            get { return embeddedLength != null ? Mathf.Max(0f, embeddedLength()) : cutscene.length; }
             set { cutscene.length = value; }
         }
 
         //The min view time
         public float viewTimeMin {
-            get { return cutscene.viewTimeMin; }
-            set { cutscene.viewTimeMin = value; }
+            get { return embeddedViewTimeMin != null ? embeddedViewTimeMin() : cutscene.viewTimeMin; }
+            set
+            {
+                if (embeddedSetViewTimeMin != null)
+                    embeddedSetViewTimeMin(value);
+                else
+                    cutscene.viewTimeMin = value;
+            }
         }
 
         //The max view time
         public float viewTimeMax {
-            get { return cutscene.viewTimeMax; }
-            set { cutscene.viewTimeMax = value; }
+            get { return embeddedViewTimeMax != null ? embeddedViewTimeMax() : cutscene.viewTimeMax; }
+            set
+            {
+                if (embeddedSetViewTimeMax != null)
+                    embeddedSetViewTimeMax(value);
+                else
+                    cutscene.viewTimeMax = value;
+            }
+        }
+
+        public Vector2 EmbeddedScrollPosition {
+            get => scrollPos;
+            set => scrollPos = value;
         }
 
         //The max time currently in view
@@ -467,7 +494,54 @@ namespace Slate
         float SnapTime(float time) {
             //holding control for precision (ignore snap intervals)
             if ( Event.current.control ) { return time; }
+            if ( embeddedSurface ) {
+                var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
+                return Mathf.Round(time * frameRate) / frameRate;
+            }
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
+        }
+
+        float EmbeddedCurrentTime()
+        {
+            if (embeddedCurrentFrame != null)
+                return embeddedCurrentFrame() / (float)Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
+            return cutscene.currentTime;
+        }
+
+        void SetEmbeddedCurrentTime(float time)
+        {
+            if (embeddedSetCurrentFrame != null)
+            {
+                int frame = Mathf.RoundToInt(Mathf.Max(0f, time) * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+                embeddedSetCurrentFrame(frame);
+                return;
+            }
+            cutscene.currentTime = time;
+        }
+
+        public static float CurrentSnapInterval {
+            get
+            {
+                if ( current != null && current.embeddedSurface )
+                    return 1f / Mathf.Max(1, current.embeddedFrameRate != null ? current.embeddedFrameRate() : Prefs.frameRate);
+                return Prefs.snapInterval;
+            }
+        }
+
+        readonly struct SurfaceLayout
+        {
+            public SurfaceLayout(Rect topLeft, Rect topMiddle, Rect left, Rect center)
+            {
+                TopLeft = topLeft;
+                TopMiddle = topMiddle;
+                Left = left;
+                Center = center;
+            }
+
+            public Rect TopLeft { get; }
+            public Rect TopMiddle { get; }
+            public Rect Left { get; }
+            public Rect Center { get; }
         }
 
         //Do action safely (stop cutscene, do, resample)
@@ -582,13 +656,63 @@ namespace Slate
 
         public void InitializeEmbedded(Cutscene newCutscene, System.Action repaint)
         {
+            InitializeEmbedded(newCutscene, repaint, null, null, null);
+        }
+
+        SurfaceLayout CalculateLayout()
+        {
+            var timelineTop = embeddedSurface ? TOP_MARGIN : TOOLBAR_HEIGHT + TOP_MARGIN;
+            var timeInfoTop = embeddedSurface ? 0f : TOOLBAR_HEIGHT;
+            float contentWidth = screenWidth - LEFT_MARGIN - RIGHT_MARGIN;
+            float contentHeight = screenHeight - timelineTop + scrollPos.y;
+            return new SurfaceLayout(
+                new Rect(0, embeddedSurface ? 0 : TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN),
+                new Rect(LEFT_MARGIN, timeInfoTop, contentWidth, TOP_MARGIN),
+                new Rect(0, timelineTop, LEFT_MARGIN, contentHeight),
+                new Rect(LEFT_MARGIN, timelineTop, contentWidth, contentHeight));
+        }
+
+        public void InitializeEmbedded(
+            Cutscene newCutscene,
+            System.Action repaint,
+            System.Func<int> frameRate,
+            System.Action addTrack,
+            System.Action<ActionClip> copyClip,
+            System.Func<int> currentFrame = null,
+            System.Action<int> setCurrentFrame = null,
+            System.Func<float> timelineLength = null,
+            System.Func<float> viewMin = null,
+            System.Action<float> setViewMin = null,
+            System.Func<float> viewMax = null,
+            System.Action<float> setViewMax = null)
+        {
             embeddedSurface = true;
             embeddedRepaint = repaint;
+            embeddedFrameRate = frameRate;
+            embeddedLength = timelineLength;
+            embeddedCurrentFrame = currentFrame;
+            embeddedSetCurrentFrame = setCurrentFrame;
+            embeddedViewTimeMin = viewMin;
+            embeddedSetViewTimeMin = setViewMin;
+            embeddedViewTimeMax = viewMax;
+            embeddedSetViewTimeMax = setViewMax;
+            embeddedAddTrack = addTrack;
+            embeddedCopyClip = copyClip;
             Styles.Load();
             showDragDropInfo = false;
             willRepaint = true;
             pendingGuides = new List<GuideLine>();
             InitializeAll(newCutscene);
+        }
+
+        public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
+        {
+            embeddedRuntimeTime = runtimeTime;
+        }
+
+        public void ConfigureEmbeddedHistoryTime(System.Func<float?> historyTime)
+        {
+            embeddedHistoryTime = historyTime;
         }
 
         public void InitializeStandalone(
@@ -670,8 +794,15 @@ namespace Slate
             if (!embeddedSurface)
                 return;
             CancelEditTransaction();
-            if (cutscene != null && !Application.isPlaying)
+            if (cutscene != null && !embeddedSurface && !Application.isPlaying)
                 Stop(true);
+            if (cutscene != null &&
+                (ReferenceEquals(Selection.activeObject, cutscene.gameObject) ||
+                 Selection.activeObject is Component component && component.transform.IsChildOf(cutscene.transform)))
+            {
+                Selection.activeObject = null;
+            }
+            CutsceneUtility.selectedObject = null;
             cutscene = null;
             clipWrappers = null;
             clipWrappersMap = null;
@@ -682,6 +813,18 @@ namespace Slate
             setTitle = null;
             beginWindows = null;
             endWindows = null;
+            embeddedFrameRate = null;
+            embeddedLength = null;
+            embeddedCurrentFrame = null;
+            embeddedSetCurrentFrame = null;
+            embeddedViewTimeMin = null;
+            embeddedSetViewTimeMin = null;
+            embeddedViewTimeMax = null;
+            embeddedSetViewTimeMax = null;
+            embeddedRuntimeTime = null;
+            embeddedHistoryTime = null;
+            embeddedAddTrack = null;
+            embeddedCopyClip = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -699,6 +842,35 @@ namespace Slate
             current.clipWrappersMap = null;
             CutsceneUtility.selectedObject = null;
             current.willRepaint = true;
+        }
+
+        void SyncEmbeddedCurveTrack()
+        {
+            if (!embeddedSurface || cutscene == null)
+                return;
+            CutsceneTrack selectedTrack = (CutsceneUtility.selectedObject as ActionClip)?.parent as CutsceneTrack;
+            bool changed = false;
+            foreach (CutsceneGroup group in cutscene.groups)
+            {
+                foreach (CutsceneTrack track in group.tracks)
+                {
+                    bool shouldShow = selectedTrack != null && ReferenceEquals(track, selectedTrack);
+                    if (track.showCurves == shouldShow)
+                        continue;
+                    track.showCurves = shouldShow;
+                    changed = true;
+                }
+            }
+            if (changed)
+                willRepaint = true;
+        }
+
+        void OnEmbeddedSelectionChanged(IDirectable _)
+        {
+            if (!embeddedSurface)
+                return;
+            SyncEmbeddedCurveTrack();
+            RequestEmbeddedRepaint();
         }
 
         void ShowNotification(GUIContent content)
@@ -730,7 +902,7 @@ namespace Slate
         void OnEnable() {
             Styles.Load();
 
-            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
+            UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { if ( !embeddedSurface && cutscene != null && stage.IsPartOfPrefabContents(cutscene.gameObject) ) { Stop(true); } };
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnWillSaveScene;
 
@@ -750,11 +922,14 @@ namespace Slate
             pendingGuides = new List<GuideLine>();
 
             current = this;
+            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
+            CutsceneUtility.onSelectionChange += OnEmbeddedSelectionChanged;
             InitializeAll();
         }
 
         //...
         void OnDisable() {
+            CutsceneUtility.onSelectionChange -= OnEmbeddedSelectionChanged;
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnWillSaveScene;
             CancelEditTransaction();
 
@@ -765,7 +940,7 @@ namespace Slate
             EditorApplication.update -= OnEditorUpdate;
             SceneView.duringSceneGui -= OnSceneGUI;
             Tools.hidden = false;
-            if ( cutscene != null && !Application.isPlaying ) {
+            if ( cutscene != null && !embeddedSurface && !Application.isPlaying ) {
                 Stop(true);
             }
             OnEditorClosed?.Invoke();
@@ -785,7 +960,7 @@ namespace Slate
 
         //Before scene is saved we need to stop so that cutscene changes are reverted.
         void OnWillSaveScene(UnityEngine.SceneManagement.Scene scene, string path) {
-            if ( cutscene != null && cutscene.currentTime > 0 ) {
+            if ( cutscene != null && !embeddedSurface && cutscene.currentTime > 0 ) {
                 Stop(true);
                 Debug.LogWarning("Scene Saved while a cutscene was in preview mode. Cutscene was reverted before saving the scene along with changes it affected.");
             }
@@ -797,7 +972,7 @@ namespace Slate
 
             //first stop current cut if any
             if ( cutscene != null ) {
-                if ( !Application.isPlaying ) {
+                if ( !embeddedSurface && !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -808,7 +983,7 @@ namespace Slate
                 CutsceneUtility.selectedObject = null;
                 multiSelection = null;
                 InitClipWrappers();
-                if ( !Application.isPlaying ) {
+                if ( !embeddedSurface && !Application.isPlaying ) {
                     Stop(true);
                 }
             }
@@ -826,7 +1001,7 @@ namespace Slate
             multiSelection = null;
             var lastTime = cutscene.currentTime;
 
-            if ( !Application.isPlaying ) {
+            if ( !embeddedSurface && !Application.isPlaying ) {
                 Stop(true);
             }
 
@@ -924,6 +1099,11 @@ namespace Slate
         //Stop button pressed or otherwise reset the scrubbing/previewing
         public void Stop(bool forceRewind) {
 
+            if ( embeddedSurface ) {
+                editorPlaybackState = EditorPlaybackState.Stoped;
+                willRepaint = true;
+                return;
+            }
 
             if ( Application.isPlaying ) {
                 if ( cutscene.isActive ) {
@@ -945,6 +1125,14 @@ namespace Slate
 
         ///<summary>Steps time forward to the next key time</summary>
         void StepForward() {
+            if ( embeddedSurface ) {
+                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
+                    embeddedSetCurrentFrame(embeddedCurrentFrame() + 1);
+                    return;
+                }
+                cutscene.currentTime = Mathf.Min(cutscene.length, cutscene.currentTime + 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+                return;
+            }
             var keyable = CutsceneUtility.selectedObject as IKeyable;
             if ( keyable != null ) {
                 var time = keyable.animationData.GetKeyNext(keyable.RootTimeToLocalTimeUnclamped());
@@ -960,6 +1148,14 @@ namespace Slate
 
         ///<summary>Steps time backwards to the previous key time</summary>
         void StepBackward() {
+            if ( embeddedSurface ) {
+                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
+                    embeddedSetCurrentFrame(embeddedCurrentFrame() - 1);
+                    return;
+                }
+                cutscene.currentTime = Mathf.Max(0f, cutscene.currentTime - 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+                return;
+            }
             var keyable = CutsceneUtility.selectedObject as IKeyable;
             if ( keyable != null ) {
                 var time = keyable.animationData.GetKeyPrevious(keyable.RootTimeToLocalTimeUnclamped());
@@ -975,7 +1171,6 @@ namespace Slate
 
         //Sample the cutscene
         void OnEditorUpdate() {
-
             if ( embeddedSurface ) {
                 return;
             }
@@ -1030,6 +1225,7 @@ namespace Slate
 
             cutscene.currentTime += editorPlaybackState == EditorPlaybackState.PlayingForwards ? delta : -delta;
             cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, startTime, endTime);
+            RequestEmbeddedRepaint();
         }
 
 
@@ -1137,7 +1333,8 @@ namespace Slate
 
             //avoid edit when compiling
             if ( EditorApplication.isCompiling ) {
-                Stop(true);
+                if ( !embeddedSurface )
+                    Stop(true);
                 ShowNotification(new GUIContent("Compiling\n...Please wait..."));
                 return;
             }
@@ -1188,19 +1385,24 @@ namespace Slate
             }
 
             //make the layout rects
-            topLeftRect = new Rect(0, TOOLBAR_HEIGHT, LEFT_MARGIN, TOP_MARGIN);
-            topMiddleRect = new Rect(LEFT_MARGIN, TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, TOP_MARGIN);
-            leftRect = new Rect(0, TOOLBAR_HEIGHT + TOP_MARGIN, LEFT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
-            centerRect = new Rect(LEFT_MARGIN, TOP_MARGIN + TOOLBAR_HEIGHT, screenWidth - LEFT_MARGIN - RIGHT_MARGIN, screenHeight - TOOLBAR_HEIGHT - TOP_MARGIN + scrollPos.y);
+            SurfaceLayout layout = CalculateLayout();
+            topLeftRect = layout.TopLeft;
+            topMiddleRect = layout.TopMiddle;
+            leftRect = layout.Left;
+            centerRect = layout.Center;
 
             //...
+            DoKeyboardShortcuts();
             if (!embeddedSurface)
             {
-                DoKeyboardShortcuts();
                 bool guiEnabled = GUI.enabled;
                 GUI.enabled = guiEnabled && IsPlaybackAllowedFor(cutscene);
                 ShowPlaybackControls(topLeftRect);
                 GUI.enabled = guiEnabled;
+            }
+            else
+            {
+                ShowEmbeddedAuthoringToolbar(topLeftRect);
             }
             ShowTimeInfo(topMiddleRect);
             if (!embeddedSurface)
@@ -1218,6 +1420,8 @@ namespace Slate
             GUI.EndScrollView();
             ///---
 
+            DrawRuntimeOverlay();
+            DrawHistoryOverlay();
             DrawGuides();
             AcceptDrops();
 
@@ -1269,8 +1473,10 @@ namespace Slate
             //resample?
             if ( willResample ) {
                 willResample = false;
-                //delaycall so that other gui controls are finalized before resample.
-                EditorApplication.delayCall += () => { if ( cutscene != null ) cutscene.ReSample(); };
+                if ( !embeddedSurface ) {
+                    //delaycall so that other gui controls are finalized before resample.
+                    EditorApplication.delayCall += () => { if ( cutscene != null ) cutscene.ReSample(); };
+                }
             }
 
             //hack to show modal popup windows
@@ -1307,6 +1513,67 @@ namespace Slate
             if ( viewTimeMax == 0 ) { GUI.Label(centerRect, "<size=40>:-)</size>", Styles.centerLabel); }
         }
 
+        void DrawRuntimeOverlay()
+        {
+            if (!embeddedSurface || embeddedRuntimeTime == null)
+                return;
+            float? runtimeTime = embeddedRuntimeTime();
+            if (!runtimeTime.HasValue || runtimeTime.Value < viewTimeMin || runtimeTime.Value > viewTimeMax)
+                return;
+            float x = TimeToPos(runtimeTime.Value) + centerRect.x;
+            GUI.color = new Color(0.25f, 0.85f, 1f, 0.9f);
+            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
+            GUI.Label(new Rect(x + 4f, centerRect.y + 2f, 64f, 18f), "Runtime", EditorStyles.label);
+            GUI.color = Color.white;
+        }
+
+        void DrawHistoryOverlay()
+        {
+            if (!embeddedSurface || embeddedHistoryTime == null)
+                return;
+            float? historyTime = embeddedHistoryTime();
+            if (!historyTime.HasValue || historyTime.Value < viewTimeMin || historyTime.Value > viewTimeMax)
+                return;
+            float x = TimeToPos(historyTime.Value) + centerRect.x;
+            GUI.color = new Color(0.85f, 0.45f, 1f, 0.9f);
+            GUI.DrawTexture(new Rect(x - 1f, centerRect.y, 2f, centerRect.height), whiteTexture);
+            GUI.Label(new Rect(x + 4f, centerRect.y + 20f, 64f, 18f), "History", EditorStyles.label);
+            GUI.color = Color.white;
+        }
+
+        void ShowEmbeddedAuthoringToolbar(Rect rect)
+        {
+            GUI.Box(rect, string.Empty, EditorStyles.toolbar);
+            GUI.BeginGroup(rect);
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+            if (GUILayout.Button("+ Track", EditorStyles.toolbarButton, GUILayout.Width(62)))
+                embeddedAddTrack?.Invoke();
+            if (GUILayout.Button("‹", EditorStyles.toolbarButton, GUILayout.Width(24)))
+                StepBackward();
+            if (GUILayout.Button("›", EditorStyles.toolbarButton, GUILayout.Width(24)))
+                StepForward();
+            if (GUILayout.Button("Fit", EditorStyles.toolbarButton, GUILayout.Width(36)))
+            {
+                viewTimeMin = 0f;
+                viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+            }
+            int authoringFrame = embeddedCurrentFrame != null
+                ? embeddedCurrentFrame()
+                : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+            if (embeddedCurrentFrame != null && embeddedSetCurrentFrame != null)
+            {
+                GUILayout.Label("Edit", EditorStyles.miniLabel);
+                int requestedFrame = EditorGUILayout.IntField(authoringFrame, GUILayout.Width(52));
+                if (requestedFrame != authoringFrame)
+                    embeddedSetCurrentFrame(requestedFrame);
+                GUILayout.Label("F", EditorStyles.miniLabel);
+            }
+            else
+                GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
+            GUILayout.EndHorizontal();
+            GUI.EndGroup();
+        }
+
         ///----------------------------------------------------------------------------------------------
 
         //...		
@@ -1317,6 +1584,10 @@ namespace Slate
 
                 //play
                 if ( e.keyCode == KeyCode.Space ) {
+                    if ( embeddedSurface ) {
+                        e.Use();
+                        return;
+                    }
                     if ( editorPlaybackState != EditorPlaybackState.Stoped ) { Stop(false); } else { Play(); }
                     e.Use();
                 }
@@ -1403,8 +1674,9 @@ namespace Slate
             DrawGuideLine(length, isProSkin ? Color.white : Color.black);
 
             //draw a vertical line at current time
-            if ( cutscene.currentTime > 0 ) {
-                DrawGuideLine(cutscene.currentTime, scruberColor);
+            var embeddedCurrentTime = EmbeddedCurrentTime();
+            if ( embeddedCurrentTime > 0 ) {
+                DrawGuideLine(embeddedCurrentTime, scruberColor);
             }
 
             //draw a vertical line at dragging clip start/end time
@@ -1587,7 +1859,7 @@ namespace Slate
         //Scrubing....
         void DoScrubControls() {
 
-            if ( !IsPlaybackAllowedFor(cutscene) ) {
+            if ( !embeddedSurface && !IsPlaybackAllowedFor(cutscene) ) {
                 return;
             }
 
@@ -1602,7 +1874,7 @@ namespace Slate
                 var loopRegionMaxPos = TimeToPos(cutscene.playTimeMax) + leftRect.width;
                 var loopRegionMinPos = TimeToPos(cutscene.playTimeMin) + leftRect.width;
 
-                var isEndCarret = Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control;
+                var isEndCarret = embeddedLength == null && (Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control);
                 var isRegionMax = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
                 var isRegionMin = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMinPos) < 10;
 
@@ -1644,8 +1916,8 @@ namespace Slate
 
             var pointerTime = PosToTime(mousePosition.x);
             if ( isMovingScrubCarret ) {
-                cutscene.currentTime = SnapTime(pointerTime);
-                cutscene.currentTime = Mathf.Clamp(cutscene.currentTime, Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
+                var scrubTime = Mathf.Clamp(SnapTime(pointerTime), Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
+                SetEmbeddedCurrentTime(scrubTime);
             }
 
             if ( isMovingEndCarret ) {
@@ -1708,7 +1980,6 @@ namespace Slate
             }
         }
 
-        //top left controls
         void ShowPlaybackControls(Rect topLeftRect) {
 
             var autoKeyRect = new Rect(topLeftRect.xMin + 10, topLeftRect.yMin + 4, 32, 32);
@@ -1812,24 +2083,49 @@ namespace Slate
             timeInfoInterval = 1000000f;
             timeInfoHighMod = timeInfoInterval;
             var lowMod = 0.01f;
-            var modulos = new float[] { 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 }; //... O.o
-            for ( var i = 0; i < modulos.Length; i++ ) {
-                var count = viewTime / modulos[i];
-                if ( centerRect.width / count > 50 ) { //50 is approx width of label
-                    timeInfoInterval = modulos[i];
-                    lowMod = i > 0 ? modulos[i - 1] : lowMod;
-                    timeInfoHighMod = i < modulos.Length - 1 ? modulos[i + 1] : timeInfoHighMod;
-                    break;
+            var doFrames = embeddedSurface || Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
+            var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
+            if ( embeddedSurface ) {
+                var frameIntervals = new[] { 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 3000, 6000 };
+                var selectedInterval = frameIntervals[frameIntervals.Length - 1];
+                var selectedHighInterval = selectedInterval;
+                for ( var i = 0; i < frameIntervals.Length; i++ ) {
+                    var count = viewTime * frameRate / frameIntervals[i];
+                    if ( centerRect.width / Mathf.Max(1f, count) > 50 ) {
+                        selectedInterval = frameIntervals[i];
+                        selectedHighInterval = i < frameIntervals.Length - 1 ? frameIntervals[i + 1] : selectedInterval;
+                        break;
+                    }
+                }
+                timeInfoInterval = selectedInterval / (float)frameRate;
+                timeInfoHighMod = selectedHighInterval / (float)frameRate;
+                lowMod = 1f / frameRate;
+            }
+            else {
+                var modulos = new float[] { 0.1f, 0.5f, 1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 250000, 500000 }; //... O.o
+                for ( var i = 0; i < modulos.Length; i++ ) {
+                    var count = viewTime / modulos[i];
+                    if ( centerRect.width / count > 50 ) { //50 is approx width of label
+                        timeInfoInterval = modulos[i];
+                        lowMod = i > 0 ? modulos[i - 1] : lowMod;
+                        timeInfoHighMod = i < modulos.Length - 1 ? modulos[i + 1] : timeInfoHighMod;
+                        break;
+                    }
                 }
             }
 
-            var doFrames = Prefs.timeStepMode == Prefs.TimeStepMode.Frames;
-            var timeStep = doFrames ? ( 1f / Prefs.frameRate ) : lowMod;
+            var timeStep = doFrames ? ( 1f / frameRate ) : lowMod;
 
-            timeInfoStart = (float)Mathf.FloorToInt(viewTimeMin / timeInfoInterval) * timeInfoInterval;
-            timeInfoEnd = (float)Mathf.CeilToInt(viewTimeMax / timeInfoInterval) * timeInfoInterval;
-            timeInfoStart = Mathf.Round(timeInfoStart * 10) / 10;
-            timeInfoEnd = Mathf.Round(timeInfoEnd * 10) / 10;
+            if ( embeddedSurface ) {
+                timeInfoStart = Mathf.Floor(viewTimeMin * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
+                timeInfoEnd = Mathf.Ceil(viewTimeMax * frameRate / (timeInfoInterval * frameRate)) * timeInfoInterval;
+            }
+            else {
+                timeInfoStart = (float)Mathf.FloorToInt(viewTimeMin / timeInfoInterval) * timeInfoInterval;
+                timeInfoEnd = (float)Mathf.CeilToInt(viewTimeMax / timeInfoInterval) * timeInfoInterval;
+                timeInfoStart = Mathf.Round(timeInfoStart * 10) / 10;
+                timeInfoEnd = Mathf.Round(timeInfoEnd * 10) / 10;
+            }
 
             GUI.BeginGroup(topMiddleRect);
             {
@@ -1864,28 +2160,36 @@ namespace Slate
                 for ( var i = timeInfoStart; i <= timeInfoEnd; i += timeInfoInterval ) {
 
                     var posX = TimeToPos(i);
-                    var rounded = Mathf.Round(i * 10) / 10;
+                    var rounded = embeddedSurface ? Mathf.Round(i * frameRate) / frameRate : Mathf.Round(i * 10) / 10;
 
                     GUI.color = isProSkin ? Color.white : Color.black;
                     var markRect = Rect.MinMaxRect(posX - 2, TOP_MARGIN - 3, posX + 2, TOP_MARGIN - 1);
                     GUI.DrawTexture(markRect, whiteTexture);
                     GUI.color = Color.white;
 
-                    var text = doFrames ? ( rounded * Prefs.frameRate ).ToString("0") : rounded.ToString("0.00");
+                    var text = doFrames
+                        ? Mathf.RoundToInt(rounded * frameRate).ToString("0") + "F"
+                        : rounded.ToString("0.00");
                     var size = GUI.skin.GetStyle("label").CalcSize(new GUIContent(text));
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y + 2);
-                    GUI.color = rounded % timeInfoHighMod == 0 ? Color.white : Color.white.WithAlpha(0.5f);
+                    var isMajor = doFrames
+                        ? Mathf.RoundToInt(rounded * frameRate) % Mathf.Max(1, Mathf.RoundToInt(timeInfoHighMod * frameRate)) == 0
+                        : rounded % timeInfoHighMod == 0;
+                    GUI.color = isMajor ? Color.white : Color.white.WithAlpha(0.5f);
                     GUI.Box(stampRect, text, (GUIStyle)"label");
                     GUI.color = Color.white;
                 }
 
                 //the number showing current time when scubing
-                if ( cutscene.currentTime > 0 ) {
-                    var label = doFrames ? ( cutscene.currentTime * Prefs.frameRate ).ToString("0") : cutscene.currentTime.ToString("0.00");
+                var embeddedCurrentTime = EmbeddedCurrentTime();
+                if ( embeddedCurrentTime > 0 ) {
+                    var label = doFrames
+                        ? Mathf.RoundToInt(embeddedCurrentTime * frameRate).ToString("0") + "F"
+                        : embeddedCurrentTime.ToString("0.00");
                     var text = "<b><size=17>" + label + "</size></b>";
                     var size = Styles.headerBoxStyle.CalcSize(new GUIContent(text));
-                    var posX = TimeToPos(cutscene.currentTime);
+                    var posX = TimeToPos(embeddedCurrentTime);
                     var stampRect = new Rect(0, 0, size.x, size.y);
                     stampRect.center = new Vector2(posX, TOP_MARGIN - size.y / 2);
 
@@ -2050,47 +2354,52 @@ namespace Slate
 
                 //CONTEXT
                 if ( ( e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition) ) || plusClicked ) {
-                    var menu = new GenericMenu();
-                    foreach ( var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)) ) {
-                        var info = _info;
-                        if ( info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()) ) {
-                            continue;
-                        }
+                    if ( embeddedSurface && embeddedAddTrack != null ) {
+                        embeddedAddTrack();
+                    }
+                    else {
+                        var menu = new GenericMenu();
+                        foreach ( var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)) ) {
+                            var info = _info;
+                            if ( info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()) ) {
+                                continue;
+                            }
 
-                        var canAdd = !info.isUnique || ( group.tracks.Find(track => track.GetType() == info.type) == null );
-                        var finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
-                        if ( canAdd ) {
-                            menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => { group.AddTrack(info.type); });
+                            var canAdd = !info.isUnique || ( group.tracks.Find(track => track.GetType() == info.type) == null );
+                            var finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
+                            if ( canAdd ) {
+                                menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => { group.AddTrack(info.type); });
+                            } else {
+                                menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
+                            }
+                        }
+                        if ( group.CanAddTrack(copyTrack) ) {
+                            menu.AddItem(new GUIContent("Paste Track"), false, () => { group.DuplicateTrack(copyTrack); });
                         } else {
-                            menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
+                            menu.AddDisabledItem(new GUIContent("Paste Track"));
                         }
-                    }
-                    if ( group.CanAddTrack(copyTrack) ) {
-                        menu.AddItem(new GUIContent("Paste Track"), false, () => { group.DuplicateTrack(copyTrack); });
-                    } else {
-                        menu.AddDisabledItem(new GUIContent("Paste Track"));
-                    }
-                    menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => { group.isActive = !group.isActive; });
-                    menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => { group.isLocked = !group.isLocked; });
+                        menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => { group.isActive = !group.isActive; });
+                        menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => { group.isLocked = !group.isLocked; });
 
-                    if ( !( group is DirectorGroup ) ) {
-                        menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => { Selection.activeObject = group.actor; });
-                        menu.AddItem(new GUIContent("Replace Actor"), false, () => { group.actor = null; });
-                        menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                            {
-                                cutscene.DuplicateGroup(group);
-                                InitClipWrappers();
-                            });
-                        menu.AddSeparator("/");
-                        menu.AddItem(new GUIContent("Delete Group"), false, () =>
-                            {
-                                if ( EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!") ) {
-                                    cutscene.DeleteGroup(group);
+                        if ( !( group is DirectorGroup ) ) {
+                            menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => { Selection.activeObject = group.actor; });
+                            menu.AddItem(new GUIContent("Replace Actor"), false, () => { group.actor = null; });
+                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                                {
+                                    cutscene.DuplicateGroup(group);
                                     InitClipWrappers();
-                                }
-                            });
+                                });
+                            menu.AddSeparator("/");
+                            menu.AddItem(new GUIContent("Delete Group"), false, () =>
+                                {
+                                    if ( EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!") ) {
+                                        cutscene.DeleteGroup(group);
+                                        InitClipWrappers();
+                                    }
+                                });
+                        }
+                        menu.ShowAsContext();
                     }
-                    menu.ShowAsContext();
                     e.Use();
                 }
 
@@ -2179,15 +2488,17 @@ namespace Slate
                     var menu = new GenericMenu();
                     menu.AddItem(new GUIContent("Disable Track"), !track.isActive, () => { track.isActive = !track.isActive; });
                     menu.AddItem(new GUIContent("Lock Track"), track.isLocked, () => { track.isLocked = !track.isLocked; });
-                    menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
-                    if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
-                        menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                            {
-                                group.DuplicateTrack(track);
-                                InitClipWrappers();
-                            });
-                    } else {
-                        menu.AddDisabledItem(new GUIContent("Duplicate"));
+                    if ( !embeddedSurface ) {
+                        menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
+                        if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
+                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                                {
+                                    group.DuplicateTrack(track);
+                                    InitClipWrappers();
+                                });
+                        } else {
+                            menu.AddDisabledItem(new GUIContent("Duplicate"));
+                        }
                     }
                     menu.AddSeparator("/");
                     menu.AddItem(new GUIContent("Delete Track"), false, () =>
@@ -2237,7 +2548,7 @@ namespace Slate
             var e = Event.current;
 
             //bg graphic
-            var bgRect = Rect.MinMaxRect(centerRect.xMin, TOP_MARGIN + TOOLBAR_HEIGHT + scrollPos.y, centerRect.xMax, screenHeight - TOOLBAR_HEIGHT + scrollPos.y);
+            var bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
             GUI.color = Color.black.WithAlpha(0.03f);
@@ -2874,11 +3185,6 @@ namespace Slate
         //...
         void ShowWelcome() {
 
-            if ( webMessage == null ) {
-                webMessage = string.Empty;
-                FetchWebMessageBoard();
-            }
-
             var bgRect = Rect.MinMaxRect(0, 0, screenWidth, screenHeight);
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.DrawTexture(bgRect, whiteTexture);
@@ -2912,7 +3218,7 @@ namespace Slate
             GUI.color = Color.black.WithAlpha(0.2f);
             GUI.Box(boardRect, string.Empty);
             GUI.color = Color.white;
-            GUI.Label(boardRect.ExpandBy(-5), webMessage);
+            GUI.Label(boardRect.ExpandBy(-5), "从 Skill Graph 打开 Timeline 进行作者编辑。\n\n角色运行预览由 Graph Shell 管理。", EditorStyles.wordWrappedLabel);
 
             var buttonsRect = Rect.MinMaxRect(titleRect.xMin, titleRect.yMax + 5, titleRect.xMax, screenHeight);
             var openRect = new Rect(buttonsRect.xMax - 40, buttonsRect.yMin, 40, 40);
@@ -2980,40 +3286,6 @@ namespace Slate
                 }
                 GUI.backgroundColor = Color.white;
             }
-        }
-
-        //...
-        void FetchWebMessageBoard() {
-            var url = "https://paradoxnotion.com/files/softwaremessageboard.txt";
-            var request = UnityEngine.Networking.UnityWebRequest.Get(url);
-            var op = request.SendWebRequest();
-            op.completed += (x) =>
-            {
-                webMessage = request.downloadHandler?.text;
-                if ( !string.IsNullOrEmpty(webMessage) ) {
-                    var result = string.Empty;
-                    var boards = webMessage.Split('|');
-                    foreach ( var board in boards ) {
-                        var targetPair = board.GetStringWithinOuter('<', '>').Split(':');
-                        var target = targetPair[0];
-                        var isAll = target.ToLower() == "all";
-                        if ( isAll || target.ToLower() == "slate" ) {
-                            if ( !isAll ) {
-                                var version = targetPair[1];
-                                var uptodate = Cutscene.VERSION_NUMBER == float.Parse(version);
-                                result += uptodate ? "<b>You are up to date on the latest version!</b>" : string.Format("<b>There is a new version available! ( v{0} )</b>", version);
-                            }
-                            var content = board.GetStringWithinOuter('{', '}');
-                            result += content.Replace("\t", "").TrimEnd();
-                        }
-                    }
-                    result = result.Trim();
-                    webMessage = result;
-                }
-
-                request.Dispose();
-                RequestEmbeddedRepaint();
-            };
         }
 
         ///----------------------------------------------------------------------------------------------
@@ -3503,12 +3775,17 @@ namespace Slate
                     return;
                 }
 
-                menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
-                menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
+                if ( !editor.embeddedSurface ) {
+                    menu.AddItem(new GUIContent("Copy Clip"), false, () => { CutsceneUtility.CopyClip(action); });
+                    menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
+                }
+                else if ( editor.embeddedCopyClip != null ) {
+                    menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => { editor.embeddedCopyClip(action); });
+                }
 
                 if ( allowScale ) {
                     menu.AddItem(new GUIContent("Fit Clip (F)"), false, () => { StretchFit(); });
-                    if ( action.length > 0 ) {
+                    if ( action.length > 0 && !editor.embeddedSurface ) {
                         menu.AddItem(new GUIContent("Split At Cursor"), false, () => { Split(snapedPointerTime); });
                         menu.AddItem(new GUIContent("Split At Scrubber (S)"), false, () => { Split(editor.cutscene.currentTime); });
                     }

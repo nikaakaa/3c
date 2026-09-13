@@ -9,32 +9,73 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
 {
+    [Serializable]
+    public struct BtsmtlSlateTimelineViewState
+    {
+        [SerializeField] float m_ViewTimeMin;
+        [SerializeField] float m_ViewTimeMax;
+        [SerializeField] float m_CurrentTime;
+        [SerializeField] Vector2 m_ScrollPosition;
+        [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] string m_ClipAuthoringId;
+        [SerializeField] bool m_GroupCollapsed;
+
+        public BtsmtlSlateTimelineViewState(
+            float viewTimeMin,
+            float viewTimeMax,
+            float currentTime,
+            Vector2 scrollPosition,
+            string trackAuthoringId,
+            string clipAuthoringId,
+            bool groupCollapsed)
+        {
+            m_ViewTimeMin = viewTimeMin;
+            m_ViewTimeMax = viewTimeMax;
+            m_CurrentTime = currentTime;
+            m_ScrollPosition = scrollPosition;
+            m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
+            m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_GroupCollapsed = groupCollapsed;
+        }
+
+        public float ViewTimeMin => m_ViewTimeMin;
+        public float ViewTimeMax => m_ViewTimeMax;
+        public float CurrentTime => m_CurrentTime;
+        public Vector2 ScrollPosition => m_ScrollPosition;
+        public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
+        public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
+        public bool GroupCollapsed => m_GroupCollapsed;
+        public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
+    }
+
     readonly struct BtsmtlSlateCurveBinding
     {
-        public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve)
+        public BtsmtlSlateCurveBinding(string channelId, string parameterName, AnimationCurve curve, float duration)
         {
             ChannelId = channelId ?? string.Empty;
             ParameterName = parameterName ?? string.Empty;
             Curve = curve ?? throw new ArgumentNullException(nameof(curve));
+            Duration = Mathf.Max(0.0001f, duration);
         }
 
         public string ChannelId { get; }
         public string ParameterName { get; }
         public AnimationCurve Curve { get; }
+        public float Duration { get; }
     }
 
     [AddComponentMenu("")]
     sealed class BtsmtlSlateGroup : CutsceneGroup
     {
-        [SerializeField] string m_Name = "Timeline";
+        [SerializeField] string m_DisplayName = "Timeline";
         [SerializeField] GameObject m_Actor;
         [SerializeField] ActorReferenceMode m_ReferenceMode = ActorReferenceMode.UseOriginal;
         [SerializeField] ActorInitialTransformation m_InitialTransformation = ActorInitialTransformation.UseOriginal;
 
         public override string name
         {
-            get => m_Name;
-            set => m_Name = value ?? string.Empty;
+            get => m_DisplayName;
+            set => m_DisplayName = value ?? string.Empty;
         }
 
         public override GameObject actor
@@ -65,6 +106,7 @@ namespace BTSMTL.Timeline.Editor
     {
         [SerializeField] string m_SourceAuthoringId;
         bool m_RuntimeActive = true;
+        Action<float> m_AddClip;
 
         public string SourceAuthoringId => m_SourceAuthoringId ?? string.Empty;
 
@@ -83,6 +125,29 @@ namespace BTSMTL.Timeline.Editor
         {
             m_RuntimeActive = active;
         }
+
+        public void ConfigureAuthoringMenu(Action<float> addClip)
+        {
+            m_AddClip = addClip;
+        }
+
+#if UNITY_EDITOR
+        public override void OnTrackTimelineGUI(
+            Rect posRect,
+            Rect timeRect,
+            float cursorTime,
+            Func<float, float> timeToPosition)
+        {
+            Event e = Event.current;
+            Rect clipsRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin, posRect.xMax, posRect.yMin + defaultHeight);
+            if (m_AddClip != null && e.type == EventType.ContextClick && clipsRect.Contains(e.mousePosition))
+            {
+                m_AddClip(cursorTime);
+                e.Use();
+            }
+            base.OnTrackTimelineGUI(posRect, timeRect, cursorTime, timeToPosition);
+        }
+#endif
     }
 
     [AddComponentMenu("")]
@@ -135,6 +200,8 @@ namespace BTSMTL.Timeline.Editor
         public float CameraResponseEaseIn;
         [AnimatableParameter("Camera Response Ease Out", 0f, 1f)]
         public float CameraResponseEaseOut;
+        [AnimatableParameter("Scene Presentation Value")]
+        public float ScenePresentationValue;
 
         public override float length
         {
@@ -203,6 +270,13 @@ namespace BTSMTL.Timeline.Editor
                 return false;
             curve = parameter.curves[0];
             return curve != null;
+        }
+
+        public bool TryGetCurveDuration(string channelId, out float duration)
+        {
+            duration = length;
+            return m_CurveBindings.TryGetValue(channelId ?? string.Empty, out BtsmtlSlateCurveBinding binding) &&
+                   (duration = binding.Duration) > 0f;
         }
 
         protected override void OnCreate()
@@ -282,11 +356,13 @@ namespace BTSMTL.Timeline.Editor
                 return nameof(CameraResponseEaseIn);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut)
                 return nameof(CameraResponseEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.ScenePresentationValue)
+                return nameof(ScenePresentationValue);
             throw new InvalidOperationException($"Timeline curve channel '{channelId}' has no Slate proxy field.");
         }
     }
 
-    public sealed class BtsmtlSlateTimelineProjection : IDisposable
+    public sealed class BtsmtlSlateTimelineProjection : IDisposable, ITimelineAuthoringClipResolver
     {
         readonly TimelineEditorOpenRequest m_Request;
         readonly TimelineEditorSessionContext m_Session;
@@ -302,6 +378,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, Slate.Section> m_ProxySections =
             new Dictionary<string, Slate.Section>(StringComparer.Ordinal);
         ProjectionSnapshot m_BeginSnapshot;
+        string m_BeginSourceRevision;
         readonly Func<Cutscene, bool> m_UndoPolicy;
         readonly Func<Cutscene, bool> m_PlaybackPolicy;
         GameObject m_Host;
@@ -310,6 +387,16 @@ namespace BTSMTL.Timeline.Editor
         bool m_Disposed;
         bool m_RebuildQueued;
         bool m_ReadOnly;
+        string m_PendingTrackFocus;
+        string m_PendingClipFocus;
+        string m_SourceRevision = string.Empty;
+        Clip m_CopiedClip;
+        BtsmtlSlateTimelineViewState? m_PendingViewState;
+        float? m_RuntimeVisualTime;
+        float? m_HistoryVisualTime;
+        int m_CurrentFrame;
+        float m_ViewTimeMin;
+        float m_ViewTimeMax;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -380,6 +467,8 @@ namespace BTSMTL.Timeline.Editor
             m_OpenSourceClip = openSourceClip;
             m_UndoPolicy = ShouldRecordUndo;
             m_PlaybackPolicy = cutscene => !ReferenceEquals(cutscene, m_Cutscene);
+            m_ViewTimeMin = 0f;
+            m_ViewTimeMax = Mathf.Max(1f / Mathf.Max(1, m_Session.FrameRate), request.Timeline.Duration);
             try
             {
                 BuildProjection();
@@ -391,6 +480,7 @@ namespace BTSMTL.Timeline.Editor
                 CutsceneEditor.RecordUndoForCutscene = m_UndoPolicy;
                 CutsceneEditor.AllowPlaybackForCutscene = m_PlaybackPolicy;
                 m_Request.Timeline.OnValueChanged += OnSourceTimelineChanged;
+                CutsceneUtility.onSelectionChange += OnSlateSelectionChanged;
                 Undo.undoRedoEvent += OnUndoRedoEvent;
             }
             catch
@@ -401,6 +491,64 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public Cutscene Cutscene => m_Cutscene;
+        public TimelineEditorSelection Selection => m_Session.Selection;
+        public event Action<TimelineEditorSelection> SelectionChanged;
+        public event Action<string> AuthoringIssue;
+
+        public void ApplyFormalMutation(Action mutation, string undoName)
+        {
+            if (m_ReadOnly)
+            {
+                ReportIssue("Timeline 当前只读，不能修改正式字段。");
+                return;
+            }
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    mutation?.Invoke();
+                    m_Request.Timeline.Init();
+                }, undoName);
+                QueueRebuildProjection();
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"字段修改失败：{exception.Message}");
+            }
+        }
+
+        public BtsmtlSlateTimelineViewState CaptureViewState()
+        {
+            TimelineEditorSelection selection = m_Session.Selection;
+            return new BtsmtlSlateTimelineViewState(
+                m_EmbeddedEditor != null ? m_ViewTimeMin : 0f,
+                m_EmbeddedEditor != null ? m_ViewTimeMax : 0f,
+                m_CurrentFrame / (float)Mathf.Max(1, m_Session.FrameRate),
+                m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
+                selection.Track?.AuthoringId,
+                selection.Clip?.AuthoringId,
+                m_Cutscene != null && m_Cutscene.groups.Count != 0 && m_Cutscene.groups[0].isCollapsed);
+        }
+
+        public void RestoreViewState(BtsmtlSlateTimelineViewState state)
+        {
+            if (m_EmbeddedEditor == null)
+                return;
+            if (state.ViewTimeMax > state.ViewTimeMin)
+            {
+                m_ViewTimeMin = state.ViewTimeMin;
+                m_ViewTimeMax = state.ViewTimeMax;
+                m_EmbeddedEditor.viewTimeMin = m_ViewTimeMin;
+                m_EmbeddedEditor.viewTimeMax = m_ViewTimeMax;
+            }
+            if (m_EmbeddedEditor.cutscene != null)
+                SetCurrentFrame(Mathf.RoundToInt(state.CurrentTime * Mathf.Max(1, m_Session.FrameRate)));
+            if (m_Cutscene != null && m_Cutscene.groups.Count != 0)
+                m_Cutscene.groups[0].isCollapsed = state.GroupCollapsed;
+            m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
+            if (state.HasSelection)
+                FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);
+        }
 
         public void DrawEmbeddedGUI(float width, float height)
         {
@@ -424,6 +572,11 @@ namespace BTSMTL.Timeline.Editor
                 m_ProxyClips.TryGetValue(clipAuthoringId, out BtsmtlSlateActionClip clip))
             {
                 CutsceneUtility.selectedObject = clip;
+                if (m_SourceClips.TryGetValue(clipAuthoringId, out Clip sourceClip))
+                {
+                    m_Session.SetSelection(sourceClip);
+                    SelectionChanged?.Invoke(m_Session.Selection);
+                }
                 m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }
@@ -431,6 +584,11 @@ namespace BTSMTL.Timeline.Editor
                 m_ProxyTracks.TryGetValue(trackAuthoringId, out BtsmtlSlateTrack track))
             {
                 CutsceneUtility.selectedObject = track;
+                if (m_SourceTracks.TryGetValue(trackAuthoringId, out Track sourceTrack))
+                {
+                    m_Session.SetSelection(sourceTrack);
+                    SelectionChanged?.Invoke(m_Session.Selection);
+                }
                 m_EmbeddedEditor?.RequestEmbeddedRepaint();
                 return true;
             }
@@ -483,6 +641,7 @@ namespace BTSMTL.Timeline.Editor
 
         void BuildProjection()
         {
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Request.Timeline);
             m_Host = new GameObject("__BTSMTL_SlateTimelineProjection__");
             m_Host.hideFlags = HideFlags.HideAndDontSave;
             m_Cutscene = m_Host.AddComponent<Cutscene>();
@@ -494,17 +653,15 @@ namespace BTSMTL.Timeline.Editor
                 if (defaultGroups[index] != null)
                     UnityEngine.Object.DestroyImmediate(defaultGroups[index].gameObject);
             }
-            m_Cutscene.length = Mathf.Max(1f, m_Request.Timeline.Duration);
+            float frameDuration = 1f / Mathf.Max(1, m_Session.FrameRate);
+            m_Cutscene.length = Mathf.Max(frameDuration, m_Request.Timeline.Duration);
             m_Cutscene.viewTimeMin = 0f;
-            m_Cutscene.viewTimeMax = Mathf.Max(m_Cutscene.length + 1f, m_Cutscene.length);
+            m_Cutscene.viewTimeMax = Mathf.Max(m_Cutscene.length + frameDuration, frameDuration);
 
             GameObject groupObject = CreateChild(m_Cutscene.groupsRoot, "BTSMTL Timeline");
             BtsmtlSlateGroup group = groupObject.AddComponent<BtsmtlSlateGroup>();
             group.hideFlags = HideFlags.HideAndDontSave;
-            string ownershipLabel = string.IsNullOrWhiteSpace(m_Request.OwnershipLabel)
-                ? string.Empty
-                : $" [{m_Request.OwnershipLabel}]";
-            group.name = $"{m_Request.Timeline.Name}{ownershipLabel}";
+            group.name = m_Request.Timeline.Name;
             m_Cutscene.groups.Add(group);
 
             for (int trackIndex = 0; trackIndex < m_Request.Timeline.Tracks.Count; trackIndex++)
@@ -514,14 +671,13 @@ namespace BTSMTL.Timeline.Editor
                     continue;
                 var curveChannels = new List<TimelineCurveChannelDescriptor>();
                 TimelineCurveChannelCatalog.CollectForTrack(sourceTrack, curveChannels);
-                string trackDisplayName = curveChannels.Count == 0
-                    ? sourceTrack.Name
-                    : $"{sourceTrack.Name}  [Curves: {curveChannels.Count}]";
+                string trackDisplayName = sourceTrack.Name;
                 GameObject trackObject = CreateChild(group.transform, trackDisplayName);
                 BtsmtlSlateTrack proxyTrack = trackObject.AddComponent<BtsmtlSlateTrack>();
                 proxyTrack.hideFlags = HideFlags.HideAndDontSave;
                 proxyTrack.name = trackDisplayName;
                 proxyTrack.Configure(sourceTrack.AuthoringId);
+                proxyTrack.ConfigureAuthoringMenu(time => ShowAddClipMenu(sourceTrack.AuthoringId, time));
                 group.tracks.Add(proxyTrack);
                 proxyTrack.PostCreate(group);
                 m_SourceTracks[sourceTrack.AuthoringId] = sourceTrack;
@@ -535,8 +691,6 @@ namespace BTSMTL.Timeline.Editor
                     BtsmtlSlateActionClip proxyClip = trackObject.AddComponent<BtsmtlSlateActionClip>();
                     proxyClip.hideFlags = HideFlags.HideAndDontSave;
                     string displayName = sourceClip.Name;
-                    if (sourceClip is ITimelineOwnedAuthoringIdentity)
-                        displayName = $"{displayName} [{sourceClip.ContractKind}]";
                     proxyClip.Configure(
                         displayName,
                         sourceClip.Duration / (float)TimelineUtility.FrameRate,
@@ -552,7 +706,8 @@ namespace BTSMTL.Timeline.Editor
                         curveBindings.Add(new BtsmtlSlateCurveBinding(
                             descriptor.ChannelId.Value,
                             BtsmtlSlateActionClip.ParameterNameFor(descriptor.ChannelId),
-                            ToSlateCurve(descriptor.Read(sourceClip), proxyClip.length)));
+                            ToSlateCurve(descriptor.Read(sourceClip), CurveDuration(sourceClip, descriptor)),
+                            CurveDuration(sourceClip, descriptor)));
                     }
                     proxyClip.ConfigureCurves(curveBindings);
                     proxyClip.startTime = sourceClip.StartFrame / (float)TimelineUtility.FrameRate;
@@ -578,22 +733,346 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_Cutscene.Validate();
-            foreach (BtsmtlSlateTrack proxyTrack in m_ProxyTracks.Values)
-                proxyTrack.showCurves = true;
-            BtsmtlSlateActionClip firstClip = m_ProxyClips.Values.FirstOrDefault();
-            if (firstClip != null)
-                CutsceneUtility.selectedObject = firstClip;
         }
 
         void CreateEmbeddedEditor()
         {
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
-            m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null);
+            m_EmbeddedEditor.InitializeEmbedded(
+                m_Cutscene,
+                null,
+                () => m_Session.FrameRate,
+                ShowAddTrackMenu,
+                CopyProxyClip,
+                () => m_CurrentFrame,
+                SetCurrentFrame,
+                () => m_Request.Timeline.Duration,
+                () => m_ViewTimeMin,
+                value => m_ViewTimeMin = value,
+                () => m_ViewTimeMax,
+                value => m_ViewTimeMax = value);
+            m_EmbeddedEditor.viewTimeMin = m_ViewTimeMin;
+            m_EmbeddedEditor.viewTimeMax = m_ViewTimeMax;
+            SetCurrentFrame(m_CurrentFrame);
+            m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
+            m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);
+            if (!string.IsNullOrEmpty(m_PendingTrackFocus) || !string.IsNullOrEmpty(m_PendingClipFocus))
+            {
+                FocusSource(m_PendingTrackFocus, m_PendingClipFocus);
+                m_PendingTrackFocus = string.Empty;
+                m_PendingClipFocus = string.Empty;
+            }
+        }
+
+        void SetCurrentFrame(int frame)
+        {
+            m_CurrentFrame = Mathf.Clamp(frame, 0, m_Request.Timeline.MaxFrame);
+            if (m_EmbeddedEditor?.cutscene != null)
+                m_EmbeddedEditor.cutscene.currentTime = m_CurrentFrame / (float)Mathf.Max(1, m_Session.FrameRate);
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
+        }
+
+        void ShowAddTrackMenu()
+        {
+            GenericMenu menu = new GenericMenu();
+            foreach (TimelineTrackContract contract in m_Request.ContractCatalog.Tracks)
+            {
+                TimelineTrackContract candidate = contract;
+                Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(candidate.Kind);
+                bool requiresFields = trackType
+                    .GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true)
+                    .Length > 0;
+                string label = DisplayKind(candidate.Kind);
+                menu.AddItem(new GUIContent(label), false, () => ShowTrackCreationPopup(candidate.Kind, requiresFields));
+            }
+            menu.ShowAsContext();
+        }
+
+        void ShowTrackCreationPopup(string kind, bool requiresFields)
+        {
+            PopupWindow.Show(
+                new Rect(0, 0, 1, 1),
+                new TimelineTrackCreationPopup(
+                    kind,
+                    DisplayKind(kind),
+                    requiresFields,
+                    (name, channelId, slotId) => AddTrack(kind, name, channelId, slotId)));
+        }
+
+        bool AddTrack(string kind, string name, string channelId, string slotId)
+        {
+            if (!IsSourceCurrent())
+                return false;
+            Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
+            string authoringId = string.Empty;
+            Track addedTrack = null;
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    int count = m_Request.Timeline.Tracks.Count;
+                    m_Request.Timeline.AddTrack(trackType, m_Request.ContractCatalog);
+                    addedTrack = m_Request.Timeline.Tracks[count];
+                    authoringId = addedTrack.AuthoringId;
+                    addedTrack.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
+                    TimelineAuthoringTrackBinding.Apply(addedTrack, channelId, slotId);
+                }, "Add Timeline Track");
+            }
+            catch (Exception exception)
+            {
+                if (addedTrack != null)
+                    m_Request.Timeline.RemoveTrack(addedTrack);
+                ReportIssue($"新增 Track 失败：{exception.Message}");
+                return false;
+            }
+            m_PendingTrackFocus = authoringId;
+            QueueRebuildProjection();
+            return true;
+        }
+
+        void ShowAddClipMenu(string trackAuthoringId, float time)
+        {
+            if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track track))
+                return;
+            if (!m_Request.ContractCatalog.TryGetTrack(track.ContractKind, out TimelineTrackContract trackContract))
+                return;
+
+            GenericMenu menu = new GenericMenu();
+            int frame = Mathf.Max(0, Mathf.RoundToInt(time * m_Session.FrameRate));
+            for (int index = 0; index < trackContract.AllowedClipKinds.Count; index++)
+            {
+                string kind = trackContract.AllowedClipKinds[index];
+                string clipKind = kind;
+                menu.AddItem(new GUIContent(DisplayKind(clipKind)), false, () => ShowClipCreationPopup(trackAuthoringId, clipKind, frame));
+            }
+            if (m_CopiedClip != null && trackContract.AllowsClip(m_CopiedClip.ContractKind))
+            {
+                menu.AddSeparator("/");
+                menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => PasteClip(trackAuthoringId, frame));
+            }
+            menu.ShowAsContext();
+        }
+
+        void CopyProxyClip(ActionClip proxyClip)
+        {
+            if (proxyClip is BtsmtlSlateActionClip slateClip &&
+                m_SourceClips.TryGetValue(slateClip.SourceAuthoringId, out Clip sourceClip))
+                m_CopiedClip = sourceClip;
+        }
+
+        void PasteClip(string trackAuthoringId, int frame)
+        {
+            if (m_CopiedClip == null || !m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
+                return;
+            if (!IsSourceCurrent())
+                return;
+            string authoringId = string.Empty;
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip);
+                    clone.RegenerateAuthoringIdentity();
+                    if (clone is ITimelineOwnedAuthoringIdentity owned)
+                        owned.RegenerateOwnedAuthoringIdentity();
+                    clone.StartFrame = Mathf.Max(0, frame);
+                    clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Duration);
+                    m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clone);
+                    targetTrack.Clips.Add(clone);
+                    m_Request.Timeline.Init();
+                    authoringId = clone.AuthoringId;
+                }, "Paste Timeline Clip");
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"粘贴 Clip 失败：{exception.Message}");
+                return;
+            }
+            m_PendingTrackFocus = trackAuthoringId;
+            m_PendingClipFocus = authoringId;
+            QueueRebuildProjection();
+        }
+
+        void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
+        {
+            var motionClipIds = m_Request.Timeline.Tracks
+                .SelectMany(track => track.Clips)
+                .OfType<MotionCurveClip>()
+                .Select(clip => clip.AuthoringId)
+                .ToArray();
+            var request = new TimelineClipCreationRequest
+            {
+                TrackAuthoringId = trackAuthoringId,
+                Kind = kind,
+                StartFrame = frame,
+                EndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20),
+                CurveEndFrame = frame + Mathf.Max(1, m_Session.FrameRate / 20)
+            };
+            PopupWindow.Show(
+                new Rect(0, 0, 1, 1),
+                new TimelineClipCreationPopup(request, motionClipIds, m_Request.Timeline.ExternalBindings, AddClip));
+        }
+
+        bool AddClip(TimelineClipCreationRequest request)
+        {
+            if (!IsSourceCurrent())
+                return false;
+            if (!m_SourceTracks.TryGetValue(request.TrackAuthoringId, out Track track))
+                return false;
+            string authoringId = string.Empty;
+            Clip addedClip = null;
+            try
+            {
+                m_Session.Apply(() =>
+                {
+                    if (request.Kind == TimelineContractKinds.AnimationClip)
+                    {
+                        addedClip = TimelineAuthoringTrackBinding.CreateClip(
+                            m_Request.Timeline,
+                            m_Request.ContractCatalog,
+                            track,
+                            request.Resource as UnityEngine.AnimationClip,
+                            request.StartFrame);
+                    }
+                    else
+                    {
+                        addedClip = request.Resource != null
+                            ? m_Request.Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
+                            : m_Request.Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
+                    }
+                    authoringId = addedClip.AuthoringId;
+                    addedClip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                    if (addedClip is MotionCurveClip motion)
+                    {
+                        motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
+                    }
+                    TimelineAuthoringClipConfiguration configuration =
+                        BuildClipConfiguration(addedClip, request);
+                    TimelineAuthoringClipBinding.Configure(
+                        m_Request.Timeline,
+                        addedClip,
+                        configuration,
+                        this);
+                    addedClip.Track.UpdateMix();
+                    m_Request.Timeline.Init();
+                }, "Add Timeline Clip");
+            }
+            catch (Exception exception)
+            {
+                if (addedClip != null)
+                    m_Request.Timeline.RemoveClip(addedClip);
+                ReportIssue($"新增 Clip 失败：{exception.Message}");
+                return false;
+            }
+            m_PendingTrackFocus = request.TrackAuthoringId;
+            m_PendingClipFocus = authoringId;
+            QueueRebuildProjection();
+            return true;
+        }
+
+        bool IsSourceCurrent()
+        {
+            if (string.Equals(m_SourceRevision, TimelineAuthoringFingerprint.Compute(m_Request.Timeline), StringComparison.Ordinal))
+                return true;
+            ReportIssue("Timeline owner 已在外部修改，当前新增输入已取消。");
+            QueueRebuildProjection();
+            return false;
+        }
+
+        static TimelineAuthoringClipConfiguration BuildClipConfiguration(
+            Clip clip,
+            TimelineClipCreationRequest request)
+        {
+            TimelineAuthoringClipConfiguration configuration = TimelineAuthoringClipBinding.Read(clip);
+            if (request.Kind == TimelineContractKinds.AnimationClip)
+            {
+                configuration.Extrapolation = request.Extrapolation;
+                configuration.BlendProfileId = request.BlendProfileId;
+            }
+            if (request.Kind == TimelineContractKinds.MotionCurveClip)
+            {
+                configuration.CurveId = request.CurveId;
+                configuration.CurveEndFrame = request.CurveEndFrame;
+                configuration.Space = request.Space;
+                configuration.Channel = request.Channel;
+                configuration.BlendMode = request.BlendMode;
+                configuration.Priority = request.Priority;
+                configuration.ConsumeLowerChannels = request.ConsumeLowerChannels;
+            }
+            if (request.Kind == TimelineContractKinds.MotionWarpClip)
+                configuration.SourceMotionClipId = request.SourceMotionClipId;
+            if (request.Kind == TimelineContractKinds.ActionCueClip)
+            {
+                configuration.CueId = request.CueId;
+                configuration.CueType = request.CueType;
+            }
+            if (request.Kind == TimelineContractKinds.CameraStateClip)
+            {
+                configuration.CameraMode = request.CameraMode;
+                configuration.Priority = request.CameraPriority;
+                configuration.CameraBlendInSeconds = request.CameraBlendInSeconds;
+                configuration.CameraBlendOutSeconds = request.CameraBlendOutSeconds;
+                configuration.CameraTargetKey = request.CameraTargetKey;
+                configuration.CameraInterruptPolicy = request.CameraInterruptPolicy;
+            }
+            if (request.Kind == TimelineContractKinds.CameraCueClip)
+            {
+                configuration.CueId = request.CueId;
+                configuration.CameraCueKind = request.CameraCueKind;
+                configuration.CueType = request.CueType;
+                configuration.CameraIntensity = request.CameraIntensity;
+                configuration.CameraDurationSeconds = request.CameraDurationSeconds;
+                configuration.Priority = request.CameraPriority;
+            }
+            if (request.Kind == TimelineContractKinds.CameraResponseClip)
+            {
+                configuration.CameraLookResponse = request.CameraLookResponse;
+                configuration.ManualOrbitWeight = request.ManualOrbitWeight;
+                configuration.PitchResponseWeight = request.PitchResponseWeight;
+                configuration.YawResponseWeight = request.YawResponseWeight;
+                configuration.Priority = request.CameraPriority;
+            }
+            if (request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
+            {
+                configuration.TargetBindingId = request.TargetBindingId;
+                configuration.ParameterBindingId = request.ParameterBindingId;
+            }
+            return configuration;
+        }
+
+        public bool TryResolveMotionClip(TimelineData timeline, string identity, out MotionCurveClip clip)
+        {
+            clip = timeline?.Tracks
+                .SelectMany(track => track.Clips)
+                .OfType<MotionCurveClip>()
+                .FirstOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+            return clip != null;
+        }
+
+        static string DisplayKind(string kind)
+        {
+            int separator = kind.LastIndexOf('.');
+            string value = separator >= 0 ? kind.Substring(0, separator) : kind;
+            return value.Replace('-', ' ');
         }
 
         static AnimationCurve ToSlateCurve(AnimationCurve normalizedCurve, float duration)
         {
             return ConvertCurveTime(normalizedCurve, duration, false);
+        }
+
+        static float CurveDuration(Clip sourceClip, TimelineCurveChannelDescriptor descriptor)
+        {
+            if (sourceClip is MotionCurveClip motion &&
+                (descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionX ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionY ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionPositionZ ||
+                 descriptor.ChannelId == TimelineCurveChannelCatalog.MotionYaw))
+            {
+                return Mathf.Max(1f / TimelineUtility.FrameRate,
+                    (motion.CurveEndFrame - motion.StartFrame) / (float)TimelineUtility.FrameRate);
+            }
+            return Mathf.Max(1f / TimelineUtility.FrameRate, sourceClip.Duration / (float)TimelineUtility.FrameRate);
         }
 
         static AnimationCurve ToAuthoringCurve(AnimationCurve slateCurve, float duration)
@@ -640,15 +1119,27 @@ namespace BTSMTL.Timeline.Editor
             if (!ReferenceEquals(cutscene, m_Cutscene))
                 return;
             m_BeginSnapshot = CaptureSnapshot();
+            m_BeginSourceRevision = TimelineAuthoringFingerprint.Compute(m_Request.Timeline);
         }
 
         void OnEditTransactionCommit(Cutscene cutscene)
         {
             if (!ReferenceEquals(cutscene, m_Cutscene) || m_BeginSnapshot == null)
                 return;
+            if (!string.Equals(
+                    m_BeginSourceRevision,
+                    TimelineAuthoringFingerprint.Compute(m_Request.Timeline),
+                    StringComparison.Ordinal))
+            {
+                m_BeginSnapshot = null;
+                m_BeginSourceRevision = string.Empty;
+                QueueRebuildProjection();
+                return;
+            }
             ProjectionSnapshot endSnapshot = CaptureSnapshot();
             ApplyDiff(m_BeginSnapshot, endSnapshot);
             m_BeginSnapshot = null;
+            m_BeginSourceRevision = string.Empty;
             QueueRebuildProjection();
         }
 
@@ -657,6 +1148,7 @@ namespace BTSMTL.Timeline.Editor
             if (!ReferenceEquals(cutscene, m_Cutscene))
                 return;
             m_BeginSnapshot = null;
+            m_BeginSourceRevision = string.Empty;
             QueueRebuildProjection();
         }
 
@@ -666,6 +1158,26 @@ namespace BTSMTL.Timeline.Editor
                 return;
             if (m_SourceClips.TryGetValue(proxyClip.SourceAuthoringId, out Clip sourceClip))
                 m_OpenSourceClip?.Invoke(sourceClip);
+        }
+
+        void OnSlateSelectionChanged(IDirectable directable)
+        {
+            if (directable is BtsmtlSlateActionClip proxyClip &&
+                m_SourceClips.TryGetValue(proxyClip.SourceAuthoringId, out Clip sourceClip))
+            {
+                m_Session.SetSelection(sourceClip);
+                SelectionChanged?.Invoke(m_Session.Selection);
+                return;
+            }
+            if (directable is BtsmtlSlateTrack proxyTrack &&
+                m_SourceTracks.TryGetValue(proxyTrack.SourceAuthoringId, out Track sourceTrack))
+            {
+                m_Session.SetSelection(sourceTrack);
+                SelectionChanged?.Invoke(m_Session.Selection);
+                return;
+            }
+            m_Session.SetSelection(null);
+            SelectionChanged?.Invoke(m_Session.Selection);
         }
 
         void OnSourceTimelineChanged()
@@ -758,16 +1270,28 @@ namespace BTSMTL.Timeline.Editor
             ProjectionSnapshot begin,
             ProjectionSnapshot end)
         {
-            if (m_ReadOnly || end.Unsupported)
+            if (m_ReadOnly)
+            {
+                ReportIssue("Timeline 当前只读，不能提交作者修改。");
                 return;
-            var changes = new List<(Clip Clip, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
+            }
+            if (end.Unsupported)
+            {
+                ReportIssue("该 Slate 操作没有正式 Timeline 映射，已丢弃。");
+                return;
+            }
+            var changes = new List<(Clip Clip, string TrackAuthoringId, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)>();
             foreach (KeyValuePair<string, ProxyClipSnapshot> pair in end.Clips)
             {
                 if (!begin.Clips.TryGetValue(pair.Key, out ProxyClipSnapshot before) ||
                     !m_SourceClips.TryGetValue(pair.Key, out Clip sourceClip))
                     continue;
-                if (!string.Equals(before.TrackAuthoringId, FindProxyTrackAuthoringId(pair.Key), StringComparison.Ordinal))
+                string trackAuthoringId = FindProxyTrackAuthoringId(pair.Key);
+                if (string.IsNullOrEmpty(trackAuthoringId))
+                {
+                    ReportIssue("Clip 所属 Track 已过期，已丢弃本次修改。");
                     return;
+                }
                 int startFrame = Mathf.Max(0, Mathf.RoundToInt(pair.Value.StartTime * TimelineUtility.FrameRate));
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(pair.Value.EndTime * TimelineUtility.FrameRate));
                 int beforeStartFrame = Mathf.RoundToInt(before.StartTime * TimelineUtility.FrameRate);
@@ -784,7 +1308,9 @@ namespace BTSMTL.Timeline.Editor
                 int beforeEaseOutFrame = Mathf.RoundToInt(before.BlendOut * TimelineUtility.FrameRate);
                 if (startFrame != beforeStartFrame || endFrame != beforeEndFrame ||
                     easeInFrame != beforeEaseInFrame || easeOutFrame != beforeEaseOutFrame)
-                    changes.Add((sourceClip, startFrame, endFrame, easeInFrame, easeOutFrame));
+                    changes.Add((sourceClip, trackAuthoringId, startFrame, endFrame, easeInFrame, easeOutFrame));
+                else if (!string.Equals(before.TrackAuthoringId, trackAuthoringId, StringComparison.Ordinal))
+                    changes.Add((sourceClip, trackAuthoringId, beforeStartFrame, beforeEndFrame, easeInFrame, easeOutFrame));
             }
 
             var curveChanges = new List<(Clip Clip, TimelineCurveChannelId ChannelId, AnimationCurve Curve)>();
@@ -801,10 +1327,19 @@ namespace BTSMTL.Timeline.Editor
                     TimelineCurveChannelId channelId = new TimelineCurveChannelId(curvePair.Key);
                     if (!TimelineCurveChannelCatalog.TryGet(curvePair.Key, out TimelineCurveChannelDescriptor descriptor) ||
                         !descriptor.Supports(sourceClip))
+                    {
+                        ReportIssue($"曲线通道 '{curvePair.Key}' 没有正式映射，已丢弃本次修改。");
                         return;
+                    }
                     if (!m_ProxyClips.TryGetValue(pair.Key, out BtsmtlSlateActionClip proxyClip))
+                    {
+                        ReportIssue("曲线所属 Clip 已过期，已丢弃本次修改。");
                         return;
-                    curveChanges.Add((sourceClip, channelId, ToAuthoringCurve(curvePair.Value.Curve, proxyClip.length)));
+                    }
+                    float curveDuration = proxyClip.TryGetCurveDuration(channelId.Value, out float mappedDuration)
+                        ? mappedDuration
+                        : proxyClip.length;
+                    curveChanges.Add((sourceClip, channelId, ToAuthoringCurve(curvePair.Value.Curve, curveDuration)));
                 }
             }
 
@@ -851,7 +1386,15 @@ namespace BTSMTL.Timeline.Editor
                     m_Request.Timeline.RemoveSection(removedSections[index]);
                 for (int index = 0; index < changes.Count; index++)
                 {
-                    (Clip clip, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
+                    (Clip clip, string trackAuthoringId, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
+                    if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
+                        throw new InvalidOperationException("Timeline target Track identity is stale.");
+                    if (!ReferenceEquals(clip.Track, targetTrack))
+                    {
+                        m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clip);
+                        clip.Track.Clips.Remove(clip);
+                        targetTrack.Clips.Add(clip);
+                    }
                     clip.StartFrame = startFrame;
                     clip.EndFrame = endFrame;
                     clip.SelfEaseInFrame = easeInFrame;
@@ -886,6 +1429,11 @@ namespace BTSMTL.Timeline.Editor
             }, "Slate Timeline Edit");
         }
 
+        void ReportIssue(string message)
+        {
+            AuthoringIssue?.Invoke(message ?? string.Empty);
+        }
+
         string FindProxyTrackAuthoringId(string clipAuthoringId)
         {
             foreach (CutsceneGroup group in m_Cutscene.groups)
@@ -918,7 +1466,8 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_Cutscene == null)
                 return;
-            m_Cutscene.currentTime = Mathf.Max(0f, visualTime);
+            m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
+            m_HistoryVisualTime = null;
             foreach (KeyValuePair<string, BtsmtlSlateTrack> pair in m_ProxyTracks)
             {
                 bool active = activeTracks != null && activeTracks.ContainsKey(pair.Key);
@@ -936,10 +1485,31 @@ namespace BTSMTL.Timeline.Editor
 
         public void ClearRuntimeOverlay()
         {
+            m_RuntimeVisualTime = null;
+            m_HistoryVisualTime = null;
             foreach (BtsmtlSlateTrack track in m_ProxyTracks.Values)
                 track.SetRuntimeActive(true);
             foreach (BtsmtlSlateActionClip clip in m_ProxyClips.Values)
                 clip.SetRuntimeStatus(string.Empty);
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
+        }
+
+        public void ApplyHistoryOverlay(
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (m_Cutscene == null)
+                return;
+            m_HistoryVisualTime = Mathf.Max(0f, visualTime);
+            foreach (KeyValuePair<string, BtsmtlSlateTrack> pair in m_ProxyTracks)
+                pair.Value.SetRuntimeActive(activeTracks != null && activeTracks.ContainsKey(pair.Key));
+            foreach (KeyValuePair<string, BtsmtlSlateActionClip> pair in m_ProxyClips)
+            {
+                string status = string.Empty;
+                activeClips?.TryGetValue(pair.Key, out status);
+                pair.Value.SetRuntimeStatus(status);
+            }
             m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
@@ -964,6 +1534,9 @@ namespace BTSMTL.Timeline.Editor
             m_RebuildQueued = false;
             if (m_Disposed)
                 return;
+            BtsmtlSlateTimelineViewState? viewState = m_EmbeddedEditor != null
+                ? CaptureViewState()
+                : m_PendingViewState;
             m_SourceClips.Clear();
             m_ProxyClips.Clear();
             m_SourceTracks.Clear();
@@ -984,6 +1557,9 @@ namespace BTSMTL.Timeline.Editor
             m_Cutscene = null;
             BuildProjection();
             CreateEmbeddedEditor();
+            if (viewState.HasValue)
+                RestoreViewState(viewState.Value);
+            m_PendingViewState = null;
         }
 
         public void Dispose()
@@ -991,11 +1567,15 @@ namespace BTSMTL.Timeline.Editor
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            if (m_RebuildQueued)
+                EditorApplication.delayCall -= RebuildProjection;
+            m_RebuildQueued = false;
             CutsceneEditor.OnEditTransactionBegin -= OnEditTransactionBegin;
             CutsceneEditor.OnEditTransactionCommit -= OnEditTransactionCommit;
             CutsceneEditor.OnEditTransactionCancel -= OnEditTransactionCancel;
             CutsceneEditor.OnActionDoubleClick -= OnActionDoubleClick;
             m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
+            CutsceneUtility.onSelectionChange -= OnSlateSelectionChanged;
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             if (ReferenceEquals(CutsceneEditor.RecordUndoForCutscene, m_UndoPolicy))
                 CutsceneEditor.RecordUndoForCutscene = null;
@@ -1008,6 +1588,8 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor = null;
             }
             m_Session.Dispose();
+            SelectionChanged = null;
+            AuthoringIssue = null;
             if (m_Host != null)
                 UnityEngine.Object.DestroyImmediate(m_Host);
             m_Host = null;
@@ -1019,6 +1601,8 @@ namespace BTSMTL.Timeline.Editor
             m_SourceSections.Clear();
             m_ProxySections.Clear();
             m_BeginSnapshot = null;
+            if (ReferenceEquals(s_Current, this))
+                s_Current = null;
         }
     }
 }

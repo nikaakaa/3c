@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4 已完成；1.5 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终领域工厂和准备／采用接口已经完成。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、2.1 已完成；1.5—1.7、2.2 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -40,6 +40,7 @@
 - `c47640401`：将 Float32／Fixed Ability 生命周期推进、停止屏障、generation、EntryOperation 和终态处理移入独立 `AbilityDomainRuntime` Module，Evaluator 只保留顺序编排。
 - `9828d7afa`：记录 Ability Module 从总 Evaluator 拆出的边界。
 - `e7f8c7fe3`：将 Float32／Fixed ControlModule 装配、参数读取、StateLayout、读写端口和 UnityHFSM Tick 移入独立 `ControlDomainRuntime` Module。
+- `5e72ea7be`：将每个 Actor 的 Workspace／Evaluator 组合移入 `CharacterDomainRuntimeFactory`，Kernel 只保留 roster/binding 选择和实例生命周期。
 
 ## 当前实现边界
 
@@ -50,7 +51,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- 当前 `SimulationKernel` 仍是角色领域 Interface 的旧 Implementation；Evaluate 仍负责跨领域顺序和 World request，Control 与 Ability 的装配／生命周期已分别进入独立 Module。2.1 的显式角色实例工厂、Effect／Equipment／Timeline／Motion 领域装配仍未完成。
+- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 与 Ability 的装配／生命周期已分别进入独立 Module。Effect／Equipment／Timeline／Motion 的 owner 迁移和旧 Program 数据清理仍未完成。
 
 ## 编译证据与阻断
 
@@ -63,4 +64,4 @@
 
 ## 下一小步
 
-下一步把 Kernel 内按 Actor 创建 Evaluator 的路径提炼为角色领域实例工厂，并让该实例持有 Evaluate／Finalize 所需的领域组合；随后继续迁移 Effect、Equipment、Timeline、Motion owner，再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。
+下一步迁移 Effect、Equipment、Timeline、Motion 的实例 owner，再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，清除 Character catalog／slot 对 Ability 的承载。

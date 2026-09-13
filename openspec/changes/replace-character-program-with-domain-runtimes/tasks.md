@@ -12,7 +12,7 @@
 
 ## 2. 角色领域运行与状态
 
-- [ ] 2.1 交付角色领域运行实例工厂与 Evaluate／Finalize 接口，保持控制、技能、效果、运动和提交顺序，由现有 Pass 调用。
+- [x] 2.1 交付角色领域运行实例工厂与 Evaluate／Finalize 接口，保持控制、技能、效果、运动和提交顺序，由现有 Pass 调用。
 - [ ] 2.2 将 ControlModule 参数、静态 Motion 描述和控制状态迁出 Program catalog／slots，保留 C# UnityHFSM 及全部已有走跑转身规则。
 - [ ] 2.3 消费曲线任务提供的RootMotionCurveAsset及Timeline唯一时间映射，将C# Control／Motion接到正式portable绑定，删除CharacterControlMotionCatalogEmitter依赖并保留MovingTurn和CameraRelative行为。
 - [ ] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。

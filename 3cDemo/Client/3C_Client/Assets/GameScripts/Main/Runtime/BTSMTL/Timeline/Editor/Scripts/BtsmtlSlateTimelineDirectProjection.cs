@@ -1353,6 +1353,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 TrackAuthoringId = trackAuthoringId,
                 Kind = kind,
+                FrameRate = FrameRate,
                 StartFrame = frame,
                 EndFrame = defaultEndFrame,
                 DefaultEndFrame = defaultEndFrame,

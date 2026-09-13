@@ -13,6 +13,7 @@ namespace BTSMTL.Timeline.Editor
     {
         public string TrackAuthoringId;
         public string Kind;
+        public int FrameRate;
         public int StartFrame;
         public int EndFrame;
         public int DefaultEndFrame;
@@ -80,7 +81,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Resource = EditorGUILayout.ObjectField("Animation Clip", m_Request.Resource, typeof(UnityEngine.AnimationClip), false);
                 if (!ReferenceEquals(previousResource, m_Request.Resource) && m_Request.Resource is UnityEngine.AnimationClip animation)
                 {
-                    int resourceEndFrame = m_Request.StartFrame + Mathf.Max(1, Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate));
+                    int resourceEndFrame = m_Request.StartFrame + Mathf.Max(1, Mathf.RoundToInt(animation.length * m_Request.FrameRate));
                     if (m_Request.EndFrame == m_Request.DefaultEndFrame)
                         m_Request.EndFrame = resourceEndFrame;
                     m_Request.DefaultEndFrame = resourceEndFrame;

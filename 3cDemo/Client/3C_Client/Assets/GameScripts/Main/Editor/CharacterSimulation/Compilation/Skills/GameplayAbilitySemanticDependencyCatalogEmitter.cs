@@ -349,8 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Report);
             var fields = new List<ProgramCatalogField>
             {
-                m_Builder.ConstantField(source, "Definition", definition),
-                m_Builder.IdentityField("ProviderOwner", providerOwner)
+                m_Builder.ConstantField(source, "Definition", definition)
             };
             DeclareIdentity(
                 ProgramCatalogEntryKind.GameplayEffect,

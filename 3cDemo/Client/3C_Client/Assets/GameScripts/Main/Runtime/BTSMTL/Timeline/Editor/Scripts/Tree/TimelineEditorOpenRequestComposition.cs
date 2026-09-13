@@ -34,7 +34,8 @@ namespace BTSMTL.Timeline.Editor
                 serializedPropertyPath,
                 ownershipLabel,
                 runtimeDebugBinding,
-                toolCatalog ?? TimelineEditorToolCatalog.Empty);
+                toolCatalog ?? TimelineEditorToolCatalog.Empty,
+                TimelineTreeContractComposition.Create());
         }
     }
 }

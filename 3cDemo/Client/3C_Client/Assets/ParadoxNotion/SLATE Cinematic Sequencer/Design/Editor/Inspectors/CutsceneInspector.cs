@@ -34,7 +34,10 @@ namespace Slate
         //...
         void OnEnable() {
             currentDirectableEditor = null;
-            cutscene = (Cutscene)target;
+            cutscene = target as Cutscene;
+            if ( cutscene == null ) {
+                return;
+            }
             willResample = false;
             willDirty = false;
             updateModeProp = serializedObject.FindProperty("_updateMode");
@@ -62,7 +65,10 @@ namespace Slate
         //...
         public override void OnInspectorGUI() {
 
-            cutscene = (Cutscene)target;
+            cutscene = target as Cutscene;
+            if ( cutscene == null ) {
+                return;
+            }
 
             if ( UnityEditor.EditorUtility.IsPersistent(cutscene) ) {
                 EditorGUILayout.HelpBox("To edit a cutscene prefab please open it first.", MessageType.Info);
@@ -73,13 +79,16 @@ namespace Slate
             GUI.skin.label.richText = true;
 
             if ( e.rawType == EventType.MouseDown && e.button == 0 ) { //generic undo
-                Undo.RegisterFullObjectHierarchyUndo(cutscene.groupsRoot.gameObject, "Cutscene Inspector");
-                Undo.RecordObject(cutscene, "Cutscene Inspector");
-                willDirty = true;
+                if ( CutsceneEditor.ShouldRecordUndoFor(cutscene) ) {
+                    Undo.RegisterFullObjectHierarchyUndo(cutscene.groupsRoot.gameObject, "Cutscene Inspector");
+                    Undo.RecordObject(cutscene, "Cutscene Inspector");
+                    willDirty = true;
+                }
             }
 
             if ( e.rawType == EventType.MouseUp && e.button == 0 || e.rawType == EventType.KeyUp ) {
-                willDirty = true;
+                if ( CutsceneEditor.ShouldRecordUndoFor(cutscene) )
+                    willDirty = true;
                 if ( CutsceneUtility.selectedObject != null && CutsceneUtility.selectedObject.startTime <= cutscene.currentTime ) {
                     willResample = true;
                 }
@@ -94,7 +103,7 @@ namespace Slate
             DoCutsceneInspector();
             DoSelectionInspector();
 
-            if ( willDirty ) {
+            if ( willDirty && CutsceneEditor.ShouldRecordUndoFor(cutscene) ) {
                 willDirty = false;
                 EditorUtility.SetDirty(cutscene);
                 if ( CutsceneUtility.selectedObject as UnityEngine.Object != null ) {

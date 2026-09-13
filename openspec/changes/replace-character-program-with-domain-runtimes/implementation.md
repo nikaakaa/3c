@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4、2.2、2.3、2.4 已完成；2.1 按 D12 重新打开，1.5—1.10、2.5 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -55,6 +55,7 @@
 - `46236f591`：将 CharacterEquipmentProfile 编译为独立 portable `CharacterEquipmentRuntimeBinding`，让 Equipment layout、Float32／Fixed 参数读取、Local／Fixed／Rollback／Server Authority 与 DotRecast manifest 使用同一份 Equipment 目录；manifest schema 升到 8。
 - `5be0c3d3c`：删除 Equipment aggregate 的 Program state kind、semantic、layout address 和 Program 发射；由 CharacterSimulationState、Float32／Fixed 事务、state codec 与 Server Authority checkpoint 持有和传输独立 Equipment 状态。
 - `5bde181b4`：删除 Gameplay Effect aggregate 的 Program state kind、semantic、layout address 和 Ability 前端的角色级 aggregate 声明；由 CharacterSimulationState、Float32／Fixed 事务、state codec 与 Server Authority checkpoint 持有和传输独立 Effect 状态。
+- `759a49725`：把 Equipment local-state 的 kind、default、当前值、reset 和 codec 全部迁入 Equipment 领域，删除 Equipment local-state Program slot、semantic 和 state port；2.5 的 Effect／Equipment 目录与运行状态迁移完成。
 
 ## 当前实现边界
 
@@ -65,7 +66,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect 与 Equipment 的静态目录和 aggregate 状态已进入独立领域分区，但 Equipment local-state 默认值、其它角色级服务状态、Timeline 的其余 owner 迁移和旧 Program 数据清理仍未完成。
+- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect 与 Equipment 的静态目录和全部对应运行状态已进入独立领域分区；其它角色级服务状态、Timeline 的其余 owner 迁移和旧 Program 数据清理仍未完成。
 - Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。
@@ -73,7 +74,7 @@
 - `CharacterBodyMotionProfile` 现在由 `CharacterPipelineDefinition.BuildBodyMotionRuntimeBinding` 生成唯一 `CharacterBodyMotionBinding`，经 Local／Fixed／Rollback／Server Authority 的 Actor registration 进入 `SimulationActorBinding`、Evaluate request 和 Pending evaluation；Float32／Fixed 的 `CharacterBodyMotionRuntime` 只消费这份运行绑定，垂直积分、Motion 仲裁、WorldResolveBatch 和 `AirborneVerticalMotion` 能力校验仍由原正式链处理。CharacterSimulationProgram 不再保存 BodyMotion descriptor 或编码字段，Float32／Fixed Program artifact 与 payload 版本已升级并拒绝旧格式；DotRecast manifest schema 8 携带 BodyMotion 配置及 hash。
 - Local Host 与 Server Authority Host 直接从 Character Definition 构造 Control／BodyMotion binding；加载后的 Authority runtime 使用 manifest 中的同一绑定，不再从 Program catalog 补参数。
 - `CharacterGameplayEffectProfile` 现在由 `CharacterPipelineDefinition.BuildGameplayEffectRuntimeBinding` 编译为带 source identity、content revision、完整 Tag／Attribute／Effect portable bytes 的 binding，进入 Program layout、Actor binding、Evaluate request 和 DotRecast manifest；Float32／Fixed 的 `SimulationGameplayEffectProgram` 对 Character 只从该 binding 解码，不再从 Character Program catalog 读取 Effect 定义。`GameplayEffectStateAggregate` 已由 `CharacterSimulationState` 独立持有，现有 Effect working state、事务 savepoint、state codec 和 Authority checkpoint 使用同一份状态；Program 内保留的 Effect identity／producer 仍服务于现有 operation 引用。
-- `CharacterEquipmentProfile` 现在由 `CharacterPipelineDefinition.BuildEquipmentRuntimeBinding` 编译为带 source identity、content revision、slots／features／items／routes／route implementations／parameter values 和 local-state identities 的 portable binding，进入 Program layout、Actor binding、Evaluate request 和 DotRecast manifest；Float32／Fixed 的 Equipment layout 与参数读取只消费该 binding，不再从 Character Program constants 读取 Equipment 参数。`EquipmentStateAggregate` 已由 `CharacterSimulationState` 独立持有，事务、state codec 和 Authority checkpoint 使用同一份状态；当前 operation identity references 与 local-state slot/default 仍复用 Program 的正式接口。
+- `CharacterEquipmentProfile` 现在由 `CharacterPipelineDefinition.BuildEquipmentRuntimeBinding` 编译为带 source identity、content revision、slots／features／items／routes／route implementations／parameter values、local-state kind 和 default 的 portable binding，进入 Program layout、Actor binding、Evaluate request 和 DotRecast manifest；Float32／Fixed 的 Equipment layout 与参数读取只消费该 binding，不再从 Character Program constants 读取 Equipment 参数。`EquipmentStateAggregate` 现在由 `CharacterSimulationState` 独立持有 slots、local-state 当前值、pending change 和 contribution handles，事务、state codec 和 Authority checkpoint 使用同一份状态；当前 operation identity references 仍复用 Program 的正式接口。
 
 ## 编译证据与阻断
 
@@ -91,8 +92,9 @@
 - 2026-09-14 Equipment 运行绑定后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 1 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 56 个既有 warning、0 errors；`ThirdPersonSimulation.Fixed.Unity.csproj` 与 `ThirdPersonSimulation.DeterministicRollback.Unity.csproj` 均为 0 warning、0 error。
 - 2026-09-14 Equipment 状态分区后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 56 个既有 warning、0 errors。
 - 2026-09-14 Gameplay Effect 状态分区后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 56 个既有 warning、0 errors。
+- 2026-09-14 Equipment local-state 迁移后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecastAuthority.csproj` 为 3 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 56 个既有 warning、0 errors。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步
 
-下一步把 Equipment local-state slot/default 从 Program layout 拆出，并继续移出其它角色级服务状态，保持技能只发请求；随后继续收口 Timeline 与角色领域状态，最后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。
+下一步按 2.6 交付领域分区的 Capture／Restore 和统一角色 Step 事务，覆盖 Control、Ability、Effect、Equipment、请求、目标和跨 Tick MotionWarp；随后继续移出其它角色级服务状态、收口 Timeline 与角色领域状态，最后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。

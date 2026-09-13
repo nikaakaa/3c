@@ -51,7 +51,9 @@ namespace ThirdPersonCamera
             bool hasAimPoint,
             Vector3 aimPoint,
             string sourceKey,
-            string error)
+            string error,
+            bool targetInvalid = false,
+            string invalidKey = "")
         {
             Valid = valid;
             HasFollowPoint = hasFollowPoint;
@@ -60,6 +62,8 @@ namespace ThirdPersonCamera
             AimPoint = aimPoint;
             SourceKey = sourceKey ?? string.Empty;
             Error = error ?? string.Empty;
+            TargetInvalid = targetInvalid;
+            InvalidKey = invalidKey ?? string.Empty;
         }
 
         public bool Valid { get; }
@@ -69,12 +73,27 @@ namespace ThirdPersonCamera
         public Vector3 AimPoint { get; }
         public string SourceKey { get; }
         public string Error { get; }
+        public bool TargetInvalid { get; }
+        public string InvalidKey { get; }
 
         public static CameraResolvedTargetPlan NoOverride =>
             new CameraResolvedTargetPlan(true, false, default, false, default, string.Empty, string.Empty);
 
-        public static CameraResolvedTargetPlan Invalid(string sourceKey, string error) =>
-            new CameraResolvedTargetPlan(false, false, default, false, default, sourceKey, error);
+        public static CameraResolvedTargetPlan Invalid(
+            string sourceKey,
+            string error,
+            bool targetInvalid = false,
+            string invalidKey = "") =>
+            new CameraResolvedTargetPlan(
+                false,
+                false,
+                default,
+                false,
+                default,
+                sourceKey,
+                error,
+                targetInvalid,
+                invalidKey);
     }
 
     public readonly struct CameraBasisSnapshot
@@ -118,6 +137,9 @@ namespace ThirdPersonCamera
         public Vector2 ConsumedLook { get; private set; }
         public CameraResponseRequest Response { get; private set; }
         public CameraResetReason ResetReason { get; private set; }
+        public CameraPresentationStopReason TargetStopReason { get; private set; }
+        public string TargetRetiredKey { get; private set; } = string.Empty;
+        public bool TargetRetired { get; private set; }
         public bool Paused { get; private set; }
         public float DeltaSeconds { get; private set; }
         public IReadOnlyList<CameraEffectContribution> Effects { get; private set; } =
@@ -132,6 +154,9 @@ namespace ThirdPersonCamera
             Vector2 consumedLook,
             in CameraResponseRequest response,
             CameraResetReason resetReason,
+            bool targetRetired,
+            CameraPresentationStopReason targetStopReason,
+            string targetRetiredKey,
             bool paused,
             float deltaSeconds,
             IReadOnlyList<CameraEffectContribution> effects)
@@ -144,6 +169,9 @@ namespace ThirdPersonCamera
             ConsumedLook = consumedLook;
             Response = response;
             ResetReason = resetReason;
+            TargetRetired = targetRetired;
+            TargetStopReason = targetStopReason;
+            TargetRetiredKey = targetRetiredKey ?? string.Empty;
             Paused = paused;
             DeltaSeconds = deltaSeconds;
             if (effects == null || effects.Count == 0)
@@ -167,6 +195,9 @@ namespace ThirdPersonCamera
             ConsumedLook = Vector2.zero;
             Response = default;
             ResetReason = CameraResetReason.None;
+            TargetRetired = false;
+            TargetStopReason = CameraPresentationStopReason.NaturalComplete;
+            TargetRetiredKey = string.Empty;
             Paused = false;
             DeltaSeconds = 0f;
             Effects = Array.Empty<CameraEffectContribution>();

@@ -50,5 +50,12 @@ public readonly struct CameraTargetSelectionRequest
                                  !string.IsNullOrWhiteSpace(AnchorKey) ||
                                  !string.IsNullOrWhiteSpace(AimPointKey) ||
                                  !string.IsNullOrWhiteSpace(PreferredBoneKey);
+
+        public bool UsesKey(string key) =>
+            !string.IsNullOrEmpty(key) &&
+            (string.Equals(TargetKey, key, StringComparison.Ordinal) ||
+             string.Equals(AnchorKey, key, StringComparison.Ordinal) ||
+             string.Equals(AimPointKey, key, StringComparison.Ordinal) ||
+             string.Equals(PreferredBoneKey, key, StringComparison.Ordinal));
     }
 }

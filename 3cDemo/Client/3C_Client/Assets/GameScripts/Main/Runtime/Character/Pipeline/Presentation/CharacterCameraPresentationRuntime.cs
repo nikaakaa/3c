@@ -459,6 +459,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 sequence,
                 m_TargetBuffer,
                 m_FrameTargets);
+            bool targetRetired = false;
+            string targetRetiredKey = string.Empty;
+            while (!resolvedTarget.Valid && resolvedTarget.TargetInvalid)
+            {
+                if (!RemoveInvalidTargetRequests(resolvedTarget.InvalidKey))
+                    break;
+                targetRetired = true;
+                targetRetiredKey = resolvedTarget.InvalidKey;
+                RebuildTargetBuffer();
+                resolvedTarget = m_TargetResolver.Resolve(
+                    sequence,
+                    m_TargetBuffer,
+                    m_FrameTargets);
+            }
             if (!resolvedTarget.Valid)
                 throw new InvalidOperationException(resolvedTarget.Error);
             if (!string.IsNullOrEmpty(resolvedTarget.SourceKey))
@@ -515,6 +529,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 plan.LookDelta,
                 in response,
                 resetReason,
+                targetRetired,
+                targetRetired
+                    ? CameraPresentationStopReason.TargetInvalid
+                    : CameraPresentationStopReason.NaturalComplete,
+                targetRetiredKey,
                 paused,
                 presentationDeltaSeconds,
                 m_EffectEvaluator.Contributions);
@@ -584,6 +603,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     string.Equals(request.SourceId, sourceId, StringComparison.Ordinal))
                     m_PendingEffects.RemoveAt(i);
             }
+        }
+
+        bool RemoveInvalidTargetRequests(string invalidKey)
+        {
+            if (string.IsNullOrEmpty(invalidKey))
+                return false;
+            var remove = new List<PresentationProducerInstanceId>();
+            foreach (KeyValuePair<PresentationProducerInstanceId, CameraTargetSelectionRequest> pair in m_Targets)
+                if (pair.Value.Active && pair.Value.UsesKey(invalidKey))
+                    remove.Add(pair.Key);
+            for (int i = 0; i < remove.Count; i++)
+                m_Targets.Remove(remove[i]);
+            return remove.Count != 0;
+        }
+
+        void RebuildTargetBuffer()
+        {
+            m_TargetBuffer.Clear();
+            foreach (CameraTargetSelectionRequest request in m_Targets.Values)
+                if (request.Active)
+                    m_TargetBuffer.Add(request);
         }
 
         void RemovePendingEffectsAllCycles(

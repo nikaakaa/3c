@@ -851,7 +851,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
                     !string.IsNullOrEmpty(resourceId) &&
                     !float.IsNaN(weight) && !float.IsInfinity(weight) && weight >= 0f &&
                     !float.IsNaN(remaining) && remaining >= 0f &&
-                    cycle >= 0 && stopReason >= 1 && stopReason <= 3 &&
+                    cycle >= 0 && stopReason >= 1 && stopReason <= 4 &&
                     (!active || !string.IsNullOrEmpty(sourceId) || !string.IsNullOrEmpty(eventId));
                 if (valid)
                     continue;

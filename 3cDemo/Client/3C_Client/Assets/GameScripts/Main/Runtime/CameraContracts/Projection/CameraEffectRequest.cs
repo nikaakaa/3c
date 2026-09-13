@@ -8,7 +8,8 @@ namespace ThirdPersonCamera
     {
         NaturalComplete = 1,
         Cancel = 2,
-        EventRevoked = 3
+        EventRevoked = 3,
+        TargetInvalid = 4
     }
 
 public readonly struct CameraEffectRequest

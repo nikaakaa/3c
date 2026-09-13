@@ -64,9 +64,17 @@ namespace ThirdPersonCamera
             Vector3 follow = default;
             Vector3 aim = default;
             if (hasFollow && !TryResolvePoint(followKey, snapshots, out follow, out string followError))
-                return CameraResolvedTargetPlan.Invalid(sourceKey, followError);
+                return CameraResolvedTargetPlan.Invalid(
+                    sourceKey,
+                    followError,
+                    selected.Active,
+                    followKey);
             if (hasAim && !TryResolvePoint(aimKey, snapshots, out aim, out string aimError))
-                return CameraResolvedTargetPlan.Invalid(sourceKey, aimError);
+                return CameraResolvedTargetPlan.Invalid(
+                    sourceKey,
+                    aimError,
+                    selected.Active,
+                    aimKey);
             return new CameraResolvedTargetPlan(true, hasFollow, follow, hasAim, aim, sourceKey, string.Empty);
         }
 

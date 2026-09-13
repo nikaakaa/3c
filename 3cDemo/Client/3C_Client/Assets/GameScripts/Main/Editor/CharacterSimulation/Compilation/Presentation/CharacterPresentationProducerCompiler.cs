@@ -52,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             CharacterAnimationPresentationProfile profile,
+            CharacterCameraProfile cameraProfile,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
@@ -62,6 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 reader,
                 producer,
                 profile,
+                cameraProfile,
                 footAnalysisCompilation,
                 timelines,
                 timelineCallSites,
@@ -75,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal static IReadOnlyList<CharacterPresentationProducerEntry> CompileEntries(
             CharacterPresentationSemanticReader reader,
             CharacterAnimationPresentationProfile profile,
+            CharacterCameraProfile cameraProfile,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
@@ -89,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         reader,
                         reader.Producers[i],
                         profile,
+                        cameraProfile,
                         footAnalysisCompilation,
                         timelines,
                         timelineCallSites,
@@ -130,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             CharacterAnimationPresentationProfile profile,
+            CharacterCameraProfile cameraProfile,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> timelineCallSites,
@@ -146,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (kind.Value != CharacterPresentationProducerKind.Animation)
             {
                 ThirdPersonCamera.CharacterPresentationCameraBinding camera = kind.Value == CharacterPresentationProducerKind.Camera
-                    ? BuildCameraBinding(reader, producer, source, timelines, profile, errors)
+                    ? BuildCameraBinding(reader, producer, source, timelines, cameraProfile, errors)
                     : null;
                 CharacterPresentationCueBinding cue = kind.Value == CharacterPresentationProducerKind.Cue
                     ? BuildCueBinding(producer, source, timelines, errors)

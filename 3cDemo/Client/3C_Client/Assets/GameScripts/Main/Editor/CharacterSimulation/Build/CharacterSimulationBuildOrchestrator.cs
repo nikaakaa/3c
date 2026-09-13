@@ -583,6 +583,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterPresentationProducerCompiler.CompileEntries(
                     reader,
                     model.AnimationPresentationProfile,
+                    model.Definition.CameraProfile,
                     footAnalysis,
                     model.Timelines,
                     timelineCallSites,

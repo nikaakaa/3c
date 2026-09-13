@@ -1,6 +1,7 @@
 using System;
 using Cinemachine;
 using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCamera
 {

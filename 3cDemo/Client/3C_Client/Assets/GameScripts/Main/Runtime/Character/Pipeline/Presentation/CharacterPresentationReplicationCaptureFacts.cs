@@ -750,7 +750,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticKey("collision-status")]
         [DiagnosticGroup("camera-collision")]
-        public CameraCollisionStatus CollisionStatus => m_Collision.Status;
+        public int CollisionStatus => (int)m_Collision.Status;
 
         [DiagnosticField]
         [DiagnosticKey("collision-correction-distance")]

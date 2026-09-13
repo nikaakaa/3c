@@ -55,6 +55,7 @@
         "TEngine.Editor",
         "Unity.Collections",
         "Unity.InputSystem",
+        "Cinemachine",
         "YooAsset",
         "YooAsset.Editor"
     ],

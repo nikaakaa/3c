@@ -80,7 +80,7 @@
 
 - [x] 10.1 在 C# authoring 提供 TimelineAuthoringClipBinding 正式强类型配置合同后，将 projection 现有创建输入及当前 Clip 值接入该入口，保持原字段/默认值/引用/合法范围与失败反馈
 - [x] 10.2 删除 BtsmtlSlateTimelineProjection.cs 的 BuildClipProperties、Export/JObject/JSON Apply 中转及专用依赖；不建立 UI 配置模型，不修改公共任务拥有的 TimelineAuthoringClipBinding.cs
-- [ ] 10.3 如公共输出接入需要补充读取或根挂接能力，仅在既有 Timeline 领域 API 暴露正式内容/布局/owner 能力；公共遍历、C#输出、生成及两个MCP由 C# authoring 负责，不在 Slate 复制
+- [x] 10.3 如公共输出接入需要补充读取或根挂接能力，仅在既有 Timeline 领域 API 暴露正式内容/布局/owner 能力；公共遍历、C#输出、生成及两个MCP由 C# authoring 负责，不在 Slate 复制
 - [x] 10.4 从本任务剩余 UI/导航消费者移除旧 Agent 文件协议调用与无用依赖，保留 AddTrack/AddClip/AddSection、正式规则/Undo/Session和已有刷新；人工编辑不写源码，生成不自动 Build/Play
 
 依赖仅阻止第10节对应接线，无关 UI 继续原范围。领域规则是业务实现，不是中央 Agent Validator；不新增验证任务。按中文小步提交，命令执行遵守 AGENTS。

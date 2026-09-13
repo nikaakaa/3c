@@ -65,7 +65,7 @@ TimelineEditorWindow
 - Timeline 绑定关闭时只释放 `CutsceneEditorSurface` 和编辑适配数据；没有临时 Slate GameObject、组件树或延迟重建代理需要销毁。
 - Timeline 窗口新增完整构建后的 `WindowOpened` 生命周期通知，Runtime Observation Bridge 在 Slate Surface、属性区和恢复状态都建立后再刷新；不再依赖过早的 AssetOpened 时机。
 - Timeline 顶部和对应 Graph Shell/SkillGraph Preview 区显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
-- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。当前 Client 源码树中已不存在 `AgentSkillFlowDocumentExporter`、`BtsmtlSkillTimelineAuthoringApplier`、`BtsmtlSlateTimelineProjection` 或 `TimelineAuthoringClipBinding.Export/Apply` 消费者；公共输出根挂接仍由 10.3 保留。
+- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。当前 Client 源码树中已不存在 `AgentSkillFlowDocumentExporter`、`BtsmtlSkillTimelineAuthoringApplier`、`BtsmtlSlateTimelineProjection` 或 `TimelineAuthoringClipBinding.Export/Apply` 消费者。C# authoring 直接读取 `TimelineAsset.Data`、`TimelineData.Tracks/Sections/ExternalBindings` 与 `SerializedOwner/SerializedPropertyPath`；未新增 Slate 遍历、输出器或编辑器布局模型，10.3 已按既有正式 API 收口。
 
 ## 正式能力对账
 
@@ -94,7 +94,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj \
 - 作者 Timeline revision 与真实 Build/adoption 的精确匹配仍未完成；当前两者并列显示，分别来自 TimelineData 和 coordinator，避免伪造采用关系。
 - 历史 Capture、checkpoint restore、输入 replay 的完整能力门禁和完成结果。
 - C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
-- 旧 JSON/Agent 文件协议消费者已从当前 Client 源码树清除；仍未完成的是 10.3 所要求的公共 Timeline 输出根挂接与 owner/content/layout 正式读取能力。
+- 旧 JSON/Agent 文件协议消费者已从当前 Client 源码树清除；Timeline 公共 content/owner 读取沿用现有正式 API，编辑器局部选择、滚动和 Inspector 宽度不属于生成输出。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。

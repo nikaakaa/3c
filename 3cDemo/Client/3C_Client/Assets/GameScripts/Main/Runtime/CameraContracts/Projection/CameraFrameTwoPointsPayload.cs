@@ -18,7 +18,6 @@ namespace ThirdPersonCamera
         [SerializeField] Vector2 m_TargetVerticalOffset;
         [SerializeField] Vector2 m_PitchRange;
         [SerializeField] float m_PlayerHeight;
-        [SerializeField] string m_BeginCameraDataId = string.Empty;
 
         public CameraFrameTwoPointsPayload(
             string stageId,
@@ -33,8 +32,7 @@ namespace ThirdPersonCamera
             float mainVerticalOffset,
             Vector2 targetVerticalOffset,
             Vector2 pitchRange,
-            float playerHeight,
-            string beginCameraDataId)
+            float playerHeight)
             : base(stageId, CameraSequenceStageKind.FrameTwoPointsChat)
         {
             m_AspectRatio = aspectRatio;
@@ -49,7 +47,6 @@ namespace ThirdPersonCamera
             m_TargetVerticalOffset = targetVerticalOffset;
             m_PitchRange = pitchRange;
             m_PlayerHeight = playerHeight;
-            m_BeginCameraDataId = beginCameraDataId ?? string.Empty;
         }
 
         public float AspectRatio => m_AspectRatio;
@@ -64,7 +61,6 @@ namespace ThirdPersonCamera
         public Vector2 TargetVerticalOffset => m_TargetVerticalOffset;
         public Vector2 PitchRange => m_PitchRange;
         public float PlayerHeight => m_PlayerHeight;
-        public string BeginCameraDataId => m_BeginCameraDataId ?? string.Empty;
 
         public void RequireValid(string source)
         {
@@ -74,8 +70,7 @@ namespace ThirdPersonCamera
                 MinPlayerHeightRatio > MaxPlayerHeightRatio || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
                 !float.IsFinite(Pitch) || !Finite(MainHorizontalOffset) || !Finite(SubHorizontalOffset) ||
                 !float.IsFinite(MainVerticalOffset) || !Finite(TargetVerticalOffset) || !Finite(PitchRange) ||
-                PitchRange.x >= PitchRange.y || !float.IsFinite(PlayerHeight) || PlayerHeight <= 0f ||
-                string.IsNullOrWhiteSpace(BeginCameraDataId))
+                PitchRange.x >= PitchRange.y || !float.IsFinite(PlayerHeight) || PlayerHeight <= 0f)
                 throw new InvalidOperationException($"{source} contains invalid two-point framing.");
         }
 

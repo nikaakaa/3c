@@ -72,8 +72,6 @@ namespace ThirdPersonCamera
                         multiplePoints.PlayerHeight,
                         multiplePoints.AngleRange,
                         multiplePoints.FieldOfView,
-                        multiplePoints.LayerMask,
-                        multiplePoints.BeginCameraDataId,
                         context.CompileCurve(context.RequireCurve(multiplePoints.DeltaHeightToPitch)),
                         CompileTwoPoints(multiplePoints.FallbackTwoPoints));
                 case CameraTwoEntitiesFrameStage twoEntities:
@@ -115,8 +113,7 @@ namespace ThirdPersonCamera
                 stage.MainVerticalOffset,
                 stage.TargetVerticalOffset,
                 stage.PitchRange,
-                stage.PlayerHeight,
-                stage.BeginCameraDataId);
+                stage.PlayerHeight);
         }
 
         static CameraEntityFramePayload CompileEntityFrame(CameraEntityFrameStage stage)

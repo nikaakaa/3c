@@ -22,7 +22,6 @@ namespace ThirdPersonCamera
         [SerializeField] Vector2 m_TargetVerticalOffset;
         [SerializeField] Vector2 m_PitchRange = new Vector2(-70f, 70f);
         [SerializeField] float m_PlayerHeight = 1.8f;
-        [SerializeField] string m_BeginCameraDataId = string.Empty;
 
         public override CameraSequenceStageKind Kind => CameraSequenceStageKind.FrameTwoPointsChat;
         public float AspectRatio => m_AspectRatio;
@@ -37,7 +36,6 @@ namespace ThirdPersonCamera
         public Vector2 TargetVerticalOffset => m_TargetVerticalOffset;
         public Vector2 PitchRange => m_PitchRange;
         public float PlayerHeight => m_PlayerHeight;
-        public string BeginCameraDataId => m_BeginCameraDataId ?? string.Empty;
 
         public override void RequireValid(string source)
         {
@@ -47,7 +45,7 @@ namespace ThirdPersonCamera
                 !float.IsFinite(MaxPlayerHeightRatio) || MinPlayerHeightRatio > MaxPlayerHeightRatio ||
                 !float.IsFinite(FieldOfView) || FieldOfView <= 0f || !float.IsFinite(Pitch) ||
                 !float.IsFinite(PitchRange.x) || !float.IsFinite(PitchRange.y) || PitchRange.x >= PitchRange.y ||
-                !float.IsFinite(PlayerHeight) || PlayerHeight <= 0f || string.IsNullOrWhiteSpace(BeginCameraDataId))
+                !float.IsFinite(PlayerHeight) || PlayerHeight <= 0f)
                 throw new InvalidOperationException($"{source} contains invalid two-point framing.");
         }
     }

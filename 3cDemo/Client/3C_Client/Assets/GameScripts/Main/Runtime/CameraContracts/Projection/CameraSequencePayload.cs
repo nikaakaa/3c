@@ -77,7 +77,7 @@ namespace ThirdPersonCamera
                         !Finite(value.SubHorizontalOffset) || !float.IsFinite(value.MainVerticalOffset) ||
                         !Finite(value.TargetVerticalOffset) || !Finite(value.PitchRange) ||
                         value.PitchRange.x >= value.PitchRange.y || !float.IsFinite(value.PlayerHeight) ||
-                        value.PlayerHeight <= 0f || string.IsNullOrWhiteSpace(value.BeginCameraDataId))
+                        value.PlayerHeight <= 0f)
                         throw new InvalidOperationException($"{source} contains invalid two-point framing.");
                     break;
                 case CameraFrameMultiplePointsPayload value:
@@ -85,7 +85,7 @@ namespace ThirdPersonCamera
                         !float.IsFinite(value.HeightRatio) || value.HeightRatio <= 0f || !float.IsFinite(value.PlayerHeight) ||
                         value.PlayerHeight <= 0f || !Finite(value.AngleRange) || value.AngleRange.x >= value.AngleRange.y ||
                         !float.IsFinite(value.FieldOfView) || value.FieldOfView <= 0f ||
-                        string.IsNullOrWhiteSpace(value.BeginCameraDataId) || value.DeltaHeightToPitch == null ||
+                        value.DeltaHeightToPitch == null ||
                         value.FallbackTwoPoints == null)
                         throw new InvalidOperationException($"{source} contains invalid multiple-point framing.");
                     value.DeltaHeightToPitch.RequireValid(source + ".DeltaHeightToPitch");

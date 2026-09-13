@@ -12,8 +12,6 @@ namespace ThirdPersonCamera
         [SerializeField] float m_PlayerHeight;
         [SerializeField] Vector2 m_AngleRange;
         [SerializeField] float m_FieldOfView;
-        [SerializeField] LayerMask m_LayerMask;
-        [SerializeField] string m_BeginCameraDataId = string.Empty;
         [SerializeField] CameraCurvePayload m_DeltaHeightToPitch;
         [SerializeReference] CameraFrameTwoPointsPayload m_FallbackTwoPoints;
 
@@ -25,8 +23,6 @@ namespace ThirdPersonCamera
             float playerHeight,
             Vector2 angleRange,
             float fieldOfView,
-            LayerMask layerMask,
-            string beginCameraDataId,
             CameraCurvePayload deltaHeightToPitch,
             CameraFrameTwoPointsPayload fallbackTwoPoints)
             : base(stageId, CameraSequenceStageKind.FrameMultiplePointsChat)
@@ -37,8 +33,6 @@ namespace ThirdPersonCamera
             m_PlayerHeight = playerHeight;
             m_AngleRange = angleRange;
             m_FieldOfView = fieldOfView;
-            m_LayerMask = layerMask;
-            m_BeginCameraDataId = beginCameraDataId ?? string.Empty;
             m_DeltaHeightToPitch = deltaHeightToPitch;
             m_FallbackTwoPoints = fallbackTwoPoints;
         }
@@ -49,8 +43,6 @@ namespace ThirdPersonCamera
         public float PlayerHeight => m_PlayerHeight;
         public Vector2 AngleRange => m_AngleRange;
         public float FieldOfView => m_FieldOfView;
-        public LayerMask LayerMask => m_LayerMask;
-        public string BeginCameraDataId => m_BeginCameraDataId ?? string.Empty;
         public CameraCurvePayload DeltaHeightToPitch => m_DeltaHeightToPitch;
         public CameraFrameTwoPointsPayload FallbackTwoPoints => m_FallbackTwoPoints;
     }

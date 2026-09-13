@@ -16,8 +16,6 @@ namespace ThirdPersonCamera
         [SerializeField] float m_PlayerHeight = 1.8f;
         [SerializeField] Vector2 m_AngleRange = new Vector2(-70f, 70f);
         [SerializeField] float m_FieldOfView = 60f;
-        [SerializeField] LayerMask m_LayerMask = Physics.DefaultRaycastLayers;
-        [SerializeField] string m_BeginCameraDataId = string.Empty;
         [SerializeField] CameraCurveAsset m_DeltaHeightToPitch;
         [SerializeField] CameraFrameTwoPointsStage m_FallbackTwoPoints;
 
@@ -28,8 +26,6 @@ namespace ThirdPersonCamera
         public float PlayerHeight => m_PlayerHeight;
         public Vector2 AngleRange => m_AngleRange;
         public float FieldOfView => m_FieldOfView;
-        public LayerMask LayerMask => m_LayerMask;
-        public string BeginCameraDataId => m_BeginCameraDataId ?? string.Empty;
         public CameraCurveAsset DeltaHeightToPitch => m_DeltaHeightToPitch;
         public CameraFrameTwoPointsStage FallbackTwoPoints => m_FallbackTwoPoints;
 
@@ -40,7 +36,7 @@ namespace ThirdPersonCamera
                 !float.IsFinite(HeightRatio) || HeightRatio <= 0f || !float.IsFinite(PlayerHeight) ||
                 PlayerHeight <= 0f || !float.IsFinite(AngleRange.x) || !float.IsFinite(AngleRange.y) ||
                 AngleRange.x >= AngleRange.y || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
-                string.IsNullOrWhiteSpace(BeginCameraDataId) || !DeltaHeightToPitch || FallbackTwoPoints == null)
+                !DeltaHeightToPitch || FallbackTwoPoints == null)
                 throw new InvalidOperationException($"{source} contains invalid multiple-point framing.");
             DeltaHeightToPitch.RequireValid();
             FallbackTwoPoints.RequireValid($"{source}.FallbackTwoPoints");

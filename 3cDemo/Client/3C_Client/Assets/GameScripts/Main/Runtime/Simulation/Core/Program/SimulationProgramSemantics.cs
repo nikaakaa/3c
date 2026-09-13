@@ -940,8 +940,7 @@ namespace ThirdPersonSimulation
         Random = 9,
         Fact = 10,
         Input = 11,
-        Equipment = 12,
-        Control = 13
+        Equipment = 12
     }
 
     public enum ProgramStateSemantic : ushort
@@ -992,11 +991,7 @@ namespace ThirdPersonSimulation
         RandomState = 122,
         HandleAllocator = 123,
         FactSequence = 124,
-        AIWaitElapsedTicks = 130,
-        ControlState = 140,
-        ControlActiveState = 141,
-        ControlEnteredTick = 142,
-        ControlTransition = 143
+        AIWaitElapsedTicks = 130
     }
 
     public sealed class ProgramStateSlot
@@ -1080,10 +1075,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.RunnableActivationGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.LocomotionMotionElapsedTicks => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.AIWaitElapsedTicks => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
-                ProgramStateSemantic.ControlState => IsControlStateValue(kind) && owner == ProgramStateOwnerKind.Control,
-                ProgramStateSemantic.ControlActiveState => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.Control,
-                ProgramStateSemantic.ControlEnteredTick => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Control,
-                ProgramStateSemantic.ControlTransition => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.Control,
                 ProgramStateSemantic.StateMachineActive => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachinePending => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachineExiting => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
@@ -1142,17 +1133,6 @@ namespace ThirdPersonSimulation
                    kind == ProgramStateValueKind.ActionTargetSnapshot;
         }
 
-        static bool IsControlStateValue(ProgramStateValueKind kind)
-        {
-            return kind == ProgramStateValueKind.Boolean ||
-                   kind == ProgramStateValueKind.Int32 ||
-                   kind == ProgramStateValueKind.UInt64 ||
-                   kind == ProgramStateValueKind.Scalar ||
-                   kind == ProgramStateValueKind.Vector2 ||
-                   kind == ProgramStateValueKind.Vector3 ||
-                   kind == ProgramStateValueKind.Yaw ||
-                   kind == ProgramStateValueKind.Identity;
-        }
     }
 
     public enum ProgramScopeKind : byte
@@ -1331,7 +1311,6 @@ namespace ThirdPersonSimulation
         CatalogEntry = 6,
         BodyMotion = 7,
         ControlModule = 8,
-        ControlState = 9,
         ControlTransition = 10,
         OperationPort = 11,
         GraphInvocation = 12,
@@ -1479,9 +1458,6 @@ namespace ThirdPersonSimulation
                         break;
                     case ProgramSourceTargetKind.StateSlot:
                         RequireTarget(entry.TargetIndex, stateSlots, "state slot");
-                        break;
-                    case ProgramSourceTargetKind.ControlState:
-                        RequireTarget(entry.TargetIndex, stateSlots, "control state");
                         break;
                 }
             }

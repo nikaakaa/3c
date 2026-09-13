@@ -88,11 +88,7 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.StateMachinePending,
                 ProgramStateSemantic.StateMachineExiting,
                 ProgramStateSemantic.StateMachineTransition,
-                ProgramStateSemantic.StateMachineExecutionPath,
-                ProgramStateSemantic.ControlState,
-                ProgramStateSemantic.ControlActiveState,
-                ProgramStateSemantic.ControlEnteredTick,
-                ProgramStateSemantic.ControlTransition);
+                ProgramStateSemantic.StateMachineExecutionPath);
             ActionPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance,

@@ -280,12 +280,12 @@ namespace ThirdPersonCharacter.Control.Rules
                 },
                 new[]
                 {
-                    new CharacterControlStateFieldDescriptor(s_ActiveState, ProgramStateValueKind.Identity, ProgramStateSemantic.ControlActiveState),
-                    new CharacterControlStateFieldDescriptor(s_EnteredTick, ProgramStateValueKind.UInt64, ProgramStateSemantic.ControlEnteredTick),
-                    new CharacterControlStateFieldDescriptor(s_LastTransition, ProgramStateValueKind.Identity, ProgramStateSemantic.ControlTransition),
-                    new CharacterControlStateFieldDescriptor(s_MotionElapsed, ProgramStateValueKind.Int32, ProgramStateSemantic.ControlState),
-                    new CharacterControlStateFieldDescriptor(s_DirectionalDodgeRunIntent, ProgramStateValueKind.Boolean, ProgramStateSemantic.ControlState),
-                    new CharacterControlStateFieldDescriptor(s_DodgeForwardCompletionInstance, ProgramStateValueKind.UInt64, ProgramStateSemantic.ControlState)
+                    new CharacterControlStateFieldDescriptor(s_ActiveState, CharacterControlStateValueKind.Identity, CharacterControlStateSemantic.ActiveState),
+                    new CharacterControlStateFieldDescriptor(s_EnteredTick, CharacterControlStateValueKind.UInt64, CharacterControlStateSemantic.EnteredTick),
+                    new CharacterControlStateFieldDescriptor(s_LastTransition, CharacterControlStateValueKind.Identity, CharacterControlStateSemantic.Transition),
+                    new CharacterControlStateFieldDescriptor(s_MotionElapsed, CharacterControlStateValueKind.Int32, CharacterControlStateSemantic.StateValue),
+                    new CharacterControlStateFieldDescriptor(s_DirectionalDodgeRunIntent, CharacterControlStateValueKind.Boolean, CharacterControlStateSemantic.StateValue),
+                    new CharacterControlStateFieldDescriptor(s_DodgeForwardCompletionInstance, CharacterControlStateValueKind.UInt64, CharacterControlStateSemantic.StateValue)
                 },
                 new[]
                 {

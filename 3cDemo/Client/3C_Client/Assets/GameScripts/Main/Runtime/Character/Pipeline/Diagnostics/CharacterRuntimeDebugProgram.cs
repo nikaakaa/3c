@@ -12,10 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         {
             if (slot == null)
                 throw new ArgumentNullException(nameof(slot));
-            RuntimeSourceTargetKind kind = slot.OwnerKind == ProgramStateOwnerKind.Control
-                ? RuntimeSourceTargetKind.ControlState
-                : RuntimeSourceTargetKind.StateSlot;
-            return new RuntimeSourceTarget(kind, slot.Index);
+            return new RuntimeSourceTarget(RuntimeSourceTargetKind.StateSlot, slot.Index);
         }
     }
 
@@ -369,7 +366,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 ProgramSourceTargetKind.CatalogEntry => RuntimeSourceTargetKind.CatalogEntry,
                 ProgramSourceTargetKind.BodyMotion => RuntimeSourceTargetKind.BodyMotion,
                 ProgramSourceTargetKind.ControlModule => RuntimeSourceTargetKind.ControlModule,
-                ProgramSourceTargetKind.ControlState => RuntimeSourceTargetKind.ControlState,
                 ProgramSourceTargetKind.ControlTransition => RuntimeSourceTargetKind.ControlTransition,
                 _ => throw new ArgumentOutOfRangeException(nameof(source.TargetKind))
             };

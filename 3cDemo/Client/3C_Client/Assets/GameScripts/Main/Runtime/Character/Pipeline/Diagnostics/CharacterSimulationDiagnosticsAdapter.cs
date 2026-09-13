@@ -16,7 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         CharacterPortValueDiagnostics m_PortValues;
         CharacterControlFlowDiagnostics m_ControlEdges;
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
-        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
 
         public CharacterSimulationDiagnosticsAdapter(
@@ -48,7 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             m_GraphInvocationSources = new RuntimeSourceElementHandle[program.Operations.Count];
             m_OperationSources = new ProgramSourceMapEntry[program.Operations.Count];
             m_ControlModules.Clear();
-            m_ControlStates.Clear();
             m_ControlTransitions.Clear();
             for (int i = 0; i < program.SourceMap.Count; i++)
             {
@@ -71,7 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 RuntimeSourceTarget target = entry.TargetKind switch
                 {
                     ProgramSourceTargetKind.ControlModule => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlModule, entry.TargetIndex),
-                    ProgramSourceTargetKind.ControlState => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlState, entry.TargetIndex),
                     ProgramSourceTargetKind.ControlTransition => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlTransition, entry.TargetIndex),
                     _ => default
                 };
@@ -86,8 +83,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         throw new InvalidOperationException($"Control module source target '{entry.TargetIndex}' is outside the Program catalog.");
                     m_ControlModules[program.CatalogEntries[entry.TargetIndex].Identity] = handle;
                 }
-                else if (entry.TargetKind == ProgramSourceTargetKind.ControlState)
-                    m_ControlStates[entry.NodeId] = handle;
                 else
                     m_ControlTransitions[entry.EdgeId] = handle;
             }
@@ -386,8 +381,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         {
             if (source.TransitionId.IsValid && m_ControlTransitions.TryGetValue(source.TransitionId.Value, out RuntimeSourceElementHandle transition))
                 return transition;
-            if (source.StateId.IsValid && m_ControlStates.TryGetValue(source.StateId.Value, out RuntimeSourceElementHandle state))
-                return state;
             return m_ControlModules.TryGetValue(source.ModuleId.Value, out RuntimeSourceElementHandle module)
                 ? module
                 : throw new InvalidOperationException($"Control source '{source.Identity}' is absent from the Debug Source Map.");

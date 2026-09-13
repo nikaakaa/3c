@@ -127,24 +127,54 @@ namespace ThirdPersonSimulation
         public int EvaluationOrder { get; }
     }
 
+    public enum CharacterControlStateValueKind : byte
+    {
+        Boolean = 1,
+        Int32 = 2,
+        UInt64 = 3,
+        Identity = 4
+    }
+
+    public enum CharacterControlStateSemantic : ushort
+    {
+        ActiveState = 1,
+        EnteredTick = 2,
+        Transition = 3,
+        StateValue = 4
+    }
+
     public sealed class CharacterControlStateFieldDescriptor
     {
         public CharacterControlStateFieldDescriptor(
             CharacterControlStateFieldId id,
-            ProgramStateValueKind valueKind,
-            ProgramStateSemantic semantic)
+            CharacterControlStateValueKind valueKind,
+            CharacterControlStateSemantic semantic)
         {
-            if (!id.IsValid)
-                throw new ArgumentException("Character control state field identity is invalid.", nameof(id));
-            ProgramStateSchema.RequireSlot(valueKind, ProgramStateOwnerKind.Control, semantic);
+            if (!id.IsValid || !Enum.IsDefined(typeof(CharacterControlStateValueKind), valueKind) || !Enum.IsDefined(typeof(CharacterControlStateSemantic), semantic) || !IsValid(valueKind, semantic))
+                throw new ArgumentException("Character control state field is incomplete.");
             Id = id;
             ValueKind = valueKind;
             Semantic = semantic;
         }
 
         public CharacterControlStateFieldId Id { get; }
-        public ProgramStateValueKind ValueKind { get; }
-        public ProgramStateSemantic Semantic { get; }
+        public CharacterControlStateValueKind ValueKind { get; }
+        public CharacterControlStateSemantic Semantic { get; }
+
+        static bool IsValid(CharacterControlStateValueKind valueKind, CharacterControlStateSemantic semantic)
+        {
+            return semantic switch
+            {
+                CharacterControlStateSemantic.ActiveState => valueKind == CharacterControlStateValueKind.Identity,
+                CharacterControlStateSemantic.EnteredTick => valueKind == CharacterControlStateValueKind.UInt64,
+                CharacterControlStateSemantic.Transition => valueKind == CharacterControlStateValueKind.Identity,
+                CharacterControlStateSemantic.StateValue => valueKind == CharacterControlStateValueKind.Boolean ||
+                    valueKind == CharacterControlStateValueKind.Int32 ||
+                    valueKind == CharacterControlStateValueKind.UInt64 ||
+                    valueKind == CharacterControlStateValueKind.Identity,
+                _ => false
+            };
+        }
     }
 
     public sealed class CharacterControlParameterDescriptor
@@ -404,25 +434,6 @@ namespace ThirdPersonSimulation
             resolved = messages.Count == 0 ? new CharacterControlParameterSet(resolvedValues) : null;
             return messages.Count == 0;
         }
-
-        public CharacterControlStateFieldDescriptor FindStateField(ProgramStateSemantic semantic)
-        {
-            CharacterControlStateFieldDescriptor result = null;
-            for (int i = 0; i < m_StateFields.Count; i++)
-            {
-                CharacterControlStateFieldDescriptor field = m_StateFields[i];
-                if (field.Semantic != semantic)
-                    continue;
-                if (result != null)
-                    throw new InvalidOperationException($"Character control module '{ModuleId}' has duplicate state field semantic '{semantic}'.");
-                result = field;
-            }
-            return result;
-        }
-
-        public CharacterControlStateFieldDescriptor RequireStateField(ProgramStateSemantic semantic) =>
-            FindStateField(semantic) ?? throw new InvalidOperationException(
-                $"Character control module '{ModuleId}' has no state field for semantic '{semantic}'.");
 
         void ValidateStateGraph()
         {

@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
     {
         readonly ReadOnlyCollection<CharacterControlStateFieldDescriptor> m_Fields;
         readonly Dictionary<CharacterControlStateFieldId, int> m_Indexes;
-        readonly Dictionary<CharacterControlStateFieldId, ProgramStateValueKind> m_Kinds;
+        readonly Dictionary<CharacterControlStateFieldId, CharacterControlStateValueKind> m_Kinds;
 
         public CharacterControlStateSchema(CharacterControlModuleContract contract)
         {
@@ -17,10 +17,10 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(contract));
             var fields = new List<CharacterControlStateFieldDescriptor>(contract.StateFields.Count);
             m_Indexes = new Dictionary<CharacterControlStateFieldId, int>();
-            m_Kinds = new Dictionary<CharacterControlStateFieldId, ProgramStateValueKind>();
+            m_Kinds = new Dictionary<CharacterControlStateFieldId, CharacterControlStateValueKind>();
             var hashParts = new List<string>
             {
-                "character-control-state-schema/1",
+                "character-control-state-schema/2",
                 contract.ModuleId.Value,
                 contract.SemanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
@@ -52,10 +52,10 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control state schema identity is incomplete.");
             var copied = new List<CharacterControlStateFieldDescriptor>(fields.Count);
             m_Indexes = new Dictionary<CharacterControlStateFieldId, int>();
-            m_Kinds = new Dictionary<CharacterControlStateFieldId, ProgramStateValueKind>();
+            m_Kinds = new Dictionary<CharacterControlStateFieldId, CharacterControlStateValueKind>();
             var hashParts = new List<string>
             {
-                "character-control-state-schema/1",
+                "character-control-state-schema/2",
                 moduleId.Value,
                 semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
@@ -90,22 +90,22 @@ namespace ThirdPersonSimulation
                 ? index
                 : throw new InvalidOperationException($"Character control state field '{field}' is not declared.");
 
-        public ProgramStateValueKind RequireKind(CharacterControlStateFieldId field) =>
-            m_Kinds.TryGetValue(field, out ProgramStateValueKind kind)
+        public CharacterControlStateValueKind RequireKind(CharacterControlStateFieldId field) =>
+            m_Kinds.TryGetValue(field, out CharacterControlStateValueKind kind)
                 ? kind
                 : throw new InvalidOperationException($"Character control state field '{field}' is not declared.");
 
-        static bool IsSupported(ProgramStateValueKind kind) =>
-            kind == ProgramStateValueKind.Identity ||
-            kind == ProgramStateValueKind.Boolean ||
-            kind == ProgramStateValueKind.Int32 ||
-            kind == ProgramStateValueKind.UInt64;
+        static bool IsSupported(CharacterControlStateValueKind kind) =>
+            kind == CharacterControlStateValueKind.Identity ||
+            kind == CharacterControlStateValueKind.Boolean ||
+            kind == CharacterControlStateValueKind.Int32 ||
+            kind == CharacterControlStateValueKind.UInt64;
     }
 
     public readonly struct CharacterControlStateValue
     {
         CharacterControlStateValue(
-            ProgramStateValueKind kind,
+            CharacterControlStateValueKind kind,
             bool boolean,
             int int32,
             ulong uint64,
@@ -118,32 +118,32 @@ namespace ThirdPersonSimulation
             Identity = identity ?? string.Empty;
         }
 
-        public ProgramStateValueKind Kind { get; }
+        public CharacterControlStateValueKind Kind { get; }
         public bool Boolean { get; }
         public int Int32 { get; }
         public ulong UInt64 { get; }
         public string Identity { get; }
 
         public static CharacterControlStateValue FromBoolean(bool value) =>
-            new CharacterControlStateValue(ProgramStateValueKind.Boolean, value, 0, 0, string.Empty);
+            new CharacterControlStateValue(CharacterControlStateValueKind.Boolean, value, 0, 0, string.Empty);
 
         public static CharacterControlStateValue FromInt32(int value) =>
-            new CharacterControlStateValue(ProgramStateValueKind.Int32, false, value, 0, string.Empty);
+            new CharacterControlStateValue(CharacterControlStateValueKind.Int32, false, value, 0, string.Empty);
 
         public static CharacterControlStateValue FromUInt64(ulong value) =>
-            new CharacterControlStateValue(ProgramStateValueKind.UInt64, false, 0, value, string.Empty);
+            new CharacterControlStateValue(CharacterControlStateValueKind.UInt64, false, 0, value, string.Empty);
 
         public static CharacterControlStateValue FromIdentity(string value) =>
-            new CharacterControlStateValue(ProgramStateValueKind.Identity, false, 0, 0, value);
+            new CharacterControlStateValue(CharacterControlStateValueKind.Identity, false, 0, 0, value);
 
-        public static CharacterControlStateValue Default(ProgramStateValueKind kind)
+        public static CharacterControlStateValue Default(CharacterControlStateValueKind kind)
         {
             return kind switch
             {
-                ProgramStateValueKind.Boolean => FromBoolean(false),
-                ProgramStateValueKind.Int32 => FromInt32(0),
-                ProgramStateValueKind.UInt64 => FromUInt64(0),
-                ProgramStateValueKind.Identity => FromIdentity(string.Empty),
+                CharacterControlStateValueKind.Boolean => FromBoolean(false),
+                CharacterControlStateValueKind.Int32 => FromInt32(0),
+                CharacterControlStateValueKind.UInt64 => FromUInt64(0),
+                CharacterControlStateValueKind.Identity => FromIdentity(string.Empty),
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
         }
@@ -228,7 +228,7 @@ namespace ThirdPersonSimulation
         {
             var parts = new List<string>
             {
-                "character-control-runtime-state/1",
+                "character-control-runtime-state/2",
                 schema.SchemaHash.Value,
                 lastCompletedTick.ToString(System.Globalization.CultureInfo.InvariantCulture)
             };
@@ -333,8 +333,8 @@ namespace ThirdPersonSimulation
     public static class CharacterControlRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 1;
-        public const string CodecIdentity = "character-control-runtime-state/v1";
+        const int Version = 2;
+        public const string CodecIdentity = "character-control-runtime-state/v2";
 
         public static byte[] Write(CharacterControlRuntimeState state)
         {
@@ -372,8 +372,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < values.Length; i++)
             {
                 var field = new CharacterControlStateFieldId(reader.ReadString());
-                ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte(), "control state value kind");
-                ProgramStateSemantic semantic = ReadEnum<ProgramStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                CharacterControlStateValueKind kind = ReadEnum<CharacterControlStateValueKind>(reader.ReadByte(), "control state value kind");
+                CharacterControlStateSemantic semantic = ReadEnum<CharacterControlStateSemantic>(reader.ReadUInt16(), "control state semantic");
                 if (field != schema.Fields[i].Id || kind != schema.Fields[i].ValueKind || semantic != schema.Fields[i].Semantic)
                     throw new InvalidDataException($"Character control runtime state field '{field}' does not match schema index '{i}'.");
                 values[i] = ReadValue(reader, kind);
@@ -411,8 +411,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < fields.Length; i++)
             {
                 var fieldId = new CharacterControlStateFieldId(reader.ReadString());
-                ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte(), "control state value kind");
-                ProgramStateSemantic semantic = ReadEnum<ProgramStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                CharacterControlStateValueKind kind = ReadEnum<CharacterControlStateValueKind>(reader.ReadByte(), "control state value kind");
+                CharacterControlStateSemantic semantic = ReadEnum<CharacterControlStateSemantic>(reader.ReadUInt16(), "control state semantic");
                 ReadValue(reader, kind);
                 fields[i] = new CharacterControlStateFieldDescriptor(fieldId, kind, semantic);
             }
@@ -449,22 +449,22 @@ namespace ThirdPersonSimulation
         {
             switch (value.Kind)
             {
-                case ProgramStateValueKind.Boolean: writer.WriteBoolean(value.Boolean); break;
-                case ProgramStateValueKind.Int32: writer.WriteInt32(value.Int32); break;
-                case ProgramStateValueKind.UInt64: writer.WriteUInt64(value.UInt64); break;
-                case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
+                case CharacterControlStateValueKind.Boolean: writer.WriteBoolean(value.Boolean); break;
+                case CharacterControlStateValueKind.Int32: writer.WriteInt32(value.Int32); break;
+                case CharacterControlStateValueKind.UInt64: writer.WriteUInt64(value.UInt64); break;
+                case CharacterControlStateValueKind.Identity: writer.WriteString(value.Identity); break;
                 default: throw new InvalidDataException($"Unsupported character control runtime state value kind '{value.Kind}'.");
             }
         }
 
-        static CharacterControlStateValue ReadValue(CanonicalReader reader, ProgramStateValueKind kind)
+        static CharacterControlStateValue ReadValue(CanonicalReader reader, CharacterControlStateValueKind kind)
         {
             return kind switch
             {
-                ProgramStateValueKind.Boolean => CharacterControlStateValue.FromBoolean(reader.ReadBoolean()),
-                ProgramStateValueKind.Int32 => CharacterControlStateValue.FromInt32(reader.ReadInt32()),
-                ProgramStateValueKind.UInt64 => CharacterControlStateValue.FromUInt64(reader.ReadUInt64()),
-                ProgramStateValueKind.Identity => CharacterControlStateValue.FromIdentity(reader.ReadString()),
+                CharacterControlStateValueKind.Boolean => CharacterControlStateValue.FromBoolean(reader.ReadBoolean()),
+                CharacterControlStateValueKind.Int32 => CharacterControlStateValue.FromInt32(reader.ReadInt32()),
+                CharacterControlStateValueKind.UInt64 => CharacterControlStateValue.FromUInt64(reader.ReadUInt64()),
+                CharacterControlStateValueKind.Identity => CharacterControlStateValue.FromIdentity(reader.ReadString()),
                 _ => throw new InvalidDataException($"Unsupported character control runtime state value kind '{kind}'.")
             };
         }

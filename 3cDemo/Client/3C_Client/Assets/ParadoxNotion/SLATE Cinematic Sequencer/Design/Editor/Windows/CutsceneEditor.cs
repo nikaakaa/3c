@@ -366,6 +366,7 @@ namespace Slate
         [System.NonSerialized] private float embeddedDragStart;
         [System.NonSerialized] private float embeddedDragEnd;
         [System.NonSerialized] private bool embeddedEditStarted;
+        [System.NonSerialized] private IEmbeddedTimelineSectionBinding embeddedDraggedSection;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
 
@@ -883,6 +884,7 @@ namespace Slate
             embeddedDragStart = 0f;
             embeddedDragEnd = 0f;
             embeddedEditStarted = false;
+            embeddedDraggedSection = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -2228,6 +2230,7 @@ namespace Slate
             GUI.color = Color.white;
 
             GUI.BeginGroup(rect);
+            DrawEmbeddedSections(rect);
             float nextY = FIRST_GROUP_TOP_MARGIN;
             IReadOnlyList<IEmbeddedTimelineGroupBinding> groups = embeddedTimeline.Groups;
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
@@ -2388,6 +2391,70 @@ namespace Slate
             GUI.EndGroup();
             if (e.rawType == EventType.MouseUp && embeddedInteractingClip == null && rect.Contains(e.mousePosition))
                 embeddedTimeline.Select(null);
+        }
+
+        void DrawEmbeddedSections(Rect rect)
+        {
+            Event e = Event.current;
+            IReadOnlyList<IEmbeddedTimelineSectionBinding> sections = embeddedTimeline.Sections;
+            Rect sectionsRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0f)), 3f, TimeToPos(viewTimeMax), 19f);
+            if (e.type == EventType.ContextClick && sectionsRect.Contains(e.mousePosition))
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x + rect.x) * embeddedTimeline.FrameRate));
+                GenericMenu menu = new GenericMenu();
+                menu.AddItem(new GUIContent("Add Section"), false, () => embeddedTimeline.AddSection(frame));
+                menu.ShowAsContext();
+                e.Use();
+            }
+
+            float lastTime = 0f;
+            for (int index = 0; index <= sections.Count; index++)
+            {
+                IEmbeddedTimelineSectionBinding section = index < sections.Count ? sections[index] : null;
+                float nextTime = section != null ? Mathf.Clamp(section.Time, lastTime, length) : length;
+                Rect sectionRect = Rect.MinMaxRect(TimeToPos(lastTime), 3f, TimeToPos(nextTime) - 2f, 18f);
+                GUI.color = section != null ? section.Color : Color.gray;
+                GUI.DrawTexture(sectionRect, whiteTexture);
+                GUI.color = Color.white;
+                GUI.Label(sectionRect, section != null ? $" {section.Name}" : " Outro", Styles.leftLabel);
+                if (section != null)
+                {
+                    Rect markerRect = new Rect(TimeToPos(section.Time) - 2f, 3f, 4f, 16f);
+                    GUI.DrawTexture(markerRect, whiteTexture);
+                    if (e.type == EventType.MouseDown && e.button == 0 && markerRect.Contains(e.mousePosition))
+                    {
+                        embeddedTimeline.Select(section);
+                        if (!embeddedTimeline.IsReadOnly && !section.IsLocked)
+                            embeddedDraggedSection = section;
+                        e.Use();
+                    }
+                    if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
+                    {
+                        GenericMenu menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Delete Section"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteSection(section), "Delete Section"));
+                        menu.AddItem(new GUIContent("Focus Section"), false, () =>
+                        {
+                            viewTimeMin = Mathf.Max(0f, section.Time - 0.1f);
+                            viewTimeMax = Mathf.Min(length, section.Time + 0.5f);
+                        });
+                        menu.ShowAsContext();
+                        e.Use();
+                    }
+                }
+                lastTime = nextTime;
+            }
+
+            if (embeddedDraggedSection != null && e.type == EventType.MouseDrag)
+            {
+                float time = Mathf.Clamp(SnapTime(PosToTime(e.mousePosition.x + rect.x)), 0f, length);
+                embeddedDraggedSection.Time = time;
+                e.Use();
+            }
+            if (e.rawType == EventType.MouseUp && embeddedDraggedSection != null)
+            {
+                embeddedDraggedSection = null;
+                e.Use();
+            }
         }
 
         void ShowEmbeddedClipMenu(IEmbeddedTimelineClipBinding clip, IEmbeddedTimelineTrackBinding track)

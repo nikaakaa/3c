@@ -865,6 +865,27 @@ namespace BTSMTL.Timeline.Editor
             RebuildBindings();
         }
 
+        public void AddSection(int frame)
+        {
+            if (IsReadOnly)
+                return;
+            try
+            {
+                string name = $"Section {Timeline.Sections.Count + 1}";
+                m_Session.Apply(() =>
+                {
+                    Timeline.AddSection(name, Mathf.Max(0, frame));
+                    Timeline.Init();
+                }, "Add Timeline Section");
+                m_BeginSelectionId = string.Empty;
+                RebuildBindings();
+            }
+            catch (Exception exception)
+            {
+                ReportIssue($"新增 Section 失败：{exception.Message}");
+            }
+        }
+
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {
             if (clip is BtsmtlTimelineClipBinding directClip)

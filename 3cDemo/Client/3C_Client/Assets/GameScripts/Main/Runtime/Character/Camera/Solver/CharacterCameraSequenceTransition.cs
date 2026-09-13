@@ -114,7 +114,6 @@ namespace ThirdPersonCamera
                     m_RetireElapsed = 0f;
                     m_RetireDuration = 0f;
                     m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
-                    m_RetireReason = CameraPresentationStopReason.NaturalComplete;
                     m_CurrentSequenceId = string.Empty;
                     m_BlendFrom = default;
                     m_TransitionElapsed = 0f;
@@ -142,7 +141,6 @@ namespace ThirdPersonCamera
                         m_RetireElapsed = 0f;
                         m_RetireDuration = 0f;
                         m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
-                        m_RetireReason = CameraPresentationStopReason.NaturalComplete;
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = request.SourceId;
                         m_CurrentGeneration = request.Generation;

@@ -76,7 +76,7 @@
 - `CharacterCameraPresentationRuntime.Present` 已把 `GameplayPresentationFrameContext.RenderFrame` 与 `LocalLogicTick` 传入 `CharacterPresentationReplicationCaptureFrame`；这是静态链路证据，不等价于 Unity Console 或运行时回放通过。该修改发生在 Unity 增量重载期间，实时结果待实例恢复后读取。
 - `4fb7111ea`：Camera target resolver/runtime 已区分配置漏绑与运行时目标失效：前者继续在正式绑定校验处失败，后者移除使用失效 key 的目标请求、记录 `TargetInvalid` 到 `CameraDebugSnapshot` 并重新走当前正式目标裁决；没有新增自动选敌或默认目标补齐路径。
 - `53ef18bc8`：Camera PresentationCaptureFrame 已同步采集 `TargetRetired`、`TargetStopReason`、`TargetRetiredKey`，目标失效退出原因进入同一只读采样合同；当前仍只有静态证据，未宣称 Unity 运行时通过。
-- Camera Sequence transition 现在保留 `SequenceRetiring` 与 `SequenceStopReason`，并同步进入 DebugSnapshot/PresentationCaptureFrame；自然结束、取消和事件撤销不再只影响内部转场而丢失退出原因。
+- Camera Sequence transition 现在保留 `SequenceRetiring` 与最后一次 `SequenceStopReason`，并同步进入 DebugSnapshot/PresentationCaptureFrame；自然结束、取消和事件撤销不再只影响内部转场而丢失最终采样帧的退出原因。
 - Camera 最终输出在 Effect 求值后统一按 Profile `Input.PitchLimit` 限制俯仰，再进入环境约束与 Adapter；避免后续 Stretch/Override/Shot 改写越过基础输入合同。
 - Camera plan continuity operator 已消费并校验 `SequenceRetiring/SequenceStopReason` 与 `TargetRetired/TargetStopReason/TargetRetiredKey`，退出合同异常会进入诊断失败结果；尚未取得 Unity 运行时采样证据。
 - 当前 Corin `CorinAttack1Timeline.asset` 的 `Attack1CameraCue` 仍是通用 `ActionCueClip`，只有 `CueId: Attack1CameraCue` 与 `CueType: Camera`，没有正式 `CameraCueClip.ResourceId`；因此外部动作资料中的 camera key 仍不能直接迁成正式 Camera request，避免伪造资源映射。

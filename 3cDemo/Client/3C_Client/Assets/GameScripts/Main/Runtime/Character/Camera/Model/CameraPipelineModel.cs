@@ -33,6 +33,8 @@ namespace ThirdPersonCamera
         FovKick,
         Recoil,
         CollisionCorrection,
-        Custom
+        Custom,
+        Override,
+        Shot
     }
 }

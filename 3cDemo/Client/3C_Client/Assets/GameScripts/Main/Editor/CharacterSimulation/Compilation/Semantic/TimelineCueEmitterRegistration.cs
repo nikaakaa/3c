@@ -13,6 +13,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.RegisterTrack<ActionCueTrack>(context => context.DeclareTrackCatalog());
             registry.RegisterClip<ActionCueClip>((clip, context) =>
             {
+                if (string.Equals(clip.CueType, "Camera", StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        $"ActionCueClip '{context.ClipIdentity(clip)}' uses CueType Camera; migrate it to a typed CameraCueClip with ResourceId.");
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
                 string producer = context.ProducerIdentity(clip);
                 int producerIndex = context.Builder.DeclareProducer(

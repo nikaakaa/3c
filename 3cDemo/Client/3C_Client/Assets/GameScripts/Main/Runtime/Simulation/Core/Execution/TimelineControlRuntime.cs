@@ -740,12 +740,23 @@ namespace ThirdPersonSimulation
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             if (!Crosses(segment, start) && !(segment.StartsCycle && Equal(start, m_Target.Zero)))
                 return;
+            TTime end = m_Target.ClipTime(clip, TimelineClipTimePoint.End);
+            TTime duration = m_Target.Max(m_Target.Epsilon, m_Target.Subtract(end, start));
+            TTime sample = m_Target.Clamp(segment.Current, start, end);
+            TTime self = m_Target.Clamp(m_Target.Subtract(sample, start), m_Target.Zero, duration);
+            TTime weight = SampleClipWeight(
+                clip,
+                m_Target.Divide(self, duration),
+                self,
+                m_Target.Max(m_Target.Zero, m_Target.Subtract(end, sample)));
             EmitPresentation(
                 timeline,
                 clip,
                 TimelinePresentationOutputKind.Camera,
                 start,
-                m_Target.ClipScalar(clip, TimelineClipScalarValue.Intensity),
+                m_Target.Multiply(
+                    m_Target.ClipScalar(clip, TimelineClipScalarValue.Intensity),
+                    weight),
                 segment.Cycle,
                 PresentationActionInstanceId(timeline));
         }

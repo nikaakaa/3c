@@ -11,6 +11,7 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
+using ThirdPersonCamera;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -107,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             var result = new Dictionary<string,
                 List<CharacterPresentationTimelineCallSite>>(StringComparer.Ordinal);
-            foreach (CharacterSkillCompilationRecord skill in model.SkillRecords)
+            foreach (GameplayAbilityCompilationRecord skill in model.AbilityRecords)
                 foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
                     {
@@ -506,6 +507,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             response.Priority);
                     case CameraCueClip cue:
                         return BuildCameraCueBinding(producer, cue, errors);
+                    case CameraOverrideClip cameraOverride:
+                        return BuildCameraResourceBinding(
+                            producer,
+                            ThirdPersonCamera.CharacterPresentationCameraBindingKind.Override,
+                            cameraOverride.OverrideTrack?.TrackId,
+                            cameraOverride.OverrideTrack?.Priority ?? 0,
+                            errors);
+                    case CameraZoomClip cameraZoom:
+                        return BuildCameraResourceBinding(
+                            producer,
+                            ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom,
+                            cameraZoom.Zoom?.ZoomId,
+                            cameraZoom.Zoom?.DataPriority ?? 0,
+                            errors);
+                    case CameraStretchClip cameraStretch:
+                        return BuildCameraResourceBinding(
+                            producer,
+                            ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch,
+                            cameraStretch.Stretch?.StretchId,
+                            cameraStretch.Stretch?.DataPriority ?? 0,
+                            errors);
+                    case CameraShotClip cameraShot:
+                        return BuildCameraResourceBinding(
+                            producer,
+                            ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shot,
+                            cameraShot.Shot?.ShotId,
+                            cameraShot.Shot?.Priority ?? 0,
+                            errors);
                     default:
                         errors?.Add($"Camera producer '{producer.Identity}' source clip type '{clip.GetType().Name}' is unsupported.");
                         return null;
@@ -590,6 +619,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 TimelineCameraCueKind.Shake => CameraCueKind.Shake,
                 TimelineCameraCueKind.FovKick => CameraCueKind.FovKick,
                 TimelineCameraCueKind.Recoil => CameraCueKind.Recoil,
+                TimelineCameraCueKind.Override => CameraCueKind.Override,
+                TimelineCameraCueKind.Shot => CameraCueKind.Shot,
                 _ => throw new InvalidOperationException($"Camera cue kind '{value}' has no Camera effect owner.")
             };
 
@@ -611,9 +642,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CameraCueKind.Shake => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shake,
                 CameraCueKind.FovKick => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Zoom,
                 CameraCueKind.Recoil => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Stretch,
+                CameraCueKind.Override => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Override,
+                CameraCueKind.Shot => ThirdPersonCamera.CharacterPresentationCameraBindingKind.Shot,
                 _ => throw new InvalidOperationException($"Camera cue kind '{cueKind}' has no Camera effect owner.")
             };
             return ThirdPersonCamera.CharacterPresentationCameraBinding.Effect(kind, resourceId, priority);
+        }
+
+        static ThirdPersonCamera.CharacterPresentationCameraBinding BuildCameraResourceBinding(
+            ProgramProducer producer,
+            ThirdPersonCamera.CharacterPresentationCameraBindingKind kind,
+            string resourceId,
+            int priority,
+            List<string> errors)
+        {
+            if (string.IsNullOrWhiteSpace(resourceId))
+            {
+                errors?.Add($"Camera producer '{producer.Identity}' has no camera resource reference.");
+                return null;
+            }
+            return ThirdPersonCamera.CharacterPresentationCameraBinding.Effect(
+                kind,
+                resourceId,
+                priority);
         }
 
         static CameraResponseMode ToResponseMode(TimelineCameraLookResponseMode value) =>

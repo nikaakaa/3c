@@ -7,7 +7,7 @@ using UnityEngine;
 namespace BTSMTL.Timeline
 {
     [Serializable]
-    [AcceptableTrackGroups("Base")]
+    [AcceptableTrackGroups("Base", "Camera")]
     public sealed partial class TimelineData
     {
         [SerializeField]

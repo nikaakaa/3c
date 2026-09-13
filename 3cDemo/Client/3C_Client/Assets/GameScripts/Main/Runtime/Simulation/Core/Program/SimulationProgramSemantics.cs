@@ -497,7 +497,7 @@ namespace ThirdPersonSimulation
                     RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraCue:
-                    RequireEnum(operation, operation.Integer1, 0, 4, "CueKind");
+                    RequireEnum(operation, operation.Integer1, 0, 6, "CueKind");
                     RequireFlags(operation, 0);
                     RequireString(operation, literals, "CueId", true);
                     RequireString(operation, literals, "CueType", true);
@@ -924,7 +924,7 @@ namespace ThirdPersonSimulation
         ActionTargetSnapshot = 24,
         GameplayEffectAggregate = 25,
         EquipmentAggregate = 26,
-        SkillExecutionState = 27
+        AbilityExecutionState = 27
     }
 
     public enum ProgramStateOwnerKind : byte
@@ -984,7 +984,7 @@ namespace ThirdPersonSimulation
         InputRequestBuffer = 70,
         ActionInstance = 80,
         ActionRequestBuffer = 81,
-        SkillExecutionState = 82,
+        AbilityExecutionState = 82,
         ActionEventSequence = 84,
         GameplayEffectAggregate = 100,
         EquipmentAggregate = 110,
@@ -1062,7 +1062,7 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
                 ProgramStateValueKind.GameplayEffectAggregate => "state.gameplay-effect-aggregate/v1",
-                ProgramStateValueKind.SkillExecutionState => "state.skill-execution/v1",
+                ProgramStateValueKind.AbilityExecutionState => "state.ability-execution/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
         }
@@ -1117,7 +1117,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.InputRequestBuffer => kind == ProgramStateValueKind.InputRequest && owner == ProgramStateOwnerKind.Input,
                 ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
-                ProgramStateSemantic.SkillExecutionState => kind == ProgramStateValueKind.SkillExecutionState && owner == ProgramStateOwnerKind.Action,
+                ProgramStateSemantic.AbilityExecutionState => kind == ProgramStateValueKind.AbilityExecutionState && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionEventSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.GameplayEffectAggregate => kind == ProgramStateValueKind.GameplayEffectAggregate && owner == ProgramStateOwnerKind.GameplayEffect,
                 ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
@@ -1572,7 +1572,7 @@ namespace ThirdPersonSimulation
         EquipmentInitialLoadout = 29,
         EquipmentVisualBinding = 30,
         ControlModule = 31,
-        SkillProgram = 32,
+        AbilityProgram = 32,
         TimelineBinding = 33
     }
 

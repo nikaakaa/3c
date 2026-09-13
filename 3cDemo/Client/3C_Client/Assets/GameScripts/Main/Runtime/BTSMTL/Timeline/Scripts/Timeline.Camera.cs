@@ -33,7 +33,9 @@ namespace BTSMTL.Timeline
         FovKick,
         Recoil,
         CollisionCorrection,
-        Custom
+        Custom,
+        Override,
+        Shot
     }
 
     public readonly struct TimelineCameraStateSample
@@ -412,7 +414,27 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.CameraResponseTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Camera,
-                    TimelineContractKinds.CameraResponseClip)
+                    TimelineContractKinds.CameraResponseClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraOverrideTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraOverrideClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraZoomTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraZoomClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraStretchTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraStretchClip),
+                new TimelineTrackContract(
+                    TimelineContractKinds.CameraShotTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.Camera,
+                    TimelineContractKinds.CameraShotClip)
             },
             new[]
             {
@@ -433,6 +455,34 @@ namespace BTSMTL.Timeline
                 new TimelineClipContract(
                     TimelineContractKinds.CameraResponseClip,
                     TimelineContractKinds.CameraResponseTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraOverrideClip,
+                    TimelineContractKinds.CameraOverrideTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraZoomClip,
+                    TimelineContractKinds.CameraZoomTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraStretchClip,
+                    TimelineContractKinds.CameraStretchTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Camera,
+                    true,
+                    true),
+                new TimelineClipContract(
+                    TimelineContractKinds.CameraShotClip,
+                    TimelineContractKinds.CameraShotTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,

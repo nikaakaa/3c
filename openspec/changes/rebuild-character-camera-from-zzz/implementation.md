@@ -28,10 +28,10 @@
 | 2.1-2.3 平滑、裁决与连续性 | 完成 | WorldBasicHistory 普通推进保留速度；Sequence/Response/Target 同权裁决统一，零权 Sequence 不再抢占；切镜使用显式 BlendIn，未配置时使用 Profile RotationTransitionSeconds。 |
 | 2.4 生命周期 | 部分完成 | Sequence/Effect 请求保留 source/generation/action/cycle/event 身份并区分结束原因；Unity Owner 销毁和正式产物运行尚未取得当前 Editor 证据。 |
 | 3.1-3.2 锁定和多目标构图 | 部分完成 | 目标槽、显式目标切换、双点/多点/实体计划和失效报错已接线；不自动选敌；Entity frame/rotation policy 的来源公式未闭合。 |
-| 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；当前 Corin 只有 Zoom/Stretch 正式资源，Shake/Override 没有来源触发闭包。 |
+| 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；Camera Resource Track 已注册为 typed Camera request；当前 Corin 只有 Zoom/Stretch 正式资源，Shake/Override 没有来源触发闭包。 |
 | 4.4-4.5 Shot 与固定效果顺序 | 部分完成 | Shot 编译要求真实 prefab 和标准 VCam，Adapter 支持显式 Shot rig binding；已知来源 prefab 尚未进入工程；顺序固定为 Override→Zoom→Stretch→Shake→Shot→Environment。 |
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
-| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Shot 及效果真实作者引用仍缺少闭包。 |
+| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
 | 6.3 Corin 动作资源可达性 | 未完成 | 已保留 18 Zoom/18 Stretch 资源；现有 Corin ActionCue 的 Camera 标记仍没有正式 ResourceId，不能虚构 81 Shake/4 Override 的触发关系。 |
 | 6.4-6.5 正式发布与 Preview/ScenePlay | 阻塞 | 生成产物待 Character Build 正式重发布；当前 Runtime 代码检查被工作区既有 `CharacterSkillDependency`/`GameplayAbilityDefinition` 编译错误阻断，Unity MCP 资源返回 `no_unity_session`，未做动态 Console/ScenePlay 验收。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/碰撞字段和 Effect table/operator 已接入；输入回放已改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动，文件仍未单独提交。 |
@@ -50,8 +50,10 @@
 ## 本窗口证据
 
 - `8db41c4fbcc925c1df83e66aea18f304b12368dc`：统一 Camera Projection、FramePlanner、Effect、Environment Constraint、Producer binding 和唯一默认轨道 owner。
+- `393066dda`：收口 Reset/暂停/碰撞/效果采样诊断，删除旧 Controller、无消费者 Locking/ChangeAvatar 配置，并让不闭合阶段在编译/求值时明确失败。
 - `ThirdPersonCamera.Contracts.csproj` 使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，2 个 Unity 包警告，0 个错误。
 - `ThirdPersonClient.Runtime.csproj` 同参数检查到工作区既有错误：`CharacterControlProgramContracts.cs(636)` 缺少 `CharacterSkillDependency`；直接项目重编译另有用户新增 `GameplayAbilityDefinition` 未实现 `IGameplayBehaviorProfile.DebugCategory/Tags`。本次未修改这些文件。
 - `ThirdPersonClient.Editor.csproj` 在 Runtime 因既有错误未产出 DLL 后无法继续编译；没有把该结果解释为摄像机代码已通过 Editor 编译。
-- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`，Editor/project/camera 资源均返回 `no_unity_session`；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
+- Unity MCP 已显式查询实例 `3C_Client@e852139597e42532`；资源接口仍返回 `no_unity_session`，但显式工具可读取当前 Console。Force refresh 后 Console 新增错误为既有 Timeline Slate 引用缺失和 `GameplayAbilityDefinition` 接口未实现，未出现摄像机源码错误；未使用 batchmode 替代当前 Editor 验收，也未声明 Console、画面或回放通过。
+- 已按精确 Definition/Wrapper 路径启动 Fixed Character Build，job `a5d9ddca7fc44bf7b863f8aedcd15629` 返回 `character_build_exception`：`Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.` 原因是 Unity 因工作区既有编译错误仍使用旧域程序集，而 Profile 已删除正式 owner 字段；没有接受旧域状态并伪造发布产物。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

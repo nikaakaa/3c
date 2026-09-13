@@ -13,6 +13,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.RegisterTrack<CameraStateTrack>(context => context.DeclareTrackCatalog());
             registry.RegisterTrack<CameraCueTrack>(context => context.DeclareTrackCatalog());
             registry.RegisterTrack<CameraResponseTrack>(context => context.DeclareTrackCatalog());
+            registry.RegisterTrack<CameraOverrideTrack>(context => context.DeclareTrackCatalog());
+            registry.RegisterTrack<CameraZoomTrack>(context => context.DeclareTrackCatalog());
+            registry.RegisterTrack<CameraStretchTrack>(context => context.DeclareTrackCatalog());
+            registry.RegisterTrack<CameraShotTrack>(context => context.DeclareTrackCatalog());
             registry.RegisterClip<CameraStateClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
@@ -71,6 +75,64 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve))
                     });
             });
+            registry.RegisterClip<CameraOverrideClip>((clip, context) =>
+                DeclareEffectClip(
+                    clip,
+                    context,
+                    TimelineCameraCueKind.Override,
+                    clip.OverrideTrack?.TrackId,
+                    clip.OverrideTrack?.Priority ?? 0));
+            registry.RegisterClip<CameraZoomClip>((clip, context) =>
+                DeclareEffectClip(
+                    clip,
+                    context,
+                    TimelineCameraCueKind.FovKick,
+                    clip.Zoom?.ZoomId,
+                    clip.Zoom?.DataPriority ?? 0));
+            registry.RegisterClip<CameraStretchClip>((clip, context) =>
+                DeclareEffectClip(
+                    clip,
+                    context,
+                    TimelineCameraCueKind.Recoil,
+                    clip.Stretch?.StretchId,
+                    clip.Stretch?.DataPriority ?? 0));
+            registry.RegisterClip<CameraShotClip>((clip, context) =>
+                DeclareEffectClip(
+                    clip,
+                    context,
+                    TimelineCameraCueKind.Shot,
+                    clip.Shot?.ShotId,
+                    clip.Shot?.Priority ?? 0));
+        }
+
+        static OperationHandle DeclareEffectClip(
+            CameraResourceClip clip,
+            TimelineSemanticEmitterContext context,
+            TimelineCameraCueKind cueKind,
+            string resourceId,
+            int priority)
+        {
+            if (string.IsNullOrWhiteSpace(resourceId))
+                throw new InvalidOperationException(
+                    $"Camera resource clip '{context.ClipIdentity(clip)}' has no ResourceId.");
+            CharacterSimulationSourceLocation source = context.ClipSource(clip);
+            return DeclarePresentationClip(
+                clip,
+                context,
+                SimulationOperationCode.TimelineCameraCue,
+                new[]
+                {
+                    context.Builder.ConstantField(source, "CueId", resourceId),
+                    context.Builder.ConstantField(source, "CueKind", cueKind),
+                    context.Builder.ConstantField(source, "CueType", "Camera"),
+                    context.Builder.ConstantField(source, "ResourceId", resourceId),
+                    context.Builder.ConstantField(source, "Intensity", 1f),
+                    context.Builder.ConstantField(source, "DurationSeconds", 0f),
+                    context.Builder.ConstantField(source, "Priority", priority),
+                    context.Builder.ConstantField(source, "WeightCurve", context.BakeCurve(clip, "WeightCurve", clip.WeightCurve)),
+                    context.Builder.ConstantField(source, "EaseInCurve", context.BakeCurve(clip, "EaseInCurve", clip.EaseInCurve)),
+                    context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve))
+                });
         }
 
         static OperationHandle DeclarePresentationClip(

@@ -65,5 +65,6 @@
 - 已按精确 Definition/Wrapper 路径启动 Fixed Character Build，job `a5d9ddca7fc44bf7b863f8aedcd15629` 返回 `character_build_exception`：`Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.` 原因是 Unity 因工作区既有编译错误仍使用旧域程序集，而 Profile 已删除正式 owner 字段；没有接受旧域状态并伪造发布产物。
 - 在当前 Editor 状态下再次按同一 Definition/Wrapper 启动 Fixed Character Build，job `004c30412ff14008b3db55cdfd5a215c` 最终返回同一 `Character Camera Profile 'CorinCharacterCameraProfile' is incomplete.`；没有接受任何生成 Projection/Program 产物。
 - 在 Camera/Timeline 编译错误清除后按同一 Definition/Wrapper 启动 Fixed Character Build，job `81133763a5a84dee83cdc91a7d57d761` 已进入 running；在终态返回前不接受任何生成 Projection/Program 产物。
+- 当前 `Editor.log` 已给出 Build 阶段证据：ACL 清单扫描耗时 `19941ms`；170 个已发布动画资源的复用判定耗时 `47196ms`；动画目录阶段总计 `67141ms`，随后仍在处理 7 个 ACL 动画片段。该耗时属于全量 Character Build 的 ACL/资源发布阶段，不是 Camera 求解或 Camera Contracts 编译。
 - 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

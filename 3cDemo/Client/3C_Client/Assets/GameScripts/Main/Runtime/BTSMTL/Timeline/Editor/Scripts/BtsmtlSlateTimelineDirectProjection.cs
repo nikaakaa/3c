@@ -1371,7 +1371,14 @@ namespace BTSMTL.Timeline.Editor
                 m_Session.Apply(() =>
                 {
                     Track track = directTrack.Source;
-                    if (request.Kind == TimelineContractKinds.AnimationClip)
+                    if (request.Kind == TimelineContractKinds.TreeClip)
+                        addedClip = TimelineTreeAuthoringClipBinding.CreateClip(
+                            Timeline,
+                            m_Request.ContractCatalog,
+                            track,
+                            request.Resource as ScriptableObject,
+                            request.StartFrame);
+                    else if (request.Kind == TimelineContractKinds.AnimationClip)
                         addedClip = TimelineAuthoringTrackBinding.CreateClip(Timeline, m_Request.ContractCatalog, track, request.Resource as UnityEngine.AnimationClip, request.StartFrame);
                     else
                         addedClip = request.Resource != null

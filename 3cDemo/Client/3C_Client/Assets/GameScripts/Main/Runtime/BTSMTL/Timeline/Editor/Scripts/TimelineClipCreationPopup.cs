@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
+using TreeDesigner;
 using UnityEditor;
 using UnityEngine;
 
@@ -161,8 +162,9 @@ namespace BTSMTL.Timeline.Editor
             if (m_Request.Kind == TimelineContractKinds.AnimationClip && m_Request.Resource is not UnityEngine.AnimationClip)
                 return "必须选择已有 AnimationClip。";
             if (m_Request.Kind == TimelineContractKinds.TreeClip &&
-                m_Request.Resource is not ScriptableObject)
-                return "必须选择正式 Graph / Tree 来源。";
+                m_Request.Resource is not BaseTreeAsset &&
+                m_Request.Resource is not ITimelineTreeGraphAsset)
+                return "必须选择正式 Timeline Tree 来源。";
             if (m_Request.Kind == TimelineContractKinds.MotionCurveClip &&
                 (m_Request.CurveEndFrame <= m_Request.StartFrame || m_Request.CurveEndFrame > m_Request.EndFrame))
                 return "Curve End Frame 必须位于 Clip 范围内。";

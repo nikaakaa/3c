@@ -37,6 +37,8 @@ TimelineEditorWindow
 
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
 - 左右轨道共享行高和滚动，曲线展开同步；右侧 Inspector 可折叠、拖拽调宽并保持最小可读宽度，窗口宽度不足时自动收起 Inspector。
+- 右侧 Clip Inspector 使用正式 `Clip` 字段显示 Authoring Id、Contract、帧长、Start/End、Blend In/Out 与 Clip In；Slate 参数行只复用原参数绘制和关键帧交互，曲线修改通过 `IEmbeddedTimelineClipBinding.ApplyCurveEdits` 回写同一 `TimelineEditorSessionContext`，不创建或选中 Slate `ActionClip`。
+- Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与正式右侧 Inspector，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。

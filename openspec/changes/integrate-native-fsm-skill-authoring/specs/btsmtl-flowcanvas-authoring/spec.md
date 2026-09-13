@@ -50,13 +50,13 @@ Skill的StateMachine子图 MUST由NodeCanvas原生FSM及正式FSMState/FSMConnec
 
 ### Requirement: 原生FSM能力必须遵守BTSMTL生命周期和转移语义
 
-原生Entry/Prime、Any、Exit与整体OnFSMEnter/Exit MUST分别映射正式入口路由、任意状态路由、退出调用与FSM整体钩子，MUST不混同StateBody的OnEnter/Root/OnExit。条件、priority、abortPolicy和同来源唯一order MUST只存于转移连接。原生无condition的OnFinish行为 MUST不得代替BTSMTL无条件边或state-root-completed条件；未登记的原生任务、栈调用和执行方式 MUST拒绝。ActionList/ConditionTask只可通过正式typed定义与compiler binding表达业务，不能交给插件运行。
+原生Entry/Prime、Any、Exit MUST分别表达入口路由、任意状态路由和退出当前FSM调用，MUST不被当作Ability终态。状态退出阶段及内部回调由运行代码拥有，不要求作者配置OnExit清理或终态图。条件、priority、abortPolicy和同来源唯一order MUST只存于转移连接。原生无condition的OnFinish行为 MUST不得代替BTSMTL无条件边或state-root-completed条件；未登记的插件任务/栈调用拒绝，正式业务仍编译进Program，不启动插件runtime。
 
 #### Scenario: 状态尚未完成但取消条件成立
 
 - **WHEN** 恢复窗口内闪避输入、动作准入等正式取消条件成立
-- **THEN** Program MUST按既有priority/order与中止合同选择转移，不等待插件状态完成
-- **AND** MUST先停止源主体并完成其OnExit及Action/Timeline清理，再依既有合同进入目标或退出调用
+- **THEN** Ability规则与生命周期 MUST接受相应结束请求并停止执行内容，不等待插件状态完成
+- **AND** 状态与Timeline模块 MUST自动处理内部退出和资源释放，不由作者OnExit决定结束结果
 
 #### Scenario: 原生任务没有编译映射
 
@@ -72,7 +72,7 @@ Skill的StateMachine子图 MUST由NodeCanvas原生FSM及正式FSMState/FSMConnec
 
 ### Requirement: Corin清理必须按真实消费者保留动作业务
 
-Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Setup、Clear Directional Dodge Run Intent及对应图内意图声明和失去引用的私有空图。清理 MUST先核对全部Skill、Timeline、typed目标、provider和编译消费者，不按显示名或缺少Get节点判定无消费。Dodge有效Body/Exit Monitor并行、动作窗口和目标快照 MUST保留；正式ControlModule跑步意图的设置/清理时机 MUST不因删除副本改变。StopThreshold消费者未完成正式归属裁决及迁移前 MUST不删除仍被引用的声明，也不新增临时共享provider。
+Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Setup、Clear Directional Dodge Run Intent及对应图内意图声明和失去引用的私有空图。清理 MUST按全部Skill、Timeline、typed目标、provider和编译消费者处理，不按显示名或缺少Get节点判定无消费。Dodge已迁入Native FSM的根图 MUST不恢复Startup Branches或Setup/Clear；有效结束条件迁回Ability规则/生命周期，StateBody清理由代码承担。原窗口取消、目标及ControlModule跑步意图语义保持；仍被引用且未裁决归属的StopThreshold声明不得删除或用临时provider替代。
 
 #### Scenario: 多条转移指向同一出口
 
@@ -80,11 +80,81 @@ Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Set
 - **THEN** 系统 MUST保留每条转移identity、condition、priority、abortPolicy和order，只改善条件与目标摘要
 - **AND** MUST不合并条件、复制Exit状态或移除动作准入及连段边
 
-#### Scenario: Dodge同时播放和监控退出
+#### Scenario: Dodge迁移后保留及时退出语义
 
-- **WHEN** 清理Dodge中的无消费Setup写入
-- **THEN** Timeline Body和Exit Monitor MUST保持原并行运行与停止语义
-- **AND** MUST不将整体替换成等待Timeline结束才检查退出的Sequence
+- **WHEN** Dodge根图已迁移为Native FSM并删除旧Setup/Parallel外壳
+- **THEN** Timeline执行期间的原取消/中断/中止条件与停止语义 MUST保留
+- **AND** MUST不恢复旧包装，也不得变成等待Timeline结束才响应取消
+
+### Requirement: Ability生命周期必须统一决定执行结束
+
+执行根完成、Ability取消规则、外部中断/替换和强制终止 MUST进入同一AbilityExecution生命周期处理，保留Complete/Cancel/Interrupt/Abort及原有效原因与请求竞争语义。接受的结束结果 MUST在停止尚运行内容前明确，退出阶段不能重写或反推结果；状态内部转换或单个Timeline完成不得自动等同整个Ability结束。终态与逻辑停止过程 MUST复用同一执行状态，不能增加第二运行链。
+
+#### Scenario: 闪避替换攻击
+- **WHEN** 闪避替换满足正式规则并中断攻击
+- **THEN** 生命周期 MUST先接受攻击的Interrupt，再停止其逻辑执行；必要停止完成后允许新能力激活
+- **AND** 状态退出回调不得重新选择Cancel/Complete，也不得只因旧动画仍淡出阻止新能力
+
+#### Scenario: 连段切换内部状态
+- **WHEN** Attack1正常转移到Attack2
+- **THEN** 同一AbilityExecution MUST继续执行，状态代码处理原状态退出
+- **AND** 不得因State.OnExit或Timeline局部结束就结束整个Ability
+
+### Requirement: 状态退出清理必须由代码自动完成
+
+状态、执行子图、Timeline及各模块拥有的窗口和运行资源 MUST由对应代码按生命周期自动停止/回收，不要求作者连接OnExit清理、动画释放或结束分派节点。内部OnExit与正式强制停止仍由代码处理，必要释放不能依赖普通回调一定执行。Dodge旧ActionExit的有效结束条件迁回Ability后，Selector、空规则、被替代Submit分支及空作者OnExit页 MUST删除，不能隐藏进新节点或子图。
+
+#### Scenario: Ability没有作者OnExit图
+- **WHEN** 正常完成、取消、中断或强制终止没有配置作者OnExit图的Ability
+- **THEN** 对应运行模块 MUST完成其拥有内容的停止和释放，缺少作者清理图不能成为资源残留原因
+- **AND** 不得自动生成空OnExit页补齐旧结构约束
+
+#### Scenario: 退出时Ability结果已经确定
+- **WHEN** Ability已接受Cancel或Interrupt，状态层随后收到统一停止上下文
+- **THEN** 原终态 MUST保持；内部回调需要原因时读取既定执行上下文
+- **AND** 不得从TreeParentStop等状态退出原因重新猜测或提交另一个终态
+
+### Requirement: Timeline片段混合与跨动作过渡必须各有唯一owner
+
+Timeline动画轨道/片段 MUST拥有素材、时间区间、片段重叠及WeightCurve/EaseIn/EaseOut等局部混合。不同动作播放之间的接替、动作退出到基础姿态 MUST由对应动作Slot的正式转移规则处理；基础姿态之间的切换属于Pose动画状态机。各处 MUST不重复保存或执行同一次交接的时长/曲线。中途打断 MUST从当前采样和混合结果接替，不跳到旧片段末尾冒充EaseOut。
+
+#### Scenario: 同一Timeline内两个片段重叠
+- **WHEN** 作者在Timeline内安排片段A/B的重叠区间和局部权重
+- **THEN** 播放请求 MUST保留该时间与局部混合含义，不把内部片段衔接转为跨Ability的Slot规则
+- **AND** 完整C#输出/生成 MUST恢复同一片段配置
+
+#### Scenario: 攻击动画中途被闪避接替
+- **WHEN** 攻击逻辑已中断而旧播放按配置淡出
+- **THEN** 动作Slot MUST按正式源/目标转移规则接入新播放，旧播放仅保留表现所需状态
+- **AND** 旧Timeline不得继续产生命中、效果或技能Motion，不以淡出时长代替玩法恢复时间
+
+#### Scenario: 退出后没有接替动画
+- **WHEN** 动作贡献淡出且没有新动作播放
+- **THEN** PoseGraph MUST继续输出基础姿态并在贡献消失后自然显露
+- **AND** 不要求作者在OnExit硬播Idle或显式释放播放
+
+#### Scenario: 完整导出与生成Ability
+- **WHEN** C#作者工具输出并生成含动画播放的Ability
+- **THEN** 自有Timeline的局部混合和明确Slot/表现引用 MUST完整保留，Slot过渡与Pose配置保留其原owner，停止与释放由原模块自动执行
+- **AND** 输出不得重新创建Action Exit Selector、空规则或作者OnExit清理链
+
+### Requirement: 动作混合历史必须由对应动画模块维护
+
+连续接替时必要的旧来源、权重历史、容量和释放 MUST由动作Slot自身的混合实现管理，不能由Ability、State.OnExit或EventGraph维护第二份栈。Pose分支确有多来源历史时可使用其显式BlendStack，但不得因存在动作Slot自动新增全局BlendStack或重复管理同一动作历史。源/目标过渡 MUST使用该节点正式规则。
+
+#### Scenario: A到B尚未混完又接入C
+- **WHEN** 动作A/B正在混合时收到C的正式播放请求
+- **THEN** 混合模块 MUST保留当前输出所需历史并接入C，不清空后从完整B姿态重新开始
+- **AND** 旧来源无贡献后由动画代码回收，不继续执行已停止的Ability逻辑
+
+### Requirement: 动画EventGraph与动作播放请求必须保持不同的数据路径
+
+动画EventGraph MUST从Gameplay原始事实计算动画专用变量，供PoseGraph/基础动画状态机消费。Ability Timeline的正式播放、时间、片段权重和停止请求 MUST沿既有Presentation接口直接进入动作Slot，不强制先经EventGraph再次仲裁或转发。EventGraph不得因此获得结束Ability、反写Gameplay或手工推进混合栈的职责；BTSMTL也不得接管最终骨骼采样和Pose组合。
+
+#### Scenario: 技能播放和基础姿态同时工作
+- **WHEN** 动画EventGraph更新走跑变量，同时Ability请求播放攻击动画
+- **THEN** 基础姿态 MUST由动画状态机按变量决定，攻击播放请求由Slot接入并组合
+- **AND** 不需要EventGraph另接开始/停止事件才能释放该技能播放，也不创建第二播放器
 
 ### Requirement: 所有作者入口必须遵守同一能力与事务合同
 
@@ -255,11 +325,11 @@ AbilityGrant MUST表示明确角色/装备授予的Ability引用、输入映射�
 
 ### Requirement: Skill Timeline必须表达有限动作并输出表现合同
 
-Skill Timeline MUST能够表达动作AnimationTrack、AnimationClip、Action Slot、进入/退出混合请求、命中窗口、取消和完成时序。Timeline MUST输出稳定的Animation Producer/Playback合同；最终Locomotion混合、Layer、IK和Output Pose MUST由Presentation/PoseGraph完成，Skill MUST不直接写最终Pose。
+Skill Timeline MUST能够表达动作AnimationTrack、AnimationClip、指定动作Slot、片段重叠/局部权重以及命中窗口、取消和完成时序。Timeline MUST输出稳定Animation Producer/Playback、时间、局部权重和自动停止通知；跨动作接替由Slot正式规则处理，基础Locomotion转移、Layer、IK和Output Pose由Presentation/PoseGraph完成。Skill不得直接写最终Pose，也不得通过作者OnExit补齐播放释放。
 
 #### Scenario: 技能播放动作
 - **WHEN** GA式Skill进入动作Timeline
-- **THEN** Program MUST按Timeline发出动作表现请求并等待完成、混出或中断
+- **THEN** Program MUST按Timeline发出动作表现请求并推进其Gameplay完成/取消流程，不隐含等待纯表现混出结束
 - **AND** Presentation MUST依据该请求完成最终动画组合
 
 ### Requirement: Skill Program必须进入可替换的Simulation Pipeline

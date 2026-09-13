@@ -4,6 +4,8 @@
 
 r3的完整技能入口为GameplayAbilityDefinition，AbilityGraph是其内部执行页。下文Skill Graph名称用于识别既有编辑表面，正式Ability入口不能只打开裸图或要求作者到角色Definition和空ActionContext资产中拼接技能。
 
+r4中退出与资源回收 MUST由原运行模块自动完成，作者不得被要求配置OnExit清理图或终态/释放节点。Timeline动画轨道/片段 MUST保留素材、时间、重叠与局部权重编辑；跨动作接替规则 MUST在对应动作Slot动画配置编辑，基础姿态转移属于Pose动画状态机。动画EventGraph提供动画变量/判断，不作为全部播放和停止的必经入口，同一过渡参数不得多处重复配置。
+
 ### Requirement: Graph Authoring Editor Shell必须提供可组合工作区区域
 
 本要求对BTSMTL技能 MUST由FlowCanvas原生GraphEditor的canvas、panel和command表面及显式domain adapter履行，不再指定旧GraphView作为技能画布。Skill domain adapter只能向原生表面提供业务数据与Mutation，不得用自定义面板替换原生Panels。显式重操作、editor-only状态和唯一数据源约束仍有效；以下旧Shell／GraphView实现要求对未迁移领域保持，不能据此迁移其他领域。

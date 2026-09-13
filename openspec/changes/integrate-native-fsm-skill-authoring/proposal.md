@@ -4,7 +4,15 @@
 
 r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完整技能的入口，集中拥有技能规则和执行图。现有SkillDefinition、ActionProfile、ActionContext与角色图列表分散表达同一技能，新C#生成也只登记图；本阶段收敛这些所有权和命名，不把只重建Graph称为完整Ability。
 
+2026-09-13 Dodge交接补充：DodgeBack/DodgeForward已通过正式generate_assets写回Native FSM + StateBody + Timeline，根图Setup清理已完成；StateBody内仍有旧Action Exit Selector和空Action Exit_To_Succeed_Rule。该结构是迁移中间态，不是Native FSM必需组件，也不代表退出生命周期已最终收敛。
+
 ## What Changes
+
+- r4撤销“OnExit分派终态”方案：Ability规则和统一生命周期代码决定Complete/Cancel/Interrupt/Abort，先记住结果再停止执行内容；State.OnExit仅为代码内部退出阶段，不让作者编排清理、结束或动画释放。内部状态切换不结束整个Ability。
+- 系统按原owner自动停止StateBody/Timeline、关闭相关窗口并释放运行资源；将旧ActionExit里的有效结束条件迁回Ability规则/请求入口，再删除Selector、空条件、被替代Submit分支及空作者OnExit页，不以新分派节点换壳。
+- 固定动画分工：Timeline编辑动画素材、时间区间、片段重叠及局部WeightCurve/EaseIn/EaseOut；动作Slot的正式转移规则处理不同动作播放的接替，Pose动画状态机管理基础姿态转移。混合栈的历史/容量/回收由其动画模块拥有，不在Timeline重复配置跨动作过渡或新增全局BlendStack。
+- Ability/Timeline代码自动发布有精确实例身份的播放与停止请求，直接进入现有Presentation/Slot链。动画EventGraph从原始事实计算动画变量供Pose消费，不成为技能播放/退出的必经转发或仲裁层，不反写Gameplay。
+- 技能逻辑停止后可保留纯表现淡出，新Ability不必等旧动画权重为零；旧表现不能继续命中、效果或技能位移。无接替动画时自然显露基础姿态，不在OnExit播放Idle，也不用淡出时间代替玩法恢复时间。
 
 - **BREAKING**：将完整技能作者入口收敛为独立`GameplayAbilityDefinition`资产；其唯一`AbilityGraph`和私有FSM、条件、Macro、Timeline归该Ability拥有。角色通过`AbilityGrant`引用、授予并绑定输入，不再分别维护SkillDefinitions与SkillGraphs两套登记。
 - 技能专用的激活、阻断、取消、目标要求及效果引用收进Ability配置；真正需要共同维护的激活规则才显式共享，专用与共享只允许一个有效来源。输入映射与已有授予参数归角色/装备，当前目标、释放代次和执行状态归运行上下文。
@@ -26,7 +34,7 @@ r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完
 
 ### New Capabilities
 
-- `btsmtl-flowcanvas-authoring`：保留原稳定能力路径，补充GameplayAbilityDefinition完整入口、AbilityGrant、执行上下文和完整Ability生成范围；既有原生FSM不重新实施。
+- `btsmtl-flowcanvas-authoring`：保留原稳定能力路径，补充GameplayAbilityDefinition、统一逻辑结束、内部清理、动画侧退出通知边界及完整Ability生成范围；动画策略与混合由动画领域拥有。
 
 ### Modified Capabilities
 

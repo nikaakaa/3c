@@ -42,6 +42,14 @@ namespace ThirdPersonCharacter.Pipeline
             return new GameplayAbilityProviderBinding(providers);
         }
 
+        public ThirdPersonSimulation.CharacterSimulationProgram LoadFloat32GameplayAbility(
+            ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset asset)
+        {
+            if (!asset)
+                throw new ArgumentNullException(nameof(asset));
+            return asset.Load(BuildGameplayAbilityProviderBinding());
+        }
+
 #if UNITY_EDITOR
         void OnValidate()
         {

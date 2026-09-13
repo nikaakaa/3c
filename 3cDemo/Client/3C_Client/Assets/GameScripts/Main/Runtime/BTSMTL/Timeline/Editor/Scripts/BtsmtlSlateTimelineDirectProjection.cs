@@ -806,6 +806,26 @@ namespace BTSMTL.Timeline.Editor
             RebuildBindings();
         }
 
+        public void DeleteClips(IReadOnlyList<IEmbeddedTimelineClipBinding> clips)
+        {
+            if (IsReadOnly || clips == null)
+                return;
+            BtsmtlTimelineClipBinding[] directClips = clips
+                .OfType<BtsmtlTimelineClipBinding>()
+                .Where(value => value?.Source != null)
+                .ToArray();
+            if (directClips.Length == 0)
+                return;
+            m_Session.Apply(() =>
+            {
+                for (int index = 0; index < directClips.Length; index++)
+                    Timeline.RemoveClip(directClips[index].Source);
+                Timeline.Init();
+            }, "Delete Timeline Clips");
+            m_BeginSelectionId = string.Empty;
+            RebuildBindings();
+        }
+
         public void MoveTrack(IEmbeddedTimelineTrackBinding track, int index)
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding directTrack))

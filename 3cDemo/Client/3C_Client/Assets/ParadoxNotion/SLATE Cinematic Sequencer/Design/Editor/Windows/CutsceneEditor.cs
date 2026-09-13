@@ -2069,6 +2069,18 @@ namespace Slate
             if (embeddedTimeline == null)
                 return;
 
+            if (e.type == EventType.KeyDown && !e.control && !e.shift &&
+                (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace))
+            {
+                if (embeddedMultiSelection != null && embeddedMultiSelection.Count > 0)
+                    ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClips(embeddedMultiSelection.ToArray()), "Delete Clips");
+                else if (embeddedTimeline.Selected is IEmbeddedTimelineClipBinding selectedClip)
+                    ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(selectedClip), "Delete Clip");
+                embeddedMultiSelection = null;
+                embeddedTimeline.Select(null);
+                e.Use();
+            }
+
             if (e.type == EventType.MouseDown && (e.button == 0 || e.button == 1) && !embeddedEditStarted)
             {
                 embeddedEditStarted = !embeddedTimeline.IsReadOnly;

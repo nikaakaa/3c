@@ -554,6 +554,11 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor?.DrawEmbeddedGUI(width, height, beginWindows, endWindows);
         }
 
+        public void ConfigureRepaint(Action repaint)
+        {
+            m_EmbeddedEditor?.ConfigureEmbeddedRepaint(repaint);
+        }
+
         public BtsmtlSlateTimelineViewState CaptureViewState()
         {
             return new BtsmtlSlateTimelineViewState(

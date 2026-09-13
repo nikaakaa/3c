@@ -760,6 +760,12 @@ namespace Slate
             embeddedHistoryTime = historyTime;
         }
 
+        public void ConfigureEmbeddedRepaint(System.Action repaint)
+        {
+            if (embeddedSurface)
+                embeddedRepaint = repaint;
+        }
+
         public void InitializeStandalone(
             Cutscene newCutscene,
             System.Action repaint,

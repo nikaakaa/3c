@@ -470,6 +470,7 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexGrow = 1f;
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
+            m_SlateProjection.ConfigureRepaint(() => m_SlateSurface?.MarkDirtyRepaint());
             m_WorkspaceSplit = new TwoPaneSplitView(
                 1,
                 Mathf.Clamp(m_DetailsWidth, DetailsMinWidth, DetailsMaxWidth),

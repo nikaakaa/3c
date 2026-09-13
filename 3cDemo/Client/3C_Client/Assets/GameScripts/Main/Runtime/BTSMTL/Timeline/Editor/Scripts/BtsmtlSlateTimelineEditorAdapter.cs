@@ -126,11 +126,6 @@ namespace BTSMTL.Timeline.Editor
                 m_Surface.DrawGUI(width, height);
         }
 
-        public void DrawEmbeddedGUI(float width, float height, Action beginWindows, Action endWindows)
-        {
-            DrawEmbeddedGUI(width, height);
-        }
-
         public void ApplyFormalMutation(Action mutation, string undoName)
         {
             if (m_ReadOnly)

@@ -49,6 +49,7 @@ TimelineEditorWindow
 - Curve 区高度以 72px 为下限、每个通道至少 20px；通道数量增加时只扩展当前 Track，不压缩参数名和关键帧行。
 - Surface 的重绘由窗口 host 回调按需触发；编辑提交、运行/历史 overlay 和手势变化主动请求重绘，Timeline 窗口不再挂常驻 `EditorApplication.update` 刷新循环。
 - 删除 Session 中只返回 `1f/0/0f` 的旧帧几何占位 port；作者帧、像素和吸附只由纯 Surface 管理，Session 保留正式 FrameRate、selection 和 mutation owner。
+- 删除 BTSMTL 唯一 Timeline 窗口不使用的 `BeginWindows/EndWindows` 嵌入兼容签名，Surface 只保留普通两参数绘制入口。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

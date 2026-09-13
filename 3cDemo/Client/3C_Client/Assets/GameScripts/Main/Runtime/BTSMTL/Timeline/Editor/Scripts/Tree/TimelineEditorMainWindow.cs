@@ -677,9 +677,7 @@ namespace BTSMTL.Timeline.Editor
             Rect rect = m_SlateSurface.contentRect;
             m_SlateProjection.DrawEmbeddedGUI(
                 Mathf.Max(1f, rect.width),
-                Mathf.Max(1f, rect.height),
-                BeginWindows,
-                EndWindows);
+                Mathf.Max(1f, rect.height));
         }
 
         void RebuildDetails(TimelineEditorSelection selection)

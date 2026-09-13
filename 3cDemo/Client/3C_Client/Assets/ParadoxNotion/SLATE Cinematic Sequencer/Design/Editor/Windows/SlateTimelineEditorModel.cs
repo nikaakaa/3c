@@ -188,24 +188,41 @@ namespace Slate
         public bool RuntimeActive { get; }
     }
 
+    public sealed class SlateTimelineEditorSectionView
+    {
+        public SlateTimelineEditorSectionView(string sectionId, string displayName, int frame)
+        {
+            SectionId = sectionId ?? string.Empty;
+            DisplayName = displayName ?? string.Empty;
+            Frame = Mathf.Max(0, frame);
+        }
+
+        public string SectionId { get; }
+        public string DisplayName { get; }
+        public int Frame { get; }
+    }
+
     public sealed class SlateTimelineEditorGroupView
     {
         public SlateTimelineEditorGroupView(
             string groupId,
             string displayName,
             bool isCollapsed,
-            IReadOnlyList<SlateTimelineEditorTrackView> tracks)
+            IReadOnlyList<SlateTimelineEditorTrackView> tracks,
+            IReadOnlyList<SlateTimelineEditorSectionView> sections = null)
         {
             GroupId = groupId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
             IsCollapsed = isCollapsed;
             Tracks = tracks ?? Array.Empty<SlateTimelineEditorTrackView>();
+            Sections = sections ?? Array.Empty<SlateTimelineEditorSectionView>();
         }
 
         public string GroupId { get; }
         public string DisplayName { get; }
         public bool IsCollapsed { get; }
         public IReadOnlyList<SlateTimelineEditorTrackView> Tracks { get; }
+        public IReadOnlyList<SlateTimelineEditorSectionView> Sections { get; }
     }
 
     public sealed class SlateTimelineEditorContentView

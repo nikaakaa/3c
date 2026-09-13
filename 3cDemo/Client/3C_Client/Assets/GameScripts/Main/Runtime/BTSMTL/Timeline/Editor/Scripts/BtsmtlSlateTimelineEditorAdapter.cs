@@ -330,7 +330,14 @@ namespace BTSMTL.Timeline.Editor
                     "timeline",
                     m_Request.Timeline.Name,
                     m_GroupCollapsed,
-                    tracks)
+                    tracks,
+                    m_Request.Timeline.Sections
+                        .Where(section => section != null)
+                        .Select(section => new SlateTimelineEditorSectionView(
+                            section.AuthoringId,
+                            section.Name,
+                            section.Frame))
+                        .ToArray())
             };
             return new SlateTimelineEditorContentView(
                 m_Request.Timeline.Name,

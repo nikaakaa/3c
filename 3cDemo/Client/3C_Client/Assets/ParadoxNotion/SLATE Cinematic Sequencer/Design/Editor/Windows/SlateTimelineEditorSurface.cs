@@ -455,6 +455,18 @@ namespace Slate
                 GUI.color = Color.yellow;
                 GUI.DrawTexture(new Rect(x, 28f, 1f, contentHeight - 28f), Styles.whiteTexture);
             }
+            for (int groupIndex = 0; groupIndex < m_Content.Groups.Count; groupIndex++)
+            {
+                SlateTimelineEditorGroupView group = m_Content.Groups[groupIndex];
+                for (int sectionIndex = 0; sectionIndex < group.Sections.Count; sectionIndex++)
+                {
+                    SlateTimelineEditorSectionView section = group.Sections[sectionIndex];
+                    float x = m_LeftMargin + FrameToX(section.Frame, timelineWidth);
+                    GUI.color = new Color(0.4f, 0.8f, 1f, 0.65f);
+                    GUI.DrawTexture(new Rect(x, 28f, 1f, contentHeight - 28f), Styles.whiteTexture);
+                    GUI.Label(new Rect(x + 3f, 30f, 120f, 18f), section.DisplayName, EditorStyles.miniLabel);
+                }
+            }
             GUI.color = Color.white;
         }
 

@@ -17,7 +17,9 @@ namespace Slate
         public static event Action<IAnimatableData> onCurvesUpdated;
 
         private static Dictionary<IAnimatableData, CurveRenderer> cache = new Dictionary<IAnimatableData, CurveRenderer>();
+        private static bool legacySubscriptionsInitialized;
         public static void DrawCurves(IAnimatableData animatable, IKeyable keyable, Rect posRect, Rect timeRect) {
+            EnsureLegacySubscriptions();
             CurveRenderer instance = null;
             if ( !cache.TryGetValue(animatable, out instance) ) {
                 cache[animatable] = instance = new CurveRenderer(animatable, keyable, posRect);
@@ -35,7 +37,10 @@ namespace Slate
         }
 
 
-        static CurveEditor() {
+        static void EnsureLegacySubscriptions() {
+            if (legacySubscriptionsInitialized)
+                return;
+            legacySubscriptionsInitialized = true;
             AnimatedParameter.onParameterChanged += RefreshCurvesOf;
             DopeSheetEditor.onCurvesUpdated += RefreshCurvesOf;
             CurveEditor3D.onCurvesUpdated += RefreshCurvesOf;
@@ -64,6 +69,7 @@ namespace Slate
 
 
         public static void FrameAllCurvesOf(IAnimatableData animatable) {
+            EnsureLegacySubscriptions();
             CurveRenderer instance = null;
             if ( !cache.TryGetValue(animatable, out instance) ) {
                 return;
@@ -109,8 +115,7 @@ namespace Slate
             public CurveRenderer(AnimationCurve[] curves, Rect posRect) {
                 this.curves = curves;
                 pureSnapInterval = 0f;
-                undoHandler = () => RefreshCurves();
-                Undo.undoRedoPerformed += undoHandler;
+                undoHandler = null;
                 Init();
             }
 
@@ -124,8 +129,7 @@ namespace Slate
                 this.posRect = posRect;
                 pureSnapInterval = Mathf.Max(0.0001f, snapInterval);
                 pureUpdated = onUpdated;
-                undoHandler = () => RefreshCurves();
-                Undo.undoRedoPerformed += undoHandler;
+                undoHandler = null;
                 Init();
             }
 

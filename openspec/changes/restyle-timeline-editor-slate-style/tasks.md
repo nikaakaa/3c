@@ -88,7 +88,7 @@
 ## 11. 无组件 Slate Editor 输入迁移
 
 - [x] 11.1 已建立并接入普通 C# 内容读视图、稳定元素 ID、帧/曲线输入、手势草稿和实例命令/UI host 合同；不继承组件或实现 runtime IDirectable/IKeyable
-- [ ] 11.2 将 CutsceneEditorSurface 改为普通可释放 SlateTimelineEditorSurface，迁移 Bind/DrawGUI/Refresh/Dispose、行列表、Clip包装器、Section与快捷键，移除 Cutscene/Transform/Validate 依赖
+- [x] 11.2 已将 CutsceneEditorSurface 的 BTSMTL Timeline 入口改为普通可释放 SlateTimelineEditorSurface，完成 Bind/DrawGUI/SetContent/Dispose、行列表、Clip、Section、游标拖动与快捷键迁移，移除 Cutscene/Transform/Validate 依赖
 - [ ] 11.3 将 CurveEditor/DopeSheet/参数列表改接完整曲线草稿、time-domain/帧映射和命令 port，保留 Slate 算法，移除组件参数反射、root.currentTime、AutoKey和 proxy Undo
 - [x] 11.4 已将打开链切换为 `BtsmtlSlateTimelineEditorAdapter`，纯读取 TimelineData 并调用既有 typed 新增/字段/Curve/Session/Undo；右侧 Inspector、稳定 ID 选择和视图恢复沿用同一窗口链
 - [x] 11.5 BTSMTL Timeline 打开链已切换到 `BtsmtlSlateTimelineEditorAdapter`，删除隐藏宿主、BtsmtlSlateGroup/Track/ActionClip 组件类、CreateChild/AddComponent/groupsRoot/组件扫描及旧签名/fallback 路径

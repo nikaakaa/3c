@@ -839,7 +839,10 @@ namespace BTSMTL.Timeline.Editor
                 clone.RegenerateAuthoringIdentity();
                 if (clone is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
+                int originalStartFrame = source.StartFrame;
                 int originalEndFrame = source.EndFrame;
+                float splitRatio = Mathf.Clamp01(
+                    (frame - originalStartFrame) / (float)Mathf.Max(1, originalEndFrame - originalStartFrame));
                 m_Session.Apply(() =>
                 {
                     source.EndFrame = frame;
@@ -850,6 +853,7 @@ namespace BTSMTL.Timeline.Editor
                     clone.SelfEaseOutFrame = 0;
                     if (clone is MotionCurveClip cloneMotion)
                         cloneMotion.CurveEndFrame = Mathf.Clamp(cloneMotion.CurveEndFrame, clone.StartFrame + 1, clone.EndFrame);
+                    SplitClipCurves(source, clone, splitRatio);
                     m_Request.ContractCatalog.RequireClipPlacement(source.Track, clone);
                     source.Track.Clips.Add(clone);
                     source.Track.UpdateMix();
@@ -863,6 +867,57 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue($"Split Clip 失败：{exception.Message}");
                 RebuildBindings();
             }
+        }
+
+        static void SplitClipCurves(Clip source, Clip clone, float splitRatio)
+        {
+            if (splitRatio <= 0f || splitRatio >= 1f)
+                return;
+            var descriptors = new List<TimelineCurveChannelDescriptor>();
+            TimelineCurveChannelCatalog.CollectForTrack(source.Track, descriptors);
+            for (int index = 0; index < descriptors.Count; index++)
+            {
+                TimelineCurveChannelDescriptor descriptor = descriptors[index];
+                if (!descriptor.Supports(source) || !descriptor.Supports(clone))
+                    continue;
+                AnimationCurve sourceCurve = descriptor.Read(source);
+                AnimationCurve first = SplitNormalizedCurve(sourceCurve, splitRatio, true);
+                AnimationCurve second = SplitNormalizedCurve(sourceCurve, splitRatio, false);
+                descriptor.Replace(source, first);
+                descriptor.Replace(clone, second);
+            }
+        }
+
+        static AnimationCurve SplitNormalizedCurve(AnimationCurve source, float splitRatio, bool firstHalf)
+        {
+            AnimationCurve result = new AnimationCurve
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+            var keys = new List<Keyframe>();
+            Keyframe[] sourceKeys = source.keys;
+            for (int index = 0; index < sourceKeys.Length; index++)
+            {
+                Keyframe key = sourceKeys[index];
+                if (firstHalf ? key.time <= splitRatio : key.time >= splitRatio)
+                {
+                    float duration = firstHalf ? splitRatio : 1f - splitRatio;
+                    float time = firstHalf ? key.time / duration : (key.time - splitRatio) / duration;
+                    key.time = Mathf.Clamp01(time);
+                    key.inTangent *= duration;
+                    key.outTangent *= duration;
+                    keys.Add(key);
+                }
+            }
+            float splitValue = source.Evaluate(splitRatio);
+            if (firstHalf)
+                keys.Add(new Keyframe(1f, splitValue));
+            else
+                keys.Insert(0, new Keyframe(0f, splitValue));
+            result.keys = keys.OrderBy(key => key.time).ToArray();
+            result.UpdateTangentsFromMode();
+            return result;
         }
 
         public void MoveTrack(IEmbeddedTimelineTrackBinding track, int index)

@@ -1532,7 +1532,16 @@ namespace Slate
             int authoringFrame = embeddedCurrentFrame != null
                 ? embeddedCurrentFrame()
                 : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
-            GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
+            if (embeddedCurrentFrame != null && embeddedSetCurrentFrame != null)
+            {
+                GUILayout.Label("Edit", EditorStyles.miniLabel);
+                int requestedFrame = EditorGUILayout.IntField(authoringFrame, GUILayout.Width(52));
+                if (requestedFrame != authoringFrame)
+                    embeddedSetCurrentFrame(requestedFrame);
+                GUILayout.Label("F", EditorStyles.miniLabel);
+            }
+            else
+                GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
             GUILayout.EndHorizontal();
             GUI.EndGroup();
         }

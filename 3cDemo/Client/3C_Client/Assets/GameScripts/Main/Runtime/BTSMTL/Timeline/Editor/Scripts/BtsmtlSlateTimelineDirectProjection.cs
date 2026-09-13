@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using Slate;
+using ThirdPersonCamera;
 using UnityEditor;
 using UnityEngine;
 
@@ -1491,6 +1492,14 @@ namespace BTSMTL.Timeline.Editor
                 configuration.YawResponseWeight = request.YawResponseWeight;
                 configuration.Priority = request.CameraPriority;
             }
+            if (request.Kind == TimelineContractKinds.CameraOverrideClip)
+                configuration.CameraOverrideTrack = request.Resource as CameraOverrideTrackAsset;
+            if (request.Kind == TimelineContractKinds.CameraZoomClip)
+                configuration.CameraZoom = request.Resource as CameraZoomAsset;
+            if (request.Kind == TimelineContractKinds.CameraStretchClip)
+                configuration.CameraStretch = request.Resource as CameraStretchAsset;
+            if (request.Kind == TimelineContractKinds.CameraShotClip)
+                configuration.CameraShot = request.Resource as CameraShotAsset;
             if (request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
             {
                 configuration.TargetBindingId = request.TargetBindingId;

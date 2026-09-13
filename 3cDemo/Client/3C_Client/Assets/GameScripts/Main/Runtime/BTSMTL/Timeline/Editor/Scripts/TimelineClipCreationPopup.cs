@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using ThirdPersonCamera;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -136,6 +137,14 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.YawResponseWeight = EditorGUILayout.Slider("Yaw Response", m_Request.YawResponseWeight, 0f, 1f);
                 m_Request.CameraPriority = EditorGUILayout.IntField("Priority", m_Request.CameraPriority);
             }
+            else if (m_Request.Kind == TimelineContractKinds.CameraOverrideClip)
+                m_Request.Resource = EditorGUILayout.ObjectField("Override Track", m_Request.Resource, typeof(CameraOverrideTrackAsset), false);
+            else if (m_Request.Kind == TimelineContractKinds.CameraZoomClip)
+                m_Request.Resource = EditorGUILayout.ObjectField("Zoom", m_Request.Resource, typeof(CameraZoomAsset), false);
+            else if (m_Request.Kind == TimelineContractKinds.CameraStretchClip)
+                m_Request.Resource = EditorGUILayout.ObjectField("Stretch", m_Request.Resource, typeof(CameraStretchAsset), false);
+            else if (m_Request.Kind == TimelineContractKinds.CameraShotClip)
+                m_Request.Resource = EditorGUILayout.ObjectField("Shot", m_Request.Resource, typeof(CameraShotAsset), false);
             else if (m_Request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip)
             {
                 BuildBindingPopup("Target Binding", true, ref m_Request.TargetBindingId);
@@ -170,6 +179,14 @@ namespace BTSMTL.Timeline.Editor
                 return "Curve End Frame 必须位于 Clip 范围内。";
             if (m_Request.Kind == TimelineContractKinds.MotionWarpClip && string.IsNullOrEmpty(m_Request.SourceMotionClipId))
                 return "MotionWarp 必须选择已有 MotionCurve 来源。";
+            if (m_Request.Kind == TimelineContractKinds.CameraOverrideClip && m_Request.Resource is not CameraOverrideTrackAsset)
+                return "Camera Override 必须选择正式 Override Track。";
+            if (m_Request.Kind == TimelineContractKinds.CameraZoomClip && m_Request.Resource is not CameraZoomAsset)
+                return "Camera Zoom 必须选择正式 Zoom 资源。";
+            if (m_Request.Kind == TimelineContractKinds.CameraStretchClip && m_Request.Resource is not CameraStretchAsset)
+                return "Camera Stretch 必须选择正式 Stretch 资源。";
+            if (m_Request.Kind == TimelineContractKinds.CameraShotClip && m_Request.Resource is not CameraShotAsset)
+                return "Camera Shot 必须选择正式 Shot 资源。";
             if (m_Request.Kind == TimelineContractKinds.ActionCueClip &&
                 (string.IsNullOrWhiteSpace(m_Request.CueId) || string.IsNullOrWhiteSpace(m_Request.CueType)))
                 return "Cue Id 和 Cue Type 必须填写。";

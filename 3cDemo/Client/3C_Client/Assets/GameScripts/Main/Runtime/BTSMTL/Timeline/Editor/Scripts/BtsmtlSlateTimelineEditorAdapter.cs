@@ -465,6 +465,22 @@ namespace BTSMTL.Timeline.Editor
             menu.ShowAsContext();
         }
 
+        public void SetSectionFrame(string sectionId, int frame)
+        {
+            if (m_ReadOnly || !IsSourceCurrent())
+                return;
+            TimelineSection section = m_Request.Timeline.Sections.FirstOrDefault(value =>
+                value != null && string.Equals(value.AuthoringId, sectionId, StringComparison.Ordinal));
+            if (section == null)
+                return;
+            m_Session.Apply(() =>
+            {
+                m_Request.Timeline.ConfigureSection(section, section.Name, Mathf.Max(0, frame));
+                m_Request.Timeline.Init();
+            }, "Move Timeline Section");
+            RebuildContent();
+        }
+
         void ShowClipPopup(string trackId, string kind, int frame)
         {
             var request = new TimelineClipCreationRequest

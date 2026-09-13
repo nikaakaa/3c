@@ -35,6 +35,10 @@ namespace Slate
         int m_DragClipBlendOut;
         int m_DragClipAnchorFrame;
         int m_DragClipDelta;
+        string m_DragSectionId;
+        int m_DragSectionFrame;
+        int m_DragSectionAnchorFrame;
+        int m_DragSectionDelta;
 
         public SlateTimelineEditorContentView Content => m_Content;
         public SlateTimelineEditorSelection Selection => m_Selection;
@@ -404,6 +408,24 @@ namespace Slate
                     Event.current.Use();
                 }
             }
+            if (m_DragSectionId != null)
+            {
+                if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
+                {
+                    float timelineWidth = Mathf.Max(1f, surface.width - m_LeftMargin);
+                    m_DragSectionDelta = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth) - m_DragSectionAnchorFrame;
+                    m_Host.RequestRepaint();
+                    Event.current.Use();
+                }
+                if (Event.current.rawType == EventType.MouseUp)
+                {
+                    m_Commands.SetSectionFrame(m_DragSectionId, Mathf.Max(0, m_DragSectionFrame + m_DragSectionDelta));
+                    m_Commands.CommitGesture();
+                    m_DragSectionId = null;
+                    m_DragSectionDelta = 0;
+                    Event.current.Use();
+                }
+            }
         }
 
         void DrawTimeMarkers(float width, float contentHeight)
@@ -427,10 +449,22 @@ namespace Slate
                 for (int sectionIndex = 0; sectionIndex < group.Sections.Count; sectionIndex++)
                 {
                     SlateTimelineEditorSectionView section = group.Sections[sectionIndex];
-                    float x = m_LeftMargin + FrameToX(section.Frame, timelineWidth);
+                    int sectionFrame = section.Frame +
+                        (string.Equals(m_DragSectionId, section.SectionId, StringComparison.Ordinal) ? m_DragSectionDelta : 0);
+                    float x = m_LeftMargin + FrameToX(sectionFrame, timelineWidth);
                     GUI.color = new Color(0.4f, 0.8f, 1f, 0.65f);
                     GUI.DrawTexture(new Rect(x, 28f, 1f, contentHeight - 28f), Styles.whiteTexture);
                     GUI.Label(new Rect(x + 3f, 30f, 120f, 18f), section.DisplayName, EditorStyles.miniLabel);
+                    if (Event.current.type == EventType.MouseDown && Event.current.button == 0 &&
+                        Mathf.Abs(Event.current.mousePosition.x - x) <= 6f)
+                    {
+                        m_DragSectionId = section.SectionId;
+                        m_DragSectionFrame = section.Frame;
+                        m_DragSectionAnchorFrame = PositionToFrame(Event.current.mousePosition.x - m_LeftMargin, timelineWidth);
+                        m_DragSectionDelta = 0;
+                        m_Commands.BeginGesture("Move Timeline Section");
+                        Event.current.Use();
+                    }
                 }
             }
             GUI.color = Color.white;
@@ -508,7 +542,7 @@ namespace Slate
         {
             if (m_Disposed)
                 return;
-            if (m_DragClipId != null)
+            if (m_DragClipId != null || m_DragSectionId != null)
                 m_Commands?.CancelGesture();
             DisposeCurveRenderers();
             m_Disposed = true;
@@ -516,6 +550,7 @@ namespace Slate
             m_Commands = null;
             m_Host = null;
             m_DragClipId = null;
+            m_DragSectionId = null;
         }
     }
 }

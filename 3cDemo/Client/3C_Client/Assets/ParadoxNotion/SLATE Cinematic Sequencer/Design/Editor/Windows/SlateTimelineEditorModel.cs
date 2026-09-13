@@ -283,6 +283,7 @@ namespace Slate
         void SetTrackLocked(string trackId, bool locked);
         void RequestAddTrack(int frame);
         void RequestAddClip(string trackId, int frame);
+        void SetSectionFrame(string sectionId, int frame);
         void CopyClip(string clipId);
         void OpenSource(string clipId);
         void Select(SlateTimelineEditorSelection selection);

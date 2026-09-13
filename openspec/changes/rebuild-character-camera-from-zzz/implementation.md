@@ -74,7 +74,7 @@
 - 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
 - 外部动作索引 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/*.json` 的 `cameraKeys` 已逐动作解析：当前样本明确反查出 Shake 34 个、Stretch 10 个、Zoom 10 个资源键；其中 `sm0-011-Attack_Counter` 同时存在 Shake/Stretch/Zoom typed keys。该证据只确认来源可达性，未替代 3C Graph/Timeline 的正式 CameraCue request。
 - `CharacterCameraPresentationRuntime.Present` 已把 `GameplayPresentationFrameContext.RenderFrame` 与 `LocalLogicTick` 传入 `CharacterPresentationReplicationCaptureFrame`；这是静态链路证据，不等价于 Unity Console 或运行时回放通过。该修改发生在 Unity 增量重载期间，实时结果待实例恢复后读取。
-- Camera target resolver/runtime 已区分配置漏绑与运行时目标失效：前者继续在正式绑定校验处失败，后者移除使用失效 key 的目标请求、记录 `TargetInvalid` 到 `CameraDebugSnapshot` 并重新走当前正式目标裁决；没有新增自动选敌或默认目标补齐路径。
-- Camera PresentationCaptureFrame 已同步采集 `TargetRetired`、`TargetStopReason`、`TargetRetiredKey`，目标失效退出原因进入同一只读采样合同；当前仍只有静态证据，未宣称 Unity 运行时通过。
+- `4fb7111ea`：Camera target resolver/runtime 已区分配置漏绑与运行时目标失效：前者继续在正式绑定校验处失败，后者移除使用失效 key 的目标请求、记录 `TargetInvalid` 到 `CameraDebugSnapshot` 并重新走当前正式目标裁决；没有新增自动选敌或默认目标补齐路径。
+- `53ef18bc8`：Camera PresentationCaptureFrame 已同步采集 `TargetRetired`、`TargetStopReason`、`TargetRetiredKey`，目标失效退出原因进入同一只读采样合同；当前仍只有静态证据，未宣称 Unity 运行时通过。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

@@ -81,7 +81,7 @@ namespace BTSMTL.Timeline.Editor
         BtsmtlSlateTimelineViewState m_ViewState;
 
         [SerializeField]
-        float m_DetailsHeight = 180f;
+        float m_DetailsWidth = 320f;
 
         [SerializeField]
         bool m_DetailsCollapsed;
@@ -99,9 +99,11 @@ namespace BTSMTL.Timeline.Editor
         Label m_RevisionSummary;
         Label m_Status;
         ToolbarMenu m_RuntimeObservationMenu;
+        TwoPaneSplitView m_WorkspaceSplit;
+        VisualElement m_DetailsPane;
         VisualElement m_DetailsHost;
         ToolbarButton m_DetailsToggle;
-        bool m_DetailsAvailable;
+        bool m_NarrowDetailsCollapsed;
         RuntimeInstanceKey m_PinnedRuntimePlayback;
         bool m_HasPinnedRuntimePlayback;
 
@@ -357,14 +359,8 @@ namespace BTSMTL.Timeline.Editor
 
         void OnRootGeometryChanged(GeometryChangedEvent evt)
         {
-            if (evt.newRect.width < 600f || evt.newRect.height < 360f)
-            {
-                if (!m_DetailsCollapsed)
-                {
-                    m_DetailsCollapsed = true;
-                    ApplyDetailsVisibility();
-                }
-            }
+            m_NarrowDetailsCollapsed = evt.newRect.width < 900f || evt.newRect.height < 360f;
+            ApplyDetailsVisibility();
         }
 
         void OnEnable()
@@ -469,17 +465,40 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexGrow = 1f;
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
-            rootVisualElement.Add(m_SlateSurface);
-            rootVisualElement.Add(CreateDetailsToolbar());
-            m_DetailsHost = new VisualElement { name = "timeline-details" };
-            m_DetailsHost.style.flexShrink = 0f;
-            m_DetailsHost.style.height = Mathf.Clamp(m_DetailsHeight, 80f, 320f);
-            m_DetailsHost.style.maxHeight = 320f;
+            m_WorkspaceSplit = new TwoPaneSplitView(
+                1,
+                Mathf.Clamp(m_DetailsWidth, 240f, 480f),
+                TwoPaneSplitViewOrientation.Horizontal)
+            {
+                name = "timeline-workspace"
+            };
+            m_WorkspaceSplit.style.flexGrow = 1f;
+            m_WorkspaceSplit.style.flexShrink = 1f;
+            m_WorkspaceSplit.style.minHeight = 320f;
+            m_WorkspaceSplit.Add(m_SlateSurface);
+            m_DetailsPane = new VisualElement { name = "timeline-details-pane" };
+            m_DetailsPane.style.flexGrow = 1f;
+            m_DetailsPane.style.flexShrink = 0f;
+            m_DetailsPane.Add(CreateDetailsHeader());
+            m_DetailsHost = new ScrollView { name = "timeline-details" };
+            m_DetailsHost.style.flexGrow = 1f;
             m_DetailsHost.style.paddingLeft = 8f;
             m_DetailsHost.style.paddingRight = 8f;
             m_DetailsHost.style.paddingTop = 4f;
             m_DetailsHost.style.paddingBottom = 4f;
-            rootVisualElement.Add(m_DetailsHost);
+            m_DetailsPane.Add(m_DetailsHost);
+            m_WorkspaceSplit.Add(m_DetailsPane);
+            m_WorkspaceSplit.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (!m_DetailsCollapsed && m_WorkspaceSplit.fixedPane != null)
+                {
+                    float width = m_WorkspaceSplit.fixedPane.resolvedStyle.width;
+                    if (width > 0f)
+                        m_DetailsWidth = width;
+                }
+            });
+            rootVisualElement.Add(m_WorkspaceSplit);
+            ApplyDetailsVisibility();
             m_SlateProjection.SelectionChanged += RebuildDetails;
             m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
             RebuildDetails(m_SlateProjection.Selection);
@@ -614,6 +633,8 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
+            m_WorkspaceSplit = null;
+            m_DetailsPane = null;
             m_DetailsHost = null;
             m_RevisionSummary = null;
             m_Timeline = null;
@@ -671,12 +692,11 @@ namespace BTSMTL.Timeline.Editor
             m_DetailsHost.Clear();
             if (selection.Kind == TimelineEditorSelectionKind.None)
             {
-                m_DetailsAvailable = false;
+                m_DetailsHost.Add(new Label("选择 Track、Clip 或关键帧查看属性。"));
                 ApplyDetailsVisibility();
                 return;
             }
 
-            m_DetailsAvailable = true;
             if (selection.Clip != null)
             {
                 Clip clip = selection.Clip;
@@ -705,40 +725,27 @@ namespace BTSMTL.Timeline.Editor
             ApplyDetailsVisibility();
         }
 
-        VisualElement CreateDetailsToolbar()
+        VisualElement CreateDetailsHeader()
         {
-            var toolbar = new Toolbar { name = "timeline-details-toolbar" };
-            m_DetailsToggle = new ToolbarButton(() =>
-            {
-                m_DetailsCollapsed = !m_DetailsCollapsed;
-                ApplyDetailsVisibility();
-            });
-            m_DetailsToggle.style.width = 88f;
-            toolbar.Add(m_DetailsToggle);
-            var height = new Slider("Height", 80f, 320f)
-            {
-                value = Mathf.Clamp(m_DetailsHeight, 80f, 320f)
-            };
-            height.style.width = 220f;
-            height.RegisterValueChangedCallback(evt =>
-            {
-                m_DetailsHeight = evt.newValue;
-                if (m_DetailsHost != null)
-                    m_DetailsHost.style.height = m_DetailsHeight;
-            });
-            toolbar.Add(height);
-            ApplyDetailsVisibility();
+            var toolbar = new Toolbar { name = "timeline-details-header" };
+            var title = new Label("Inspector");
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            toolbar.Add(title);
             return toolbar;
         }
 
         void ApplyDetailsVisibility()
         {
             if (m_DetailsToggle != null)
-                m_DetailsToggle.text = m_DetailsCollapsed ? "Details ▸" : "Details ▾";
-            if (m_DetailsHost != null)
-                m_DetailsHost.style.display = m_DetailsAvailable && !m_DetailsCollapsed
-                    ? DisplayStyle.Flex
-                    : DisplayStyle.None;
+                m_DetailsToggle.text = m_DetailsCollapsed || m_NarrowDetailsCollapsed
+                    ? "Inspector ▸"
+                    : "Inspector ▾";
+            if (m_WorkspaceSplit == null)
+                return;
+            if (m_DetailsCollapsed || m_NarrowDetailsCollapsed)
+                m_WorkspaceSplit.CollapseChild(1);
+            else
+                m_WorkspaceSplit.UnCollapse();
         }
 
         VisualElement CreateAuthoringToolbar()
@@ -763,6 +770,12 @@ namespace BTSMTL.Timeline.Editor
             m_RevisionSummary = new Label(AuthoringRevisionLabel());
             m_RevisionSummary.style.marginLeft = 6f;
             m_RevisionSummary.tooltip = "TimelineData 当前作者内容指纹；不代表运行时已采用。";
+            m_DetailsToggle = new ToolbarButton(() =>
+            {
+                m_DetailsCollapsed = !m_DetailsCollapsed;
+                ApplyDetailsVisibility();
+            });
+            m_DetailsToggle.style.width = 100f;
             m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
             m_RuntimeObservationMenu.style.width = 150f;
             m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
@@ -774,6 +787,7 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
             toolbar.Add(m_RevisionSummary);
+            toolbar.Add(m_DetailsToggle);
             toolbar.Add(m_RuntimeObservationMenu);
             toolbar.Add(m_Status);
             RefreshRuntimeObservationMenu();

@@ -790,6 +790,23 @@ namespace Slate
                 embeddedAddTrack = binding.AddTrack;
         }
 
+        internal void ApplyEmbeddedCommand(System.Action command, string undoName)
+        {
+            if (embeddedTimeline == null || embeddedTimeline.IsReadOnly)
+                return;
+            try
+            {
+                embeddedTimeline.BeginEdit(undoName);
+                command?.Invoke();
+                embeddedTimeline.CommitEdit();
+            }
+            catch (System.Exception exception)
+            {
+                embeddedTimeline.CancelEdit();
+                ShowNotification(new GUIContent(exception.Message));
+            }
+        }
+
         public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
         {
             embeddedRuntimeTime = runtimeTime;
@@ -3842,31 +3859,33 @@ namespace Slate
             //CONTEXT
             void DoClipContextMenu() {
                 var menu = new GenericMenu();
+                IEmbeddedTimelineClipBinding formalClip = null;
+                if (editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy)
+                    editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out formalClip);
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
                     menu.AddItem(new GUIContent("Delete Clips"), false, () =>
                     {
+                        if (editor.embeddedTimeline != null)
+                        {
+                            var formalClips = new List<IEmbeddedTimelineClipBinding>();
+                            foreach (var act in multiSelection.Select(b => b.action).ToArray())
+                                if (act is IEmbeddedTimelineProxyIdentity proxy &&
+                                    editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                                    formalClips.Add(formalClip);
+                            if (formalClips.Count != 0)
+                            {
+                                editor.ApplyEmbeddedCommand(() => editor.embeddedTimeline.DeleteClips(formalClips), "Delete Timeline Clips");
+                                multiSelection = null;
+                                return;
+                            }
+                        }
                         editor.SafeDoAction(() =>
-                           {
-                               if (editor.embeddedTimeline != null)
-                               {
-                                   var formalClips = new List<IEmbeddedTimelineClipBinding>();
-                                   foreach (var act in multiSelection.Select(b => b.action).ToArray())
-                                       if (act is IEmbeddedTimelineProxyIdentity proxy &&
-                                           editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
-                                           formalClips.Add(formalClip);
-                                   if (formalClips.Count != 0)
-                                   {
-                                       editor.embeddedTimeline.DeleteClips(formalClips);
-                                       multiSelection = null;
-                                       return;
-                                   }
-                               }
-                               foreach ( var act in multiSelection.Select(b => b.action).ToArray() ) {
-                                   ( act.parent as CutsceneTrack ).DeleteAction(act);
-                               }
-                               editor.InitClipWrappers();
-                               multiSelection = null;
-                           });
+                        {
+                            foreach (var act in multiSelection.Select(b => b.action).ToArray())
+                                (act.parent as CutsceneTrack).DeleteAction(act);
+                            editor.InitClipWrappers();
+                            multiSelection = null;
+                        });
                     });
 
                     menu.ShowAsContext();
@@ -3883,7 +3902,13 @@ namespace Slate
                 }
 
                 if ( allowScale ) {
-                    menu.AddItem(new GUIContent("Fit Clip (F)"), false, () => { StretchFit(); });
+                    menu.AddItem(new GUIContent("Fit Clip (F)"), false, () =>
+                    {
+                        if (formalClip != null)
+                            editor.ApplyEmbeddedCommand(formalClip.StretchFit, "Fit Clip");
+                        else
+                            StretchFit();
+                    });
                     if ( action.length > 0 && !editor.embeddedSurface ) {
                         menu.AddItem(new GUIContent("Split At Cursor"), false, () => { Split(snapedPointerTime); });
                         menu.AddItem(new GUIContent("Split At Scrubber (S)"), false, () => { Split(editor.cutscene.currentTime); });
@@ -3891,35 +3916,57 @@ namespace Slate
                 }
 
                 if ( hasParameters ) {
-                    menu.AddItem(new GUIContent("Key At Cursor"), false, () => { action.TryAddIdentityKey(action.ToLocalTime(snapedPointerTime)); });
-                    menu.AddItem(new GUIContent("Key At Scrubber (K)"), false, () => { action.TryAddIdentityKey(action.RootTimeToLocalTime()); });
+                    menu.AddItem(new GUIContent("Key At Cursor"), false, () =>
+                    {
+                        if (formalClip != null)
+                            editor.ApplyEmbeddedCommand(() => formalClip.AddIdentityKey(Mathf.Clamp(snapedPointerTime - formalClip.StartTime, 0f, formalClip.Length)), "Key Clip");
+                        else
+                            action.TryAddIdentityKey(action.ToLocalTime(snapedPointerTime));
+                    });
+                    menu.AddItem(new GUIContent("Key At Scrubber (K)"), false, () =>
+                    {
+                        if (formalClip != null)
+                            editor.ApplyEmbeddedCommand(() => formalClip.AddIdentityKey(Mathf.Clamp(editor.EmbeddedCurrentTime() - formalClip.StartTime, 0f, formalClip.Length)), "Key Clip");
+                        else
+                            action.TryAddIdentityKey(action.RootTimeToLocalTime());
+                    });
                 }
 
                 menu.AddSeparator("/");
 
                 if ( hasActiveParameters ) {
-                    menu.AddItem(new GUIContent("Clean Keys Off-Range (C)"), false, () => { CleanKeysOffRange(); });
+                    menu.AddItem(new GUIContent("Clean Keys Off-Range (C)"), false, () =>
+                    {
+                        if (formalClip != null)
+                            editor.ApplyEmbeddedCommand(formalClip.CleanKeysOffRange, "Clean Keys");
+                        else
+                            CleanKeysOffRange();
+                    });
                     menu.AddItem(new GUIContent("Remove Animation"), false, () =>
                     {
                         if ( EditorUtility.DisplayDialog("Remove Animation", "All Animation Curve keys of all animated parameters for this clip will be removed.\nAre you sure?", "Yes", "No") ) {
-                            editor.SafeDoAction(() => { action.ResetAnimatedParameters(); });
+                            if (formalClip != null)
+                                editor.ApplyEmbeddedCommand(formalClip.ResetAnimation, "Remove Animation");
+                            else
+                                editor.SafeDoAction(() => { action.ResetAnimatedParameters(); });
                         }
                     });
                 }
 
                 menu.AddItem(new GUIContent("Delete Clip"), false, () =>
                 {
-                    editor.SafeDoAction(() =>
+                    if (formalClip != null)
                     {
-                        if (editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy &&
-                            editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
-                            editor.embeddedTimeline.DeleteClip(formalClip);
-                        else
+                        editor.ApplyEmbeddedCommand(() => editor.embeddedTimeline.DeleteClip(formalClip), "Delete Timeline Clip");
+                    }
+                    else
+                    {
+                        editor.SafeDoAction(() =>
                         {
                             ( action.parent as CutsceneTrack ).DeleteAction(action);
                             editor.InitClipWrappers();
-                        }
-                    });
+                        });
+                    }
                 });
 
                 menu.ShowAsContext();

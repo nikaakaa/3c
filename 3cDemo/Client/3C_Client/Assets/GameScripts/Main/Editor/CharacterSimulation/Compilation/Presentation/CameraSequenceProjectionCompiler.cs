@@ -91,6 +91,13 @@ namespace ThirdPersonCamera
                         euler.StageId,
                         euler.Offset,
                         euler.FlipForward);
+                case CameraRotationLastStage last:
+                    return new CameraRotationLastPayload(
+                        last.StageId,
+                        last.OverrideRotation,
+                        last.Rotation,
+                        last.UseRelativeYaw,
+                        last.LastCameraDataId);
                 default:
                     throw new InvalidOperationException(
                         $"Camera Sequence stage '{stage.StageId}' kind '{stage.Kind}' has no closed source evaluator.");

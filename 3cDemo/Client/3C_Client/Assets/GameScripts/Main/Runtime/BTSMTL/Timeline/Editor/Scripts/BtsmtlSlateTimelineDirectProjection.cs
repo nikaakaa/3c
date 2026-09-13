@@ -1348,13 +1348,15 @@ namespace BTSMTL.Timeline.Editor
         void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
         {
             var motionClipIds = Timeline.Tracks.SelectMany(track => track.Clips).OfType<MotionCurveClip>().Select(clip => clip.AuthoringId).ToArray();
+            int defaultEndFrame = frame + Mathf.Max(1, FrameRate / 20);
             var request = new TimelineClipCreationRequest
             {
                 TrackAuthoringId = trackAuthoringId,
                 Kind = kind,
                 StartFrame = frame,
-                EndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                CurveEndFrame = frame + Mathf.Max(1, FrameRate / 20)
+                EndFrame = defaultEndFrame,
+                DefaultEndFrame = defaultEndFrame,
+                CurveEndFrame = defaultEndFrame
             };
             PopupWindow.Show(
                 new Rect(0, 0, 1, 1),
@@ -1385,7 +1387,8 @@ namespace BTSMTL.Timeline.Editor
                         addedClip = request.Resource != null
                             ? Timeline.AddClip(m_Request.ContractCatalog, request.Resource, track, request.StartFrame)
                             : Timeline.AddClip(m_Request.ContractCatalog, track, request.StartFrame);
-                    addedClip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                    if (request.Kind != TimelineContractKinds.AnimationClip || request.EndFrame != request.DefaultEndFrame)
+                        addedClip.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
                     if (addedClip is MotionCurveClip motion)
                         motion.CurveEndFrame = Mathf.Clamp(request.CurveEndFrame, motion.StartFrame + 1, motion.EndFrame);
                     TimelineAuthoringClipBinding.Configure(Timeline, addedClip, BuildClipConfiguration(addedClip, request), this);

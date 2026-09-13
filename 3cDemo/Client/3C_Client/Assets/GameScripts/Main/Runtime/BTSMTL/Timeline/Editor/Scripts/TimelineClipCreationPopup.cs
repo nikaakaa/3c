@@ -15,6 +15,7 @@ namespace BTSMTL.Timeline.Editor
         public string Kind;
         public int StartFrame;
         public int EndFrame;
+        public int DefaultEndFrame;
         public int CurveEndFrame;
         public UnityEngine.Object Resource;
         public ExtraPolationMode Extrapolation = ExtraPolationMode.None;
@@ -75,7 +76,15 @@ namespace BTSMTL.Timeline.Editor
 
             if (m_Request.Kind == TimelineContractKinds.AnimationClip)
             {
+                UnityEngine.Object previousResource = m_Request.Resource;
                 m_Request.Resource = EditorGUILayout.ObjectField("Animation Clip", m_Request.Resource, typeof(UnityEngine.AnimationClip), false);
+                if (!ReferenceEquals(previousResource, m_Request.Resource) && m_Request.Resource is UnityEngine.AnimationClip animation)
+                {
+                    int resourceEndFrame = m_Request.StartFrame + Mathf.Max(1, Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate));
+                    if (m_Request.EndFrame == m_Request.DefaultEndFrame)
+                        m_Request.EndFrame = resourceEndFrame;
+                    m_Request.DefaultEndFrame = resourceEndFrame;
+                }
                 m_Request.Extrapolation = (ExtraPolationMode)EditorGUILayout.EnumPopup("Extrapolation", m_Request.Extrapolation);
                 m_Request.BlendProfileId = EditorGUILayout.TextField("Blend Profile", m_Request.BlendProfileId);
             }

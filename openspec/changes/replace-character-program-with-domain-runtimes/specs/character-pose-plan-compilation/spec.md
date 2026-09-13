@@ -115,4 +115,3 @@ Pose 节点的字段、默认值、端口、局部规则、资源引用和子图
 #### Scenario: 只有旧PoseImage存在
 - **WHEN** 角色缺少合法原生图但磁盘上仍有旧 Image
 - **THEN** 实例准备 MUST报告缺失图，不能读取旧 Image 继续运行
-

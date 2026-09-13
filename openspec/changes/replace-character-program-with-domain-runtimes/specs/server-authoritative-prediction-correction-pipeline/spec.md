@@ -69,4 +69,3 @@ Authority baseline 和 Prediction History MUST保存同一 Tick 已提交的控�
 #### Scenario: 恢复活动技能与控制状态
 - **WHEN** 纠正点位于动作中段且存在有效控制状态与效果
 - **THEN** 系统 MUST先完整解码候选，再原子恢复各领域与世界并按原策略重放
-

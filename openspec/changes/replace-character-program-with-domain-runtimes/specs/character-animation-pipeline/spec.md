@@ -182,4 +182,3 @@ Final Publication MUST唯一拥有 Committed／Pending 最终姿态、完整物�
 - **WHEN** Slot usage消失、retirement permission和backend release依赖全部在成功帧内匹配
 - **THEN** Runtime MUST在Seal后执行唯一deferred release command
 - **AND** MUST不在原生Pose图成功前销毁旧Playable或复用其workspace槽位
-

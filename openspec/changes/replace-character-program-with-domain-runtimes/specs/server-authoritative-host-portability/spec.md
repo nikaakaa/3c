@@ -54,4 +54,3 @@ neutral Simulation Core 与 ServerAuthoritative Model MUST只定义通用角色�
 #### Scenario: 普通DotNet装配角色
 - **WHEN** Authority Host 取得合法技能数据、模块配置、roster 和 Solver
 - **THEN** 它 MUST在不加载 Unity 或 FlowCanvas 的条件下构造同一玩法运行，并继续按能力合同拒绝非法组合
-

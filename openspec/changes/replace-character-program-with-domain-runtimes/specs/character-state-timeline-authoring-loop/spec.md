@@ -38,5 +38,3 @@ Corin Locomotion Gameplay状态行为 MUST由C#控制模块拥有；基础连招
 - **WHEN** 作者下钻Attack1 StateNode
 - **THEN** 编辑器 MUST打开该StateNode的inline StateBehaviorSubTree
 - **AND** 项目 MUST不要求`Attack1SubTree.asset`
-
-

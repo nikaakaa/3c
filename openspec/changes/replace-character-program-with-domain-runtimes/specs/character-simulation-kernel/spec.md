@@ -207,4 +207,3 @@ Evaluate／Finalize MUST保留同一 actor／Tick 事务及原业务顺序，通
 #### Scenario: 控制与技能共同产生运动
 - **WHEN** 当前 Tick 的控制与活动技能各提交运动贡献
 - **THEN** 同一 Evaluate MUST按原仲裁生成唯一请求，Finalize 等待对应世界结果后一次提交
-

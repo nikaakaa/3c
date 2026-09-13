@@ -13,14 +13,14 @@
 
 ### Requirement: 模型策略必须集中在模型 Definition 与 Pass 配置
 
-ServerAuthoritativeHybrid的prediction、authority、history、snapshot、cadence、missing-input与output disposition policy MUST只在模型Definition、Source或Pass config。可靠输出 MUST由GameplayFactKind与ProducerId coverage配置；ActionProfile、Effect、Graph、Timeline与Blackboard MUST不复制模型策略，也 MUST不要求逐Action或逐Effect策略表。缺失角色玩法 coverage时配置 MUST失败。                    
+ServerAuthoritativeHybrid的prediction、authority、history、snapshot、cadence、missing-input与output disposition policy MUST只在模型Definition、Source或Pass config。可靠输出 MUST由GameplayFactKind与ProducerId coverage配置；ActionProfile、Effect、Graph、Timeline与Blackboard MUST不复制模型策略，也 MUST不要求逐Action或逐Effect策略表。缺失角色玩法 coverage时配置 MUST失败。
 
 #### Scenario: Producer 缺少复制覆盖
 
-- **WHEN** Corin Program声明animation producer               
-- **AND** 模型配置没有ProducerId coverage         
+- **WHEN** Corin已授予技能声明animation producer
+- **AND** 模型配置没有ProducerId coverage
 - **THEN** ModelDefinition 或 Pipeline compile MUST明确失败
-- **AND** MUST不按名称或ActionProfile推断                
+- **AND** MUST不按名称或ActionProfile推断
 
 
 ### Requirement: ServerAuthoritative 权威运动必须拥有独立模拟后端

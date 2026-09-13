@@ -186,4 +186,3 @@ Timeline Curve Editor MUST只提供Timeline-local作者投影与正式mutation�
 - **WHEN** 作者预览一个合法有限动作 Timeline
 - **THEN** 预览 MUST通过动作请求进入原生 Pose 实例，保留动作时间与 Slot 混合语义
 - **AND** MUST不创建另一套动画执行器或生成临时角色 Program
-

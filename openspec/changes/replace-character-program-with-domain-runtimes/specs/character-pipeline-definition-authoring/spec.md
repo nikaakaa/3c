@@ -114,4 +114,3 @@ Definition Inspector MUST以正式配置引用为主；技能产物、资源状�
 - **WHEN** 作者选中CharacterPipelineDefinition
 - **THEN** Inspector MUST不序列化或绘制第二份generated Equipment catalog
 - **AND** 编译状态 MAY以只读摘要显示
-

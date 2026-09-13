@@ -9,5 +9,3 @@
 - **WHEN** Pose Runtime为执行计划增加内部offset或buffer index
 - **THEN** Authoring capability、Details与C#作者参数 MUST不自动暴露该字段
 - **AND** 对应节点或资源模块 MUST在实例初始化时准备该内部值，不生成Pose IR
-
-

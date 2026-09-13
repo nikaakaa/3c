@@ -4,7 +4,7 @@ using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
-	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IActionSkillLifecyclePort<Float32ActionInstanceState>
+	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IAbilityLifecyclePort<Float32ActionInstanceState>
 	{
 		readonly Float32EvaluationFrame m_Frame;
 		readonly IFloat32InputPort m_InputRuntime;
@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
 		readonly Func<OperationHandle, bool> m_IsOperationStopComplete;
 		readonly ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation, Float32ActionInstanceState> m_Activation;
 		readonly ActionSkillCommitFlow<SimulationActionTargetSnapshot, Float32ActionInstanceState> m_Commit;
-		readonly ActionSkillLifecycleFlow<Float32ActionInstanceState> m_Lifecycle;
+		readonly AbilityExecution<Float32ActionInstanceState> m_Lifecycle;
 
 		public Float32ActionRuntime(
 			Float32ProgramAccess access,
@@ -48,14 +48,14 @@ namespace ThirdPersonSimulation
 			m_EquipmentContext = equipmentContext ?? throw new ArgumentNullException(nameof(equipmentContext));
 			m_IsOperationStopComplete = isOperationStopComplete ?? (operation => true);
 			m_Commit = new ActionSkillCommitFlow<SimulationActionTargetSnapshot, Float32ActionInstanceState>(this);
-			m_Lifecycle = new ActionSkillLifecycleFlow<Float32ActionInstanceState>(this);
+			m_Lifecycle = new AbilityExecution<Float32ActionInstanceState>(this);
 			m_Activation = new ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation, Float32ActionInstanceState>(new ActionAdmissionControl(this), this, m_Commit);
 		}
 
 		public bool Activate<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation)
 			where TTarget : struct, IOperationControlTarget<TTarget>
 		{
-			ActionAdmissionProfile profile = RequireActionProfile(operation);
+			ActionAdmissionProfile profile = RequireAdmissionProfile(operation);
 			return m_Activation.ActivateImmediate(
 				new ActionSkillActivationCandidate<SimulationActionTargetSnapshot, SimulationOperation>(
 					default,
@@ -72,9 +72,9 @@ namespace ThirdPersonSimulation
 		}
 
 		public bool IsContextActive(string contextId) => m_Actions.IsContextActive(contextId);
-		public bool IsSkillActive(CharacterSkillId skillId) => m_Actions.IsSkillActive(skillId);
-		public bool IsSkillCompleted(CharacterSkillId skillId) => m_Actions.IsSkillCompleted(skillId);
-		public ulong CompletedSkillInstanceId(CharacterSkillId skillId) => m_Actions.CompletedSkillInstanceId(skillId);
+		public bool IsAbilityActive(CharacterSkillId abilityId) => m_Actions.IsAbilityActive(abilityId);
+		public bool IsAbilityCompleted(CharacterSkillId abilityId) => m_Actions.IsAbilityCompleted(abilityId);
+		public ulong CompletedAbilityInstanceId(CharacterSkillId abilityId) => m_Actions.CompletedAbilityInstanceId(abilityId);
 
 		public void BindCurrentSkillExecution(OperationHandle operation, ulong generation)
 		{
@@ -84,82 +84,117 @@ namespace ThirdPersonSimulation
 			m_Actions.BindSkillExecution(action, operation, generation);
 		}
 
-		public void FinishFromControl(
+		public void ResolveFromControl(
 			CharacterSkillId skillId,
 			SimulationExecutionSource source,
-			bool completed,
+			AbilityLifecycleTransition transition,
 			string reason)
 		{
-			m_Lifecycle.Finish(skillId, source, completed, reason);
+			m_Lifecycle.Resolve(skillId, source, transition, reason);
 		}
 
-		public void FinishFromControl(
-			Float32ActionInstanceState action,
-			SimulationExecutionSource source,
-			bool completed,
-			string reason)
+        public void ResolveFromControl(
+            Float32ActionInstanceState action,
+            SimulationExecutionSource source,
+            AbilityLifecycleTransition transition,
+            string reason)
 		{
-			m_Lifecycle.Finish(action, source, completed, reason);
-		}
+            m_Lifecycle.Resolve(action, source, transition, reason);
+        }
+
+        public void ResolveFromControl(
+            Float32ActionInstanceState action,
+            SimulationExecutionSource source,
+            string trigger,
+            AbilityLifecycleTransition defaultTransition,
+            string reason)
+        {
+            GameplayAbilityProgramBinding binding = m_Program.AbilityPrograms.Require(action.SkillId);
+            m_Lifecycle.Resolve(action, binding, trigger, source, defaultTransition, reason);
+        }
 
 		public ActionAdmissionDecision PreviewActivation<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			SimulationOperation operation)
 			where TTarget : struct, IOperationControlTarget<TTarget>
 		{
-			ActionAdmissionProfile profile = RequireActionProfile(operation);
+			ActionAdmissionProfile profile = RequireAdmissionProfile(operation);
 			return m_Activation.Preview(operation, profile, ReadActionTargetSnapshot(cursor, operation));
 		}
 
-        public bool ActivateFromControl(CharacterControlSkillRequest controlRequest)
+        public bool ActivateFromControl(CharacterControlAbilityRequest controlRequest)
         {
             if (controlRequest.EquipmentContext.IsValid &&
-                !m_EquipmentContext.IsSkillBinding(controlRequest.EquipmentContext, controlRequest.SkillId))
+                !m_EquipmentContext.IsAbilityBinding(controlRequest.EquipmentContext, controlRequest.AbilityId))
             {
                 if (m_Trace.Enabled)
                     m_Trace.Add(
                         controlRequest.Source,
                         "equipment_skill_binding_invalid",
                         SimulationTraceSeverity.Warning,
-                        $"skill={controlRequest.SkillId}:context={controlRequest.EquipmentContext}");
+                        $"ability={controlRequest.AbilityId}:context={controlRequest.EquipmentContext}");
                 return false;
             }
-			CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
-			ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
+			GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+			ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
 			return m_Activation.ActivateFromControl(controlRequest, skill, profile);
 		}
 
-        public void StopFromControl(CharacterControlSkillStopRequest controlRequest)
+        public void StopFromControl(CharacterControlAbilityStopRequest controlRequest)
         {
-            CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
+            GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+            string trigger = string.IsNullOrWhiteSpace(controlRequest.ActionWindowType)
+                ? controlRequest.Mode == CharacterControlAbilityStopMode.Force
+                    ? GameplayAbilityEndTriggerNames.AbortRequested
+                    : GameplayAbilityEndTriggerNames.CancelRequested
+                : GameplayAbilityEndTriggerNames.ActionWindowClosed;
+            AbilityLifecycleTransition defaultTransition = controlRequest.Mode == CharacterControlAbilityStopMode.Force
+                ? AbilityLifecycleTransition.Abort
+                : AbilityLifecycleTransition.Cancel;
             if (controlRequest.ActionInstanceId != 0)
             {
                 if (!m_Actions.TryGetInstance(controlRequest.ActionInstanceId, out Float32ActionInstanceState action))
                     return;
                 if (action.SkillId != skill.SkillId)
                     throw new InvalidOperationException($"Action instance '{controlRequest.ActionInstanceId}' does not belong to Skill '{skill.SkillId}'.");
-                m_Lifecycle.Stop(action, controlRequest.Mode, controlRequest.Source, controlRequest.Reason);
+                m_Lifecycle.Resolve(
+                    action,
+                    skill,
+                    trigger,
+                    controlRequest.Source,
+                    defaultTransition,
+                    controlRequest.Reason,
+                    controlRequest.ActionWindowType);
                 return;
             }
-            m_Lifecycle.Stop(skill.SkillId, controlRequest.Mode, controlRequest.Source, controlRequest.Reason);
+            m_Lifecycle.Resolve(
+                skill.SkillId,
+                skill,
+                trigger,
+                controlRequest.Source,
+                defaultTransition,
+                controlRequest.Reason,
+                controlRequest.ActionWindowType);
         }
 
         public bool StopIfEquipmentContextStale(Float32ActionInstanceState action)
         {
             if (!action.IsActive || !action.EquipmentContext.IsValid || m_EquipmentContext.IsCurrentActionContext(action.EquipmentContext))
                 return false;
-            m_Lifecycle.Stop(
+            m_Lifecycle.Resolve(
                 action,
-                CharacterControlSkillStopMode.Force,
+                m_Program.AbilityPrograms.Require(action.SkillId),
+                GameplayAbilityEndTriggerNames.AbortRequested,
                 action.Source,
+                AbilityLifecycleTransition.Abort,
                 "EquipmentGenerationChanged");
             return true;
         }
 
 		public bool TryCommitPendingControl(CharacterSkillId skillId)
 		{
-			CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(skillId);
-			ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
+			GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(skillId);
+			ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
 			return m_Activation.TryCommitPendingControl(skillId, profile);
 		}
 
@@ -179,7 +214,7 @@ namespace ThirdPersonSimulation
 			if (ingress.Header.Kind != SimulationIngressKind.ActionLifecycle)
 				throw new InvalidOperationException($"Action runtime cannot apply ingress kind '{ingress.Header.Kind}'.");
 			SimulationActionLifecycleIngress payload = ingress.ActionLifecycle;
-			m_Lifecycle.ApplyIngress(new ActionSkillLifecycleIngress(
+			m_Lifecycle.ApplyIngress(new AbilityLifecycleIngress(
 				ingress.Header.FactIdentity.ToString(),
 				payload.ActionInstanceId,
 				payload.PredictionKey,
@@ -216,11 +251,11 @@ namespace ThirdPersonSimulation
 			return generation == 0 ? 1UL : generation;
 		}
 
-		ActionAdmissionProfile RequireActionProfile(SimulationOperation operation) =>
-			Access.Services.RequireActionProfile(operation.Handle);
+		ActionAdmissionProfile RequireAdmissionProfile(SimulationOperation operation) =>
+			Access.Services.RequireAdmissionProfile(operation.Handle);
 
-		ActionAdmissionProfile RequireActionProfile(string actionId) =>
-			Access.Services.RequireActionProfile(actionId);
+		ActionAdmissionProfile RequireAdmissionProfile(string actionId) =>
+			Access.Services.RequireAdmissionProfile(actionId);
 
 		ProgramCatalogEntry FindGameplayTag(string identity)
 		{
@@ -252,9 +287,9 @@ namespace ThirdPersonSimulation
 			}
 		}
 
-		ActionAdmissionProfile IActionAdmissionReadPort.RequireActionProfile(string actionId)
+		ActionAdmissionProfile IActionAdmissionReadPort.RequireAdmissionProfile(string actionId)
 		{
-			return RequireActionProfile(actionId);
+			return RequireAdmissionProfile(actionId);
 		}
 
 		bool IActionAdmissionReadPort.TryGetGameplayTagParent(string tag, out string parentTag)
@@ -447,7 +482,13 @@ namespace ThirdPersonSimulation
 		{
 			if (!m_Actions.TryGetInstance(actionInstanceId, out Float32ActionInstanceState action) || !action.IsActive)
 				throw new InvalidOperationException($"Action instance '{actionInstanceId}' is not active for replacement.");
-			m_Lifecycle.Interrupt(action, source, reason);
+			m_Lifecycle.Resolve(
+                action,
+                m_Program.AbilityPrograms.Require(action.SkillId),
+                GameplayAbilityEndTriggerNames.InterruptRequested,
+                source,
+                AbilityLifecycleTransition.Interrupt,
+                reason);
 		}
 
 		bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.IsActionInstanceStopComplete(ulong actionInstanceId) =>
@@ -497,46 +538,46 @@ namespace ThirdPersonSimulation
                 result,
                 reason);
 
-		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
+		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
 
-		IEnumerable<Float32ActionInstanceState> IActionSkillLifecyclePort<Float32ActionInstanceState>.ActionStates =>
+		IEnumerable<Float32ActionInstanceState> IAbilityLifecyclePort<Float32ActionInstanceState>.ActionStates =>
 			EnumerateActionStates();
 
-		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.TryFindActive(
+		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TryFindActive(
 			string contextId,
 			out Float32ActionInstanceState action) =>
 			m_Actions.FindActive(contextId, out action) >= 0;
 
-		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.TryFindActive(
+		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TryFindActive(
 			CharacterSkillId skillId,
 			out Float32ActionInstanceState action) =>
 			m_Actions.FindActive(skillId, out action) >= 0;
 
-		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.IsActive(Float32ActionInstanceState action) => action.IsActive;
+		bool IAbilityLifecyclePort<Float32ActionInstanceState>.IsActive(Float32ActionInstanceState action) => action.IsActive;
 
-	string IActionSkillLifecyclePort<Float32ActionInstanceState>.ActionId(Float32ActionInstanceState action) => action.ActionId;
+	string IAbilityLifecyclePort<Float32ActionInstanceState>.ActionId(Float32ActionInstanceState action) => action.ActionId;
 
-	CharacterSkillId IActionSkillLifecyclePort<Float32ActionInstanceState>.SkillId(Float32ActionInstanceState action) => action.SkillId;
+	CharacterSkillId IAbilityLifecyclePort<Float32ActionInstanceState>.SkillId(Float32ActionInstanceState action) => action.SkillId;
 
-		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.InstanceId(Float32ActionInstanceState action) => action.InstanceId;
+		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.InstanceId(Float32ActionInstanceState action) => action.InstanceId;
 
-		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.PredictionKey(Float32ActionInstanceState action) => action.PredictionKey;
+		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.PredictionKey(Float32ActionInstanceState action) => action.PredictionKey;
 
-		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.InputSequence(Float32ActionInstanceState action) => action.InputSequence;
+		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.InputSequence(Float32ActionInstanceState action) => action.InputSequence;
 
-		string IActionSkillLifecyclePort<Float32ActionInstanceState>.Reason(Float32ActionInstanceState action) => action.Reason;
+	string IAbilityLifecyclePort<Float32ActionInstanceState>.Reason(Float32ActionInstanceState action) => action.Reason;
 
-		SimulationExecutionSource IActionSkillLifecyclePort<Float32ActionInstanceState>.Source(Float32ActionInstanceState action) => action.Source;
+	SimulationExecutionSource IAbilityLifecyclePort<Float32ActionInstanceState>.Source(Float32ActionInstanceState action) => action.Source;
 
-		EquipmentActionContext IActionSkillLifecyclePort<Float32ActionInstanceState>.EquipmentContext(Float32ActionInstanceState action) => action.EquipmentContext;
+	EquipmentActionContext IAbilityLifecyclePort<Float32ActionInstanceState>.EquipmentContext(Float32ActionInstanceState action) => action.EquipmentContext;
 
-		ActionSkillLifecyclePhase IActionSkillLifecyclePort<Float32ActionInstanceState>.Phase(Float32ActionInstanceState action) =>
-			(ActionSkillLifecyclePhase)(byte)action.Phase;
+		AbilityLifecyclePhase IAbilityLifecyclePort<Float32ActionInstanceState>.Phase(Float32ActionInstanceState action) =>
+			(AbilityLifecyclePhase)(byte)action.Phase;
 
-		ActionSkillLifecycleState IActionSkillLifecyclePort<Float32ActionInstanceState>.State(Float32ActionInstanceState action) =>
-			(ActionSkillLifecycleState)(byte)action.State;
+		AbilityLifecycleState IAbilityLifecyclePort<Float32ActionInstanceState>.State(Float32ActionInstanceState action) =>
+			(AbilityLifecycleState)(byte)action.State;
 
-		IDisposable IActionSkillLifecyclePort<Float32ActionInstanceState>.EnterExecution(Float32ActionInstanceState action)
+		IDisposable IAbilityLifecyclePort<Float32ActionInstanceState>.EnterExecution(Float32ActionInstanceState action)
 		{
 			if (!action.SkillId.IsValid)
 				return null;
@@ -551,9 +592,9 @@ namespace ThirdPersonSimulation
 			return m_Actions.EnterSkillExecution(action);
 		}
 
-		Float32ActionInstanceState IActionSkillLifecyclePort<Float32ActionInstanceState>.WithLifecycle(
+		Float32ActionInstanceState IAbilityLifecyclePort<Float32ActionInstanceState>.WithLifecycle(
 			Float32ActionInstanceState action,
-			ActionSkillLifecycleUpdate update) =>
+			AbilityLifecycleUpdate update) =>
 			action.WithLifecycle(
 				(SimulationActionPhase)(byte)update.Phase,
 				(SimulationActionState)(byte)update.State,
@@ -562,33 +603,33 @@ namespace ThirdPersonSimulation
 				update.SourceTick,
 				update.Reason);
 
-		void IActionSkillLifecyclePort<Float32ActionInstanceState>.WriteState(Float32ActionInstanceState action) =>
+		void IAbilityLifecyclePort<Float32ActionInstanceState>.WriteState(Float32ActionInstanceState action) =>
 			m_Actions.WriteState(action);
 
-		void IActionSkillLifecyclePort<Float32ActionInstanceState>.EmitActionFact(
+		void IAbilityLifecyclePort<Float32ActionInstanceState>.EmitActionFact(
 			SimulationExecutionSource source,
 			Float32ActionInstanceState action) => EmitActionFact(source, action);
 
-		void IActionSkillLifecyclePort<Float32ActionInstanceState>.ClearTerminalResources(ulong actionInstanceId)
+		public void ClearTerminalResources(ulong actionInstanceId)
 		{
 			m_GameplayEffectActions.RemoveActionTags(actionInstanceId);
 			m_GameplayEffectActions.ClearConfirmedAction(actionInstanceId);
 			m_Blackboard.ClearActionInstanceScopes(actionInstanceId);
 		}
 
-		ulong IActionSkillLifecyclePort<Float32ActionInstanceState>.SourceGeneration(SimulationExecutionSource source) =>
+		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.SourceGeneration(SimulationExecutionSource source) =>
 			SourceGeneration(source);
 
-		bool IActionSkillLifecyclePort<Float32ActionInstanceState>.TraceEnabled => m_Trace.Enabled;
+		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TraceEnabled => m_Trace.Enabled;
 
-	void IActionSkillLifecyclePort<Float32ActionInstanceState>.Trace(
+	void IAbilityLifecyclePort<Float32ActionInstanceState>.Trace(
 			SimulationExecutionSource source,
 			string code,
 			ActionSkillTraceSeverity severity,
 			string detail,
 			ulong generation) => m_Trace.Add(source, code, ToTraceSeverity(severity), detail, generation);
 
-	void IActionSkillLifecyclePort<Float32ActionInstanceState>.TraceActionResult(
+	void IAbilityLifecyclePort<Float32ActionInstanceState>.TraceActionResult(
 			SimulationExecutionSource source,
 			string actionId,
 			CharacterSkillId skillId,

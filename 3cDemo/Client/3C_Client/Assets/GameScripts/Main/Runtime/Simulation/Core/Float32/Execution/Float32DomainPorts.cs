@@ -36,7 +36,8 @@ namespace ThirdPersonSimulation
     internal interface IFloat32ActionContextReader
     {
         bool IsContextActive(string contextId);
-        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
+        bool IsCurrentExecutionContextActive();
+        bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId);
         int FindActive(string contextId, out Float32ActionInstanceState state);
         int FindActive(CharacterSkillId skillId, out Float32ActionInstanceState state);
         Float32ActionInstanceState FindOnlyActive();

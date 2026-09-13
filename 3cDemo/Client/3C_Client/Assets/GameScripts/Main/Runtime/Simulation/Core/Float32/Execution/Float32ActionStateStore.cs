@@ -304,12 +304,12 @@ namespace ThirdPersonSimulation
         }
     }
 
-	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IActionSkillExecutionStorage<CharacterStateValue>
+	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IGameplayAbilityExecutionStorage<CharacterStateValue>
 	{
 		readonly Float32EvaluationFrame m_Frame;
 		readonly Float32StatePort m_State;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
-		readonly ActionSkillExecutionManager<CharacterStateValue> m_SkillExecution;
+		readonly GameplayAbilityExecutionManager<CharacterStateValue> m_SkillExecution;
 
         public Float32ActionStateStore(
             Float32ProgramAccess access,
@@ -319,7 +319,7 @@ namespace ThirdPersonSimulation
 		{
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_State = state ?? throw new ArgumentNullException(nameof(state));
-			m_SkillExecution = new ActionSkillExecutionManager<CharacterStateValue>(this);
+		m_SkillExecution = new GameplayAbilityExecutionManager<CharacterStateValue>(this);
 			m_Frame.BindSkillExecutionStateAccess(this);
 		}
 
@@ -341,7 +341,7 @@ namespace ThirdPersonSimulation
 		{
 			if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
 				throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
-			IDisposable execution = m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
+			IDisposable execution = m_SkillExecution.Enter(new AbilityExecutionContext(
 				action.SkillId,
 				action.SkillEntryOperation,
 				action.InstanceId,
@@ -368,12 +368,17 @@ namespace ThirdPersonSimulation
 			return false;
 		}
 
-		public bool IsSkillActive(CharacterSkillId skillId)
+        public bool IsCurrentExecutionContextActive()
+        {
+            return TryGetCurrentSkillExecution(out Float32ActionInstanceState action) && action.IsActive;
+        }
+
+		public bool IsAbilityActive(CharacterSkillId abilityId)
 		{
 			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
-				if (action.IsActive && action.SkillId == skillId)
+				if (action.IsActive && action.SkillId == abilityId)
 					return true;
 			}
 			return false;
@@ -385,16 +390,16 @@ namespace ThirdPersonSimulation
 		public bool HasSkillExecutionFrame(ulong actionInstanceId) =>
 			m_SkillExecution.HasFrame(actionInstanceId);
 
-		public bool IsSkillCompleted(CharacterSkillId skillId) => CompletedSkillInstanceId(skillId) != 0;
+		public bool IsAbilityCompleted(CharacterSkillId abilityId) => CompletedAbilityInstanceId(abilityId) != 0;
 
-		public ulong CompletedSkillInstanceId(CharacterSkillId skillId)
+		public ulong CompletedAbilityInstanceId(CharacterSkillId abilityId)
 		{
 			ulong result = 0;
 			ulong resultTick = 0;
 			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
-				if (action.SkillId != skillId || action.State != SimulationActionState.Ended)
+				if (action.SkillId != abilityId || action.State != SimulationActionState.Ended)
 					continue;
 				if (result == 0 ||
 					action.LastTransitionTick > resultTick ||
@@ -416,13 +421,13 @@ namespace ThirdPersonSimulation
 			return found;
 		}
 
-		public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
+		public bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId)
 		{
 			ulong found = 0;
 			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState state = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
-				if (!state.IsActive || state.SkillId != skillId)
+				if (!state.IsActive || state.SkillId != abilityId)
 					continue;
 				if (found != 0)
 				{
@@ -794,15 +799,15 @@ namespace ThirdPersonSimulation
 			return value;
 		}
 
-		bool IActionSkillExecutionStorage<CharacterStateValue>.IsSkillStateSlot(int slotIndex) =>
+		bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsAbilityStateSlot(int slotIndex) =>
 			m_Layout.IsSkillExecutionStateSlot(slotIndex);
 
-		bool IActionSkillExecutionStorage<CharacterStateValue>.IsValueValid(
+		bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsValueValid(
 			int slotIndex,
 			CharacterStateValue value) =>
 			value.Kind == m_Program.StateSlots[slotIndex].ValueKind;
 
-		CharacterStateValue IActionSkillExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
+		CharacterStateValue IGameplayAbilityExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
 		{
 			ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
 			return slot.DefaultConstantIndex >= 0
@@ -812,11 +817,11 @@ namespace ThirdPersonSimulation
 				: CharacterStateValue.Default(slot.ValueKind);
 		}
 
-		ActionSkillExecutionAggregate<CharacterStateValue> IActionSkillExecutionStorage<CharacterStateValue>.ReadAggregate() =>
+		GameplayAbilityExecutionAggregate<CharacterStateValue> IGameplayAbilityExecutionStorage<CharacterStateValue>.ReadAggregate() =>
 			m_State.Get(m_Layout.SkillExecutionStateAddress.SlotIndex).SkillExecutionState;
 
-		void IActionSkillExecutionStorage<CharacterStateValue>.WriteAggregate(
-			ActionSkillExecutionAggregate<CharacterStateValue> aggregate) =>
+		void IGameplayAbilityExecutionStorage<CharacterStateValue>.WriteAggregate(
+			GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate) =>
 			m_State.Set(
 				m_Layout.SkillExecutionStateAddress.SlotIndex,
 				CharacterStateValue.FromSkillExecutionState(aggregate));

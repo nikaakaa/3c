@@ -840,16 +840,16 @@ namespace BTSMTL.Timeline.Editor
                 if (clone is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
                 int originalEndFrame = source.EndFrame;
-                source.EndFrame = frame;
-                source.SelfEaseOutFrame = 0;
-                clone.StartFrame = frame;
-                clone.EndFrame = originalEndFrame;
-                clone.SelfEaseInFrame = 0;
-                clone.SelfEaseOutFrame = 0;
-                if (clone is MotionCurveClip cloneMotion)
-                    cloneMotion.CurveEndFrame = Mathf.Clamp(cloneMotion.CurveEndFrame, clone.StartFrame + 1, clone.EndFrame);
                 m_Session.Apply(() =>
                 {
+                    source.EndFrame = frame;
+                    source.SelfEaseOutFrame = 0;
+                    clone.StartFrame = frame;
+                    clone.EndFrame = originalEndFrame;
+                    clone.SelfEaseInFrame = 0;
+                    clone.SelfEaseOutFrame = 0;
+                    if (clone is MotionCurveClip cloneMotion)
+                        cloneMotion.CurveEndFrame = Mathf.Clamp(cloneMotion.CurveEndFrame, clone.StartFrame + 1, clone.EndFrame);
                     m_Request.ContractCatalog.RequireClipPlacement(source.Track, clone);
                     source.Track.Clips.Add(clone);
                     source.Track.UpdateMix();

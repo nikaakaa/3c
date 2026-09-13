@@ -28,24 +28,47 @@
 - **THEN** MUST 报告该资产配置错误，不推断求值模式
 - **AND** MUST 不产生 sample、delta 或 motion contribution
 
+### Requirement: MotionCurve Clip控制曲线必须进入typed Curve Channel Catalog
+
+MotionCurveClip MUST 只拥有 Weight 与 Ease In/Out 等片段局部曲线，以及正式源引用和使用配置；PositionX/Y/Z/Yaw MUST 由 RootMotionCurveAsset 唯一拥有。Timeline UI MUST 消费正式 typed 字段，只为局部曲线提供注册 channel 编辑；源运动曲线 MUST 提供只读展示及真实 owner 导航，不创建片段副本。Position MUST 保持 meter/unbounded domain，Yaw MUST 保持 degree/unbounded domain，Weight/Ease MUST 保持 [0,1] bounded domain。源语义、时间映射和 mutation MUST 来自正式 owner，不由 UI 另行定义；技能独立内容入口与 Control/Motion 资源绑定 MUST 消费同一正式源，不创建 Generic Curve Runtime 或角色总包。
+
+#### Scenario: 在Timeline编辑Position Z
+
+- **WHEN** 作者在 Timeline 请求编辑源 Position Z
+- **THEN** Editor MUST 导航到真实源 owner，以源正式时间域和 meter 单位编辑
+- **AND** MUST 发布源内容修订及依赖变化供技能或控制正式消费绑定处理，不在 Timeline-local channel 写入副本
+- **AND** Animation 采样与 Presentation MUST 不成为 Gameplay 位移的第二来源
+
+#### Scenario: MotionCurve引用RootMotionCurveAsset
+
+- **WHEN** MotionCurve 作者数据来自正式 RootMotionCurveAsset
+- **THEN** RootMotionCurveAsset MUST 继续是唯一外部源
+- **AND** Timeline Curve Catalog MUST 不复制该资产全部曲线形成第二份 authoring
+
+#### Scenario: Position curve超出权重范围
+
+- **WHEN** 源 Position X key 值大于 1 或小于 0
+- **THEN** 正式源编辑与 Timeline 只读展示 MUST 使用 unbounded meter domain
+- **AND** MUST 不 Clamp 到 [0,1]
+
 ## REMOVED Requirements
 
 ### Requirement: RootMotionCurveAsset 与 Timeline 内联位移必须保持单向边界
 
 **Reason**: 旧名称仍暗示内联数据存在，本次统一为源资产唯一所有权。
 
-**Migration**: 使用“运动源与 Timeline 数据段必须保持唯一所有权”要求，迁移旧嵌入曲线后删除其读写路径，Gameplay Runtime 保持 compiled Program 消费。
+**Migration**: 使用“运动源与 Timeline 数据段必须保持唯一所有权”要求，迁移旧嵌入曲线后删除其读写路径；技能使用独立技能内容，控制使用正式 Control/Motion 资源绑定，portable Gameplay 不回读 Unity 资产。
 
 ## ADDED Requirements
 
 ### Requirement: 运动源与 Timeline 数据段必须保持唯一所有权
 
-RootMotionCurveAsset MUST 唯一拥有源运动曲线；MotionCurveClip MUST 仅保存正式类型化源引用、源区间和播放/混合配置，不保留内联 PositionX/Y/Z/Yaw。TimelineData MUST 只拥有轨道和片段，不隐式拥有外部源的删除权。Compiler MUST 从源和片段映射编译为 portable Program constants；Gameplay Runtime MUST 只读取 compiled constants，不直接读取 Unity 源资产或另一份 inline runtime curve。
+RootMotionCurveAsset MUST 唯一拥有累计运动曲线与源时间；MotionCurveClip MUST 仅保存正式类型化源引用、源区间和播放/混合配置，不保留内联 PositionX/Y/Z/Yaw。TimelineData MUST 只拥有轨道和片段，不隐式拥有外部源的删除权。技能侧 MUST 通过独立技能内容入口消费，控制侧 MUST 通过正式 Control/Motion 资源绑定消费，可共享同一作者源而不复制第二份。portable Gameplay MUST 只读取正式采用的领域运行数据与绑定，不回读 Unity 资产。系统 MUST 不恢复角色总 Program、整包 Projection、旧 ControlMotion catalog 或换名新总包，不通过全角色 Build 采用曲线变化。
 
 #### Scenario: 编译 Dodge 曲线
 
 - **WHEN** Dodge Timeline 引用 RootMotionCurveAsset
-- **THEN** Compiler MUST 生成唯一正式 portable curve 数据
+- **THEN** 独立技能内容处理 MUST 消费该源及其片段映射，输出所需的正式技能数值数据
 - **AND** Kernel MUST 不读取 Unity AnimationCurve asset
 
 #### Scenario: 删除使用共享源的 Timeline
@@ -56,12 +79,12 @@ RootMotionCurveAsset MUST 唯一拥有源运动曲线；MotionCurveClip MUST 仅
 
 ### Requirement: MotionCurve 源区间必须使用统一时间映射
 
-源曲线 MUST 使用明确的秒时间域，Clip MUST 按正式源区间和播放配置映射 Timeline 时间。作者采样、MotionWarp 源读取、Timeline semantic 和 ControlMotion catalog MUST 使用同一映射语义及源求值模式。累计曲线 MUST 通过前后差值产生位移，源区间开始前的累计值 MUST 不成为额外位移。曲线有效窗口结束早于片段结束时 MUST 保留原有终值保持和片段权重/生命周期。源内容或区间修改 MUST 通过现有正式依赖机制使相关编译产物失效，不得只按资产路径判断内容未变。
+源曲线 MUST 使用明确的秒时间域，Clip MUST 按正式源区间和播放配置映射 Timeline 时间，映射语义 MUST 由 Timeline 唯一拥有。MotionWarp、独立技能内容处理与 Control/Motion 资源绑定 MUST 消费同一语义及源求值模式。累计曲线 MUST 通过前后差值产生位移，源区间开始前的累计值 MUST 不成为额外位移。曲线有效窗口结束早于片段结束时 MUST 保留原有终值保持和片段权重/生命周期。系统 MUST 声明源内容/区间修订与依赖结果，由对应领域正式采用匹配的消费绑定，不得只按资产路径判断内容未变。预览 MUST 只展示正式采用状态与运行结果，不通过旧角色总包或现场读取资产生成替代运行结果。
 
 #### Scenario: 使用非零起点的数据段
 
 - **WHEN** Clip 从源曲线中间开始播放
-- **THEN** 预览、Warp 与编译 MUST 使用相同区间映射
+- **THEN** Warp、技能处理和控制资源绑定 MUST 使用相同区间映射，预览 MUST 观察正式采用结果
 - **AND** 位移 MUST 为该段前后累计值差，不包含该段之前的累计偏移
 
 #### Scenario: 运动窗口先于片段结束
@@ -69,6 +92,12 @@ RootMotionCurveAsset MUST 唯一拥有源运动曲线；MotionCurveClip MUST 仅
 - **WHEN** 源曲线有效播放窗口结束但 Clip 尚未结束
 - **THEN** 源采样 MUST 保持区间终值，后续源运动 delta 为零
 - **AND** MUST 不擅自缩短 Clip 权重或占用生命周期
+
+#### Scenario: 同一运动源同时被技能与控制使用
+
+- **WHEN** 源内容或区间修订影响技能和控制的使用
+- **THEN** MUST 声明各自真实依赖结果，分别通过独立技能入口和 Control/Motion 正式绑定采用
+- **AND** MUST 不复制作者源、合成角色总包或将未采用结果标为预览已生效
 
 ### Requirement: 存量内嵌运动曲线必须一次无损迁入正式源
 

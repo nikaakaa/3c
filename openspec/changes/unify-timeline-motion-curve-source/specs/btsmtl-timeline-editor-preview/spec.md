@@ -33,5 +33,6 @@ RootMotionCurveAsset MUST 不进入 Timeline-local 可写 Curve Channel Catalog�
 #### Scenario: 修改共享源运动
 
 - **WHEN** 作者通过真实源 owner 编辑运动曲线
-- **THEN** MUST 保存源曲线并使既有依赖机制标记相关编译产物失效
+- **THEN** MUST 保存源曲线并声明内容修订及相关技能/控制依赖结果，由对应领域正式绑定采用
 - **AND** MUST 不把修改复制回各 Timeline 内嵌字段
+- **AND** 预览 MUST 只显示正式采用状态，不通过旧角色总包或临时资源绑定声称已生效

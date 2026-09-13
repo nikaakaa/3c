@@ -2,13 +2,15 @@
 
 本变更承接已归档的 `minimize-csharp-authoring-reconstruction`。用户在完成讨论和文档更新后明确要求“让实现窗口做吧，设置goal”，现已授权绑定实现任务按本文完成正式曲线源迁移。
 
-当前读取到的结构：RootMotionCurveAsset 已保存累计 XYZ/Yaw、时长、采样率和求值模式，现有烘焙器按秒写关键帧；MotionCurveClip 内嵌 XYZ/Yaw 并按归一化时间读取。MotionWarp、TimelineMotionEmitterRegistration 和 CharacterControlMotionCatalogEmitter 均直接读取嵌入曲线。BTSMTL.Timeline 已引用独立 RootMotion 程序集。
+本次 `camera-preview-timeline-domain-runtime-r1` 协调仅更新规划，统一基线为 [领域运行设计](../replace-character-program-with-domain-runtimes/design.md)。角色总 Program 与整包 Projection 退役，技能独立编译、控制直接 C#、Pose 使用原生 FlowCanvas Runtime；网络 Pipeline/Pass、Float32/Fixed 与独立资源处理保留。本次文档对齐不扩大既有实现授权，不下发实现消息，也不代表下述新接口已经落地。
+
+初次规划的源码基线：RootMotionCurveAsset 已保存累计 XYZ/Yaw、时长、采样率和求值模式，烘焙器按秒写关键帧；MotionCurveClip 内嵌 XYZ/Yaw 并按归一化时间读取。MotionWarp 与旧编译入口直接读取嵌入曲线。BTSMTL.Timeline 已引用独立 RootMotion 程序集。此段是问题来源，不声明当前代码仍处于该状态，目标接续以 D4/D8 为准。
 
 实现任务提供的样本统计是 Attack 约 659 KB、4274 个 Keyframe，其中约 4204 个来自 10 个 MotionCurveClip。该统计是讨论依据，本轮未重新测量，不作为实施完成或体积承诺。
 
 ## Goals / Non-Goals
 
-目标是让正式素材唯一拥有运动数据，Timeline 与 C# 只表达数据段使用方式，并保持 Attack/Dodge 的运动内容与原有 compiled 运行链。
+目标是让正式素材唯一拥有运动数据，Timeline 与 C# 只表达数据段使用方式，保持 Attack/Dodge 运动语义，并分别接入独立技能内容与正式 Control/Motion 资源绑定。
 
 不新建 Timeline 专属曲线类型、通用曲线运行时、资源自动扫描、JSON 中转、兼容字段或 fallback。不抽点、不丢曲线、不为迁移重新烘焙动画，不把 Runtime 改为读取 Unity 资产。不增加测试或验证任务。
 
@@ -36,7 +38,7 @@ PositionX/Y/Z/Yaw 不再是 Clip 内嵌字段；不保留“有源读源、无�
 
 ### D3：时间映射与求值共用一个正式定义
 
-RootMotionCurveAsset 继续以秒表示源时间。Clip 保存源起止秒数及自身播放配置；映射定义由 Timeline 正式领域能力拥有，预览、Warp authoring 和两个编译入口消费同一含义，不在导出器内写另一份采样公式。
+RootMotionCurveAsset 继续以秒表示源时间。Clip 保存源起止秒数及自身播放配置；映射定义由 Timeline 正式领域能力唯一拥有，技能内容处理、Control/Motion 资源绑定与 Warp 使用同一含义，预览消费正式采用结果，不在导出器或消费者内写另一份采样公式。
 
 旧曲线归一化时间 u 对应源秒数 t = u × D，D 为该 Clip 原有曲线有效时长 `(CurveEndFrame - StartFrame) / TimelineUtility.FrameRate`。等价迁移转换关键帧 time，有限切线按 1/D 缩放，保留 value、权重、WeightedMode、常量段及 pre/post wrap；不是重新采样。零时长或非法区间定位具体 Clip 并失败，不以默认时长补齐。
 
@@ -49,22 +51,24 @@ FullLocalDelta 使用 XYZ 差值；ForwardDistanceYaw 使用 forward distance �
 ```text
 RootMotionCurveAsset（正式源）
     → MotionCurveClip（引用、区间、播放配置）
-        → Timeline 作者采样／预览
+        → Timeline 唯一时间映射与 typed 源配置
         → MotionWarp 源窗口读取
-        → Timeline semantic / ControlMotion catalog
-            → 既有 Numeric Program → Gameplay Runtime → WorldSolver
+        → 独立技能内容入口 → 技能数值目标数据／执行
+        → 正式 Control/Motion 资源绑定 → C# 控制／运动执行
+            → 既有领域运动算法 → Pipeline/Pass → WorldSolver
+正式采用的领域绑定／运行结果 → 预览只读观察
 ```
 
 源码修改点与职责：
 
 - `Timeline.MotionCurve.cs`：Clip 源引用和时间映射，正式作者采样使用源数据；删除嵌入运动字段和旧读取。
 - `TimelineAuthoringClipBinding.cs`、TimelineData 正式创建入口及 builder：类型化设置源与区间，继续承担 owner、合法性和保存。
-- `Timeline.CurveAuthoring.cs` 及编辑投影：只编辑真正 Timeline-local 曲线；Position/Yaw 展示源引用及导航，不经 Timeline mutation 改源。
+- 源 typed 配置与字段描述由本任务提供；Timeline UI 只消费这些字段，局部 Weight/Ease 就地编辑，Position/Yaw 导航到源 owner，不并行修改源或时间映射语义。
 - `Timeline.MotionWarp.cs`：按绑定 Clip 的同一源区间读取累计位移/yaw，保留窗口、权重和空间规则。
-- `TimelineMotionEmitterRegistration.cs`、`CharacterControlMotionCatalogEmitter.cs`：从正式源和同一映射降低运动数据；已有 Motion 节点等源消费者沿同一求值模式，不恢复内嵌副本。
-- 正式编译依赖与 stale/hash：包括源内容及区间配置，源修改应使相关编译产物失效。仅按引用路径计算身份不足以发现源曲线变化。
+- 技能侧由编译收窄任务拥有的独立技能内容入口消费；控制侧由正式 Control/Motion 资源绑定消费。本任务声明源内容、源区间修订及依赖结果，具体新消费绑定由编译收窄 owner 定义并接续。
+- 源内容及区间修订应使实际依赖的技能数据或控制资源绑定需要更新；调用方只能采用与所需修订匹配的结果。仅路径相同不足以判定内容未变，不新建全角色 hash 或总资源目录。
 
-“共同读取同一曲线源”指 authoring/编译的唯一输入。Gameplay Runtime 继续只读 compiled constants/operation；编译器允许生成既有数值目标所需的数据，这些数据不进入 authoring C#，也不成为第二份可编辑素材。
+“共同读取同一曲线源”指技能和控制共享同一作者输入。portable Gameplay 只读正式采用的领域运行数据或绑定，不回读 Unity 资产；技能数值降低与独立运动资源处理保留，但都不进入 authoring C# 或成为第二份作者源。旧 CharacterControlMotionCatalogEmitter 与角色总 Program 不再是迁移目标，不恢复 Character 全量 Build、Projection 总包或换名总包。不能为等待新接口保留嵌入字段或双读。
 
 ### D5：Attack/Dodge 一次无损迁移
 
@@ -83,6 +87,8 @@ export_code 只输出一次类型化 RootMotionCurveAsset 引用及片段 builde
 
 继续采用已确认的偏函数式链式 builder、作者非默认值/有意义覆盖、每节点一份位置及共享对象先创建后连接。下面只示意阅读形式，不新增命名合同：
 
+已有正确的 builder 与生成入口保留，公共接口变更由其唯一 owner 接续；本任务只消费正式能力，不重建另一套入口。人工编辑、保存和资源修订不会自动导出 C#，两工具仍仅显式调用。
+
 ```csharp
 timeline.Motion(attackMotion)
     .Range(0.2f, 0.8f)
@@ -96,11 +102,24 @@ Timeline 提供类型化源选择、源区间/播放配置和“打开源资产�
 
 业务取舍：作者编辑权重仍在片段就地完成；修改共享运动需进入源 owner，避免一次局部拖动意外改了所有引用者。需要独立素材时明确创建，不能自动复制。
 
+### D8：共享文件、同批资产与真实接口缺口
+
+| 负责方 | 唯一职责 | 本任务如何接续 |
+| --- | --- | --- |
+| 本曲线源任务 | Timeline.MotionCurve.cs、Timeline.MotionWarp.cs、相关源配置/binding、同批 Corin Timeline 资产及生成源码迁移 | 统一写入一次，不分窗口分别重建同一资产 |
+| 编译收窄任务 | 独立技能内容入口、Control/Motion 新消费绑定及数值目标接入 | 提交源内容/区间修订和依赖结果，消费 owner 发布的正式接口，不改旧总包作为过渡 |
+| Timeline UI | typed 字段展示、局部作者操作和源 owner 导航 | 只消费本任务正式字段与映射，不自行增加源语义 |
+| Camera 任务 | Timeline.Camera.cs、镜头资源与请求 API、精确源动作/事件到工程 Clip 和 ResourceId 的映射 | 映射具备后由本任务统一写入同批 Timeline 资产，Camera 不再另行重建覆盖 |
+| 预览任务 | 正式采用状态与运行结果展示 | 不生成目录、源副本或临时可运行绑定，不展示未采用数据为生效 |
+
+仍需由相应 owner 成文的接口是：独立技能入口接受源/区间依赖的具体合同；Control/Motion 资源绑定的 portable 载体与采用结果；源内容/区间修订与依赖结果的实际字段；Camera 的精确动作/事件、目标 Clip、ResourceId 映射。当前广播未提供这些具体名称和映射，本文不编造。缺口记录在此，不新增测试或汇报任务，不通过旁路、旧总包或 guessed ResourceId 填补。此协调仅规划，不为获取接口向其它窗口索取汇报。
+
 ## Risks / Trade-offs
 
-- 改变共享源会影响多个片段 → 保持真实源 owner 与显式独立资源创建，更新既有编译依赖失效。
+- 改变共享源会影响技能和控制 → 声明真实修订及依赖结果，由各领域正式采用，不重新生成角色总包。
 - 只换字段未换时间单位 → 迁移完整时间与插值语义，预览、Warp 和编译共用映射。
-- 只改 Timeline emitter 漏掉 ControlMotion → 同步两条正式编译入口与所有直接读取者，Runtime 保持 Program 路径。
+- 消费绑定尚未定型 → 在 D8 记录真实缺口，由唯一 owner 接续，portable 不回读 Unity 资产，也不留旧内嵌双读。
+- Camera 与曲线迁移重建同批资产 → Camera 给出精确映射，本任务作为同批 Timeline 资产唯一写入者合并落地。
 - 不明确来源却重新烘焙 → 存量曲线作为迁移输入，保留可确认来源；不以动画重烘焙替换旧结果。
 - 与其它任务同字段冲突 → 保留现场交用户决定，不回退已正确内容。
 
@@ -117,3 +136,5 @@ Timeline 提供类型化源选择、源区间/播放配置和“打开源资产�
 - goal_budget: 用户未指定预算，不设置 token_budget。
 - completion_boundary: 全部授权实现和正式数据迁移完成后才将 goal 标为 complete；不把仅写文档、只改导出器或仅编译成功当作完成。不新增用户未要求的测试或验收任务。
 - communication: 只调度上述绑定实现任务；无须回执，不转发其它任务。实际业务冲突保留现场交用户决定。
+- coordination_revision: `camera-preview-timeline-domain-runtime-r1`
+- coordination_mode: `PLAN_ONLY`；本次不发送 IMPLEMENT_FROM_DOCUMENT 或 DOCUMENT_UPDATED，不改变已运行 goal 或扩大实现授权。

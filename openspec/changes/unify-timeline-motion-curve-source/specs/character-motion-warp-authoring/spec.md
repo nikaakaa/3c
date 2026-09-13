@@ -2,7 +2,7 @@
 
 ### Requirement: MotionWarp 必须通过源 Clip 的正式数据段读取运动
 
-MotionWarp MUST 继续通过稳定身份绑定同一 Timeline owner 内的具体 MotionCurveClip，不改为直接绑定共享 RootMotionCurveAsset。源窗口累计位移与 yaw MUST 经该 Clip 的正式源引用、区间、求值模式和时间映射读取，不直接读取旧嵌入曲线。现行 Action/Override/ActorLocal、单位权重、无 Ease、窗口范围、不重叠和非零源位移/yaw 要求 MUST 保留。共享源不使多个 Clip 合并，Gameplay Runtime MUST 沿既有 compiled Motion Modifier 路径消费。
+MotionWarp MUST 继续通过稳定身份绑定同一 Timeline owner 内的具体 MotionCurveClip，不改为直接绑定共享 RootMotionCurveAsset。源窗口累计位移与 yaw MUST 经该 Clip 的正式源引用、区间、求值模式和 Timeline 唯一时间映射读取，不直接读取旧嵌入曲线。现行 Action/Override/ActorLocal、单位权重、无 Ease、窗口范围、不重叠和非零源位移/yaw 要求 MUST 保留。共享源不使多个 Clip 合并，Gameplay MUST 保留既有 Motion Modifier 算法及领域运行顺序，经独立技能/运动正式绑定消费所需 portable 数据；MUST 不依赖角色总 Program 或在 portable 运行中回读 Unity 资产。
 
 #### Scenario: 同一曲线源在 Timeline 使用两次
 

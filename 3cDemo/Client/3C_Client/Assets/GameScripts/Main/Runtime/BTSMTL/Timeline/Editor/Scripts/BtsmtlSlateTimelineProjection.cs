@@ -18,6 +18,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] Vector2 m_ScrollPosition;
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] string m_ClipAuthoringId;
+        [SerializeField] string m_CurveTrackAuthoringId;
         [SerializeField] bool m_GroupCollapsed;
 
         public BtsmtlSlateTimelineViewState(
@@ -27,7 +28,8 @@ namespace BTSMTL.Timeline.Editor
             Vector2 scrollPosition,
             string trackAuthoringId,
             string clipAuthoringId,
-            bool groupCollapsed)
+            bool groupCollapsed,
+            string curveTrackAuthoringId = null)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
@@ -35,6 +37,7 @@ namespace BTSMTL.Timeline.Editor
             m_ScrollPosition = scrollPosition;
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_CurveTrackAuthoringId = curveTrackAuthoringId ?? string.Empty;
             m_GroupCollapsed = groupCollapsed;
         }
 
@@ -44,6 +47,7 @@ namespace BTSMTL.Timeline.Editor
         public Vector2 ScrollPosition => m_ScrollPosition;
         public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
         public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
+        public string CurveTrackAuthoringId => m_CurveTrackAuthoringId ?? string.Empty;
         public bool GroupCollapsed => m_GroupCollapsed;
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
     }
@@ -116,6 +120,9 @@ namespace BTSMTL.Timeline.Editor
             {
                 trackId = track.AuthoringId;
             }
+            string curveTrackId = m_Binding.Groups
+                .SelectMany(group => group.Tracks)
+                .FirstOrDefault(track => track.ShowCurves)?.AuthoringId ?? string.Empty;
             bool collapsed = m_Binding.Groups.Count != 0 && m_Binding.Groups[0].IsCollapsed;
             return new BtsmtlSlateTimelineViewState(
                 m_Binding.ViewTimeMin,
@@ -124,7 +131,8 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor.EmbeddedScrollPosition,
                 trackId,
                 clipId,
-                collapsed);
+                collapsed,
+                curveTrackId);
         }
 
         public void RestoreViewState(BtsmtlSlateTimelineViewState state)
@@ -137,6 +145,9 @@ namespace BTSMTL.Timeline.Editor
             m_Binding.CurrentFrame = Mathf.RoundToInt(state.CurrentTime * Mathf.Max(1, m_Binding.FrameRate));
             if (m_Binding.Groups.Count != 0)
                 m_Binding.Groups[0].IsCollapsed = state.GroupCollapsed;
+            foreach (IEmbeddedTimelineGroupBinding group in m_Binding.Groups)
+                foreach (IEmbeddedTimelineTrackBinding track in group.Tracks)
+                    track.ShowCurves = string.Equals(track.AuthoringId, state.CurveTrackAuthoringId, StringComparison.Ordinal);
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
                 FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);

@@ -404,6 +404,11 @@ namespace BTSMTL.Timeline.Editor
 
         void BuildBindings()
         {
+            var expandedTracks = new HashSet<string>(
+                m_Tracks.Values
+                    .Where(track => track.ShowCurves)
+                    .Select(track => track.AuthoringId),
+                StringComparer.Ordinal);
             m_Groups.Clear();
             m_Sections.Clear();
             m_Tracks.Clear();
@@ -417,6 +422,7 @@ namespace BTSMTL.Timeline.Editor
                 if (source == null)
                     continue;
                 var track = new BtsmtlTimelineTrackBinding(this, group, source);
+                track.ShowCurves = expandedTracks.Contains(source.AuthoringId);
                 group.AddTrack(track);
                 m_Tracks[source.AuthoringId] = track;
                 for (int clipIndex = 0; clipIndex < source.Clips.Count; clipIndex++)

@@ -1090,60 +1090,14 @@ namespace BTSMTL.Timeline.Editor
                 removedTracks.Length == 0 && removedClips.Length == 0 && removedSections.Length == 0 &&
                 !trackOrderChanged)
                 return;
-            m_Session.Apply(() =>
-            {
-                for (int index = 0; index < removedTracks.Length; index++)
-                    m_Request.Timeline.RemoveTrack(removedTracks[index]);
-                for (int index = 0; index < removedClips.Length; index++)
-                {
-                    if (!removedTracks.Contains(removedClips[index].Track))
-                        m_Request.Timeline.RemoveClip(removedClips[index]);
-                }
-                for (int index = 0; index < removedSections.Length; index++)
-                    m_Request.Timeline.RemoveSection(removedSections[index]);
-                for (int index = 0; index < changes.Count; index++)
-                {
-                    (Clip clip, string trackAuthoringId, int startFrame, int endFrame, int easeInFrame, int easeOutFrame) = changes[index];
-                    if (!m_SourceTracks.TryGetValue(trackAuthoringId, out Track targetTrack))
-                        throw new InvalidOperationException("Timeline target Track identity is stale.");
-                    if (!ReferenceEquals(clip.Track, targetTrack))
-                    {
-                        m_Request.ContractCatalog.RequireClipPlacement(targetTrack, clip);
-                        clip.Track.Clips.Remove(clip);
-                        targetTrack.Clips.Add(clip);
-                    }
-                    clip.StartFrame = startFrame;
-                    clip.EndFrame = endFrame;
-                    clip.SelfEaseInFrame = easeInFrame;
-                    clip.SelfEaseOutFrame = easeOutFrame;
-                    clip.Track.UpdateMix();
-                }
-                for (int index = 0; index < curveChanges.Count; index++)
-                {
-                    (Clip clip, TimelineCurveChannelId channelId, AnimationCurve curve) = curveChanges[index];
-                    TimelineCurveAuthoring.Replace(clip, channelId, curve);
-                }
-                for (int index = 0; index < sectionChanges.Count; index++)
-                {
-                    (TimelineSection section, string name, int frame) = sectionChanges[index];
-                    m_Request.Timeline.ConfigureSection(section, name, frame);
-                }
-                if (trackOrderChanged)
-                {
-                    var orderedTracks = new List<Track>(end.TrackOrder.Count);
-                    for (int index = 0; index < end.TrackOrder.Count; index++)
-                    {
-                        if (m_SourceTracks.TryGetValue(end.TrackOrder[index], out Track track) &&
-                            !removedTracks.Contains(track))
-                            orderedTracks.Add(track);
-                    }
-                    if (orderedTracks.Count != m_Request.Timeline.Tracks.Count)
-                        throw new InvalidOperationException("Slate Timeline track identity is stale.");
-                    m_Request.Timeline.Tracks.Clear();
-                    m_Request.Timeline.Tracks.AddRange(orderedTracks);
-                }
-                m_Request.Timeline.Init();
-            }, "Slate Timeline Edit");
+            m_Binding.ApplyProxyDiff(
+                changes,
+                curveChanges,
+                sectionChanges,
+                removedTracks,
+                removedClips,
+                removedSections,
+                end.TrackOrder);
         }
 
         void ReportIssue(string message)
@@ -1324,3 +1278,4 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
+

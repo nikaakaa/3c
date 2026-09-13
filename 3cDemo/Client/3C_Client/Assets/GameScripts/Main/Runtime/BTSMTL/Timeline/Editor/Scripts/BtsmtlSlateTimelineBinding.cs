@@ -352,6 +352,71 @@ namespace BTSMTL.Timeline.Editor
             m_Session.Apply(mutation, undoName);
         }
 
+        public void ApplyProxyDiff(
+            IReadOnlyList<(Clip Clip, string TrackAuthoringId, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)> changes,
+            IReadOnlyList<(Clip Clip, TimelineCurveChannelId ChannelId, AnimationCurve Curve)> curveChanges,
+            IReadOnlyList<(TimelineSection Section, string Name, int Frame)> sectionChanges,
+            IReadOnlyList<Track> removedTracks,
+            IReadOnlyList<Clip> removedClips,
+            IReadOnlyList<TimelineSection> removedSections,
+            IReadOnlyList<string> trackOrder)
+        {
+            if (IsReadOnly)
+                throw new InvalidOperationException("Timeline 当前只读，不能提交作者修改。");
+            m_Session.Apply(() =>
+            {
+                for (int index = 0; index < removedTracks.Count; index++)
+                    Timeline.RemoveTrack(removedTracks[index]);
+                for (int index = 0; index < removedClips.Count; index++)
+                    if (!removedTracks.Contains(removedClips[index].Track))
+                        Timeline.RemoveClip(removedClips[index]);
+                for (int index = 0; index < removedSections.Count; index++)
+                    Timeline.RemoveSection(removedSections[index]);
+
+                for (int index = 0; index < changes.Count; index++)
+                {
+                    var change = changes[index];
+                    if (!TryGetTrack(change.TrackAuthoringId, out Track targetTrack))
+                        throw new InvalidOperationException("Timeline target Track identity is stale.");
+                    if (!ReferenceEquals(change.Clip.Track, targetTrack))
+                    {
+                        ContractCatalog.RequireClipPlacement(targetTrack, change.Clip);
+                        change.Clip.Track.Clips.Remove(change.Clip);
+                        targetTrack.Clips.Add(change.Clip);
+                    }
+                    change.Clip.StartFrame = change.StartFrame;
+                    change.Clip.EndFrame = change.EndFrame;
+                    change.Clip.SelfEaseInFrame = change.EaseInFrame;
+                    change.Clip.SelfEaseOutFrame = change.EaseOutFrame;
+                    change.Clip.Track.UpdateMix();
+                }
+
+                for (int index = 0; index < curveChanges.Count; index++)
+                {
+                    var change = curveChanges[index];
+                    TimelineCurveAuthoring.Replace(change.Clip, change.ChannelId, change.Curve);
+                }
+                for (int index = 0; index < sectionChanges.Count; index++)
+                {
+                    var change = sectionChanges[index];
+                    Timeline.ConfigureSection(change.Section, change.Name, change.Frame);
+                }
+                if (trackOrder != null && trackOrder.Count != 0)
+                {
+                    var orderedTracks = new List<Track>(trackOrder.Count);
+                    for (int index = 0; index < trackOrder.Count; index++)
+                        if (TryGetTrack(trackOrder[index], out Track track) && !removedTracks.Contains(track))
+                            orderedTracks.Add(track);
+                    if (orderedTracks.Count != Timeline.Tracks.Count)
+                        throw new InvalidOperationException("Slate Timeline track identity is stale.");
+                    Timeline.Tracks.Clear();
+                    Timeline.Tracks.AddRange(orderedTracks);
+                }
+                Timeline.Init();
+            }, "Slate Timeline Edit");
+            Rebuild();
+        }
+
         public List<TimelineCurveChannelDescriptor> CollectCurveChannels(Track track)
         {
             var result = new List<TimelineCurveChannelDescriptor>();

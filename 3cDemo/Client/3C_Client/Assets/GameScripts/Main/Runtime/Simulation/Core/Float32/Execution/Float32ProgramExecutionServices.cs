@@ -79,7 +79,6 @@ namespace ThirdPersonSimulation
                 program,
                 out m_BlackboardGroups,
                 out m_ScopeBlackboardGroups);
-            EventSequencePolicy = new Float32StateAccessPolicy(ProgramStateSemantic.FactSequence);
             ControlPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.RunnableLifecycle,
                 ProgramStateSemantic.RunnableChildCursor,
@@ -133,7 +132,6 @@ namespace ThirdPersonSimulation
         public ProgramLayoutIdentity Identity { get; }
         public OperationExecutionTopology Topology { get; }
         public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
-        public Float32StateAccessPolicy EventSequencePolicy { get; }
         public Float32StateAccessPolicy ControlPolicy { get; }
         public Float32StateAccessPolicy ActionPolicy { get; }
         public Float32StateAccessPolicy InputPolicy { get; }

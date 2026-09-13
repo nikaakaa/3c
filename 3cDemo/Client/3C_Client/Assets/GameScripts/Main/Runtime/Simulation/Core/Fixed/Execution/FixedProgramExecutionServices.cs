@@ -80,7 +80,6 @@ namespace ThirdPersonSimulation.Fixed
                 program,
                 out m_BlackboardGroups,
                 out m_ScopeBlackboardGroups);
-            EventSequencePolicy = new FixedStateAccessPolicy(ProgramStateSemantic.FactSequence);
             ControlPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.RunnableLifecycle,
                 ProgramStateSemantic.RunnableChildCursor,
@@ -134,7 +133,6 @@ namespace ThirdPersonSimulation.Fixed
         public ProgramLayoutIdentity Identity { get; }
         public OperationExecutionTopology Topology { get; }
         public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
-        public FixedStateAccessPolicy EventSequencePolicy { get; }
         public FixedStateAccessPolicy ControlPolicy { get; }
         public FixedStateAccessPolicy ActionPolicy { get; }
         public FixedStateAccessPolicy InputPolicy { get; }

@@ -361,16 +361,10 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedEventSequence
     {
         readonly FixedEvaluationFrame m_Frame;
-        readonly FixedStatePort m_State;
-        readonly int m_SequenceSlot;
 
         public FixedEventSequence(FixedEvaluationFrame frame)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_State = frame.CreateStatePort("EventSequence", frame.Services.EventSequencePolicy);
-            m_SequenceSlot = frame.Layout.FindStateSlot(ProgramStateSemantic.FactSequence, null);
-            if (m_SequenceSlot < 0)
-                throw new InvalidOperationException("Program has no FactSequence state slot.");
         }
 
         public SimulationEventHeader Next(SimulationOperation operation, string channel)
@@ -393,10 +387,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
         {
-            ulong sequence = checked(m_State.Get(m_SequenceSlot).UInt64 + 1);
-            if (sequence == 0)
-                throw new OverflowException("Simulation event sequence overflowed.");
-            m_State.Set(m_SequenceSlot, CharacterStateValue.FromUInt64(sequence));
+            ulong sequence = m_Frame.Transaction.NextEventSequence();
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);

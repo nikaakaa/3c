@@ -936,8 +936,7 @@ namespace ThirdPersonSimulation
         GameplayEffect = 7,
         MotionModifier = 8,
         Random = 9,
-        Fact = 10,
-        Input = 11,
+        Input = 10,
     }
 
     public enum ProgramStateSemantic : ushort
@@ -984,7 +983,6 @@ namespace ThirdPersonSimulation
         ActionEventSequence = 84,
         RandomState = 122,
         HandleAllocator = 123,
-        FactSequence = 124,
         AIWaitElapsedTicks = 130
     }
 
@@ -1105,7 +1103,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ActionEventSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
                 ProgramStateSemantic.HandleAllocator => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runtime,
-                ProgramStateSemantic.FactSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Fact,
                 _ => false
             };
             if (!valid)

@@ -516,11 +516,7 @@ namespace ThirdPersonSimulation.Fixed
             PendingCharacterEvaluation pending,
             string channel)
         {
-            int sequenceSlot = pending.ExecutionLayout.RequireStateSlot(ProgramStateSemantic.FactSequence);
-            ulong sequence = checked(transaction.Get(sequenceSlot).UInt64 + 1);
-            if (sequence == 0)
-                throw new OverflowException("Simulation event sequence overflowed.");
-            transaction.Set(sequenceSlot, CharacterStateValue.FromUInt64(sequence));
+            ulong sequence = transaction.NextEventSequence();
             OperationHandle root = pending.ExecutionLayout.RootOperation;
             ulong generation = 1;
             SimulationOperation operation = pending.Program.Operations[root.Value];

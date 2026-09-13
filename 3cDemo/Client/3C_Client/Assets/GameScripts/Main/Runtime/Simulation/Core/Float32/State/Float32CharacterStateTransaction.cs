@@ -238,6 +238,8 @@ namespace ThirdPersonSimulation
     {
         internal Float32CharacterStateSavepoint(
             int depth,
+            bool hadEventSequenceWorking,
+            ulong eventSequenceSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -245,6 +247,8 @@ namespace ThirdPersonSimulation
             EquipmentStateAggregate equipmentSnapshot)
         {
             Depth = depth;
+            HadEventSequenceWorking = hadEventSequenceWorking;
+            EventSequenceSnapshot = eventSequenceSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -253,6 +257,8 @@ namespace ThirdPersonSimulation
         }
 
         internal int Depth { get; }
+        internal bool HadEventSequenceWorking { get; }
+        internal ulong EventSequenceSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -274,6 +280,8 @@ namespace ThirdPersonSimulation
         SimulationGameplayEffectState m_GameplayEffectWorking;
         Float32GameplayEffectExecutionScratch m_GameplayEffectScratch;
         EquipmentStateAggregate m_EquipmentWorking;
+        ulong m_EventSequenceWorking;
+        bool m_EventSequenceDirty;
         Float32CharacterStateTransactionStatus m_Status;
 
         Float32CharacterStateTransaction(
@@ -336,6 +344,17 @@ namespace ThirdPersonSimulation
             if (m_Workspace.TryGet(address, m_Epoch, out CharacterStateValue value))
                 return value;
             return m_BaseState.Get(address);
+        }
+
+        public ulong NextEventSequence()
+        {
+            RequireActive();
+            ulong sequence = checked((m_EventSequenceDirty ? m_EventSequenceWorking : m_BaseState.EventSequence) + 1UL);
+            if (sequence == 0)
+                throw new OverflowException("Simulation event sequence overflowed.");
+            m_EventSequenceWorking = sequence;
+            m_EventSequenceDirty = true;
+            return sequence;
         }
 
         public void Set(int slotIndex, CharacterStateValue value)
@@ -415,6 +434,8 @@ namespace ThirdPersonSimulation
             RequireActive();
             var savepoint = new Float32CharacterStateSavepoint(
                 m_Savepoints.Count + 1,
+                m_EventSequenceDirty,
+                m_EventSequenceWorking,
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -444,6 +465,8 @@ namespace ThirdPersonSimulation
                     savepoint.GameplayEffectSnapshot,
                     savepoint.GameplayEffectDirty);
             }
+            m_EventSequenceDirty = savepoint.HadEventSequenceWorking;
+            m_EventSequenceWorking = savepoint.EventSequenceSnapshot;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -483,6 +506,7 @@ namespace ThirdPersonSimulation
             EquipmentStateAggregate equipmentState = m_Layout.Equipment.CapabilityEnabled
                 ? m_EquipmentWorking ?? m_BaseState.RequireEquipmentState()
                 : null;
+            ulong eventSequence = m_EventSequenceDirty ? m_EventSequenceWorking : m_BaseState.EventSequence;
 
             try
             {
@@ -490,6 +514,7 @@ namespace ThirdPersonSimulation
                 CharacterSimulationState committed = m_BaseState.WithDirtyPages(
                     m_Program,
                     m_Tick,
+                    eventSequence,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -570,6 +595,8 @@ namespace ThirdPersonSimulation
             m_GameplayEffectWorking = null;
             m_GameplayEffectScratch = null;
             m_EquipmentWorking = null;
+            m_EventSequenceWorking = 0;
+            m_EventSequenceDirty = false;
         }
 
     }

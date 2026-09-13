@@ -2196,6 +2196,7 @@ namespace Slate
                         GenericMenu menu = new GenericMenu();
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
                         menu.AddItem(new GUIContent("Delete Track"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteTrack(track), "Delete Track"));
                         menu.ShowAsContext();
                         e.Use();
@@ -2292,6 +2293,21 @@ namespace Slate
                         GUI.Label(clipRect.ExpandBy(-4, -2), clip.Info, Styles.leftLabel);
                         if (clipRect.width <= 20)
                             GUI.Label(new Rect(clipRect.xMax + 2, clipRect.y, 120, clipRect.height), clip.Info, Styles.leftLabel);
+                        if (selected && clip.Keyable?.animationData != null && clipRect.width > 12f)
+                        {
+                            Rect dopeRect = Rect.MinMaxRect(
+                                clipRect.xMin,
+                                clipRect.yMax - 13f,
+                                clipRect.xMax,
+                                clipRect.yMax);
+                            DopeSheetEditor.DrawDopeSheet(
+                                clip.Keyable.animationData,
+                                clip.Keyable,
+                                dopeRect,
+                                0f,
+                                Mathf.Max(clip.Length, 1f / embeddedTimeline.FrameRate),
+                                false);
+                        }
 
                         if (e.type == EventType.MouseDown && clipRect.Contains(e.mousePosition))
                         {
@@ -2353,6 +2369,7 @@ namespace Slate
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x + rect.x) * embeddedTimeline.FrameRate));
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        menu.AddItem(new GUIContent("Paste Formal Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
                         menu.ShowAsContext();
                         e.Use();
                     }

@@ -12,6 +12,7 @@ namespace Slate
         const float GroupHeight = 22f;
         const float TrackHeight = 26f;
         const float CurveHeight = 72f;
+        const float CurveKeyStripHeight = 18f;
 
         ISlateTimelineEditorCommandPort m_Commands;
         ISlateTimelineEditorHost m_Host;
@@ -338,8 +339,30 @@ namespace Slate
                         });
                     m_CurveRenderers.Add(key, renderer);
                 }
-                Rect curveRect = new Rect(rect.x, rect.y + curveIndex * curveHeight, rect.width, curveHeight);
+                Rect rowRect = new Rect(rect.x, rect.y + curveIndex * curveHeight, rect.width, curveHeight);
+                DrawCurveKeyStrip(curve, rowRect, clip.StartFrame, clip.EndFrame);
+                Rect curveRect = new Rect(rowRect.x, rowRect.y + CurveKeyStripHeight, rowRect.width, rowRect.height - CurveKeyStripHeight);
                 renderer.Draw(curveRect, Rect.MinMaxRect(0f, 0f, 1f, 1f));
+            }
+        }
+
+        void DrawCurveKeyStrip(
+            SlateTimelineEditorCurveView curve,
+            Rect rect,
+            int startFrame,
+            int endFrame)
+        {
+            GUI.Box(rect, GUIContent.none, Styles.timeBoxStyle ?? GUI.skin.box);
+            GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 150f, 16f), curve.DisplayName, EditorStyles.miniLabel);
+            if (curve.Curve == null)
+                return;
+            for (int keyIndex = 0; keyIndex < curve.Curve.length; keyIndex++)
+            {
+                Keyframe key = curve.Curve.keys[keyIndex];
+                float frame = Mathf.Lerp(startFrame, endFrame, key.time);
+                float x = rect.x + FrameToX(Mathf.RoundToInt(frame), rect.width);
+                Rect keyRect = new Rect(x - 4f, rect.center.y - 4f, 8f, 8f);
+                GUI.DrawTexture(keyRect, Styles.dopeKey ?? Texture2D.whiteTexture);
             }
         }
 

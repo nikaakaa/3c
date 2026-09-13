@@ -484,7 +484,7 @@ namespace Slate
 
         //The color used in scruber
         private Color scruberColor {
-            get { return cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f); }
+            get { return embeddedSurface || cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f); }
         }
 
         ///----------------------------------------------------------------------------------------------
@@ -1974,8 +1974,8 @@ namespace Slate
             var e = Event.current;
             if ( e.type == EventType.MouseDown && topMiddleRect.Contains(mousePosition) ) {
                 var endCarretPos = TimeToPos(length) + leftRect.width;
-                var loopRegionMaxPos = TimeToPos(cutscene.playTimeMax) + leftRect.width;
-                var loopRegionMinPos = TimeToPos(cutscene.playTimeMin) + leftRect.width;
+                var loopRegionMaxPos = !embeddedSurface ? TimeToPos(cutscene.playTimeMax) + leftRect.width : 0f;
+                var loopRegionMinPos = !embeddedSurface ? TimeToPos(cutscene.playTimeMin) + leftRect.width : 0f;
 
                 var isEndCarret = embeddedLength == null && (Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control);
                 var isRegionMax = !embeddedSurface && Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
@@ -2309,7 +2309,7 @@ namespace Slate
                 GUI.DrawTexture(lengthRect, Styles.carretIcon);
                 GUI.color = Color.white;
 
-                if ( Prefs.loopRegionMode && !Application.isPlaying ) {
+                if ( !embeddedSurface && Prefs.loopRegionMode && !Application.isPlaying ) {
                     //the loop region min
                     var lrMinPos = TimeToPos(cutscene.playTimeMin);
                     var lrMinRect = new Rect(0, 0, 16, 16);
@@ -2346,7 +2346,7 @@ namespace Slate
             if ( isResizingLeftMargin ) { LEFT_MARGIN = e.mousePosition.x + 2; }
             if ( e.rawType == EventType.MouseUp ) { isResizingLeftMargin = false; }
 
-            GUI.enabled = cutscene.currentTime <= 0;
+            GUI.enabled = EmbeddedCurrentTime() <= 0;
 
             //starting height && search.
             var nextYPos = FIRST_GROUP_TOP_MARGIN;

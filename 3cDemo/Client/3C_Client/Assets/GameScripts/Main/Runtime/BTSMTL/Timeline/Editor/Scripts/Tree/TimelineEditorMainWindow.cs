@@ -13,6 +13,11 @@ namespace BTSMTL.Timeline.Editor
 {
     public sealed class TimelineEditorWindow : EditorWindow
     {
+        const float DetailsMinWidth = 380f;
+        const float DetailsMaxWidth = 560f;
+        const float DetailsInitialWidth = 420f;
+        const float DetailsCollapseThreshold = 1080f;
+
         enum RuntimeObservationSelectionMode : byte
         {
             Automatic = 0,
@@ -81,7 +86,7 @@ namespace BTSMTL.Timeline.Editor
         BtsmtlSlateTimelineViewState m_ViewState;
 
         [SerializeField]
-        float m_DetailsWidth = 320f;
+        float m_DetailsWidth = DetailsInitialWidth;
 
         [SerializeField]
         bool m_DetailsCollapsed;
@@ -359,7 +364,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnRootGeometryChanged(GeometryChangedEvent evt)
         {
-            m_NarrowDetailsCollapsed = evt.newRect.width < 900f || evt.newRect.height < 360f;
+            m_NarrowDetailsCollapsed = evt.newRect.width < DetailsCollapseThreshold || evt.newRect.height < 360f;
             ApplyDetailsVisibility();
         }
 
@@ -467,7 +472,7 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.minHeight = 320f;
             m_WorkspaceSplit = new TwoPaneSplitView(
                 1,
-                Mathf.Clamp(m_DetailsWidth, 240f, 480f),
+                Mathf.Clamp(m_DetailsWidth, DetailsMinWidth, DetailsMaxWidth),
                 TwoPaneSplitViewOrientation.Horizontal)
             {
                 name = "timeline-workspace"
@@ -479,6 +484,8 @@ namespace BTSMTL.Timeline.Editor
             m_DetailsPane = new VisualElement { name = "timeline-details-pane" };
             m_DetailsPane.style.flexGrow = 1f;
             m_DetailsPane.style.flexShrink = 0f;
+            m_DetailsPane.style.minWidth = DetailsMinWidth;
+            m_DetailsPane.style.maxWidth = DetailsMaxWidth;
             m_DetailsPane.Add(CreateDetailsHeader());
             m_DetailsHost = new ScrollView { name = "timeline-details" };
             m_DetailsHost.style.flexGrow = 1f;
@@ -494,7 +501,7 @@ namespace BTSMTL.Timeline.Editor
                 {
                     float width = m_WorkspaceSplit.fixedPane.resolvedStyle.width;
                     if (width > 0f)
-                        m_DetailsWidth = width;
+                        m_DetailsWidth = Mathf.Clamp(width, DetailsMinWidth, DetailsMaxWidth);
                 }
             });
             rootVisualElement.Add(m_WorkspaceSplit);

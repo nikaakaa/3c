@@ -2,13 +2,15 @@
 
 ## Purpose
 
-定义MotionWarp Timeline authoring、稳定源MotionCurve绑定、目标姿态、累计进度曲线与发布前拒绝规则，使Warp只作为compiled Program中的正式Motion Modifier存在。
+定义MotionWarp Timeline authoring、稳定源MotionCurve绑定、RootMotionCurveAsset源区间映射、目标姿态、累计进度曲线与发布前拒绝规则，使Warp只作为compiled Program中的正式Motion Modifier存在。
 
 ## Requirements
 
 ### Requirement: MotionWarpClip 必须显式引用唯一源 MotionCurveClip
 
 `MotionWarpClip` MUST通过稳定authoring identity显式引用同一Timeline owner内的一个`MotionCurveClip`。源Clip MUST使用`Action` channel、`Override` blend mode、`ActorLocal` space、无Ease且全程为1的Gameplay WeightCurve；Warp窗口 MUST完整位于源Clip的`StartFrame..CurveEndFrame`内，同一源Clip上的Warp窗口 MUST不重叠。动画CrossFade MUST继续由Presentation独立表达，Gameplay source权重 MUST不改变Warp目标。系统 MUST不通过时间重叠、Track名称、Clip列表索引、CurveId或运行时扫描猜测source。ScaleToTarget的源窗口终点平面向量与ScaleSourceYaw的源窗口总yaw MUST在authoring/Semantic发布前满足对应非零前置条件，Runtime仍 MUST保留同一invariant检查。
+
+源窗口累计位移与 yaw MUST 经被绑定 MotionCurveClip 的 RootMotionCurveAsset、源区间、求值模式和 Timeline 唯一时间映射读取，不得直接读取旧内嵌曲线或改绑共享资产。多个 Clip 可以引用同一源但 MUST 保持各自区间和 Warp 绑定；portable Gameplay MUST只消费已编译的正式 Motion Modifier 数据，不回读 Unity 资产。
 
 #### Scenario: 重排 Timeline Track
 

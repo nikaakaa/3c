@@ -358,18 +358,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
-            CharacterStateValue value;
-            if (slot.ValueKind == ProgramStateValueKind.GameplayEffectAggregate)
-            {
-                value = CharacterStateValue.FromGameplayEffectAggregate(
-                    GameplayEffectStateAggregate.CreateInitial(m_Layout.GameplayEffectProgram));
-            }
-            else
-            {
-                value = slot.DefaultConstantIndex >= 0
-                    ? CharacterStateValue.FromConstant(m_Program.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                    : CharacterStateValue.Default(slot.ValueKind);
-            }
+            CharacterStateValue value = slot.DefaultConstantIndex >= 0
+                ? CharacterStateValue.FromConstant(m_Program.Constants[slot.DefaultConstantIndex], slot.ValueKind)
+                : CharacterStateValue.Default(slot.ValueKind);
             Set(slotIndex, value);
         }
 
@@ -385,7 +376,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Gameplay Effect state is bound to another Actor workspace.");
                 return m_GameplayEffectWorking;
             }
-            GameplayEffectStateAggregate aggregate = Get(m_Layout.GameplayEffectAggregateAddress).GameplayEffectAggregate;
+            GameplayEffectStateAggregate aggregate = m_BaseState.RequireGameplayEffectState();
             m_GameplayEffectScratch = scratch;
             m_GameplayEffectWorking = new SimulationGameplayEffectState(
                 m_Layout.GameplayEffectProgram,
@@ -397,7 +388,7 @@ namespace ThirdPersonSimulation.Fixed
         public GameplayEffectStateAggregate GetGameplayEffectAggregate()
         {
             RequireActive();
-            return Get(m_Layout.GameplayEffectAggregateAddress).GameplayEffectAggregate;
+            return m_BaseState.RequireGameplayEffectState();
         }
 
         public EquipmentStateAggregate GetEquipmentState()
@@ -471,12 +462,9 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(controlState));
             if (m_Savepoints.Count != 0)
                 throw new InvalidOperationException("Character state transaction cannot Commit with active savepoints.");
-            if (m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges)
-            {
-                Set(
-                    m_Layout.GameplayEffectAggregateAddress,
-                    CharacterStateValue.FromGameplayEffectAggregate(m_GameplayEffectWorking.Freeze()));
-            }
+            GameplayEffectStateAggregate gameplayEffectState = m_Program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect")
+                ? m_GameplayEffectWorking?.Freeze() ?? m_BaseState.RequireGameplayEffectState()
+                : null;
             EquipmentStateAggregate equipmentState = m_Layout.Equipment.CapabilityEnabled
                 ? m_EquipmentWorking ?? m_BaseState.RequireEquipmentState()
                 : null;
@@ -488,6 +476,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_Program,
                     m_Tick,
                     controlState,
+                    gameplayEffectState,
                     equipmentState,
                     m_Workspace.Replacements,
                     m_Workspace.DirtyCount);

@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 16;
-		public const string CodecIdentity = "character-state/float32/v17";
-		const string HashIdentity = "character-state-hash/float32/v15";
+		const int Version = 17;
+		public const string CodecIdentity = "character-state/float32/v18";
+		const string HashIdentity = "character-state-hash/float32/v16";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -41,6 +41,10 @@ namespace ThirdPersonSimulation
                 WriteValue(writer, state.Get(i, slot.ValueKind), layout);
             }
             writer.WriteBytes(CharacterControlRuntimeStateCodec.Write(state.ControlState));
+			bool hasGameplayEffectState = state.TryGetGameplayEffectState(out GameplayEffectStateAggregate gameplayEffectState);
+			writer.WriteBoolean(hasGameplayEffectState);
+			if (hasGameplayEffectState)
+				GameplayEffectStateAggregateCodec.Write(writer, gameplayEffectState, layout.GameplayEffectProgram);
 			bool hasEquipmentState = state.TryGetEquipmentState(out EquipmentStateAggregate equipmentState);
 			writer.WriteBoolean(hasEquipmentState);
 			if (hasEquipmentState)
@@ -81,8 +85,14 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"Character state slot '{i}' kind does not match Program layout.");
             }
             CharacterControlRuntimeState controlState = CharacterControlRuntimeStateCodec.Read(reader.ReadBytes());
-            if (controlState.LastCompletedTick != lastCompletedTick)
-                throw new InvalidDataException("Character control runtime state Tick does not match Character state.");
+			if (controlState.LastCompletedTick != lastCompletedTick)
+				throw new InvalidDataException("Character control runtime state Tick does not match Character state.");
+			bool hasGameplayEffectState = reader.ReadBoolean();
+			GameplayEffectStateAggregate gameplayEffectState = hasGameplayEffectState
+				? GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram)
+				: null;
+			if (hasGameplayEffectState != program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect"))
+				throw new InvalidDataException("Character Gameplay Effect state presence does not match its runtime capability.");
 			bool hasEquipmentState = reader.ReadBoolean();
 			EquipmentStateAggregate equipmentState = hasEquipmentState
 				? EquipmentStateAggregateCodec.Read(reader, layout.Equipment)
@@ -90,7 +100,7 @@ namespace ThirdPersonSimulation
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, controlState, equipmentState);
+			var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -131,9 +141,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
                 case ProgramStateValueKind.AbilityExecutionState: WriteSkillExecutionState(writer, value.SkillExecutionState, layout); break;
-                case ProgramStateValueKind.GameplayEffectAggregate:
-                    GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
-                    break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
         }
@@ -161,9 +168,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
                 case ProgramStateValueKind.AbilityExecutionState: return CharacterStateValue.FromSkillExecutionState(ReadSkillExecutionState(reader, layout));
-                case ProgramStateValueKind.GameplayEffectAggregate:
-                    return CharacterStateValue.FromGameplayEffectAggregate(
-                        GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
         }

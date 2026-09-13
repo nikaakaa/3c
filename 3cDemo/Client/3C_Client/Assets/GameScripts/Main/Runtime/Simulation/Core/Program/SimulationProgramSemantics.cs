@@ -922,7 +922,6 @@ namespace ThirdPersonSimulation
         ActionInstance = 22,
         ActionInstanceReference = 23,
         ActionTargetSnapshot = 24,
-        GameplayEffectAggregate = 25,
         AbilityExecutionState = 27
     }
 
@@ -984,7 +983,6 @@ namespace ThirdPersonSimulation
         ActionRequestBuffer = 81,
         AbilityExecutionState = 82,
         ActionEventSequence = 84,
-        GameplayEffectAggregate = 100,
         EquipmentLocalState = 111,
         RandomState = 122,
         HandleAllocator = 123,
@@ -1054,7 +1052,6 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.ActionInstance => "state.action-instance/v1",
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
-                ProgramStateValueKind.GameplayEffectAggregate => "state.gameplay-effect-aggregate/v1",
                 ProgramStateValueKind.AbilityExecutionState => "state.ability-execution/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
@@ -1108,7 +1105,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.AbilityExecutionState => kind == ProgramStateValueKind.AbilityExecutionState && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionEventSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Action,
-                ProgramStateSemantic.GameplayEffectAggregate => kind == ProgramStateValueKind.GameplayEffectAggregate && owner == ProgramStateOwnerKind.GameplayEffect,
                 ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
                 ProgramStateSemantic.HandleAllocator => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runtime,
                 ProgramStateSemantic.FactSequence => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Fact,

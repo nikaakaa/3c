@@ -709,7 +709,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 kind == ProgramStateValueKind.ActionInstanceReference ||
                 kind == ProgramStateValueKind.BlackboardOwnerToken ||
                 kind == ProgramStateValueKind.BlackboardWriteStamp ||
-                kind == ProgramStateValueKind.GameplayEffectAggregate ||
                 kind == ProgramStateValueKind.AbilityExecutionState)
             {
                 return -1;

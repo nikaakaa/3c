@@ -115,7 +115,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
-        readonly TypedStateAddress m_GameplayEffectAggregate;
         readonly TypedStateAddress m_SkillExecutionState;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
@@ -176,8 +175,7 @@ namespace ThirdPersonSimulation.Fixed
                 out m_AllActionSlots,
                 out m_ActionContexts,
                 out m_TimelineRetention,
-                out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
-                out m_GameplayEffectAggregate);
+                out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -211,7 +209,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterEquipmentRuntimeBinding EquipmentBinding => m_EquipmentBinding;
         internal FixedProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
-        public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
         public TypedStateAddress SkillExecutionStateAddress => m_SkillExecutionState;
         internal bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
         public EquipmentProgramLayout Equipment { get; }
@@ -655,14 +652,12 @@ namespace ThirdPersonSimulation.Fixed
             out IReadOnlyList<TypedActionStateAddresses> allActionSlots,
             out IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> actionContexts,
             out IReadOnlyDictionary<int, TypedStateAddress> timelineRetention,
-            out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
-            out TypedStateAddress gameplayEffectAggregate)
+            out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             var actionBuilders = new Dictionary<string, Dictionary<int, ActionAddressBuilder>>(StringComparer.Ordinal);
             var timeline = new Dictionary<int, TypedStateAddress>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
-            gameplayEffectAggregate = default;
             TypedStateAddress eventSequence = default;
 
             for (int i = 0; i < program.StateSlots.Count; i++)
@@ -692,19 +687,11 @@ namespace ThirdPersonSimulation.Fixed
                     case ProgramStateSemantic.BlackboardValue when slot.ValueKind == ProgramStateValueKind.ActionTargetSnapshot:
                         AddUnique(targets, slot.OwnerIdentity, address, "Action target snapshot");
                         break;
-                    case ProgramStateSemantic.GameplayEffectAggregate:
-                        if (gameplayEffectAggregate.IsValid)
-                            throw new InvalidDataException("Program contains duplicate Gameplay Effect aggregate state.");
-                        gameplayEffectAggregate = address;
-                        break;
                 }
             }
 
             if (!eventSequence.IsValid)
                 throw new InvalidDataException("Program has no Action event sequence state.");
-            if (!gameplayEffectAggregate.IsValid)
-                throw new InvalidDataException("Program has no Gameplay Effect aggregate state.");
-
             var actionValues = new Dictionary<string, TypedActionStateAddresses>(StringComparer.Ordinal);
             var actionSlotValues = new Dictionary<string, IReadOnlyList<TypedActionStateAddresses>>(StringComparer.Ordinal);
             var allActionValues = new List<TypedActionStateAddresses>();

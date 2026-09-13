@@ -11,7 +11,6 @@ namespace ThirdPersonSimulation
 		readonly Float32ActionInstanceState m_ActionInstance;
 		readonly Float32ActionInstanceReference m_ActionInstanceReference;
 		readonly GameplayAbilityExecutionAggregate<CharacterStateValue> m_SkillExecutionState;
-		readonly GameplayEffectStateAggregate m_GameplayEffectAggregate;
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
 		readonly BlackboardWriteStamp m_BlackboardWriteStamp;
 
@@ -32,8 +31,7 @@ namespace ThirdPersonSimulation
 			Float32ActionInstanceState actionInstance,
 			Float32ActionInstanceReference actionInstanceReference,
 			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState,
-			SimulationActionTargetSnapshot actionTargetSnapshot,
-			GameplayEffectStateAggregate gameplayEffectAggregate)
+			SimulationActionTargetSnapshot actionTargetSnapshot)
 		{
 			Kind = kind;
 			Boolean = boolean;
@@ -52,7 +50,6 @@ namespace ThirdPersonSimulation
 			m_ActionInstanceReference = actionInstanceReference;
 			m_SkillExecutionState = skillExecutionState;
 			ActionTargetSnapshot = actionTargetSnapshot;
-			m_GameplayEffectAggregate = gameplayEffectAggregate;
 		}
 
 		public ProgramStateValueKind Kind { get; }
@@ -75,10 +72,6 @@ namespace ThirdPersonSimulation
 			Kind == ProgramStateValueKind.AbilityExecutionState
 				? m_SkillExecutionState ?? throw new InvalidOperationException("Skill execution state aggregate is missing.")
 				: throw new InvalidOperationException($"State value is '{Kind}', expected SkillExecutionState.");
-		internal GameplayEffectStateAggregate GameplayEffectAggregate =>
-			Kind == ProgramStateValueKind.GameplayEffectAggregate
-				? m_GameplayEffectAggregate ?? throw new InvalidOperationException("Gameplay Effect state aggregate is missing.")
-				: throw new InvalidOperationException($"State value is '{Kind}', expected GameplayEffectAggregate.");
 		public static CharacterStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
 		public static CharacterStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
 		public static CharacterStateValue FromUInt64(ulong value) => Create(ProgramStateValueKind.UInt64, uint64: value);
@@ -96,12 +89,6 @@ namespace ThirdPersonSimulation
 		internal static CharacterStateValue FromSkillExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> value) =>
 			Create(ProgramStateValueKind.AbilityExecutionState, skillExecutionState: value ?? throw new ArgumentNullException(nameof(value)));
 		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
-		internal static CharacterStateValue FromGameplayEffectAggregate(GameplayEffectStateAggregate value)
-		{
-			return Create(
-				ProgramStateValueKind.GameplayEffectAggregate,
-				gameplayEffectAggregate: value ?? throw new ArgumentNullException(nameof(value)));
-		}
 		public static CharacterStateValue Default(ProgramStateValueKind kind)
 		{
 			return kind switch
@@ -122,7 +109,6 @@ namespace ThirdPersonSimulation
 				ProgramStateValueKind.ActionInstanceReference => FromActionInstanceReference(default),
 				ProgramStateValueKind.AbilityExecutionState => FromSkillExecutionState(new GameplayAbilityExecutionAggregate<CharacterStateValue>()),
 				ProgramStateValueKind.ActionTargetSnapshot => FromActionTargetSnapshot(SimulationActionTargetSnapshot.None),
-				ProgramStateValueKind.GameplayEffectAggregate => throw new InvalidOperationException("Gameplay Effect aggregate requires the Program catalog."),
 				_ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
 			};
 		}
@@ -166,8 +152,7 @@ namespace ThirdPersonSimulation
 			Float32ActionInstanceState actionInstance = default,
 			Float32ActionInstanceReference actionInstanceReference = default,
 			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState = null,
-			SimulationActionTargetSnapshot actionTargetSnapshot = default,
-			GameplayEffectStateAggregate gameplayEffectAggregate = null)
+			SimulationActionTargetSnapshot actionTargetSnapshot = default)
 		{
 			return new CharacterStateValue(
 				kind,
@@ -186,8 +171,7 @@ namespace ThirdPersonSimulation
 				actionInstance,
 				actionInstanceReference,
 				skillExecutionState,
-				actionTargetSnapshot,
-				gameplayEffectAggregate);
+				actionTargetSnapshot);
 		}
 
 		T Require<T>(ProgramStateValueKind expected, T value)
@@ -290,6 +274,7 @@ namespace ThirdPersonSimulation
 		readonly CharacterStatePartition[] m_Partitions;
 		readonly ProgramExecutionLayout m_Layout;
 		readonly CharacterControlRuntimeState m_ControlState;
+		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
 		CharacterStateHash m_StateHash;
 
@@ -298,6 +283,7 @@ namespace ThirdPersonSimulation
 			ProgramExecutionLayout layout,
 			ulong lastCompletedTick,
 			CharacterControlRuntimeState controlState,
+			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
 			CharacterStatePartition[] partitions,
 			bool takeOwnership)
@@ -306,6 +292,15 @@ namespace ThirdPersonSimulation
 				throw new ArgumentNullException(nameof(program));
 			m_Layout = layout ?? throw new ArgumentNullException(nameof(layout));
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
+			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
+			if (gameplayEffectEnabled)
+			{
+				if (gameplayEffectState == null)
+					throw new ArgumentNullException(nameof(gameplayEffectState));
+			}
+			else if (gameplayEffectState != null)
+				throw new ArgumentException("Character state carries Gameplay Effect state while the capability is disabled.", nameof(gameplayEffectState));
+			m_GameplayEffectState = gameplayEffectState;
 			if (m_Layout.Equipment.CapabilityEnabled)
 			{
 				if (equipmentState == null)
@@ -342,6 +337,13 @@ namespace ThirdPersonSimulation
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
+		internal GameplayEffectStateAggregate RequireGameplayEffectState() =>
+			m_GameplayEffectState ?? throw new InvalidOperationException("Character does not install Gameplay Effect state.");
+		internal bool TryGetGameplayEffectState(out GameplayEffectStateAggregate state)
+		{
+			state = m_GameplayEffectState;
+			return state != null;
+		}
 		internal EquipmentStateAggregate RequireEquipmentState() =>
 			m_EquipmentState ?? throw new InvalidOperationException("Character does not install Equipment state.");
 		public bool TryGetEquipmentState(out EquipmentStateAggregate state)
@@ -377,12 +379,7 @@ namespace ThirdPersonSimulation
 			for (int i = 0; i < values.Length; i++)
 			{
 				ProgramStateSlot slot = program.StateSlots[i];
-				if (slot.ValueKind == ProgramStateValueKind.GameplayEffectAggregate)
-				{
-					values[i] = CharacterStateValue.FromGameplayEffectAggregate(
-						GameplayEffectStateAggregate.CreateInitial(layout.GameplayEffectProgram));
-				}
-				else if (slot.ValueKind == ProgramStateValueKind.BlackboardOwnerToken &&
+				if (slot.ValueKind == ProgramStateValueKind.BlackboardOwnerToken &&
 					layout.Services.TryGetInitialBlackboardOwnerToken(i, out BlackboardOwnerToken token))
 				{
 					values[i] = CharacterStateValue.FromBlackboardOwnerToken(token);
@@ -394,10 +391,13 @@ namespace ThirdPersonSimulation
 						: CharacterStateValue.Default(slot.ValueKind);
 				}
 			}
+			GameplayEffectStateAggregate gameplayEffectState = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect")
+				? GameplayEffectStateAggregate.CreateInitial(layout.GameplayEffectProgram)
+				: null;
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, controlState, equipmentState);
+			return Create(program, layout, 0, values, controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -406,6 +406,7 @@ namespace ThirdPersonSimulation
 			ulong lastCompletedTick,
 			IReadOnlyList<CharacterStateValue> values,
 			CharacterControlRuntimeState controlState,
+			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
 		{
 			if (values == null || values.Count != program.StateSlots.Count)
@@ -431,7 +432,7 @@ namespace ThirdPersonSimulation
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, controlState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -458,6 +459,7 @@ namespace ThirdPersonSimulation
 			CharacterSimulationProgram program,
 			SimulationTick completedTick,
 			CharacterControlRuntimeState controlState,
+			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
 			CharacterStatePageReplacement[] replacements,
 			int replacementCount)
@@ -474,7 +476,7 @@ namespace ThirdPersonSimulation
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, controlState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -495,6 +497,7 @@ namespace ThirdPersonSimulation
 				LastCompletedTick,
 				values,
 				ControlState,
+				m_GameplayEffectState,
 				m_EquipmentState);
 		}
 

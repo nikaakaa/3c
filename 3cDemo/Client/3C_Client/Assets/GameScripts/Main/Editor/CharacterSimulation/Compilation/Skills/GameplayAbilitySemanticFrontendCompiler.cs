@@ -74,12 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "action:event-sequence");
                 builder.DeclareStandaloneStateSlot(
                     abilitySource,
-                    ProgramStateValueKind.GameplayEffectAggregate,
-                    ProgramStateOwnerKind.GameplayEffect,
-                    ProgramStateSemantic.GameplayEffectAggregate,
-                    "gameplay-effect:aggregate");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
                     ProgramStateValueKind.UInt64,
                     ProgramStateOwnerKind.Random,
                     ProgramStateSemantic.RandomState,

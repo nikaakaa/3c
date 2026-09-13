@@ -332,11 +332,10 @@ namespace ThirdPersonSimulation.Fixed
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_Savepoint = frame.Transaction.CreateSavepoint();
-				m_OutputSavepoint = frame.CreateOutputSavepoint();
-				m_Values = new CharacterStateValue[frame.Program.StateSlots.Count];
-				for (int i = 0; i < m_Values.Length; i++)
-					if (frame.Program.StateSlots[i].ValueKind != ProgramStateValueKind.GameplayEffectAggregate)
-						m_Values[i] = frame.Transaction.Get(i);
+			m_OutputSavepoint = frame.CreateOutputSavepoint();
+			m_Values = new CharacterStateValue[frame.Program.StateSlots.Count];
+			for (int i = 0; i < m_Values.Length; i++)
+				m_Values[i] = frame.Transaction.Get(i);
 			}
 
 			public void Complete()
@@ -351,11 +350,10 @@ namespace ThirdPersonSimulation.Fixed
 			{
 				if (m_Completed)
 					return;
-				m_Frame.RestoreOutput(m_OutputSavepoint);
-				m_Frame.Transaction.Restore(m_Savepoint);
-				for (int i = 0; i < m_Values.Length; i++)
-					if (m_Frame.Program.StateSlots[i].ValueKind != ProgramStateValueKind.GameplayEffectAggregate)
-						m_Frame.Transaction.Set(i, m_Values[i]);
+			m_Frame.RestoreOutput(m_OutputSavepoint);
+			m_Frame.Transaction.Restore(m_Savepoint);
+			for (int i = 0; i < m_Values.Length; i++)
+				m_Frame.Transaction.Set(i, m_Values[i]);
 				m_Completed = true;
 			}
 		}

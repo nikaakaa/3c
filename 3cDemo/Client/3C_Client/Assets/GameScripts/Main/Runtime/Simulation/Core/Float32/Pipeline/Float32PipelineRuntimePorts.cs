@@ -20,10 +20,17 @@ namespace ThirdPersonSimulation
         public const string DiagnosticsSchema = "simulation-diagnostics-sink";
     }
 
+    public interface IFloat32CharacterDomainRuntime
+    {
+        SimulationKernelSpecializationManifest Specialization { get; }
+        PendingCharacterEvaluation Evaluate(SimulationEvaluateRequest request);
+        SimulationActorTickResult Finalize(SimulationFinalizeRequest request);
+    }
+
     public interface IFloat32ProgramRuntimePort : ISimulationRuntimePort
     {
         SimulationProgramCatalog Catalog { get; }
-        SimulationKernel Kernel { get; }
+        IFloat32CharacterDomainRuntime CharacterRuntime { get; }
         IReadOnlyList<SimulationActorBinding> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
@@ -50,7 +57,7 @@ namespace ThirdPersonSimulation
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
             Catalog = runtime.Catalog;
-            Kernel = runtime.Kernel;
+            CharacterRuntime = runtime.Kernel;
             var bindings = new List<SimulationActorBinding>(runtime.Roster);
             for (int i = 0; i < bindings.Count; i++)
             {
@@ -74,7 +81,7 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException($"Actor '{bindings[i].ActorId}' Program binding is stale.", nameof(runtime));
                 KernelProgramBinding kernelBinding = runtime.GetBinding(program.Manifest.ProgramId);
                 ProgramExecutionLayout layout = kernelBinding.Layout;
-                kernelBinding.Require(program, layout, Kernel.Specialization);
+                kernelBinding.Require(program, layout, CharacterRuntime.Specialization);
                 if (sharedLayouts.TryGetValue(program.Manifest.ProgramId, out ProgramExecutionLayout shared) &&
                     !ReferenceEquals(shared.Services, layout.Services))
                 {
@@ -102,7 +109,7 @@ namespace ThirdPersonSimulation
 
         public SimulationPortDescriptor Descriptor { get; }
         public SimulationProgramCatalog Catalog { get; private set; }
-        public SimulationKernel Kernel { get; }
+        public IFloat32CharacterDomainRuntime CharacterRuntime { get; }
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => m_RosterDescriptor;
         public int GetActorIndex(ActorId actorId)
@@ -134,7 +141,7 @@ namespace ThirdPersonSimulation
                 CharacterSimulationProgram program = Catalog.GetRequired(actor.ProgramId);
                 KernelProgramBinding kernelBinding = runtime.GetBinding(program.Manifest.ProgramId);
                 ProgramExecutionLayout layout = kernelBinding.Layout;
-                kernelBinding.Require(program, layout, Kernel.Specialization);
+                kernelBinding.Require(program, layout, CharacterRuntime.Specialization);
                 if (sharedLayouts.TryGetValue(program.Manifest.ProgramId, out ProgramExecutionLayout shared) &&
                     !ReferenceEquals(shared.Services, layout.Services))
                 {

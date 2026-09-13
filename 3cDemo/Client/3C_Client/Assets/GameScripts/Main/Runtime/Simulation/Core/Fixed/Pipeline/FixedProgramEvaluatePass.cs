@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidOperationException("Program Evaluate Pass Actor order does not match the locked roster.");
                     }
                     CharacterSimulationProgram program = readPorts.ProgramRuntime.GetProgram(i);
-                    PendingCharacterEvaluation evaluation = readPorts.ProgramRuntime.Kernel.Evaluate(
+                    PendingCharacterEvaluation evaluation = readPorts.ProgramRuntime.CharacterRuntime.Evaluate(
                         new SimulationEvaluateRequest(
                             readPorts.ProgramRuntime.GetKernelBinding(i),
                             actor.ActorId,

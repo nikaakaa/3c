@@ -100,7 +100,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    public sealed class SimulationKernel
+    public sealed class SimulationKernel : IFixedCharacterDomainRuntime
     {
         static readonly SimulationKernelSpecializationManifest s_Fixed =
             new SimulationKernelSpecializationManifest(

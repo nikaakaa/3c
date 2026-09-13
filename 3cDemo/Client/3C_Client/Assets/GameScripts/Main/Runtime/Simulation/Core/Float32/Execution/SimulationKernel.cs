@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class SimulationKernel
+    public sealed class SimulationKernel : IFloat32CharacterDomainRuntime
     {
         static readonly SimulationKernelSpecializationManifest s_Float32 =
             new SimulationKernelSpecializationManifest(

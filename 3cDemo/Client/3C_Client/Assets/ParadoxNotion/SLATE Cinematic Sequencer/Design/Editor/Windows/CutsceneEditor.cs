@@ -3798,6 +3798,20 @@ namespace Slate
                     {
                         editor.SafeDoAction(() =>
                            {
+                               if (editor.embeddedTimeline != null)
+                               {
+                                   var formalClips = new List<IEmbeddedTimelineClipBinding>();
+                                   foreach (var act in multiSelection.Select(b => b.action).ToArray())
+                                       if (act is IEmbeddedTimelineProxyIdentity proxy &&
+                                           editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                                           formalClips.Add(formalClip);
+                                   if (formalClips.Count != 0)
+                                   {
+                                       editor.embeddedTimeline.DeleteClips(formalClips);
+                                       multiSelection = null;
+                                       return;
+                                   }
+                               }
                                foreach ( var act in multiSelection.Select(b => b.action).ToArray() ) {
                                    ( act.parent as CutsceneTrack ).DeleteAction(act);
                                }
@@ -3848,8 +3862,14 @@ namespace Slate
                 {
                     editor.SafeDoAction(() =>
                     {
-                        ( action.parent as CutsceneTrack ).DeleteAction(action);
-                        editor.InitClipWrappers();
+                        if (editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy &&
+                            editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                            editor.embeddedTimeline.DeleteClip(formalClip);
+                        else
+                        {
+                            ( action.parent as CutsceneTrack ).DeleteAction(action);
+                            editor.InitClipWrappers();
+                        }
                     });
                 });
 

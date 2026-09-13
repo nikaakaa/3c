@@ -23,6 +23,7 @@ namespace Slate
         IReadOnlyList<IEmbeddedTimelineSectionBinding> Sections { get; }
         IEmbeddedTimelineElementBinding Selected { get; }
         bool TryGetTrack(string authoringId, out IEmbeddedTimelineTrackBinding track);
+        bool TryGetClip(string authoringId, out IEmbeddedTimelineClipBinding clip);
         void Select(IEmbeddedTimelineElementBinding element);
         void AddTrack();
         void AddClip(IEmbeddedTimelineTrackBinding track, int frame);

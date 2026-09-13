@@ -329,6 +329,17 @@ namespace BTSMTL.Timeline.Editor
             return TryGetTrackBinding(authoringId, out track);
         }
 
+        bool IEmbeddedTimelineBinding.TryGetClip(string authoringId, out IEmbeddedTimelineClipBinding clip)
+        {
+            if (m_Clips.TryGetValue(authoringId ?? string.Empty, out BtsmtlTimelineClipBinding value))
+            {
+                clip = value;
+                return true;
+            }
+            clip = null;
+            return false;
+        }
+
         public bool TryGetClip(string authoringId, out Clip clip)
         {
             clip = null;

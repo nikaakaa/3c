@@ -3366,6 +3366,7 @@ namespace Slate
                 }
             }
             EndWindows();
+            DoMultiSelection();
             GUI.EndGroup();
             totalHeight = nextY;
             if (e.rawType == EventType.MouseUp && interactingClip != null)
@@ -3606,7 +3607,7 @@ namespace Slate
                     GUI.color = Color.white.WithAlpha(0.05f);
                     GUI.DrawTexture(r, whiteTexture);
                     GUI.color = Color.white;
-                    foreach ( var wrapper in clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.action.isLocked) ) {
+                    foreach ( var wrapper in clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.editorBinding.IsLocked) ) {
                         GUI.color = new Color(0.5f, 0.5f, 1, 0.5f);
                         GUI.Box(wrapper.rect, string.Empty, Slate.Styles.clipBoxStyle);
                         GUI.color = Color.white;
@@ -3616,10 +3617,13 @@ namespace Slate
 
             if ( e.rawType == EventType.MouseUp ) {
                 if ( bigEnough ) {
-                    multiSelection = clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.action.isLocked).ToList();
+                    multiSelection = clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.editorBinding.IsLocked).ToList();
                     if ( multiSelection.Count == 1 ) {
                         ActionClip selectedAction = multiSelection[0].action;
-                        CutsceneUtility.selectedObject = selectedAction;
+                        if (embeddedTimeline != null && multiSelection[0].editorBinding.FormalClip != null)
+                            embeddedTimeline.Select(multiSelection[0].editorBinding.FormalClip);
+                        else
+                            CutsceneUtility.selectedObject = selectedAction;
                         multiSelection = null;
                     }
                 }
@@ -3640,8 +3644,8 @@ namespace Slate
 
                 if ( e.type == EventType.MouseDown && ( leftDragRect.Contains(e.mousePosition) || rightDragRect.Contains(e.mousePosition) ) ) {
                     multiSelectionScaleDirection = leftDragRect.Contains(e.mousePosition) ? -1 : 1;
-                    var minTime = Mathf.Min(multiSelection.Select(b => b.action.startTime).ToArray());
-                    var maxTime = Mathf.Max(multiSelection.Select(b => b.action.endTime).ToArray());
+                    var minTime = Mathf.Min(multiSelection.Select(b => b.editorBinding.StartTime).ToArray());
+                    var maxTime = Mathf.Max(multiSelection.Select(b => b.editorBinding.EndTime).ToArray());
                     preMultiSelectionRetimeMinMax = Rect.MinMaxRect(minTime, 0, maxTime, 0);
                     foreach ( var wrapper in multiSelection ) {
                         wrapper.BeginClipAdjust();
@@ -3659,10 +3663,10 @@ namespace Slate
                         var lerpMax = multiSelectionScaleDirection == 1 ? Mathf.Max(pointerTime, preTimeMin) : preTimeMax;
 
                         var normIn = Mathf.InverseLerp(preTimeMin, preTimeMax, clipWrapper.preScaleStartTime);
-                        clipWrapper.action.startTime = Mathf.Lerp(lerpMin, lerpMax, normIn);
+                        clipWrapper.editorBinding.StartTime = Mathf.Lerp(lerpMin, lerpMax, normIn);
 
                         var normOut = Mathf.InverseLerp(preTimeMin, preTimeMax, clipWrapper.preScaleEndTime);
-                        clipWrapper.action.endTime = Mathf.Lerp(lerpMin, lerpMax, normOut);
+                        clipWrapper.editorBinding.EndTime = Mathf.Lerp(lerpMin, lerpMax, normOut);
 
                         clipWrapper.UpdateClipAdjustContents();
                     }

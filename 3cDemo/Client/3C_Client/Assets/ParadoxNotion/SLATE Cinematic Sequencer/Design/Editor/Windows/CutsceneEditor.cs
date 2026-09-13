@@ -1475,7 +1475,7 @@ namespace Slate
             //Record Undo and dirty? This is an overal fallback. Certain actions register undo as well.
             var doRecordUndo = e.rawType == EventType.MouseDown && ( e.button == 0 || e.button == 1 );
             doRecordUndo |= e.type == EventType.DragPerform;
-            if ( doRecordUndo ) {
+            if ( doRecordUndo && embeddedTimeline == null ) {
                 BeginEditTransaction("Cutscene Change", e.button);
                 if (ShouldRecordUndo() && cutscene != null) {
                     Undo.RegisterFullObjectHierarchyUndo(cutscene.groupsRoot.gameObject, "Cutscene Change");
@@ -2553,7 +2553,7 @@ namespace Slate
                         if (e.rawType == EventType.MouseUp && trackRect.Contains(e.mousePosition))
                         {
                             int destination = trackIndex;
-                            embeddedTimeline.MoveTrack(formalPickedTrack, destination);
+                            ApplyEmbeddedCommand(() => embeddedTimeline.MoveTrack(formalPickedTrack, destination), "Move Track");
                             formalPickedTrack = null;
                             e.Use();
                         }

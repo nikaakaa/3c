@@ -19,7 +19,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, BtsmtlTimelineTrackBinding> m_Tracks = new Dictionary<string, BtsmtlTimelineTrackBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineClipBinding> m_Clips = new Dictionary<string, BtsmtlTimelineClipBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineSectionBinding> m_SectionsById = new Dictionary<string, BtsmtlTimelineSectionBinding>(StringComparer.Ordinal);
-        readonly string m_SourceRevision;
+        string m_SourceRevision;
         IEmbeddedTimelineElementBinding m_Selected;
         BtsmtlTimelineClipBinding m_CopiedClip;
         bool m_EditActive;
@@ -368,71 +368,6 @@ namespace BTSMTL.Timeline.Editor
             m_Session.Apply(mutation, undoName);
         }
 
-        public void ApplyProxyDiff(
-            IReadOnlyList<(Clip Clip, string TrackAuthoringId, int StartFrame, int EndFrame, int EaseInFrame, int EaseOutFrame)> changes,
-            IReadOnlyList<(Clip Clip, TimelineCurveChannelId ChannelId, AnimationCurve Curve)> curveChanges,
-            IReadOnlyList<(TimelineSection Section, string Name, int Frame)> sectionChanges,
-            IReadOnlyList<Track> removedTracks,
-            IReadOnlyList<Clip> removedClips,
-            IReadOnlyList<TimelineSection> removedSections,
-            IReadOnlyList<string> trackOrder)
-        {
-            if (IsReadOnly)
-                throw new InvalidOperationException("Timeline 当前只读，不能提交作者修改。");
-            m_Session.Apply(() =>
-            {
-                for (int index = 0; index < removedTracks.Count; index++)
-                    Timeline.RemoveTrack(removedTracks[index]);
-                for (int index = 0; index < removedClips.Count; index++)
-                    if (!removedTracks.Contains(removedClips[index].Track))
-                        Timeline.RemoveClip(removedClips[index]);
-                for (int index = 0; index < removedSections.Count; index++)
-                    Timeline.RemoveSection(removedSections[index]);
-
-                for (int index = 0; index < changes.Count; index++)
-                {
-                    var change = changes[index];
-                    if (!TryGetTrack(change.TrackAuthoringId, out Track targetTrack))
-                        throw new InvalidOperationException("Timeline target Track identity is stale.");
-                    if (!ReferenceEquals(change.Clip.Track, targetTrack))
-                    {
-                        ContractCatalog.RequireClipPlacement(targetTrack, change.Clip);
-                        change.Clip.Track.Clips.Remove(change.Clip);
-                        targetTrack.Clips.Add(change.Clip);
-                    }
-                    change.Clip.StartFrame = change.StartFrame;
-                    change.Clip.EndFrame = change.EndFrame;
-                    change.Clip.SelfEaseInFrame = change.EaseInFrame;
-                    change.Clip.SelfEaseOutFrame = change.EaseOutFrame;
-                    change.Clip.Track.UpdateMix();
-                }
-
-                for (int index = 0; index < curveChanges.Count; index++)
-                {
-                    var change = curveChanges[index];
-                    TimelineCurveAuthoring.Replace(change.Clip, change.ChannelId, change.Curve);
-                }
-                for (int index = 0; index < sectionChanges.Count; index++)
-                {
-                    var change = sectionChanges[index];
-                    Timeline.ConfigureSection(change.Section, change.Name, change.Frame);
-                }
-                if (trackOrder != null && trackOrder.Count != 0)
-                {
-                    var orderedTracks = new List<Track>(trackOrder.Count);
-                    for (int index = 0; index < trackOrder.Count; index++)
-                        if (TryGetTrack(trackOrder[index], out Track track) && !removedTracks.Contains(track))
-                            orderedTracks.Add(track);
-                    if (orderedTracks.Count != Timeline.Tracks.Count)
-                        throw new InvalidOperationException("Slate Timeline track identity is stale.");
-                    Timeline.Tracks.Clear();
-                    Timeline.Tracks.AddRange(orderedTracks);
-                }
-                Timeline.Init();
-            }, "Slate Timeline Edit");
-            Rebuild();
-        }
-
         public List<TimelineCurveChannelDescriptor> CollectCurveChannels(Track track)
         {
             var result = new List<TimelineCurveChannelDescriptor>();
@@ -502,6 +437,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Sections.Add(section);
                 m_SectionsById[source.AuthoringId] = section;
             }
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(Timeline);
         }
 
         void ShowTrackCreationPopup(string kind, bool requiresFields)
@@ -519,15 +455,18 @@ namespace BTSMTL.Timeline.Editor
                 return false;
             try
             {
+                Track added = null;
                 ApplyImmediate(() =>
                 {
                     Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
                     int count = Timeline.Tracks.Count;
                     Timeline.AddTrack(trackType, ContractCatalog);
-                    Track added = Timeline.Tracks[count];
+                    added = Timeline.Tracks[count];
                     added.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
                     TimelineAuthoringTrackBinding.Apply(added, channelId, slotId);
                 }, "Add Timeline Track");
+                if (added != null && m_Tracks.TryGetValue(added.AuthoringId, out BtsmtlTimelineTrackBinding addedBinding))
+                    Select(addedBinding);
                 return true;
             }
             catch (Exception exception)
@@ -576,9 +515,10 @@ namespace BTSMTL.Timeline.Editor
                 return false;
             try
             {
+                Clip added = null;
                 ApplyImmediate(() =>
                 {
-                    Clip added = request.Kind == TimelineContractKinds.AnimationClip
+                    added = request.Kind == TimelineContractKinds.AnimationClip
                         ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
                         : request.Kind == TimelineContractKinds.MotionCurveClip
                             ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, request.StartFrame)
@@ -589,6 +529,8 @@ namespace BTSMTL.Timeline.Editor
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip");
+                if (added != null && m_Clips.TryGetValue(added.AuthoringId, out BtsmtlTimelineClipBinding addedBinding))
+                    Select(addedBinding);
                 return true;
             }
             catch (Exception exception)

@@ -347,7 +347,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 6;
+        public const int SchemaVersion = 7;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }

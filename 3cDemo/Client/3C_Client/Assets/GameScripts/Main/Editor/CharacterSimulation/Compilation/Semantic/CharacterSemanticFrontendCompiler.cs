@@ -167,11 +167,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.Roots,
                     model.Definition.ControlMotionTimelines,
                     report);
-                CharacterControlMotionCatalogEmitter.Declare(
-                    builder,
-                    model.Definition.ControlMotionTimelines,
-                    model.DefinitionPath,
-                    report);
                 if (!report.IsValid)
                     return null;
                 OperationHandle controlRoot = emitter.EmitControlAbilityPrograms(controlModule.Contract, controlSource, motions);

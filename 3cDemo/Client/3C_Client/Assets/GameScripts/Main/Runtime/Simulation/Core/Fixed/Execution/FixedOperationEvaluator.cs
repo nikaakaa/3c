@@ -489,7 +489,7 @@ namespace ThirdPersonSimulation.Fixed
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples,
                 m_ActionStore);
-            var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame);
+            var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame, controlRuntimeBinding);
             var camera = new FixedCameraOperationRuntime(access, m_Frame.Presentation);
             FixedStatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new FixedTimelineControlStatePort(access, timelineState);

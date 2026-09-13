@@ -170,6 +170,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 writer.WriteDouble(value.NumericValue);
             }
             writer.WriteString(binding.Parameters.ContentHash.Value);
+            writer.WriteBytes(CharacterControlMotionBindingCodec.Write(binding.MotionBindings));
             writer.WriteString(binding.BindingHash.Value);
         }
 
@@ -192,7 +193,8 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             var expectedParametersHash = new StableHash(reader.ReadString());
             if (!parameters.ContentHash.Equals(expectedParametersHash))
                 throw new InvalidDataException("Manifest control parameter hash does not match its canonical values.");
-            var binding = new CharacterControlRuntimeBinding(moduleId, semanticVersion, parameters);
+            CharacterControlMotionBindingCatalog motionBindings = CharacterControlMotionBindingCodec.Read(reader.ReadBytes());
+            var binding = new CharacterControlRuntimeBinding(moduleId, semanticVersion, parameters, motionBindings);
             var expectedBindingHash = new StableHash(reader.ReadString());
             if (!binding.BindingHash.Equals(expectedBindingHash))
                 throw new InvalidDataException("Manifest Control runtime binding hash does not match its canonical values.");

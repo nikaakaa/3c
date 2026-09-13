@@ -510,23 +510,27 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeBinding(
             CharacterControlModuleId moduleId,
             int semanticVersion,
-            CharacterControlParameterSet parameters)
+            CharacterControlParameterSet parameters,
+            CharacterControlMotionBindingCatalog motionBindings)
         {
             if (!moduleId.IsValid || semanticVersion <= 0)
                 throw new ArgumentException("Character control runtime binding identity is incomplete.");
             ModuleId = moduleId;
             SemanticVersion = semanticVersion;
             Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+            MotionBindings = motionBindings ?? throw new ArgumentNullException(nameof(motionBindings));
             BindingHash = StableHash.Compute(
-                "character-control-runtime-binding/1",
+                "character-control-runtime-binding/2",
                 moduleId.Value,
                 semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                parameters.ContentHash.ToString());
+                parameters.ContentHash.ToString(),
+                motionBindings.ContentHash.ToString());
         }
 
         public CharacterControlModuleId ModuleId { get; }
         public int SemanticVersion { get; }
         public CharacterControlParameterSet Parameters { get; }
+        public CharacterControlMotionBindingCatalog MotionBindings { get; }
         public StableHash BindingHash { get; }
 
         public void RequireContract(CharacterControlModuleContract contract)
@@ -547,6 +551,7 @@ namespace ThirdPersonSimulation
                         ? $"Character control runtime binding parameters do not match module contract '{ModuleId}'."
                         : string.Join(" ", errors));
             }
+            MotionBindings.RequireContract(contract);
         }
     }
 

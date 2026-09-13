@@ -31,10 +31,13 @@ namespace ThirdPersonCharacter.Pipeline
                     out CharacterControlParameterSet parameters,
                     out IReadOnlyList<string> errors))
                 throw new InvalidOperationException(string.Join(" ", errors));
+            CharacterControlMotionBindingCatalog motionBindings =
+                CharacterControlMotionRuntimeBindingBuilder.Build(this, module.Contract);
             return new CharacterControlRuntimeBinding(
                 moduleId,
                 module.Contract.SemanticVersion,
-                parameters);
+                parameters,
+                motionBindings);
         }
     }
 }

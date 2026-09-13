@@ -1135,17 +1135,20 @@ namespace ThirdPersonSimulation
         readonly IFloat32ValueInputReader m_Values;
         readonly IFloat32MotionContributionSink m_Motion;
         readonly Float32EvaluationFrame m_Frame;
+        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public Float32LocomotionRuntime(
             Float32ProgramAccess access,
             IFloat32ValueInputReader values,
             IFloat32MotionContributionSink motion,
-            Float32EvaluationFrame frame)
+            Float32EvaluationFrame frame,
+            CharacterControlRuntimeBinding controlRuntimeBinding)
             : base(access)
         {
             m_Values = values ?? throw new ArgumentNullException(nameof(values));
             m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_ControlMotionBindings = controlRuntimeBinding?.MotionBindings;
         }
 
         public void Submit<TTarget>(
@@ -1289,41 +1292,18 @@ namespace ThirdPersonSimulation
 			out Float32Vector3 displacement,
 			out Float32Scalar yaw)
 		{
-			ProgramCatalogEntry source = FindCatalog(ProgramCatalogEntryKind.MotionCurve, descriptor.SourceMotionIdentity) ??
-				throw new InvalidOperationException($"Control motion source '{descriptor.SourceMotionIdentity}' is absent from the Program catalog.");
-			ProgramCatalogEntry track = RequireCatalog(
-				ProgramCatalogEntryKind.TimelineTrack,
-				CatalogIdentity(source, ProgramCatalogFieldId.Track));
-			ProgramCatalogEntry timeline = RequireCatalog(
-				ProgramCatalogEntryKind.Timeline,
-				CatalogIdentity(track, ProgramCatalogFieldId.Timeline));
-			int frameRate = CatalogInt32(timeline, ProgramCatalogFieldId.FrameRate);
-			Float32Scalar start = Float32Scalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.StartFrame)) / Float32Scalar.FromInt64(frameRate);
-			Float32Scalar curveEnd = Float32Scalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.CurveEndFrame)) / Float32Scalar.FromInt64(frameRate);
-			Float32Scalar duration = Float32Scalar.Max(Float32Scalar.FromDouble(0.000001d), curveEnd - start);
-			Float32Scalar tickRate = Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
-			Float32Scalar previous = Float32Scalar.Clamp(Float32Scalar.FromInt64(request.ContinuousTicks) / tickRate, Float32Scalar.Zero, duration);
-			Float32Scalar current = Float32Scalar.Clamp(Float32Scalar.FromInt64(request.ContinuousTicks + 1) / tickRate, Float32Scalar.Zero, duration);
-			Float32Scalar previousNormalized = previous / duration;
-			Float32Scalar currentNormalized = current / duration;
+			CharacterControlMotionBinding source = m_ControlMotionBindings == null
+				? throw new InvalidOperationException("Float32 Control motion bindings are not installed.")
+				: m_ControlMotionBindings.Require(descriptor.SourceMotionIdentity);
+			double tickRate = m_Program.Manifest.TickRate;
+			CharacterControlMotionDelta delta = source.EvaluateDelta(
+				request.ContinuousTicks / tickRate,
+				(request.ContinuousTicks + 1) / tickRate);
 			displacement = new Float32Vector3(
-				SampleControlCurve(source, ProgramCatalogFieldId.PositionX, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionX, previousNormalized),
-				SampleControlCurve(source, ProgramCatalogFieldId.PositionY, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionY, previousNormalized),
-				SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, previousNormalized));
-			yaw = SampleControlCurve(source, ProgramCatalogFieldId.Yaw, currentNormalized) -
-				  SampleControlCurve(source, ProgramCatalogFieldId.Yaw, previousNormalized);
-		}
-
-		Float32Scalar SampleControlCurve(
-			ProgramCatalogEntry source,
-			ProgramCatalogFieldId field,
-			Float32Scalar normalized)
-		{
-			ProgramConstant constant = CatalogConstant(source, field);
-			if (constant.Kind != ProgramConstantKind.Bytes)
-				throw new InvalidOperationException($"Control motion curve '{source.Identity}/{field}' is not a curve constant.");
-			return Access.Services.RequireTimelineCurve(constant, $"{source.Identity}/{field}")
-				.Evaluate(normalized, Float32Scalar.Zero);
+				Float32Scalar.FromDouble(delta.X),
+				Float32Scalar.FromDouble(delta.Y),
+				Float32Scalar.FromDouble(delta.Z));
+			yaw = Float32Scalar.FromDouble(delta.Yaw);
 		}
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(

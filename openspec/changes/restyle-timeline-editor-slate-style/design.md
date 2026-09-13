@@ -110,7 +110,7 @@ TimelineData 正式轨道/Clip/Section/曲线
 
 TimelineData 仍是唯一持久化 Timeline 业务对象，完整曲线、业务 identity 和资源引用保持。原 UI 修改期间的草稿可以在内存中存在，但不作为新 Editor Model 工程，不进入代码导出、Compiler 或 runtime。Curve 引用不可被 UI 在未提交时直接改正式数据。
 
-现有帧换算、右侧 Inspector、ID选择、曲线 descriptor、typed 配置和 Undo 提交已经正确的部分继续用。r2 C# 输出仍从正式 TimelineData 读取，不从 Slate 绘制状态导出。
+现有帧换算、ID选择、曲线 descriptor、typed 配置和 Undo 提交已经正确的部分继续用。Timeline 不再保留右侧自制 Inspector；r2 C# 输出仍从正式 TimelineData 读取，不从 Slate 绘制状态导出。
 
 #### 3.4 无关绑定直接清除
 
@@ -149,7 +149,7 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 主动创建无 Clip 的合法空 Track 是正常操作。“不得留下空对象”只针对取消/失败残留。取消 picker、输入非法、owner 过期时不写入、不产生 Undo；跨对象校验先验证完整草稿，提交失败在同一事务回滚。
 
-属性区编辑正式字段，资源为精确引用，时间字段按帧，TreeClip 保留正式下钻。曲线仅来自已注册 Timeline-local channel，不纳入素材骨骼/Foot Analysis。
+新增表单和正式命令只写入精确资源、时间帧和类型字段；Timeline 窗口不另设属性区，曲线仅来自已注册 Timeline-local channel，不纳入素材骨骼/Foot Analysis。
 
 删除、复制、排序和跨轨道移动都必须走正式命令和 contract：复制生成新 ID，排序保留 ID；删除前检查 MotionWarp/Section 等引用，按既有 validator 接受或拒绝。未接通的原生命令不能作为可用入口暴露，已支持的类型缺创建绑定时补正式绑定，不靠隐藏类型宣称完整。
 
@@ -158,7 +158,7 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 - 复用 Slate Curve/DopeSheet；通道名称、单位、颜色来自正式 descriptor，Track 名不再拼 “[Curves: N]”，使用明确曲线展开入口。
 - 展开仅显示当前 Clip 的有效通道；无曲线 Clip 不出现大片“No Clip Selected”参数区域。
 - 密集 key 根据缩放优化显示，不减少正式 key；选中 key 支持时间、值和切线精确编辑。
-- 按稳定 ID 保存选择、选中曲线、展开状态、编辑帧、横向范围、纵向滚动、Inspector 宽度。提交、Undo/Redo、外部刷新恢复仍有效的状态。
+- 按稳定 ID 保存选择、选中曲线、展开状态、编辑帧、横向范围和纵向滚动。提交、Undo/Redo、外部刷新恢复仍有效的状态。
 - 删除所选对象时清空对应选择，不自动改选首个 Clip；另一个文档才采用其初始视图。
 - 重绘不得抢走文本输入和合法草稿；外部变更使草稿过期时明确提示。
 - 截图中的 GUI、序列化重复字段和 proxy 生命周期错误需要完整堆栈定位，不以隐藏 Console 或泛化 null 检查代替修复。
@@ -177,7 +177,7 @@ Timeline 本地自动播放游标，以及 Timeline 中直接控制 Scene Play �
 
 保留真实 Slate Clip/Track/Curve UI、正式 identity/数据、Mutation/Undo、Graph/AnimationClip 导航、已有场景预览。
 
-撤销替代编辑器改造，清理因此新增且被用户要求回退的专用代码由实现窗口按实际 diff 负责；现有 Slate 功能、正确的 typed 配置/帧/右侧 Inspector 与正式 Camera Track 保留。无用菜单和真实缺陷继续局部处理，不列整套 Surface/曲线输入迁移。
+撤销替代编辑器改造，清理因此新增且被用户要求回退的专用代码由实现窗口按实际 diff 负责；现有 Slate 功能、正确的 typed 配置/帧和正式 Camera Track 保留。无用菜单和真实缺陷继续局部处理，不列整套 Surface/曲线输入迁移。
 
 只在主线执行。预览 change 的 2026-09-11 约定要求旧 worktree 停写，后者仅供历史追溯和未集成内容参考，不自动双写。相同文件存在其它未提交改动时报告冲突，不覆盖。
 
@@ -223,7 +223,7 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 
 - 修改 Slate 源码需要维护插件升级差异，换来复用真实 UI；补丁集中于 Editor Surface，领域规则留在 BTSMTL。
 - 临时对象是内存草稿，正式保存只有 TimelineData；新增先建正式对象，编辑只提交一次事务。
-- 右侧 Inspector 占用横向空间，可收起以释放时间轴宽度；属性编辑不再放在底部制造第二块时间区。
+- 不保留右侧 Inspector，避免挤压原 Slate 时间轴；属性输入只通过已有正式创建/命令入口完成。
 - 作者帧沿用已有语义，逐 Tick 运行定位消费真实 trace；本次不做时钟迁移。
 
 ## 文档对账

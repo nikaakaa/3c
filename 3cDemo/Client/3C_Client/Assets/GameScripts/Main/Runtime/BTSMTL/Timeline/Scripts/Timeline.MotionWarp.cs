@@ -51,7 +51,7 @@ namespace BTSMTL.Timeline
 #endif
     }
 
-    [ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), ClipInspectorView("MotionWarpClipInspectorView"), Color(248, 177, 91)]
+    [ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), Color(248, 177, 91)]
     [TimelineAuthoringProperty("sourceMotionClipId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("translationMode", typeof(MotionWarpTranslationMode))]
     [TimelineAuthoringProperty("targetOffsetSpace", typeof(MotionWarpTargetOffsetSpace))]

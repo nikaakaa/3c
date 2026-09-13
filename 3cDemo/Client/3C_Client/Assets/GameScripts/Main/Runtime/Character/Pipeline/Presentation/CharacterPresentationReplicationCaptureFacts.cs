@@ -559,7 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResponseWeight = responseWeight;
             PitchResponseWeight = pitchResponseWeight;
             YawResponseWeight = yawResponseWeight;
-            ResetReason = resetReason;
+            ResetReason = (int)resetReason;
             Paused = paused;
         }
 
@@ -617,7 +617,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ResponseWeight,
                 PitchResponseWeight,
                 YawResponseWeight,
-                ResetReason,
+                (CameraResetReason)ResetReason,
                 Paused,
                 m_EffectContributions,
                 in m_Collision);
@@ -735,7 +735,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticKey("reset-reason")]
         [DiagnosticGroup("camera-frame")]
-        public CameraResetReason ResetReason { get; }
+        public int ResetReason { get; }
 
         [DiagnosticField]
         [DiagnosticKey("paused")]

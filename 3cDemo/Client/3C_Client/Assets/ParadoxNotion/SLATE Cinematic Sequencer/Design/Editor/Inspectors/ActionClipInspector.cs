@@ -20,6 +20,8 @@ namespace Slate
     {
         private ActionClip action { get { return (ActionClip)target; } }
 
+        protected virtual bool RequiresTargetActor => true;
+
         public override void OnInspectorGUI() {
             ShowCommonInspector();
             ShowAnimatableParameters();
@@ -78,7 +80,7 @@ namespace Slate
         //Shows possible errors
         void ShowErrors() {
 
-            if ( action.actor == null ) {
+            if ( RequiresTargetActor && action.actor == null ) {
                 EditorGUILayout.HelpBox("The target Actor is null.", MessageType.Error);
                 GUILayout.Space(5);
                 return;

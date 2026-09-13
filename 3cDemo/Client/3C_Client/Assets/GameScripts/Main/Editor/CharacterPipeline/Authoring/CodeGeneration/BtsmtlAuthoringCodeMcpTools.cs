@@ -36,9 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             [ToolParameter("精确 Assets/... Skill Graph、Timeline、Pose Graph 或 EventGraph 资产路径。", Required = true)]
             public string asset_path { get; set; }
 
-            [ToolParameter("当 asset_path 指向含多个子资产的文件时，填写精确 local file id。", Required = false)]
-            public long asset_local_file_id { get; set; }
-
             [ToolParameter("精确 CharacterPipelineDefinition 资产路径。", Required = true)]
             public string definition_asset_path { get; set; }
 
@@ -53,6 +50,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             [ToolParameter("生成 C# 命名空间。", Required = true)]
             public string namespace_name { get; set; }
+
+            [ToolParameter("当 asset_path 指向含多个子资产的文件时，填写精确 local file id。", Required = false)]
+            public long asset_local_file_id { get; set; }
         }
 
         public static object HandleCommand(JObject @params) =>

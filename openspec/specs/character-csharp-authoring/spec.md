@@ -38,13 +38,73 @@
 
 ### Requirement: 输出必须覆盖正式配置和业务顺序
 
-导出 MUST 完整表达生成范围内对象类型、稳定身份、参数、节点值、Blackboard 声明、动态端口、Macro 接口、FSM 状态与转移、Graph 连接、Timeline 轨道/片段/Section、外部 binding、资源引用、曲线与 layout。系统 MUST 保持显式业务顺序，不以整理源码为由改变转移 order、轨道/片段或端口顺序。无法表达的正式内容 MUST 定位对象和字段并拒绝完整导出，不得静默省略、输出占位或生成默认内容。
+导出 MUST 完整表达生成范围内对象类型、重建必需身份、作者参数与节点值、Blackboard 声明、动态端口配置、Macro 接口、FSM 状态与转移、Graph 连接、Timeline 轨道/片段/Section、外部 binding、资源引用、作者曲线定义和节点位置等布局。系统 MUST 保持显式业务顺序，不以整理源码为由改变转移 order、轨道/片段或端口顺序。输出 MUST 仅包含恢复这些正式内容所需的作者配置；正式 API 可确定恢复的默认值、固定结构和可推导信息 MUST 不重复输出。Timeline 源曲线 MUST 通过 Clip 数据段引用恢复，独立作者曲线 MUST 表达关键帧和插值配置，不输出逐 tick 采样。无法表达或不能确定用途的正式字段 MUST 定位对象和字段并拒绝完整导出，不得静默省略、输出占位或生成默认内容。
 
 #### Scenario: 遇到未支持的正式字段
 
 - **WHEN** 输出适配不能表达某个正式配置字段
 - **THEN** 导出 MUST 明确报告对象、字段和原因
 - **AND** MUST 不以缺字段代码替换目标源码并声称成功
+
+#### Scenario: 默认值与作者布局
+
+- **WHEN** 正式创建 API 能确定恢复某个默认字段，而资产另有非默认配置和正式 layout
+- **THEN** 导出 MUST 省略冗余默认赋值并保持非默认配置和 layout
+- **AND** MUST 不以字段不参与运行计算为理由丢失正式作者内容
+
+#### Scenario: 显式覆盖值恰好等于默认值
+
+- **WHEN** 作者显式覆盖的值等于当前默认值，但覆盖状态会改变正式继承语义
+- **THEN** 导出 MUST 保留该覆盖意图
+- **AND** MUST 不仅凭值相等省略有意义的作者配置
+
+### Requirement: 导出必须只保留最小重建闭包
+
+输出 MUST 只包含正式 API 恢复目标资产所需的类型、拓扑、业务顺序、owner、根绑定、有效作者配置、正式引用和必要身份。默认值、固定端口/结构、可推导值、编辑器视口/选中态、生成过程、历史日志、诊断 hash 和变量名中的 identity/hash 后缀 MUST 省略。graph、node、edge、variable identity 只有在正式引用、稳定拓扑或 owner 关系需要时才 MUST 保留原值；外部资源需要精确定位时 MUST 保留正式路径和 localFileId。同一外部资源 MUST 在生成代码中声明一次并复用，不能通过压缩字符串或第二份数据模型隐藏字段。
+
+#### Scenario: 默认配置不进入生成源码
+
+- **WHEN** 正式对象的配置等于当前正式创建 API 的默认语义
+- **THEN** 生成源码 MUST 依赖正式 API 恢复该默认值
+- **AND** MUST 不重复写出默认赋值、派生值或固定结构
+
+#### Scenario: 同一外部资源被多处引用
+
+- **WHEN** 生成范围内多个节点或 Clip 引用同一外部资源
+- **THEN** 生成源码 MUST 只创建一个类型化外部引用变量
+- **AND** 后续使用 MUST 引用该变量，不重复写路径和 localFileId
+
+#### Scenario: identity没有正式消费者
+
+- **WHEN** 内部 identity 不参与正式引用、稳定拓扑、owner 或清理关系
+- **THEN** 导出 MUST 不把该 identity写入源码
+- **AND** 正式创建 API MUST 负责分配需要的运行身份
+
+### Requirement: Timeline 导出必须表达 Clip 数据段和独立曲线
+
+Timeline 输出 MUST 表达正式 Clip/数据段引用、源起止区间、时间轴位置及速度、混合、循环或其它作者覆盖；不得复制源 Clip 的逐 tick 数据、烘焙/分析缓存或运行编译结果。Timeline 上独立作者曲线 MUST 保留完整关键帧、切线、权重、插值和正式时间域，不得重采样、有损抽点或用默认值替代非默认曲线。源资源和范围外共享对象 MUST 保持外部引用，不得隐式复制。
+
+#### Scenario: Clip只使用源数据的一段
+
+- **WHEN** Timeline Clip 指定源资源、源区间和时间轴位置
+- **THEN** 生成代码 MUST 通过正式 Clip 创建 API 恢复该数据段
+- **AND** MUST 不生成每帧或每 tick 的时间映射数组
+
+#### Scenario: 独立作者曲线包含非默认关键帧
+
+- **WHEN** Clip 拥有独立作者曲线或覆盖曲线
+- **THEN** 生成代码 MUST 保留其关键帧、插值/切线/权重和时间域
+- **AND** MUST 不把曲线替换成默认曲线或密集采样结果
+
+### Requirement: 生成类不得承载调度元数据
+
+生成类 MUST 只实现正式执行合同和 C# 类型声明，不得输出绝对 SourceCodePath、重复 EntryTypeName 或仅用于调度的 RecipeType 实例属性。source_code_path、entry_type_name、recipe_type 仍 MUST 由工具请求与现有生成服务处理；服务 MUST 确认请求入口类型、精确源码与当前编译脚本关联，不得新增 manifest、注册表或生成类自报路径来替代该关联。
+
+#### Scenario: 源码路径不依赖开发者机器
+
+- **WHEN** 生成源码被移动到另一台开发机器或项目 checkout
+- **THEN** 生成类 MUST 仍只依赖正式执行上下文
+- **AND** 工具 MUST 使用调用请求和当前 Unity 脚本关联确认入口，不读取源码内的绝对路径属性
 
 ### Requirement: 导出必须处理环与共享引用
 
@@ -84,13 +144,25 @@
 
 ### Requirement: 生成范围必须可删除重建且保持逻辑身份
 
-已导出的 C# MUST 足以在相同外部资源和正式 API 版本下重建其明确生成范围，不依赖旧生成资产正文或旧生成子资产 GUID。代码 MUST 表达并保持业务图、节点、变量及其它正式元素的稳定 identity，内部引用使用本次创建的对象；物理 Unity 实例或文件身份不作为内容永久保留要求。再次完整生成 MUST 替换其拥有的输出范围，不不断追加重复对象，并通过领域正式 API 明确恢复 Profile、Definition 等根 owner/消费者绑定。
+已导出的 C# MUST 足以在相同外部资源和正式 API 版本下重建其明确生成范围，不依赖旧生成资产正文或旧生成子资产 GUID。代码 MUST 保持正式引用、稳定拓扑或 owner 关系所需的业务图、节点、边、变量及其它元素 identity；无上述用途的身份 MUST 不复制原值，由正式创建能力分配。内部引用 MUST 使用本次创建对象，物理 Unity 实例或文件身份不作为永久保留要求。再次完整生成 MUST 替换其拥有的输出范围，不不断追加重复对象，并通过领域正式 API 明确恢复 Profile、Definition 等根 owner/消费者绑定。重建 MUST 保持正式内容等价，不要求逐字复制原 YAML 或旧源码。
 
 #### Scenario: 删除生成图后重建
 
 - **WHEN** 生成范围内旧资产已不存在而源码及真实外部输入仍存在
-- **THEN** `generate_assets` MUST 恢复等价对象、逻辑身份、配置、owner 和引用
+- **THEN** `generate_assets` MUST 恢复等价对象、必需逻辑身份、配置、owner 和引用
 - **AND** MUST 恢复本次明确指定的根绑定，不只产生孤立图
+
+#### Scenario: 内部边没有身份消费者
+
+- **WHEN** 一条边的关系可由本次创建的端点、端口、配置和顺序表达，且无正式稳定身份或 owner 引用要求
+- **THEN** 导出 MUST 不复制其旧 GUID
+- **AND** 重建 MUST 恢复该边及其顺序，保留端点相同但业务上独立的多条边
+
+#### Scenario: 范围外正式消费者依赖节点身份
+
+- **WHEN** 正式消费者需要按稳定节点身份绑定生成范围内元素
+- **THEN** 导出 MUST 保留该必需身份并恢复明确绑定
+- **AND** MUST 不因当前图内部没有身份引用而删除它
 
 ### Requirement: 外部输入与生成输出必须分开
 
@@ -132,6 +204,16 @@
 - **THEN** 工具 MUST 返回明确诊断且保留原目标文件
 - **AND** MUST 不修改输入图或触发 Build
 
+### Requirement: GameplayAbilityDefinition必须是完整技能生成根
+
+`export_code`从`GameplayAbilityDefinition`导出时 MUST覆盖Ability identity、准入规则、目标要求、效果引用、结束规则、后续Ability关系、唯一私有AbilityGraph及其FSM、Condition、Macro、Timeline和Slot引用。`generate_assets` MUST按同一范围创建或替换Ability主资产、私有AbilityGraph以及声明范围内已有的`AbilityGrant`；只有迁移旧Skill根时才创建明确的角色授予，不得给独立Ability凭空添加授予，也不得只创建孤立Graph或继续依赖旧SkillDefinition/SkillGraphs。普通Ability节点和Timeline MUST通过当前`AbilityExecutionContext`工作，不要求手配空`ActionContextSlot`；公共作者入口仍只能是`btsmtl.export_code`与`btsmtl.generate_assets`。
+
+#### Scenario: 生成完整Gameplay Ability
+
+- **WHEN** 作者明确指定GameplayAbilityDefinition源码、Definition上下文和输出范围
+- **THEN** 生成 MUST恢复完整Ability外壳、私有执行图和明确授予/输入绑定
+- **AND** MUST不创建旧Skill外壳、Action Exit清理图或第二份执行状态
+
 ### Requirement: 旧 Agent 协议与工具必须激进删除
 
 系统 MUST 删除旧五个 BTSMTL authoring 工具、Agent Window、Document/Snapshot/Codec/Store/Exporter/Reconciler、专属 Mutation/Session/Validator/Report 和无消费者的协议 DTO、测试及依赖。新导出/生成入口 MUST 不转发旧工具、保留兼容包或把 Agent 框架换名搬迁；正式领域代码和新代码输出器只保留其实际职责。
@@ -167,3 +249,67 @@ Foot Motion 完整曲线组、Clip 与 Timeline 各自 owner 和时间域、Moti
 - **WHEN** 创建代码只提交要求整组修改的曲线中的一条
 - **THEN** 正式曲线 API MUST 拒绝不完整数据组
 - **AND** MUST 不通过省略校验或 JSON 中转完成写入
+
+### Requirement: Timeline 创建源码必须引用 Clip 数据段
+
+Timeline 源码 MUST 表达精确 Clip 数据段引用、源区间、时间轴位置及作者配置的速度、混合等播放参数与覆盖值。已有源 Clip 曲线、逐 tick 采样、烘焙/分析缓存和编译结果 MUST 不复制进生成源码，MUST 由源引用及现有正式系统恢复。源 Clip 与 Timeline 的 owner、各自时间域、正式曲线组规则 MUST 保持不变。范围外源资源 MUST 作为重建输入，范围内共享源定义 MUST 仅创建一次。源码数据量 MUST 由作者对象、引用和配置决定，不因派生采样频率或采样数量而增加。
+
+#### Scenario: 同一 Clip 数据段用于多个片段
+
+- **WHEN** 多个 Timeline 片段使用同一源 Clip 的不同区间
+- **THEN** 源码 MUST 复用源 Clip 引用，分别表达源区间、时间轴位置与作者覆盖
+- **AND** MUST 不为每个片段输出源曲线或逐 tick 数组
+
+#### Scenario: 作者独立编辑 Timeline 曲线
+
+- **WHEN** Timeline 存在不能仅通过源数据段恢复的独立作者曲线或覆盖曲线
+- **THEN** 源码 MUST 保留其作者关键帧、必要切线/权重、插值与时间域
+- **AND** MUST 不输出重采样数组、不进行有损抽点，也不修改源 Clip 的曲线
+
+#### Scenario: 只有派生样本而缺少正式源定义
+
+- **WHEN** 导出无法取得恢复该内容所需的源数据段或独立作者关键帧
+- **THEN** MUST 报告具体正式内容缺口并保持旧目标源码
+- **AND** MUST 不把密集样本或新建的旁路素材冒充作者配置输出
+
+### Requirement: 创建源码必须采用链式 builder 表达作者配置
+
+生成 C# MUST 以偏函数式的链式 builder 组织节点及配置、Timeline 片段和连接，直接调用正式创建能力。源码 MUST 表达当前最终的作者选择、非默认值和有意义的显式覆盖，不依赖作者编辑历史，不区分 AI 与人工编辑来源。固定端口、默认值和派生内容 MUST 由正式系统恢复。每个节点的位置 MUST 仅表达一次，MUST 不复制选中态、视口与重绘缓存。Builder MUST 不建立第二份持久化领域模型、操作日志或执行路径。
+
+#### Scenario: 创建带有 Timeline 的节点
+
+- **WHEN** 导出包含位置、非默认参数和 Clip 片段的业务节点
+- **THEN** 源码 MUST 以节点创建和链式配置表达位置、参数及嵌套 Timeline 配置
+- **AND** MUST 不展开工厂固定结构和源 Clip 派生数据
+
+#### Scenario: 链式创建包含循环与共享对象
+
+- **WHEN** 图包含循环或被多个节点引用的共享子图
+- **THEN** 源码 MUST 允许先声明对象再连接并只创建一次共享对象
+- **AND** MUST 不为组成单一调用链改变拓扑或业务顺序
+
+### Requirement: 创建源码必须只表达最小重建闭包
+
+源码 MUST 只表达正式资产重建必需的对象、配置、拓扑、身份、根绑定与精确外部输入。源码 MUST 不包含变量名中的 GUID/hash 后缀、不参与重建的 GUID、历史/操作顺序日志、诊断 hash 或生成过程信息。共享内部对象与重复外部资源 MUST 复用引用；真实外部输入的 GUID/localFileId 或正式相对路径定位信息 MUST 按精确解析需要保留，不得一并清除。未知字段 MUST 不被当作无用字段。
+
+#### Scenario: 同一素材被多处引用
+
+- **WHEN** 多个节点使用同一外部子资源
+- **THEN** 源码 MUST 声明一次精确资源引用并复用
+- **AND** MUST 保留区分子资源所必需的身份，不复制素材本身
+
+#### Scenario: 输出局部对象名称
+
+- **WHEN** 导出器为图、节点或连接分配局部变量
+- **THEN** MUST 使用可读名称和必要的局部重名序号
+- **AND** MUST 不将业务 GUID 再编码进变量名称
+
+### Requirement: 工具调度元数据必须与资产创建内容分离
+
+源码 MUST 不硬编码本机绝对 SourceCodePath，MUST 不携带仅用于调度的 recipe 和重复入口类型名属性。类型声明及正式执行合同 MUST 足以表达创建入口；精确源码路径、入口类型与 recipe 由工具请求/响应及现有编译关联承担，不写入生成资产，不建立另一个持久化注册协议。工具 MUST 保持精确源码与当前已编译类型的关联，源码未成功编译或关联不明确时 MUST 拒绝执行旧结果。
+
+#### Scenario: 项目移动到另一台机器
+
+- **WHEN** 项目位置变化且相同生成源码已在当前项目成功编译，调用方给出当前精确源码与入口
+- **THEN** 工具 MUST 通过当前编译关联定位并执行该入口
+- **AND** MUST 不要求编辑源码中的旧机器绝对路径

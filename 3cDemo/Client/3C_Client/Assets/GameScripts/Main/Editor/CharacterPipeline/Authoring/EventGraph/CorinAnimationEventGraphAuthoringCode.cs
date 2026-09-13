@@ -1,78 +1,176 @@
 using System;
-using System.IO;
-using FlowCanvas.Nodes;
-using ThirdPersonCharacter.Pipeline;
-using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
-using UnityEditor;
+using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;
+using UnityObject = UnityEngine.Object;
+using UnityAnimationClip = UnityEngine.AnimationClip;
+using BTSMTL.EventGraphs;
+using FlowCanvas;
+using FlowCanvas.Macros;
+using FlowCanvas.Nodes;
+using NodeCanvas.Framework;
+using ParadoxNotion;
+using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
 {
-    public sealed class CorinAnimationEventGraphAuthoringCode :
-        IBtsmtlAuthoringGenerationEntry
+    public sealed class CorinAnimationEventGraphAuthoringCode : IBtsmtlAuthoringGenerationEntry
     {
-        public const string Recipe = "character.animation-event-graph.corin/v1";
-        public const string SourcePath =
-            "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/EventGraph/CorinAnimationEventGraphAuthoringCode.cs";
-        public const string OutputPath =
-            "Assets/Configs/Character/Corin/Pipeline/Presentation/EventGraphs/CorinAnimationEventGraph.asset";
-        public const string GraphIdentity = "character.corin.animation-event-graph";
-        public const string ContentRevision = "character.corin.animation-event-graph/v1";
-
-        public string RecipeType => Recipe;
-        public string EntryTypeName => typeof(CorinAnimationEventGraphAuthoringCode).FullName;
-        public string SourceCodePath =>
-            Path.Combine(
-                Directory.GetParent(Application.dataPath).FullName,
-                SourcePath.Replace('/', Path.DirectorySeparatorChar));
-
-        public BtsmtlAuthoringGenerationResult Execute(
-            BtsmtlAuthoringGenerationContext context)
+        public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)
         {
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            CharacterPipelineDefinition definition =
-                context.ResolveExternalAsset<CharacterPipelineDefinition>(
-                    context.DefinitionAssetPath,
-                    0L);
-            CharacterAnimationPresentationProfile profile =
-                definition.AnimationPresentationProfile;
-            if (!profile)
-                throw new InvalidOperationException(
-                    "Corin Animation Event Graph generation requires the Definition Animation Presentation Profile.");
-            if (!string.Equals(context.OutputAssetPath, OutputPath, StringComparison.Ordinal))
-                throw new InvalidOperationException(
-                    $"Corin Animation Event Graph generation requires output path '{OutputPath}'.");
+            var eventGraph = EventGraphAuthoringCode.EnsureRoot<CharacterAnimationEventGraph>(context, "character.corin.animation-event-graph", "character.corin.animation-event-graph/v2", "CorinAnimationEventGraph");
+            eventGraph.DeclareVariable<Single>("animation.horizontal-speed", "Horizontal Speed", 0f);
+            eventGraph.DeclareVariable<Single>("animation.vertical-speed", "Vertical Speed", 0f);
+            eventGraph.DeclareVariable<Vector2>("animation.movement-direction", "Movement Direction", new Vector2(0f, 0f));
+            eventGraph.DeclareVariable<Vector2>("animation.desired-direction", "Desired Direction", new Vector2(0f, 0f));
+            eventGraph.DeclareVariable<Single>("animation.horizontal-acceleration", "Horizontal Acceleration", 0f);
+            eventGraph.DeclareVariable<Single>("animation.facing-error", "Facing Error", 0f);
+            eventGraph.DeclareVariable<CharacterPresentationMotionPhase>("animation.motion-phase", "Motion Phase", CharacterPresentationMotionPhase.GroundedStationary);
+            eventGraph.DeclareVariable<Vector2>("animation.history.previous-planar-velocity", "Previous Planar Velocity", new Vector2(0f, 0f));
+            eventGraph.DeclareVariable<Boolean>("animation.history.has-previous-sample", "Has Previous Sample", false);
+            var node = eventGraph.AddAuthoringNode(typeof(StartEvent), "corin.animation-event-graph.start", new UnityEngine.Vector2(-1180f, -260f));
+            var node1 = eventGraph.AddAuthoringNode(typeof(SetVariable<Vector2>), "corin.animation-event-graph.start.set-previous-planar", new UnityEngine.Vector2(-880f, -260f));
+            var node2 = eventGraph.AddAuthoringNode(typeof(SetVariable<Boolean>), "corin.animation-event-graph.start.set-has-previous", new UnityEngine.Vector2(-620f, -260f));
+            var node3 = eventGraph.AddAuthoringNode(typeof(UpdateEvent), "corin.animation-event-graph.update", new UnityEngine.Vector2(-1180f, 80f));
+            var node4 = eventGraph.AddAuthoringNode(typeof(Split), "corin.animation-event-graph.update-split", new UnityEngine.Vector2(-920f, 80f));
+            var node5 = eventGraph.AddAuthoringNode(typeof(SetVariable<Single>), "corin.animation-event-graph.set.horizontal-speed", new UnityEngine.Vector2(-348.6666f, -137.3333f));
+            var node6 = eventGraph.AddAuthoringNode(typeof(SetVariable<Single>), "corin.animation-event-graph.set.vertical-speed", new UnityEngine.Vector2(-92f, -10.00003f));
+            var node7 = eventGraph.AddAuthoringNode(typeof(SetVariable<Vector2>), "corin.animation-event-graph.set.movement-direction", new UnityEngine.Vector2(150f, 51.99997f));
+            var node8 = eventGraph.AddAuthoringNode(typeof(SetVariable<Vector2>), "corin.animation-event-graph.set.desired-direction", new UnityEngine.Vector2(440f, 86.00006f));
+            var node9 = eventGraph.AddAuthoringNode(typeof(SetVariable<Single>), "corin.animation-event-graph.set.facing-error", new UnityEngine.Vector2(695.3334f, 130.6667f));
+            var node10 = eventGraph.AddAuthoringNode(typeof(SwitchBool), "corin.animation-event-graph.branch.acceleration-history", new UnityEngine.Vector2(160f, 360f));
+            var node11 = eventGraph.AddAuthoringNode(typeof(SetVariable<Single>), "corin.animation-event-graph.set.horizontal-acceleration", new UnityEngine.Vector2(420f, 300f));
+            var node12 = eventGraph.AddAuthoringNode(typeof(SetVariable<Single>), "corin.animation-event-graph.set.horizontal-acceleration-zero", new UnityEngine.Vector2(420f, 440f));
+            var node13 = eventGraph.AddAuthoringNode(typeof(SwitchBool), "corin.animation-event-graph.branch.grounded", new UnityEngine.Vector2(160f, 620f));
+            var node14 = eventGraph.AddAuthoringNode(typeof(SwitchBool), "corin.animation-event-graph.branch.grounded-moving", new UnityEngine.Vector2(420f, 560f));
+            var node15 = eventGraph.AddAuthoringNode(typeof(SetVariable<CharacterPresentationMotionPhase>), "corin.animation-event-graph.set.motion-phase-grounded-moving", new UnityEngine.Vector2(680f, 500f));
+            var node16 = eventGraph.AddAuthoringNode(typeof(SetVariable<CharacterPresentationMotionPhase>), "corin.animation-event-graph.set.motion-phase-grounded-stationary", new UnityEngine.Vector2(680f, 620f));
+            var node17 = eventGraph.AddAuthoringNode(typeof(SwitchBool), "corin.animation-event-graph.branch.airborne-rising", new UnityEngine.Vector2(420f, 780f));
+            var node18 = eventGraph.AddAuthoringNode(typeof(SetVariable<CharacterPresentationMotionPhase>), "corin.animation-event-graph.set.motion-phase-airborne-rising", new UnityEngine.Vector2(680f, 740f));
+            var node19 = eventGraph.AddAuthoringNode(typeof(SetVariable<CharacterPresentationMotionPhase>), "corin.animation-event-graph.set.motion-phase-airborne-falling", new UnityEngine.Vector2(680f, 860f));
+            var node20 = eventGraph.AddAuthoringNode(typeof(SetVariable<Vector2>), "corin.animation-event-graph.history.set-previous-planar", new UnityEngine.Vector2(420f, 1040f));
+            var node21 = eventGraph.AddAuthoringNode(typeof(SetVariable<Boolean>), "corin.animation-event-graph.history.set-has-previous", new UnityEngine.Vector2(680.6824f, 1040.667f));
+            var node22 = eventGraph.AddAuthoringNode(typeof(EventGraphVector3InputNode), "corin.animation-event-graph.input.velocity", new UnityEngine.Vector2(-1180f, 420f));
+            var node23 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector3PlanarNode>), "corin.animation-event-graph.calculate.velocity-planar", new UnityEngine.Vector2(-878.6666f, 420f));
+            var node24 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2MagnitudeNode>), "corin.animation-event-graph.calculate.horizontal-speed", new UnityEngine.Vector2(-620f, 420f));
+            var node25 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<FloatGreaterThan>), "corin.animation-event-graph.calculate.horizontal-moving-check", new UnityEngine.Vector2(-360f, 1400f));
+            var node26 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<OR>), "corin.animation-event-graph.calculate.grounded-moving-check", new UnityEngine.Vector2(-80f, 1400f));
+            var node27 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2NormalizeNode>), "corin.animation-event-graph.calculate.movement-direction", new UnityEngine.Vector2(-620f, 700f));
+            var node28 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2SubtractNode>), "corin.animation-event-graph.calculate.planar-delta", new UnityEngine.Vector2(-360f, 1120f));
+            var node29 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2MagnitudeNode>), "corin.animation-event-graph.calculate.planar-delta-magnitude", new UnityEngine.Vector2(-80f, 1120f));
+            var node30 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<FloatDivide>), "corin.animation-event-graph.calculate.horizontal-acceleration", new UnityEngine.Vector2(200f, 1120f));
+            var node31 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector3YNode>), "corin.animation-event-graph.calculate.vertical-speed", new UnityEngine.Vector2(-880f, 560f));
+            var node32 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<FloatGreaterThan>), "corin.animation-event-graph.calculate.airborne-rising-check", new UnityEngine.Vector2(-360f, 1540f));
+            var node33 = eventGraph.AddAuthoringNode(typeof(EventGraphQuaternionInputNode), "corin.animation-event-graph.input.rotation", new UnityEngine.Vector2(-1180f, 560f));
+            var node34 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphQuaternionForwardNode>), "corin.animation-event-graph.calculate.forward", new UnityEngine.Vector2(-880f, 980f));
+            var node35 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector3PlanarNode>), "corin.animation-event-graph.calculate.facing-planar", new UnityEngine.Vector2(-620f, 980f));
+            var node36 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2NormalizeNode>), "corin.animation-event-graph.calculate.facing", new UnityEngine.Vector2(-360f, 980f));
+            var node37 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2SignedAngleNode>), "corin.animation-event-graph.calculate.facing-error", new UnityEngine.Vector2(-80f, 980f));
+            var node38 = eventGraph.AddAuthoringNode(typeof(EventGraphBoolInputNode), "corin.animation-event-graph.input.grounded", new UnityEngine.Vector2(-1180f, 700f));
+            var node39 = eventGraph.AddAuthoringNode(typeof(EventGraphVector2InputNode), "corin.animation-event-graph.input.desired-planar-velocity", new UnityEngine.Vector2(-1180f, 840f));
+            var node40 = eventGraph.AddAuthoringNode(typeof(SimplexNodeWrapper<EventGraphVector2NormalizeNode>), "corin.animation-event-graph.calculate.desired-direction", new UnityEngine.Vector2(-620f, 840f));
+            var node41 = eventGraph.AddAuthoringNode(typeof(EventGraphVector2InputNode), "corin.animation-event-graph.input.desired-facing", new UnityEngine.Vector2(-1180f, 980f));
+            var node42 = eventGraph.AddAuthoringNode(typeof(EventGraphBoolInputNode), "corin.animation-event-graph.input.has-motion", new UnityEngine.Vector2(-1180f, 1120f));
+            var node43 = eventGraph.AddAuthoringNode(typeof(EventGraphVector2InputNode), "corin.animation-event-graph.input.locomotion-planar-basis", new UnityEngine.Vector2(-1180f, 1260f));
+            var node44 = eventGraph.AddAuthoringNode(typeof(EventGraphDeltaNode), "corin.animation-event-graph.input.delta-seconds", new UnityEngine.Vector2(-1180f, 1400f));
+            var node45 = eventGraph.AddAuthoringNode(typeof(GetVariable<Vector2>), "corin.animation-event-graph.history.get-previous-planar", new UnityEngine.Vector2(-620f, 1120f));
+            var node46 = eventGraph.AddAuthoringNode(typeof(GetVariable<Boolean>), "corin.animation-event-graph.history.get-has-previous", new UnityEngine.Vector2(-620f, 1260f));
 
-            CharacterAnimationEventGraph graph =
-                EventGraphAuthoringCode.EnsureRoot<CharacterAnimationEventGraph>(
-                    context,
-                    GraphIdentity,
-                    ContentRevision,
-                    "CorinAnimationEventGraph");
+            eventGraph.ConfigureCanvas("Animation Event Graph", "Corin动画事件图计算速度、方向、加速度、朝向误差和运动阶段，并维护实例历史。", new UnityEngine.Vector2(5f, 266f), 0.752373338f);
+            eventGraph.ConfigureVariable("animation.history.previous-planar-velocity", false);
+            eventGraph.ConfigureVariable("animation.history.has-previous-sample", false);
+            eventGraph.ConfigureAssignment((SetVariable<UnityEngine.Vector2>)node1, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<bool>)node2, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureUpdateEvent((UpdateEvent)node3);
+            eventGraph.ConfigureInstantSplit((Split)node4, 8);
+            eventGraph.ConfigureAssignment((SetVariable<float>)node5, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<float>)node6, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<UnityEngine.Vector2>)node7, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<UnityEngine.Vector2>)node8, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<float>)node9, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<float>)node11, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<float>)node12, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<UnityEngine.Vector2>)node20, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureAssignment((SetVariable<bool>)node21, ParadoxNotion.AssignOp.Set, false);
+            eventGraph.ConfigureHostInput(node22, "presentation.velocity");
+            eventGraph.ConfigureHostInput(node33, "presentation.rotation");
+            eventGraph.ConfigureHostInput(node38, "presentation.grounded");
+            eventGraph.ConfigureHostInput(node39, "presentation.desired-planar-velocity");
+            eventGraph.ConfigureHostInput(node41, "presentation.desired-facing");
+            eventGraph.ConfigureHostInput(node42, "presentation.has-motion");
+            eventGraph.ConfigureHostInput(node43, "presentation.locomotion-planar-basis");
+            eventGraph.ConfigureHostInput(node44, "host.delta-seconds");
 
-            graph.AddAuthoringNode<StartEvent>(
-                "corin.animation-event-graph.start",
-                new Vector2(-720f, 0f));
-            UpdateEvent update = graph.AddAuthoringNode<UpdateEvent>(
-                "corin.animation-event-graph.update",
-                new Vector2(-720f, 280f));
+            eventGraph.BindVariableNode((ParameterVariableNode)node1, "animation.history.previous-planar-velocity");
+            eventGraph.BindVariableNode((ParameterVariableNode)node2, "animation.history.has-previous-sample");
+            eventGraph.BindVariableNode((ParameterVariableNode)node5, "animation.horizontal-speed");
+            eventGraph.BindVariableNode((ParameterVariableNode)node6, "animation.vertical-speed");
+            eventGraph.BindVariableNode((ParameterVariableNode)node7, "animation.movement-direction");
+            eventGraph.BindVariableNode((ParameterVariableNode)node8, "animation.desired-direction");
+            eventGraph.BindVariableNode((ParameterVariableNode)node9, "animation.facing-error");
+            eventGraph.BindVariableNode((ParameterVariableNode)node11, "animation.horizontal-acceleration");
+            eventGraph.BindVariableNode((ParameterVariableNode)node12, "animation.horizontal-acceleration");
+            eventGraph.BindVariableNode((ParameterVariableNode)node15, "animation.motion-phase");
+            eventGraph.BindVariableNode((ParameterVariableNode)node16, "animation.motion-phase");
+            eventGraph.BindVariableNode((ParameterVariableNode)node18, "animation.motion-phase");
+            eventGraph.BindVariableNode((ParameterVariableNode)node19, "animation.motion-phase");
+            eventGraph.BindVariableNode((ParameterVariableNode)node20, "animation.history.previous-planar-velocity");
+            eventGraph.BindVariableNode((ParameterVariableNode)node21, "animation.history.has-previous-sample");
+            eventGraph.BindVariableNode((ParameterVariableNode)node45, "animation.history.previous-planar-velocity");
+            eventGraph.BindVariableNode((ParameterVariableNode)node46, "animation.history.has-previous-sample");
 
-            graph.ConfigureUpdateEvent(update);
-            graph.ConfigureCanvas(
-                "Animation Event Graph",
-                "Corin animation presentation uses Action Playback and source curves as formal inputs.",
-                Vector2.zero,
-                1f);
-            graph.ConfigureAuthoringIdentity(GraphIdentity, ContentRevision);
-
-            Undo.RecordObject(profile, "Bind Corin Animation Event Graph");
-            profile.SetEventGraph(graph);
-            EditorUtility.SetDirty(profile);
-            EditorUtility.SetDirty(graph);
-            return context.Complete(graph);
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.start-previous", node, "Once", node1, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.start-has-previous", node1, "Out", node2, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.update-split", node3, "Out", node4, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.speed", node4, "0", node5, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.vertical-speed", node4, "1", node6, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.movement-direction", node4, "2", node7, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.desired-direction", node4, "3", node8, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.facing-error", node4, "4", node9, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.acceleration-branch", node4, "5", node10, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.motion-phase-branch", node4, "6", node13, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.save-previous-planar", node4, "7", node20, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.acceleration-calculated", node10, "True", node11, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.acceleration-first-sample", node10, "False", node12, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.grounded-moving-branch", node13, "True", node14, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.airborne-branch", node13, "False", node17, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.grounded-moving", node14, "True", node15, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.grounded-stationary", node14, "False", node16, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.airborne-rising", node17, "True", node18, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.airborne-falling", node17, "False", node19, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.flow.save-has-previous", node20, "Out", node21, "In");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.velocity-planar", node22, "Value", node23, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.vertical-speed", node22, "Value", node31, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.horizontal-speed", node23, "Value", node24, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.movement-direction", node23, "Value", node27, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.current-planar", node23, "Value", node28, "a");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-previous-planar", node23, "Value", node20, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.horizontal-speed-check", node24, "Value", node25, "a");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-horizontal-speed", node24, "Value", node5, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.speed-motion-check", node25, "Value", node26, "b");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.grounded-moving-check", node26, "Value", node14, "Condition");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-movement-direction", node27, "Value", node7, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.planar-delta", node28, "Value", node29, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.acceleration-numerator", node29, "Value", node30, "a");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-horizontal-acceleration", node30, "Value", node11, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.vertical-rising-check", node31, "Value", node32, "a");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-vertical-speed", node31, "Value", node6, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.airborne-rising-check", node32, "Value", node17, "Condition");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.forward", node33, "Value", node34, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.facing-planar", node34, "Value", node35, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.facing", node35, "Value", node36, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.facing-error-from", node36, "Value", node37, "from");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-facing-error", node37, "Value", node9, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.grounded-check", node38, "Value", node13, "Condition");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.desired-direction", node39, "Value", node40, "value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.set-desired-direction", node40, "Value", node8, "Value");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.facing-error-to", node41, "Value", node37, "to");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.has-motion-check", node42, "Value", node26, "a");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.acceleration-delta", node44, "Delta", node30, "b");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.previous-planar", node45, "Value", node28, "b");
+            eventGraph.ConnectAuthoringPorts("corin.animation-event-graph.value.has-previous", node46, "Value", node10, "Condition");
+            return context.Complete(eventGraph);
         }
-
     }
 }

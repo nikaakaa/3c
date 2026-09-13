@@ -5,8 +5,11 @@ using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonGameplay.Effects;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -16,6 +19,196 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     public static class BtsmtlSkillAuthoringCode
     {
+        public static BtsmtlSkillFlowGraph EnsureAbilityRoot(
+            BtsmtlAuthoringGenerationContext context,
+            string abilityId,
+            string graphIdentity,
+            string name)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (string.IsNullOrWhiteSpace(abilityId) || string.IsNullOrWhiteSpace(graphIdentity))
+                throw new ArgumentException("Gameplay Ability root identity is incomplete.");
+            string outputPath = context.OutputAssetPath;
+            GameplayAbilityDefinition ability = AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(outputPath);
+            if (!ability)
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(outputPath) != null)
+                    throw new InvalidOperationException($"Gameplay Ability output '{outputPath}' is occupied by another asset type.");
+                int separator = outputPath.LastIndexOf('/');
+                string folder = separator > 0 ? outputPath.Substring(0, separator) : string.Empty;
+                if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+                    throw new InvalidOperationException($"Gameplay Ability output folder '{folder}' does not exist.");
+                ability = ScriptableObject.CreateInstance<GameplayAbilityDefinition>();
+                ability.name = string.IsNullOrWhiteSpace(name) ? abilityId : name;
+                ability.ConfigureIdentity(abilityId, name);
+                AssetDatabase.CreateAsset(ability, outputPath);
+            }
+            else if (!string.Equals(ability.AbilityId, abilityId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Gameplay Ability output '{outputPath}' has identity '{ability.AbilityId}', expected '{abilityId}'.");
+            }
+
+            BtsmtlSkillFlowGraph graph = ability.AbilityGraph;
+            if (graph == null)
+            {
+                graph = AssetDatabase.LoadAllAssetsAtPath(outputPath)
+                    .OfType<BtsmtlSkillFlowGraph>()
+                    .SingleOrDefault(value => string.Equals(value.AuthoringId, graphIdentity, StringComparison.Ordinal));
+                if (graph != null)
+                    ability.SetAbilityGraph(graph);
+            }
+            if (graph == null)
+            {
+                graph = BtsmtlSkillGraphAssetFactory.CreatePrivateAbilityGraph(ability, graphIdentity, name);
+            }
+            else if (!string.Equals(graph.AuthoringId, graphIdentity, StringComparison.Ordinal) ||
+                     graph.Role != BtsmtlSkillFlowGraphRole.Skill)
+            {
+                throw new InvalidOperationException($"Gameplay Ability '{abilityId}' graph identity or role is invalid.");
+            }
+            EditorUtility.SetDirty(ability);
+            EditorUtility.SetDirty(graph);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(outputPath, ImportAssetOptions.ForceUpdate);
+            GameplayAbilityDefinition persistedAbility =
+                AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(outputPath);
+            BtsmtlSkillFlowGraph persistedGraph = AssetDatabase.LoadAllAssetsAtPath(outputPath)
+                .OfType<BtsmtlSkillFlowGraph>()
+                .SingleOrDefault(value => string.Equals(value.AuthoringId, graphIdentity, StringComparison.Ordinal));
+            if (!persistedAbility || !persistedGraph)
+                throw new InvalidOperationException("Gameplay Ability root or private AbilityGraph was not persisted.");
+            if (persistedAbility.AbilityGraph != persistedGraph)
+            {
+                persistedAbility.SetAbilityGraph(persistedGraph);
+                EditorUtility.SetDirty(persistedAbility);
+                AssetDatabase.SaveAssets();
+            }
+            return persistedGraph;
+        }
+
+        public static void BindAbilityRoot(
+            BtsmtlAuthoringGenerationContext context,
+            BtsmtlSkillFlowGraph graph)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            string outputPath = context.OutputAssetPath;
+            GameplayAbilityDefinition ability = AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(outputPath);
+            if (!ability || ability.AbilityGraph != graph)
+                throw new InvalidOperationException("Gameplay Ability root is not bound to its private Ability graph.");
+            CharacterPipelineDefinition definition =
+                context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
+            if (!definition)
+                throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
+            CharacterSkillAuthoringDefinition legacy = definition.SkillDefinitions
+                .SingleOrDefault(value => value != null &&
+                    string.Equals(value.EntryGraphAuthoringId, graph.AuthoringId, StringComparison.Ordinal));
+            if (legacy != null)
+            {
+                ability.ConfigureAdmissionProfile(legacy.ActionProfile);
+                ability.ConfigureFollowUps(legacy.AllowedFollowUpSkillIds);
+                if (!definition.AbilityGrants.Any(value => value != null && value.Ability == ability))
+                {
+                    var grant = new AbilityGrant();
+                    grant.Configure(
+                        ability,
+                        legacy.SourceInputRequestId,
+                        legacy.ConsumeSourceInputRequest,
+                        legacy.TargetInputValueId,
+                        legacy.TargetKey);
+                    definition.SetAbilityGrants(definition.AbilityGrants.Concat(new[] { grant }));
+                }
+                if (LegacySkillsAreMigrated(definition))
+                {
+                    var retiredPaths = definition.SkillGraphs
+                        .Select(AssetDatabase.GetAssetPath)
+                        .Concat(definition.SkillDefinitions
+                            .Where(value => value != null && value.ActionContext != null)
+                            .Select(value => AssetDatabase.GetAssetPath(value.ActionContext)))
+                        .Where(value => !string.IsNullOrEmpty(value))
+                        .Distinct(StringComparer.Ordinal)
+                        .ToArray();
+                    definition.SetSkillDefinitions(Array.Empty<CharacterSkillAuthoringDefinition>());
+                    definition.SetSkillGraphs(Array.Empty<BtsmtlSkillFlowGraph>());
+                    foreach (string retiredPath in retiredPaths)
+                        context.DeleteAsset(retiredPath);
+                }
+            }
+            EditorUtility.SetDirty(ability);
+            EditorUtility.SetDirty(definition);
+        }
+
+        public static void ConfigureAbility(
+            BtsmtlAuthoringGenerationContext context,
+            string debugCategory,
+            GameplayTagId[] tags,
+            ActionProfile admissionProfile,
+            GameplayEffectDefinition[] effects,
+            GameplayAbilityEndRule[] endRules,
+            GameplayAbilitySubgraphDependencyConfiguration[] subgraphDependencies,
+            string[] followUpAbilityIds,
+            string sourceInputRequestId,
+            bool consumeSourceInputRequest,
+            string targetInputValueId,
+            string targetKey,
+            bool createGrant)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            GameplayAbilityDefinition ability =
+                AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(context.OutputAssetPath);
+            if (!ability)
+                throw new InvalidOperationException("Gameplay Ability output asset is unavailable.");
+            CharacterPipelineDefinition definition =
+                context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
+            if (!definition)
+                throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
+            ability.ConfigureMetadata(debugCategory, tags);
+            ability.ConfigureAdmissionProfile(admissionProfile);
+            ability.ConfigureEffects(effects);
+            ability.ConfigureEndRules(endRules);
+            ability.ConfigureSubgraphDependencies(subgraphDependencies);
+            ability.ConfigureFollowUps(followUpAbilityIds);
+            AbilityGrant grant = definition.AbilityGrants
+                .SingleOrDefault(value => value != null && value.Ability == ability);
+            if (grant == null)
+            {
+                if (!createGrant)
+                {
+                    EditorUtility.SetDirty(ability);
+                    return;
+                }
+                grant = new AbilityGrant();
+                definition.SetAbilityGrants(definition.AbilityGrants.Concat(new[] { grant }));
+            }
+            grant.Configure(
+                ability,
+                sourceInputRequestId,
+                consumeSourceInputRequest,
+                targetInputValueId,
+                targetKey);
+            EditorUtility.SetDirty(ability);
+            EditorUtility.SetDirty(definition);
+        }
+
+        static bool LegacySkillsAreMigrated(CharacterPipelineDefinition definition)
+        {
+            if (definition.SkillDefinitions.Count == 0)
+                return false;
+            for (int i = 0; i < definition.SkillDefinitions.Count; i++)
+            {
+                CharacterSkillAuthoringDefinition legacy = definition.SkillDefinitions[i];
+                if (legacy == null || !definition.AbilityGrants.Any(value => value != null &&
+                    string.Equals(value.AbilityId, legacy.SkillId, StringComparison.Ordinal)))
+                    return false;
+            }
+            return true;
+        }
+
         public static BtsmtlSkillFlowGraph EnsureSkillRoot(
             BtsmtlAuthoringGenerationContext context,
             string identity,
@@ -173,7 +366,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 .SingleOrDefault(value =>
                     value.Data != null && string.Equals(value.Data.AuthoringId, identity, StringComparison.Ordinal));
             if (existing)
+            {
+                existing.Data.Name = name ?? existing.Data.Name;
+                existing.Data.Scale = 1f;
+                existing.Data.Loop = false;
                 return existing;
+            }
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能Timeline", () =>
             {
                 TimelineAsset asset = BtsmtlSkillGraphAssetFactory.CreatePrivateTimeline(owner, name);
@@ -202,6 +400,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     existing.SetData(TimelineData.CreateDefault(name));
                 existing.Data.ConfigureAuthoringIdentity(identity);
                 existing.Data.Name = name;
+                existing.Data.Scale = 1f;
+                existing.Data.Loop = false;
                 EditorUtility.SetDirty(existing);
                 return existing;
             }
@@ -229,7 +429,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             if (graph == null)
                 throw new ArgumentNullException(nameof(graph));
-            return BtsmtlSkillFlowGraphAuthoring.EnsureNode(graph, nodeType, identity, name, position);
+            FlowNode node = BtsmtlSkillFlowGraphAuthoring.EnsureNode(graph, nodeType, identity, name, position);
+            ResetNodeDefaults(node);
+            return node;
         }
 
         public static BtsmtlSkillNativeState EnsureNativeState(
@@ -255,6 +457,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Vector2 position,
             BtsmtlSkillFlowGraph body) =>
             BtsmtlSkillNativeStateMachineAuthoring.ConfigureState(state, name, position, body);
+
+        public static void ConfigureNativeState(
+            BtsmtlSkillNativeState state,
+            BtsmtlSkillFlowGraph body) =>
+            BtsmtlSkillNativeStateMachineAuthoring.ConfigureState(state, state.name, state.position, body);
 
         public static void ConfigureNativeConnection(
             BtsmtlSkillNativeConnection connection,
@@ -360,9 +567,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 if (existing.GetType() != trackType)
                     throw new InvalidOperationException($"Timeline track identity '{identity}' has a different type.");
                 existing.Name = name ?? existing.Name;
+                existing.PersistentMuted = false;
                 return existing;
             }
             Track created = null;
+            PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 int count = timeline.Tracks.Count;
@@ -386,11 +595,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Clip existing = track.Clips.SingleOrDefault(value => value != null && value.AuthoringId == identity);
             if (existing != null)
             {
-                ConfigureClipFrames(existing, startFrame, existing.EndFrame, existing.OtherEaseInFrame,
-                    existing.OtherEaseOutFrame, existing.SelfEaseInFrame, existing.SelfEaseOutFrame, existing.ClipInFrame);
+                ConfigureClipSegment(existing, startFrame, DefaultEndFrame(existing, startFrame, referenceObject), 0, 0, 0);
                 return existing;
             }
             Clip created = null;
+            PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 created = referenceObject
@@ -402,24 +611,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return created;
         }
 
-        public static void ConfigureClipFrames(
+        public static Clip EnsureClip(
+            TimelineData timeline,
+            TimelineContractCatalog catalog,
+            Track track,
+            string identity,
+            int startFrame,
+            UnityEngine.Object referenceObject,
+            int endFrame,
+            int selfEaseInFrame,
+            int selfEaseOutFrame,
+            int clipInFrame)
+        {
+            Clip clip = EnsureClip(timeline, catalog, track, identity, startFrame, referenceObject);
+            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInFrame);
+            return clip;
+        }
+
+        public static void ConfigureClipSegment(
             Clip clip,
             int startFrame,
             int endFrame,
-            int otherEaseInFrame,
-            int otherEaseOutFrame,
             int selfEaseInFrame,
             int selfEaseOutFrame,
             int clipInFrame)
         {
             clip.StartFrame = startFrame;
             clip.EndFrame = endFrame;
-            clip.OtherEaseInFrame = otherEaseInFrame;
-            clip.OtherEaseOutFrame = otherEaseOutFrame;
             clip.SelfEaseInFrame = selfEaseInFrame;
             clip.SelfEaseOutFrame = selfEaseOutFrame;
             clip.ClipInFrame = clipInFrame;
             clip.FrameToTime();
+            clip.Track?.UpdateMix();
+        }
+
+        static int DefaultEndFrame(Clip clip, int startFrame, UnityEngine.Object referenceObject)
+        {
+            if (referenceObject is UnityEngine.AnimationClip animation)
+                return startFrame + Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate);
+            return startFrame + (clip is SignalClip ? 1 : 3);
+        }
+
+        static void ResetNodeDefaults(FlowNode node)
+        {
+            if (node is BtsmtlSkillLoopFlowNode loop)
+                loop.SetStopType(BtsmtlSkillLoopStopType.None);
+            if (node is BtsmtlSkillParallelFlowNode parallel)
+                parallel.SetMode(BtsmtlSkillParallelMode.JumpComplete);
+            if (node is BtsmtlSkillStateExitCauseFlowNode cause)
+                cause.SetCause(BtsmtlSkillStateExitCause.StateTransition);
+            if (node is BtsmtlSkillLocomotionFlowNode locomotion)
+                locomotion.Configure(
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultMoveSpeed,
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultDisplacementMode,
+                    null,
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultTurnSpeedDegrees,
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultCameraRelative,
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultExecutionMode,
+                    ThirdPersonCharacter.Pipeline.Motion.LocomotionInputMotionAuthoringRules.DefaultDurationSeconds);
         }
 
         public static TimelineSection EnsureSection(
@@ -430,6 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string nextSectionId)
         {
             TimelineSection result = null;
+            PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 result = timeline.EnsureSection(identity, name, frame);
@@ -450,6 +700,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string parameterId)
         {
             TimelineExternalBindingDeclaration result = null;
+            PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 result = timeline.ExternalBindings.SingleOrDefault(value => value != null && value.AuthoringId == identity);
@@ -481,6 +732,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillFlowGraphAuthoring.Prune(graph, nodeIdentities, connectionIdentities);
         }
 
+        public static void PruneBlackboard(FlowGraph graph, IEnumerable<string> variableIdentities)
+        {
+            if (graph is not BtsmtlSkillFlowGraph skillGraph)
+                throw new InvalidOperationException("技能黑板清理必须作用于正式Skill Graph。");
+            var keep = new HashSet<string>(variableIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            var variables = skillGraph.blackboard.variables.Values
+                .Where(value => value != null && !keep.Contains(value.ID))
+                .ToArray();
+            foreach (Variable variable in variables)
+                if (BtsmtlSkillGraphClosure.Validate(skillGraph, false)
+                    .SelectMany(value => value.allNodes)
+                    .OfType<IBtsmtlSkillBlackboardAccessNode>()
+                    .Any(node => node.Variable.DeclarationId == variable.ID &&
+                        string.Equals(node.Variable.OwnerId, skillGraph.AuthoringId, StringComparison.Ordinal)))
+                    throw new InvalidOperationException($"技能黑板变量'{variable.name}'仍被节点引用。");
+            BtsmtlSkillFlowEditorMutation.Apply(
+                skillGraph,
+                "清理技能黑板声明",
+                () =>
+                {
+                    foreach (Variable variable in variables)
+                        skillGraph.blackboard.RemoveVariable(variable.name);
+                    skillGraph.SetBlackboardDeclarations(skillGraph.BlackboardDeclarations
+                        .Where(declaration => keep.Contains(declaration.VariableId))
+                        .ToArray());
+                },
+                false);
+        }
+
         public static void PruneNativeStateMachine(
             BtsmtlSkillNativeStateMachine machine,
             IEnumerable<string> stateIdentities,
@@ -508,6 +788,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var clips = new HashSet<string>(clipIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             var sections = new HashSet<string>(sectionIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
             var bindings = new HashSet<string>(bindingIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 foreach (Track track in timeline.Tracks.ToArray())
@@ -529,6 +810,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         timeline.RemoveExternalBinding(binding);
                 timeline.Init();
             }, "清理Timeline输出");
+        }
+
+        static void PrepareTimelineMutation(TimelineData timeline)
+        {
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            timeline.UpdateSerializedTimeline();
         }
     }
 }

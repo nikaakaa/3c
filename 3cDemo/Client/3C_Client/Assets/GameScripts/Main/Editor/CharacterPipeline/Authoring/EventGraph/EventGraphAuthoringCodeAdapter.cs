@@ -126,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
             context.AddUsing("FlowCanvas.Nodes");
             context.AddUsing("NodeCanvas.Framework");
             context.AddUsing("ParadoxNotion");
+            context.AddUsing("ThirdPersonCharacter.Pipeline.Animation");
             context.AddUsing("ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph");
             context.AddUsing("UnityEngine");
         }
@@ -161,9 +162,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                     "事件图Canvas translation包含非法数值。");
                 return;
             }
-            context.AddStatement(
-                BtsmtlAuthoringCodeEmissionPhase.Configure,
-                $"{graphVariable}.ConfigureCanvas({StringLiteral(graph.category)}, {StringLiteral(graph.comments)}, {Vector2Literal(graph.translation)}, {FloatLiteral(graph.zoomFactor)});");
+            if (!string.IsNullOrEmpty(graph.category) ||
+                !string.IsNullOrEmpty(graph.comments) ||
+                graph.translation != Vector2.zero ||
+                !Mathf.Approximately(graph.zoomFactor, 1f))
+                context.AddStatement(
+                    BtsmtlAuthoringCodeEmissionPhase.Configure,
+                    $"{graphVariable}.ConfigureCanvas({StringLiteral(graph.category)}, {StringLiteral(graph.comments)}, {Vector2Literal(graph.translation)}, {FloatLiteral(graph.zoomFactor)});");
         }
 
         static void EmitVariables(
@@ -223,10 +228,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,
                     $"{graphVariable}.DeclareVariable<{type}>({StringLiteral(variable.ID)}, {StringLiteral(variable.name)}, {valueLiteral});");
-                if (variable.isExposedPublic)
+                if (!variable.isExposedPublic)
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Configure,
-                        $"{graphVariable}.ConfigureVariable({StringLiteral(variable.ID)}, true);");
+                        $"{graphVariable}.ConfigureVariable({StringLiteral(variable.ID)}, false);");
             }
         }
 
@@ -485,16 +490,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 return;
             if (!macroVariables.TryGetValue(macro, out string macroVariable))
             {
-                macroVariable = context.RegisterObject(
-                    macro,
-                    macroPath,
-                    "macro");
-                if (string.IsNullOrEmpty(macroVariable))
-                    return;
+                macroVariable = macroExpression;
                 macroVariables.Add(macro, macroVariable);
-                context.AddStatement(
-                    BtsmtlAuthoringCodeEmissionPhase.Create,
-                    $"var {macroVariable} = {macroExpression} ?? throw new System.InvalidOperationException({StringLiteral($"Event graph Macro '{macroPath}' could not be loaded.")});");
             }
             context.AddStatement(
                 BtsmtlAuthoringCodeEmissionPhase.Configure,
@@ -632,6 +629,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 return vector2Input.InputId;
             if (node is EventGraphVector3InputNode vector3Input)
                 return vector3Input.InputId;
+            if (node is EventGraphQuaternionInputNode quaternionInput)
+                return quaternionInput.InputId;
             return string.Empty;
         }
 

@@ -86,7 +86,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                 string nodeVariable = context.RegisterObject(
                     node,
                     node.UID,
-                    "node");
+                    "node",
+                    false,
+                    "Root",
+                    BtsmtlAuthoringCodeSyntax.TypeName(typeof(Node)));
                 if (!string.IsNullOrEmpty(nodeVariable))
                     nodeVariables.Add(node, nodeVariable);
             }

@@ -11,7 +11,7 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 
 这是 Agent 作者工具：只负责调用表达、文件组织、输出管理和诊断。正式字段、默认值、身份/owner、业务校验、创建/事务/保存、编译和运行均归正式领域；不把它们复制进工具，也不在工具内新增攻击阶段、连段或其它业务模板。
 
-多文件输出优化规划见 `openspec/changes/optimize-agent-csharp-output/design.md`，尚未实施。目标是一个根一个生成目录、一个执行入口，局部对象配置就近组织、资源按使用范围复用、命名稳定、相同文件不写盘。仅清理明确生成范围，手写扩展在范围外；不解析旧 C# 或自动同步，不为分文件新增领域对象。
+多文件输出已按 `openspec/changes/optimize-agent-csharp-output/design.md` 实施：一个根一个专属 Generated 目录、一个执行入口，局部对象配置就近组织，跨局部对象通过执行状态传递，资源按使用范围复用，命名稳定，相同文件不写盘。仅清理入口所属明确生成范围，手写扩展必须在范围外；不解析旧 C# 或自动同步，不为分文件新增领域对象。
 
 只使用两个作者 MCP：
 
@@ -24,7 +24,7 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 
 ## 导出
 
-1. 确认精确根资产、Definition、源码输出路径、recipe、入口类型和命名空间。
+1. 确认精确根资产、Definition、入口源码路径、recipe、入口类型和命名空间。入口路径使用 `Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/CodeGeneration/Generated/<Root>/<Root>.cs`。
 2. Unity 工具调用必须显式指定目标 unity_instance；目标必须非 Play、非编译、非导入。
 3. export_code 直接读取正式对象闭包。失败时保留已有源码，不写半份结果。
 
@@ -36,6 +36,8 @@ description: 通过正式 C# authoring API 和两个显式 MCP 管理 BTSMTL Ski
 - 同一外部资源在源码中声明一次后复用；类型用必要的 using/别名。
 - Timeline 保存源 Clip/数据段、源区间、时间轴位置和正式作者覆盖。独立作者曲线保留完整关键帧、切线、权重和时间域，不重采样。
 - Builder 直接调用正式领域 API；共享对象先声明再连接，不能复制第二棵领域树。
+- 入口只保留资源加载、创建/配置/绑定/连接的原顺序和 `Complete`；Graph、FSM、Timeline、Pose 的局部创建与配置放在稳定命名的同目录 partial 文件。
+- 同一外部资源只在执行状态中解析一次；同一根的局部文件内容未变化时不重写，也不改已有 `.meta`。
 
 MotionCurve 按正式 API 输出 RootMotionCurveAsset 引用与使用配置，不展开源关键帧。export_code 不隐式提取素材；generate_assets 不复制、重烘焙或删除范围外源。具体源所有权和时间规则查当前 `openspec/specs/character-root-motion-curves/spec.md`，工具不重新实现这些规则。
 
@@ -58,7 +60,7 @@ dotnet build ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /
 dotnet build-server shutdown
 ~~~
 
-编译失败时停止 generate_assets。生成只接受精确源码路径、已编译入口、Definition 和输出路径；不接受任意源码正文或旧同名入口。响应必须区分保存、创建、替换、删除和 diagnostic。
+编译失败时停止 generate_assets。生成只接受精确入口源码路径、已编译入口、Definition 和输出路径；入口目录内的 partial 文件随当前编译关联参与。不接受任意源码正文或旧同名入口。响应必须区分保存、创建、替换、删除和 diagnostic。
 
 ## 正式 API 边界
 

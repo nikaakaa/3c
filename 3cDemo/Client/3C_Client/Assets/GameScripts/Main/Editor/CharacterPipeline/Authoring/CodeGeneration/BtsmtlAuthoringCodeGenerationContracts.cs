@@ -30,13 +30,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string code,
             string subject,
             string message,
-            string suggestion = null)
+            string suggestion = null,
+            string filePath = null)
         {
             Severity = severity;
             Code = code ?? string.Empty;
             Subject = subject ?? string.Empty;
             Message = message ?? string.Empty;
             Suggestion = suggestion ?? string.Empty;
+            FilePath = filePath ?? string.Empty;
         }
 
         public BtsmtlAuthoringCodeDiagnosticSeverity Severity { get; }
@@ -44,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public string Subject { get; }
         public string Message { get; }
         public string Suggestion { get; }
+        public string FilePath { get; }
 
         public override string ToString() =>
             string.IsNullOrEmpty(Subject)
@@ -62,6 +65,90 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         public string AssetPath { get; }
         public string TypeName { get; }
+        public long LocalFileId { get; }
+    }
+
+    public sealed class BtsmtlAuthoringCodeSourceFile
+    {
+        internal BtsmtlAuthoringCodeSourceFile(
+            string filePath,
+            string relativePath,
+            string sectionName,
+            bool isEntryPoint,
+            string sourceCode)
+        {
+            FilePath = filePath;
+            RelativePath = relativePath;
+            SectionName = sectionName;
+            IsEntryPoint = isEntryPoint;
+            SourceCode = sourceCode ?? string.Empty;
+        }
+
+        public string FilePath { get; }
+        public string RelativePath { get; }
+        public string SectionName { get; }
+        public bool IsEntryPoint { get; }
+        public string SourceCode { get; }
+    }
+
+    public sealed class BtsmtlAuthoringCodeFileWriteResult
+    {
+        internal BtsmtlAuthoringCodeFileWriteResult(
+            bool success,
+            string failedFilePath,
+            string errorMessage,
+            IEnumerable<string> createdFiles,
+            IEnumerable<string> modifiedFiles,
+            IEnumerable<string> unchangedFiles,
+            IEnumerable<string> deletedFiles)
+        {
+            Success = success;
+            FailedFilePath = failedFilePath ?? string.Empty;
+            ErrorMessage = errorMessage ?? string.Empty;
+            CreatedFiles = new ReadOnlyCollection<string>((createdFiles ?? Enumerable.Empty<string>()).ToArray());
+            ModifiedFiles = new ReadOnlyCollection<string>((modifiedFiles ?? Enumerable.Empty<string>()).ToArray());
+            UnchangedFiles = new ReadOnlyCollection<string>((unchangedFiles ?? Enumerable.Empty<string>()).ToArray());
+            DeletedFiles = new ReadOnlyCollection<string>((deletedFiles ?? Enumerable.Empty<string>()).ToArray());
+        }
+
+        public bool Success { get; }
+        public string FailedFilePath { get; }
+        public string ErrorMessage { get; }
+        public IReadOnlyList<string> CreatedFiles { get; }
+        public IReadOnlyList<string> ModifiedFiles { get; }
+        public IReadOnlyList<string> UnchangedFiles { get; }
+        public IReadOnlyList<string> DeletedFiles { get; }
+    }
+
+    internal readonly struct BtsmtlAuthoringCodeStatement
+    {
+        public BtsmtlAuthoringCodeStatement(string sectionName, string text)
+        {
+            SectionName = sectionName;
+            Text = text;
+        }
+
+        public string SectionName { get; }
+        public string Text { get; }
+    }
+
+    internal readonly struct BtsmtlAuthoringCodeExternalAssetReference
+    {
+        public BtsmtlAuthoringCodeExternalAssetReference(
+            string variableName,
+            string typeName,
+            string assetPath,
+            long localFileId)
+        {
+            VariableName = variableName;
+            TypeName = typeName;
+            AssetPath = assetPath;
+            LocalFileId = localFileId;
+        }
+
+        public string VariableName { get; }
+        public string TypeName { get; }
+        public string AssetPath { get; }
         public long LocalFileId { get; }
     }
 
@@ -85,6 +172,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Root = root ?? throw new ArgumentNullException(nameof(root));
             DefinitionAssetPath = RequirePath(definitionAssetPath, nameof(definitionAssetPath));
             OutputCodePath = RequirePath(outputCodePath, nameof(outputCodePath));
+            string outputDirectory = System.IO.Path.GetDirectoryName(OutputCodePath);
+            string outputName = System.IO.Path.GetFileNameWithoutExtension(OutputCodePath);
+            if (string.IsNullOrEmpty(outputDirectory) ||
+                !string.Equals(
+                    System.IO.Path.GetFileName(outputDirectory),
+                    outputName,
+                    StringComparison.Ordinal))
+                throw new ArgumentException(
+                    "OutputCodePath must be the entry file inside its dedicated root directory.",
+                    nameof(outputCodePath));
             RecipeType = RequireValue(recipeType, nameof(recipeType));
             NamespaceName = RequireQualifiedIdentifier(namespaceName, nameof(namespaceName));
             EntryTypeName = RequireIdentifier(entryTypeName, nameof(entryTypeName));
@@ -128,21 +225,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         readonly Dictionary<object, string> m_ObjectVariables = new(ReferenceComparer.Instance);
         readonly Dictionary<object, string> m_ObjectIdentities = new(ReferenceComparer.Instance);
         readonly Dictionary<string, object> m_IdentityOwners = new(StringComparer.Ordinal);
+        readonly List<string> m_ObjectVariableOrder = new();
+        readonly Dictionary<string, string> m_VariableTypeNames = new(StringComparer.Ordinal);
+        readonly Dictionary<string, string> m_VariableSections = new(StringComparer.Ordinal);
+        readonly List<string> m_Sections = new();
         readonly HashSet<string> m_VariableNames = new(StringComparer.Ordinal);
         readonly HashSet<string> m_Usings = new(StringComparer.Ordinal);
-        readonly Dictionary<BtsmtlAuthoringCodeEmissionPhase, List<string>> m_Statements =
+        readonly Dictionary<BtsmtlAuthoringCodeEmissionPhase, List<BtsmtlAuthoringCodeStatement>> m_Statements =
             new();
         readonly List<BtsmtlAuthoringCodeDiagnostic> m_Diagnostics = new();
         readonly List<BtsmtlAuthoringCodeExternalDependency> m_ExternalDependencies = new();
         readonly HashSet<string> m_ExternalDependencyKeys = new(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_ExternalAssetVariables = new(StringComparer.Ordinal);
-        readonly List<string> m_ExternalAssetStatements = new();
+        readonly List<BtsmtlAuthoringCodeExternalAssetReference> m_ExternalAssets = new();
 
         internal BtsmtlAuthoringCodeExportContext(BtsmtlAuthoringCodeExportRequest request)
         {
             Request = request;
+            m_Sections.Add("Root");
+            m_VariableNames.Add("generation");
             foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
-                m_Statements.Add(phase, new List<string>());
+                m_Statements.Add(phase, new List<BtsmtlAuthoringCodeStatement>());
         }
 
         public BtsmtlAuthoringCodeExportRequest Request { get; }
@@ -156,7 +259,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             object source,
             string authoringIdentity,
             string variableHint,
-            bool isRoot = false)
+            bool isRoot = false,
+            string sectionName = null,
+            string storageTypeName = null)
         {
             if (source == null)
             {
@@ -187,9 +292,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
 
             string variableName = AllocateVariableName(variableHint);
+            string normalizedSection = EnsureSection(sectionName, isRoot);
             m_ObjectVariables.Add(source, variableName);
             m_ObjectIdentities.Add(source, authoringIdentity);
             m_IdentityOwners.Add(authoringIdentity, source);
+            m_ObjectVariableOrder.Add(variableName);
+            m_VariableTypeNames.Add(
+                variableName,
+                string.IsNullOrWhiteSpace(storageTypeName)
+                    ? BtsmtlAuthoringCodeSyntax.TypeName(source.GetType())
+                    : storageTypeName);
+            m_VariableSections.Add(variableName, normalizedSection);
             if (isRoot)
                 RootVariableName = variableName;
             return variableName;
@@ -247,12 +360,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 return variable;
             variable = AllocateVariableName("asset");
             m_ExternalAssetVariables.Add(key, variable);
-            m_ExternalAssetStatements.Add(
-                $"var {variable} = context.ResolveExternalAsset<{typeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(assetPath)}, {localFileId}L);");
+            m_VariableTypeNames.Add(variable, typeName);
+            m_ExternalAssets.Add(
+                new BtsmtlAuthoringCodeExternalAssetReference(variable, typeName, assetPath, localFileId));
             return variable;
         }
 
-        public void AddStatement(BtsmtlAuthoringCodeEmissionPhase phase, string statement)
+        public void AddStatement(
+            BtsmtlAuthoringCodeEmissionPhase phase,
+            string statement,
+            string sectionName = null)
         {
             if (string.IsNullOrWhiteSpace(statement))
             {
@@ -264,7 +381,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 ReportError("multiline_authoring_statement", phase.ToString(), "单条代码输出语句不能包含换行。");
                 return;
             }
-            m_Statements[phase].Add(statement);
+            m_Statements[phase].Add(
+                new BtsmtlAuthoringCodeStatement(
+                    string.IsNullOrWhiteSpace(sectionName)
+                        ? FindStatementSection(phase, statement)
+                        : EnsureSection(sectionName, false),
+                    statement));
         }
 
         public void ReportError(string code, string subject, string message, string suggestion = null) =>
@@ -279,26 +401,147 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string subject,
             string message,
             string suggestion = null) =>
-            m_Diagnostics.Add(new BtsmtlAuthoringCodeDiagnostic(severity, code, subject, message, suggestion));
+            m_Diagnostics.Add(new BtsmtlAuthoringCodeDiagnostic(
+                severity,
+                code,
+                subject,
+                message,
+                suggestion,
+                Request.OutputCodePath));
 
         internal IReadOnlyCollection<string> Usings => m_Usings;
 
-        internal IReadOnlyList<string> ExternalAssetStatements => m_ExternalAssetStatements;
+        internal IReadOnlyList<string> Sections => m_Sections;
 
-        internal IReadOnlyList<string> Statements(BtsmtlAuthoringCodeEmissionPhase phase) => m_Statements[phase];
+        internal IReadOnlyList<string> ObjectVariableOrder => m_ObjectVariableOrder;
+
+        internal IReadOnlyDictionary<string, string> VariableTypeNames => m_VariableTypeNames;
+
+        internal IReadOnlyDictionary<string, string> VariableSections => m_VariableSections;
+
+        internal IReadOnlyList<BtsmtlAuthoringCodeExternalAssetReference> ExternalAssets => m_ExternalAssets;
+
+        internal IReadOnlyList<BtsmtlAuthoringCodeStatement> Statements(BtsmtlAuthoringCodeEmissionPhase phase) => m_Statements[phase];
 
         internal IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> Diagnostics => m_Diagnostics;
 
-        internal BtsmtlAuthoringCodeExportResult CreateResult(string sourceCode) =>
+        internal BtsmtlAuthoringCodeExportResult CreateResult(
+            IReadOnlyList<BtsmtlAuthoringCodeSourceFile> files) =>
             new(
                 !HasErrors,
                 Request.OutputCodePath,
                 Request.DefinitionAssetPath,
                 Request.RecipeType,
                 Request.EntryTypeName,
-                sourceCode ?? string.Empty,
+                files ?? Array.Empty<BtsmtlAuthoringCodeSourceFile>(),
                 new ReadOnlyCollection<BtsmtlAuthoringCodeExternalDependency>(m_ExternalDependencies.ToArray()),
                 new ReadOnlyCollection<BtsmtlAuthoringCodeDiagnostic>(m_Diagnostics.ToArray()));
+
+        internal IReadOnlyList<string> ExternalAssetUsageSections(string variableName)
+        {
+            var result = new List<string>();
+            foreach (List<BtsmtlAuthoringCodeStatement> statements in m_Statements.Values)
+                foreach (BtsmtlAuthoringCodeStatement statement in statements)
+                    if (ContainsIdentifier(statement.Text, variableName) && !result.Contains(statement.SectionName))
+                        result.Add(statement.SectionName);
+            return result;
+        }
+
+        internal bool IsVariableUsed(string variableName) =>
+            string.Equals(variableName, RootVariableName, StringComparison.Ordinal) ||
+            m_Statements.Values.Any(statements =>
+                statements.Any(statement => ContainsIdentifier(statement.Text, variableName)));
+
+        string FindStatementSection(
+            BtsmtlAuthoringCodeEmissionPhase phase,
+            string statement)
+        {
+            foreach (KeyValuePair<string, string> value in m_VariableSections)
+                if (statement.StartsWith($"var {value.Key} =", StringComparison.Ordinal))
+                    return value.Value;
+            int firstIndex = int.MaxValue;
+            string firstSection = null;
+            foreach (KeyValuePair<string, string> value in m_VariableSections)
+            {
+                int index = IdentifierIndex(statement, value.Key);
+                if (index >= 0 && index < firstIndex)
+                {
+                    firstIndex = index;
+                    firstSection = value.Value;
+                }
+            }
+            if (!string.IsNullOrEmpty(firstSection))
+                return firstSection;
+            if (m_Statements[phase].Count != 0)
+                return m_Statements[phase][m_Statements[phase].Count - 1].SectionName;
+            return "Root";
+        }
+
+        string EnsureSection(string sectionName, bool isRoot)
+        {
+            if (isRoot)
+                return "Root";
+            string normalized = NormalizeSectionName(sectionName);
+            if (string.Equals(normalized, "Root", StringComparison.Ordinal))
+                return normalized;
+            if (m_Sections.Contains(normalized))
+                return normalized;
+            string candidate = normalized;
+            int suffix = 1;
+            while (m_Sections.Contains(candidate))
+                candidate = $"{normalized}_{suffix++}";
+            m_Sections.Add(candidate);
+            return candidate;
+        }
+
+        static string NormalizeSectionName(string sectionName)
+        {
+            if (string.IsNullOrWhiteSpace(sectionName))
+                return "Root";
+            string[] parts = sectionName
+                .Replace('\\', '/')
+                .Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(value => value != "." && value != "..")
+                .Select(BtsmtlAuthoringCodeSyntax.Identifier)
+                .Where(value => !string.IsNullOrEmpty(value))
+                .ToArray();
+            return parts.Length == 0 ? "Root" : string.Join("/", parts);
+        }
+
+        static bool ContainsIdentifier(string text, string identifier) =>
+            IdentifierIndex(text, identifier) >= 0;
+
+        static int IdentifierIndex(string text, string identifier)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(identifier))
+                return -1;
+            bool inString = false;
+            bool escaped = false;
+            for (int start = 0; start < text.Length; start++)
+            {
+                char character = text[start];
+                if (character == '"' && !escaped)
+                    inString = !inString;
+                if (!inString &&
+                    start + identifier.Length <= text.Length &&
+                    string.Equals(text.Substring(start, identifier.Length), identifier, StringComparison.Ordinal))
+                {
+                    bool left = start == 0 || !IsIdentifierCharacter(text[start - 1]);
+                    int end = start + identifier.Length;
+                    bool right = end == text.Length || !IsIdentifierCharacter(text[end]);
+                    if (left && right)
+                        return start;
+                }
+                escaped = inString && character == '\\' && !escaped;
+                if (character != '\\')
+                    escaped = false;
+            }
+            return -1;
+        }
+
+        static bool IsIdentifierCharacter(char value) =>
+            value == '_' || value >= '0' && value <= '9' ||
+            value >= 'A' && value <= 'Z' || value >= 'a' && value <= 'z';
 
         internal string AllocateVariableName(string variableHint)
         {
@@ -328,7 +571,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string definitionAssetPath,
             string recipeType,
             string entryTypeName,
-            string sourceCode,
+            IReadOnlyList<BtsmtlAuthoringCodeSourceFile> files,
             IReadOnlyList<BtsmtlAuthoringCodeExternalDependency> externalDependencies,
             IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> diagnostics)
         {
@@ -337,7 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             DefinitionAssetPath = definitionAssetPath;
             RecipeType = recipeType;
             EntryTypeName = entryTypeName;
-            SourceCode = sourceCode;
+            Files = files;
             ExternalDependencies = externalDependencies;
             Diagnostics = diagnostics;
         }
@@ -347,7 +590,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public string DefinitionAssetPath { get; }
         public string RecipeType { get; }
         public string EntryTypeName { get; }
-        public string SourceCode { get; }
+        public IReadOnlyList<BtsmtlAuthoringCodeSourceFile> Files { get; }
         public IReadOnlyList<BtsmtlAuthoringCodeExternalDependency> ExternalDependencies { get; }
         public IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> Diagnostics { get; }
     }

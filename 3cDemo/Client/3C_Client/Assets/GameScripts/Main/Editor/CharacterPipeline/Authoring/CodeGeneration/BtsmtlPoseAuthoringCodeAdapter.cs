@@ -82,20 +82,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             for (int i = 0; i < sourceSlots.Length; i++)
             {
                 CharacterPresentationPoseSourceSlot slot = sourceSlots[i];
-                context.RegisterObject(slot, $"pose.source.{slot.name}", "sourceSlot");
+                context.RegisterObject(
+                    slot,
+                    $"pose.source.{slot.name}",
+                    "sourceSlot",
+                    false,
+                    "Slots",
+                    BtsmtlAuthoringCodeSyntax.TypeName(slot.GetType()));
                 if (slot.GetType().IsAbstract)
                     context.ReportError("pose_source_slot_type_invalid", slot.name, "Pose Source Slot 类型不能是抽象类型。");
             }
             for (int i = 0; i < resourceSlots.Length; i++)
             {
                 CharacterPoseResourceSlot slot = resourceSlots[i];
-                context.RegisterObject(slot, $"pose.resource.{slot.name}", "resourceSlot");
+                context.RegisterObject(
+                    slot,
+                    $"pose.resource.{slot.name}",
+                    "resourceSlot",
+                    false,
+                    "Slots",
+                    BtsmtlAuthoringCodeSyntax.TypeName(slot.GetType()));
             }
             for (int i = 0; i < graphs.Length; i++)
             {
                 CharacterPoseCanvasGraph graph = graphs[i];
                 graph.RequireValid();
-                context.RegisterObject(graph, graph.GraphId.Value, "poseGraph");
+                context.RegisterObject(
+                    graph,
+                    graph.GraphId.Value,
+                    "poseGraph",
+                    false,
+                    $"Graphs/{BtsmtlAuthoringCodeSyntax.Identifier(graph.name)}",
+                    BtsmtlAuthoringCodeSyntax.TypeName(graph.GetType()));
             }
 
             int[] sourceBindingIndices = ResolveSourceBindingIndices(context, profile, sourceSlots);

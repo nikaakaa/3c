@@ -70,6 +70,7 @@ namespace BTSMTL.Timeline.Editor
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Session = new TimelineEditorSessionContext(request);
             m_Binding = new BtsmtlSlateTimelineBinding(request, m_Session, openSourceClip);
+            Selection.activeObject = request.SerializedOwner;
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
             m_EmbeddedEditor.InitializeEmbedded(m_Binding, null);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);

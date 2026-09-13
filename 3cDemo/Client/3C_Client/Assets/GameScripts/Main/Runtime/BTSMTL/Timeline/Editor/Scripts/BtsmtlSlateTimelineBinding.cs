@@ -88,6 +88,7 @@ namespace BTSMTL.Timeline.Editor
         public void Select(IEmbeddedTimelineElementBinding element)
         {
             m_Selected = element;
+            Selection.activeObject = m_Request.SerializedOwner;
             foreach (BtsmtlTimelineTrackBinding track in m_Tracks.Values)
                 track.SetSelectedClip(null);
             if (element is BtsmtlTimelineClipBinding clip)

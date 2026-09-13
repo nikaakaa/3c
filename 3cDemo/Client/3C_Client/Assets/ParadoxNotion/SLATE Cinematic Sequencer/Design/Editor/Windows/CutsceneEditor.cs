@@ -361,6 +361,8 @@ namespace Slate
         [System.NonSerialized] private System.Action postWindowsGUI;
         [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedInteractingClip;
         [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedBlendClip;
+        [System.NonSerialized] private List<IEmbeddedTimelineClipBinding> embeddedMultiSelection;
+        [System.NonSerialized] private Dictionary<IEmbeddedTimelineClipBinding, float> embeddedDragOffsets;
         [System.NonSerialized] private bool embeddedScalingStart;
         [System.NonSerialized] private bool embeddedScalingEnd;
         [System.NonSerialized] private bool embeddedBlendingIn;
@@ -883,6 +885,8 @@ namespace Slate
             embeddedTimeline = null;
             embeddedInteractingClip = null;
             embeddedBlendClip = null;
+            embeddedMultiSelection = null;
+            embeddedDragOffsets = null;
             embeddedScalingStart = false;
             embeddedScalingEnd = false;
             embeddedBlendingIn = false;
@@ -2105,6 +2109,7 @@ namespace Slate
                 embeddedBlendClip = null;
                 embeddedBlendingIn = false;
                 embeddedBlendingOut = false;
+                embeddedDragOffsets = null;
                 if (embeddedEditStarted)
                 {
                     embeddedEditStarted = false;
@@ -2301,7 +2306,8 @@ namespace Slate
                             y,
                             Mathf.Max(TimeToPos(clip.EndTime), TimeToPos(clip.StartTime) + 6f),
                             y + track.DefaultHeight);
-                        bool selected = ReferenceEquals(embeddedTimeline.Selected, clip);
+                        bool selected = ReferenceEquals(embeddedTimeline.Selected, clip) ||
+                                        embeddedMultiSelection != null && embeddedMultiSelection.Contains(clip);
                         if (selected)
                         {
                             GUI.color = HIGHLIGHT_COLOR;
@@ -2355,6 +2361,14 @@ namespace Slate
                                 ShowEmbeddedClipMenu(clip, track);
                                 e.Use();
                             }
+                            else if (e.button == 0 && e.control)
+                            {
+                                embeddedMultiSelection ??= new List<IEmbeddedTimelineClipBinding>();
+                                if (!embeddedMultiSelection.Remove(clip))
+                                    embeddedMultiSelection.Add(clip);
+                                e.Use();
+                                continue;
+                            }
                             else if (e.button == 0 && !track.IsLocked && !clip.IsLocked && !embeddedTimeline.IsReadOnly)
                             {
                                 float pointerTime = PosToTime(e.mousePosition.x + rect.x);
@@ -2378,6 +2392,14 @@ namespace Slate
                                 embeddedDragStart = clip.StartTime;
                                 embeddedDragEnd = clip.EndTime;
                                 embeddedDragOffset = pointerTime - clip.StartTime;
+                                if (embeddedMultiSelection == null || !embeddedMultiSelection.Contains(clip))
+                                    embeddedMultiSelection = new List<IEmbeddedTimelineClipBinding> { clip };
+                                embeddedDragOffsets = new Dictionary<IEmbeddedTimelineClipBinding, float>();
+                                for (int selectionIndex = 0; selectionIndex < embeddedMultiSelection.Count; selectionIndex++)
+                                {
+                                    IEmbeddedTimelineClipBinding selectedClip = embeddedMultiSelection[selectionIndex];
+                                    embeddedDragOffsets[selectedClip] = pointerTime - selectedClip.StartTime;
+                                }
                                 embeddedScalingStart = nearStart && clip.CanScale;
                                 embeddedScalingEnd = nearEnd && clip.CanScale;
                                 e.Use();
@@ -2399,6 +2421,20 @@ namespace Slate
                                 clip.StartTime = Mathf.Clamp(pointerTime, 0f, embeddedDragEnd - 1f / embeddedTimeline.FrameRate);
                             else if (embeddedScalingEnd)
                                 clip.EndTime = Mathf.Max(pointerTime, embeddedDragStart + 1f / embeddedTimeline.FrameRate);
+                            else if (embeddedMultiSelection != null && embeddedMultiSelection.Count > 1 && embeddedDragOffsets != null)
+                            {
+                                for (int selectionIndex = 0; selectionIndex < embeddedMultiSelection.Count; selectionIndex++)
+                                {
+                                    IEmbeddedTimelineClipBinding selectedClip = embeddedMultiSelection[selectionIndex];
+                                    float duration = selectedClip.EndTime - selectedClip.StartTime;
+                                    float start = Mathf.Clamp(
+                                        pointerTime - embeddedDragOffsets[selectedClip],
+                                        0f,
+                                        maxTime - duration);
+                                    selectedClip.StartTime = start;
+                                    selectedClip.EndTime = start + duration;
+                                }
+                            }
                             else
                             {
                                 float start = Mathf.Clamp(pointerTime - embeddedDragOffset, 0f, maxTime - (embeddedDragEnd - embeddedDragStart));
@@ -2440,7 +2476,10 @@ namespace Slate
             }
             GUI.EndGroup();
             if (e.rawType == EventType.MouseUp && embeddedInteractingClip == null && rect.Contains(e.mousePosition))
+            {
+                embeddedMultiSelection = null;
                 embeddedTimeline.Select(null);
+            }
         }
 
         void DrawEmbeddedSections(Rect rect)

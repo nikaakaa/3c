@@ -53,7 +53,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         context.Builder.ConstantField(source, "ResourceId", clip.ResourceId),
                         context.Builder.ConstantField(source, "Intensity", clip.Intensity),
                         context.Builder.ConstantField(source, "DurationSeconds", clip.DurationSeconds),
-                        context.Builder.ConstantField(source, "Priority", clip.Priority)
+                        context.Builder.ConstantField(source, "Priority", clip.Priority),
+                        context.Builder.ConstantField(source, "WeightCurve", context.BakeCurve(clip, "WeightCurve", clip.WeightCurve)),
+                        context.Builder.ConstantField(source, "EaseInCurve", context.BakeCurve(clip, "EaseInCurve", clip.EaseInCurve)),
+                        context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve))
                     });
             });
             registry.RegisterClip<CameraResponseClip>((clip, context) =>

@@ -164,6 +164,9 @@ namespace BTSMTL.Timeline
                 result.CameraDurationSeconds = cameraCue.DurationSeconds;
                 result.CameraResourceId = cameraCue.ResourceId;
                 result.Priority = cameraCue.Priority;
+                result.CameraWeightCurve = cameraCue.WeightCurve;
+                result.CameraEaseInCurve = cameraCue.EaseInCurve;
+                result.CameraEaseOutCurve = cameraCue.EaseOutCurve;
             }
             if (clip is CameraResourceClip cameraResource)
             {
@@ -278,6 +281,9 @@ namespace BTSMTL.Timeline
                 cameraCue.Intensity = configuration.CameraIntensity;
                 cameraCue.DurationSeconds = configuration.CameraDurationSeconds;
                 cameraCue.Priority = configuration.Priority;
+                cameraCue.WeightCurve = configuration.CameraWeightCurve;
+                cameraCue.EaseInCurve = configuration.CameraEaseInCurve;
+                cameraCue.EaseOutCurve = configuration.CameraEaseOutCurve;
             }
             if (clip is CameraResponseClip cameraResponse)
             {

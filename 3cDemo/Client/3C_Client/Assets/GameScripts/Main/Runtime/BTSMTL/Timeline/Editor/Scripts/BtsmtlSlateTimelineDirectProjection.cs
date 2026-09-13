@@ -68,6 +68,9 @@ namespace BTSMTL.Timeline.Editor
         public float CameraResponseWeight;
         public float CameraResponseEaseIn;
         public float CameraResponseEaseOut;
+        public float CameraCueWeight;
+        public float CameraCueEaseIn;
+        public float CameraCueEaseOut;
         public float CameraOverrideWeight;
         public float CameraOverrideEaseIn;
         public float CameraOverrideEaseOut;
@@ -401,6 +404,9 @@ namespace BTSMTL.Timeline.Editor
             if (channelId == TimelineCurveChannelCatalog.CameraResponseWeight) return nameof(BtsmtlTimelineCurveTarget.CameraResponseWeight);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraResponseEaseIn);
             if (channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraResponseEaseOut);
+            if (channelId == TimelineCurveChannelCatalog.CameraCueWeight) return nameof(BtsmtlTimelineCurveTarget.CameraCueWeight);
+            if (channelId == TimelineCurveChannelCatalog.CameraCueEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraCueEaseIn);
+            if (channelId == TimelineCurveChannelCatalog.CameraCueEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraCueEaseOut);
             if (channelId == TimelineCurveChannelCatalog.CameraOverrideWeight) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideWeight);
             if (channelId == TimelineCurveChannelCatalog.CameraOverrideEaseIn) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideEaseIn);
             if (channelId == TimelineCurveChannelCatalog.CameraOverrideEaseOut) return nameof(BtsmtlTimelineCurveTarget.CameraOverrideEaseOut);

@@ -301,6 +301,12 @@ namespace BTSMTL.Timeline
         public float DurationSeconds = 0.2f;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority;
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
 #if UNITY_EDITOR
         public CameraCueClip(Track track, int frame) : base(track, frame)

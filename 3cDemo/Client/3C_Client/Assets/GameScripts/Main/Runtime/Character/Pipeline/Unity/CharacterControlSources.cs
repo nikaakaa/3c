@@ -42,16 +42,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public CharacterControlSourceContext(
             CharacterPipelineHost owner,
             CharacterPipelineDefinition definition,
-            CharacterSimulationProgram program)
+            CharacterSimulationProgram program,
+            CharacterControlModuleContract controlModule)
         {
             Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             Program = program ?? throw new ArgumentNullException(nameof(program));
+            ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
         }
 
         public CharacterPipelineHost Owner { get; }
         public CharacterPipelineDefinition Definition { get; }
         public CharacterSimulationProgram Program { get; }
+        public CharacterControlModuleContract ControlModule { get; }
     }
 
     public abstract class CharacterControlSource : MonoBehaviour

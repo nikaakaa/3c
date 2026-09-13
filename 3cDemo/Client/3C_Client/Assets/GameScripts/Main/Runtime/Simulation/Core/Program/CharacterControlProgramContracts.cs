@@ -609,13 +609,10 @@ namespace ThirdPersonSimulation
     public static class CharacterControlProgramCatalogValidator
     {
         public static CharacterControlModuleBinding Resolve(
-            IReadOnlyList<ProgramCatalogEntry> catalogEntries,
-            IReadOnlyList<ProgramStateSlot> stateSlots)
+            IReadOnlyList<ProgramCatalogEntry> catalogEntries)
         {
             if (catalogEntries == null)
                 throw new ArgumentNullException(nameof(catalogEntries));
-            if (stateSlots == null)
-                throw new ArgumentNullException(nameof(stateSlots));
 
             CharacterControlModuleBinding binding = default;
             for (int i = 0; i < catalogEntries.Count; i++)
@@ -631,14 +628,6 @@ namespace ThirdPersonSimulation
                     entry.Revision);
             }
 
-            for (int i = 0; i < stateSlots.Count; i++)
-            {
-                ProgramStateSlot slot = stateSlots[i];
-                if (slot.OwnerKind != ProgramStateOwnerKind.Control)
-                    continue;
-                if (!binding.IsValid || !string.Equals(slot.OwnerIdentity, binding.ModuleId.Value, StringComparison.Ordinal))
-                    throw new InvalidDataException($"Control state slot '{slot.Identity}' has no matching ControlModule catalog binding.");
-            }
             return binding;
         }
 

@@ -289,7 +289,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_SourceMap,
                 m_Operations.Count,
                 m_StateSlots.Count);
-            ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
+            ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries);
             for (int i = 0; i < m_StateSlots.Count; i++)
                 FixedProgramStateSchema.RequireCodec(m_StateSlots[i]);
             ValidateRootReference();

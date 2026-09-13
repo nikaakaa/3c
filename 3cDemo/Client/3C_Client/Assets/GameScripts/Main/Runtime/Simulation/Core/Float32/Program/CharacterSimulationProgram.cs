@@ -288,7 +288,7 @@ namespace ThirdPersonSimulation
                 m_SourceMap,
                 m_Operations.Count,
                 m_StateSlots.Count);
-            ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
+            ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries);
             ValidateRootReference();
             ValidateReferences();
             LayoutHash = CharacterSimulationProgramCodec.ComputeLayoutHash(this);

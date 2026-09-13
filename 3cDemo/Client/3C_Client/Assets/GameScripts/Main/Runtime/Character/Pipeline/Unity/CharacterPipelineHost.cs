@@ -523,7 +523,10 @@ namespace ThirdPersonCharacter.Pipeline
 				if (program.Manifest.TickRate != tickRate || m_Definition.SimulationTickRate != tickRate)
 					throw new InvalidOperationException("Program, Character Definition, and Session Composition Tick rates must match exactly.");
 
-				inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, program));
+				CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
+				CharacterControlRuntimeBinding controlRuntimeBinding = m_Definition.BuildControlRuntimeBinding(controlModules);
+				CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
+				inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, program, controlModule));
 				if (inputAdapter == null)
 					throw new InvalidOperationException("Character control source returned no input adapter.");
 				WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
@@ -637,8 +640,7 @@ namespace ThirdPersonCharacter.Pipeline
 					diagnosticsTarget,
 					m_RootHierarchy.VisualRoot,
 					presentationRuntimeFactory,
-					m_Definition.BuildControlRuntimeBinding(
-						CharacterControlRuntimeModuleCatalog.Create()));
+					controlRuntimeBinding);
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;

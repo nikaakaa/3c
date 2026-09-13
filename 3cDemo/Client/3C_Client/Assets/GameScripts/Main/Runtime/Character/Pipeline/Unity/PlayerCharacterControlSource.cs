@@ -24,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             return new UnityCharacterSimulationInputAdapter(
                 context.Definition.InputProfile,
                 context.Program,
+                context.ControlModule,
                 context.Owner.CameraRig,
                 context.Owner,
                 ActionTargetInputValueId,

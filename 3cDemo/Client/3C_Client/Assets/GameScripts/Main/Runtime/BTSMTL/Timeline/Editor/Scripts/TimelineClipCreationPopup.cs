@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -17,8 +18,10 @@ namespace BTSMTL.Timeline.Editor
         public int StartFrame;
         public int EndFrame;
         public int DefaultEndFrame;
-        public int CurveEndFrame;
         public UnityEngine.Object Resource;
+        public RootMotionCurveAsset SourceCurve;
+        public float SourceStartTime;
+        public float SourceEndTime;
         public ExtraPolationMode Extrapolation = ExtraPolationMode.None;
         public string BlendProfileId = string.Empty;
         public string CurveId = "MotionCurve";
@@ -67,7 +70,7 @@ namespace BTSMTL.Timeline.Editor
             m_Create = create;
         }
 
-        public override Vector2 GetWindowSize() => new Vector2(380, 420);
+        public override Vector2 GetWindowSize() => new Vector2(380, 460);
 
         public override void OnGUI(Rect rect)
         {
@@ -94,8 +97,26 @@ namespace BTSMTL.Timeline.Editor
 
             if (m_Request.Kind == TimelineContractKinds.MotionCurveClip)
             {
+                RootMotionCurveAsset previousSource = m_Request.SourceCurve;
+                m_Request.SourceCurve = (RootMotionCurveAsset)EditorGUILayout.ObjectField(
+                    "Root Motion Curve",
+                    m_Request.SourceCurve,
+                    typeof(RootMotionCurveAsset),
+                    false);
+                if (!ReferenceEquals(previousSource, m_Request.SourceCurve) && m_Request.SourceCurve)
+                {
+                    m_Request.SourceStartTime = 0f;
+                    m_Request.SourceEndTime = m_Request.SourceCurve.Duration;
+                    int sourceEndFrame = m_Request.StartFrame + Mathf.Max(
+                        1,
+                        Mathf.RoundToInt(m_Request.SourceCurve.Duration * m_Request.FrameRate));
+                    if (m_Request.EndFrame == m_Request.DefaultEndFrame)
+                        m_Request.EndFrame = sourceEndFrame;
+                    m_Request.DefaultEndFrame = sourceEndFrame;
+                }
                 m_Request.CurveId = EditorGUILayout.TextField("Curve Id", m_Request.CurveId);
-                m_Request.CurveEndFrame = EditorGUILayout.IntField("Curve End Frame", m_Request.CurveEndFrame);
+                m_Request.SourceStartTime = EditorGUILayout.FloatField("Source Start (s)", m_Request.SourceStartTime);
+                m_Request.SourceEndTime = EditorGUILayout.FloatField("Source End (s)", m_Request.SourceEndTime);
                 m_Request.Space = (TimelineMotionContributionSpace)EditorGUILayout.EnumPopup("Space", m_Request.Space);
                 m_Request.Channel = (TimelineMotionChannel)EditorGUILayout.EnumPopup("Channel", m_Request.Channel);
                 m_Request.BlendMode = (TimelineMotionBlendMode)EditorGUILayout.EnumPopup("Blend Mode", m_Request.BlendMode);
@@ -184,9 +205,22 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Resource is not BaseTreeAsset &&
                 m_Request.Resource is not ITimelineTreeGraphAsset)
                 return "必须选择正式 Timeline Tree 来源。";
-            if (m_Request.Kind == TimelineContractKinds.MotionCurveClip &&
-                (m_Request.CurveEndFrame <= m_Request.StartFrame || m_Request.CurveEndFrame > m_Request.EndFrame))
-                return "Curve End Frame 必须位于 Clip 范围内。";
+            if (m_Request.Kind == TimelineContractKinds.MotionCurveClip)
+            {
+                if (!m_Request.SourceCurve)
+                    return "必须选择正式 RootMotionCurveAsset。";
+                if (!m_Request.SourceCurve.TryValidate(out string sourceError))
+                    return sourceError;
+                if (m_Request.SourceStartTime < 0f ||
+                    m_Request.SourceEndTime <= m_Request.SourceStartTime ||
+                    m_Request.SourceEndTime > m_Request.SourceCurve.Duration)
+                    return "Source 时间范围必须位于 RootMotionCurveAsset 内。";
+                int sourceEndFrame = m_Request.StartFrame + Mathf.Max(
+                    1,
+                    Mathf.RoundToInt((m_Request.SourceEndTime - m_Request.SourceStartTime) * m_Request.FrameRate));
+                if (sourceEndFrame > m_Request.EndFrame)
+                    return "Clip End Frame 必须覆盖 Source 时间范围。";
+            }
             if (m_Request.Kind == TimelineContractKinds.MotionWarpClip && string.IsNullOrEmpty(m_Request.SourceMotionClipId))
                 return "MotionWarp 必须选择已有 MotionCurve 来源。";
             if (m_Request.Kind == TimelineContractKinds.CameraOverrideClip && m_Request.Resource is not CameraOverrideTrackAsset)

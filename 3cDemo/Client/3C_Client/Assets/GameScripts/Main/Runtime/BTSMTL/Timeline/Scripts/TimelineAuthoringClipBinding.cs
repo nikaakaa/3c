@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -55,7 +56,9 @@ namespace BTSMTL.Timeline
         public ExtraPolationMode Extrapolation { get; set; }
         public string BlendProfileId { get; set; }
         public string CurveId { get; set; }
-        public int CurveEndFrame { get; set; }
+        public RootMotionCurveAsset SourceCurve { get; set; }
+        public float SourceStartTime { get; set; }
+        public float SourceEndTime { get; set; }
         public TimelineMotionContributionSpace Space { get; set; }
         public TimelineMotionChannel Channel { get; set; }
         public TimelineMotionBlendMode BlendMode { get; set; }
@@ -104,6 +107,15 @@ namespace BTSMTL.Timeline
 
     public static class TimelineAuthoringClipBinding
     {
+        public static UnityEngine.Object SourceAsset(Clip clip)
+        {
+            if (clip is MotionCurveClip motion)
+                return motion.SourceCurve;
+            if (clip is AnimationClip animation)
+                return animation.Clip;
+            return null;
+        }
+
         public static TimelineAuthoringClipConfiguration Read(Clip clip)
         {
             if (clip == null)
@@ -117,7 +129,9 @@ namespace BTSMTL.Timeline
             if (clip is MotionCurveClip motion)
             {
                 result.CurveId = motion.CurveId;
-                result.CurveEndFrame = motion.CurveEndFrame;
+                result.SourceCurve = motion.SourceCurve;
+                result.SourceStartTime = motion.SourceStartTime;
+                result.SourceEndTime = motion.SourceEndTime;
                 result.Space = motion.Space;
                 result.Channel = motion.Channel;
                 result.BlendMode = motion.BlendMode;
@@ -230,7 +244,10 @@ namespace BTSMTL.Timeline
             if (clip is MotionCurveClip motion)
             {
                 motion.CurveId = configuration.CurveId;
-                motion.CurveEndFrame = configuration.CurveEndFrame;
+                motion.ConfigureSource(
+                    configuration.SourceCurve,
+                    configuration.SourceStartTime,
+                    configuration.SourceEndTime);
                 motion.Space = configuration.Space;
                 motion.Channel = configuration.Channel;
                 motion.BlendMode = configuration.BlendMode;

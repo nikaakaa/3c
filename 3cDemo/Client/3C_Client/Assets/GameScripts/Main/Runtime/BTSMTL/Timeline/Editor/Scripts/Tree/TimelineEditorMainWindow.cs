@@ -414,10 +414,11 @@ namespace BTSMTL.Timeline.Editor
 
         void OpenClip(Clip clip)
         {
-            if (clip is AnimationClip animationClip && animationClip.Clip)
+            UnityEngine.Object sourceAsset = TimelineAuthoringClipBinding.SourceAsset(clip);
+            if (sourceAsset)
             {
-                Selection.activeObject = animationClip.Clip;
-                EditorGUIUtility.PingObject(animationClip.Clip);
+                Selection.activeObject = sourceAsset;
+                EditorGUIUtility.PingObject(sourceAsset);
                 return;
             }
             if (clip is TreeClip assetClip && assetClip.AssetTree)

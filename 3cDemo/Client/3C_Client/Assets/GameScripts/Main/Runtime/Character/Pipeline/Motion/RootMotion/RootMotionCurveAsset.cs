@@ -39,6 +39,22 @@ namespace ThirdPersonCharacter.Pipeline.Motion.RootMotion
         public float TotalForwardDistance => totalForwardDistance;
         public float TotalYaw => totalYaw;
 
+        public Vector3 EvaluatePosition(float sourceTime)
+        {
+            float time = Mathf.Clamp(sourceTime, 0f, duration);
+            return evaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+                ? Vector3.forward * Evaluate(forwardDistance, time)
+                : new Vector3(
+                    Evaluate(localPositionX, time),
+                    Evaluate(localPositionY, time),
+                    Evaluate(localPositionZ, time));
+        }
+
+        public float EvaluateYaw(float sourceTime)
+        {
+            return Evaluate(localYaw, Mathf.Clamp(sourceTime, 0f, duration));
+        }
+
         public static bool IsValidEvaluationMode(RootMotionCurveEvaluationMode mode)
         {
             return mode == RootMotionCurveEvaluationMode.FullLocalDelta ||
@@ -64,7 +80,33 @@ namespace ThirdPersonCharacter.Pipeline.Motion.RootMotion
 
         public bool TryValidate(out string error)
         {
-            return TryValidateEvaluationMode(evaluationMode, out error);
+            if (!TryValidateEvaluationMode(evaluationMode, out error))
+                return false;
+            if (duration <= 0f)
+            {
+                error = "Root Motion 曲线源时长必须大于 0。";
+                return false;
+            }
+            if (!HasCurve(localYaw))
+            {
+                error = "Root Motion 曲线源缺少 Yaw 曲线。";
+                return false;
+            }
+            if (evaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw)
+            {
+                if (!HasCurve(forwardDistance))
+                {
+                    error = "ForwardDistanceYaw 曲线源缺少前向距离曲线。";
+                    return false;
+                }
+            }
+            else if (!HasCurve(localPositionX) || !HasCurve(localPositionY) || !HasCurve(localPositionZ))
+            {
+                error = "FullLocalDelta 曲线源缺少局部位移曲线。";
+                return false;
+            }
+            error = string.Empty;
+            return true;
         }
 
         public void SetBakedData(
@@ -100,7 +142,23 @@ namespace ThirdPersonCharacter.Pipeline.Motion.RootMotion
 
         static AnimationCurve CopyCurve(AnimationCurve source)
         {
-            return source != null ? new AnimationCurve(source.keys) : NewZeroCurve();
+            if (source == null)
+                return NewZeroCurve();
+            return new AnimationCurve(source.keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+        }
+
+        static float Evaluate(AnimationCurve curve, float time)
+        {
+            return curve != null && curve.length != 0 ? curve.Evaluate(time) : 0f;
+        }
+
+        static bool HasCurve(AnimationCurve curve)
+        {
+            return curve != null && curve.length != 0;
         }
 
         static AnimationCurve NewZeroCurve()

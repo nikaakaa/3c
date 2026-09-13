@@ -137,10 +137,6 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId AnimationEaseIn = Id("animation.ease-in");
         public static readonly TimelineCurveChannelId AnimationEaseOut = Id("animation.ease-out");
         public static readonly TimelineCurveChannelId MotionWeight = Id("motion.weight");
-        public static readonly TimelineCurveChannelId MotionPositionX = Id("motion.position-x");
-        public static readonly TimelineCurveChannelId MotionPositionY = Id("motion.position-y");
-        public static readonly TimelineCurveChannelId MotionPositionZ = Id("motion.position-z");
-        public static readonly TimelineCurveChannelId MotionYaw = Id("motion.yaw");
         public static readonly TimelineCurveChannelId MotionEaseIn = Id("motion.ease-in");
         public static readonly TimelineCurveChannelId MotionEaseOut = Id("motion.ease-out");
         public static readonly TimelineCurveChannelId MotionWarpPositionProgress = Id("motion-warp.position-progress");
@@ -169,8 +165,6 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId ScenePresentationValue = Id("scene-presentation.value");
 
         static readonly TimelineCurveValueDomain Unit = TimelineCurveValueDomain.Bounded(0f, 1f);
-        static readonly TimelineCurveValueDomain Meters = TimelineCurveValueDomain.Unbounded(0f, "m");
-        static readonly TimelineCurveValueDomain Degrees = TimelineCurveValueDomain.Unbounded(0f, "deg");
         static readonly List<TimelineCurveChannelDescriptor> Descriptors = BuildDescriptors();
         static readonly Dictionary<string, TimelineCurveChannelDescriptor> ById = BuildIndex();
 
@@ -211,10 +205,6 @@ namespace BTSMTL.Timeline
             D(AnimationEaseIn, typeof(AnimationClip), "Ease In", C(91, 187, 137), Unit, ZeroOne),
             D(AnimationEaseOut, typeof(AnimationClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(MotionWeight, typeof(MotionCurveClip), "Weight", C(120, 211, 151), Unit, One),
-            D(MotionPositionX, typeof(MotionCurveClip), "Position X", C(235, 100, 91), Meters, Zero),
-            D(MotionPositionY, typeof(MotionCurveClip), "Position Y", C(109, 210, 116), Meters, Zero),
-            D(MotionPositionZ, typeof(MotionCurveClip), "Position Z", C(94, 157, 235), Meters, Zero),
-            D(MotionYaw, typeof(MotionCurveClip), "Yaw", C(230, 199, 93), Degrees, Zero),
             D(MotionEaseIn, typeof(MotionCurveClip), "Ease In", C(93, 189, 141), Unit, ZeroOne),
             D(MotionEaseOut, typeof(MotionCurveClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(MotionWarpPositionProgress, typeof(MotionWarpClip), "Position Progress", C(238, 156, 72), Unit, ZeroOne,
@@ -277,10 +267,6 @@ namespace BTSMTL.Timeline
                 AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseIn => clip.EaseInCurve,
                 AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseOut => clip.EaseOutCurve,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionWeight => clip.WeightCurve,
-                MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionX => clip.PositionX,
-                MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionY => clip.PositionY,
-                MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionZ => clip.PositionZ,
-                MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionYaw => clip.Yaw,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseIn => clip.EaseInCurve,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut => clip.EaseOutCurve,
                 MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress && clip.UsesPositionProgress => clip.PositionProgressCurve,
@@ -322,10 +308,6 @@ namespace BTSMTL.Timeline
                 case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseIn: clip.EaseInCurve = copy; break;
                 case AnimationClip clip when channelId == TimelineCurveChannelCatalog.AnimationEaseOut: clip.EaseOutCurve = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionWeight: clip.WeightCurve = copy; break;
-                case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionX: clip.PositionX = copy; break;
-                case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionY: clip.PositionY = copy; break;
-                case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionPositionZ: clip.PositionZ = copy; break;
-                case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionYaw: clip.Yaw = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseIn: clip.EaseInCurve = copy; break;
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut: clip.EaseOutCurve = copy; break;
                 case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress: clip.PositionProgressCurve = copy; break;

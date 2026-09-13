@@ -562,19 +562,14 @@ namespace BTSMTL.Timeline
         }
 
         static float SourceWindowYaw(MotionCurveClip source, MotionWarpClip warp) =>
-            source.Yaw.Evaluate(SourceNormalizedTime(source, warp.EndFrame)) -
-            source.Yaw.Evaluate(SourceNormalizedTime(source, warp.StartFrame));
+            source.EvaluateYawAtTimelineTime(warp.EndFrame / (float)TimelineUtility.FrameRate) -
+            source.EvaluateYawAtTimelineTime(warp.StartFrame / (float)TimelineUtility.FrameRate);
 
         static Vector2 SourcePosition(MotionCurveClip source, int frame)
         {
-            float normalized = SourceNormalizedTime(source, frame);
-            return new Vector2(source.PositionX.Evaluate(normalized), source.PositionZ.Evaluate(normalized));
-        }
-
-        static float SourceNormalizedTime(MotionCurveClip source, int frame)
-        {
-            int duration = source.CurveEndFrame - source.StartFrame;
-            return duration <= 0 ? 0f : Mathf.Clamp01((frame - source.StartFrame) / (float)duration);
+            Vector3 position = source.EvaluatePositionAtTimelineTime(
+                frame / (float)TimelineUtility.FrameRate);
+            return new Vector2(position.x, position.z);
         }
 
         static bool HasUnitGameplayWeight(MotionCurveClip source)

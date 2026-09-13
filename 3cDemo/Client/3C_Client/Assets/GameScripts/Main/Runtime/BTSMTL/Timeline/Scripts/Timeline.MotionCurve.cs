@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -133,21 +134,14 @@ namespace BTSMTL.Timeline
             if (Mathf.Approximately(previousSelfTime, selfTime))
                 return false;
 
-            float curveDuration = Mathf.Max(
-                0.0001f,
-                (clip.CurveEndFrame - clip.StartFrame) / (float)TimelineUtility.FrameRate);
-            float previousCurveTime = Mathf.Clamp(previousTimelineTime - clip.StartTime, 0f, curveDuration);
-            float curveTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, curveDuration);
-            float previousNormalizedTime = Mathf.Clamp01(previousCurveTime / curveDuration);
-            float normalizedTime = Mathf.Clamp01(curveTime / curveDuration);
             float weightNormalizedTime = Mathf.Clamp01(selfTime / duration);
             float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
             float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime, clip.EaseOutTime);
             if (weight <= 0f)
                 return false;
 
-            Vector3 previousPosition = SamplePosition(clip, previousNormalizedTime);
-            Vector3 currentPosition = SamplePosition(clip, normalizedTime);
+            Vector3 previousPosition = clip.EvaluatePositionAtTimelineTime(previousTimelineTime);
+            Vector3 currentPosition = clip.EvaluatePositionAtTimelineTime(timelineTime);
             contribution = new TimelineMotionCurveContribution(
                 string.Empty,
                 string.Empty,
@@ -157,20 +151,12 @@ namespace BTSMTL.Timeline
                 clip.Channel,
                 clip.BlendMode,
                 currentPosition - previousPosition,
-                EvaluateCurve(clip.Yaw, normalizedTime, 0f) - EvaluateCurve(clip.Yaw, previousNormalizedTime, 0f),
+                clip.EvaluateYawAtTimelineTime(timelineTime) - clip.EvaluateYawAtTimelineTime(previousTimelineTime),
                 clip.Priority,
                 weight,
                 clip.ConsumeLowerChannels,
-                normalizedTime);
+                weightNormalizedTime);
             return true;
-        }
-
-        static Vector3 SamplePosition(MotionCurveClip clip, float normalizedTime)
-        {
-            return new Vector3(
-                EvaluateCurve(clip.PositionX, normalizedTime, 0f),
-                EvaluateCurve(clip.PositionY, normalizedTime, 0f),
-                EvaluateCurve(clip.PositionZ, normalizedTime, 0f));
         }
 
         static float SampleWeight(
@@ -201,12 +187,29 @@ namespace BTSMTL.Timeline
 
 #if UNITY_EDITOR
         public override Type ClipType => typeof(MotionCurveClip);
+
+        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        {
+            if (referenceObject is not RootMotionCurveAsset source)
+                throw new ArgumentException("MotionCurveClip requires a RootMotionCurveAsset source.", nameof(referenceObject));
+            MotionCurveClip clip = new MotionCurveClip(this, frame, source);
+            clip.RegenerateAuthoringIdentity();
+            m_Clips.Add(clip);
+            return clip;
+        }
+
+        public override Clip AddClip(int frame)
+        {
+            throw new InvalidOperationException("MotionCurveClip requires a RootMotionCurveAsset source.");
+        }
 #endif
     }
 
     [ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Color(126, 220, 146)]
     [TimelineAuthoringProperty("curveId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
-    [TimelineAuthoringProperty("curveEndFrame", TimelineAuthoringPropertyKind.Integer)]
+    [TimelineAuthoringProperty("sourceCurve", TimelineAuthoringPropertyKind.Object)]
+    [TimelineAuthoringProperty("sourceStartTime", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0, Finite = true)]
+    [TimelineAuthoringProperty("sourceEndTime", TimelineAuthoringPropertyKind.Float, HasMinimum = true, Minimum = 0, Finite = true)]
     [TimelineAuthoringProperty("space", typeof(TimelineMotionContributionSpace))]
     [TimelineAuthoringProperty("channel", typeof(TimelineMotionChannel))]
     [TimelineAuthoringProperty("blendMode", typeof(TimelineMotionBlendMode))]
@@ -219,8 +222,6 @@ namespace BTSMTL.Timeline
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CurveId = "MotionCurve";
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public int CurveEndFrame;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineMotionContributionSpace Space = TimelineMotionContributionSpace.Local;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public TimelineMotionChannel Channel = TimelineMotionChannel.Action;
@@ -230,34 +231,133 @@ namespace BTSMTL.Timeline
         public int Priority = 100;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public bool ConsumeLowerChannels = true;
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        RootMotionCurveAsset m_SourceCurve;
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        float m_SourceStartTime;
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        float m_SourceEndTime;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve PositionX = AnimationCurve.Linear(0f, 0f, 1f, 0f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve PositionY = AnimationCurve.Linear(0f, 0f, 1f, 0f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve PositionZ = AnimationCurve.Linear(0f, 0f, 1f, 0f);
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public AnimationCurve Yaw = AnimationCurve.Linear(0f, 0f, 1f, 0f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
+        public RootMotionCurveAsset SourceCurve => m_SourceCurve;
+        public float SourceStartTime => m_SourceStartTime;
+        public float SourceEndTime => m_SourceEndTime;
+        public float SourceDuration => Mathf.Max(0f, m_SourceEndTime - m_SourceStartTime);
+
+        public int CurveEndFrame => StartFrame + Mathf.RoundToInt(SourceDuration * TimelineUtility.FrameRate);
+        public AnimationCurve ProgramPositionX => ProgramCurve(SourcePositionX);
+        public AnimationCurve ProgramPositionY => ProgramCurve(SourcePositionY);
+        public AnimationCurve ProgramPositionZ => ProgramCurve(SourcePositionZ);
+        public AnimationCurve ProgramYaw => ProgramCurve(RequireSource().LocalYaw);
+
+        AnimationCurve SourcePositionX => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+            ? ZeroCurve()
+            : RequireSource().LocalPositionX;
+
+        AnimationCurve SourcePositionY => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+            ? ZeroCurve()
+            : RequireSource().LocalPositionY;
+
+        AnimationCurve SourcePositionZ => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+            ? RequireSource().ForwardDistance
+            : RequireSource().LocalPositionZ;
+
+        RootMotionCurveAsset RequireSource()
+        {
+            if (!m_SourceCurve)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' requires a RootMotionCurveAsset source.");
+            return m_SourceCurve;
+        }
+
+        public void ConfigureSource(RootMotionCurveAsset source, float sourceStartTime, float sourceEndTime)
+        {
+            if (!source)
+                throw new ArgumentNullException(nameof(source));
+            if (!source.TryValidate(out string error))
+                throw new InvalidOperationException(error);
+            if (!float.IsFinite(sourceStartTime) || !float.IsFinite(sourceEndTime) ||
+                sourceStartTime < 0f || sourceEndTime <= sourceStartTime || sourceEndTime > source.Duration)
+                throw new ArgumentException("Motion curve source range is invalid.");
+            m_SourceCurve = source;
+            m_SourceStartTime = sourceStartTime;
+            m_SourceEndTime = sourceEndTime;
+            if (Track?.Timeline != null)
+                RebindTimeline();
+        }
+
+        public Vector3 EvaluatePositionAtTimelineTime(float timelineTime)
+        {
+            float sourceTime = Mathf.Clamp(
+                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime),
+                m_SourceStartTime,
+                m_SourceEndTime);
+            return RequireSource().EvaluatePosition(sourceTime);
+        }
+
+        public float EvaluateYawAtTimelineTime(float timelineTime)
+        {
+            float sourceTime = Mathf.Clamp(
+                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime),
+                m_SourceStartTime,
+                m_SourceEndTime);
+            return RequireSource().EvaluateYaw(sourceTime);
+        }
+
+        static AnimationCurve ZeroCurve() => AnimationCurve.Linear(0f, 0f, 1f, 0f);
+
         public override void Init(Track track)
         {
             base.Init(track);
+            RootMotionCurveAsset source = RequireSource();
+            if (!source.TryValidate(out string error))
+                throw new InvalidOperationException(error);
+            if (!float.IsFinite(m_SourceStartTime) || !float.IsFinite(m_SourceEndTime) ||
+                m_SourceStartTime < 0f || m_SourceEndTime <= m_SourceStartTime ||
+                m_SourceEndTime > source.Duration)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source range.");
             if (CurveEndFrame <= StartFrame || CurveEndFrame > EndFrame)
                 throw new InvalidOperationException($"MotionCurveClip '{CurveId}' requires StartFrame < CurveEndFrame <= EndFrame.");
+        }
+
+        AnimationCurve ProgramCurve(AnimationCurve source)
+        {
+            AnimationCurve result = TimelineCurveAuthoring.CopyCurve(source);
+            float duration = SourceDuration;
+            if (duration <= 0f)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source duration.");
+            Keyframe[] keys = result.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                Keyframe key = keys[i];
+                key.time = (key.time - m_SourceStartTime) / duration;
+                key.inTangent *= duration;
+                key.outTangent *= duration;
+                keys[i] = key;
+            }
+            result.keys = keys;
+            return result;
         }
 
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
 
-        public MotionCurveClip(Track track, int frame) : base(track, frame)
+        public MotionCurveClip(Track track, int frame, RootMotionCurveAsset source) : base(track, frame)
         {
-            CurveEndFrame = EndFrame;
+            if (!source)
+                throw new ArgumentNullException(nameof(source));
+            if (!source.TryValidate(out string error))
+                throw new InvalidOperationException(error);
+            if (source.Duration <= 0f)
+                throw new ArgumentException("MotionCurve source duration must be positive.", nameof(source));
+            EndFrame = StartFrame + Mathf.RoundToInt(source.Duration * TimelineUtility.FrameRate);
+            m_SourceCurve = source;
+            m_SourceStartTime = 0f;
+            m_SourceEndTime = source.Duration;
         }
 #endif
     }

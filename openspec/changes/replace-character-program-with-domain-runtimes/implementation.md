@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3 已完成；1.4 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终领域工厂和准备／采用接口已经完成。
+- OpenSpec 任务：1.1、1.2、1.3、1.4 已完成；1.5 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终领域工厂和准备／采用接口已经完成。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -33,6 +33,8 @@
 - `90b7c2cb2`：让 Float32 `GameplayAbilityDataAsset.Load` 必须接收并校验 typed provider binding。
 - `30518b1c9`：让 Fixed `FixedGameplayAbilityDataAsset.Load` 采用同一 typed provider binding；同时固化该文件已有的 Fixed 类型限定。
 - `0ef3af238`：由 Character Definition 生成 typed provider binding 并接入 Float32 Ability Load；Fixed 通过 Fixed assembly extension 接入同一入口，避免共享 Definition 反向依赖 Fixed。
+- `99d7426fb`：解除 Float32／Fixed Ability 生命周期对 Character ControlModule 存在性的短路依赖。
+- `2749c9f44`：记录角色 Definition 到独立 Ability 资源的 typed binding 入口。
 
 ## 当前实现边界
 
@@ -41,8 +43,8 @@
 - Ability 根入口直接指向私有图的 Root operation；Float32／Fixed 的 Ability 生命周期、Action／Effect catalog、状态槽和 artifact metadata 已接通。
 - Ability 目录现在为 Input／Gameplay Effect／Equipment／Character State 外部依赖发布 typed provider requirement；缺少 owner、同一依赖绑定多个 owner 或绑定类型不符时，Target 发布直接失败。
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
-- typed provider binding 尚未接入 Character Host／Session 的实际资源采用；因此任务 1.4 仍未完成，当前提交只完成 provider 合同和发布前闭合。
-- Character Definition 到独立 Ability 资源的绑定入口已经存在，但当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
+- typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
+- 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
 
 ## 编译证据与阻断
 
@@ -55,4 +57,4 @@
 
 ## 下一小步
 
-下一步让 Character Host／Session 在准备阶段以 typed binding 解析 Input／Effect／Equipment／状态依赖并报告实际采用结果；目前两种 Numeric Target 的独立 Ability 资源入口已完成，但角色实际装配仍未接入。之后再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。
+下一步把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，并由角色领域工厂装配；随后迁移 Control、Effect、Equipment 和网络 Pass 的状态所有权。

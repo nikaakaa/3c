@@ -2,11 +2,12 @@
 
 ## 1. 已有接入基础
 
+2026-09-13 纯内存修订：本节勾选只记录原接入基础，不代表新的无组件 Surface 已实现。原 HideAndDontSave 宿主/组件树方案已被否决并从目标清单移除，历史见 Git；第11节负责完整替换。现有布局、右侧 Inspector、帧、typed 配置和 Undo 行为保留。
+
 - [x] 1.1 已有 CutsceneEditorSurface 的 InitializeEmbedded/DrawEmbeddedGUI 和 transaction callback；后续布局/播放清理分别由布局和预览边界章节承担
 - [x] 1.2 已有 TimelineData 正式 owner 与 Editor-only Slate projection 的身份映射基础，不把临时对象作为保存资产
 - [x] 1.3 正式打开入口已切换到 Slate Surface，旧 UI Toolkit 仿 Slate 时间轴不再作为正式入口
 - [x] 1.4 不恢复旧 UI Toolkit viewport/interaction/rendering 并行实现；帧和 GUI 改造在 Slate Surface 内完成
-- [x] 1.5 已有 HideAndDontSave projection host、Track/Clip 对象；序列化和释放问题由 5.5 继续收口
 - [x] 1.6 已有正式 Track/Clip/Section identity 到临时对象映射；刷新恢复由第 6 节收口
 - [x] 1.7 Skill/Shared Timeline 正式入口已有唯一 TimelineEditorWindow 承载 Slate
 - [x] 1.8 Slate 类型/API 无法加载时已有明确 unavailable 入口，不回退到另一套 UI
@@ -83,3 +84,14 @@
 - [ ] 10.4 从本任务剩余 UI/导航消费者移除旧 Agent 文件协议调用与无用依赖，保留 AddTrack/AddClip/AddSection、正式规则/Undo/Session和已有刷新；人工编辑不写源码，生成不自动 Build/Play
 
 依赖仅阻止第10节对应接线，无关 UI 继续原范围。领域规则是业务实现，不是中央 Agent Validator；不新增验证任务。按中文小步提交，命令执行遵守 AGENTS。
+
+## 11. 无组件 Slate Editor 输入迁移
+
+- [ ] 11.1 从现有 Slate 绘制/交互提炼普通 C# 内容读视图、稳定元素ID、帧/曲线输入、手势草稿和实例命令/UI host合同；不继承组件或实现 runtime IDirectable/IKeyable
+- [ ] 11.2 将 CutsceneEditorSurface 改为普通可释放 SlateTimelineEditorSurface，迁移 Bind/DrawGUI/Refresh/Dispose、行列表、Clip包装器、Section与快捷键，移除 Cutscene/Transform/Validate 依赖
+- [ ] 11.3 将 CurveEditor/DopeSheet/参数列表改接完整曲线草稿、time-domain/帧映射和命令 port，保留 Slate 算法，移除组件参数反射、root.currentTime、AutoKey和 proxy Undo
+- [ ] 11.4 将现有 projection 改名为 BtsmtlSlateTimelineEditorAdapter，纯读取 TimelineData 并调用既有 typed 新增/字段/Curve/Session/Undo；迁移右侧 Inspector 和按稳定 ID 的选择/视图恢复
+- [ ] 11.5 单次切换全部正式打开/刷新入口，删除隐藏宿主、BtsmtlSlateGroup/Track/ActionClip组件类、CreateChild/AddComponent/groupsRoot/组件扫描及旧签名/fallback路径，更新命名/meta/引用
+- [ ] 11.6 按窗口释放 curve/DopeSheet缓存、事件、GUI capture和命令引用；Undo/Redo单点刷新，关闭/重绑/Domain Reload不创建场景或Unity代理对象
+- [ ] 11.7 有真实 Slate 原生窗口消费者时将其对象读取/播放隔离到插件边界 adapter，复用同一纯内存Surface；移除无消费者旧Editor封装，不提供BTSMTL组件兼容入口
+- [ ] 11.8 保留可选运行/历史标记与预览导航的外部adapter，ScenePlay不进入Surface必需输入；r2导出始终读取TimelineData，更新实际删除范围和实施记录

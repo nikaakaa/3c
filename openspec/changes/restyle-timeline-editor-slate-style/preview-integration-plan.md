@@ -2,6 +2,8 @@
 
 ## 目标与归属
 
+2026-09-13 无场景对象修订：Timeline 本地打开/编辑改为“正式 TimelineData → 纯内存 Editor adapter → Slate UI”，不创建隐藏 GameObject/Cutscene/Group/Track/ActionClip 或场景。此前组件 projection 是错误适配方案，不是预览需要。ScenePlay/Actor/Director 不属于本地编辑的必需输入；本计划运行能力仅通过可选外部观察/导航 adapter 连接。
+
 2026-09-13 r2：作者输入采用 [公共 C# authoring 方案](../remove-agent-authoring-use-native-csharp/design.md)，不再依赖 Agent Document 版本或五工具生命周期。现有 Timeline 编辑 Session、运行 Session、owner、Undo、时钟、Build/adoption 和已正确界面保持原归属，不按 Document/JSON 名字整目录删除业务代码。
 
 2026-09-12 用户要求将“预览”任务的窗口一起规划，写入 Timeline change，后续随 Timeline 一起实施。本文件是两边 UI、导航、binding 和编辑后采用的统一实施入口。这里的“一起”是一次完整作者操作交付，不是把所有场景运行按钮塞进 Timeline。
@@ -10,6 +12,8 @@
 - Timeline：新增和编辑 Track/Clip/Curve/Section、作者帧、属性；显示精确调用的运行标记，并提供返回预览入口。
 - Unity Game/Scene 视图：显示实际角色、地形、相机和场景结果，不新增一个有自己相机/播放器的 Timeline 预览窗口。
 - 原场景预览 change 继续拥有协调器、启动器、Session/adoption/restore 等运行合同。联合排期不复制其状态机，不重写已正确的运行算法。
+
+已有真实预览场景、角色和相机是预览正式 owner 的对象，不属于要删除的 UI 代理。删除范围仅为 Timeline 打开链创建的代用对象及依赖；原本正确的 Session、Build/采用与三种时间状态保持。
 
 ## 已核对证据与可靠性
 
@@ -66,6 +70,8 @@ Tree-only 技能可正常试验，不要求必须打开 Timeline。控制用 Mot
 
 ## Timeline 与预览如何连起来
 
+Slate Surface 只接纯内存内容、窗口局部编辑状态和可选运行标记值，不持有 ScenePlay coordinator/Context/Actor。外部 adapter 从真实 diagnostics 抽取标记并注入；没有运行 binding 时同一 Surface 完整编辑。新 Editor Model 不执行、存储或模拟运行 Timeline，也不成为 C# 导出输入。
+
 ```text
 SkillGraph 选定作者技能/调用点
   -> 共享预览命令进入正式场景运行
@@ -116,6 +122,8 @@ Timeline 修改并保存
 
 ## 联合实施批次与输入输出
 
+Timeline tasks 第11节先迁移组件输入、选择/拖动、Curve/DopeSheet和生命周期到纯内存，切换后既有 P1–P5 联动继续复用。不得用“预览尚未接通”保留旧隐藏组件树，也不以无场景对象迁移重建已有正确预览。
+
 | 批次 | 输入 | 输出 | 原任务归属 |
 |---|---|---|---|
 | P1 统一预览表面 | 当前 SkillGraph/Graph Shell 实际宿主、operations/status、场景定位合同 | 分组布局、明确按钮、能力/状态 presenter，删除重复控制入口 | 预览 6.1/9.4 |
@@ -127,6 +135,8 @@ Timeline 修改并保存
 P1/P3 与 Timeline 布局、帧、新增一起排期；P2/P4/P5 逐项核对主线正式合同和真实证据。接口缺失只记录具体依赖，不复制旧分支整份实现，不增加默认播放器。Pose/MM/相机算法和 Presentation checkpoint 实现不因联合 UI 规划而改由窗口拥有。
 
 ## 联合完成标准
+
+新增行为条件：在不加载或启动任何预览场景时，Timeline 打开、曲线编辑、Undo/Redo、重绑和关闭均不创建临时场景对象；连接预览前后仍使用同一纯内存 Surface，无组件 fallback。此条件不作为验证 tasks，也不因规划完成勾选实现项。
 
 人工行为标准放本文件，不加入 tasks 的手动测试项：
 

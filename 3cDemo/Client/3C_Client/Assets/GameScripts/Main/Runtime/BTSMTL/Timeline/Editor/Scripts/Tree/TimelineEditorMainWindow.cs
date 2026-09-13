@@ -664,7 +664,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnAuthoringIssue(string message)
         {
-            SetStatus(string.IsNullOrEmpty(message) ? $"Frame {TimelineUtility.FrameRate}" : message);
+            SetStatus(string.IsNullOrEmpty(message) ? $"Rate {TimelineUtility.FrameRate} FPS" : message);
         }
 
         void CaptureViewState()
@@ -785,7 +785,7 @@ namespace BTSMTL.Timeline.Editor
             m_DetailsToggle.style.width = 100f;
             m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
             m_RuntimeObservationMenu.style.width = 150f;
-            m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
+            m_Status = new Label($"Rate {TimelineUtility.FrameRate} FPS");
             m_Status.style.marginLeft = 6f;
             m_Status.style.flexGrow = 1f;
             m_Status.tooltip = "Timeline 使用正式作者帧编辑。角色 Scene Play、Build、Skill 和运行观察由 Skill Graph / Graph Shell 管理。";

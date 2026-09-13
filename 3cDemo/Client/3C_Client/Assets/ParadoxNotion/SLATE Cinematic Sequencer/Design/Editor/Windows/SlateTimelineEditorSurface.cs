@@ -131,11 +131,24 @@ namespace Slate
                 m_ViewEndFrame = Mathf.Max(1, m_Content.LengthFrame);
                 m_Host.RequestRepaint();
             }
-            Rect addTrackRect = new Rect(50f, 4f, 78f, 20f);
+            Rect previousFrameRect = new Rect(50f, 4f, 24f, 20f);
+            if (GUI.Button(previousFrameRect, "<", EditorStyles.toolbarButton))
+                m_Commands.SetCurrentFrame(Mathf.Max(0, m_Content.CurrentFrame - 1));
+            Rect nextFrameRect = new Rect(76f, 4f, 24f, 20f);
+            if (GUI.Button(nextFrameRect, ">", EditorStyles.toolbarButton))
+                m_Commands.SetCurrentFrame(Mathf.Min(m_Content.LengthFrame, m_Content.CurrentFrame + 1));
+            GUI.Label(new Rect(106f, 6f, 74f, 16f), "Author Frame", EditorStyles.miniLabel);
+            int currentFrame = EditorGUI.IntField(new Rect(180f, 4f, 58f, 20f), m_Content.CurrentFrame);
+            if (currentFrame != m_Content.CurrentFrame)
+                m_Commands.SetCurrentFrame(Mathf.Clamp(currentFrame, 0, m_Content.LengthFrame));
+            GUI.Label(new Rect(242f, 6f, 62f, 16f), $"/ {m_Content.LengthFrame}", EditorStyles.miniLabel);
+            GUI.Label(new Rect(306f, 6f, 58f, 16f), $"{m_Content.FrameRate} FPS", EditorStyles.miniLabel);
+            Rect addTrackRect = new Rect(368f, 4f, 78f, 20f);
             if (GUI.Button(addTrackRect, "+ Track", EditorStyles.toolbarButton))
                 m_Commands.RequestAddTrack(m_Content.CurrentFrame);
 
-            Rect sliderRect = new Rect(m_LeftMargin + 4f, 7f, Mathf.Max(30f, surface.width - m_LeftMargin - 12f), 18f);
+            float sliderX = Mathf.Max(m_LeftMargin + 4f, 452f);
+            Rect sliderRect = new Rect(sliderX, 7f, Mathf.Max(30f, surface.width - sliderX - 12f), 18f);
             float start = m_ViewStartFrame;
             float end = m_ViewEndFrame;
             EditorGUI.MinMaxSlider(sliderRect, ref start, ref end, 0f, Mathf.Max(1, m_Content.LengthFrame));
@@ -245,8 +258,13 @@ namespace Slate
             GUI.color = track.IsActive ? Color.white : Color.grey;
             if (track.RuntimeActive)
                 GUI.color = Color.yellow;
-            GUI.Label(new Rect(leftRect.x + 8f, leftRect.y + 3f, leftRect.width - 10f, 18f), track.DisplayName, EditorStyles.label);
+            GUI.Label(new Rect(leftRect.x + 8f, leftRect.y + 3f, leftRect.width - 48f, 18f), track.DisplayName, EditorStyles.label);
             GUI.color = Color.white;
+            if (GUI.Button(new Rect(leftRect.xMax - 34f, leftRect.y + 2f, 28f, 18f), "+", EditorStyles.miniButton))
+            {
+                m_Commands.RequestAddClip(track.TrackId, m_Content.CurrentFrame);
+                Event.current.Use();
+            }
             if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && leftRect.Contains(Event.current.mousePosition))
             {
                 Select(new SlateTimelineEditorSelection(
@@ -352,8 +370,12 @@ namespace Slate
                     m_CurveRenderers.Add(key, renderer);
                 }
                 Rect rowRect = new Rect(rect.x, rect.y + curveIndex * curveHeight, rect.width, curveHeight);
-                DrawCurveKeyStrip(clip, curve, rowRect, clip.StartFrame, clip.EndFrame);
+                DrawCurveKeyStrip(clip, curve, rowRect, curve.StartFrame, curve.EndFrame);
                 Rect curveRect = new Rect(rowRect.x, rowRect.y + CurveKeyStripHeight, rowRect.width, rowRect.height - CurveKeyStripHeight);
+                if (string.Equals(m_DopeClipId, clip.ClipId, StringComparison.Ordinal) &&
+                    string.Equals(m_DopeCurveId, curve.CurveId, StringComparison.Ordinal) &&
+                    m_DopeCurve != null && m_CurveRenderers.TryGetValue(key, out renderer))
+                    renderer.SetPureCurves(new[] { TimelineCurveAuthoringCopy(m_DopeCurve) });
                 renderer.Draw(curveRect, Rect.MinMaxRect(0f, 0f, 1f, 1f));
             }
         }
@@ -367,7 +389,8 @@ namespace Slate
         {
             GUI.Box(rect, GUIContent.none, Styles.timeBoxStyle ?? GUI.skin.box);
             GUI.Label(new Rect(rect.x + 4f, rect.y + 1f, 150f, 16f), curve.DisplayName, EditorStyles.miniLabel);
-            AnimationCurve dopeCurve = string.Equals(m_DopeClipId, curve.CurveId, StringComparison.Ordinal) &&
+            AnimationCurve dopeCurve = string.Equals(m_DopeClipId, clip.ClipId, StringComparison.Ordinal) &&
+                                       string.Equals(m_DopeCurveId, curve.CurveId, StringComparison.Ordinal) &&
                                        m_DopeCurve != null
                 ? m_DopeCurve
                 : curve.Curve;
@@ -379,7 +402,9 @@ namespace Slate
                 float frame = Mathf.Lerp(startFrame, endFrame, key.time);
                 float x = rect.x + FrameToX(Mathf.RoundToInt(frame), rect.width);
                 Rect keyRect = new Rect(x - 4f, rect.center.y - 4f, 8f, 8f);
-                bool selected = m_DopeCurveId == curve.CurveId && m_DopeSelectedKeys.Contains(keyIndex);
+                bool selected = m_DopeClipId == clip.ClipId &&
+                                m_DopeCurveId == curve.CurveId &&
+                                m_DopeSelectedKeys.Contains(keyIndex);
                 GUI.color = selected ? Color.cyan : Color.white;
                 GUI.DrawTexture(keyRect, Styles.dopeKey ?? Texture2D.whiteTexture);
                 GUI.color = Color.white;
@@ -392,7 +417,7 @@ namespace Slate
                     m_DopeClipId = clip.ClipId;
                     m_DopeCurveId = curve.CurveId;
                     m_DopeCurve = new AnimationCurve(dopeCurve.keys);
-                    m_DopeOriginalKeys = dopeCurve.keys;
+                    m_DopeOriginalKeys = (Keyframe[])dopeCurve.keys.Clone();
                     m_DopeAnchorX = Event.current.mousePosition.x;
                     m_DopeCurveStartFrame = startFrame;
                     m_DopeCurveEndFrame = endFrame;
@@ -486,6 +511,9 @@ namespace Slate
                         keys[keyIndex] = key;
                     }
                     m_DopeCurve = new AnimationCurve(keys);
+                    string rendererKey = $"{m_DopeClipId}:{m_DopeCurveId}";
+                    if (m_CurveRenderers.TryGetValue(rendererKey, out CurveEditor.CurveRenderer renderer))
+                        renderer.SetPureCurves(new[] { TimelineCurveAuthoringCopy(m_DopeCurve) });
                     m_Host.RequestRepaint();
                     Event.current.Use();
                 }

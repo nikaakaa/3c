@@ -36,9 +36,11 @@ TimelineEditorWindow
 作者界面：
 
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
+- 作者帧现在在 Surface 内提供上一帧、下一帧、整数帧输入、总帧数和 FPS 标识；轨道左侧提供可见的 `+` Clip 入口，顶部时间范围滑块避开编辑按钮，不与控件重叠。
 - 左右轨道共享行高和滚动，曲线展开同步；右侧 Inspector 可折叠、拖拽调宽并保持最小可读宽度，窗口宽度不足时自动收起 Inspector。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet key strip 从纯内存完整曲线快照读取；支持关键帧多选和按作者帧整体拖动，正式 key、切线、权重和 wrap 不被删除或量化，CurveRenderer 负责切线与细节编辑。
+- DopeSheet key strip 以 `ClipId + CurveId` 区分活动曲线，使用每个曲线自己的作者帧域显示关键帧；拖动草稿会同步刷新 Slate CurveRenderer，提交仍只经过正式曲线命令 port。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

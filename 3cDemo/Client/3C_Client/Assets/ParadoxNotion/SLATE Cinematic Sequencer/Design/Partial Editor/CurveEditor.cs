@@ -349,6 +349,13 @@ namespace Slate
                 cEditorType.GetProperty("animationCurves").SetValue(cEditor, GetCurveWrapperArray(curves), null);
             }
 
+            public void SetPureCurves(AnimationCurve[] source) {
+                if (pureUpdated == null)
+                    return;
+                curves = source ?? Array.Empty<AnimationCurve>();
+                RefreshCurves();
+            }
+
 
             public void Draw(Rect posRect, Rect timeRect) {
 

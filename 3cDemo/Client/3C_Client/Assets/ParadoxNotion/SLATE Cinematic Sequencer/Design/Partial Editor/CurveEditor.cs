@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 
 using UnityEditor;
 using UnityEngine;
@@ -23,6 +23,15 @@ namespace Slate
                 cache[animatable] = instance = new CurveRenderer(animatable, keyable, posRect);
             }
             instance.Draw(posRect, timeRect);
+        }
+
+        public static CurveRenderer CreatePureCurveRenderer(
+            AnimationCurve[] curves,
+            Rect posRect,
+            float snapInterval,
+            Action<AnimationCurve[]> onUpdated)
+        {
+            return new CurveRenderer(curves, posRect, snapInterval, onUpdated);
         }
 
 
@@ -75,6 +84,9 @@ namespace Slate
             private AnimationCurve[] curves;
             private Rect posRect;
             private Rect timeRect;
+            private readonly float pureSnapInterval;
+            private readonly Action<AnimationCurve[]> pureUpdated;
+            private readonly Undo.UndoRedoCallback undoHandler;
 
             private static Assembly editorAssembly;
             private static Type cEditorType;
@@ -89,13 +101,31 @@ namespace Slate
                 this.keyable = keyable;
                 this.curves = animatable.GetCurves();
                 this.posRect = posRect;
-                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                undoHandler = () => RefreshCurves();
+                Undo.undoRedoPerformed += undoHandler;
                 Init();
             }
 
             public CurveRenderer(AnimationCurve[] curves, Rect posRect) {
                 this.curves = curves;
-                Undo.undoRedoPerformed += () => { RefreshCurves(); };
+                pureSnapInterval = 0f;
+                undoHandler = () => RefreshCurves();
+                Undo.undoRedoPerformed += undoHandler;
+                Init();
+            }
+
+            public CurveRenderer(
+                AnimationCurve[] curves,
+                Rect posRect,
+                float snapInterval,
+                Action<AnimationCurve[]> onUpdated)
+            {
+                this.curves = curves ?? Array.Empty<AnimationCurve>();
+                this.posRect = posRect;
+                pureSnapInterval = Mathf.Max(0.0001f, snapInterval);
+                pureUpdated = onUpdated;
+                undoHandler = () => RefreshCurves();
+                Undo.undoRedoPerformed += undoHandler;
                 Init();
             }
 
@@ -117,8 +147,9 @@ namespace Slate
                 var settings = GetCurveEditorSettings();
                 cEditorType.GetProperty("settings").SetValue(cEditor, settings, null);
 
-                invSnap = 1f / CutsceneEditorSurface.CurrentSnapInterval;
-                lastSnapPref = CutsceneEditorSurface.CurrentSnapInterval;
+                float snapInterval = pureSnapInterval > 0f ? pureSnapInterval : CutsceneEditorSurface.CurrentSnapInterval;
+                invSnap = 1f / snapInterval;
+                lastSnapPref = snapInterval;
                 ignoreScrollWheelUntilClicked = true;
 
                 RecalculateBounds();
@@ -335,7 +366,7 @@ namespace Slate
                     axisLock = 2;
                 }
 
-                var snapInterval = CutsceneEditorSurface.CurrentSnapInterval;
+                var snapInterval = pureSnapInterval > 0f ? pureSnapInterval : CutsceneEditorSurface.CurrentSnapInterval;
                 if ( snapInterval != lastSnapPref ) {
                     lastSnapPref = snapInterval;
                     invSnap = 1 / snapInterval;
@@ -373,9 +404,19 @@ namespace Slate
 
             //raise event
             void OnCurvesUpdated() {
+                if (pureUpdated != null) {
+                    pureUpdated(curves);
+                    return;
+                }
                 if ( onCurvesUpdated != null ) {
                     onCurvesUpdated(animatable);
                 }
+            }
+
+            public void Dispose()
+            {
+                if (undoHandler != null)
+                    Undo.undoRedoPerformed -= undoHandler;
             }
 
         }

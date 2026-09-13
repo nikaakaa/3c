@@ -16,6 +16,8 @@ namespace Slate
         ISlateTimelineEditorCommandPort m_Commands;
         ISlateTimelineEditorHost m_Host;
         SlateTimelineEditorContentView m_Content;
+        readonly Dictionary<string, CurveEditor.CurveRenderer> m_CurveRenderers =
+            new Dictionary<string, CurveEditor.CurveRenderer>(StringComparer.Ordinal);
         Vector2 m_ScrollPosition;
         int m_ViewStartFrame;
         int m_ViewEndFrame;
@@ -32,16 +34,6 @@ namespace Slate
         int m_DragClipBlendOut;
         int m_DragClipAnchorFrame;
         int m_DragClipDelta;
-        string m_DragCurveClipId;
-        string m_DragCurveId;
-        AnimationCurve m_DragCurve;
-        int m_DragCurveKeyIndex = -1;
-        Rect m_DragCurveRect;
-        float m_DragCurveMin;
-        float m_DragCurveMax;
-        float m_DragCurveTimelineWidth;
-        int m_DragCurveStartFrame;
-        int m_DragCurveEndFrame;
 
         public SlateTimelineEditorContentView Content => m_Content;
         public SlateTimelineEditorSelection Selection => m_Selection;
@@ -70,6 +62,7 @@ namespace Slate
         {
             if (m_Disposed)
                 return;
+            DisposeCurveRenderers();
             m_Content = content ?? throw new ArgumentNullException(nameof(content));
             if (!m_HasView)
             {
@@ -79,6 +72,13 @@ namespace Slate
             }
             m_ViewStartFrame = Mathf.Clamp(m_ViewStartFrame, 0, content.LengthFrame - 1);
             m_ViewEndFrame = Mathf.Clamp(m_ViewEndFrame, m_ViewStartFrame + 1, content.LengthFrame);
+        }
+
+        void DisposeCurveRenderers()
+        {
+            foreach (CurveEditor.CurveRenderer renderer in m_CurveRenderers.Values)
+                renderer.Dispose();
+            m_CurveRenderers.Clear();
         }
 
         public void SetSelection(SlateTimelineEditorSelection selection)
@@ -312,74 +312,46 @@ namespace Slate
         void DrawCurves(SlateTimelineEditorClipView clip, Rect rect, float timelineWidth)
         {
             GUI.Box(rect, GUIContent.none, Styles.timeBoxStyle ?? GUI.skin.box);
+            if (clip.Curves.Count == 0)
+                return;
+            float curveHeight = rect.height / clip.Curves.Count;
             for (int curveIndex = 0; curveIndex < clip.Curves.Count; curveIndex++)
             {
                 SlateTimelineEditorCurveView curve = clip.Curves[curveIndex];
-                AnimationCurve source = string.Equals(m_DragCurveClipId, clip.ClipId, StringComparison.Ordinal) &&
-                                        string.Equals(m_DragCurveId, curve.CurveId, StringComparison.Ordinal)
-                    ? m_DragCurve
-                    : curve.Curve;
-                if (source == null || source.length == 0)
+                if (curve.Curve == null || curve.Curve.length == 0)
                     continue;
-                float min = source.keys[0].value;
-                float max = min;
-                for (int keyIndex = 1; keyIndex < source.length; keyIndex++)
+                string key = $"{clip.ClipId}:{curve.CurveId}";
+                if (!m_CurveRenderers.TryGetValue(key, out CurveEditor.CurveRenderer renderer))
                 {
-                    min = Mathf.Min(min, source.keys[keyIndex].value);
-                    max = Mathf.Max(max, source.keys[keyIndex].value);
+                    renderer = CurveEditor.CreatePureCurveRenderer(
+                        new[] { TimelineCurveAuthoringCopy(curve.Curve) },
+                        Rect.zero,
+                        1f / Mathf.Max(1, curve.EndFrame - curve.StartFrame),
+                        curves =>
+                        {
+                            if (curves == null || curves.Length == 0 || curves[0] == null)
+                                return;
+                            m_Commands.BeginGesture("Edit Timeline Curve");
+                            m_Commands.ReplaceCurve(clip.ClipId, curve.CurveId, curves[0]);
+                            m_Commands.CommitGesture();
+                            m_Host.RequestRepaint();
+                        });
+                    m_CurveRenderers.Add(key, renderer);
                 }
-                if (Mathf.Abs(max - min) < 0.0001f)
-                {
-                    min -= 1f;
-                    max += 1f;
-                }
-                Vector3[] points = new Vector3[Mathf.Max(2, Mathf.RoundToInt(rect.width / 4f))];
-                for (int pointIndex = 0; pointIndex < points.Length; pointIndex++)
-                {
-                    float t = pointIndex / (float)(points.Length - 1);
-                    float frame = Mathf.Lerp(clip.StartFrame, clip.EndFrame, t);
-                    float value = source.Evaluate(frame / Mathf.Max(1f, curve.EndFrame - curve.StartFrame));
-                    float x = rect.x + FrameToX(Mathf.RoundToInt(frame), timelineWidth) - FrameToX(clip.StartFrame, timelineWidth);
-                    float y = Mathf.Lerp(rect.yMax - 8f, rect.yMin + 8f, Mathf.InverseLerp(min, max, value));
-                    points[pointIndex] = new Vector3(x, y, 0f);
-                }
-                Handles.color = curveIndex == 0 ? Color.red : curveIndex == 1 ? Color.green : Color.cyan;
-                Handles.DrawAAPolyLine(2f, points);
-                Handles.color = Color.white;
-                for (int keyIndex = 0; keyIndex < source.length; keyIndex++)
-                {
-                    Keyframe key = source.keys[keyIndex];
-                    float keyFrame = Mathf.Lerp(clip.StartFrame, clip.EndFrame, key.time);
-                    float keyX = rect.x + FrameToX(Mathf.RoundToInt(keyFrame), timelineWidth) - FrameToX(clip.StartFrame, timelineWidth);
-                    float keyY = Mathf.Lerp(rect.yMax - 8f, rect.yMin + 8f, Mathf.InverseLerp(min, max, key.value));
-                    Rect keyRect = new Rect(keyX - 4f, keyY - 4f, 8f, 8f);
-                    GUI.DrawTexture(keyRect, Styles.dopeKey ?? Texture2D.whiteTexture);
-                    if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && keyRect.Contains(Event.current.mousePosition))
-                    {
-                        m_DragCurveClipId = clip.ClipId;
-                        m_DragCurveId = curve.CurveId;
-                        m_DragCurve = new AnimationCurve(source.keys);
-                        m_DragCurveKeyIndex = keyIndex;
-                        m_DragCurveRect = rect;
-                        m_DragCurveMin = min;
-                        m_DragCurveMax = max;
-                        m_DragCurveTimelineWidth = timelineWidth;
-                        m_DragCurveStartFrame = clip.StartFrame;
-                        m_DragCurveEndFrame = clip.EndFrame;
-                        m_Commands.BeginGesture("Edit Timeline Curve");
-                        m_Commands.Select(new SlateTimelineEditorSelection(
-                            SlateTimelineEditorElementKind.Key,
-                            string.Empty,
-                            clip.TrackId,
-                            clip.ClipId,
-                            string.Empty,
-                            curve.CurveId,
-                            keyIndex));
-                        Event.current.Use();
-                    }
-                }
+                Rect curveRect = new Rect(rect.x, rect.y + curveIndex * curveHeight, rect.width, curveHeight);
+                renderer.Draw(curveRect, Rect.MinMaxRect(0f, 0f, 1f, 1f));
             }
         }
+
+        static AnimationCurve TimelineCurveAuthoringCopy(AnimationCurve source)
+        {
+            return new AnimationCurve(source.keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+        }
+
 
         void HandleGlobalEvents(Rect surface)
         {
@@ -406,35 +378,6 @@ namespace Slate
                     m_Commands.CommitGesture();
                     m_DragClipId = null;
                     m_DragClipDelta = 0;
-                    Event.current.Use();
-                }
-            }
-            if (m_DragCurve != null)
-            {
-                if (Event.current.type == EventType.MouseDrag && Event.current.button == 0)
-                {
-                    Keyframe key = m_DragCurve.keys[m_DragCurveKeyIndex];
-                    float contentMouseY = Event.current.mousePosition.y - TopHeight + m_ScrollPosition.y;
-                    float framePosition = Event.current.mousePosition.x - m_DragCurveRect.x;
-                    float frame = Mathf.Lerp(
-                        m_ViewStartFrame,
-                        m_ViewEndFrame,
-                        Mathf.Clamp01((framePosition + FrameToX(m_DragCurveStartFrame, m_DragCurveTimelineWidth)) / m_DragCurveTimelineWidth));
-                    key.time = Mathf.Clamp01(Mathf.InverseLerp(m_DragCurveStartFrame, m_DragCurveEndFrame, frame));
-                    float valuePosition = Mathf.InverseLerp(m_DragCurveRect.yMax - 8f, m_DragCurveRect.yMin + 8f, contentMouseY);
-                    key.value = Mathf.Lerp(m_DragCurveMin, m_DragCurveMax, valuePosition);
-                    m_DragCurveKeyIndex = m_DragCurve.MoveKey(m_DragCurveKeyIndex, key);
-                    m_Host.RequestRepaint();
-                    Event.current.Use();
-                }
-                if (Event.current.rawType == EventType.MouseUp)
-                {
-                    m_Commands.ReplaceCurve(m_DragCurveClipId, m_DragCurveId, m_DragCurve);
-                    m_Commands.CommitGesture();
-                    m_DragCurve = null;
-                    m_DragCurveClipId = null;
-                    m_DragCurveId = null;
-                    m_DragCurveKeyIndex = -1;
                     Event.current.Use();
                 }
             }
@@ -542,17 +485,14 @@ namespace Slate
         {
             if (m_Disposed)
                 return;
-            if (m_DragClipId != null || m_DragCurve != null)
+            if (m_DragClipId != null)
                 m_Commands?.CancelGesture();
+            DisposeCurveRenderers();
             m_Disposed = true;
             m_Content = null;
             m_Commands = null;
             m_Host = null;
-            m_DragCurve = null;
             m_DragClipId = null;
-            m_DragCurveClipId = null;
-            m_DragCurveId = null;
-            m_DragCurveKeyIndex = -1;
         }
     }
 }

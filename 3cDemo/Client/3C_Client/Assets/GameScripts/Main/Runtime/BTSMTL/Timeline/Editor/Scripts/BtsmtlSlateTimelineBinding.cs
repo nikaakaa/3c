@@ -387,12 +387,12 @@ namespace BTSMTL.Timeline.Editor
                 Select(track);
         }
 
-        void ApplyImmediate(Action mutation, string undoName)
+        bool ApplyImmediate(Action mutation, string undoName)
         {
             if (!IsSourceCurrent())
             {
                 Rebuild();
-                return;
+                return false;
             }
             m_Session.Apply(() =>
             {
@@ -400,6 +400,7 @@ namespace BTSMTL.Timeline.Editor
                 Timeline.Init();
             }, undoName);
             Rebuild();
+            return true;
         }
 
         void BuildBindings()
@@ -463,7 +464,7 @@ namespace BTSMTL.Timeline.Editor
             try
             {
                 Track added = null;
-                ApplyImmediate(() =>
+                if (!ApplyImmediate(() =>
                 {
                     Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
                     int count = Timeline.Tracks.Count;
@@ -471,7 +472,8 @@ namespace BTSMTL.Timeline.Editor
                     added = Timeline.Tracks[count];
                     added.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
                     TimelineAuthoringTrackBinding.Apply(added, channelId, slotId);
-                }, "Add Timeline Track");
+                }, "Add Timeline Track"))
+                    return false;
                 if (added != null && m_Tracks.TryGetValue(added.AuthoringId, out BtsmtlTimelineTrackBinding addedBinding))
                     Select(addedBinding);
                 return true;
@@ -523,7 +525,7 @@ namespace BTSMTL.Timeline.Editor
             try
             {
                 Clip added = null;
-                ApplyImmediate(() =>
+                if (!ApplyImmediate(() =>
                 {
                     added = request.Kind == TimelineContractKinds.AnimationClip
                         ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
@@ -535,7 +537,8 @@ namespace BTSMTL.Timeline.Editor
                     added.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
-                }, "Add Timeline Clip");
+                }, "Add Timeline Clip"))
+                    return false;
                 if (added != null && m_Clips.TryGetValue(added.AuthoringId, out BtsmtlTimelineClipBinding addedBinding))
                     Select(addedBinding);
                 return true;

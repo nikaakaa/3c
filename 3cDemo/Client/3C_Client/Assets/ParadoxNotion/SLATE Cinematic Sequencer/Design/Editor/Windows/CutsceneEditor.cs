@@ -1645,6 +1645,57 @@ namespace Slate
         void DoKeyboardShortcuts() {
 
             var e = Event.current;
+            if (embeddedTimeline != null)
+            {
+                if (e.type != EventType.KeyDown || GUIUtility.keyboardControl != 0 || e.control || e.shift)
+                    return;
+                if (e.keyCode == KeyCode.Space)
+                {
+                    e.Use();
+                    return;
+                }
+                if (e.keyCode == KeyCode.Period)
+                {
+                    StepForward();
+                    e.Use();
+                    return;
+                }
+                if (e.keyCode == KeyCode.Comma)
+                {
+                    StepBackward();
+                    e.Use();
+                    return;
+                }
+                if (!(embeddedTimeline.Selected is IEmbeddedTimelineClipBinding clip))
+                    return;
+                if (e.keyCode == KeyCode.K && clip.Keyable?.animationData != null)
+                {
+                    ApplyEmbeddedCommand(
+                        () => clip.AddIdentityKey(clip.Keyable.ToLocalTime(EmbeddedCurrentTime())),
+                        "Key Clip");
+                    e.Use();
+                    return;
+                }
+                if (e.keyCode == KeyCode.S)
+                {
+                    int frame = Mathf.RoundToInt(SnapTime(EmbeddedCurrentTime()) * embeddedTimeline.FrameRate);
+                    embeddedTimeline.SplitClip(clip, frame);
+                    e.Use();
+                    return;
+                }
+                if (e.keyCode == KeyCode.F)
+                {
+                    ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip");
+                    e.Use();
+                    return;
+                }
+                if (e.keyCode == KeyCode.C)
+                {
+                    ApplyEmbeddedCommand(clip.CleanKeysOffRange, "Clean Keys");
+                    e.Use();
+                }
+                return;
+            }
             if ( e.type == EventType.KeyDown && GUIUtility.keyboardControl == 0 && !e.control && !e.shift ) {
 
                 //play
@@ -2074,9 +2125,9 @@ namespace Slate
                 (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace))
             {
                 if (embeddedMultiSelection != null && embeddedMultiSelection.Count > 0)
-                    ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClips(embeddedMultiSelection.ToArray()), "Delete Clips");
+                    embeddedTimeline.DeleteClips(embeddedMultiSelection.ToArray());
                 else if (embeddedTimeline.Selected is IEmbeddedTimelineClipBinding selectedClip)
-                    ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(selectedClip), "Delete Clip");
+                    embeddedTimeline.DeleteClip(selectedClip);
                 embeddedMultiSelection = null;
                 embeddedTimeline.Select(null);
                 e.Use();
@@ -2229,7 +2280,7 @@ namespace Slate
                             menu.AddItem(new GUIContent("Move Track Up"), false, () => embeddedTimeline.MoveTrack(track, trackIndex - 1));
                         if (trackIndex + 1 < tracks.Count)
                             menu.AddItem(new GUIContent("Move Track Down"), false, () => embeddedTimeline.MoveTrack(track, trackIndex + 1));
-                        menu.AddItem(new GUIContent("Delete Track"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteTrack(track), "Delete Track"));
+                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
                         menu.ShowAsContext();
                         e.Use();
                     }
@@ -2435,7 +2486,7 @@ namespace Slate
                     if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
                     {
                         GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Delete Section"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteSection(section), "Delete Section"));
+                        menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
                         menu.AddItem(new GUIContent("Focus Section"), false, () =>
                         {
                             viewTimeMin = Mathf.Max(0f, section.Time - 0.1f);
@@ -2484,10 +2535,10 @@ namespace Slate
             if (hasMultiSelection)
             {
                 IEmbeddedTimelineClipBinding[] selected = embeddedMultiSelection.ToArray();
-                menu.AddItem(new GUIContent("Delete Clips"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClips(selected), "Delete Clips"));
+                menu.AddItem(new GUIContent("Delete Clips"), false, () => embeddedTimeline.DeleteClips(selected));
             }
             else
-                menu.AddItem(new GUIContent("Delete Clip"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(clip), "Delete Clip"));
+                menu.AddItem(new GUIContent("Delete Clip"), false, () => embeddedTimeline.DeleteClip(clip));
             menu.ShowAsContext();
         }
 

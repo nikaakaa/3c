@@ -1935,6 +1935,12 @@ namespace Slate
         //Scrubing....
         void DoScrubControls() {
 
+            if (embeddedTimeline != null)
+            {
+                DoEmbeddedScrubControls();
+                return;
+            }
+
             if ( !embeddedSurface && !IsPlaybackAllowedFor(cutscene) ) {
                 return;
             }
@@ -2081,6 +2087,8 @@ namespace Slate
                 e.Use();
             }
 
+            DoKeyboardShortcuts();
+
             if (e.type == EventType.MouseDown && (e.button == 0 || e.button == 1) && !embeddedEditStarted)
             {
                 embeddedEditStarted = !embeddedTimeline.IsReadOnly;
@@ -2096,7 +2104,7 @@ namespace Slate
 
             ShowEmbeddedAuthoringToolbar(topLeftRect);
             ShowTimeInfo(topMiddleRect);
-            DoEmbeddedScrubControls();
+            DoScrubControls();
             DoZoomAndPan();
 
             Rect scrollRect = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, screenHeight - 5);

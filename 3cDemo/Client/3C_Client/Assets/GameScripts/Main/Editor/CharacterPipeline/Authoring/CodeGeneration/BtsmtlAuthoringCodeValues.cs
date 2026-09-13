@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
             string typeName = BtsmtlAuthoringCodeSyntax.TypeName(expectedType);
             context.AddExternalDependency(assetPath, typeName, localFileId);
-            return $"context.ResolveExternalAsset<{typeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(assetPath)}, {localFileId}L)";
+            return context.ResolveExternalAsset(assetPath, typeName, localFileId);
         }
 
         public static string Vector2(Vector2 value) =>
@@ -108,6 +108,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (type == typeof(double) && value is double doubleValue)
             {
                 expression = BtsmtlAuthoringCodeSyntax.DoubleLiteral(doubleValue);
+                return true;
+            }
+            if (type != null && type.IsEnum && value is Enum enumValue)
+            {
+                expression = BtsmtlAuthoringCodeSyntax.EnumLiteral(
+                    BtsmtlAuthoringCodeSyntax.TypeName(type),
+                    enumValue.ToString());
                 return true;
             }
             if (type == typeof(string) && value is string text)

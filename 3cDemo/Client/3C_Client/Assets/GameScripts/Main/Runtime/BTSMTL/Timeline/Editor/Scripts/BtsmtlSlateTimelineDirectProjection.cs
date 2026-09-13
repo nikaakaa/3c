@@ -591,7 +591,7 @@ namespace BTSMTL.Timeline.Editor
         void IDirector.Play() { }
         void IDirector.Pause() { }
         void IDirector.Stop() { }
-        void IDirector.Sample(float time) => ((IDirector)this).currentTime = time;
+        void IDirector.Sample(float time) { }
         void IDirector.ReSample() { }
         void IDirector.Validate() { }
         void IDirector.SendGlobalMessage(string message, object value) { }

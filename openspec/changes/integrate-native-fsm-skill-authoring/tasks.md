@@ -1,4 +1,8 @@
-## r2执行边界
+## 当前执行边界：r3完整Ability入口
+
+用户已确认GameplayAbilityDefinition是完整技能作者入口。第1—6节已勾选项保留历史状态；只执行第7节新增实现，不重新打开r2任务，也不把图范围生成完成解释成完整Ability外壳完成。任务只列实现、迁移、删除及必要规范修改，不列验证、证据收集、Build验收或手动测试任务。
+
+## r2历史执行边界
 
 2026-09-13：公共基线改为remove-agent-authoring-use-native-csharp/design.md r2。下列已勾选项保留当时实现事实；尤其3.1/3.2是旧Document阶段记录，不再作为需要发布v8/五工具的目标，也不表示旧协议代码已删除。新的领域API迁出与C#完整输出/重建见第6节；不撤销已经正确的原生FSM、条件/顺序、生命周期与Program链。
 
@@ -26,22 +30,32 @@
 
 - [x] 4.1 实现identity、逻辑端点、条件、priority、abortPolicy、order与资产引用的重映射；不重排已正确并列转移。
 - [x] 4.2 移除Attack Setup、意图副本和私有空图；保留Dodge并行、窗口、ActionTarget及仍被引用的阈值，不改变正式控制意图时机。
-- [ ] 4.3 通过公共export_code/generate_assets及正式FSM API完成明确Skill范围完整输出与重建，核对状态/配置/条件/priority/abortPolicy/order/生命周期/layout/共享对象及指定Definition根引用；交付往返和删除生成输出后重建记录，保留业务identity，不依赖旧子资产GUID，不自动合并未导出修改。
-- [ ] 4.4 让已有FSM/Skill领域校验与Character编译器、独立显式Build直接消费重建资产，核对Program/Projection和来源身份并交付当前结果；不新增Agent Validator或自动Build，完整运行轨迹仍归Corin闭环。
-- [ ] 4.5 定位并修复属于本作者层的m_Name重名问题；不全局改名或清缓存。
+- [x] 4.3 已通过公共`btsmtl.generate_assets`和`btsmtl.export_code`及正式FSM API完成Corin Attack Skill范围的重建/输出；恢复状态配置、StateBody、条件、priority、abortPolicy、order、生命周期、layout、共享对象和Definition根绑定，保留业务identity，不依赖旧子资产GUID，不自动合并未导出修改。
+- [x] 4.4 已让现有FSM合同、Skill闭包、`BtsmtlSkillGraphOccurrence`和`BtsmtlSkillGraphCompiler`直接消费重建的native FSM；独立Build入口保持原有显式边界，本轮按要求不运行Build，不新增Agent Validator或自动Build。
+- [x] 4.5 已根据完整Console调用栈确认m_Name问题归属Slate.CutsceneGroupInspector，不属于本Skill/FSM作者层；不改名、不清缓存、不扩大范围。
 
 ## 5. 删除与交付
 
-- [ ] 5.1 在有效操作已迁出且调用者脱离Agent后，按公共退役范围删除本领域无消费者旧状态存储、协议适配/补读和一次性转换；交付源码消费者清单，保留原生FSM和合法非Skill/普通FlowGraph能力，不整目录或整文件搬迁。
-- [ ] 5.2 按design D6归并剩余四份领域delta，撤销本change的Document v8发布依赖，保留正确FSM、组合、编译与current后来新增场景；只向公共退役结果提供本领域规范差异，公共工具/协议规范归C# authoring负责。
-- [ ] 5.3 整理本领域API、C#输出/生成接入、完整往返与旧Agent依赖归零结果，明确历史完成和未完成项；不承担事件图运行、Pose变量、通用观察、网络Adapter或Replay。
+- [x] 5.1 有效FSM操作已迁出且调用者已脱离Agent；已删除本领域无消费者旧状态存储、Skill/Presentation协议链和一次性转换入口，保留原生FSM及合法非Skill/普通FlowGraph能力。独立`btsmtl.scene_play`预览不属于旧authoring链，继续保留。
+- [x] 5.2 已按design D6完成r2规范对账：撤销本change的Document v8发布依赖，保留正确FSM、组合、编译与current后来新增场景；本change只向公共退役结果提供Skill/FSM领域差异，公共工具/协议规范归C# authoring负责。
+- [x] 5.3 已整理Skill/FSM正式API、C# export/generate接入和旧Agent依赖边界；事件图运行、Pose变量、通用观察、网络Adapter与Replay均未纳入本change。
 
 ## 6. r2正式FSM能力迁出与C#输出接入
 
-- [ ] 6.1 逐方法盘点BtsmtlSkillGraphAuthoringApplier的FSM创建/配置/连接/条件/owner/系统入口/身份及校验，交付保留能力→已有模块→协议删除项清单和真实冲突；不能仅凭目录名删除。
-- [ ] 6.2 将FSM/State创建、StateBody挂接、参数/layout配置及明确owner操作落实到已有工厂和原生FSM/State模块；交付公开typed读取/配置入口及调用链，拒绝AgentPackage/JToken或私有字段反射作为参数合同。
-- [ ] 6.3 将系统入口复用、状态/边业务identity恢复、连接/改接、condition/priority/abortPolicy/order落实到正式领域API；交付新对象可恢复既有业务身份的结果，不要求local协议ID，不按输出排序改变转移，不重复创建工厂默认内容。
-- [ ] 6.4 提供FSM及StateBody/Condition/Macro等拥有闭包的正式读取和内部/外部引用区分，交付完整字段/生命周期/layout/动态接口及根绑定覆盖表；内部共享只创建一次，未知字段或引用明确拒绝完整输出。
-- [ ] 6.5 将仅存在旧Applier的有效owner/身份/条件角色/顺序约束补入已有NativeStateMachineContract、GraphClosure或对应配置方法，删除重复规则；交付人工编辑和生成共用约束的调用链，不新增中央Validator、整包事务或源码同步。
-- [ ] 6.6 在公共C# authoring入口与输出器接通后提供薄FSM适配，按创建→配置→引用→连接→指定根挂接输出正式API调用；交付完整源码、精确外部依赖、未映射字段拒绝与明确生成范围结果，代码未编译时不执行旧同名入口，Build保持独立。
-- [ ] 6.7 人工作者/编译及生成调用者全部切到正式领域API后，配合公共退役清理旧Applier协议部分；交付本领域对Agent Document/DTO/Session/Reconciler/重复Validator的直接及间接依赖归零扫描，不能把整个Applier改名保留。
+- [x] 6.1 盘点BtsmtlSkillGraphAuthoringApplier中的FSM创建、配置、连接、条件、owner、系统入口和身份操作，并将有效能力落到已有模块；不能仅凭目录名删除。
+- [x] 6.2 将FSM/State创建、StateBody挂接、参数/layout配置及明确owner操作落实到已有工厂和原生FSM/State模块；公开typed读取/配置入口，拒绝AgentPackage、JToken或私有字段反射作为参数合同。
+- [x] 6.3 将系统入口复用、状态/边业务identity恢复、连接/改接、condition/priority/abortPolicy/order落实到正式领域API；不要求local协议ID，不按输出排序改变转移，不重复创建工厂默认内容。
+- [x] 6.4 提供FSM及StateBody/Condition/Macro等拥有闭包的正式读取和内部/外部引用区分；内部共享只创建一次，未知字段或引用拒绝完整输出。
+- [x] 6.5 将仅存在旧Applier的有效owner/身份/条件角色/顺序约束补入已有NativeStateMachineContract、GraphClosure或对应配置方法，删除重复规则；不新增中央Validator、整包事务或源码同步。
+- [x] 6.6 在公共C# authoring入口与输出器接通后提供薄FSM适配，按创建→配置→引用→连接→指定根挂接输出正式API调用；代码未编译时不执行旧同名入口，Build保持独立。
+- [x] 6.7 人工作者、编译及C#生成调用者已切到正式Skill/FSM API；旧Applier及其协议调用者已按公共退役范围移除，未改名保留整套Applier。
+
+## 7. GameplayAbilityDefinition完整入口
+
+- [ ] 7.1 将现有SkillDefinition职责迁为独立GameplayAbilityDefinition资产，集中技能身份、激活/阻断/取消/目标要求、已有效果引用及后续能力关系；技能专用规则由Ability拥有，显式共享规则保持唯一对象来源。
+- [ ] 7.2 将AbilityGraph及私有FSM/StateBody/Condition/Macro/Timeline归属Ability资产；角色/装备改为AbilityGrant精确引用和输入绑定，移除SkillDefinitions与SkillGraphs双重登记，保留业务identity与共享资源引用。
+- [ ] 7.3 建立统一Ability作者入口，在同一页面编辑规则、目标要求、执行图与资源，并显示共享规则来源；沿原生GraphEditor下钻私有内容，创建技能时自动建立内部拥有关系。
+- [ ] 7.4 将Skill专属类型和调用统一为AbilityGraph、AbilityExecution和AbilityExecutionContext，复用现有释放状态；普通Ability移除手配空ActionContextSlot，由当前执行上下文贯通节点与Timeline，保留合法非Skill业务和原准入分组/取消顺序。
+- [ ] 7.5 扩展公共C#工具的领域根支持，从GameplayAbilityDefinition完整输出外壳、规则、图与声明范围的AbilityGrant挂接；子图模式只处理子图及原owner，删除后生成不依赖旧外壳或子资产GUID，不新增MCP入口。
+- [ ] 7.6 迁移Corin现有技能、共享Dodge规则和角色授予引用，删除被替代的Skill专属旧字段、类型、资产入口与兼容别名；不改变阈值、输入消费、目标、并发、取消、MovingTurn或Program执行行为。
+- [ ] 7.7 同步受本次改动影响的正式作者/编译/代码生成接口及规范命名，修订角色装配根与独立Ability资产合同；保留r2公共双工具边界，不扩展成本/冷却/等级或其它业务系统。

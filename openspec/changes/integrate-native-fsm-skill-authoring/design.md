@@ -2,7 +2,7 @@
 
 见[proposal](proposal.md)。2026-09-13按公共[原生C#作者基线r2](../remove-agent-authoring-use-native-csharp/design.md)更新剩余计划。旧实现及任务映射保留在[归档交接](../archive/2026-09-12-refactor-btsmtl-flowcanvas-authoring/split-handoff.md)和本目录历史实施记录；已勾选工作不撤销，但不代表新导出/重建或协议删除完成。
 
-本轮只读源码已确认`BtsmtlSkillNativeStateMachine : FSM`、原生State/Connection适配、`ConfigureIdentity/ConfigureOwner/SetBody/Configure`、工厂创建及`BtsmtlSkillNativeStateMachineContract.Validate/Populate`存在，启动插件runtime仍被拒绝。任务4.3等实际资产收尾尚未勾选；不能用源码或旧Document记录证明当前资产已完成往返。实施前重读实际差异，不从旧截图恢复steps、不覆盖其它窗口正确改动。
+此前只读源码已确认原生FSM类型、配置/创建及领域合同存在，插件runtime被拒绝。当前任务表已将r2各项勾选，本轮保留这些实现记录；它们只说明当时的图/FSM范围，不能扩大为r3的完整Ability外壳已输出。当前`BindSkillRoot`仍只登记`Definition.SkillGraphs`，角色外壳另存于`SkillDefinitions`。实施前重读实际差异，不从旧截图恢复steps、不覆盖其它窗口正确改动。
 
 ## Goals / Non-Goals
 
@@ -16,8 +16,9 @@
 
 | 作者内容 | 唯一存储与owner |
 |---|---|
-| Skill根 | 独立FlowGraph主资产，Definition只引用 |
-| StateMachine | 原生FSM，唯一属于调用它的节点，私有内容仍保存于Skill或共享Macro实际文件 |
+| GameplayAbilityDefinition | r3独立技能主资产，拥有规则及唯一AbilityGraph；角色通过AbilityGrant引用 |
+| AbilityGraph（原Skill执行图） | Ability私有执行根，保存于Ability文件；不再与外壳分开登记为第二个技能入口 |
+| StateMachine | 原生FSM，唯一属于调用它的节点，私有内容保存于Ability或正式共享Macro实际文件 |
 | State | FSMState业务适配，唯一引用StateBody |
 | Transition | FSMConnection业务适配，唯一保存condition、priority、abortPolicy、order；私有条件由Edge拥有 |
 | StateBody、ConditionRule、Macro、TimelineBody | FlowCanvas正式图及原接口，不再镜像状态机拓扑 |
@@ -41,7 +42,7 @@ Entry/Prime只在单一无条件入口时直接表达默认目标；条件/多�
 
 ### D3.1 Applier内真实FSM能力逐项迁出
 
-`Editor/CharacterPipeline/Authoring/SkillDocument/BtsmtlSkillGraphAuthoringApplier.cs`仍有协议DTO、会话、local identity表和以下真实操作混合。此文件的有效FSM操作迁出由本change唯一负责，不允许公共清理任务先整目录删除，也不能把原文件换名搬进领域。
+以下是r2对旧`Editor/CharacterPipeline/Authoring/SkillDocument/BtsmtlSkillGraphAuthoringApplier.cs`的迁出来源记录。当前任务已记录有效能力迁出和旧协议移除；本表用于说明能力去向，不表示该旧文件仍应存在或需要恢复。r3继续消费已落到正式模块的能力。
 
 | 现有位置 | 保留能力与已有模块去向 | 退役部分 |
 |---|---|---|
@@ -53,7 +54,7 @@ Entry/Prime只在单一无条件入口时直接表达默认目标；条件/多�
 
 只暴露当前正式业务需要的typed读取/配置方法，不让生成代码依赖AgentPackage、JToken、私有字段反射或SerializedObject路径。校验继续分布在已有FSM/Skill模块，公共导出器只判断输出是否完整，不重新维护业务规则。
 
-当前代码创建缺失State/Edge时要求`local:`，系统入口主要校验已有UID；这不足以证明删除后可按指定业务identity重建。生成所需的identity恢复应成为正式领域接口，不能复用协议local表或依赖旧子资产GUID。工厂当前会填入系统入口和默认StateBody，输出/重建必须复用这些实际对象或经明确领域创建合同一次建立，不能重复创建后靠按名字合并。
+r2盘点曾发现缺失State/Edge创建受`local:`限制、系统入口只能对照已有UID；身份恢复已按任务记录迁入正式接口，r3不能退回协议local表或旧子资产GUID查找。工厂生成的系统入口和默认StateBody继续复用或通过明确领域合同一次建立，不能重复创建后靠名字合并。
 
 ### D3.2 完整输出与生成范围
 
@@ -92,7 +93,7 @@ Build独立显式执行，仍由现有Character编译器读取正式资产产生
 
 StopThreshold若统一ControlModule阈值可保持移动/取消一致；Skill私有取消阈值可独立调手感。二者是未来业务变更，不是本次迁移的隐藏选项，本change不以选择未定永久阻塞FSM交付；清理验收明确排除仍有消费者的正式声明。Corin控制文件中的MovingTurn来源和60Hz时长改动不覆盖。
 
-m_Name问题单独取得完整错误、实际类型和继承链后修复；目前命中的普通SkillStepPort字段不足以确认MonoBehaviour错误来源，不全局改名或清缓存。若证实属于其它领域，记录精确归属，不扩大FSM修复范围。
+m_Name问题已在任务4.5记录归属Slate.CutsceneGroupInspector；不再作为本Ability阶段的修改目标，不回头改Skill字段或清缓存。
 
 ### D6 r2规范对账与职责
 
@@ -106,6 +107,46 @@ m_Name问题单独取得完整错误、实际类型和继承链后修复；目�
 | Skill Program的Pipeline要求 | 保留为下游合同；网络Adapter实现与载荷证据由Corin闭环change负责，不进入本tasks |
 | 原“Unity资产永久唯一来源/不能替换物理身份”的解释 | 生成范围以已导出C#重建；保留业务identity/order和根关系，允许替换物理对象；未导出修改不自动同步 |
 | GraphAuthoringApplier混合协议与真实操作 | 本任务迁出有效FSM能力，C# authoring在调用者脱离后清理协议；不能先整目录删或整包改名 |
+
+### D7 r3完整Ability入口与命名
+
+用户已确认采用GameplayAbilityDefinition作为完整技能入口。本节是r2之后的新目标；前文的Skill/FSM名称用于识别现有代码与历史接口，不意味着保留两套正式作者名称。
+
+| 业务对象 | 正式职责 | 从现有模型迁移 |
+|---|---|---|
+| GameplayAbilityDefinition | 可独立打开的技能资产；唯一拥有技能身份、激活/阻断/取消/目标要求、效果引用、后续能力关系和执行图 | CharacterSkillAuthoringDefinition及ActionProfile中对应技能规则；从角色内联配置迁到明确Ability资产 |
+| AbilityGraph | 激活后的执行内容，保留原生FSM、Sequence/Parallel/Macro/Timeline语义 | 原Skill执行图；私有图归Ability文件，共享资源保持明确外部引用 |
+| AbilityGrant | 某角色/装备授予哪个Ability、输入映射及已有授予参数 | 角色侧Skill登记和输入绑定；不复制技能规则/执行图，不新增等级系统 |
+| AbilityExecution | 一次实际释放的身份、阶段和生命周期 | 复用现有Skill相关Action实例状态和Program布局，不并行创建第二实例 |
+| AbilityExecutionContext | 本次释放的owner、目标、输入来源、代次及任务/Timeline关联 | 当前运行上下文；普通技能不暴露必须手配的空ActionContextSlot |
+
+AbilityGrant对应授予记录，不是一次执行，不把UE AbilitySpec当成AbilityExecution。命名借用UE的职责划分，执行仍是本项目的Program/Simulation Pipeline。
+
+作者打开一个Ability页面即可编辑基本信息、激活规则、目标要求、执行图和资源引用。专用规则随Ability保存；实际共同维护的规则可显式共享，并直接在该入口显示其来源，禁止本地副本加共享副本同时生效。独立动画、效果和共享Macro保持资源身份，不将整个角色或素材库塞入Ability。业务取舍：聚合入口减少拼配置的负担；显式共享能统一多个技能的策略，但修改会影响全部消费者，必须显示共享关系。同值不自动等于应共享。
+
+规则只有一个正式对象来源：默认由Ability拥有，真正共享时引用明确共享对象，不同时保存内联值和外部覆盖。共享规则identity与Ability identity分开；DodgeBack/DodgeForward不能因迁入两个Ability就改变原Dodge准入分组、并发上限、互斥和取消边界。旧ActionId等仍参与执行的身份按业务角色明确映射，不机械替换成AbilityId。
+
+Action不再作为技能作者层与Ability并列的“另一种技能”。迁移ActionProfile/Context/Instance前按消费者区分：Skill专属职责迁入以上对象；若通用Action确实服务独立非Skill业务，保留其明确内部职责，不全库机械改名。相同状态不因作者术语变化复制，已正确激活、取消、预测身份与Timeline停止顺序保留。专属旧类型/字段/入口迁完即删除，无兼容别名或旧新双写。
+
+### D8 r3完整Ability的C#范围
+
+完整Ability输出从GameplayAbilityDefinition开始，覆盖外壳字段、自有激活规则、唯一执行图及私有FSM/条件/Macro/Timeline；外部共享策略、效果和素材只输出精确引用。公开export/generate工具仍只有原两个，扩展其正式领域根支持，不另造Ability MCP。
+
+完整生成顺序为创建Ability资产和自有内容 → 配置能力规则及业务identity → 恢复资源和内部引用 → 连接执行图 → 挂接唯一AbilityGraph → 对明确指定角色/装备恢复AbilityGrant及输入映射。若本次只生成可复用Ability资产，可以明确不授予角色；若声明恢复某角色能力，则不得只返回孤立图或依赖该角色残留旧SkillDefinition。删除输出后重建遵循同一明确范围。
+
+子图导出只覆盖该子图拥有内容及指向既有Ability的owner绑定，不克隆外壳、规则或其它技能。完整Ability与子图范围必须显式区分，不能把当前仅BindSkillRoot/SetSkillGraphs的代码作为完整Ability实现。只操作FSM不得修改准入、阈值、目标策略、输入绑定或后续能力。
+
+### D9 r3与现行规范的实际差异
+
+| 当前合同/代码 | r3目标与处理 |
+|---|---|
+| character-pipeline-definition-authoring要求SkillDefinitions + SkillGraphs及EntryGraphAuthoringId跨表解析 | 改为AbilityGrant精确引用GameplayAbilityDefinition，编译由Ability直接进入其执行图；对应正式规范在实施时同步，当前不伪装为已变更 |
+| 本change原“技能根是独立FlowGraph主资产” | 明确替换为独立GameplayAbilityDefinition，私有AbilityGraph归它拥有，不能同时保留两个主入口 |
+| 当前GA外壳要求输入、目标、ActionContext混存 | 输入映射归授予，目标要求归Ability，当前目标与执行关联归ExecutionContext；保留有效业务值和使用时机 |
+| 当前C#生成只把Graph加入Definition.SkillGraphs | 扩展为完整外壳/规则/图/授予范围，旧图重建记录继续有效，但不证明此新增范围完成 |
+| ActionProfile被DodgeBack/DodgeForward共享 | 按明确共享策略保留单一规则来源，不拆成会漂移的同值副本，不改闪避完成或取消行为 |
+
+本轮只修改本change工件，未提前写current specs、公共C#基线或其它规划。名称和所有权迁移属于新实现任务；既有r2勾选保持不动。成本、冷却等只展示和连接已有能力，不凭UE命名扩大系统范围。
 
 ## Risks / Trade-offs
 
@@ -121,7 +162,7 @@ m_Name问题单独取得完整错误、实际类型和继承链后修复；目�
 
 ## Planning Revision
 
-- revision: r2
+- revision: r3（完整GameplayAbilityDefinition入口）
 - baseline: remove-agent-authoring-use-native-csharp/design.md r2，2026-09-13
-- scope: 只更新本目录proposal/design/tasks/specs；已有任务勾选与implementation记录不视为新计划完成证据。
+- scope: 只更新本目录proposal/design/tasks/specs；r2已有勾选和implementation记录保留，新增Ability任务不含验证任务。
 - dispatch: 未向规划、实现或协调窗口发送消息；本次不修改业务代码/资产。

@@ -123,14 +123,14 @@ Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Set
 
 ### Requirement: 子图私有与共享所有权必须明确
 
-每个技能根 MUST保存为独立FlowGraph主资产，CharacterPipelineDefinition MUST只引用该技能根，MUST不把技能根保存为Definition子资产。技能根拥有的私有页面、Macro与Timeline MUST保存为同一技能文件内的子资产；共享Macro所拥有的私有内容 MUST归属该共享Macro文件。私有内容的保存、复制与回收 MUST依据实际文件owner，不得回退使用Definition作为私有内容容器。
+每个完整技能 MUST以独立GameplayAbilityDefinition主资产作为作者入口，唯一AbilityGraph及其私有FSM、条件、Macro与Timeline MUST由该Ability拥有并保存于对应资产文件。CharacterPipelineDefinition MUST通过AbilityGrant精确引用Ability，MUST不再维护独立SkillDefinitions/SkillGraphs双重登记，也不得保存这些私有内容。共享Macro所拥有的私有内容 MUST归属该共享Macro文件；私有内容保存、复制与回收 MUST依据真实owner，不得通过第二根或镜像图绕过。
 
 新建私有子图 MUST由当前根自动拥有，作者无需先创建独立资产。共享子图 MUST显式引用并显示共享属性。删除调用 MUST不删除仍被引用的共享定义；私有闭包回收、复制和保存 MUST归属根事务。MUST不同时保存私有子图的内联副本与资产副本。
 
 #### Scenario: 新建技能根与私有内容
 - **WHEN** 作者创建技能根及其私有Macro或Timeline
-- **THEN** 技能根 MUST成为独立主资产，私有内容 MUST保存在该技能文件中
-- **AND** Definition MUST只保存根引用，不持有这些私有子资产
+- **THEN** GameplayAbilityDefinition MUST成为独立主资产，执行图和私有内容 MUST由该Ability拥有
+- **AND** 角色Definition MUST只保存授予引用，不持有技能内部子资产
 
 #### Scenario: 私有内容指向错误文件
 - **WHEN** 私有页面或Timeline的实际文件与其声明调用方的所属技能文件不一致
@@ -197,18 +197,46 @@ Corin迁移 MUST删除Attack无消费Startup Branches、单步OnEnter Action Set
 - **THEN** 生成范围 MUST以该代码为准，不把未导出修改自动合并进源码或重建结果
 - **AND** 人工保存本身 MUST不触发导出、生成或Build
 
-### Requirement: 每个GA式技能必须只有一个正式入口图
+### Requirement: GameplayAbilityDefinition必须是完整技能作者入口
 
-每个正式Skill MUST由一个稳定Skill identity和一个Entry Graph组成。Skill外壳 MUST保存激活、目标、Action Context、替换和后续关系；执行Graph MUST承载节点、Macro、State、Condition和Timeline闭包。系统 MUST拒绝同一Skill的多个执行根、隐藏入口或从旧Character RootTree推断入口。
+每个GameplayAbilityDefinition MUST拥有稳定Ability identity、技能激活/阻断/取消规则、目标要求、已有消耗/冷却/效果引用、后续能力关系和唯一AbilityGraph。作者 MUST能从该入口编辑规则、执行图和资源；专用规则归Ability拥有，显式共享规则只有一个正式来源，不同时保存本地副本和外部覆盖。AbilityGraph MUST保留原生FSM及组合/Timeline业务，系统 MUST拒绝第二能力外壳、多个执行根或旧Character RootTree入口。此作者合同不要求新增尚不存在的效果或等级系统。
 
 #### Scenario: 激活技能
-- **WHEN** 输入或正式控制规则请求一个Skill
-- **THEN** 系统 MUST通过该Skill唯一Entry Graph创建一次正式激活
-- **AND** 编译、网络、回滚和观察 MUST使用同一Skill root identity
+- **WHEN** 输入或正式控制规则请求一个已授予Ability
+- **THEN** 系统 MUST使用该Ability的正式激活规则和唯一AbilityGraph进入现有Program执行
+- **AND** 编译、网络、回滚和观察 MUST保留对应稳定业务identity，不新增第二套运行实例
+
+#### Scenario: 两个闪避能力共享规则
+- **WHEN** DodgeBack与DodgeForward迁移为独立Ability并继续共享原激活策略
+- **THEN** 规则 MUST只有一个明确来源，作者入口 MUST显示共享关系
+- **AND** 原准入分组、并发上限、互斥和取消语义 MUST保持，规则identity不得误当Ability identity
+
+### Requirement: Ability授予与一次执行必须各自归属
+
+AbilityGrant MUST表示明确角色/装备授予的Ability引用、输入映射和已有授予参数，不复制技能规则或执行图。AbilityExecution MUST表示一次释放，AbilityExecutionContext MUST承载当前目标、来源和执行关联；二者 MUST复用现有对应状态，不另造Skill/Action并行状态。目标要求属于定义，实际目标属于执行。普通Ability节点及Timeline MUST绑定当前执行上下文，不要求作者创建空ActionContextSlot。合法非Skill上下文 MUST保留其业务边界。
+
+#### Scenario: 相同Ability授予不同角色
+- **WHEN** 两个角色引用同一Ability但使用不同输入映射
+- **THEN** 输入绑定 MUST分别属于各自AbilityGrant，技能规则和执行图保持同一正式来源
+- **AND** 两次实际释放 MUST各自拥有隔离的运行身份，授予记录不得被当作执行实例
+
+### Requirement: 完整Ability代码生成必须包含外壳与执行内容
+
+完整Ability导出 MUST以GameplayAbilityDefinition为根，覆盖定义字段、自有规则、唯一执行图及私有闭包，显式引用外部共享规则/效果/素材；生成 MUST恢复完整定义和声明范围内的角色授予/输入绑定。MUST不以只登记Graph、只恢复FSM或依赖旧SkillDefinition残留作为完整能力生成。子图范围 MUST只处理指定子图和已有owner，不克隆或覆盖能力外壳。公共工具继续为export_code/generate_assets，不新增Ability专用MCP。
+
+#### Scenario: 角色尚无该Ability记录
+- **WHEN** 完整生成目标明确包含Ability资产及对指定角色的授予，而角色尚未登记该能力
+- **THEN** 生成 MUST创建完整Ability及内部内容，并恢复明确AbilityGrant和输入映射
+- **AND** MUST不要求预先存在旧SkillDefinition/ActionProfile外壳或旧生成子资产GUID
+
+#### Scenario: 只重建连段FSM
+- **WHEN** 明确生成范围仅是某个Ability的连段状态机
+- **THEN** 生成 MUST保持该Ability规则、授予和其它内容不变，恢复原子图owner引用
+- **AND** MUST不新增第二Ability外壳，也不能将子图输出报告为完整Ability输出
 
 ### Requirement: Skill变量必须按正式provider和生命周期访问
 
-技能作者面板 MUST区分Character State、Ability Attribute、GameplayTag、Input/TargetData、Skill Local Blackboard、State、ActionInstance和Frame Fact。每个变量引用 MUST包含owner、稳定声明ID、类型、读写权限和生命周期。Skill MUST不通过名字、反射、路径扫描或某个Skill Graph的隐式共享变量访问其他provider。
+技能作者面板 MUST区分Character State、Ability Attribute、GameplayTag、Input/TargetData、Ability Local Blackboard、State、AbilityExecution和Frame Fact。每个变量引用 MUST包含owner、稳定声明ID、类型、读写权限和生命周期。Ability MUST不通过名字、反射、路径扫描或某个图的隐式共享变量访问其他provider；正式Skill专属命名迁移后不得保留并行别名或第二份运行数据。
 
 #### Scenario: 读取角色移动事实
 - **WHEN** Skill读取速度、朝向或移动模式

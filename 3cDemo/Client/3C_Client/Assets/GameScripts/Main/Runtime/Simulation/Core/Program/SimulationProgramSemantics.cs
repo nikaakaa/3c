@@ -1573,7 +1573,8 @@ namespace ThirdPersonSimulation
         EquipmentVisualBinding = 30,
         ControlModule = 31,
         AbilityProgram = 32,
-        TimelineBinding = 33
+        TimelineBinding = 33,
+        CharacterState = 34
     }
 
     public enum ProgramCatalogFieldKind : byte

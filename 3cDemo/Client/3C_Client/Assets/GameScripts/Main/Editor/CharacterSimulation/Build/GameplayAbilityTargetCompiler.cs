@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!artifact.Header.Root.IsAbility ||
                 !artifact.SemanticIr.Manifest.Root.Equals(artifact.Header.Root))
                 throw new InvalidOperationException("Gameplay Ability Target requires an Ability Semantic IR artifact.");
+            GameplayAbilityProviderContract.Create(artifact.SemanticIr.CatalogEntries);
         }
     }
 }

@@ -205,6 +205,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Index.InputValues);
                 return;
             }
+            if (node is BtsmtlSkillMoveFacingAngleFlowNode move)
+            {
+                DeclareIdentity(
+                    ProgramCatalogEntryKind.CharacterState,
+                    "move-facing-angle",
+                    move.ProviderOwnerId,
+                    source,
+                    m_Index.CharacterStates,
+                    "character-state");
+                return;
+            }
+            if (node is IBtsmtlSkillCharacterStateNode state)
+            {
+                DeclareIdentity(
+                    ProgramCatalogEntryKind.CharacterState,
+                    state.FieldId,
+                    state.ProviderOwnerId,
+                    source,
+                    m_Index.CharacterStates,
+                    "character-state");
+                return;
+            }
             if (node is BtsmtlSkillCanActivateActionFlowNode admission)
             {
                 object profile = BtsmtlSkillGraphAuthoringMetadata.ReadField(admission, "admissionProfile");
@@ -216,12 +238,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (node is BtsmtlSkillGameplayTagFlowNode tag)
             {
-                DeclareTag(tag.Tag.Value, source);
+                DeclareTag(tag.Tag.Value, tag.ProviderOwnerId, source);
                 return;
             }
             if (node is BtsmtlSkillGameplayTagQueryFlowNode query)
             {
-                DeclareQuery(query.Query, source);
+                DeclareQuery(query.Query, query.ProviderOwnerId, source);
                 return;
             }
             if (node is BtsmtlSkillGameplayAttributeFlowNode attribute)
@@ -245,7 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (remove.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
                     DeclareEffectReference(model, remove.Effect, owners.GameplayProviderOwnerId, source);
                 else
-                    DeclareQuery(remove.EffectTagQuery, source);
+                    DeclareQuery(remove.EffectTagQuery, remove.ProviderOwnerId, source);
             }
         }
 
@@ -389,27 +411,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value");
         }
 
-        void DeclareTag(string identity, CharacterSimulationSourceLocation source)
+        void DeclareTag(
+            string identity,
+            string providerOwner,
+            CharacterSimulationSourceLocation source)
         {
-            DeclareIdentity(ProgramCatalogEntryKind.GameplayTag, identity, string.Empty, source, m_Index.GameplayTags, "tag");
+            DeclareIdentity(ProgramCatalogEntryKind.GameplayTag, identity, providerOwner, source, m_Index.GameplayTags, "tag");
         }
 
-        void DeclareQuery(GameplayTagQuery query, CharacterSimulationSourceLocation source)
+        void DeclareQuery(
+            GameplayTagQuery query,
+            string providerOwner,
+            CharacterSimulationSourceLocation source)
         {
             if (query == null)
             {
                 m_Report.Error("ability_tag_query_missing", source.Identity, "Ability Gameplay Tag查询为空。");
                 return;
             }
-            DeclareQueryTags(query.All, source);
-            DeclareQueryTags(query.Any, source);
-            DeclareQueryTags(query.None, source);
+            DeclareQueryTags(query.All, providerOwner, source);
+            DeclareQueryTags(query.Any, providerOwner, source);
+            DeclareQueryTags(query.None, providerOwner, source);
         }
 
-        void DeclareQueryTags(IReadOnlyList<GameplayTagId> tags, CharacterSimulationSourceLocation source)
+        void DeclareQueryTags(
+            IReadOnlyList<GameplayTagId> tags,
+            string providerOwner,
+            CharacterSimulationSourceLocation source)
         {
             for (int i = 0; i < tags.Count; i++)
-                DeclareTag(tags[i].Value, source);
+                DeclareTag(tags[i].Value, providerOwner, source);
         }
 
         void DeclareIdentity(

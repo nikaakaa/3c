@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public HashSet<string> EquipmentFeatures { get; } = new HashSet<string>(StringComparer.Ordinal);
         public HashSet<string> EquipmentItems { get; } = new HashSet<string>(StringComparer.Ordinal);
         public HashSet<string> EquipmentParameters { get; } = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<string> CharacterStates { get; } = new HashSet<string>(StringComparer.Ordinal);
     }
 
     public sealed class CharacterSimulationCatalogCompiler

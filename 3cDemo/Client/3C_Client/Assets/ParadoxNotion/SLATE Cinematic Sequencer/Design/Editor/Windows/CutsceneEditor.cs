@@ -530,6 +530,43 @@ namespace Slate
             cutscene.currentTime = time;
         }
 
+        bool TryGetEmbeddedGroup(CutsceneGroup source, out IEmbeddedTimelineGroupBinding group)
+        {
+            group = null;
+            if (embeddedTimeline == null || !(source is IEmbeddedTimelineProxyIdentity proxy))
+                return false;
+            for (int index = 0; index < embeddedTimeline.Groups.Count; index++)
+            {
+                IEmbeddedTimelineGroupBinding candidate = embeddedTimeline.Groups[index];
+                if (string.Equals(candidate.AuthoringId, proxy.AuthoringId, System.StringComparison.Ordinal))
+                {
+                    group = candidate;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsEmbeddedSelected(CutsceneGroup source)
+        {
+            return TryGetEmbeddedGroup(source, out IEmbeddedTimelineGroupBinding group) &&
+                   ReferenceEquals(embeddedTimeline.Selected, group);
+        }
+
+        bool IsEmbeddedSelected(CutsceneTrack source)
+        {
+            return embeddedTimeline != null && source is IEmbeddedTimelineProxyIdentity proxy &&
+                   embeddedTimeline.TryGetTrack(proxy.AuthoringId, out IEmbeddedTimelineTrackBinding track) &&
+                   ReferenceEquals(embeddedTimeline.Selected, track);
+        }
+
+        bool IsEmbeddedSelected(ActionClip source)
+        {
+            return embeddedTimeline != null && source is IEmbeddedTimelineProxyIdentity proxy &&
+                   embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding clip) &&
+                   ReferenceEquals(embeddedTimeline.Selected, clip);
+        }
+
         public static float CurrentSnapInterval {
             get
             {
@@ -1912,7 +1949,7 @@ namespace Slate
                 return;
             }
 
-            if ( cutscene.isActive ) { //no scrubbing if playing in runtime
+            if ( !embeddedSurface && cutscene.isActive ) { //no scrubbing if playing in runtime
                 return;
             }
 
@@ -1924,8 +1961,8 @@ namespace Slate
                 var loopRegionMinPos = TimeToPos(cutscene.playTimeMin) + leftRect.width;
 
                 var isEndCarret = embeddedLength == null && (Mathf.Abs(mousePosition.x - endCarretPos) < 10 || e.control);
-                var isRegionMax = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
-                var isRegionMin = Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMinPos) < 10;
+                var isRegionMax = !embeddedSurface && Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMaxPos) < 10;
+                var isRegionMin = !embeddedSurface && Prefs.loopRegionMode && Mathf.Abs(mousePosition.x - loopRegionMinPos) < 10;
 
                 if ( isEndCarret || isRegionMax || isRegionMin ) {
                     CacheMagnetSnapTimes();
@@ -1936,7 +1973,7 @@ namespace Slate
                     isMovingLoopRegionMin = isRegionMin && !isMovingLoopRegionMax;
                     isMovingEndCarret = isEndCarret && !isMovingLoopRegionMax;
                     isMovingScrubCarret = !isMovingEndCarret && !isMovingLoopRegionMax && !isMovingLoopRegionMin;
-                    if ( isMovingScrubCarret ) {
+                    if ( isMovingScrubCarret && !embeddedSurface ) {
                         Pause();
                     }
                 }
@@ -2368,7 +2405,7 @@ namespace Slate
                 nextYPos += GROUP_HEIGHT;
 
                 //highligh?
-                var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup );
+                var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || IsEmbeddedSelected(group) || group == pickedGroup );
                 GUI.color = groupSelected ? LIST_SELECTION_COLOR : GROUP_COLOR;
                 GUI.Box(groupRect, string.Empty, Styles.headerBoxStyle);
                 GUI.color = Color.white;
@@ -2455,11 +2492,14 @@ namespace Slate
 
                 //REORDERING
                 if ( e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition) ) {
-                    CutsceneUtility.selectedObject = group;
+                    if ( embeddedSurface && TryGetEmbeddedGroup(group, out IEmbeddedTimelineGroupBinding formalGroup) )
+                        embeddedTimeline.Select(formalGroup);
+                    else
+                        CutsceneUtility.selectedObject = group;
                     if ( !( group is DirectorGroup ) ) {
                         pickedGroup = group;
                     }
-                    if ( e.clickCount == 2 ) {
+                    if ( e.clickCount == 2 && !embeddedSurface ) {
                         Selection.activeGameObject = group.actor;
                     }
                     e.Use();
@@ -2510,7 +2550,7 @@ namespace Slate
                 GUI.DrawTexture(trackRect, whiteTexture);
                 GUI.color = Color.white.WithAlpha(0.25f);
                 GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
-                if ( ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack ) {
+                if ( ReferenceEquals(track, CutsceneUtility.selectedObject) || IsEmbeddedSelected(track) || track == pickedTrack ) {
                     GUI.color = LIST_SELECTION_COLOR;
                     GUI.DrawTexture(trackRect, whiteTexture);
                 }
@@ -2893,7 +2933,7 @@ namespace Slate
 
 
                         //dont draw if outside of view range and not selected
-                        var isSelected = ReferenceEquals(CutsceneUtility.selectedObject, action) || ( multiSelection != null && multiSelection.Select(b => b.action).Contains(action) );
+                        var isSelected = ReferenceEquals(CutsceneUtility.selectedObject, action) || IsEmbeddedSelected(action) || ( multiSelection != null && multiSelection.Select(b => b.action).Contains(action) );
                         var isVisible = Rect.MinMaxRect(0, scrollPos.y, centerRect.width, centerRect.height).Overlaps(clipRect);
                         if ( !isSelected && !isVisible ) {
                             clipWrapper.rect = default(Rect); //we basicaly "nullify" the rect. Too much trouble to work with nullable rect.
@@ -3172,7 +3212,12 @@ namespace Slate
                 if ( bigEnough ) {
                     multiSelection = clipWrappers.Values.Where(b => r.Overlaps(b.rect) && !b.action.isLocked).ToList();
                     if ( multiSelection.Count == 1 ) {
-                        CutsceneUtility.selectedObject = multiSelection[0].action;
+                        ActionClip selectedAction = multiSelection[0].action;
+                        if (embeddedTimeline != null && selectedAction is IEmbeddedTimelineProxyIdentity proxy &&
+                            embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                            embeddedTimeline.Select(formalClip);
+                        else
+                            CutsceneUtility.selectedObject = selectedAction;
                         multiSelection = null;
                     }
                 }
@@ -3497,7 +3542,11 @@ namespace Slate
                             multiSelection.Add(this);
                         }
                     } else {
-                        CutsceneUtility.selectedObject = action;
+                        if (editor.embeddedTimeline != null && action is IEmbeddedTimelineProxyIdentity proxy &&
+                            editor.embeddedTimeline.TryGetClip(proxy.AuthoringId, out IEmbeddedTimelineClipBinding formalClip))
+                            editor.embeddedTimeline.Select(formalClip);
+                        else
+                            CutsceneUtility.selectedObject = action;
                         if ( multiSelection != null && !multiSelection.Select(cw => cw.action).Contains(action) ) {
                             multiSelection = null;
                         }

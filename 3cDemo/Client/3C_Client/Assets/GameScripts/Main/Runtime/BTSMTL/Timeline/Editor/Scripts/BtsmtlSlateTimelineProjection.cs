@@ -65,9 +65,10 @@ namespace BTSMTL.Timeline.Editor
     }
 
     [AddComponentMenu("")]
-    sealed class BtsmtlSlateGroup : CutsceneGroup
+    sealed class BtsmtlSlateGroup : CutsceneGroup, IEmbeddedTimelineProxyIdentity
     {
         [SerializeField] string m_DisplayName = "Timeline";
+        [SerializeField] string m_SourceAuthoringId;
         [SerializeField] GameObject m_Actor;
         [SerializeField] ActorReferenceMode m_ReferenceMode = ActorReferenceMode.UseOriginal;
         [SerializeField] ActorInitialTransformation m_InitialTransformation = ActorInitialTransformation.UseOriginal;
@@ -76,6 +77,13 @@ namespace BTSMTL.Timeline.Editor
         {
             get => m_DisplayName;
             set => m_DisplayName = value ?? string.Empty;
+        }
+
+        public string AuthoringId => m_SourceAuthoringId ?? string.Empty;
+
+        public void Configure(string sourceAuthoringId)
+        {
+            m_SourceAuthoringId = sourceAuthoringId ?? string.Empty;
         }
 
         public override GameObject actor
@@ -145,6 +153,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_AddClip(cursorTime);
                 e.Use();
+                return;
             }
             base.OnTrackTimelineGUI(posRect, timeRect, cursorTime, timeToPosition);
         }
@@ -649,6 +658,7 @@ namespace BTSMTL.Timeline.Editor
             BtsmtlSlateGroup group = groupObject.AddComponent<BtsmtlSlateGroup>();
             group.hideFlags = HideFlags.HideAndDontSave;
             group.name = m_Request.Timeline.Name;
+            group.Configure(m_Request.Timeline.AuthoringId);
             m_Cutscene.groups.Add(group);
 
             for (int trackIndex = 0; trackIndex < m_Binding.Tracks.Count; trackIndex++)
@@ -1278,4 +1288,3 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
-

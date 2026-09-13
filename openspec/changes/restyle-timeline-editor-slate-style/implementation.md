@@ -12,7 +12,7 @@ Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 G
 TimelineEditorWindow
   -> TimelineEditorOpenRequest
   -> TimelineEditorSessionContext
-  -> BtsmtlSlateTimelineDirectProjection
+  -> BtsmtlSlateTimelineProjection（只持有正式 Binding，不创建 Slate 组件）
   -> Slate CutsceneEditorSurface.InitializeEmbedded(IEmbeddedTimelineBinding)
   -> Slate Track/Clip/Curve 手势
   -> TimelineData identity 快照
@@ -64,7 +64,7 @@ TimelineEditorWindow
 - Timeline 绑定关闭时只释放 `CutsceneEditorSurface` 和编辑适配数据；没有临时 Slate GameObject、组件树或延迟重建代理需要销毁。
 - Timeline 窗口新增完整构建后的 `WindowOpened` 生命周期通知，Runtime Observation Bridge 在 Slate Surface 和恢复状态都建立后再刷新；不再依赖过早的 AssetOpened 时机。
 - Timeline 顶部和对应 Graph Shell/SkillGraph Preview 区显示当前 `TimelineAuthoringFingerprint` 的短作者 revision，并在正式 `TimelineData.OnValueChanged` 后广播变化；它只表示作者内容，不冒充运行时 adoption。
-- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。当前 Client 源码树中已不存在 `AgentSkillFlowDocumentExporter`、`BtsmtlSkillTimelineAuthoringApplier`、`BtsmtlSlateTimelineProjection` 或 `TimelineAuthoringClipBinding.Export/Apply` 消费者。C# authoring 直接读取 `TimelineAsset.Data`、`TimelineData.Tracks/Sections/ExternalBindings` 与 `SerializedOwner/SerializedPropertyPath`；未新增 Slate 遍历、输出器或编辑器布局模型，10.3 已按既有正式 API 收口。
+- C# authoring typed 合同已交付后，Projection 的新增 Clip 配置改为 `Read -> typed configuration 覆盖 popup 输入 -> Configure`；已删除 `BuildClipProperties`、`JObject` using 及旧 `Export/Apply` 消费。当前 Client 源码树中已不存在 `AgentSkillFlowDocumentExporter`、`BtsmtlSkillTimelineAuthoringApplier` 或 `TimelineAuthoringClipBinding.Export/Apply` 消费者。`BtsmtlSlateTimelineProjection` 仍是正式打开协调器，但只持有 `TimelineEditorSessionContext`、`BtsmtlSlateTimelineBinding` 和 `CutsceneEditorSurface`，不再创建 `GameObject`、`Cutscene`、Group、Track、ActionClip 代理。C# authoring 直接读取 `TimelineAsset.Data`、`TimelineData.Tracks/Sections/ExternalBindings` 与 `SerializedOwner/SerializedPropertyPath`；未新增 Slate 遍历、输出器或编辑器布局模型，10.3 已按既有正式 API 收口。
 
 ## 正式能力对账
 
@@ -72,20 +72,9 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 
 ## 编译证据
 
-2026-09-13 当前 Unity Editor 在重新编译 Slate 与 Timeline 编辑程序集后，Console 未出现 Timeline/Slate 错误；最新刷新中的工作区错误来自其它 Character/Camera 生成链（`CollisionStatus` 合同无效、`CameraShotProjectionCompiler` 缺少 Cinemachine 引用），不归本 change。
+2026-09-14 通过显式 Unity 实例刷新脚本后，Console 未出现 Timeline/Slate 类型错误；当前剩余错误来自其它窗口正在迁移的 Simulation Control 合同（`CharacterControlRuntimeState`、`CharacterControlRuntimeStateTransaction`、`CharacterControlStateSchema` 的构造/参数不匹配），因此 Unity 尚未加载本轮 Timeline 程序集，不能把当前结果当作曲线端到端通过。
 
-已通过（Timeline Editor 程序集）：
-
-```text
-dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj \
-  --no-restore --disable-build-servers /nr:false /m:1 /p:UseSharedCompilation=false /p:LangVersion=11.0
-```
-
-结果为 0 errors；仅有项目及第三方既有 warnings。该次编译使用了生成项目所需的 `LangVersion=11.0` 覆盖；每次构建后执行 `dotnet build-server shutdown`。
-
-`BTSMTL.Timeline.Tree.Editor` 目标程序集本轮以 0 错误、0 警告通过；主 Editor 工程仍可能被工作区其它 Character/Camera 生成项目的错误阻断，这不是 Timeline 绑定代码错误，且不替代 Unity Editor 端到端验收。
-
-主 Editor 工程的联合编译仍可能被工作区其它生成项目的现有 Camera 合同缺失成员阻断；本轮不修改这些无关业务文件，也不把该失败归因于 Timeline 绑定。该验证不替代 Unity Editor 端到端验收。
+本轮没有把主 Editor 的联合编译错误归因于 Timeline，也没有修改 Simulation 文件。真实打开、选 Clip、展开曲线、拖动 key、保存和重开仍待主工作区编译恢复后验证。
 
 ## 尚未完成
 
@@ -95,6 +84,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj \
 - C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
 - 旧 JSON/Agent 文件协议消费者已从当前 Client 源码树清除；Timeline 公共 content/owner 读取沿用现有正式 API，编辑器局部选择和滚动不属于生成输出。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
+- 现有正式 Slate binding 已替代 BTSMTL 隐藏组件树，但右侧真实 owner Inspector、Section 的无 Director 编辑接线，以及曲线展开状态跨刷新恢复仍未完整收口。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。
 - 当前无 Slate 对象入口需要在连接到正确的 `D:/Unity_Project_1/3C` Editor 后做一次真实打开、刷新、创建和曲线编辑验收；已连接的 Editor 是 `D:/Unity_Project_1/3C-parallel-test`，且本轮检查时尚未 ready，因此不能把该次连接当作主工作区证据。

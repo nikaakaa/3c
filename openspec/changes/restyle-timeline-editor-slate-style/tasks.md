@@ -1,5 +1,7 @@
 2026-09-13 源码对账：ce21aec8f/afcb90056已恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理，DirectProjection已删除。第11节按[源码解耦决策](slate-source-decoupling.md)重新展开为未完成实现项。第1–10节保留此前功能记录，但对已由当前源码证明不成立的勾选予以纠正；未重新核对的历史勾选不构成本次端到端声明。正确业务实现不回退。只在主线实施，不向旧worktree双写；不新增测试、手动验证、编译或校验任务。
 
+2026-09-14 实现对账：提交 `93b232070` 已删除 `BuildProjection`、隐藏宿主和 BTSMTL 代理组件树；提交 `66e2ebc92` 将正式 binding 接入现有 Slate `ShowGroupsAndTracksList` / `ShowTimeLines` 入口。第11.10 的“无组件入口”已达到源码边界，但真实打开、刷新、曲线编辑和保存仍未端到端验收；其余第11节按实际缺口继续保留未完成。
+
 2026-09-13 领域协调仅PLAN：原UI/数据/Undo实现要求不变；预览联动改用独立技能、原生Pose重建、Camera绑定/Reset及Session领域准备，废除总包Build/ProgramEpoch前置。Motion源XYZ/Yaw归外部源，UI只接曲线owner的typed字段与导航。本次只更新清单含义，不向实现任务下发或扩大授权。
 
 ## 1. 已有接入基础
@@ -104,5 +106,5 @@
 - [ ] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板
 - [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务
 - [ ] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂
-- [ ] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
+- [x] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
 - [ ] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态

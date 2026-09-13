@@ -29,6 +29,10 @@ TimelineEditorWindow
 
 因此当前定性为“原生算法及正式命令逐步接线中，组件/绑定混合输入尚未收口”，不是恢复完成。后续保留已正确左侧Track/Group、正式新增、游标/帧号、曲线/缩放/鼠标代码；在同一原函数里逐项替换输入和命令，清除仍存在的替代分支与组件依赖，不整体回退、不新增第三套UI。以下第2–10节源码细节仍以原阅读快照理解，本段才是这次增量核对，不代表UI实跑或完整复审。
 
+2026-09-14 当前实现更新：上述段落是历史快照，不能继续作为当前代码结论。`BtsmtlSlateTimelineProjection` 已改为只创建 `CutsceneEditorSurface` ScriptableObject，并把 `BtsmtlSlateTimelineBinding` 直接传入原 Slate Surface；`BuildProjection`、`CreateChild`、隐藏宿主、BtsmtlSlateGroup/Track/ActionClip、代理 identity 和差异快照路径已删除。现有 Slate 原入口在 embedded binding 下读取正式 Groups/Tracks/Clips，Clip 仍使用原 `ActionClipWrapper`，曲线仍使用原 `TrackEditorGUI`/`CurveEditor`。
+
+当前仍未闭合的不是代理树，而是：Section 的无 Director 编辑、真实 owner Inspector、曲线展开状态恢复、部分 formal 手势和 Unity 端到端曲线保存验收。当前主工作区还被其他 Simulation Control 编译错误阻断，不能把此次源码收口说成运行通过。
+
 目标只有一条编辑链：
 
 ```text

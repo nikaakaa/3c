@@ -484,7 +484,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnAuthoringIssue(string message)
         {
-            SetStatus(string.IsNullOrEmpty(message) ? $"Frame {TimelineUtility.FrameRate}" : message);
+            SetStatus(message);
         }
 
         void CaptureViewState()

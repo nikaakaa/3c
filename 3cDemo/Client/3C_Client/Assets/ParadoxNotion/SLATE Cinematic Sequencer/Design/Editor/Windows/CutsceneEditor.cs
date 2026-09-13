@@ -1743,6 +1743,12 @@ namespace Slate
         //...
         void DrawGuides() {
 
+            if (embeddedTimeline != null)
+            {
+                DrawEmbeddedGuides();
+                return;
+            }
+
             //draw a vertical line at 0 time
             DrawGuideLine(0, isProSkin ? Color.white : Color.black);
 
@@ -2116,7 +2122,7 @@ namespace Slate
 
             DrawRuntimeOverlay();
             DrawHistoryOverlay();
-            DrawEmbeddedGuides();
+            DrawGuides();
 
             if (e.rawType == EventType.MouseUp)
             {

@@ -19,7 +19,7 @@
 - Corin Attack Ability：入口加 5 个 Stage、10 个 Condition、5 个 Timeline 局部文件，共 21 个文件。
 - Corin Dodge Back / Dodge Forward Ability：各 4 个文件。
 - Corin Attack / Dodge Admission Profile：各 1 个入口文件。
-- Locomotion Pose Graph：入口和局部 Slot 文件，共 2 个文件。
+- Locomotion Pose Graph：入口、局部 Slot 文件和 Graph 局部文件，共 3 个文件。
 - Corin Animation EventGraph：1 个入口文件。
 
 旧平铺入口及其 .meta 已删除；各专属目录的源码和 .meta 成对保留。MotionCurve 仍只使用正式 RootMotionCurveAsset 引用，没有恢复逐帧曲线或 CurveEndFrame。

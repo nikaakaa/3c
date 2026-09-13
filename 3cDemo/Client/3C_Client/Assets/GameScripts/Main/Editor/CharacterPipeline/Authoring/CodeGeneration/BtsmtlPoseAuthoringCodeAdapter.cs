@@ -112,7 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     graph.GraphId.Value,
                     "poseGraph",
                     false,
-                    $"Graphs/{BtsmtlAuthoringCodeSyntax.Identifier(graph.name)}",
+                    PoseGraphSection(graph, i),
                     BtsmtlAuthoringCodeSyntax.TypeName(graph.GetType()));
             }
 
@@ -212,6 +212,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             }
             return result;
         }
+
+        static string PoseGraphSection(CharacterPoseCanvasGraph graph, int index) =>
+            $"Graphs/{(string.IsNullOrWhiteSpace(graph.name) ? $"Graph{index}" : BtsmtlAuthoringCodeSyntax.Identifier(graph.name))}";
 
         static int[] ResolveResourceBindingIndices(
             BtsmtlAuthoringCodeExportContext context,

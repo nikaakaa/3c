@@ -7,7 +7,8 @@ namespace ThirdPersonSimulation
     public enum SimulationProgramRootKind : byte
     {
         Character = 1,
-        Timeline = 2
+        Timeline = 2,
+        Ability = 3
     }
 
     public readonly struct SimulationProgramRootDescriptor : IEquatable<SimulationProgramRootDescriptor>
@@ -37,6 +38,7 @@ namespace ThirdPersonSimulation
             IsHash(ContentIdentity);
         public bool IsCharacter => Kind == SimulationProgramRootKind.Character;
         public bool IsTimeline => Kind == SimulationProgramRootKind.Timeline;
+        public bool IsAbility => Kind == SimulationProgramRootKind.Ability;
 
         public bool Equals(SimulationProgramRootDescriptor other) =>
             Kind == other.Kind &&
@@ -69,6 +71,8 @@ namespace ThirdPersonSimulation
                 ? "control:"
                 : kind == SimulationProgramRootKind.Timeline
                     ? "timeline:"
+                    : kind == SimulationProgramRootKind.Ability
+                        ? "ability:"
                     : string.Empty;
             return prefix.Length > 0 &&
                    !string.IsNullOrEmpty(value) &&

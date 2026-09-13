@@ -36,11 +36,10 @@ TimelineEditorWindow
 作者界面：
 
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
-- 左右轨道共享行高和滚动，曲线展开同步；右侧 Inspector 可折叠、拖拽调宽并保持最小可读宽度，窗口宽度不足时自动收起 Inspector。
-- 右侧 Clip Inspector 使用正式 `Clip` 字段显示 Authoring Id、Contract、帧长、Start/End、Blend In/Out 与 Clip In；Slate 参数行只复用原参数绘制和关键帧交互，曲线修改通过 `IEmbeddedTimelineClipBinding.ApplyCurveEdits` 回写同一 `TimelineEditorSessionContext`，不创建或选中 Slate `ActionClip`。
-- MotionWarp 与 TreeClip 的专用右侧 Inspector 也只接收 `ApplyFormalMutation`；源曲线绑定、Tree ownership 和执行阶段不再直接调用 `Timeline.ApplyModify`，右侧字段与 Slate 时间轴共用同一 Session、Undo 和刷新链。
+- 左右轨道共享行高和滚动，曲线展开同步；外层 Timeline 窗口不再添加 Toolbar、SplitView、Runtime 菜单或右侧自制 Inspector，只承载原 `CutsceneEditorSurface`。
+- formal Clip 的时间、Blend、DopeSheet、关键帧和曲线交互全部由原 Slate `ActionClipWindow` / `ActionClipWrapper` 通过 `IEmbeddedTimelineBinding` 接回正式 Session；不再创建 `TimelineFormalClipDetailsView`、MotionWarp/Tree 自制属性面板。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与正式右侧 Inspector，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
-- `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；前者只提供 Slate 编辑器 UI/接口，后者只提供正式 Camera Resource 字段类型，均不改变 TimelineData owner，也不引入 Slate 组件树。
+- `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；Timeline 窗口只作为 Unity 容器，实际可见编辑 UI 来自原 Slate Surface，均不改变 TimelineData owner，也不引入 Slate 组件树。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
 - 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换作者时间、调用正式 Clip 编辑或绘制引导，不启用 Slate 播放或采样。
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。

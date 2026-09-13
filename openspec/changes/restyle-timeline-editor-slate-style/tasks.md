@@ -41,15 +41,15 @@
 ## 5. GUI 布局和生命周期
 
 - [x] 5.1 合并文档名/ownership/来源，工具栏统一高度；清掉重复标题和隐藏控件的空白占位
-- [x] 5.2 Slate Surface 通过单一 SurfaceLayout 计算工具栏、搜索、缩放、标尺、左右轨道和命中区域；属性区由同一 Timeline 窗口的 UI Toolkit 宿主管理
-- [x] 5.3 左右共同行高度与垂直滚动，曲线展开同步；右侧 Inspector 可收起/调宽，窄窗口自动收起 Inspector
+- [x] 5.2 唯一 Timeline 窗口只承载 Slate Surface；原 Slate Surface 自己计算工具栏、搜索、缩放、标尺、左右轨道和命中区域，不新增 UI Toolkit Timeline 壳
+- [x] 5.3 左右共同行高度与垂直滚动、曲线展开同步均由原 Slate Surface 保留；不新增右侧自制 Inspector 或第二套属性面板
 - [x] 5.4 删除临时 Auto、“作者预览”、无关 Actor/Director/Render 和未映射菜单；曲线入口不再拼入 Track 名
 - [x] 5.5 根据完整堆栈修复重复序列化字段、GUI 和 proxy 生命周期异常，销毁时释放临时宿主/选择/回调，不隐藏错误代替处理
 
 ## 6. 刷新与属性
 
-- [x] 6.1 正式 Track/Clip/key selection 驱动属性区，时间按帧、资源精确引用、Curve 只显示当前注册 channel
-- [x] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野、纵向滚动及 Inspector 宽度；删除对象不自动改选首个 Clip
+- [x] 6.1 正式 Track/Clip/key selection 驱动原 Slate Surface，时间按帧、资源精确引用、Curve 只显示当前注册 channel；不创建独立属性区
+- [x] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野和纵向滚动；删除对象不自动改选首个 Clip，不保存自制 Inspector 宽度
 - [x] 6.3 Add Track/Add Clip 弹窗在正式提交失败或 owner 过期时保留当前输入并报告原因；DopeSheet 仅按像素密度减少显示 key，不修改正式曲线
 
 ## 7. 预览边界
@@ -95,5 +95,5 @@
 - [x] 11.2 在原ActionClipWindow/交互包装器/菜单中将字段和命令改接正式ID、typed创建/编辑和现有Mutation/Undo，保留原选择、框选、拖动、裁剪、缩放行为；formal Clip 使用同一 `ActionClipWindow` 与 `ActionClipWrapper`，菜单命令转到 `IEmbeddedTimelineBinding`
 - [x] 11.3 在原CurveEditor/DopeSheetEditor/参数工具中替换曲线读写、编辑时间和提交绑定，保留原关键帧/切线算法及全部曲线数据，不另写渲染器或曲线编辑器；无对象 binding 通过原 Slate CurveEditor/DopeSheetEditor 使用纯编辑数据，提交由 `TimelineEditorSessionContext` 完成
 - [x] 11.4 删除Timeline临时GameObject/Cutscene/Group/Track/ActionClip组件树和专属创建/扫描/销毁，清除Actor/Director/运行采样等无关绑定，必要签名/薄adapter就地改接；由 `BtsmtlSlateTimelineDirectProjection` 与 `IEmbeddedTimelineBinding` 完成，提交 `7ddde8c4e`
-- [x] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、右侧Inspector和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback
+- [x] 11.5 将原刷新/选择/Undo/生命周期通知接回现有Session、原 Slate Surface 和视图状态，保留正式Camera轨道及外部预览；清理重做遗留入口，不保留第二UI或组件fallback
 - [x] 11.6 将原 Slate 原生对象/Actor/Director/Cutscene 条件门禁改接正式 Timeline contract 和编辑资格，合法新增/选择/编辑不因缺少原生组件或原生播放状态被拒绝；正式路径仅使用 binding/Session，不创建原生组件树

@@ -14,18 +14,6 @@ namespace BTSMTL.Timeline.Editor
 {
     public sealed class TimelineEditorWindow : EditorWindow
     {
-        const float DetailsMinWidth = 380f;
-        const float DetailsMaxWidth = 560f;
-        const float DetailsInitialWidth = 420f;
-        const float DetailsCollapseThreshold = 1080f;
-
-        enum RuntimeObservationSelectionMode : byte
-        {
-            Automatic = 0,
-            FollowLatest = 1,
-            Pinned = 2
-        }
-
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
         internal static event Action<TimelineEditorWindow> WindowOpened;
@@ -86,32 +74,10 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField]
         BtsmtlSlateTimelineViewState m_ViewState;
 
-        [SerializeField]
-        float m_DetailsWidth = DetailsInitialWidth;
-
-        [SerializeField]
-        bool m_DetailsCollapsed;
-
-        [SerializeField]
-        RuntimeObservationSelectionMode m_RuntimeObservationSelectionMode;
-
         TimelineNode m_SourceNode;
         BtsmtlSlateTimelineDirectProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
-        ToolbarButton m_BackButton;
-        ObjectField m_SharedTimelineField;
-        Label m_SourceSummary;
-        Label m_RevisionSummary;
-        Label m_Status;
-        ToolbarMenu m_RuntimeObservationMenu;
-        TwoPaneSplitView m_WorkspaceSplit;
-        VisualElement m_DetailsPane;
-        VisualElement m_DetailsHost;
-        ToolbarButton m_DetailsToggle;
-        bool m_NarrowDetailsCollapsed;
-        RuntimeInstanceKey m_PinnedRuntimePlayback;
-        bool m_HasPinnedRuntimePlayback;
 
         public TimelineData Timeline => m_Timeline;
         public BaseTreeWindow SourceGraphWindow => m_SourceGraphWindow;
@@ -144,22 +110,7 @@ namespace BTSMTL.Timeline.Editor
             out string message)
         {
             IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
-            if (m_RuntimeObservationSelectionMode == RuntimeObservationSelectionMode.Pinned)
-            {
-                for (int index = 0; index < summaries.Count; index++)
-                    if (summaries[index].Playback.Equals(m_PinnedRuntimePlayback) && summaries[index].Playback.IsValid)
-                    {
-                        summary = summaries[index];
-                        message = string.Empty;
-                        return true;
-                    }
-                summary = default;
-                message = "固定的运行调用已不在当前诊断记录中。";
-                return false;
-            }
-            if (summaries.Count != 0 &&
-                (m_RuntimeObservationSelectionMode == RuntimeObservationSelectionMode.FollowLatest || summaries.Count == 1) &&
-                summaries[0].Playback.IsValid)
+            if (summaries.Count == 1 && summaries[0].Playback.IsValid)
             {
                 summary = summaries[0];
                 message = string.Empty;
@@ -167,77 +118,9 @@ namespace BTSMTL.Timeline.Editor
             }
             summary = default;
             message = summaries.Count > 1
-                ? "当前 Timeline 对应多个运行调用，请选择跟随最新或固定具体实例。"
+                ? "当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。"
                 : string.Empty;
             return false;
-        }
-
-        internal void RefreshRuntimeObservationMenu()
-        {
-            if (m_RuntimeObservationMenu == null)
-                return;
-            m_RuntimeObservationMenu.menu.MenuItems().Clear();
-            m_RuntimeObservationMenu.menu.AppendAction(
-                "自动（仅唯一调用）",
-                _ => SetRuntimeObservationAutomatic());
-            m_RuntimeObservationMenu.menu.AppendAction(
-                "跟随最新调用",
-                _ => SetRuntimeObservationFollowLatest());
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
-            for (int index = 0; index < summaries.Count; index++)
-            {
-                RuntimeTimelinePlaybackDebugSummary candidate = summaries[index];
-                RuntimeInstanceKey playback = candidate.Playback;
-                m_RuntimeObservationMenu.menu.AppendAction(
-                    RuntimeObservationLabel(candidate),
-                    _ => SetRuntimeObservationPinned(playback));
-            }
-            m_RuntimeObservationMenu.text = RuntimeObservationSelectionLabel(summaries);
-            m_RuntimeObservationMenu.tooltip = summaries.Count == 0
-                ? "没有 Timeline 运行调用"
-                : "选择自动、跟随最新或固定具体运行调用";
-        }
-
-        void SetRuntimeObservationAutomatic()
-        {
-            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Automatic;
-            m_HasPinnedRuntimePlayback = false;
-            RefreshRuntimeObservationMenu();
-            TimelineRuntimeObservationBridge.RefreshWindow(this);
-        }
-
-        void SetRuntimeObservationFollowLatest()
-        {
-            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.FollowLatest;
-            m_HasPinnedRuntimePlayback = false;
-            RefreshRuntimeObservationMenu();
-            TimelineRuntimeObservationBridge.RefreshWindow(this);
-        }
-
-        void SetRuntimeObservationPinned(RuntimeInstanceKey playback)
-        {
-            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Pinned;
-            m_PinnedRuntimePlayback = playback;
-            m_HasPinnedRuntimePlayback = playback.IsValid;
-            RefreshRuntimeObservationMenu();
-            TimelineRuntimeObservationBridge.RefreshWindow(this);
-        }
-
-        static string RuntimeObservationLabel(RuntimeTimelinePlaybackDebugSummary summary)
-        {
-            RuntimeInstanceKey playback = summary.Playback;
-            return $"固定 #{playback.TimelinePlaybackId} / Action {playback.ActionInstanceId} / Tick {summary.LatestLogicTick}";
-        }
-
-        string RuntimeObservationSelectionLabel(IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries)
-        {
-            return m_RuntimeObservationSelectionMode switch
-            {
-                RuntimeObservationSelectionMode.FollowLatest => "Runtime: 跟随最新",
-                RuntimeObservationSelectionMode.Pinned when m_HasPinnedRuntimePlayback =>
-                    $"Runtime: 固定 #{m_PinnedRuntimePlayback.TimelinePlaybackId}",
-                _ => summaries.Count == 1 ? "Runtime: 自动" : "Runtime: 选择调用"
-            };
         }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
@@ -321,7 +204,6 @@ namespace BTSMTL.Timeline.Editor
         {
             m_SourceGraphAuthoringId = graphAuthoringId ?? string.Empty;
             m_SourceNodeGuid = sourceNodeAuthoringId ?? string.Empty;
-            RefreshRuntimeObservationMenu();
         }
 
         void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)
@@ -357,16 +239,9 @@ namespace BTSMTL.Timeline.Editor
 
         public void CreateGUI()
         {
-            rootVisualElement.RegisterCallback<GeometryChangedEvent>(OnRootGeometryChanged);
             TryRestoreBinding();
             if (m_SlateProjection == null)
                 BuildUnboundView();
-        }
-
-        void OnRootGeometryChanged(GeometryChangedEvent evt)
-        {
-            m_NarrowDetailsCollapsed = evt.newRect.width < DetailsCollapseThreshold || evt.newRect.height < 360f;
-            ApplyDetailsVisibility();
         }
 
         void OnEnable()
@@ -438,8 +313,6 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
-            m_RuntimeObservationSelectionMode = RuntimeObservationSelectionMode.Automatic;
-            m_HasPinnedRuntimePlayback = false;
             Selection.activeObject = null;
 
             TimelineEditorOpenRequest openRequest = TimelineEditorOpenRequestComposition.Create(
@@ -455,7 +328,6 @@ namespace BTSMTL.Timeline.Editor
                     out string unavailableReason))
             {
                 rootVisualElement.Clear();
-                rootVisualElement.Add(CreateAuthoringToolbar());
                 rootVisualElement.Add(new HelpBox(
                     $"Slate Timeline unavailable: {unavailableReason}",
                     HelpBoxMessageType.Error));
@@ -464,7 +336,6 @@ namespace BTSMTL.Timeline.Editor
 
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             rootVisualElement.Clear();
-            rootVisualElement.Add(CreateAuthoringToolbar());
             m_SlateSurface = new IMGUIContainer(DrawSlateSurface)
             {
                 name = "slate-timeline-surface"
@@ -473,45 +344,8 @@ namespace BTSMTL.Timeline.Editor
             m_SlateSurface.style.flexShrink = 1f;
             m_SlateSurface.style.minHeight = 320f;
             m_SlateProjection.ConfigureRepaint(() => m_SlateSurface?.MarkDirtyRepaint());
-            m_WorkspaceSplit = new TwoPaneSplitView(
-                1,
-                Mathf.Clamp(m_DetailsWidth, DetailsMinWidth, DetailsMaxWidth),
-                TwoPaneSplitViewOrientation.Horizontal)
-            {
-                name = "timeline-workspace"
-            };
-            m_WorkspaceSplit.style.flexGrow = 1f;
-            m_WorkspaceSplit.style.flexShrink = 1f;
-            m_WorkspaceSplit.style.minHeight = 320f;
-            m_WorkspaceSplit.Add(m_SlateSurface);
-            m_DetailsPane = new VisualElement { name = "timeline-details-pane" };
-            m_DetailsPane.style.flexGrow = 1f;
-            m_DetailsPane.style.flexShrink = 0f;
-            m_DetailsPane.style.minWidth = DetailsMinWidth;
-            m_DetailsPane.style.maxWidth = DetailsMaxWidth;
-            m_DetailsPane.Add(CreateDetailsHeader());
-            m_DetailsHost = new ScrollView { name = "timeline-details" };
-            m_DetailsHost.style.flexGrow = 1f;
-            m_DetailsHost.style.paddingLeft = 8f;
-            m_DetailsHost.style.paddingRight = 8f;
-            m_DetailsHost.style.paddingTop = 4f;
-            m_DetailsHost.style.paddingBottom = 4f;
-            m_DetailsPane.Add(m_DetailsHost);
-            m_WorkspaceSplit.Add(m_DetailsPane);
-            m_WorkspaceSplit.RegisterCallback<GeometryChangedEvent>(_ =>
-            {
-                if (!m_DetailsCollapsed && m_WorkspaceSplit.fixedPane != null)
-                {
-                    float width = m_WorkspaceSplit.fixedPane.resolvedStyle.width;
-                    if (width > 0f)
-                        m_DetailsWidth = Mathf.Clamp(width, DetailsMinWidth, DetailsMaxWidth);
-                }
-            });
-            rootVisualElement.Add(m_WorkspaceSplit);
-            ApplyDetailsVisibility();
-            m_SlateProjection.SelectionChanged += RebuildDetails;
             m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
-            RebuildDetails(m_SlateProjection.Selection);
+            rootVisualElement.Add(m_SlateSurface);
             if (string.Equals(m_ViewTimelineAuthoringId, timeline.AuthoringId, StringComparison.Ordinal))
                 m_SlateProjection.RestoreViewState(m_ViewState);
             WindowOpened?.Invoke(this);
@@ -521,8 +355,6 @@ namespace BTSMTL.Timeline.Editor
         {
             titleContent = new GUIContent("Timeline Editor");
             rootVisualElement.Clear();
-            rootVisualElement.Add(CreateAuthoringToolbar());
-            SetStatus("选择一个 Timeline 资产或从 Skill Graph 打开 Timeline。");
         }
 
         void ClearBinding()
@@ -637,32 +469,17 @@ namespace BTSMTL.Timeline.Editor
                 m_Timeline.OnValueChanged -= OnTimelineValueChanged;
             if (m_SlateProjection != null)
             {
-                m_SlateProjection.SelectionChanged -= RebuildDetails;
                 m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
             }
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
-            m_WorkspaceSplit = null;
-            m_DetailsPane = null;
-            m_DetailsHost = null;
-            m_RevisionSummary = null;
             m_Timeline = null;
         }
 
         void OnTimelineValueChanged()
         {
-            if (m_RevisionSummary != null)
-                m_RevisionSummary.text = AuthoringRevisionLabel();
             AuthoringRevisionChanged?.Invoke(this);
-        }
-
-        string AuthoringRevisionLabel()
-        {
-            string revision = AuthoringRevision;
-            return string.IsNullOrEmpty(revision)
-                ? "Authoring: -"
-                : $"Authoring: {revision.Substring(0, Math.Min(8, revision.Length))}";
         }
 
         void OnAuthoringIssue(string message)
@@ -693,130 +510,6 @@ namespace BTSMTL.Timeline.Editor
                 Mathf.Max(1f, rect.height),
                 BeginWindows,
                 EndWindows);
-        }
-
-        void RebuildDetails(TimelineEditorSelection selection)
-        {
-            if (m_DetailsHost == null)
-                return;
-            m_DetailsHost.Clear();
-            if (selection.Kind == TimelineEditorSelectionKind.None)
-            {
-                m_DetailsHost.Add(new Label("选择 Track、Clip 或关键帧查看属性。"));
-                ApplyDetailsVisibility();
-                return;
-            }
-
-            if (selection.Clip != null)
-            {
-                Clip clip = selection.Clip;
-                m_DetailsHost.Add(new Label(
-                    $"{clip.Name}  |  {clip.ContractKind}  |  Frame {clip.StartFrame}..{clip.EndFrame}"));
-                m_DetailsHost.Add(new Button(() => OpenClip(clip)) { text = "Open Source" });
-                if (clip is MotionWarpClip)
-                    m_DetailsHost.Add(new MotionWarpClipInspectorView(clip, m_SlateProjection.ApplyFormalMutation));
-                else if (clip is TreeClip treeClip)
-                {
-                    var inspector = new TreeClipInspectorView(treeClip, m_SlateProjection.ApplyFormalMutation);
-                    inspector.Initialize(OpenClip);
-                    m_DetailsHost.Add(inspector);
-                }
-                else
-                    m_DetailsHost.Add(new TimelineFormalClipDetailsView(
-                        clip,
-                        m_SlateProjection.ApplyFormalMutation,
-                        m_SlateProjection.Selected as IEmbeddedTimelineClipBinding,
-                        m_SlateProjection.FrameRate));
-                ApplyDetailsVisibility();
-                return;
-            }
-
-            if (selection.Track != null)
-            {
-                Track track = selection.Track;
-                m_DetailsHost.Add(new Label($"{track.Name}  |  {track.ContractKind}  |  Clips {track.Clips.Count}"));
-            }
-            ApplyDetailsVisibility();
-        }
-
-        VisualElement CreateDetailsHeader()
-        {
-            var toolbar = new Toolbar { name = "timeline-details-header" };
-            var title = new Label("Inspector");
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
-            toolbar.Add(title);
-            return toolbar;
-        }
-
-        void ApplyDetailsVisibility()
-        {
-            if (m_DetailsToggle != null)
-                m_DetailsToggle.text = m_DetailsCollapsed || m_NarrowDetailsCollapsed
-                    ? "Inspector ▸"
-                    : "Inspector ▾";
-            if (m_WorkspaceSplit == null)
-                return;
-            if (m_DetailsCollapsed || m_NarrowDetailsCollapsed)
-                m_WorkspaceSplit.CollapseChild(1);
-            else
-                m_WorkspaceSplit.UnCollapse();
-        }
-
-        VisualElement CreateAuthoringToolbar()
-        {
-            var toolbar = new Toolbar();
-            m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
-            m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
-            var previewButton = new ToolbarButton(ReturnToPreview) { text = "Preview" };
-            previewButton.style.display = m_SourceGraphWindow ? DisplayStyle.Flex : DisplayStyle.None;
-            m_SharedTimelineField = new ObjectField("Document")
-            {
-                objectType = typeof(UnityEngine.Object),
-                allowSceneObjects = false
-            };
-            m_SharedTimelineField.style.width = 280f;
-            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
-            m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
-            m_SourceSummary = new Label(CurrentSourceSummary());
-            m_SourceSummary.style.minWidth = 180f;
-            m_SourceSummary.style.marginLeft = 6f;
-            m_SourceSummary.tooltip = CurrentSourceTooltip();
-            m_RevisionSummary = new Label(AuthoringRevisionLabel());
-            m_RevisionSummary.style.marginLeft = 6f;
-            m_RevisionSummary.tooltip = "TimelineData 当前作者内容指纹；不代表运行时已采用。";
-            m_DetailsToggle = new ToolbarButton(() =>
-            {
-                m_DetailsCollapsed = !m_DetailsCollapsed;
-                ApplyDetailsVisibility();
-            });
-            m_DetailsToggle.style.width = 100f;
-            m_RuntimeObservationMenu = new ToolbarMenu { text = "Runtime: 选择调用" };
-            m_RuntimeObservationMenu.style.width = 150f;
-            m_Status = new Label($"Frame {TimelineUtility.FrameRate}");
-            m_Status.style.marginLeft = 6f;
-            m_Status.style.flexGrow = 1f;
-            m_Status.tooltip = "Timeline 使用正式作者帧编辑。角色 Scene Play、Build、Skill 和运行观察由 Skill Graph / Graph Shell 管理。";
-            toolbar.Add(m_BackButton);
-            toolbar.Add(previewButton);
-            toolbar.Add(m_SharedTimelineField);
-            toolbar.Add(m_SourceSummary);
-            toolbar.Add(m_RevisionSummary);
-            toolbar.Add(m_DetailsToggle);
-            toolbar.Add(m_RuntimeObservationMenu);
-            toolbar.Add(m_Status);
-            RefreshRuntimeObservationMenu();
-            return toolbar;
-        }
-
-        void ReturnToPreview()
-        {
-            if (!m_SourceGraphWindow)
-            {
-                SetStatus("当前 Timeline 没有绑定 Graph Shell 上下文。");
-                return;
-            }
-            m_SourceGraphWindow.Show();
-            m_SourceGraphWindow.Focus();
         }
 
         bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
@@ -868,48 +561,12 @@ namespace BTSMTL.Timeline.Editor
             m_NavigationSourceGraphWindow = null;
             m_NavigationSourceGraphOwner = null;
             m_NavigationViewport = Vector2.zero;
-            if (m_BackButton != null)
-                m_BackButton.style.display = DisplayStyle.None;
-        }
-
-        void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
-        {
-            TimelineAsset asset = evt.newValue as TimelineAsset;
-            if (asset)
-            {
-                ClearNavigation();
-                BindAsset(asset, m_SourceGraphAuthoringId, m_SourceNodeGuid);
-                return;
-            }
-
-            if (m_SerializedOwner is TimelineAsset)
-                ClearBinding();
-            else
-                m_SharedTimelineField.SetValueWithoutNotify(null);
-        }
-
-        string CurrentSourceSummary()
-        {
-            if (m_Timeline == null)
-                return "Source: None";
-            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
-            return ownership;
-        }
-
-        string CurrentSourceTooltip()
-        {
-            if (m_Timeline == null)
-                return "Source: None";
-            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
-            return $"Source: {ownership} / {m_Timeline.Name}";
         }
 
         void SetStatus(string value)
         {
-            if (m_Status == null)
-                return;
-            m_Status.text = value ?? string.Empty;
-            m_Status.tooltip = value ?? string.Empty;
+            if (!string.IsNullOrEmpty(value))
+                ShowNotification(new GUIContent(value));
         }
     }
 
@@ -938,7 +595,6 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!window || window.Timeline == null)
                 return;
-            window.RefreshRuntimeObservationMenu();
             if (!window.TryResolveRuntimeObservation(
                     out RuntimeTimelinePlaybackDebugSummary summary,
                     out string observationMessage))

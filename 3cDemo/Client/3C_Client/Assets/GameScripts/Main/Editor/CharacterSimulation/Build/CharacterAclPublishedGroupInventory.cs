@@ -44,32 +44,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string assetPath = $"{Folder}/{Stem}.asset";
             bool hasAsset = m_Paths.Contains(assetPath);
             if (hasAsset)
-            {
-                try
-                {
-                    AssetDatabase.ImportAsset(
-                        assetPath,
-                        ImportAssetOptions.ForceSynchronousImport);
-                    Resource =
-                        AssetDatabase.LoadAssetAtPath<CharacterAclAnimationResource>(
-                            assetPath);
-                }
-                catch
-                {
-                    Resource = null;
-                }
-            }
-            bool complete = false;
-            try
-            {
-                complete = hasAsset && Resource &&
-                    Resource.ValidateRuntime().IsReady &&
-                    HasExactDeploymentFiles();
-            }
-            catch
-            {
-                complete = false;
-            }
+                Resource = AssetDatabase.LoadAssetAtPath<CharacterAclAnimationResource>(assetPath);
+            bool complete = hasAsset && Resource &&
+                Resource.ValidateRuntime().IsReady &&
+                HasExactDeploymentFiles();
             State = complete
                 ? CharacterAclPublishedGroupFileState.Complete
                 : hasAsset
@@ -136,6 +114,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string stem,
             out CharacterAclPublishedGroupInventoryEntry entry) =>
             m_ByStem.TryGetValue(stem, out entry);
+
+        internal static CharacterAclPublishedGroupInventory Empty() =>
+            new CharacterAclPublishedGroupInventory(
+                Array.Empty<CharacterAclPublishedGroupInventoryEntry>());
 
         internal static CharacterAclPublishedGroupInventory Scan(
             string folder,

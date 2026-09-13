@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile,
                 definition,
                 CreateAnimationBuildInput(ownerGuid, profile),
-                true);
+                false);
         }
 
         internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
@@ -241,7 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile,
                 definition,
                 animationBuildInput,
-                true);
+                false);
         }
 
         internal static CharacterPresentationProjectionCompileResult CompilePoseOnly(
@@ -347,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     definition.AnimationPresentationProfile,
                     definition,
                     animationBuildInput,
-                    request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish);
+                    false);
             }
             catch (Exception exception)
             {
@@ -407,7 +407,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 artifact,
                 animationBuildInput,
                 poseResult,
-                request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish,
+                false,
                 report,
                 out CharacterPresentationSemanticContract frontendContract,
                 out CharacterAnimationBuildCatalog animationCatalog);

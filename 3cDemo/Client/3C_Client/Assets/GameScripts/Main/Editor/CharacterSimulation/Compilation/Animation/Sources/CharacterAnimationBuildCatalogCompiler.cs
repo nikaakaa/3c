@@ -257,7 +257,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
             return CharacterAclHash.ComputeStrings(values);
         }
 
-        CharacterAclAnimationGroupArtifact TryReusePublishedGroup(
+        CharacterAclAnimationGroupArtifact RequirePublishedGroup(
             CharacterAclPublishedGroupInventory publishedInventory,
             string buildInputIdentity,
             int groupIndex,
@@ -276,29 +276,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 {
                     continue;
                 }
-                try
-                {
-                    CharacterAclAnimationResourceManifest[] manifests =
-                        new CharacterAclAnimationResourceManifest[clipCount];
-                    for (int clipIndex = 0; clipIndex < clipCount; clipIndex++)
-                        manifests[clipIndex] = entry.Resource.GetGroupManifest(clipIndex);
-                    string reportPath =
-                        $"{entry.Folder}/{entry.Stem}.quality.json";
-                    CharacterAclAnimationQualityReport[] qualityReports =
-                        ReadPublishedQualityReports(reportPath, clipCount);
-                    return new CharacterAclAnimationGroupArtifact(
-                        groupIndex,
-                        entry.Resource.Manifest.GroupContentHash,
-                        buildInputIdentity,
-                        manifests,
-                        qualityReports);
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
+                CharacterAclAnimationResourceManifest[] manifests =
+                    new CharacterAclAnimationResourceManifest[clipCount];
+                for (int clipIndex = 0; clipIndex < clipCount; clipIndex++)
+                    manifests[clipIndex] = entry.Resource.GetGroupManifest(clipIndex);
+                string reportPath =
+                    $"{entry.Folder}/{entry.Stem}.quality.json";
+                CharacterAclAnimationQualityReport[] qualityReports =
+                    ReadPublishedQualityReports(reportPath, clipCount);
+                return new CharacterAclAnimationGroupArtifact(
+                    groupIndex,
+                    entry.Resource.Manifest.GroupContentHash,
+                    buildInputIdentity,
+                    manifests,
+                    qualityReports);
             }
-            return null;
+            throw new InvalidOperationException(
+                $"Published ACL group for build input '{buildInputIdentity}' with {clipCount} clips is missing or stale.");
         }
 
         static CharacterAclAnimationQualityReport[] ReadPublishedQualityReports(
@@ -329,7 +323,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
         internal CharacterAnimationBuildCatalog Complete(List<string> errors)
         {
             var timingWatch = System.Diagnostics.Stopwatch.StartNew();
-            double reuseMs = 0;
             CharacterAnimationBuildCatalogEntry[] entries = m_Entries.Values
                 .OrderBy(value => value.StableIdentity, StringComparer.Ordinal)
                 .ToArray();
@@ -352,10 +345,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 .OrderBy(value => value.Value)
                 .ToArray();
             CharacterAclPublishedGroupInventory publishedInventory =
-                CharacterAclPublishedGroupInventory.Scan(
-                    CharacterAclAnimationArtifactIdentity.GetOutputFolder(
-                        m_Input.OwnerAssetGuid),
-                    CharacterAclAnimationArtifactIdentity.GetAssetStemPrefix());
+                aclGroups.Length == 0
+                    ? CharacterAclPublishedGroupInventory.Empty()
+                    : CharacterAclPublishedGroupInventory.Scan(
+                        CharacterAclAnimationArtifactIdentity.GetOutputFolder(
+                            m_Input.OwnerAssetGuid),
+                        CharacterAclAnimationArtifactIdentity.GetAssetStemPrefix());
             for (int groupOrder = 0; groupOrder < aclGroups.Length; groupOrder++)
             {
                 string groupIdentity = aclGroups[groupOrder].Key;
@@ -400,68 +395,38 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                     }
                     continue;
                 }
-                var requests = new List<CharacterAclAnimationBuildRequest>(group.Count);
                 var clipIdentityValues = new List<string>(group.Count * 6);
-                try
+                for (int i = 0; i < group.Count; i++)
                 {
-                    for (int i = 0; i < group.Count; i++)
-                    {
-                        CharacterAnimationBuildCatalogEntry entry = group[i];
-                        if (!entry.AuthoringClip)
-                            throw new InvalidOperationException(
-                                $"ACL animation catalog entry '{entry.StableIdentity}' has no authoring Clip for the formal build.");
-                        CharacterAnimationClipContentIdentity identity =
-                            CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
-                        clipIdentityValues.Add(identity.AssetGuid);
-                        clipIdentityValues.Add(identity.LocalFileId.ToString(
-                            System.Globalization.CultureInfo.InvariantCulture));
-                        clipIdentityValues.Add(identity.FullDependencyHash);
-                        clipIdentityValues.Add(identity.RegisteredCurveHash);
-                        clipIdentityValues.Add(identity.SourceDurationSeconds.ToString(
-                            "R", System.Globalization.CultureInfo.InvariantCulture));
-                        clipIdentityValues.Add(identity.Loop ? "loop" : "once");
-                        requests.Add(new CharacterAclAnimationBuildRequest(
-                            new CharacterAnimationAuthoringReadRequest(
-                                entry.AuthoringClip,
-                                identity,
-                                m_Input.SourceRig,
-                                m_Input.ParameterLayout,
-                                m_Input.Profile.AnimationPropertyBindings,
-                                Array.Empty<CharacterAnimationParameterCurveSourceBinding>(),
-                                $"animation-clip/{identity.AssetGuid}/{identity.LocalFileId}",
-                                CharacterAnimationBuildChannel.Transform |
-                                CharacterAnimationBuildChannel.AnimatedProperty),
-                            m_Input.Compression));
-                    }
-                    string buildInputIdentity = ComputeGroupBuildInputIdentity(
-                        clipIdentityValues,
-                        CharacterAnimationBuildChannel.Transform |
-                        CharacterAnimationBuildChannel.AnimatedProperty);
-                    var reuseWatch = System.Diagnostics.Stopwatch.StartNew();
-                    CharacterAclAnimationGroupArtifact groupArtifact =
-                        TryReusePublishedGroup(
-                            publishedInventory,
-                            buildInputIdentity,
-                            groupIndex,
-                            group.Count)
-                        ?? CharacterAclAnimationResourceBuilder.BuildGroup(
-                            requests,
-                            groupIndex,
-                            m_Input.OwnerAssetGuid,
-                            m_Input.NativeArtifactIdentity,
-                            buildInputIdentity);
-                    reuseWatch.Stop();
-                    reuseMs += reuseWatch.Elapsed.TotalMilliseconds;
-                    for (int i = 0; i < group.Count; i++)
-                        group[i].GroupArtifact = groupArtifact;
-                    artifacts[resourceIndex] = groupArtifact;
-                    resources[resourceIndex] = groupArtifact.CreateDescriptor(resourceIndex);
+                    CharacterAnimationBuildCatalogEntry entry = group[i];
+                    if (!entry.AuthoringClip)
+                        throw new InvalidOperationException(
+                            $"ACL animation catalog entry '{entry.StableIdentity}' has no authoring Clip for the formal build.");
+                    CharacterAnimationClipContentIdentity identity =
+                        CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(entry.AuthoringClip);
+                    clipIdentityValues.Add(identity.AssetGuid);
+                    clipIdentityValues.Add(identity.LocalFileId.ToString(
+                        System.Globalization.CultureInfo.InvariantCulture));
+                    clipIdentityValues.Add(identity.FullDependencyHash);
+                    clipIdentityValues.Add(identity.RegisteredCurveHash);
+                    clipIdentityValues.Add(identity.SourceDurationSeconds.ToString(
+                        "R", System.Globalization.CultureInfo.InvariantCulture));
+                    clipIdentityValues.Add(identity.Loop ? "loop" : "once");
                 }
-                catch (Exception exception)
-                {
-                    errors?.Add(
-                        $"ACL animation group '{groupIndex}' build failed: {exception.Message}");
-                }
+                string buildInputIdentity = ComputeGroupBuildInputIdentity(
+                    clipIdentityValues,
+                    CharacterAnimationBuildChannel.Transform |
+                    CharacterAnimationBuildChannel.AnimatedProperty);
+                CharacterAclAnimationGroupArtifact groupArtifact =
+                    RequirePublishedGroup(
+                        publishedInventory,
+                        buildInputIdentity,
+                        groupIndex,
+                        group.Count);
+                for (int i = 0; i < group.Count; i++)
+                    group[i].GroupArtifact = groupArtifact;
+                artifacts[resourceIndex] = groupArtifact;
+                resources[resourceIndex] = groupArtifact.CreateDescriptor(resourceIndex);
             }
             var hashValues = new List<string>(entries.Length * 4 + 2)
             {
@@ -484,7 +449,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                 $"[计时] 动画目录 身份计算 {CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount}次/" +
                 $"{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs:F0}ms/" +
                 $"命中{CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCacheHits} | " +
-                $"复用判定 {reuseMs:F0}ms | 总 {timingWatch.ElapsedMilliseconds}ms");
+                $"已发布读取 | 总 {timingWatch.ElapsedMilliseconds}ms");
             CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCount = 0;
             CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveTotalMs = 0;
             CharacterAnimationClipRegisteredCurveCatalog.IdentityResolveCacheHits = 0;

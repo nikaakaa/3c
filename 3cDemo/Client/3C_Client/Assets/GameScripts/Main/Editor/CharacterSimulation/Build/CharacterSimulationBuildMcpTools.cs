@@ -19,55 +19,6 @@ using UnityEngine.UI;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    [McpForUnityTool("character.build_float32_products", Description = "Build and publish the Float32 Program wrapper and Presentation Projection for one exact CharacterPipelineDefinition path.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
-    public static class BuildCharacterFloat32ProductsMcpTool
-    {
-        public sealed class Parameters
-        {
-            [ToolParameter("Omit or use start to create a job; use status to poll one job.", Required = false)]
-            public string action { get; set; }
-
-            [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
-            public string job_id { get; set; }
-
-            [ToolParameter("Exact Assets/... path to one CharacterPipelineDefinition asset required for start.", Required = false)]
-            public string definition_asset_path { get; set; }
-        }
-
-        public static object HandleCommand(JObject @params)
-        {
-            return CharacterSimulationBuildMcpJobScheduler.Handle(
-                @params,
-                CharacterSimulationBuildKind.Float32);
-        }
-    }
-
-    [McpForUnityTool("character.build_fixed_products", Description = "Build and publish Float32 and Fixed Program wrappers with one shared Presentation Projection for one exact CharacterPipelineDefinition and one exact Fixed wrapper destination.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
-    public static class BuildCharacterFixedProductsMcpTool
-    {
-        public sealed class Parameters
-        {
-            [ToolParameter("Omit or use start to create a job; use status to poll one job.", Required = false)]
-            public string action { get; set; }
-
-            [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
-            public string job_id { get; set; }
-
-            [ToolParameter("Exact Assets/... path to one CharacterPipelineDefinition asset required for start.", Required = false)]
-            public string definition_asset_path { get; set; }
-
-            [ToolParameter("Exact Assets/... .asset destination for the Fixed Program wrapper required for start.", Required = false)]
-            public string wrapper_asset_path { get; set; }
-        }
-
-        public static object HandleCommand(JObject @params)
-        {
-            return CharacterSimulationBuildMcpJobScheduler.Handle(
-                @params,
-                CharacterSimulationBuildKind.Fixed);
-        }
-    }
-
     [McpForUnityTool("timeline.build_float32_program", Description = "Build and publish the Float32 Program wrapper for one exact TimelineAsset path through the shared Semantic IR pipeline.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
     public static class BuildTimelineFloat32ProgramMcpTool
     {
@@ -513,140 +464,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         static bool s_Building;
 
-        public static object BuildFloat32(JObject parameters)
-        {
-            object validation = ValidateRequest(
-                parameters,
-                new HashSet<string>(StringComparer.Ordinal) { "definition_asset_path" },
-                false,
-                out CharacterPipelineDefinition definition,
-                out string definitionPath,
-                out _);
-            if (validation != null)
-                return validation;
-            if (!TryEnter(out object busy))
-                return busy;
-            try
-            {
-                ICharacterSimulationTargetBuildAdapter target =
-                    CharacterSimulationTargetCatalog.Float32(definition);
-                CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
-                    new CharacterSimulationBuildRequest(
-                        definition,
-                        CharacterSimulationBuildPublicationMode.Publish,
-                        new[] { target }));
-                if (!result.IsValid)
-                    return BuildFailure(definitionPath, target.UnityWrapperDestination, result);
-
-                CharacterSimulationProgramAsset wrapper =
-                    AssetDatabase.LoadAssetAtPath<CharacterSimulationProgramAsset>(
-                        target.UnityWrapperDestination);
-                if (!wrapper)
-                {
-                    return new ErrorResponse(
-                        "float32_wrapper_missing_after_build",
-                        new { definitionAssetPath = definitionPath, wrapperAssetPath = target.UnityWrapperDestination });
-                }
-                return new SuccessResponse(
-                    "Exact Float32 Program and Presentation Projection were published.",
-                    CreateResponse(
-                        definition,
-                        definitionPath,
-                        target.UnityWrapperDestination,
-                        wrapper.NumericProfileId,
-                        wrapper.TargetAbiVersion,
-                        wrapper.ProgramId,
-                        wrapper.SourceRevision,
-                        wrapper.SemanticHash,
-                        wrapper.ProgramHash,
-                        wrapper.LayoutHash,
-                        wrapper.CanonicalBytesHash,
-                        wrapper.CanonicalByteLength,
-                        result));
-            }
-            catch (Exception exception)
-            {
-                return new ErrorResponse(
-                    "character_build_exception",
-                    new { definitionAssetPath = definitionPath, message = exception.Message });
-            }
-            finally
-            {
-                s_Building = false;
-            }
-        }
-
-        public static object BuildFixed(JObject parameters)
-        {
-            object validation = ValidateRequest(
-                parameters,
-                new HashSet<string>(StringComparer.Ordinal)
-                {
-                    "definition_asset_path",
-                    "wrapper_asset_path"
-                },
-                true,
-                out CharacterPipelineDefinition definition,
-                out string definitionPath,
-                out string wrapperPath);
-            if (validation != null)
-                return validation;
-            if (!TryEnter(out object busy))
-                return busy;
-            try
-            {
-                ICharacterSimulationTargetBuildAdapter target =
-                    new FixedCharacterSimulationTargetBuildAdapter(wrapperPath);
-                CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
-                    new CharacterSimulationBuildRequest(
-                        definition,
-                        CharacterSimulationBuildPublicationMode.Publish,
-                        new[] { CharacterSimulationTargetCatalog.Float32(definition), target }));
-                if (!result.IsValid)
-                    return BuildFailure(definitionPath, wrapperPath, result);
-
-                FixedCharacterSimulationProgramAsset wrapper =
-                    AssetDatabase.LoadAssetAtPath<FixedCharacterSimulationProgramAsset>(wrapperPath);
-                if (!wrapper)
-                {
-                    return new ErrorResponse(
-                        "fixed_wrapper_missing_after_build",
-                        new { definitionAssetPath = definitionPath, wrapperAssetPath = wrapperPath });
-                }
-                return new SuccessResponse(
-                    "Exact Float32 and Fixed Programs with one shared Presentation Projection were published.",
-                    CreateResponse(
-                        definition,
-                        definitionPath,
-                        wrapperPath,
-                        ThirdPersonSimulation.Fixed.FixedSimulationNumericProfile.Value.Id.Value,
-                        ThirdPersonSimulation.Fixed.FixedSimulationNumericProfile.Value.AbiVersion.Value,
-                        wrapper.ProgramId,
-                        wrapper.SourceRevision,
-                        wrapper.SemanticHash,
-                        wrapper.ProgramHash,
-                        wrapper.LayoutHash,
-                        wrapper.CanonicalBytesHash,
-                        wrapper.CanonicalByteLength,
-                        result));
-            }
-            catch (Exception exception)
-            {
-                return new ErrorResponse(
-                    "character_build_exception",
-                    new
-                    {
-                        definitionAssetPath = definitionPath,
-                        wrapperAssetPath = wrapperPath,
-                        message = exception.Message
-                    });
-            }
-            finally
-            {
-                s_Building = false;
-            }
-        }
-
         public static object BuildTimelineFloat32(JObject parameters)
         {
             object validation = ValidateTimelineRequest(
@@ -778,41 +595,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        static object ValidateRequest(
-            JObject parameters,
-            HashSet<string> allowed,
-            bool requiresWrapper,
-            out CharacterPipelineDefinition definition,
-            out string definitionPath,
-            out string wrapperPath)
-        {
-            definition = null;
-            definitionPath = string.Empty;
-            wrapperPath = string.Empty;
-            if (parameters == null)
-                return new ErrorResponse("request_missing");
-            string unknown = parameters.Properties()
-                .Select(property => property.Name)
-                .FirstOrDefault(name => !allowed.Contains(name));
-            if (!string.IsNullOrEmpty(unknown))
-                return new ErrorResponse("unknown_parameter", new { parameter = unknown });
-            if (!TryGetExactAssetPath(parameters, "definition_asset_path", out definitionPath))
-                return new ErrorResponse("definition_asset_path_required");
-            definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(definitionPath);
-            if (!definition ||
-                !string.Equals(AssetDatabase.GetAssetPath(definition), definitionPath, StringComparison.Ordinal))
-            {
-                return new ErrorResponse(
-                    "character_pipeline_definition_not_found",
-                    new { definitionAssetPath = definitionPath });
-            }
-            if (!requiresWrapper)
-                return null;
-            if (!TryGetExactAssetPath(parameters, "wrapper_asset_path", out wrapperPath))
-                return new ErrorResponse("wrapper_asset_path_required", new { definitionAssetPath = definitionPath });
-            return null;
-        }
-
         static object ValidateTimelineRequest(
             JObject parameters,
             HashSet<string> allowed,
@@ -893,21 +675,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return true;
         }
 
-        static object BuildFailure(
-            string definitionPath,
-            string wrapperPath,
-            CharacterSimulationBuildResult result)
-        {
-            return new ErrorResponse(
-                "character_build_failed",
-                new
-                {
-                    definitionAssetPath = definitionPath,
-                    wrapperAssetPath = wrapperPath,
-                    diagnostics = Messages(result)
-                });
-        }
-
         static object TimelineBuildFailure(
             string timelinePath,
             string wrapperPath,
@@ -921,51 +688,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     wrapperAssetPath = wrapperPath,
                     diagnostics = Messages(result)
                 });
-        }
-
-        static object CreateResponse(
-            CharacterPipelineDefinition definition,
-            string definitionPath,
-            string wrapperPath,
-            string numericProfileId,
-            int targetAbiVersion,
-            string programId,
-            string sourceRevision,
-            string semanticHash,
-            string programHash,
-            string layoutHash,
-            string canonicalBytesHash,
-            int canonicalByteLength,
-            CharacterSimulationBuildResult result)
-        {
-            CharacterPresentationProjectionAsset projection =
-                definition.PresentationProjection;
-            return new
-            {
-                definitionAssetPath = definitionPath,
-                wrapperAssetPath = wrapperPath,
-                projectionAssetPath = projection ? AssetDatabase.GetAssetPath(projection) : string.Empty,
-                numericProfileId,
-                targetAbiVersion,
-                programId,
-                sourceRevision,
-                semanticHash,
-                programHash,
-                layoutHash,
-                canonicalBytesHash,
-                canonicalByteLength,
-                projection = projection
-                    ? new
-                    {
-                        projection.ProgramId,
-                        projection.SourceRevision,
-                        projection.SemanticHash,
-                        projection.ContractHash,
-                        projection.ProjectionRevision
-                    }
-                    : null,
-                diagnostics = Messages(result)
-            };
         }
 
         static object CreateTimelineResponse(
@@ -1002,11 +724,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 contentIdentity = root.ContentIdentity,
                 diagnostics = Messages(result)
             };
-        }
-
-        static object[] Messages(CharacterSimulationBuildResult result)
-        {
-            return Messages(result?.Report);
         }
 
         static object[] Messages(TimelineSimulationBuildResult result)

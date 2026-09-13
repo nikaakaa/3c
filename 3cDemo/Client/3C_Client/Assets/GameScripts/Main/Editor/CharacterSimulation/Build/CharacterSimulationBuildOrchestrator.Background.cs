@@ -461,7 +461,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     artifact,
                     animationBuildInput,
                     poseResult,
-                    true,
+                    false,
                     report,
                     out CharacterPresentationSemanticContract contract,
                     out animationCatalog);

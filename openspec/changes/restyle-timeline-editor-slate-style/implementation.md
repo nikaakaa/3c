@@ -45,6 +45,8 @@ TimelineEditorWindow
 - 纯曲线 Renderer 不再订阅旧 `AnimatedParameter/DopeSheet/CutsceneUtility` 全局事件或 Slate Undo；这些订阅只在真正调用旧原生 `DrawCurves(IAnimatableData, IKeyable, ...)` 时懒加载，避免 Timeline 纯内存路径带入旧内核副作用。
 - Section 标记支持选中，右侧 Inspector 直接编辑名称、作者帧和下一个 Section 引用，提交使用 `TimelineData.ConfigureSection/ConfigureSectionNext`，不再留下只能拖动、不能查看属性的漂浮标记。
 - Track Inspector 直接编辑正式 Track 名称和 `PersistentMuted`；曲线关键帧选择会保留所属 Clip 的 Inspector 上下文，不再因为纯 Surface 的 `Key` 选择被清空。
+- 一个 Track 内只有当前编辑 Clip 的 Curve 区会展开；未选 Clip 时取该 Track 第一条有曲线的 Clip。左侧参数名与右侧曲线行共享同一高度，避免多个 Clip 的 Curve 互相覆盖或出现漂浮的无归属曲线。
+- Curve 区高度以 72px 为下限、每个通道至少 20px；通道数量增加时只扩展当前 Track，不压缩参数名和关键帧行。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

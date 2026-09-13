@@ -11,7 +11,8 @@ namespace Slate
         const float TopHeight = 38f;
         const float GroupHeight = 22f;
         const float TrackHeight = 26f;
-        const float CurveHeight = 72f;
+        const float CurveMinHeight = 72f;
+        const float CurveRowHeight = 20f;
         const float CurveKeyStripHeight = 18f;
 
         ISlateTimelineEditorCommandPort m_Commands;
@@ -255,7 +256,9 @@ namespace Slate
             float width)
         {
             float timelineWidth = Mathf.Max(1f, width - m_LeftMargin);
-            float rowHeight = TrackHeight + (track.ShowCurves ? CurveHeight : 0f);
+            SlateTimelineEditorClipView curveClip = FindCurveClip(track);
+            float curveAreaHeight = CurveAreaHeight(curveClip);
+            float rowHeight = TrackHeight + curveAreaHeight;
             Rect leftRect = new Rect(4f, y, m_LeftMargin - 8f, rowHeight - 3f);
             Rect timelineRect = new Rect(m_LeftMargin, y, timelineWidth, rowHeight - 3f);
             bool selected = IsSelected(SlateTimelineEditorElementKind.Track, track.TrackId, string.Empty);
@@ -290,7 +293,17 @@ namespace Slate
                 Event.current.Use();
             }
             for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                DrawClip(track, track.Clips[clipIndex], timelineRect, timelineWidth);
+                DrawClip(
+                    track,
+                    track.Clips[clipIndex],
+                    timelineRect,
+                    timelineWidth,
+                    curveAreaHeight,
+                    curveClip != null && string.Equals(
+                        curveClip.ClipId,
+                        track.Clips[clipIndex].ClipId,
+                        StringComparison.Ordinal));
+            DrawCurveParameterLabels(curveClip, leftRect);
             y += rowHeight;
         }
 
@@ -298,7 +311,9 @@ namespace Slate
             SlateTimelineEditorTrackView track,
             SlateTimelineEditorClipView clip,
             Rect timelineRect,
-            float timelineWidth)
+            float timelineWidth,
+            float curveAreaHeight,
+            bool drawCurves)
         {
             int offset = string.Equals(m_DragClipId, clip.ClipId, StringComparison.Ordinal) ? m_DragClipDelta : 0;
             int start = clip.StartFrame + offset;
@@ -340,10 +355,59 @@ namespace Slate
                 }
                 Event.current.Use();
             }
-            if (track.ShowCurves)
+            if (drawCurves)
             {
-                Rect curveRect = new Rect(timelineRect.x, timelineRect.y + TrackHeight, timelineRect.width, CurveHeight);
+                Rect curveRect = new Rect(timelineRect.x, timelineRect.y + TrackHeight, timelineRect.width, curveAreaHeight);
                 DrawCurves(clip, curveRect, timelineWidth);
+            }
+        }
+
+        float CurveAreaHeight(SlateTimelineEditorClipView clip)
+        {
+            return clip == null || clip.Curves.Count == 0
+                ? 0f
+                : Mathf.Max(CurveMinHeight, clip.Curves.Count * CurveRowHeight);
+        }
+
+        SlateTimelineEditorClipView FindCurveClip(SlateTimelineEditorTrackView track)
+        {
+            if (!track.ShowCurves)
+                return null;
+            if (string.Equals(m_Selection.TrackId, track.TrackId, StringComparison.Ordinal) &&
+                !string.IsNullOrEmpty(m_Selection.ClipId))
+            {
+                for (int index = 0; index < track.Clips.Count; index++)
+                    if (string.Equals(track.Clips[index].ClipId, m_Selection.ClipId, StringComparison.Ordinal) &&
+                        track.Clips[index].Curves.Count != 0)
+                        return track.Clips[index];
+            }
+            for (int index = 0; index < track.Clips.Count; index++)
+                if (track.Clips[index].Curves.Count != 0)
+                    return track.Clips[index];
+            return null;
+        }
+
+        void DrawCurveParameterLabels(
+            SlateTimelineEditorClipView clip,
+            Rect leftRect)
+        {
+            if (clip == null || clip.Curves.Count == 0)
+                return;
+            float curveHeight = CurveAreaHeight(clip) / clip.Curves.Count;
+            for (int index = 0; index < clip.Curves.Count; index++)
+            {
+                Rect labelRect = new Rect(
+                    leftRect.x + 4f,
+                    leftRect.y + TrackHeight + index * curveHeight,
+                    leftRect.width - 8f,
+                    curveHeight - 3f);
+                GUI.color = new Color(0.06f, 0.22f, 0.22f, 0.9f);
+                GUI.Box(labelRect, GUIContent.none, Styles.headerBoxStyle ?? GUI.skin.box);
+                GUI.color = Color.white;
+                GUI.Label(
+                    new Rect(labelRect.x + 6f, labelRect.y + 2f, labelRect.width - 12f, 18f),
+                    clip.Curves[index].DisplayName,
+                    EditorStyles.miniLabel);
             }
         }
 
@@ -655,8 +719,9 @@ namespace Slate
                     continue;
                 for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
                 {
-                    if (MatchesSearch(group.Tracks[trackIndex]))
-                        height += TrackHeight + (group.Tracks[trackIndex].ShowCurves ? CurveHeight : 0f);
+                    SlateTimelineEditorTrackView track = group.Tracks[trackIndex];
+                    if (MatchesSearch(track))
+                        height += TrackHeight + CurveAreaHeight(FindCurveClip(track));
                 }
             }
             return height;

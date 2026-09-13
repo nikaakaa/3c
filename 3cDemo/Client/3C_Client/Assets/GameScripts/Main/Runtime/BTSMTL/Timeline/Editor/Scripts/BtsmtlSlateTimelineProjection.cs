@@ -719,9 +719,9 @@ namespace BTSMTL.Timeline.Editor
                 }
             }
 
-            for (int sectionIndex = 0; sectionIndex < m_Binding.Sections.Count; sectionIndex++)
+            for (int sectionIndex = 0; sectionIndex < m_Binding.SourceSections.Count; sectionIndex++)
             {
-                TimelineSection section = m_Binding.Sections[sectionIndex];
+                TimelineSection section = m_Binding.SourceSections[sectionIndex];
                 if (section != null)
                 {
                     Slate.Section proxySection = new Slate.Section(

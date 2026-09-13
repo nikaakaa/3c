@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
@@ -120,19 +123,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         "generation_context_missing",
                         request.EntryTypeName,
                         "正式生成上下文不能为空。"));
-            if (!string.Equals(request.RecipeType, entry.RecipeType, StringComparison.Ordinal) ||
-                !string.Equals(request.EntryTypeName, entry.EntryTypeName, StringComparison.Ordinal) ||
-                !string.Equals(request.SourceCodePath, entry.SourceCodePath, StringComparison.Ordinal))
+            if (!string.Equals(request.EntryTypeName, entry.GetType().FullName, StringComparison.Ordinal))
                 return BtsmtlAuthoringGenerationResult.Failure(
                     request.OutputAssetPath,
                     new BtsmtlAuthoringCodeDiagnostic(
                         BtsmtlAuthoringCodeDiagnosticSeverity.Error,
                         "generation_entry_mismatch",
                         request.EntryTypeName,
-                        "请求的recipe或入口类型与已编译正式入口不一致。"));
-            if (!string.Equals(request.SourceCodePath, context.SourceCodePath, StringComparison.Ordinal) ||
-                !string.Equals(request.RecipeType, context.RecipeType, StringComparison.Ordinal) ||
-                !string.Equals(request.DefinitionAssetPath, context.DefinitionAssetPath, StringComparison.Ordinal) ||
+                        "请求的入口类型与已编译正式入口不一致。"));
+            if (!SourceMatchesEntry(request.SourceCodePath, entry.GetType()))
+                return BtsmtlAuthoringGenerationResult.Failure(
+                    request.OutputAssetPath,
+                    new BtsmtlAuthoringCodeDiagnostic(
+                        BtsmtlAuthoringCodeDiagnosticSeverity.Error,
+                        "generation_source_entry_mismatch",
+                        request.EntryTypeName,
+                        "请求源码路径没有关联到当前已编译入口类型。"));
+            if (!string.Equals(request.DefinitionAssetPath, context.DefinitionAssetPath, StringComparison.Ordinal) ||
                 !string.Equals(request.OutputAssetPath, context.OutputAssetPath, StringComparison.Ordinal))
                 return BtsmtlAuthoringGenerationResult.Failure(
                     request.OutputAssetPath,
@@ -140,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         BtsmtlAuthoringCodeDiagnosticSeverity.Error,
                         "generation_context_mismatch",
                         request.EntryTypeName,
-                        "生成请求与正式生成上下文的精确路径或recipe不一致。"));
+                        "生成请求与正式生成上下文的精确资产路径不一致。"));
 
             try
             {
@@ -163,6 +170,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         error.Message));
             }
         }
+
+        static bool SourceMatchesEntry(string sourceCodePath, Type entryType)
+        {
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            string absolutePath = Path.GetFullPath(sourceCodePath ?? string.Empty);
+            string normalizedRoot = projectRoot.Replace('\\', '/').TrimEnd('/');
+            string normalizedSource = absolutePath.Replace('\\', '/');
+            if (!normalizedSource.StartsWith(normalizedRoot + "/", StringComparison.OrdinalIgnoreCase))
+                return false;
+            string assetPath = normalizedSource.Substring(normalizedRoot.Length + 1);
+            MonoScript source = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
+            return source && source.GetClass() == entryType;
+        }
     }
 
     internal static class BtsmtlAuthoringCodeSourceBuilder
@@ -172,6 +192,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var writer = new SourceWriter();
             writer.WriteLine("using System;");
             writer.WriteLine("using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;");
+            writer.WriteLine("using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;");
+            writer.WriteLine("using UnityObject = UnityEngine.Object;");
+            writer.WriteLine("using UnityAnimationClip = UnityEngine.AnimationClip;");
             foreach (string namespaceName in context.Usings.OrderBy(value => value, StringComparer.Ordinal))
                 writer.WriteLine($"using {namespaceName};");
             writer.WriteLine();
@@ -181,14 +204,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 $"public sealed class {context.Request.EntryTypeName} : IBtsmtlAuthoringGenerationEntry");
             writer.OpenBlock();
             writer.WriteLine(
-                $"public string RecipeType => {BtsmtlAuthoringCodeSyntax.StringLiteral(context.Request.RecipeType)};");
-            writer.WriteLine(
-                $"public string EntryTypeName => typeof({context.Request.EntryTypeName}).FullName;");
-            writer.WriteLine(
-                $"public string SourceCodePath => {BtsmtlAuthoringCodeSyntax.StringLiteral(context.Request.OutputCodePath)};");
-            writer.WriteLine(
                 "public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)");
             writer.OpenBlock();
+            foreach (string statement in context.ExternalAssetStatements)
+                writer.WriteLine(statement);
+            if (context.ExternalAssetStatements.Count != 0)
+                writer.WriteLine();
             bool wrotePhase = false;
             foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
             {

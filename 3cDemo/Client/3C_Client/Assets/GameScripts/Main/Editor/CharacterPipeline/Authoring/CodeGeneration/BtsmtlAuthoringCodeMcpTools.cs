@@ -12,6 +12,7 @@ using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
 using UnityEngine;
 
@@ -19,7 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     [McpForUnityTool(
         "btsmtl.export_code",
-        Description = "从一个精确的正式 Skill Graph、Timeline、Pose Graph 或 EventGraph 资产完整导出可重建的 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
+        Description = "从一个精确的正式 Skill Graph、Timeline、Pose Graph 或 EventGraph 资产导出最小可重建 C# authoring 文件；不修改输入资产，不读取旧源码，不触发生成或Build。",
         StructuredOutput = true,
         AutoRegister = true,
         RequiresPolling = false,
@@ -76,10 +77,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             [ToolParameter("精确已编译 C# authoring 文件路径。", Required = true)]
             public string source_code_path { get; set; }
 
-            [ToolParameter("必须与已编译入口的 RecipeType 完全一致。", Required = true)]
+            [ToolParameter("生成调度recipe标识，由现有正式领域规则判断适用范围。", Required = true)]
             public string recipe_type { get; set; }
 
-            [ToolParameter("必须填写已编译入口返回的完整 EntryTypeName。", Required = true)]
+            [ToolParameter("当前源码文件中已编译入口的完整类型名。", Required = true)]
             public string entry_type_name { get; set; }
 
             [ToolParameter("精确 CharacterPipelineDefinition 资产路径。", Required = true)]
@@ -247,7 +248,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             UnityEngine.Object[] supported = assets
-                .Where(value => value is BtsmtlSkillFlowGraph ||
+                .Where(value => value is GameplayAbilityDefinition ||
+                                value is BtsmtlSkillFlowGraph ||
                                 value is TimelineAsset ||
                                 value is CharacterPresentationPoseGraphAsset ||
                                 value is HostEventGraph)
@@ -261,7 +263,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     $"Asset '{assetPath}' has no supported authoring root with local id {localFileId}.");
             }
             UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(assetPath);
-            if (main is BtsmtlSkillFlowGraph ||
+            if (main is GameplayAbilityDefinition ||
+                main is BtsmtlSkillFlowGraph ||
                 main is TimelineAsset ||
                 main is CharacterPresentationPoseGraphAsset ||
                 main is HostEventGraph)

@@ -6,9 +6,6 @@ namespace ThirdPersonCharacter.Generated
 {
     public sealed class LocomotionFullBodyPoseGraphAuthoringCode : IBtsmtlAuthoringGenerationEntry
     {
-        public string RecipeType => "character.pose.corin.locomotion/v1";
-        public string EntryTypeName => typeof(LocomotionFullBodyPoseGraphAuthoringCode).FullName;
-        public string SourceCodePath => "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Editor\\CharacterPipeline\\Authoring\\CodeGeneration\\Generated\\LocomotionFullBodyPoseGraphAuthoringCode.cs";
         public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)
         {
             var sourceSlot_4135820d6029 = BtsmtlPoseAuthoringCode.CreateSourceSlot<global::ThirdPersonCharacter.Pipeline.Animation.CharacterClipPoseSourceSlot>("Corin_Pipeline_Idle_Inplace Source Binding");

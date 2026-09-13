@@ -5,9 +5,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {
     public sealed class CorinAttackSkillAuthoringCode : IBtsmtlAuthoringGenerationEntry
     {
-        public string RecipeType => "character.skill.corin.attack/v1";
-        public string EntryTypeName => typeof(CorinAttackSkillAuthoringCode).FullName;
-        public string SourceCodePath => "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Assets\\GameScripts\\Main\\Editor\\CharacterPipeline\\Authoring\\CodeGeneration\\Generated\\CorinAttackSkillAuthoringCode.cs";
         public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)
         {
             var graph_7e4b9924a50f = global::ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration.BtsmtlSkillAuthoringCode.EnsureSkillRoot(context, "00ec42f6d5ede195dcf13e4e27fe7933", "Attack");

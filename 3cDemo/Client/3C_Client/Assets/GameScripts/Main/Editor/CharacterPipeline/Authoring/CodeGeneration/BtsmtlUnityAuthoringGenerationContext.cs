@@ -11,6 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
     {
         readonly BtsmtlAuthoringGenerationRequest m_Request;
         readonly List<BtsmtlAuthoringCodeDiagnostic> m_Diagnostics = new();
+        readonly List<string> m_DeletionRequests = new();
+        readonly List<string> m_DeletedAssetPaths = new();
         readonly bool m_OutputExisted;
 
         public BtsmtlUnityAuthoringGenerationContext(BtsmtlAuthoringGenerationRequest request)
@@ -19,8 +21,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             m_OutputExisted = AssetDatabase.LoadMainAssetAtPath(m_Request.OutputAssetPath) != null;
         }
 
-        public override string SourceCodePath => m_Request.SourceCodePath;
-        public override string RecipeType => m_Request.RecipeType;
         public override string DefinitionAssetPath => m_Request.DefinitionAssetPath;
         public override string OutputAssetPath => m_Request.OutputAssetPath;
 
@@ -40,6 +40,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return (T)(object)asset;
         }
 
+        public override void DeleteAsset(string assetPath)
+        {
+            string normalized = NormalizeAssetPath(assetPath);
+            if (string.Equals(normalized, OutputAssetPath, StringComparison.Ordinal))
+                throw new InvalidOperationException("正式生成入口不能删除当前输出资产。");
+            if (!m_DeletionRequests.Contains(normalized))
+                m_DeletionRequests.Add(normalized);
+        }
+
         public override BtsmtlAuthoringGenerationResult Complete(object rootOutput)
         {
             if (rootOutput == null)
@@ -51,13 +60,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             try
             {
                 AssetDatabase.SaveAssets();
+                foreach (string path in m_DeletionRequests)
+                {
+                    if (AssetDatabase.LoadMainAssetAtPath(path) == null)
+                        continue;
+                    if (!AssetDatabase.DeleteAsset(path))
+                        throw new InvalidOperationException($"正式生成入口无法删除旧资产 '{path}'。");
+                    m_DeletedAssetPaths.Add(path);
+                }
+                AssetDatabase.SaveAssets();
                 return new BtsmtlAuthoringGenerationResult(
                     true,
                     rootOutput,
                     OutputAssetPath,
                     m_OutputExisted ? Array.Empty<string>() : new[] { OutputAssetPath },
                     m_OutputExisted ? new[] { OutputAssetPath } : Array.Empty<string>(),
-                    Array.Empty<string>(),
+                    m_DeletedAssetPaths,
                     m_Diagnostics,
                     true);
             }

@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
@@ -136,6 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         readonly List<BtsmtlAuthoringCodeDiagnostic> m_Diagnostics = new();
         readonly List<BtsmtlAuthoringCodeExternalDependency> m_ExternalDependencies = new();
         readonly HashSet<string> m_ExternalDependencyKeys = new(StringComparer.Ordinal);
+        readonly Dictionary<string, string> m_ExternalAssetVariables = new(StringComparer.Ordinal);
+        readonly List<string> m_ExternalAssetStatements = new();
 
         internal BtsmtlAuthoringCodeExportContext(BtsmtlAuthoringCodeExportRequest request)
         {
@@ -185,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 return string.Empty;
             }
 
-            string variableName = AllocateVariableName(variableHint, authoringIdentity);
+            string variableName = AllocateVariableName(variableHint);
             m_ObjectVariables.Add(source, variableName);
             m_ObjectIdentities.Add(source, authoringIdentity);
             m_IdentityOwners.Add(authoringIdentity, source);
@@ -236,6 +237,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             m_ExternalDependencies.Add(new BtsmtlAuthoringCodeExternalDependency(assetPath, typeName, localFileId));
         }
 
+        internal string ResolveExternalAsset(
+            string assetPath,
+            string typeName,
+            long localFileId)
+        {
+            string key = $"{typeName}\n{assetPath}\n{localFileId}";
+            if (m_ExternalAssetVariables.TryGetValue(key, out string variable))
+                return variable;
+            variable = AllocateVariableName("asset");
+            m_ExternalAssetVariables.Add(key, variable);
+            m_ExternalAssetStatements.Add(
+                $"var {variable} = context.ResolveExternalAsset<{typeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(assetPath)}, {localFileId}L);");
+            return variable;
+        }
+
         public void AddStatement(BtsmtlAuthoringCodeEmissionPhase phase, string statement)
         {
             if (string.IsNullOrWhiteSpace(statement))
@@ -267,6 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         internal IReadOnlyCollection<string> Usings => m_Usings;
 
+        internal IReadOnlyList<string> ExternalAssetStatements => m_ExternalAssetStatements;
+
         internal IReadOnlyList<string> Statements(BtsmtlAuthoringCodeEmissionPhase phase) => m_Statements[phase];
 
         internal IReadOnlyList<BtsmtlAuthoringCodeDiagnostic> Diagnostics => m_Diagnostics;
@@ -282,16 +300,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 new ReadOnlyCollection<BtsmtlAuthoringCodeExternalDependency>(m_ExternalDependencies.ToArray()),
                 new ReadOnlyCollection<BtsmtlAuthoringCodeDiagnostic>(m_Diagnostics.ToArray()));
 
-        string AllocateVariableName(string variableHint, string authoringIdentity)
+        internal string AllocateVariableName(string variableHint)
         {
             string hint = BtsmtlAuthoringCodeSyntax.Identifier(
                 string.IsNullOrWhiteSpace(variableHint) ? "value" : variableHint);
-            string identityToken = BtsmtlAuthoringCodeSyntax.IdentityToken(authoringIdentity);
-            string baseName = $"{hint}_{identityToken}";
-            string candidate = baseName;
-            int suffix = 2;
+            string candidate = hint;
+            int suffix = 1;
             while (!m_VariableNames.Add(candidate))
-                candidate = $"{baseName}_{suffix++}";
+                candidate = $"{hint}{suffix++}";
             return candidate;
         }
 
@@ -368,20 +384,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
     public abstract class BtsmtlAuthoringGenerationContext
     {
-        public abstract string SourceCodePath { get; }
-        public abstract string RecipeType { get; }
         public abstract string DefinitionAssetPath { get; }
         public abstract string OutputAssetPath { get; }
         public abstract T ResolveExternalAsset<T>(string assetPath, long localFileId);
+        public abstract void DeleteAsset(string assetPath);
         public abstract BtsmtlAuthoringGenerationResult Complete(object rootOutput);
         public abstract BtsmtlAuthoringGenerationResult Fail(BtsmtlAuthoringCodeDiagnostic diagnostic);
     }
 
     public interface IBtsmtlAuthoringGenerationEntry
     {
-        string RecipeType { get; }
-        string EntryTypeName { get; }
-        string SourceCodePath { get; }
         BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context);
     }
 
@@ -659,24 +671,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 return $"{TypeName(type.GetElementType())}[]";
             if (type.IsGenericType)
             {
-                string name = type.GetGenericTypeDefinition().FullName;
+                string name = type.GetGenericTypeDefinition().Name;
                 int tick = name.IndexOf('`');
                 name = name.Substring(0, tick).Replace('+', '.');
-                return $"global::{name}<{string.Join(", ", type.GetGenericArguments().Select(TypeName))}>";
+                return $"{name}<{string.Join(", ", type.GetGenericArguments().Select(TypeName))}>";
             }
-            return $"global::{type.FullName.Replace('+', '.')}";
-        }
-
-        internal static string IdentityToken(string identity)
-        {
-            string normalized = Identifier(identity);
-            if (normalized.Length <= 32)
-                return normalized;
-            using (SHA256 algorithm = SHA256.Create())
-            {
-                byte[] hash = algorithm.ComputeHash(Encoding.UTF8.GetBytes(identity));
-                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant().Substring(0, 12);
-            }
+            string fullName = type.FullName?.Replace('+', '.') ?? type.Name;
+            if (string.Equals(fullName, "System.Object", StringComparison.Ordinal))
+                return "object";
+            if (string.Equals(fullName, "UnityEngine.Object", StringComparison.Ordinal))
+                return "UnityObject";
+            if (string.Equals(fullName, "UnityEngine.AnimationClip", StringComparison.Ordinal))
+                return "UnityAnimationClip";
+            if (string.Equals(fullName, "BTSMTL.Timeline.AnimationClip", StringComparison.Ordinal))
+                return "TimelineAnimationClip";
+            return type.Name.Replace('+', '.');
         }
 
         static void EnsureFinite(float value)

@@ -101,6 +101,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             int[] sourceBindingIndices = ResolveSourceBindingIndices(context, profile, sourceSlots);
             int[] resourceBindingIndices = ResolveResourceBindingIndices(context, profile, resourceSlots);
             context.AddUsing(typeof(CharacterPoseCanvasGraph).Namespace);
+            context.AddUsing("ThirdPersonCharacter.Pipeline");
+            context.AddUsing("ThirdPersonCharacter.Pipeline.Animation");
+            context.AddUsing("ThirdPersonSimulation");
+            context.AddUsing("UnityEngine");
             string definitionExpression =
                 BtsmtlAuthoringCodeValues.ExternalAsset(
                     context,

@@ -130,6 +130,8 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 #### 3.5 回退与继续
 
+最新增量状态见[源码决策的01c68fb21对账](slate-source-decoupling.md)：binding与代理差异事务已部分接线，BuildProjection组件树仍在。实现报告中的ShowEmbedded替代入口，在本次未提交工作树搜索中已不出现，但CutsceneEditor.cs仍脏且原函数继续依赖Cutscene，不能记作恢复完成。以下ce21aec8f/afcb90056段仅为历史恢复基线。接续顺序是在原列表、时间轴、ActionClipWrapper和曲线函数内逐项换正式输入/命令，再删除不再需要的代理；保留已正确Track/Group及后续作者功能，不整体回退共享工作树。
+
 2026-09-13 本次已核对提交ce21aec8f《回退Timeline到Slate原生曲线编辑基线》和afcb90056《补回Timeline作者游标与正式新增》。当前入口为TimelineEditorWindow → BtsmtlSlateTimelineProjection.BuildProjection → 隐藏GameObject/Cutscene/Group/Track/ActionClip → 原CutsceneEditorSurface。DirectProjection已删除，原ShowGroupsAndTracksList/ShowTimeLines已恢复，但组件树仍创建；不得用旧7ddde8c4e状态声称当前已无组件依赖。本次只有源码/提交证据，没有Unity端到端证明。
 
 原第11节的替代编辑器方案继续撤销；该节回退前的完成勾选不能沿用。本次按源码决策重新列出原函数参数化、非组件绑定、曲线/Inspector接线、正式事务和清理任务，均未完成。正确的typed配置、正式曲线换算与原UI迁移复用，不重写。

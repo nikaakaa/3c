@@ -4,6 +4,8 @@
 
 ## 1. 已有接入基础
 
+01c68fb21增量对账：正式binding与代理差异事务已部分接入，组件树未删除；当前未提交CutsceneEditor.cs中两个ShowEmbedded替代入口已搜不到，但仍依赖Cutscene/代理identity，不能标为恢复完成。第11节继续表示完整收口，不因局部提交勾选整项；复用已有binding，不新建第三条路径。旧快照里的完成项只用于保留正确业务，不驱动整体回退。
+
 历史上0aa52f209撤销过一次自制UI；最新恢复基线是ce21aec8f/afcb90056。两次回退均不构成组件解耦完成；第11节不得沿用已回退实现的完成勾选。
 
 - [x] 1.1 已有 CutsceneEditorSurface 的 InitializeEmbedded/DrawEmbeddedGUI 和 transaction callback；后续布局/播放清理分别由布局和预览边界章节承担

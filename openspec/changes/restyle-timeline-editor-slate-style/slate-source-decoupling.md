@@ -8,7 +8,7 @@
 
 本文件是实现设计，不是完成报告。2026-09-13 核对了 `ce21aec8f`、`afcb90056` 以及工作树源码；阅读期间 HEAD 为 `24e63cf3f`，其它任务可能继续提交。未启动 Unity、未执行 UI 操作或编译，不把源码分析当成端到端通过。
 
-当前实际链路：
+上次源码阅读的链路（ce21aec8f/afcb90056快照）：
 
 ```text
 TimelineEditorWindow
@@ -19,7 +19,15 @@ TimelineEditorWindow
   → TimelineEditorSessionContext.Apply → TimelineData.ApplyModify
 ```
 
-原 UI 已恢复；无组件依赖尚未完成。`BtsmtlSlateTimelineDirectProjection` 已删除。不能再引用其旧提交声称当前没有组件树。残留 `EmbeddedTimelineBinding.cs`、`SlateTimelineEditorModel.cs` 的类型声明不表示正式路径已使用它们。
+上述快照只能说明当时原绘制入口已接回，不是“恢复完成”或无组件依赖完成。不能再引用旧提交声称当前没有组件树。
+
+### 最新状态对账：01c68fb21及未提交工作树
+
+2026-09-13 实现任务报告到01c68fb21《收口Slate代理差异的正式事务》。本次核对该提交存在，修改BtsmtlSlateTimelineBinding和Projection的事务接线；当前BuildProjection仍创建隐藏GameObject、Cutscene和代理Group/Track/ActionClip。正式binding已有真实消费者，不再是只有接口声明，但它尚未代替组件输入。
+
+报告称两个ShowEmbedded替代绘制入口仍在；本次读取的未提交CutsceneEditor.cs及Slate目录搜索已不含ShowEmbeddedGroupsAndTracksList、ShowEmbeddedTimeLines或OnEmbeddedTimelineGUI。该源码文件仍有未提交修改，不能把此变化归到01c68fb21或当成完整交付。当前ShowGroupsAndTracksList仍读cutscene.currentTime，其他位置仍在代理identity与embeddedTimeline之间转换。
+
+因此当前定性为“原生算法及正式命令逐步接线中，组件/绑定混合输入尚未收口”，不是恢复完成。后续保留已正确左侧Track/Group、正式新增、游标/帧号、曲线/缩放/鼠标代码；在同一原函数里逐项替换输入和命令，清除仍存在的替代分支与组件依赖，不整体回退、不新增第三套UI。以下第2–10节源码细节仍以原阅读快照理解，本段才是这次增量核对，不代表UI实跑或完整复审。
 
 目标只有一条编辑链：
 
@@ -64,7 +72,7 @@ TimelineEditorWindow
 
 ## 4. 决策D2：接口只描述编辑需要的数据，不伪装播放器
 
-在现有 `EmbeddedTimelineBinding.cs` 的位置收窄并按实际共用职责命名编辑接口，删除回退后无消费者的通用EditorModel。迁移现有 `BtsmtlSlateTimelineProjection` 中正确的映射、typed创建、曲线换算和提交代码；最终以 `BtsmtlSlateTimelineBinding` 表达其职责，不保留Projection/DirectProjection双入口。名称是本次设计决定，不是声称该类已经存在。
+在现有EmbeddedTimelineBinding.cs的位置收窄编辑接口，删除确认无消费者的通用EditorModel。迁移Projection中正确的映射、typed创建、曲线换算和提交；最终只由BtsmtlSlateTimelineBinding接正式数据。01c68fb21已包含该binding类，但Projection组件输入仍存在，不能仅凭类已建立声称解耦完成，也不重新创建另一份binding。
 
 | 编辑接口提供什么 | 数据/行为实际属于谁 | 不允许放进去什么 |
 |---|---|---|

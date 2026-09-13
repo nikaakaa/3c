@@ -289,6 +289,7 @@ namespace Slate
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
+        [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -358,6 +359,13 @@ namespace Slate
         [System.NonSerialized] private float[] magnetSnapTimesCache;
         [System.NonSerialized] private List<GuideLine> pendingGuides;
         [System.NonSerialized] private System.Action postWindowsGUI;
+        [System.NonSerialized] private IEmbeddedTimelineClipBinding embeddedInteractingClip;
+        [System.NonSerialized] private bool embeddedScalingStart;
+        [System.NonSerialized] private bool embeddedScalingEnd;
+        [System.NonSerialized] private float embeddedDragOffset;
+        [System.NonSerialized] private float embeddedDragStart;
+        [System.NonSerialized] private float embeddedDragEnd;
+        [System.NonSerialized] private bool embeddedEditStarted;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
 
@@ -473,7 +481,14 @@ namespace Slate
 
         //The color used in scruber
         private Color scruberColor {
-            get { return cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f); }
+            get
+            {
+                if (embeddedSurface)
+                    return embeddedTimeline != null && embeddedTimeline.IsReadOnly
+                        ? Color.yellow
+                        : new Color(1, 0.3f, 0.3f);
+                return cutscene.isActive ? Color.yellow : new Color(1, 0.3f, 0.3f);
+            }
         }
 
         ///----------------------------------------------------------------------------------------------
@@ -705,6 +720,36 @@ namespace Slate
             InitializeAll(newCutscene);
         }
 
+        public void InitializeEmbedded(
+            IEmbeddedTimelineBinding binding,
+            System.Action repaint,
+            System.Action beginWindowsCallback = null,
+            System.Action endWindowsCallback = null)
+        {
+            embeddedSurface = true;
+            embeddedTimeline = binding ?? throw new System.ArgumentNullException(nameof(binding));
+            embeddedRepaint = repaint;
+            embeddedFrameRate = () => binding.FrameRate;
+            embeddedLength = () => binding.Length;
+            embeddedCurrentFrame = () => binding.CurrentFrame;
+            embeddedSetCurrentFrame = value => binding.CurrentFrame = value;
+            embeddedViewTimeMin = () => binding.ViewTimeMin;
+            embeddedSetViewTimeMin = value => binding.ViewTimeMin = value;
+            embeddedViewTimeMax = () => binding.ViewTimeMax;
+            embeddedSetViewTimeMax = value => binding.ViewTimeMax = value;
+            embeddedAddTrack = binding.AddTrack;
+            embeddedCopyClip = null;
+            beginWindows = beginWindowsCallback;
+            endWindows = endWindowsCallback;
+            Styles.Load();
+            showDragDropInfo = false;
+            willRepaint = true;
+            pendingGuides = new List<GuideLine>();
+            clipWrappers = null;
+            clipWrappersMap = null;
+            cutscene = null;
+        }
+
         public void ConfigureEmbeddedRuntimeTime(System.Func<float?> runtimeTime)
         {
             embeddedRuntimeTime = runtimeTime;
@@ -825,6 +870,13 @@ namespace Slate
             embeddedHistoryTime = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
+            embeddedTimeline = null;
+            embeddedInteractingClip = null;
+            embeddedScalingStart = false;
+            embeddedScalingEnd = false;
+            embeddedDragStart = 0f;
+            embeddedDragEnd = 0f;
+            embeddedEditStarted = false;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))
                 current = null;
@@ -1325,6 +1377,12 @@ namespace Slate
             var e = Event.current;
             mousePosition = e.mousePosition;
             current = this;
+
+            if (embeddedSurface && embeddedTimeline != null)
+            {
+                OnEmbeddedTimelineGUI();
+                return;
+            }
 
             if ( cutscene == null || isAboutButtonPressed ) {
                 ShowWelcome();
@@ -1980,6 +2038,370 @@ namespace Slate
             }
         }
 
+        void OnEmbeddedTimelineGUI()
+        {
+            GUI.skin.label.richText = true;
+            GUI.skin.label.alignment = TextAnchor.UpperLeft;
+            EditorStyles.label.richText = true;
+            EditorStyles.textField.wordWrap = true;
+            EditorStyles.foldout.richText = true;
+
+            Event e = Event.current;
+            mousePosition = e.mousePosition;
+            if (embeddedTimeline == null)
+                return;
+
+            if (e.type == EventType.MouseDown && (e.button == 0 || e.button == 1) && !embeddedEditStarted)
+            {
+                embeddedEditStarted = !embeddedTimeline.IsReadOnly;
+                if (embeddedEditStarted)
+                    embeddedTimeline.BeginEdit("Timeline Edit");
+            }
+
+            SurfaceLayout layout = CalculateLayout();
+            topLeftRect = layout.TopLeft;
+            topMiddleRect = layout.TopMiddle;
+            leftRect = layout.Left;
+            centerRect = layout.Center;
+
+            ShowEmbeddedAuthoringToolbar(topLeftRect);
+            ShowTimeInfo(topMiddleRect);
+            DoEmbeddedScrubControls();
+            DoZoomAndPan();
+
+            Rect scrollRect = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, screenHeight - 5);
+            Rect scrollView = Rect.MinMaxRect(0, centerRect.yMin, screenWidth, totalHeight + 150);
+            scrollPos = GUI.BeginScrollView(scrollRect, scrollPos, scrollView);
+            ShowEmbeddedGroupsAndTracksList(leftRect);
+            ShowEmbeddedTimeLines(centerRect);
+            GUI.EndScrollView();
+
+            DrawRuntimeOverlay();
+            DrawHistoryOverlay();
+            DrawEmbeddedGuides();
+
+            if (e.rawType == EventType.MouseUp)
+            {
+                if (embeddedInteractingClip != null)
+                {
+                    embeddedInteractingClip = null;
+                    embeddedScalingStart = false;
+                    embeddedScalingEnd = false;
+                }
+                if (embeddedEditStarted)
+                {
+                    embeddedEditStarted = false;
+                    embeddedTimeline.CommitEdit();
+                }
+            }
+
+            if (e.type == EventType.MouseDrag || e.rawType == EventType.MouseUp || GUI.changed)
+                willRepaint = true;
+        }
+
+        void DoEmbeddedScrubControls()
+        {
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && e.button == 0 && topMiddleRect.Contains(mousePosition))
+            {
+                isMovingScrubCarret = true;
+                SetEmbeddedCurrentTime(SnapTime(PosToTime(mousePosition.x)));
+                e.Use();
+            }
+            if (isMovingScrubCarret && e.button == 0 && (e.type == EventType.MouseDrag || e.type == EventType.MouseDown))
+            {
+                float time = Mathf.Clamp(
+                    SnapTime(PosToTime(mousePosition.x)),
+                    Mathf.Max(viewTimeMin, 0f),
+                    length);
+                SetEmbeddedCurrentTime(time);
+                e.Use();
+            }
+            if (e.rawType == EventType.MouseUp && e.button == 0)
+                isMovingScrubCarret = false;
+        }
+
+        void ShowEmbeddedGroupsAndTracksList(Rect rect)
+        {
+            Event e = Event.current;
+            var groups = embeddedTimeline.Groups;
+            var collapseRect = Rect.MinMaxRect(rect.x + 5, rect.y + 4, rect.x + 25, rect.y + 19);
+            var searchRect = Rect.MinMaxRect(rect.x + 20, rect.y + 4, rect.xMax - 18, rect.y + 19);
+            var cancelRect = Rect.MinMaxRect(searchRect.xMax, searchRect.y, rect.xMax - 4, searchRect.yMax);
+            bool anyExpanded = groups.Any(group => !group.IsCollapsed);
+            if (GUI.Button(collapseRect, anyExpanded ? "▼" : "►", (GUIStyle)"label"))
+            {
+                for (int index = 0; index < groups.Count; index++)
+                    groups[index].IsCollapsed = anyExpanded;
+            }
+            searchString = EditorGUI.TextField(searchRect, searchString, (GUIStyle)"ToolbarSearchTextField");
+            if (GUI.Button(cancelRect, string.Empty, (GUIStyle)"ToolbarSearchCancelButton"))
+            {
+                searchString = string.Empty;
+                GUIUtility.keyboardControl = 0;
+            }
+
+            float nextY = FIRST_GROUP_TOP_MARGIN;
+            GUI.BeginGroup(rect);
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
+                if (!string.IsNullOrEmpty(searchString) &&
+                    group.DisplayName.IndexOf(searchString, System.StringComparison.OrdinalIgnoreCase).Equals(-1) &&
+                    group.Tracks.All(track => track.DisplayName.IndexOf(searchString, System.StringComparison.OrdinalIgnoreCase).Equals(-1)))
+                    continue;
+
+                Rect groupRect = new Rect(0, nextY, rect.width - GROUP_RIGHT_MARGIN, GROUP_HEIGHT);
+                nextY += GROUP_HEIGHT;
+                GUI.color = group.IsActive ? Color.white : Color.gray;
+                GUI.Box(groupRect, string.Empty, (GUIStyle)"flow node 0");
+                GUI.color = Color.white;
+                Rect foldoutRect = new Rect(groupRect.x + 2, groupRect.y + 1, 20, groupRect.height);
+                group.IsCollapsed = !EditorGUI.Foldout(foldoutRect, !group.IsCollapsed, group.DisplayName);
+                if (e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition))
+                {
+                    embeddedTimeline.Select(group);
+                    e.Use();
+                }
+                if (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition))
+                {
+                    GenericMenu menu = new GenericMenu();
+                    menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
+                    menu.ShowAsContext();
+                    e.Use();
+                }
+
+                if (group.IsCollapsed)
+                    continue;
+
+                IReadOnlyList<IEmbeddedTimelineTrackBinding> tracks = group.Tracks;
+                for (int trackIndex = 0; trackIndex < tracks.Count; trackIndex++)
+                {
+                    IEmbeddedTimelineTrackBinding track = tracks[trackIndex];
+                    Rect trackRect = new Rect(10, nextY, rect.width - TRACK_RIGHT_MARGIN - 10, track.FinalHeight);
+                    nextY += track.FinalHeight + TRACK_MARGINS;
+                    GUI.color = track.IsActive ? new Color(1f, 1f, 1f, 0.18f) : new Color(1f, 1f, 1f, 0.08f);
+                    GUI.DrawTexture(trackRect, whiteTexture);
+                    GUI.color = ReferenceEquals(embeddedTimeline.Selected, track) ? LIST_SELECTION_COLOR : Color.white;
+                    GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
+                    GUI.color = Color.white;
+                    GUI.Label(trackRect.ExpandBy(-6, -2), track.DisplayName, Styles.leftLabel);
+                    if (e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition))
+                    {
+                        embeddedTimeline.Select(track);
+                        e.Use();
+                    }
+                    if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
+                    {
+                        GenericMenu menu = new GenericMenu();
+                        int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
+                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        menu.AddItem(new GUIContent("Delete Track"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteTrack(track), "Delete Track"));
+                        menu.ShowAsContext();
+                        e.Use();
+                    }
+                }
+            }
+            GUI.EndGroup();
+            totalHeight = nextY;
+        }
+
+        void ShowEmbeddedTimeLines(Rect rect)
+        {
+            Event e = Event.current;
+            Rect bgRect = Rect.MinMaxRect(rect.xMin, rect.yMin, rect.xMax, screenHeight + scrollPos.y);
+            GUI.color = Color.black.WithAlpha(0.1f);
+            GUI.DrawTexture(bgRect, whiteTexture);
+            GUI.color = Color.black.WithAlpha(0.03f);
+            GUI.DrawTextureWithTexCoords(bgRect, Styles.stripes, new Rect(0, 0, bgRect.width / -7, bgRect.height / -7));
+            GUI.color = Color.white;
+
+            GUI.BeginGroup(rect);
+            float nextY = FIRST_GROUP_TOP_MARGIN;
+            IReadOnlyList<IEmbeddedTimelineGroupBinding> groups = embeddedTimeline.Groups;
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
+                Rect groupRect = new Rect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)), nextY, TimeToPos(viewTimeMax), GROUP_HEIGHT);
+                nextY += GROUP_HEIGHT;
+                if (group.IsCollapsed)
+                {
+                    GUI.color = Color.black.WithAlpha(0.15f);
+                    GUI.DrawTexture(groupRect, whiteTexture);
+                    GUI.color = Color.white;
+                    for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
+                    {
+                        IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
+                        for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                        {
+                            IEmbeddedTimelineClipBinding clip = track.Clips[clipIndex];
+                            GUI.DrawTexture(
+                                Rect.MinMaxRect(
+                                    TimeToPos(clip.StartTime),
+                                    groupRect.y + 3,
+                                    TimeToPos(clip.EndTime),
+                                    groupRect.yMax - 3),
+                                whiteTexture);
+                        }
+                    }
+                    continue;
+                }
+
+                for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
+                {
+                    IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
+                    float y = nextY;
+                    Rect trackRect = Rect.MinMaxRect(
+                        Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(track.StartTime)),
+                        y,
+                        TimeToPos(viewTimeMax),
+                        y + track.FinalHeight);
+                    nextY += track.FinalHeight + TRACK_MARGINS;
+                    GUI.color = Color.black.WithAlpha(track.IsActive ? 0.08f : 0.2f);
+                    GUI.DrawTexture(trackRect, whiteTexture);
+                    GUI.color = Color.white;
+                    if (ReferenceEquals(embeddedTimeline.Selected, track))
+                    {
+                        GUI.color = Color.grey;
+                        GUI.Box(trackRect.ExpandBy(0, 2), string.Empty, Styles.hollowFrameHorizontalStyle);
+                        GUI.color = Color.white;
+                    }
+                    if (track.IsLocked && e.isMouse && trackRect.Contains(e.mousePosition))
+                        e.Use();
+
+                    IReadOnlyList<IEmbeddedTimelineClipBinding> clips = track.Clips;
+                    for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
+                    {
+                        IEmbeddedTimelineClipBinding clip = clips[clipIndex];
+                        Rect clipRect = Rect.MinMaxRect(
+                            TimeToPos(clip.StartTime),
+                            y,
+                            Mathf.Max(TimeToPos(clip.EndTime), TimeToPos(clip.StartTime) + 6f),
+                            y + track.DefaultHeight);
+                        bool selected = ReferenceEquals(embeddedTimeline.Selected, clip);
+                        if (selected)
+                        {
+                            GUI.color = HIGHLIGHT_COLOR;
+                            GUI.DrawTexture(clipRect.ExpandBy(2), Styles.whiteTexture);
+                            GUI.color = Color.white;
+                        }
+                        GUI.color = clip.IsValid && track.IsActive ? Color.white : Color.gray;
+                        GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
+                        GUI.color = Color.white;
+                        clip.DrawClipGUI(clipRect);
+                        GUI.Label(clipRect.ExpandBy(-4, -2), clip.Info, Styles.leftLabel);
+                        if (clipRect.width <= 20)
+                            GUI.Label(new Rect(clipRect.xMax + 2, clipRect.y, 120, clipRect.height), clip.Info, Styles.leftLabel);
+
+                        if (e.type == EventType.MouseDown && clipRect.Contains(e.mousePosition))
+                        {
+                            embeddedTimeline.Select(clip);
+                            if (e.button == 1)
+                            {
+                                ShowEmbeddedClipMenu(clip, track);
+                                e.Use();
+                            }
+                            else if (e.button == 0 && !track.IsLocked && !clip.IsLocked && !embeddedTimeline.IsReadOnly)
+                            {
+                                float pointerTime = PosToTime(e.mousePosition.x + rect.x);
+                                embeddedInteractingClip = clip;
+                                embeddedDragStart = clip.StartTime;
+                                embeddedDragEnd = clip.EndTime;
+                                embeddedDragOffset = pointerTime - clip.StartTime;
+                                embeddedScalingStart = Mathf.Abs(e.mousePosition.x - clipRect.xMin) <= 5f && clip.CanScale;
+                                embeddedScalingEnd = Mathf.Abs(e.mousePosition.x - clipRect.xMax) <= 5f && clip.CanScale;
+                                e.Use();
+                            }
+                        }
+                        if (embeddedInteractingClip == clip && e.type == EventType.MouseDrag)
+                        {
+                            float pointerTime = SnapTime(PosToTime(e.mousePosition.x + rect.x));
+                            if (embeddedScalingStart)
+                                clip.StartTime = Mathf.Clamp(pointerTime, 0f, embeddedDragEnd - 1f / embeddedTimeline.FrameRate);
+                            else if (embeddedScalingEnd)
+                                clip.EndTime = Mathf.Max(pointerTime, embeddedDragStart + 1f / embeddedTimeline.FrameRate);
+                            else
+                            {
+                                float start = Mathf.Clamp(pointerTime - embeddedDragOffset, 0f, maxTime - (embeddedDragEnd - embeddedDragStart));
+                                clip.StartTime = start;
+                                clip.EndTime = start + embeddedDragEnd - embeddedDragStart;
+                            }
+                            e.Use();
+                        }
+                    }
+
+                    if (track.ShowCurves && track.Clips.Count > 0)
+                    {
+                        IEmbeddedTimelineClipBinding curveClip = track.Clips.FirstOrDefault(clip => ReferenceEquals(embeddedTimeline.Selected, clip));
+                        if (curveClip?.Keyable?.animationData != null)
+                        {
+                            Rect curveRect = Rect.MinMaxRect(
+                                TimeToPos(viewTimeMin),
+                                y + track.DefaultHeight + 2f,
+                                TimeToPos(viewTimeMax),
+                                y + track.FinalHeight - 2f);
+                            CurveEditor.DrawCurves(
+                                curveClip.Keyable.animationData,
+                                curveClip.Keyable,
+                                curveRect,
+                                Rect.MinMaxRect(TimeToPos(viewTimeMin), 0f, TimeToPos(viewTimeMax), 0f));
+                        }
+                    }
+
+                    if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
+                    {
+                        int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x + rect.x) * embeddedTimeline.FrameRate));
+                        GenericMenu menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        menu.ShowAsContext();
+                        e.Use();
+                    }
+                }
+            }
+            GUI.EndGroup();
+            if (e.rawType == EventType.MouseUp && embeddedInteractingClip == null && rect.Contains(e.mousePosition))
+                embeddedTimeline.Select(null);
+        }
+
+        void ShowEmbeddedClipMenu(IEmbeddedTimelineClipBinding clip, IEmbeddedTimelineTrackBinding track)
+        {
+            GenericMenu menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => embeddedTimeline.CopyClip(clip));
+            if (clip.CanScale)
+                menu.AddItem(new GUIContent("Fit Clip"), false, () => ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip"));
+            if (clip.Keyable?.animationData != null)
+            {
+                menu.AddItem(new GUIContent("Key At Cursor"), false, () => ApplyEmbeddedCommand(
+                    () => clip.AddIdentityKey(clip.Keyable.ToLocalTime(EmbeddedCurrentTime())),
+                    "Key Clip"));
+                menu.AddItem(new GUIContent("Clean Keys Off-Range"), false, () => ApplyEmbeddedCommand(clip.CleanKeysOffRange, "Clean Keys"));
+            }
+            menu.AddSeparator("/");
+            menu.AddItem(new GUIContent("Delete Clip"), false, () => ApplyEmbeddedCommand(() => embeddedTimeline.DeleteClip(clip), "Delete Clip"));
+            menu.ShowAsContext();
+        }
+
+        void ApplyEmbeddedCommand(System.Action command, string undoName)
+        {
+            if (embeddedTimeline == null || embeddedTimeline.IsReadOnly)
+                return;
+            embeddedTimeline.BeginEdit(undoName);
+            command?.Invoke();
+            embeddedTimeline.CommitEdit();
+        }
+
+        void DrawEmbeddedGuides()
+        {
+            DrawGuideLine(0f, isProSkin ? Color.white : Color.black);
+            DrawGuideLine(length, isProSkin ? Color.white : Color.black);
+            float time = EmbeddedCurrentTime();
+            if (time > 0f)
+                DrawGuideLine(time, scruberColor);
+            for (int index = 0; index < pendingGuides.Count; index++)
+                DrawGuideLine(pendingGuides[index].time, pendingGuides[index].color);
+            pendingGuides.Clear();
+        }
+
         void ShowPlaybackControls(Rect topLeftRect) {
 
             var autoKeyRect = new Rect(topLeftRect.xMin + 10, topLeftRect.yMin + 4, 32, 32);
@@ -2206,7 +2628,7 @@ namespace Slate
                 GUI.DrawTexture(lengthRect, Styles.carretIcon);
                 GUI.color = Color.white;
 
-                if ( Prefs.loopRegionMode && !Application.isPlaying ) {
+                if ( Prefs.loopRegionMode && cutscene != null && !Application.isPlaying ) {
                     //the loop region min
                     var lrMinPos = TimeToPos(cutscene.playTimeMin);
                     var lrMinRect = new Rect(0, 0, 16, 16);

@@ -3446,8 +3446,8 @@ namespace Slate
 
                     if ( e.clickCount == 2 ) {
                         OnActionDoubleClick?.Invoke(action);
-                        //do this with reflection to get the declaring actor in case action has 'new' declaration. This is only done in Shot right now.
-                        Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
+                        if (!editor.embeddedSurface)
+                            Selection.activeObject = action.GetType().GetProperty("actor").GetValue(action, null) as Object;
                     }
                 }
 

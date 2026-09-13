@@ -38,6 +38,8 @@
 - `6126fc0c0`：让 Float32／Fixed Evaluate／Finalize Pass 通过角色领域运行 Interface 调用，不再直接依赖 Kernel 属性。
 - `8dcbfb2ed`：把 Program Runtime 和 Backend composition 对外的 Kernel seam 收敛为 `CharacterRuntime`，具体 Kernel 只留在内部安装路径。
 - `c47640401`：将 Float32／Fixed Ability 生命周期推进、停止屏障、generation、EntryOperation 和终态处理移入独立 `AbilityDomainRuntime` Module，Evaluator 只保留顺序编排。
+- `9828d7afa`：记录 Ability Module 从总 Evaluator 拆出的边界。
+- `e7f8c7fe3`：将 Float32／Fixed ControlModule 装配、参数读取、StateLayout、读写端口和 UnityHFSM Tick 移入独立 `ControlDomainRuntime` Module。
 
 ## 当前实现边界
 
@@ -48,7 +50,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- 当前 `SimulationKernel` 仍是角色领域 Interface 的旧 Implementation；Evaluate 仍编排 Control、Effect、Equipment、Timeline 和 Motion，但 Ability 生命周期已经由独立 Module 持有。2.1 的完整角色实例工厂及其余模块 owner 迁移尚未完成。
+- 当前 `SimulationKernel` 仍是角色领域 Interface 的旧 Implementation；Evaluate 仍负责跨领域顺序和 World request，Control 与 Ability 的装配／生命周期已分别进入独立 Module。2.1 的显式角色实例工厂、Effect／Equipment／Timeline／Motion 领域装配仍未完成。
 
 ## 编译证据与阻断
 
@@ -61,4 +63,4 @@
 
 ## 下一小步
 
-下一步继续把 Evaluate 内的 Control、Effect、Equipment、Timeline、Motion 组合迁到各自窄 Interface，并由角色实例工厂统一装配；随后把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data，再迁移网络 Pass 的状态所有权。
+下一步把 Kernel 内按 Actor 创建 Evaluator 的路径提炼为角色领域实例工厂，并让该实例持有 Evaluate／Finalize 所需的领域组合；随后继续迁移 Effect、Equipment、Timeline、Motion owner，再把 Target artifact 从旧 `CharacterSimulationProgram` 容器拆成真正的 Ability execution data。

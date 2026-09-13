@@ -92,8 +92,7 @@ namespace ThirdPersonCamera
                     value.FallbackTwoPoints.RequireValid(source + ".FallbackTwoPoints");
                     break;
                 case CameraEntityFramePayload value:
-                    if (string.IsNullOrWhiteSpace(value.MainTargetSlotId) ||
-                        string.IsNullOrWhiteSpace(value.FramePolicyId) || string.IsNullOrWhiteSpace(value.RotationPolicyId))
+                    if (string.IsNullOrWhiteSpace(value.MainTargetSlotId))
                         throw new InvalidOperationException($"{source} contains invalid entity framing.");
                     for (int i = 0; i < value.SubTargetSlotIds.Count; i++)
                         if (string.IsNullOrWhiteSpace(value.SubTargetSlotIds[i]))

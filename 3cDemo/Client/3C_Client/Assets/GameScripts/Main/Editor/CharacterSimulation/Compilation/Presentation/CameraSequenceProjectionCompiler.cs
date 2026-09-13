@@ -129,9 +129,7 @@ namespace ThirdPersonCamera
                 stage.StageId,
                 stage.Kind,
                 stage.MainTargetSlotId,
-                subTargetSlotIds,
-                stage.FramePolicyId,
-                stage.RotationPolicyId);
+                subTargetSlotIds);
         }
     }
 }

@@ -278,6 +278,8 @@ namespace Slate
         [System.NonSerialized] private System.Action beginWindows;
         [System.NonSerialized] private System.Action endWindows;
         [System.NonSerialized] private System.Func<int> embeddedFrameRate;
+        [System.NonSerialized] private System.Func<int> embeddedCurrentFrame;
+        [System.NonSerialized] private System.Action<int> embeddedSetCurrentFrame;
         [System.NonSerialized] private System.Func<float?> embeddedRuntimeTime;
         [System.NonSerialized] private System.Func<float?> embeddedHistoryTime;
         [System.NonSerialized] private System.Action embeddedAddTrack;
@@ -640,11 +642,15 @@ namespace Slate
             System.Action repaint,
             System.Func<int> frameRate,
             System.Action addTrack,
-            System.Action<ActionClip> copyClip)
+            System.Action<ActionClip> copyClip,
+            System.Func<int> currentFrame = null,
+            System.Action<int> setCurrentFrame = null)
         {
             embeddedSurface = true;
             embeddedRepaint = repaint;
             embeddedFrameRate = frameRate;
+            embeddedCurrentFrame = currentFrame;
+            embeddedSetCurrentFrame = setCurrentFrame;
             embeddedAddTrack = addTrack;
             embeddedCopyClip = copyClip;
             Styles.Load();
@@ -763,6 +769,8 @@ namespace Slate
             beginWindows = null;
             endWindows = null;
             embeddedFrameRate = null;
+            embeddedCurrentFrame = null;
+            embeddedSetCurrentFrame = null;
             embeddedRuntimeTime = null;
             embeddedHistoryTime = null;
             embeddedAddTrack = null;
@@ -1068,6 +1076,10 @@ namespace Slate
         ///<summary>Steps time forward to the next key time</summary>
         void StepForward() {
             if ( embeddedSurface ) {
+                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
+                    embeddedSetCurrentFrame(embeddedCurrentFrame() + 1);
+                    return;
+                }
                 cutscene.currentTime = Mathf.Min(cutscene.length, cutscene.currentTime + 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
                 return;
             }
@@ -1087,6 +1099,10 @@ namespace Slate
         ///<summary>Steps time backwards to the previous key time</summary>
         void StepBackward() {
             if ( embeddedSurface ) {
+                if ( embeddedCurrentFrame != null && embeddedSetCurrentFrame != null ) {
+                    embeddedSetCurrentFrame(embeddedCurrentFrame() - 1);
+                    return;
+                }
                 cutscene.currentTime = Mathf.Max(0f, cutscene.currentTime - 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
                 return;
             }
@@ -1491,9 +1507,10 @@ namespace Slate
                 viewTimeMin = 0f;
                 viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
             }
-            GUILayout.Label(
-                $"Edit  {Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate))}F",
-                EditorStyles.miniLabel);
+            int authoringFrame = embeddedCurrentFrame != null
+                ? embeddedCurrentFrame()
+                : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
+            GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
             GUILayout.EndHorizontal();
             GUI.EndGroup();
         }

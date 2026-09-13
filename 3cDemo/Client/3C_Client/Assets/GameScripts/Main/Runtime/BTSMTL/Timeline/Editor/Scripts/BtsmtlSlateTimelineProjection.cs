@@ -394,6 +394,7 @@ namespace BTSMTL.Timeline.Editor
         BtsmtlSlateTimelineViewState? m_PendingViewState;
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
+        int m_CurrentFrame;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
@@ -518,7 +519,7 @@ namespace BTSMTL.Timeline.Editor
             return new BtsmtlSlateTimelineViewState(
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMin : 0f,
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.viewTimeMax : 0f,
-                m_EmbeddedEditor != null && m_EmbeddedEditor.cutscene != null ? m_EmbeddedEditor.cutscene.currentTime : 0f,
+                m_CurrentFrame / (float)Mathf.Max(1, m_Session.FrameRate),
                 m_EmbeddedEditor != null ? m_EmbeddedEditor.EmbeddedScrollPosition : Vector2.zero,
                 selection.Track?.AuthoringId,
                 selection.Clip?.AuthoringId,
@@ -535,7 +536,7 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor.viewTimeMax = state.ViewTimeMax;
             }
             if (m_EmbeddedEditor.cutscene != null)
-                m_EmbeddedEditor.cutscene.currentTime = Mathf.Clamp(state.CurrentTime, 0f, m_EmbeddedEditor.cutscene.length);
+                SetCurrentFrame(Mathf.RoundToInt(state.CurrentTime * Mathf.Max(1, m_Session.FrameRate)));
             if (m_Cutscene != null && m_Cutscene.groups.Count != 0)
                 m_Cutscene.groups[0].isCollapsed = state.GroupCollapsed;
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
@@ -731,7 +732,15 @@ namespace BTSMTL.Timeline.Editor
         void CreateEmbeddedEditor()
         {
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
-            m_EmbeddedEditor.InitializeEmbedded(m_Cutscene, null, () => m_Session.FrameRate, ShowAddTrackMenu, CopyProxyClip);
+            m_EmbeddedEditor.InitializeEmbedded(
+                m_Cutscene,
+                null,
+                () => m_Session.FrameRate,
+                ShowAddTrackMenu,
+                CopyProxyClip,
+                () => m_CurrentFrame,
+                SetCurrentFrame);
+            SetCurrentFrame(m_CurrentFrame);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);
             if (!string.IsNullOrEmpty(m_PendingTrackFocus) || !string.IsNullOrEmpty(m_PendingClipFocus))
@@ -740,6 +749,14 @@ namespace BTSMTL.Timeline.Editor
                 m_PendingTrackFocus = string.Empty;
                 m_PendingClipFocus = string.Empty;
             }
+        }
+
+        void SetCurrentFrame(int frame)
+        {
+            m_CurrentFrame = Mathf.Clamp(frame, 0, m_Request.Timeline.MaxFrame);
+            if (m_EmbeddedEditor?.cutscene != null)
+                m_EmbeddedEditor.cutscene.currentTime = m_CurrentFrame / (float)Mathf.Max(1, m_Session.FrameRate);
+            m_EmbeddedEditor?.RequestEmbeddedRepaint();
         }
 
         void ShowAddTrackMenu()

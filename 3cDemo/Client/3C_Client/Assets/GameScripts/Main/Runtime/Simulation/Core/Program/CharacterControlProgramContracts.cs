@@ -494,6 +494,51 @@ namespace ThirdPersonSimulation
         public bool IsValid => CatalogEntryIndex >= 0 && ModuleId.IsValid && SemanticVersion > 0;
     }
 
+    public sealed class CharacterControlRuntimeBinding
+    {
+        public CharacterControlRuntimeBinding(
+            CharacterControlModuleId moduleId,
+            int semanticVersion,
+            CharacterControlParameterSet parameters)
+        {
+            if (!moduleId.IsValid || semanticVersion <= 0)
+                throw new ArgumentException("Character control runtime binding identity is incomplete.");
+            ModuleId = moduleId;
+            SemanticVersion = semanticVersion;
+            Parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+            BindingHash = StableHash.Compute(
+                "character-control-runtime-binding/1",
+                moduleId.Value,
+                semanticVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                parameters.ContentHash.ToString());
+        }
+
+        public CharacterControlModuleId ModuleId { get; }
+        public int SemanticVersion { get; }
+        public CharacterControlParameterSet Parameters { get; }
+        public StableHash BindingHash { get; }
+
+        public void RequireContract(CharacterControlModuleContract contract)
+        {
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            if (contract.ModuleId != ModuleId || contract.SemanticVersion != SemanticVersion)
+                throw new InvalidOperationException(
+                    $"Character control runtime binding '{ModuleId}/{SemanticVersion}' does not match module contract '{contract.ModuleId}/{contract.SemanticVersion}'.");
+            if (!contract.TryResolveParameterSet(
+                    Parameters.Values,
+                    out CharacterControlParameterSet resolved,
+                    out IReadOnlyList<string> errors) ||
+                !resolved.ContentHash.Equals(Parameters.ContentHash))
+            {
+                throw new InvalidOperationException(
+                    errors == null || errors.Count == 0
+                        ? $"Character control runtime binding parameters do not match module contract '{ModuleId}'."
+                        : string.Join(" ", errors));
+            }
+        }
+    }
+
     public sealed class CharacterControlModuleCatalog
     {
         readonly struct ModuleEntry

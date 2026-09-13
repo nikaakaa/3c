@@ -126,3 +126,33 @@ MotionCurve MUST引用 RootMotionCurveAsset 的正式源内容，源区间和播
 - **WHEN** 作者更新源数据但当前技能实例仍活动
 - **THEN** 当前实例 MUST继续使用启动时绑定的内容，正式重新准备后新实例采用新版本
 - **AND** 网络锁定会话不得偷偷更换轨迹或内容身份
+
+### Requirement: 领域工厂必须实际脱离整角色Program装配
+
+角色领域工厂 MUST从明确角色配置、已绑定独立技能集合、数值服务及领域状态创建实例，并由正式Host和原Pipeline Pass实际使用。只把旧Program、ExecutionLayout、Workspace和Evaluator包进新的Factory MUST不被视为完成领域装配；最终公开输入输出不得要求整角色可执行容器。
+
+#### Scenario: 角色没有旧Program但领域配置完整
+- **WHEN** 角色已具备合法控制、技能、运动及其它必需领域绑定
+- **THEN** 正式工厂 MUST可以创建可由原Pass推进的角色实例
+- **AND** MUST不为了创建实例而生成或加载旧Character Program
+
+### Requirement: 独立技能不得复制角色级领域状态
+
+独立技能数据 MUST只声明其局部图执行、调用和实例状态，不得为复用旧执行器无条件复制角色GameplayEffect aggregate、全局随机状态、HandleAllocator或FactSequence。角色级服务与状态 MUST由原正式领域owner唯一提供，多个技能通过typed服务使用同一事实。明确的技能私有状态 MUST具有技能／实例作用域和恢复规则，不能与角色级字段混用。
+
+#### Scenario: 两个技能同时消费效果与实例分配服务
+- **WHEN** 同一角色安装并运行两个独立技能
+- **THEN** 两者 MUST使用角色正式效果与分配服务，不能各自创建一份角色aggregate或全局序号
+- **AND** 两个技能的私有计时与局部变量 MUST仍独立
+
+### Requirement: Provider绑定必须检查真实依赖合同
+
+Provider绑定 MUST从当前实际模块或正式配置取得被引用成员的identity、值类型、合同版本和typed运行句柄，并按技能要求解析。只匹配Provider种类或资产GUID MUST不足以判定Ready。缺失成员、类型不符或版本不兼容 MUST在准备／绑定阶段返回精确依赖原因；不得从旧技能产物反推提供者当前合同。
+
+#### Scenario: 同一资产删除被引用输入
+- **WHEN** InputProfile的GUID未变但实际合同已删除技能使用的MoveAxis
+- **THEN** 绑定 MUST拒绝该技能依赖并定位输入，不得因owner identity相同而接受
+
+#### Scenario: 提供者改变字段类型
+- **WHEN** 技能要求的属性类型与实际提供者声明不同
+- **THEN** 绑定 MUST在运行前报告类型不匹配，不能延迟为Tick中的默认值或错误读取

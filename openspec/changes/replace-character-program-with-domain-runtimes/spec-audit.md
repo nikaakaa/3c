@@ -48,6 +48,24 @@
 
 实现记录中1.1—1.3只交付Ability前端、两个Target入口和store，仍借用旧容器。不存在本规划已经交付四领域工厂、原生Pose／直接Timeline完整运行或预览接入的结论。新规划不会把旧小步标记为失败或回退它们；增量在新增未完成任务中接续，运行结果尚无本轮证明。
 
+## 2026-09-14实现质量审查
+
+本节由规划窗口按用户要求记录；源码审查快照为HEAD `50e12e191` 附近。本轮未修改代码、资产或implementation.md，未重跑编译／Unity；实现窗口的历史编译记录仍只代表其报告边界。
+
+| 编号 | 源码证据 | 审查结论 | 任务口径 |
+| --- | --- | --- | --- |
+| Q1 | Float32／Fixed CharacterDomainRuntimeFactory仍从request.Program／ExecutionLayout创建旧Workspace／Evaluator；Host仍Load整角色Program | 已集中创建职责，但尚未形成最终领域装配 | 2.1重开；保留已有代码和Pass调用口 |
+| Q2 | GameplayAbilitySemanticFrontendCompiler声明GameplayEffectAggregate、runtime:rng、handle-allocator、fact-sequence | 技能仍携带角色级状态，接入多技能前必须迁出；不声称当前已发生运行重复 | 1.2保留已实现的前端小步，新增1.8明确状态整改、1.10完成独立数据接口 |
+| Q3 | GameplayAbilityProviderContract.RequireBinding只比较Kind／ProviderIdentity | 资产身份相同不证明成员存在、类型或版本兼容 | 1.4描述收窄为已实现身份检查，新增1.9承担真实合同解析 |
+| Q4 | GameplayAbilityDataAsset.Load和Fixed对应方法返回CharacterSimulationProgram | 独立Asset wrapper不等于最终技能execution data | 1.10移除返回／消费链对旧容器的依赖 |
+| Q5 | Pose初始化仍拒绝FlowCanvas Runtime；Timeline仍用旧发射／Program plan；网络仍锁Program／Layout | 这些主链尚未落地，不以拆分类或小步提交数量推定完成 | 原相关未完成任务保持 |
+
+同时跟随current spec替换Curve Key条款中已退役的Position key场景，完整保留新“源运动曲线不进入Timeline lane”场景及其它未变场景，不恢复源曲线进入Timeline可写lane。
+
+此次修改的是完成口径和明确整改边界，不降低原目标，也不撤销已正确的前端、数值目标、存储、生命周期和静态Motion迁移。implementation.md中的2.1已完成属于实现方此前记录，本轮不改历史日志；tasks.md和design D12记录本次规划审查结论。
+
+本轮在character-domain-runtime增加工厂脱离Program、技能不复制角色级状态、Provider真实合同三项要求与场景。未新增测试代码或验证任务，后续实现仍按原owner边界推进；不向其它窗口发送日常回执或新增执行指令。
+
 ## 增量清单
 
 | 能力 | 操作 | 原Requirement | 保留原场景数 | 迁移说明 |

@@ -146,18 +146,17 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 - **THEN** MutationAdapter MUST原子保存完整Keyframe字段
 - **AND** 未修改的key与wrap mode MUST无损保留
 
-#### Scenario: 复制到不兼容channel
+#### Scenario: 源运动曲线不进入Timeline lane
 
-- **WHEN** 作者把unbounded Position key粘贴到bounded Weight channel
-- **THEN** Editor MUST拒绝该操作并说明time/value domain不兼容
-- **AND** MUST不Clamp、不换算单位也不部分写入
+- **WHEN** 作者试图把 RootMotionCurveAsset 源曲线粘贴到 Timeline Weight channel
+- **THEN** Editor MUST拒绝该操作并说明源 owner 不属于 Timeline-local channel
+- **AND** MUST不创建曲线副本或部分写入
 
 #### Scenario: 外部修改使key选择过期
 
 - **WHEN** owner curve revision在编辑手势外被C#作者API或其它正式入口替换
 - **THEN** Editor MUST使临时key选择失效并重新读取完整curve
 - **AND** MUST不按旧key index写入新revision
-
 
 ### Requirement: Curve Editor必须保持领域运行链唯一
 

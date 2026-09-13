@@ -1,18 +1,22 @@
-本轮规划补充：已勾选1.1—1.3保留原交付事实；其仍复用旧容器，不代表最终领域工厂／准备采用接口可用。Timeline直接内容运行的增量由1.5—1.7和新增接入任务交付，implementation.md由实现窗口维护。
+2026-09-14审查口径：保留1.1—1.3的前端／目标／存储小步与1.4的Provider身份检查成果；1.2和1.4的已完成描述按实际交付收窄，原完整要求由1.8—1.10接续。2.1重新标为未完成，现有Factory仅封装旧Program的Workspace／Evaluator，不等于最终领域工厂。审查依据与代码链见design D12及spec-audit；implementation.md的历史记录由实现窗口维护。
 
 ## 1. 独立技能数据与领域合同
 
 - [x] 1.1 将技能构建根迁为 GameplayAbilityDefinition，交付只包含其私有 Graph／FSM／条件／子图引用／Timeline 的发现模型与实际依赖修订。
-- [x] 1.2 将原 Character Builder 中的技能操作、调用帧、局部状态、常量、来源与能力要求迁为独立 Ability 数据接口，不携带角色控制或全角色目录。
+- [x] 1.2 已交付Ability根的技能操作、调用帧、黑板、常量、来源与能力前端，当前仍落入旧Program容器；最终独立执行数据和角色级状态迁出由1.8、1.10接续。
 - [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
-- [x] 1.4 将 Input／Effect／Equipment／角色状态等技能外部引用迁为 typed provider 合同，使缺失引用在角色绑定时明确失败。
+- [x] 1.4 已交付Input／Effect／Equipment／CharacterState的typed Provider种类、owner identity声明及Load身份检查入口；真实成员／类型／版本绑定由1.9接续。
 - [ ] 1.5 将技能调用与独立Timeline产品统一接到直接内容调度入口，保留正式时钟、窗口、循环／Section、取消及TreeClip阶段。
 - [ ] 1.6 删除Timeline轨道／Clip／MotionWarp到IR与operation的发射，技能只保存调用和内容引用，TreeClip图继续独立编译。
 - [ ] 1.7 交付同一Timeline字段合同的portable内容导出、资源引用与Float32／Fixed绑定，使普通.NET直接运行而不回读Unity或生成临时程序。
 
+- [ ] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
+- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄，拒绝同GUID下已删除或类型不符的依赖。
+- [ ] 1.10 将AbilityDataAsset／FixedAbilityDataAsset的Load结果和消费接口迁为真正独立技能执行数据，删除对CharacterSimulationProgram／角色全局布局的返回和解码依赖。
+
 ## 2. 角色领域运行与状态
 
-- [x] 2.1 交付角色领域运行实例工厂与 Evaluate／Finalize 接口，保持控制、技能、效果、运动和提交顺序，由现有 Pass 调用。
+- [ ] 2.1 按明确角色配置、已绑定独立技能集合和领域状态创建角色运行实例，接入正式Host及现有Pass的Evaluate／Finalize；Factory不得继续以旧Program／ExecutionLayout创建旧Evaluator作为交付终点。
 - [ ] 2.2 将 ControlModule 参数、静态 Motion 描述和控制状态迁出 Program catalog／slots，保留 C# UnityHFSM 及全部已有走跑转身规则。
 - [ ] 2.3 消费曲线任务提供的RootMotionCurveAsset及Timeline唯一时间映射，将C# Control／Motion接到正式portable绑定，删除CharacterControlMotionCatalogEmitter依赖并保留MovingTurn和CameraRelative行为。
 - [ ] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。

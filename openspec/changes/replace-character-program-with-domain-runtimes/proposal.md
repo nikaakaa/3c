@@ -52,5 +52,5 @@
 - Runtime：Character Host／Registration、Float32／Fixed evaluator 与状态 codec、Control／Ability／Motion／Effect／Equipment 接口、Pose 原生图／节点／连接、动画资源和最终输出。
 - Network／Server：Session Composer、Pass 产品及快照接口、握手与 Authority manifest；协议身份正式升级，网络行为和部署产品分工不改变。
 - Authoring：复用已安装的 FlowCanvas／NodeCanvas、正式 Capability／Mutation 与显式 `export_code`／`generate_assets`，不新增插件或作者同步机制。
-- 接口现状：实现记录中的 1.1—1.3 仅表示 Ability 前端、目标入口与 store 已交付，当前仍借用旧容器；领域实例工厂和预览可消费的准备／采用接口尚未完成，不能据此宣称新角色运行可用。
+- 接口现状：1.1—1.3已交付Ability前端、目标入口与store，1.4已交付Provider身份检查；当前仍借用旧容器。2026-09-14审查将2.1重开：现有Factory只包住旧Workspace／Evaluator，尚未完成领域装配。技能角色级状态、Provider成员／类型／版本解析和最终技能Load接口分别由新增1.8—1.10收口，不能据已有小步宣称新运行或预览接口可用。
 - 文档：本提案替代旧评估中“继续保留角色总 Program”的方向。现行 spec、`openspec/project.md` 和并行 Pose／EventGraph／技能 FSM 提案的矛盾与准确分工见 `design.md`；本轮不改写其它任务，不把旧完成项重新判为未完成。

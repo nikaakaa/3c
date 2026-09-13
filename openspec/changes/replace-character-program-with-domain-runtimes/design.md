@@ -152,12 +152,32 @@ RootMotionCurveAsset 唯一保存累计 XYZ／Yaw、源时长和求值模式；C
 
 ### D11. 当前可消费接口与完成边界
 
-本轮读取 implementation.md 和源码后，只确认已有：
+以下是2026-09-13第一批接口快照，保留其已交付事实；2026-09-14新增模块与质量审查见D12。该批确认已有：
 - `GameplayAbilitySemanticFrontendCompiler.Compile(GameplayAbilityDefinition)`：返回独立 Ability 的语义结果。
 - `GameplayAbilityTargetCompiler.CompileFloat32/CompileFixed(ValidatedSemanticIrArtifact)`：提供两个目标入口。
 - `GameplayAbilityFloat32TargetProgramArtifactStore` 与 Fixed 对应类的 `Stage/Write/Load`：按 Ability identity 处理产物。
 
 这些仍复用旧 Semantic／CharacterSimulationProgram 容器，不能当作最终领域 runtime 或预览 API。任务1.1—1.3的已勾选记录保留；D9的 Timeline operation 删除、最终技能数据接口、D10四个领域准备／采用结果和角色工厂均由后续未完成任务交付。编译命令曾失败及未运行验证的边界仍按实现记录保留，本规划不改写 implementation.md 的事实。
+
+### D12. 2026-09-14实现审查与收口要求
+
+本轮源码快照：HEAD `50e12e191` 附近的共享工作区。审查只读，不重跑编译或Unity。implementation.md报告的编译成功属于实现窗口记录，不转换为本轮运行证明。
+
+| 审查项 | 已有实际链路 | 完成口径与整改 |
+| --- | --- | --- |
+| Q1 领域工厂 | Float32／Fixed CharacterDomainRuntimeFactory仍以SimulationEvaluateRequest中的Program／ExecutionLayout创建旧Workspace和OperationEvaluator；CharacterPipelineHost仍Load旧整角色Program | 这是实例创建职责集中，不是最终领域装配。2.1重开；必须从正式角色配置、独立技能绑定和领域状态创建并被Host／Pass实际消费，不能只新增Factory名字 |
+| Q2 技能状态归属 | GameplayAbilitySemanticFrontendCompiler无条件声明GameplayEffectAggregate、runtime:rng、handle-allocator和fact-sequence | 将原角色级状态留在每份Ability中会延续完整运行单元模型。1.8接管移出，领域服务唯一拥有；明确的技能局部状态仍保留，不强迫不同技能共享其私有计时或变量 |
+| Q3 Provider实际合同 | RequireBinding只比较Kind与ProviderIdentity；BindingEntry不包含真实成员／类型／版本或运行服务句柄 | 1.4只算身份声明入口已完成。1.9必须解析实际提供者合同，不能靠同一资产GUID证明依赖仍存在，不能从旧产物反算“实际”合同 |
+| Q4 最终技能数据接口 | GameplayAbilityDataAsset.Load及Fixed对应入口仍返回CharacterSimulationProgram | 1.10完成最终返回／消费类型和布局分离。已有校验、codec／store逻辑可复用，不能只换Asset名称 |
+| Q5 后续主链 | Timeline仍走旧发射／Program plan，Pose仍禁止原生运行，网络仍比较Program／Layout身份 | 保持原未完成任务，不把模块拆分类提交等同于这些行为已经改变 |
+
+Q1的完成条件是实际依赖被切断：角色工厂输入不再要求整角色Program，输出不再只是旧Evaluator与Workspace，正式Host使用已绑定技能集合和领域配置创建实例，Pass继续原Evaluate／WorldResolve／Finalize顺序。D10的准备与采用结果仍需由真实owner发布。
+
+Q2不是当前运行已出现重复效果或序号冲突的结论；新技能资源尚未整体接进角色启动。本项指出的是接入前必须清除的状态归属冲突。若业务确有技能私有随机流，必须使用明确的技能／实例作用域与恢复规则，不能复用旧角色级runtime:rng来冒充私有设计。
+
+Q3要求的是被实际引用的成员合同，不是整资产每个无关字段都触发失败。提供者必须从当前已安装模块／正式配置发布成员identity、值类型与合同版本，绑定按技能需求解析typed句柄。同GUID删除MoveAxis、改变某属性类型、或提供者版本不兼容时，准备应返回精确依赖失败；仅更改未消费的作者显示信息不构成合同失配。
+
+已有有效小步继续保留：独立Ability前端、两个Target／store、生命周期模块拆分、Control Tick模块拆分、Pass的CharacterRuntime调用口，以及Control静态Motion直接读取C# Contract。此次重开完成标记不回退代码、不撤销这些成果，也不以改名或保留旧兼容入口代替剩余收口。
 
 ## Risks / Trade-offs
 

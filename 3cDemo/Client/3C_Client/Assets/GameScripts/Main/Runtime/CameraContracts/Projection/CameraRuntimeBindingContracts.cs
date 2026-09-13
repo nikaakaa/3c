@@ -109,7 +109,7 @@ namespace ThirdPersonCamera
         {
             if (string.IsNullOrWhiteSpace(actorId) || string.IsNullOrWhiteSpace(instanceId))
             {
-                return CameraBindingAdoptedResult.Failed(
+                return CameraBindingAdoptedResult.CreateFailed(
                     BindingId,
                     ProfileId,
                     ProfileRevision,

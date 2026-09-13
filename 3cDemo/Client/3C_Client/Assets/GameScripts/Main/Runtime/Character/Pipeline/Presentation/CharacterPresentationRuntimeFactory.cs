@@ -401,14 +401,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             physicsScene,
                             worldAwareBinding.SelfColliderRoot);
                     }
+                    var cameraBindingRequest = new CameraBindingPreparationRequest(
+                        $"camera-runtime|{actorId.Value}|{diagnostics.CharacterRuntimeId:N}",
+                        projection.ProgramId,
+                        projection.SourceRevision,
+                        projection.Camera,
+                        cameraRig,
+                        cameraTargetBindings,
+                        environmentQuery);
+                    CameraBindingPreparationResult cameraBindingPreparation =
+                        CameraRuntimeBindingPreparation.Prepare(in cameraBindingRequest);
+                    if (!cameraBindingPreparation.IsReady)
+                    {
+                        throw new InvalidOperationException(
+                            $"Camera binding preparation failed: status={cameraBindingPreparation.Status}, code={cameraBindingPreparation.FailureCode}, message={cameraBindingPreparation.FailureMessage}");
+                    }
+                    CameraRuntimeBinding cameraBinding = cameraBindingPreparation.PreparedBinding;
+                    CameraBindingAdoptedResult adoptedBinding = cameraBinding.Adopt(
+                        actorId.Value,
+                        diagnostics.CharacterRuntimeId.ToString("N"));
+                    if (!adoptedBinding.Adopted)
+                    {
+                        throw new InvalidOperationException(
+                            $"Camera binding adoption failed: {adoptedBinding.FailureMessage}");
+                    }
                     camera = new CharacterCameraPresentationRuntime(
                         projection,
-                        cameraRig,
+                        cameraBinding,
+                        adoptedBinding,
                         initialBody,
                         followAnchor,
                         aimAnchor,
-                        cameraTargetBindings,
-                        environmentQuery,
                         inputAdapter,
                         lookInputId,
                         initializeExternalState);

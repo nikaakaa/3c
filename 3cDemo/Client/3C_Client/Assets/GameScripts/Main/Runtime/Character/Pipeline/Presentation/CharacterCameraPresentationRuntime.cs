@@ -11,6 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal sealed class CharacterCameraPresentationRuntime : IDisposable
     {
+        readonly CameraRuntimeBinding m_RuntimeBinding;
+        readonly CameraBindingAdoptedResult m_AdoptedBinding;
         readonly ICameraRigAdapter m_CameraRig;
         readonly CharacterCameraProjectionPayload m_CameraProjection;
         readonly CameraTargetBindingResolver m_TargetResolver;
@@ -44,37 +46,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterCameraPresentationRuntime(
             CharacterPresentationProjection projection,
-            ICameraRigAdapter cameraRig,
+            CameraRuntimeBinding runtimeBinding,
+            CameraBindingAdoptedResult adoptedBinding,
             CharacterPresentationBodyState initialBody,
             Transform followAnchor,
             Transform aimAnchor,
-            IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
-            ICameraEnvironmentQuery environmentQuery,
             ICharacterPresentationLookInput inputAdapter,
             string lookInputId,
             bool initializeExternalState = true)
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            runtimeBinding = runtimeBinding ?? throw new ArgumentNullException(nameof(runtimeBinding));
+            runtimeBinding.RequireValid();
+            if (!adoptedBinding.Adopted ||
+                !string.Equals(adoptedBinding.BindingId, runtimeBinding.BindingId, StringComparison.Ordinal) ||
+                !string.Equals(adoptedBinding.ProfileId, runtimeBinding.ProfileId, StringComparison.Ordinal) ||
+                !string.Equals(adoptedBinding.ProfileRevision, runtimeBinding.ProfileRevision, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Camera runtime binding was not adopted by the requested profile.");
+            }
             projection.RequireCameraPayload();
-            m_CameraProjection = projection.Camera;
-            m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
+            if (!ReferenceEquals(projection.Camera, runtimeBinding.Projection))
+                throw new InvalidOperationException("Camera runtime binding does not belong to the Presentation Projection.");
+            m_RuntimeBinding = runtimeBinding;
+            m_AdoptedBinding = adoptedBinding;
+            m_CameraProjection = runtimeBinding.Projection;
+            m_CameraRig = runtimeBinding.RigAdapter;
             m_ResponseResolver = new CameraResponseRequestResolver(m_CameraProjection.Input);
             if (!followAnchor || !aimAnchor)
                 throw new ArgumentException("Presentation Camera requires explicit follow and aim anchors.");
-            if (cameraTargetBindings == null)
-                throw new ArgumentNullException(nameof(cameraTargetBindings));
             m_InputAdapter = inputAdapter ?? throw new ArgumentNullException(nameof(inputAdapter));
             m_LookInputId = string.IsNullOrWhiteSpace(lookInputId)
                 ? throw new ArgumentException("Presentation Camera look input identity is missing.", nameof(lookInputId))
                 : lookInputId.Trim();
-            m_TargetResolver = new CameraTargetBindingResolver(cameraTargetBindings);
+            m_TargetResolver = new CameraTargetBindingResolver(runtimeBinding.TargetBindings);
             RequireCameraTargetBindings(projection, m_TargetResolver);
             m_SequenceEvaluator = new CharacterCameraSequenceEvaluator(m_CameraProjection);
             m_EffectEvaluator = new CameraEffectEvaluator(m_CameraProjection);
             m_EnvironmentSolver = new CameraEnvironmentConstraintSolver(
                 m_CameraProjection,
-                environmentQuery);
+                runtimeBinding.EnvironmentQuery);
             Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
             m_FollowBindPosition = inverse * (followAnchor.position - initialBody.Position);
             m_AimBindPosition = inverse * (aimAnchor.position - initialBody.Position);
@@ -85,6 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CameraBasisSnapshot BasisSnapshot => m_CameraRig.BasisSnapshot;
         public CameraRigResult RigResult => m_CameraRig.Result;
         public CameraDebugSnapshot DebugSnapshot => m_Debug;
+        internal CameraRuntimeBinding RuntimeBinding => m_RuntimeBinding;
+        internal CameraBindingAdoptedResult AdoptedBinding => m_AdoptedBinding;
         internal CharacterCameraPresentationCaptureFrame LastPresentationFrame => m_LastPresentationFrame;
 
         public void SetInitialState(in CameraInitialState state)

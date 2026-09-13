@@ -555,7 +555,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlanPitch = planPitch;
             RawLook = rawLook;
             ConsumedLook = consumedLook;
-            ResponseMode = (int)responseMode;
+            ResponseModeValue = (int)responseMode;
             ResponseWeight = responseWeight;
             PitchResponseWeight = pitchResponseWeight;
             YawResponseWeight = yawResponseWeight;
@@ -613,7 +613,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PlanPitch,
                 RawLook,
                 ConsumedLook,
-                (CameraResponseMode)ResponseMode,
+                (CameraResponseMode)ResponseModeValue,
                 ResponseWeight,
                 PitchResponseWeight,
                 YawResponseWeight,
@@ -715,7 +715,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticKey("response-mode")]
         [DiagnosticGroup("camera-input")]
-        public int ResponseMode { get; }
+        public int ResponseModeValue { get; }
 
         [DiagnosticField]
         [DiagnosticKey("response-weight")]

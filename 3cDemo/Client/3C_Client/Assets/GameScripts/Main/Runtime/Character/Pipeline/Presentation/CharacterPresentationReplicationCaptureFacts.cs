@@ -812,7 +812,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterCameraEffectCaptureRow(CameraEffectContribution source)
         {
-            Stage = source.Stage;
+            Stage = (int)source.Stage;
             ResourceId = source.ResourceId;
             Weight = source.Weight;
             RemainingSeconds = source.RemainingSeconds;
@@ -823,12 +823,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceActionInstanceId = source.SourceActionInstanceId;
             Cycle = source.Cycle;
             EventId = source.EventId;
-            StopReason = source.StopReason;
+            StopReason = (int)source.StopReason;
         }
 
         [DiagnosticField]
         [DiagnosticKey("stage")]
-        public CameraEffectStage Stage { get; }
+        public int Stage { get; }
 
         [DiagnosticField]
         [DiagnosticKey("resource-id")]
@@ -872,7 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         [DiagnosticField]
         [DiagnosticKey("stop-reason")]
-        public CameraPresentationStopReason StopReason { get; }
+        public int StopReason { get; }
     }
 
     public readonly struct CharacterPresentationCommandCaptureFacts

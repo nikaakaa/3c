@@ -2528,7 +2528,7 @@ namespace Slate
                     int inspected = -1;
                     if (formalInspectedParameters != null)
                         formalInspectedParameters.TryGetValue(track.AuthoringId, out inspected);
-                    TrackEditorGUI.DrawFormalTrackInfoGUI(e, trackRect, track, ReferenceEquals(embeddedTimeline.Selected, track), ref inspected);
+                    TrackEditorGUI.DrawParametersInfoGUI(e, trackRect, track, ReferenceEquals(embeddedTimeline.Selected, track), ref inspected);
                     if (formalInspectedParameters != null)
                         formalInspectedParameters[track.AuthoringId] = inspected;
 
@@ -3295,7 +3295,7 @@ namespace Slate
                     int inspected = -1;
                     if (formalInspectedParameters != null)
                         formalInspectedParameters.TryGetValue(track.AuthoringId, out inspected);
-                    TrackEditorGUI.DrawFormalTimelineGUI(e, trackPosRect, trackTimeRect, TimeToPos, track, ref inspected);
+                    TrackEditorGUI.DrawClipCurves(e, trackPosRect, trackTimeRect, TimeToPos, track, ref inspected);
                     if (formalInspectedParameters != null)
                         formalInspectedParameters[track.AuthoringId] = inspected;
 

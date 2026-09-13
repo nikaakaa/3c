@@ -371,7 +371,7 @@ namespace Slate
 
         }
 
-        public static void DrawFormalTrackInfoGUI(
+        public static void DrawParametersInfoGUI(
             Event e,
             Rect trackRect,
             IEmbeddedTimelineTrackBinding track,
@@ -427,7 +427,7 @@ namespace Slate
             }
         }
 
-        public static void DrawFormalTimelineGUI(
+        public static void DrawClipCurves(
             Event e,
             Rect posRect,
             Rect timeRect,
@@ -438,10 +438,10 @@ namespace Slate
             if (!track.ShowCurves)
                 return;
             var curvesRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin + track.DefaultHeight, posRect.xMax, posRect.yMax);
-            DrawFormalClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterIndex);
+            DrawClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterIndex);
         }
 
-        static void DrawFormalClipCurves(
+        static void DrawClipCurves(
             Event e,
             Rect posRect,
             Rect timeRect,
@@ -492,7 +492,7 @@ namespace Slate
                     GUI.DrawTexture(parameterRect, Texture2D.whiteTexture);
                     GUI.color = Color.white;
                     GUI.Label(parameterRect, string.Format(" <size=10>{0}</size>", parameter.DisplayName), Styles.leftLabel);
-                    DrawFormalKeys(parameter, parameterRect, finalTimeRect);
+                    DrawKeys(parameter, parameterRect, finalTimeRect);
                     if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
                     {
                         inspectedParameterIndex = index;
@@ -516,7 +516,7 @@ namespace Slate
                 () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));
         }
 
-        static void DrawFormalKeys(IEmbeddedTimelineParameterBinding parameter, Rect rect, Rect timeRect)
+        static void DrawKeys(IEmbeddedTimelineParameterBinding parameter, Rect rect, Rect timeRect)
         {
             if (parameter.Curves == null || parameter.Curves.Count == 0)
                 return;

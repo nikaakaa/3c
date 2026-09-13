@@ -772,13 +772,6 @@ namespace Slate
             cutscene = null;
         }
 
-        public void ConfigureEmbeddedBinding(IEmbeddedTimelineBinding binding)
-        {
-            embeddedTimeline = binding;
-            if (binding != null)
-                embeddedAddTrack = binding.AddTrack;
-        }
-
         internal void ApplyEmbeddedCommand(System.Action command, string undoName)
         {
             if (embeddedTimeline == null || embeddedTimeline.IsReadOnly)

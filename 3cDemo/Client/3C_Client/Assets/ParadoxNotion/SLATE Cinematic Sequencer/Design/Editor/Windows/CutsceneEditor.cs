@@ -2393,6 +2393,7 @@ namespace Slate
         void ShowEmbeddedClipMenu(IEmbeddedTimelineClipBinding clip, IEmbeddedTimelineTrackBinding track)
         {
             GenericMenu menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Open Source"), false, () => embeddedTimeline.OpenSource(clip));
             menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => embeddedTimeline.CopyClip(clip));
             if (clip.CanScale)
                 menu.AddItem(new GUIContent("Fit Clip"), false, () => ApplyEmbeddedCommand(clip.StretchFit, "Fit Clip"));

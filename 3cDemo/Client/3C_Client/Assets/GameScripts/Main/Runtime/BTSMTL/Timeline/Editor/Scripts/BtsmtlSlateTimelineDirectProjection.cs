@@ -9,6 +9,45 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
 {
+    [Serializable]
+    public struct BtsmtlSlateTimelineViewState
+    {
+        [SerializeField] float m_ViewTimeMin;
+        [SerializeField] float m_ViewTimeMax;
+        [SerializeField] float m_CurrentTime;
+        [SerializeField] Vector2 m_ScrollPosition;
+        [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] string m_ClipAuthoringId;
+        [SerializeField] bool m_GroupCollapsed;
+
+        public BtsmtlSlateTimelineViewState(
+            float viewTimeMin,
+            float viewTimeMax,
+            float currentTime,
+            Vector2 scrollPosition,
+            string trackAuthoringId,
+            string clipAuthoringId,
+            bool groupCollapsed)
+        {
+            m_ViewTimeMin = viewTimeMin;
+            m_ViewTimeMax = viewTimeMax;
+            m_CurrentTime = currentTime;
+            m_ScrollPosition = scrollPosition;
+            m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
+            m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            m_GroupCollapsed = groupCollapsed;
+        }
+
+        public float ViewTimeMin => m_ViewTimeMin;
+        public float ViewTimeMax => m_ViewTimeMax;
+        public float CurrentTime => m_CurrentTime;
+        public Vector2 ScrollPosition => m_ScrollPosition;
+        public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
+        public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
+        public bool GroupCollapsed => m_GroupCollapsed;
+        public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
+    }
+
     sealed class BtsmtlTimelineCurveTarget
     {
         public float AnimationWeight;
@@ -817,7 +856,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding directSection))
                 return;
-            m_Session.Apply(()
+            m_Session.Apply(() =>
             {
                 Timeline.RemoveSection(directSection.Source);
                 Timeline.Init();
@@ -837,6 +876,12 @@ namespace BTSMTL.Timeline.Editor
             if (m_CopiedClip == null || !(track is BtsmtlTimelineTrackBinding directTrack))
                 return;
             PasteClip(directTrack.Source.AuthoringId, frame);
+        }
+
+        public void OpenSource(IEmbeddedTimelineClipBinding clip)
+        {
+            if (clip is BtsmtlTimelineClipBinding directClip)
+                m_OpenSourceClip?.Invoke(directClip.Source);
         }
 
         public void BeginEdit(string undoName)

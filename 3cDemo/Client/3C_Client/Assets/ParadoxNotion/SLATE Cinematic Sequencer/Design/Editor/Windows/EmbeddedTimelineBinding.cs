@@ -28,6 +28,7 @@ namespace Slate
         void DeleteSection(IEmbeddedTimelineSectionBinding section);
         void CopyClip(IEmbeddedTimelineClipBinding clip);
         void PasteClip(IEmbeddedTimelineTrackBinding track, int frame);
+        void OpenSource(IEmbeddedTimelineClipBinding clip);
         void BeginEdit(string undoName);
         void CommitEdit();
         void CancelEdit();

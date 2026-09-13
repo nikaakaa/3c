@@ -648,20 +648,24 @@ namespace Slate
 
         //Cache an array of snap times for clip (clip times are excluded)
         //Saved in property .magnetSnapTimesCache
-        void CacheMagnetSnapTimes(ActionClip clip = null) {
+        void CacheMagnetSnapTimes(IClipEditorBinding excluded = null) {
             var result = new List<float>();
             result.Add(0);
             result.Add(length);
-            result.Add(cutscene.currentTime);
-            if ( cutscene.directorGroup != null ) {
+            result.Add(EmbeddedCurrentTime());
+            if ( cutscene != null && cutscene.directorGroup != null ) {
                 result.AddRange(cutscene.directorGroup.sections.Select(s => s.time));
             }
             foreach ( var cw in clipWrappers ) {
-                var action = cw.Value.action;
-                //exclude the target clip and only include the same group
-                if ( clip == null || ( action != clip && action.parent.parent == clip.parent.parent ) ) {
-                    result.Add(action.startTime);
-                    result.Add(action.endTime);
+                IClipEditorBinding binding = cw.Value.editorBinding;
+                bool sameTrack = excluded == null ||
+                    (binding.Track != null && excluded.Track != null
+                        ? ReferenceEquals(binding.Track, excluded.Track)
+                        : binding.NativeAction != null && excluded.NativeAction != null &&
+                          binding.NativeAction.parent.parent == excluded.NativeAction.parent.parent);
+                if (sameTrack && !ReferenceEquals(binding, excluded)) {
+                    result.Add(binding.StartTime);
+                    result.Add(binding.EndTime);
                 }
             }
             magnetSnapTimesCache = result.Distinct().ToArray();
@@ -3332,10 +3336,20 @@ namespace Slate
                         if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging)
                         {
                             float start = wrapper.editorBinding.StartTime;
-                            float pointer = SnapTime(PosToTime(clipRect.x + leftRect.width));
-                            pointer = Mathf.Clamp(pointer, 0f, maxTime - wrapper.editorBinding.Length);
+                            float length = wrapper.editorBinding.Length;
+                            float pointer = SnapTime(PosToTime(mousePosition.x));
+                            if (Prefs.magnetSnapping && !e.control)
+                            {
+                                float? magnet = MagnetSnapTime(pointer, magnetSnapTimesCache);
+                                if (magnet.HasValue)
+                                {
+                                    pointer = magnet.Value;
+                                    pendingGuides.Add(new GuideLine(pointer, Color.white));
+                                }
+                            }
+                            pointer = Mathf.Clamp(pointer, 0f, maxTime - length);
                             wrapper.editorBinding.StartTime = pointer;
-                            wrapper.editorBinding.EndTime = pointer + wrapper.editorBinding.Length;
+                            wrapper.editorBinding.EndTime = pointer + length;
                             if (Mathf.Abs(pointer - start) > 0.0001f)
                                 e.Use();
                             clipRect.x = TimeToPos(pointer);
@@ -3956,8 +3970,7 @@ namespace Slate
                             isWaitingMouseDrag = true;
                         }
                         editor.interactingClip = this;
-                        if (action != null)
-                            editor.CacheMagnetSnapTimes(action);
+                        editor.CacheMagnetSnapTimes(editorBinding);
                     }
 
                     if ( e.control && dragRect.Contains(e.mousePosition) ) {
@@ -4133,9 +4146,8 @@ namespace Slate
                     preScaleSubclipOffset = ( action as ISubClipContainable ).subClipOffset;
                     preScaleSubclipSpeed = ( action as ISubClipContainable ).subClipSpeed;
                 }
-                if (action != null)
-                    editor.CacheMagnetSnapTimes(action);
-                else
+                editor.CacheMagnetSnapTimes(editorBinding);
+                if (action == null)
                     editor.embeddedTimeline?.BeginEdit("Adjust Timeline Clip");
             }
 

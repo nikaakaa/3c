@@ -7,10 +7,10 @@ namespace ThirdPersonSimulation
 		readonly Float32InputRuntime m_Input;
 		readonly Float32EvaluationFrame m_Frame;
 		readonly Func<CharacterControlParameterId, Float32Scalar> m_ReadParameter;
-		readonly Func<CharacterSkillId, bool> m_IsSkillActive;
-		readonly Func<CharacterSkillId, (bool Found, ulong InstanceId)> m_TryGetActiveSkillInstanceId;
-		readonly Func<CharacterSkillId, bool> m_IsSkillCompleted;
-		readonly Func<CharacterSkillId, ulong> m_CompletedSkillInstanceId;
+		readonly Func<CharacterSkillId, bool> m_IsAbilityActive;
+		readonly Func<CharacterSkillId, (bool Found, ulong InstanceId)> m_TryGetActiveAbilityInstanceId;
+		readonly Func<CharacterSkillId, bool> m_IsAbilityCompleted;
+		readonly Func<CharacterSkillId, ulong> m_CompletedAbilityInstanceId;
 		readonly Func<CharacterSkillId, string, bool> m_IsActionWindowActive;
         readonly Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> m_TryReadEquipmentActionContext;
 
@@ -28,25 +28,25 @@ namespace ThirdPersonSimulation
 			m_Input = input ?? throw new ArgumentNullException(nameof(input));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
-			m_IsSkillActive = isSkillActive ?? throw new ArgumentNullException(nameof(isSkillActive));
-			m_TryGetActiveSkillInstanceId = tryGetActiveSkillInstanceId ?? throw new ArgumentNullException(nameof(tryGetActiveSkillInstanceId));
-			m_IsSkillCompleted = isSkillCompleted ?? throw new ArgumentNullException(nameof(isSkillCompleted));
-			m_CompletedSkillInstanceId = completedSkillInstanceId ?? throw new ArgumentNullException(nameof(completedSkillInstanceId));
+			m_IsAbilityActive = isSkillActive ?? throw new ArgumentNullException(nameof(isSkillActive));
+			m_TryGetActiveAbilityInstanceId = tryGetActiveSkillInstanceId ?? throw new ArgumentNullException(nameof(tryGetActiveSkillInstanceId));
+			m_IsAbilityCompleted = isSkillCompleted ?? throw new ArgumentNullException(nameof(isSkillCompleted));
+			m_CompletedAbilityInstanceId = completedSkillInstanceId ?? throw new ArgumentNullException(nameof(completedSkillInstanceId));
 			m_IsActionWindowActive = isActionWindowActive ?? throw new ArgumentNullException(nameof(isActionWindowActive));
             m_TryReadEquipmentActionContext = tryReadEquipmentActionContext ?? throw new ArgumentNullException(nameof(tryReadEquipmentActionContext));
 		}
 
 		public bool HasInputRequest(string requestId) => m_Input.HasRequest(requestId, out _);
-		public bool IsSkillActive(CharacterSkillId skillId) => m_IsSkillActive(skillId);
-		public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
+		public bool IsAbilityActive(CharacterSkillId abilityId) => m_IsAbilityActive(abilityId);
+		public bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId)
 		{
-			(bool found, ulong value) = m_TryGetActiveSkillInstanceId(skillId);
+			(bool found, ulong value) = m_TryGetActiveAbilityInstanceId(abilityId);
 			instanceId = value;
 			return found;
 		}
-		public bool IsSkillCompleted(CharacterSkillId skillId) => m_IsSkillCompleted(skillId);
-		public ulong CompletedSkillInstanceId(CharacterSkillId skillId) => m_CompletedSkillInstanceId(skillId);
-		public bool IsActionWindowActive(CharacterSkillId skillId, string windowType) => m_IsActionWindowActive(skillId, windowType);
+		public bool IsAbilityCompleted(CharacterSkillId abilityId) => m_IsAbilityCompleted(abilityId);
+		public ulong CompletedAbilityInstanceId(CharacterSkillId abilityId) => m_CompletedAbilityInstanceId(abilityId);
+		public bool IsAbilityWindowActive(CharacterSkillId abilityId, string windowType) => m_IsActionWindowActive(abilityId, windowType);
         public bool TryReadEquipmentActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context)
         {
             (bool found, EquipmentActionContext value) = m_TryReadEquipmentActionContext(routeId);

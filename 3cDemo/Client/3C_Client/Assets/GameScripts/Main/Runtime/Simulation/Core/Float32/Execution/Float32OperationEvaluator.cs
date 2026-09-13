@@ -497,10 +497,10 @@ namespace ThirdPersonSimulation
 					m_Input,
 					m_Frame,
 					parameter => ReadControlParameter(controlCatalog, parameter),
-					skill => m_Actions.IsSkillActive(skill),
-					skill => (m_ActionStore.TryGetActiveSkillInstanceId(skill, out ulong instanceId), instanceId),
-					skill => m_Actions.IsSkillCompleted(skill),
-					skill => m_Actions.CompletedSkillInstanceId(skill),
+					skill => m_Actions.IsAbilityActive(skill),
+					skill => (m_ActionStore.TryGetActiveAbilityInstanceId(skill, out ulong instanceId), instanceId),
+					skill => m_Actions.IsAbilityCompleted(skill),
+					skill => m_Actions.CompletedAbilityInstanceId(skill),
 					(skill, window) => m_Blackboard.IsActionWindowActive(skill, window),
 					route =>
 					{
@@ -583,7 +583,7 @@ namespace ThirdPersonSimulation
 				ApplyInputRequests();
 				PrepareTimelineDecision();
 				TickCharacterControl();
-				TickSkillPrograms();
+			TickAbilityPrograms();
 				TickOperationControl();
                 m_Equipment.EndEvaluation();
                 ResolvedGameplayMotion motion = ResolveMotion();
@@ -649,7 +649,7 @@ namespace ThirdPersonSimulation
 				m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
 				return;
 			}
-			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+			IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
 			for (int i = 0; i < skills.Count; i++)
 			{
 				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
@@ -685,16 +685,16 @@ namespace ThirdPersonSimulation
 				m_CharacterControlOutput);
 		}
 
-		[PerformanceProbe("simulation.operation.skill-program-tick")]
-		void TickSkillPrograms()
+		[PerformanceProbe("simulation.operation.ability-program-tick")]
+		void TickAbilityPrograms()
 		{
 			if (m_CharacterControl == null)
 				return;
-			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+			IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
 			var stoppingInstances = new HashSet<ulong>();
 			for (int i = 0; i < skills.Count; i++)
 			{
-				CharacterSkillProgramBinding skill = skills[i];
+				GameplayAbilityProgramBinding skill = skills[i];
 				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
 				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
@@ -711,6 +711,7 @@ namespace ThirdPersonSimulation
 								skill.EntryOperation,
 								OperationStopContext.ActionContextEnded(skill.EntryOperation));
 					}
+					m_Actions.ClearTerminalResources(action.InstanceId);
 					m_ActionStore.RemoveSkillExecution(action.InstanceId);
 					continue;
 				}
@@ -767,12 +768,14 @@ namespace ThirdPersonSimulation
 					}
 				}
 				if (removeFrame)
+					m_Actions.ClearTerminalResources(action.InstanceId);
+				if (removeFrame)
 					m_ActionStore.RemoveSkillExecution(action.InstanceId);
 				}
 			}
 			for (int i = 0; i < skills.Count; i++)
 			{
-				CharacterSkillProgramBinding skill = skills[i];
+				GameplayAbilityProgramBinding skill = skills[i];
 				m_Actions.TryCommitPendingControl(skill.SkillId);
 				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
 				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
@@ -798,12 +801,15 @@ namespace ThirdPersonSimulation
 						}
 						else
 						{
-							m_Actions.FinishFromControl(
-								action,
-								SimulationExecutionSource.FromSkillOperation(
-									skill.EntryOperation,
-									m_Frame.Services.SourcePath(skill.EntryOperation)),
-								status == OperationRunnableStatus.Success,
+                            m_Actions.ResolveFromControl(
+                                action,
+                                SimulationExecutionSource.FromSkillOperation(
+                                    skill.EntryOperation,
+                                    m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                GameplayAbilityEndTriggerNames.ExecutionCompleted,
+                                status == OperationRunnableStatus.Success
+                                    ? AbilityLifecycleTransition.Complete
+                                    : AbilityLifecycleTransition.Abort,
 								status == OperationRunnableStatus.Success ? "SkillCompleted" : "SkillExecutionFailed");
 							continue;
 						}
@@ -825,12 +831,15 @@ namespace ThirdPersonSimulation
 								skill.EntryOperation,
 								m_Control.ReadGeneration(skill.EntryOperation));
 							if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
-								m_Actions.FinishFromControl(
-									current,
-									SimulationExecutionSource.FromSkillOperation(
-										skill.EntryOperation,
-										m_Frame.Services.SourcePath(skill.EntryOperation)),
-									result == OperationExecutionResult.Success,
+                                m_Actions.ResolveFromControl(
+                                    current,
+                                    SimulationExecutionSource.FromSkillOperation(
+                                        skill.EntryOperation,
+                                        m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                    GameplayAbilityEndTriggerNames.ExecutionCompleted,
+                                    result == OperationExecutionResult.Success
+                                        ? AbilityLifecycleTransition.Complete
+                                        : AbilityLifecycleTransition.Abort,
 									result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
 						}
 					}

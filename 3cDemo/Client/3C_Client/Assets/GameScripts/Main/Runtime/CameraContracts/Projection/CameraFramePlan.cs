@@ -112,6 +112,15 @@ namespace ThirdPersonCamera
             return WithWorldBasicData(m_WorldBasicData.WithFieldOfView(fieldOfView));
         }
 
+        public CameraFramePlan WithPitchClamped(float minimum, float maximum)
+        {
+            if (!float.IsFinite(minimum) || !float.IsFinite(maximum) || minimum > maximum)
+                throw new ArgumentOutOfRangeException(nameof(minimum));
+            Vector3 euler = Rotation.eulerAngles;
+            float pitch = Mathf.Clamp(Pitch, minimum, maximum);
+            return WithRotation(Quaternion.Euler(pitch, euler.y, euler.z));
+        }
+
         public CameraFramePlan WithLens(CameraLensPlan lens)
         {
             CameraFramePlan result = this;

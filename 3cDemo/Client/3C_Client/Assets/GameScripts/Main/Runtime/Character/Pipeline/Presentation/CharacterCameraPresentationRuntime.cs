@@ -518,6 +518,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ApplyPendingSequenceTerminations();
             plan = m_EffectEvaluator.Resolve(plan, m_PendingEffects, in frameInput);
             m_PendingEffects.Clear();
+            plan = plan.WithPitchClamped(
+                m_CameraProjection.Input.PitchLimit.x,
+                m_CameraProjection.Input.PitchLimit.y);
             plan = m_EnvironmentSolver.Apply(plan, in frameInput);
             m_CameraRig.Apply(in plan);
             m_Debug.Set(

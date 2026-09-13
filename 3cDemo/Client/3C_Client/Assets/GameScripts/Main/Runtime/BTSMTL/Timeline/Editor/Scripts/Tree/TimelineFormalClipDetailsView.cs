@@ -2,6 +2,7 @@
 using System;
 using BTSMTL.Timeline;
 using Slate;
+using ThirdPersonCamera;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;

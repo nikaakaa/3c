@@ -3490,25 +3490,14 @@ namespace Slate
 
             //blend graphics
             void DrawBlendGraphics() {
-                if ( action.blendIn > 0 ) {
-                    Handles.color = Color.black.WithAlpha(0.5f);
-                    Handles.DrawAAPolyLine(2, new Vector2(0, rect.height), new Vector2(blendInPosX, 0));
-                    Handles.color = Color.black.WithAlpha(0.3f);
-                    Handles.DrawAAConvexPolygon(new Vector3(0, 0), new Vector3(0, rect.height), new Vector3(blendInPosX, 0));
-                }
-
-                if ( action.blendOut > 0 && overlapOut == 0 ) {
-                    Handles.color = Color.black.WithAlpha(0.5f);
-                    Handles.DrawAAPolyLine(2, new Vector2(blendOutPosX, 0), new Vector2(rect.width, rect.height));
-                    Handles.color = Color.black.WithAlpha(0.3f);
-                    Handles.DrawAAConvexPolygon(new Vector3(rect.width, 0), new Vector2(blendOutPosX, 0), new Vector2(rect.width, rect.height));
-                }
-
-                if ( overlapIn > 0 ) {
-                    Handles.color = Color.black;
-                    Handles.DrawAAPolyLine(2, new Vector2(blendInPosX, 0), new Vector2(blendInPosX, rect.height));
-                }
-                Handles.color = Color.white;
+                ClipEditorGUI.DrawBlendGraphics(
+                    rect,
+                    blendInPosX,
+                    blendOutPosX,
+                    action.blendIn,
+                    action.blendOut,
+                    overlapIn,
+                    overlapOut);
             }
 
             //clip scale/blend in/out controls

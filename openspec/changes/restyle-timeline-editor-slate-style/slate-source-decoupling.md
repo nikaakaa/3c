@@ -2,6 +2,8 @@
 
 ## 1. 结论与本次范围
 
+2026-09-13 后续领域协调更新：本文件原UI解耦决策保留；运行依赖以[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)为准，MotionCurve数据归属以[曲线源迁移](../unify-timeline-motion-curve-source/design.md)为准。以下源码快照仍是此前阅读事实，不是本轮重跑检查。此次仅PLAN，不改代码或向实现任务发送授权。
+
 可以保留 Slate 原 UI，同时去掉 BTSMTL 对 Slate 组件树和播放器的依赖。依据不是“看起来能适配”，而是下文列出的原函数、字段与调用点。实现需要修改这些函数的参数、数据访问和命令出口，有些原 UI 方法需要从 MonoBehaviour 实例搬到现有 Editor 模块；不需要重新设计轨道、Clip、曲线的绘制或鼠标算法。
 
 本文件是实现设计，不是完成报告。2026-09-13 核对了 `ce21aec8f`、`afcb90056` 以及工作树源码；阅读期间 HEAD 为 `24e63cf3f`，其它任务可能继续提交。未启动 Unity、未执行 UI 操作或编译，不把源码分析当成端到端通过。
@@ -116,7 +118,9 @@ TimelineEditorWindow
 5. `ShowParameter/ShowMiniParameterKeyControls`保留原按钮和布局。Value来自当前草稿曲线在编辑帧的值或作者正在输入的值；加key写该值，前后key只定位编辑游标。静态`AnimationCurve.Evaluate`读取曲线数值不等于执行`Cutscene.Sample`，允许前者，禁止后者。
 6. 原key/切线数学操作继续共用`CurveUtility`等原代码。需要从AnimatedParameter拆出纯key操作时迁移原实现，不在适配层再抄一份。正式channel若无“禁用参数/表达式/添加场景属性”合同，不显示这些菜单，也不造相应配置。
 
-时间换算继续沿已正确的`ConvertCurveTime`：若正式域为normalized，时长为D秒，则`t秒 = u × D`，`tangent秒 = tangent归一化 / D`；写回反向换算。weight、WeightedMode、wrap保持。Motion Position/Yaw的D使用`CurveEndFrame - StartFrame`，不能一律使用整个Clip长度。只对作者移动/新增的key按帧吸附，未改曲线不做无意义往返保存。
+真正Timeline-local的Weight/Ease、Warp progress等曲线继续沿正式descriptor换算：normalized域时`t秒 = u × D`、`tangent秒 = tangent归一化 / D`，写回反向换算，weight/WeightedMode/wrap保持。只对作者移动/新增的key按帧吸附。
+
+Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥有，UI消费曲线迁移owner提供的源引用、源区间与播放映射、打开源导航。源XYZ/Yaw可只读展示，不经Timeline mutation改源；旧CurveEndFrame等价迁移和源秒映射归曲线owner，不能在Slate适配里保留旧嵌入曲线双读或另一套采样公式。
 
 修改原Renderer的cache释放与通知：缓存身份归当前窗口/通道，不因每次重建对象丢失曲线视野；关闭解除所属订阅并清理对应条目。当前匿名`Undo.undoRedoPerformed`订阅无法逐实例解除，需要改成可解除的原处理函数。不能只销毁隐藏GameObject就认为曲线缓存已释放。
 
@@ -157,6 +161,14 @@ TimelineEditorWindow
 运行/历史overlay仍消费已有`TimelineRuntimeObservationBridge`和正式runtime binding，既不写muted/StartFrame，也不复用编辑游标保存其位置。Scene Play Actor只在原运行上下文存在，不注入Slate Actor接口；关闭Timeline不停止Session。
 
 播放语义不在本次解耦中擅自改动：帧定位和逐帧已确认；Timeline内Play是否作为正式Scene Play快捷控制，与纯游标自动前进不是一回事。保留已有正确入口，不加假播放器、不以Slate Play/Sample替代正式预览；若需新增或改变Play行为，先明确其正式命令目标。本文件不把实现消息中的“播放已补回”当作运行语义已确认。
+
+### D8补充：预览接入领域装配而不是总包采用
+
+- 原Scene Play协调器及领域模块继续是运行owner。技能只构建技能，活动实例固定启动版本；Pose通过同一原生Factory显式重建并重置历史；Camera通过正式绑定/Reset；控制和网络变化按Session规则重新准备。
+- UI消费场景目标、领域就绪结果、配置版本、实际采用版本/实例generation及失败原因；请求接受、准备成功、实际采用分开报告，不根据UI hash判断生效。
+- 撤掉角色全量Build、整包Projection、统一ProgramEpoch与Document/v7前提，不换名造总包。保留Float32/Fixed、网络Pipeline/Pass和独立资源处理。
+- 纯Timeline仍需真实非Skill调用方、内容及播放身份。Slate原曲线/手势不承担角色工厂、CameraBuilder、技能编译或运行采样。
+- Slate编辑与UI适配归Timeline；MotionCurve/MotionWarp源配置binding归曲线迁移；Timeline.Camera.cs归摄像机；装配归领域运行迁移。完整接入信息见[联动计划](preview-integration-plan.md)。本次仅规划，不新增实现授权。
 
 ## 11. 实施顺序与明确删除范围
 

@@ -8,6 +8,9 @@
 
 ## What Changes
 
+- 2026-09-13仅规划协调：运行接入对齐[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)，移除Character全量Build、整包Projection、统一ProgramEpoch和Document/v7前置。技能独立构建，Pose同一原生Factory显式重建/历史重置，Camera正式绑定/Reset，控制与网络依Session规则准备。预览原owner报告就绪、配置版本、实际版本和失败，UI不推断采用。
+- MotionCurve源、区间、映射由[曲线源迁移](../unify-timeline-motion-curve-source/design.md)拥有，UI只接typed字段与源导航。源XYZ/Yaw不再作为Timeline-local通道，Weight/Ease等局部曲线仍用原Slate编辑。本通知不授权新的实现或修改其它owner文件。
+
 - 硬边界覆盖打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路：不得创建或依赖 Slate 组件树，原生 Cutscene/Actor/Director 约束不得拒绝正式 TimelineData 合法操作。回退后 BuildProjection 隐藏对象仅是待清理残留，不是最终方案或 fallback。
 
 - 删除上一轮纯内存 Surface/Editor Model、Clip包装器/选择系统和曲线工具整体迁移任务，不换名称继续实现。
@@ -18,8 +21,8 @@
 - 原Track组件内的Editor方法允许搬迁到现有Editor模块并参数化，只保留一份函数主体；不以原入口提前返回到ShowEmbedded列表/时间轴冒充复用。BTSMTL编辑接口不继承运行IDirector/IKeyable，不提供空运行实现。
 - 删除临时 Cutscene/GameObject/组件树及专属创建、层级扫描和销毁；Actor/Director/运行采样等无关绑定直接清除。不能保留代用组件绕过接线，也不能另写一套 UI 来达成去依赖。
 - Slate 对象无论何种承载均不能成为第二份持久化 Timeline、compiler输入或角色运行 owner；本地编辑不依赖启动 ScenePlay。
-- 预览继续归正式 SkillGraph/Graph Shell、Session/adoption，Timeline 只编辑和显示已接入的真实观察。
-- r2 C# authoring 分工继续：人工编辑不写源码，export_code/generate_assets 各显式调用，编译不生成资产，两工具不自动 Character Build/Play。公共 typed binding 与代码输出由原任务拥有，不恢复 UI JSON 或旧五工具。
+- 预览继续归原SkillGraph/Graph Shell协调器、Session与各领域实际采用，Timeline 只编辑和显示已接入的真实观察。
+- r2 C# authoring 分工继续：人工编辑不写源码，export_code/generate_assets 各显式调用，编译不生成资产，两工具不自动触发领域准备或Play。公共 typed binding 与代码输出由原任务拥有，不恢复 UI JSON 或旧五工具。
 
 ## Capabilities
 
@@ -32,6 +35,8 @@
 - `btsmtl-timeline-editor-preview`：复用现成 Slate UI，通过现有数据/命令适配完成正式编辑；撤销强制新模型、曲线输入与组件迁移条款。
 
 ## Impact
+
+- 本次领域协调只修改本change的6份规划文档。现行规范仍要求Motion XYZ/Yaw作为Timeline-local通道，与新源owner规则冲突，源迁移delta归曲线任务；现行总Program/Projection与预览总Epoch条款由领域运行和原预览owner替换。本change明确消费新合同，不覆盖这些owner文档或下发执行。
 
 - 本轮只修改本change文档，增加slate-source-decoupling.md；当前恢复状态按ce21aec8f/afcb90056及源码记录，不修改实现或资产。
 - 保留正式TimelineData/identity/资源/Curve/typed Mutation/Undo/Session、真实Slate UI、原Inspector控件、既有Camera Track和已正确的预览；不恢复右侧自制面板。

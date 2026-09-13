@@ -1,5 +1,7 @@
 2026-09-13 源码对账：ce21aec8f/afcb90056已恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理，DirectProjection已删除。第11节按[源码解耦决策](slate-source-decoupling.md)重新展开为未完成实现项。第1–10节保留此前功能记录，但对已由当前源码证明不成立的勾选予以纠正；未重新核对的历史勾选不构成本次端到端声明。正确业务实现不回退。只在主线实施，不向旧worktree双写；不新增测试、手动验证、编译或校验任务。
 
+2026-09-13 领域协调仅PLAN：原UI/数据/Undo实现要求不变；预览联动改用独立技能、原生Pose重建、Camera绑定/Reset及Session领域准备，废除总包Build/ProgramEpoch前置。Motion源XYZ/Yaw归外部源，UI只接曲线owner的typed字段与导航。本次只更新清单含义，不向实现任务下发或扩大授权。
+
 ## 1. 已有接入基础
 
 历史上0aa52f209撤销过一次自制UI；最新恢复基线是ce21aec8f/afcb90056。两次回退均不构成组件解耦完成；第11节不得沿用已回退实现的完成勾选。
@@ -16,7 +18,7 @@
 
 ## 2. 投影和数据编辑收口
 
-- [x] 2.1 对齐 Clip/Section/Curve 全部显示与 domain 映射，包含 Motion CurveEndFrame、Scene Presentation valueCurve 和真实内容终点；未支持字段明确报告
+- [ ] 2.1 保留已正确Clip/Section/局部Curve显示与domain映射；按曲线owner新合同接Motion源/区间/映射与导航，源XYZ/Yaw退出Timeline-local写入，Weight/Ease继续编辑，不新增采样公式
 - [x] 2.2 将正式 selection、属性、TreeClip ownership/下钻和 AnimationClip 资源导航接入同一 adapter，不仅保存在临时名称中
 - [ ] 2.3 完成有效手势begin/commit/cancel与source revision处理；当前恢复基线仍对普通MouseDown抓快照、MouseUp排队重建，随11.8收口，选择/游标/缩放不产生作者事务
 - [ ] 2.4 完成diff到Session/正式owner的校验、提交与失败恢复；当前ApplyModify无自动校验/回滚，过期分支仍有静默返回，随11.8收口
@@ -70,9 +72,9 @@
 ## 9. 与预览窗口联合实施
 
 - [x] 9.1 P1：将共享预览 presenter 接入实际 SkillGraph/Graph Shell 宿主，按场景控制、试验/采用、观察、折叠历史分组，消除旧树窗口专属接入和重复工具条
-- [ ] 9.2 P2：接入场景资产/精确 context 定位和角色/非 Skill 正式目标；区分开始场景与请求技能/业务调用，状态与拒绝原因来自正式 owner
+- [ ] 9.2 P2：接入场景资产/context、角色或真实非Skill调用方、内容及播放身份，消费各领域就绪/失败报告；区分场景开始与技能请求，不要求Character全量Build或整包Projection就绪
 - [x] 9.3 P3：Timeline 打开请求携带作者 locator 和可选准确 runtime binding，连接运行 overlay、Follow/Pin、双向导航及多调用选择，编辑帧与运行/历史位置隔离
-- [ ] 9.4 P4：Timeline 修改/Undo 后把 authoring revision 与真实 Build/adoption 报告接入预览状态区，显示待采用/已采用/下次激活/失败，同 Session 生效不由窗口伪造
+- [ ] 9.4 P4：Timeline修改/Undo后消费原预览owner的领域就绪、配置版本、实际采用版本/实例和失败报告；技能启动版本固定，Pose重建重置历史，Camera正式绑定/Reset，控制/网络按Session准备；删除统一ProgramEpoch采用前提，不用UI hash推断生效
 - [ ] 9.5 P5：历史面板区分诊断采集与输入录制，按选定 Tick/区间和正式 capability 校验恢复/回放，刷新不覆盖输入，命令接受与完成分开显示
 - [ ] 9.6 跨宿主布局、切页、关闭、重载和绑定释放统一收口；同步预览原任务/审计的主线证据，记录缺失能力，不以按钮存在代替联合交付
 
@@ -96,9 +98,9 @@
 - [ ] 11.3 D2：把现有Projection中正确的ID映射、typed新增、曲线换算和提交迁移为BtsmtlSlateTimelineBinding；只引用正式对象和必要手势草稿，不恢复EditorModel/DirectProjection两条路径
 - [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase
 - [ ] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令
-- [ ] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具接正式descriptor曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy Animatable浮点字段和ParameterNameFor映射，复用现有domain及tangent换算
+- [ ] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw仅只读/源导航，源区间及映射消费曲线owner的typed接线
 - [ ] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板
 - [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务
-- [ ] 11.9 D8：原标尺/游标/步进/曲线吸附使用同一正式帧上下文，编辑资格不依赖Cutscene时间或Actor；保留原Runtime/History观察与Scene Play Session，删除BTSMTL采样与播放副作用，不擅自新增Play语义
+- [ ] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂
 - [ ] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
 - [ ] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态

@@ -102,7 +102,7 @@ Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 
 
 #### Scenario: Graph Shell启动Scene Play
 
-- **WHEN** 作者在 Graph Shell 点击 Scene Play、Build 或 Skill request
+- **WHEN** 作者在Graph Shell点击Scene Play、构建当前技能或Skill request
 - **THEN** 命令 MUST进入唯一 Scene Play coordinator 和正式 Session
 - **AND** Timeline MUST只接收正式 runtime binding/overlay，不创建本地播放器
 - **AND** Timeline 的作者编辑能力 MUST不因打开运行观察而复制或切换到另一个窗口
@@ -111,8 +111,8 @@ Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 
 
 - **WHEN** 作者在同一 Scene Play Session 中拖动 Clip、修改 Curve 或 Section
 - **THEN** Timeline MUST通过正式 BTSMTL Mutation/Undo 写入作者 Timeline
-- **AND** Graph Shell MUST负责显示 dirty、Build 和 Program adoption 状态
-- **AND** Build 成功后 MUST在同一 Session 的 adoption barrier 采用兼容的新 ProgramEpoch；当前 Action 不兼容时保留旧 Epoch，下一次 Action 才采用
+- **AND** Graph Shell MUST显示对应领域的配置版本、就绪结果、实际采用版本/实例及失败原因，MUST NOT恢复Character全量Build或统一ProgramEpoch采用
+- **AND** 活动技能实例 MUST保持启动时的不可变技能版本，新版本只用于后续实例；影响Session玩法identity的变化 MUST按正式规则重新准备，普通编辑本身 MUST NOT更换Session
 
 #### Scenario: Timeline只读观察运行
 
@@ -161,6 +161,46 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 - **AND** 成功后 MUST选中新对象；取消或失败 MUST不修改已有内容
 
 ## ADDED Requirements
+
+### Requirement: Timeline预览联动必须消费领域准备和实际采用报告
+
+Timeline与Graph Shell的公共接入 MUST遵循replace-character-program-with-domain-runtimes领域装配合同。角色总Program、整包Projection、统一ProgramEpoch、旧Document/v7 MUST NOT成为作者编辑、场景准备或运行采用的前置；MUST NOT换名创建新的角色总包。Slate原UI、TimelineData、现有编辑Session/Undo及typed接线 MUST保留。
+
+原rebuild-btsmtl-preview-with-scene-play协调器与正式运行模块 MUST继续拥有预览生命周期和领域采用。共同接口 MUST表达场景/context/目标/Session generation、领域内容与配置版本、就绪结果、实际采用版本或实例、失败阶段和原因。Timeline UI MUST仅消费对应报告与导航，不代写角色工厂、CameraBuilder或技能编译器。
+
+#### Scenario: 各领域处理作者变化
+
+- **WHEN** 技能、Pose、Camera、控制或网络配置发生变化并收到对应显式操作
+- **THEN** 技能 MUST仅构建技能及真实依赖；Pose MUST经正式运行共用的原生Factory重建实例并重置历史；Camera MUST经正式绑定和Reset
+- **AND** 控制与网络内容变化 MUST按Session规则准备，MUST保留网络Pipeline/Pass、Float32/Fixed和独立资源处理，不要求Character全量Build
+
+#### Scenario: 就绪不等于实际采用
+
+- **WHEN** UI收到准备成功、请求接受或作者配置hash变化
+- **THEN** UI MUST分别显示配置、候选/准备、实际采用状态，只有正式领域报告能够确认生效
+- **AND** 缺失实际版本 MUST显示未知或待报告，旧请求/目标/generation的晚到结果 MUST NOT覆盖新实例；MUST NOT由UI hash推断采用
+
+#### Scenario: 原预览接口尚未迁移
+
+- **WHEN** 原预览owner尚未提供某领域的就绪、版本或失败报告
+- **THEN** 联动 MUST明确报告该领域待接入并保留本地编辑，MUST NOT等待已删除总包、代写其它owner实现或建立第二个协调器
+- **AND** 纯Timeline MUST仍要求真实非Skill调用方、内容与播放身份，MUST NOT创建假角色或空技能替代
+
+### Requirement: Timeline运动源与局部作者曲线必须分开
+
+MotionCurve源、源区间、播放映射及MotionWarp源配置 MUST由unify-timeline-motion-curve-source的正式合同拥有；Timeline UI MUST消费其typed字段和打开源导航。RootMotionCurveAsset拥有的XYZ/Yaw MUST NOT注册成Timeline-local可写channel；Weight/Ease及Warp progress等真正局部曲线 MUST继续复用原Slate曲线编辑。
+
+#### Scenario: 编辑一次运动使用
+
+- **WHEN** 作者修改MotionCurveClip的源、区间、播放配置或局部Weight/Ease
+- **THEN** UI MUST通过相应正式typed入口修改一次使用，MUST NOT修改共享源XYZ/Yaw、自动复制源或保留旧嵌入曲线双读
+- **AND** 源时间裁切、末端保持和求值映射 MUST来自曲线owner唯一正式定义，不在Timeline预览另写采样公式
+
+#### Scenario: 查看或修改共享运动源
+
+- **WHEN** 作者从Timeline查看XYZ/Yaw或请求修改源
+- **THEN** Timeline MAY只读显示源及其版本，修改 MUST导航真实源owner并由其负责Undo/保存/依赖失效
+- **AND** 普通Timeline C#输出 MUST只保留明确源引用与使用配置，不复制外部源关键帧；局部曲线仍完整输出
 
 ### Requirement: Timeline必须直接复用现成Slate编辑功能
 
@@ -214,7 +254,7 @@ Timeline MUST消费公共 C# authoring r2 的 export_code 与 generate_assets，
 
 - **WHEN** 作者拖动或保存 Timeline，或导出的 C# 经正常编译
 - **THEN** 人工编辑 MUST不自动 export_code，源码编译 MUST不自动 generate_assets
-- **AND** 只有显式公共操作才更新指定源码或资产；两操作 MUST不自动 Character Build 或 Play
+- **AND** 只有显式公共操作才更新指定源码或资产；两操作 MUST NOT自动触发领域准备或Play，Character全量Build MUST NOT作为前置
 
 #### Scenario: 显式重新生成
 
@@ -306,7 +346,7 @@ Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数�
 #### Scenario: Curve时间换算
 
 - **WHEN** 作者编辑 Timeline-local 曲线 key
-- **THEN** adapter MUST按正式 descriptor 的 domain 转换局部秒与 normalized time，正确处理 CurveEndFrame 等领域边界和切线缩放
+- **THEN** adapter MUST按正式descriptor处理Timeline-local曲线的domain与切线换算；源运动XYZ/Yaw MUST消费曲线owner的源区间/映射而非旧嵌入CurveEndFrame读法，MUST NOT在UI重造采样公式
 - **AND** 未编辑 key 的时间、值、tangent、weight、WeightedMode 和 wrap mode MUST保持
 
 #### Scenario: 显示全部内容
@@ -345,7 +385,7 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 
 - **WHEN** 作者在 Scene Play 中编辑正式 Timeline
 - **THEN** 作者数据 MUST经同一 Mutation/Undo 修改，运行标记 MUST只读消费真实绑定
-- **AND** 新版本是否采用 MUST由 Graph Shell 的既有 Build/adoption 合同报告，不更换 Session 或直接写运行状态
+- **AND** 新版本是否采用 MUST由原预览协调器和对应领域的实际报告决定，UI MUST NOT推断生效或直接写运行状态；Pose显式重建 MUST重置历史，控制/网络变化 MUST按Session准备规则处理
 
 ### Requirement: 临时投影必须正确释放且没有无关编辑入口
 

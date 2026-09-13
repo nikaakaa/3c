@@ -32,7 +32,7 @@
 | 4.4-4.5 Shot 与固定效果顺序 | 部分完成 | Shot 编译要求真实 prefab 和标准 VCam，Adapter 支持显式 Shot rig binding；已知来源 prefab 尚未进入工程；顺序固定为 Override→Zoom→Stretch→Shake→Shot→Environment。 |
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
 | 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Resource Track 的 Weight/Ease 通过 Timeline curve channel 采样；Shot 及效果真实作者引用仍缺少闭包。 |
-| 6.3 Corin 动作资源可达性 | 未完成 | 已保留 18 Zoom/18 Stretch 资源；现有 Corin ActionCue 的 Camera 标记仍没有正式 ResourceId，不能虚构 81 Shake/4 Override 的触发关系。 |
+| 6.3 Corin 动作资源可达性 | 部分完成 | ZZZ 动作资料已证明 34 个 Shake、10 个 Stretch、10 个 Zoom 资源键能反查到具体动作；工程已保留 18 Zoom/18 Stretch 资源，但现有 Corin ActionCue 仍没有正式 ResourceId，尚未把这些来源映射接入正式 Camera request，也不能虚构剩余 81 Shake/4 Override 的项目触发关系。 |
 | 6.4-6.5 正式发布与 Preview/ScenePlay | 暂停全量入口 | 用户明确要求删除会触发十几分钟全量 Character Build 的入口；已移除 Character Float32/Fixed MCP 注册与 CLI 入口，底层正式 Orchestrator 保留但当前没有新的增量发布入口，旧 job 不接受其产物。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/碰撞字段和 Effect table/operator 已接入；输入回放已改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动，文件仍未单独提交。 |
 | 7.3-7.4 删除与合同同步 | 部分完成 | 已删除无引用 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入引用和无消费者 Locking/ChangeAvatar 配置；生成 Projection 和部分历史文档仍需正式发布后对账。 |
@@ -69,4 +69,5 @@
 - 当前 `Editor.log` 已给出 Build 阶段证据：ACL 清单扫描耗时 `19941ms`；170 个已发布动画资源的复用判定耗时 `47196ms`；动画目录阶段总计 `67141ms`，随后仍在处理 7 个 ACL 动画片段。该耗时属于全量 Character Build 的 ACL/资源发布阶段，不是 Camera 求解或 Camera Contracts 编译。
 - 按用户要求删除全量 Character Build 入口：移除 `character.build_float32_products`、`character.build_fixed_products`、对应 Scheduler 的 Character BuildKind 分支和 `CorinFixedBuildCli`；Timeline 专用入口保留。删除后不再调用 Character 全量 Build。
 - 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
+- 外部动作索引 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/*.json` 的 `cameraKeys` 已逐动作解析：当前样本明确反查出 Shake 34 个、Stretch 10 个、Zoom 10 个资源键；其中 `sm0-011-Attack_Counter` 同时存在 Shake/Stretch/Zoom typed keys。该证据只确认来源可达性，未替代 3C Graph/Timeline 的正式 CameraCue request。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。

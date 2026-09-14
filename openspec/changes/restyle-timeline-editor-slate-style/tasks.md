@@ -134,6 +134,8 @@
 
 ## 12. Timeline直接内容Runtime（新增规划范围）
 
+DOMAIN-BOUNDARIES-20260914-03执行补充见timeline-direct-runtime.md第9节。12.3完成整区间Enter/采样/Exit及循环，12.4接真实领域候选；12.5将Stop与未决Advance的关系纳入同一Step，禁止提前清空已提交活动状态或Abort角色；12.6接已提交私有状态恢复；12.9交付实际采用/运行结果。核心负责独立TreeClip服务和角色结果汇集，本任务不共写其Host/codec/技能编译。保留后续已有正确代码，不新增或复制checkbox；只通知本实现，不要求回执。
+
 2026-09-14职责复审（主方案D19）：当前工作区已有显式NumericTarget／资源依赖解析、游标Advance候选、Commit／Discard及停止状态入口，不能再报告为只有Prepare；但nextFrame活动Clip列表不等同区间调度。12.3必须覆盖跨过的短Clip与完整循环，12.4／12.5必须把实际业务输出和停止也纳入调用方Step接受边界。现有UI成果保持，以下完整事项仍未勾选，主方案只负责共享技能／角色接口集成。
 
 2026-09-14依据PARALLEL-20260914-DOMAIN-01登记；具体合同、当前代码对账和文件 owner 见[timeline-direct-runtime.md](timeline-direct-runtime.md)。用户已把这条 Runtime 线纳入当前 goal；不新建窗口，也不向其它窗口派工。当前源码已有 direct-runtime 合同、Skill `ITimelinePlaybackService` 接线和 operation-backed `TimelineControlRuntime`，但最终直接内容 Runtime 尚未闭环，因此以下任务保持未完成，不能用现有类名或窄编译替代完成证据。第1–11节原UI进度保持；此处是主方案1.5–1.7、3.8与8.2中Timeline域内部分的唯一执行清单，主方案保留公共集成和责任指针，不复制勾选项。

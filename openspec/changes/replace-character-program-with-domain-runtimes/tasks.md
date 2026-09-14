@@ -1,4 +1,6 @@
-本清单自 `parallel-20260914-domain-01-planning-update` 起只记录核心实现和公共集成。Timeline唯一实施清单在 `../restyle-timeline-editor-slate-style/tasks.md` 第12组；Pose唯一实施清单在 `../refine-pose-graph-readonly-blackboard/tasks.md` 第3组。各实现已获授权推进，本轮按用户要求更新文档并一次通知核心实现与两个领域规划，不建立日常回执或重复派工。原领域事项移出不表示已完成，不复制第二份领域清单。
+本清单自 `parallel-20260914-domain-01-planning-update` 起只记录核心实现和公共集成。Timeline唯一实施清单在 `../restyle-timeline-editor-slate-style/tasks.md` 第12组；Pose唯一实施清单在 `../refine-pose-graph-readonly-blackboard/tasks.md` 第3组。各实现已获授权推进。用户本轮要求直接更新各自规划并通知对应实现，执行补充见design D22（DOMAIN-BOUNDARIES-20260914-03）；不通知规划窗口、不索取回执、不重复派工。原领域事项移出不表示已完成，不复制第二份领域清单。
+
+D22在原条目内的交付范围：1.11一并收口技能局部接口、按需服务、角色每帧工作迁出与无WorldRequest候选，取消不得Abort角色；2.6包含单一角色Step工作状态及输入共享消费/恢复，保留已完成多Ability/角色Hash；2.1/3.2将按Actor的Pending批次改为角色结果，汇集实际多技能/领域候选并接原Backend；3.1由正式Session提供NumericProfile/TickRate，技能只校验匹配；3.8接Timeline实际Advance/Stop候选和恢复，4.7/6.4接真实Pose服务至Host。以上为现有事项的完整含义，不新增checkbox或验证任务。
 
 2026-09-14执行更新（检查至dd0708d46及工作区）：旧根类型错误已撤回，28个编译文件删除及后续清理保留。核心已有独立技能安装／服务、角色绑定、新CharacterRuntime port和两个数值目标状态codec；但CharacterRuntimeState仍以单个Ability安装／Hash为根，效果绑定还会拒绝不使用该能力的技能，按D19纠正。Timeline已有数值／资源准备、游标Advance候选与Commit／Discard，仍缺跨边界Clip业务和完整停止／恢复。Pose已有多种值节点、Constraint适配和原生Final入口，StateMachine仍缺具体Source实现，角色Host仍走旧Program／Projection。原已完成小步只代表当时交付，不能用作最新运行完成事实。
 
@@ -6,7 +8,7 @@
 
 D20补正原规划遗漏：Skill独立必须覆盖定义、编译、加载和执行，不仅是独立数据文件。技能不得创建角色事务或组装Control／Effect／Equipment模块；实际调用方提供技能声明所需的typed服务和调用输入，并拥有外层提交。角色只是一种调用方，1.11必须与角色接线同步收口，不能因1.10独立格式存在判定Skill已独立。
 
-D21领域分工提报DOMAIN-BOUNDARIES-20260914-02待协调窗口审阅：主清单保留核心任务，Timeline／Pose继续使用各自唯一清单，不新增任务或重分文件owner。建议以“技能与调用方 → 共享状态 → 领域实际调用 → 公共入口／产品”的业务切面接续，每批包含真实算法和消费者，不只搭接口。1f26e07c0已交付角色多Ability聚合，效果安装也已按技能能力选择绑定；这些历史问题按剩余边界处理，不重复撤回正确工作。
+D21领域分工提报DOMAIN-BOUNDARIES-20260914-02已审阅，具体接线按D22：主清单保留核心任务，Timeline／Pose继续使用各自唯一清单，不新增任务或重分文件owner。按有实际依赖的业务切面接续，每批包含状态、真实算法和消费者，不设先搭完全部接口的阶段。1f26e07c0已交付角色多Ability聚合，效果安装也已按技能能力选择绑定；这些历史问题按剩余边界处理，不重复撤回正确工作。
 
 执行顺序以用户2026-09-14“先大删除再做”为准：先执行下列首批删除，再完成独立技能、角色装配及其它保留业务的接线。旧消费者仍引用取消的类型不是延迟删除的条件；允许中间提交编译失败或功能明确不可用，记录错误所属消费者并接到正式接口，不加兼容层、占位类型、假结果或新旧开关。已完成小步保留，整个迁移必须等保留业务接通才算完成。Timeline／Pose在各自唯一清单执行同样顺序，不在这里复制领域任务。
 

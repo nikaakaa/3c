@@ -319,7 +319,7 @@ Pose后续每类节点说明真实输入、复用的已有算法、输出及其�
 
 业务收益是同一技能可被不同合法调用方使用，不为执行技能先造角色或整套角色模块；代价仅是把原有模块装配与事务控制放回真实调用方。已有技能数据／拓扑／布局保留合理职责，Program名称本身不是架构缺陷，不借此再做一轮无关重命名重构。
 
-### D21. 先收口领域职责的文档与执行划分（待协调审阅）
+### D21. 先收口领域职责的文档与执行划分（已审阅，具体接线见D22）
 
 提报编号：DOMAIN-BOUNDARIES-20260914-02。用户要求先把领域做好，并把规划交工作协调窗口审阅。本节把D19／D20已明确的边界组织成可执行的领域分工，不新增通用领域框架、不要求按表新建九个任务／程序集，也不据此重派已有实现。原方案独立Skill、直接Timeline、原生Pose和保留网络行为不重新选择。
 
@@ -368,6 +368,44 @@ Source采样、动画混合、Constraint、Final Writer是Pose内部及原领域
 - 确认共享输入消费、无运动的技能结果、缺失事实明确失败属于原职责约束补全，不新建通用调度器／事件总线／事务框架；协调记录旧“待分派”快照不应覆盖后来已授权并正在执行的事实。
 
 业务取舍：保留大执行器继续添加适配能暂时少改调用处，但会延续共享状态重复和角色依赖；按上表让实际owner承担职责会暴露接线缺口，但减少后续同步和取消／恢复成本。选择领域收口不要求更多文件或接口，优先复用现有正式端口与算法，只删除／提取发生越界的职责。
+
+### D22. 角色Step、多技能调用与领域服务的具体接线
+
+决定编号：DOMAIN-BOUNDARIES-20260914-03。用户明确要求协调窗口直接更新各自规划文档并告知相关实现。沿用核心、Timeline、Pose现有实现及唯一tasks，不向规划窗口层层转发，不新增任务或通用框架。本文定义核心接线，Timeline细节在其timeline-direct-runtime.md第9节，Pose细节在其design.md第12节；不是再要求从协调记录拼接执行方案。
+
+#### 角色工作状态与技能局部状态
+
+每角色每Step准备一份领域工作状态；输入、效果、装备按其原规则推进，多个技能在各自调用实例内执行并访问同一份领域工作状态。CharacterRuntimeState保留已有多Ability集合、角色Hash、领域状态及正确codec；CharacterRuntimeStateTransaction以角色Step为根，不再以单个Installation决定完整角色事务。多个技能不能分别从旧角色快照生成完整结果，再由后提交者覆盖前面的修改。
+
+技能局部状态接口只允许访问局部槽位、调用帧与本次候选。共享InputRequests/Consumed归输入owner，效果、装备、MotionWarp和序号归实际领域服务；整角色Abort及完整Savepoint/Restore不经技能接口暴露。复用已有保存点机制并明确作用范围，不在技能内部复制角色快照或另建事务框架。Float32/Fixed、状态codec与网络恢复同步调整，保留已正确多技能聚合和角色Hash，不能重复撤回。
+
+InputRuntime在角色层接收/筛选/过期请求一次，技能只记录自己的等待进度。请求使用既有身份、来源/序号、优先级及确定性选择语义；多个候选可以查询，正式准入接受时才按原规则消费同一份请求。失败候选不提前消费，取消已运行技能也不自动撤销过去已提交的输入消费。
+
+#### 技能调用与动作协调
+
+技能输入是独立数据、调用身份/目标/时间、局部状态和实际声明所需的typed服务；输出是运行/完成/失败/取消状态、局部候选、实际领域请求和观察。角色与TreeClip调用同一入口，不强制构造角色上下文。AbilityControlRuntime保留图执行、条件、局部变量、调用栈与停止流程；AbilityExecutionServiceSet内的效果整帧推进、装备Begin/End、输入接收/过期处理交回角色领域调度，不能逐技能重复执行。
+
+保留已有Input/Tag/Effect/Equipment/Motion等正式端口，按需要收窄并绑定。不使用效果的技能不要求效果服务；实际读取Body事实时必须有有效数据，不能用默认原点/零速度/false冒充。保留已有按技能能力选择Effect binding的修正，不重新派发旧缺陷。
+
+PendingAbilityEvaluation只表达技能候选，不强制CharacterWorldSolveRequest；无运动请求的技能可以完成。Motion汇总真实请求后由调用方接Solver。技能Discard仅丢弃该调用候选，不能通过接口背后的角色事务Abort中止整个Step。正常取消沿技能生命周期处理，关闭精确实例/generation拥有的窗口和子调用；效果是否随技能结束由效果既有持续/绑定规则决定。
+
+ActionRuntime按方法解除单个AbilityExecutionFrame依赖，保留ActionAdmissionControl、ActionSkillActivationFlow、ActionSkillCommitFlow和AbilityExecution实际规则：Control选择动作；调用方动作协调管理上下文内的并发/替换/启动/取消；技能保留自身准入/结束合同；Equipment判断装备上下文；Input保存消费事实。窗口保存者沿已有动作/战斗符号定位，不笼统归给Timeline或Effect，也不整类搬进Control重写。
+
+领域调用保留两类业务形式：准入、扣费、标签查询、输入消费需要立即返回本帧候选结果，通过实际领域服务处理；运动仲裁、相机和表现输出可汇总正式请求再处理。前者必须有明确工作状态与撤销范围，后者不能把排队当成功；都进入原Step接受边界。全部改成延迟请求会破坏技能条件分支，全部直接发布则破坏失败丢弃；不为统一形式新增事件总线。
+
+#### 角色结果、外层时钟与真实Host
+
+PendingEvaluationBatch按Actor组织时必须保存角色候选，汇集多个技能和领域结果；PendingAbilityEvaluation只保留内部调用作用域，不能一份技能结果代表整角色。角色候选交既有WorldSolve/Finalize/Backend接受，保留原确定性顺序、能力校验、网络Pass及原子提交。实际安装前完成候选检查，安装阶段不重放技能/Clip业务或提前发布部分结果。
+
+CharacterRuntime必须提供实际领域推进与多技能调用，roster/配置集合不等同运行完成。NumericProfile、TickRate由正式Session/数值配置决定，技能数据校验匹配；不能从第一个技能反推角色时钟，也不能让没有活动技能的角色无法推进控制/输入/领域状态。OperationSetVersion保留技能执行兼容含义，不泛化为角色总业务版本。
+
+Host/Registration/Session退出Program/Projection必要条件，安装真实领域绑定和服务。核心只汇集owner确认的采用事实，调用Timeline的实际推进/停止/恢复及Pose的真实源采样至Final结果，不在核心复制它们的状态和算法。角色/技能内容、状态schema、World/Pipeline身份分别保留，网络恢复组合相同已提交结果。预览/作者使用原正式入口，不新增备用播放器或假成功。
+
+#### 实施归属、依赖与规范对账
+
+核心唯一修改Ability执行帧/服务/Pending、CharacterRuntimeState/codec、InputRuntime、ActionRuntime、共享技能Timeline编译/TreeClip执行、Host/Factory与Pipeline/网络；Timeline第12组和Pose第3组仍是唯一域内清单。核心任务落点为1.9—1.11、2.1/2.6—2.8、3.1/3.2/3.8、4.7和6.4，不复制领域checkbox。各业务切面包含状态、真实算法与消费者，不设先写完全部接口的阶段，不替用户另定优先级。小步中文提交，仅实际接口阻塞在实现之间协商，不回执/日报/转发。
+
+本节细化现有character-domain-runtime增量中的技能独立、共享输入、统一Tick提交恢复与唯一实现归属，不恢复旧Program/Image路径。现行spec中旧总载体要求继续由本change已有delta替代，不新增第二份规范。最新并行代码若已修正某项，仅续接剩余消费者，不以历史审查回退正确实现。维持单一角色工作状态能保留同帧多技能修改，代价是共享服务与角色接线要一起完成；将每个技能作为完整角色事务会延续覆盖风险，不作为过渡方案。
 
 ## Risks / Trade-offs
 

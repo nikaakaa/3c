@@ -237,3 +237,19 @@ Image专属删除包括CharacterPoseCompilerModule及只服务其IR/Pass的入�
 完成后的角色和正式Preview通过同一公开Pose实例接口读取真实图/资源版本，沿同一时钟和Barrier完成准备、求值、提交或失败处理；同一阶段重复读取不重复业务，子图/Actor状态隔离，观察来自真实完成结果，Image专属链已经退出且共享壳只由主实现接入。输入、曲线和C# authoring已完成成果保持；IK通过其当前正式接口接续。
 
 上述是设计/证据条件，不是测试或验证tasks。本轮仅登记接收范围、配对和规范增量，不运行Unity、Build，不修改业务代码/资产，不派发实现、不新建窗口、不向其它窗口发送任何消息。
+
+## 12. DOMAIN-BOUNDARIES-20260914-03：真实Pose服务与角色接入
+
+用户要求协调窗口直接更新本任务规划并通知既有PoseGraph实现`01a081f3-46f4-7c91-8930-73923ff7950b`。本节接续主方案design D22，原生Runtime唯一清单仍为tasks第3组；只读输入历史保持，不新增窗口/清单，不以审阅时的旧缺陷重做已正确实现。
+
+Pose负责真实图/节点服务、每Actor及子调用实例、节点历史/缓冲、源需求、姿态/约束求值和结果生命周期。保留已完成Player/Blend/Constraint/Source/Final、端口校验及原生节点接入；StateMachine等具体服务按当前代码检查剩余构造注入与输出消费，不能把已有handler视为业务全部完成，也不能重建一轮外壳。
+
+输入为正式图/资源绑定、调用实例、原表现时钟及已提交玩法事实、EventGraph同次typed Frame。沿原顺序准备源需求，由唯一Source采样和Animancer Barrier完成后求值，再ValidatePending并Commit/Discard，最终骨骼/属性仍由唯一Final Publication发布。Foot/IK算法和状态归原owner；不因换图执行载体复制算法或绕过原故障边界。
+
+核心tasks 4.7/4.8/6.1/6.4唯一修改共享角色表现Host/Factory/Barrier外壳，注入实际Source/Constraint/Final服务，调用并消费最终结果；Pose维护内部实现及明确所需合同，不同时改公共Host。服务交付包含来源、实例/阶段身份、资源就绪、结果与释放责任，不能仅提供注册表。原生节点不直接写Transform，核心不重复实现节点历史。
+
+玩法Step先由现有Pipeline/Backend接受，Pose/Camera消费已提交事实并遵守原表现失败边界。表现故障、观察订阅或节点Discard不能擅自撤销已提交玩法Step；Pose历史不进入玩法回滚快照。Reset/Replace/Stop完成在途工作、失效旧generation并释放租约后，owner报告实际安装版本和完成结果；核心汇集，预览读取，不推断假全局版本。
+
+本节细化第11节与主change native-flowcanvas-pose-runtime增量的两阶段/唯一发布/归属要求，不改变EventGraph变量写入或Motion/Camera/Foot资源算法所有权。可与核心并行完成内部节点和外部接线，只有实际接口缺失才协商；不设全员等待接口、不增加空服务、第二时钟、Image加载期编译或兼容运行。
+
+业务取舍：保留真实采样至Final链路要求双方明确实例和释放责任，但可继续使用现有正确动画算法；只交接口/handler会让Host缺服务而无法产出姿态，不能算本轮交付。小步中文提交，保留正确实现，实际业务冲突交用户决定，不回执/日报或向规划窗口层层转发。

@@ -14,8 +14,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         ISimulationActorRegistration,
         IFixedPublishedActorResultObserver
     {
-        ThirdPersonSimulation.Fixed.CharacterSimulationProgram Program { get; }
-        ThirdPersonSimulation.Fixed.SimulationActorBinding ProgramIdentity { get; }
         string WorldBodyBindingId { get; }
         ThirdPersonSimulation.Fixed.WorldBodyState InitialBody { get; }
         IFixedPresentationCommitOutputPort PresentationOutput { get; }

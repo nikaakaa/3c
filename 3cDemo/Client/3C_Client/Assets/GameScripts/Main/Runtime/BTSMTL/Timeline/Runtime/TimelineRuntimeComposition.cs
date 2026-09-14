@@ -195,6 +195,62 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public sealed class TimelineRuntimeEvaluationFanout : ITimelineRuntimeEvaluationSink
+    {
+        readonly ReadOnlyCollection<ITimelineRuntimeEvaluationSink> m_Sinks;
+
+        public TimelineRuntimeEvaluationFanout(IEnumerable<ITimelineRuntimeEvaluationSink> sinks)
+        {
+            var values = new List<ITimelineRuntimeEvaluationSink>(sinks ?? throw new ArgumentNullException(nameof(sinks)));
+            if (values.Count == 0)
+                throw new ArgumentException("Timeline evaluation fanout requires at least one sink.", nameof(sinks));
+            for (int index = 0; index < values.Count; index++)
+                if (values[index] == null)
+                    throw new ArgumentException("Timeline evaluation fanout contains a null sink.", nameof(sinks));
+            m_Sinks = new ReadOnlyCollection<ITimelineRuntimeEvaluationSink>(values);
+        }
+
+        public bool Consume(TimelineRuntimeStepContext context)
+        {
+            bool accepted = true;
+            for (int index = 0; index < m_Sinks.Count; index++)
+                accepted &= m_Sinks[index].Consume(context);
+            return accepted;
+        }
+
+        public void Commit(TimelineRuntimeStepContext context)
+        {
+            for (int index = 0; index < m_Sinks.Count; index++)
+                m_Sinks[index].Commit(context);
+        }
+
+        public void Discard(TimelineRuntimeStepContext context)
+        {
+            for (int index = 0; index < m_Sinks.Count; index++)
+                m_Sinks[index].Discard(context);
+        }
+
+        public bool ConsumeStop(TimelineRuntimeStopRequest request)
+        {
+            bool accepted = true;
+            for (int index = 0; index < m_Sinks.Count; index++)
+                accepted &= m_Sinks[index].ConsumeStop(request);
+            return accepted;
+        }
+
+        public void CommitStop(TimelineRuntimeStopRequest request)
+        {
+            for (int index = 0; index < m_Sinks.Count; index++)
+                m_Sinks[index].CommitStop(request);
+        }
+
+        public void DiscardStop(TimelineRuntimeStopRequest request)
+        {
+            for (int index = 0; index < m_Sinks.Count; index++)
+                m_Sinks[index].DiscardStop(request);
+        }
+    }
+
     public sealed class TimelineRuntimeComposition : ITimelinePlaybackService, IDisposable
     {
         readonly TimelineContractCatalog m_ContractCatalog;

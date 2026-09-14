@@ -291,9 +291,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 else if (node.Payload is CharacterPoseSubgraphPayload subgraph)
                 {
+                    CharacterPoseCanvasGraph child =
+                        graphAsset.RequireGraph(subgraph.Subgraph.PoseGraphId);
+                    CharacterPoseSubgraphSignatureValidator.RequireMatch(
+                        node,
+                        child);
                     ValidateGraph(
                         graphAsset,
-                        graphAsset.RequireGraph(subgraph.Subgraph.PoseGraphId),
+                        child,
                         BoundaryKind.Boundary,
                         visiting,
                         visited);

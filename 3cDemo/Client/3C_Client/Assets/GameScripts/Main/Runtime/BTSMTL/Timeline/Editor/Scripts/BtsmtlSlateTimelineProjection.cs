@@ -19,6 +19,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] string m_ClipAuthoringId;
         [SerializeField] string[] m_CurveTrackAuthoringIds;
+        [SerializeField] BtsmtlSlateTimelineTrackHeight[] m_TrackHeights;
         [SerializeField] bool m_GroupCollapsed;
 
         public BtsmtlSlateTimelineViewState(
@@ -29,7 +30,8 @@ namespace BTSMTL.Timeline.Editor
             string trackAuthoringId,
             string clipAuthoringId,
             bool groupCollapsed,
-            IEnumerable<string> curveTrackAuthoringIds = null)
+            IEnumerable<string> curveTrackAuthoringIds = null,
+            IEnumerable<BtsmtlSlateTimelineTrackHeight> trackHeights = null)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
@@ -40,6 +42,9 @@ namespace BTSMTL.Timeline.Editor
             m_CurveTrackAuthoringIds = curveTrackAuthoringIds == null
                 ? Array.Empty<string>()
                 : curveTrackAuthoringIds.Where(value => !string.IsNullOrEmpty(value)).Distinct(StringComparer.Ordinal).ToArray();
+            m_TrackHeights = trackHeights == null
+                ? Array.Empty<BtsmtlSlateTimelineTrackHeight>()
+                : trackHeights.Where(value => !string.IsNullOrEmpty(value.AuthoringId) && value.Height > 0f).ToArray();
             m_GroupCollapsed = groupCollapsed;
         }
 
@@ -50,8 +55,25 @@ namespace BTSMTL.Timeline.Editor
         public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
         public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
         public IReadOnlyList<string> CurveTrackAuthoringIds => m_CurveTrackAuthoringIds ?? Array.Empty<string>();
+        public IReadOnlyList<BtsmtlSlateTimelineTrackHeight> TrackHeights => m_TrackHeights ?? Array.Empty<BtsmtlSlateTimelineTrackHeight>();
         public bool GroupCollapsed => m_GroupCollapsed;
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) || !string.IsNullOrEmpty(ClipAuthoringId);
+    }
+
+    [Serializable]
+    public struct BtsmtlSlateTimelineTrackHeight
+    {
+        [SerializeField] string m_AuthoringId;
+        [SerializeField] float m_Height;
+
+        public BtsmtlSlateTimelineTrackHeight(string authoringId, float height)
+        {
+            m_AuthoringId = authoringId ?? string.Empty;
+            m_Height = height;
+        }
+
+        public string AuthoringId => m_AuthoringId ?? string.Empty;
+        public float Height => m_Height;
     }
 
     public sealed class BtsmtlSlateTimelineProjection : IDisposable, ITimelineAuthoringClipResolver
@@ -129,6 +151,11 @@ namespace BTSMTL.Timeline.Editor
                 .Where(track => track.ShowCurves)
                 .Select(track => track.AuthoringId)
                 .ToArray();
+            BtsmtlSlateTimelineTrackHeight[] trackHeights = m_Binding.Groups
+                .SelectMany(group => group.Tracks)
+                .Where(track => track.CustomHeight > 0f)
+                .Select(track => new BtsmtlSlateTimelineTrackHeight(track.AuthoringId, track.CustomHeight))
+                .ToArray();
             bool collapsed = m_Binding.Groups.Count != 0 && m_Binding.Groups[0].IsCollapsed;
             return new BtsmtlSlateTimelineViewState(
                 m_Binding.ViewTimeMin,
@@ -138,7 +165,8 @@ namespace BTSMTL.Timeline.Editor
                 trackId,
                 clipId,
                 collapsed,
-                curveTrackIds);
+                curveTrackIds,
+                trackHeights);
         }
 
         public void RestoreViewState(BtsmtlSlateTimelineViewState state)
@@ -155,6 +183,11 @@ namespace BTSMTL.Timeline.Editor
             foreach (IEmbeddedTimelineGroupBinding group in m_Binding.Groups)
                 foreach (IEmbeddedTimelineTrackBinding track in group.Tracks)
                     track.ShowCurves = expandedTracks.Contains(track.AuthoringId);
+            var trackHeights = state.TrackHeights.ToDictionary(value => value.AuthoringId, StringComparer.Ordinal);
+            foreach (IEmbeddedTimelineGroupBinding group in m_Binding.Groups)
+                foreach (IEmbeddedTimelineTrackBinding track in group.Tracks)
+                    if (trackHeights.TryGetValue(track.AuthoringId, out BtsmtlSlateTimelineTrackHeight height))
+                        track.CustomHeight = height.Height;
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
                 FocusSource(state.TrackAuthoringId, state.ClipAuthoringId);

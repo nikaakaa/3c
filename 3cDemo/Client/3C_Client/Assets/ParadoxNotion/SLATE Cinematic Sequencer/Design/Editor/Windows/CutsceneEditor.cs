@@ -3366,7 +3366,7 @@ namespace Slate
                         {
                             float start = wrapper.editorBinding.StartTime;
                             float length = wrapper.editorBinding.Length;
-                            float pointer = SnapTime(PosToTime(mousePosition.x));
+                            float pointer = SnapTime(PosToTime(mousePosition.x) - wrapper.formalDragOffset);
                             if (Prefs.magnetSnapping && !e.control)
                             {
                                 float? magnet = MagnetSnapTime(pointer, magnetSnapTimesCache);
@@ -3385,15 +3385,15 @@ namespace Slate
                         }
 
                         bool selected = ReferenceEquals(embeddedTimeline.Selected, clip);
-                        if (selected)
-                        {
-                            GUI.color = HIGHLIGHT_COLOR;
-                            GUI.DrawTexture(clipRect.ExpandBy(2), whiteTexture);
-                            GUI.color = Color.white;
-                        }
                         GUI.color = wrapper.editorBinding.IsValid ? Color.white : new Color(1, 0.3f, 0.3f);
                         GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
                         wrapper.rect = GUI.Window(id, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
+                        if (selected)
+                        {
+                            GUI.color = HIGHLIGHT_COLOR;
+                            GUI.Box(clipRect.ExpandBy(2), string.Empty, Styles.hollowFrameHorizontalStyle);
+                            GUI.color = Color.white;
+                        }
                         string runtimeStatus = embeddedRuntimeClipStatus?.Invoke(clip.AuthoringId);
                         if (!string.IsNullOrEmpty(runtimeStatus))
                             GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
@@ -3870,6 +3870,7 @@ namespace Slate
             public bool isScalingEnd;
             public bool isControlingBlendIn;
             public bool isControlingBlendOut;
+            public float formalDragOffset;
 
             public Dictionary<int, Keyframe[]> preScaleKeys;
             public float preScaleStartTime;
@@ -4004,6 +4005,8 @@ namespace Slate
                     if ( e.button == 0 ) {
                         if ( dragRect.Contains(e.mousePosition) ) {
                             isWaitingMouseDrag = true;
+                            if (editorBinding.FormalClip != null)
+                                formalDragOffset = editor.PosToTime(editor.mousePosition.x) - editorBinding.StartTime;
                         }
                         editor.interactingClip = this;
                         editor.CacheMagnetSnapTimes(editorBinding);

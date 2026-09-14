@@ -125,9 +125,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x58494643;
-        const int ArtifactVersion = 34;
-        const int ProgramFormatVersion = 38;
-        const int LayoutFormatVersion = 11;
+        const int ArtifactVersion = 35;
+        const int ProgramFormatVersion = 39;
+        const int LayoutFormatVersion = 12;
         const int SourceMapStringTableVersion = 6;
 
         public static CharacterSimulationProgramArtifactHeader ReadArtifactHeader(byte[] bytes)
@@ -375,8 +375,6 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(value.TimelineOwnerOperation.Value);
             writer.WriteString(value.ActionContextIdentity);
             writer.WriteInt32(value.CatalogEntryIndex);
-            writer.WriteInt32(value.StateSlotStart);
-            writer.WriteInt32(value.StateSlotCount);
             writer.WriteByte((byte)value.TranslationMode);
             writer.WriteByte((byte)value.TargetOffsetSpace);
             writer.WriteByte((byte)value.RotationMode);
@@ -401,8 +399,6 @@ namespace ThirdPersonSimulation.Fixed
                 new OperationHandle(reader.ReadInt32()),
                 new OperationHandle(reader.ReadInt32()),
                 reader.ReadString(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
                 reader.ReadInt32(),
                 (ProgramMotionWarpTranslationMode)reader.ReadByte(),
                 (ProgramMotionWarpTargetOffsetSpace)reader.ReadByte(),

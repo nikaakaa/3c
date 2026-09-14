@@ -455,12 +455,6 @@ namespace ThirdPersonSimulation
                 {
                     throw new ArgumentException($"Motion modifier '{i}' topology is invalid.");
                 }
-                if (descriptor.StateSlotStart < 0 ||
-                    descriptor.StateSlotStart + descriptor.StateSlotCount > m_StateSlots.Count ||
-                    descriptor.StateSlotCount != ProgramMotionModifierDescriptor.MotionWarpStateSlotCount)
-                {
-                    throw new ArgumentException($"Motion modifier '{i}' state range is invalid.");
-                }
                 ValidateOptionalModifierConstant(descriptor.TargetPlanarOffsetConstantIndex, ProgramConstantKind.Vector2, i, "target offset");
                 ValidateOptionalModifierConstant(descriptor.TargetYawOffsetConstantIndex, ProgramConstantKind.Scalar, i, "target yaw offset");
                 ValidateOptionalModifierConstant(descriptor.MaximumPositionCorrectionConstantIndex, ProgramConstantKind.Scalar, i, "position clamp");

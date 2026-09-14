@@ -482,7 +482,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Motion = new FixedMotionAccumulator(
                 access,
                 m_Frame,
-                m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples,
                 m_ActionStore);

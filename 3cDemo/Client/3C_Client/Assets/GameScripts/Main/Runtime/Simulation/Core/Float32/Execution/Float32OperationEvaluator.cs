@@ -477,7 +477,6 @@ namespace ThirdPersonSimulation
             m_Motion = new Float32MotionAccumulator(
                 access,
                 m_Frame,
-				m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
 				workspace.MotionContributions,
 				workspace.MotionWarpSamples,
 				m_ActionStore);

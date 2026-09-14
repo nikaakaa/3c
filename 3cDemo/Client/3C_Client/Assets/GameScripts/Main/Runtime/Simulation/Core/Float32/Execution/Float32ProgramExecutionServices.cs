@@ -100,22 +100,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.TimelineLoop,
                 ProgramStateSemantic.TimelineTreeClipCycle,
                 ProgramStateSemantic.TimelineLogicTime);
-            MotionModifierPolicy = new Float32StateAccessPolicy(
-                ProgramStateSemantic.MotionWarpActive,
-                ProgramStateSemantic.MotionWarpInitialized,
-                ProgramStateSemantic.MotionWarpPlaybackGeneration,
-                ProgramStateSemantic.MotionWarpStartBodyPosition,
-                ProgramStateSemantic.MotionWarpStartBodyYaw,
-                ProgramStateSemantic.MotionWarpSourceWindowStartPosition,
-                ProgramStateSemantic.MotionWarpSourceWindowStartYaw,
-                ProgramStateSemantic.MotionWarpResolvedTargetPosition,
-                ProgramStateSemantic.MotionWarpResolvedTargetYaw,
-                ProgramStateSemantic.MotionWarpLimitResult,
-                ProgramStateSemantic.MotionWarpPreviousWarpedPosition,
-                ProgramStateSemantic.MotionWarpPreviousWarpedYaw,
-                ProgramStateSemantic.MotionWarpLastPositionProgress,
-                ProgramStateSemantic.MotionWarpLastYawProgress,
-                ProgramStateSemantic.MotionWarpSourceOperation);
             Access = new Float32ProgramAccess(program, layout, this);
         }
 
@@ -126,7 +110,6 @@ namespace ThirdPersonSimulation
         public Float32StateAccessPolicy ControlPolicy { get; }
         public Float32StateAccessPolicy BlackboardPolicy { get; }
         public Float32StateAccessPolicy TimelinePolicy { get; }
-        public Float32StateAccessPolicy MotionModifierPolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {

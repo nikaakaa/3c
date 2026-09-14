@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     public sealed class NetworkCheckpointLayout
     {
-        const int SchemaVersion = 15;
+        const int SchemaVersion = 16;
         readonly CharacterSimulationProgram m_Program;
         readonly ProgramExecutionLayout m_ExecutionLayout;
 
@@ -190,8 +190,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
-        const int FullVersion = 16;
-        const int DeltaVersion = 19;
+        const int FullVersion = 17;
+        const int DeltaVersion = 20;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)
@@ -219,7 +219,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 CharacterSimulationStateCodec.WriteActionActivationRequests(state.ActionActivationRequests, layout.ExecutionLayout),
                 CharacterSimulationStateCodec.WriteActionInstances(state.ActionInstances, layout.ExecutionLayout),
                 CharacterSimulationStateCodec.WriteTimelineRetentions(state.TimelineRetainedActionContexts, layout.ExecutionLayout),
-                CharacterSimulationStateCodec.WriteMotionWarpContexts(state.MotionWarpActionContexts, layout.ExecutionLayout),
+                CharacterSimulationStateCodec.WriteMotionWarpStates(state.MotionWarpStates, layout.ExecutionLayout),
                 EncodeGameplayEffectState(layout, state),
                 EncodeEquipmentState(state));
         }

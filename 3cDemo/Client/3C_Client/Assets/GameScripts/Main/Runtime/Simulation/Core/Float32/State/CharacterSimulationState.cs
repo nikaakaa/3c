@@ -238,7 +238,7 @@ namespace ThirdPersonSimulation
 		readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
 		readonly List<Float32ActionInstanceState> m_ActionInstances;
 		readonly Dictionary<int, Float32ActionInstanceReference> m_TimelineRetainedActionContexts;
-		readonly Dictionary<int, Float32ActionInstanceReference> m_MotionWarpActionContexts;
+		readonly Dictionary<int, Float32MotionWarpState> m_MotionWarpStates;
 		readonly CharacterControlRuntimeState m_ControlState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
@@ -256,7 +256,7 @@ namespace ThirdPersonSimulation
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<Float32ActionInstanceState> actionInstances,
 			IReadOnlyDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
-			IReadOnlyDictionary<int, Float32ActionInstanceReference> motionWarpActionContexts,
+			IReadOnlyDictionary<int, Float32MotionWarpState> motionWarpStates,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -274,7 +274,7 @@ namespace ThirdPersonSimulation
 			m_ActionActivationRequests = CopyActionActivationRequests(layout, actionActivationRequests);
 			m_ActionInstances = CopyActionInstances(layout, actionInstances);
 			m_TimelineRetainedActionContexts = CopyTimelineRetainedActionContexts(layout, timelineRetainedActionContexts);
-			m_MotionWarpActionContexts = CopyMotionWarpActionContexts(layout, motionWarpActionContexts);
+			m_MotionWarpStates = CopyMotionWarpStates(layout, motionWarpStates);
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
 			if (gameplayEffectEnabled)
@@ -326,7 +326,7 @@ namespace ThirdPersonSimulation
 		internal IReadOnlyList<SimulationActionActivationRequestState> ActionActivationRequests => m_ActionActivationRequests;
 		internal IReadOnlyList<Float32ActionInstanceState> ActionInstances => m_ActionInstances;
 		internal IReadOnlyDictionary<int, Float32ActionInstanceReference> TimelineRetainedActionContexts => m_TimelineRetainedActionContexts;
-		internal IReadOnlyDictionary<int, Float32ActionInstanceReference> MotionWarpActionContexts => m_MotionWarpActionContexts;
+		internal IReadOnlyDictionary<int, Float32MotionWarpState> MotionWarpStates => m_MotionWarpStates;
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
@@ -390,7 +390,7 @@ namespace ThirdPersonSimulation
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), Array.Empty<SimulationActionActivationRequestState>(), Array.Empty<Float32ActionInstanceState>(), new Dictionary<int, Float32ActionInstanceReference>(), new Dictionary<int, Float32ActionInstanceReference>(), controlState, gameplayEffectState, equipmentState);
+			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), Array.Empty<SimulationActionActivationRequestState>(), Array.Empty<Float32ActionInstanceState>(), new Dictionary<int, Float32ActionInstanceReference>(), new Dictionary<int, Float32MotionWarpState>(), controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -406,7 +406,7 @@ namespace ThirdPersonSimulation
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<Float32ActionInstanceState> actionInstances,
 			IReadOnlyDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
-			IReadOnlyDictionary<int, Float32ActionInstanceReference> motionWarpActionContexts,
+			IReadOnlyDictionary<int, Float32MotionWarpState> motionWarpStates,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
@@ -434,7 +434,7 @@ namespace ThirdPersonSimulation
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpActionContexts, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpStates, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -468,7 +468,7 @@ namespace ThirdPersonSimulation
 				CharacterSimulationStateCodec.ReadActionActivationRequests(actionActivationRequestStateBytes, layout),
 				CharacterSimulationStateCodec.ReadActionInstances(actionInstanceStateBytes, layout),
 				CharacterSimulationStateCodec.ReadTimelineRetentions(timelineRetentionStateBytes, layout),
-				CharacterSimulationStateCodec.ReadMotionWarpContexts(motionWarpStateBytes, layout),
+				CharacterSimulationStateCodec.ReadMotionWarpStates(motionWarpStateBytes, layout),
 				controlState,
 				gameplayEffectState,
 				equipmentState);
@@ -505,7 +505,7 @@ namespace ThirdPersonSimulation
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<Float32ActionInstanceState> actionInstances,
 			IReadOnlyDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
-			IReadOnlyDictionary<int, Float32ActionInstanceReference> motionWarpActionContexts,
+			IReadOnlyDictionary<int, Float32MotionWarpState> motionWarpStates,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -524,7 +524,7 @@ namespace ThirdPersonSimulation
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpActionContexts, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpStates, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -552,7 +552,7 @@ namespace ThirdPersonSimulation
 				ActionActivationRequests,
 				ActionInstances,
 				TimelineRetainedActionContexts,
-				MotionWarpActionContexts,
+				MotionWarpStates,
 				ControlState,
 				m_GameplayEffectState,
 				m_EquipmentState);
@@ -628,19 +628,19 @@ namespace ThirdPersonSimulation
 			return result;
 		}
 
-		static Dictionary<int, Float32ActionInstanceReference> CopyMotionWarpActionContexts(
+		static Dictionary<int, Float32MotionWarpState> CopyMotionWarpStates(
 			ProgramExecutionLayout layout,
-			IReadOnlyDictionary<int, Float32ActionInstanceReference> motionWarpActionContexts)
+			IReadOnlyDictionary<int, Float32MotionWarpState> motionWarpStates)
 		{
-			if (motionWarpActionContexts == null)
-				throw new ArgumentNullException(nameof(motionWarpActionContexts));
-			var result = new Dictionary<int, Float32ActionInstanceReference>();
-			foreach (KeyValuePair<int, Float32ActionInstanceReference> pair in motionWarpActionContexts)
+			if (motionWarpStates == null)
+				throw new ArgumentNullException(nameof(motionWarpStates));
+			var result = new Dictionary<int, Float32MotionWarpState>();
+			foreach (KeyValuePair<int, Float32MotionWarpState> pair in motionWarpStates)
 			{
-				if (!layout.HasMotionWarp(new OperationHandle(pair.Key)) || !pair.Value.IsValid)
-					throw new InvalidDataException("Character MotionWarp Action context is invalid.");
+				if (!layout.HasMotionWarp(new OperationHandle(pair.Key)) || !pair.Value.Active || !pair.Value.ActionInstance.IsValid)
+					throw new InvalidDataException("Character MotionWarp state is invalid.");
 				if (!result.TryAdd(pair.Key, pair.Value))
-					throw new InvalidDataException("Character MotionWarp Action context is duplicated.");
+					throw new InvalidDataException("Character MotionWarp state is duplicated.");
 			}
 			return result;
 		}

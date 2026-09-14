@@ -178,6 +178,85 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
+    internal readonly struct FixedMotionWarpState
+    {
+        public FixedMotionWarpState(
+            bool active,
+            bool initialized,
+            ulong playbackGeneration,
+            FixedActionInstanceReference actionInstance,
+            FixedVector3 startBodyPosition,
+            FixedYaw startBodyYaw,
+            FixedVector3 sourceWindowStartPosition,
+            FixedScalar sourceWindowStartYaw,
+            FixedVector3 resolvedTargetPosition,
+            FixedYaw resolvedTargetYaw,
+            ProgramMotionWarpLimitResult limitResult,
+            FixedVector3 previousWarpedPosition,
+            FixedYaw previousWarpedYaw,
+            FixedScalar lastPositionProgress,
+            FixedScalar lastYawProgress,
+            OperationHandle sourceOperation)
+        {
+            Active = active;
+            Initialized = initialized;
+            PlaybackGeneration = playbackGeneration;
+            ActionInstance = actionInstance;
+            StartBodyPosition = startBodyPosition;
+            StartBodyYaw = startBodyYaw;
+            SourceWindowStartPosition = sourceWindowStartPosition;
+            SourceWindowStartYaw = sourceWindowStartYaw;
+            ResolvedTargetPosition = resolvedTargetPosition;
+            ResolvedTargetYaw = resolvedTargetYaw;
+            LimitResult = limitResult;
+            PreviousWarpedPosition = previousWarpedPosition;
+            PreviousWarpedYaw = previousWarpedYaw;
+            LastPositionProgress = lastPositionProgress;
+            LastYawProgress = lastYawProgress;
+            SourceOperation = sourceOperation;
+        }
+
+        public bool Active { get; }
+        public bool Initialized { get; }
+        public ulong PlaybackGeneration { get; }
+        public FixedActionInstanceReference ActionInstance { get; }
+        public FixedVector3 StartBodyPosition { get; }
+        public FixedYaw StartBodyYaw { get; }
+        public FixedVector3 SourceWindowStartPosition { get; }
+        public FixedScalar SourceWindowStartYaw { get; }
+        public FixedVector3 ResolvedTargetPosition { get; }
+        public FixedYaw ResolvedTargetYaw { get; }
+        public ProgramMotionWarpLimitResult LimitResult { get; }
+        public FixedVector3 PreviousWarpedPosition { get; }
+        public FixedYaw PreviousWarpedYaw { get; }
+        public FixedScalar LastPositionProgress { get; }
+        public FixedScalar LastYawProgress { get; }
+        public OperationHandle SourceOperation { get; }
+
+        public FixedMotionWarpState WithProgress(
+            FixedVector3 previousWarpedPosition,
+            FixedYaw previousWarpedYaw,
+            FixedScalar lastPositionProgress,
+            FixedScalar lastYawProgress) =>
+            new FixedMotionWarpState(
+                Active,
+                Initialized,
+                PlaybackGeneration,
+                ActionInstance,
+                StartBodyPosition,
+                StartBodyYaw,
+                SourceWindowStartPosition,
+                SourceWindowStartYaw,
+                ResolvedTargetPosition,
+                ResolvedTargetYaw,
+                LimitResult,
+                previousWarpedPosition,
+                previousWarpedYaw,
+                lastPositionProgress,
+                lastYawProgress,
+                SourceOperation);
+    }
+
     internal sealed class FixedMotionAccumulator : FixedOperationModule,
         IFixedMotionContributionSink,
         IFixedMotionModifierSampleSink
@@ -190,7 +269,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedMotionAccumulator(
             FixedProgramAccess access,
             FixedEvaluationFrame frame,
-            FixedStatePort modifierState,
             List<SimulationMotionContribution> contributions,
             List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> warpSamples,
             FixedActionStateStore actions)
@@ -199,7 +277,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Contributions = contributions ?? throw new ArgumentNullException(nameof(contributions));
             m_WarpSamples = warpSamples ?? throw new ArgumentNullException(nameof(warpSamples));
-            m_MotionWarp = new FixedMotionWarpTarget(access, frame, modifierState, actions);
+            m_MotionWarp = new FixedMotionWarpTarget(access, frame, actions);
         }
 
         public void Submit(SimulationMotionContribution contribution)
@@ -439,46 +517,28 @@ namespace ThirdPersonSimulation.Fixed
         IMotionModifierTarget<FixedScalar, FixedActionInstanceState, ResolvedMotionChannel>
     {
         readonly FixedEvaluationFrame m_Frame;
-        readonly FixedStatePort m_State;
         readonly FixedActionStateStore m_Actions;
         readonly FixedCharacterStateTransaction m_Transaction;
 
         public FixedMotionWarpTarget(
             FixedProgramAccess access,
             FixedEvaluationFrame frame,
-            FixedStatePort state,
             FixedActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Transaction = m_Frame.Transaction ?? throw new InvalidOperationException("MotionWarp target requires an active Character state transaction.");
         }
 
         public void Reset(ProgramMotionModifierDescriptor descriptor)
         {
-            if (HasSkillExecutionState(descriptor))
-            {
-                if (m_Actions.FindActive(descriptor.ActionContextIdentity, out FixedActionInstanceState action) < 0)
-                    return;
-                if (m_Actions.IsSkillExecutionActive(action.InstanceId))
-                {
-                    ResetState(descriptor);
-                    return;
-                }
-                using (m_Actions.EnterSkillExecution(action))
-                    ResetState(descriptor);
-                return;
-            }
             ResetState(descriptor);
         }
 
         void ResetState(ProgramMotionModifierDescriptor descriptor)
         {
-            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, default);
-            for (int i = 0; i < descriptor.StateSlotCount; i++)
-                m_State.Reset(descriptor.StateSlotStart + i);
+            m_Transaction.SetMotionWarpState(descriptor.Operation, default);
         }
 
         public void TraceSourceNotResolved(ProgramMotionModifierDescriptor descriptor, OperationHandle resolvedOwner)
@@ -544,9 +604,10 @@ namespace ThirdPersonSimulation.Fixed
                 Fail(MotionModifierDiagnosticCode.TargetSnapshotRequired, descriptor, $"Action '{action.ActionId}' has no immutable target snapshot for requirement '{requirement}'.");
             }
 
-            bool active = Read(descriptor, ProgramStateSemantic.MotionWarpActive).Boolean;
-            bool initialized = Read(descriptor, ProgramStateSemantic.MotionWarpInitialized).Boolean;
-            FixedActionInstanceReference storedReference = m_Transaction.GetMotionWarpActionContext(descriptor.Operation);
+            FixedMotionWarpState storedState = m_Transaction.GetMotionWarpState(descriptor.Operation);
+            bool active = storedState.Active;
+            bool initialized = storedState.Initialized;
+            FixedActionInstanceReference storedReference = storedState.ActionInstance;
             var storedAction = storedReference.IsValid
                 ? new TimelineActionContextIdentity(
                     storedReference.ActionId,
@@ -563,9 +624,9 @@ namespace ThirdPersonSimulation.Fixed
                 lifecycle = MotionWarpRuntimeSemantics.ResolveLifecycle(
                     active,
                     initialized,
-                    Read(descriptor, ProgramStateSemantic.MotionWarpPlaybackGeneration).UInt64,
+                    storedState.PlaybackGeneration,
                     storedAction,
-                    Read(descriptor, ProgramStateSemantic.MotionWarpSourceOperation).Int32,
+                    storedState.SourceOperation.Value,
                     sample.PlaybackGeneration,
                     currentAction,
                     descriptor.SourceMotionOperation);
@@ -646,19 +707,19 @@ namespace ThirdPersonSimulation.Fixed
             }
             else
             {
-                startBodyPosition = Read(descriptor, ProgramStateSemantic.MotionWarpStartBodyPosition).Vector3;
-                startBodyYaw = Read(descriptor, ProgramStateSemantic.MotionWarpStartBodyYaw).Yaw;
-                sourceWindowStartPosition = Read(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartPosition).Vector3;
-                sourceWindowStartYaw = Read(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartYaw).Scalar;
-                resolvedTargetPosition = Read(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetPosition).Vector3;
-                resolvedTargetYaw = Read(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetYaw).Yaw;
-                limitResult = (ProgramMotionWarpLimitResult)Read(descriptor, ProgramStateSemantic.MotionWarpLimitResult).Int32;
+                startBodyPosition = storedState.StartBodyPosition;
+                startBodyYaw = storedState.StartBodyYaw;
+                sourceWindowStartPosition = storedState.SourceWindowStartPosition;
+                sourceWindowStartYaw = storedState.SourceWindowStartYaw;
+                resolvedTargetPosition = storedState.ResolvedTargetPosition;
+                resolvedTargetYaw = storedState.ResolvedTargetYaw;
+                limitResult = storedState.LimitResult;
                 if (!Enum.IsDefined(typeof(ProgramMotionWarpLimitResult), limitResult) || limitResult == ProgramMotionWarpLimitResult.PreservedByLimitPolicy)
                     Fail(MotionModifierDiagnosticCode.InvalidState, descriptor, $"Restored MotionWarp limit result '{limitResult}' is invalid for active state.");
-                previousWarpedPosition = Read(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition).Vector3;
-                previousWarpedYaw = Read(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw).Yaw;
-                previousPositionProgress = Read(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress).Scalar;
-                previousYawProgress = Read(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress).Scalar;
+                previousWarpedPosition = storedState.PreviousWarpedPosition;
+                previousWarpedYaw = storedState.PreviousWarpedYaw;
+                previousPositionProgress = storedState.LastPositionProgress;
+                previousYawProgress = storedState.LastYawProgress;
                 RequireProgress(previousPositionProgress, descriptor, "position");
                 RequireProgress(previousYawProgress, descriptor, "yaw");
             }
@@ -688,23 +749,14 @@ namespace ThirdPersonSimulation.Fixed
             FixedVector3 modifierPositionCorrection = warpedSourceDelta - rawSourceDelta;
             FixedScalar modifierYawCorrection = warpedSourceYawDelta - rawSourceYawDelta;
             channel.ApplyCorrection(modifierPositionCorrection, modifierYawCorrection);
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition, CharacterStateValue.FromVector3(currentWarpedPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw, CharacterStateValue.FromYaw(currentWarpedYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress, CharacterStateValue.FromScalar(positionProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress, CharacterStateValue.FromScalar(yawProgress));
+            m_Transaction.SetMotionWarpState(
+                descriptor.Operation,
+                storedState.WithProgress(currentWarpedPosition, currentWarpedYaw, positionProgress, yawProgress));
             Trace(
                 descriptor,
                 limitResult == ProgramMotionWarpLimitResult.AppliedClamped ? MotionModifierDiagnosticCode.AppliedClamped : MotionModifierDiagnosticCode.Applied,
                 SimulationTraceSeverity.Information,
                 $"source={descriptor.SourceMotionOperation};action={action.InstanceId};target={action.TargetSnapshot.TargetId};normalized={currentProgress};translation={descriptor.TranslationMode};offsetSpace={descriptor.TargetOffsetSpace};rotation={descriptor.RotationMode};rotationMethod={descriptor.RotationMethod};limit={limitResult};sourceWindowStartPosition={sourceWindowStartPosition};sourceWindowStartYaw={sourceWindowStartYaw};sourceCurrentRelative={currentSourceRelative};sourceCurrentYawRelative={currentSourceYawRelative};previousWarpedPosition={previousWarpedPosition};previousWarpedYaw={previousWarpedYaw};warpedCumulativePosition={currentWarpedPosition};warpedCumulativeYaw={currentWarpedYaw};warpedDelta={warpedSourceDelta};rawSourceDelta={rawSourceDelta};correction={modifierPositionCorrection};warpedYawDelta={warpedSourceYawDelta};rawSourceYawDelta={rawSourceYawDelta};yawCorrection={modifierYawCorrection};positionProgress={positionProgress};yawProgress={yawProgress};finalActionDisplacement={channel.Displacement};finalActionYaw={channel.YawDegrees}");
-        }
-
-        bool HasSkillExecutionState(ProgramMotionModifierDescriptor descriptor)
-        {
-            for (int i = 0; i < descriptor.StateSlotCount; i++)
-                if (m_Layout.IsSkillExecutionStateSlot(descriptor.StateSlotStart + i))
-                    return true;
-            return false;
         }
 
         public void Fail(string code, ProgramMotionModifierDescriptor descriptor, string detail)
@@ -813,22 +865,25 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar positionProgress,
             FixedScalar yawProgress)
         {
-            Write(descriptor, ProgramStateSemantic.MotionWarpActive, CharacterStateValue.FromBoolean(true));
-            Write(descriptor, ProgramStateSemantic.MotionWarpInitialized, CharacterStateValue.FromBoolean(true));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPlaybackGeneration, CharacterStateValue.FromUInt64(playbackGeneration));
-            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, FixedActionInstanceReference.FromInstance(action));
-            Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyPosition, CharacterStateValue.FromVector3(startBodyPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyYaw, CharacterStateValue.FromYaw(startBodyYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartPosition, CharacterStateValue.FromVector3(sourceWindowStartPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartYaw, CharacterStateValue.FromScalar(sourceWindowStartYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetPosition, CharacterStateValue.FromVector3(resolvedTargetPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetYaw, CharacterStateValue.FromYaw(resolvedTargetYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLimitResult, CharacterStateValue.FromInt32((int)limitResult));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition, CharacterStateValue.FromVector3(previousWarpedPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw, CharacterStateValue.FromYaw(previousWarpedYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress, CharacterStateValue.FromScalar(positionProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress, CharacterStateValue.FromScalar(yawProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceOperation, CharacterStateValue.FromInt32(descriptor.SourceMotionOperation.Value));
+            m_Transaction.SetMotionWarpState(
+                descriptor.Operation,
+                new FixedMotionWarpState(
+                    true,
+                    true,
+                    playbackGeneration,
+                    FixedActionInstanceReference.FromInstance(action),
+                    startBodyPosition,
+                    startBodyYaw,
+                    sourceWindowStartPosition,
+                    sourceWindowStartYaw,
+                    resolvedTargetPosition,
+                    resolvedTargetYaw,
+                    limitResult,
+                    previousWarpedPosition,
+                    previousWarpedYaw,
+                    positionProgress,
+                    yawProgress,
+                    descriptor.SourceMotionOperation));
         }
 
         FixedVector3 ResolveTargetPosition(
@@ -1120,12 +1175,6 @@ namespace ThirdPersonSimulation.Fixed
             if (value < FixedScalar.Zero || value > FixedScalar.One)
                 Fail(MotionModifierDiagnosticCode.InvalidState, descriptor, $"Restored {label} progress '{value}' is outside [0,1].");
         }
-
-        CharacterStateValue Read(ProgramMotionModifierDescriptor descriptor, ProgramStateSemantic semantic) =>
-            m_State.Get(Access.RequireOperationSlot(descriptor.Operation, semantic));
-
-        void Write(ProgramMotionModifierDescriptor descriptor, ProgramStateSemantic semantic, CharacterStateValue value) =>
-            m_State.Set(Access.RequireOperationSlot(descriptor.Operation, semantic), value);
 
         void Trace(
             ProgramMotionModifierDescriptor descriptor,

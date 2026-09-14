@@ -40,7 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.LabelField("Timeline Owner", descriptor.TimelineOwnerOperation.Value.ToString());
                 EditorGUILayout.LabelField("Action Context", descriptor.ActionContextIdentity);
                 EditorGUILayout.LabelField("Modes", $"{descriptor.TranslationMode} / {descriptor.TargetOffsetSpace} / {descriptor.RotationMode} / {descriptor.RotationMethod} / {descriptor.LimitPolicy}");
-                EditorGUILayout.LabelField("State Range", $"{descriptor.StateSlotStart}..{descriptor.StateSlotStart + descriptor.StateSlotCount - 1} ({descriptor.StateSlotCount})");
             }
         }
 

@@ -102,7 +102,6 @@ namespace ThirdPersonSimulation
             if (owner == ProgramStateOwnerKind.Runnable ||
                 owner == ProgramStateOwnerKind.StateMachine ||
                 owner == ProgramStateOwnerKind.Timeline ||
-                owner == ProgramStateOwnerKind.MotionModifier ||
                 owner == ProgramStateOwnerKind.Blackboard)
                 result.Add(slotIndex);
         }

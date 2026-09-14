@@ -10,9 +10,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-        const int Version = 29;
-        public const string CodecIdentity = "character-state/fixed-q32.32/v28";
-        const string HashIdentity = "character-state-hash/fixed-q32.32/v26";
+        const int Version = 30;
+        public const string CodecIdentity = "character-state/fixed-q32.32/v29";
+        const string HashIdentity = "character-state-hash/fixed-q32.32/v27";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation.Fixed
             WriteActionActivationRequests(writer, state.ActionActivationRequests, layout);
             WriteActionInstances(writer, state.ActionInstances, layout);
             WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts, layout);
-            WriteMotionWarpContexts(writer, state.MotionWarpActionContexts, layout);
+            WriteMotionWarpStates(writer, state.MotionWarpStates, layout);
             writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation.Fixed
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, layout);
             List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, layout);
             Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, layout);
-            Dictionary<int, FixedActionInstanceReference> motionWarpActionContexts = ReadMotionWarpContexts(reader, layout);
+            Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, layout);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -119,7 +119,7 @@ namespace ThirdPersonSimulation.Fixed
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpActionContexts, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpStates, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -425,9 +425,9 @@ namespace ThirdPersonSimulation.Fixed
             return values;
         }
 
-        static void WriteMotionWarpContexts(
+        static void WriteMotionWarpStates(
             CanonicalWriter writer,
-            IReadOnlyDictionary<int, FixedActionInstanceReference> values,
+            IReadOnlyDictionary<int, FixedMotionWarpState> values,
             ProgramExecutionLayout layout)
         {
             IReadOnlyList<int> operationIds = layout.MotionWarpOperationIds;
@@ -436,54 +436,99 @@ namespace ThirdPersonSimulation.Fixed
             {
                 int operation = operationIds[i];
                 writer.WriteInt32(operation);
-                if (values.TryGetValue(operation, out FixedActionInstanceReference value))
+                if (values.TryGetValue(operation, out FixedMotionWarpState value) && value.Active)
                 {
                     writer.WriteBoolean(true);
-                    WriteActionReference(writer, value);
+                    writer.WriteBoolean(value.Initialized);
+                    writer.WriteUInt64(value.PlaybackGeneration);
+                    WriteActionReference(writer, value.ActionInstance);
+                    writer.WriteVector3(value.StartBodyPosition);
+                    writer.WriteYaw(value.StartBodyYaw);
+                    writer.WriteVector3(value.SourceWindowStartPosition);
+                    writer.WriteScalar(value.SourceWindowStartYaw);
+                    writer.WriteVector3(value.ResolvedTargetPosition);
+                    writer.WriteYaw(value.ResolvedTargetYaw);
+                    writer.WriteByte((byte)value.LimitResult);
+                    writer.WriteVector3(value.PreviousWarpedPosition);
+                    writer.WriteYaw(value.PreviousWarpedYaw);
+                    writer.WriteScalar(value.LastPositionProgress);
+                    writer.WriteScalar(value.LastYawProgress);
+                    writer.WriteInt32(value.SourceOperation.Value);
                 }
                 else
                     writer.WriteBoolean(false);
             }
         }
 
-        static Dictionary<int, FixedActionInstanceReference> ReadMotionWarpContexts(
+        static Dictionary<int, FixedMotionWarpState> ReadMotionWarpStates(
             CanonicalReader reader,
             ProgramExecutionLayout layout)
         {
             IReadOnlyList<int> operationIds = layout.MotionWarpOperationIds;
             int count = reader.ReadInt32();
             if (count != operationIds.Count)
-                throw new InvalidDataException("Character MotionWarp Action context count does not match its runtime binding.");
-            var values = new Dictionary<int, FixedActionInstanceReference>();
+                throw new InvalidDataException("Character MotionWarp state count does not match its runtime binding.");
+            var values = new Dictionary<int, FixedMotionWarpState>();
             for (int i = 0; i < count; i++)
             {
                 int operation = reader.ReadInt32();
                 if (operation != operationIds[i])
-                    throw new InvalidDataException("Character MotionWarp Action context order does not match its runtime binding.");
+                    throw new InvalidDataException("Character MotionWarp state order does not match its runtime binding.");
                 if (!reader.ReadBoolean())
                     continue;
-                FixedActionInstanceReference value = ReadActionReference(reader);
+                bool initialized = reader.ReadBoolean();
+                ulong playbackGeneration = reader.ReadUInt64();
+                FixedActionInstanceReference actionInstance = ReadActionReference(reader);
+                FixedVector3 startBodyPosition = reader.ReadVector3();
+                FixedYaw startBodyYaw = reader.ReadYaw();
+                FixedVector3 sourceWindowStartPosition = reader.ReadVector3();
+                FixedScalar sourceWindowStartYaw = reader.ReadScalar();
+                FixedVector3 resolvedTargetPosition = reader.ReadVector3();
+                FixedYaw resolvedTargetYaw = reader.ReadYaw();
+                ProgramMotionWarpLimitResult limitResult = ReadEnum<ProgramMotionWarpLimitResult>(reader.ReadByte());
+                FixedVector3 previousWarpedPosition = reader.ReadVector3();
+                FixedYaw previousWarpedYaw = reader.ReadYaw();
+                FixedScalar lastPositionProgress = reader.ReadScalar();
+                FixedScalar lastYawProgress = reader.ReadScalar();
+                OperationHandle sourceOperation = new OperationHandle(reader.ReadInt32());
+                var value = new FixedMotionWarpState(
+                    true,
+                    initialized,
+                    playbackGeneration,
+                    actionInstance,
+                    startBodyPosition,
+                    startBodyYaw,
+                    sourceWindowStartPosition,
+                    sourceWindowStartYaw,
+                    resolvedTargetPosition,
+                    resolvedTargetYaw,
+                    limitResult,
+                    previousWarpedPosition,
+                    previousWarpedYaw,
+                    lastPositionProgress,
+                    lastYawProgress,
+                    sourceOperation);
                 if (!values.TryAdd(operation, value))
-                    throw new InvalidDataException("Character MotionWarp Action context is duplicated.");
+                    throw new InvalidDataException("Character MotionWarp state is duplicated.");
             }
             return values;
         }
 
-        internal static byte[] WriteMotionWarpContexts(
-            IReadOnlyDictionary<int, FixedActionInstanceReference> values,
+        internal static byte[] WriteMotionWarpStates(
+            IReadOnlyDictionary<int, FixedMotionWarpState> values,
             ProgramExecutionLayout layout)
         {
             using var writer = new CanonicalWriter();
-            WriteMotionWarpContexts(writer, values, layout);
+            WriteMotionWarpStates(writer, values, layout);
             return writer.ToArray();
         }
 
-        internal static Dictionary<int, FixedActionInstanceReference> ReadMotionWarpContexts(
+        internal static Dictionary<int, FixedMotionWarpState> ReadMotionWarpStates(
             byte[] bytes,
             ProgramExecutionLayout layout)
         {
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
-            Dictionary<int, FixedActionInstanceReference> values = ReadMotionWarpContexts(reader, layout);
+            Dictionary<int, FixedMotionWarpState> values = ReadMotionWarpStates(reader, layout);
             reader.RequireComplete();
             return values;
         }

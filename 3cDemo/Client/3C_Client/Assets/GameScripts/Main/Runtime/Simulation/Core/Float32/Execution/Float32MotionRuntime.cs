@@ -177,6 +177,85 @@ namespace ThirdPersonSimulation
         }
     }
 
+    internal readonly struct Float32MotionWarpState
+    {
+        public Float32MotionWarpState(
+            bool active,
+            bool initialized,
+            ulong playbackGeneration,
+            Float32ActionInstanceReference actionInstance,
+            Float32Vector3 startBodyPosition,
+            Float32Yaw startBodyYaw,
+            Float32Vector3 sourceWindowStartPosition,
+            Float32Scalar sourceWindowStartYaw,
+            Float32Vector3 resolvedTargetPosition,
+            Float32Yaw resolvedTargetYaw,
+            ProgramMotionWarpLimitResult limitResult,
+            Float32Vector3 previousWarpedPosition,
+            Float32Yaw previousWarpedYaw,
+            Float32Scalar lastPositionProgress,
+            Float32Scalar lastYawProgress,
+            OperationHandle sourceOperation)
+        {
+            Active = active;
+            Initialized = initialized;
+            PlaybackGeneration = playbackGeneration;
+            ActionInstance = actionInstance;
+            StartBodyPosition = startBodyPosition;
+            StartBodyYaw = startBodyYaw;
+            SourceWindowStartPosition = sourceWindowStartPosition;
+            SourceWindowStartYaw = sourceWindowStartYaw;
+            ResolvedTargetPosition = resolvedTargetPosition;
+            ResolvedTargetYaw = resolvedTargetYaw;
+            LimitResult = limitResult;
+            PreviousWarpedPosition = previousWarpedPosition;
+            PreviousWarpedYaw = previousWarpedYaw;
+            LastPositionProgress = lastPositionProgress;
+            LastYawProgress = lastYawProgress;
+            SourceOperation = sourceOperation;
+        }
+
+        public bool Active { get; }
+        public bool Initialized { get; }
+        public ulong PlaybackGeneration { get; }
+        public Float32ActionInstanceReference ActionInstance { get; }
+        public Float32Vector3 StartBodyPosition { get; }
+        public Float32Yaw StartBodyYaw { get; }
+        public Float32Vector3 SourceWindowStartPosition { get; }
+        public Float32Scalar SourceWindowStartYaw { get; }
+        public Float32Vector3 ResolvedTargetPosition { get; }
+        public Float32Yaw ResolvedTargetYaw { get; }
+        public ProgramMotionWarpLimitResult LimitResult { get; }
+        public Float32Vector3 PreviousWarpedPosition { get; }
+        public Float32Yaw PreviousWarpedYaw { get; }
+        public Float32Scalar LastPositionProgress { get; }
+        public Float32Scalar LastYawProgress { get; }
+        public OperationHandle SourceOperation { get; }
+
+        public Float32MotionWarpState WithProgress(
+            Float32Vector3 previousWarpedPosition,
+            Float32Yaw previousWarpedYaw,
+            Float32Scalar lastPositionProgress,
+            Float32Scalar lastYawProgress) =>
+            new Float32MotionWarpState(
+                Active,
+                Initialized,
+                PlaybackGeneration,
+                ActionInstance,
+                StartBodyPosition,
+                StartBodyYaw,
+                SourceWindowStartPosition,
+                SourceWindowStartYaw,
+                ResolvedTargetPosition,
+                ResolvedTargetYaw,
+                LimitResult,
+                previousWarpedPosition,
+                previousWarpedYaw,
+                lastPositionProgress,
+                lastYawProgress,
+                SourceOperation);
+    }
+
     internal sealed class Float32MotionAccumulator : Float32OperationModule,
         IFloat32MotionContributionSink,
         IFloat32MotionModifierSampleSink
@@ -189,7 +268,6 @@ namespace ThirdPersonSimulation
         public Float32MotionAccumulator(
             Float32ProgramAccess access,
             Float32EvaluationFrame frame,
-            Float32StatePort modifierState,
             List<SimulationMotionContribution> contributions,
             List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> warpSamples,
             Float32ActionStateStore actions)
@@ -198,7 +276,7 @@ namespace ThirdPersonSimulation
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Contributions = contributions ?? throw new ArgumentNullException(nameof(contributions));
             m_WarpSamples = warpSamples ?? throw new ArgumentNullException(nameof(warpSamples));
-            m_MotionWarp = new Float32MotionWarpTarget(access, frame, modifierState, actions);
+            m_MotionWarp = new Float32MotionWarpTarget(access, frame, actions);
         }
 
         public void Submit(SimulationMotionContribution contribution)
@@ -438,46 +516,28 @@ namespace ThirdPersonSimulation
         IMotionModifierTarget<Float32Scalar, Float32ActionInstanceState, ResolvedMotionChannel>
     {
         readonly Float32EvaluationFrame m_Frame;
-        readonly Float32StatePort m_State;
         readonly Float32ActionStateStore m_Actions;
         readonly Float32CharacterStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
             Float32ProgramAccess access,
             Float32EvaluationFrame frame,
-            Float32StatePort state,
             Float32ActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Transaction = m_Frame.Transaction ?? throw new InvalidOperationException("MotionWarp target requires an active Character state transaction.");
         }
 
         public void Reset(ProgramMotionModifierDescriptor descriptor)
         {
-            if (HasSkillExecutionState(descriptor))
-            {
-                if (m_Actions.FindActive(descriptor.ActionContextIdentity, out Float32ActionInstanceState action) < 0)
-                    return;
-                if (m_Actions.IsSkillExecutionActive(action.InstanceId))
-                {
-                    ResetState(descriptor);
-                    return;
-                }
-                using (m_Actions.EnterSkillExecution(action))
-                    ResetState(descriptor);
-                return;
-            }
             ResetState(descriptor);
         }
 
         void ResetState(ProgramMotionModifierDescriptor descriptor)
         {
-            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, default);
-            for (int i = 0; i < descriptor.StateSlotCount; i++)
-                m_State.Reset(descriptor.StateSlotStart + i);
+            m_Transaction.SetMotionWarpState(descriptor.Operation, default);
         }
 
         public void TraceSourceNotResolved(ProgramMotionModifierDescriptor descriptor, OperationHandle resolvedOwner)
@@ -543,9 +603,10 @@ namespace ThirdPersonSimulation
                 Fail(MotionModifierDiagnosticCode.TargetSnapshotRequired, descriptor, $"Action '{action.ActionId}' has no immutable target snapshot for requirement '{requirement}'.");
             }
 
-            bool active = Read(descriptor, ProgramStateSemantic.MotionWarpActive).Boolean;
-            bool initialized = Read(descriptor, ProgramStateSemantic.MotionWarpInitialized).Boolean;
-            Float32ActionInstanceReference storedReference = m_Transaction.GetMotionWarpActionContext(descriptor.Operation);
+            Float32MotionWarpState storedState = m_Transaction.GetMotionWarpState(descriptor.Operation);
+            bool active = storedState.Active;
+            bool initialized = storedState.Initialized;
+            Float32ActionInstanceReference storedReference = storedState.ActionInstance;
             var storedAction = storedReference.IsValid
                 ? new TimelineActionContextIdentity(
                     storedReference.ActionId,
@@ -562,9 +623,9 @@ namespace ThirdPersonSimulation
                 lifecycle = MotionWarpRuntimeSemantics.ResolveLifecycle(
                     active,
                     initialized,
-                    Read(descriptor, ProgramStateSemantic.MotionWarpPlaybackGeneration).UInt64,
+                    storedState.PlaybackGeneration,
                     storedAction,
-                    Read(descriptor, ProgramStateSemantic.MotionWarpSourceOperation).Int32,
+                    storedState.SourceOperation.Value,
                     sample.PlaybackGeneration,
                     currentAction,
                     descriptor.SourceMotionOperation);
@@ -642,19 +703,19 @@ namespace ThirdPersonSimulation
             }
             else
             {
-                startBodyPosition = Read(descriptor, ProgramStateSemantic.MotionWarpStartBodyPosition).Vector3;
-                startBodyYaw = Read(descriptor, ProgramStateSemantic.MotionWarpStartBodyYaw).Yaw;
-                sourceWindowStartPosition = Read(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartPosition).Vector3;
-                sourceWindowStartYaw = Read(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartYaw).Scalar;
-                resolvedTargetPosition = Read(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetPosition).Vector3;
-                resolvedTargetYaw = Read(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetYaw).Yaw;
-                limitResult = (ProgramMotionWarpLimitResult)Read(descriptor, ProgramStateSemantic.MotionWarpLimitResult).Int32;
+                startBodyPosition = storedState.StartBodyPosition;
+                startBodyYaw = storedState.StartBodyYaw;
+                sourceWindowStartPosition = storedState.SourceWindowStartPosition;
+                sourceWindowStartYaw = storedState.SourceWindowStartYaw;
+                resolvedTargetPosition = storedState.ResolvedTargetPosition;
+                resolvedTargetYaw = storedState.ResolvedTargetYaw;
+                limitResult = storedState.LimitResult;
                 if (!Enum.IsDefined(typeof(ProgramMotionWarpLimitResult), limitResult) || limitResult == ProgramMotionWarpLimitResult.PreservedByLimitPolicy)
                     Fail(MotionModifierDiagnosticCode.InvalidState, descriptor, $"Restored MotionWarp limit result '{limitResult}' is invalid for active state.");
-                previousWarpedPosition = Read(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition).Vector3;
-                previousWarpedYaw = Read(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw).Yaw;
-                previousPositionProgress = Read(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress).Scalar;
-                previousYawProgress = Read(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress).Scalar;
+                previousWarpedPosition = storedState.PreviousWarpedPosition;
+                previousWarpedYaw = storedState.PreviousWarpedYaw;
+                previousPositionProgress = storedState.LastPositionProgress;
+                previousYawProgress = storedState.LastYawProgress;
                 RequireProgress(previousPositionProgress, descriptor, "position");
                 RequireProgress(previousYawProgress, descriptor, "yaw");
             }
@@ -684,23 +745,14 @@ namespace ThirdPersonSimulation
             Float32Vector3 modifierPositionCorrection = warpedSourceDelta - rawSourceDelta;
             Float32Scalar modifierYawCorrection = warpedSourceYawDelta - rawSourceYawDelta;
             channel.ApplyCorrection(modifierPositionCorrection, modifierYawCorrection);
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition, CharacterStateValue.FromVector3(currentWarpedPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw, CharacterStateValue.FromYaw(currentWarpedYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress, CharacterStateValue.FromScalar(positionProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress, CharacterStateValue.FromScalar(yawProgress));
+            m_Transaction.SetMotionWarpState(
+                descriptor.Operation,
+                storedState.WithProgress(currentWarpedPosition, currentWarpedYaw, positionProgress, yawProgress));
             Trace(
                 descriptor,
                 limitResult == ProgramMotionWarpLimitResult.AppliedClamped ? MotionModifierDiagnosticCode.AppliedClamped : MotionModifierDiagnosticCode.Applied,
                 SimulationTraceSeverity.Information,
                 $"source={descriptor.SourceMotionOperation};action={action.InstanceId};target={action.TargetSnapshot.TargetId};normalized={currentProgress};translation={descriptor.TranslationMode};offsetSpace={descriptor.TargetOffsetSpace};rotation={descriptor.RotationMode};rotationMethod={descriptor.RotationMethod};limit={limitResult};sourceWindowStartPosition={sourceWindowStartPosition};sourceWindowStartYaw={sourceWindowStartYaw};sourceCurrentRelative={currentSourceRelative};sourceCurrentYawRelative={currentSourceYawRelative};previousWarpedPosition={previousWarpedPosition};previousWarpedYaw={previousWarpedYaw};warpedCumulativePosition={currentWarpedPosition};warpedCumulativeYaw={currentWarpedYaw};warpedDelta={warpedSourceDelta};rawSourceDelta={rawSourceDelta};correction={modifierPositionCorrection};warpedYawDelta={warpedSourceYawDelta};rawSourceYawDelta={rawSourceYawDelta};yawCorrection={modifierYawCorrection};positionProgress={positionProgress};yawProgress={yawProgress};finalActionDisplacement={channel.Displacement};finalActionYaw={channel.YawDegrees}");
-        }
-
-        bool HasSkillExecutionState(ProgramMotionModifierDescriptor descriptor)
-        {
-            for (int i = 0; i < descriptor.StateSlotCount; i++)
-                if (m_Layout.IsSkillExecutionStateSlot(descriptor.StateSlotStart + i))
-                    return true;
-            return false;
         }
 
         public void Fail(string code, ProgramMotionModifierDescriptor descriptor, string detail)
@@ -809,22 +861,25 @@ namespace ThirdPersonSimulation
             Float32Scalar positionProgress,
             Float32Scalar yawProgress)
         {
-            Write(descriptor, ProgramStateSemantic.MotionWarpActive, CharacterStateValue.FromBoolean(true));
-            Write(descriptor, ProgramStateSemantic.MotionWarpInitialized, CharacterStateValue.FromBoolean(true));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPlaybackGeneration, CharacterStateValue.FromUInt64(playbackGeneration));
-            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, Float32ActionInstanceReference.FromInstance(action));
-            Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyPosition, CharacterStateValue.FromVector3(startBodyPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyYaw, CharacterStateValue.FromYaw(startBodyYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartPosition, CharacterStateValue.FromVector3(sourceWindowStartPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartYaw, CharacterStateValue.FromScalar(sourceWindowStartYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetPosition, CharacterStateValue.FromVector3(resolvedTargetPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpResolvedTargetYaw, CharacterStateValue.FromYaw(resolvedTargetYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLimitResult, CharacterStateValue.FromInt32((int)limitResult));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedPosition, CharacterStateValue.FromVector3(previousWarpedPosition));
-            Write(descriptor, ProgramStateSemantic.MotionWarpPreviousWarpedYaw, CharacterStateValue.FromYaw(previousWarpedYaw));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastPositionProgress, CharacterStateValue.FromScalar(positionProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpLastYawProgress, CharacterStateValue.FromScalar(yawProgress));
-            Write(descriptor, ProgramStateSemantic.MotionWarpSourceOperation, CharacterStateValue.FromInt32(descriptor.SourceMotionOperation.Value));
+            m_Transaction.SetMotionWarpState(
+                descriptor.Operation,
+                new Float32MotionWarpState(
+                    true,
+                    true,
+                    playbackGeneration,
+                    Float32ActionInstanceReference.FromInstance(action),
+                    startBodyPosition,
+                    startBodyYaw,
+                    sourceWindowStartPosition,
+                    sourceWindowStartYaw,
+                    resolvedTargetPosition,
+                    resolvedTargetYaw,
+                    limitResult,
+                    previousWarpedPosition,
+                    previousWarpedYaw,
+                    positionProgress,
+                    yawProgress,
+                    descriptor.SourceMotionOperation));
         }
 
         Float32Vector3 ResolveTargetPosition(
@@ -1116,12 +1171,6 @@ namespace ThirdPersonSimulation
             if (value < Float32Scalar.Zero || value > Float32Scalar.One)
                 Fail(MotionModifierDiagnosticCode.InvalidState, descriptor, $"Restored {label} progress '{value}' is outside [0,1].");
         }
-
-        CharacterStateValue Read(ProgramMotionModifierDescriptor descriptor, ProgramStateSemantic semantic) =>
-            m_State.Get(Access.RequireOperationSlot(descriptor.Operation, semantic));
-
-        void Write(ProgramMotionModifierDescriptor descriptor, ProgramStateSemantic semantic, CharacterStateValue value) =>
-            m_State.Set(Access.RequireOperationSlot(descriptor.Operation, semantic), value);
 
         void Trace(
             ProgramMotionModifierDescriptor descriptor,

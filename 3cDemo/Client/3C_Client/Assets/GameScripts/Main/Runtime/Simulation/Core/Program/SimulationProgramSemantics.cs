@@ -112,8 +112,6 @@ namespace ThirdPersonSimulation
 
     public sealed class ProgramMotionModifierDescriptor
     {
-        public const int MotionWarpStateSlotCount = 15;
-
         public ProgramMotionModifierDescriptor(
             int index,
             ProgramMotionModifierKind kind,
@@ -123,8 +121,6 @@ namespace ThirdPersonSimulation
             OperationHandle timelineOwnerOperation,
             string actionContextIdentity,
             int catalogEntryIndex,
-            int stateSlotStart,
-            int stateSlotCount,
             ProgramMotionWarpTranslationMode translationMode,
             ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
             ProgramMotionWarpRotationMode rotationMode,
@@ -139,7 +135,7 @@ namespace ThirdPersonSimulation
             int yawProgressCurveConstantIndex)
         {
             if (index < 0 || !operation.IsValid || !sourceMotionOperation.IsValid || !timelineOwnerOperation.IsValid ||
-                catalogEntryIndex < 0 || stateSlotStart < 0 || stateSlotCount <= 0 ||
+                catalogEntryIndex < 0 ||
                 targetPlanarOffsetConstantIndex < -1 || targetYawOffsetConstantIndex < -1 ||
                 maximumPositionCorrectionConstantIndex < -1 || maximumYawCorrectionConstantIndex < -1 ||
                 maximumYawRateConstantIndex < -1 || positionProgressCurveConstantIndex < -1 || yawProgressCurveConstantIndex < -1)
@@ -162,7 +158,6 @@ namespace ThirdPersonSimulation
             bool usesYawProgress = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ProgressCurve;
             bool usesYawRate = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ConstantRate;
             if (kind != ProgramMotionModifierKind.MotionWarp || channel != ProgramMotionModifierChannel.Action ||
-                stateSlotCount != MotionWarpStateSlotCount ||
                 !hasTranslation && !hasRotation ||
                 hasTranslation &&
                     (targetPlanarOffsetConstantIndex < 0 || maximumPositionCorrectionConstantIndex < 0) ||
@@ -186,8 +181,6 @@ namespace ThirdPersonSimulation
             TimelineOwnerOperation = timelineOwnerOperation;
             ActionContextIdentity = SimulationIdentity.Require(actionContextIdentity, nameof(actionContextIdentity));
             CatalogEntryIndex = catalogEntryIndex;
-            StateSlotStart = stateSlotStart;
-            StateSlotCount = stateSlotCount;
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
@@ -210,8 +203,6 @@ namespace ThirdPersonSimulation
         public OperationHandle TimelineOwnerOperation { get; }
         public string ActionContextIdentity { get; }
         public int CatalogEntryIndex { get; }
-        public int StateSlotStart { get; }
-        public int StateSlotCount { get; }
         public ProgramMotionWarpTranslationMode TranslationMode { get; }
         public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public ProgramMotionWarpRotationMode RotationMode { get; }
@@ -928,7 +919,6 @@ namespace ThirdPersonSimulation
         Blackboard = 5,
         Action = 6,
         GameplayEffect = 7,
-        MotionModifier = 8,
     }
 
     public enum ProgramStateSemantic : ushort
@@ -947,21 +937,6 @@ namespace ThirdPersonSimulation
         TimelineLoop = 41,
         TimelineTreeClipCycle = 42,
         TimelineLogicTime = 44,
-        MotionWarpActive = 45,
-        MotionWarpInitialized = 46,
-        MotionWarpPlaybackGeneration = 47,
-        MotionWarpStartBodyPosition = 49,
-        MotionWarpStartBodyYaw = 50,
-        MotionWarpSourceWindowStartPosition = 51,
-        MotionWarpSourceWindowStartYaw = 52,
-        MotionWarpResolvedTargetPosition = 53,
-        MotionWarpResolvedTargetYaw = 54,
-        MotionWarpLimitResult = 55,
-        MotionWarpPreviousWarpedPosition = 56,
-        MotionWarpPreviousWarpedYaw = 57,
-        MotionWarpLastPositionProgress = 58,
-        MotionWarpLastYawProgress = 59,
-        MotionWarpSourceOperation = 62,
         BlackboardValue = 60,
         BlackboardOwnerToken = 61,
         BlackboardLifetime = 63,
@@ -1053,21 +1028,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.TimelineLoop => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.Timeline,
                 ProgramStateSemantic.TimelineTreeClipCycle => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Timeline,
                 ProgramStateSemantic.TimelineLogicTime => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.Timeline,
-                ProgramStateSemantic.MotionWarpActive => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpInitialized => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpPlaybackGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpStartBodyPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpStartBodyYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpSourceWindowStartPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpSourceWindowStartYaw => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpResolvedTargetPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpResolvedTargetYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpLimitResult => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpPreviousWarpedPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpPreviousWarpedYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpLastPositionProgress => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpLastYawProgress => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpSourceOperation => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.BlackboardValue => IsBlackboardValue(kind) && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardOwnerToken => kind == ProgramStateValueKind.BlackboardOwnerToken && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardLifetime => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Blackboard,

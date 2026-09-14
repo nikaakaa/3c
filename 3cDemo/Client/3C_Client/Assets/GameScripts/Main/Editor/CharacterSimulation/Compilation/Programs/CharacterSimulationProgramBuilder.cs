@@ -668,24 +668,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelineTreeClipCycle));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Scalar, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelineLogicTime));
             }
-            if (code == SimulationOperationCode.TimelineMotionWarp)
-            {
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Boolean, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpActive));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Boolean, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpInitialized));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpPlaybackGeneration));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpStartBodyPosition));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Yaw, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpStartBodyYaw));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpSourceWindowStartPosition));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Scalar, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpSourceWindowStartYaw));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpResolvedTargetPosition));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Yaw, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpResolvedTargetYaw));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpLimitResult));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpPreviousWarpedPosition));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Yaw, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpPreviousWarpedYaw));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Scalar, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpLastPositionProgress));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Scalar, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpLastYawProgress));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpSourceOperation));
-            }
             return slots;
         }
 

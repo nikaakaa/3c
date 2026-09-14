@@ -679,25 +679,6 @@ namespace ThirdPersonSimulation
 
     public static class ProgramMotionModifierCompiler
     {
-        static readonly ProgramStateSemantic[] s_MotionWarpStateSemantics =
-        {
-            ProgramStateSemantic.MotionWarpActive,
-            ProgramStateSemantic.MotionWarpInitialized,
-            ProgramStateSemantic.MotionWarpPlaybackGeneration,
-            ProgramStateSemantic.MotionWarpStartBodyPosition,
-            ProgramStateSemantic.MotionWarpStartBodyYaw,
-            ProgramStateSemantic.MotionWarpSourceWindowStartPosition,
-            ProgramStateSemantic.MotionWarpSourceWindowStartYaw,
-            ProgramStateSemantic.MotionWarpResolvedTargetPosition,
-            ProgramStateSemantic.MotionWarpResolvedTargetYaw,
-            ProgramStateSemantic.MotionWarpLimitResult,
-            ProgramStateSemantic.MotionWarpPreviousWarpedPosition,
-            ProgramStateSemantic.MotionWarpPreviousWarpedYaw,
-            ProgramStateSemantic.MotionWarpLastPositionProgress,
-            ProgramStateSemantic.MotionWarpLastYawProgress,
-            ProgramStateSemantic.MotionWarpSourceOperation
-        };
-
         public static IReadOnlyList<ProgramMotionModifierDescriptor> Compile(CharacterGameplaySemanticIr semanticIr)
         {
             if (semanticIr == null)
@@ -756,7 +737,6 @@ namespace ThirdPersonSimulation
             ProgramMotionWarpLimitPolicy limitPolicy = RequireEnumLiteral<ProgramMotionWarpLimitPolicy>(semanticIr, catalog, "LimitPolicy");
             if (translationMode == ProgramMotionWarpTranslationMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
                 throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' disables both correction modes.");
-            int stateSlotStart = RequireMotionWarpStateLayout(semanticIr, operation);
             bool hasTranslation = translationMode != ProgramMotionWarpTranslationMode.Disabled;
             bool hasRotation = rotationMode != ProgramMotionWarpRotationMode.Disabled;
             bool usesPositionProgress = translationMode is ProgramMotionWarpTranslationMode.SkewToTarget or ProgramMotionWarpTranslationMode.LinearToTarget;
@@ -780,8 +760,6 @@ namespace ThirdPersonSimulation
                 new OperationHandle(timelineOwner),
                 actionContext,
                 catalog.Index,
-                stateSlotStart,
-                ProgramMotionModifierDescriptor.MotionWarpStateSlotCount,
                 translationMode,
                 targetOffsetSpace,
                 rotationMode,
@@ -1111,27 +1089,6 @@ namespace ThirdPersonSimulation
             if (value != operation.Integer1 || !Enum.IsDefined(typeof(ProgramMotionWarpRotationMode), mode))
                 throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' rotation mode is inconsistent.");
             return mode;
-        }
-
-        static int RequireMotionWarpStateLayout(CharacterGameplaySemanticIr semanticIr, SemanticOperation operation)
-        {
-            if (operation.StateSlots.Count != s_MotionWarpStateSemantics.Length)
-                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' requires exactly {s_MotionWarpStateSemantics.Length} state slots.");
-            int start = operation.StateSlots[0];
-            for (int i = 0; i < s_MotionWarpStateSemantics.Length; i++)
-            {
-                int slotIndex = operation.StateSlots[i];
-                if (slotIndex != start + i || slotIndex < 0 || slotIndex >= semanticIr.StateDeclarations.Count)
-                    throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' state layout is not contiguous.");
-                ProgramStateSlot slot = semanticIr.StateDeclarations[slotIndex];
-                if (slot.OwnerKind != ProgramStateOwnerKind.MotionModifier ||
-                    slot.Semantic != s_MotionWarpStateSemantics[i] ||
-                    !string.Equals(slot.OwnerIdentity, $"operation:{operation.Handle.Value}", StringComparison.Ordinal))
-                {
-                    throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' state slot '{slotIndex}' has the wrong semantic owner.");
-                }
-            }
-            return start;
         }
 
         static int RequireInt32Literal(

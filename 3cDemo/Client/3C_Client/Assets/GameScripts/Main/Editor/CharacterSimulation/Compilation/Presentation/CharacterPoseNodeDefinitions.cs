@@ -234,10 +234,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ActionPlaybackInput;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterActionPlaybackInputPosePayload>(CharacterPoseNodeKind.ActionPlaybackInput, RootOnly, "Action Playback Input", "Inputs", InputColor,
                 Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel")),
@@ -285,10 +281,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.SelectedPosePlayer;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Player;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterSelectedPosePlayerPayload>(CharacterPoseNodeKind.SelectedPosePlayer, RootAndStateWithLinkedEntry, "Selected Pose Player", "Sources", SourceColor,
                 Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot))),
@@ -330,10 +322,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendSpacePlayer;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Player;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterBlendSpacePlayerPosePayload>(CharacterPoseNodeKind.BlendSpacePlayer, RootAndStateWithLinkedEntry, "Blend Space Player", "Sources", SourceColor,
                 Fields(SourceField(typeof(CharacterBlendSpacePoseSourceSlot)), EnumField("input-range-policy", "Input Range", typeof(CharacterAnimationBlendSpaceInputRangePolicy))),
@@ -399,11 +387,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ClipPlayer;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Player |
-                CharacterPoseNodeRuntimeRequirement.ClipPlayer;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterClipPlayerPosePayload>(CharacterPoseNodeKind.ClipPlayer, RootAndStateWithLinkedEntry, "Clip Player", "Sources", SourceColor,
                 Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), EnumField("clock-source", "Clock Source", typeof(CharacterClipPlayerClockSource))),
@@ -479,10 +462,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseStateMachine;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.StateMachine;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterPoseStateMachineNodePayload>(CharacterPoseNodeKind.PoseStateMachine, RootAndLinkedEntry, "Animation State Machine", "State Machine", BlendColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
@@ -540,13 +519,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AnimationSlot;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Player |
-                CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl |
-                CharacterPoseNodeRuntimeRequirement.BlendPolicy |
-                CharacterPoseNodeRuntimeRequirement.AnimationSlot;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterAnimationSlotPosePayload>(CharacterPoseNodeKind.AnimationSlot, RootAndStateWithLinkedEntry, "Slot", "Action", BlendColor,
                 Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), ResourceField("blend-policy", "Blend Policy")),
@@ -628,12 +600,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendStack;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
-                CharacterPoseNodeRuntimeRequirement.Player |
-                CharacterPoseNodeRuntimeRequirement.BlendPolicy;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, RootAndStateWithLinkedEntry, "Blend Stack", "Blend", BlendColor,
                 Fields(SourceField(typeof(CharacterPresentationPoseSourceSlot)), ResourceField("blend-policy", "Blend Policy")),
@@ -687,10 +653,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.Inertialization;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Inertialization;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, AllPoseGraphsWithLinkedEntry, "Inertialization", "Blend", BlendColor,
                 Fields(ResourceField("inertialization-policy", "Policy")),
@@ -834,10 +796,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AdditivePose;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.Additive;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, AllPoseGraphsWithLinkedEntry, "Additive Pose", "Blend", BlendColor,
                 Fields(StringField("reference-pose-id", "Reference Pose", "RigReference"), EnumField("reference-space", "Reference Space", typeof(AdditiveReferenceSpace)), EnumField("scale-policy", "Scale Policy", typeof(AdditiveScalePolicy)), FloatField("weight", "Weight", 1f, 0f, 1f)),
@@ -935,10 +893,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ModifyBone;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.ModifyBone;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterModifyBonePosePayload>(CharacterPoseNodeKind.ModifyBone, AllPoseGraphs, "Modify Bone", "Constraints", ConstraintColor,
                 Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
@@ -1020,10 +974,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.RootOrientationWarp;
-        public override CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.RootOrientationWarp;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, RootAndStateWithLinkedEntry, "Root Orientation Warp", "Constraints", ConstraintColor,
                 Fields(ResourceField("yaw-curve", "Yaw Profile")),

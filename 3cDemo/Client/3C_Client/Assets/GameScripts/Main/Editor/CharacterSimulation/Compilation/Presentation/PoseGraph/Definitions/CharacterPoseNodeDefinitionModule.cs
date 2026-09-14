@@ -49,23 +49,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         BlackboardOnly = 3
     }
 
-    [Flags]
-    internal enum CharacterPoseNodeRuntimeRequirement : ushort
-    {
-        None = 0,
-        PoseSourceSlot = 1 << 0,
-        Player = 1 << 2,
-        ActionPlaybackControl = 1 << 3,
-        BlendPolicy = 1 << 4,
-        StateMachine = 1 << 5,
-        AnimationSlot = 1 << 6,
-        Inertialization = 1 << 7,
-        Additive = 1 << 8,
-        ModifyBone = 1 << 9,
-        RootOrientationWarp = 1 << 10,
-        ClipPlayer = 1 << 11
-    }
-
     internal abstract class CharacterPoseNodeDefinition
     {
         GraphAuthoringCapabilityDescriptor m_Capability;
@@ -73,9 +56,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public abstract CharacterPoseNodeKind Kind { get; }
         public abstract Type PayloadType { get; }
         public abstract GraphAuthoringCapabilityDescriptor Declare();
-        public virtual CharacterPoseNodeRuntimeRequirement
-            RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.None;
         public CharacterPoseCanvasCreationKind CanvasCreation =>
             Kind == CharacterPoseNodeKind.LinkedPoseCall
                 ? CharacterPoseCanvasCreationKind.DedicatedSurface
@@ -88,15 +68,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Kind != CharacterPoseNodeKind.OutputPose &&
             Kind != CharacterPoseNodeKind.PoseStateMachine;
         public bool UsesPoseSourceSlot =>
-            Requires(CharacterPoseNodeRuntimeRequirement.PoseSourceSlot);
+            Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
+            Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+            Kind == CharacterPoseNodeKind.ClipPlayer ||
+            Kind == CharacterPoseNodeKind.BlendStack;
         public GraphAuthoringCapabilityDescriptor Capability =>
             m_Capability ?? throw new InvalidOperationException(
                 $"Pose Node Definition '{Kind}' has no capability projection.");
         public string CapabilityIdentity => Capability.CapabilityId.Value;
-        public bool Requires(
-            CharacterPoseNodeRuntimeRequirement requirement) =>
-            requirement != CharacterPoseNodeRuntimeRequirement.None &&
-            (RuntimeRequirements & requirement) == requirement;
         public CharacterPoseExecutionDomain ExecutionDomain
         {
             get

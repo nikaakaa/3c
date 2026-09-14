@@ -501,8 +501,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     handler.Channel(node.Payload);
                 if (channel.IsValid)
                     channelInputs.Add(channel);
-                if (handler.Requires(
-                        CharacterPoseNodeRuntimeRequirement.AnimationSlot))
+                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
                 {
                     AnimationSlotId slotId =
                         ((CharacterAnimationSlotPosePayload)
@@ -527,8 +526,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 else if (node.Kind == CharacterPoseNodeKind.GraphOutput)
                     graphOutputCount++;
 
-                if (handler.Requires(
-                        CharacterPoseNodeRuntimeRequirement.StateMachine))
+                if (node.Kind == CharacterPoseNodeKind.PoseStateMachine)
                 {
                     ValidateStateMachine(
                         ownerAsset,

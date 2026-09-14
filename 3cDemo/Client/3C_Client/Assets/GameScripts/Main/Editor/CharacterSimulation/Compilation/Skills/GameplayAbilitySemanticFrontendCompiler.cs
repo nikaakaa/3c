@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 builder.RequireGameplayCapability("Action");
                 builder.RequireGameplayCapability("RunnableTree");
                 builder.RequireGameplayCapability("GameplayEffect");
-                var catalogIndex = new CharacterSimulationCatalogIndex();
+                var catalogIndex = new GameplayAbilityCatalogIndex();
                 var catalogEmitter = new GameplayAbilitySemanticDependencyCatalogEmitter(builder, report, catalogIndex);
                 GameplayAbilityProviderOwnerSet providers = catalogEmitter.Emit(model);
                 var blackboard = new CharacterSemanticBlackboardEmitter(model.Declarations, builder, report);

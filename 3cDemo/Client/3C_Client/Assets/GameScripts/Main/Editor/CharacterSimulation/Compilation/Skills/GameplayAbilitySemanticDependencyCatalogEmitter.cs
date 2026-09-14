@@ -150,11 +150,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
-        readonly CharacterSimulationCatalogIndex m_Index;
+        readonly GameplayAbilityCatalogIndex m_Index;
         public GameplayAbilitySemanticDependencyCatalogEmitter(
             CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
-            CharacterSimulationCatalogIndex index)
+            GameplayAbilityCatalogIndex index)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_Report = report ?? throw new ArgumentNullException(nameof(report));

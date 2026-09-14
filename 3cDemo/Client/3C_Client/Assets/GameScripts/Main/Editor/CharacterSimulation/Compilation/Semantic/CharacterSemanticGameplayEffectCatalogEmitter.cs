@@ -13,13 +13,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterAuthoringCompilationModel m_Model;
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
-        readonly CharacterSimulationCatalogIndex m_Index;
+        readonly GameplayAbilityCatalogIndex m_Index;
 
         public CharacterSemanticGameplayEffectCatalogEmitter(
             CharacterAuthoringCompilationModel model,
             CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
-            CharacterSimulationCatalogIndex index)
+            GameplayAbilityCatalogIndex index)
         {
             m_Model = model ?? throw new ArgumentNullException(nameof(model));
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));

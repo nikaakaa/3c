@@ -8,12 +8,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class CharacterSemanticGameplayNodeBindingEmitter : ICharacterSemanticNodeBinding
     {
         readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
-        readonly CharacterSimulationCatalogIndex m_CatalogIndex;
+        readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly CharacterSimulationCompileReport m_Report;
 
         public CharacterSemanticGameplayNodeBindingEmitter(
             CharacterSemanticCatalogReferenceEmitter catalog,
-            CharacterSimulationCatalogIndex catalogIndex,
+            GameplayAbilityCatalogIndex catalogIndex,
             CharacterSimulationCompileReport report)
         {
             m_Catalog = catalog;

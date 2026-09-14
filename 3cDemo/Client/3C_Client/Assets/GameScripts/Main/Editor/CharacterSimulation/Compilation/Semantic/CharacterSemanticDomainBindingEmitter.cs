@@ -24,11 +24,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSemanticBlackboardEmitter m_Blackboard;
         readonly IReadOnlyList<ICharacterSemanticNodeBinding> m_Bindings;
         readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
-        readonly CharacterSimulationCatalogIndex m_CatalogIndex;
+        readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly CharacterSimulationCompileReport m_Report;
 
         public CharacterSemanticDomainBindingEmitter(
-            CharacterSimulationCatalogIndex catalogIndex,
+            GameplayAbilityCatalogIndex catalogIndex,
             CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
             CharacterSemanticBlackboardEmitter blackboard)

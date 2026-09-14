@@ -564,6 +564,7 @@ namespace BTSMTL.Timeline.Editor
             if (!IsSourceCurrent())
             {
                 Rebuild();
+                ReportIssue("Timeline 内容已被外部修改，Add Track 已取消。");
                 return false;
             }
             try
@@ -638,6 +639,7 @@ namespace BTSMTL.Timeline.Editor
             if (!IsSourceCurrent())
             {
                 Rebuild();
+                ReportIssue("Timeline 内容已被外部修改，Add Clip 已取消。");
                 return false;
             }
             if (!m_Tracks.TryGetValue(request.TrackAuthoringId, out BtsmtlTimelineTrackBinding track))

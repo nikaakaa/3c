@@ -39,6 +39,7 @@ TimelineEditorWindow
 - `+ Track` 使用 `TimelineContractCatalog`、`TimelineAuthoringTypeCatalog` 和正式 Track 字段 binding。
 - 轨道右键按作者帧打开 Add Clip 表单；Animation、Tree、Motion、MotionWarp、Camera、Cue 和 Scene binding 均走正式类型工厂/`TimelineAuthoringClipBinding`。
 - Add Track/Add Clip 失败或 owner revision 过期时保留表单输入，不留下半成品或额外 Undo。
+- Add Track/Add Clip 在发现 owner revision 过期时先重建正式 binding，再通过 `AuthoringIssue` 报告具体取消原因；popup 只保留输入，不创建临时对象。
 - Scene Presentation 的 `valueCurve` 已注册到正式 `TimelineCurveChannelCatalog`，Slate 编辑后通过 `TimelineCurveAuthoring.Replace` 回写正式曲线。
 - 运行观察从 `BtsmtlSkillObservationSession` 按 Timeline/Graph/Node 精确筛选 `RuntimeTimelinePlaybackDebugSummary`，调用 `TimelineEditorWindow.ApplyRuntimeObservation`；运行线和作者编辑游标分离。
 - Graph Shell 历史折叠区的 `Segment` 驱动 `RuntimeDebugSession.HistoryOffset`，历史观察调用 `ApplyHistoryObservation` 绘制独立 History 线；历史线、实时线和作者帧互不写同一个时间状态。

@@ -203,13 +203,14 @@ namespace BTSMTL.Timeline.Runtime
         internal static TimelineRuntimePreparationResult Failed(
             string requestId,
             TimelineExecutionIdentity executionIdentity,
+            TimelineRuntimeNumericTarget numericTarget,
             IEnumerable<string> errors)
         {
             return new TimelineRuntimePreparationResult(
                 TimelineRuntimePreparationStatus.Failed,
                 requestId,
                 executionIdentity,
-                TimelineRuntimeNumericTarget.Float32,
+                numericTarget,
                 null,
                 null,
                 null,
@@ -254,6 +255,7 @@ namespace BTSMTL.Timeline.Runtime
                 return TimelineRuntimePreparationResult.Failed(
                     request.RequestId,
                     request.ExecutionIdentity,
+                    request.NumericTarget,
                     discovery.Errors);
 
             try
@@ -278,6 +280,7 @@ namespace BTSMTL.Timeline.Runtime
                     return TimelineRuntimePreparationResult.Failed(
                         request.RequestId,
                         request.ExecutionIdentity,
+                        request.NumericTarget,
                         errors);
 
                 TimelineBindingPlan bindingPlan = new TimelineBindingPlan(discovery.Content);
@@ -291,6 +294,7 @@ namespace BTSMTL.Timeline.Runtime
                     return TimelineRuntimePreparationResult.Failed(
                         request.RequestId,
                         request.ExecutionIdentity,
+                        request.NumericTarget,
                         errors);
                 return TimelineRuntimePreparationResult.Ready(
                     request,
@@ -305,6 +309,7 @@ namespace BTSMTL.Timeline.Runtime
                 return TimelineRuntimePreparationResult.Failed(
                     request.RequestId,
                     request.ExecutionIdentity,
+                    request.NumericTarget,
                     new[] { exception.Message });
             }
         }

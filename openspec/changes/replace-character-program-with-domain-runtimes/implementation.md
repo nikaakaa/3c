@@ -72,6 +72,9 @@
 - `ef66cd0c7`：删除 MotionWarp 剩余 15 个 Program state slot、MotionModifier owner、descriptor 槽位范围和 `MotionModifierPolicy`；Float32／Fixed 以 `MotionWarpStates` 按 operation identity 持有完整生命周期、姿态、限制结果、推进进度和 Action 引用，事务统一处理重置、推进、savepoint／Restore，状态 codec、Server Authority checkpoint、程序 artifact 与布局版本同步升级。
 - `9b4b517ab`：将 Ability provider 合同从类别级 owner 身份扩展为依赖成员级的 ValueKind、Revision、ProviderSemanticVersion 和 RuntimeHandle；Character Definition 从真实 Input、Gameplay Effect、Equipment 与 Control 配置生成成员绑定，Ability DataAsset 与 Target 编译入口统一校验实际依赖成员。
 - `e140ae68d`：新增 Float32／Fixed `GameplayAbilityExecutionData`，Ability Asset 的公开 Load／Definition 入口改为返回技能域数据，数据公开调用帧、技能操作、局部状态、依赖引用、来源和 Provider 合同，不再把 `CharacterSimulationProgram` 作为调用方结果返回；内部运行时消费链仍需继续从旧 Program evaluator 切换。
+- `8741f20cf`：将 Float32 Ability canonical artifact、Numeric Target、根身份、元数据和 Provider 合同校验移入核心 `Float32GameplayAbilityExecutionDataLoader`，Unity DataAsset 只组装持久化元数据并取得执行数据。
+- `fc8abc1a4`：按同一合同完成 Fixed Ability loader，保持 Float32／Fixed 的产物读取边界对称。
+- `d885db31b`：修正两个 loader 的跨程序集可见性，使 Unity DataAsset 能调用核心正式入口；生成的 Unity csproj 只作为本机编译索引，不纳入仓库。
 
 ## 当前实现边界
 
@@ -80,7 +83,7 @@
 - Ability 根入口直接指向私有图的 Root operation；Float32／Fixed 的 Ability 生命周期、Action／Effect catalog、状态槽和 artifact metadata 已接通。
 - Ability 目录现在为 Input／Gameplay Effect／Equipment／Character State 外部依赖发布成员级 typed provider requirement；缺少 owner、成员、运行句柄、同一依赖绑定多个 owner、成员版本或值类型不符时，Target 发布直接失败。当前 1.9 已补齐资产配置到成员合同的解析，独立 Ability execution data 接入仍由 1.10 完成。
 - Ability 独立前端不再声明 Gameplay Effect aggregate、随机数、句柄分配器或事实序号等角色级服务状态；这些服务由角色运行时 owner 提供，Ability 只保留自己的 action／execution state 和必要 provider requirement。1.8 已完成，但 1.9 的真实成员解析与 1.10 的独立 execution data 仍未完成。
-- `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 的公开 Load 结果现在是独立的 `*GameplayAbilityExecutionData`，包含技能执行所需的 typed 表和 Provider 合同；canonical bytes 的内部 reader 仍复用旧 `CharacterSimulationProgramCodec`，Ability evaluator 也尚未直接消费新数据，因此 1.10 仍未完全闭合，领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
+- `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 的公开 Load 结果现在是独立的 `*GameplayAbilityExecutionData`，包含技能执行所需的 typed 表和 Provider 合同；Unity DataAsset 不再直接承担 artifact reader 和元数据校验，Float32／Fixed loader 统一承接这条入口。canonical bytes 的内部 reader 仍复用旧 `CharacterSimulationProgramCodec`，Ability evaluator 也尚未直接消费新数据，因此 1.10 仍未完全闭合，领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 或缺失／类型／版本／句柄不符的成员在资源绑定阶段失败，任务 1.4 的身份入口和 1.9 的成员合同分别保留其边界。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
 - `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；Character Program 仍承载 Runnable、StateMachine、Timeline 播放和 Blackboard，旧 Program 数据清理仍未完成。Timeline 播放内部由 Timeline owner 提供，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
@@ -132,6 +135,7 @@
 - 2026-09-14 MotionWarp 完整状态分区后，`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonSimulation.ServerAuthoritative.csproj` 为 1 个既有 warning、0 error；`ThirdPersonSimulation.Fixed.Compiler.csproj` 为 2 个 Unity TestRunner 既有 warning、0 error。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 2026-09-14 Ability Provider 成员合同后，`ThirdPersonSimulation.Core.csproj` 和 `ThirdPersonSimulation.Fixed.Compiler.csproj` 均为 0 error；Core 为 0 warning，Fixed.Compiler 为 2 个 Unity TestRunner 既有 warning。`ThirdPersonClient.Runtime.csproj` 为 2 个并行 Pose 文件缺少 `Component` using 的既有错误，未出现本步 Provider 文件错误；每次编译结束后均已执行 `dotnet build-server shutdown`。
 - 2026-09-14 Ability execution data 返回边界后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；未运行 Unity、测试或资产生成。`ThirdPersonClient.Runtime.csproj` 仍被并行 Pose 文件的 2 个 `Component` 类型错误阻断，未出现本步 Ability data 文件错误；每次编译结束后均已执行 `dotnet build-server shutdown`。
+- 2026-09-14 Ability artifact loader 边界后，`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Unity.csproj` 均为 0 warning、0 error；第一次 Unity 编译发现新 loader 未进入显式生成工程，补入本机忽略的 csproj 索引后复编通过。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

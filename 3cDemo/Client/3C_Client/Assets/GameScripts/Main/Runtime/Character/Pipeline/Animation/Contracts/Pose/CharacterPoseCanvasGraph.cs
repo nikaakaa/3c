@@ -111,6 +111,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return runtime.Read<T>(node, portId);
         }
 
+        internal bool TryObserveNativeNode(
+            PoseNodeId nodeId,
+            PosePortId portId,
+            out CharacterPoseNativeNodeObservation observation)
+        {
+            observation = default;
+            return m_NativeRuntime != null &&
+                m_NativeRuntime.TryObserve(nodeId, portId, out observation);
+        }
+
 #if UNITY_EDITOR
         [NonSerialized] BlackboardSource m_EditorBlackboard;
         [NonSerialized] CharacterAnimationVariableContract m_EditorAnimationVariables;

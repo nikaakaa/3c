@@ -88,10 +88,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 $"Pose Canvas node '{NodeId}' does not own payload '{typeof(T).Name}'.");
 
         internal T ReadNativeOutput<T>(PosePortId portId)
+            where T : CharacterPoseNativePortValue
         {
             CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph ??
                 throw new InvalidOperationException("Pose node is not attached to a native Pose graph.");
             return owner.ReadNativeOutput<T>(this, portId);
+        }
+
+        internal bool TryObserveNativeOutput(
+            PosePortId portId,
+            out CharacterPoseNativeNodeObservation observation)
+        {
+            observation = default;
+            CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph;
+            return owner != null &&
+                owner.TryObserveNativeNode(NodeId, portId, out observation);
         }
 
         public AnimationChannelId AnimationChannelId => m_Payload switch

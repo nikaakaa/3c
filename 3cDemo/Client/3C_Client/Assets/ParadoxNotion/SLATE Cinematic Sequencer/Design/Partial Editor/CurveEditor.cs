@@ -120,12 +120,14 @@ namespace Slate
 
             public CurveRenderer(AnimationCurve[] curves, Rect posRect) {
                 this.curves = curves;
+                this.posRect = posRect;
                 SubscribeUndoRedo();
                 Init();
             }
 
             public CurveRenderer(AnimationCurve[] curves, Rect posRect, Action onCurvesUpdated) {
                 this.curves = curves;
+                this.posRect = posRect;
                 rawOnCurvesUpdated = onCurvesUpdated;
                 SubscribeUndoRedo();
                 Init();

@@ -16,7 +16,7 @@ using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public sealed class FixedCharacterRegistration :
-        IFixedLocalSimulationActorRegistration,
+        IFixedCharacterRuntimeRegistration,
         ISimulationActorStartGate,
         ISimulationPresentationCheckpointRuntime
     {

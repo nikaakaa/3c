@@ -275,6 +275,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage,
             CharacterPoseNativePortValue output)
         {
+            RequireAlive();
+            RequireFrame();
             if (m_Output != null)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();

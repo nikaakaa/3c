@@ -57,7 +57,7 @@
 ## 6. 刷新与属性
 
 - [ ] 6.1 选中正式Track/Clip/key驱动原Slate控件，普通字段接Unity已有Inspector的正式owner；不恢复Timeline右侧自制面板，不再选代理Cutscene，随11.7收口
-- [ ] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野和纵向滚动；删除对象不自动改选首个 Clip，不保存自制 Inspector 宽度 本次确认P仅保存一个曲线展开轨道，稳定通道/Section及多展开恢复仍未齐，见审阅A05/A10。
+- [ ] 6.2 按稳定 identity 保存并恢复选择、展开、当前帧、横向视野和纵向滚动；删除对象不自动改选首个 Clip，不保存自制 Inspector 宽度。`0d011d3f1` 已将 formal Track 自定义高度纳入同一 view state；稳定通道/Section及多展开恢复仍未齐，见审阅A05/A10。
 - [x] 6.3 Add Track/Add Clip 弹窗在正式提交失败或 owner 过期时保留当前输入并报告原因；DopeSheet 仅按像素密度减少显示 key，不修改正式曲线
 
 ## 7. 预览边界

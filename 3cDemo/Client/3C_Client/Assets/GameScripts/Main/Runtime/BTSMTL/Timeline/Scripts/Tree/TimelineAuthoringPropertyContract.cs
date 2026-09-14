@@ -1,0 +1,395 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using UnityEngine;
+
+namespace BTSMTL.Timeline
+{
+    public readonly struct TimelineAuthoringReferenceValue
+    {
+        public TimelineAuthoringReferenceValue(
+            UnityEngine.Object asset,
+            string errorCode = "",
+            string errorMessage = "")
+        {
+            Asset = asset;
+            ErrorCode = errorCode ?? string.Empty;
+            ErrorMessage = errorMessage ?? string.Empty;
+        }
+
+        public UnityEngine.Object Asset { get; }
+        public string ErrorCode { get; }
+        public string ErrorMessage { get; }
+        public bool IsMissing => !Asset && !string.IsNullOrEmpty(ErrorCode);
+    }
+
+    public readonly struct TimelineAuthoringPropertyValue
+    {
+        public TimelineAuthoringPropertyValue(
+            string propertyId,
+            TimelineAuthoringPropertyKind kind,
+            object value)
+        {
+            PropertyId = string.IsNullOrWhiteSpace(propertyId)
+                ? throw new ArgumentException("Timeline authoring property identity is missing.", nameof(propertyId))
+                : propertyId;
+            Kind = kind;
+            Value = value;
+        }
+
+        public string PropertyId { get; }
+        public TimelineAuthoringPropertyKind Kind { get; }
+        public object Value { get; }
+    }
+
+    public static class TimelineAuthoringPropertyContract
+    {
+        public static IReadOnlyList<TimelineAuthoringPropertyValue> Read(Clip clip)
+        {
+            if (clip == null)
+                throw new ArgumentNullException(nameof(clip));
+            TimelineAuthoringClipConfiguration configuration = TimelineAuthoringClipBinding.Read(clip);
+            var result = new List<TimelineAuthoringPropertyValue>();
+            foreach (TimelineAuthoringPropertyAttribute property in clip.GetType()
+                         .GetCustomAttributes(typeof(TimelineAuthoringPropertyAttribute), true)
+                         .OfType<TimelineAuthoringPropertyAttribute>()
+                         .OrderBy(value => value.PropertyId, StringComparer.Ordinal))
+            {
+                object value = ReadValue(configuration, property.PropertyId);
+                if (value is AnimationCurve)
+                    continue;
+                Add(result, clip, property.PropertyId, property.Kind, value);
+            }
+            if (clip is TreeClip tree)
+            {
+                Add(result, clip, "executionPhase", TimelineAuthoringPropertyKind.Enum, tree.ExecutionPhase);
+                if (tree.AssetTree)
+                    Add(result, clip, "assetTree", TimelineAuthoringPropertyKind.Object, tree.AssetTree);
+            }
+            if (clip is CameraOverrideClip)
+                Add(result, clip, "overrideTrack", TimelineAuthoringPropertyKind.Object, configuration.CameraOverrideTrack);
+            if (clip is CameraZoomClip)
+                Add(result, clip, "zoom", TimelineAuthoringPropertyKind.Object, configuration.CameraZoom);
+            if (clip is CameraStretchClip)
+                Add(result, clip, "stretch", TimelineAuthoringPropertyKind.Object, configuration.CameraStretch);
+            if (clip is CameraShotClip)
+                Add(result, clip, "shot", TimelineAuthoringPropertyKind.Object, configuration.CameraShot);
+            return result;
+        }
+
+        public static UnityEngine.Object ReferenceAsset(Clip clip)
+        {
+            if (clip is TreeClip tree && tree.AssetTree)
+                return tree.AssetTree;
+            return TimelineAuthoringClipBinding.SourceAsset(clip);
+        }
+
+        public static TimelineAuthoringReferenceValue Reference(Clip clip)
+        {
+            UnityEngine.Object asset = ReferenceAsset(clip);
+            if (asset)
+                return new TimelineAuthoringReferenceValue(asset);
+            if (clip is MotionCurveClip)
+                return new TimelineAuthoringReferenceValue(
+                    null,
+                    "motion_curve_source_missing",
+                    "MotionCurveClip缺少RootMotionCurveAsset正式源引用。");
+            if (clip is TreeClip)
+                return new TimelineAuthoringReferenceValue(
+                    null,
+                    "timeline_tree_source_unsupported",
+                    "TreeClip不是正式资产节点图引用。");
+            return new TimelineAuthoringReferenceValue(null);
+        }
+
+        public static int DefaultEndFrame(
+            Clip clip,
+            int startFrame,
+            UnityEngine.Object referenceObject)
+        {
+            if (referenceObject is UnityEngine.AnimationClip animation)
+                return startFrame + Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate);
+            return startFrame + (clip is SignalClip ? 1 : 3);
+        }
+
+        public static bool NeedsSegmentOverride(
+            Clip clip,
+            UnityEngine.Object referenceObject)
+        {
+            return clip.EndFrame != DefaultEndFrame(clip, clip.StartFrame, referenceObject) ||
+                   clip.SelfEaseInFrame != 0 ||
+                   clip.SelfEaseOutFrame != 0 ||
+                   clip.ClipInFrame != 0;
+        }
+
+        public static void Apply(
+            TimelineData timeline,
+            Clip clip,
+            IReadOnlyList<TimelineAuthoringPropertyValue> values)
+        {
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            if (clip == null)
+                throw new ArgumentNullException(nameof(clip));
+            TimelineAuthoringClipConfiguration configuration = DefaultConfiguration();
+            string sourceMotionClipId = string.Empty;
+            TimelineTreeExecutionPhase executionPhase = TimelineTreeExecutionPhase.Commit;
+            UnityEngine.Object treeAsset = null;
+            foreach (TimelineAuthoringPropertyValue value in values ?? Array.Empty<TimelineAuthoringPropertyValue>())
+            {
+                if (value.PropertyId == "sourceMotionClipId")
+                    sourceMotionClipId = (string)value.Value;
+                else if (value.PropertyId == "executionPhase")
+                    executionPhase = (TimelineTreeExecutionPhase)value.Value;
+                else if (value.PropertyId == "assetTree")
+                    treeAsset = (UnityEngine.Object)value.Value;
+                else
+                    SetValue(configuration, value.PropertyId, value.Value);
+            }
+            TimelineAuthoringClipBinding.Configure(timeline, clip, configuration, null);
+            if (clip is TreeClip tree)
+            {
+                if (treeAsset)
+                    tree.SetAssetTree(treeAsset as ScriptableObject);
+                tree.SetExecutionPhase(executionPhase);
+            }
+            if (clip is MotionWarpClip warp)
+            {
+                if (string.IsNullOrEmpty(sourceMotionClipId))
+                    MotionWarpAuthoring.ClearSource(timeline, warp);
+                else if (MotionWarpAuthoring.TryResolveSource(timeline, sourceMotionClipId, out MotionCurveClip source))
+                    MotionWarpAuthoring.BindSource(timeline, warp, source);
+            }
+        }
+
+        static void Add(
+            ICollection<TimelineAuthoringPropertyValue> result,
+            Clip clip,
+            string propertyId,
+            TimelineAuthoringPropertyKind kind,
+            object value)
+        {
+            if (value is UnityEngine.Object asset && !asset ||
+                value == null ||
+                IsDefault(clip, propertyId, value))
+                return;
+            result.Add(new TimelineAuthoringPropertyValue(propertyId, kind, value));
+        }
+
+        static object ReadValue(
+            TimelineAuthoringClipConfiguration configuration,
+            string propertyId) =>
+            propertyId switch
+            {
+                "extraPolationMode" => configuration.Extrapolation,
+                "blendProfileId" => configuration.BlendProfileId,
+                "curveId" => configuration.CurveId,
+                "sourceCurve" => configuration.SourceCurve,
+                "sourceStartTime" => configuration.SourceStartTime,
+                "sourceEndTime" => configuration.SourceEndTime,
+                "space" => configuration.Space,
+                "channel" => configuration.Channel,
+                "blendMode" => configuration.BlendMode,
+                "priority" => configuration.Priority,
+                "consumeLowerChannels" => configuration.ConsumeLowerChannels,
+                "sourceMotionClipId" => configuration.SourceMotionClipId,
+                "translationMode" => configuration.TranslationMode,
+                "targetOffsetSpace" => configuration.TargetOffsetSpace,
+                "rotationMode" => configuration.RotationMode,
+                "rotationMethod" => configuration.RotationMethod,
+                "targetPlanarOffset" => configuration.TargetPlanarOffset,
+                "targetYawOffsetDegrees" => configuration.TargetYawOffsetDegrees,
+                "maxTotalPositionCorrection" => configuration.MaxTotalPositionCorrection,
+                "maxTotalYawCorrectionDegrees" => configuration.MaxTotalYawCorrectionDegrees,
+                "maximumYawRateDegreesPerSecond" => configuration.MaximumYawRateDegreesPerSecond,
+                "limitPolicy" => configuration.LimitPolicy,
+                "cueId" => configuration.CueId,
+                "cueType" => configuration.CueType,
+                "mode" => configuration.CameraMode,
+                "sequenceId" => configuration.CameraSequenceId,
+                "blendInSeconds" => configuration.CameraBlendInSeconds,
+                "blendOutSeconds" => configuration.CameraBlendOutSeconds,
+                "targetKey" => configuration.CameraTargetKey,
+                "interruptPolicy" => configuration.CameraInterruptPolicy,
+                "cueKind" => configuration.CameraCueKind,
+                "resourceId" => configuration.CameraResourceId,
+                "intensity" => configuration.CameraIntensity,
+                "durationSeconds" => configuration.CameraDurationSeconds,
+                "lookResponse" => configuration.CameraLookResponse,
+                "manualOrbitWeight" => configuration.ManualOrbitWeight,
+                "pitchResponseWeight" => configuration.PitchResponseWeight,
+                "yawResponseWeight" => configuration.YawResponseWeight,
+                "targetBindingId" => configuration.TargetBindingId,
+                "parameterBindingId" => configuration.ParameterBindingId,
+                _ => throw new InvalidOperationException($"未知Timeline作者属性：{propertyId}")
+            };
+
+        static void SetValue(
+            TimelineAuthoringClipConfiguration configuration,
+            string propertyId,
+            object value)
+        {
+            switch (propertyId)
+            {
+                case "extraPolationMode": configuration.Extrapolation = (ExtraPolationMode)value; break;
+                case "blendProfileId": configuration.BlendProfileId = (string)value; break;
+                case "curveId": configuration.CurveId = (string)value; break;
+                case "sourceCurve": configuration.SourceCurve = (RootMotionCurveAsset)value; break;
+                case "sourceStartTime": configuration.SourceStartTime = (float)value; break;
+                case "sourceEndTime": configuration.SourceEndTime = (float)value; break;
+                case "space": configuration.Space = (TimelineMotionContributionSpace)value; break;
+                case "channel": configuration.Channel = (TimelineMotionChannel)value; break;
+                case "blendMode": configuration.BlendMode = (TimelineMotionBlendMode)value; break;
+                case "priority": configuration.Priority = (int)value; break;
+                case "consumeLowerChannels": configuration.ConsumeLowerChannels = (bool)value; break;
+                case "translationMode": configuration.TranslationMode = (MotionWarpTranslationMode)value; break;
+                case "targetOffsetSpace": configuration.TargetOffsetSpace = (MotionWarpTargetOffsetSpace)value; break;
+                case "rotationMode": configuration.RotationMode = (MotionWarpRotationMode)value; break;
+                case "rotationMethod": configuration.RotationMethod = (MotionWarpRotationMethod)value; break;
+                case "targetPlanarOffset": configuration.TargetPlanarOffset = (Vector2)value; break;
+                case "targetYawOffsetDegrees": configuration.TargetYawOffsetDegrees = (float)value; break;
+                case "maxTotalPositionCorrection": configuration.MaxTotalPositionCorrection = (float)value; break;
+                case "maxTotalYawCorrectionDegrees": configuration.MaxTotalYawCorrectionDegrees = (float)value; break;
+                case "maximumYawRateDegreesPerSecond": configuration.MaximumYawRateDegreesPerSecond = (float)value; break;
+                case "limitPolicy": configuration.LimitPolicy = (MotionWarpLimitPolicy)value; break;
+                case "cueId": configuration.CueId = (string)value; break;
+                case "cueType": configuration.CueType = (string)value; break;
+                case "mode": configuration.CameraMode = (TimelineCameraMode)value; break;
+                case "sequenceId": configuration.CameraSequenceId = (string)value; break;
+                case "blendInSeconds": configuration.CameraBlendInSeconds = (float)value; break;
+                case "blendOutSeconds": configuration.CameraBlendOutSeconds = (float)value; break;
+                case "targetKey": configuration.CameraTargetKey = (string)value; break;
+                case "interruptPolicy": configuration.CameraInterruptPolicy = (TimelineCameraInterruptPolicy)value; break;
+                case "cueKind": configuration.CameraCueKind = (TimelineCameraCueKind)value; break;
+                case "resourceId": configuration.CameraResourceId = (string)value; break;
+                case "intensity": configuration.CameraIntensity = (float)value; break;
+                case "durationSeconds": configuration.CameraDurationSeconds = (float)value; break;
+                case "lookResponse": configuration.CameraLookResponse = (TimelineCameraLookResponseMode)value; break;
+                case "manualOrbitWeight": configuration.ManualOrbitWeight = (float)value; break;
+                case "pitchResponseWeight": configuration.PitchResponseWeight = (float)value; break;
+                case "yawResponseWeight": configuration.YawResponseWeight = (float)value; break;
+                case "targetBindingId": configuration.TargetBindingId = (string)value; break;
+                case "parameterBindingId": configuration.ParameterBindingId = (string)value; break;
+                case "overrideTrack": configuration.CameraOverrideTrack = (CameraOverrideTrackAsset)value; break;
+                case "zoom": configuration.CameraZoom = (CameraZoomAsset)value; break;
+                case "stretch": configuration.CameraStretch = (CameraStretchAsset)value; break;
+                case "shot": configuration.CameraShot = (CameraShotAsset)value; break;
+                default: throw new InvalidOperationException($"未知Timeline作者属性：{propertyId}");
+            }
+        }
+
+        static TimelineAuthoringClipConfiguration DefaultConfiguration() =>
+            new TimelineAuthoringClipConfiguration
+            {
+                Extrapolation = default,
+                BlendProfileId = string.Empty,
+                CurveId = "MotionCurve",
+                Space = TimelineMotionContributionSpace.Local,
+                Channel = TimelineMotionChannel.Action,
+                BlendMode = TimelineMotionBlendMode.Override,
+                Priority = 100,
+                ConsumeLowerChannels = true,
+                TranslationMode = MotionWarpTranslationMode.SkewToTarget,
+                TargetOffsetSpace = MotionWarpTargetOffsetSpace.ApproachDirection,
+                RotationMode = MotionWarpRotationMode.FaceTarget,
+                RotationMethod = MotionWarpRotationMethod.ProgressCurve,
+                TargetPlanarOffset = Vector2.zero,
+                MaxTotalPositionCorrection = 1f,
+                MaxTotalYawCorrectionDegrees = 45f,
+                MaximumYawRateDegreesPerSecond = 360f,
+                LimitPolicy = MotionWarpLimitPolicy.ApplyClamped,
+                CueId = "Cue",
+                CueType = "Gameplay",
+                CameraMode = TimelineCameraMode.SkillCloseup,
+                CameraSequenceId = string.Empty,
+                CameraBlendInSeconds = 0.15f,
+                CameraBlendOutSeconds = 0.2f,
+                CameraTargetKey = string.Empty,
+                CameraInterruptPolicy = TimelineCameraInterruptPolicy.BlendOut,
+                CameraCueKind = TimelineCameraCueKind.Shake,
+                CameraIntensity = 1f,
+                CameraDurationSeconds = 0.2f,
+                CameraResourceId = string.Empty,
+                CameraLookResponse = TimelineCameraLookResponseMode.Suppressed,
+                ManualOrbitWeight = 0f,
+                PitchResponseWeight = 1f,
+                YawResponseWeight = 1f,
+                TargetBindingId = "target",
+                ParameterBindingId = "openAmount",
+                PositionProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpPositionProgress),
+                YawProgressCurve = DefaultCurve(TimelineCurveChannelCatalog.MotionWarpYawProgress),
+                CameraWeightCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueWeight),
+                CameraEaseInCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueEaseIn),
+                CameraEaseOutCurve = DefaultCurve(TimelineCurveChannelCatalog.CameraCueEaseOut),
+                ValueCurve = DefaultCurve(TimelineCurveChannelCatalog.ScenePresentationValue)
+            };
+
+        static AnimationCurve DefaultCurve(TimelineCurveChannelId id) =>
+            TimelineCurveChannelCatalog.Require(id.Value).CreateDefaultCurve();
+
+        static bool IsDefault(Clip clip, string propertyId, object value)
+        {
+            object expected = propertyId switch
+            {
+                "extraPolationMode" => default(ExtraPolationMode),
+                "blendProfileId" => string.Empty,
+                "curveId" => "MotionCurve",
+                "sourceStartTime" => 0f,
+                "sourceEndTime" => 0f,
+                "space" => TimelineMotionContributionSpace.Local,
+                "channel" => TimelineMotionChannel.Action,
+                "blendMode" => TimelineMotionBlendMode.Override,
+                "priority" when clip is CameraCueClip => 0,
+                "priority" => 100,
+                "consumeLowerChannels" => true,
+                "sourceMotionClipId" => string.Empty,
+                "translationMode" => MotionWarpTranslationMode.SkewToTarget,
+                "targetOffsetSpace" => MotionWarpTargetOffsetSpace.ApproachDirection,
+                "rotationMode" => MotionWarpRotationMode.FaceTarget,
+                "rotationMethod" => MotionWarpRotationMethod.ProgressCurve,
+                "targetPlanarOffset" => Vector2.zero,
+                "targetYawOffsetDegrees" => 0f,
+                "maxTotalPositionCorrection" => 1f,
+                "maxTotalYawCorrectionDegrees" => 45f,
+                "maximumYawRateDegreesPerSecond" => 360f,
+                "limitPolicy" => MotionWarpLimitPolicy.ApplyClamped,
+                "cueId" when clip is CameraCueClip => "CameraCue",
+                "cueId" => "Cue",
+                "cueType" when clip is CameraCueClip => "Camera",
+                "cueType" => "Gameplay",
+                "mode" => TimelineCameraMode.SkillCloseup,
+                "sequenceId" => string.Empty,
+                "blendInSeconds" => 0.15f,
+                "blendOutSeconds" => 0.2f,
+                "targetKey" => string.Empty,
+                "interruptPolicy" => TimelineCameraInterruptPolicy.BlendOut,
+                "cueKind" => TimelineCameraCueKind.Shake,
+                "resourceId" => string.Empty,
+                "intensity" => 1f,
+                "durationSeconds" => 0.2f,
+                "lookResponse" => TimelineCameraLookResponseMode.Suppressed,
+                "manualOrbitWeight" => 0f,
+                "pitchResponseWeight" => 1f,
+                "yawResponseWeight" => 1f,
+                "targetBindingId" => "target",
+                "parameterBindingId" => "openAmount",
+                "executionPhase" => TimelineTreeExecutionPhase.Commit,
+                _ => null
+            };
+            return expected != null && ValuesEqual(value, expected);
+        }
+
+        static bool ValuesEqual(object left, object right)
+        {
+            if (left is Vector2 leftVector && right is Vector2 rightVector)
+                return leftVector == rightVector;
+            if (left is Enum leftEnum && right is Enum rightEnum)
+                return leftEnum.GetType() == rightEnum.GetType() && leftEnum.Equals(rightEnum);
+            return Equals(left, right);
+        }
+    }
+}
+#endif

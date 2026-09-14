@@ -26,13 +26,12 @@ namespace ThirdPersonSimulation
             OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
                 .Require(source.Code, source.Handle, graphCallFrames)
                 .RequireSelection(edge.SourcePort);
-            return ResolveOutputKind(source, sourcePort, graphCallFrames, constants, references, stateSlots);
+            return ResolveOutputKind(source, sourcePort, constants, references, stateSlots);
         }
 
         public static SemanticValueKind ResolveOutputKind(
             SimulationOperation operation,
             OperationValuePortDefinition port,
-            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames,
             IReadOnlyList<ProgramConstant> constants,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramStateSlot> stateSlots)
@@ -46,7 +45,7 @@ namespace ThirdPersonSimulation
             if (operation.Code == SimulationOperationCode.BlackboardGet)
             {
                 return CharacterGameplayValuePortContracts.FromState(
-                    stateSlots[RequireStateReference(references, operation)] .ValueKind);
+                    stateSlots[RequireStateReference(references, operation)].ValueKind);
             }
             if (operation.Code == SimulationOperationCode.CharacterStateRead)
                 return CharacterStateProviderFields.ValueKind(operation.Text0);
@@ -59,7 +58,6 @@ namespace ThirdPersonSimulation
             SimulationOperation operation,
             OperationValuePortDefinition port,
             SemanticValueKind kind,
-            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramStateSlot> stateSlots)
         {

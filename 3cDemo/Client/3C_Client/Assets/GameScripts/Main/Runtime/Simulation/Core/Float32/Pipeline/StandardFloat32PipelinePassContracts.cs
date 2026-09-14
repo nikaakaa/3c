@@ -10,9 +10,7 @@ namespace ThirdPersonSimulation
         public const int LocalControlInputStateSchemaVersion = 1;
         public const string LocalInputIngressPassId = "thirdperson.simulation.local-input-ingress";
         public const string LocalSingleStepSchedulePassId = "thirdperson.simulation.local-single-step-schedule";
-        public const string ProgramEvaluatePassId = "thirdperson.simulation.float32-program-evaluate";
         public const string WorldResolveBatchPassId = "thirdperson.simulation.float32-world-resolve-batch";
-        public const string ProgramFinalizePassId = "thirdperson.simulation.float32-program-finalize";
         public const string LocalImmediateOutputPassId = "thirdperson.simulation.local-immediate-output";
 
         static readonly SimulationPipelineExecutionSupport s_AllExecution =
@@ -35,7 +33,6 @@ namespace ThirdPersonSimulation
             new[]
             {
                 Float32LocalInputSourcePortContract.Requirement,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
                 Target(Float32PipelineRuntimePortIds.CommittedObservation, Float32PipelineRuntimePortIds.CommittedObservationSchema)
             });
 
@@ -51,28 +48,7 @@ namespace ThirdPersonSimulation
                 Consume(SimulationPipelineProducts.TypedIngress),
                 Produce(SimulationPipelineProducts.ExecutionPlan)
             },
-            new[]
-            {
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema)
-            });
-
-        static readonly SimulationPipelinePassDescriptor s_ProgramEvaluate = Create(
-            ProgramEvaluatePassId,
-            SimulationPipelinePhase.Step,
-            s_AllExecution,
-            SimulationPipelinePassStateClass.Stateless,
-            string.Empty,
-            new[]
-            {
-                Produce(SimulationPipelineProducts.PendingActorEvaluations),
-                Produce(SimulationPipelineProducts.WorldSolveBatchRequest)
-            },
-            new[]
-            {
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
-                Target(Float32PipelineRuntimePortIds.WorkingState, Float32PipelineRuntimePortIds.WorkingStateSchema),
-                Diagnostics()
-            });
+            Array.Empty<SimulationPipelinePortRequirement>());
 
         static readonly SimulationPipelinePassDescriptor s_WorldResolveBatch = Create(
             WorldResolveBatchPassId,
@@ -91,25 +67,6 @@ namespace ThirdPersonSimulation
                 Diagnostics()
             });
 
-        static readonly SimulationPipelinePassDescriptor s_ProgramFinalize = Create(
-            ProgramFinalizePassId,
-            SimulationPipelinePhase.Step,
-            s_AllExecution,
-            SimulationPipelinePassStateClass.Stateless,
-            string.Empty,
-            new[]
-            {
-                Consume(SimulationPipelineProducts.PendingActorEvaluations),
-                Consume(SimulationPipelineProducts.WorldSolveBatchResult),
-                Append(SimulationPipelineProducts.FinalizedStepResult)
-            },
-            new[]
-            {
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
-                Target(Float32PipelineRuntimePortIds.WorkingState, Float32PipelineRuntimePortIds.WorkingStateSchema),
-                Diagnostics()
-            });
-
         static readonly SimulationPipelinePassDescriptor s_LocalImmediateOutput = Create(
             LocalImmediateOutputPassId,
             SimulationPipelinePhase.Egress,
@@ -125,9 +82,7 @@ namespace ThirdPersonSimulation
 
         public static SimulationPipelinePassDescriptor LocalInputIngress => s_LocalInputIngress;
         public static SimulationPipelinePassDescriptor LocalSingleStepSchedule => s_LocalSingleStepSchedule;
-        public static SimulationPipelinePassDescriptor ProgramEvaluate => s_ProgramEvaluate;
         public static SimulationPipelinePassDescriptor WorldResolveBatch => s_WorldResolveBatch;
-        public static SimulationPipelinePassDescriptor ProgramFinalize => s_ProgramFinalize;
         public static SimulationPipelinePassDescriptor LocalImmediateOutput => s_LocalImmediateOutput;
 
         public static SimulationPipelinePassFactoryDescriptor CreateFactoryDescriptor(
@@ -183,9 +138,6 @@ namespace ThirdPersonSimulation
 
         static SimulationPipelineProductAccess Produce(SimulationPipelineProductContract product) =>
             new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.ExclusiveProducer);
-
-        static SimulationPipelineProductAccess Append(SimulationPipelineProductContract product) =>
-            new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.AppendOnlyProducer);
 
         static SimulationPipelineProductAccess Consume(SimulationPipelineProductContract product) =>
             new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.ReadOnlyConsumer);

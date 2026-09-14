@@ -60,7 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             FixedSimulationActorBinding actorBinding,
             CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
-            CharacterPresentationSemanticContract presentationContract,
             AnimationPresentationProgramIdentity presentationProgramIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
@@ -96,8 +95,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentException("Fixed Actor registration world binding does not match the Character Runtime binding.", nameof(actorBinding));
             ProjectionAsset = projectionAsset ? projectionAsset : throw new ArgumentNullException(nameof(projectionAsset));
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-            PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
-            Projection.RequireContract(PresentationContract);
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
             m_MaximumActivePresentationRecords = maximumActivePresentationRecords;
@@ -146,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding => m_BodyMotionBinding;
         public CharacterPresentationProjectionAsset ProjectionAsset { get; private set; }
         public CharacterPresentationProjection Projection { get; private set; }
-        public CharacterPresentationSemanticContract PresentationContract { get; private set; }
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }
         public RuntimeDiagnosticsContext DiagnosticsContext { get; }

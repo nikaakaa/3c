@@ -16,9 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (host is CharacterPipelineHost character)
                 return character.Definition;
-            if (host is FixedCharacterHost fixedHost && fixedHost.ProgramAsset)
-                return AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
-                    AssetDatabase.GUIDToAssetPath(fixedHost.ProgramAsset.DefinitionGuid));
+            if (host is FixedCharacterHost fixedHost)
+                return fixedHost.CharacterDefinition;
             return null;
         }
 

@@ -14,7 +14,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using FixedCharacterSimulationProgram = ThirdPersonSimulation.Fixed.CharacterSimulationProgram;
+using FixedSimulationActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 using FixedWorldCollisionSummary = ThirdPersonSimulation.Fixed.WorldCollisionSummary;
 
@@ -25,8 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         [SerializeField] SimulationSessionHost m_SessionHost;
         [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
-        [SerializeField] FixedCharacterSimulationProgramAsset m_Program;
-        [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] FixedCharacterControlSource m_ControlSource;
         [SerializeField] CharacterPresentationRole m_PresentationRole = CharacterPresentationRole.SimulatedActor;
         [SerializeField] string m_ActorId = string.Empty;
@@ -50,12 +48,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ActorId SimulationActorId => ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
         public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
-        public FixedCharacterSimulationProgramAsset ProgramAsset => m_Program;
-        public CharacterPresentationProjectionAsset ProjectionAsset => m_PresentationProjection;
+        public CharacterPresentationProjectionAsset ProjectionAsset =>
+            m_CharacterDefinition ? m_CharacterDefinition.PresentationProjection : null;
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
         public ICharacterPresentationRuntime PresentationRuntime => m_Registration?.PresentationRuntime;
+        public FixedCharacterRegistration Registration => m_Registration;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position
@@ -74,8 +73,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 #if UNITY_EDITOR
         public void SetProfileAuthoring(
             CharacterPipelineDefinition characterDefinition,
-            FixedCharacterSimulationProgramAsset program,
-            CharacterPresentationProjectionAsset presentationProjection,
             FixedCharacterControlSource controlSource,
             CharacterPresentationRole presentationRole,
             ActorId actorId,
@@ -94,9 +91,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_SessionHost = null;
             m_CharacterDefinition = characterDefinition ? characterDefinition : throw new ArgumentNullException(nameof(characterDefinition));
-            m_Program = program ? program : throw new ArgumentNullException(nameof(program));
-            m_PresentationProjection = presentationProjection ? presentationProjection :
-                throw new ArgumentNullException(nameof(presentationProjection));
             m_ControlSource = controlSource ? controlSource : throw new ArgumentNullException(nameof(controlSource));
             m_PresentationRole = presentationRole;
             m_ActorId = actorId.IsValid ? actorId.Value : throw new ArgumentException("ActorId is invalid.", nameof(actorId));
@@ -160,10 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 return;
             SimulationSessionHost sessionHost = m_SessionHost ? m_SessionHost :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a SimulationSessionHost.");
-            FixedCharacterSimulationProgramAsset programAsset = m_Program ? m_Program :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Fixed Program asset.");
-            CharacterPresentationProjectionAsset projectionAsset = m_PresentationProjection ? m_PresentationProjection :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Presentation Projection asset.");
             FixedCharacterControlSource controlSourceDefinition = m_ControlSource ? m_ControlSource :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a formal Fixed Control Source.");
             CharacterRootHierarchyBinding rootHierarchy = m_RootHierarchy ? m_RootHierarchy :
@@ -178,19 +168,38 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterAnimationRigBinding animationRigBinding = m_AnimationRigBinding
                 ? m_AnimationRigBinding
                 : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Animation Rig Binding.");
-            ActorId actorId = ActorId;
-            PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
-            FixedCharacterSimulationProgram program = programAsset.Load();
             CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Character Pipeline Definition.");
-            if (characterDefinition.SimulationTickRate != program.Manifest.TickRate)
-                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Program TickRate must match.");
+            CharacterPresentationProjectionAsset projectionAsset = characterDefinition.PresentationProjection ?
+                characterDefinition.PresentationProjection :
+                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition requires a Presentation Projection asset.");
+            ActorId actorId = ActorId;
+            PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
+            int tickRate = sessionHost.Composition
+                ? sessionHost.Composition.TickRate
+                : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an explicit Composition Definition.");
+            if (characterDefinition.SimulationTickRate != tickRate)
+                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Session Composition TickRate must match.");
             CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
             CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(controlModules);
             CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
             CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
+                characterDefinition.LoadFixedCharacterAbilities();
+            FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
+                actorId,
+                Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
+                controlRuntimeBinding,
+                bodyMotionBinding,
+                gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding,
+                abilityData);
+            FixedCharacterRuntime characterRuntime = FixedCharacterRuntime.Create(
+                new[] { actorBinding },
+                tickRate,
+                controlModules);
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
             ICharacterPresentationRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
@@ -208,22 +217,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     FixedCharacterInputTraceModule.ResolveInitialBody(
                         BuildInitialBody(actorId, rootHierarchy.LogicRoot));
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
-                CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
-                    program.Manifest.ProgramId.Value,
-                    program.Manifest.SourceRevision.Value,
-                    program.ProgramHash.ToString(),
-                    program.SourceMap);
+                RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+                    $"fixed-character-runtime/{actorId.Value}",
+                    characterRuntime.Abilities[0].SourceRevision.Value,
+                    characterRuntime.GameplayContentHash.ToString());
+                var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 CharacterPipelineTraceCommandLine.Enable(diagnosticsStore);
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
-                    debugProgram.Revision,
-                    debugProgram.SourceMap,
+                    diagnosticsRevision,
+                    debugSourceMap,
                     diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-                CharacterPresentationSemanticContract presentationContract =
-                    FixedCharacterPresentationContractAdapter.Create(program);
                 CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
                     projectionAsset);
                 animationRigBinding.RequireValid(projection.Rig);
@@ -234,19 +241,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 controlSource = controlSourceDefinition.Create(
                     new FixedCharacterControlSourceContext(this, characterDefinition, controlModule));
                 IUnityFixedCharacterControlSourceRuntime presentationControlSource = controlSource;
-                Func<
-                    CharacterPresentationSemanticContract,
-                    CharacterPresentationProjection,
-                    CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
-                    (_, candidateProjection) => CreatePresentationRuntime(
-                        candidateProjection,
-                        actorId,
-                        presentationBody,
-                        presentationControlSource,
-                        physicsScene,
-                        diagnosticsContext,
-                        program.Manifest.TickRate,
-                        false);
                 CharacterPresentationRuntimeBinding presentationBinding;
                 presentationBinding = CreatePresentationRuntime(
                     projection,
@@ -255,7 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     presentationControlSource,
                     physicsScene,
                     diagnosticsContext,
-                    program.Manifest.TickRate,
+                    tickRate,
                     true);
                 presentation = presentationBinding.Runtime;
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
@@ -267,10 +261,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     GetInstanceID(),
                     name,
                     actorId,
-                    program,
+                    characterRuntime,
+                    actorBinding,
                     projectionAsset,
                     projection,
-                    presentationContract,
                     new AnimationPresentationProgramIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
@@ -280,12 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
-                    m_MaximumActivePresentationRecords,
-                    presentationRuntimeFactory,
-                    controlRuntimeBinding,
-                    bodyMotionBinding,
-                    gameplayEffectRuntimeBinding,
-                    equipmentRuntimeBinding);
+                    m_MaximumActivePresentationRecords);
                 controlSource = null;
                 presentation = null;
                 diagnosticsTarget = null;

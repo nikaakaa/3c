@@ -9,6 +9,54 @@ namespace BTSMTL.Timeline.Runtime
         Fixed = 1
     }
 
+    public readonly struct TimelineRuntimeDependencyHandle : IEquatable<TimelineRuntimeDependencyHandle>
+    {
+        public TimelineRuntimeDependencyHandle(int value)
+        {
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value));
+            Value = value;
+        }
+
+        public int Value { get; }
+        public bool IsValid => Value > 0;
+        public bool Equals(TimelineRuntimeDependencyHandle other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is TimelineRuntimeDependencyHandle other && Equals(other);
+        public override int GetHashCode() => Value;
+        public static TimelineRuntimeDependencyHandle Invalid => default;
+    }
+
+    public interface ITimelineRuntimeDependencyResolver
+    {
+        bool TryResolve(
+            TimelineContentDependency dependency,
+            TimelineRuntimeNumericTarget numericTarget,
+            out TimelineRuntimeDependencyHandle handle,
+            out string error);
+    }
+
+    public sealed class TimelineRuntimePreparedDependencies
+    {
+        readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Handles;
+
+        internal TimelineRuntimePreparedDependencies(
+            IReadOnlyList<TimelineContentDependency> dependencies,
+            IReadOnlyList<TimelineRuntimeDependencyHandle> handles)
+        {
+            m_Handles = new Dictionary<string, TimelineRuntimeDependencyHandle>(StringComparer.Ordinal);
+            for (int index = 0; index < dependencies.Count; index++)
+                m_Handles.Add(dependencies[index].Identity, handles[index]);
+        }
+
+        public bool TryGetHandle(string dependencyIdentity, out TimelineRuntimeDependencyHandle handle)
+        {
+            if (m_Handles.TryGetValue(dependencyIdentity ?? string.Empty, out handle))
+                return handle.IsValid;
+            handle = TimelineRuntimeDependencyHandle.Invalid;
+            return false;
+        }
+    }
+
     public readonly struct TimelineRuntimePlaybackHandle : IEquatable<TimelineRuntimePlaybackHandle>
     {
         public TimelineRuntimePlaybackHandle(ulong value)
@@ -41,6 +89,7 @@ namespace BTSMTL.Timeline.Runtime
             ExecutionIdentity = preparation.ExecutionIdentity;
             NumericTarget = preparation.NumericTarget;
             Content = preparation.Content;
+            PreparedDependencies = preparation.PreparedDependencies;
             PreparedBindings = preparation.PreparedBindings;
             State = TimelineRuntimePlaybackState.Prepared;
         }
@@ -52,6 +101,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content.ContentHash;
+        public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
         public TimelineRuntimePlaybackState State { get; private set; }
 
@@ -71,7 +121,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineExecutionIdentity executionIdentity,
             TimelineRuntimeNumericTarget numericTarget,
             IEnumerable<TimelineCallBinding> callBindings,
-            ITimelineDomainBindingResolver domainResolver)
+            ITimelineDomainBindingResolver domainResolver,
+            ITimelineRuntimeDependencyResolver dependencyResolver)
         {
             RequestId = string.IsNullOrWhiteSpace(requestId)
                 ? throw new ArgumentException("Timeline prepare request identity is required.", nameof(requestId))
@@ -86,6 +137,7 @@ namespace BTSMTL.Timeline.Runtime
             NumericTarget = numericTarget;
             CallBindings = new List<TimelineCallBinding>(callBindings ?? Array.Empty<TimelineCallBinding>()).AsReadOnly();
             DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
+            DependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
         }
 
         public string RequestId { get; }
@@ -95,6 +147,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public IReadOnlyList<TimelineCallBinding> CallBindings { get; }
         public ITimelineDomainBindingResolver DomainResolver { get; }
+        public ITimelineRuntimeDependencyResolver DependencyResolver { get; }
     }
 
     public enum TimelineRuntimePreparationStatus : byte
@@ -114,6 +167,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineBindingPlan bindingPlan,
             TimelineCallInput callInput,
             TimelinePreparedBindings preparedBindings,
+            TimelineRuntimePreparedDependencies preparedDependencies,
             IReadOnlyList<string> errors)
         {
             Status = status;
@@ -124,6 +178,7 @@ namespace BTSMTL.Timeline.Runtime
             BindingPlan = bindingPlan;
             CallInput = callInput;
             PreparedBindings = preparedBindings;
+            PreparedDependencies = preparedDependencies;
             Errors = errors ?? Array.Empty<string>();
         }
 
@@ -136,6 +191,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineBindingPlan BindingPlan { get; }
         public TimelineCallInput CallInput { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
+        public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public IReadOnlyList<string> Errors { get; }
         public bool IsReady => Status == TimelineRuntimePreparationStatus.Ready &&
                                Content != null &&
@@ -158,6 +214,7 @@ namespace BTSMTL.Timeline.Runtime
                 null,
                 null,
                 null,
+                null,
                 new List<string>(errors ?? Array.Empty<string>()).AsReadOnly());
         }
 
@@ -166,7 +223,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineContentUnit content,
             TimelineBindingPlan bindingPlan,
             TimelineCallInput callInput,
-            TimelinePreparedBindings preparedBindings)
+            TimelinePreparedBindings preparedBindings,
+            TimelineRuntimePreparedDependencies preparedDependencies)
         {
             return new TimelineRuntimePreparationResult(
                 TimelineRuntimePreparationStatus.Ready,
@@ -177,6 +235,7 @@ namespace BTSMTL.Timeline.Runtime
                 bindingPlan,
                 callInput,
                 preparedBindings,
+                preparedDependencies,
                 Array.Empty<string>());
         }
     }
@@ -199,9 +258,30 @@ namespace BTSMTL.Timeline.Runtime
 
             try
             {
+                var errors = new List<string>();
+                var dependencyHandles = new List<TimelineRuntimeDependencyHandle>(discovery.Content.Dependencies.Count);
+                for (int index = 0; index < discovery.Content.Dependencies.Count; index++)
+                {
+                    TimelineContentDependency dependency = discovery.Content.Dependencies[index];
+                    if (!request.DependencyResolver.TryResolve(
+                            dependency,
+                            request.NumericTarget,
+                            out TimelineRuntimeDependencyHandle handle,
+                            out string error) || !handle.IsValid)
+                    {
+                        errors.Add($"timeline_dependency_unresolved:{dependency.Identity}:{error ?? "dependency is unresolved"}");
+                        continue;
+                    }
+                    dependencyHandles.Add(handle);
+                }
+                if (errors.Count != 0 || dependencyHandles.Count != discovery.Content.Dependencies.Count)
+                    return TimelineRuntimePreparationResult.Failed(
+                        request.RequestId,
+                        request.ExecutionIdentity,
+                        errors);
+
                 TimelineBindingPlan bindingPlan = new TimelineBindingPlan(discovery.Content);
                 TimelineCallInput callInput = new TimelineCallInput(bindingPlan, request.CallBindings);
-                var errors = new List<string>();
                 TimelinePreparedBindings preparedBindings = TimelineBindingPreparation.Prepare(
                     bindingPlan,
                     callInput,
@@ -217,7 +297,8 @@ namespace BTSMTL.Timeline.Runtime
                     discovery.Content,
                     bindingPlan,
                     callInput,
-                    preparedBindings);
+                    preparedBindings,
+                    new TimelineRuntimePreparedDependencies(discovery.Content.Dependencies, dependencyHandles));
             }
             catch (Exception exception)
             {

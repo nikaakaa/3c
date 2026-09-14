@@ -3036,185 +3036,22 @@ namespace Slate
                     }
 
 
-                    //ACTION CLIPS
-                    for ( int a = 0; a < track.clips.Count; a++ ) {
-                        var action = track.clips[a];
-                        var ID = UID(g, t, a);
-                        IClipEditorBinding currentBinding = new NativeClipEditorBinding(action);
-                        ActionClipWrapper clipWrapper = null;
-
-                        if ( !clipWrappers.TryGetValue(ID, out clipWrapper) || !clipWrapper.Matches(currentBinding) ) {
-                            clipWrapper = new ActionClipWrapper(action);
-                            clipWrappers[ID] = clipWrapper;
-                            if (action != null)
-                                clipWrappersMap[action] = clipWrapper;
-                        }
-
-                        //find and store next/previous clips to wrapper
-                        var nextClip = a < track.clips.Count - 1 ? track.clips[a + 1] : null;
-                        var previousClip = a != 0 ? track.clips[a - 1] : null;
-                        IClipEditorBinding nextBinding = null;
-                        IClipEditorBinding previousBinding = null;
-                        if (nextClip != null)
-                        {
-                            nextBinding = new NativeClipEditorBinding(nextClip);
-                        }
-                        if (previousClip != null)
-                        {
-                            previousBinding = new NativeClipEditorBinding(previousClip);
-                        }
-                        clipWrapper.nextClip = nextClip;
-                        clipWrapper.previousClip = previousClip;
-                        clipWrapper.SetNeighbors(previousBinding, nextBinding);
-
-
-                        //get the action box rect
-                        var clipRect = clipWrapper.rect;
-
-                        //modify it
-                        clipRect.y = yPos;
-                        clipRect.width = Mathf.Max(clipWrapper.editorBinding.Length / viewTime * centerRect.width, 6);
-                        clipRect.height = track.defaultHeight;
-
-
-                        //get the action time and pos
-                        var xTime = clipWrapper.editorBinding.StartTime;
-                        var xPos = clipRect.x;
-
-                        if ( interactingClip != null && ReferenceEquals(interactingClip, clipWrapper) && interactingClip.isDragging && e.type == EventType.MouseDrag ) {
-
-                            var lastTime = xTime;
-                            xTime = PosToTime(xPos + leftRect.width);
-                            xTime = SnapTime(xTime);
-                            xTime = Mathf.Clamp(xTime, 0, maxTime - 0.1f);
-
-                            //handle multisection. Limit xmin, xmax by their bound rect
-                            if ( multiSelection != null && multiSelection.Count > 1 ) {
-                                var delta = xTime - lastTime;
-                                var boundMin = Mathf.Min(multiSelection.Select(b => b.editorBinding.StartTime).ToArray());
-                                if ( boundMin + delta < 0 ) {
-                                    xTime -= delta;
-                                    delta = 0;
-                                }
-
-                                foreach ( var cw in multiSelection ) {
-                                    if ( !ReferenceEquals(cw, clipWrapper) ) {
-                                        cw.editorBinding.StartTime += delta;
-                                    }
-                                }
-                            }
-
-                            //clamp and cross blend between other nearby clips
-                            if ( multiSelection == null || multiSelection.Count < 1 ) {
-                                var preCursorClip = track.clips.LastOrDefault(x => x != action && x.startTime < cursorTime);
-                                var postCursorClip = track.clips.FirstOrDefault(x => x != action && x.endTime > cursorTime);
-
-                                //Shift/Ripple clips
-                                //when shifting track clips always clamp to previous clip and no need to clamp to next
-                                if ( e.shift || Prefs.rippleMode ) {
-                                    preCursorClip = previousClip;
-                                    postCursorClip = null;
-                                }
-
-                                IClipEditorBinding preCursorBinding = preCursorClip != null ? new NativeClipEditorBinding(preCursorClip) : null;
-                                IClipEditorBinding postCursorBinding = postCursorClip != null ? new NativeClipEditorBinding(postCursorClip) : null;
-                                var preTime = preCursorBinding != null ? preCursorBinding.EndTime : 0;
-                                var postTime = postCursorBinding != null ? postCursorBinding.StartTime : maxTime + clipWrapper.editorBinding.Length;
-
-                                //Magnet snapping when dragging clip
-                                if ( Prefs.magnetSnapping && !e.control ) {
-                                    var snapStart = MagnetSnapTime(xTime, magnetSnapTimesCache);
-                                    var snapEnd = MagnetSnapTime(xTime + clipWrapper.editorBinding.Length, magnetSnapTimesCache);
-                                    if ( snapStart != null && snapEnd != null ) {
-                                        var distStart = Mathf.Abs(snapStart.Value - xTime);
-                                        var distEnd = Mathf.Abs(snapEnd.Value - ( xTime + clipWrapper.editorBinding.Length ));
-                                        var bestTime = distEnd < distStart ? snapEnd.Value : snapStart.Value;
-                                        pendingGuides.Add(new GuideLine(bestTime, Color.white));
-                                        xTime = distEnd < distStart ? snapEnd.Value - clipWrapper.editorBinding.Length : snapStart.Value;
-                                    } else {
-                                        if ( snapEnd != null ) {
-                                            pendingGuides.Add(new GuideLine(snapEnd.Value, Color.white));
-                                            xTime = snapEnd.Value - clipWrapper.editorBinding.Length;
-                                        }
-                                        if ( snapStart != null ) {
-                                            pendingGuides.Add(new GuideLine(snapStart.Value, Color.white));
-                                            xTime = snapStart.Value;
-                                        }
-                                    }
-                                }
-
-
-                                //expand possible time if crossblendable
-                                if ( clipWrapper.editorBinding.CanCrossBlend(preCursorBinding) ) { preTime -= Mathf.Min(clipWrapper.editorBinding.Length / 2, preCursorBinding.Length / 2); }
-                                if ( clipWrapper.editorBinding.CanCrossBlend(postCursorBinding) ) { postTime += Mathf.Min(clipWrapper.editorBinding.Length / 2, postCursorBinding.Length / 2); }
-
-                                //does it fit?
-                                if ( clipWrapper.editorBinding.Length > postTime - preTime ) {
-                                    xTime = lastTime;
-                                }
-
-                                if ( xTime != lastTime ) {
-                                    xTime = Mathf.Clamp(xTime, preTime, postTime - clipWrapper.editorBinding.Length);
-                                    //Shift all the next clips along with this one if shift is down
-                                    if ( e.shift || Prefs.rippleMode ) {
-                                        foreach ( var cw in clipWrappers.Values.Where(c =>
-                                            !ReferenceEquals(c, clipWrapper) &&
-                                            c.editorBinding.StartTime > lastTime &&
-                                            (c.editorBinding.FormalClip != null && clipWrapper.editorBinding.FormalClip != null
-                                                ? ReferenceEquals(c.editorBinding.Track, clipWrapper.editorBinding.Track)
-                                                : c.action != null && clipWrapper.action != null && c.action.parent == clipWrapper.action.parent)) ) {
-                                            cw.editorBinding.StartTime += xTime - lastTime;
-                                        }
-                                    }
-                                }
-                            }
-
-                            //Apply xTime
-                            clipWrapper.editorBinding.StartTime = xTime;
-                        }
-
-                        //apply xPos
-                        clipRect.x = TimeToPos(xTime);
-
-
-                        //dont draw if outside of view range and not selected
-                        var isSelected = ReferenceEquals(CutsceneUtility.selectedObject, action) || ( multiSelection != null && multiSelection.Contains(clipWrapper) );
-                        var isVisible = Rect.MinMaxRect(0, scrollPos.y, centerRect.width, centerRect.height).Overlaps(clipRect);
-                        if ( !isSelected && !isVisible ) {
-                            clipWrapper.rect = default(Rect); //we basicaly "nullify" the rect. Too much trouble to work with nullable rect.
-                            continue;
-                        }
-
-                        //draw selection graphics rect
-                        if ( isSelected ) {
-                            var selRect = clipRect.ExpandBy(2);
-                            GUI.color = HIGHLIGHT_COLOR;
-                            GUI.DrawTexture(selRect, Slate.Styles.whiteTexture);
-                            GUI.color = Color.white;
-                        }
-
-                        //determine color and draw clip
-                        var color = Color.white;
-                        color = clipWrapper.editorBinding.IsValid ? color : new Color(1, 0.3f, 0.3f);
-                        color = track.isActive ? color : Color.grey;
-                        GUI.color = color;
-                        GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
-                        clipWrapper.rect = GUI.Window(ID, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
-                        if ( !isProSkin ) { GUI.color = Color.white.WithAlpha(0.5f); GUI.Box(clipRect, string.Empty); GUI.color = Color.white; }
-                        GUI.color = Color.white;
-
-                        //forward external Clip GUI
-                        var nextPosX = TimeToPos(nextBinding != null ? nextBinding.StartTime : viewTimeMax);
-                        var prevPosX = TimeToPos(previousBinding != null ? previousBinding.EndTime : viewTimeMin);
-                        var extRectLeft = Rect.MinMaxRect(prevPosX, clipRect.yMin, clipRect.xMin, clipRect.yMax);
-                        var extRectRight = Rect.MinMaxRect(clipRect.xMax, clipRect.yMin, nextPosX, clipRect.yMax);
-                        clipWrapper.editorBinding.DrawClipGUIExternal(extRectLeft, extRectRight);
-
-                        //draw info text outside if clip is too small
-                        if ( clipRect.width <= 20 ) {
-                            GUI.Label(extRectRight.ExpandBy(-1), string.Format("<size=10>{0}</size>", clipWrapper.editorBinding.Info));
-                        }
-                    }
+                    var nativeClipBindings = new IClipEditorBinding[track.clips.Count];
+                    for (int clipIndex = 0; clipIndex < track.clips.Count; clipIndex++)
+                        nativeClipBindings[clipIndex] = new NativeClipEditorBinding(track.clips[clipIndex]);
+                    for (int clipIndex = 0; clipIndex < nativeClipBindings.Length; clipIndex++)
+                        DrawTimelineClip(
+                            centerRect,
+                            yPos,
+                            g,
+                            t,
+                            clipIndex,
+                            nativeClipBindings[clipIndex],
+                            clipIndex > 0 ? nativeClipBindings[clipIndex - 1] : null,
+                            clipIndex + 1 < nativeClipBindings.Length ? nativeClipBindings[clipIndex + 1] : null,
+                            nativeClipBindings,
+                            track.isActive,
+                            track.defaultHeight);
                 }
 
                 //highligh selected group
@@ -3270,6 +3107,187 @@ namespace Slate
                     interactingClip = null;
                 }
             }
+        }
+
+        void DrawTimelineClip(
+            Rect centerRect,
+            float y,
+            int groupIndex,
+            int trackIndex,
+            int clipIndex,
+            IClipEditorBinding currentBinding,
+            IClipEditorBinding previousBinding,
+            IClipEditorBinding nextBinding,
+            IReadOnlyList<IClipEditorBinding> trackBindings,
+            bool trackActive,
+            float trackDefaultHeight)
+        {
+            int id = UID(groupIndex, trackIndex, clipIndex);
+            ActionClipWrapper wrapper;
+            if (!clipWrappers.TryGetValue(id, out wrapper) || !wrapper.Matches(currentBinding))
+            {
+                wrapper = currentBinding.FormalClip != null
+                    ? new ActionClipWrapper(currentBinding.FormalClip)
+                    : new ActionClipWrapper(currentBinding.NativeAction);
+                clipWrappers[id] = wrapper;
+                if (currentBinding.NativeAction != null)
+                {
+                    if (clipWrappersMap != null)
+                        clipWrappersMap[currentBinding.NativeAction] = wrapper;
+                }
+            }
+
+            wrapper.SetNeighbors(previousBinding, nextBinding);
+            Rect clipRect = wrapper.rect;
+            clipRect.y = y;
+            clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
+            clipRect.height = trackDefaultHeight;
+
+            float xTime = wrapper.editorBinding.StartTime;
+            float xPos = clipRect.x;
+            if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging && Event.current.type == EventType.MouseDrag)
+            {
+                Event e = Event.current;
+                float lastTime = xTime;
+                xTime = PosToTime(xPos + leftRect.width);
+                xTime = SnapTime(xTime);
+                xTime = Mathf.Clamp(xTime, 0f, maxTime - 0.1f);
+
+                if (multiSelection != null && multiSelection.Count > 1)
+                {
+                    float delta = xTime - lastTime;
+                    float boundMin = Mathf.Min(multiSelection.Select(value => value.editorBinding.StartTime).ToArray());
+                    if (boundMin + delta < 0f)
+                    {
+                        xTime -= delta;
+                        delta = 0f;
+                    }
+                    foreach (ActionClipWrapper value in multiSelection)
+                        if (!ReferenceEquals(value, wrapper))
+                            value.editorBinding.StartTime += delta;
+                }
+
+                if (multiSelection == null || multiSelection.Count < 1)
+                {
+                    float cursorTime = SnapTime(PosToTime(mousePosition.x));
+                    IClipEditorBinding preCursorBinding = trackBindings
+                        .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.StartTime < cursorTime)
+                        .LastOrDefault();
+                    IClipEditorBinding postCursorBinding = trackBindings
+                        .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.EndTime > cursorTime)
+                        .FirstOrDefault();
+                    if (e.shift || Prefs.rippleMode)
+                    {
+                        preCursorBinding = previousBinding;
+                        postCursorBinding = null;
+                    }
+
+                    float preTime = preCursorBinding != null ? preCursorBinding.EndTime : 0f;
+                    float postTime = postCursorBinding != null ? postCursorBinding.StartTime : maxTime + wrapper.editorBinding.Length;
+                    if (Prefs.magnetSnapping && !e.control)
+                    {
+                        float? snapStart = MagnetSnapTime(xTime, magnetSnapTimesCache);
+                        float? snapEnd = MagnetSnapTime(xTime + wrapper.editorBinding.Length, magnetSnapTimesCache);
+                        if (snapStart != null && snapEnd != null)
+                        {
+                            float distStart = Mathf.Abs(snapStart.Value - xTime);
+                            float distEnd = Mathf.Abs(snapEnd.Value - (xTime + wrapper.editorBinding.Length));
+                            bool useEnd = distEnd < distStart;
+                            float bestTime = useEnd ? snapEnd.Value : snapStart.Value;
+                            pendingGuides.Add(new GuideLine(bestTime, Color.white));
+                            xTime = useEnd ? snapEnd.Value - wrapper.editorBinding.Length : snapStart.Value;
+                        }
+                        else
+                        {
+                            if (snapEnd != null)
+                            {
+                                pendingGuides.Add(new GuideLine(snapEnd.Value, Color.white));
+                                xTime = snapEnd.Value - wrapper.editorBinding.Length;
+                            }
+                            if (snapStart != null)
+                            {
+                                pendingGuides.Add(new GuideLine(snapStart.Value, Color.white));
+                                xTime = snapStart.Value;
+                            }
+                        }
+                    }
+
+                    if (wrapper.editorBinding.CanCrossBlend(preCursorBinding))
+                        preTime -= Mathf.Min(wrapper.editorBinding.Length / 2f, preCursorBinding.Length / 2f);
+                    if (wrapper.editorBinding.CanCrossBlend(postCursorBinding))
+                        postTime += Mathf.Min(wrapper.editorBinding.Length / 2f, postCursorBinding.Length / 2f);
+                    if (wrapper.editorBinding.Length > postTime - preTime)
+                        xTime = lastTime;
+                    if (Mathf.Abs(xTime - lastTime) > 0.0001f)
+                    {
+                        xTime = Mathf.Clamp(xTime, preTime, postTime - wrapper.editorBinding.Length);
+                        if (e.shift || Prefs.rippleMode)
+                        {
+                            foreach (ActionClipWrapper value in clipWrappers.Values.Where(value =>
+                                !ReferenceEquals(value, wrapper) &&
+                                value.editorBinding.StartTime > lastTime &&
+                                ((value.editorBinding.FormalClip != null && wrapper.editorBinding.FormalClip != null &&
+                                  ReferenceEquals(value.editorBinding.Track, wrapper.editorBinding.Track)) ||
+                                 (value.editorBinding.NativeAction != null && wrapper.editorBinding.NativeAction != null &&
+                                  value.editorBinding.NativeAction.parent == wrapper.editorBinding.NativeAction.parent))))
+                                value.editorBinding.StartTime += xTime - lastTime;
+                        }
+                    }
+                }
+                wrapper.editorBinding.StartTime = xTime;
+            }
+            clipRect.x = TimeToPos(xTime);
+
+            bool isSelected = wrapper.editorBinding.FormalClip != null
+                ? ReferenceEquals(embeddedTimeline?.Selected, wrapper.editorBinding.FormalClip)
+                : ReferenceEquals(CutsceneUtility.selectedObject, wrapper.editorBinding.NativeAction) ||
+                  (multiSelection != null && multiSelection.Contains(wrapper));
+            bool isVisible = Rect.MinMaxRect(0, scrollPos.y, centerRect.width, centerRect.height).Overlaps(clipRect);
+            if (!isSelected && !isVisible)
+            {
+                wrapper.rect = default(Rect);
+                return;
+            }
+
+            if (isSelected)
+            {
+                GUI.color = HIGHLIGHT_COLOR;
+                GUI.DrawTexture(clipRect.ExpandBy(2), Slate.Styles.whiteTexture);
+                GUI.color = Color.white;
+            }
+
+            GUI.color = wrapper.editorBinding.IsValid ? Color.white : new Color(1, 0.3f, 0.3f);
+            GUI.color = trackActive ? GUI.color : Color.grey;
+            GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
+            wrapper.rect = GUI.Window(id, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
+            if (!isProSkin)
+            {
+                GUI.color = Color.white.WithAlpha(0.5f);
+                GUI.Box(clipRect, string.Empty);
+                GUI.color = Color.white;
+            }
+            if (isSelected)
+            {
+                GUI.color = HIGHLIGHT_COLOR;
+                GUI.Box(clipRect.ExpandBy(2), string.Empty, Styles.hollowFrameHorizontalStyle);
+                GUI.color = Color.white;
+            }
+
+            string runtimeStatus = wrapper.editorBinding.FormalClip != null
+                ? embeddedRuntimeClipStatus?.Invoke(wrapper.editorBinding.FormalClip.AuthoringId)
+                : null;
+            if (!string.IsNullOrEmpty(runtimeStatus))
+                GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
+            float nextPosX = TimeToPos(nextBinding != null ? nextBinding.StartTime : viewTimeMax);
+            float previousPosX = TimeToPos(previousBinding != null ? previousBinding.EndTime : viewTimeMin);
+            wrapper.editorBinding.DrawClipGUIExternal(
+                Rect.MinMaxRect(previousPosX, clipRect.yMin, clipRect.xMin, clipRect.yMax),
+                Rect.MinMaxRect(clipRect.xMax, clipRect.yMin, nextPosX, clipRect.yMax));
+            if (clipRect.width <= 20)
+                GUI.Label(
+                    Rect.MinMaxRect(clipRect.xMax, clipRect.yMin, nextPosX, clipRect.yMax).ExpandBy(-1),
+                    string.Format("<size=10>{0}</size>", wrapper.editorBinding.Info));
+            GUI.color = Color.white;
         }
 
         void ShowTimeLines(Rect centerRect, IEmbeddedTimelineBinding timeline)
@@ -3345,7 +3363,8 @@ namespace Slate
                         GUI.color = Color.white;
                     }
 
-                    float cursorTime = SnapTime(PosToTime(mousePosition.x));
+                    if (track.IsLocked && e.isMouse && trackPosRect.Contains(e.mousePosition))
+                        e.Use();
 
                     string inspectionKey = FormalInspectionKey(track);
                     string inspected = string.Empty;
@@ -3372,134 +3391,18 @@ namespace Slate
                     for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
                         clipBindings[clipIndex] = new FormalClipEditorBinding(clips[clipIndex]);
                     for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
-                    {
-                        IEmbeddedTimelineClipBinding clip = clips[clipIndex];
-                        int id = UID(groupIndex, trackIndex, clipIndex);
-                        IClipEditorBinding currentBinding = clipBindings[clipIndex];
-                        ActionClipWrapper wrapper;
-                        if (!clipWrappers.TryGetValue(id, out wrapper) || !wrapper.Matches(currentBinding))
-                        {
-                            wrapper = new ActionClipWrapper(clip);
-                            clipWrappers[id] = wrapper;
-                        }
-
-                        IClipEditorBinding previous = clipIndex > 0 ? clipBindings[clipIndex - 1] : null;
-                        IClipEditorBinding next = clipIndex + 1 < clips.Count ? clipBindings[clipIndex + 1] : null;
-                        wrapper.SetNeighbors(previous, next);
-                        Rect clipRect = wrapper.rect;
-                        clipRect.y = y;
-                        clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
-                        clipRect.height = track.DefaultHeight;
-
-                        float xTime = wrapper.editorBinding.StartTime;
-                        float xPos = clipRect.x;
-                        if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging && e.type == EventType.MouseDrag)
-                        {
-                            float lastTime = xTime;
-                            xTime = PosToTime(xPos + leftRect.width);
-                            xTime = SnapTime(xTime);
-                            xTime = Mathf.Clamp(xTime, 0f, maxTime - 0.1f);
-
-                            if (multiSelection != null && multiSelection.Count > 1)
-                            {
-                                float delta = xTime - lastTime;
-                                float boundMin = Mathf.Min(multiSelection.Select(value => value.editorBinding.StartTime).ToArray());
-                                if (boundMin + delta < 0f)
-                                {
-                                    xTime -= delta;
-                                    delta = 0f;
-                                }
-                                foreach (ActionClipWrapper value in multiSelection)
-                                    if (!ReferenceEquals(value, wrapper))
-                                        value.editorBinding.StartTime += delta;
-                            }
-
-                            if (multiSelection == null || multiSelection.Count < 1)
-                            {
-                                IClipEditorBinding preCursorBinding = clipBindings
-                                    .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.StartTime < cursorTime)
-                                    .LastOrDefault();
-                                IClipEditorBinding postCursorBinding = clipBindings
-                                    .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.EndTime > cursorTime)
-                                    .FirstOrDefault();
-                                if (e.shift || Prefs.rippleMode)
-                                {
-                                    preCursorBinding = previous;
-                                    postCursorBinding = null;
-                                }
-
-                                float preTime = preCursorBinding != null ? preCursorBinding.EndTime : 0f;
-                                float postTime = postCursorBinding != null ? postCursorBinding.StartTime : maxTime + wrapper.editorBinding.Length;
-                                if (Prefs.magnetSnapping && !e.control)
-                                {
-                                    float? snapStart = MagnetSnapTime(xTime, magnetSnapTimesCache);
-                                    float? snapEnd = MagnetSnapTime(xTime + wrapper.editorBinding.Length, magnetSnapTimesCache);
-                                    if (snapStart != null && snapEnd != null)
-                                    {
-                                        float distStart = Mathf.Abs(snapStart.Value - xTime);
-                                        float distEnd = Mathf.Abs(snapEnd.Value - (xTime + wrapper.editorBinding.Length));
-                                        bool useEnd = distEnd < distStart;
-                                        float bestTime = useEnd ? snapEnd.Value : snapStart.Value;
-                                        pendingGuides.Add(new GuideLine(bestTime, Color.white));
-                                        xTime = useEnd ? snapEnd.Value - wrapper.editorBinding.Length : snapStart.Value;
-                                    }
-                                    else
-                                    {
-                                        if (snapEnd != null)
-                                        {
-                                            pendingGuides.Add(new GuideLine(snapEnd.Value, Color.white));
-                                            xTime = snapEnd.Value - wrapper.editorBinding.Length;
-                                        }
-                                        if (snapStart != null)
-                                        {
-                                            pendingGuides.Add(new GuideLine(snapStart.Value, Color.white));
-                                            xTime = snapStart.Value;
-                                        }
-                                    }
-                                }
-
-                                if (wrapper.editorBinding.CanCrossBlend(preCursorBinding))
-                                    preTime -= Mathf.Min(wrapper.editorBinding.Length / 2f, preCursorBinding.Length / 2f);
-                                if (wrapper.editorBinding.CanCrossBlend(postCursorBinding))
-                                    postTime += Mathf.Min(wrapper.editorBinding.Length / 2f, postCursorBinding.Length / 2f);
-                                if (wrapper.editorBinding.Length > postTime - preTime)
-                                    xTime = lastTime;
-                                if (Mathf.Abs(xTime - lastTime) > 0.0001f)
-                                {
-                                    xTime = Mathf.Clamp(xTime, preTime, postTime - wrapper.editorBinding.Length);
-                                    if (e.shift || Prefs.rippleMode)
-                                    {
-                                        foreach (ActionClipWrapper value in clipWrappers.Values.Where(value =>
-                                            !ReferenceEquals(value, wrapper) &&
-                                            value.editorBinding.StartTime > lastTime &&
-                                            value.editorBinding.FormalClip != null &&
-                                            ReferenceEquals(value.editorBinding.Track, wrapper.editorBinding.Track)))
-                                            value.editorBinding.StartTime += xTime - lastTime;
-                                    }
-                                }
-                            }
-                            wrapper.editorBinding.StartTime = xTime;
-                            clipRect.x = TimeToPos(xTime);
-                        }
-
-                        if (!wrapper.isDragging)
-                            clipRect.x = TimeToPos(xTime);
-
-                        bool selected = ReferenceEquals(embeddedTimeline.Selected, clip);
-                        GUI.color = wrapper.editorBinding.IsValid ? Color.white : new Color(1, 0.3f, 0.3f);
-                        GUI.Box(clipRect, string.Empty, Styles.clipBoxHorizontalStyle);
-                        wrapper.rect = GUI.Window(id, clipRect, ActionClipWindow, string.Empty, GUIStyle.none);
-                        if (selected)
-                        {
-                            GUI.color = HIGHLIGHT_COLOR;
-                            GUI.Box(clipRect.ExpandBy(2), string.Empty, Styles.hollowFrameHorizontalStyle);
-                            GUI.color = Color.white;
-                        }
-                        string runtimeStatus = embeddedRuntimeClipStatus?.Invoke(clip.AuthoringId);
-                        if (!string.IsNullOrEmpty(runtimeStatus))
-                            GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
-                        GUI.color = Color.white;
-                    }
+                        DrawTimelineClip(
+                            centerRect,
+                            y,
+                            groupIndex,
+                            trackIndex,
+                            clipIndex,
+                            clipBindings[clipIndex],
+                            clipIndex > 0 ? clipBindings[clipIndex - 1] : null,
+                            clipIndex + 1 < clips.Count ? clipBindings[clipIndex + 1] : null,
+                            clipBindings,
+                            track.IsActive,
+                            track.DefaultHeight);
                 }
             }
             EndWindows();
@@ -3971,8 +3874,6 @@ namespace Slate
             public bool isScalingEnd;
             public bool isControlingBlendIn;
             public bool isControlingBlendOut;
-            public float formalDragOffset;
-
             public Dictionary<int, Keyframe[]> preScaleKeys;
             public float preScaleStartTime;
             public float preScaleEndTime;
@@ -4113,8 +4014,6 @@ namespace Slate
                     if ( e.button == 0 ) {
                         if ( dragRect.Contains(e.mousePosition) ) {
                             isWaitingMouseDrag = true;
-                            if (editorBinding.FormalClip != null)
-                                formalDragOffset = editor.PosToTime(editor.mousePosition.x) - editorBinding.StartTime;
                         }
                         editor.interactingClip = this;
                         editor.CacheMagnetSnapTimes(editorBinding);

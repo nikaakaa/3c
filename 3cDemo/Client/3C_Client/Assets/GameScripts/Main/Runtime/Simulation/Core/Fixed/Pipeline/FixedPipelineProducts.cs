@@ -101,18 +101,18 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedPendingEvaluationBatch
     {
-        readonly PendingCharacterEvaluation[] m_Evaluations;
+        readonly FixedPendingAbilityEvaluation[] m_Evaluations;
 
         internal FixedPendingEvaluationBatch(int actorCount)
         {
             if (actorCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(actorCount));
-            m_Evaluations = new PendingCharacterEvaluation[actorCount];
+            m_Evaluations = new FixedPendingAbilityEvaluation[actorCount];
         }
 
         internal FixedPendingEvaluationBatch Reset(
             SimulationTick tick,
-            PendingCharacterEvaluation[] evaluations)
+            FixedPendingAbilityEvaluation[] evaluations)
         {
             if (!tick.IsValid || evaluations == null || evaluations.Length != m_Evaluations.Length)
                 throw new ArgumentException("Pending evaluation batch workspace is invalid.");
@@ -136,7 +136,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationTick Tick { get; private set; }
-        public IReadOnlyList<PendingCharacterEvaluation> Evaluations => m_Evaluations;
+        public IReadOnlyList<FixedPendingAbilityEvaluation> Evaluations => m_Evaluations;
 
         internal void AbortUnconsumed()
         {

@@ -120,6 +120,10 @@
 - `9965d868`：删除旧 GameplayLab 代码删除后留下的空 Editor 程序集。
 - `270f573e7`：把数值 Target 对旧 Kernel specialization 的依赖改为独立 `SimulationExecutionTargetManifest`。
 - `9d7e464c7`：收紧 Ability Value resolver 的输入接口，移除无效的旧上下文参数。
+- `40be04e41`：让 DotRecast manifest loader 从 Float32 正式 Execution Target 校验操作集版本，不再读取 Kernel specialization。
+- `6556051ee`：从公共角色 registration contract 移除 Program epoch、Program binding 和整角色 Program 身份成员。
+- `60a758ef0`：从 Fixed registration contract 移除 Character Program 和 ProgramIdentity 成员。
+- `1a3865f9f`：将保留的 Session checkpoint/replay 合同重命名为 `SimulationSessionCheckpointContracts.cs`，不再用 Epoch 文件名承载旧 adoption。
 
 ## 当前实现边界
 
@@ -134,6 +138,7 @@
 - 旧 `SimulationKernel`、Float32／Fixed `CharacterDomainRuntimeInstance` 和整角色 Program evaluator 入口已删除；Session／Pipeline／Network 的旧请求、ProgramRuntime port 和 Program identity 消费者仍是删除后暴露的待接线错误。后续角色工厂必须直接装配 Control、独立 Ability 数据集合、Timeline、Pose、Camera、Motion、Effect、Equipment 和 World owner，不恢复 Kernel、全局 Layout 或转换 Factory。Ability 数据已能由 Character Definition 直接加载为按 AbilityId 索引的集合，实际 evaluator／Host／Pass 消费仍待接通。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
 - Ability execution data 现在自持 `OperationExecutionTopology`、`ProgramCatalogRuntimeIndex`；值边缘类型解析已由独立 `GameplayAbilityExecutionValueResolver` 承担。`SimulationExecutionTargetManifest` 只描述数值后端、ABI 和操作集，不再通过 Kernel 提供 Target 身份。
 - 旧 GameplayLab Bootstrap、Session Variant 和空 Editor 程序集已删除；性能采样与网络产品脚本仍引用旧 GameplayLab 类型，属于后续正式角色启动入口的待接线消费者。
+- Session checkpoint/replay 数据结构仍保留，但旧 Program adoption、Actor binding、Program Runtime component 和 Kernel implementation 已退出；Float32/Fixed Pipeline、Host、Network、Rollback 和性能脚本中的旧签名暂时保持错误，后续统一改成领域内容 identity、roster 和状态合同。
 - Float32／Fixed Control 参数链路的旧 `SimulationActorBinding` wrapper 和 Program adoption 合同已删除；现有 `CharacterPipelineDefinition.ControlParameters`、`CharacterControlRuntimeBinding` 与 `SimulationEvaluateRequest` 仍是待接入的新角色装配材料。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash，后续由角色 Factory 直接把它交给 Control owner。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。

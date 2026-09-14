@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedAbilityExecutionInput m_Input;
         readonly FixedAbilityBodyFacts m_Body;
+        readonly Func<string, bool> m_HasInputRequest;
         readonly Func<CharacterControlParameterId, FixedScalar> m_ReadParameter;
         readonly Func<CharacterSkillId, bool> m_IsAbilityActive;
         readonly Func<CharacterSkillId, (bool Found, ulong InstanceId)> m_TryGetActiveAbilityInstanceId;
@@ -19,6 +20,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterControlReadPort(
             FixedAbilityExecutionInput input,
             FixedAbilityBodyFacts body,
+            Func<string, bool> hasInputRequest,
             Func<CharacterControlParameterId, FixedScalar> readParameter,
             Func<CharacterSkillId, bool> isAbilityActive,
             Func<CharacterSkillId, (bool Found, ulong InstanceId)> tryGetActiveAbilityInstanceId,
@@ -29,6 +31,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Body = body;
+            m_HasInputRequest = hasInputRequest ?? throw new ArgumentNullException(nameof(hasInputRequest));
             m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
             m_IsAbilityActive = isAbilityActive ?? throw new ArgumentNullException(nameof(isAbilityActive));
             m_TryGetActiveAbilityInstanceId = tryGetActiveAbilityInstanceId ?? throw new ArgumentNullException(nameof(tryGetActiveAbilityInstanceId));
@@ -38,13 +41,7 @@ namespace ThirdPersonSimulation.Fixed
             m_TryReadEquipmentActionContext = tryReadEquipmentActionContext ?? throw new ArgumentNullException(nameof(tryReadEquipmentActionContext));
         }
 
-        public bool HasInputRequest(string requestId)
-        {
-            for (int i = 0; i < m_Input.Requests.Count; i++)
-                if (string.Equals(m_Input.Requests[i].RequestId, requestId, StringComparison.Ordinal))
-                    return true;
-            return false;
-        }
+        public bool HasInputRequest(string requestId) => m_HasInputRequest(requestId);
 
         public bool IsAbilityActive(CharacterSkillId abilityId) => m_IsAbilityActive(abilityId);
 
@@ -308,6 +305,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Read = new FixedCharacterControlReadPort(
                 input,
                 body,
+                requestId => HasInputRequest(roleState, requestId),
                 parameter => FixedScalar.FromDouble(binding.Parameters.ReadNumeric(parameter)),
                 skill => IsAbilityActive(roleState, skill),
                 skill => TryGetActiveAbilityInstanceId(roleState, skill),
@@ -339,6 +337,12 @@ namespace ThirdPersonSimulation.Fixed
                 if (actions[i].IsActive && actions[i].SkillId == abilityId)
                     return true;
             return false;
+        }
+
+        static bool HasInputRequest(FixedCharacterRuntimeStateTransaction state, string requestId)
+        {
+            SimulationInputRequestState request = state.GetInputRequest(requestId);
+            return request.IsValid && !request.Consumed && request.ExpireTick >= state.Tick.Value;
         }
 
         static (bool Found, ulong InstanceId) TryGetActiveAbilityInstanceId(

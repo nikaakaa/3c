@@ -327,6 +327,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 不能通过添加空 handler、默认 Pose、旧 Program reader 或伪造调用点消除该缺口；否则会把 Source Pending、IK/Final Publication 和真实采用状态隐藏成成功。
 - 该事实不是不可推进的外部阻断：下一步可在不改共享 Host 的前提下继续实现具体领域 handler；完成证据仍要求真实 Host 调用、静态残留清理和用户侧 Unity/Play 验收。
 
+## 2026-09-14 r3 补齐 required input 校验
+
+- `CharacterPoseNativeGraphValidator` 现在在类型、重复连接和环检查前，逐节点检查所有 `Required` 输入是否确实有一条连接；悬空必需输入返回带图/节点/端口路径的 `PortInvalid`。
+- 可选输入仍由节点/服务自己的正式配置处理；本步没有补零值、默认 Pose 或隐式连接。
+- 本步未运行 Unity/Build；当前服务 handler 与角色 Host 接线缺口不变。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

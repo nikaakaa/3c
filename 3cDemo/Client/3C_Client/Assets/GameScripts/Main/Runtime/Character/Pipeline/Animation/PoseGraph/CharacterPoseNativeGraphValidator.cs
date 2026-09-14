@@ -143,6 +143,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
 
+                foreach (CharacterPoseCanvasNode node in nodes)
+                {
+                    foreach (CharacterPosePortDefinition port in shapes[node.NodeId])
+                    {
+                        if (port.Direction != CharacterPosePortDirection.Input ||
+                            !port.Required)
+                            continue;
+                        string targetKey = node.NodeId.Value + "/" + port.PortId.Value;
+                        if (!targetConnections.Contains(targetKey))
+                        {
+                            Fail(
+                                CharacterPoseNativeFailureCode.PortInvalid,
+                                $"{graph.GraphId}/{targetKey}",
+                                $"Pose required input '{targetKey}' is not connected.");
+                        }
+                    }
+                }
+
                 EnsureAcyclic(graph, nodes, indegree, outgoing);
                 ValidateBoundary(graph, nodes, boundary);
                 ValidateReferencedGraphs(graphAsset, graph, nodes, visiting, visited);

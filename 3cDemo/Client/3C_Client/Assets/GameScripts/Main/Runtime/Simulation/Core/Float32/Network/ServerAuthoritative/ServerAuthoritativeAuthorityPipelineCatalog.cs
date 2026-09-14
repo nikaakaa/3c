@@ -48,7 +48,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 new[] { schedule },
                 new[]
                 {
-                    StandardFloat32PipelinePassContracts.WorldResolveBatch
+                    StandardFloat32PipelinePassContracts.AbilityEvaluate,
+                    StandardFloat32PipelinePassContracts.WorldResolveBatch,
+                    StandardFloat32PipelinePassContracts.AbilityFinalize
                 },
                 new[] { replication });
 
@@ -57,7 +59,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 {
                     new AuthorityAcceptedInputIngressPassRuntimeFactory(policy),
                     new AuthorityTickSchedulePassRuntimeFactory(policy),
+                    new Float32AbilityEvaluatePassRuntimeFactory(),
                     new Float32WorldResolveBatchPassRuntimeFactory(),
+                    new Float32AbilityFinalizePassRuntimeFactory(),
                     new AuthorityReplicationEgressPassRuntimeFactory(policy, replicationPolicy)
                 });
             IReadOnlyList<IFloat32PipelineProductSlotFactory> productSlots = CreateProductSlots();
@@ -118,7 +122,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             RequirePhase(
                 descriptor,
                 SimulationPipelinePhase.Step,
-                StandardFloat32PipelinePassContracts.WorldResolveBatch);
+                StandardFloat32PipelinePassContracts.AbilityEvaluate,
+                StandardFloat32PipelinePassContracts.WorldResolveBatch,
+                StandardFloat32PipelinePassContracts.AbilityFinalize);
             IReadOnlyList<SimulationPipelinePassDescriptor> egress = descriptor.GetPhase(SimulationPipelinePhase.Egress);
             if (egress.Count != 1 ||
                 !egress[0].PassId.Equals(ServerAuthoritativeAuthorityPassIds.ReplicationEgress) ||

@@ -518,7 +518,7 @@ namespace Slate
             return ( Mathf.Round(time / Prefs.snapInterval) * Prefs.snapInterval );
         }
 
-        float EmbeddedCurrentTime()
+        internal float EmbeddedCurrentTime()
         {
             if (embeddedCurrentFrame != null)
                 return embeddedCurrentFrame() / (float)Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);

@@ -425,6 +425,47 @@ namespace Slate
                     e.Use();
                 }
             }
+
+            if (inspectedParameterIndex >= 0)
+            {
+                var parameter = clip.Parameters[inspectedParameterIndex];
+                var editor = CutsceneEditorSurface.current;
+                float localTime = Mathf.Clamp(
+                    (editor?.EmbeddedCurrentTime() ?? clip.StartTime) - clip.StartTime,
+                    0f,
+                    clip.Length);
+                var curves = parameter.Curves;
+                var curve = curves != null && curves.Count != 0 ? curves[0].Curve : null;
+                bool hasKey = curve != null && Array.Exists(curve.keys, key => Mathf.Abs(key.time - localTime) <= 0.0001f);
+                var controlsRect = new Rect(expansionRect.xMin + 4, nextY + 4, expansionRect.width - 8, 22f);
+                GUI.color = Color.black.WithAlpha(UnityEditor.EditorGUIUtility.isProSkin ? 0.2f : 0.35f);
+                GUI.Box(controlsRect, string.Empty, Styles.headerBoxStyle);
+                GUI.color = Color.white;
+                float buttonWidth = 20f;
+                var previousRect = new Rect(controlsRect.x + 4, controlsRect.y + 1, buttonWidth, 20f);
+                var keyRect = new Rect(previousRect.xMax, previousRect.y, buttonWidth, previousRect.height);
+                var nextRect = new Rect(keyRect.xMax, previousRect.y, buttonWidth, previousRect.height);
+                if (GUI.Button(previousRect, Styles.previousKeyIcon, GUIStyle.none))
+                    parameter.SelectPreviousKey(localTime);
+                GUI.color = hasKey ? Color.red : Color.white;
+                if (GUI.Button(keyRect, Styles.keyIcon, GUIStyle.none))
+                    editor?.ApplyEmbeddedCommand(
+                        () =>
+                        {
+                            if (hasKey)
+                                parameter.RemoveKey(localTime);
+                            else
+                                parameter.AddKey(localTime);
+                        },
+                        hasKey ? "Remove Timeline Key" : "Add Timeline Key");
+                GUI.color = Color.white;
+                if (GUI.Button(nextRect, Styles.nextKeyIcon, GUIStyle.none))
+                    parameter.SelectNextKey(localTime);
+                GUI.Label(
+                    Rect.MinMaxRect(nextRect.xMax + 6, controlsRect.y, controlsRect.xMax - 4, controlsRect.yMax),
+                    parameter.CurrentValue.ToString("0.###"),
+                    Styles.rightLabel);
+            }
         }
 
         public static void DrawClipCurves(

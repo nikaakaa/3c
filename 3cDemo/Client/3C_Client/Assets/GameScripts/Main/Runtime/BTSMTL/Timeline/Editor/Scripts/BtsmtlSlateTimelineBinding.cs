@@ -861,8 +861,27 @@ namespace BTSMTL.Timeline.Editor
                     if (Mathf.Abs(m_Curve.Curve[index].time - localTime) <= 0.0001f)
                         m_Curve.Curve.RemoveKey(index);
             }
-            public void SelectPreviousKey(float localTime) { }
-            public void SelectNextKey(float localTime) { }
+            public void SelectPreviousKey(float localTime)
+            {
+                float? previous = null;
+                Keyframe[] keys = m_Curve.Curve.keys;
+                for (int index = 0; index < keys.Length; index++)
+                    if (keys[index].time < localTime - 0.0001f && (!previous.HasValue || keys[index].time > previous.Value))
+                        previous = keys[index].time;
+                if (previous.HasValue)
+                    m_Clip.Owner.CurrentFrame = m_Clip.Source.StartFrame + Mathf.RoundToInt(previous.Value * m_Clip.Owner.FrameRate);
+            }
+
+            public void SelectNextKey(float localTime)
+            {
+                float? next = null;
+                Keyframe[] keys = m_Curve.Curve.keys;
+                for (int index = 0; index < keys.Length; index++)
+                    if (keys[index].time > localTime + 0.0001f && (!next.HasValue || keys[index].time < next.Value))
+                        next = keys[index].time;
+                if (next.HasValue)
+                    m_Clip.Owner.CurrentFrame = m_Clip.Source.StartFrame + Mathf.RoundToInt(next.Value * m_Clip.Owner.FrameRate);
+            }
         }
 
         sealed class BtsmtlTimelineSectionBinding : IEmbeddedTimelineSectionBinding

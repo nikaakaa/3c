@@ -18,12 +18,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new Dictionary<
                     CharacterPoseNodeKind,
                     CharacterPoseNativeNodeHandlerCreator>();
+        bool m_Sealed;
 
         internal void Register(
             CharacterPoseNodeKind kind,
             CharacterPoseNativeNodeHandlerCreator creator)
         {
-            if (!Enum.IsDefined(typeof(CharacterPoseNodeKind), kind) ||
+            if (m_Sealed ||
+                !Enum.IsDefined(typeof(CharacterPoseNodeKind), kind) ||
                 creator == null ||
                 IsBuiltin(kind) ||
                 !m_Creators.TryAdd(kind, creator))
@@ -41,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!preparedBinding.IsValid || !context.IsValid)
                 throw new ArgumentException(
                     "Pose native handler registry binding is invalid.");
+            m_Sealed = true;
             var handlers = new List<ICharacterPoseNativeNodeHandler>();
             try
             {

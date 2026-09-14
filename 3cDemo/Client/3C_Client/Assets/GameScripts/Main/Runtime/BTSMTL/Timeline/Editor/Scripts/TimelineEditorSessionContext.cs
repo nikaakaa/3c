@@ -11,15 +11,18 @@ namespace BTSMTL.Timeline.Editor
     {
         static UnityEngine.Object s_Owner;
         static string s_PropertyPath = string.Empty;
+        static object s_Element;
 
         public static event Action Changed;
 
-        public static void Set(UnityEngine.Object owner, string propertyPath)
+        public static void Set(UnityEngine.Object owner, string propertyPath, object element = null)
         {
-            if (ReferenceEquals(s_Owner, owner) && string.Equals(s_PropertyPath, propertyPath, StringComparison.Ordinal))
+            if (ReferenceEquals(s_Owner, owner) && string.Equals(s_PropertyPath, propertyPath, StringComparison.Ordinal) &&
+                ReferenceEquals(s_Element, element))
                 return;
             s_Owner = owner;
             s_PropertyPath = propertyPath ?? string.Empty;
+            s_Element = element;
             Changed?.Invoke();
         }
 
@@ -29,6 +32,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             s_Owner = null;
             s_PropertyPath = string.Empty;
+            s_Element = null;
             Changed?.Invoke();
         }
 
@@ -40,6 +44,17 @@ namespace BTSMTL.Timeline.Editor
                 return true;
             }
             propertyPath = string.Empty;
+            return false;
+        }
+
+        public static bool TryGetElement(UnityEngine.Object owner, out object element)
+        {
+            if (ReferenceEquals(s_Owner, owner) && s_Element != null)
+            {
+                element = s_Element;
+                return true;
+            }
+            element = null;
             return false;
         }
     }

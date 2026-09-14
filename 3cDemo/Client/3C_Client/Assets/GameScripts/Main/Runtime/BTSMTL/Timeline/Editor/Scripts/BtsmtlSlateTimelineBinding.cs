@@ -97,7 +97,7 @@ namespace BTSMTL.Timeline.Editor
                         ? sectionSource.Source
                         : null;
             if (source != null && Timeline.TryGetSerializedPropertyPath(source, out string propertyPath))
-                TimelineInspectorSelection.Set(m_Request.SerializedOwner, propertyPath);
+                TimelineInspectorSelection.Set(m_Request.SerializedOwner, propertyPath, source);
             else
                 TimelineInspectorSelection.Clear(m_Request.SerializedOwner);
             m_Session.SetSelection(

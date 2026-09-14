@@ -86,6 +86,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public ServerAuthoritativeFantasyEndpointDefinition Endpoint => m_Endpoint
             ? m_Endpoint
             : throw new InvalidOperationException("DotRecast Authority build profile requires an Endpoint.");
+        public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
         public int DataPort => m_DataPort is > 0 and <= 65535
             ? m_DataPort
             : throw new InvalidOperationException("DotRecast Authority build profile requires a valid data port.");

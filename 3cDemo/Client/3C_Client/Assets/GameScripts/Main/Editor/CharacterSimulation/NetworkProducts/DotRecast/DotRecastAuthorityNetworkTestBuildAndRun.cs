@@ -30,15 +30,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public void PrepareBuildInputs(NetworkTestProductContext context)
         {
             DotRecastAuthorityNetworkTestBuildProfile profile = LoadBuildProfile();
+            GameplayAbilityExecutionDataAssetPublisher.PublishDefinition(
+                profile.CharacterDefinition,
+                "Assets/Configs/Character/Corin/Pipeline/Abilities");
             DotRecastAuthoritySceneManifestExportRequest export = profile.BuildExportRequest(
                 Path.Combine(context.ProductRoot, "Server"));
-            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
-                new CharacterSimulationBuildRequest(
-                    export.CharacterDefinition,
-                    CharacterSimulationBuildPublicationMode.Publish,
-                    new[] { CharacterSimulationTargetCatalog.Float32(export.CharacterDefinition) }));
-            if (!result.IsValid)
-                throw new InvalidOperationException("DotRecast Authority Float32 Character target failed to build.");
         }
 
         public NetworkTestProductDescriptor CreateDescriptor(NetworkTestProductContext context)
@@ -46,7 +42,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DotRecastAuthorityNetworkTestBuildProfile profile = LoadBuildProfile();
             DotRecastAuthoritySceneManifestExportRequest export = profile.BuildExportRequest(
                 Path.Combine(context.ProductRoot, "Server"));
-            ThirdPersonSimulation.CharacterSimulationProgram program = export.CharacterDefinition.SimulationProgram.Load();
+            string characterContentIdentity = NetworkTestProductAdapterUtility.CharacterContentIdentity(export.CharacterDefinition);
             int controlPort = profile.Endpoint.Port;
             int dataPort = profile.DataPort;
             if (controlPort == dataPort)
@@ -63,7 +59,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "Development, StrictMode",
                 ScriptingImplementation.Mono2x,
                 "3cDemo/Tools/ServerAuthoritative/Start-DotRecastAuthorityDemo.ps1",
-                NetworkTestProductAdapterUtility.ProgramIdentity(program),
+                characterContentIdentity,
                 export.AuthoritySource.Requirements.RequiredPipelineId.Value,
                 "thirdperson.network-model.server-authoritative-hybrid",
                 "thirdperson.runtime-topology.dotrecast-authority.three-process.v1",

@@ -264,7 +264,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Disposed || m_Child == null)
                 return;
-            m_Child.StopInstance();
+            if (m_Child.Graph.isRunning)
+                m_Child.Graph.Stop(false);
+            else
+                m_Child.StopInstance();
             m_ChildFrameOpen = false;
         }
 

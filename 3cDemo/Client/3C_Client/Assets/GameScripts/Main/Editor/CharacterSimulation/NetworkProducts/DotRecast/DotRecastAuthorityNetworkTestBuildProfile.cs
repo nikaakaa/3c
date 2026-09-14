@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             [SerializeField] float m_ContactHeight;
             [SerializeField] float m_ContactSkinWidth;
 
-            public DotRecastAuthorityActorExportBinding Build(CharacterSimulationProgram program)
+            public DotRecastAuthorityActorExportBinding Build(string characterContentIdentity)
             {
                 var actorId = new ActorId(Require(m_ActorId, nameof(m_ActorId)));
                 var roster = new ServerAuthoritativeRosterEntry(
@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     StableHash.Compute(
                         "server-authoritative-authority-output/1",
                         actorId.Value,
-                        program.ProgramHash.ToString(),
+                        characterContentIdentity,
                         bindingId));
                 var contactShape = new ActorContactShape(
                     Float32ScalarBoundary.ConvertExternal(m_ContactRadius, $"{bindingId}/contact-radius"),
@@ -94,12 +94,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             if (!m_CharacterDefinition || !m_AuthoritySource || !m_ExecutionBackend || !m_WorldSolver || !m_Endpoint)
                 throw new InvalidOperationException("DotRecast Authority build profile requires all formal asset references.");
-            CharacterSimulationProgram program = m_CharacterDefinition.SimulationProgram.Load();
+            string characterContentIdentity = NetworkTestProductAdapterUtility.CharacterContentIdentity(m_CharacterDefinition);
             if (m_Actors == null || m_Actors.Count != 2)
                 throw new InvalidOperationException("DotRecast Authority build profile requires exactly two Actor rows.");
             var actors = new DotRecastAuthorityActorExportBinding[m_Actors.Count];
             for (int i = 0; i < actors.Length; i++)
-                actors[i] = m_Actors[i]?.Build(program) ?? throw new InvalidOperationException("DotRecast Authority build profile contains an empty Actor row.");
+                actors[i] = m_Actors[i]?.Build(characterContentIdentity) ?? throw new InvalidOperationException("DotRecast Authority build profile contains an empty Actor row.");
             return new DotRecastAuthoritySceneManifestExportRequest(
                 serverPublishDirectory,
                 m_CharacterDefinition,

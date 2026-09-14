@@ -2472,6 +2472,23 @@ namespace Slate
             GUI.color = Color.white;
         }
 
+        void DrawGroupListHeaderFrame(
+            Rect groupRect,
+            string title,
+            bool active,
+            bool selected,
+            bool collapsed,
+            Color activeColor,
+            Action<bool> setCollapsed)
+        {
+            GUI.color = selected ? LIST_SELECTION_COLOR : GROUP_COLOR;
+            GUI.Box(groupRect, string.Empty, Styles.headerBoxStyle);
+            GUI.color = active ? activeColor : Color.grey;
+            Rect foldRect = new Rect(groupRect.x + 2, groupRect.y + 1, 20, groupRect.height);
+            setCollapsed(!EditorGUI.Foldout(foldRect, !collapsed, title));
+            GUI.color = Color.white;
+        }
+
         void DrawTrackListRowFrame(
             Rect trackRect,
             bool active,
@@ -2549,12 +2566,14 @@ namespace Slate
                 Rect groupRect = new Rect(4, nextY, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
                 nextY += GROUP_HEIGHT;
                 bool groupSelected = ReferenceEquals(embeddedTimeline.Selected, group);
-                GUI.color = groupSelected ? LIST_SELECTION_COLOR : GROUP_COLOR;
-                GUI.Box(groupRect, string.Empty, Styles.headerBoxStyle);
-                GUI.color = group.IsActive ? Color.white : Color.grey;
-                Rect foldRect = new Rect(groupRect.x + 2, groupRect.y + 1, 20, groupRect.height);
-                group.IsCollapsed = !EditorGUI.Foldout(foldRect, !group.IsCollapsed, string.Format("<b>{0}</b>", group.DisplayName));
-                GUI.color = Color.white;
+                DrawGroupListHeaderFrame(
+                    groupRect,
+                    string.Format("<b>{0}</b>", group.DisplayName),
+                    group.IsActive,
+                    groupSelected,
+                    group.IsCollapsed,
+                    Color.white,
+                    value => group.IsCollapsed = value);
 
                 if (e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition))
                 {
@@ -2654,9 +2673,15 @@ namespace Slate
 
                 //highligh?
                 var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup );
-                GUI.color = groupSelected ? LIST_SELECTION_COLOR : GROUP_COLOR;
-                GUI.Box(groupRect, string.Empty, Styles.headerBoxStyle);
-                GUI.color = Color.white;
+                var isVirtual = group.referenceMode == CutsceneGroup.ActorReferenceMode.UseInstanceHideOriginal;
+                DrawGroupListHeaderFrame(
+                    groupRect,
+                    string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty),
+                    group.isActive,
+                    groupSelected,
+                    group.isCollapsed,
+                    isProSkin ? Color.yellow : Color.white,
+                    value => group.isCollapsed = value);
 
 
                 //GROUP CONTROLS
@@ -2673,12 +2698,6 @@ namespace Slate
                     if ( GUI.Button(lockIconRect, Styles.lockIcon, GUIStyle.none) ) { group.isLocked = false; }
                 }
 
-                GUI.color = isProSkin ? Color.yellow : Color.white;
-                GUI.color = group.isActive ? GUI.color : Color.grey;
-                var foldRect = new Rect(groupRect.x + 2, groupRect.y + 1, 20, groupRect.height);
-                var isVirtual = group.referenceMode == CutsceneGroup.ActorReferenceMode.UseInstanceHideOriginal;
-                group.isCollapsed = !EditorGUI.Foldout(foldRect, !group.isCollapsed, string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty));
-                GUI.color = Color.white;
                 //Actor Object Field
                 if ( !embeddedSurface && group.actor == null ) {
                     var oRect = Rect.MinMaxRect(groupRect.xMin + 20, groupRect.yMin + 1, groupRect.xMax - 20, groupRect.yMax - 1);

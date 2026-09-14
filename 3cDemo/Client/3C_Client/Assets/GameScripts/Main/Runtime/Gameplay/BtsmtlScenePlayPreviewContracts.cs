@@ -237,8 +237,6 @@ namespace ThirdPersonGameplay.ScenePlay
             string inputRequestId,
             ulong inputSequence,
             ulong sceneGeneration,
-            ulong programEpoch,
-            string programRevision,
             string message,
             Guid executionBranchId = default,
             ulong checkpointTick = 0)
@@ -249,8 +247,6 @@ namespace ThirdPersonGameplay.ScenePlay
             InputRequestId = inputRequestId ?? string.Empty;
             InputSequence = inputSequence;
             SceneGeneration = sceneGeneration;
-            ProgramEpoch = programEpoch;
-            ProgramRevision = programRevision ?? string.Empty;
             Message = message ?? string.Empty;
             ExecutionBranchId = executionBranchId;
             CheckpointTick = checkpointTick;
@@ -262,8 +258,6 @@ namespace ThirdPersonGameplay.ScenePlay
         public string InputRequestId { get; }
         public ulong InputSequence { get; }
         public ulong SceneGeneration { get; }
-        public ulong ProgramEpoch { get; }
-        public string ProgramRevision { get; }
         public string Message { get; }
         public Guid ExecutionBranchId { get; }
         public ulong CheckpointTick { get; }

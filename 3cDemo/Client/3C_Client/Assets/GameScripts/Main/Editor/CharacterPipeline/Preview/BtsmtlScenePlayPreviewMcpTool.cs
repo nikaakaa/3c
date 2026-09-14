@@ -508,8 +508,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             input_request_id = result.InputRequestId,
             input_sequence = result.InputSequence,
             scene_generation = result.SceneGeneration,
-            program_epoch = result.ProgramEpoch,
-            program_revision = result.ProgramRevision,
             execution_branch_id = result.ExecutionBranchId.ToString("N"),
             checkpoint_tick = result.CheckpointTick,
             message = result.Message

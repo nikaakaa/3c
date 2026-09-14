@@ -26,8 +26,14 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
 
-        public FixedCharacterRuntime(IEnumerable<SimulationActorBinding> roster)
+        public FixedCharacterRuntime(
+            IEnumerable<SimulationActorBinding> roster,
+            SimulationNumericProfile numericProfile,
+            int tickRate,
+            OperationSetVersion operationSetVersion)
         {
+            if (!numericProfile.IsValid || tickRate <= 0 || !operationSetVersion.IsValid)
+                throw new ArgumentException("Fixed Character Runtime execution identity is incomplete.");
             var values = roster == null
                 ? new List<SimulationActorBinding>()
                 : new List<SimulationActorBinding>(roster);
@@ -64,12 +70,10 @@ namespace ThirdPersonSimulation.Fixed
             }
             var abilityValues = new List<FixedGameplayAbilityExecutionData>(abilities.Values);
             abilityValues.Sort((left, right) => left.AbilityId.CompareTo(right.AbilityId));
-            if (abilityValues.Count == 0)
-                throw new ArgumentException("Fixed Character Runtime requires at least one Ability.", nameof(roster));
             m_Abilities = abilityValues.AsReadOnly();
-            NumericProfile = m_Abilities[0].NumericProfile;
-            TickRate = m_Abilities[0].TickRate;
-            OperationSetVersion = m_Abilities[0].OperationSetVersion;
+            NumericProfile = numericProfile;
+            TickRate = tickRate;
+            OperationSetVersion = operationSetVersion;
             WorldCapability requiredWorldCapabilities = WorldCapability.None;
             for (int i = 0; i < m_Abilities.Count; i++)
             {

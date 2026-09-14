@@ -1,0 +1,752 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
+
+namespace ThirdPersonSimulation
+{
+    internal static class Float32CharacterRuntimeStateCodec
+    {
+        const uint Magic = 0x54535243;
+        const int Version = 1;
+        const string HashIdentity = "float32-character-runtime-state-hash/1";
+        public const string CodecIdentity = "float32-character-runtime-state/1";
+
+        public static byte[] Write(Float32CharacterRuntimeState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            return writer.ToArray();
+        }
+
+        public static CharacterStateHash ComputeHash(Float32CharacterRuntimeState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            using var writer = new CanonicalWriter();
+            writer.WriteString(HashIdentity);
+            WriteCanonical(writer, state);
+            return new CharacterStateHash(writer.ComputeHash());
+        }
+
+        public static Float32CharacterRuntimeState Read(
+            byte[] bytes,
+            Float32GameplayAbilityExecutionInstallation installation,
+            CharacterEquipmentRuntimeBinding equipmentBinding)
+        {
+            if (bytes == null || installation == null)
+                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installation));
+            var reader = new CanonicalReader(bytes);
+            if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
+                !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("Float32 Character runtime state header is invalid.");
+            }
+            installation.Identity.Require(ReadIdentity(reader));
+            ulong lastCompletedTick = reader.ReadUInt64();
+            Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
+            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
+            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
+            EquipmentProgramLayout equipmentLayout = equipmentBinding == null ? null : CreateEquipmentLayout(installation, equipmentBinding);
+            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installation.Layout, equipmentLayout);
+            List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installation.Layout, equipmentLayout);
+            Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
+            Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
+            ulong eventSequence = reader.ReadUInt64();
+            ulong actionEventSequence = reader.ReadUInt64();
+            ulong handleAllocator = reader.ReadUInt64();
+            CharacterControlRuntimeState controlState = reader.ReadBoolean()
+                ? CharacterControlRuntimeStateCodec.Read(reader.ReadBytes())
+                : null;
+            GameplayEffectStateAggregate gameplayEffectState = null;
+            if (reader.ReadBoolean())
+            {
+                if (installation.GameplayEffectCatalog == null)
+                    throw new InvalidDataException("Float32 Character runtime state contains Gameplay Effect state without an installed catalog.");
+                var effectReader = new CanonicalReader(reader.ReadBytes());
+                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, installation.GameplayEffectCatalog);
+                effectReader.RequireComplete();
+            }
+            EquipmentStateAggregate equipmentState = null;
+            if (reader.ReadBoolean())
+            {
+                var equipmentReader = new CanonicalReader(reader.ReadBytes());
+                equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, equipmentLayout);
+                equipmentReader.RequireComplete();
+            }
+            reader.RequireComplete();
+            var state = new Float32CharacterRuntimeState(
+                installation,
+                lastCompletedTick,
+                stateValues,
+                abilityExecutionState,
+                inputRequests,
+                actionActivationRequests,
+                actionInstances,
+                timelineRetainedActionContexts,
+                motionWarpStates,
+                eventSequence,
+                actionEventSequence,
+                handleAllocator,
+                controlState,
+                gameplayEffectState,
+                equipmentState);
+            RequireCanonical(bytes, Write(state), "Float32 Character runtime state");
+            return state;
+        }
+
+        static void WriteCanonical(CanonicalWriter writer, Float32CharacterRuntimeState state)
+        {
+            writer.WriteUInt32(Magic);
+            writer.WriteInt32(Version);
+            writer.WriteString(CodecIdentity);
+            WriteIdentity(writer, state.AbilityIdentity);
+            writer.WriteUInt64(state.LastCompletedTick);
+            WriteValues(writer, state.StateValues);
+            WriteAbilityExecutionState(writer, state.AbilityExecutionState);
+            WriteInputRequests(writer, state.InputRequests);
+            WriteActionActivationRequests(writer, state.ActionActivationRequests);
+            WriteActionInstances(writer, state.ActionInstances);
+            WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts);
+            WriteMotionWarpStates(writer, state.MotionWarpStates);
+            writer.WriteUInt64(state.EventSequence);
+            writer.WriteUInt64(state.ActionEventSequence);
+            writer.WriteUInt64(state.HandleAllocator);
+            writer.WriteBoolean(state.ControlState != null);
+            if (state.ControlState != null)
+                writer.WriteBytes(CharacterControlRuntimeStateCodec.Write(state.ControlState));
+            writer.WriteBoolean(state.GameplayEffectState != null);
+            if (state.GameplayEffectState != null)
+            {
+                using var effectWriter = new CanonicalWriter();
+                GameplayEffectStateAggregateCodec.Write(effectWriter, state.GameplayEffectState, state.Installation.GameplayEffectCatalog);
+                writer.WriteBytes(effectWriter.ToArray());
+            }
+            writer.WriteBoolean(state.EquipmentState != null);
+            if (state.EquipmentState != null)
+            {
+                using var equipmentWriter = new CanonicalWriter();
+                EquipmentStateAggregateCodec.Write(equipmentWriter, state.EquipmentState);
+                writer.WriteBytes(equipmentWriter.ToArray());
+            }
+        }
+
+        static void WriteIdentity(CanonicalWriter writer, GameplayAbilityExecutionIdentity identity)
+        {
+            writer.WriteString(identity.AbilityId.Value);
+            writer.WriteString(identity.ContentHash.ToString());
+            writer.WriteString(identity.StateSchemaHash.ToString());
+            writer.WriteString(identity.OperationSetVersion.Value);
+            SimulationNumericProfileCodec.Write(writer, identity.NumericProfile);
+        }
+
+        static GameplayAbilityExecutionIdentity ReadIdentity(CanonicalReader reader) =>
+            new GameplayAbilityExecutionIdentity(
+                new CharacterSkillId(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new OperationSetVersion(reader.ReadString()),
+                SimulationNumericProfileCodec.Read(reader));
+
+        static void WriteValues(CanonicalWriter writer, IReadOnlyDictionary<int, CharacterStateValue> values)
+        {
+            var keys = new List<int>(values.Keys);
+            keys.Sort();
+            writer.WriteInt32(keys.Count);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                writer.WriteInt32(keys[i]);
+                WriteValue(writer, values[keys[i]]);
+            }
+        }
+
+        static Dictionary<int, CharacterStateValue> ReadValues(CanonicalReader reader, GameplayAbilityExecutionLayout layout)
+        {
+            int count = ReadCount(reader, layout.StateSlots.Count, "Float32 Character state value");
+            var values = new Dictionary<int, CharacterStateValue>(count);
+            int previous = -1;
+            for (int i = 0; i < count; i++)
+            {
+                int slotIndex = reader.ReadInt32();
+                if (slotIndex < 0 || slotIndex >= layout.StateSlots.Count || slotIndex <= previous)
+                    throw new InvalidDataException("Float32 Character state value indexes are invalid or not canonically ordered.");
+                CharacterStateValue value = ReadValue(reader);
+                if (value.Kind != layout.StateSlots[slotIndex].ValueKind)
+                    throw new InvalidDataException($"Float32 Character state value slot '{slotIndex}' kind does not match the Ability layout.");
+                values.Add(slotIndex, value);
+                previous = slotIndex;
+            }
+            return values;
+        }
+
+        static void WriteAbilityExecutionState(
+            CanonicalWriter writer,
+            GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate)
+        {
+            var frames = new List<GameplayAbilityExecutionFrame<CharacterStateValue>>(aggregate?.Frames ?? Array.Empty<GameplayAbilityExecutionFrame<CharacterStateValue>>());
+            frames.Sort((left, right) => left.ActionInstanceId.CompareTo(right.ActionInstanceId));
+            writer.WriteInt32(frames.Count);
+            for (int i = 0; i < frames.Count; i++)
+            {
+                GameplayAbilityExecutionFrame<CharacterStateValue> frame = frames[i];
+                writer.WriteString(frame.SkillId.Value);
+                writer.WriteInt32(frame.EntryOperation.Value);
+                writer.WriteUInt64(frame.ActionInstanceId);
+                writer.WriteUInt64(frame.PredictionKey);
+                writer.WriteUInt64(frame.Generation);
+                WriteValues(writer, frame.Values);
+            }
+        }
+
+        static GameplayAbilityExecutionAggregate<CharacterStateValue> ReadAbilityExecutionState(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            int count = ReadCount(reader, 1000000, "Float32 Ability execution frame");
+            var frames = new List<GameplayAbilityExecutionFrame<CharacterStateValue>>(count);
+            ulong previous = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var skillId = new CharacterSkillId(reader.ReadString());
+                OperationHandle entryOperation = ReadRequiredOperation(reader, layout);
+                ulong actionInstanceId = reader.ReadUInt64();
+                ulong predictionKey = reader.ReadUInt64();
+                ulong generation = reader.ReadUInt64();
+                if (actionInstanceId == 0 || i > 0 && actionInstanceId <= previous)
+                    throw new InvalidDataException("Float32 Ability execution frame identities are invalid or not canonically ordered.");
+                Dictionary<int, CharacterStateValue> values = ReadValues(reader, layout);
+                frames.Add(new GameplayAbilityExecutionFrame<CharacterStateValue>(
+                    skillId,
+                    entryOperation,
+                    actionInstanceId,
+                    predictionKey,
+                    generation,
+                    values));
+                previous = actionInstanceId;
+            }
+            return new GameplayAbilityExecutionAggregate<CharacterStateValue>(frames);
+        }
+
+        static void WriteInputRequests(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<string, SimulationInputRequestState> requests)
+        {
+            var keys = new List<string>(requests.Keys);
+            keys.Sort(StringComparer.Ordinal);
+            writer.WriteInt32(keys.Count);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                writer.WriteString(keys[i]);
+                SimulationInputRequestStateCodec.Write(writer, requests[keys[i]]);
+            }
+        }
+
+        static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            int count = ReadCount(reader, layout.InputRequestIds.Count, "Float32 Ability Input request");
+            var requests = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
+            string previous = null;
+            for (int i = 0; i < count; i++)
+            {
+                string requestId = SimulationIdentity.Require(reader.ReadString(), "InputRequestId");
+                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !layout.HasInputRequest(requestId))
+                    throw new InvalidDataException("Float32 Ability Input request identities are invalid or not canonically ordered.");
+                SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
+                if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
+                    throw new InvalidDataException("Float32 Ability Input request state key does not match its value.");
+                requests.Add(requestId, value);
+                previous = requestId;
+            }
+            return requests;
+        }
+
+        static void WriteActionActivationRequests(
+            CanonicalWriter writer,
+            IReadOnlyList<SimulationActionActivationRequestState> requests)
+        {
+            writer.WriteInt32(requests.Count);
+            for (int i = 0; i < requests.Count; i++)
+            {
+                SimulationActionActivationRequestState request = requests[i];
+                writer.WriteBoolean(request.IsValid);
+                if (!request.IsValid)
+                    continue;
+                writer.WriteString(request.ActionId);
+                WriteOptionalSkill(writer, request.SkillId);
+                WriteOptionalOperation(writer, request.SkillEntryOperation);
+                writer.WriteString(request.ContextId);
+                writer.WriteString(request.SourceInputRequestId);
+                writer.WriteUInt64(request.InputSequence);
+                writer.WriteUInt64(request.StartTick);
+                writer.WriteString(request.TargetKey);
+                WriteTarget(writer, request.TargetSnapshot);
+                SimulationExecutionSourceCodec.Write(writer, request.Source);
+                WriteEquipmentContext(writer, request.EquipmentContext);
+                writer.WriteUInt64(request.ReplacementActionInstanceId);
+            }
+        }
+
+        static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout,
+            EquipmentProgramLayout equipmentLayout)
+        {
+            int count = ReadCount(reader, 1000000, "Float32 Action activation request");
+            var requests = new List<SimulationActionActivationRequestState>(count);
+            for (int i = 0; i < count; i++)
+            {
+                if (!reader.ReadBoolean())
+                    continue;
+                var request = new SimulationActionActivationRequestState(
+                    reader.ReadString(),
+                    ReadOptionalSkill(reader),
+                    ReadOptionalOperation(reader, layout),
+                    reader.ReadString(),
+                    reader.ReadString(),
+                    reader.ReadUInt64(),
+                    reader.ReadUInt64(),
+                    reader.ReadString(),
+                    ReadTarget(reader),
+                    SimulationExecutionSourceCodec.Read(reader),
+                    ReadEquipmentContext(reader, equipmentLayout),
+                    reader.ReadUInt64());
+                if (!request.IsValid)
+                    throw new InvalidDataException("Float32 Action activation request identity is invalid.");
+                requests.Add(request);
+            }
+            return requests;
+        }
+
+        static void WriteActionInstances(CanonicalWriter writer, IReadOnlyList<Float32ActionInstanceState> actions)
+        {
+            writer.WriteInt32(actions.Count);
+            for (int i = 0; i < actions.Count; i++)
+            {
+                Float32ActionInstanceState action = actions[i];
+                writer.WriteBoolean(action.IsValid);
+                if (!action.IsValid)
+                    continue;
+                writer.WriteString(action.ActionId);
+                WriteOptionalSkill(writer, action.SkillId);
+                WriteOptionalOperation(writer, action.SkillEntryOperation);
+                writer.WriteUInt64(action.SkillExecutionGeneration);
+                writer.WriteString(action.ContextId);
+                writer.WriteUInt64(action.InstanceId);
+                writer.WriteUInt64(action.PredictionKey);
+                writer.WriteString(action.SourceInputRequestId);
+                writer.WriteUInt64(action.InputSequence);
+                writer.WriteUInt64(action.StartTick);
+                writer.WriteString(action.TargetKey);
+                WriteTarget(writer, action.TargetSnapshot);
+                SimulationExecutionSourceCodec.Write(writer, action.Source);
+                writer.WriteByte((byte)action.Phase);
+                writer.WriteByte((byte)action.State);
+                writer.WriteByte((byte)action.LastTransition);
+                writer.WriteUInt64(action.LastTransitionTick);
+                writer.WriteUInt64(action.LastTransitionSourceTick);
+                writer.WriteString(action.Reason);
+                WriteEquipmentContext(writer, action.EquipmentContext);
+                writer.WriteUInt64(action.SegmentGeneration);
+            }
+        }
+
+        static List<Float32ActionInstanceState> ReadActionInstances(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout,
+            EquipmentProgramLayout equipmentLayout)
+        {
+            int count = ReadCount(reader, 1000000, "Float32 Action instance");
+            var actions = new List<Float32ActionInstanceState>(count);
+            for (int i = 0; i < count; i++)
+            {
+                if (!reader.ReadBoolean())
+                    continue;
+                var action = new Float32ActionInstanceState(
+                    reader.ReadString(),
+                    ReadOptionalSkill(reader),
+                    ReadOptionalOperation(reader, layout),
+                    reader.ReadUInt64(),
+                    reader.ReadString(),
+                    reader.ReadUInt64(),
+                    reader.ReadUInt64(),
+                    reader.ReadString(),
+                    reader.ReadUInt64(),
+                    reader.ReadUInt64(),
+                    reader.ReadString(),
+                    ReadTarget(reader),
+                    SimulationExecutionSourceCodec.Read(reader),
+                    ReadEnum<SimulationActionPhase>(reader.ReadByte()),
+                    ReadEnum<SimulationActionState>(reader.ReadByte()),
+                    ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
+                    reader.ReadUInt64(),
+                    reader.ReadUInt64(),
+                    reader.ReadString(),
+                    ReadEquipmentContext(reader, equipmentLayout),
+                    reader.ReadUInt64());
+                if (!action.IsValid)
+                    throw new InvalidDataException("Float32 Action instance identity is invalid.");
+                actions.Add(action);
+            }
+            return actions;
+        }
+
+        static void WriteTimelineRetentions(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<int, Float32ActionInstanceReference> retentions)
+        {
+            var keys = new List<int>(retentions.Keys);
+            keys.Sort();
+            writer.WriteInt32(keys.Count);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                writer.WriteInt32(keys[i]);
+                WriteActionReference(writer, retentions[keys[i]]);
+            }
+        }
+
+        static Dictionary<int, Float32ActionInstanceReference> ReadTimelineRetentions(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            int count = ReadCount(reader, layout.TimelineRetentionOperationIds.Count, "Float32 Timeline retention");
+            var values = new Dictionary<int, Float32ActionInstanceReference>(count);
+            int previous = -1;
+            for (int i = 0; i < count; i++)
+            {
+                int operation = reader.ReadInt32();
+                if (operation < 0 || operation <= previous || !layout.HasTimelineRetention(new OperationHandle(operation)))
+                    throw new InvalidDataException("Float32 Timeline retention operation identities are invalid or not canonically ordered.");
+                Float32ActionInstanceReference value = ReadActionReference(reader, layout);
+                if (!value.IsValid)
+                    throw new InvalidDataException("Float32 Timeline retention action identity is invalid.");
+                values.Add(operation, value);
+                previous = operation;
+            }
+            return values;
+        }
+
+        static void WriteMotionWarpStates(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<int, Float32MotionWarpState> states)
+        {
+            var keys = new List<int>(states.Keys);
+            keys.Sort();
+            writer.WriteInt32(keys.Count);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                writer.WriteInt32(keys[i]);
+                WriteMotionWarpState(writer, states[keys[i]]);
+            }
+        }
+
+        static Dictionary<int, Float32MotionWarpState> ReadMotionWarpStates(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            int count = ReadCount(reader, layout.MotionWarpOperationIds.Count, "Float32 MotionWarp state");
+            var values = new Dictionary<int, Float32MotionWarpState>(count);
+            int previous = -1;
+            for (int i = 0; i < count; i++)
+            {
+                int operation = reader.ReadInt32();
+                if (operation < 0 || operation <= previous || !layout.HasMotionWarp(new OperationHandle(operation)))
+                    throw new InvalidDataException("Float32 MotionWarp operation identities are invalid or not canonically ordered.");
+                Float32MotionWarpState value = ReadMotionWarpState(reader, layout);
+                if (!value.Active)
+                    throw new InvalidDataException("Float32 MotionWarp state is not active.");
+                values.Add(operation, value);
+                previous = operation;
+            }
+            return values;
+        }
+
+        static void WriteMotionWarpState(CanonicalWriter writer, Float32MotionWarpState value)
+        {
+            writer.WriteBoolean(value.Active);
+            if (!value.Active)
+                return;
+            writer.WriteBoolean(value.Initialized);
+            writer.WriteUInt64(value.PlaybackGeneration);
+            WriteActionReference(writer, value.ActionInstance);
+            writer.WriteVector3(value.StartBodyPosition);
+            writer.WriteYaw(value.StartBodyYaw);
+            writer.WriteVector3(value.SourceWindowStartPosition);
+            writer.WriteScalar(value.SourceWindowStartYaw);
+            writer.WriteVector3(value.ResolvedTargetPosition);
+            writer.WriteYaw(value.ResolvedTargetYaw);
+            writer.WriteByte((byte)value.LimitResult);
+            writer.WriteVector3(value.PreviousWarpedPosition);
+            writer.WriteYaw(value.PreviousWarpedYaw);
+            writer.WriteScalar(value.LastPositionProgress);
+            writer.WriteScalar(value.LastYawProgress);
+            WriteOptionalOperation(writer, value.SourceOperation);
+        }
+
+        static Float32MotionWarpState ReadMotionWarpState(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            if (!reader.ReadBoolean())
+                return default;
+            return new Float32MotionWarpState(
+                true,
+                reader.ReadBoolean(),
+                reader.ReadUInt64(),
+                ReadActionReference(reader, layout),
+                reader.ReadVector3(),
+                reader.ReadYaw(),
+                reader.ReadVector3(),
+                reader.ReadScalar(),
+                reader.ReadVector3(),
+                reader.ReadYaw(),
+                ReadEnum<ProgramMotionWarpLimitResult>(reader.ReadByte()),
+                reader.ReadVector3(),
+                reader.ReadYaw(),
+                reader.ReadScalar(),
+                reader.ReadScalar(),
+                ReadOptionalOperation(reader, layout));
+        }
+
+        static void WriteValue(CanonicalWriter writer, CharacterStateValue value)
+        {
+            writer.WriteByte((byte)value.Kind);
+            switch (value.Kind)
+            {
+                case ProgramStateValueKind.Boolean: writer.WriteBoolean(value.Boolean); break;
+                case ProgramStateValueKind.Int32: writer.WriteInt32(value.Int32); break;
+                case ProgramStateValueKind.UInt64: writer.WriteUInt64(value.UInt64); break;
+                case ProgramStateValueKind.Scalar: writer.WriteScalar(value.Scalar); break;
+                case ProgramStateValueKind.Vector2: writer.WriteVector2(value.Vector2); break;
+                case ProgramStateValueKind.Vector3: writer.WriteVector3(value.Vector3); break;
+                case ProgramStateValueKind.Yaw: writer.WriteYaw(value.Yaw); break;
+                case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
+                case ProgramStateValueKind.BlackboardOwnerToken: WriteBlackboardOwnerToken(writer, value.BlackboardOwnerToken); break;
+                case ProgramStateValueKind.BlackboardWriteStamp: WriteBlackboardWriteStamp(writer, value.BlackboardWriteStamp); break;
+                case ProgramStateValueKind.ActionTargetSnapshot: WriteTarget(writer, value.ActionTargetSnapshot); break;
+                default: throw new InvalidDataException($"Unsupported Float32 Character state value kind '{value.Kind}'.");
+            }
+        }
+
+        static CharacterStateValue ReadValue(CanonicalReader reader)
+        {
+            ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte());
+            return kind switch
+            {
+                ProgramStateValueKind.Boolean => CharacterStateValue.FromBoolean(reader.ReadBoolean()),
+                ProgramStateValueKind.Int32 => CharacterStateValue.FromInt32(reader.ReadInt32()),
+                ProgramStateValueKind.UInt64 => CharacterStateValue.FromUInt64(reader.ReadUInt64()),
+                ProgramStateValueKind.Scalar => CharacterStateValue.FromScalar(reader.ReadScalar()),
+                ProgramStateValueKind.Vector2 => CharacterStateValue.FromVector2(reader.ReadVector2()),
+                ProgramStateValueKind.Vector3 => CharacterStateValue.FromVector3(reader.ReadVector3()),
+                ProgramStateValueKind.Yaw => CharacterStateValue.FromYaw(reader.ReadYaw()),
+                ProgramStateValueKind.Identity => CharacterStateValue.FromIdentity(reader.ReadString()),
+                ProgramStateValueKind.BlackboardOwnerToken => CharacterStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader)),
+                ProgramStateValueKind.BlackboardWriteStamp => CharacterStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader)),
+                ProgramStateValueKind.ActionTargetSnapshot => CharacterStateValue.FromActionTargetSnapshot(ReadTarget(reader)),
+                _ => throw new InvalidDataException($"Unsupported Float32 Character state value kind '{kind}'.")
+            };
+        }
+
+        static void WriteBlackboardOwnerToken(CanonicalWriter writer, BlackboardOwnerToken value)
+        {
+            writer.WriteByte(value.IsValid ? (byte)value.ScopeKind : (byte)0);
+            writer.WriteInt32(value.IsValid ? value.CompiledOwnerIndex : -1);
+            writer.WriteUInt64(value.IsValid ? value.Generation : 0);
+        }
+
+        static BlackboardOwnerToken ReadBlackboardOwnerToken(CanonicalReader reader)
+        {
+            byte scope = reader.ReadByte();
+            int owner = reader.ReadInt32();
+            ulong generation = reader.ReadUInt64();
+            if (scope == 0 && owner == -1 && generation == 0)
+                return default;
+            return new BlackboardOwnerToken(
+                ReadEnum<ProgramScopeKind>(scope),
+                owner,
+                generation);
+        }
+
+        static void WriteBlackboardWriteStamp(CanonicalWriter writer, BlackboardWriteStamp value)
+        {
+            writer.WriteInt32(value.IsValid ? value.SourceOperation.Value : -1);
+            writer.WriteUInt64(value.IsValid ? value.LogicTick : 0);
+            writer.WriteUInt64(value.IsValid ? value.ActionInstanceId : 0);
+            writer.WriteInt32(value.IsValid && value.TimelineOperation.IsValid ? value.TimelineOperation.Value : -1);
+            writer.WriteInt32(value.IsValid && value.ClipOperation.IsValid ? value.ClipOperation.Value : -1);
+            writer.WriteInt32(value.IsValid ? value.Cycle : 0);
+        }
+
+        static BlackboardWriteStamp ReadBlackboardWriteStamp(CanonicalReader reader)
+        {
+            int source = reader.ReadInt32();
+            ulong tick = reader.ReadUInt64();
+            ulong action = reader.ReadUInt64();
+            int timeline = reader.ReadInt32();
+            int clip = reader.ReadInt32();
+            int cycle = reader.ReadInt32();
+            if (source == -1 && tick == 0 && action == 0 && timeline == -1 && clip == -1 && cycle == 0)
+                return default;
+            return new BlackboardWriteStamp(
+                new OperationHandle(source),
+                tick,
+                action,
+                timeline < 0 ? OperationHandle.Invalid : new OperationHandle(timeline),
+                clip < 0 ? OperationHandle.Invalid : new OperationHandle(clip),
+                cycle);
+        }
+
+        static void WriteTarget(CanonicalWriter writer, SimulationActionTargetSnapshot target)
+        {
+            writer.WriteString(target.TargetId);
+            writer.WriteVector3(target.Position);
+            writer.WriteYaw(target.Yaw);
+        }
+
+        static SimulationActionTargetSnapshot ReadTarget(CanonicalReader reader) =>
+            new SimulationActionTargetSnapshot(
+                reader.ReadString(),
+                reader.ReadVector3(),
+                reader.ReadYaw());
+
+        static void WriteActionReference(CanonicalWriter writer, Float32ActionInstanceReference value)
+        {
+            writer.WriteBoolean(value.IsValid);
+            if (!value.IsValid)
+                return;
+            writer.WriteString(value.ActionId);
+            writer.WriteString(value.ContextId);
+            writer.WriteUInt64(value.InstanceId);
+            writer.WriteUInt64(value.PredictionKey);
+            WriteOptionalSkill(writer, value.SkillId);
+            WriteOptionalOperation(writer, value.SkillEntryOperation);
+            writer.WriteUInt64(value.SkillExecutionGeneration);
+        }
+
+        static Float32ActionInstanceReference ReadActionReference(
+            CanonicalReader reader,
+            GameplayAbilityExecutionLayout layout)
+        {
+            if (!reader.ReadBoolean())
+                return default;
+            return new Float32ActionInstanceReference(
+                reader.ReadString(),
+                reader.ReadString(),
+                reader.ReadUInt64(),
+                reader.ReadUInt64(),
+                ReadOptionalSkill(reader),
+                ReadOptionalOperation(reader, layout),
+                reader.ReadUInt64());
+        }
+
+        static void WriteOptionalSkill(CanonicalWriter writer, CharacterSkillId value)
+        {
+            writer.WriteBoolean(value.IsValid);
+            if (value.IsValid)
+                writer.WriteString(value.Value);
+        }
+
+        static CharacterSkillId ReadOptionalSkill(CanonicalReader reader) =>
+            reader.ReadBoolean() ? new CharacterSkillId(reader.ReadString()) : default;
+
+        static void WriteOptionalOperation(CanonicalWriter writer, OperationHandle value) =>
+            writer.WriteInt32(value.IsValid ? value.Value : -1);
+
+        static OperationHandle ReadOptionalOperation(CanonicalReader reader, GameplayAbilityExecutionLayout layout)
+        {
+            int value = reader.ReadInt32();
+            if (value < -1 || layout != null && value >= layout.Operations.Count)
+                throw new InvalidDataException("Float32 Character runtime state operation handle is invalid.");
+            return value < 0 ? OperationHandle.Invalid : new OperationHandle(value);
+        }
+
+        static OperationHandle ReadRequiredOperation(CanonicalReader reader, GameplayAbilityExecutionLayout layout)
+        {
+            OperationHandle operation = ReadOptionalOperation(reader, layout);
+            return operation.IsValid
+                ? operation
+                : throw new InvalidDataException("Float32 Character runtime state requires an operation handle.");
+        }
+
+        static void WriteEquipmentContext(CanonicalWriter writer, EquipmentActionContext context)
+        {
+            writer.WriteBoolean(context.IsValid);
+            if (!context.IsValid)
+                return;
+            writer.WriteString(context.SlotId.Value);
+            writer.WriteString(context.EquipmentId.Value);
+            writer.WriteString(context.FeatureId.Value);
+            writer.WriteUInt64(context.EquipmentRevision);
+            writer.WriteString(context.RouteId.Value);
+        }
+
+        static EquipmentActionContext ReadEquipmentContext(CanonicalReader reader, EquipmentProgramLayout layout)
+        {
+            if (!reader.ReadBoolean())
+                return default;
+            var context = new EquipmentActionContext(
+                new EquipmentSlotId(reader.ReadString()),
+                new EquipmentId(reader.ReadString()),
+                new EquipmentFeatureId(reader.ReadString()),
+                reader.ReadUInt64(),
+                new EquipmentActionRouteId(reader.ReadString()));
+            if (layout == null)
+                throw new InvalidDataException("Float32 Character runtime state contains an Equipment Action Context without an Equipment layout.");
+            EquipmentProgramItem item = layout.RequireItem(context.EquipmentId);
+            EquipmentProgramFeature feature = layout.RequireFeature(context.FeatureId);
+            EquipmentProgramRoute route = layout.RequireRoute(context.RouteId);
+            if (!layout.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
+                throw new InvalidDataException($"Equipment Action Context '{context}' has no Feature route implementation.");
+            if (item.SlotId != context.SlotId || item.FeatureId != context.FeatureId ||
+                route.OwnerSlotId != context.SlotId || feature.FeatureId != context.FeatureId)
+            {
+                throw new InvalidDataException($"Equipment Action Context '{context}' does not match the Equipment layout.");
+            }
+            return context;
+        }
+
+        static EquipmentProgramLayout CreateEquipmentLayout(
+            Float32GameplayAbilityExecutionInstallation installation,
+            CharacterEquipmentRuntimeBinding binding)
+        {
+            if (binding == null)
+                throw new InvalidDataException("Float32 Character runtime state requires an Equipment binding.");
+            if (installation == null)
+                throw new InvalidDataException("Float32 Character runtime state Equipment layout has no Ability installation.");
+            return EquipmentProgramLayoutCompiler.Compile(
+                binding,
+                installation.Data.CatalogEntries,
+                installation.Data.References,
+                installation.Data.Producers);
+        }
+
+        static int ReadCount(CanonicalReader reader, int maximum, string label)
+        {
+            int count = reader.ReadInt32();
+            if (count < 0 || count > maximum)
+                throw new InvalidDataException($"{label} count '{count}' is invalid.");
+            return count;
+        }
+
+        static T ReadEnum<T>(byte value) where T : struct
+        {
+            object candidate = Enum.ToObject(typeof(T), value);
+            if (!Enum.IsDefined(typeof(T), candidate))
+                throw new InvalidDataException($"Float32 Character runtime state enum '{typeof(T).Name}' value '{value}' is invalid.");
+            return (T)candidate;
+        }
+
+        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        {
+            if (source.Length != canonical.Length)
+                throw new InvalidDataException($"{label} is not canonical.");
+            for (int i = 0; i < source.Length; i++)
+                if (source[i] != canonical[i])
+                    throw new InvalidDataException($"{label} is not canonical.");
+        }
+    }
+}

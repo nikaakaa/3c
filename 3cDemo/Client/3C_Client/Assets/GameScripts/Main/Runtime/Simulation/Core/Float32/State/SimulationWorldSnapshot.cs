@@ -7,15 +7,16 @@ namespace ThirdPersonSimulation
 {
     public sealed class SimulationActorState
     {
-        public SimulationActorState(ActorId actorId, CharacterSimulationState state)
+        public SimulationActorState(ActorId actorId, Float32CharacterRuntimeState state)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("ActorId is invalid.", nameof(actorId));
             ActorId = actorId;
             State = state ?? throw new ArgumentNullException(nameof(state));
         }
+
         public ActorId ActorId { get; }
-        public CharacterSimulationState State { get; }
+        public Float32CharacterRuntimeState State { get; }
     }
 
     public sealed class SimulationActorSnapshot
@@ -24,43 +25,43 @@ namespace ThirdPersonSimulation
 
         public SimulationActorSnapshot(
             ActorId actorId,
-            ProgramId programId,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+            GameplayAbilityExecutionIdentity abilityIdentity,
             CharacterStateHash stateHash,
             string stateCodecIdentity,
             byte[] stateBytes)
         {
-            if (!actorId.IsValid || !programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !stateHash.IsValid ||
-                !string.Equals(stateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal))
+            if (!actorId.IsValid || !abilityIdentity.IsValid || !stateHash.IsValid ||
+                !string.Equals(stateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal))
+            {
                 throw new ArgumentException("Actor snapshot identity is incomplete.");
+            }
             ActorId = actorId;
-            ProgramId = programId;
-            ProgramHash = programHash;
-            LayoutHash = layoutHash;
+            AbilityIdentity = abilityIdentity;
             StateHash = stateHash;
             StateCodecIdentity = stateCodecIdentity;
             m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
         }
 
         public ActorId ActorId { get; }
-        public ProgramId ProgramId { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
+        public GameplayAbilityExecutionIdentity AbilityIdentity { get; }
         public CharacterStateHash StateHash { get; }
         public string StateCodecIdentity { get; }
         public ReadOnlyMemory<byte> StateBytes => m_StateBytes;
         internal byte[] StateBytesBuffer => m_StateBytes;
 
-        public CharacterSimulationState Decode(CharacterSimulationProgram program)
+        public Float32CharacterRuntimeState Decode(
+            Float32GameplayAbilityExecutionInstallation installation,
+            CharacterEquipmentRuntimeBinding equipmentBinding)
         {
-            if (!string.Equals(StateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal) ||
-                program == null || program.Manifest.ProgramId != ProgramId || !program.ProgramHash.Equals(ProgramHash) || !program.LayoutHash.Equals(LayoutHash))
-                throw new InvalidDataException($"Actor '{ActorId}' snapshot Program binding is stale or mismatched.");
-            CharacterSimulationState state = CharacterSimulationStateCodec.Read(m_StateBytes, program);
-            CharacterStateHash hash = CharacterSimulationStateCodec.ComputeHash(state);
-            if (!hash.Equals(StateHash))
-                throw new InvalidDataException($"Actor '{ActorId}' Character state hash is invalid.");
+            if (!string.Equals(StateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
+                installation == null)
+            {
+                throw new InvalidDataException($"Actor '{ActorId}' snapshot Ability binding is stale or mismatched.");
+            }
+            installation.Identity.Require(AbilityIdentity);
+            Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(m_StateBytes, installation, equipmentBinding);
+            if (!Float32CharacterRuntimeStateCodec.ComputeHash(state).Equals(StateHash))
+                throw new InvalidDataException($"Actor '{ActorId}' Character runtime state hash is invalid.");
             return state;
         }
     }
@@ -91,18 +92,14 @@ namespace ThirdPersonSimulation
             Tick = tick;
             var copied = actors == null ? new List<SimulationActorSnapshot>() : new List<SimulationActorSnapshot>(actors);
             for (int i = 0; i < copied.Count; i++)
-            {
                 if (copied[i] == null)
                     throw new ArgumentException("Simulation World Snapshot actor roster contains a null entry.", nameof(actors));
-            }
             copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (copied.Count == 0)
                 throw new ArgumentException("Simulation World Snapshot actor roster cannot be empty.", nameof(actors));
-            for (int i = 0; i < copied.Count; i++)
-            {
-                if (copied[i] == null || i > 0 && copied[i - 1].ActorId == copied[i].ActorId)
-                    throw new ArgumentException("Simulation World Snapshot actor roster contains null or duplicate entries.", nameof(actors));
-            }
+            for (int i = 1; i < copied.Count; i++)
+                if (copied[i - 1].ActorId == copied[i].ActorId)
+                    throw new ArgumentException("Simulation World Snapshot actor roster contains duplicate entries.", nameof(actors));
             m_Actors = copied.AsReadOnly();
             m_WorldStateBytes = worldStateBytes == null ? throw new ArgumentNullException(nameof(worldStateBytes)) : (byte[])worldStateBytes.Clone();
             DeterministicValidity = deterministicValidity;
@@ -121,61 +118,62 @@ namespace ThirdPersonSimulation
         public bool DeterministicValidity { get; }
         public SimulationWorldHash WorldHash { get; }
 
-        public WorldSimulationState DecodeWorldState()
-        {
-            return WorldSimulationStateCodec.Read(m_WorldStateBytes, NumericProfile, SolverId, SolverVersion, WorldRevision);
-        }
+        public WorldSimulationState DecodeWorldState() =>
+            WorldSimulationStateCodec.Read(m_WorldStateBytes, NumericProfile, SolverId, SolverVersion, WorldRevision);
     }
 
     public static class SimulationWorldSnapshotFactory
     {
         public static SimulationWorldSnapshot Capture(
-            SimulationProgramCatalog catalog,
+            Float32CharacterRuntime characterRuntime,
             SimulationTick tick,
             IEnumerable<SimulationActorState> actorStates,
             WorldSimulationState worldState,
             WorldCapability solverCapabilities)
         {
-            if (catalog == null)
-                throw new ArgumentNullException(nameof(catalog));
+            if (characterRuntime == null)
+                throw new ArgumentNullException(nameof(characterRuntime));
             if (worldState == null)
                 throw new ArgumentNullException(nameof(worldState));
-            if (catalog.NumericProfile != worldState.NumericProfile)
-                throw new InvalidOperationException("Program Catalog and World state Numeric Profiles do not match.");
+            if (characterRuntime.NumericProfile != worldState.NumericProfile)
+                throw new InvalidOperationException("Character Runtime and World state Numeric Profiles do not match.");
             var actors = actorStates == null ? new List<SimulationActorState>() : new List<SimulationActorState>(actorStates);
             for (int i = 0; i < actors.Count; i++)
-            {
                 if (actors[i] == null)
-                    throw new InvalidOperationException("Character state roster contains a null entry.");
-            }
+                    throw new InvalidOperationException("Character runtime state roster contains a null entry.");
             actors.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (actors.Count != worldState.Bodies.Count)
-                throw new InvalidOperationException("Character state roster and World body roster do not match.");
+            if (actors.Count != worldState.Bodies.Count || actors.Count != characterRuntime.Roster.Count)
+                throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters do not match.");
             var snapshots = new SimulationActorSnapshot[actors.Count];
-            bool programsDeterministic = true;
+            bool abilitiesDeterministic = true;
             for (int i = 0; i < actors.Count; i++)
             {
                 SimulationActorState actor = actors[i];
-                if (i > 0 && actors[i - 1].ActorId == actor.ActorId || worldState.Bodies[i].ActorId != actor.ActorId)
-                    throw new InvalidOperationException("Character state roster and World body roster are not the same stable ActorId order.");
-                CharacterSimulationProgram program = catalog.GetRequired(actor.State.ProgramId);
-                if (actor.State.NumericProfile != catalog.NumericProfile || !program.ProgramHash.Equals(actor.State.ProgramHash) || !program.LayoutHash.Equals(actor.State.LayoutHash))
-                    throw new InvalidOperationException($"Actor '{actor.ActorId}' Character state binding does not match Catalog.");
-                byte[] stateBytes = CharacterSimulationStateCodec.Write(actor.State);
+                SimulationActorBinding binding = characterRuntime.Roster[i];
+                if (i > 0 && actors[i - 1].ActorId == actor.ActorId ||
+                    worldState.Bodies[i].ActorId != actor.ActorId || binding.ActorId != actor.ActorId)
+                {
+                    throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters are not the same stable ActorId order.");
+                }
+                Float32GameplayAbilityExecutionInstallation installation = binding.AbilityInstallations.Require(actor.State.AbilityIdentity.AbilityId);
+                installation.Identity.Require(actor.State.AbilityIdentity);
+                if (actor.State.NumericProfile != characterRuntime.NumericProfile)
+                    throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state Numeric Profile does not match Character Runtime.");
+                byte[] stateBytes = Float32CharacterRuntimeStateCodec.Write(actor.State);
                 snapshots[i] = new SimulationActorSnapshot(
                     actor.ActorId,
-                    program.Manifest.ProgramId,
-                    program.ProgramHash,
-                    program.LayoutHash,
-                    CharacterSimulationStateCodec.ComputeHash(actor.State),
-                    CharacterSimulationStateCodec.CodecIdentity,
+                    installation.Identity,
+                    Float32CharacterRuntimeStateCodec.ComputeHash(actor.State),
+                    Float32CharacterRuntimeStateCodec.CodecIdentity,
                     stateBytes);
-                programsDeterministic &= program.Manifest.NumericProfile.DeterministicReplay && program.Manifest.Capabilities.HasGameplayCapability("DeterministicReplay");
+                Float32GameplayAbilityExecutionData ability = installation.Data;
+                abilitiesDeterministic &= ability.NumericProfile.DeterministicReplay && ability.Capabilities.HasGameplayCapability("DeterministicReplay");
             }
-            bool deterministicValidity = catalog.NumericProfile.DeterministicReplay && programsDeterministic && (solverCapabilities & WorldCapability.DeterministicReplay) != 0;
+            bool deterministicValidity = characterRuntime.NumericProfile.DeterministicReplay && abilitiesDeterministic &&
+                (solverCapabilities & WorldCapability.DeterministicReplay) != 0;
             return new SimulationWorldSnapshot(
-                catalog.NumericProfile,
-                catalog.CatalogHash,
+                characterRuntime.NumericProfile,
+                characterRuntime.GameplayContentHash,
                 worldState.SolverId,
                 worldState.SolverVersion,
                 worldState.WorldRevision,
@@ -196,17 +194,19 @@ namespace ThirdPersonSimulation
             WorldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
             var copied = actors == null ? new List<SimulationActorState>() : new List<SimulationActorState>(actors);
             for (int i = 0; i < copied.Count; i++)
-            {
                 if (copied[i] == null)
                     throw new ArgumentException("Simulation state Actor roster contains a null entry.", nameof(actors));
-            }
             copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (copied.Count == 0 || copied.Count != worldState.Bodies.Count)
                 throw new ArgumentException("Simulation state Actor and World body rosters must be non-empty and equal.", nameof(actors));
             for (int i = 0; i < copied.Count; i++)
             {
-                if (copied[i] == null || copied[i].State.NumericProfile != worldState.NumericProfile || copied[i].ActorId != worldState.Bodies[i].ActorId || i > 0 && copied[i - 1].ActorId == copied[i].ActorId)
+                if (copied[i].State.NumericProfile != worldState.NumericProfile ||
+                    copied[i].ActorId != worldState.Bodies[i].ActorId ||
+                    i > 0 && copied[i - 1].ActorId == copied[i].ActorId)
+                {
                     throw new ArgumentException("Simulation state Actor and World body rosters must share one stable ActorId order.", nameof(actors));
+                }
             }
             m_Actors = copied.AsReadOnly();
         }
@@ -218,62 +218,21 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationWorldStateStore
     {
-        SimulationProgramCatalog m_Catalog;
+        readonly Float32CharacterRuntime m_Runtime;
         SimulationWorldStateSet m_Current;
 
-        public SimulationWorldStateStore(SimulationProgramCatalog catalog, SimulationWorldStateSet initialState)
+        public SimulationWorldStateStore(Float32CharacterRuntime runtime, SimulationWorldStateSet initialState)
         {
-            m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+            m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             m_Current = initialState ?? throw new ArgumentNullException(nameof(initialState));
             ValidateCurrentBindings(initialState);
         }
 
         public SimulationWorldStateSet Current => m_Current;
 
-        public SimulationWorldStateSet PrepareCatalogAdoption(SimulationProgramCatalog catalog)
-        {
-            if (catalog == null)
-                throw new ArgumentNullException(nameof(catalog));
-            if (catalog.NumericProfile != m_Catalog.NumericProfile ||
-                catalog.TickRate != m_Catalog.TickRate ||
-                !catalog.OperationSetVersion.Equals(m_Catalog.OperationSetVersion))
-            {
-                throw new InvalidOperationException("Program Catalog adoption changes the locked runtime ABI.");
-            }
-            var actors = new SimulationActorState[m_Current.Actors.Count];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                SimulationActorState current = m_Current.Actors[i];
-                CharacterSimulationProgram program = catalog.GetRequired(current.State.ProgramId);
-                if (!program.LayoutHash.Equals(current.State.LayoutHash))
-                    throw new InvalidOperationException($"Actor '{current.ActorId}' Program LayoutHash changed during adoption.");
-                actors[i] = new SimulationActorState(current.ActorId, current.State.RebindProgram(program));
-            }
-            var candidate = new SimulationWorldStateSet(m_Current.LastCompletedTick, actors, m_Current.WorldState);
-            ValidateCurrentBindings(candidate, catalog);
-            return candidate;
-        }
+        public void Restore(SimulationWorldSnapshot snapshot) => m_Current = ValidateAndDecode(snapshot);
 
-        public void AdoptCatalog(SimulationProgramCatalog catalog, SimulationWorldStateSet state)
-        {
-            if (catalog == null || state == null)
-                throw new ArgumentNullException(catalog == null ? nameof(catalog) : nameof(state));
-            ValidateCurrentBindings(state, catalog);
-            RequireSameRosterAndWorldBinding(m_Current, state);
-            m_Catalog = catalog;
-            m_Current = state;
-        }
-
-        public void Restore(SimulationWorldSnapshot snapshot)
-        {
-            SimulationWorldStateSet restored = ValidateAndDecode(snapshot);
-            m_Current = restored;
-        }
-
-        public SimulationWorldStateSet PrepareRestore(SimulationWorldSnapshot snapshot)
-        {
-            return ValidateAndDecode(snapshot);
-        }
+        public SimulationWorldStateSet PrepareRestore(SimulationWorldSnapshot snapshot) => ValidateAndDecode(snapshot);
 
         public void ReplaceValidated(SimulationWorldStateSet stateSet)
         {
@@ -293,10 +252,8 @@ namespace ThirdPersonSimulation
             ValidateCurrentBindings(stateSet);
             RequireSameRosterAndWorldBinding(m_Current, stateSet);
             for (int i = 0; i < stateSet.Actors.Count; i++)
-            {
                 if (stateSet.Actors[i].State.LastCompletedTick != stateSet.LastCompletedTick)
                     throw new InvalidOperationException($"Actor '{stateSet.Actors[i].ActorId}' state Tick does not match the published Tick.");
-            }
             m_Current = stateSet;
         }
 
@@ -304,12 +261,14 @@ namespace ThirdPersonSimulation
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            if (snapshot.NumericProfile != m_Catalog.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Catalog.CatalogHash))
-                throw new InvalidDataException("Snapshot Numeric Profile or GameplayContentHash does not match the active Catalog.");
+            if (snapshot.NumericProfile != m_Runtime.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Runtime.GameplayContentHash))
+                throw new InvalidDataException("Snapshot Numeric Profile or GameplayContentHash does not match the active Character Runtime.");
             if (!snapshot.SolverId.Equals(m_Current.WorldState.SolverId) ||
                 !string.Equals(snapshot.SolverVersion, m_Current.WorldState.SolverVersion, StringComparison.Ordinal) ||
                 !snapshot.WorldRevision.Equals(m_Current.WorldState.WorldRevision))
+            {
                 throw new InvalidDataException("Snapshot Solver or WorldRevision binding does not match the active world.");
+            }
             if (snapshot.Actors.Count != m_Current.Actors.Count)
                 throw new InvalidDataException("Snapshot Actor roster count does not match the active roster.");
             var restoredActors = new SimulationActorState[snapshot.Actors.Count];
@@ -317,10 +276,11 @@ namespace ThirdPersonSimulation
             {
                 SimulationActorSnapshot actorSnapshot = snapshot.Actors[i];
                 SimulationActorState currentActor = m_Current.Actors[i];
-                if (actorSnapshot.ActorId != currentActor.ActorId || actorSnapshot.ProgramId != currentActor.State.ProgramId)
-                    throw new InvalidDataException("Snapshot Actor roster or Program binding does not match the active roster.");
-                CharacterSimulationProgram program = m_Catalog.GetRequired(actorSnapshot.ProgramId);
-                CharacterSimulationState state = actorSnapshot.Decode(program);
+                SimulationActorBinding binding = m_Runtime.Roster[i];
+                if (actorSnapshot.ActorId != currentActor.ActorId || actorSnapshot.AbilityIdentity != currentActor.State.AbilityIdentity || binding.ActorId != actorSnapshot.ActorId)
+                    throw new InvalidDataException("Snapshot Actor roster or Ability binding does not match the active roster.");
+                Float32GameplayAbilityExecutionInstallation installation = binding.AbilityInstallations.Require(actorSnapshot.AbilityIdentity.AbilityId);
+                Float32CharacterRuntimeState state = actorSnapshot.Decode(installation, binding.EquipmentRuntimeBinding);
                 if (state.LastCompletedTick != snapshot.Tick.Value)
                     throw new InvalidDataException($"Actor '{actorSnapshot.ActorId}' state Tick does not match Snapshot Tick.");
                 restoredActors[i] = new SimulationActorState(actorSnapshot.ActorId, state);
@@ -329,26 +289,22 @@ namespace ThirdPersonSimulation
             if (worldState.Bodies.Count != restoredActors.Length)
                 throw new InvalidDataException("Snapshot World body roster does not match Actor roster.");
             for (int i = 0; i < restoredActors.Length; i++)
-            {
                 if (worldState.Bodies[i].ActorId != restoredActors[i].ActorId)
                     throw new InvalidDataException("Snapshot World body order does not match Actor roster.");
-            }
             return new SimulationWorldStateSet(snapshot.Tick.Value, restoredActors, worldState);
         }
 
         void ValidateCurrentBindings(SimulationWorldStateSet stateSet)
         {
-            ValidateCurrentBindings(stateSet, m_Catalog);
-        }
-
-        static void ValidateCurrentBindings(SimulationWorldStateSet stateSet, SimulationProgramCatalog catalog)
-        {
+            if (stateSet.WorldState.NumericProfile != m_Runtime.NumericProfile || stateSet.Actors.Count != m_Runtime.Roster.Count)
+                throw new InvalidDataException("Simulation state does not match the active Character Runtime.");
             for (int i = 0; i < stateSet.Actors.Count; i++)
             {
-                CharacterSimulationState state = stateSet.Actors[i].State;
-                CharacterSimulationProgram program = catalog.GetRequired(state.ProgramId);
-                if (state.NumericProfile != catalog.NumericProfile || stateSet.WorldState.NumericProfile != catalog.NumericProfile || !program.ProgramHash.Equals(state.ProgramHash) || !program.LayoutHash.Equals(state.LayoutHash))
-                    throw new InvalidDataException($"Actor '{stateSet.Actors[i].ActorId}' state does not match active Catalog.");
+                SimulationActorState actor = stateSet.Actors[i];
+                SimulationActorBinding binding = m_Runtime.Roster[i];
+                if (actor.ActorId != binding.ActorId)
+                    throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' does not match the active Character Runtime roster.");
+                binding.AbilityInstallations.Require(actor.State.AbilityIdentity.AbilityId).Identity.Require(actor.State.AbilityIdentity);
             }
         }
 
@@ -359,13 +315,17 @@ namespace ThirdPersonSimulation
                 !string.Equals(candidate.WorldState.SolverVersion, current.WorldState.SolverVersion, StringComparison.Ordinal) ||
                 !candidate.WorldState.WorldRevision.Equals(current.WorldState.WorldRevision) ||
                 candidate.Actors.Count != current.Actors.Count)
+            {
                 throw new InvalidOperationException("Simulation state replacement changes the locked Solver, WorldRevision, or Actor roster.");
+            }
             for (int i = 0; i < current.Actors.Count; i++)
             {
                 if (candidate.Actors[i].ActorId != current.Actors[i].ActorId ||
-                    candidate.Actors[i].State.ProgramId != current.Actors[i].State.ProgramId ||
+                    candidate.Actors[i].State.AbilityIdentity != current.Actors[i].State.AbilityIdentity ||
                     candidate.WorldState.Bodies[i].ActorId != current.WorldState.Bodies[i].ActorId)
-                    throw new InvalidOperationException("Simulation state replacement changes the locked Actor or Program binding.");
+                {
+                    throw new InvalidOperationException("Simulation state replacement changes the locked Actor or Ability binding.");
+                }
             }
         }
     }
@@ -373,7 +333,7 @@ namespace ThirdPersonSimulation
     public static class SimulationWorldSnapshotCodec
     {
         const uint Magic = 0x504e5343;
-        const int Version = 4;
+        const int Version = 5;
 
         public static byte[] Write(SimulationWorldSnapshot snapshot)
         {
@@ -394,7 +354,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Simulation World Snapshot header is invalid.");
             var expectedHash = new SimulationWorldHash(new StableHash(reader.ReadString()));
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
-            var catalogHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+            var gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
             var solverId = new SolverImplementationId(reader.ReadString());
             string solverVersion = reader.ReadString();
             var worldRevision = new WorldRevision(reader.ReadString());
@@ -408,16 +368,23 @@ namespace ThirdPersonSimulation
             {
                 actors[i] = new SimulationActorSnapshot(
                     new ActorId(reader.ReadString()),
-                    new ProgramId(reader.ReadString()),
-                    new ProgramHash(new StableHash(reader.ReadString())),
-                    new LayoutHash(new StableHash(reader.ReadString())),
+                    ReadAbilityIdentity(reader),
                     new CharacterStateHash(new StableHash(reader.ReadString())),
                     reader.ReadString(),
                     reader.ReadBytes());
             }
             byte[] worldStateBytes = reader.ReadBytes();
             reader.RequireComplete();
-            var snapshot = new SimulationWorldSnapshot(numericProfile, catalogHash, solverId, solverVersion, worldRevision, tick, actors, worldStateBytes, deterministicValidity);
+            var snapshot = new SimulationWorldSnapshot(
+                numericProfile,
+                gameplayContentHash,
+                solverId,
+                solverVersion,
+                worldRevision,
+                tick,
+                actors,
+                worldStateBytes,
+                deterministicValidity);
             if (!snapshot.WorldHash.Equals(expectedHash))
                 throw new InvalidDataException($"Simulation World Snapshot hash mismatch. Expected '{expectedHash}', actual '{snapshot.WorldHash}'.");
             RequireCanonical(bytes, Write(snapshot), "Simulation World Snapshot");
@@ -445,9 +412,7 @@ namespace ThirdPersonSimulation
             {
                 SimulationActorSnapshot actor = snapshot.Actors[i];
                 writer.WriteString(actor.ActorId.Value);
-                writer.WriteString(actor.ProgramId.Value);
-                writer.WriteString(actor.ProgramHash.ToString());
-                writer.WriteString(actor.LayoutHash.ToString());
+                WriteAbilityIdentity(writer, actor.AbilityIdentity);
                 writer.WriteString(actor.StateHash.ToString());
                 writer.WriteString(actor.StateCodecIdentity);
                 writer.WriteBytes(actor.StateBytesBuffer);
@@ -455,15 +420,30 @@ namespace ThirdPersonSimulation
             writer.WriteBytes(snapshot.WorldStateBytesBuffer);
         }
 
+        static void WriteAbilityIdentity(CanonicalWriter writer, GameplayAbilityExecutionIdentity identity)
+        {
+            writer.WriteString(identity.AbilityId.Value);
+            writer.WriteString(identity.ContentHash.ToString());
+            writer.WriteString(identity.StateSchemaHash.ToString());
+            writer.WriteString(identity.OperationSetVersion.Value);
+            SimulationNumericProfileCodec.Write(writer, identity.NumericProfile);
+        }
+
+        static GameplayAbilityExecutionIdentity ReadAbilityIdentity(CanonicalReader reader) =>
+            new GameplayAbilityExecutionIdentity(
+                new CharacterSkillId(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new OperationSetVersion(reader.ReadString()),
+                SimulationNumericProfileCodec.Read(reader));
+
         static void RequireCanonical(byte[] source, byte[] canonical, string label)
         {
             if (source.Length != canonical.Length)
                 throw new InvalidDataException($"{label} is not canonical.");
             for (int i = 0; i < source.Length; i++)
-            {
                 if (source[i] != canonical[i])
                     throw new InvalidDataException($"{label} is not canonical.");
-            }
         }
     }
 }

@@ -178,3 +178,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 并行提交 `a31c27b79` 已删除约 10,974 行 Pose/Timeline 旧编译链，包含 `CharacterPoseCompilerModule`、Pose Closure/Topology/Typed Lowering、ValueLifetime、Stage Schedule、Worker Batch、ProgramImage Seal 及旧 Timeline Semantic Compiler/Emitter；本记录只登记已发生的结构变化，不重复删除这些文件。
 - 旧 Runtime 载体仍有残留：`CharacterPoseProgramImage`、`CharacterPoseProgramExecutionView`、`CharacterPoseProgramExecutor`、`CharacterPoseProgramRuntime`、`AnimationPoseNativeWorkspace` 和 Worker Scheduler 仍被 `CharacterPresentationRuntime`/Pose Runtime 引用。它们尚未具备删除证据，下一刀是切换这些消费者到原生 Graph/Source/Constraint/Publication 接口。
 - 因此当前状态是“旧编译入口已激进裁掉、旧运行载体正在断链迁移”，不能宣称 Pose Runtime 已完成或旧链已全部删除。
+
+## 2026-09-14 r3 删除旧 ExecutionView 载体
+
+- 删除 `PoseGraph/Program/CharacterPoseProgramExecutionView.cs` 及其 `.meta`；该文件只负责把旧 `CharacterPoseProgramImage` 展开为全图 Operation/Stage/Linked Pose 索引，属于本次要退出的旧载体。
+- 删除后静态残留集中在 `CharacterPoseProgramExecutor`、`CharacterPoseProgramRuntime`、`CharacterPoseProgramEvaluationRuntime`、`CharacterPoseProgramActorRuntime`、`CharacterPoseRuntimeComposition` 和 Worker Scheduler；这些消费者下一步统一改接原生 Graph Runtime，不新增同名兼容类型。
+- 本步未运行 Unity/Build；当前残留引用是预期的删除后接线状态，尚不能作为完成证据。

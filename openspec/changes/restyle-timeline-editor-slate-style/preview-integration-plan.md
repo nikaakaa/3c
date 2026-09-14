@@ -2,11 +2,13 @@
 
 ## 本次规划基线与授权
 
-2026-09-13 按用户协调方案 camera-preview-timeline-domain-runtime-r1 更新。运行装配以 [领域运行方案](../replace-character-program-with-domain-runtimes/design.md) D1–D8 为准；MotionCurve来源以 [曲线源迁移](../unify-timeline-motion-curve-source/design.md) D1–D7 为准。本文只更新本任务拥有的共同接入要求，不修改代码、资产或产物，不向实现任务下发消息，不增加原实现授权。
+2026-09-13 按用户协调方案 camera-preview-timeline-domain-runtime-r1 更新。运行装配以 [领域运行方案](../replace-character-program-with-domain-runtimes/design.md) D1–D8 为准；MotionCurve来源以 [曲线源迁移](../../specs/character-root-motion-curves/spec.md) D1–D7 为准。本文只更新本任务拥有的共同接入要求，不修改代码、资产或产物，不向实现任务下发消息，不增加原实现授权。
 
 [Slate源码解耦决策](slate-source-decoupling.md)继续约束原UI复用：原轨道、Clip、曲线和手势保持，TimelineData、typed接线、编辑Session/Undo保持。旧ce21aec8f/afcb90056仅是上次源码阅读的恢复基线，不是本轮重新检查的实现状态；UI解耦不等于运行装配迁移已完成。
 
 ## 1. 归属与禁止恢复的旧前提
+
+2026-09-14 PARALLEL-20260914-DOMAIN-01：本任务新增直接Timeline Runtime规划，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)，与原Slate UI线分开；仅更新文档，不启动实现。原ScenePlay协调器继续拥有预览运行接入，不能因本任务接收内容Runtime就代写预览协调器。
 
 - Timeline窗口只拥有作者编辑、帧游标、正式Undo、源导航和真实运行/历史标记；不创建Slate播放器、另一个采样器或预览Session。
 - SkillGraph/Graph Shell承载共享预览控制；场景选择、准备、运行、暂停、结束和领域变化后的实际采用由rebuild-btsmtl-preview-with-scene-play原协调器及正式运行模块拥有。
@@ -43,7 +45,8 @@ SceneAsset、context身份与目标声明是正式输入，不能要求作者先
 
 | 内容变化 | 处理命令与真实owner | 预览应显示的结果 | 不允许的替代 |
 |---|---|---|---|
-| Skill及其引用Timeline | 技能独立编译/准备，仅处理技能闭包和真实依赖；技能运行模块绑定版本 | 构建成功不等于当前实例已更新；活动实例保持启动时不可变技能版本，新版本用于后续实例；Session玩法identity变化按正式规则重新准备 | Character全量Build；强行给活动技能换版本；用整包Epoch判断 |
+| Timeline Prepare/CreatePlayback | Timeline Runtime独立准备内容identity/revision、NumericTarget、外部资源/成员和TreeClip服务，再按精确调用方创建实例；不发射Track/Clip operations | Pending/Ready或分型依赖失败；实际创建后报告Playback identity/generation及内容/资源版本 | 借用Ability Prepare、旧ProgramPlan、Slate播放器或假非Skill调用方 |
+| Skill及其引用Timeline | 技能独立编译/准备；调用Timeline只引用其直接内容版本和入参，不展开轨道/Clip；技能运行模块绑定版本 | 构建成功不等于当前实例已更新；活动实例保持启动时不可变技能版本，新版本用于后续实例；Session玩法identity变化按正式规则重新准备 | Character全量Build；强行给活动技能换版本；用整包Epoch判断 |
 | Pose图及其绑定 | 同一正式原生Pose Factory显式重建实例，释放旧实例并重置播放/IK等历史 | 配置版本、实际实例generation/版本、重建成功/失败、历史已重置；图仍按原表现时钟执行 | Compile Pose Image；加载时生成隐藏操作表；承诺拓扑改动无损热替换 |
 | Camera配置/资源绑定 | 正式Camera绑定与Reset，由摄像机模块报告 | 目标、配置版本、实际绑定版本、Reset结果与失败原因 | UI计算采样、编相机总包或代写CameraBuilder；声称只改hash已生效 |
 | C#控制/控制配置 | 正式控制模块和角色装配/Session规则处理 | 是否需要重新准备、原因、配置与实际版本、完成/失败 | 编入技能或恢复Control总catalog；旧实例偷偷读取新字段 |
@@ -101,7 +104,7 @@ Timeline正式编辑/Undo
 - 源时间、区间裁切、末端保持和delta等使用曲线owner唯一正式映射，预览不能另造采样公式。旧CurveEndFrame到源秒的等价迁移属于曲线owner，不留UI双读。
 - 源改动使哪些技能数据或控制绑定失效由正式依赖报告决定，不触发Character总Build。
 
-曲线迁移设计中旧“全角色Numeric Program/ControlMotion catalog”措辞，涉及运行装配时以本次领域运行基线为准；其源、区间与无损迁移职责保持。Timeline规划不擅自修改曲线owner的设计或编译实现。
+运动源迁移已归档完成，现行源API和唯一时间映射直接复用，不重新安排无损迁移或恢复旧Program接入。未来共享源/区间/Warp字段变化仍归原owner。Timeline直接Runtime的新增接收范围见timeline-direct-runtime.md。
 
 ## 7. 历史、失败与恢复
 
@@ -115,6 +118,7 @@ Timeline正式编辑/Undo
 
 | 职责 | 唯一负责方 | 本规划接入范围 |
 |---|---|---|
+| Timeline直接内容Runtime/portable/播放私有状态 | 本任务新增Runtime线 | 独立Prepare/CreatePlayback、Advance候选与Commit/Discard/Stop、分型Capture/Restore；核心接总Step/快照 |
 | Slate编辑源码、Timeline UI适配 | Timeline任务 | 原UI、正式字段/命令、导航、只读版本与运行标记 |
 | ScenePlay协调器、场景准备、运行采用/历史 | rebuild-btsmtl-preview-with-scene-play原owner | 提供/消费第4节信息，不由Timeline复制实现 |
 | Timeline.MotionCurve/MotionWarp与源配置binding | unify-timeline-motion-curve-source | UI消费typed字段和源导航；保留局部Weight/Ease |

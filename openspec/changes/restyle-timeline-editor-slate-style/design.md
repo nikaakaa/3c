@@ -1,6 +1,6 @@
 ## Context
 
-2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../unify-timeline-motion-curve-source/design.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
+2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../../specs/character-root-motion-curves/spec.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
 
 2026-09-13 源码对账与具体接线决策见 [Slate原源码解耦决策](slate-source-decoupling.md)。该文档逐项说明原窗口、Track内Editor方法、Clip wrapper、曲线/参数工具、Inspector、Undo和选择的实际依赖；本设计第3节与其共同约束实现，不允许以原入口转发另一套绘制冒充复用。
 
@@ -17,6 +17,8 @@
 用户已确认单窗口、真实 Slate UI、项目自有数据/运行内核、预览期间可编辑且不更换 Session。用户尚未确认 Timeline 内 Play 的具体意义，不能把此前“只让游标线移动”的建议当成需求。
 
 ## Goals / Non-Goals
+
+2026-09-14 范围拆分：下方原目标主要描述Slate UI；新增Timeline直接运行设计见[timeline-direct-runtime.md](timeline-direct-runtime.md)，对应tasks第12节，接受D9—D13的内容/portable/播放/私有状态职责。本轮仅PLAN，不启动实现。原UI“不改执行语义”不再被误解为本任务不能登记Runtime线；也不能把新增Runtime理解为Slate UI开始执行角色。
 
 **Goals:**
 
@@ -257,6 +259,8 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 | 当前代码 | ce21aec8f/afcb90056恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理；原UI恢复不等于解耦完成。 |
 
 ## Migration Plan
+
+Runtime域内迁移和公共接口以[timeline-direct-runtime.md](timeline-direct-runtime.md)为准，与下方原UI迁移分开登记。主方案公共接入项只引用该职责，不重复复制域内执行清单。已完成运动源迁移不重开，使用现行RootMotionCurveAsset/映射API。
 
 1. 实现窗口按用户授权回退替代编辑器改造，恢复真实 Slate 原有绘制、交互和曲线功能；本任务只同步文档，不操作代码或资产。
 2. 在恢复后的实际基线上继续原有正式数据、typed 新增/字段/曲线回写、帧显示和布局修复；已有正确功能不重做。

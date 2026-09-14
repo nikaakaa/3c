@@ -1,5 +1,7 @@
 ## Why
 
+2026-09-14 PARALLEL-20260914-DOMAIN-01新增规划接收范围：除原Slate UI线外，本任务登记独立的Timeline直接内容Runtime，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)。本次只更新规划，不启动该Runtime实现；复用现有timeline任务，原UI授权/正确进展不变。历史段落不作为当前实现状态。
+
 用户要求直接使用 Slate 已有的完整 Timeline UI。此前规划把数据适配扩大为纯内存 Editor Model、新 Surface API、交互与 Curve/DopeSheet 输入全面改造，实际成为重做编辑器，用户已明确否决；实现窗口已通过 0aa52f209 按用户要求回退。
 
 本change撤销该方案，复用真实Slate已提供的时间尺、轨道/Clip、选择、拖动、裁剪、缩放、曲线和切线编辑。TimelineData继续是正式业务数据，已有typed配置、Mutation/Undo与预览归属保持；不恢复Timeline内部右侧自制Inspector，正式属性编辑复用原Slate控件接入Unity已有Inspector。
@@ -9,7 +11,7 @@
 ## What Changes
 
 - 2026-09-13仅规划协调：运行接入对齐[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)，移除Character全量Build、整包Projection、统一ProgramEpoch和Document/v7前置。技能独立构建，Pose同一原生Factory显式重建/历史重置，Camera正式绑定/Reset，控制与网络依Session规则准备。预览原owner报告就绪、配置版本、实际版本和失败，UI不推断采用。
-- MotionCurve源、区间、映射由[曲线源迁移](../unify-timeline-motion-curve-source/design.md)拥有，UI只接typed字段与源导航。源XYZ/Yaw不再作为Timeline-local通道，Weight/Ease等局部曲线仍用原Slate编辑。本通知不授权新的实现或修改其它owner文件。
+- MotionCurve源、区间、映射由[曲线源迁移](../../specs/character-root-motion-curves/spec.md)拥有，UI只接typed字段与源导航。源XYZ/Yaw不再作为Timeline-local通道，Weight/Ease等局部曲线仍用原Slate编辑。本通知不授权新的实现或修改其它owner文件。
 
 - 硬边界覆盖打开、刷新、新增 Track/Clip、选择、编辑和关闭全链路：不得创建或依赖 Slate 组件树，原生 Cutscene/Actor/Director 约束不得拒绝正式 TimelineData 合法操作。回退后 BuildProjection 隐藏对象仅是待清理残留，不是最终方案或 fallback。
 
@@ -28,6 +30,8 @@
 
 ### New Capabilities
 
+- `btsmtl-timeline-direct-runtime`：直接只读内容与portable表示，独立Prepare/CreatePlayback，Advance候选及Commit/Discard/Stop，循环/Section、窗口/TreeClip调用与分型播放快照。与Slate UI分开，域内唯一清单为tasks第12节。
+
 - 无新增编辑器框架；撤销上一轮声明的纯内存 Slate Surface 架构能力。
 
 ### Modified Capabilities
@@ -35,6 +39,9 @@
 - `btsmtl-timeline-editor-preview`：复用现成 Slate UI，通过现有数据/命令适配完成正式编辑；撤销强制新模型、曲线输入与组件迁移条款。
 
 ## Impact
+
+- 新增Runtime规划接收主方案D13的Timeline域内部分；主实现仍拥有共享BtsmtlSkillTimelineCompiler、TreeClip技能执行服务、角色Step/总快照/Host及公共artifact删除。Motion/Warp/Camera、预览协调器、C#生成与资产均保留原owner。
+- 对照现行btsmtl-runnable-timeline-node、gameplay-semantic-ir、compiled-simulation-program：Timeline内部operation发射、全角色state slots及ProgramPlan前提被D9与本change的新直接Runtime合同替代，原inline/shared、隔离、结束/取消语义保留。跨领域旧要求的全局delta仍由主方案维护，不覆盖其文档。
 
 - 本次领域协调只修改本change的6份规划文档。现行规范仍要求Motion XYZ/Yaw作为Timeline-local通道，与新源owner规则冲突，源迁移delta归曲线任务；现行总Program/Projection与预览总Epoch条款由领域运行和原预览owner替换。本change明确消费新合同，不覆盖这些owner文档或下发执行。
 

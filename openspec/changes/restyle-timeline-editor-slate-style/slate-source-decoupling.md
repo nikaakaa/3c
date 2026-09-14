@@ -2,7 +2,9 @@
 
 ## 1. 结论与本次范围
 
-2026-09-13 后续领域协调更新：本文件原UI解耦决策保留；运行依赖以[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)为准，MotionCurve数据归属以[曲线源迁移](../unify-timeline-motion-curve-source/design.md)为准。以下源码快照仍是此前阅读事实，不是本轮重跑检查。此次仅PLAN，不改代码或向实现任务发送授权。
+2026-09-14 新增Runtime规划已单列[timeline-direct-runtime.md](timeline-direct-runtime.md)。本文继续只约束Slate UI解耦与已确认截图修正；UI不运行角色。新增直接Runtime不使用Slate播放器，不把portable内容视为被禁止的自制Editor Model，也不改变本节各历史源码快照事实。仅登记规划，本轮不下发Runtime实现。
+
+2026-09-13 后续领域协调更新：本文件原UI解耦决策保留；运行依赖以[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)为准，MotionCurve数据归属以[曲线源迁移](../../specs/character-root-motion-curves/spec.md)为准。以下源码快照仍是此前阅读事实，不是本轮重跑检查。此次仅PLAN，不改代码或向实现任务发送授权。
 
 可以保留 Slate 原 UI，同时去掉 BTSMTL 对 Slate 组件树和播放器的依赖。依据不是“看起来能适配”，而是下文列出的原函数、字段与调用点。实现需要修改这些函数的参数、数据访问和命令出口，有些原 UI 方法需要从 MonoBehaviour 实例搬到现有 Editor 模块；不需要重新设计轨道、Clip、曲线的绘制或鼠标算法。
 

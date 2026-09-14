@@ -1,0 +1,270 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ThirdPersonCharacter.Pipeline.Animation
+{
+    internal sealed class CharacterPoseNativeGraphValidationException : InvalidOperationException
+    {
+        internal CharacterPoseNativeGraphValidationException(
+            CharacterPoseNativeFailureCode code,
+            string source,
+            string message)
+            : base(message)
+        {
+            Code = code;
+            Source = source;
+        }
+
+        internal CharacterPoseNativeFailureCode Code { get; }
+        internal string Source { get; }
+    }
+
+    internal static class CharacterPoseNativeGraphValidator
+    {
+        internal static void RequireValid(
+            CharacterPresentationPoseGraphAsset graphAsset,
+            CharacterPoseCanvasGraph root)
+        {
+            if (!graphAsset || root == null)
+                Fail(CharacterPoseNativeFailureCode.GraphMissing, "Pose", "Pose graph asset or root graph is missing.");
+            var visiting = new HashSet<PoseGraphId>();
+            var visited = new HashSet<PoseGraphId>();
+            ValidateGraph(graphAsset, root, visiting, visited);
+        }
+
+        static void ValidateGraph(
+            CharacterPresentationPoseGraphAsset graphAsset,
+            CharacterPoseCanvasGraph graph,
+            ISet<PoseGraphId> visiting,
+            ISet<PoseGraphId> visited)
+        {
+            if (!graph.GraphId.IsValid)
+                Fail(CharacterPoseNativeFailureCode.GraphInvalid, "Pose Graph", "Pose graph identity is invalid.");
+            if (visited.Contains(graph.GraphId))
+                return;
+            if (!visiting.Add(graph.GraphId))
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.Cycle,
+                    graph.GraphId.Value,
+                    $"Pose graph reference cycle contains '{graph.GraphId}'.");
+            }
+
+            try
+            {
+                graph.RequireValid();
+                CharacterPoseCanvasNode[] nodes = graph.Nodes.ToArray();
+                var byId = nodes.ToDictionary(node => node.NodeId);
+                var shapes = new Dictionary<PoseNodeId, IReadOnlyList<CharacterPosePortDefinition>>();
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    CharacterPoseCanvasNode node = nodes[i];
+                    IReadOnlyList<CharacterPosePortDefinition> shape =
+                        CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
+                    var ports = new HashSet<PosePortId>();
+                    for (int portIndex = 0; portIndex < shape.Count; portIndex++)
+                    {
+                        CharacterPosePortDefinition port = shape[portIndex];
+                        if (!port.PortId.IsValid || !ports.Add(port.PortId) ||
+                            !Enum.IsDefined(typeof(CharacterPosePortKind), port.Kind) ||
+                            !Enum.IsDefined(typeof(CharacterPosePortDirection), port.Direction))
+                        {
+                            Fail(
+                                CharacterPoseNativeFailureCode.PortInvalid,
+                                $"{graph.GraphId}/{node.NodeId}",
+                                $"Pose node '{node.NodeId}' has an invalid or duplicate port.");
+                        }
+                    }
+                    shapes.Add(node.NodeId, shape);
+                }
+
+                var targetConnections = new HashSet<string>(StringComparer.Ordinal);
+                var indegree = nodes.ToDictionary(node => node.NodeId, _ => 0);
+                var outgoing = nodes.ToDictionary(
+                    node => node.NodeId,
+                    _ => new HashSet<PoseNodeId>());
+                foreach (CharacterPoseCanvasConnection connection in graph.Connections)
+                {
+                    if (!byId.TryGetValue(connection.SourceNodeId, out CharacterPoseCanvasNode source) ||
+                        !byId.TryGetValue(connection.TargetNodeId, out CharacterPoseCanvasNode target) ||
+                        !shapes.TryGetValue(source.NodeId, out IReadOnlyList<CharacterPosePortDefinition> sourceShape) ||
+                        !shapes.TryGetValue(target.NodeId, out IReadOnlyList<CharacterPosePortDefinition> targetShape))
+                    {
+                        Fail(
+                            CharacterPoseNativeFailureCode.PortInvalid,
+                            $"{graph.GraphId}/{connection.EdgeId}",
+                            "Pose connection references an unknown node.");
+                    }
+                    CharacterPosePortDefinition sourcePort = RequirePort(
+                        sourceShape,
+                        connection.SourcePortId,
+                        CharacterPosePortDirection.Output,
+                        graph.GraphId,
+                        connection.EdgeId);
+                    CharacterPosePortDefinition targetPort = RequirePort(
+                        targetShape,
+                        connection.TargetPortId,
+                        CharacterPosePortDirection.Input,
+                        graph.GraphId,
+                        connection.EdgeId);
+                    if (CharacterPoseCanvasNativePorts.RuntimeBindingType(sourcePort.Kind) !=
+                        CharacterPoseCanvasNativePorts.RuntimeBindingType(targetPort.Kind))
+                    {
+                        Fail(
+                            CharacterPoseNativeFailureCode.PortInvalid,
+                            $"{graph.GraphId}/{connection.EdgeId}",
+                            $"Pose connection '{connection.EdgeId}' has incompatible typed ports.");
+                    }
+                    string targetKey = target.NodeId.Value + "/" + targetPort.PortId.Value;
+                    if (!targetConnections.Add(targetKey))
+                    {
+                        Fail(
+                            CharacterPoseNativeFailureCode.PortInvalid,
+                            $"{graph.GraphId}/{targetKey}",
+                            "Pose input port has more than one connection.");
+                    }
+                    if (sourcePort.Kind != CharacterPosePortKind.PoseHistory)
+                    {
+                        if (outgoing[source.NodeId].Add(target.NodeId))
+                            indegree[target.NodeId]++;
+                    }
+                }
+
+                EnsureAcyclic(graph, nodes, indegree, outgoing);
+                ValidateBoundary(graph, nodes);
+                ValidateReferencedGraphs(graphAsset, graph, nodes, visiting, visited);
+            }
+            catch (CharacterPoseNativeGraphValidationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.GraphInvalid,
+                    graph.GraphId.Value,
+                    exception.Message);
+            }
+            finally
+            {
+                visiting.Remove(graph.GraphId);
+            }
+            visited.Add(graph.GraphId);
+        }
+
+        static CharacterPosePortDefinition RequirePort(
+            IReadOnlyList<CharacterPosePortDefinition> shape,
+            PosePortId portId,
+            CharacterPosePortDirection direction,
+            PoseGraphId graphId,
+            string edgeId)
+        {
+            CharacterPosePortDefinition port = shape.SingleOrDefault(value =>
+                value.PortId == portId && value.Direction == direction);
+            return port ?? throw new CharacterPoseNativeGraphValidationException(
+                CharacterPoseNativeFailureCode.PortInvalid,
+                $"{graphId}/{edgeId}/{portId}",
+                $"Pose connection '{edgeId}' references missing {direction} port '{portId}'.");
+        }
+
+        static void EnsureAcyclic(
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            IDictionary<PoseNodeId, int> indegree,
+            IReadOnlyDictionary<PoseNodeId, HashSet<PoseNodeId>> outgoing)
+        {
+            var ready = new SortedSet<PoseNodeId>(
+                indegree.Where(value => value.Value == 0).Select(value => value.Key));
+            int count = 0;
+            while (ready.Count != 0)
+            {
+                PoseNodeId current = ready.Min;
+                ready.Remove(current);
+                count++;
+                foreach (PoseNodeId target in outgoing[current].OrderBy(value => value))
+                {
+                    int next = indegree[target] - 1;
+                    indegree[target] = next;
+                    if (next == 0)
+                        ready.Add(target);
+                }
+            }
+            if (count != nodes.Count)
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.Cycle,
+                    graph.GraphId.Value,
+                    $"Pose graph '{graph.GraphId}' contains an executable cycle.");
+            }
+        }
+
+        static void ValidateBoundary(
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyList<CharacterPoseCanvasNode> nodes)
+        {
+            int outputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
+            int graphOutputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
+            bool graphBoundary = graph.Role == CharacterPoseAuthoringGraphRole.Subgraph ||
+                graph.Role == CharacterPoseAuthoringGraphRole.LinkedPoseEntry ||
+                graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer ||
+                graph.Role == CharacterPoseAuthoringGraphRole.ControlRig;
+            if ((!graphBoundary && (outputCount != 1 || graphOutputCount != 0)) ||
+                (graphBoundary && (graphOutputCount != 1 || outputCount != 0)))
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.GraphInvalid,
+                    graph.GraphId.Value,
+                    graphBoundary
+                        ? "Pose boundary graph must contain exactly one Graph Output and no Output Pose."
+                        : "Pose root or state graph must contain exactly one Output Pose and no Graph Output.");
+            }
+        }
+
+        static void ValidateReferencedGraphs(
+            CharacterPresentationPoseGraphAsset graphAsset,
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            ISet<PoseGraphId> visiting,
+            ISet<PoseGraphId> visited)
+        {
+            foreach (CharacterPoseCanvasNode node in nodes)
+            {
+                if (node.Payload is CharacterPoseStateMachineNodePayload stateMachine)
+                {
+                    CharacterPoseStateMachineAuthoringValidator.RequireValid(
+                        stateMachine.StateMachine,
+                        graphAsset.RequireGraph);
+                    foreach (CharacterPoseStateDefinition state in stateMachine.StateMachine.States)
+                        ValidateGraph(
+                            graphAsset,
+                            graphAsset.RequireGraph(state.PoseGraphId),
+                            visiting,
+                            visited);
+                }
+                else if (node.Payload is CharacterPoseSubgraphPayload subgraph)
+                {
+                    ValidateGraph(
+                        graphAsset,
+                        graphAsset.RequireGraph(subgraph.Subgraph.PoseGraphId),
+                        visiting,
+                        visited);
+                }
+                else if (node.Payload is CharacterMotionMatchingPosePayload motionMatching)
+                {
+                    ValidateGraph(
+                        graphAsset,
+                        graphAsset.RequireGraph(motionMatching.EntryGraph.PoseGraphId),
+                        visiting,
+                        visited);
+                }
+            }
+        }
+
+        static void Fail(
+            CharacterPoseNativeFailureCode code,
+            string source,
+            string message) =>
+            throw new CharacterPoseNativeGraphValidationException(code, source, message);
+    }
+}

@@ -59,6 +59,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return Require(port.Kind).Type;
         }
 
+        internal static Type RuntimeBindingType(CharacterPosePortKind kind) =>
+            Require(kind).Type;
+
+        internal static IReadOnlyList<CharacterPosePortDefinition> GetRuntimeShape(
+            CharacterPoseCanvasNode node) =>
+            RuntimeShape(node);
+
         internal static int Index(Port port, CharacterPosePortDirection direction)
         {
             CharacterPosePortDefinition[] ports = Shape((CharacterPoseCanvasNode)port.parent)

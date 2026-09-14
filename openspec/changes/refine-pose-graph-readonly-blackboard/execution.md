@@ -139,3 +139,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativePortValues.cs` 为 FlowCanvas 运行端口提供 Local/Component Pose、动画参数、Discontinuity、Action Playback、Full Body IK Goals/Contribution、Pose History、Trajectory、Presentation Facts 和 Motion Matching Binding 的独立 typed 值。
 - `CharacterPoseCanvasNativePorts.cs` 的端口注册改为使用上述运行值，不再使用无数据的 Editor marker；输出通过原生 Runtime 读取，静态端口形状继续覆盖现有 Pose Node Kind 与动态接口端口。
 - 静态 Editor 工程本步未产生新增 Pose 类型错误；完整工程仍被共享 Ability 改动的 `Float32GameplayAbilityExecutionData.FromProgram` 缺失引用阻断，编译后已执行 `dotnet build-server shutdown`。
+
+## 2026-09-14 r3 原生图校验门禁
+
+- `CharacterPoseNativeGraphValidator.cs` 增加不依赖 Pose IR 的原生 Graph 校验：检查节点/端口身份、typed 连接、输入单连接、可执行环、根/边界 Output 约束，并递归检查 StateMachine、Pose Subgraph 和 Motion Matching Entry Graph 的引用闭包。
+- 校验失败保留 `FailureCode` 与图/节点/端口路径，不能读旧 Image 或默认姿态继续运行。
+- Runtime 工程未发现本步新增错误；完整 Editor 依赖链仍被共享 Ability 文件 `GameplayAbilityDataAsset.cs:81` 的 `Float32GameplayAbilityExecutionData.FromProgram` 缺失成员阻断，编译后已执行 `dotnet build-server shutdown`。

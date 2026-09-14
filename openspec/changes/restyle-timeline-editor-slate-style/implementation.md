@@ -10,13 +10,13 @@ Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 G
 
 Timeline Runtime 不是 Timeline 窗口里的播放按钮，也不是 Slate 的 `Cutscene`/`Director` 代理。当前代码已经形成三层不同的接线，必须继续收敛而不能混用：
 
-1. `Timeline.ExecutionContracts.cs` 提供直接内容 Runtime 需要的 binding plan、调用输入、领域 binding 准备、执行 identity、Tick view、观察和表现输出合同。这些类型只定义边界，尚未形成可创建、推进和提交的直接播放实例。
-2. `TimelineNode` 通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，这是 Skill Graph 的调用入口；它负责调用身份、状态查询和停止传播，不应被改成 Timeline 窗口的本地播放器，也不能作为非 Skill 调用方的唯一入口。
-3. `TimelineControlRuntime<TTarget,TTime>` 目前仍以 `OperationHandle`、`ITimelineTargetLeaf<TTime>` 和 `OperationControlCursor` 读取 operation/Program，完成 Section、循环、TreeClip、Motion/Camera/Cue、权重和 trace 调度。这是现行 operation-backed 运行基线，不是第12节要求的直接内容最终实现；迁移必须把同一算法的内容读取和候选提交接到正式 Runtime owner，而不是复制一份求值器。
+1. `Timeline.ExecutionContracts.cs` 提供直接内容 Runtime 的 binding plan、调用输入、领域 binding 准备、执行 identity、观察和表现输出合同；`TimelineRuntimePreparation`、`TimelineRuntimeService` 和 `TimelineRuntimeComposition` 已在此边界上形成正式 Prepare/Create/Step/Commit/Discard/Stop/Capture/Restore 链。
+2. `TimelineNode` 通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，这是 Skill Graph 的调用入口；它负责调用身份、状态查询和停止传播，不是 Timeline 窗口的本地播放器，也不能作为非 Skill 调用方的唯一入口。
+3. 旧的无调用 `TimelineControlRuntime.cs` 已删除；`TimelineControlContracts.cs` 中仍被并行 Simulation 诊断/运动代码使用的公共类型保留，但不再作为 Timeline 执行器。直接 Runtime 通过 `TimelineRuntimeEvaluator` 处理 Section、循环、跨区间 Clip 边界、TreeClip 生命周期、Motion/Camera/Cue/Scene/Animation/MotionWarp 输出。
 
-4. `TimelineRuntimePreparation` 已把 `TimelineContentDiscovery`、`TimelineBindingPlan`、正式 call input 和 domain binding preparation 接成直接 Runtime 的 Prepare 入口，并返回内容 revision、调用 identity 与明确失败原因；它还没有创建 Playback 实例，也没有推进/Commit/Discard。
+4. `TimelineRuntimePreparation` 从 `TimelineContentDiscovery`、`TimelineBindingPlan`、正式 call input 和 dependency resolver 形成 Ready 结果；Camera Override/Zoom/Stretch/Shot 资源现在也进入内容闭包和 typed resource sample。`TimelineRuntimeEvaluationBuffer` 在同一 Commit 边界发布不可变 committed evaluation，包含 playback/generation、逻辑帧、循环、内容 revision、执行 identity 和所有领域输出。
 
-因此当前“有 Runtime 接线”表示基础合同、Skill 请求、直接 Prepare 和 operation-backed 调度存在；不表示直接 Timeline Playback、非 Skill playback、Commit/Discard 候选状态或 Capture/Restore 已闭环。实现时应先以这些现有入口划定 owner，再替换其共同 Timeline 读取/发射点；不得新建第二套播放器或在 Slate 中添加运行按钮。
+因此当前“Timeline Runtime 库内闭环”表示直接 Playback 的生命周期和候选提交协议已经闭合；不表示主工程已经安装一个 Composition。当前真实剩余边界是：没有生产代码创建 `TimelineRuntimeComposition`，也没有正式 owner 注入角色/World 汇集、TreeClip 技能服务、Motion/Warp、Camera、Cue 和 committed evaluation consumer。这个接线必须由核心 Runtime/Preview owner 完成，不能在 Timeline 内创建全局 service、空执行器、假 Actor 或第二套播放器。
 
 ## 已完成代码链
 

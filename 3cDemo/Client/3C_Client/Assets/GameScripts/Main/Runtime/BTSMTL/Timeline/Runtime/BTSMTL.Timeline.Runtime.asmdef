@@ -4,9 +4,7 @@
     "references": [
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
-        "ThirdPersonSimulation.Core",
-        "ThirdPersonSimulation.Float32",
-        "ThirdPersonSimulation.Fixed"
+        "ThirdPersonSimulation.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

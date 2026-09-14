@@ -104,6 +104,29 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
         public TimelineRuntimePlaybackState State { get; private set; }
+        public bool HasStopContext { get; private set; }
+        public TimelinePlaybackStopContext StopContext { get; private set; }
+
+        public bool RequestStop(TimelinePlaybackStopContext context)
+        {
+            if (State == TimelineRuntimePlaybackState.Disposed ||
+                State == TimelineRuntimePlaybackState.Completed ||
+                State == TimelineRuntimePlaybackState.Stopped ||
+                State == TimelineRuntimePlaybackState.Failed)
+                return false;
+            StopContext = context;
+            HasStopContext = true;
+            State = TimelineRuntimePlaybackState.Stopping;
+            return true;
+        }
+
+        public bool CompleteStop()
+        {
+            if (State != TimelineRuntimePlaybackState.Stopping)
+                return false;
+            State = TimelineRuntimePlaybackState.Stopped;
+            return true;
+        }
 
         public void Dispose()
         {

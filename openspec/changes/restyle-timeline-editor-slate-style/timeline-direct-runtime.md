@@ -8,9 +8,9 @@
 |---|---|---|
 | `Timeline.ExecutionContracts.cs` | 已有 `TimelineBindingPlan`、`TimelineCallInput`、`TimelineBindingPreparation`、分型 `TimelineTickContext`/`ITimelineTickExecutionView`、执行 identity、观察和 Scene Presentation sink 合同 | 直接 Runtime 的输出消费仍由主实现提供 typed sink；该文件不拥有角色/World 提交 |
 | `TimelineRuntimePreparation.cs` | 已有正式 `Prepare`/`CreatePlayback`，显式 NumericTarget、执行 identity、内容 revision、domain binding 和 dependency resolver；Playback 保存 prepared bindings、prepared dependencies 和 generation，拥有完整区间边界、循环分段、Clip 样本、TreeClip 生命周期候选和 Step Commit/Discard 回调 | 具体 domain binding、TreeClip 技能服务和角色/World 汇集仍由主实现注入 |
-| `TimelineRuntimeService.cs` | 已有唯一直接播放服务、播放实例表、Skill `ITimelinePlaybackService` 入口、正式 `TimelineRuntimePlaybackRequestFactory`、Step、Stop、Shutdown、逐实例 descriptor 以及 schema/revision/generation 校验的 Capture/Restore；`TimelineRuntimeExecutionConsumer` 负责把候选交给 typed evaluation/TreeClip sinks | 主实现尚未把具体 call-binding source、domain resolver、TreeClip service、角色结果 sink 与 Graph Shell/Preview owner 接上 |
+| `TimelineRuntimeService.cs`、`TimelineRuntimeComposition.cs` | 已有唯一直接播放服务、播放实例表、Skill `ITimelinePlaybackService` 入口、非Skill `Prepare/CreateStartedPlayback/Step/Stop/Capture/Restore` 入口、正式 `TimelineRuntimePlaybackRequestFactory`、Step、Stop、Shutdown、逐实例 descriptor 以及 schema/revision/generation/播放模式校验的 Capture/Restore；`TimelineRuntimeExecutionConsumer` 负责把候选交给 typed evaluation/TreeClip sinks，`TimelineRuntimeEvaluationBuffer`负责提交后的观察 | 具体角色/World汇集、TreeClip技能执行和编辑器直接观察仍由正式owner接入；Timeline不伪造这些domain服务 |
 | `TimelineData.Runtime.cs`、`TimelinePlaybackTreeContracts.cs`、`TimelineNode.cs` | Skill Timeline 已通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，查询状态并传播 Stop/Cancel | 这是现有 Skill/Node 播放入口，不是非 Skill 可用的直接内容 Runtime，也不替代第12节的独立 Prepare/CreatePlayback |
-| `Simulation/Core/Execution/TimelineControlContracts.cs`、`TimelineControlRuntime.cs` | 已有基于 `OperationHandle`、`ITimelineTargetLeaf<TTime>`、`OperationControlCursor` 的循环、Section、TreeClip、Motion/Camera/Cue、Weight/Ease 和 trace 调度 | 该实现仍从 operation/Program 读取并在控制状态口写入，不能原样作为“删除 ProgramPlan/operation 前提”的最终实现；第12.3、12.4、12.8仍未完成 |
+| `Simulation/Core/Execution/TimelineControlContracts.cs`、已删除的 `TimelineControlRuntime.cs` | 旧控制器曾有基于 `OperationHandle`、`ITimelineTargetLeaf<TTime>`、`OperationControlCursor` 的循环、Section、TreeClip、Motion/Camera/Cue、Weight/Ease 和 trace 调度；当前源码没有调用方，旧控制器已删除 | 合同文件中仍被并行 Simulation 运动/诊断代码使用的公共类型不能整文件删除；直接 Runtime 不再走该执行器 |
 | `RuntimeDiagnostics` 的 Timeline playback provenance/summary | 已有按 playback identity 的只读诊断与编辑器观察入口 | 诊断只观察运行事实，不是 Timeline Runtime owner，不得反向驱动播放 |
 
 当前 Timeline Runtime 目录没有拆成两份的 `Float32TimelinePlayback.cs` 或 `FixedTimelinePlayback.cs`；直接 Playback 由一个共享调度器拥有，NumericTarget 只作为准备、资源和快照 schema 的分型输入。tasks 第12节不能只按类型存在来勾选完成；还必须有主实现提供的 request factory、Step/TreeClip/输出消费者和 Preview/Diagnostics 实际接线。
@@ -92,7 +92,7 @@ Float32/Fixed快照保持对应数值精度与schema，不经float中转Fixed状
 | 文件/符号 | 唯一写入者 | 交接规则 |
 |---|---|---|
 | Runtime/BTSMTL/Timeline/Runtime下直接内容/portable内容/播放私有状态、Float32TimelinePlayback.cs、FixedTimelinePlayback.cs | 本任务Timeline Runtime线 | 迁移现有算法，去掉ProgramPlan/operation前提；不新增兼容模式 |
-| Runtime/Simulation/Core/Execution/TimelineControlRuntime.cs及Timeline专属发射适配 | 本任务Timeline Runtime线 | 只处理Timeline职责；涉及通用Evaluator/Workspace/Program codec的改动给主实现集成，不占整个Simulation目录 |
+| Runtime/Simulation/Core/Execution中旧Timeline控制器 | 本任务Timeline Runtime线 | 无调用的`TimelineControlRuntime.cs`已删除；`TimelineControlContracts.cs`中被并行Simulation使用的公共诊断/运动类型保留，不再作为执行入口 |
 | BtsmtlSkillTimelineCompiler.cs与共享技能编译/调用入口、TreeClip技能服务 | 原主实现01a09a5f-8d64-7c11-a461-7889623b7459 | Timeline提供内容及调用合同，主实现删除共同入口的内部发射并接技能调用，不能双方各删半个文件 |
 | CharacterPipelineHost、领域Factory/Instance、Step、角色状态/codec、网络checkpoint/manifest、共享artifact及Character Build删除 | 原主实现 | Timeline只提供接口、私有状态与准确调用需求，不代改共享Host |
 | Timeline.MotionCurve.cs、Timeline.MotionWarp.cs、RootMotionCurveAsset及源配置/映射 | 原运动源owner | 已归档迁移不重开，复用现行API；具体字段变化由原owner写入 |

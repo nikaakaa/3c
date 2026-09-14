@@ -7,14 +7,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static void RegisterFootPlacement(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseNativeConstraintServiceBinding service,
-            Func<CharacterPoseCanvasNode, CharacterFootPlacementConstraintHandle>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterFootPlacementConstraintHandle>
                 handleFactory)
         {
             RequireArguments(registry, service, handleFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 new CharacterPoseNativeFootPlacementHandler(
                     node.NodeId,
-                    handleFactory(node),
+                    handleFactory(node, context),
                     service));
             registry.Register(
                 CharacterPoseNodeKind.FootPlacement,
@@ -24,14 +25,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static void RegisterPoseBoneIkGoals(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseNativeConstraintServiceBinding service,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseBoneContributionConstraintHandle> handleFactory)
         {
             RequireArguments(registry, service, handleFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 new CharacterPoseNativePoseBoneIkGoalsHandler(
                     node.NodeId,
-                    handleFactory(node),
+                    handleFactory(node, context),
                     service));
             registry.Register(
                 CharacterPoseNodeKind.PoseBoneIKGoals,
@@ -41,14 +42,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static void RegisterGoalAssembler(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseNativeConstraintServiceBinding service,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterFullBodyIkGoalAssemblerConstraintHandle> handleFactory)
         {
             RequireArguments(registry, service, handleFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 new CharacterPoseNativeFullBodyIkGoalAssemblerHandler(
                     node.NodeId,
-                    handleFactory(node),
+                    handleFactory(node, context),
                     service));
             registry.Register(
                 CharacterPoseNodeKind.FullBodyIkGoalAssembler,
@@ -58,24 +59,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static void RegisterFullBodyIk(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseNativeConstraintServiceBinding service,
-            Func<CharacterPoseCanvasNode, CharacterFullBodyIkConstraintHandle>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterFullBodyIkConstraintHandle>
                 handleFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, service, handleFactory);
             if (bufferFactory == null)
                 throw new ArgumentNullException(nameof(bufferFactory));
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
             {
-                CharacterPoseNativeNodePoseBuffer buffer = bufferFactory(node) ??
+                CharacterPoseNativeNodePoseBuffer buffer = bufferFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native Full Body IK buffer factory returned no buffer for '{node.NodeId}'.");
                 try
                 {
                     return new CharacterPoseNativeFullBodyIkHandler(
                         node.NodeId,
-                        handleFactory(node),
+                        handleFactory(node, context),
                         buffer,
                         service);
                 }
@@ -105,11 +108,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         sealed class Creator
         {
-            readonly Func<CharacterPoseCanvasNode,
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeNodeHandler> m_Create;
 
             internal Creator(
-                Func<CharacterPoseCanvasNode,
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     ICharacterPoseNativeNodeHandler> create)
             {
                 m_Create = create ?? throw new ArgumentNullException(nameof(create));
@@ -119,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
-                m_Create(node);
+                m_Create(node, context);
         }
     }
 }

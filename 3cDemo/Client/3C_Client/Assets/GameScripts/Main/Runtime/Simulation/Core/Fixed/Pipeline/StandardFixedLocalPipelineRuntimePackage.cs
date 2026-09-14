@@ -20,7 +20,9 @@ namespace ThirdPersonSimulation.Fixed
                 new[] { StandardFixedLocalPipelinePassContracts.LocalSingleStepSchedule },
                 new[]
                 {
-                    StandardFixedPipelinePassContracts.WorldResolveBatch
+                    StandardFixedPipelinePassContracts.AbilityEvaluate,
+                    StandardFixedPipelinePassContracts.WorldResolveBatch,
+                    StandardFixedPipelinePassContracts.AbilityFinalize
                 },
                 new[] { StandardFixedLocalPipelinePassContracts.LocalImmediateOutput });
         }
@@ -36,7 +38,11 @@ namespace ThirdPersonSimulation.Fixed
                     StandardFixedLocalPipelinePassContracts.CreateFactoryDescriptor(
                         StandardFixedLocalPipelinePassContracts.LocalSingleStepSchedule),
                     StandardFixedPipelinePassContracts.CreateFactoryDescriptor(
+                        StandardFixedPipelinePassContracts.AbilityEvaluate),
+                    StandardFixedPipelinePassContracts.CreateFactoryDescriptor(
                         StandardFixedPipelinePassContracts.WorldResolveBatch),
+                    StandardFixedPipelinePassContracts.CreateFactoryDescriptor(
+                        StandardFixedPipelinePassContracts.AbilityFinalize),
                     StandardFixedLocalPipelinePassContracts.CreateFactoryDescriptor(
                         StandardFixedLocalPipelinePassContracts.LocalImmediateOutput)
                 },
@@ -52,7 +58,9 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     new FixedLocalInputIngressPassRuntimeFactory(),
                     new FixedLocalSingleStepSchedulePassRuntimeFactory(),
+                    new FixedAbilityEvaluatePassRuntimeFactory(),
                     new FixedWorldResolveBatchPassRuntimeFactory(),
+                    new FixedAbilityFinalizePassRuntimeFactory(),
                     new FixedLocalImmediateOutputPassRuntimeFactory()
                 }),
                 FixedPassExecutionBackend.CreateProductRuntimeCatalog());

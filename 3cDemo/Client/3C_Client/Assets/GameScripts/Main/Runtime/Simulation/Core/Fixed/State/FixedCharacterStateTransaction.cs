@@ -245,6 +245,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong actionEventSequenceSnapshot,
             bool hadHandleAllocatorWorking,
             ulong handleAllocatorSnapshot,
+            bool hadAbilityExecutionWorking,
+            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -258,6 +260,8 @@ namespace ThirdPersonSimulation.Fixed
             ActionEventSequenceSnapshot = actionEventSequenceSnapshot;
             HadHandleAllocatorWorking = hadHandleAllocatorWorking;
             HandleAllocatorSnapshot = handleAllocatorSnapshot;
+            HadAbilityExecutionWorking = hadAbilityExecutionWorking;
+            AbilityExecutionSnapshot = abilityExecutionSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -272,6 +276,8 @@ namespace ThirdPersonSimulation.Fixed
         internal ulong ActionEventSequenceSnapshot { get; }
         internal bool HadHandleAllocatorWorking { get; }
         internal ulong HandleAllocatorSnapshot { get; }
+        internal bool HadAbilityExecutionWorking { get; }
+        internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -299,6 +305,7 @@ namespace ThirdPersonSimulation.Fixed
         bool m_ActionEventSequenceDirty;
         ulong m_HandleAllocatorWorking;
         bool m_HandleAllocatorDirty;
+        GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionWorking;
         FixedCharacterStateTransactionStatus m_Status;
 
         FixedCharacterStateTransaction(
@@ -409,6 +416,18 @@ namespace ThirdPersonSimulation.Fixed
             m_HandleAllocatorDirty = true;
         }
 
+        public GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState()
+        {
+            RequireActive();
+            return m_AbilityExecutionWorking ?? m_BaseState.AbilityExecutionState;
+        }
+
+        public void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state)
+        {
+            RequireActive();
+            m_AbilityExecutionWorking = state ?? throw new ArgumentNullException(nameof(state));
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -492,6 +511,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_ActionEventSequenceWorking,
                 m_HandleAllocatorDirty,
                 m_HandleAllocatorWorking,
+                m_AbilityExecutionWorking != null,
+                m_AbilityExecutionWorking?.Clone(),
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -527,6 +548,9 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionEventSequenceWorking = savepoint.ActionEventSequenceSnapshot;
             m_HandleAllocatorDirty = savepoint.HadHandleAllocatorWorking;
             m_HandleAllocatorWorking = savepoint.HandleAllocatorSnapshot;
+            m_AbilityExecutionWorking = savepoint.HadAbilityExecutionWorking
+                ? savepoint.AbilityExecutionSnapshot?.Clone()
+                : null;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -569,6 +593,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong eventSequence = m_EventSequenceDirty ? m_EventSequenceWorking : m_BaseState.EventSequence;
             ulong actionEventSequence = m_ActionEventSequenceDirty ? m_ActionEventSequenceWorking : m_BaseState.ActionEventSequence;
             ulong handleAllocator = m_HandleAllocatorDirty ? m_HandleAllocatorWorking : m_BaseState.HandleAllocator;
+            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = m_AbilityExecutionWorking ?? m_BaseState.AbilityExecutionState;
 
             try
             {
@@ -579,6 +604,7 @@ namespace ThirdPersonSimulation.Fixed
                     eventSequence,
                     actionEventSequence,
                     handleAllocator,
+                    abilityExecutionState,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -665,6 +691,7 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionEventSequenceDirty = false;
             m_HandleAllocatorWorking = 0;
             m_HandleAllocatorDirty = false;
+            m_AbilityExecutionWorking = null;
         }
 
     }

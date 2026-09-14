@@ -92,8 +92,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.StateMachineExecutionPath);
             ActionPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
-                ProgramStateSemantic.ActionInstance,
-                ProgramStateSemantic.AbilityExecutionState);
+                ProgramStateSemantic.ActionInstance);
             InputPolicy = new Float32StateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
             BlackboardPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,

@@ -813,13 +813,11 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         GameplayAbilityExecutionAggregate<CharacterStateValue> IGameplayAbilityExecutionStorage<CharacterStateValue>.ReadAggregate() =>
-            m_State.Get(m_Layout.SkillExecutionStateAddress.SlotIndex).SkillExecutionState;
+            m_Frame.Transaction.GetAbilityExecutionState();
 
         void IGameplayAbilityExecutionStorage<CharacterStateValue>.WriteAggregate(
             GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate) =>
-            m_State.Set(
-                m_Layout.SkillExecutionStateAddress.SlotIndex,
-                CharacterStateValue.FromSkillExecutionState(aggregate));
+            m_Frame.Transaction.SetAbilityExecutionState(aggregate);
 
         void MatchActive(
             TypedStateAddress address,

@@ -708,8 +708,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 kind == ProgramStateValueKind.ActionInstance ||
                 kind == ProgramStateValueKind.ActionInstanceReference ||
                 kind == ProgramStateValueKind.BlackboardOwnerToken ||
-                kind == ProgramStateValueKind.BlackboardWriteStamp ||
-                kind == ProgramStateValueKind.AbilityExecutionState)
+                kind == ProgramStateValueKind.BlackboardWriteStamp)
             {
                 return -1;
             }

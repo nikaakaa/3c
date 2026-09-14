@@ -63,7 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(contract));
             if (motions == null)
                 throw new ArgumentNullException(nameof(motions));
-            m_AbilityPrograms.DeclareExecutionState();
             m_Blackboard.CompileDeclarations();
             for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
             {

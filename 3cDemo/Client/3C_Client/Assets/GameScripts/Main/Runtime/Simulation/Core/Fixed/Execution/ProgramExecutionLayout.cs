@@ -113,7 +113,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
-        readonly TypedStateAddress m_SkillExecutionState;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
         readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
@@ -151,10 +150,6 @@ namespace ThirdPersonSimulation.Fixed
             m_NamedConstantIndexes = BuildNamedConstantIndexes(program);
             BuildGlobalStateSlots(program, stateSemanticCount, out m_FirstStateSlots, out m_StateSlotsByOwner);
             BuildTypedStateLayout(program, out m_TypedAddresses, out m_Partitions);
-            int skillExecutionStateSlot = FindStateSlot(ProgramStateSemantic.AbilityExecutionState, "action:ability-execution");
-            if (skillExecutionStateSlot < 0)
-                throw new InvalidDataException("Program has no Skill execution state aggregate.");
-            m_SkillExecutionState = m_TypedAddresses[skillExecutionStateSlot];
             m_SkillExecutionStateSlots = GameplayAbilityExecutionSlotMap.Build(
                 program.Operations.Count,
                 program.ControlFlow,
@@ -207,7 +202,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterEquipmentRuntimeBinding EquipmentBinding => m_EquipmentBinding;
         internal FixedProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
-        public TypedStateAddress SkillExecutionStateAddress => m_SkillExecutionState;
         internal bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
         public EquipmentProgramLayout Equipment { get; }
         public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;

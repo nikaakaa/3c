@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 22;
-		public const string CodecIdentity = "character-state/fixed-q32.32/v21";
-		const string HashIdentity = "character-state-hash/fixed-q32.32/v19";
+		const int Version = 24;
+		public const string CodecIdentity = "character-state/fixed-q32.32/v23";
+		const string HashIdentity = "character-state-hash/fixed-q32.32/v21";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -36,8 +36,9 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
-            writer.WriteInt32(state.SlotCount);
             ProgramExecutionLayout layout = state.ExecutionLayout;
+            WriteSkillExecutionState(writer, state.AbilityExecutionState, layout);
+            writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
                 ProgramStateSlot slot = layout.Program.StateSlots[i];
@@ -72,6 +73,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
             ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(program);
+            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadSkillExecutionState(reader, layout);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -106,7 +108,7 @@ namespace ThirdPersonSimulation.Fixed
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -146,7 +148,6 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.ActionInstance: WriteActionInstance(writer, value.ActionInstance); break;
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
-                case ProgramStateValueKind.AbilityExecutionState: WriteSkillExecutionState(writer, value.SkillExecutionState, layout); break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
         }
@@ -173,7 +174,6 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.ActionInstance: return CharacterStateValue.FromActionInstance(ReadActionInstance(reader, layout));
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
-                case ProgramStateValueKind.AbilityExecutionState: return CharacterStateValue.FromSkillExecutionState(ReadSkillExecutionState(reader, layout));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
         }
@@ -491,6 +491,25 @@ namespace ThirdPersonSimulation.Fixed
                     values));
             }
             return new GameplayAbilityExecutionAggregate<CharacterStateValue>(frames);
+        }
+
+        internal static byte[] WriteAbilityExecutionState(
+            GameplayAbilityExecutionAggregate<CharacterStateValue> state,
+            ProgramExecutionLayout layout)
+        {
+            using var writer = new CanonicalWriter();
+            WriteSkillExecutionState(writer, state, layout);
+            return writer.ToArray();
+        }
+
+        internal static GameplayAbilityExecutionAggregate<CharacterStateValue> ReadAbilityExecutionState(
+            byte[] bytes,
+            ProgramExecutionLayout layout)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            GameplayAbilityExecutionAggregate<CharacterStateValue> state = ReadSkillExecutionState(reader, layout);
+            reader.RequireComplete();
+            return state;
         }
 
         static void WriteTargetSnapshot(CanonicalWriter writer, SimulationActionTargetSnapshot value)

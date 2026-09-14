@@ -10,7 +10,6 @@ namespace ThirdPersonSimulation
 		readonly Float32ActionActivationRequestState m_ActionActivationRequest;
 		readonly Float32ActionInstanceState m_ActionInstance;
 		readonly Float32ActionInstanceReference m_ActionInstanceReference;
-		readonly GameplayAbilityExecutionAggregate<CharacterStateValue> m_SkillExecutionState;
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
 		readonly BlackboardWriteStamp m_BlackboardWriteStamp;
 
@@ -30,7 +29,6 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest,
 			Float32ActionInstanceState actionInstance,
 			Float32ActionInstanceReference actionInstanceReference,
-			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState,
 			SimulationActionTargetSnapshot actionTargetSnapshot)
 		{
 			Kind = kind;
@@ -48,7 +46,6 @@ namespace ThirdPersonSimulation
 			m_ActionActivationRequest = actionActivationRequest;
 			m_ActionInstance = actionInstance;
 			m_ActionInstanceReference = actionInstanceReference;
-			m_SkillExecutionState = skillExecutionState;
 			ActionTargetSnapshot = actionTargetSnapshot;
 		}
 
@@ -68,10 +65,6 @@ namespace ThirdPersonSimulation
 		internal Float32ActionActivationRequestState ActionActivationRequest => Require(ProgramStateValueKind.ActionActivationRequest, m_ActionActivationRequest);
 		internal Float32ActionInstanceState ActionInstance => Require(ProgramStateValueKind.ActionInstance, m_ActionInstance);
 		internal Float32ActionInstanceReference ActionInstanceReference => Require(ProgramStateValueKind.ActionInstanceReference, m_ActionInstanceReference);
-		internal GameplayAbilityExecutionAggregate<CharacterStateValue> SkillExecutionState =>
-			Kind == ProgramStateValueKind.AbilityExecutionState
-				? m_SkillExecutionState ?? throw new InvalidOperationException("Skill execution state aggregate is missing.")
-				: throw new InvalidOperationException($"State value is '{Kind}', expected SkillExecutionState.");
 		public static CharacterStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
 		public static CharacterStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
 		public static CharacterStateValue FromUInt64(ulong value) => Create(ProgramStateValueKind.UInt64, uint64: value);
@@ -86,8 +79,6 @@ namespace ThirdPersonSimulation
 		internal static CharacterStateValue FromActionActivationRequest(Float32ActionActivationRequestState value) => Create(ProgramStateValueKind.ActionActivationRequest, actionActivationRequest: value);
 		internal static CharacterStateValue FromActionInstance(Float32ActionInstanceState value) => Create(ProgramStateValueKind.ActionInstance, actionInstance: value);
 		internal static CharacterStateValue FromActionInstanceReference(Float32ActionInstanceReference value) => Create(ProgramStateValueKind.ActionInstanceReference, actionInstanceReference: value);
-		internal static CharacterStateValue FromSkillExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> value) =>
-			Create(ProgramStateValueKind.AbilityExecutionState, skillExecutionState: value ?? throw new ArgumentNullException(nameof(value)));
 		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
 		public static CharacterStateValue Default(ProgramStateValueKind kind)
 		{
@@ -107,7 +98,6 @@ namespace ThirdPersonSimulation
 				ProgramStateValueKind.ActionActivationRequest => FromActionActivationRequest(default),
 				ProgramStateValueKind.ActionInstance => FromActionInstance(default),
 				ProgramStateValueKind.ActionInstanceReference => FromActionInstanceReference(default),
-				ProgramStateValueKind.AbilityExecutionState => FromSkillExecutionState(new GameplayAbilityExecutionAggregate<CharacterStateValue>()),
 				ProgramStateValueKind.ActionTargetSnapshot => FromActionTargetSnapshot(SimulationActionTargetSnapshot.None),
 				_ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
 			};
@@ -151,7 +141,6 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest = default,
 			Float32ActionInstanceState actionInstance = default,
 			Float32ActionInstanceReference actionInstanceReference = default,
-			GameplayAbilityExecutionAggregate<CharacterStateValue> skillExecutionState = null,
 			SimulationActionTargetSnapshot actionTargetSnapshot = default)
 		{
 			return new CharacterStateValue(
@@ -170,7 +159,6 @@ namespace ThirdPersonSimulation
 				actionActivationRequest,
 				actionInstance,
 				actionInstanceReference,
-				skillExecutionState,
 				actionTargetSnapshot);
 		}
 
@@ -276,6 +264,7 @@ namespace ThirdPersonSimulation
 		readonly ulong m_EventSequence;
 		readonly ulong m_ActionEventSequence;
 		readonly ulong m_HandleAllocator;
+		readonly GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
 		readonly CharacterControlRuntimeState m_ControlState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
@@ -288,6 +277,7 @@ namespace ThirdPersonSimulation
 			ulong eventSequence,
 			ulong actionEventSequence,
 			ulong handleAllocator,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -300,6 +290,7 @@ namespace ThirdPersonSimulation
 			m_EventSequence = eventSequence;
 			m_ActionEventSequence = actionEventSequence;
 			m_HandleAllocator = handleAllocator;
+			m_AbilityExecutionState = abilityExecutionState ?? throw new ArgumentNullException(nameof(abilityExecutionState));
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
 			if (gameplayEffectEnabled)
@@ -346,6 +337,7 @@ namespace ThirdPersonSimulation
 		internal ulong EventSequence => m_EventSequence;
 		internal ulong ActionEventSequence => m_ActionEventSequence;
 		internal ulong HandleAllocator => m_HandleAllocator;
+		internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState => m_AbilityExecutionState;
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
@@ -409,7 +401,7 @@ namespace ThirdPersonSimulation
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, 0, 0, 0, controlState, gameplayEffectState, equipmentState);
+			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -420,6 +412,7 @@ namespace ThirdPersonSimulation
 			ulong eventSequence,
 			ulong actionEventSequence,
 			ulong handleAllocator,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
@@ -447,7 +440,34 @@ namespace ThirdPersonSimulation
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, controlState, gameplayEffectState, equipmentState, partitions, true);
+		}
+
+		internal static CharacterSimulationState Create(
+			CharacterSimulationProgram program,
+			ProgramExecutionLayout layout,
+			ulong lastCompletedTick,
+			IReadOnlyList<CharacterStateValue> values,
+			ulong eventSequence,
+			ulong actionEventSequence,
+			ulong handleAllocator,
+			byte[] abilityExecutionStateBytes,
+			CharacterControlRuntimeState controlState,
+			GameplayEffectStateAggregate gameplayEffectState,
+			EquipmentStateAggregate equipmentState)
+		{
+			return Create(
+				program,
+				layout,
+				lastCompletedTick,
+				values,
+				eventSequence,
+				actionEventSequence,
+				handleAllocator,
+				CharacterSimulationStateCodec.ReadAbilityExecutionState(abilityExecutionStateBytes, layout),
+				controlState,
+				gameplayEffectState,
+				equipmentState);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -476,6 +496,7 @@ namespace ThirdPersonSimulation
 			ulong eventSequence,
 			ulong actionEventSequence,
 			ulong handleAllocator,
+			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -494,7 +515,7 @@ namespace ThirdPersonSimulation
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -517,6 +538,7 @@ namespace ThirdPersonSimulation
 				EventSequence,
 				ActionEventSequence,
 				HandleAllocator,
+				AbilityExecutionState,
 				ControlState,
 				m_GameplayEffectState,
 				m_EquipmentState);

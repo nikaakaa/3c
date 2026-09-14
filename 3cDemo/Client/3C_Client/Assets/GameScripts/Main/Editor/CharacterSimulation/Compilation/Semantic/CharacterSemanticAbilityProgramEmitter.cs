@@ -24,23 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
         }
 
-        public void DeclareExecutionState()
-        {
-            m_Builder.DeclareStandaloneStateSlot(
-                new CharacterSimulationSourceLocation(
-                    typeof(GameplayAbilityProgramBinding).FullName,
-                    "Program",
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    "character/ability-execution-state"),
-                ProgramStateValueKind.AbilityExecutionState,
-                ProgramStateOwnerKind.Action,
-                ProgramStateSemantic.AbilityExecutionState,
-                "action:ability-execution");
-        }
-
         public bool Emit(
             CharacterControlModuleContract contract,
             Func<GameplayAbilityCompilationRecord, OperationHandle> compileEntry)

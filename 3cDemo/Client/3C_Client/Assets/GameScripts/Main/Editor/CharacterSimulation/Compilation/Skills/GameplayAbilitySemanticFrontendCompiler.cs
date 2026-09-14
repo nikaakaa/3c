@@ -66,12 +66,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 builder.RequireGameplayCapability("Action");
                 builder.RequireGameplayCapability("RunnableTree");
                 builder.RequireGameplayCapability("GameplayEffect");
-                builder.DeclareStandaloneStateSlot(
-                    abilitySource,
-                    ProgramStateValueKind.AbilityExecutionState,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.AbilityExecutionState,
-                    "action:ability-execution");
                 var catalogIndex = new CharacterSimulationCatalogIndex();
                 var catalogEmitter = new GameplayAbilitySemanticDependencyCatalogEmitter(builder, report, catalogIndex);
                 GameplayAbilityProviderOwnerSet providers = catalogEmitter.Emit(model);

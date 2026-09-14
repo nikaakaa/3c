@@ -921,8 +921,7 @@ namespace ThirdPersonSimulation
         ActionActivationRequest = 21,
         ActionInstance = 22,
         ActionInstanceReference = 23,
-        ActionTargetSnapshot = 24,
-        AbilityExecutionState = 27
+        ActionTargetSnapshot = 24
     }
 
     public enum ProgramStateOwnerKind : byte
@@ -977,7 +976,6 @@ namespace ThirdPersonSimulation
         InputRequestBuffer = 70,
         ActionInstance = 80,
         ActionRequestBuffer = 81,
-        AbilityExecutionState = 82,
         AIWaitElapsedTicks = 130
     }
 
@@ -1043,7 +1041,6 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.ActionInstance => "state.action-instance/v1",
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
-                ProgramStateValueKind.AbilityExecutionState => "state.ability-execution/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
         }
@@ -1094,7 +1091,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.InputRequestBuffer => kind == ProgramStateValueKind.InputRequest && owner == ProgramStateOwnerKind.Input,
                 ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
-                ProgramStateSemantic.AbilityExecutionState => kind == ProgramStateValueKind.AbilityExecutionState && owner == ProgramStateOwnerKind.Action,
                 _ => false
             };
             if (!valid)

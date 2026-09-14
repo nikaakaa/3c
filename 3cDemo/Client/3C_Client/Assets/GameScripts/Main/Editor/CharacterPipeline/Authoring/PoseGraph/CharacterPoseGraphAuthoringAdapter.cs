@@ -1296,11 +1296,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return true;
                 case "pose-parameter":
                     options = m_Profile && m_Profile.EventGraph
-                        ? m_Profile.EventGraph.BuildVariableContract().Descriptors
+                        ? m_Profile.EventGraph.BuildVariableContract().PublishedDescriptors
                             .Where(value =>
                                 value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Bool ||
                                 value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Int32 ||
-                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Float32)
+                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Float32 ||
+                                value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Enum &&
+                                value.ValueType == typeof(CharacterPresentationMotionPhase))
                             .Where(value =>
                                 value.Reference.VariableId != AnimationPoseParameterIds.ActionWeight.Value &&
                                 value.Reference.VariableId != AnimationPoseParameterIds.FootPlacementWeight.Value)
@@ -1548,8 +1550,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         definition.RequirePayload(node.Payload);
                         ValidateFields(node, capability);
                         ValidatePorts(node, definition);
-                        if (definition.NativeRole ==
-                            CharacterPoseNativeNodeRole.Subgraph)
+                        if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
                         {
                             CharacterPoseSubgraphSignatureValidator.RequireMatch(
                                 node,

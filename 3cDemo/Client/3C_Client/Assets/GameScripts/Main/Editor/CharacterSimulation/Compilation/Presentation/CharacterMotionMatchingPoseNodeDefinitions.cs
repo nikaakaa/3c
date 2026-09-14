@@ -99,8 +99,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterEntryPoseInputPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.EntryPoseInput;
-        public override CharacterPoseNativeNodeRole NativeRole => CharacterPoseNativeNodeRole.GraphInput;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterEntryPoseInputPayload>(CharacterPoseNodeKind.EntryPoseInput, new[] { CharacterPoseGraphAuthoringCapabilities.Subgraph }, "Entry Pose Input", "Inputs", InputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),

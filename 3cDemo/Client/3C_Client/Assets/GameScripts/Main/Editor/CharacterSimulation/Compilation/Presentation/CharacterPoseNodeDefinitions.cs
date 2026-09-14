@@ -13,24 +13,12 @@ using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabi
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal enum CharacterPoseNativeNodeRole : byte
-    {
-        Operation = 1,
-        GraphInput = 2,
-        GraphOutput = 3,
-        Subgraph = 4,
-        PoseOutput = 5
-    }
-
     internal abstract class CharacterPoseNodeDefinition<TPayload> :
         CharacterPoseNodeDefinition
         where TPayload : CharacterPoseNodePayload, new()
     {
         public abstract override CharacterPoseNodeKind Kind { get; }
         public override Type PayloadType => typeof(TPayload);
-        public override CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.Operation;
-
         public override CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload) =>
             GetSource(Require(payload));
@@ -1069,9 +1057,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseSubgraph;
-        public override CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.Subgraph;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, AllPoseGraphsWithLinkedEntry, "Pose Subgraph", "Graph", BlendColor,
                 Fields(Field("graph-id", "Graph", GraphAuthoringFieldValueKind.IdentityReference, "pose-graph")),
@@ -1146,9 +1131,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.GraphInput;
-        public override CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.GraphInput;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterGraphInputPosePayload>(CharacterPoseNodeKind.GraphInput, StateSubgraphAndLinkedEntry, "Graph Input", "Graph", InputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedOutputs);
@@ -1159,9 +1141,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.GraphOutput;
-        public override CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.GraphOutput;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterGraphOutputPosePayload>(CharacterPoseNodeKind.GraphOutput, StateSubgraphAndLinkedEntry, "Graph Output", "Graph", OutputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedInputs);
@@ -1172,8 +1151,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.OutputPose;
-        public override CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.PoseOutput;
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, RootAndState, "Output Pose", "Output", OutputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),

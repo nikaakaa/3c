@@ -519,14 +519,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
 
-                if (handler.NativeRole ==
-                    CharacterPoseNativeNodeRole.PoseOutput)
+                if (node.Kind == CharacterPoseNodeKind.OutputPose)
                     outputCount++;
-                else if (handler.NativeRole ==
-                         CharacterPoseNativeNodeRole.GraphInput)
+                else if (node.Kind == CharacterPoseNodeKind.GraphInput ||
+                         node.Kind == CharacterPoseNodeKind.EntryPoseInput)
                     graphInputCount++;
-                else if (handler.NativeRole ==
-                         CharacterPoseNativeNodeRole.GraphOutput)
+                else if (node.Kind == CharacterPoseNodeKind.GraphOutput)
                     graphOutputCount++;
 
                 if (handler.Requires(
@@ -548,8 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         traverseDependencies,
                         animationInputParameters);
                 }
-                else if (handler.NativeRole ==
-                         CharacterPoseNativeNodeRole.Subgraph)
+                else if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
                 {
                     ValidateSubgraph(
                         ownerAsset,
@@ -604,12 +601,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 var localPorts = new HashSet<PosePortId>();
                 bool boundary =
-                    handler.NativeRole ==
-                    CharacterPoseNativeNodeRole.GraphInput ||
-                    handler.NativeRole ==
-                    CharacterPoseNativeNodeRole.GraphOutput ||
-                    handler.NativeRole ==
-                    CharacterPoseNativeNodeRole.Subgraph;
+                    node.Kind == CharacterPoseNodeKind.GraphInput ||
+                    node.Kind == CharacterPoseNodeKind.EntryPoseInput ||
+                    node.Kind == CharacterPoseNodeKind.GraphOutput ||
+                    node.Kind == CharacterPoseNodeKind.PoseSubgraph;
                 for (int portIndex = 0;
                      portIndex < nodePorts.Count;
                      portIndex++)
@@ -1548,9 +1543,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             CharacterPoseCanvasNode output =
                 nodes.Values.SingleOrDefault(node =>
-                    CharacterPoseNodeDefinitionModule.Shared
-                        .Require(node.Kind).NativeRole ==
-                    CharacterPoseNativeNodeRole.PoseOutput);
+                    node.Kind == CharacterPoseNodeKind.OutputPose);
             if (output == null)
                 return;
             var reachable = new HashSet<PoseNodeId>();

@@ -73,8 +73,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public abstract CharacterPoseNodeKind Kind { get; }
         public abstract Type PayloadType { get; }
         public abstract GraphAuthoringCapabilityDescriptor Declare();
-        public virtual CharacterPoseNativeNodeRole NativeRole =>
-            CharacterPoseNativeNodeRole.Operation;
         public virtual CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.None;

@@ -957,7 +957,11 @@ namespace BTSMTL.Timeline.Editor
             public bool ShowCurves { get; set; }
             public float CustomHeight
             {
-                get => m_CustomHeight;
+                get => m_CustomHeight > 0f
+                    ? m_CustomHeight
+                    : ShowCurves
+                        ? GetNaturalExpandedHeight(string.Empty)
+                        : 0f;
                 set => m_CustomHeight = Mathf.Clamp(value, DefaultHeight + 32f, 600f);
             }
             public Color Color => Source.Color();
@@ -966,6 +970,14 @@ namespace BTSMTL.Timeline.Editor
             public float DefaultHeight => 32f;
             public float FinalHeight => GetFinalHeight(string.Empty);
             public float GetFinalHeight(string inspectedParameterId)
+            {
+                float naturalHeight = GetNaturalExpandedHeight(inspectedParameterId);
+                if (!ShowCurves || string.IsNullOrEmpty(inspectedParameterId))
+                    return naturalHeight;
+                return Mathf.Max(naturalHeight, m_CustomHeight);
+            }
+
+            float GetNaturalExpandedHeight(string inspectedParameterId)
             {
                 if (!ShowCurves)
                     return DefaultHeight;
@@ -984,7 +996,7 @@ namespace BTSMTL.Timeline.Editor
                 float parameterHeight = DefaultHeight + 10f + clip.Parameters.Count * 20f;
                 if (!hasInspectedParameter)
                     return Mathf.Max(parameterHeight, DefaultHeight + 50f);
-                return Mathf.Max(parameterHeight + 65f, m_CustomHeight);
+                return parameterHeight + 65f;
             }
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;
             public IEmbeddedTimelineClipBinding SelectedClip =>

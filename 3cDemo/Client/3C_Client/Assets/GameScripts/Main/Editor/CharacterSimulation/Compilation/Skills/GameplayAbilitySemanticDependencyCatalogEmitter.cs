@@ -323,12 +323,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     : $"action:{actionId}:slot:{i:D4}";
                 m_Builder.DeclareStandaloneStateSlot(
                     source,
-                    ProgramStateValueKind.ActionActivationRequest,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.ActionRequestBuffer,
-                    ownerIdentity);
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
                     ProgramStateValueKind.ActionInstance,
                     ProgramStateOwnerKind.Action,
                     ProgramStateSemantic.ActionInstance,

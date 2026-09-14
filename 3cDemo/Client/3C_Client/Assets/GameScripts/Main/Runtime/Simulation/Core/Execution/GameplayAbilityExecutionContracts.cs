@@ -21,6 +21,60 @@ namespace ThirdPersonSimulation
         Information = 2
     }
 
+    internal readonly struct SimulationActionActivationRequestState<TTargetSnapshot>
+        where TTargetSnapshot : struct
+    {
+        public SimulationActionActivationRequestState(
+            string actionId,
+            CharacterSkillId skillId,
+            OperationHandle skillEntryOperation,
+            string contextId,
+            string sourceInputRequestId,
+            ulong inputSequence,
+            ulong startTick,
+            string targetKey,
+            TTargetSnapshot targetSnapshot,
+            SimulationExecutionSource source,
+            EquipmentActionContext equipmentContext = default,
+            ulong replacementActionInstanceId = 0)
+        {
+            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
+            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
+            if (inputSequence == 0 || startTick == 0 || !source.IsValid)
+                throw new ArgumentException("Action activation request identity is incomplete.");
+            InputSequence = inputSequence;
+            StartTick = startTick;
+            TargetKey = targetKey ?? string.Empty;
+            TargetSnapshot = targetSnapshot;
+            Source = source;
+            EquipmentContext = equipmentContext;
+            ReplacementActionInstanceId = replacementActionInstanceId;
+        }
+
+        public string ActionId { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public string ContextId { get; }
+        public string SourceInputRequestId { get; }
+        public ulong InputSequence { get; }
+        public ulong StartTick { get; }
+        public string TargetKey { get; }
+        public TTargetSnapshot TargetSnapshot { get; }
+        public SimulationExecutionSource Source { get; }
+        public EquipmentActionContext EquipmentContext { get; }
+        public ulong ReplacementActionInstanceId { get; }
+        public bool IsValid =>
+            !string.IsNullOrEmpty(ActionId) &&
+            !string.IsNullOrEmpty(ContextId) &&
+            InputSequence != 0 &&
+            StartTick != 0 &&
+            Source.IsValid &&
+            (!Source.IsCharacterControl || SkillId.IsValid && SkillEntryOperation.IsValid);
+    }
+
     internal readonly struct AbilityExecutionContext
     {
         public AbilityExecutionContext(

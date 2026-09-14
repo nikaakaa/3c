@@ -63,17 +63,15 @@ namespace ThirdPersonSimulation.Fixed
 
     public readonly struct TypedActionStateAddresses
     {
-        public TypedActionStateAddresses(string actionId, TypedStateAddress request, TypedStateAddress instance)
+        public TypedActionStateAddresses(string actionId, TypedStateAddress instance)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
-            if (!request.IsValid || !instance.IsValid)
-                throw new ArgumentException("Action typed state addresses are incomplete.");
-            Request = request;
+            if (!instance.IsValid)
+                throw new ArgumentException("Action typed state address is invalid.");
             Instance = instance;
         }
 
         public string ActionId { get; }
-        public TypedStateAddress Request { get; }
         public TypedStateAddress Instance { get; }
     }
 
@@ -658,9 +656,6 @@ namespace ThirdPersonSimulation.Fixed
                 TypedStateAddress address = addresses[i];
                 switch (slot.Semantic)
                 {
-                    case ProgramStateSemantic.ActionRequestBuffer:
-                        RequireActionBuilder(actionBuilders, slot.OwnerIdentity).Request = address;
-                        break;
                     case ProgramStateSemantic.ActionInstance:
                         RequireActionBuilder(actionBuilders, slot.OwnerIdentity).Instance = address;
                         break;
@@ -685,11 +680,10 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     if (slot.Key != expectedSlotIndex++)
                         throw new InvalidDataException($"Action '{pair.Key}' has a non-contiguous instance slot layout.");
-                    if (!slot.Value.Request.IsValid || !slot.Value.Instance.IsValid)
+                    if (!slot.Value.Instance.IsValid)
                         throw new InvalidDataException($"Action '{pair.Key}' slot '{slot.Key}' typed state is incomplete.");
                     TypedActionStateAddresses typedAction = new TypedActionStateAddresses(
                         pair.Key,
-                        slot.Value.Request,
                         slot.Value.Instance);
                     values.Add(typedAction);
                     allActionValues.Add(typedAction);
@@ -845,7 +839,6 @@ namespace ThirdPersonSimulation.Fixed
             }
 
             public int SlotIndex;
-            public TypedStateAddress Request;
             public TypedStateAddress Instance;
         }
 

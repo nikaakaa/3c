@@ -3,15 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation
 {
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 24;
-		public const string CodecIdentity = "character-state/float32/v25";
-		const string HashIdentity = "character-state-hash/float32/v23";
+		const int Version = 25;
+		public const string CodecIdentity = "character-state/float32/v26";
+		const string HashIdentity = "character-state-hash/float32/v24";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -39,6 +40,7 @@ namespace ThirdPersonSimulation
             ProgramExecutionLayout layout = state.ExecutionLayout;
             WriteSkillExecutionState(writer, state.AbilityExecutionState, layout);
             WriteInputRequests(writer, state.InputRequests, layout.InputRequestIds);
+            WriteActionActivationRequests(writer, state.ActionActivationRequests, layout);
             writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
@@ -76,6 +78,7 @@ namespace ThirdPersonSimulation
             ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(program);
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadSkillExecutionState(reader, layout);
             Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, layout.InputRequestIds);
+            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, layout);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -110,7 +113,7 @@ namespace ThirdPersonSimulation
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -145,7 +148,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
                 case ProgramStateValueKind.BlackboardOwnerToken: WriteBlackboardOwnerToken(writer, value.BlackboardOwnerToken); break;
                 case ProgramStateValueKind.BlackboardWriteStamp: WriteBlackboardWriteStamp(writer, value.BlackboardWriteStamp); break;
-                case ProgramStateValueKind.ActionActivationRequest: WriteActionRequest(writer, value.ActionActivationRequest); break;
                 case ProgramStateValueKind.ActionInstance: WriteActionInstance(writer, value.ActionInstance); break;
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
@@ -170,7 +172,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: return CharacterStateValue.FromIdentity(reader.ReadString());
                 case ProgramStateValueKind.BlackboardOwnerToken: return CharacterStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader));
                 case ProgramStateValueKind.BlackboardWriteStamp: return CharacterStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader));
-                case ProgramStateValueKind.ActionActivationRequest: return CharacterStateValue.FromActionActivationRequest(ReadActionRequest(reader, layout));
                 case ProgramStateValueKind.ActionInstance: return CharacterStateValue.FromActionInstance(ReadActionInstance(reader, layout));
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
@@ -275,7 +276,49 @@ namespace ThirdPersonSimulation
             return values;
         }
 
-        static void WriteActionRequest(CanonicalWriter writer, Float32ActionActivationRequestState value)
+        static void WriteActionActivationRequests(
+            CanonicalWriter writer,
+            IReadOnlyList<SimulationActionActivationRequestState> values,
+            ProgramExecutionLayout layout)
+        {
+            writer.WriteInt32(values.Count);
+            for (int i = 0; i < values.Count; i++)
+                WriteActionRequest(writer, values[i]);
+        }
+
+        static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
+            CanonicalReader reader,
+            ProgramExecutionLayout layout)
+        {
+            int count = reader.ReadInt32();
+            if (count < 0)
+                throw new InvalidDataException("Character action activation request state count is invalid.");
+            var values = new List<SimulationActionActivationRequestState>(count);
+            for (int i = 0; i < count; i++)
+                values.Add(ReadActionRequest(reader, layout));
+            return values;
+        }
+
+        internal static byte[] WriteActionActivationRequests(
+            IReadOnlyList<SimulationActionActivationRequestState> values,
+            ProgramExecutionLayout layout)
+        {
+            using var writer = new CanonicalWriter();
+            WriteActionActivationRequests(writer, values, layout);
+            return writer.ToArray();
+        }
+
+        internal static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
+            byte[] bytes,
+            ProgramExecutionLayout layout)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            List<SimulationActionActivationRequestState> values = ReadActionActivationRequests(reader, layout);
+            reader.RequireComplete();
+            return values;
+        }
+
+        static void WriteActionRequest(CanonicalWriter writer, SimulationActionActivationRequestState value)
         {
             writer.WriteBoolean(value.IsValid);
             if (!value.IsValid)
@@ -294,7 +337,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(value.ReplacementActionInstanceId);
         }
 
-        static Float32ActionActivationRequestState ReadActionRequest(
+        static SimulationActionActivationRequestState ReadActionRequest(
             CanonicalReader reader,
             ProgramExecutionLayout layout)
         {
@@ -312,7 +355,7 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source = ReadExecutionSource(reader, layout);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             ulong replacementActionInstanceId = reader.ReadUInt64();
-            return new Float32ActionActivationRequestState(
+            return new SimulationActionActivationRequestState(
                 actionId,
                 skillId,
                 skillEntryOperation,

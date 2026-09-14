@@ -2,13 +2,13 @@ using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
 {
 	public readonly struct CharacterStateValue
 	{
-		readonly FixedActionActivationRequestState m_ActionActivationRequest;
-		readonly FixedActionInstanceState m_ActionInstance;
+        readonly FixedActionInstanceState m_ActionInstance;
 		readonly FixedActionInstanceReference m_ActionInstanceReference;
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
 		readonly BlackboardWriteStamp m_BlackboardWriteStamp;
@@ -25,8 +25,7 @@ namespace ThirdPersonSimulation.Fixed
 			string identity,
 			BlackboardOwnerToken blackboardOwnerToken,
 			BlackboardWriteStamp blackboardWriteStamp,
-			FixedActionActivationRequestState actionActivationRequest,
-			FixedActionInstanceState actionInstance,
+            FixedActionInstanceState actionInstance,
 			FixedActionInstanceReference actionInstanceReference,
 			SimulationActionTargetSnapshot actionTargetSnapshot)
 		{
@@ -41,8 +40,7 @@ namespace ThirdPersonSimulation.Fixed
 			Identity = identity ?? string.Empty;
 			m_BlackboardOwnerToken = blackboardOwnerToken;
 			m_BlackboardWriteStamp = blackboardWriteStamp;
-			m_ActionActivationRequest = actionActivationRequest;
-			m_ActionInstance = actionInstance;
+            m_ActionInstance = actionInstance;
 			m_ActionInstanceReference = actionInstanceReference;
 			ActionTargetSnapshot = actionTargetSnapshot;
 		}
@@ -59,8 +57,7 @@ namespace ThirdPersonSimulation.Fixed
 		public BlackboardOwnerToken BlackboardOwnerToken => Require(ProgramStateValueKind.BlackboardOwnerToken, m_BlackboardOwnerToken);
 		public BlackboardWriteStamp BlackboardWriteStamp => Require(ProgramStateValueKind.BlackboardWriteStamp, m_BlackboardWriteStamp);
 		public SimulationActionTargetSnapshot ActionTargetSnapshot { get; }
-		internal FixedActionActivationRequestState ActionActivationRequest => Require(ProgramStateValueKind.ActionActivationRequest, m_ActionActivationRequest);
-		internal FixedActionInstanceState ActionInstance => Require(ProgramStateValueKind.ActionInstance, m_ActionInstance);
+        internal FixedActionInstanceState ActionInstance => Require(ProgramStateValueKind.ActionInstance, m_ActionInstance);
 		internal FixedActionInstanceReference ActionInstanceReference => Require(ProgramStateValueKind.ActionInstanceReference, m_ActionInstanceReference);
 		public static CharacterStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
 		public static CharacterStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
@@ -72,8 +69,7 @@ namespace ThirdPersonSimulation.Fixed
 		public static CharacterStateValue FromIdentity(string value) => Create(ProgramStateValueKind.Identity, identity: value);
 		public static CharacterStateValue FromBlackboardOwnerToken(BlackboardOwnerToken value) => Create(ProgramStateValueKind.BlackboardOwnerToken, blackboardOwnerToken: value);
 		public static CharacterStateValue FromBlackboardWriteStamp(BlackboardWriteStamp value) => Create(ProgramStateValueKind.BlackboardWriteStamp, blackboardWriteStamp: value);
-		internal static CharacterStateValue FromActionActivationRequest(FixedActionActivationRequestState value) => Create(ProgramStateValueKind.ActionActivationRequest, actionActivationRequest: value);
-		internal static CharacterStateValue FromActionInstance(FixedActionInstanceState value) => Create(ProgramStateValueKind.ActionInstance, actionInstance: value);
+        internal static CharacterStateValue FromActionInstance(FixedActionInstanceState value) => Create(ProgramStateValueKind.ActionInstance, actionInstance: value);
 		internal static CharacterStateValue FromActionInstanceReference(FixedActionInstanceReference value) => Create(ProgramStateValueKind.ActionInstanceReference, actionInstanceReference: value);
 		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
 		public static CharacterStateValue Default(ProgramStateValueKind kind)
@@ -90,8 +86,7 @@ namespace ThirdPersonSimulation.Fixed
 				ProgramStateValueKind.Identity => FromIdentity(string.Empty),
 				ProgramStateValueKind.BlackboardOwnerToken => FromBlackboardOwnerToken(default),
 				ProgramStateValueKind.BlackboardWriteStamp => FromBlackboardWriteStamp(default),
-				ProgramStateValueKind.ActionActivationRequest => FromActionActivationRequest(default),
-				ProgramStateValueKind.ActionInstance => FromActionInstance(default),
+                ProgramStateValueKind.ActionInstance => FromActionInstance(default),
 				ProgramStateValueKind.ActionInstanceReference => FromActionInstanceReference(default),
 				ProgramStateValueKind.ActionTargetSnapshot => FromActionTargetSnapshot(SimulationActionTargetSnapshot.None),
 				_ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
@@ -132,8 +127,7 @@ namespace ThirdPersonSimulation.Fixed
 			string identity = null,
 			BlackboardOwnerToken blackboardOwnerToken = default,
 			BlackboardWriteStamp blackboardWriteStamp = default,
-			FixedActionActivationRequestState actionActivationRequest = default,
-			FixedActionInstanceState actionInstance = default,
+            FixedActionInstanceState actionInstance = default,
 			FixedActionInstanceReference actionInstanceReference = default,
 			SimulationActionTargetSnapshot actionTargetSnapshot = default)
 		{
@@ -149,8 +143,7 @@ namespace ThirdPersonSimulation.Fixed
 				identity,
 				blackboardOwnerToken,
 				blackboardWriteStamp,
-				actionActivationRequest,
-				actionInstance,
+                actionInstance,
 				actionInstanceReference,
 				actionTargetSnapshot);
 		}
@@ -259,6 +252,7 @@ namespace ThirdPersonSimulation.Fixed
 		readonly ulong m_HandleAllocator;
 		readonly GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
 		readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
+		readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
 		readonly CharacterControlRuntimeState m_ControlState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
@@ -273,6 +267,7 @@ namespace ThirdPersonSimulation.Fixed
 			ulong handleAllocator,
 			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
+			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -287,6 +282,7 @@ namespace ThirdPersonSimulation.Fixed
 			m_HandleAllocator = handleAllocator;
 			m_AbilityExecutionState = abilityExecutionState ?? throw new ArgumentNullException(nameof(abilityExecutionState));
 			m_InputRequests = CopyInputRequests(layout.InputRequestIds, inputRequests);
+			m_ActionActivationRequests = CopyActionActivationRequests(layout, actionActivationRequests);
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
 			if (gameplayEffectEnabled)
@@ -335,6 +331,7 @@ namespace ThirdPersonSimulation.Fixed
 		internal ulong HandleAllocator => m_HandleAllocator;
 		internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState => m_AbilityExecutionState;
 		internal IReadOnlyDictionary<string, SimulationInputRequestState> InputRequests => m_InputRequests;
+		internal IReadOnlyList<SimulationActionActivationRequestState> ActionActivationRequests => m_ActionActivationRequests;
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
@@ -398,7 +395,7 @@ namespace ThirdPersonSimulation.Fixed
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), controlState, gameplayEffectState, equipmentState);
+			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), Array.Empty<SimulationActionActivationRequestState>(), controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -411,6 +408,7 @@ namespace ThirdPersonSimulation.Fixed
 			ulong handleAllocator,
 			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
+			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
@@ -438,7 +436,7 @@ namespace ThirdPersonSimulation.Fixed
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -469,6 +467,7 @@ namespace ThirdPersonSimulation.Fixed
 			ulong handleAllocator,
 			GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
+			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -487,7 +486,7 @@ namespace ThirdPersonSimulation.Fixed
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -512,6 +511,7 @@ namespace ThirdPersonSimulation.Fixed
 				HandleAllocator,
 				AbilityExecutionState,
 				InputRequests,
+				ActionActivationRequests,
 				ControlState,
 				m_GameplayEffectState,
 				m_EquipmentState);
@@ -522,6 +522,28 @@ namespace ThirdPersonSimulation.Fixed
 			var result = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
 			for (int i = 0; i < requestIds.Count; i++)
 				result.Add(requestIds[i], default);
+			return result;
+		}
+
+		static List<SimulationActionActivationRequestState> CopyActionActivationRequests(
+			ProgramExecutionLayout layout,
+			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests)
+		{
+			if (actionActivationRequests == null)
+				throw new ArgumentNullException(nameof(actionActivationRequests));
+			var result = new List<SimulationActionActivationRequestState>(actionActivationRequests.Count);
+			var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+			for (int i = 0; i < actionActivationRequests.Count; i++)
+			{
+				SimulationActionActivationRequestState request = actionActivationRequests[i];
+				if (!request.IsValid)
+					throw new InvalidDataException("Character action activation request state is invalid.");
+				int count = counts.TryGetValue(request.ActionId, out int current) ? current : 0;
+				if (count >= layout.ActionStateSlots(request.ActionId).Count)
+					throw new InvalidDataException($"Character action activation request state exceeds Action '{request.ActionId}' capacity.");
+				counts[request.ActionId] = count + 1;
+				result.Add(request);
+			}
 			return result;
 		}
 

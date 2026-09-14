@@ -1,62 +1,10 @@
 ﻿using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
+using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal readonly struct FixedActionActivationRequestState
-    {
-        public FixedActionActivationRequestState(
-            string actionId,
-            CharacterSkillId skillId,
-            OperationHandle skillEntryOperation,
-            string contextId,
-            string sourceInputRequestId,
-            ulong inputSequence,
-            ulong startTick,
-            string targetKey,
-            SimulationActionTargetSnapshot targetSnapshot,
-            SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext = default,
-            ulong replacementActionInstanceId = 0)
-        {
-            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
-            SkillId = skillId;
-            SkillEntryOperation = skillEntryOperation;
-            ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
-            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
-            if (inputSequence == 0 || startTick == 0 || !source.IsValid)
-                throw new ArgumentException("Action activation request identity is incomplete.");
-            InputSequence = inputSequence;
-            StartTick = startTick;
-            TargetKey = targetKey ?? string.Empty;
-            TargetSnapshot = targetSnapshot;
-            Source = source;
-            EquipmentContext = equipmentContext;
-            ReplacementActionInstanceId = replacementActionInstanceId;
-        }
-
-        public string ActionId { get; }
-        public CharacterSkillId SkillId { get; }
-        public OperationHandle SkillEntryOperation { get; }
-        public string ContextId { get; }
-        public string SourceInputRequestId { get; }
-        public ulong InputSequence { get; }
-        public ulong StartTick { get; }
-        public string TargetKey { get; }
-        public SimulationActionTargetSnapshot TargetSnapshot { get; }
-        public SimulationExecutionSource Source { get; }
-        public EquipmentActionContext EquipmentContext { get; }
-        public ulong ReplacementActionInstanceId { get; }
-        public bool IsValid =>
-            !string.IsNullOrEmpty(ActionId) &&
-            !string.IsNullOrEmpty(ContextId) &&
-            InputSequence != 0 &&
-            StartTick != 0 &&
-            Source.IsValid &&
-            (!Source.IsCharacterControl || SkillId.IsValid && SkillEntryOperation.IsValid);
-    }
-
     internal readonly struct FixedActionInstanceState
     {
         public FixedActionInstanceState(
@@ -656,57 +604,45 @@ namespace ThirdPersonSimulation.Fixed
             m_State.Set(slot, CharacterStateValue.FromActionInstance(action));
         }
 
-        public int RequireRequestSlot(string actionId)
-        {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
-            {
-                if (!m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
-                    return addresses.Request.SlotIndex;
-            }
-            throw new InvalidOperationException($"Action '{actionId}' has no free activation request slot.");
-        }
-
         public bool HasPendingRequest(string actionId)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
-            {
-                if (m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
+            foreach (SimulationActionActivationRequestState request in m_Frame.Transaction.GetActionActivationRequests())
+                if (request.IsValid && string.Equals(request.ActionId, actionId, StringComparison.Ordinal))
                     return true;
-            }
             return false;
         }
 
-        public int RequireSlot(string actionId, ProgramStateSemantic semantic)
+        public void StageRequest(SimulationActionActivationRequestState state)
         {
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(actionId);
-            return semantic switch
-            {
-                ProgramStateSemantic.ActionRequestBuffer => addresses.Request.SlotIndex,
-                ProgramStateSemantic.ActionInstance => addresses.Instance.SlotIndex,
-                _ => throw new InvalidOperationException($"Action '{actionId}' has no typed '{semantic}' state.")
-            };
+            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.Transaction.GetActionActivationRequests();
+            int count = 0;
+            for (int i = 0; i < current.Count; i++)
+                if (string.Equals(current[i].ActionId, state.ActionId, StringComparison.Ordinal))
+                    count++;
+            if (count >= m_Layout.ActionStateSlots(state.ActionId).Count)
+                throw new InvalidOperationException($"Action '{state.ActionId}' has no free activation request capacity.");
+            var requests = new List<SimulationActionActivationRequestState>(current.Count + 1);
+            for (int i = 0; i < current.Count; i++)
+                requests.Add(current[i]);
+            requests.Add(state);
+            m_Frame.Transaction.SetActionActivationRequests(requests);
         }
-
-        public void WriteRequest(int slot, FixedActionActivationRequestState state) =>
-            m_State.Set(slot, CharacterStateValue.FromActionActivationRequest(state));
-
-        public FixedActionActivationRequestState ReadRequest(int slot) =>
-            m_State.Get(slot).ActionActivationRequest;
 
         public int FindPendingSkill(
             CharacterSkillId skillId,
-            out FixedActionActivationRequestState request)
+            out SimulationActionActivationRequestState request)
         {
             int found = -1;
             request = default;
-            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.Transaction.GetActionActivationRequests();
+            for (int i = 0; i < requests.Count; i++)
             {
-                FixedActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+                SimulationActionActivationRequestState candidate = requests[i];
                 if (!candidate.IsValid || !candidate.Source.IsCharacterControl || candidate.SkillId != skillId)
                     continue;
                 if (found >= 0)
                     throw new InvalidOperationException($"Skill '{skillId}' has multiple pending Action activation requests.");
-                found = addresses.Request.SlotIndex;
+                found = i;
                 request = candidate;
             }
             return found;
@@ -721,17 +657,19 @@ namespace ThirdPersonSimulation.Fixed
             ulong startTick,
             ulong replacementActionInstanceId)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.Transaction.GetActionActivationRequests();
+            for (int i = 0; i < requests.Count; i++)
             {
-                FixedActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+                SimulationActionActivationRequestState candidate = requests[i];
                 if (candidate.IsValid && candidate.SkillId == skillId &&
+                    string.Equals(candidate.ActionId, actionId, StringComparison.Ordinal) &&
                     candidate.SkillEntryOperation.Equals(entryOperation) &&
                     string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
                     candidate.InputSequence == inputSequence &&
                     candidate.StartTick == startTick &&
                     (replacementActionInstanceId == ulong.MaxValue ||
                      candidate.ReplacementActionInstanceId == replacementActionInstanceId))
-                    return addresses.Request.SlotIndex;
+                    return i;
             }
             return -1;
         }
@@ -745,22 +683,39 @@ namespace ThirdPersonSimulation.Fixed
             ulong startTick,
             ulong replacementActionInstanceId)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.Transaction.GetActionActivationRequests();
+            for (int i = 0; i < requests.Count; i++)
             {
-                FixedActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+                SimulationActionActivationRequestState candidate = requests[i];
                 if (candidate.IsValid && candidate.SkillId == skillId &&
+                    string.Equals(candidate.ActionId, actionId, StringComparison.Ordinal) &&
                     candidate.SkillEntryOperation.Equals(entryOperation) &&
                     string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
                     candidate.InputSequence == inputSequence &&
                     candidate.StartTick == startTick &&
                     (replacementActionInstanceId == ulong.MaxValue ||
                      candidate.ReplacementActionInstanceId == replacementActionInstanceId))
-                    return addresses.Instance.SlotIndex;
+                {
+                    if (candidate.ReplacementActionInstanceId != 0 &&
+                        TryFindInstanceSlot(candidate.ReplacementActionInstanceId, out int replacementSlot))
+                        return replacementSlot;
+                    return FindEmptyInstanceSlot(actionId);
+                }
             }
             return -1;
         }
 
-        public void ClearRequest(int slot) => m_State.Set(slot, CharacterStateValue.FromActionActivationRequest(default));
+        public void ClearRequestAt(int index)
+        {
+            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.Transaction.GetActionActivationRequests();
+            if (index < 0 || index >= current.Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            var requests = new List<SimulationActionActivationRequestState>(current.Count - 1);
+            for (int i = 0; i < current.Count; i++)
+                if (i != index)
+                    requests.Add(current[i]);
+            m_Frame.Transaction.SetActionActivationRequests(requests);
+        }
 
         public FixedActionInstanceState ReadSlot(int slot) => m_State.Get(slot).ActionInstance;
 

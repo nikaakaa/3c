@@ -19,7 +19,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateValueKind.Identity => "state.fixed-q32.32-identity/v1",
                 ProgramStateValueKind.BlackboardOwnerToken => "state.fixed-q32.32-blackboard-owner-token/v1",
                 ProgramStateValueKind.BlackboardWriteStamp => "state.fixed-q32.32-blackboard-write-stamp/v1",
-                ProgramStateValueKind.ActionActivationRequest => "state.fixed-q32.32-action-activation-request/v1",
                 ProgramStateValueKind.ActionInstance => "state.fixed-q32.32-action-instance/v1",
                 ProgramStateValueKind.ActionInstanceReference => "state.fixed-q32.32-action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.fixed-q32.32-action-target-snapshot/v1",

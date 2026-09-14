@@ -92,7 +92,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.StateMachineTransition,
                 ProgramStateSemantic.StateMachineExecutionPath);
             ActionPolicy = new FixedStateAccessPolicy(
-                ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance);
             BlackboardPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,

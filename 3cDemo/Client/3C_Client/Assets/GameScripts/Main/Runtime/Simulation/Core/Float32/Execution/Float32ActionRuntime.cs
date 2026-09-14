@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation
 {
@@ -341,10 +342,8 @@ namespace ThirdPersonSimulation
 		void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.StageRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
 		{
-			int slot = m_Actions.RequireRequestSlot(request.ActionId);
-			m_Actions.WriteRequest(
-				slot,
-				new Float32ActionActivationRequestState(
+			m_Actions.StageRequest(
+				new SimulationActionActivationRequestState(
 					request.ActionId,
 					request.SkillId,
 					request.SkillEntryOperation,
@@ -363,8 +362,8 @@ namespace ThirdPersonSimulation
 			CharacterSkillId skillId,
 			out ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
 		{
-			int slot = m_Actions.FindPendingSkill(skillId, out Float32ActionActivationRequestState staged);
-			if (slot < 0)
+			int requestIndex = m_Actions.FindPendingSkill(skillId, out SimulationActionActivationRequestState staged);
+			if (requestIndex < 0)
 			{
 				request = default;
 				return false;
@@ -388,7 +387,7 @@ namespace ThirdPersonSimulation
 		void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.ClearPendingRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
 		{
-			int slot = m_Actions.FindPendingRequest(
+			int requestIndex = m_Actions.FindPendingRequest(
 				request.ActionId,
 				request.SkillId,
 				request.SkillEntryOperation,
@@ -396,9 +395,9 @@ namespace ThirdPersonSimulation
 				request.InputSequence,
 				request.StartTick,
 				request.ReplacementActionInstanceId);
-			if (slot < 0)
+			if (requestIndex < 0)
 				throw new InvalidOperationException($"Action '{request.ActionId}' has no matching pending activation request.");
-			m_Actions.ClearRequest(slot);
+			m_Actions.ClearRequestAt(requestIndex);
 		}
 
         ulong IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.NextActionInstanceId() =>
@@ -462,7 +461,7 @@ namespace ThirdPersonSimulation
 
 		void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.ClearRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request) =>
-			m_Actions.ClearRequest(m_Actions.FindPendingRequest(
+			m_Actions.ClearRequestAt(m_Actions.FindPendingRequest(
 				request.ActionId,
 				request.SkillId,
 				request.SkillEntryOperation,

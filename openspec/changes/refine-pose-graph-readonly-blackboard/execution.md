@@ -277,6 +277,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Residual risk：旧 Presentation Host、Projection、Snapshot Publisher 和少量并行脏消费者仍引用已退出类型；原生 evaluator 尚未接入 Source/Constraint/Final Publication，当前不能宣称 3.1—3.18 全部完成。
 - Undo：这些是源文件与 `.meta` 的 Git 删除，可按上述 Pose 提交逆序逐个 revert；不要回退或覆盖同期间的并行提交。
 
+## 2026-09-14 r3 统一 NativePorts 形状来源
+
+- `CharacterPoseCanvasNativePorts.Shape` 现在始终返回同一份 `RuntimeShape`；删除编辑器专用 `PoseCanvasEditorBridge.PortShape` 分支和注册，FlowCanvas 的编辑端口、连接类型、索引与运行端口不再各自投影一份形状。
+- 保留 `CharacterPoseAuthoringPortProjection` 供正式 Mutation/Clipboard/作者字段规则使用，但它不再成为 FlowCanvas 运行端口的第二来源；节点的 typed value 仍由 NativePorts 注册表创建。
+- 本步保留并行已有的 NativePorts/Graph 泛型约束改动；未运行 Unity/Build，下一步仍需把原生 evaluator 接到正式 Source/Constraint/Final 服务。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 [CharacterPosePortKind.MotionMatchingBinding] = Registration<CharacterPoseNativeMotionMatchingBindingValue>()
             };
 
-        static PortRegistration Registration<T>() =>
+        static PortRegistration Registration<T>() where T : CharacterPoseNativePortValue =>
             new PortRegistration(typeof(T), Add<T>);
 
         static PortRegistration Require(CharacterPosePortKind kind) =>
@@ -77,14 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : throw new InvalidOperationException($"Pose port '{port.ID}' is not declared.");
         }
 
-        static IReadOnlyList<CharacterPosePortDefinition> Shape(CharacterPoseCanvasNode node)
-        {
-#if UNITY_EDITOR
-            if (PoseCanvasEditorBridge.PortShape != null)
-                return PoseCanvasEditorBridge.PortShape(node);
-#endif
-            return RuntimeShape(node);
-        }
+        static IReadOnlyList<CharacterPosePortDefinition> Shape(CharacterPoseCanvasNode node) =>
+            RuntimeShape(node);
 
         static IReadOnlyList<CharacterPosePortDefinition> RuntimeShape(
             CharacterPoseCanvasNode node)
@@ -250,6 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 required);
 
         static void Add<T>(CharacterPoseCanvasNode node, CharacterPosePortDefinition port)
+            where T : CharacterPoseNativePortValue
         {
             if (port.Direction == CharacterPosePortDirection.Input)
                 node.AddValueInput<T>(port.Name, port.PortId.Value);

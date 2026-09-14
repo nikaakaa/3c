@@ -262,6 +262,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Snapshot Publisher 文件暂留，后续改为消费原生节点观察与正式 Source/Constraint/Publication 结果；不恢复旧 Program Diagnostics facade。
 - 本步未运行 Unity/Build；Presentation Diagnostics Coordinator 的旧引用保留为后续断链。
 
+## 2026-09-14 r3 删除旧 Pose 诊断事件 facade
+
+- 删除 `Presentation/CharacterPoseCommittedDiagnosticsEventPublisher.cs`、`CharacterPoseCommittedDiagnosticsEventPublisher.Foot.cs` 及其 `.meta`；两者只把旧 Program/Frame/Constraint/Final 结果转换为事件，原生节点观察已拥有节点/阶段/提交身份。
+- 保留快照数据结构与现有正式 IK/Final Publication 服务；旧 Presentation Diagnostics Coordinator 的引用作为后续原生观察接线清单，不恢复旧 Program 诊断事件链。
+- 本步未运行 Unity/Build；当前断链仍是激进裁剪的中间状态。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

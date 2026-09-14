@@ -2852,7 +2852,7 @@ namespace Slate
                         GUI.DrawTexture(markRect, Styles.whiteTexture);
                         GUI.color = Color.white;
                     },
-                    ()
+                    () =>
                     {
                         cutscene.groups.Remove(pickedGroup);
                         cutscene.groups.Insert(g, pickedGroup);

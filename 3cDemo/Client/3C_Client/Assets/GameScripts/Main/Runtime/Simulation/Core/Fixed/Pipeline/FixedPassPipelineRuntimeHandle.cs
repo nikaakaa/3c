@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedPassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ICharacterFutureBodyTranslationSource, ISimulationSessionProgramAdoption, ISimulationSessionCheckpointRuntime, ISimulationSessionInputReplayRuntime
+    public sealed class FixedPassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ICharacterFutureBodyTranslationSource, ISimulationSessionCheckpointRuntime, ISimulationSessionInputReplayRuntime
     {
         readonly SimulationSessionLifecycleController m_Lifecycle;
         readonly CompiledSimulationPipelinePlan m_Pipeline;
@@ -13,7 +13,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<IFixedCompiledPipelinePassRuntime> m_Passes;
         readonly SimulationSessionResourceRegistry m_Resources;
         readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
-        SimulationProgramEpoch m_ProgramEpoch;
         ulong m_LatestOuterTick;
         bool m_Disposed;
 
@@ -36,15 +35,12 @@ namespace ThirdPersonSimulation.Fixed
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
             m_Lifecycle.Activate(descriptor);
-            m_ProgramEpoch = SimulationProgramEpoch.Initial(descriptor.ProgramCatalogHash);
         }
 
         public SimulationSessionCompositionDescriptor Descriptor { get; }
         public SimulationSessionLifecycleState LifecycleState => m_Lifecycle.State;
         public SimulationSessionFailure Failure => m_Lifecycle.Failure;
         public SimulationSessionDiagnosticsSnapshot Diagnostics => BuildDiagnostics();
-        public SimulationProgramEpoch ProgramEpoch => m_ProgramEpoch;
-
         public SimulationSessionCheckpoint CaptureCheckpoint()
         {
             if (m_Disposed)
@@ -62,48 +58,6 @@ namespace ThirdPersonSimulation.Fixed
             m_LatestOuterTick = checkpoint.Tick.Value;
         }
 
-        public SimulationProgramEpoch PrepareProgramEpoch(
-            ProgramRevision sourceRevision,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(FixedPassPipelineRuntimeHandle));
-            return m_Transaction.PrepareProgramEpoch(m_ProgramEpoch, sourceRevision, bindings);
-        }
-
-        public SimulationProgramAdoptionResult AdoptProgramEpoch(
-            SimulationProgramEpoch epoch,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(FixedPassPipelineRuntimeHandle));
-            if (!epoch.IsValid || epoch.Value <= m_ProgramEpoch.Value)
-            {
-                return new SimulationProgramAdoptionResult(
-                    SimulationProgramAdoptionStatus.Rejected,
-                    m_ProgramEpoch,
-                    epoch,
-                    "program_epoch_not_newer",
-                    "Program Epoch is not newer than the active Session Epoch.");
-            }
-            SimulationProgramAdoptionResult result;
-            try
-            {
-                result = m_Transaction.AdoptProgramEpoch(epoch, bindings);
-            }
-            catch (InvalidOperationException exception)
-            {
-                return new SimulationProgramAdoptionResult(
-                    SimulationProgramAdoptionStatus.Rejected,
-                    m_ProgramEpoch,
-                    epoch,
-                    "program_epoch_incompatible",
-                    exception.Message);
-            }
-            if (result.IsApplied)
-                m_ProgramEpoch = epoch;
-            return result;
-        }
         public string PredictionSourceIdentity =>
             m_FutureBodyTranslationSource?.PredictionSourceIdentity ?? string.Empty;
 
@@ -366,7 +320,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             var components = new List<SimulationSessionComponentDiagnostic>
             {
-                Component("ProgramRuntime", Descriptor.ProgramRuntime),
                 Component("ExecutionBackend", Descriptor.ExecutionBackend),
                 Component("SessionSource", Descriptor.SessionSource),
                 Component("WorldSolver", Descriptor.WorldSolver),

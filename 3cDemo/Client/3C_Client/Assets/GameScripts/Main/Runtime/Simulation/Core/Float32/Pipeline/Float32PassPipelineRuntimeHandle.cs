@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32PassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ISimulationSessionProgramAdoption, ISimulationSessionCheckpointRuntime, ISimulationSessionInputReplayRuntime
+    public sealed class Float32PassPipelineRuntimeHandle : ISimulationSessionRuntimeHandle, ISimulationSessionCheckpointRuntime, ISimulationSessionInputReplayRuntime
     {
         readonly SimulationSessionLifecycleController m_Lifecycle;
         readonly CompiledSimulationPipelinePlan m_Pipeline;
@@ -11,7 +11,6 @@ namespace ThirdPersonSimulation
         readonly Float32PipelineTransaction m_Transaction;
         readonly IReadOnlyList<IFloat32CompiledPipelinePassRuntime> m_Passes;
         readonly SimulationSessionResourceRegistry m_Resources;
-        SimulationProgramEpoch m_ProgramEpoch;
         ulong m_LatestOuterTick;
         bool m_Disposed;
 
@@ -32,15 +31,12 @@ namespace ThirdPersonSimulation
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
             m_Lifecycle.Activate(descriptor);
-            m_ProgramEpoch = SimulationProgramEpoch.Initial(descriptor.ProgramCatalogHash);
         }
 
         public SimulationSessionCompositionDescriptor Descriptor { get; }
         public SimulationSessionLifecycleState LifecycleState => m_Lifecycle.State;
         public SimulationSessionFailure Failure => m_Lifecycle.Failure;
         public SimulationSessionDiagnosticsSnapshot Diagnostics => BuildDiagnostics();
-        public SimulationProgramEpoch ProgramEpoch => m_ProgramEpoch;
-
         public SimulationSessionCheckpoint CaptureCheckpoint()
         {
             if (m_Disposed)
@@ -188,49 +184,6 @@ namespace ThirdPersonSimulation
             }
         }
 
-        public SimulationProgramEpoch PrepareProgramEpoch(
-            ProgramRevision sourceRevision,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
-            return m_Transaction.PrepareProgramEpoch(m_ProgramEpoch, sourceRevision, bindings);
-        }
-
-        public SimulationProgramAdoptionResult AdoptProgramEpoch(
-            SimulationProgramEpoch epoch,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(Float32PassPipelineRuntimeHandle));
-            if (!epoch.IsValid || epoch.Value <= m_ProgramEpoch.Value)
-            {
-                return new SimulationProgramAdoptionResult(
-                    SimulationProgramAdoptionStatus.Rejected,
-                    m_ProgramEpoch,
-                    epoch,
-                    "program_epoch_not_newer",
-                    "Program Epoch is not newer than the active Session Epoch.");
-            }
-            SimulationProgramAdoptionResult result;
-            try
-            {
-                result = m_Transaction.AdoptProgramEpoch(epoch, bindings);
-            }
-            catch (InvalidOperationException exception)
-            {
-                return new SimulationProgramAdoptionResult(
-                    SimulationProgramAdoptionStatus.Rejected,
-                    m_ProgramEpoch,
-                    epoch,
-                    "program_epoch_incompatible",
-                    exception.Message);
-            }
-            if (result.IsApplied)
-                m_ProgramEpoch = epoch;
-            return result;
-        }
-
         public void LogicTick(SimulationSessionLogicTickContext context)
         {
             if (m_Disposed)
@@ -312,7 +265,6 @@ namespace ThirdPersonSimulation
         {
             var components = new List<SimulationSessionComponentDiagnostic>
             {
-                Component("ProgramRuntime", Descriptor.ProgramRuntime),
                 Component("ExecutionBackend", Descriptor.ExecutionBackend),
                 Component("SessionSource", Descriptor.SessionSource),
                 Component("WorldSolver", Descriptor.WorldSolver),

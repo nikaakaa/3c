@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonSimulation;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
 {
@@ -157,61 +156,6 @@ namespace BTSMTL.Timeline.Editor
         void Apply(Action mutation, string undoName);
     }
 
-    public abstract class TimelineEditorToolPanel : VisualElement, IDisposable
-    {
-        public virtual void Dispose()
-        {
-        }
-    }
-
-    public interface ITimelineEditorToolProvider
-    {
-        string ToolId { get; }
-        string DisplayName { get; }
-        bool Supports(TimelineEditorSelection selection);
-        TimelineEditorToolPanel CreatePanel(TimelineEditorSessionContext session);
-    }
-
-    public sealed class TimelineEditorToolCatalog
-    {
-        public static readonly TimelineEditorToolCatalog Empty = new TimelineEditorToolCatalog(Array.Empty<ITimelineEditorToolProvider>());
-
-        readonly ITimelineEditorToolProvider[] m_Providers;
-
-        public TimelineEditorToolCatalog(IEnumerable<ITimelineEditorToolProvider> providers)
-        {
-            var values = new List<ITimelineEditorToolProvider>();
-            var ids = new HashSet<string>(StringComparer.Ordinal);
-            if (providers != null)
-            {
-                foreach (ITimelineEditorToolProvider provider in providers)
-                {
-                    if (provider == null || string.IsNullOrWhiteSpace(provider.ToolId) ||
-                        !string.Equals(provider.ToolId, provider.ToolId.Trim(), StringComparison.Ordinal))
-                        throw new ArgumentException("Timeline Editor tool provider identity is invalid.", nameof(providers));
-                    if (!ids.Add(provider.ToolId))
-                        throw new ArgumentException($"Timeline Editor tool provider '{provider.ToolId}' is duplicated.", nameof(providers));
-                    values.Add(provider);
-                }
-            }
-            m_Providers = values.ToArray();
-        }
-
-        public IReadOnlyList<ITimelineEditorToolProvider> Providers => m_Providers;
-    }
-
-    public static class TimelineEditorToolComposition
-    {
-        static TimelineEditorToolCatalog s_Catalog = TimelineEditorToolCatalog.Empty;
-
-        public static TimelineEditorToolCatalog Catalog => s_Catalog;
-
-        public static void SetCatalog(TimelineEditorToolCatalog catalog)
-        {
-            s_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-        }
-    }
-
     public sealed class TimelineEditorOpenRequest
     {
         public TimelineEditorOpenRequest(
@@ -220,7 +164,6 @@ namespace BTSMTL.Timeline.Editor
             string serializedPropertyPath,
             string ownershipLabel,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding,
-            TimelineEditorToolCatalog toolCatalog,
             TimelineContractCatalog contractCatalog)
         {
             Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
@@ -230,7 +173,6 @@ namespace BTSMTL.Timeline.Editor
             SerializedPropertyPath = serializedPropertyPath;
             OwnershipLabel = ownershipLabel ?? string.Empty;
             RuntimeDebugBinding = runtimeDebugBinding;
-            ToolCatalog = toolCatalog ?? TimelineEditorToolCatalog.Empty;
             ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
         }
 
@@ -239,7 +181,6 @@ namespace BTSMTL.Timeline.Editor
         public string SerializedPropertyPath { get; }
         public string OwnershipLabel { get; }
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding { get; }
-        public TimelineEditorToolCatalog ToolCatalog { get; }
         public TimelineContractCatalog ContractCatalog { get; }
     }
 
@@ -261,7 +202,6 @@ namespace BTSMTL.Timeline.Editor
         public string SerializedPropertyPath => m_Request.SerializedPropertyPath;
         public string OwnershipLabel => m_Request.OwnershipLabel;
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding => m_Request.RuntimeDebugBinding;
-        public TimelineEditorToolCatalog ToolCatalog => m_Request.ToolCatalog;
         public TimelineEditorSelection Selection => m_Selection;
         public bool IsReadOnly => m_IsReadOnly != null && m_IsReadOnly();
         public int FrameRate => TimelineUtility.FrameRate;

@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         SimulationActorBinding CharacterBinding { get; }
     }
 
-    public interface ILocalSimulationActorRegistration : IFloat32SimulationActorRegistration
+    public interface ILocalSimulationActorRegistration : IFloat32CharacterRuntimeRegistration
     {
         ICharacterControlSourceRuntime LocalControlSource { get; }
     }

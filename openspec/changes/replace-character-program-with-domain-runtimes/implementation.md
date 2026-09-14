@@ -102,6 +102,18 @@
 - `49f3a4f96`：删除全局无调用者的旧 GameplayAbilityProgramDefinition／GameplayAbilityCatalog 定义目录。
 - `65c06746b`：删除 Control 侧旧 Program catalog owner binding、Program catalog validator 和按旧 Program 校验 Ability 的路径；Control catalog 只按正式 ModuleId/Contract 取得模块。
 - `ee1057bc4`（共享工作区并行提交）：同时删除 Float32／Fixed 旧 Session Composer 及 Unity Composer；本窗口未重复提交该改动。
+- `7f96d8947`：将独立 Ability 的 Binding、Catalog、EndRule 合同统一改为 Execution 命名，移除独立领域对旧 Program 合同名的依赖。
+- `e46a19f9f`：删除旧 GameplayLab 总 Program 构建器和 Editor 启动器。
+- `04452ae98`：删除 Float32／Fixed 旧 Control state、Control port 和 Timeline target 适配器；保留通用 Operation control 算法。
+- `466ab44e`：让 Float32／Fixed Ability 数据对象直接构建并持有 `OperationExecutionTopology` 与 `ProgramCatalogRuntimeIndex`。
+- `fd429fad0`：删除 Float32／Fixed 旧 Control 领域运行适配器。
+- `8142bd4e7`：删除旧角色 `SimulationKernel` 实现和 `CharacterDomainRuntimeInstance` 包装，不再保留整角色 Program evaluator 入口。
+- `8e9e355f2`：从 Session checkpoint 合同文件移除 Program Epoch、ProgramBinding 和 Program adoption 定义；checkpoint/replay 数据合同暂保留。
+- `f6a3b1bb6`：新增只保存独立 Ability 数据对象引用的安装集合，按 AbilityId 建立查找索引，不复制操作或状态。
+- `31c7efaeb`：让 Character Definition 的 Float32／Fixed Load 入口可以直接装配独立 Ability 数据集合。
+- `69756dac4`：删除旧 Program Runtime 组件描述器。
+- `1b08dfbed`：移除 `ProgramRuntime` 组件角色身份，保留其它 Backend／Source／Solver／Snapshot 角色编号。
+- `af0986661`：删除旧 Session Program Runtime 兼容性 evaluator 和 Inspector；保留 Pipeline Inspector。
 
 ## 当前实现边界
 
@@ -113,7 +125,7 @@
 - `Float32GameplayAbilityExecutionData` 与 `FixedGameplayAbilityExecutionData` 是当前独立 artifact 数据对象；独立 codec 读写 `.ability`，`GameplayAbilityDataAsset.Load` 和 `FixedGameplayAbilityDataAsset.Load` 直接返回技能域数据，`GameplayAbilityExecutionDataArtifactStore` 直接发布它们。旧 Program→Ability catalog 转换、旧 Ability loader、旧整角色 Program artifact store 和旧 Program reader 已删除，不能恢复 CharacterSimulationProgram 转换、整包复制或兼容 reader。现有 evaluator／binding／拓扑仍有 CharacterSimulationProgram 残余引用，属于激进删除后的待接线错误，不是角色正式入口。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 或缺失／类型／版本／句柄不符的成员在资源绑定阶段失败，任务 1.4 的身份入口和 1.9 的成员合同分别保留其边界。
 - 当前 Character Host、Session、Network 和部分 Evaluate／State 链仍引用旧整角色 Program；这些是本轮删除后暴露出来的待拆接线，不是继续服务角色的正式入口。Ability 资源集合尚未装配进新的领域运行实例，后续由角色领域工厂直接组装。
-- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；剩余 Evaluate／State／Network 消费者仍依赖旧 Program，需要继续删除或改接领域数据。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
+- 旧 `SimulationKernel`、Float32／Fixed `CharacterDomainRuntimeInstance` 和整角色 Program evaluator 入口已删除；Session／Pipeline／Network 的旧请求、ProgramRuntime port 和 Program identity 消费者仍是删除后暴露的待接线错误。后续角色工厂必须直接装配 Control、独立 Ability 数据集合、Timeline、Pose、Camera、Motion、Effect、Equipment 和 World owner，不恢复 Kernel、全局 Layout 或转换 Factory。Ability 数据已能由 Character Definition 直接加载为按 AbilityId 索引的集合，实际 evaluator／Host／Pass 消费仍待接通。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
 - Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。

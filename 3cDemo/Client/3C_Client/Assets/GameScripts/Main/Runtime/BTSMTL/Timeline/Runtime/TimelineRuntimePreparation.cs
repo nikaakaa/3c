@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace BTSMTL.Timeline.Runtime
 {
+    public enum TimelineRuntimeNumericTarget : byte
+    {
+        Float32 = 0,
+        Fixed = 1
+    }
+
     public readonly struct TimelineRuntimePlaybackHandle : IEquatable<TimelineRuntimePlaybackHandle>
     {
         public TimelineRuntimePlaybackHandle(ulong value)
@@ -33,6 +39,7 @@ namespace BTSMTL.Timeline.Runtime
             Generation = generation;
             RequestId = preparation.RequestId;
             ExecutionIdentity = preparation.ExecutionIdentity;
+            NumericTarget = preparation.NumericTarget;
             Content = preparation.Content;
             PreparedBindings = preparation.PreparedBindings;
             State = TimelineRuntimePlaybackState.Prepared;
@@ -42,6 +49,7 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content.ContentHash;
         public TimelinePreparedBindings PreparedBindings { get; }
@@ -61,6 +69,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineData timeline,
             TimelineContractCatalog contractCatalog,
             TimelineExecutionIdentity executionIdentity,
+            TimelineRuntimeNumericTarget numericTarget,
             IEnumerable<TimelineCallBinding> callBindings,
             ITimelineDomainBindingResolver domainResolver)
         {
@@ -72,6 +81,9 @@ namespace BTSMTL.Timeline.Runtime
             if (!executionIdentity.IsValid)
                 throw new ArgumentException("Timeline execution identity is invalid.", nameof(executionIdentity));
             ExecutionIdentity = executionIdentity;
+            if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
+                throw new ArgumentOutOfRangeException(nameof(numericTarget));
+            NumericTarget = numericTarget;
             CallBindings = new List<TimelineCallBinding>(callBindings ?? Array.Empty<TimelineCallBinding>()).AsReadOnly();
             DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
         }
@@ -80,6 +92,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineData Timeline { get; }
         public TimelineContractCatalog ContractCatalog { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineRuntimeNumericTarget NumericTarget { get; }
         public IReadOnlyList<TimelineCallBinding> CallBindings { get; }
         public ITimelineDomainBindingResolver DomainResolver { get; }
     }
@@ -96,6 +109,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePreparationStatus status,
             string requestId,
             TimelineExecutionIdentity executionIdentity,
+            TimelineRuntimeNumericTarget numericTarget,
             TimelineContentUnit content,
             TimelineBindingPlan bindingPlan,
             TimelineCallInput callInput,
@@ -105,6 +119,7 @@ namespace BTSMTL.Timeline.Runtime
             Status = status;
             RequestId = requestId ?? string.Empty;
             ExecutionIdentity = executionIdentity;
+            NumericTarget = numericTarget;
             Content = content;
             BindingPlan = bindingPlan;
             CallInput = callInput;
@@ -115,6 +130,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparationStatus Status { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content?.ContentHash ?? string.Empty;
         public TimelineBindingPlan BindingPlan { get; }
@@ -137,6 +153,7 @@ namespace BTSMTL.Timeline.Runtime
                 TimelineRuntimePreparationStatus.Failed,
                 requestId,
                 executionIdentity,
+                TimelineRuntimeNumericTarget.Float32,
                 null,
                 null,
                 null,
@@ -155,6 +172,7 @@ namespace BTSMTL.Timeline.Runtime
                 TimelineRuntimePreparationStatus.Ready,
                 request.RequestId,
                 request.ExecutionIdentity,
+                request.NumericTarget,
                 content,
                 bindingPlan,
                 callInput,

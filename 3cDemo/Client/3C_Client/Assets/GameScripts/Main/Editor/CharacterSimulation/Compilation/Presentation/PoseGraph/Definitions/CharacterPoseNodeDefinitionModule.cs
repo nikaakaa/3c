@@ -82,13 +82,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseNodeRuntimeRequirement.None;
         public CharacterPoseOperationFamily OperationFamily =>
             ResolveFamily(Kind);
-        public bool WorkerThreadSafe =>
-            NativeRole == CharacterPoseNativeNodeRole.Operation &&
-            CharacterPoseWorkerKernels.IsWorkerDomain(ExecutionDomain);
-        public CharacterPoseWorkerKernelId WorkerKernel =>
-            WorkerThreadSafe
-                ? CharacterPoseWorkerKernels.Require(OperationCode)
-                : CharacterPoseWorkerKernelId.None;
         public CharacterPoseCanvasCreationKind CanvasCreation =>
             Kind == CharacterPoseNodeKind.LinkedPoseCall
                 ? CharacterPoseCanvasCreationKind.DedicatedSurface

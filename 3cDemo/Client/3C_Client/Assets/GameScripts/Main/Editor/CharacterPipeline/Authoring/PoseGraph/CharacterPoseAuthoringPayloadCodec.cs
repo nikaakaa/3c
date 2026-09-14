@@ -222,8 +222,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterPoseOperationFamily OperationFamily => m_Definition.OperationFamily;
         public CharacterPoseNativeNodeRole NativeRole => m_Definition.NativeRole;
         public CharacterPoseOperationCode OperationCode => m_Definition.OperationCode;
-        public bool WorkerThreadSafe => m_Definition.WorkerThreadSafe;
-        public CharacterPoseWorkerKernelId WorkerKernel => m_Definition.WorkerKernel;
         public bool UsesPoseSourceSlot => m_Definition.UsesPoseSourceSlot;
         public bool UsesAnimationChannel => m_Definition.UsesAnimationChannel;
 

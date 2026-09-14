@@ -2,17 +2,18 @@
 
 ## 0. 当前代码对账
 
-本文现在同时承担“最终合同”和“实现状态对账”，避免把已有的旧运行接线误写成新直接 Runtime 已完成。
+本文同时承担“最终合同”和“实现状态对账”。本节表格保留早期读取快照；最新接线补充以第9节及tasks第12组为准，已有Advance候选、Commit/Discard与内容闭包不得按旧表重做。
 
 | 当前代码 | 已有事实 | 不能据此宣称的完成项 |
 |---|---|---|
-| `Timeline.ExecutionContracts.cs` | 已有 `TimelineBindingPlan`、`TimelineCallInput`、`TimelineBindingPreparation`、分型 `TimelineTickContext`/`ITimelineTickExecutionView`、执行 identity、观察和 Scene Presentation sink 合同 | 这只是 binding/输入准备和输出合同；没有直接内容 playback 实例、Advance 候选、Commit/Discard 或分型 Capture/Restore |
-| `TimelineRuntimePreparation.cs` | 已有正式 `Prepare`/`CreatePlayback`，显式 NumericTarget、执行 identity、内容 revision、domain binding 和 dependency resolver；Playback 保存 prepared bindings、prepared dependencies 和 generation | 还没有 Advance、TreeClip 实际执行、Commit/Discard、停止窗口提交或 Capture/Restore |
+| `Timeline.ExecutionContracts.cs` | 已有 `TimelineBindingPlan`、`TimelineCallInput`、`TimelineBindingPreparation`、分型 `TimelineTickContext`/`ITimelineTickExecutionView`、执行 identity、观察和 Scene Presentation sink 合同 | 直接 Runtime 的输出消费仍由主实现提供 typed sink；该文件不拥有角色/World 提交 |
+| `TimelineRuntimePreparation.cs` | 已有正式 `Prepare`/`CreatePlayback`，显式 NumericTarget、执行 identity、内容 revision、domain binding 和 dependency resolver；Playback 保存 prepared bindings、prepared dependencies 和 generation，拥有完整区间边界、循环分段、Clip 样本、TreeClip 生命周期候选和 Step Commit/Discard 回调 | 具体 domain binding、TreeClip 技能服务和角色/World 汇集仍由主实现注入 |
+| `TimelineRuntimeService.cs` | 已有唯一直接播放服务、播放实例表、Skill `ITimelinePlaybackService` 入口、Step、Stop、Shutdown、逐实例 descriptor 以及 schema/revision/generation 校验的 Capture/Restore；`TimelineRuntimeExecutionConsumer` 负责把候选交给 typed evaluation/TreeClip sinks | 主实现尚未把具体 request factory、TreeClip service、角色结果 sink 与 Graph Shell/Preview owner 接上 |
 | `TimelineData.Runtime.cs`、`TimelinePlaybackTreeContracts.cs`、`TimelineNode.cs` | Skill Timeline 已通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，查询状态并传播 Stop/Cancel | 这是现有 Skill/Node 播放入口，不是非 Skill 可用的直接内容 Runtime，也不替代第12节的独立 Prepare/CreatePlayback |
 | `Simulation/Core/Execution/TimelineControlContracts.cs`、`TimelineControlRuntime.cs` | 已有基于 `OperationHandle`、`ITimelineTargetLeaf<TTime>`、`OperationControlCursor` 的循环、Section、TreeClip、Motion/Camera/Cue、Weight/Ease 和 trace 调度 | 该实现仍从 operation/Program 读取并在控制状态口写入，不能原样作为“删除 ProgramPlan/operation 前提”的最终实现；第12.3、12.4、12.8仍未完成 |
 | `RuntimeDiagnostics` 的 Timeline playback provenance/summary | 已有按 playback identity 的只读诊断与编辑器观察入口 | 诊断只观察运行事实，不是 Timeline Runtime owner，不得反向驱动播放 |
 
-当前 Timeline Runtime 目录没有 `Float32TimelinePlayback.cs` 或 `FixedTimelinePlayback.cs` 这两个最终直接内容实现文件；tasks 第12节中的迁移目标不能按文件名存在来勾选。本文后续合同以当前正式 `TimelineData`、`TimelineContentClosure`、typed domain binding 和主实现提供的 Step/TreeClip/快照边界为准。
+当前 Timeline Runtime 目录没有拆成两份的 `Float32TimelinePlayback.cs` 或 `FixedTimelinePlayback.cs`；直接 Playback 由一个共享调度器拥有，NumericTarget 只作为准备、资源和快照 schema 的分型输入。tasks 第12节不能只按类型存在来勾选完成；还必须有主实现提供的 request factory、Step/TreeClip/输出消费者和 Preview/Diagnostics 实际接线。
 
 ## 1. 接收范围与授权状态
 
@@ -114,3 +115,17 @@ TimelineSemanticEmitterRegistry等文件若混合Camera/Motion或共享编译职
 依赖未完成时准确记录缺哪个typed接口或共享入口，不补旧Program适配器/空执行服务。D11曾交付的独立Ability前端和两个目标store保留事实，但它们仍返回旧容器的部分不能当作最终新技能服务。D12审查属于主实现整改，Timeline不复制Q1—Q4待办。
 
 主方案只保留职责指针与公共集成项，本任务 tasks 第12节是 Runtime 域内唯一勾选入口。实现时不向其它窗口派工，不创建第二个 Timeline Runtime 清单；共享 Host、Step、TreeClip、快照和编译入口由各自 owner 接入。编译/刷新若后续实施需要，按协调指定主实现组织，编译期间暂停源码写入，不新建锁或验证服务。
+
+## 9. DOMAIN-BOUNDARIES-20260914-03：实际调度与角色Step接线补充
+
+用户要求协调窗口直接更新本任务规划并通知既有timeline实现`01a089db-81e3-7a73-ae52-82ef95b744d4`。本节接续主方案design D22，细化现有第12组，不新增窗口/清单；第0节旧代码对账属于历史快照，不能覆盖现已交付的Advance候选、Commit/Discard、内容闭包或Track顺序。
+
+- 保留正式TimelineData/内容闭包、稳定Track/Clip身份和顺序、数值/资源准备与游标候选。推进必须处理整个区间：10到30帧包含20—21帧短Clip，跨循环处理尾段/整循环/头段；依原正式边界与阶段顺序执行Enter/采样/Exit，不用nextFrame活动列表冒充调度结果。
+- 在实际Clip阶段调用窗口、Motion、Effect/Cue、Camera、动画和TreeClip服务。Timeline负责时序、调用身份和私有状态，各领域负责算法及业务状态；查询/条件所需服务立即返回本Step候选结果，需要仲裁的贡献交领域汇总，不能把排队当业务成功。
+- Advance和Stop进入同一调用方Step的接受/丢弃边界。RequestStop不得先清除未决Advance并永久改变已提交状态；明确当前候选与停止的关系，产生覆盖该实例清理的终止候选。Discard后保留前一次已提交游标、活动窗口和调用关系，不遗留半次取消；Commit只安装已检查候选，不重复执行Clip或先发布部分Gameplay结果。
+- Stop/ForceStop/ActionContextEnded只作用于准确播放identity/generation；技能正常取消不等于角色事务Abort。窗口和TreeClip的停止走真实服务，视觉尾部沿Slot。效果是否继续由其自身持续/绑定合同决定，不随Timeline结束统一移除。
+- TreeClip通过核心提供的同一独立技能入口执行。传入父播放/Clip/循环与子调用身份、时间和typed服务，取得真实状态及本Step结果；Timeline只保存调度与调用关联，不复制技能局部帧，不要求非运动技能产生WorldSolveRequest。
+- Capture/PrepareRestore/ApplyRestore保存已提交私有状态及精确内容/schema/generation，核心组合角色/网络恢复并决定安装。非Skill使用同一正式Runtime；所需服务缺失精确失败，不造空技能/假Actor/空执行服务。
+- Timeline唯一修改内部内容、调度、候选及恢复。共享BtsmtlSkillTimelineCompiler、TreeClip执行、Host、角色状态/codec和外层Pipeline由核心唯一接线；Camera/Motion/Warp算法继续原owner。直接与核心实现协商实际接口阻塞，保留正确UI/源映射，不索取回执、不向规划窗口转发。
+
+本节对应第12.1—12.9已有任务，完整交付包括业务服务与消费者。沿用第8节规范替代关系及本change直接运行delta；不建立新的事件总线、事务管理器或播放器。业务取舍是保留本帧服务结果以支持TreeClip判断，同时将输出留在调用方提交边界内；仅维护活动列表虽然简单，但会遗漏跨过的短Clip及取消业务，不满足现有播放语义。

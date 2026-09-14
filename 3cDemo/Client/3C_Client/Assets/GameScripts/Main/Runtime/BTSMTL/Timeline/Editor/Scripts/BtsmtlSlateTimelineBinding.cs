@@ -214,6 +214,11 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Add Clip 需要正式 Timeline Track。");
                 return;
             }
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能添加 Clip。");
+                return;
+            }
             CapturePopupPosition();
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
         }
@@ -222,6 +227,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能修改 Active 状态。");
+                return;
+            }
             ApplyImmediate(() => formalTrack.Source.PersistentMuted = !active, "Track Active");
         }
 
@@ -235,6 +245,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能删除。");
+                return;
+            }
             ApplyImmediate(() => Timeline.RemoveTrack(formalTrack.Source), "Delete Timeline Track");
         }
 
@@ -242,6 +257,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(clip is BtsmtlTimelineClipBinding formalClip))
                 return;
+            if (formalClip.IsLocked)
+            {
+                ReportIssue("当前 Clip 或所属 Track 已锁定，不能删除。");
+                return;
+            }
             ApplyImmediate(() => Timeline.RemoveClip(formalClip.Source), "Delete Timeline Clip");
         }
 
@@ -249,6 +269,14 @@ namespace BTSMTL.Timeline.Editor
         {
             if (clips == null || IsReadOnly)
                 return;
+            for (int index = 0; index < clips.Count; index++)
+            {
+                if (clips[index] is BtsmtlTimelineClipBinding formalClip && formalClip.IsLocked)
+                {
+                    ReportIssue("选中的 Clip 或所属 Track 已锁定，不能删除。");
+                    return;
+                }
+            }
             ApplyImmediate(() =>
             {
                 for (int index = 0; index < clips.Count; index++)
@@ -261,6 +289,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(clip is BtsmtlTimelineClipBinding formalClip))
                 return;
+            if (formalClip.IsLocked)
+            {
+                ReportIssue("当前 Clip 或所属 Track 已锁定，不能切分。");
+                return;
+            }
             if (frame <= formalClip.Source.StartFrame || frame >= formalClip.Source.EndFrame)
                 return;
             if (formalClip.Source is not AnimationClip && formalClip.Source is not MotionCurveClip)
@@ -305,6 +338,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能排序。");
+                return;
+            }
             ApplyImmediate(() =>
             {
                 List<Track> tracks = Timeline.Tracks;
@@ -317,6 +355,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding formalSection))
                 return;
+            if (formalSection.IsLocked)
+            {
+                ReportIssue("当前 Section 已锁定，不能修改。");
+                return;
+            }
             formalSection.Name = name ?? string.Empty;
             formalSection.Time = Mathf.Max(0, frame) / (float)FrameRate;
         }
@@ -325,6 +368,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding formalSection))
                 return;
+            if (formalSection.IsLocked)
+            {
+                ReportIssue("当前 Section 已锁定，不能删除。");
+                return;
+            }
             ApplyImmediate(() => Timeline.RemoveSection(formalSection.Source), "Delete Timeline Section");
         }
 
@@ -356,6 +404,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || m_CopiedClip == null || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能粘贴 Clip。");
+                return;
+            }
             ApplyImmediate(() =>
             {
                 Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip);
@@ -682,6 +735,11 @@ namespace BTSMTL.Timeline.Editor
             {
                 ReportIssue("Add Clip 的目标 Track 已失效。");
                 return "Add Clip 的目标 Track 已失效。";
+            }
+            if (track.IsLocked)
+            {
+                ReportIssue("Add Clip 的目标 Track 已锁定。");
+                return "Add Clip 的目标 Track 已锁定。";
             }
             try
             {

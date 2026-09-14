@@ -3,6 +3,57 @@ using System.Collections.Generic;
 
 namespace BTSMTL.Timeline.Runtime
 {
+    public readonly struct TimelineRuntimePlaybackHandle : IEquatable<TimelineRuntimePlaybackHandle>
+    {
+        public TimelineRuntimePlaybackHandle(ulong value)
+        {
+            if (value == 0)
+                throw new ArgumentOutOfRangeException(nameof(value));
+            Value = value;
+        }
+
+        public ulong Value { get; }
+        public bool IsValid => Value != 0;
+        public bool Equals(TimelineRuntimePlaybackHandle other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is TimelineRuntimePlaybackHandle other && Equals(other);
+        public override int GetHashCode() => Value.GetHashCode();
+        public static TimelineRuntimePlaybackHandle Invalid => default;
+        public static bool operator ==(TimelineRuntimePlaybackHandle left, TimelineRuntimePlaybackHandle right) => left.Equals(right);
+        public static bool operator !=(TimelineRuntimePlaybackHandle left, TimelineRuntimePlaybackHandle right) => !left.Equals(right);
+    }
+
+    public sealed class TimelineRuntimePlayback : IDisposable
+    {
+        internal TimelineRuntimePlayback(
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation,
+            TimelineRuntimePreparationResult preparation)
+        {
+            Handle = handle;
+            Generation = generation;
+            RequestId = preparation.RequestId;
+            ExecutionIdentity = preparation.ExecutionIdentity;
+            Content = preparation.Content;
+            PreparedBindings = preparation.PreparedBindings;
+            State = TimelineRuntimePlaybackState.Prepared;
+        }
+
+        public TimelineRuntimePlaybackHandle Handle { get; }
+        public ulong Generation { get; }
+        public string RequestId { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineContentUnit Content { get; }
+        public string ContentRevision => Content.ContentHash;
+        public TimelinePreparedBindings PreparedBindings { get; }
+        public TimelineRuntimePlaybackState State { get; private set; }
+
+        public void Dispose()
+        {
+            if (State != TimelineRuntimePlaybackState.Disposed)
+                State = TimelineRuntimePlaybackState.Disposed;
+        }
+    }
+
     public sealed class TimelineRuntimePrepareRequest
     {
         public TimelineRuntimePrepareRequest(
@@ -157,6 +208,22 @@ namespace BTSMTL.Timeline.Runtime
                     request.ExecutionIdentity,
                     new[] { exception.Message });
             }
+        }
+
+        public static TimelineRuntimePlayback CreatePlayback(
+            TimelineRuntimePreparationResult preparation,
+            ulong generation)
+        {
+            if (preparation == null)
+                throw new ArgumentNullException(nameof(preparation));
+            if (!preparation.IsReady)
+                throw new InvalidOperationException("Timeline playback cannot be created from a failed preparation.");
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            return new TimelineRuntimePlayback(
+                new TimelineRuntimePlaybackHandle(preparation.ExecutionIdentity.InstanceId),
+                generation,
+                preparation);
         }
     }
 }

@@ -385,6 +385,10 @@ namespace BTSMTL.Timeline.Editor
                 Select(clip);
             else if (m_Tracks.TryGetValue(selectedId, out BtsmtlTimelineTrackBinding track))
                 Select(track);
+            else if (m_SectionsById.TryGetValue(selectedId, out BtsmtlTimelineSectionBinding section))
+                Select(section);
+            else
+                Select(null);
         }
 
         bool ApplyImmediate(Action mutation, string undoName)

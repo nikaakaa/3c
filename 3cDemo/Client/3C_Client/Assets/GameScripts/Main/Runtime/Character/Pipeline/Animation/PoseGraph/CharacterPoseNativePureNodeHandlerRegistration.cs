@@ -7,9 +7,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static void RegisterPureValueHandlers(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory,
-            Func<CharacterPoseCanvasNode, IReadOnlyList<float>> boneMaskFactory)
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                IReadOnlyList<float>> boneMaskFactory)
         {
             if (registry == null)
                 throw new ArgumentNullException(nameof(registry));
@@ -43,15 +45,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             readonly Func<
                 CharacterPoseCanvasNode,
+                CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
             readonly Func<
                 CharacterPoseCanvasNode,
+                CharacterPoseNativeInstanceContext,
                 IReadOnlyList<float>> m_BoneMaskFactory;
 
             internal Creator(
-                Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    CharacterPoseNativeNodePoseBuffer>
                     bufferFactory,
-                Func<CharacterPoseCanvasNode, IReadOnlyList<float>>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    IReadOnlyList<float>>
                     boneMaskFactory)
             {
                 m_BufferFactory = bufferFactory;
@@ -64,6 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeBlendPoseHandler(
                         node.NodeId,
                         buffer));
@@ -73,9 +80,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context)
             {
-                IReadOnlyList<float> boneMask = m_BoneMaskFactory(node);
+                IReadOnlyList<float> boneMask = m_BoneMaskFactory(node, context);
                 return CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeLayeredBoneBlendHandler(
                         node.NodeId,
                         preparedBinding.Rig,
@@ -89,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeAdditivePoseHandler(
                         node.NodeId,
                         preparedBinding.Rig,
@@ -100,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeModifyBoneHandler(
                         node.NodeId,
                         preparedBinding.Rig,
@@ -111,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeParameterResolveHandler(
                         node.NodeId,
                         buffer));
@@ -121,6 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeSpaceConversionHandler(
                         node.NodeId,
                         node.Kind,
@@ -133,6 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
+                    in context,
                     buffer => new CharacterPoseNativeSpaceConversionHandler(
                         node.NodeId,
                         node.Kind,
@@ -141,12 +154,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             ICharacterPoseNativeNodeHandler CreateWithBuffer(
                 CharacterPoseCanvasNode node,
+                in CharacterPoseNativeInstanceContext context,
                 Func<
                     CharacterPoseNativeNodePoseBuffer,
                     ICharacterPoseNativeNodeHandler> creator)
             {
                 CharacterPoseNativeNodePoseBuffer buffer =
-                    m_BufferFactory(node) ??
+                    m_BufferFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                 try

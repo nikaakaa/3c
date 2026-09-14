@@ -6,31 +6,32 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32AbilityDomainRuntime
     {
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32GameplayAbilityExecutionInstallationSet m_Installations;
         readonly Float32ActionRuntime m_Actions;
         readonly Float32ActionStateStore m_ActionStore;
         readonly OperationControlRuntime<Float32OperationTarget> m_Control;
 
         public Float32AbilityDomainRuntime(
-            Float32EvaluationFrame frame,
+            Float32GameplayAbilityExecutionInstallationSet installations,
             Float32ActionRuntime actions,
             Float32ActionStateStore actionStore,
             OperationControlRuntime<Float32OperationTarget> control)
         {
-            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
         }
 
-        [PerformanceProbe("simulation.operation.ability-program-tick")]
+        [PerformanceProbe("simulation.operation.ability-tick")]
         public void Tick()
         {
-            IReadOnlyList<GameplayAbilityExecutionBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+            IReadOnlyList<Float32GameplayAbilityExecutionInstallation> installations = m_Installations.Installations;
             var stoppingInstances = new HashSet<ulong>();
-            for (int i = 0; i < skills.Count; i++)
+            for (int i = 0; i < installations.Count; i++)
             {
-                GameplayAbilityExecutionBinding skill = skills[i];
+                Float32GameplayAbilityExecutionInstallation installation = installations[i];
+                GameplayAbilityExecutionBinding skill = installation.Data.Binding;
                 IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
                 {
@@ -109,9 +110,10 @@ namespace ThirdPersonSimulation
                         m_ActionStore.RemoveSkillExecution(action.InstanceId);
                 }
             }
-            for (int i = 0; i < skills.Count; i++)
+            for (int i = 0; i < installations.Count; i++)
             {
-                GameplayAbilityExecutionBinding skill = skills[i];
+                Float32GameplayAbilityExecutionInstallation installation = installations[i];
+                GameplayAbilityExecutionBinding skill = installation.Data.Binding;
                 m_Actions.TryCommitPendingControl(skill.SkillId);
                 IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
@@ -141,7 +143,7 @@ namespace ThirdPersonSimulation
                                     action,
                                     SimulationExecutionSource.FromSkillOperation(
                                         skill.EntryOperation,
-                                        m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                        installation.Services.SourcePath(skill.EntryOperation)),
                                     GameplayAbilityEndTriggerNames.ExecutionCompleted,
                                     status == OperationRunnableStatus.Success
                                         ? AbilityLifecycleTransition.Complete
@@ -171,7 +173,7 @@ namespace ThirdPersonSimulation
                                         current,
                                         SimulationExecutionSource.FromSkillOperation(
                                             skill.EntryOperation,
-                                            m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                            installation.Services.SourcePath(skill.EntryOperation)),
                                         GameplayAbilityEndTriggerNames.ExecutionCompleted,
                                         result == OperationExecutionResult.Success
                                             ? AbilityLifecycleTransition.Complete

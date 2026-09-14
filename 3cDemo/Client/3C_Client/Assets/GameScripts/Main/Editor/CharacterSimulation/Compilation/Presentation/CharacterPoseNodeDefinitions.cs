@@ -207,9 +207,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ProgramParameterInput;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.ProgramParameterInput;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterProgramParameterInputPosePayload>(CharacterPoseNodeKind.ProgramParameterInput, AllPoseGraphsWithLinkedEntry, "Animation Parameter", "Inputs", InputColor,
                 Fields(Field("parameter-id", "Parameter", GraphAuthoringFieldValueKind.IdentityReference, "pose-parameter")),
@@ -249,8 +246,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ActionPlaybackInput;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.ActionPlaybackInput;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.AnimationChannel |
@@ -303,8 +298,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.SelectedPosePlayer;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.SelectedPosePlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player;
@@ -350,8 +343,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendSpacePlayer;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.BlendSpacePlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player;
@@ -421,8 +412,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ClipPlayer;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.ClipPlayer;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Player |
@@ -503,8 +492,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseStateMachine;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.PoseStateMachine;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.StateMachine;
@@ -566,8 +553,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AnimationSlot;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.AnimationSlot;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.AnimationChannel |
@@ -657,8 +642,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendStack;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.BlendStack;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
@@ -718,8 +701,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.Inertialization;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.Inertialization;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Inertialization;
@@ -764,9 +745,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendPose;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.BlendPose;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, AllPoseGraphsWithLinkedEntry, "Blend Pose", "Blend", BlendColor,
                 Fields(FloatField("weight", "Weight", 1f, 0f, 1f)),
@@ -804,9 +782,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LayeredBoneBlend;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.LayeredBoneBlend;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, AllPoseGraphsWithLinkedEntry, "Layered Blend Per Bone", "Blend", BlendColor,
                 Fields(ResourceField("bone-mask", "Bone Mask"), EnumField("blend-space", "Pose Space", typeof(CharacterLayeredBoneBlendSpace)), FloatField("weight", "Weight", 1f, 0f, 1f)),
@@ -873,8 +848,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AdditivePose;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.AdditivePose;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.Additive;
@@ -945,9 +918,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseParameterResolve;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.PoseParameterResolve;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterPoseParameterResolvePayload>(CharacterPoseNodeKind.PoseParameterResolve, AllPoseGraphsWithLinkedEntry, "Pose Parameter Resolve", "Parameters", BlendColor,
                 Fields(Field("parameter-policies", "Parameter Policies", GraphAuthoringFieldValueKind.Object, "pose-parameter-policy")),
@@ -979,8 +949,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ModifyBone;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.ModifyBone;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.ModifyBone;
@@ -1066,8 +1034,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.RootOrientationWarp;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.RootOrientationWarp;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.RootOrientationWarp;
@@ -1160,9 +1126,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LocalToComponentPose;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.LocalToComponentPose;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterLocalToComponentPosePayload>(CharacterPoseNodeKind.LocalToComponentPose, AllPoseGraphs, "Local To Component", "Pose Space", ConstraintColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
@@ -1174,9 +1137,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ComponentToLocalPose;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.ComponentToLocalPose;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterComponentToLocalPosePayload>(CharacterPoseNodeKind.ComponentToLocalPose, AllPoseGraphs, "Component To Local", "Pose Space", BlendColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
@@ -1216,9 +1176,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.OutputPose;
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.PoseOutput;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.OutputPose;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, RootAndState, "Output Pose", "Output", OutputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),

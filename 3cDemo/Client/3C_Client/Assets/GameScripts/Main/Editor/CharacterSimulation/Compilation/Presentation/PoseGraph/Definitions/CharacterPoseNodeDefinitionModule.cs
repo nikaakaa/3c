@@ -76,7 +76,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public abstract GraphAuthoringCapabilityDescriptor Declare();
         public virtual CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
-        public virtual CharacterPoseOperationCode OperationCode => default;
         public virtual CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.None;

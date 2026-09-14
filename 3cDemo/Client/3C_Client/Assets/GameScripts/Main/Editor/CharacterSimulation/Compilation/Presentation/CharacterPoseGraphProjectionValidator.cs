@@ -471,9 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         graph.GraphId,
                         node.NodeId);
                 }
-                if (handler.OperationCode ==
-                    CharacterPoseOperationCode
-                        .PoseParameterResolve)
+                if (node.Kind == CharacterPoseNodeKind.PoseParameterResolve)
                 {
                     ValidateParameterPolicies(
                         graph,

@@ -12,8 +12,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterMotionMatchingPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.MotionMatchingPose;
-        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.MotionMatchingPose;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterMotionMatchingPosePayload>(CharacterPoseNodeKind.MotionMatchingPose, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Motion Matching Pose", "Sources", SourceColor,
                 Fields(ResourceField("binding", "Motion Matching Binding"), ResourceField("jump-blend-policy", "Jump Blend Policy"), ReferenceIdentityField("entry-graph-id", "Entry Processing Graph", "pose-graph"), TypedEnumField("relevance-reset-policy", "Relevance Reset", typeof(CharacterMotionMatchingRelevanceResetPolicy)), TypedEnumField("search-cadence-policy", "Search Cadence", typeof(CharacterMotionMatchingSearchCadencePolicy))),
@@ -75,8 +73,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterPoseHistoryCollectorPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseHistoryCollector;
-        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseHistoryRead;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterPoseHistoryCollectorPayload>(CharacterPoseNodeKind.PoseHistoryCollector, new[] { CharacterPoseGraphAuthoringCapabilities.StatePoseGraph }, "Pose History Collector", "Sources", SourceColor,
                 Fields(Field("history-id", "History", GraphAuthoringFieldValueKind.IdentityReference, "pose-history")),

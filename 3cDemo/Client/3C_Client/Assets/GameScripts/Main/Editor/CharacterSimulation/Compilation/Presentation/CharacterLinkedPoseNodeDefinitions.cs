@@ -13,9 +13,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LinkedPoseCall;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.LinkedPoseCall;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterLinkedPoseCallPayload>(CharacterPoseNodeKind.LinkedPoseCall, RootAndLinkedEntry, "Linked Pose Call", "Graph", BlendColor,
                 Fields(

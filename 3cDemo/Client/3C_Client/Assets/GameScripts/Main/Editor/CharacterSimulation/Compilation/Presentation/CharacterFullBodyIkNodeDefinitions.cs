@@ -13,8 +13,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterFootPlacementPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
-        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FootPlacement;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, AllPoseGraphs, "Foot Placement", "Goal Sources", ConstraintColor,
                 Fields(ResourceField("profile", "Profile"), ResourceField("calibration", "Calibration")),
@@ -54,8 +52,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterPoseBoneIkGoalsPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseBoneIKGoals;
-        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseBoneIKGoals;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, AllPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", ConstraintColor,
                 Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),
@@ -118,8 +114,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         CharacterPoseNodeDefinition<CharacterFullBodyIkPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIK;
-        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FullBodyIK;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, AllPoseGraphs, "Full Body IK", "Constraints", ConstraintColor,
                 Fields(ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
@@ -160,9 +154,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.FullBodyIkGoalAssembler;
-        public override CharacterPoseOperationCode OperationCode =>
-            CharacterPoseOperationCode.FullBodyIkGoalAssembler;
-
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterFullBodyIkGoalAssemblerPayload>(CharacterPoseNodeKind.FullBodyIkGoalAssembler, AllPoseGraphs, "Goal Assembler", "Goal Sources", ConstraintColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),

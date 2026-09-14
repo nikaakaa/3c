@@ -2472,6 +2472,33 @@ namespace Slate
             GUI.color = Color.white;
         }
 
+        void DrawTrackListRowFrame(
+            Rect trackRect,
+            bool active,
+            bool selected,
+            Color trackColor,
+            Action drawInfo)
+        {
+            GUI.color = ColorUtility.Grey(isProSkin ? (active ? 0.25f : 0.2f) : (active ? 0.9f : 0.8f));
+            GUI.DrawTexture(trackRect, whiteTexture);
+            GUI.color = Color.white.WithAlpha(0.25f);
+            GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
+            if (selected)
+            {
+                GUI.color = LIST_SELECTION_COLOR;
+                GUI.DrawTexture(trackRect, whiteTexture);
+            }
+            if (active && trackColor != Color.white && trackColor.a > 0.2f)
+            {
+                GUI.color = trackColor;
+                GUI.DrawTexture(new Rect(trackRect.xMax + 1, trackRect.yMin, 2, trackRect.height), whiteTexture);
+            }
+            GUI.color = Color.white;
+            GUI.BeginGroup(trackRect);
+            drawInfo?.Invoke();
+            GUI.EndGroup();
+        }
+
         void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
@@ -2552,24 +2579,22 @@ namespace Slate
                     Rect trackRect = new Rect(10, nextY, leftRect.width - TRACK_RIGHT_MARGIN - 10, track.FinalHeight);
                     nextY += track.FinalHeight + TRACK_MARGINS;
                     bool runtimeActive = embeddedRuntimeTrackActive == null || embeddedRuntimeTrackActive(track.AuthoringId);
-                    GUI.color = track.IsActive && runtimeActive ? ColorUtility.Grey(isProSkin ? 0.25f : 0.9f) : ColorUtility.Grey(isProSkin ? 0.2f : 0.8f);
-                    GUI.DrawTexture(trackRect, whiteTexture);
-                    GUI.color = ReferenceEquals(embeddedTimeline.Selected, track) ? LIST_SELECTION_COLOR : Color.white.WithAlpha(0.25f);
-                    GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
-                    GUI.color = Color.white;
-
                     string inspectionKey = FormalInspectionKey(track);
                     string inspected = string.Empty;
                     if (formalInspectedParameters != null)
                         formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
-                    GUI.BeginGroup(trackRect);
-                    TrackEditorGUI.DrawParametersInfoGUI(
-                        e,
-                        new Rect(0f, 0f, trackRect.width, trackRect.height),
-                        track,
-                        ReferenceEquals(embeddedTimeline.Selected, track),
-                        ref inspected);
-                    GUI.EndGroup();
+                    bool selected = ReferenceEquals(embeddedTimeline.Selected, track);
+                    DrawTrackListRowFrame(
+                        trackRect,
+                        track.IsActive && runtimeActive,
+                        selected,
+                        track.Color,
+                        () => TrackEditorGUI.DrawParametersInfoGUI(
+                            e,
+                            new Rect(0f, 0f, trackRect.width, trackRect.height),
+                            track,
+                            selected,
+                            ref inspected));
                     if (formalInspectedParameters != null)
                         formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
 
@@ -2765,30 +2790,12 @@ namespace Slate
                 var trackRect = new Rect(10, yPos, leftRect.width - TRACK_RIGHT_MARGIN - 10, track.finalHeight);
                 nextYPos += track.finalHeight + TRACK_MARGINS;
 
-                //GRAPHICS
-                GUI.color = ColorUtility.Grey(isProSkin ? ( track.isActive ? 0.25f : 0.2f ) : ( track.isActive ? 0.9f : 0.8f ));
-                GUI.DrawTexture(trackRect, whiteTexture);
-                GUI.color = Color.white.WithAlpha(0.25f);
-                GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
-                if ( ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack ) {
-                    GUI.color = LIST_SELECTION_COLOR;
-                    GUI.DrawTexture(trackRect, whiteTexture);
-                }
-
-                //custom color indicator
-                if ( track.isActive && track.color != Color.white && track.color.a > 0.2f ) {
-                    GUI.color = track.color;
-                    var colorRect = new Rect(trackRect.xMax + 1, trackRect.yMin, 2, track.finalHeight);
-                    GUI.DrawTexture(colorRect, whiteTexture);
-                }
-                GUI.color = Color.white;
-                //
-
-                //
-                GUI.BeginGroup(trackRect);
-                track.OnTrackInfoGUI(trackRect);
-                GUI.EndGroup();
-                //
+                DrawTrackListRowFrame(
+                    trackRect,
+                    track.isActive,
+                    ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack,
+                    track.color,
+                    () => track.OnTrackInfoGUI(trackRect));
 
                 AddCursorRect(trackRect, pickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow);
 

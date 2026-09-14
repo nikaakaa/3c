@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativeAuthoritySourcePolicy SourcePolicy { get; }
         public SimulationPipelineIdentity ExpectedAuthorityPipeline { get; }
         public IReadOnlyList<ActorId> LockedRoster => m_LockedRoster;
-        public Float32ProgramRuntime ProgramRuntime => Composition.ProgramRuntime;
+        public Float32CharacterRuntime CharacterRuntime => Composition.CharacterRuntime;
         public SimulationExecutionBackendDescriptor Backend => Composition.Backend;
         public Float32SimulationPipelineRuntimePackage RuntimePackage => Composition.PipelineRuntimePackage;
         public SimulationPipelineDescriptor Pipeline => RuntimePackage.Pipeline;
@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         void ValidateRoster()
         {
-            if (ProgramRuntime.Roster.Count != m_LockedRoster.Count ||
+            if (CharacterRuntime.Roster.Count != m_LockedRoster.Count ||
                 InitialState.Actors.Count != m_LockedRoster.Count ||
                 InitialState.WorldState.Bodies.Count != m_LockedRoster.Count)
             {
@@ -120,7 +120,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < m_LockedRoster.Count; i++)
             {
                 ActorId actorId = m_LockedRoster[i];
-                if (ProgramRuntime.Roster[i].ActorId != actorId ||
+                if (CharacterRuntime.Roster[i].ActorId != actorId ||
                     InitialState.Actors[i].ActorId != actorId ||
                     InitialState.WorldState.Bodies[i].ActorId != actorId)
                 {
@@ -232,8 +232,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw Failure("authority_runtime_launcher_source_mismatch", "Authority Runtime Launcher does not belong to the prepared Session Source.");
             if (!request.Source.NumericProfileId.Equals(Descriptor.NumericProfileId) ||
                 !request.Source.TargetAbiVersion.Equals(Descriptor.TargetAbiVersion) ||
-                !request.ProgramRuntime.Descriptor.NumericProfileId.Equals(Descriptor.NumericProfileId) ||
-                !request.ProgramRuntime.Descriptor.TargetAbiVersion.Equals(Descriptor.TargetAbiVersion))
+                !request.CharacterRuntime.Descriptor.NumericProfileId.Equals(Descriptor.NumericProfileId) ||
+                !request.CharacterRuntime.Descriptor.TargetAbiVersion.Equals(Descriptor.TargetAbiVersion))
             {
                 throw Failure("authority_runtime_launcher_target_abi_mismatch", "Authority Runtime Launcher, Session Source, and Program Runtime Target ABI do not match.");
             }

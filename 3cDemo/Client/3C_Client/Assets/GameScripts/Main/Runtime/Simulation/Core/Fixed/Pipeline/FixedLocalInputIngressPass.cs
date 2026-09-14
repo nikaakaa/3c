@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(context));
             var reads = new FixedLocalInputIngressReadPorts(
                 context.BindSourcePort<IFixedLocalInputSourcePort>(FixedLocalInputSourcePortContract.PortId),
-                context.BindTargetPort<IFixedProgramRuntimePort>(FixedPipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFixedCharacterRuntimePort>(FixedPipelineRuntimePortIds.CharacterRuntime),
                 context.BindTargetPort<ICommittedActorPoseReadPort<FixedVector3, FixedYaw>>(FixedPipelineRuntimePortIds.CommittedObservation));
             var writes = new FixedLocalInputIngressWritePorts(
                 context.Products.BindExclusiveWriter<FixedCanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
@@ -61,13 +61,13 @@ namespace ThirdPersonSimulation.Fixed
             RequireExecution();
             if (!ReferenceEquals(m_Source, readPorts.Source))
                 throw new InvalidOperationException("Fixed Local input Source port changed after activation.");
-            SimulationProgramCatalog catalog = readPorts.ProgramRuntime.Catalog;
+            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             FixedLocalInputFrame frame = readPorts.Source.Read(
                 context.Source,
                 nextTick,
                 catalog.TickRate,
-                readPorts.ProgramRuntime.Roster,
+                readPorts.CharacterRuntime.Roster,
                 readPorts.CommittedObservation.Read());
             writePorts.CanonicalInputs.Write(frame.CanonicalInputs);
             writePorts.TypedIngress.Write(frame.TypedIngress);
@@ -104,16 +104,16 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedLocalInputIngressReadPorts(
             IFixedLocalInputSourcePort source,
-            IFixedProgramRuntimePort programRuntime,
+            IFixedCharacterRuntimePort characterRuntime,
             ICommittedActorPoseReadPort<FixedVector3, FixedYaw> committedObservation)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             CommittedObservation = committedObservation ?? throw new ArgumentNullException(nameof(committedObservation));
         }
 
         public IFixedLocalInputSourcePort Source { get; }
-        public IFixedProgramRuntimePort ProgramRuntime { get; }
+        public IFixedCharacterRuntimePort CharacterRuntime { get; }
         public ICommittedActorPoseReadPort<FixedVector3, FixedYaw> CommittedObservation { get; }
     }
 

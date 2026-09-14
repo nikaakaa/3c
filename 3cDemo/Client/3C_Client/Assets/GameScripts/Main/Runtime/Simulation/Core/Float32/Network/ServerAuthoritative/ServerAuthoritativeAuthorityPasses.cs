@@ -93,7 +93,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var reads = new AuthorityTickScheduleReads(
                 context.Products.BindExclusiveReader<AcceptedAuthorityInputBatch>(ServerAuthoritativeProducts.AcceptedAuthorityInputBatch),
                 context.BindSourcePort<IServerAuthoritativeAuthorityClockSourcePort>(ServerAuthoritativeSourcePortContracts.AuthorityClockPortId),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindDiagnosticsPort<IFloat32DiagnosticsRuntimePort>(Float32PipelineRuntimePortIds.Diagnostics));
             var writes = new AuthorityTickScheduleWrites(
                 context.Products.BindExclusiveWriter<SimulationSessionExecutionPlan<Float32SimulationStep>>(SimulationPipelineProducts.ExecutionPlan));
@@ -155,12 +155,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Source.ClockId,
                 authorityTick.Value);
             var actorInputs = new List<SimulationPipelineActorInput<Float32StepInput>>();
-            for (int i = 0; i < readPorts.ProgramRuntime.Roster.Count; i++)
+            for (int i = 0; i < readPorts.CharacterRuntime.Roster.Count; i++)
             {
-                ActorId actorId = readPorts.ProgramRuntime.Roster[i].ActorId;
+                ActorId actorId = readPorts.CharacterRuntime.Roster[i].ActorId;
                 if (!m_Held.TryGetValue(actorId, out HeldAuthorityInput held))
                 {
-                    writePorts.ExecutionPlan.Write(Pending(context, readPorts.ProgramRuntime));
+                    writePorts.ExecutionPlan.Write(Pending(context, readPorts.CharacterRuntime));
                     return;
                 }
                 CharacterSimulationInput input = BuildInput(held, authoritySource, authorityTick);
@@ -182,9 +182,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writePorts.ExecutionPlan.Write(new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                readPorts.ProgramRuntime.Catalog.CatalogHash,
+                readPorts.CharacterRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
-                Roster(readPorts.ProgramRuntime),
+                Roster(readPorts.CharacterRuntime),
                 new[]
                 {
                     new SimulationPipelineStepSourceMapping(
@@ -279,7 +279,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static SimulationSessionExecutionPlan<Float32SimulationStep> Pending(
             SimulationPipelineScheduleContext context,
-            IFloat32ProgramRuntimePort runtime) =>
+            IFloat32CharacterRuntimePort runtime) =>
             new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Pending,
                 context.Source,
@@ -291,7 +291,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Array.Empty<Float32SimulationStep>(),
                 SimulationSessionPlanRequirement.None);
 
-        static SimulationActorRosterDescriptor Roster(IFloat32ProgramRuntimePort runtime)
+        static SimulationActorRosterDescriptor Roster(IFloat32CharacterRuntimePort runtime)
         {
             var actors = new ActorId[runtime.Roster.Count];
             for (int i = 0; i < actors.Length; i++)
@@ -387,18 +387,18 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public AuthorityTickScheduleReads(
             IReadOnlySimulationPipelineProductPort<AcceptedAuthorityInputBatch> accepted,
             IServerAuthoritativeAuthorityClockSourcePort clock,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             IFloat32DiagnosticsRuntimePort diagnostics)
         {
             Accepted = accepted ?? throw new ArgumentNullException(nameof(accepted));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
 
         public IReadOnlySimulationPipelineProductPort<AcceptedAuthorityInputBatch> Accepted { get; }
         public IServerAuthoritativeAuthorityClockSourcePort Clock { get; }
-        public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+        public IFloat32CharacterRuntimePort CharacterRuntime { get; }
         public IFloat32DiagnosticsRuntimePort Diagnostics { get; }
     }
 
@@ -442,7 +442,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.BindSourcePort<IServerAuthoritativeNetworkSendPort>(ServerAuthoritativeSourcePortContracts.AuthoritySendPortId),
                 context.BindSourcePort<IServerAuthoritativeFullBaselineRequestSourcePort>(ServerAuthoritativeSourcePortContracts.FullBaselineRequestPortId),
                 context.BindTargetPort<IFloat32CompletedStepReadPort>(Float32PipelineRuntimePortIds.CompletedSteps),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindSolverPort<IFloat32WorldSolverRuntimePort>(Float32PipelineRuntimePortIds.WorldSolver),
                 context.BindDiagnosticsPort<IFloat32DiagnosticsRuntimePort>(Float32PipelineRuntimePortIds.Diagnostics));
             var writes = new AuthorityReplicationEgressWrites(
@@ -523,8 +523,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 for (int i = 0; i < completed.Result.Actors.Count; i++)
                 {
                     SimulationActorTickResult actor = completed.Result.Actors[i];
-                    CharacterSimulationProgram program = readPorts.ProgramRuntime.GetProgram(
-                        readPorts.ProgramRuntime.GetActorIndex(actor.ActorId));
+                    CharacterSimulationProgram program = readPorts.CharacterRuntime.GetProgram(
+                        readPorts.CharacterRuntime.GetActorIndex(actor.ActorId));
                     m_SampleCommands.Clear();
                     m_ReliableEvents.Clear();
                     for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
@@ -621,7 +621,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Float32CompletedSimulationStep completed,
             AuthorityReplicationEgressReads ports)
         {
-            CharacterSimulationProgram program = ports.ProgramRuntime.Catalog.GetRequired(actor.State.ProgramId);
+            CharacterSimulationProgram program = ports.CharacterRuntime.Catalog.GetRequired(actor.State.ProgramId);
             int actorIndex = FindActorInput(completed.Step, actor.ActorId);
             ulong inputSequence = completed.Step.Inputs[actorIndex].Sequence;
             ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon value)
@@ -739,7 +739,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             IServerAuthoritativeNetworkSendPort send,
             IServerAuthoritativeFullBaselineRequestSourcePort fullBaselineRequest,
             IFloat32CompletedStepReadPort completed,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             IFloat32WorldSolverRuntimePort solver,
             IFloat32DiagnosticsRuntimePort diagnostics)
         {
@@ -748,7 +748,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Send = send ?? throw new ArgumentNullException(nameof(send));
             FullBaselineRequest = fullBaselineRequest ?? throw new ArgumentNullException(nameof(fullBaselineRequest));
             Completed = completed ?? throw new ArgumentNullException(nameof(completed));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
@@ -758,7 +758,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IServerAuthoritativeNetworkSendPort Send { get; }
         public IServerAuthoritativeFullBaselineRequestSourcePort FullBaselineRequest { get; }
         public IFloat32CompletedStepReadPort Completed { get; }
-        public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+        public IFloat32CharacterRuntimePort CharacterRuntime { get; }
         public IFloat32WorldSolverRuntimePort Solver { get; }
         public IFloat32DiagnosticsRuntimePort Diagnostics { get; }
     }

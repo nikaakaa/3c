@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(context));
             var reads = new LocalInputIngressReadPorts(
                 context.BindSourcePort<IFloat32LocalInputSourcePort>(Float32LocalInputSourcePortContract.PortId),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindTargetPort<ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw>>(Float32PipelineRuntimePortIds.CommittedObservation));
             var writes = new LocalInputIngressWritePorts(
                 context.Products.BindExclusiveWriter<Float32CanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation
             RequireExecution();
             if (!ReferenceEquals(m_Source, readPorts.Source))
                 throw new InvalidOperationException("Local Control Input Ingress source port changed after activation.");
-            SimulationProgramCatalog catalog = readPorts.ProgramRuntime.Catalog;
+            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             Float32CommittedActorPoseSnapshot observation = readPorts.CommittedObservation.Read();
             Float32LocalInputFrame frame = readPorts.Source.Read(
@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation
                 nextTick,
                 catalog.NumericProfile,
                 catalog.TickRate,
-                readPorts.ProgramRuntime.Roster,
+                readPorts.CharacterRuntime.Roster,
                 observation);
             writePorts.CanonicalInputs.Write(frame.CanonicalInputs);
             writePorts.TypedIngress.Write(frame.TypedIngress);
@@ -150,16 +150,16 @@ namespace ThirdPersonSimulation
     {
         public LocalInputIngressReadPorts(
             IFloat32LocalInputSourcePort source,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> committedObservation)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             CommittedObservation = committedObservation ?? throw new ArgumentNullException(nameof(committedObservation));
         }
 
         public IFloat32LocalInputSourcePort Source { get; }
-        public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+        public IFloat32CharacterRuntimePort CharacterRuntime { get; }
         public ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> CommittedObservation { get; }
     }
 

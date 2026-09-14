@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation.Fixed
             var reads = new FixedLocalSingleStepScheduleReadPorts(
                 context.Products.BindExclusiveReader<FixedCanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
                 context.Products.BindExclusiveReader<FixedTypedIngressBatch>(SimulationPipelineProducts.TypedIngress),
-                context.BindTargetPort<IFixedProgramRuntimePort>(FixedPipelineRuntimePortIds.ProgramRuntime));
+                context.BindTargetPort<IFixedCharacterRuntimePort>(FixedPipelineRuntimePortIds.CharacterRuntime));
             var writes = new FixedLocalSingleStepScheduleWritePorts(
                 context.Products.BindExclusiveWriter<SimulationSessionExecutionPlan<FixedSimulationStep>>(
                     SimulationPipelineProducts.ExecutionPlan));
@@ -49,23 +49,23 @@ namespace ThirdPersonSimulation.Fixed
                 context,
                 readPorts.CanonicalInputs.Read(),
                 readPorts.TypedIngress.Read(),
-                readPorts.ProgramRuntime));
+                readPorts.CharacterRuntime));
         }
 
         static SimulationSessionExecutionPlan<FixedSimulationStep> Build(
             SimulationPipelineScheduleContext context,
             FixedCanonicalInputBatch canonical,
             FixedTypedIngressBatch typed,
-            IFixedProgramRuntimePort programRuntime)
+            IFixedCharacterRuntimePort characterRuntime)
         {
-            if (canonical == null || typed == null || programRuntime == null)
+            if (canonical == null || typed == null || characterRuntime == null)
                 throw new ArgumentNullException("Fixed Local single-step Schedule input is missing.");
             if (context.Source.Kind != SimulationTickSourceKind.LocalLogic || !canonical.Source.Equals(context.Source) ||
-                canonical.Inputs.Count != programRuntime.Roster.Count)
+                canonical.Inputs.Count != characterRuntime.Roster.Count)
             {
                 throw new InvalidOperationException("Fixed Local single-step input batch does not match the outer Tick or locked roster.");
             }
-            IReadOnlyList<ActorId> actorIds = programRuntime.RosterDescriptor.Actors;
+            IReadOnlyList<ActorId> actorIds = characterRuntime.RosterDescriptor.Actors;
             for (int i = 0; i < actorIds.Count; i++)
             {
                 if (!canonical.Inputs[i].ActorId.Equals(actorIds[i]))
@@ -87,9 +87,9 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                programRuntime.Catalog.CatalogHash,
+                characterRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
-                programRuntime.RosterDescriptor,
+                characterRuntime.RosterDescriptor,
                 new[]
                 {
                     new SimulationPipelineStepSourceMapping(
@@ -119,16 +119,16 @@ namespace ThirdPersonSimulation.Fixed
         public FixedLocalSingleStepScheduleReadPorts(
             IReadOnlySimulationPipelineProductPort<FixedCanonicalInputBatch> canonicalInputs,
             IReadOnlySimulationPipelineProductPort<FixedTypedIngressBatch> typedIngress,
-            IFixedProgramRuntimePort programRuntime)
+            IFixedCharacterRuntimePort characterRuntime)
         {
             CanonicalInputs = canonicalInputs ?? throw new ArgumentNullException(nameof(canonicalInputs));
             TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
         }
 
         public IReadOnlySimulationPipelineProductPort<FixedCanonicalInputBatch> CanonicalInputs { get; }
         public IReadOnlySimulationPipelineProductPort<FixedTypedIngressBatch> TypedIngress { get; }
-        public IFixedProgramRuntimePort ProgramRuntime { get; }
+        public IFixedCharacterRuntimePort CharacterRuntime { get; }
     }
 
     public sealed class FixedLocalSingleStepScheduleWritePorts : ISimulationPipelineWritePortSet

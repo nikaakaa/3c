@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             var reads = new OwnerInputIngressReads(
                 context.BindSourcePort<IFloat32LocalInputSourcePort>(Float32LocalInputSourcePortContract.PortId),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindTargetPort<ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw>>(Float32PipelineRuntimePortIds.CommittedObservation));
             var writes = new OwnerInputIngressWrites(
                 context.Products.BindExclusiveWriter<OwnerCanonicalInputBatch>(ServerAuthoritativeProducts.OwnerCanonicalInputBatch));
@@ -46,8 +46,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             OwnerInputIngressWrites writePorts)
         {
             RequireExecution();
-            SimulationProgramCatalog catalog = readPorts.ProgramRuntime.Catalog;
-            if (readPorts.ProgramRuntime.Roster.Count != 1)
+            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
+            if (readPorts.CharacterRuntime.Roster.Count != 1)
                 throw new InvalidOperationException("Prediction Owner Input Pass requires a one-Actor simulation roster.");
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             SimulationTickSourceIdentity modelSource = MapModelSource(context.Source);
@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 nextTick,
                 catalog.NumericProfile,
                 catalog.TickRate,
-                readPorts.ProgramRuntime.Roster,
+                readPorts.CharacterRuntime.Roster,
                 readPorts.CommittedObservation.Read());
             SimulationPipelineActorInput<Float32StepInput> input = frame.CanonicalInputs.Inputs[0];
             writePorts.OwnerInput.Write(new OwnerCanonicalInputBatch(
@@ -82,15 +82,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         public OwnerInputIngressReads(
             IFloat32LocalInputSourcePort source,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> committedObservation)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             CommittedObservation = committedObservation ?? throw new ArgumentNullException(nameof(committedObservation));
         }
         public IFloat32LocalInputSourcePort Source { get; }
-        public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+        public IFloat32CharacterRuntimePort CharacterRuntime { get; }
         public ICommittedActorPoseReadPort<Float32Vector3, Float32Yaw> CommittedObservation { get; }
     }
 
@@ -207,7 +207,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Products.BindExclusiveReader<AuthoritativeObservationBatch>(ServerAuthoritativeProducts.AuthoritativeObservationBatch),
                 context.BindSourcePort<IServerAuthoritativePredictionStatePort>(ServerAuthoritativeSourcePortContracts.PredictionStatePortId),
                 context.BindSourcePort<IServerAuthoritativePredictionRestorePort>(ServerAuthoritativeSourcePortContracts.PredictionRestorePortId),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime),
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindTargetPort<IFloat32WorldSolverRuntimePort>(Float32PipelineRuntimePortIds.WorldSolver),
                 context.BindDiagnosticsPort<IFloat32DiagnosticsRuntimePort>(Float32PipelineRuntimePortIds.Diagnostics));
             var writes = new CorrectionScheduleWrites(
@@ -335,7 +335,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 plan = BuildPlan(
                     context,
-                    readPorts.ProgramRuntime,
+                    readPorts.CharacterRuntime,
                     current,
                     replay,
                     restore,
@@ -523,7 +523,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         SimulationSessionExecutionPlan<Float32SimulationStep> BuildPlan(
             SimulationPipelineScheduleContext context,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             OwnerCanonicalInputBatch current,
             IReadOnlyList<ServerAuthoritativePredictionHistoryRecord> replay,
             SimulationRestoreDirective restore,
@@ -533,7 +533,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             StableHash contactShapeConfigurationHash,
             out IReadOnlyList<CharacterBodySample> selectedRemoteBodies)
         {
-            if (programRuntime.Roster.Count != 1 || programRuntime.Roster[0].ActorId != current.ActorId)
+            if (characterRuntime.Roster.Count != 1 || characterRuntime.Roster[0].ActorId != current.ActorId)
                 throw new InvalidOperationException("Prediction Schedule owner does not match the Program roster.");
             if (currentStepCount < 0 || currentStepCount > 2)
                 throw new ArgumentOutOfRangeException(nameof(currentStepCount));
@@ -601,7 +601,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     ? SimulationSessionExecutionPlanStatus.NoStep
                     : SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                programRuntime.Catalog.CatalogHash,
+                characterRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
                 new SimulationActorRosterDescriptor(new[] { current.ActorId }),
                 mappings,
@@ -689,7 +689,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             IReadOnlySimulationPipelineProductPort<AuthoritativeObservationBatch> observations,
               IServerAuthoritativePredictionStatePort predictionState,
               IServerAuthoritativePredictionRestorePort restore,
-              IFloat32ProgramRuntimePort programRuntime,
+              IFloat32CharacterRuntimePort characterRuntime,
               IFloat32WorldSolverRuntimePort worldSolver,
               IFloat32DiagnosticsRuntimePort diagnostics)
         {
@@ -697,7 +697,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Observations = observations ?? throw new ArgumentNullException(nameof(observations));
             PredictionState = predictionState ?? throw new ArgumentNullException(nameof(predictionState));
               Restore = restore ?? throw new ArgumentNullException(nameof(restore));
-              ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+              CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
               WorldSolver = worldSolver ?? throw new ArgumentNullException(nameof(worldSolver));
               Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
@@ -705,7 +705,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlySimulationPipelineProductPort<AuthoritativeObservationBatch> Observations { get; }
         public IServerAuthoritativePredictionStatePort PredictionState { get; }
           public IServerAuthoritativePredictionRestorePort Restore { get; }
-          public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+          public IFloat32CharacterRuntimePort CharacterRuntime { get; }
           public IFloat32WorldSolverRuntimePort WorldSolver { get; }
           public IFloat32DiagnosticsRuntimePort Diagnostics { get; }
     }

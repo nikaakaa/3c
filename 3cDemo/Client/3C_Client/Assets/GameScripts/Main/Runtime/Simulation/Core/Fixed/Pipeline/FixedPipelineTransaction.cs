@@ -65,8 +65,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
             FixedCompletedStepPort completedStepPort,
-            FixedProgramRuntime programRuntime,
-            FixedProgramRuntimePort programRuntimePort)
+            FixedCharacterRuntime characterRuntime,
+            FixedCharacterRuntimePort characterRuntimePort)
         {
             var services = new PipelineTransactionRuntimeServices(
                 descriptor,
@@ -87,8 +87,8 @@ namespace ThirdPersonSimulation.Fixed
                 products,
                 workingStatePort,
                 completedStepPort,
-                programRuntime,
-                programRuntimePort);
+                characterRuntime,
+                characterRuntimePort);
             m_Coordinator = new PipelineTransactionCoordinator<
                 FixedSimulationStep,
                 FixedPipelineWorkingState,
@@ -155,8 +155,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlySimulationPipelineProductPort<FixedPendingEvaluationBatch> m_PendingEvaluations;
         readonly FixedWorkingStatePort m_WorkingStatePort;
         readonly FixedCompletedStepPort m_CompletedStepPort;
-        readonly FixedProgramRuntime m_ProgramRuntime;
-        readonly FixedProgramRuntimePort m_ProgramRuntimePort;
+        readonly FixedCharacterRuntime m_CharacterRuntime;
+        readonly FixedCharacterRuntimePort m_CharacterRuntimePort;
 
         public FixedPipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -171,8 +171,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
             FixedCompletedStepPort completedStepPort,
-            FixedProgramRuntime programRuntime,
-            FixedProgramRuntimePort programRuntimePort)
+            FixedCharacterRuntime characterRuntime,
+            FixedCharacterRuntimePort characterRuntimePort)
         {
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -188,8 +188,8 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationPipelineProducts.PendingActorEvaluations);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
-            m_ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
-            m_ProgramRuntimePort = programRuntimePort ?? throw new ArgumentNullException(nameof(programRuntimePort));
+            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            m_CharacterRuntimePort = characterRuntimePort ?? throw new ArgumentNullException(nameof(characterRuntimePort));
         }
 
         public string TransactionIdentityDomain => "fixed-pipeline-transaction/1";
@@ -222,10 +222,10 @@ namespace ThirdPersonSimulation.Fixed
                 if (typed[i] == null)
                     throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
             }
-            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
             SimulationWorldStateSet reboundState = m_StateStore.PrepareCatalogAdoption(catalog);
-            m_ProgramRuntime.AdoptPrograms(typed, catalog);
-            m_ProgramRuntimePort.AdoptRuntime(m_ProgramRuntime);
+            m_CharacterRuntime.AdoptPrograms(typed, catalog);
+            m_CharacterRuntimePort.AdoptRuntime(m_CharacterRuntime);
             m_StateStore.AdoptCatalog(catalog, reboundState);
             m_Catalog = catalog;
             var roster = new List<SimulationActorBinding>(typed);
@@ -252,7 +252,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (typed[i] == null)
                     throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
             }
-            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
             _ = m_StateStore.PrepareCatalogAdoption(catalog);
             return new SimulationProgramEpoch(
                 checked(current.Value + 1),

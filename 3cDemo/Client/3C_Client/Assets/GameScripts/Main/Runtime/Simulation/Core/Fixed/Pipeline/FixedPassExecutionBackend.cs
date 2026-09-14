@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 
@@ -104,9 +104,9 @@ namespace ThirdPersonSimulation.Fixed
 
                 FixedPipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
                 var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
-                var programPort = new FixedProgramRuntimePort(
-                    request.Descriptor.ProgramRuntime,
-                    request.ProgramRuntime);
+                var programPort = new FixedCharacterRuntimePort(
+                    request.Descriptor.CharacterRuntime,
+                    request.CharacterRuntime);
                 var workingStatePort = new FixedWorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new FixedCompletedStepPort(request.Backend.Identity);
                 var committedObservationPort = new FixedCommittedActorPoseReadPort(
@@ -204,7 +204,7 @@ namespace ThirdPersonSimulation.Fixed
                     products,
                     workingStatePort,
                     completedStepPort,
-                    request.ProgramRuntime,
+                    request.CharacterRuntime,
                     programPort);
                 var handle = new FixedPassPipelineRuntimeHandle(
                     request.Descriptor,

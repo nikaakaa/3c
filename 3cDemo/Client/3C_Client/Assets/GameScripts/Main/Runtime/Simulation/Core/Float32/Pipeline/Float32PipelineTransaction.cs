@@ -63,8 +63,8 @@ namespace ThirdPersonSimulation
             Float32PipelineProductStore products,
             Float32WorkingStatePort workingStatePort,
             Float32CompletedStepPort completedStepPort,
-            Float32ProgramRuntime programRuntime,
-            Float32ProgramRuntimePort programRuntimePort)
+            Float32CharacterRuntime characterRuntime,
+            Float32CharacterRuntimePort characterRuntimePort)
         {
             var services = new PipelineTransactionRuntimeServices(
                 descriptor,
@@ -85,8 +85,8 @@ namespace ThirdPersonSimulation
                 products,
                 workingStatePort,
                 completedStepPort,
-                programRuntime,
-                programRuntimePort);
+                characterRuntime,
+                characterRuntimePort);
             m_Coordinator = new PipelineTransactionCoordinator<
                 Float32SimulationStep,
                 Float32PipelineWorkingState,
@@ -153,8 +153,8 @@ namespace ThirdPersonSimulation
         readonly IReadOnlySimulationPipelineProductPort<Float32PendingEvaluationBatch> m_PendingEvaluations;
         readonly Float32WorkingStatePort m_WorkingStatePort;
         readonly Float32CompletedStepPort m_CompletedStepPort;
-        readonly Float32ProgramRuntime m_ProgramRuntime;
-        readonly Float32ProgramRuntimePort m_ProgramRuntimePort;
+        readonly Float32CharacterRuntime m_CharacterRuntime;
+        readonly Float32CharacterRuntimePort m_CharacterRuntimePort;
 
         public Float32PipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -169,8 +169,8 @@ namespace ThirdPersonSimulation
             Float32PipelineProductStore products,
             Float32WorkingStatePort workingStatePort,
             Float32CompletedStepPort completedStepPort,
-            Float32ProgramRuntime programRuntime,
-            Float32ProgramRuntimePort programRuntimePort)
+            Float32CharacterRuntime characterRuntime,
+            Float32CharacterRuntimePort characterRuntimePort)
         {
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -186,8 +186,8 @@ namespace ThirdPersonSimulation
                 SimulationPipelineProducts.PendingActorEvaluations);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
-            m_ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
-            m_ProgramRuntimePort = programRuntimePort ?? throw new ArgumentNullException(nameof(programRuntimePort));
+            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            m_CharacterRuntimePort = characterRuntimePort ?? throw new ArgumentNullException(nameof(characterRuntimePort));
         }
 
         public string TransactionIdentityDomain => "float32-pipeline-transaction/1";
@@ -220,10 +220,10 @@ namespace ThirdPersonSimulation
                 if (typed[i] == null)
                     throw new InvalidOperationException("Program adoption binding does not belong to the Float32 target.");
             }
-            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
             SimulationWorldStateSet reboundState = m_StateStore.PrepareCatalogAdoption(catalog);
-            m_ProgramRuntime.AdoptPrograms(typed, catalog);
-            m_ProgramRuntimePort.AdoptRuntime(m_ProgramRuntime);
+            m_CharacterRuntime.AdoptPrograms(typed, catalog);
+            m_CharacterRuntimePort.AdoptRuntime(m_CharacterRuntime);
             m_StateStore.AdoptCatalog(catalog, reboundState);
             m_Catalog = catalog;
             var roster = new List<SimulationActorBinding>(typed);
@@ -250,7 +250,7 @@ namespace ThirdPersonSimulation
                 if (typed[i] == null)
                     throw new InvalidOperationException("Program adoption binding does not belong to the Float32 target.");
             }
-            SimulationProgramCatalog catalog = m_ProgramRuntime.PrepareCatalogAdoption(typed);
+            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
             _ = m_StateStore.PrepareCatalogAdoption(catalog);
             return new SimulationProgramEpoch(
                 checked(current.Value + 1),

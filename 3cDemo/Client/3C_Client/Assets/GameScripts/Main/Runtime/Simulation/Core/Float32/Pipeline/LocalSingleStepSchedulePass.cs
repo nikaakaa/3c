@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
             var reads = new LocalSingleStepScheduleReadPorts(
                 context.Products.BindExclusiveReader<Float32CanonicalInputBatch>(SimulationPipelineProducts.CanonicalInputs),
                 context.Products.BindExclusiveReader<Float32TypedIngressBatch>(SimulationPipelineProducts.TypedIngress),
-                context.BindTargetPort<IFloat32ProgramRuntimePort>(Float32PipelineRuntimePortIds.ProgramRuntime));
+                context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime));
             var writes = new LocalSingleStepScheduleWritePorts(
                 context.Products.BindExclusiveWriter<SimulationSessionExecutionPlan<Float32SimulationStep>>(
                     SimulationPipelineProducts.ExecutionPlan));
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation
                 context,
                 readPorts.CanonicalInputs.Read(),
                 readPorts.TypedIngress.Read(),
-                readPorts.ProgramRuntime,
+                readPorts.CharacterRuntime,
                 SimulationTickSourceKind.LocalLogic));
         }
     }
@@ -59,17 +59,17 @@ namespace ThirdPersonSimulation
             SimulationPipelineScheduleContext context,
             Float32CanonicalInputBatch canonical,
             Float32TypedIngressBatch typed,
-            IFloat32ProgramRuntimePort programRuntime,
+            IFloat32CharacterRuntimePort characterRuntime,
             SimulationTickSourceKind expectedSourceKind)
         {
-            if (canonical == null || typed == null || programRuntime == null)
+            if (canonical == null || typed == null || characterRuntime == null)
                 throw new ArgumentNullException("Single-step Schedule input is missing.");
             if (context.Source.Kind != expectedSourceKind || !canonical.Source.Equals(context.Source) ||
-                canonical.Inputs.Count != programRuntime.Roster.Count)
+                canonical.Inputs.Count != characterRuntime.Roster.Count)
             {
                 throw new InvalidOperationException("Single-step Schedule input batch does not match the outer Tick or locked roster.");
             }
-            IReadOnlyList<ActorId> actorIds = programRuntime.RosterDescriptor.Actors;
+            IReadOnlyList<ActorId> actorIds = characterRuntime.RosterDescriptor.Actors;
             for (int i = 0; i < actorIds.Count; i++)
             {
                 if (!canonical.Inputs[i].ActorId.Equals(actorIds[i]))
@@ -92,9 +92,9 @@ namespace ThirdPersonSimulation
             return new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                programRuntime.Catalog.CatalogHash,
+                characterRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
-                programRuntime.RosterDescriptor,
+                characterRuntime.RosterDescriptor,
                 new[]
                 {
                     new SimulationPipelineStepSourceMapping(
@@ -124,16 +124,16 @@ namespace ThirdPersonSimulation
         public LocalSingleStepScheduleReadPorts(
             IReadOnlySimulationPipelineProductPort<Float32CanonicalInputBatch> canonicalInputs,
             IReadOnlySimulationPipelineProductPort<Float32TypedIngressBatch> typedIngress,
-            IFloat32ProgramRuntimePort programRuntime)
+            IFloat32CharacterRuntimePort characterRuntime)
         {
             CanonicalInputs = canonicalInputs ?? throw new ArgumentNullException(nameof(canonicalInputs));
             TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
+            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
         }
 
         public IReadOnlySimulationPipelineProductPort<Float32CanonicalInputBatch> CanonicalInputs { get; }
         public IReadOnlySimulationPipelineProductPort<Float32TypedIngressBatch> TypedIngress { get; }
-        public IFloat32ProgramRuntimePort ProgramRuntime { get; }
+        public IFloat32CharacterRuntimePort CharacterRuntime { get; }
     }
 
     public sealed class LocalSingleStepScheduleWritePorts : ISimulationPipelineWritePortSet

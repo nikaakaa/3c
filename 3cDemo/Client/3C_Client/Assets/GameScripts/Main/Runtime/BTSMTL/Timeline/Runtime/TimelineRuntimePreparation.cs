@@ -187,6 +187,8 @@ namespace BTSMTL.Timeline.Runtime
         readonly List<string> m_ActiveClipIds = new List<string>();
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
+        TimelinePlaybackStopContext m_PendingStopContext;
+        bool m_StopPending;
         int m_CursorFrame;
         int m_Cycle;
         string m_SectionId = string.Empty;
@@ -227,6 +229,39 @@ namespace BTSMTL.Timeline.Runtime
         public bool HasStopContext { get; private set; }
         public TimelinePlaybackStopContext StopContext { get; private set; }
 
+        public bool TryResolveTargetIdentity(string bindingId, out string targetIdentity)
+        {
+            targetIdentity = string.Empty;
+            string inputBindingId = bindingId ?? string.Empty;
+            if (PreparedBindings.Plan.TryGetTargetBindingId(inputBindingId, out string targetBindingId))
+                inputBindingId = targetBindingId;
+            if (!PreparedBindings.CallInput.TryGet(inputBindingId, out TimelineBindingValue value) ||
+                value.ValueKind != TimelineBindingValueKind.Target ||
+                string.IsNullOrEmpty(value.TargetIdentity))
+                return false;
+            targetIdentity = value.TargetIdentity;
+            return true;
+        }
+
+        public bool TryResolveClip(string authoringId, out Clip clip)
+        {
+            for (int trackIndex = 0; trackIndex < SourceTimeline.Tracks.Count; trackIndex++)
+            {
+                Track track = SourceTimeline.Tracks[trackIndex];
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip candidate = track.Clips[clipIndex];
+                    if (candidate != null && string.Equals(candidate.AuthoringId, authoringId, StringComparison.Ordinal))
+                    {
+                        clip = candidate;
+                        return true;
+                    }
+                }
+            }
+            clip = null;
+            return false;
+        }
+
         public bool Start()
         {
             if (State != TimelineRuntimePlaybackState.Prepared)
@@ -240,7 +275,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (State != TimelineRuntimePlaybackState.Running)
                 throw new InvalidOperationException("Timeline playback must be running before Advance.");
-            if (m_PendingAdvance != null)
+            if (m_PendingAdvance != null || m_StopPending)
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
             int maxFrame = Math.Max(0, Content.MaxFrame);
             long requestedFrame = (long)m_CursorFrame + request.DeltaFrames;
@@ -288,7 +323,9 @@ namespace BTSMTL.Timeline.Runtime
                 nextFrame,
                 nextCycle,
                 Content.Loop,
-                boundaries);
+                boundaries,
+                ExecutionIdentity,
+                Generation);
             bool completes = !Content.Loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
@@ -335,10 +372,32 @@ namespace BTSMTL.Timeline.Runtime
                 State == TimelineRuntimePlaybackState.Stopped ||
                 State == TimelineRuntimePlaybackState.Failed)
                 return false;
+            if (m_StopPending)
+                return false;
             StopContext = context;
             HasStopContext = true;
-            m_PendingAdvance = null;
+            m_PendingStopContext = context;
+            m_StopPending = true;
+            return true;
+        }
+
+        public bool CommitStop()
+        {
+            if (!m_StopPending || m_PendingAdvance != null)
+                return false;
+            StopContext = m_PendingStopContext;
+            HasStopContext = true;
+            m_StopPending = false;
             State = TimelineRuntimePlaybackState.Stopping;
+            m_ActiveClipIds.Clear();
+            return true;
+        }
+
+        public bool DiscardStop()
+        {
+            if (!m_StopPending || m_PendingAdvance != null)
+                return false;
+            m_StopPending = false;
             return true;
         }
 
@@ -354,9 +413,44 @@ namespace BTSMTL.Timeline.Runtime
         public void Dispose()
         {
             m_PendingAdvance = null;
+            m_StopPending = false;
             m_ActiveClipIds.Clear();
             if (State != TimelineRuntimePlaybackState.Disposed)
                 State = TimelineRuntimePlaybackState.Disposed;
+        }
+
+        internal bool HasPendingStop => m_StopPending;
+        internal bool HasPendingAdvance => m_PendingAdvance != null;
+
+        internal bool RestoreCommittedState(
+            TimelineRuntimePlaybackState state,
+            int cursorFrame,
+            int cycle,
+            string sectionId,
+            IReadOnlyList<string> activeClipIds,
+            bool hasStopContext,
+            TimelinePlaybackStopContext stopContext)
+        {
+            if (m_PendingAdvance != null || m_StopPending)
+                return false;
+            if (cursorFrame < 0 || cycle < 0 || cursorFrame > Math.Max(0, Content.MaxFrame))
+                return false;
+            if (state != TimelineRuntimePlaybackState.Prepared &&
+                state != TimelineRuntimePlaybackState.Running &&
+                state != TimelineRuntimePlaybackState.Stopping &&
+                state != TimelineRuntimePlaybackState.Completed &&
+                state != TimelineRuntimePlaybackState.Stopped)
+                return false;
+            m_CursorFrame = cursorFrame;
+            m_Cycle = cycle;
+            m_SectionId = sectionId ?? string.Empty;
+            m_ActiveClipIds.Clear();
+            for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
+                m_ActiveClipIds.Add(activeClipIds[index]);
+            HasStopContext = hasStopContext;
+            StopContext = stopContext;
+            State = state;
+            return true;
         }
 
         void RequirePendingAdvance(TimelineRuntimeAdvanceResult advance)
@@ -683,10 +777,27 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(preparation));
             if (!preparation.IsReady)
                 throw new InvalidOperationException("Timeline playback cannot be created from a failed preparation.");
+            return CreatePlayback(
+                preparation,
+                new TimelineRuntimePlaybackHandle(preparation.ExecutionIdentity.InstanceId),
+                generation);
+        }
+
+        public static TimelineRuntimePlayback CreatePlayback(
+            TimelineRuntimePreparationResult preparation,
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation)
+        {
+            if (preparation == null)
+                throw new ArgumentNullException(nameof(preparation));
+            if (!preparation.IsReady)
+                throw new InvalidOperationException("Timeline playback cannot be created from a failed preparation.");
+            if (!handle.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(handle));
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             return new TimelineRuntimePlayback(
-                new TimelineRuntimePlaybackHandle(preparation.ExecutionIdentity.InstanceId),
+                handle,
                 generation,
                 preparation);
         }
@@ -698,9 +809,10 @@ namespace BTSMTL.Timeline.Runtime
             string clipAuthoringId,
             string trackAuthoringId,
             TimelineTreeExecutionPhase phase,
-            TimelineRuntimeClipBoundaryKind kind,
+            TimelineRuntimeTreeClipEventKind eventKind,
             int frame,
-            int cycle)
+            int cycle,
+            float normalizedTime)
         {
             ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
                 ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
@@ -709,17 +821,61 @@ namespace BTSMTL.Timeline.Runtime
                 ? throw new ArgumentException("Tree Track identity is required.", nameof(trackAuthoringId))
                 : trackAuthoringId.Trim();
             Phase = phase;
-            Kind = kind;
+            EventKind = eventKind;
             Frame = frame;
             Cycle = cycle;
+            NormalizedTime = Mathf.Clamp01(normalizedTime);
         }
 
         public string ClipAuthoringId { get; }
         public string TrackAuthoringId { get; }
         public TimelineTreeExecutionPhase Phase { get; }
-        public TimelineRuntimeClipBoundaryKind Kind { get; }
+        public TimelineRuntimeTreeClipEventKind EventKind { get; }
         public int Frame { get; }
         public int Cycle { get; }
+        public float NormalizedTime { get; }
+    }
+
+    public enum TimelineRuntimeTreeClipEventKind : byte
+    {
+        Enter = 1,
+        Update = 2,
+        Exit = 3
+    }
+
+    public readonly struct TimelineRuntimeClipSample
+    {
+        public TimelineRuntimeClipSample(
+            string clipAuthoringId,
+            string trackAuthoringId,
+            string contractKind,
+            TimelineRuntimeTreeClipEventKind eventKind,
+            int frame,
+            int cycle,
+            float normalizedTime)
+        {
+            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
+                ? throw new ArgumentException("Timeline Clip identity is required.", nameof(clipAuthoringId))
+                : clipAuthoringId.Trim();
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Timeline Track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            ContractKind = string.IsNullOrWhiteSpace(contractKind)
+                ? throw new ArgumentException("Timeline Clip contract kind is required.", nameof(contractKind))
+                : contractKind.Trim();
+            EventKind = eventKind;
+            Frame = frame;
+            Cycle = cycle;
+            NormalizedTime = Mathf.Clamp01(normalizedTime);
+        }
+
+        public string ClipAuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public string ContractKind { get; }
+        public TimelineRuntimeTreeClipEventKind EventKind { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public float NormalizedTime { get; }
     }
 
     public readonly struct TimelineRuntimeScenePresentationSample
@@ -732,7 +888,9 @@ namespace BTSMTL.Timeline.Runtime
             float value,
             float normalizedTime,
             int frame,
-            int cycle)
+            int cycle,
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation)
         {
             ClipAuthoringId = clipAuthoringId ?? string.Empty;
             TargetBindingId = targetBindingId ?? string.Empty;
@@ -742,6 +900,8 @@ namespace BTSMTL.Timeline.Runtime
             NormalizedTime = Mathf.Clamp01(normalizedTime);
             Frame = frame;
             Cycle = cycle;
+            ExecutionIdentity = executionIdentity;
+            Generation = generation;
         }
 
         public string ClipAuthoringId { get; }
@@ -752,6 +912,8 @@ namespace BTSMTL.Timeline.Runtime
         public float NormalizedTime { get; }
         public int Frame { get; }
         public int Cycle { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public ulong Generation { get; }
     }
 
     public sealed class TimelineRuntimeEvaluationResult
@@ -764,7 +926,8 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
             IReadOnlyList<TimelineActionCueSample> actionCues,
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
-            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation)
+            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
+            IReadOnlyList<TimelineRuntimeClipSample> clipSamples)
         {
             AnimationContributions = Copy(animations);
             MotionContributions = Copy(motions);
@@ -774,6 +937,7 @@ namespace BTSMTL.Timeline.Runtime
             ActionCues = Copy(actionCues);
             TreeClips = Copy(treeClips);
             ScenePresentation = Copy(scenePresentation);
+            ClipSamples = Copy(clipSamples);
         }
 
         public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
@@ -784,6 +948,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
         public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
         public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
+        public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
 
         static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
         {
@@ -832,27 +997,37 @@ namespace BTSMTL.Timeline.Runtime
             if (consumer == null)
                 throw new ArgumentNullException(nameof(consumer));
             TimelineRuntimeAdvanceResult advance = playback.Advance(request);
+            var context = new TimelineRuntimeStepContext(playback, request, advance);
+            TimelineRuntimeStepDecision decision;
             try
             {
-                TimelineRuntimeStepDecision decision = consumer.Consume(
-                    new TimelineRuntimeStepContext(playback, request, advance));
-                if (decision == TimelineRuntimeStepDecision.Commit)
-                {
-                    playback.Commit(advance);
-                    return advance;
-                }
-                if (decision == TimelineRuntimeStepDecision.Discard)
-                {
-                    playback.Discard(advance);
-                    return advance;
-                }
-                throw new InvalidOperationException("Timeline Step consumer returned an invalid decision.");
+                decision = consumer.Consume(context);
             }
             catch
             {
                 playback.Discard(advance);
+                if (consumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                    commitConsumer.Discard(context);
                 throw;
             }
+            if (decision == TimelineRuntimeStepDecision.Commit)
+            {
+                playback.Commit(advance);
+                if (consumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                    commitConsumer.Commit(context);
+                return advance;
+            }
+            if (decision == TimelineRuntimeStepDecision.Discard)
+            {
+                playback.Discard(advance);
+                if (consumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                    commitConsumer.Discard(context);
+                return advance;
+            }
+            playback.Discard(advance);
+            if (consumer is ITimelineRuntimeStepCommitConsumer invalidDecisionConsumer)
+                invalidDecisionConsumer.Discard(context);
+            throw new InvalidOperationException("Timeline Step consumer returned an invalid decision.");
         }
     }
 
@@ -865,7 +1040,9 @@ namespace BTSMTL.Timeline.Runtime
             int currentFrame,
             int currentCycle,
             bool loop,
-            IReadOnlyList<TimelineRuntimeClipBoundary> boundaries)
+            IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation)
         {
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
@@ -878,6 +1055,7 @@ namespace BTSMTL.Timeline.Runtime
             var actionCues = new List<TimelineActionCueSample>();
             var treeClips = new List<TimelineRuntimeTreeClipRequest>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
+            var clipSamples = new List<TimelineRuntimeClipSample>();
             List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
                 previousFrame,
                 previousCycle,
@@ -937,6 +1115,16 @@ namespace BTSMTL.Timeline.Runtime
             for (int boundaryIndex = 0; boundaryIndex < (boundaries?.Count ?? 0); boundaryIndex++)
             {
                 TimelineRuntimeClipBoundary boundary = boundaries[boundaryIndex];
+                clipSamples.Add(new TimelineRuntimeClipSample(
+                    boundary.AuthoringId,
+                    boundary.TrackAuthoringId,
+                    ResolveContractKind(timeline, boundary.AuthoringId),
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
+                        ? TimelineRuntimeTreeClipEventKind.Enter
+                        : TimelineRuntimeTreeClipEventKind.Exit,
+                    boundary.Frame,
+                    boundary.Cycle,
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f));
                 if (!TryResolveTreeClip(
                         timeline,
                         boundary.AuthoringId,
@@ -946,9 +1134,12 @@ namespace BTSMTL.Timeline.Runtime
                     treeClip.AuthoringId,
                     treeClip.Track.AuthoringId,
                     treeClip.ExecutionPhase,
-                    boundary.Kind,
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
+                        ? TimelineRuntimeTreeClipEventKind.Enter
+                        : TimelineRuntimeTreeClipEventKind.Exit,
                     boundary.Frame,
-                    boundary.Cycle));
+                    boundary.Cycle,
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -969,7 +1160,9 @@ namespace BTSMTL.Timeline.Runtime
                         clip.ValueCurve.Evaluate(local),
                         local,
                         currentFrame,
-                        currentCycle));
+                        currentCycle,
+                        executionIdentity,
+                        generation));
                 }
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
@@ -980,6 +1173,48 @@ namespace BTSMTL.Timeline.Runtime
                 else if (track is CameraResponseTrack cameraResponseTrack)
                     cameraResponseTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResponses);
             }
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is not TreeTrack treeTrack || treeTrack.PersistentMuted)
+                    continue;
+                for (int clipIndex = 0; clipIndex < treeTrack.Clips.Count; clipIndex++)
+                {
+                    if (treeTrack.Clips[clipIndex] is not TreeClip treeClip ||
+                        currentTime <= treeClip.StartTime || currentTime >= treeClip.EndTime)
+                        continue;
+                    float duration = Mathf.Max(0.0001f, treeClip.DurationTime);
+                    float local = Mathf.Clamp01((currentTime - treeClip.StartTime) / duration);
+                    treeClips.Add(new TimelineRuntimeTreeClipRequest(
+                        treeClip.AuthoringId,
+                        treeTrack.AuthoringId,
+                        treeClip.ExecutionPhase,
+                        TimelineRuntimeTreeClipEventKind.Update,
+                        currentFrame,
+                        currentCycle,
+                        local));
+                }
+            }
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                if (track.PersistentMuted)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip clip = track.Clips[clipIndex];
+                    if (clip == null || currentTime <= clip.StartTime || currentTime >= clip.EndTime)
+                        continue;
+                    float duration = Mathf.Max(0.0001f, clip.DurationTime);
+                    clipSamples.Add(new TimelineRuntimeClipSample(
+                        clip.AuthoringId,
+                        track.AuthoringId,
+                        clip.ContractKind,
+                        TimelineRuntimeTreeClipEventKind.Update,
+                        currentFrame,
+                        currentCycle,
+                        (currentTime - clip.StartTime) / duration));
+                }
+            }
             return new TimelineRuntimeEvaluationResult(
                 animations,
                 motions,
@@ -988,7 +1223,8 @@ namespace BTSMTL.Timeline.Runtime
                 cameraResponses,
                 actionCues,
                 treeClips,
-                scenePresentation);
+                scenePresentation,
+                clipSamples);
         }
 
         static bool TryResolveTreeClip(
@@ -1011,6 +1247,21 @@ namespace BTSMTL.Timeline.Runtime
             }
             treeClip = null;
             return false;
+        }
+
+        static string ResolveContractKind(TimelineData timeline, string authoringId)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip clip = track.Clips[clipIndex];
+                    if (clip != null && string.Equals(clip.AuthoringId, authoringId, StringComparison.Ordinal))
+                        return clip.ContractKind;
+                }
+            }
+            return string.Empty;
         }
 
         static List<TimelineRuntimeEvaluationSegment> BuildSegments(

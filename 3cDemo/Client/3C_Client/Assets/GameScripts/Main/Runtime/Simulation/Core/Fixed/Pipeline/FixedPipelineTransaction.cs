@@ -65,8 +65,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
             FixedCompletedStepPort completedStepPort,
-            FixedCharacterRuntime characterRuntime,
-            FixedCharacterRuntimePort characterRuntimePort)
+            FixedCharacterRuntime characterRuntime)
         {
             var services = new PipelineTransactionRuntimeServices(
                 descriptor,
@@ -87,8 +86,7 @@ namespace ThirdPersonSimulation.Fixed
                 products,
                 workingStatePort,
                 completedStepPort,
-                characterRuntime,
-                characterRuntimePort);
+                characterRuntime);
             m_Coordinator = new PipelineTransactionCoordinator<
                 FixedSimulationStep,
                 FixedPipelineWorkingState,
@@ -110,21 +108,6 @@ namespace ThirdPersonSimulation.Fixed
                 result.TransactionIdentity,
                 result.LastCompletedTick,
                 result.CommitBatch);
-        }
-
-        public SimulationProgramAdoptionResult AdoptProgramEpoch(
-            SimulationProgramEpoch epoch,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            return m_Target.AdoptProgramEpoch(epoch, bindings);
-        }
-
-        public SimulationProgramEpoch PrepareProgramEpoch(
-            SimulationProgramEpoch current,
-            ProgramRevision sourceRevision,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            return m_Target.PrepareProgramEpoch(current, sourceRevision, bindings);
         }
 
         public SimulationSessionCheckpoint CaptureCheckpoint() => m_Target.CaptureCheckpoint();
@@ -155,8 +138,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlySimulationPipelineProductPort<FixedPendingEvaluationBatch> m_PendingEvaluations;
         readonly FixedWorkingStatePort m_WorkingStatePort;
         readonly FixedCompletedStepPort m_CompletedStepPort;
-        readonly FixedCharacterRuntime m_CharacterRuntime;
-        readonly FixedCharacterRuntimePort m_CharacterRuntimePort;
 
         public FixedPipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
@@ -171,8 +152,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedPipelineProductStore products,
             FixedWorkingStatePort workingStatePort,
             FixedCompletedStepPort completedStepPort,
-            FixedCharacterRuntime characterRuntime,
-            FixedCharacterRuntimePort characterRuntimePort)
+            FixedCharacterRuntime characterRuntime)
         {
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -188,77 +168,13 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationPipelineProducts.PendingActorEvaluations);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
-            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
-            m_CharacterRuntimePort = characterRuntimePort ?? throw new ArgumentNullException(nameof(characterRuntimePort));
+            _ = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
         }
 
         public string TransactionIdentityDomain => "fixed-pipeline-transaction/1";
         public bool DiagnosticsEnabled => m_Diagnostics.IsEnabled;
         public ulong BaselineCompletedTick => m_StateStore.Current.LastCompletedTick;
         public WorldRevision BaselineWorldRevision => m_StateStore.Current.WorldState.WorldRevision;
-
-        public SimulationProgramAdoptionResult AdoptProgramEpoch(
-            SimulationProgramEpoch epoch,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            SimulationProgramEpoch current = SimulationProgramEpoch.Initial(m_Catalog.CatalogHash);
-            if (!epoch.IsValid)
-                throw new ArgumentException("Program Epoch is invalid.", nameof(epoch));
-            if (epoch.Value <= current.Value && epoch.GameplayContentHash.Equals(m_Catalog.CatalogHash))
-            {
-                return new SimulationProgramAdoptionResult(
-                    SimulationProgramAdoptionStatus.Rejected,
-                    current,
-                    epoch,
-                    "program_epoch_not_newer",
-                    "Program Epoch is not newer than the active Catalog.");
-            }
-            if (bindings == null || bindings.Count == 0)
-                throw new ArgumentException("Program adoption requires an Actor binding roster.", nameof(bindings));
-            var typed = new SimulationActorBinding[bindings.Count];
-            for (int i = 0; i < typed.Length; i++)
-            {
-                typed[i] = bindings[i]?.ProgramObject as SimulationActorBinding;
-                if (typed[i] == null)
-                    throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
-            }
-            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
-            SimulationWorldStateSet reboundState = m_StateStore.PrepareCatalogAdoption(catalog);
-            m_CharacterRuntime.AdoptPrograms(typed, catalog);
-            m_CharacterRuntimePort.AdoptRuntime(m_CharacterRuntime);
-            m_StateStore.AdoptCatalog(catalog, reboundState);
-            m_Catalog = catalog;
-            var roster = new List<SimulationActorBinding>(typed);
-            roster.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            m_Roster = roster.AsReadOnly();
-            m_Services.Descriptor.AdoptGameplayContentHash(catalog.CatalogHash);
-            return new SimulationProgramAdoptionResult(
-                SimulationProgramAdoptionStatus.Applied,
-                epoch,
-                epoch,
-                "program_epoch_applied",
-                "Fixed Program Epoch was adopted at the Logic Tick boundary.");
-        }
-
-        public SimulationProgramEpoch PrepareProgramEpoch(
-            SimulationProgramEpoch current,
-            ProgramRevision sourceRevision,
-            IReadOnlyList<ISimulationProgramBinding> bindings)
-        {
-            var typed = new SimulationActorBinding[bindings?.Count ?? 0];
-            for (int i = 0; i < typed.Length; i++)
-            {
-                typed[i] = bindings[i]?.ProgramObject as SimulationActorBinding;
-                if (typed[i] == null)
-                    throw new InvalidOperationException("Program adoption binding does not belong to the Fixed target.");
-            }
-            SimulationProgramCatalog catalog = m_CharacterRuntime.PrepareCatalogAdoption(typed);
-            _ = m_StateStore.PrepareCatalogAdoption(catalog);
-            return new SimulationProgramEpoch(
-                checked(current.Value + 1),
-                sourceRevision,
-                catalog.CatalogHash);
-        }
 
         public SimulationSessionCheckpoint CaptureCheckpoint()
         {

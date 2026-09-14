@@ -105,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedPipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
                 var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
                 var programPort = new FixedCharacterRuntimePort(
-                    request.Descriptor.CharacterRuntime,
+                    request.Backend.Identity,
                     request.CharacterRuntime);
                 var workingStatePort = new FixedWorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new FixedCompletedStepPort(request.Backend.Identity);
@@ -204,8 +204,7 @@ namespace ThirdPersonSimulation.Fixed
                     products,
                     workingStatePort,
                     completedStepPort,
-                    request.CharacterRuntime,
-                    programPort);
+                    request.CharacterRuntime);
                 var handle = new FixedPassPipelineRuntimeHandle(
                     request.Descriptor,
                     request.CompiledPipeline,

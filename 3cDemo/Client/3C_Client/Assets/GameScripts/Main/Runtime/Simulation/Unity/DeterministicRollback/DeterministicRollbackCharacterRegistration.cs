@@ -215,9 +215,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
             m_DiagnosticsAdapter.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
 
-        public void BindProgramEpoch(ulong programEpoch) =>
-            DiagnosticsContext.SetProgramEpoch(programEpoch);
-
         public void BindExecutionBranch(Guid executionBranchId) =>
             DiagnosticsContext.SetExecutionBranch(executionBranchId);
 

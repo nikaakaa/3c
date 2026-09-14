@@ -125,12 +125,14 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!m_EditActive)
                 return;
+            float previousLength = Length;
             m_EditActive = false;
             if (!string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) ||
                 !IsSourceCurrent())
             {
                 m_EditSourceRevision = string.Empty;
                 Rebuild();
+                ExpandViewToLength(previousLength);
                 ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
             }
@@ -139,6 +141,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_EditSourceRevision = string.Empty;
                 Rebuild();
+                ExpandViewToLength(previousLength);
                 return;
             }
             try
@@ -160,10 +163,12 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_EditSourceRevision = string.Empty;
                 Rebuild();
+                ExpandViewToLength(previousLength);
                 ReportIssue(exception.Message);
             }
             m_EditSourceRevision = string.Empty;
             Rebuild();
+            ExpandViewToLength(previousLength);
         }
 
         public void CancelEdit()
@@ -464,6 +469,7 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Timeline 内容已被外部修改，当前操作未提交。");
                 return false;
             }
+            float previousLength = Length;
             try
             {
                 m_Session.Apply(() =>
@@ -480,7 +486,14 @@ namespace BTSMTL.Timeline.Editor
                 return false;
             }
             Rebuild();
+            ExpandViewToLength(previousLength);
             return true;
+        }
+
+        void ExpandViewToLength(float previousLength)
+        {
+            if (Length > previousLength + 1f / FrameRate)
+                m_ViewTimeMax = Mathf.Max(m_ViewTimeMax, Length);
         }
 
         void ValidateTimeline()

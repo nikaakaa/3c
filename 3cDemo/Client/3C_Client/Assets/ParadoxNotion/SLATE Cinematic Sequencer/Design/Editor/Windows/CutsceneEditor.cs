@@ -3272,6 +3272,43 @@ namespace Slate
             GUI.color = Color.white;
         }
 
+        void DrawTimelineGroups<TGroup>(
+            Event e,
+            IReadOnlyList<TGroup> groups,
+            ref float nextY,
+            Func<TGroup, bool> isFiltered,
+            Action<TGroup> collapseFiltered,
+            Func<TGroup, bool> isCollapsed,
+            Func<TGroup, bool> isSelected,
+            Action<TGroup, Rect> drawCollapsed,
+            Func<TGroup, float, int, float> drawChildren,
+            Action<TGroup, Rect, float> drawSelected)
+        {
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                TGroup group = groups[groupIndex];
+                if (isFiltered(group))
+                {
+                    collapseFiltered(group);
+                    continue;
+                }
+                Rect groupRect = Rect.MinMaxRect(
+                    Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0f)),
+                    nextY,
+                    TimeToPos(viewTimeMax),
+                    nextY + GROUP_HEIGHT);
+                nextY += GROUP_HEIGHT;
+                if (isCollapsed(group))
+                {
+                    drawCollapsed(group, groupRect);
+                    continue;
+                }
+                nextY = drawChildren(group, nextY, groupIndex);
+                if (isSelected(group))
+                    drawSelected?.Invoke(group, groupRect, nextY);
+            }
+        }
+
         string FormalInspectionKey(IEmbeddedTimelineTrackBinding track)
         {
             return string.Concat(
@@ -3626,16 +3663,15 @@ namespace Slate
             Rect sectionsRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)), 3, TimeToPos(viewTimeMax), 18);
             ShowSections(sectionsRect, timeline);
             BeginWindows();
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
-                Rect groupRect = Rect.MinMaxRect(
-                    Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(0)),
-                    nextY,
-                    TimeToPos(viewTimeMax),
-                    nextY + GROUP_HEIGHT);
-                nextY += GROUP_HEIGHT;
-                if (group.IsCollapsed)
+            DrawTimelineGroups(
+                e,
+                groups,
+                ref nextY,
+                group => false,
+                group => { },
+                group => group.IsCollapsed,
+                group => ReferenceEquals(embeddedTimeline.Selected, group),
+                (group, groupRect) =>
                 {
                     GUI.color = Color.black.WithAlpha(0.15f);
                     GUI.DrawTexture(groupRect.ExpandBy(2, -4), whiteTexture);
@@ -3653,55 +3689,57 @@ namespace Slate
                                 whiteTexture);
                         }
                     GUI.color = Color.white;
-                    continue;
-                }
-
-                for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
+                },
+                (group, childY, groupIndex) =>
                 {
-                    IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
-                    float y = nextY;
-                    DrawTimelineTrack(
-                        e,
-                        centerRect,
-                        groupIndex,
-                        trackIndex,
-                        y,
-                        track,
-                        value => value.StartTime,
-                        value => value.EndTime,
-                        EmbeddedTrackFinalHeight,
-                        value => value.DefaultHeight,
-                        value => value.IsActive,
-                        value => value.IsLocked,
-                        value => ReferenceEquals(embeddedTimeline.Selected, value),
-                        value => value.Clips.Select(clip => (IClipEditorBinding)new FormalClipEditorBinding(clip)).ToArray(),
-                        null,
-                        (value, trackPosRect, trackTimeRect) =>
-                        {
-                            string inspectionKey = FormalInspectionKey(value);
-                            string inspected = string.Empty;
-                            if (formalInspectedParameters != null)
-                                formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
-                            TrackEditorGUI.DrawClipCurves(e, trackPosRect, trackTimeRect, TimeToPos, value, ref inspected);
-                            if (formalInspectedParameters != null)
-                                formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
-                            if (e.type == EventType.ContextClick &&
-                                Rect.MinMaxRect(trackPosRect.xMin, y, trackPosRect.xMax, y + value.DefaultHeight).Contains(e.mousePosition))
+                    for (int trackIndex = 0; trackIndex < group.Tracks.Count; trackIndex++)
+                    {
+                        IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
+                        float y = childY;
+                        DrawTimelineTrack(
+                            e,
+                            centerRect,
+                            groupIndex,
+                            trackIndex,
+                            y,
+                            track,
+                            value => value.StartTime,
+                            value => value.EndTime,
+                            EmbeddedTrackFinalHeight,
+                            value => value.DefaultHeight,
+                            value => value.IsActive,
+                            value => value.IsLocked,
+                            value => ReferenceEquals(embeddedTimeline.Selected, value),
+                            value => value.Clips.Select(clip => (IClipEditorBinding)new FormalClipEditorBinding(clip)).ToArray(),
+                            null,
+                            (value, trackPosRect, trackTimeRect) =>
                             {
-                                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
-                                GenericMenu menu = new GenericMenu();
-                                menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, frame));
-                                if (embeddedTimeline.CanPasteClip)
-                                    menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, frame));
-                                menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(value));
-                                menu.ShowAsContext();
-                                e.Use();
-                            }
-                        },
-                        null);
-                    nextY += EmbeddedTrackFinalHeight(track) + TRACK_MARGINS;
-                }
-            }
+                                string inspectionKey = FormalInspectionKey(value);
+                                string inspected = string.Empty;
+                                if (formalInspectedParameters != null)
+                                    formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
+                                TrackEditorGUI.DrawClipCurves(e, trackPosRect, trackTimeRect, TimeToPos, value, ref inspected);
+                                if (formalInspectedParameters != null)
+                                    formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
+                                if (e.type == EventType.ContextClick &&
+                                    Rect.MinMaxRect(trackPosRect.xMin, y, trackPosRect.xMax, y + value.DefaultHeight).Contains(e.mousePosition))
+                                {
+                                    int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
+                                    GenericMenu menu = new GenericMenu();
+                                    menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, frame));
+                                    if (embeddedTimeline.CanPasteClip)
+                                        menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, frame));
+                                    menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(value));
+                                    menu.ShowAsContext();
+                                    e.Use();
+                                }
+                            },
+                            null);
+                        childY += EmbeddedTrackFinalHeight(track) + TRACK_MARGINS;
+                    }
+                    return childY;
+                },
+                null);
             EndWindows();
             DoMultiSelection();
             GUI.EndGroup();

@@ -192,3 +192,17 @@ Timeline MUST唯一拥有cursor、区间／loop／section、活动Clip与播放�
 - **WHEN** 核心技能执行器发起Timeline调用
 - **THEN** Timeline MUST使用核心提供的已编译TreeClip执行服务，并由自身Runtime负责播放调度
 - **AND** MUST不出现两套TreeClip编译／执行入口或重复操作发射
+
+### Requirement: 领域迁移必须同时退出对应旧编译和运行链
+
+领域迁移完成 MUST包含正式Host／工具／产品消费者切换，以及对应owner已无消费者的旧编译器、执行器、转换层、数据字段、codec、产物、缓存和构建入口删除。仅新增Factory、Loader、目录、端口或空阶段接口 MUST不构成完成；仍受共享消费者阻挡的删除 MUST记录具体依赖并保持相关迁移事项未完成。系统 MUST保留技能编译、Pipeline的Pass计划与能力校验，以及实际动画算法和资源处理，不得按文件命名整删业务。
+
+#### Scenario: 角色装配两个独立技能
+- **WHEN** 正式角色工厂装配两个已准备的独立技能
+- **THEN** MUST直接消费各自只读技能数据，不从整角色Program复制操作和布局或伪造Ability根
+- **AND** 技能Loader MUST不通过旧角色Program codec转换，退出的转换Factory与旧入口 MUST删除
+
+#### Scenario: Pose与Timeline正式消费者完成切换
+- **WHEN** 某领域的正式运行、预览及产品消费者全部切换到该领域原生图或直接内容运行
+- **THEN** 对应owner MUST删除该领域已无消费者的IR／Image／ProgramPlan及专属编译运行链
+- **AND** MUST保留仍有效的动画／播放算法、资源准备、网络Pass校验和技能TreeClip服务，不提供新旧运行开关

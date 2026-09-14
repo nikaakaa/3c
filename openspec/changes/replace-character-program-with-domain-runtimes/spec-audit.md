@@ -2,6 +2,28 @@
 
 本文件属于本 change 的规划附件。它记录本轮读取的现行要求与增量操作，不能代替正式 spec，也不证明实现已完成。主规范和其它窗口文件本轮不改。
 
+## 2026-09-14实现质量与删除范围复审
+
+本节补充D12历史审查，当前代码快照32f75a37c、实施记录401b52e15；D12中的旧事实只代表当时版本。此次只更新规划，不修改implementation.md、实现代码或其它领域任务。
+
+下表代码路径均相对`3cDemo/Client/3C_Client/Assets/GameScripts/Main/`。
+
+| 编号 | 当前证据 | 判断与处理 |
+| --- | --- | --- |
+| Q6 | `Runtime/Simulation/Core/Float32/Execution/Float32OperationEvaluator.cs:422`调用Ability目录FromProgram；Float32／Fixed的`Program/*GameplayAbilityExecutionDataFactory.cs:25`传原Manifest.Root，`*GameplayAbilityExecutionData.cs:39`拒绝非Ability；`Editor/CharacterSimulation/Compilation/Semantic/CharacterSemanticFrontendCompiler.cs:94`仍建Character根，Corin生成Program资产m_RootKind仍为1 | 含技能的Character根沿当前目录路径会抛异常；静态可确认，未运行复现。1.10／2.1直接装配独立技能，删除转换，不放宽根检查或伪造根 |
+| Q7 | 两个AbilityDataAsset的Load已返回独立类型；Float32／Fixed Loader仍调用旧CharacterSimulationProgramCodec，Factory复制旧操作／常量／布局，执行目录仍从旧Program建立 | 公开返回边界有进展，独立格式／执行消费者仍未完成；1.10保持未完成，不按新增类型或编译通过勾选 |
+| Q8 | `Runtime/Character/Pipeline/Runtime/CharacterPipelineDefinition.AbilityProviders.cs`已枚举实际Provider成员，`GameplayAbilityProgramContracts.cs`检查成员／类型／修订；Provider RuntimeHandle当前在合同检查中用于非空判断 | Q3的仅GUID检查已改进；1.9仍需解析结果进入实际执行服务，不能把声明字符串等同于完成运行绑定 |
+| Q9 | `Runtime/Character/Pipeline/Animation/PoseGraph/CharacterPoseNativeGraphRuntime.cs:563`只实现参数与History等有限输出，其它节点报UnsupportedNode；EvaluateFrame／CommitFrame为空 | 原生实例、阶段、端口缓存是中间成果；4.7不能提前完成，内部算法接线和Image链删除仍归Pose清单 |
+| Q10 | `Runtime/BTSMTL/Timeline/Runtime/Float32TimelinePlayback.cs`仍有ProgramPlan／CommitFrame；`Editor/CharacterSimulation/Compilation/Skills/BtsmtlSkillTimelineCompiler.cs:28`仍调用SemanticEmitter；Authority Reconciler仍比较ProgramHash／LayoutHash并按Program解码 | Timeline直接内容与网络领域状态接入仍未完成；分别由Timeline清单、核心1.5／1.6／3.x接续，不把Pass保留等同迁移结束 |
+
+目录规模只作为删除负担线索：当次`rg --files -g '*.cs'`配合UTF-8读取和`Measure-Object -Line`统计，Timeline Semantic相关12个文件共2,139非空行；PoseGraph/Program目录28个文件共13,530非空行；整角色Frontend／Builder／BuildService相关4个文件共1,445非空行。这不是净删除承诺：Pose目录含必须保留的算法，共享编译代码含必要技能职责，须按实际消费者切分。不得为达到行数删业务。
+
+新增`character-domain-runtime`的“领域迁移必须同时退出对应旧编译和运行链”要求及两个场景，D16和既有任务同步说明完成条件；未新增测试或手动验收任务，保留所有已完成checkbox。8.2／8.4只是公共残留收口，各领域能退出的旧链随消费者切换删除。Timeline／Pose不复制第二份领域任务清单。
+
+本次对照current specs与project.md后，旧整角色Program、Pose Image唯一运行要求仍与既定方案冲突，继续由既有delta及8.6替换，不能当成已经发布的新现状。`gameplay-simulation-pipeline`的Pass计划编译／能力检查与本轮删除要求不冲突，明确保留；`btsmtl-compiled-simulation-program`增量的技能编译和`native-flowcanvas-pose-runtime`增量的原生图合同保持一致。旧Requirement标题只用于MODIFIED匹配，不代表保留旧类型命名。
+
+本次没有新增代码、编译、Unity运行或资源生成；实现记录报告两个数值核心局部编译通过，不能证明Q6运行路径或完整角色／Timeline／Pose／网络已经可用。
+
 ## 对账结论
 
 - 新增 `character-domain-runtime` 与 `native-flowcanvas-pose-runtime`；现行 19 个能力在原路径提供增量。

@@ -232,6 +232,36 @@ Pose owner提供PrepareBinding／CreateInstance、PrepareDemand、Evaluate、Val
 
 Barrier前失败按原合同丢弃Pending；Barrier内或之后失败按原Fault边界阻止半帧发布，不能承诺撤销已经发生的物理采样。Stop／替换／Dispose由核心请求、领域owner执行其私有生命周期；实际InstanceId／GraphRevision／ResetGeneration和采用结果由Pose确认，核心只汇集。网络重放不推进Pose，也不保存Pose图对象。
 
+### D16. 以实际入口切换和旧链删除完成迁移
+
+本轮审查代码快照为32f75a37c，实施记录更新至401b52e15。角色状态分区、Provider成员检查、独立Ability数据类型和两个数值目标的执行目录已有进展；当前仍是中间接线，不能描述成角色已脱离Program或编译体系已删除。
+
+#### 当前接线缺陷与完成边界
+
+Float32／Fixed OperationEvaluator仍调用GameplayAbilityExecutionCatalogFactory.FromProgram。该目录把原program.Manifest.Root传给独立Ability数据构造器，后者只接受IsAbility；角色Frontend和Corin现有产物仍为Character根。含技能的Character Program沿此路径会抛异常。这是静态调用链证据，未运行Unity复现。解决归1.10与2.1：正式Host／Factory直接装配独立技能集合，删除FromProgram转换；不能取消根校验、把Character根改标Ability或增加兼容分支。
+
+Ability Load返回独立类型只完成了公开返回边界。Loader内部仍调用旧Program codec，转换Factory复制旧操作、常量、布局等集合，执行目录也仍从旧Program创建。最终必须由技能唯一格式直接加载所需只读数据并供执行器消费；同一技能在多个角色间复用，不逐技能复制全角色内容。Provider现有成员／类型／版本检查应保留，但非空RuntimeHandle字符串还需落实到实际执行绑定，不能仅凭校验函数判定1.9完成。
+
+Pose原生实例、阶段门禁、端口缓存和校验不是完整动画运行。Player／StateMachine／Slot／Blend／惯性化／Constraint算法以及最终输出必须接入；空EvaluateFrame／CommitFrame和其它节点UnsupportedNode只能记录为尚未实现。Timeline仍使用ProgramPlan及轨道／Clip发射链，直接内容运行的目标未改变。网络baseline／恢复仍依赖整角色ProgramHash／LayoutHash，Pass保留不等于状态接口迁移完成。
+
+#### 删除范围与保留职责
+
+| 领域 | 随消费者切换删除 | 保留与收窄 | 实现owner |
+| --- | --- | --- | --- |
+| 整角色 | Character Frontend／总Builder／BuildService、Program总包、角色全局布局、专属codec／artifact／失效缓存／Build UI及旧转换工厂 | 角色配置装配、领域状态、技能独立编译和格式；共享实现只保留实际技能职责并正确命名 | 核心及原工具owner |
+| Timeline | 轨道／Clip Semantic发射、Timeline IR／ProgramPlan、操作码播放适配及专属产物 | 正式轨道内容、portable导出、数值／资源准备、播放取消与恢复；TreeClip继续调用核心技能服务 | Timeline；共享技能入口归核心 |
+| Pose | Pose IR／Image、全图Lowering／Schedule／ValueLifetime／Workspace编译、Image专属执行器／发布／缓存 | FlowCanvas原生运行、实例与阶段缓存、原有动画／混合／IK算法、Source／Constraint／Final Publication和必要数值缓冲 | Pose；公共表现外壳归核心 |
+| 网络 | 对整角色Program描述、Hash／Layout和旧reader的依赖 | Pipeline编译产生不可变Pass计划、顺序／产品／能力校验、Backend／Source／Solver及网络协议与恢复算法 | 核心 |
+| 资源 | 对整角色Build和Projection总包的无关依赖 | ACL、Motion Matching、Foot等实际资源处理及领域绑定 | 各资源owner |
+
+上述表按职责删除，不按Compiler／Program文件名或目录整删。尤其Pose Program目录含实际动画算法，必须迁移算法消费者后删除其旧载体。直接内容导出、资源准备和Pipeline计划校验不属于撤销的全角色／Timeline／Pose可执行图编译。
+
+#### 小步收口规则与业务取舍
+
+每个迁移事项同时交付正式调用路径与该owner可退出的旧路径删除；公共依赖尚未迁移时，明确记录阻挡删除的消费者和owner，该领域事项仍保持未完成。允许小步提交未接完整的代码，不允许提供可选旧运行模式、永久桥接或双reader。8.2／8.4负责剩余公共依赖收口，不表示把所有旧链清理推迟到最后；既有已完成状态分区小步保留，不重新打开。
+
+作者收益是修改技能只处理技能依赖、修改Timeline直接更新内容、修改Pose无需维护另一份Image；代价是同时完成原生节点算法接入、完整恢复和工具消费者迁移。代码净减少应来自重复表示、编译阶段和旧执行器消失，不通过删算法／网络能力或把同样职责改名复制实现。移除全图Worker调度可能改变性能，不能承诺代码减少必然提速。
+
 ## Risks / Trade-offs
 
 - [原生端口重复取值] → D3 的调用实例／阶段缓存；同一输入共享两条支路时源时间与求解只推进一次。
@@ -251,7 +281,7 @@ Barrier前失败按原合同丢弃Pending；Barrier内或之后失败按原Fault
 3. 迁移 Network Pass、roster、baseline、snapshot、握手和产品 manifest，保留现有模拟顺序与行为。
 4. Timeline与Pose在各自唯一任务清单推进内部Runtime；核心只集成D14／D15的调用、提交／丢弃、分型状态与角色表现外壳，不代写领域实现。
 5. 原作者／预览／C#任务消费正式接口；核心迁移角色配置、Host、场景／Variant与公共诊断接线，领域资产由各自owner的正式API处理。
-6. 核心删除角色Program和总Projection容器；Timeline、Pose分别在其任务清单删除专属发射链和Image链。按共享规范真实owner同步旧要求，不重复实施。
+6. 核心收口角色Program和总Projection的剩余共享依赖；Timeline、Pose在各自消费者切换的小步内删除专属发射链和Image链，不统一拖到本步。按共享规范真实owner同步旧要求，不重复实施。
 
 步骤表达依赖顺序，不判定业务优先级。每一步按 owner 范围小步中文提交；模块未接完整可以明确报错，不增加可选择的旧运行模式。旧资产／协议只做一次正式迁移或显式重生成，升级唯一版本后旧 reader 删除。
 

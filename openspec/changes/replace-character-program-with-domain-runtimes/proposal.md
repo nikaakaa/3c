@@ -17,6 +17,7 @@
 - EventGraph 继续原生运行并唯一写入动画实例变量，Pose 只读其成功发布的 typed Frame。有限 Action／Timeline 直接提交现有播放生命周期请求，不经 EventGraph 转发。
 - Projection 中的 Pose ProgramImage 与全 Character Program 身份依赖退役；仍被消费的 Rig、ACL、动画资源、有限动作与 Camera 绑定迁回各自正式资源／实例绑定，资源烘焙不随技能构建触发。
 - 正式运行、Pose／Timeline 预览、Live Debug、C# authoring 和 Build／Run 产品入口共同迁移；旧产物、旧字段、旧 reader 与废弃 UI 同步退出，不保留双运行路径或运行时自动构建。
+- 删除旧编译体系是迁移交付的一部分：每个领域完成正式消费者切换时，同时删除该owner已无消费者的编译、执行、缓存与产物链。新增Factory／Loader／目录或原生图外壳不构成完成；不得用旧Program到新数据的永久转换保留整角色容器。技能编译、Pipeline／Pass计划校验及ACL／Motion Matching／Foot资源处理继续保留。
 - 本次只规划；保留当前正确算法、作者 identity、已发布 ACL 和其它窗口修改。Corin 是本次资产迁移对象，TrainingEnemy 的不稳定作者数据和未完成行为任务不纳入。
 
 ## Capabilities
@@ -54,6 +55,6 @@
 - 核心Runtime：Character Host／Registration／Factory、Float32／Fixed角色Step和状态codec、Control／Ability最终数据／provider、网络与表现外壳。Timeline和Pose内部Runtime及专属旧链由各自既有任务清单交付，核心不串行代做。
 - Network／Server：Session Composer、Pass 产品及快照接口、握手与 Authority manifest；协议身份正式升级，网络行为和部署产品分工不改变。
 - Authoring：复用已安装的 FlowCanvas／NodeCanvas、正式 Capability／Mutation 与显式 `export_code`／`generate_assets`，不新增插件或作者同步机制。
-- 接口现状：1.1—1.3已交付Ability前端、目标入口与store，1.4已交付Provider身份检查；当前仍借用旧容器。2026-09-14审查将2.1重开：现有Factory只包住旧Workspace／Evaluator，尚未完成领域装配。技能角色级状态、Provider成员／类型／版本解析和最终技能Load接口分别由新增1.8—1.10收口，不能据已有小步宣称新运行或预览接口可用。
+- 接口现状（2026-09-14，32f75a37c）：已交付Ability前端／目标／store、角色级状态迁出及Provider成员检查，Load返回独立数据类型，两个数值目标已增加执行目录；目录和Loader仍从旧Program构造或解码，Host仍加载整角色产物。Character根进入仅允许Ability根的构造器存在静态可确认的异常路径，1.9／1.10／2.1仍未完成。Pose已有原生实例和阶段外壳，节点算法与正式消费者尚未全部切换；Timeline仍走旧ProgramPlan。详见design D16，不以局部编译代替运行完成。
 - 分工：唯一领域清单分别是`restyle-timeline-editor-slate-style/tasks.md`与`refine-pose-graph-readonly-blackboard/tasks.md`的Runtime接收章节，本任务只保留指针和公共集成项。领域owner发布实际采用事实，核心装配并汇集，不自行制造版本；详见design D13—D15。
 - 文档：本提案替代旧评估中“继续保留角色总 Program”的方向。现行 spec、`openspec/project.md` 和并行 Pose／EventGraph／技能 FSM 提案的矛盾与准确分工见 `design.md`；本轮不改写其它任务，不把旧完成项重新判为未完成。

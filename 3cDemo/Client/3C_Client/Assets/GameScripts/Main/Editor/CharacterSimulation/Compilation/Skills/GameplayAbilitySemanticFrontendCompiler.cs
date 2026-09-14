@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     return GameplayAbilitySemanticFrontendResult.Failed(report);
                 DeclareAbilityCatalog(model, graph.Entry, builder, report, abilitySource);
                 builder.DeclareReference(
-                    "program:root-operation",
+                    "ability:root-operation",
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     graph.Entry.Value,

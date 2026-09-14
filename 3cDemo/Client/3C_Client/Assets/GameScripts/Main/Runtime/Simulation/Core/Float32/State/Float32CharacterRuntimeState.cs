@@ -4,9 +4,15 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-    internal sealed class Float32CharacterRuntimeState
+    public sealed class Float32CharacterRuntimeState
     {
-        public Float32CharacterRuntimeState(
+        readonly Float32GameplayAbilityExecutionInstallation m_Installation;
+
+        internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
+
+        internal Float32CharacterRuntimeState(
+            Float32GameplayAbilityExecutionInstallation installation,
+            ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
             IDictionary<string, SimulationInputRequestState> inputRequests,
@@ -21,6 +27,8 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
+            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<CharacterStateValue>();
@@ -58,6 +66,10 @@ namespace ThirdPersonSimulation
         internal CharacterControlRuntimeState ControlState { get; }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
+        public SimulationNumericProfile NumericProfile => m_Installation.Data.NumericProfile;
+        public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
+        public GameplayContentHash GameplayContentHash => new GameplayContentHash(m_Installation.Identity.ContentHash);
+        public ulong LastCompletedTick { get; }
 
         static Dictionary<int, CharacterStateValue> CopyValues(
             IDictionary<int, CharacterStateValue> values)
@@ -429,6 +441,8 @@ namespace ThirdPersonSimulation
 
         Float32CharacterRuntimeState Snapshot() =>
             new Float32CharacterRuntimeState(
+                m_Installation,
+                m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_InputRequests,

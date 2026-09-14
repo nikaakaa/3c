@@ -5,9 +5,15 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedCharacterRuntimeState
+    public sealed class FixedCharacterRuntimeState
     {
-        public FixedCharacterRuntimeState(
+        readonly FixedGameplayAbilityExecutionInstallation m_Installation;
+
+        internal FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
+
+        internal FixedCharacterRuntimeState(
+            FixedGameplayAbilityExecutionInstallation installation,
+            ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
             IDictionary<string, SimulationInputRequestState> inputRequests,
@@ -22,6 +28,8 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
+            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<CharacterStateValue>();
@@ -59,6 +67,10 @@ namespace ThirdPersonSimulation.Fixed
         internal CharacterControlRuntimeState ControlState { get; }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
+        public SimulationNumericProfile NumericProfile => m_Installation.Data.NumericProfile;
+        public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
+        public GameplayContentHash GameplayContentHash => new GameplayContentHash(m_Installation.Identity.ContentHash);
+        public ulong LastCompletedTick { get; }
 
         static Dictionary<int, CharacterStateValue> CopyValues(
             IDictionary<int, CharacterStateValue> values)
@@ -430,6 +442,8 @@ namespace ThirdPersonSimulation.Fixed
 
         FixedCharacterRuntimeState Snapshot() =>
             new FixedCharacterRuntimeState(
+                m_Installation,
+                m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_InputRequests,
@@ -486,5 +500,3 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
-
-

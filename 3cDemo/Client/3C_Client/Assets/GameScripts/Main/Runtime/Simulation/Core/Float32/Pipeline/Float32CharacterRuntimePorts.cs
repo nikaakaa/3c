@@ -23,6 +23,7 @@ namespace ThirdPersonSimulation
     public sealed class Float32CharacterRuntime
     {
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
 
         public Float32CharacterRuntime(IEnumerable<SimulationActorBinding> roster)
         {
@@ -39,6 +40,47 @@ namespace ThirdPersonSimulation
             }
             m_Roster = values.AsReadOnly();
             RosterDescriptor = new SimulationActorRosterDescriptor(ActorIds(values));
+            var abilities = new Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionData>();
+            for (int actorIndex = 0; actorIndex < values.Count; actorIndex++)
+            {
+                IReadOnlyList<Float32GameplayAbilityExecutionData> actorAbilities = values[actorIndex].AbilityData.Data;
+                for (int abilityIndex = 0; abilityIndex < actorAbilities.Count; abilityIndex++)
+                {
+                    Float32GameplayAbilityExecutionData ability = actorAbilities[abilityIndex];
+                    if (abilities.TryGetValue(ability.AbilityId, out Float32GameplayAbilityExecutionData existing))
+                    {
+                        if (!existing.ContentHash.Equals(ability.ContentHash) ||
+                            !existing.StateSchemaHash.Equals(ability.StateSchemaHash))
+                        {
+                            throw new InvalidOperationException($"Ability '{ability.AbilityId}' has different content across Character Runtime bindings.");
+                        }
+                    }
+                    else
+                    {
+                        abilities.Add(ability.AbilityId, ability);
+                    }
+                }
+            }
+            var abilityValues = new List<Float32GameplayAbilityExecutionData>(abilities.Values);
+            abilityValues.Sort((left, right) => left.AbilityId.CompareTo(right.AbilityId));
+            if (abilityValues.Count == 0)
+                throw new ArgumentException("Float32 Character Runtime requires at least one Ability.", nameof(roster));
+            m_Abilities = abilityValues.AsReadOnly();
+            NumericProfile = m_Abilities[0].NumericProfile;
+            TickRate = m_Abilities[0].TickRate;
+            OperationSetVersion = m_Abilities[0].OperationSetVersion;
+            WorldCapability requiredWorldCapabilities = WorldCapability.None;
+            for (int i = 0; i < m_Abilities.Count; i++)
+            {
+                Float32GameplayAbilityExecutionData ability = m_Abilities[i];
+                if (ability.NumericProfile != NumericProfile || ability.TickRate != TickRate ||
+                    !ability.OperationSetVersion.Equals(OperationSetVersion))
+                {
+                    throw new InvalidOperationException("Float32 Character Runtime Ability data uses inconsistent execution identities.");
+                }
+                requiredWorldCapabilities |= ability.Capabilities.RequiredWorldCapabilities;
+            }
+            RequiredWorldCapabilities = requiredWorldCapabilities;
             var parts = new List<string>
             {
                 "float32-character-runtime/1",
@@ -50,7 +92,12 @@ namespace ThirdPersonSimulation
         }
 
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
+        public IReadOnlyList<Float32GameplayAbilityExecutionData> Abilities => m_Abilities;
         public SimulationActorRosterDescriptor RosterDescriptor { get; }
+        public SimulationNumericProfile NumericProfile { get; }
+        public int TickRate { get; }
+        public OperationSetVersion OperationSetVersion { get; }
+        public WorldCapability RequiredWorldCapabilities { get; }
         public GameplayContentHash GameplayContentHash { get; }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)

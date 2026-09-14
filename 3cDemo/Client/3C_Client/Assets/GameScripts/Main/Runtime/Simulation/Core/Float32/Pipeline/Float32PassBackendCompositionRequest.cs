@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
             ValidateRoster();
             ValidateSourcePorts();
             ValidateOutputRoutes();
-            WorldCapability requiredCapabilities = CollectPassWorldCapabilities();
+            WorldCapability requiredCapabilities = CharacterRuntime.RequiredWorldCapabilities | CollectPassWorldCapabilities();
             if (!Solver.Descriptor.Supports(requiredCapabilities) ||
                 (Solver.Descriptor.Capabilities & WorldCapability.Reconstructible) == 0)
             {

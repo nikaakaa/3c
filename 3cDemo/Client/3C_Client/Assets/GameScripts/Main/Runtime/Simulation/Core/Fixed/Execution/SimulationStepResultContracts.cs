@@ -43,7 +43,8 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationActorTickResult(
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationState state,
+            FixedCharacterRuntimeState state,
+            CharacterStateHash stateHash,
             CharacterBodySample bodySample,
             CharacterMotionRequest motion,
             IEnumerable<GameplayFact> gameplayFacts,
@@ -53,6 +54,9 @@ namespace ThirdPersonSimulation.Fixed
             if (!actorId.IsValid || !tick.IsValid || bodySample.ActorId != actorId || bodySample.Tick != tick)
                 throw new ArgumentException("Actor Tick result identity is incomplete.");
             State = state ?? throw new ArgumentNullException(nameof(state));
+            if (!stateHash.IsValid)
+                throw new ArgumentException("Fixed Character runtime state hash is invalid.", nameof(stateHash));
+            m_StateHash = stateHash;
             if (state.LastCompletedTick != tick.Value)
                 throw new ArgumentException("Actor state Tick does not match result Tick.", nameof(state));
             ActorId = actorId;
@@ -69,16 +73,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterSimulationState State { get; }
-        public CharacterStateHash StateHash
-        {
-            get
-            {
-                if (!m_StateHash.IsValid)
-                    m_StateHash = CharacterSimulationStateCodec.ComputeHash(State);
-                return m_StateHash;
-            }
-        }
+        public FixedCharacterRuntimeState State { get; }
+        public CharacterStateHash StateHash => m_StateHash;
         public CharacterBodySample BodySample { get; }
         public CharacterMotionRequest Motion { get; }
         public IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;

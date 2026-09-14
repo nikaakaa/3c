@@ -24,6 +24,7 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedCharacterRuntime
     {
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
 
         public FixedCharacterRuntime(IEnumerable<SimulationActorBinding> roster)
         {
@@ -40,6 +41,47 @@ namespace ThirdPersonSimulation.Fixed
             }
             m_Roster = values.AsReadOnly();
             RosterDescriptor = new SimulationActorRosterDescriptor(ActorIds(values));
+            var abilities = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionData>();
+            for (int actorIndex = 0; actorIndex < values.Count; actorIndex++)
+            {
+                IReadOnlyList<FixedGameplayAbilityExecutionData> actorAbilities = values[actorIndex].AbilityData.Data;
+                for (int abilityIndex = 0; abilityIndex < actorAbilities.Count; abilityIndex++)
+                {
+                    FixedGameplayAbilityExecutionData ability = actorAbilities[abilityIndex];
+                    if (abilities.TryGetValue(ability.AbilityId, out FixedGameplayAbilityExecutionData existing))
+                    {
+                        if (!existing.ContentHash.Equals(ability.ContentHash) ||
+                            !existing.StateSchemaHash.Equals(ability.StateSchemaHash))
+                        {
+                            throw new InvalidOperationException($"Ability '{ability.AbilityId}' has different content across Character Runtime bindings.");
+                        }
+                    }
+                    else
+                    {
+                        abilities.Add(ability.AbilityId, ability);
+                    }
+                }
+            }
+            var abilityValues = new List<FixedGameplayAbilityExecutionData>(abilities.Values);
+            abilityValues.Sort((left, right) => left.AbilityId.CompareTo(right.AbilityId));
+            if (abilityValues.Count == 0)
+                throw new ArgumentException("Fixed Character Runtime requires at least one Ability.", nameof(roster));
+            m_Abilities = abilityValues.AsReadOnly();
+            NumericProfile = m_Abilities[0].NumericProfile;
+            TickRate = m_Abilities[0].TickRate;
+            OperationSetVersion = m_Abilities[0].OperationSetVersion;
+            WorldCapability requiredWorldCapabilities = WorldCapability.None;
+            for (int i = 0; i < m_Abilities.Count; i++)
+            {
+                FixedGameplayAbilityExecutionData ability = m_Abilities[i];
+                if (ability.NumericProfile != NumericProfile || ability.TickRate != TickRate ||
+                    !ability.OperationSetVersion.Equals(OperationSetVersion))
+                {
+                    throw new InvalidOperationException("Fixed Character Runtime Ability data uses inconsistent execution identities.");
+                }
+                requiredWorldCapabilities |= ability.Capabilities.RequiredWorldCapabilities;
+            }
+            RequiredWorldCapabilities = requiredWorldCapabilities;
             var parts = new List<string>
             {
                 "fixed-character-runtime/1",
@@ -51,7 +93,12 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
+        public IReadOnlyList<FixedGameplayAbilityExecutionData> Abilities => m_Abilities;
         public SimulationActorRosterDescriptor RosterDescriptor { get; }
+        public SimulationNumericProfile NumericProfile { get; }
+        public int TickRate { get; }
+        public OperationSetVersion OperationSetVersion { get; }
+        public WorldCapability RequiredWorldCapabilities { get; }
         public GameplayContentHash GameplayContentHash { get; }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)

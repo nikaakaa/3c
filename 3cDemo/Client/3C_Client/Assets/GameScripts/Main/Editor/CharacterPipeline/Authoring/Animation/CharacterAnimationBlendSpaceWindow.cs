@@ -1421,7 +1421,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
             if (!report.IsValid)
                 return $"Invalid ({report.Issues.Count})";
-            if (!m_Definition || !m_Profile || !m_Projection || !m_Definition.SimulationProgram)
+            if (!m_Definition || !m_Profile || !m_Projection)
                 return "Missing Definition Context";
             if (EditorUtility.IsDirty(m_Profile) || EditorUtility.IsDirty(m_Definition))
                 return "Dirty";
@@ -1441,9 +1441,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             try
             {
-                CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
-                CharacterPresentationSemanticContract contract = Float32CharacterPresentationContractAdapter.Create(program);
-                CharacterPresentationProjection projection = m_Projection.Load(contract);
+                CharacterPresentationProjection projection = m_Projection.Load();
                 for (int i = 0; i < projection.BlendSpaces.Count; i++)
                 {
                     CharacterAnimationBlendSpacePlan candidate = projection.BlendSpaces[i];
@@ -1498,9 +1496,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             var times = new CharacterAnimationBlendSpaceTimePage(plan.Samples.Count);
             double effectiveTime = m_PreviewNormalizedTime * plan.ClockDurationSeconds;
-            CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
-            CharacterPresentationSemanticContract contract = Float32CharacterPresentationContractAdapter.Create(program);
-            CharacterPresentationProjection compiledProjection = m_Projection.Load(contract);
+            CharacterPresentationProjection compiledProjection = m_Projection.Load();
             if (!CharacterAnimationBlendSpacePhaseMapper.Map(
                     plan.CreatePhasePlan(compiledProjection.ClipPhasePlans),
                     effectiveTime,

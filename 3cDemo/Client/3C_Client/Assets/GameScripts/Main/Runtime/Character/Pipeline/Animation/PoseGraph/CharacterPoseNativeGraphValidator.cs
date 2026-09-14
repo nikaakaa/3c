@@ -192,7 +192,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
 
                 EnsureAcyclic(graph, nodes, indegree, outgoing);
-                ValidateBoundary(graph, nodes, boundary);
+                ValidateBoundary(
+                    graph,
+                    nodes,
+                    graph.Connections,
+                    boundary);
                 ValidateReferencedGraphs(graphAsset, graph, nodes, visiting, visited);
             }
             catch (CharacterPoseNativeGraphValidationException)
@@ -262,6 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static void ValidateBoundary(
             CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            IReadOnlyList<CharacterPoseCanvasConnection> connections,
             BoundaryKind boundary)
         {
             int outputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
@@ -297,6 +302,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         CharacterPoseNativeFailureCode.PortInvalid,
                         graph.GraphId.Value,
                         "Pose boundary graph Graph Output must declare at least one input port.");
+                }
+
+                CharacterPoseCanvasNode entryPose = nodes.SingleOrDefault(
+                    value => value.Kind == CharacterPoseNodeKind.EntryPoseInput);
+                if (entryPose != null)
+                {
+                    var reachable = new HashSet<PoseNodeId>();
+                    var pending = new Queue<PoseNodeId>();
+                    pending.Enqueue(graphOutput.NodeId);
+                    while (pending.Count != 0)
+                    {
+                        PoseNodeId current = pending.Dequeue();
+                        if (!reachable.Add(current))
+                            continue;
+                        for (int i = 0; i < connections.Count; i++)
+                        {
+                            CharacterPoseCanvasConnection connection = connections[i];
+                            if (connection.TargetNodeId == current)
+                                pending.Enqueue(connection.SourceNodeId);
+                        }
+                    }
+                    if (!reachable.Contains(entryPose.NodeId))
+                    {
+                        Fail(
+                            CharacterPoseNativeFailureCode.PortInvalid,
+                            graph.GraphId.Value,
+                            $"Pose Entry Pose Input '{entryPose.NodeId}' is not connected to the Graph Output path.");
+                    }
                 }
             }
         }

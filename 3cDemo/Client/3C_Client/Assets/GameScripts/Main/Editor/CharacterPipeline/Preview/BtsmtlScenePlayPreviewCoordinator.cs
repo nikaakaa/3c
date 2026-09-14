@@ -466,10 +466,10 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                     BtsmtlScenePlaySkillRequestResultCode.Accepted,
                     actorId,
                     skillId,
-                     option.SourceInputRequestId,
-                     requestSequence,
-                     m_Status.SceneGeneration,
-                     "The formal Character Control Source queued the skill input request.",
+                    option.SourceInputRequestId,
+                    requestSequence,
+                    m_Status.SceneGeneration,
+                    "The formal Character Control Source queued the skill input request.",
                     m_ContextDescriptor.SessionHost.ExecutionBranchId,
                     checkpointTick);
             }
@@ -1878,10 +1878,10 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 code,
                 actorId,
                 skillId,
-                 inputRequestId,
-                 0,
-                 m_Status.SceneGeneration,
-                 message);
+                inputRequestId,
+                0,
+                m_Status.SceneGeneration,
+                message);
 
         ulong NextSceneGeneration()
         {

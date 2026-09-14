@@ -235,18 +235,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BoundaryKind boundary)
         {
             int outputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
+            int graphInputCount = nodes.Count(value =>
+                value.Kind == CharacterPoseNodeKind.GraphInput ||
+                value.Kind == CharacterPoseNodeKind.EntryPoseInput);
             int graphOutputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
             bool graphBoundary = boundary == BoundaryKind.Boundary;
             bool rootOrState = boundary == BoundaryKind.Root || boundary == BoundaryKind.State;
-            if ((!rootOrState || outputCount != 1 || graphOutputCount != 0) &&
-                (!graphBoundary || graphOutputCount != 1 || outputCount != 0))
+            if (rootOrState &&
+                (outputCount != 1 || graphInputCount != 0 || graphOutputCount != 0) ||
+                graphBoundary &&
+                (outputCount != 0 || graphInputCount != 1 || graphOutputCount != 1))
             {
                 Fail(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     graph.GraphId.Value,
                     graphBoundary
-                        ? "Pose boundary graph must contain exactly one Graph Output and no Output Pose."
-                        : "Pose root or state graph must contain exactly one Output Pose and no Graph Output.");
+                        ? "Pose boundary graph must contain exactly one Graph Input, one Graph Output and no Output Pose."
+                        : "Pose root or state graph must contain exactly one Output Pose and no Graph Input or Graph Output.");
             }
         }
 

@@ -2,6 +2,18 @@
 
 本文件属于本 change 的规划附件。它记录本轮读取的现行要求与增量操作，不能代替正式 spec，也不证明实现已完成。主规范和其它窗口文件本轮不改。
 
+## 2026-09-14补正Skill执行独立性遗漏
+
+用户指出Skill本应不依赖角色。原提案只约束独立编译根／数据和角色领域状态迁出，却未禁止技能执行帧依赖完整角色、创建角色事务或组装角色模块；规划不能把这描述为已经覆盖的明确要求。本次以D20、tasks 1.11和character-domain-runtime新增要求补正，不作为新增产品需求。
+
+| 编号 | 当前证据（客户端Main相对路径） | 整改 |
+| --- | --- | --- |
+| Q16 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityExecutionFrame.cs:35—59要求角色Input／Body／State并创建CharacterRuntimeStateTransaction | 技能只拥有局部执行状态和所需服务；外层角色／World事务归调用方，两个数值目标统一收口 |
+| Q17 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityControlRuntime.cs构造器接收Control／Equipment绑定并new Input／GameplayEffect／Equipment实现 | 把领域装配放回实际调用方，技能执行器调用正式服务，不套完整角色Context或新建第二执行器 |
+| Q18 | Editor/CharacterSimulation/Compilation/Skills/GameplayAbilitySemanticFrontendCompiler.cs:68无条件RequireGameplayCapability("GameplayEffect") | 按可达节点声明外部能力，不使用效果的技能不要求效果服务；真正缺失必需依赖仍失败 |
+
+独立Ability codec和以GameplayAbilityDefinition为根的编译入口是已有成果；它们不证明执行层独立。D19“角色持有服务”仅适用于角色调用场景，现已明确一般合同为领域拥有服务、调用方提供。新增三个规范场景覆盖无角色需求的技能、按需效果能力和外层丢弃，不新增测试任务，不修改代码或并行实施日志。
+
 ## 2026-09-14职责复审与窗口交接（检查至dd0708d46）
 
 用户明确要求更新文档，并通知核心实现及各领域规划。当前执行以design D19、核心tasks、Timeline第12组和Pose第3组为准；D16／D18及下方旧审查保留历史快照。代码仍处于并行迁移，本轮静态证据不能替代运行复现，也不按Program命名本身要求重做技能执行数据。

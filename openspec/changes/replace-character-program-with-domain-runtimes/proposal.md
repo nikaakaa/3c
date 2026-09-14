@@ -8,6 +8,7 @@
 
 - **BREAKING**：取消 `CharacterSimulationProgram` 作为整个角色的执行、配置、资源和状态装配根。角色由 C# ControlModule、AbilityRuntime、Motion、Effect、Equipment 等正式模块装配；不以另一个总包或万能运行上下文改名保留旧职责。
 - **BREAKING**：Semantic 处理收窄为 Ability 的私有 Graph／FSM／条件／子图引用，以及 TreeClip 引用的技能图。保留 Float32／Fixed 数值目标、portable 技能数据、必要技能局部状态和来源映射；不把角色控制、BodyMotion、装备总目录或 Pose 资源继续编码进技能产物。
+- Skill独立覆盖执行层：技能只依赖自身执行数据／局部状态和声明需要的typed服务，不要求完整角色配置、状态或Body，不创建角色事务或组装角色领域模块。角色及其它正式调用方提供服务并控制外层提交；不使用效果的技能不被无条件要求GameplayEffect能力。此条补正原规划遗漏，具体见D20与任务1.11。
 - **BREAKING**：Timeline 轨道、Clip、区间、播放参数和 MotionWarp 配置作为正式时间轴数据直接调度，不编成 Semantic IR／Program operation。技能只保留调用 Timeline 的节点和精确内容引用；TreeClip 图独立编译。保留 portable 内容导出、资源绑定和目标数值准备，复用现有时间、窗口、取消、回绕和恢复语义，不接入 Slate Runtime 或第二播放器。
 - 各领域分别提供技能、独立Timeline、Pose、Camera、Motion的准备／实际采用结果。Timeline独立Prepare／CreatePlayback不要求Ability外壳；Advance只生成Pending，调用方Step决定提交／丢弃，Timeline提供分型私有状态，核心只聚合。预览只消费真实领域操作与结果，不恢复 Character Build／ProgramEpoch 或创造假全局版本。
 - Camera 领域准备 Profile／资源到只读运行绑定，本任务只负责装配调用与旧 Projection 挂接迁出；运动曲线统一引用 RootMotionCurveAsset 和 Timeline 唯一时间映射，portable 数值运行不读取 Unity 资产。

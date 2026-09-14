@@ -4,6 +4,25 @@
 
 ## ADDED Requirements
 
+### Requirement: 技能必须独立于角色装配执行
+
+技能定义、编译、加载和执行 MUST不要求完整CharacterPipelineDefinition、角色Host、CharacterRuntimeState或角色输入／Body。技能执行 MUST只接收自身只读数据、局部状态、调用输入／目标／时间及实际声明需要的typed领域服务；角色事实可以是特定节点的显式服务需求，不得成为所有技能的无条件前提。技能 MUST不创建角色事务、组装Control／Effect／Equipment模块或提交角色／World状态。各领域拥有其服务和业务状态，实际调用方提供所需服务并控制外层提交／丢弃／恢复；角色和TreeClip等调用方 MUST复用同一技能执行入口，不得创建假角色、万能角色Context或第二执行器。
+
+#### Scenario: 无角色需求的技能由正式调用方执行
+- **WHEN** 合法技能只使用局部图逻辑与已提供的typed输入，不声明角色事实、运动或效果需求
+- **THEN** 定义、编译、加载及执行 MUST不要求构造角色配置、角色Body、角色状态或角色事务
+- **AND** 技能 MUST仍拥有独立调用身份、局部状态、完成／取消结果，由实际调用方处理外层生命周期
+
+#### Scenario: 技能按实际节点声明效果需求
+- **WHEN** 技能A的可达节点使用效果服务，技能B没有效果节点或依赖
+- **THEN** A MUST显式要求效果服务并在缺失时失败，B MUST不被编译器无条件加入GameplayEffect能力
+- **AND** 执行器 MUST调用提供的服务，不能自行创建角色效果模块满足需求
+
+#### Scenario: 调用方丢弃技能产生的领域候选
+- **WHEN** 技能已经生成本次调用的领域请求或候选，但实际调用方的外层Step失败
+- **THEN** 技能与领域候选 MUST服从调用方的丢弃决定，不提前提交角色或World
+- **AND** 技能执行层 MUST不拥有第二份角色事务或角色共享状态
+
 ### Requirement: 角色必须按正式领域配置创建唯一运行实例
 
 系统 MUST从明确的角色配置和能力授予创建每 actor 的控制、技能、输入、运动、效果与装备模块。角色 MUST不要求整体可执行 Program、全角色操作表或把全部配置复制成另一种总包。模块 MUST只通过各自正式输入输出连接，且所有 actor MUST继续由同一 Session 拥有的模拟时钟和世界推进。
@@ -145,7 +164,7 @@ MotionCurve MUST引用 RootMotionCurveAsset 的正式源内容，源区间和播
 
 ### Requirement: 独立技能不得复制角色级领域状态
 
-独立技能数据 MUST只声明其局部图执行、调用和实例状态，不得为复用旧执行器无条件复制角色GameplayEffect aggregate、全局随机状态、HandleAllocator或FactSequence。角色级服务与状态 MUST由原正式领域owner唯一提供，多个技能通过typed服务使用同一事实。明确的技能私有状态 MUST具有技能／实例作用域和恢复规则，不能与角色级字段混用。
+独立技能数据 MUST只声明其局部图执行、调用和实例状态，不得为复用旧执行器无条件复制角色GameplayEffect aggregate、全局随机状态、HandleAllocator或FactSequence。领域服务与业务状态 MUST由原正式领域owner拥有、实际调用方提供，多个技能通过typed服务使用同一事实；角色只是其中一种调用方，不是技能执行的必要宿主。明确的技能私有状态 MUST具有技能／实例作用域和恢复规则，不能与角色级字段混用。
 
 #### Scenario: 两个技能同时消费效果与实例分配服务
 - **WHEN** 同一角色安装并运行两个独立技能

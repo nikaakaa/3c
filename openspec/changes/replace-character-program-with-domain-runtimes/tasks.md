@@ -4,6 +4,8 @@
 
 当前接线重点：核心1.10／2.1／2.6／6.4负责独立技能到角色入口；1.5／3.8消费Timeline真正可Advance／Commit／Discard／Restore的结果；4.7／6.1接Pose实际采样至最终姿态；3.1—3.6保留网络Pass职责并迁移领域状态。新增目录、布局、准备实例或节点注册均只记局部进展，未接完整不勾选。
 
+D20补正原规划遗漏：Skill独立必须覆盖定义、编译、加载和执行，不仅是独立数据文件。技能不得创建角色事务或组装Control／Effect／Equipment模块；实际调用方提供技能声明所需的typed服务和调用输入，并拥有外层提交。角色只是一种调用方，1.11必须与角色接线同步收口，不能因1.10独立格式存在判定Skill已独立。
+
 执行顺序以用户2026-09-14“先大删除再做”为准：先执行下列首批删除，再完成独立技能、角色装配及其它保留业务的接线。旧消费者仍引用取消的类型不是延迟删除的条件；允许中间提交编译失败或功能明确不可用，记录错误所属消费者并接到正式接口，不加兼容层、占位类型、假结果或新旧开关。已完成小步保留，整个迁移必须等保留业务接通才算完成。Timeline／Pose在各自唯一清单执行同样顺序，不在这里复制领域任务。
 
 ## 0. 首批删除已取消职责
@@ -25,8 +27,9 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [ ] 1.6 由主实现唯一修改BtsmtlSkillTimelineCompiler和共享技能调用入口，先删除其中Timeline轨道／Clip发射调用与专属适配，再接直接内容引用；保留TreeClip技能图编译与Step-scoped调用服务，不与Timeline任务共写该文件。
 
 - [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
-- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；角色持有可用服务，技能只绑定自己声明需要的成员。修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；角色有服务不要求全部技能使用，技能必需服务缺失仍明确失败，不用空实现或全局启用能力绕过。
+- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；服务由对应领域拥有、调用方提供，技能只绑定自己声明需要的成员。角色调用场景中修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；不要求所有调用方拥有角色配置，必需服务缺失仍失败，不用空实现或全局启用能力绕过。
 - [ ] 1.10 将独立Ability数据的加载、格式、执行拓扑／布局接到Float32／Fixed实际执行与实例状态；复用已交付的自有拓扑和GameplayAbilityExecutionLayout，不能把创建布局视作执行完成。补齐读入到Tick／取消／恢复消费者，继续清除整角色Program解码／复制依赖，不恢复已撤回的FromProgram转换，保留必要技能编译与唯一技能格式。
+- [ ] 1.11 解除技能执行入口对角色装配的依赖：Float32／Fixed AbilityExecutionFrame只消费技能局部状态、调用输入／目标／时间和实际需要的typed服务，不强制接收CharacterRuntimeState、整角色Input／Body或在内部创建CharacterRuntimeStateTransaction；AbilityControlRuntime不再组装Control／Effect／Equipment领域模块，改调用外部正式服务。Frontend按可达节点声明能力，删除无条件GameplayEffect要求；依赖角色事实的节点只要求该事实服务。角色与TreeClip等调用方适配同一执行入口，禁止假角色、完整角色上下文包装或第二套技能执行器。
 
 ## 2. 角色领域运行与状态
 

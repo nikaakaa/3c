@@ -564,6 +564,7 @@ namespace BTSMTL.Timeline.Editor
                 m_SectionsById[source.AuthoringId] = section;
             }
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(Timeline);
+            m_CurrentFrame = Mathf.Clamp(m_CurrentFrame, 0, Timeline.MaxFrame);
         }
 
         void ShowTrackCreationPopup(string kind, IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields)

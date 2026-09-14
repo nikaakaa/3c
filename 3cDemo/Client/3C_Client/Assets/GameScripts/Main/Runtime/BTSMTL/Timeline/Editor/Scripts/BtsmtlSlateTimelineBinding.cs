@@ -1331,11 +1331,16 @@ namespace BTSMTL.Timeline.Editor
                 0f,
                 m_Curve.Duration));
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
-            public void AddKey(float localTime) => m_Curve.Curve.AddKey(localTime, m_Curve.Curve.Evaluate(localTime));
+            public void AddKey(float localTime)
+            {
+                float snappedTime = m_Curve.SnapTime(localTime);
+                m_Curve.Curve.AddKey(snappedTime, m_Curve.Curve.Evaluate(snappedTime));
+            }
             public void RemoveKey(float localTime)
             {
+                float snappedTime = m_Curve.SnapTime(localTime);
                 for (int index = m_Curve.Curve.length - 1; index >= 0; index--)
-                    if (Mathf.Abs(m_Curve.Curve[index].time - localTime) <= 0.0001f)
+                    if (Mathf.Abs(m_Curve.Curve[index].time - snappedTime) <= 0.0001f)
                         m_Curve.Curve.RemoveKey(index);
             }
             public void SelectPreviousKey(float localTime)

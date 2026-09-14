@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!graphAsset || root == null)
                 Fail(CharacterPoseNativeFailureCode.GraphMissing, "Pose", "Pose graph asset or root graph is missing.");
             var visiting = new HashSet<PoseGraphId>();
-            var visited = new HashSet<PoseGraphId>();
+            var visited = new Dictionary<PoseGraphId, BoundaryKind>();
             ValidateGraph(graphAsset, root, BoundaryKind.Root, visiting, visited);
         }
 
@@ -45,12 +45,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasGraph graph,
             BoundaryKind boundary,
             ISet<PoseGraphId> visiting,
-            ISet<PoseGraphId> visited)
+            IDictionary<PoseGraphId, BoundaryKind> visited)
         {
             if (!graph.GraphId.IsValid)
                 Fail(CharacterPoseNativeFailureCode.GraphInvalid, "Pose Graph", "Pose graph identity is invalid.");
-            if (visited.Contains(graph.GraphId))
+            if (visited.TryGetValue(graph.GraphId, out BoundaryKind previousBoundary))
+            {
+                if (previousBoundary != boundary)
+                {
+                    Fail(
+                        CharacterPoseNativeFailureCode.GraphInvalid,
+                        graph.GraphId.Value,
+                        $"Pose graph '{graph.GraphId}' is reused with conflicting boundaries '{previousBoundary}' and '{boundary}'.");
+                }
                 return;
+            }
             if (!visiting.Add(graph.GraphId))
             {
                 Fail(
@@ -201,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 visiting.Remove(graph.GraphId);
             }
-            visited.Add(graph.GraphId);
+            visited.Add(graph.GraphId, boundary);
         }
 
         static CharacterPosePortDefinition RequirePort(
@@ -297,7 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseCanvasNode> nodes,
             ISet<PoseGraphId> visiting,
-            ISet<PoseGraphId> visited)
+            IDictionary<PoseGraphId, BoundaryKind> visited)
         {
             foreach (CharacterPoseCanvasNode node in nodes)
             {

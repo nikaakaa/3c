@@ -70,6 +70,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseCanvasNode node = nodes[i];
                     IReadOnlyList<CharacterPosePortDefinition> shape =
                         CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
+                    bool interfaceBoundary =
+                        node.Kind == CharacterPoseNodeKind.GraphInput ||
+                        node.Kind == CharacterPoseNodeKind.EntryPoseInput ||
+                        node.Kind == CharacterPoseNodeKind.GraphOutput ||
+                        node.Kind == CharacterPoseNodeKind.PoseSubgraph;
                     var ports = new HashSet<PosePortId>();
                     for (int portIndex = 0; portIndex < shape.Count; portIndex++)
                     {
@@ -82,6 +87,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 CharacterPoseNativeFailureCode.PortInvalid,
                                 $"{graph.GraphId}/{node.NodeId}",
                                 $"Pose node '{node.NodeId}' has an invalid or duplicate port.");
+                        }
+                        if (interfaceBoundary != port.InterfacePortId.IsValid)
+                        {
+                            Fail(
+                                CharacterPoseNativeFailureCode.PortInvalid,
+                                $"{graph.GraphId}/{node.NodeId}/{port.PortId}",
+                                $"Pose node '{node.NodeId}' has an invalid interface port identity.");
                         }
                     }
                     shapes.Add(node.NodeId, shape);

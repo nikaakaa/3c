@@ -71,15 +71,13 @@ namespace Slate
                     setActive(!active);
             }
 
-            if (locked)
-            {
-                var lockRect = new Rect(0, 0, 16, 16);
-                lockRect.center = curveButtonRect.center - new Vector2(curveButtonRect.width, 0);
-                if (!active)
-                    lockRect.center -= new Vector2(16, 0);
-                if (GUI.Button(lockRect, Styles.lockIcon, GUIStyle.none))
-                    setLocked(!locked);
-            }
+            var lockRect = new Rect(0, 0, 16, 16);
+            lockRect.center = curveButtonRect.center - new Vector2(curveButtonRect.width, 0);
+            if (!active)
+                lockRect.center -= new Vector2(16, 0);
+            GUI.color = locked ? Color.white : Color.white.WithAlpha(0.3f);
+            if (GUI.Button(lockRect, Styles.lockIcon, GUIStyle.none))
+                setLocked(!locked);
 
             GUI.color = Color.white;
             GUI.enabled = wasEnabled;

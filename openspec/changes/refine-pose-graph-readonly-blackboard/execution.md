@@ -321,6 +321,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 当前 `rg` 结果显示 `CharacterPoseNativeGraphRuntime.Create` 只有 Runtime 工厂重载自身，没有角色 Host 的实际调用点；因此只能确认合同、handler 注册、Reset/Replace 和 FlowCanvas 生命周期已建立，不能确认角色运行闭环。
 - 未运行 Unity、Build、Play、资源刷新或端到端验证；下一步必须由现有 Source/Player/State/Blend/Constraint/Foot/Goal/FBBIK/Final 服务提供真实 handler，并由共享 Host 安装调用。
 
+## 2026-09-14 r3 接线阻断事实收据
+
+- 当前 Pose 侧已提交 `333a3a1a4`、`6a28afae6`、`5bb83d3af`、`15631b7b5`、`4663e6d76`、`597f31ec4`；截至本次扫描，原生 `Create/Replace` 没有任何角色 Host 调用点，handler 也没有除参数/action 内置实现之外的正式服务实现。
+- 不能通过添加空 handler、默认 Pose、旧 Program reader 或伪造调用点消除该缺口；否则会把 Source Pending、IK/Final Publication 和真实采用状态隐藏成成功。
+- 该事实不是不可推进的外部阻断：下一步可在不改共享 Host 的前提下继续实现具体领域 handler；完成证据仍要求真实 Host 调用、静态残留清理和用户侧 Unity/Play 验收。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

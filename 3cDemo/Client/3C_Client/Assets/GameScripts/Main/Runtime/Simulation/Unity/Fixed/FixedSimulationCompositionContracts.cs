@@ -10,6 +10,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         SimulationPipelinePassFactoryCatalog BuildFixedPortableFactoryCatalog();
     }
 
+    public abstract class FixedWorldSolverDefinition : SimulationWorldSolverDefinition
+    {
+        internal ICharacterWorldSolver CreateSolver(
+            int tickRate,
+            IReadOnlyList<IFixedSimulationActorRegistration> registrations) =>
+            CreateSolverCore(tickRate, registrations) ?? throw new InvalidOperationException(
+                $"World Solver Definition '{name}' returned no Fixed solver.");
+
+        protected abstract ICharacterWorldSolver CreateSolverCore(
+            int tickRate,
+            IReadOnlyList<IFixedSimulationActorRegistration> registrations);
+    }
+
     public interface IFixedSimulationActorRegistration :
         ISimulationActorRegistration,
         IFixedPublishedActorResultObserver
@@ -22,6 +35,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         void BeginResultCommit(int maximumBodySamples);
         void CompleteResultCommit();
         void AbortResultCommit();
+    }
+
+    public interface IFixedCharacterRuntimeRegistration : IFixedSimulationActorRegistration
+    {
+        ThirdPersonSimulation.Fixed.SimulationActorBinding CharacterBinding { get; }
     }
 
     public interface IFixedLocalSimulationActorRegistration : IFixedSimulationActorRegistration

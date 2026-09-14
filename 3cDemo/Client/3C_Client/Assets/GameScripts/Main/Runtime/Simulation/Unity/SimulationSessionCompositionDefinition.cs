@@ -61,6 +61,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             }
         }
 
+        public ISimulationSessionCompositionPreparation CreatePreparation(
+            IReadOnlyList<ISimulationActorRegistration> registrations)
+        {
+            RequireComplete();
+            return m_ExecutionBackend.CreateSessionPreparation(this, registrations);
+        }
+
 #if UNITY_EDITOR
         public void SetAuthoring(
             string sessionId,
@@ -102,6 +109,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public interface ISimulationSessionOutputLifecycle
     {
         void BeginLogicTick();
+    }
+
+    public interface ISimulationSessionCompositionPreparation : ISimulationSessionPreparation
+    {
+        SimulationSessionSourceDescriptor SourceDescriptor { get; }
+        SimulationSessionPreparedRuntime TakePreparedRuntime();
     }
 
     public sealed class SimulationSessionPreparedRuntime

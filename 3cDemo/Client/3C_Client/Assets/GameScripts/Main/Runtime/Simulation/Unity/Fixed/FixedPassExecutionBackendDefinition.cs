@@ -21,5 +21,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException("Fixed Pass Backend requires a Fixed Pipeline Definition.");
             return provider.BuildFixedPortableFactoryCatalog();
         }
+
+        public override ISimulationSessionCompositionPreparation CreateSessionPreparation(
+            SimulationSessionCompositionDefinition definition,
+            IReadOnlyList<ISimulationActorRegistration> registrations) =>
+            new FixedSimulationSessionCompositionPreparation(definition, registrations);
     }
 }

@@ -20,11 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void CaptureRenderFrame(ulong renderFrame);
     }
 
-    public interface ICharacterControlSourceProgramAdoption
-    {
-        bool TryAdoptProgram(CharacterSimulationProgram program, out string error);
-    }
-
     public interface ICharacterActionTargetInputProvider
     {
         string ProviderIdentity { get; }
@@ -42,18 +37,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public CharacterControlSourceContext(
             CharacterPipelineHost owner,
             CharacterPipelineDefinition definition,
-            CharacterSimulationProgram program,
             CharacterControlModuleContract controlModule)
         {
             Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
-            Program = program ?? throw new ArgumentNullException(nameof(program));
             ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
         }
 
         public CharacterPipelineHost Owner { get; }
         public CharacterPipelineDefinition Definition { get; }
-        public CharacterSimulationProgram Program { get; }
         public CharacterControlModuleContract ControlModule { get; }
     }
 
@@ -63,56 +55,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public abstract IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context);
     }
 
-    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime, ICharacterControlSourceProgramAdoption
+    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime
     {
-        const string InputPrefix = "input:value:";
         readonly List<SimulationInputValue> m_Values = new List<SimulationInputValue>();
-        ProgramId m_ProgramId;
-        ProgramHash m_ProgramHash;
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
 
-        public NeutralCharacterSimulationInputAdapter(CharacterSimulationProgram program)
+        public NeutralCharacterSimulationInputAdapter(CharacterInputProfile profile)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            if (program.Manifest.NumericProfile != Float32SimulationNumericProfile.Value)
-                throw new ArgumentException("Neutral Character input requires a Float32 Program.", nameof(program));
-            m_ProgramId = program.Manifest.ProgramId;
-            m_ProgramHash = program.ProgramHash;
-            for (int i = 0; i < program.CatalogEntries.Count; i++)
+            if (profile)
             {
-                ProgramCatalogEntry entry = program.CatalogEntries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.InputValue)
-                    continue;
-                if (!entry.Identity.StartsWith(InputPrefix, StringComparison.Ordinal))
-                    throw new InvalidOperationException($"Program input catalog identity '{entry.Identity}' is invalid.");
-                string inputId = entry.Identity.Substring(InputPrefix.Length);
-                m_Values.Add(CreateNeutralValue(program, entry, inputId));
+                for (int i = 0; i < profile.InputValues.Count; i++)
+                    m_Values.Add(CreateNeutralValue(profile.InputValues[i]));
             }
             m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
-            SourceIdentity = $"NeutralProgramInputs/Float32/{program.ProgramHash}";
+            SourceIdentity = "neutral-character-inputs/float32";
         }
 
         public string SourceIdentity { get; }
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
-        public ProgramId CharacterProgramId => m_ProgramId;
-        public ProgramHash CharacterProgramHash => m_ProgramHash;
         public CharacterControlSourceCapability Capabilities => CharacterControlSourceCapability.None;
-
-        public bool TryAdoptProgram(CharacterSimulationProgram program, out string error)
-        {
-            error = string.Empty;
-            if (program == null || program.Manifest.ProgramId != m_ProgramId ||
-                program.Manifest.NumericProfile != Float32SimulationNumericProfile.Value)
-            {
-                error = "Neutral input Program identity is incompatible.";
-                return false;
-            }
-            m_ProgramHash = program.ProgramHash;
-            return true;
-        }
 
         public void Activate()
         {
@@ -157,35 +120,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_Values.Clear();
         }
 
-        static SimulationInputValue CreateNeutralValue(
-            CharacterSimulationProgram program,
-            ProgramCatalogEntry entry,
-            string inputId)
+        static SimulationInputValue CreateNeutralValue(CharacterInputValueDefinition definition)
         {
-            ProgramCatalogField typeField = null;
-            for (int i = 0; i < entry.Fields.Count; i++)
+            if (definition == null)
+                throw new InvalidOperationException("Character Input Profile contains a missing input value.");
+            return definition.ValueType switch
             {
-                if (string.Equals(entry.Fields[i].Name, "ValueType", StringComparison.Ordinal))
-                {
-                    typeField = entry.Fields[i];
-                    break;
-                }
-            }
-            if (typeField == null || typeField.Kind != ProgramCatalogFieldKind.Constant)
-                throw new InvalidOperationException($"Program input '{inputId}' has no ValueType field.");
-            ProgramConstant type = program.Constants[typeField.ConstantIndex];
-            if (type.Kind != ProgramConstantKind.Int32)
-                throw new InvalidOperationException($"Program input '{inputId}' ValueType is not Int32.");
-            var kind = (ProgramInputValueKind)type.Int32;
-            return kind switch
-            {
-                ProgramInputValueKind.Boolean => SimulationInputValue.FromBoolean(inputId, false),
-                ProgramInputValueKind.Scalar => SimulationInputValue.FromScalar(inputId, Float32Scalar.Zero),
-                ProgramInputValueKind.Vector2 => SimulationInputValue.FromVector2(inputId, Float32Vector2.Zero),
-                ProgramInputValueKind.Vector3 => SimulationInputValue.FromVector3(inputId, Float32Vector3.Zero),
-                ProgramInputValueKind.Yaw => SimulationInputValue.FromYaw(inputId, Float32Yaw.Zero),
-                ProgramInputValueKind.ActionTargetSnapshot => SimulationInputValue.FromActionTargetSnapshot(inputId, SimulationActionTargetSnapshot.None),
-                _ => throw new InvalidOperationException($"Program input '{inputId}' has unsupported kind '{kind}'.")
+                CharacterInputValueType.Bool => SimulationInputValue.FromBoolean(definition.InputValueId, false),
+                CharacterInputValueType.Float => SimulationInputValue.FromScalar(definition.InputValueId, Float32Scalar.Zero),
+                CharacterInputValueType.Vector2 => SimulationInputValue.FromVector2(definition.InputValueId, Float32Vector2.Zero),
+                _ => throw new InvalidOperationException($"Character input '{definition.InputValueId}' has unsupported type '{definition.ValueType}'.")
             };
         }
 

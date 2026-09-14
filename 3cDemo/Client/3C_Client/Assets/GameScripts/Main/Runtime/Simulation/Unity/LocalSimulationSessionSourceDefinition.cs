@@ -112,12 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 if (registration is not ILocalSimulationActorRegistration local || local.LocalControlSource == null)
                     throw new InvalidOperationException($"Local Actor '{registration.ActorId}' has no Character Control Source.");
                 ICharacterControlSourceRuntime controlSource = local.LocalControlSource;
-                if (controlSource.NumericProfile != Float32SimulationNumericProfile.Value ||
-                    !controlSource.CharacterProgramId.Equals(local.Program.Manifest.ProgramId) ||
-                    !controlSource.CharacterProgramHash.Equals(local.Program.ProgramHash))
-                {
-                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source does not match its Character Program.");
-                }
+                if (controlSource.NumericProfile != Float32SimulationNumericProfile.Value)
+                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source does not match the Float32 input contract.");
                 const CharacterControlSourceCapability knownCapabilities =
                     CharacterControlSourceCapability.CommittedObservation |
                     CharacterControlSourceCapability.TransactionalState;
@@ -136,7 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 string stateIdentity = controlSource is ICharacterControlSourceStateRuntime stateful
                     ? $"{stateful.StateSchemaId}:{stateful.StateSchemaVersion}"
                     : "stateless";
-                identityParts[i + 4] = $"{registration.ActorId}:{controlSource.SourceIdentity}:{controlSource.Capabilities}:{stateIdentity}:{local.Program.ProgramHash}";
+                identityParts[i + 4] = $"{registration.ActorId}:{controlSource.SourceIdentity}:{controlSource.Capabilities}:{stateIdentity}";
             }
             var identity = new SimulationComponentIdentity(
                 SimulationComponentRole.SessionSource,

@@ -49,8 +49,6 @@ namespace ThirdPersonSimulation
     {
         string SourceIdentity { get; }
         SimulationNumericProfile NumericProfile { get; }
-        ProgramId CharacterProgramId { get; }
-        ProgramHash CharacterProgramHash { get; }
         CharacterControlSourceCapability Capabilities { get; }
         CharacterSimulationInput BuildInput(SimulationInputBuildContext context);
     }
@@ -181,7 +179,7 @@ namespace ThirdPersonSimulation
                 string stateIdentity = source is ICharacterControlSourceStateRuntime stateful
                     ? $"{stateful.StateSchemaId}:{stateful.StateSchemaVersion}"
                     : "stateless";
-                identityValues[i + 2] = $"{binding.ActorId}:{source.SourceIdentity}:{source.NumericProfile}:{source.CharacterProgramId}:{source.CharacterProgramHash}:{source.Capabilities}:{stateIdentity}";
+                identityValues[i + 2] = $"{binding.ActorId}:{source.SourceIdentity}:{source.NumericProfile}:{source.Capabilities}:{stateIdentity}";
             }
             m_Bindings = values.AsReadOnly();
             Descriptor = new SimulationPortDescriptor(
@@ -226,9 +224,7 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException("Local input Source roster contains a missing Actor binding.");
                 LocalSimulationInputBinding binding = m_Bindings[i];
                 ICharacterControlSourceRuntime controlSource = binding.ControlSource;
-                if (!actor.ActorId.Equals(binding.ActorId) || controlSource.NumericProfile != numericProfile ||
-                    !controlSource.CharacterProgramId.Equals(actor.ProgramId) ||
-                    !controlSource.CharacterProgramHash.Equals(actor.ProgramHash))
+                if (!actor.ActorId.Equals(binding.ActorId) || controlSource.NumericProfile != numericProfile)
                     throw new InvalidOperationException($"Local input Source binding for Actor '{actor.ActorId}' is incompatible.");
                 var context = new SimulationInputBuildContext(
                     actor.ActorId,

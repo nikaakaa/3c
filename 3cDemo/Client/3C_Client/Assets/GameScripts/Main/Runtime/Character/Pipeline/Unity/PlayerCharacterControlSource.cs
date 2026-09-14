@@ -23,7 +23,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new InvalidOperationException("Player control source requires an explicit Action Target input value id.");
             return new UnityCharacterSimulationInputAdapter(
                 context.Definition.InputProfile,
-                context.Program,
                 context.ControlModule,
                 context.Owner.CameraRig,
                 context.Owner,

@@ -379,7 +379,7 @@ namespace BTSMTL.Timeline.Runtime
                 State == TimelineRuntimePlaybackState.Stopped ||
                 State == TimelineRuntimePlaybackState.Failed)
                 return false;
-            if (m_StopPending)
+            if (m_StopPending || m_PendingAdvance != null)
                 return false;
             StopContext = context;
             HasStopContext = true;
@@ -1010,6 +1010,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineCameraStateSample> cameraStates,
             IReadOnlyList<TimelineCameraCueSample> cameraCues,
             IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
+            IReadOnlyList<TimelineCameraResourceSample> cameraResources,
             IReadOnlyList<TimelineActionCueSample> actionCues,
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
             IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
@@ -1021,6 +1022,7 @@ namespace BTSMTL.Timeline.Runtime
             CameraStates = Copy(cameraStates);
             CameraCues = Copy(cameraCues);
             CameraResponses = Copy(cameraResponses);
+            CameraResources = Copy(cameraResources);
             ActionCues = Copy(actionCues);
             TreeClips = Copy(treeClips);
             ScenePresentation = Copy(scenePresentation);
@@ -1033,6 +1035,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineCameraStateSample> CameraStates { get; }
         public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
         public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
+        public IReadOnlyList<TimelineCameraResourceSample> CameraResources { get; }
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
         public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
         public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
@@ -1141,6 +1144,7 @@ namespace BTSMTL.Timeline.Runtime
             var cameraStates = new List<TimelineCameraStateSample>();
             var cameraCues = new List<TimelineCameraCueSample>();
             var cameraResponses = new List<TimelineCameraResponseSample>();
+            var cameraResources = new List<TimelineCameraResourceSample>();
             var actionCues = new List<TimelineActionCueSample>();
             var treeClips = new List<TimelineRuntimeTreeClipRequest>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
@@ -1294,6 +1298,8 @@ namespace BTSMTL.Timeline.Runtime
                     cameraStateTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraStates);
                 else if (track is CameraResponseTrack cameraResponseTrack)
                     cameraResponseTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResponses);
+                else if (track is CameraResourceTrack cameraResourceTrack)
+                    cameraResourceTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResources);
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -1343,6 +1349,7 @@ namespace BTSMTL.Timeline.Runtime
                 cameraStates,
                 cameraCues,
                 cameraResponses,
+                cameraResources,
                 actionCues,
                 treeClips,
                 scenePresentation,

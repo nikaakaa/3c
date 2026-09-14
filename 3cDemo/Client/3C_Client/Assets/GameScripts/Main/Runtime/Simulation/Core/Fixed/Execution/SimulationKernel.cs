@@ -11,14 +11,15 @@ namespace ThirdPersonSimulation.Fixed
         internal KernelProgramBinding(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
-            SimulationKernel kernel)
+            SimulationKernel kernel,
+            FixedGameplayAbilityExecutionCatalog abilityExecutions)
         {
             Program = program ?? throw new ArgumentNullException(nameof(program));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Kernel = kernel ?? throw new ArgumentNullException(nameof(kernel));
+            AbilityExecutions = abilityExecutions ?? throw new ArgumentNullException(nameof(abilityExecutions));
             Specialization = kernel.Specialization;
             Layout.RequireProgram(Program);
-            AbilityExecutions = FixedGameplayAbilityExecutionCatalogFactory.FromProgram(Program);
             LayoutIdentity = new ProgramLayoutIdentity(
                 program.Manifest.ProgramId,
                 program.ProgramHash,

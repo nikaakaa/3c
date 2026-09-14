@@ -253,8 +253,13 @@ namespace BTSMTL.Timeline.Runtime
             ExecutionIdentity = playback.ExecutionIdentity;
             PlaybackMode = playback.PlaybackMode;
             NumericTarget = playback.NumericTarget;
+            ContentIdentity = playback.Content.Identity;
             ContentRevision = playback.ContentRevision;
             State = playback.State;
+            CursorFrame = playback.CursorFrame;
+            Cycle = playback.Cycle;
+            SectionId = playback.SectionId;
+            ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(playback.ActiveClipIds));
         }
 
         public TimelineRuntimePlaybackHandle Handle { get; }
@@ -263,8 +268,13 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
+        public string ContentIdentity { get; }
         public string ContentRevision { get; }
         public TimelineRuntimePlaybackState State { get; }
+        public int CursorFrame { get; }
+        public int Cycle { get; }
+        public string SectionId { get; }
+        public IReadOnlyList<string> ActiveClipIds { get; }
         public bool IsValid => Handle.IsValid && Generation != 0 && ExecutionIdentity.IsValid;
     }
 
@@ -313,6 +323,9 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimeService : ITimelinePlaybackService, ITimelinePlaybackActionContextSource, IDisposable
     {
+        static readonly List<TimelineRuntimeService> s_ActiveServices =
+            new List<TimelineRuntimeService>();
+
         readonly ITimelineRuntimePlaybackRequestFactory m_RequestFactory;
         readonly ITimelineRuntimeStepConsumer m_StepConsumer;
         readonly ITimelineRuntimeStopConsumer m_StopConsumer;
@@ -323,6 +336,7 @@ namespace BTSMTL.Timeline.Runtime
         bool m_Disposed;
 
         public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged;
+        public static event Action ObservationChanged;
         public string LastFailure { get; private set; } = string.Empty;
 
         public TimelineRuntimeService(
@@ -333,6 +347,24 @@ namespace BTSMTL.Timeline.Runtime
             m_RequestFactory = requestFactory ?? throw new ArgumentNullException(nameof(requestFactory));
             m_StepConsumer = stepConsumer ?? throw new ArgumentNullException(nameof(stepConsumer));
             m_StopConsumer = stopConsumer ?? throw new ArgumentNullException(nameof(stopConsumer));
+            s_ActiveServices.Add(this);
+        }
+
+        public static IReadOnlyList<TimelineRuntimePlaybackDescriptor> GetActivePlaybackDescriptors(
+            string contentIdentity)
+        {
+            var result = new List<TimelineRuntimePlaybackDescriptor>();
+            string identity = contentIdentity ?? string.Empty;
+            for (int serviceIndex = 0; serviceIndex < s_ActiveServices.Count; serviceIndex++)
+            {
+                TimelineRuntimeService service = s_ActiveServices[serviceIndex];
+                foreach (TimelineRuntimePlayback playback in service.m_Playbacks.Values)
+                {
+                    if (string.Equals(playback.Content.Identity, identity, StringComparison.Ordinal))
+                        result.Add(new TimelineRuntimePlaybackDescriptor(playback));
+                }
+            }
+            return new ReadOnlyCollection<TimelineRuntimePlaybackDescriptor>(result);
         }
 
         public bool RequestTimelinePlayback(
@@ -611,6 +643,8 @@ namespace BTSMTL.Timeline.Runtime
             {
                 m_Disposed = true;
                 m_Playbacks.Clear();
+                s_ActiveServices.Remove(this);
+                ObservationChanged?.Invoke();
             }
         }
 
@@ -669,6 +703,7 @@ namespace BTSMTL.Timeline.Runtime
         void Publish(TimelineRuntimePlayback playback)
         {
             PlaybackChanged?.Invoke(new TimelineRuntimePlaybackDescriptor(playback));
+            ObservationChanged?.Invoke();
         }
     }
 }

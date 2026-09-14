@@ -9,6 +9,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNodeKind Kind { get; }
         void Initialize(CharacterPoseNativeGraphRuntime runtime);
         void Start(CharacterPoseNativeGraphRuntime runtime);
+        void Reset(
+            CharacterPoseNativeGraphRuntime runtime,
+            ulong resetGeneration);
         void BeginFrame(
             CharacterPoseNativeGraphRuntime runtime,
             in CharacterPoseNativeFrameInput input,
@@ -95,6 +98,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             for (int i = 0; i < m_HandlerOrder.Count; i++)
                 m_HandlerOrder[i].Start(runtime);
+        }
+
+        public void Reset(
+            CharacterPoseNativeGraphRuntime runtime,
+            ulong resetGeneration)
+        {
+            RequireAlive();
+            if (resetGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(resetGeneration));
+            for (int i = 0; i < m_HandlerOrder.Count; i++)
+                m_HandlerOrder[i].Reset(runtime, resetGeneration);
         }
 
         public void BeginFrame(
@@ -361,6 +375,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             public void Initialize(CharacterPoseNativeGraphRuntime runtime) { }
             public void Start(CharacterPoseNativeGraphRuntime runtime) { }
+            public void Reset(
+                CharacterPoseNativeGraphRuntime runtime,
+                ulong resetGeneration) { }
             public void BeginFrame(
                 CharacterPoseNativeGraphRuntime runtime,
                 in CharacterPoseNativeFrameInput input,
@@ -415,6 +432,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             public void Initialize(CharacterPoseNativeGraphRuntime runtime) { }
             public void Start(CharacterPoseNativeGraphRuntime runtime) { }
+            public void Reset(
+                CharacterPoseNativeGraphRuntime runtime,
+                ulong resetGeneration) { }
             public void BeginFrame(
                 CharacterPoseNativeGraphRuntime runtime,
                 in CharacterPoseNativeFrameInput input,

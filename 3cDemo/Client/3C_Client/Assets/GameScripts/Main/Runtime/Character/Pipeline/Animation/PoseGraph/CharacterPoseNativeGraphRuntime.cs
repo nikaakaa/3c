@@ -41,6 +41,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         void Initialize(CharacterPoseNativeGraphRuntime runtime);
         void Start(CharacterPoseNativeGraphRuntime runtime);
+        void Reset(
+            CharacterPoseNativeGraphRuntime runtime,
+            ulong resetGeneration);
         void BeginFrame(
             CharacterPoseNativeGraphRuntime runtime,
             in CharacterPoseNativeFrameInput input,
@@ -96,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeEvaluationResult m_Evaluation;
         CharacterPoseNativePortValue m_LastCommittedOutput;
         CharacterPoseNativeFrameLineage m_LastCommittedLineage;
+        ulong m_ResetGeneration;
         CharacterPoseNativeExecutionStage m_Stage;
         ulong m_NextCompletionIdentity = 1;
         bool m_Initialized;
@@ -110,6 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Pose native graph create request is invalid.", nameof(createRequest));
             m_PreparedBinding = createRequest.PreparedBinding;
             m_CreateRequest = createRequest;
+            m_ResetGeneration = createRequest.ResetGeneration;
             m_Evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
             m_Graph = NodeCanvas.Framework.Graph.Clone(createRequest.PreparedBinding.Graph, null);
         }
@@ -118,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativePreparedBinding PreparedBinding => m_PreparedBinding;
         internal CharacterPoseNativeInstanceContext InstanceContext => m_CreateRequest.Context;
         internal ulong InstanceId => m_CreateRequest.InstanceId;
-        internal ulong ResetGeneration => m_CreateRequest.ResetGeneration;
+        internal ulong ResetGeneration => m_ResetGeneration;
         internal bool IsInitialized => m_Initialized;
         internal bool IsStarted => m_Started;
         internal bool HasOpenFrame => m_FrameLease.IsValid;
@@ -433,6 +438,68 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Evaluator.Stop(this);
                 m_Started = false;
+            }
+        }
+
+        internal CharacterPoseNativeResetResult ResetInstance(
+            ulong resetGeneration)
+        {
+            if (m_Disposed)
+                return CharacterPoseNativeResetResult.Failed(
+                    m_CreateRequest.Context.ActorId,
+                    InstanceId,
+                    m_ResetGeneration,
+                    CharacterPoseNativeFailureCode.Disposed,
+                    "Pose graph instance is disposed.");
+            if (!m_Started)
+                return CharacterPoseNativeResetResult.Failed(
+                    m_CreateRequest.Context.ActorId,
+                    InstanceId,
+                    m_ResetGeneration,
+                    CharacterPoseNativeFailureCode.Stale,
+                    "Pose graph instance is not running.");
+            if (resetGeneration == 0 || resetGeneration <= m_ResetGeneration)
+                return CharacterPoseNativeResetResult.Failed(
+                    m_CreateRequest.Context.ActorId,
+                    InstanceId,
+                    m_ResetGeneration,
+                    CharacterPoseNativeFailureCode.Stale,
+                    "Pose graph reset generation is not newer than the current instance.");
+            ulong previous = m_ResetGeneration;
+            try
+            {
+                if (m_FrameLease.IsValid)
+                    Discard(
+                        m_FrameLease,
+                        CharacterPoseNativeFailureCode.Stale);
+                m_Evaluator.Reset(this, resetGeneration);
+                m_OutputCache.Clear();
+                m_Observations.Clear();
+                m_CommittedObservations.Clear();
+                m_Evaluating.Clear();
+                m_LastCommittedOutput = null;
+                m_LastCommittedLineage = default;
+                m_ResetGeneration = resetGeneration;
+                return CharacterPoseNativeResetResult.Succeeded(
+                    m_CreateRequest.Context.ActorId,
+                    InstanceId,
+                    previous,
+                    resetGeneration);
+            }
+            catch (Exception exception)
+            {
+                m_OutputCache.Clear();
+                m_Observations.Clear();
+                m_CommittedObservations.Clear();
+                m_Evaluating.Clear();
+                m_LastCommittedOutput = null;
+                m_LastCommittedLineage = default;
+                return CharacterPoseNativeResetResult.Failed(
+                    m_CreateRequest.Context.ActorId,
+                    InstanceId,
+                    previous,
+                    CharacterPoseNativeFailureCode.FrameInvalid,
+                    exception.Message);
             }
         }
 

@@ -370,6 +370,71 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsAdopted => FailureCode == CharacterPoseNativeFailureCode.None && InstanceId != 0;
     }
 
+    internal readonly struct CharacterPoseNativeResetResult
+    {
+        CharacterPoseNativeResetResult(
+            ActorId actorId,
+            ulong instanceId,
+            ulong previousResetGeneration,
+            ulong resetGeneration,
+            CharacterPoseNativeFailureCode failureCode,
+            string message)
+        {
+            if (!actorId.IsValid || instanceId == 0 || previousResetGeneration == 0 ||
+                resetGeneration == 0 || string.IsNullOrWhiteSpace(message) ||
+                failureCode == CharacterPoseNativeFailureCode.None &&
+                resetGeneration <= previousResetGeneration ||
+                failureCode != CharacterPoseNativeFailureCode.None &&
+                resetGeneration < previousResetGeneration)
+            {
+                throw new ArgumentException("Pose native reset result is invalid.");
+            }
+            ActorId = actorId;
+            InstanceId = instanceId;
+            PreviousResetGeneration = previousResetGeneration;
+            ResetGeneration = resetGeneration;
+            FailureCode = failureCode;
+            Message = message.Trim();
+        }
+
+        internal static CharacterPoseNativeResetResult Succeeded(
+            ActorId actorId,
+            ulong instanceId,
+            ulong previousResetGeneration,
+            ulong resetGeneration) =>
+            new CharacterPoseNativeResetResult(
+                actorId,
+                instanceId,
+                previousResetGeneration,
+                resetGeneration,
+                CharacterPoseNativeFailureCode.None,
+                "Pose graph instance was reset.");
+
+        internal static CharacterPoseNativeResetResult Failed(
+            ActorId actorId,
+            ulong instanceId,
+            ulong resetGeneration,
+            CharacterPoseNativeFailureCode failureCode,
+            string message) =>
+            new CharacterPoseNativeResetResult(
+                actorId,
+                instanceId,
+                resetGeneration,
+                resetGeneration,
+                failureCode == CharacterPoseNativeFailureCode.None
+                    ? CharacterPoseNativeFailureCode.Stale
+                    : failureCode,
+                message);
+
+        internal ActorId ActorId { get; }
+        internal ulong InstanceId { get; }
+        internal ulong PreviousResetGeneration { get; }
+        internal ulong ResetGeneration { get; }
+        internal CharacterPoseNativeFailureCode FailureCode { get; }
+        internal string Message { get; }
+        internal bool IsReset => FailureCode == CharacterPoseNativeFailureCode.None;
+    }
+
     internal readonly struct CharacterPoseNativeFrameLineage : IEquatable<CharacterPoseNativeFrameLineage>
     {
         internal CharacterPoseNativeFrameLineage(

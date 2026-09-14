@@ -296,6 +296,13 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 原有直接注入 `ICharacterPoseNativeNodeEvaluator` 的入口保留，两个入口都不生成默认 evaluator、不恢复旧 Program reader，也不切换第二运行路径。
 - 本步未运行 Unity/Build；正式 Source/Player/State/Blend/Constraint/Final handler 和共享 Host 接线仍未完成。
 
+## 2026-09-14 r3 收口实例 Reset 生命周期
+
+- `CharacterPoseNativeResetResult` 增加 Reset 的 typed 成功/失败结果；同一实例只接受严格递增的 `ResetGeneration`。
+- `CharacterPoseNativeGraphRuntime.ResetInstance` 在重置前丢弃在途帧，调用所有 handler 的 Reset，再清空本帧/已提交输出与观察，防止旧代际结果继续被读取；Reset 失败不恢复旧输出。
+- handler/evaluator 注册合同同步增加 Reset；Stop/Dispose 仍负责终止图和释放资源，Replacement 继续通过新 Prepared/Adopted 实例完成，不复用旧实例身份。
+- 本步未运行 Unity/Build；正式 handler 与角色 Host 尚未接入，不能宣称 3.15 完成。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

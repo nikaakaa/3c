@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace BTSMTL.Timeline.Runtime
 {
@@ -76,8 +77,115 @@ namespace BTSMTL.Timeline.Runtime
         public static bool operator !=(TimelineRuntimePlaybackHandle left, TimelineRuntimePlaybackHandle right) => !left.Equals(right);
     }
 
+    public readonly struct TimelineRuntimeAdvanceRequest
+    {
+        public TimelineRuntimeAdvanceRequest(ulong logicTick, int deltaFrames)
+        {
+            if (logicTick == 0)
+                throw new ArgumentOutOfRangeException(nameof(logicTick));
+            if (deltaFrames < 0)
+                throw new ArgumentOutOfRangeException(nameof(deltaFrames));
+            LogicTick = logicTick;
+            DeltaFrames = deltaFrames;
+        }
+
+        public ulong LogicTick { get; }
+        public int DeltaFrames { get; }
+    }
+
+    public enum TimelineRuntimeClipBoundaryKind : byte
+    {
+        Exit = 0,
+        Enter = 1
+    }
+
+    public readonly struct TimelineRuntimeClipBoundary
+    {
+        public TimelineRuntimeClipBoundary(
+            string authoringId,
+            string trackAuthoringId,
+            int frame,
+            int cycle,
+            TimelineRuntimeClipBoundaryKind kind)
+        {
+            AuthoringId = string.IsNullOrWhiteSpace(authoringId)
+                ? throw new ArgumentException("Timeline Clip identity is required.", nameof(authoringId))
+                : authoringId.Trim();
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Timeline Track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (!Enum.IsDefined(typeof(TimelineRuntimeClipBoundaryKind), kind))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            Frame = frame;
+            Cycle = cycle;
+            Kind = kind;
+        }
+
+        public string AuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public TimelineRuntimeClipBoundaryKind Kind { get; }
+    }
+
+    public sealed class TimelineRuntimeAdvanceResult
+    {
+        readonly ReadOnlyCollection<string> m_ActiveClipIds;
+        readonly ReadOnlyCollection<TimelineRuntimeClipBoundary> m_Boundaries;
+
+        internal TimelineRuntimeAdvanceResult(
+            TimelineRuntimePlayback owner,
+            ulong generation,
+            ulong logicTick,
+            int previousFrame,
+            int frame,
+            int previousCycle,
+            int cycle,
+            string sectionId,
+            IReadOnlyList<string> activeClipIds,
+            IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
+            bool completes)
+        {
+            Owner = owner;
+            Generation = generation;
+            LogicTick = logicTick;
+            PreviousFrame = previousFrame;
+            Frame = frame;
+            PreviousCycle = previousCycle;
+            Cycle = cycle;
+            SectionId = sectionId ?? string.Empty;
+            m_ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
+            m_Boundaries = new ReadOnlyCollection<TimelineRuntimeClipBoundary>(
+                new List<TimelineRuntimeClipBoundary>(boundaries ?? Array.Empty<TimelineRuntimeClipBoundary>()));
+            Completes = completes;
+        }
+
+        internal TimelineRuntimePlayback Owner { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public int PreviousFrame { get; }
+        public int Frame { get; }
+        public int PreviousCycle { get; }
+        public int Cycle { get; }
+        public string SectionId { get; }
+        public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIds;
+        public IReadOnlyList<TimelineRuntimeClipBoundary> Boundaries => m_Boundaries;
+        public bool Completes { get; }
+    }
+
     public sealed class TimelineRuntimePlayback : IDisposable
     {
+        readonly List<string> m_ActiveClipIds = new List<string>();
+        readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
+        TimelineRuntimeAdvanceResult m_PendingAdvance;
+        int m_CursorFrame;
+        int m_Cycle;
+        string m_SectionId = string.Empty;
+
         internal TimelineRuntimePlayback(
             TimelineRuntimePlaybackHandle handle,
             ulong generation,
@@ -91,6 +199,7 @@ namespace BTSMTL.Timeline.Runtime
             Content = preparation.Content;
             PreparedDependencies = preparation.PreparedDependencies;
             PreparedBindings = preparation.PreparedBindings;
+            m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
             State = TimelineRuntimePlaybackState.Prepared;
         }
 
@@ -104,8 +213,104 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
         public TimelineRuntimePlaybackState State { get; private set; }
+        public int CursorFrame => m_CursorFrame;
+        public int Cycle => m_Cycle;
+        public string SectionId => m_SectionId;
+        public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIdsView;
         public bool HasStopContext { get; private set; }
         public TimelinePlaybackStopContext StopContext { get; private set; }
+
+        public bool Start()
+        {
+            if (State != TimelineRuntimePlaybackState.Prepared)
+                return false;
+            State = TimelineRuntimePlaybackState.Running;
+            RefreshActiveState();
+            return true;
+        }
+
+        public TimelineRuntimeAdvanceResult Advance(TimelineRuntimeAdvanceRequest request)
+        {
+            if (State != TimelineRuntimePlaybackState.Running)
+                throw new InvalidOperationException("Timeline playback must be running before Advance.");
+            if (m_PendingAdvance != null)
+                throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
+            int maxFrame = Math.Max(0, Content.MaxFrame);
+            long requestedFrame = (long)m_CursorFrame + request.DeltaFrames;
+            int nextFrame;
+            int nextCycle = m_Cycle;
+            if (Content.Loop && maxFrame > 0)
+            {
+                long cycleDelta = requestedFrame / maxFrame;
+                if (cycleDelta > int.MaxValue - nextCycle)
+                    throw new InvalidOperationException("Timeline playback cycle exceeds the supported range.");
+                nextCycle += (int)cycleDelta;
+                nextFrame = (int)(requestedFrame % maxFrame);
+            }
+            else
+            {
+                nextFrame = (int)Math.Min(requestedFrame, maxFrame);
+            }
+
+            var activeClipIds = new List<string>();
+            for (int index = 0; index < Content.Clips.Count; index++)
+            {
+                TimelineContentClip clip = Content.Clips[index];
+                if (!clip.TrackMuted && clip.StartFrame <= nextFrame && nextFrame < clip.EndFrame)
+                    activeClipIds.Add(clip.AuthoringId);
+            }
+            string sectionId = string.Empty;
+            for (int index = 0; index < Content.Sections.Count; index++)
+            {
+                TimelineContentSection section = Content.Sections[index];
+                if (section.Frame > nextFrame)
+                    break;
+                sectionId = section.AuthoringId;
+            }
+            List<TimelineRuntimeClipBoundary> boundaries = CollectBoundaries(
+                m_CursorFrame,
+                m_Cycle,
+                nextFrame,
+                nextCycle,
+                maxFrame,
+                Content.Loop);
+            bool completes = !Content.Loop && nextFrame >= maxFrame;
+            m_PendingAdvance = new TimelineRuntimeAdvanceResult(
+                this,
+                Generation,
+                request.LogicTick,
+                m_CursorFrame,
+                nextFrame,
+                m_Cycle,
+                nextCycle,
+                sectionId,
+                activeClipIds,
+                boundaries,
+                completes);
+            return m_PendingAdvance;
+        }
+
+        public bool Commit(TimelineRuntimeAdvanceResult advance)
+        {
+            RequirePendingAdvance(advance);
+            m_CursorFrame = advance.Frame;
+            m_Cycle = advance.Cycle;
+            m_SectionId = advance.SectionId;
+            m_ActiveClipIds.Clear();
+            for (int index = 0; index < advance.ActiveClipIds.Count; index++)
+                m_ActiveClipIds.Add(advance.ActiveClipIds[index]);
+            m_PendingAdvance = null;
+            if (advance.Completes)
+                State = TimelineRuntimePlaybackState.Completed;
+            return true;
+        }
+
+        public bool Discard(TimelineRuntimeAdvanceResult advance)
+        {
+            RequirePendingAdvance(advance);
+            m_PendingAdvance = null;
+            return true;
+        }
 
         public bool RequestStop(TimelinePlaybackStopContext context)
         {
@@ -116,6 +321,7 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             StopContext = context;
             HasStopContext = true;
+            m_PendingAdvance = null;
             State = TimelineRuntimePlaybackState.Stopping;
             return true;
         }
@@ -124,14 +330,124 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (State != TimelineRuntimePlaybackState.Stopping)
                 return false;
+            m_ActiveClipIds.Clear();
             State = TimelineRuntimePlaybackState.Stopped;
             return true;
         }
 
         public void Dispose()
         {
+            m_PendingAdvance = null;
+            m_ActiveClipIds.Clear();
             if (State != TimelineRuntimePlaybackState.Disposed)
                 State = TimelineRuntimePlaybackState.Disposed;
+        }
+
+        void RequirePendingAdvance(TimelineRuntimeAdvanceResult advance)
+        {
+            if (advance == null || !ReferenceEquals(advance.Owner, this) || !ReferenceEquals(m_PendingAdvance, advance))
+                throw new InvalidOperationException("Timeline Advance result does not belong to the active playback.");
+        }
+
+        void RefreshActiveState()
+        {
+            m_ActiveClipIds.Clear();
+            for (int index = 0; index < Content.Clips.Count; index++)
+            {
+                TimelineContentClip clip = Content.Clips[index];
+                if (!clip.TrackMuted && clip.StartFrame <= m_CursorFrame && m_CursorFrame < clip.EndFrame)
+                    m_ActiveClipIds.Add(clip.AuthoringId);
+            }
+            m_SectionId = string.Empty;
+            for (int index = 0; index < Content.Sections.Count; index++)
+            {
+                TimelineContentSection section = Content.Sections[index];
+                if (section.Frame > m_CursorFrame)
+                    break;
+                m_SectionId = section.AuthoringId;
+            }
+        }
+
+        List<TimelineRuntimeClipBoundary> CollectBoundaries(
+            int previousFrame,
+            int previousCycle,
+            int nextFrame,
+            int nextCycle,
+            int maxFrame,
+            bool loop)
+        {
+            var result = new List<TimelineRuntimeClipBoundary>();
+            if (maxFrame <= 0)
+                return result;
+            long previousAbsolute = (long)previousCycle * maxFrame + previousFrame;
+            long nextAbsolute = (long)nextCycle * maxFrame + nextFrame;
+            if (nextAbsolute <= previousAbsolute)
+                return result;
+            if (loop && nextCycle - previousCycle > 4096)
+                throw new InvalidOperationException("Timeline playback crossed more than 4096 cycles in one Advance.");
+
+            int firstCycle = loop ? previousCycle : 0;
+            int lastCycle = loop ? nextCycle : 0;
+            for (int clipIndex = 0; clipIndex < Content.Clips.Count; clipIndex++)
+            {
+                TimelineContentClip clip = Content.Clips[clipIndex];
+                if (clip.TrackMuted)
+                    continue;
+                for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
+                {
+                    AddBoundary(
+                        result,
+                        clip,
+                        clip.StartFrame,
+                        cycle,
+                        TimelineRuntimeClipBoundaryKind.Enter,
+                        previousAbsolute,
+                        nextAbsolute,
+                        maxFrame);
+                    AddBoundary(
+                        result,
+                        clip,
+                        clip.EndFrame,
+                        cycle,
+                        TimelineRuntimeClipBoundaryKind.Exit,
+                        previousAbsolute,
+                        nextAbsolute,
+                        maxFrame);
+                }
+            }
+            result.Sort((left, right) =>
+            {
+                int position = ((long)left.Cycle * maxFrame + left.Frame).CompareTo(
+                    (long)right.Cycle * maxFrame + right.Frame);
+                if (position != 0)
+                    return position;
+                int kind = left.Kind.CompareTo(right.Kind);
+                return kind != 0
+                    ? kind
+                    : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
+            });
+            return result;
+        }
+
+        static void AddBoundary(
+            List<TimelineRuntimeClipBoundary> result,
+            TimelineContentClip clip,
+            int frame,
+            int cycle,
+            TimelineRuntimeClipBoundaryKind kind,
+            long previousAbsolute,
+            long nextAbsolute,
+            int maxFrame)
+        {
+            long absolute = (long)cycle * maxFrame + frame;
+            if (absolute <= previousAbsolute || absolute > nextAbsolute)
+                return;
+            result.Add(new TimelineRuntimeClipBoundary(
+                clip.AuthoringId,
+                clip.TrackAuthoringId,
+                frame,
+                cycle,
+                kind));
         }
     }
 

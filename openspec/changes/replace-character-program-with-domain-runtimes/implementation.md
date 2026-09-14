@@ -99,6 +99,9 @@
 - `aad466b13`：删除从整角色 Program operation 反查 Timeline 的预览辅助器。
 - `167e3b20e`：删除 Float32／Fixed 旧整角色 Program 诊断适配器。
 - `a9f06ae6f`：删除 ServerAuthoritative 侧旧 Program 角色链，包括 Authority Actor、Remote Presentation、Fantasy endpoint/connection、Hybrid model 和旧 Session Source。
+- `49f3a4f96`：删除全局无调用者的旧 GameplayAbilityProgramDefinition／GameplayAbilityCatalog 定义目录。
+- `65c06746b`：删除 Control 侧旧 Program catalog owner binding、Program catalog validator 和按旧 Program 校验 Ability 的路径；Control catalog 只按正式 ModuleId/Contract 取得模块。
+- `ee1057bc4`（共享工作区并行提交）：同时删除 Float32／Fixed 旧 Session Composer 及 Unity Composer；本窗口未重复提交该改动。
 
 ## 当前实现边界
 
@@ -166,6 +169,7 @@
 - 2026-09-14 D17 激进删除继续完成 ProgramRuntime、Timeline reader／播放器和旧 Target 集合清理；本轮未重新编译或运行 Unity，故不宣称构建恢复。剩余旧 Program 消费者错误保持为后续领域接线清单。
 - 2026-09-14 Fixed 整角色 Program 类和旧 Pipeline Pass 删除后，`ThirdPersonSimulation.Fixed.csproj` 只报 6 个生成工程 `CS2001`：生成 csproj 仍列出已删除的 Fixed 源文件；没有新增原语的编译诊断。已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。
 - 2026-09-14 激进删除继续移除角色 Actor Registration、旧 Program 预览／诊断和 ServerAuthoritative Program 角色链；没有重新编译或运行 Unity，当前残余错误是待接线清单，不宣称网络或角色运行时已恢复。
+- 2026-09-14 Control owner 与旧 Ability 定义目录删除后未重新编译；生成工程和旧 Runtime 消费者仍按删除后的断裂状态保留，未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

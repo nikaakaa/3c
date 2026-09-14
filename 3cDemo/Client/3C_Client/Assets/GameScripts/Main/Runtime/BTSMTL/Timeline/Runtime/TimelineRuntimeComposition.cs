@@ -195,7 +195,7 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
-    public sealed class TimelineRuntimeComposition : IDisposable
+    public sealed class TimelineRuntimeComposition : ITimelinePlaybackService, IDisposable
     {
         readonly TimelineRuntimeService m_Service;
 
@@ -233,6 +233,39 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         public TimelineRuntimeService Service => m_Service;
+
+        public bool RequestTimelinePlayback(
+            TimelineData timeline,
+            string sourceId,
+            string sourceName,
+            TimelinePlaybackActionContext actionContext,
+            TimelinePlaybackMode playbackMode,
+            TreeExecutionActivationScope sourceActivation,
+            BaseGraph sourceRuntimeGraph,
+            out TimelinePlaybackHandle handle)
+        {
+            return m_Service.RequestTimelinePlayback(
+                timeline,
+                sourceId,
+                sourceName,
+                actionContext,
+                playbackMode,
+                sourceActivation,
+                sourceRuntimeGraph,
+                out handle);
+        }
+
+        public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
+        {
+            return m_Service.GetTimelinePlaybackStatus(handle);
+        }
+
+        public void CancelTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            TimelinePlaybackStopContext stopContext)
+        {
+            m_Service.CancelTimelinePlayback(handle, stopContext);
+        }
 
         public void Dispose()
         {

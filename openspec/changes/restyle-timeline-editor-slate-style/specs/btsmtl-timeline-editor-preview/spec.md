@@ -333,6 +333,19 @@ Timeline 与 SkillGraph/Graph Shell MUST按同一联动计划交付导航、运�
 - **THEN** 操作 MUST只改变视窗，游标的命中区域 MUST不占用缩放条
 - **AND** 隐藏工具栏 MUST不留下额外高度，背景 MUST使用最新布局边界
 
+#### Scenario: 轨道行局部坐标
+
+- **WHEN** 原Track参数GUI被调用或作者滚动/展开曲线
+- **THEN** 每行内容 MUST在对应轨道局部坐标和裁剪范围内绘制，名称/图标/曲线按钮 MUST NOT叠在列表原点或搜索框
+- **AND** 行背景、局部内容与鼠标事件 MUST采用一致且不重复施加的坐标转换，MUST复用同一原绘制主体
+
+#### Scenario: Clip标题与真实DopeSheet
+
+- **WHEN** 作者查看正式Clip及其底部关键帧区域
+- **THEN** 原wrapper MUST只绘制一次Clip标题，binding MUST NOT重复绘制Info，真实状态 MUST与标题分开
+- **AND** 有局部曲线的Clip MUST接原DopeSheet关键帧与编辑命令，MUST NOT以Info文字占位并提前返回
+- **AND** 无局部曲线的Clip MUST不预留假DopeSheet条带或扣减对应拖动区域，源运动曲线 MUST NOT被恢复为局部可写通道
+
 ### Requirement: Timeline必须使用正式帧率统一编辑时间
 
 Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数作者帧和 Slate 秒的转换；MUST不以 Slate 全局 FPS 或秒吸附偏好决定 BTSMTL 显示与保存。标尺、帧输入、Clip/Section 边界与关键帧编辑 MUST以作者帧为主。作者帧 MUST不自动解释为 Runtime Logic Tick。现有资产未编辑的数据 MUST不被整体量化。

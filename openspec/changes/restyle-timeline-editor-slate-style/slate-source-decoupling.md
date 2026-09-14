@@ -196,9 +196,35 @@ Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥�
 
 ## 12. 文档冲突与状态纠正
 
+最新截图问题与本次授权修正见第13节。第1节及本节早期状态均按对应快照理解，不覆盖后续正确实现或任务进度。
+
 - 旧design第3.5节和tasks第11节把DirectProjection及无组件链写成已完成，与`ce21aec8f/afcb90056`后的源码冲突；本次纠正为恢复原UI但仍有组件代理，解耦任务重新列为未完成。
 - proposal、delta中的“保留右侧Inspector”、design旧布局图，与后续明确“不新增右侧自制Inspector”冲突；统一为复用原Slate控件，属性使用Unity已有Inspector，不能因此删除正式属性编辑能力。
 - 原tasks“只从原入口分派”不足以约束复用：原入口提前return到另一套绘制不算。本次明确要求同一个函数主体、同一个wrapper/Renderer，允许只为脱离MonoBehaviour迁移原方法。
 - current `openspec/specs/btsmtl-timeline-editor-preview/spec.md`仍要求TimelinePreviewSession与互斥LiveDebug/只读，和已决定的Graph Shell场景预览不同；仍由场景预览change的delta处理，不在本次安装未实现规范。
 - 旧文档引用的`openspec/specs/timeline-animation-authoring-surface/spec.md`本次不存在，不再将其列作已核对的current依据。正式Curve descriptor等要求在当前`btsmtl-timeline-editor-preview`规范后半部可定位。
 - `implementation.md`包含旧回退前状态，仅保留历史，本次不改其所属任务记录；不能拿旧的“无组件、无Actor、已编译”当当前结论。没有新增测试、验证或编译任务。
+
+## 13. 2026-09-14 截图回归：轨道错位、重复文字与DopeSheet
+
+用户截图为CorinDodgeForwardTimeline：轨道名称/曲线按钮挤到搜索框附近，轨道背景行空白；Clip名称重复，底部条带也显示名称。用户明确要求更新文档并让现有实现任务修改。本节只授权修正这些原UI接线问题，不改变外观目标，不恢复组件树，不扩大为运行/预览重构。
+
+源码依据来自本轮截图诊断，不是Unity实跑验证：
+
+| 症状 | 已读到的调用点 | 原因与修正要求 |
+|---|---|---|
+| 左侧多条轨道标题堆到列表顶部 | CutsceneEditor的binding列表循环直接调用TrackEditorGUI.DrawParametersInfoGUI；DrawDefaultInfoGUI内部用y=0的Rect画名称/按钮 | 原版在轨道内层GUI.BeginGroup(trackRect)后画局部内容，当前调用缺少轨道坐标转换。恢复原嵌套分组/裁剪：行背景在列表坐标，轨道内容在本行局部坐标，Begin/End成对；不能只改字体或增加固定Y偏移 |
+| Clip标题重叠 | ActionClipWrapper.OnClipGUI末尾画editorBinding.Info；FormalClipEditorBinding.DrawClipGUI此前也画Info | 标题由原wrapper唯一负责，binding不再重复画相同标题。本轮已看到未提交差异删除binding中的GUI.Label，必须保留这项正确改动，不再重复修复或回退 |
+| 底部条带重复Clip名、无真正key | ShowClipDopesheet的FormalClip分支画Info后return，未调用原DopeSheet | 删除文字替代路径，正式局部曲线/参数必须接同一DopeSheetRenderer的真实关键帧操作与正式事务。无局部曲线时不占用假DopeSheet高度；不能用标题、假key或只读装饰条顶替 |
+
+### 坐标与绘制归属
+
+- 左侧列表区域建立一次列表坐标；每条轨道建立本行局部坐标，内部名称、图标、曲线按钮、通道与小控件相对本行计算。Track参数GUI不重复建立同一偏移。事件命中与图形必须处于同一坐标空间；滚动、曲线展开后仍使用原行高与裁剪规则。
+- 原wrapper在GUI.Window局部坐标画Clip标题一次；DopeSheet仅画真实key。外部运行状态仅在有真实报告且文本非空时显示独立状态，不把Clip名称或无状态占位再次覆盖标题。
+- 无曲线Clip的HasParameters/HasActiveParameters、底部高度与dragRect必须一致。不能只隐藏底部文字却仍保留空条带或挤占拖动命中区；有曲线Clip则保留原DopeSheet命中与手势。
+- 修正落在原列表/Track参数GUI/ActionClipWrapper与既有binding接线。仍然必须合并重复绘制主体，不能给两条分支分别补坐标后就称为最终共用UI。
+- 只使用真正Timeline-local的Weight/Ease、Warp progress等参数；源运动XYZ/Yaw沿曲线owner只读/导航规则，不能为了让DopeSheet有key而恢复旧源曲线写入。
+
+### 实现边界
+
+沿现有goal和小步提交继续：保留已正确左侧Track/Group、正式新增、帧/游标、曲线、缩放与鼠标行为；不整体回退共享工作树。当前未提交改动先按实际diff接续，遇到实际冲突交用户决定。代码/文档/编译通过不代表截图回归已消失，未在真实窗口确认时必须明确说明，不新增测试或验证tasks。

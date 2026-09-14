@@ -165,6 +165,8 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 ### 5. 曲线与刷新状态
 
+2026-09-14 用户截图回归的具体源码原因与修正归属见[源码决策第13节](slate-source-decoupling.md#13-2026-09-14-截图回归轨道错位重复文字与dopesheet)：恢复轨道局部GUI分组/裁剪，Clip标题由原wrapper画一次，正式曲线接真实DopeSheet而非名称占位。保持原UI算法与已正确接线，不新增另一套布局或组件代理。
+
 - 复用Slate Curve/DopeSheet；名称、单位、颜色来自正式descriptor。Motion源XYZ/Yaw不再是Timeline-local可写通道，只读显示或导航源owner；Weight/Ease、Warp progress等真正局部曲线保持可编辑。Track名称不拼曲线数量，展开沿原入口。
 - 展开仅显示当前 Clip 的有效通道；无曲线 Clip 不出现大片“No Clip Selected”参数区域。
 - 密集 key 根据缩放优化显示，不减少正式 key；选中 key 支持时间、值和切线精确编辑。

@@ -95,6 +95,8 @@
 
 ## 11. 直接修改Slate原源码的数据绑定
 
+2026-09-14 用户追加授权：修正最新截图中的轨道局部坐标、重复Clip标题与DopeSheet占位，详见源码决策第13节及下方11.12–11.14。沿现有实现goal，不新增验证tasks、不回退已正确改动。
+
 实现门槛：打开、刷新、新增、选择、编辑、关闭均不创建或依赖 Slate 组件树；原生 Cutscene/Actor/Director 规则不能阻止正式 TimelineData 的合法操作。__BTSMTL_SlateTimelineProjection__ / BuildProjection 残留不作为最终方案或 fallback。本段是实现约束，不新增验证任务。
 
 - [ ] 11.1 D1/D2：在现有Slate Editor模块收窄原编辑输入，原生Cutscene入口与BTSMTL入口共用一套原函数；BTSMTL输入不继承IDirector/IKeyable运行接口，不增加空运行实现或替代绘制分支
@@ -108,3 +110,7 @@
 - [x] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂。真实窗口验收仍未完成。
 - [x] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
 - [x] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态。正式 binding 刷新后的选择与曲线 cache 已按 Surface/Clip/参数 identity 恢复；真实关闭和未提交手势仍待主 Unity Editor 验收。
+
+- [ ] 11.12 恢复原轨道行内GUI.BeginGroup/EndGroup和局部坐标裁剪，名称/图标/曲线按钮/参数只在本行绘制，背景与滚动使用原列表坐标；合并进同一原列表主体，不用固定偏移遮盖问题
+- [ ] 11.13 Clip标题统一由原ActionClipWrapper绘制，保留已删除binding重复Label的正确改动；真实运行状态不冒充或覆盖标题，不重复显示Info
+- [ ] 11.14 将正式局部曲线接同一原DopeSheet的真实key操作与正式事务，删除FormalClip画Info后return的占位；无曲线时同时消除假底栏高度和对应拖动区域扣减，不恢复源XYZ/Yaw的局部写入

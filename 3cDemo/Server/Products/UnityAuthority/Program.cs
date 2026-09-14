@@ -30,15 +30,7 @@ try
         },
         new[] { "Gate" },
         Array.Empty<string>(),
-        new[]
-        {
-            "thirdperson.server.dotrecast-authority.entity",
-            "thirdperson.server.dotrecast-authority.hotfix",
-            "ThirdPerson.Server.DotRecastAuthority.Entity",
-            "ThirdPerson.Server.DotRecastAuthority.Hotfix",
-            "ThirdPersonSimulation.DotRecast",
-            "ThirdPersonSimulation.DotRecastAuthority"
-        },
+        Array.Empty<string>(),
         "Authority",
         Array.Empty<ServerProductArtifactDescriptor>(),
         () =>

@@ -40,14 +40,11 @@ internal static class Program
                     "ThirdPerson.Server.Gate.Hotfix",
                     "ThirdPerson.Server.UnityAuthority.Entity",
                     "ThirdPerson.Server.UnityAuthority.Hotfix",
-                    "ThirdPerson.Server.DotRecastAuthority.Entity",
-                    "ThirdPerson.Server.DotRecastAuthority.Hotfix",
                     "ThirdPersonSimulation.Core",
                     "ThirdPersonSimulation.Float32",
                     "ThirdPersonSimulation.ServerAuthoritative",
                     "ThirdPersonSimulation.ServerAuthoritative.Transport",
-                    "ThirdPersonSimulation.DotRecast",
-                    "ThirdPersonSimulation.DotRecastAuthority"
+                    "ThirdPersonSimulation.DotRecast"
                 },
                 "Authority",
                 Array.Empty<ServerProductArtifactDescriptor>(),

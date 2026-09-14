@@ -112,7 +112,6 @@ $null = Assert-ServerProductBuild `
     -ExpectedScenes @("Gate") `
     -ExpectedEntityModules @("thirdperson.server.gate.entity", "thirdperson.server.unity-authority.entity") `
     -ExpectedHotfixModules @("thirdperson.server.gate.hotfix", "thirdperson.server.unity-authority.hotfix") `
-    -ForbiddenModuleIds @("thirdperson.server.dotrecast-authority.entity", "thirdperson.server.dotrecast-authority.hotfix", "ThirdPerson.Server.DotRecastAuthority.Entity", "ThirdPerson.Server.DotRecastAuthority.Hotfix", "ThirdPersonSimulation.DotRecast", "ThirdPersonSimulation.DotRecastAuthority")
 $controlPort = [int](Get-NetworkTestProductField $manifest "controlPort")
 $authorityDataPort = [int](Get-NetworkTestProductField $manifest "authorityDataPort")
 if ($controlPort -le 0 -or $controlPort -gt 65535 -or

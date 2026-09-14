@@ -267,12 +267,12 @@ namespace ThirdPersonSimulation.Fixed
             if (m_Completed)
                 throw new InvalidOperationException("Fixed Ability invocation has already completed.");
             ResolvedGameplayMotion motion = m_Motion.Resolve();
+            m_Control.EndEvaluation();
             var result = new FixedAbilityInvocationResult(
                 motion,
                 new List<GameplayFact>(m_Workspace.Facts),
                 new List<PresentationCommand>(m_Workspace.Presentation),
                 new List<SimulationTraceRecord>(m_Workspace.Trace));
-            m_Control.EndEvaluation();
             m_Frame.End();
             m_Completed = true;
             return result;

@@ -263,11 +263,6 @@ namespace BTSMTL.Timeline.Editor
                 BuildUnboundView();
         }
 
-        void OnEnable()
-        {
-            EditorApplication.update += OnEditorUpdate;
-        }
-
         [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
         public static void OpenStandalone()
         {
@@ -483,7 +478,6 @@ namespace BTSMTL.Timeline.Editor
         void OnDisable()
         {
             WindowClosed?.Invoke(this);
-            EditorApplication.update -= OnEditorUpdate;
             DisposeView();
         }
 
@@ -503,11 +497,6 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!string.IsNullOrEmpty(message))
                 ShowNotification(new GUIContent(message));
-        }
-
-        void OnEditorUpdate()
-        {
-            m_SlateSurface?.MarkDirtyRepaint();
         }
 
         void DrawSlateSurface()

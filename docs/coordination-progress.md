@@ -1,7 +1,58 @@
 # 3C 工作协调进展
 
-维护人：工作协调窗口。最近更新：2026-09-14（PARALLEL-20260914-DOMAIN-01 审阅；未派工）。
+维护人：工作协调窗口。最近更新：2026-09-14（DOMAIN-BOUNDARIES-20260914-02 领域职责规范审阅）。
 本文件是推进记录，由协调窗口单独维护；不替代业务 spec，不由功能任务顺手修改或并入功能 MR。
+
+## 2026-09-14：DOMAIN-BOUNDARIES-20260914-02 规范审阅
+
+状态：`REVIEWED_NO_REASSIGNMENT`。来源：规划提交 `6932d1ad6`、[design D21](../openspec/changes/replace-character-program-with-domain-runtimes/design.md)、同目录spec-audit与tasks，以及两个领域的现行清单。用户本轮重点为“怎么规范”；这里只记录约束和现有归属，不新建任务、不调整执行优先级、不向其它窗口派工。
+
+当前授权事实：此前三个规划已登记分工，核心、Timeline、Pose已经获准实施。下方PARALLEL审阅的“待分派”是当时快照，不再代表当前状态，不需要重复授权。此前只发消息要求更新规划，不等于当时运行链已经完成；后续实施事实以各自现行清单和代码为准。
+
+### 审阅结论
+
+D21的九个业务职责与现有任务分工相容。应规范状态和调用边界，不按九个领域新增九个窗口、九套框架或九份重复计划。当前没有因职责冲突必须转交核心文件的证据；工作量大本身不能成为其它任务接管的依据。核心内部继续区分Input、Control、Skill、Motion、Effect、Equipment，角色装配与Session/Pipeline/Backend分别完成模块连接和外层执行顺序。
+
+### 实现必须能回答的六项合同
+
+以下内容补在各自已有设计与实现记录中；不要求新增模板文件、通用基类或统一Context。
+
+| 合同 | 必须写明 | 业务边界 |
+| --- | --- | --- |
+| 输入与能力 | 接收什么值、来源、调用身份和时间；真正需要哪些服务 | 不用效果的技能不要求效果服务；读取位置的技能必须拿到有效事实，不能把缺失数据当原点。 |
+| 状态归属 | 谁保存、作用于角色还是调用实例、谁能修改、何时释放 | 输入请求的消费只保存一份；技能局部变量、Timeline游标、Pose节点历史分别由其owner保存，调用者不复制。 |
+| 输出与实际执行 | 返回什么结果或请求，哪个现有实现接收并处理 | Timeline发起窗口开关，正式动作/战斗模块执行；返回候选列表不等于业务已经发生。 |
+| 接受与丢弃 | 谁产生候选、谁检查、谁接受；失败和取消影响哪一个调用 | 领域丢弃自己的候选；调用方决定整个Step。技能取消不能自行Abort整角色，无运动技能也能完成。 |
+| 停止与恢复 | 调用身份、generation、内容/schema；哪些已提交状态进入恢复 | 停止只关闭指定实例；核心组合领域快照，不重新解释Timeline私有字段或复制TreeClip技能帧。Pose表现历史不塞入玩法回滚。 |
+| 文件与完成范围 | 一个共享文件的唯一修改者、唯一tasks条目、真实上下游 | 一个业务切面要有状态、算法与消费者。新增接口、注册handler、Prepare成功都不能单独证明Host已经可用。 |
+
+同一业务合同适用于Float32和Fixed，不能只修一侧。采用已有数值和资源接口，不要求为了表面统一把不同数值实现重写。
+
+### 现有归属怎样落到代码
+
+| 唯一修改者 | 文件/符号边界及清单 | 对外协作 |
+| --- | --- | --- |
+| 核心实现 `01a09a5f-8d64-7c11-a461-7889623b7459` | Float32/Fixed的Ability执行帧、Pending结果、InputRuntime、ActionRuntime、CharacterRuntimeState及codec；Control/Motion/Effect/Equipment运行；Host/Factory、Pipeline/Backend/网络接线；主tasks 1.9—1.11、2.x、3.x、4.7与6.x | 内部按领域拆职责，不等于把这些文件交给作者或预览任务。共享技能Timeline编译和TreeClip执行仍由核心唯一修改。 |
+| Timeline实现 `01a089db-81e3-7a73-ae52-82ef95b744d4` | 直接内容、完整时间区间调度、播放候选/停止/恢复；现有tasks第12组 | 提供真实Clip阶段调用和私有状态结果；核心接调用服务与Step，Timeline不另写效果、运动或技能执行算法。 |
+| Pose实现 `01a081f3-46f4-7c91-8930-73923ff7950b` | 原生图/节点、Source需求、姿态求值、缓冲和Final服务；现有tasks第3组 | 提供实际节点服务及结果，核心接共享表现Host；Foot/IK算法仍由原任务维护。 |
+| Camera、运动源/C# authoring、Foot/IK、EventGraph、预览原任务 | 延续各自已登记文件与唯一清单 | Camera负责镜头算法与绑定，运动源负责曲线及时间映射，EventGraph负责变量生产，预览消费正式运行观察。它们不因空闲或名称相关接管核心运行。 |
+
+ActionRuntime不整类搬给Control。当前ActivateFromControl/StopFromControl/StopIfEquipmentContextStale连接调用方请求、装备上下文、动作准入与生命周期：调用方管理该上下文的启动、并发、替换和取消，技能保留自身准入/结束规则，装备owner判断上下文，输入owner保存消费事实。核心按方法整理调用，不在Control再实现一份技能规则。窗口的实际保存者仍须由核心沿现有动作/战斗符号定位，不笼统划给Effect或Timeline。
+
+如后续确实需要分担，应先列出具体文件/符号、依赖接口和唯一清单的转移范围，再按用户决定交接。保持现有分工的代价是核心集成集中；转交独立业务切面可以分摊工作，但会增加接口交接和共享状态协调成本。两者都不能靠多方同时改ActionRuntime、角色状态或Host来完成。
+
+### 本轮代码核对与规范落点
+
+读取点为 `6932d1ad6` 附近的共享工作树，包含并行修改，仅作静态证据。路径相对客户端`Assets/GameScripts/Main/`。
+
+- Q19须按新代码修正表述：`Float32AbilityEvaluationContracts.cs`及Fixed对应文件已使用技能事务接口，不能再称字段仍直接声明角色事务；但仍强制非空CharacterWorldSolveRequest并在AbortUnconsumed调用事务Abort。`Float32CharacterRuntimeStateTransaction`仍实现该接口，因此仅改接口名不证明取消权限已经分离。落点仍是核心1.11，保留已正确接口工作，检查实际调用对象与作用范围。
+- Q20仍有依据：两侧CharacterRuntimeState文件中的AbilityRuntimeState仍保存InputRequests，InputRuntime.ClearRequest通过当前事务改消费状态。多Ability集合和角色Hash已经存在；剩余是把共享消费移到输入owner及接通其恢复，不能再派一次多Ability聚合。落点为核心2.6/2.7。
+- Q21仍有依据：Ability执行帧接收带有效性标识的BodyFacts，ValueRuntime直接读取位置、速度、朝向等字段；当前读取路径未见有效性拒绝。按实际需求绑定与读取边界收口，缺失服务明确失败，不新增层层重复校验。落点为核心1.11。
+- Timeline现行第12组已记录游标候选和Commit/Discard；剩余包括跨过短Clip的完整区间事件、实际领域输出、停止/恢复。Pose第3组已记录混合、Constraint、Source和Final的进展；不能按旧审阅重复派发“从零搭接口”。两者完整运行和共享Host接线仍未因此完成。
+
+主规范仍由既有领域change的delta归并，本记录不另立业务规范。旧审查与新代码不符时更新剩余项，不撤回正确实现；规范约束不等于实施已完成。本轮仅修改本协调文件，不新增测试或验证任务，不运行Unity/Build，不索取回执或发送日常报告。
+
+---
 
 ## 2026-09-14：PARALLEL-20260914-DOMAIN-01 审阅
 

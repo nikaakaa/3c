@@ -207,7 +207,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new PoseNodeId(Guid.NewGuid().ToString("N")),
                 clone.DisplayName,
                 ParadoxNotion.Serialization.JSONSerializer.Clone<CharacterPoseNodePayload>(clone.Payload),
-                clone.DynamicPorts.ToArray(),
+                clone.DynamicPorts
+                    .Select(value =>
+                        ParadoxNotion.Serialization.JSONSerializer.Clone<CharacterPoseDynamicPort>(value))
+                    .ToArray(),
                 clone.position);
             var transaction = new CharacterPresentationMutationTransaction(
                 Guid.NewGuid().ToString("N"),

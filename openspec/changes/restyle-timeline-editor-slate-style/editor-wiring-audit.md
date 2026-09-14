@@ -137,7 +137,7 @@ S正式拖动分支的游标/长度/循环区间更新此前在isMoving状态持
 
 S正式Section菜单当前只有移到当前帧和删除，缺少原Edit名称/帧输入；创建固定名Section，不能把完整属性合同等同已有Add/Delete。拖动仍限制在当前length，边界延长语义需服从正式内容规则。
 
-新增Track/Clip确有正式typed入口和回滚，但CreateTrack/CreateClip的过期分支仅Rebuild并false，弹窗显示“可能owner已更新”等泛化信息，字段缺项与过期原因不精确。表单只支持当前写出的类型字段分支，不能因catalog枚举到类型就声称所有必填字段已覆盖；新增类型不允许靠默认值凑可创建。
+新增Track/Clip确有正式typed入口和回滚；提交 `e45a04b2e` 补上CameraResourceTrack的资源到具体Clip创建与类型校验，避免Camera资源Add Clip生成null。CreateTrack/CreateClip的过期分支仍Rebuild并false，弹窗显示“可能owner已更新”等泛化信息，字段缺项与过期原因不精确。表单只支持当前写出的类型字段分支，不能因catalog枚举到类型就声称所有必填字段已覆盖；新增类型不允许靠默认值凑可创建。
 
 W的“运行控制：Skill Graph / Graph Shell”是标签，当前工具栏没有返回精确预览来源的按钮；OpenClip源导航是Selection/Ping，TreeClip部分入口仍走BaseTreeWindow。保留已有正式导航和runtime observation，但不能将文字说明或旧树窗口入口称为已完成新SkillGraph预览联动。
 

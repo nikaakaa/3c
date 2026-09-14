@@ -136,28 +136,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackActorHash
     {
-        readonly ReadOnlyCollection<KeyValuePair<string, StableHash>> m_Modules;
-
-        public RollbackActorHash(ActorId actorId, StableHash actorHash, IEnumerable<KeyValuePair<string, StableHash>> modules)
+        public RollbackActorHash(
+            ActorId actorId,
+            GameplayContentHash gameplayContentHash,
+            CharacterStateHash characterStateHash)
         {
-            if (!actorId.IsValid || !actorHash.IsValid)
+            if (!actorId.IsValid || !gameplayContentHash.IsValid || !characterStateHash.IsValid)
                 throw new ArgumentException("Rollback Actor hash is incomplete.");
-            var values = new List<KeyValuePair<string, StableHash>>(modules ?? Array.Empty<KeyValuePair<string, StableHash>>());
-            values.Sort((left, right) => string.CompareOrdinal(left.Key, right.Key));
-            for (int i = 0; i < values.Count; i++)
-            {
-                SimulationIdentity.Require(values[i].Key, nameof(modules));
-                if (!values[i].Value.IsValid || i > 0 && string.Equals(values[i - 1].Key, values[i].Key, StringComparison.Ordinal))
-                    throw new ArgumentException("Rollback module hash is invalid or duplicated.", nameof(modules));
-            }
             ActorId = actorId;
-            ActorHash = actorHash;
-            m_Modules = values.AsReadOnly();
+            GameplayContentHash = gameplayContentHash;
+            CharacterStateHash = characterStateHash;
         }
 
         public ActorId ActorId { get; }
-        public StableHash ActorHash { get; }
-        public IReadOnlyList<KeyValuePair<string, StableHash>> Modules => m_Modules;
+        public GameplayContentHash GameplayContentHash { get; }
+        public CharacterStateHash CharacterStateHash { get; }
     }
 
     public sealed class RollbackStateHashReport : IRollbackProtocolPayload

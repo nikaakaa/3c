@@ -90,7 +90,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public const string EndpointId = "thirdperson.network-endpoint.deterministic-rollback";
         public const string EndpointVersion = "4";
         public const string ProtocolId = "thirdperson.rollback-input-protocol";
-        public const int ProtocolVersion = 5;
+        public const int ProtocolVersion = 6;
 
         public static SimulationComponentIdentity BuildModel(
             DeterministicRollbackModelPolicy policy,
@@ -136,7 +136,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 "relayed-explicit-input-batch",
                 "canonical-bundle",
                 "canonical-confirmation",
-                "state-hash-with-peer-world-body-v2",
+                "state-hash-with-role-content-v1",
                 "snapshot-request-with-routing",
                 "snapshot-response-with-routing-session-snapshot-v3"));
     }

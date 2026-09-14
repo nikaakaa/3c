@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         const uint Magic = 0x50524244;
         const uint PayloadMagic = 0x4C505244;
-        const int Version = 5;
+        const int Version = 6;
 
         public static byte[] Write(RollbackProtocolEnvelope envelope)
         {
@@ -256,13 +256,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 RollbackActorHash actor = value.Actors[i];
                 writer.WriteString(actor.ActorId.Value);
-                writer.WriteString(actor.ActorHash.Value);
-                writer.WriteInt32(actor.Modules.Count);
-                for (int moduleIndex = 0; moduleIndex < actor.Modules.Count; moduleIndex++)
-                {
-                    writer.WriteString(actor.Modules[moduleIndex].Key);
-                    writer.WriteString(actor.Modules[moduleIndex].Value.Value);
-                }
+                writer.WriteString(actor.GameplayContentHash.ToString());
+                writer.WriteString(actor.CharacterStateHash.ToString());
             }
         }
 
@@ -278,12 +273,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < actorCount; i++)
             {
                 var actorId = new ActorId(reader.ReadString());
-                var actorHash = new StableHash(reader.ReadString());
-                int moduleCount = ReadCount(reader);
-                var modules = new KeyValuePair<string, StableHash>[moduleCount];
-                for (int moduleIndex = 0; moduleIndex < moduleCount; moduleIndex++)
-                    modules[moduleIndex] = new KeyValuePair<string, StableHash>(reader.ReadString(), new StableHash(reader.ReadString()));
-                actors[i] = new RollbackActorHash(actorId, actorHash, modules);
+                var gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+                var characterStateHash = new CharacterStateHash(new StableHash(reader.ReadString()));
+                actors[i] = new RollbackActorHash(actorId, gameplayContentHash, characterStateHash);
             }
             return new RollbackStateHashReport(peerId, tick, worldHash, rosterHash, kccHash, actors);
         }

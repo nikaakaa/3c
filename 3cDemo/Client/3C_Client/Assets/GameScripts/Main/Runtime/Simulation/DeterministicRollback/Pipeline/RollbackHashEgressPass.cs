@@ -7,8 +7,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public static class RollbackSourceEgressChannels
     {
         public const string StateHash = "deterministic-rollback.state-hash";
-        public const string StateHashSchema = "deterministic-rollback-state-hash";
-        public const int StateHashSchemaVersion = 2;
+        public const string StateHashSchema = "deterministic-rollback-state-hash-v3";
+        public const int StateHashSchemaVersion = 3;
     }
 
     public sealed class RollbackHashEgressPassRuntimeFactory : IFixedPipelinePassRuntimeFactory
@@ -111,12 +111,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 SimulationActorSnapshot actor = world.Actors[i];
                 actors[i] = new RollbackActorHash(
                     actor.ActorId,
-                    actor.StateHash.Value,
-                    new[]
-                    {
-                        new KeyValuePair<string, StableHash>("gameplay-content", actor.GameplayContentHash.Value),
-                        new KeyValuePair<string, StableHash>("character-state", actor.StateHash.Value)
-                    });
+                    actor.GameplayContentHash,
+                    actor.StateHash);
             }
             return new RollbackStateHashReport(
                 localPeerId,

@@ -3118,11 +3118,13 @@ namespace Slate
                     }
                     //
 
-                    if ( track.isLocked ) {
-                        if ( e.isMouse && trackPosRect.Contains(e.mousePosition) ) {
-                            e.Use();
-                        }
-                    }
+                    if (track.isLocked &&
+                        (e.type == EventType.MouseDown ||
+                         e.type == EventType.MouseDrag ||
+                         e.type == EventType.MouseUp ||
+                         e.type == EventType.ContextClick) &&
+                        trackPosRect.Contains(e.mousePosition))
+                        e.Use();
 
                     //...
                     var cursorTime = SnapTime(PosToTime(mousePosition.x));
@@ -3493,7 +3495,12 @@ namespace Slate
                         GUI.color = Color.white;
                     }
 
-                    if (track.IsLocked && e.isMouse && trackPosRect.Contains(e.mousePosition))
+                    if (track.IsLocked &&
+                        (e.type == EventType.MouseDown ||
+                         e.type == EventType.MouseDrag ||
+                         e.type == EventType.MouseUp ||
+                         e.type == EventType.ContextClick) &&
+                        trackPosRect.Contains(e.mousePosition))
                         e.Use();
 
                     string inspectionKey = FormalInspectionKey(track);

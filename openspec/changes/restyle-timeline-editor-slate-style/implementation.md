@@ -59,6 +59,7 @@ TimelineEditorWindow
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。
 - 嵌入 Surface 每次 `DrawEmbeddedGUI` 都重置本帧的 `formalSelectionHandled`；它只记录当前输入事件是否已由正式 Clip 处理，不把一次 Clip 点击状态泄漏到后续帧。该修正不增加选择源，也不改变原 Slate 命中算法。
 - 正式 Timeline 的快捷键在 `CutsceneEditor.DoKeyboardShortcuts` 入口先分流：逗号/句号只逐帧移动，K/S/F/C 分别进入正式 Clip 的加 key、拆分、适配和清理曲线；Space 被明确消费，不进入原生 Slate 播放。删除 Track/Clip/Section 等已经由 binding 自己调用正式 Session 的命令，不再被外层 Slate 草稿事务重复包裹。
+- 原 Slate 的参数区、曲线区和锁定轨道只在明确的 MouseDown/MouseDrag/MouseUp/ContextClick 输入上调用 `Event.Use`；参数区和曲线区限定左键，避免右键菜单、鼠标移动或非输入事件被提前消费。
 - `BtsmtlTimelineDirectorBinding` 已删除；Projection 自身只实现 Slate `IDirector` 所要求的 root 合同，所有播放、采样和受影响 Actor 接口保持空实现，不再分配第二个 Director 对象或第二套时钟。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。

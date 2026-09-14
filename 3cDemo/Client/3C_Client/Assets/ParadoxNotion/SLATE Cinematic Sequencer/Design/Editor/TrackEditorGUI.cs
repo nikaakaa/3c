@@ -212,7 +212,7 @@ namespace Slate
                 proposedHeight = buttonRect.yMax + 10;
             }
 
-            if (e.type == EventType.MouseDown && expansionRect.Contains(e.mousePosition))
+            if (e.type == EventType.MouseDown && e.button == 0 && expansionRect.Contains(e.mousePosition))
                 e.Use();
         }
         public static void DrawClipCurves(Event e, Rect posRect, Rect timeRect, System.Func<float, float> TimeToPos, IKeyable keyable, System.Func<bool> isSelectedKeyable, ref int inspectedParameterIndex) {
@@ -349,7 +349,7 @@ namespace Slate
             }
 
             //consume event
-            if ( e.type == EventType.MouseDown && finalPosRect.Contains(e.mousePosition) ) {
+            if ( e.type == EventType.MouseDown && e.button == 0 && finalPosRect.Contains(e.mousePosition) ) {
                 e.Use();
             }
 
@@ -411,7 +411,7 @@ namespace Slate
                         track.CustomHeight = track.FinalHeight + e.delta.y;
                         e.Use();
                     }
-                    if (e.rawType == EventType.MouseUp)
+                    if (e.rawType == EventType.MouseUp && e.button == 0)
                     {
                         surface.EndEmbeddedTrackResize();
                         e.Use();

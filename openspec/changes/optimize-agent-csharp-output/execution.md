@@ -36,7 +36,7 @@
 - Editor 侧 CodeGeneration 源在使用已有 Unity 程序集作为引用时通过静态编译；当前完整项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
 - Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。正式 `btsmtl.export_code` 已对 Attack 执行并返回 8 个文件、总计 198,414 字节，其中入口 1,608 字节；这次调用仍使用当时已加载的旧生成器程序集。
 - 静态编译中间导出时发现短入口缺少命名空间闭合，源码已在 `cf715b0b9` 修复；最新生成器还没有在 Unity 中重新加载，因此当前生成目录不能作为最终输出归档。
-- Unity 当前 Console 仍有并行 Pose 源码的 5 个编译错误，阻止 `ThirdPersonClient.Editor` 加载最新生成器。未修改并行 Simulation/Pose 文件、未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
+- Unity 当前 Console 仍有并行 Fixed Simulation 源码的 1 个编译错误：`CharacterPipelineDefinitionFixedAbilityExtensions.cs:9` 找不到 `FixedGameplayAbilityExecutionData`，阻止 `ThirdPersonClient.Editor` 加载最新生成器。未修改并行 Simulation/Pose 文件、未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
 
 因此当前缺少的是 Unity 编译恢复后用最新程序集重新导出并编译全部已采用 C# 根，不是另建一个生成路径来绕过该边界。
 

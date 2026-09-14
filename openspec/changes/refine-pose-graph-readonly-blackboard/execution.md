@@ -223,3 +223,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 这些类型是旧 Operation 表的页存储、输入输出值页、播放器/状态/Linked/Inertialization 操作适配器和配套数学入口；原生 Graph 不再通过 Operation code、Value page 或 Worker batch 执行节点。
 - 保留外部 `Constraints`、`Final` 和现有 Inertialization/IK 服务文件；它们是算法/发布边界，不随旧 Program 操作适配器一起删除。旧 Executor/Runtime 的脏引用不在本步补兼容。
 - 本步未运行 Unity/Build；当前断链仍是激进删除的中间状态，不能作为完成证据。
+
+## 2026-09-14 r3 删除旧 Worker Plan 与 Operation Pages
+
+- 删除 `Contracts/Pose/CharacterPoseWorkerPlan.cs` 和 `CharacterPoseOperationPages.cs` 及其 `.meta`；前者是可序列化的 Worker 批次/值范围/骨骼执行布局，后者是全图 Operation header、payload page 和 Value reference 表。
+- 原生 FlowCanvas 图的 Node/Port/Connection 与 `CharacterPoseNativeGraphValidator` 直接确定执行拓扑，不再生成或读取这两种全图执行描述。
+- 诊断、Projection 和旧 Program 消费者的引用暂不补兼容；它们将在切换原生观察/发布合同时删除或改为节点观察数据。
+- 本步未运行 Unity/Build；当前残留引用是激进裁剪过程中的预期中间状态，不能作为完成证据。

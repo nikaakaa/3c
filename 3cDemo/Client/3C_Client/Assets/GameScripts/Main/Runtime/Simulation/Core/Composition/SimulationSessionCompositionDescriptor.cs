@@ -38,10 +38,7 @@ namespace ThirdPersonSimulation
             SimulationWorldId worldId,
             SimulationSourceClockId sourceClockId,
             int tickRate,
-            SimulationComponentIdentity programRuntime,
-            NumericProfileId numericProfileId,
-            TargetAbiVersion targetAbiVersion,
-            OperationSetVersion operationSetVersion,
+            SimulationExecutionTargetManifest executionTarget,
             SimulationComponentIdentity executionBackend,
             SimulationPipelineIdentity pipeline,
             ProgramCatalogHash programCatalogHash,
@@ -59,14 +56,13 @@ namespace ThirdPersonSimulation
         {
             if (!sessionId.IsValid || !worldId.IsValid || !sourceClockId.IsValid || tickRate <= 0)
                 throw new ArgumentException("Session identity and TickRate are required.");
-            RequireRole(programRuntime, SimulationComponentRole.ProgramRuntime, nameof(programRuntime));
+            ExecutionTarget = executionTarget ?? throw new ArgumentNullException(nameof(executionTarget));
             RequireRole(executionBackend, SimulationComponentRole.ExecutionBackend, nameof(executionBackend));
             RequireRole(sessionSource, SimulationComponentRole.SessionSource, nameof(sessionSource));
             RequireRole(worldSolver, SimulationComponentRole.WorldSolver, nameof(worldSolver));
             RequireRole(snapshotCodec, SimulationComponentRole.SnapshotCodec, nameof(snapshotCodec));
             RequireRole(committer, SimulationComponentRole.Committer, nameof(committer));
-            if (!numericProfileId.IsValid || !targetAbiVersion.IsValid || !operationSetVersion.IsValid ||
-                !pipeline.IsValid || !programCatalogHash.IsValid || roster == null || solverImplementationId.Equals(default))
+            if (!pipeline.IsValid || !programCatalogHash.IsValid || roster == null || solverImplementationId.Equals(default))
             {
                 throw new ArgumentException("Session composition identity is incomplete.");
             }
@@ -82,10 +78,6 @@ namespace ThirdPersonSimulation
             WorldId = worldId;
             SourceClockId = sourceClockId;
             TickRate = tickRate;
-            ProgramRuntime = programRuntime;
-            NumericProfileId = numericProfileId;
-            TargetAbiVersion = targetAbiVersion;
-            OperationSetVersion = operationSetVersion;
             ExecutionBackend = executionBackend;
             Pipeline = pipeline;
             ProgramCatalogHash = programCatalogHash;
@@ -108,10 +100,10 @@ namespace ThirdPersonSimulation
         public SimulationWorldId WorldId { get; }
         public SimulationSourceClockId SourceClockId { get; }
         public int TickRate { get; }
-        public SimulationComponentIdentity ProgramRuntime { get; }
-        public NumericProfileId NumericProfileId { get; }
-        public TargetAbiVersion TargetAbiVersion { get; }
-        public OperationSetVersion OperationSetVersion { get; }
+        public SimulationExecutionTargetManifest ExecutionTarget { get; }
+        public NumericProfileId NumericProfileId => ExecutionTarget.NumericProfile.Id;
+        public TargetAbiVersion TargetAbiVersion => ExecutionTarget.NumericProfile.AbiVersion;
+        public OperationSetVersion OperationSetVersion => ExecutionTarget.OperationSetVersion;
         public SimulationComponentIdentity ExecutionBackend { get; }
         public SimulationPipelineIdentity Pipeline { get; }
         public ProgramCatalogHash ProgramCatalogHash { get; private set; }
@@ -130,15 +122,12 @@ namespace ThirdPersonSimulation
         SimulationSessionCompositionIdentity ComputeIdentity()
         {
             return new SimulationSessionCompositionIdentity(StableHash.Compute(
-                "simulation-session-composition/2",
+                "simulation-session-composition/3",
                 SessionId.Value,
                 WorldId.Value,
                 SourceClockId.Value,
                 TickRate.ToString(CultureInfo.InvariantCulture),
-                ProgramRuntime.ToString(),
-                NumericProfileId.Value,
-                TargetAbiVersion.ToString(),
-                OperationSetVersion.Value,
+                ExecutionTarget.Identity.ToString(),
                 ExecutionBackend.ToString(),
                 Pipeline.ToString(),
                 Roster.RosterHash.ToString(),
@@ -152,13 +141,6 @@ namespace ThirdPersonSimulation
                 Model?.ToString() ?? string.Empty,
                 Endpoint?.ToString() ?? string.Empty,
                 Protocol?.ToString() ?? string.Empty));
-        }
-
-        public void AdoptProgramCatalogHash(ProgramCatalogHash programCatalogHash)
-        {
-            if (!programCatalogHash.IsValid)
-                throw new ArgumentException("Program Catalog Hash is invalid.", nameof(programCatalogHash));
-            ProgramCatalogHash = programCatalogHash;
         }
 
         static void RequireRole(SimulationComponentIdentity identity, SimulationComponentRole role, string parameter)

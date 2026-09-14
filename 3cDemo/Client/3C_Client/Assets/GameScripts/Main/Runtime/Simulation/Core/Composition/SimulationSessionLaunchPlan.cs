@@ -164,7 +164,7 @@ namespace ThirdPersonSimulation
 
         public SimulationSessionCompositionDescriptor Descriptor { get; }
         public SimulationCompiledPipelinePlanIdentity CompiledPipeline { get; }
-        public SimulationComponentIdentity ProgramRuntime => Descriptor.ProgramRuntime;
+        public SimulationExecutionTargetManifest ExecutionTarget => Descriptor.ExecutionTarget;
         public SimulationComponentIdentity ExecutionBackend => Descriptor.ExecutionBackend;
         public SimulationComponentIdentity SessionSource => Descriptor.SessionSource;
         public SimulationComponentIdentity WorldSolver => Descriptor.WorldSolver;

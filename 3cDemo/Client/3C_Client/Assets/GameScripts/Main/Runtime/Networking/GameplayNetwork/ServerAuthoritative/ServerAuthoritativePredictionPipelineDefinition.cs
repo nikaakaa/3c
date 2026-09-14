@@ -75,9 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             RequirePasses(descriptor, SimulationPipelinePhase.Schedule,
                 ServerAuthoritativePredictionPassIds.CorrectionSchedule);
             RequirePasses(descriptor, SimulationPipelinePhase.Step,
-                StandardFloat32PipelinePassContracts.ProgramEvaluate.PassId,
-                StandardFloat32PipelinePassContracts.WorldResolveBatch.PassId,
-                StandardFloat32PipelinePassContracts.ProgramFinalize.PassId);
+                StandardFloat32PipelinePassContracts.WorldResolveBatch.PassId);
             RequirePasses(descriptor, SimulationPipelinePhase.Egress,
                 ServerAuthoritativePredictionPassIds.HistoryEgress,
                 ServerAuthoritativePredictionPassIds.OutputDisposition,

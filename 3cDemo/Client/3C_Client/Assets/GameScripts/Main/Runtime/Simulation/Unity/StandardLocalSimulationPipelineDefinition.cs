@@ -27,9 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             RequirePhase(
                 descriptor,
                 SimulationPipelinePhase.Step,
-                StandardFloat32PipelinePassContracts.ProgramEvaluate,
-                StandardFloat32PipelinePassContracts.WorldResolveBatch,
-                StandardFloat32PipelinePassContracts.ProgramFinalize);
+                StandardFloat32PipelinePassContracts.WorldResolveBatch);
             RequirePhase(descriptor, SimulationPipelinePhase.Egress, StandardFloat32PipelinePassContracts.LocalImmediateOutput);
             return descriptor;
         }

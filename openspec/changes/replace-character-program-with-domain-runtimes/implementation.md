@@ -124,6 +124,7 @@
 - `6556051ee`：从公共角色 registration contract 移除 Program epoch、Program binding 和整角色 Program 身份成员。
 - `60a758ef0`：从 Fixed registration contract 移除 Character Program 和 ProgramIdentity 成员。
 - `1a3865f9f`：将保留的 Session checkpoint/replay 合同重命名为 `SimulationSessionCheckpointContracts.cs`，不再用 Epoch 文件名承载旧 adoption。
+- `8f2675c6d`：从 Float32／Fixed 旧 Kernel contracts 中删除 Program-bound Evaluate／Pending／Finalize 请求，把仍由 WorldResolve／Finalize 使用的 BodySample／ActorTickResult 提取为 Step Result 合同。
 
 ## 当前实现边界
 
@@ -139,6 +140,7 @@
 - Ability execution data 现在自持 `OperationExecutionTopology`、`ProgramCatalogRuntimeIndex`；值边缘类型解析已由独立 `GameplayAbilityExecutionValueResolver` 承担。`SimulationExecutionTargetManifest` 只描述数值后端、ABI 和操作集，不再通过 Kernel 提供 Target 身份。
 - 旧 GameplayLab Bootstrap、Session Variant 和空 Editor 程序集已删除；性能采样与网络产品脚本仍引用旧 GameplayLab 类型，属于后续正式角色启动入口的待接线消费者。
 - Session checkpoint/replay 数据结构仍保留，但旧 Program adoption、Actor binding、Program Runtime component 和 Kernel implementation 已退出；Float32/Fixed Pipeline、Host、Network、Rollback 和性能脚本中的旧签名暂时保持错误，后续统一改成领域内容 identity、roster 和状态合同。
+- Float32／Fixed 旧 Kernel 请求合同已经删除，新的领域 Step 请求尚未建立；现有 Step Result 只负责携带已完成状态、Body sample、Motion 和事实／表现／诊断输出，不再暗含 Program binding。
 - Float32／Fixed Control 参数链路的旧 `SimulationActorBinding` wrapper 和 Program adoption 合同已删除；现有 `CharacterPipelineDefinition.ControlParameters`、`CharacterControlRuntimeBinding` 与 `SimulationEvaluateRequest` 仍是待接入的新角色装配材料。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash，后续由角色 Factory 直接把它交给 Control owner。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。

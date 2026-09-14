@@ -216,3 +216,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 这些类型把动作播放、Motion Matching、Source Playable 准备/退休、Linked Fragment 和操作权重都绑在旧 Program Image/Frame Pages/Worker 生命周期上；新的 Pose 图应由原生节点实例、Source 服务和唯一 EventGraph 输入分别持有，不恢复旧 Program 状态总线。
 - 现有脏的 Program Executor/Runtime/Evaluation/Actor 文件及 Presentation 消费者不在本步改动；它们对已删除类型的引用作为下一步断链清单保留。
 - 本步未运行 Unity/Build；当前断链仍是激进删除的中间状态，不能作为完成证据。
+
+## 2026-09-14 r3 删除旧 Operation 页与值页
+
+- 删除 `CharacterPoseNativeOperationPages`、`CharacterPoseInertializationOperationModule`、`CharacterPoseLinkedOperationModule`、`CharacterPoseManagedValuePage`、`CharacterPosePlayerOperationModule`、`CharacterPosePureMath`、`CharacterPoseStateOperationModule` 和 `CharacterPoseValuePageSlice` 及其 `.meta`。
+- 这些类型是旧 Operation 表的页存储、输入输出值页、播放器/状态/Linked/Inertialization 操作适配器和配套数学入口；原生 Graph 不再通过 Operation code、Value page 或 Worker batch 执行节点。
+- 保留外部 `Constraints`、`Final` 和现有 Inertialization/IK 服务文件；它们是算法/发布边界，不随旧 Program 操作适配器一起删除。旧 Executor/Runtime 的脏引用不在本步补兼容。
+- 本步未运行 Unity/Build；当前断链仍是激进删除的中间状态，不能作为完成证据。

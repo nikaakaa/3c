@@ -123,7 +123,7 @@
 - [x] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet。提交 `081ba862b` 增加源Reference项并保留Weight/Ease原曲线链；真实窗口验收仍未完成。
 - [ ] 11.17 按实际调用栈修正Event.Use对Layout/Repaint的错误消费，只处理明确输入事件，保留现有鼠标交互，不屏蔽警告或将其未经证明归为曲线缺失唯一原因
 
-- [x] 11.18 MotionCurveClip保持与其它Clip相同的参数行、DopeSheet和CurveEditor布局；Position X/Y/Z/Yaw作为带`[Ref]`标记的只读源曲线显示，source字段通过正式typed Inspector配置，Timeline不写源资产。提交 `081ba862b` 改为同一Renderer引用项，提交 `a25a05d10` 接通source typed字段，提交 `dfa8a2db3` 将源区间显示映射移回MotionCurveClip正式定义，提交 `f2df9c64e` 修正Keyframe显示副本的值类型拷贝；真实窗口验收仍未完成。
+- [x] 11.18 MotionCurveClip保持与其它Clip相同的参数行、DopeSheet和CurveEditor布局；Position X/Y/Z/Yaw作为带`[Ref]`标记的只读源曲线显示，source字段通过正式typed Inspector配置，Timeline不写源资产。提交 `081ba862b` 改为同一Renderer引用项，提交 `a25a05d10` 接通source typed字段，提交 `dfa8a2db3` 将源区间显示映射移回MotionCurveClip正式定义，提交 `f2df9c64e` 修正Keyframe显示副本的值类型拷贝，提交 `7545f0b22` 保留源区间边界切线；真实窗口验收仍未完成。
 - [x] 11.19 在现有binding/Session内只提交实际变化字段/曲线，空手势不记Undo；分离作者SelfEase与派生OtherEase，删除每次遍历所有Clip回写曲线/字段的路径，保留已有失败回滚（A07）。提交 `48a1d2a72` 已加入HasChanges差异门、SelfEase初始化和曲线等价判断；真实窗口验收仍未完成。
 - [x] 11.20 将Track Muted等正式状态改为同一正式命令提交，禁止先写Source再验revision；Track锁定贯穿本轨Clip的原手势与菜单，锁状态只按已有编辑语义保存（A08）。提交 `48a1d2a72`、`ff70519c2` 已接正式Muted命令、可见锁定按钮和本轨Clip锁定阻断，`e7b22ab74` 让binding重建按AuthoringId恢复锁定视图状态；真实窗口验收仍未完成。
 - [ ] 11.21 原移动/裁剪/缩放/切分准确接入ClipIn、局部曲线及正式源区间含义，Copy即时捕获正式内容，Paste新身份；缺失源操作由原Motion/Warp owner提供，不只改Start/End冒充完整操作（A01/A09）。`0f9448bd9` 和 `adc097652` 已接入ClipIn、Split source range与Formal裁剪草稿；`e3833c11a` 已让native/formal共用原生Clip移动事件算法；移动提交、完整缩放重定时和局部曲线左右段映射仍未完成。

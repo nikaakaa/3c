@@ -50,7 +50,7 @@ TimelineEditorWindow
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
 - 左右轨道共享行高和滚动，曲线展开同步；外层 Timeline 窗口不再添加 Toolbar、SplitView、Runtime 菜单或右侧自制 Inspector，只承载原 `CutsceneEditorSurface`。
 - formal Clip 的时间、Blend、DopeSheet、关键帧和曲线交互全部由原 Slate `ActionClipWindow` / `ActionClipWrapper` 通过 `IEmbeddedTimelineBinding` 接回正式 Session；不再创建 `TimelineFormalClipDetailsView`、MotionWarp/Tree 自制属性面板。
-- native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。轨道列表主体仍待11.1/11.2/11.4继续参数化。
+- native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。Track 行的背景、选中框、颜色标记和局部坐标容器共用 `DrawTrackListRowFrame`，Group 标题共用 `DrawGroupListHeaderFrame`；组列表排序、Track 参数提供者和来源特有命令仍待11.1/11.2/11.4继续参数化。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与 Slate Surface，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；Timeline 窗口只作为 Unity 容器，实际可见编辑 UI 来自原 Slate Surface，均不改变 TimelineData owner，也不引入 Slate 组件树。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
@@ -66,6 +66,7 @@ TimelineEditorWindow
 - 相邻 Clip 的重叠显示仍保留 Slate 图形，但自动把重叠量写入 `BlendIn/BlendOut` 的逻辑只对真实 native Cutscene 生效；formal Ease 只在明确的边缘手势中通过正式 Session 提交，多选删除也直接调用正式 binding。
 - formal 轨道参数绘制恢复原 Slate 行内坐标组；formal Clip 标题只由 `ActionClipWrapper` 统一绘制，底部 DopeSheet 条保留样式但不重复写 Info。`TimelineData.ApplyModify` 使用同一 Undo group，正式 mutation 抛错时回滚 owner 并重新建立序列化绑定。
 - formal 轨道展开高度按当前参数数量和曲线编辑区计算；没有选 Clip 或没有参数时不再预留固定的大块空白，左右列表与时间区仍消费同一 `FinalHeight`。
+- MotionCurve 的源 Reference 显示副本由 `MotionCurveClip` 按正式源区间生成；区间边界优先保留原 key 和切线，没有原 key 时才用邻近切线生成边界，Slate 不再自行改写源曲线插值。
 - formal 局部曲线现在通过原 `DopeSheetRenderer` 编辑真实 keys；`EditorContext` 只提供正式曲线、局部时间、作者游标和 binding 事务回调，不实现 `IKeyable`/Director 运行接口。DopeSheet 的 key 拖动、框选、复制、切线和粘贴都回到同一正式曲线草稿与 Session 提交链。
 - formal Session 在提交后调用正式 `TimelineData.ValidateContent`；`ApplyModify` 以同一 owner Undo group 包住序列化 mutation，失败时回滚并重建绑定，source revision 过期和提交异常通过现有 Timeline Editor 通知反馈。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。

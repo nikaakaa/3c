@@ -856,6 +856,195 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_BindingPage);
         }
 
+        internal CharacterPoseSourceBinding PrepareNativeClipPlayer(
+            CharacterPoseSourceFrameLease lease,
+            AnimationPoseSourceId sourceId,
+            int sourceOwnerIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId,
+            int bindingIndex)
+        {
+            RequirePendingOpen(lease);
+            if (!sourceId.IsValid || sourceOwnerIndex < 0 ||
+                !capture.SourceId.Equals(sourceId) ||
+                capture.CompletionIdentity == 0 ||
+                !poseNodeId.IsValid || bindingIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Native Clip Player source preparation is invalid.");
+            }
+            if (m_BindingPage.CompletionIdentity == 0)
+                BeginBindingFrame(capture.CompletionIdentity);
+            if (m_BindingPage.CompletionIdentity != capture.CompletionIdentity)
+                throw new InvalidOperationException(
+                    "Native Clip Player source binding frame is stale.");
+            CharacterPoseSourceBinding binding =
+                PreparePlayerAndConnect(
+                    sourceId,
+                    sourceOwnerIndex,
+                    clips,
+                    m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
+                        ? default
+                        : m_Catalog.RequireClip(sourceId),
+                    in capture,
+                    poseNodeId);
+            m_BindingPage.BindClip(bindingIndex, in binding);
+            m_PreparedSourceCount++;
+            return binding;
+        }
+
+        internal CharacterPoseSourceBinding PrepareNativeBlendSpacePlayer(
+            CharacterPoseSourceFrameLease lease,
+            AnimationPoseSourceId sourceId,
+            int sourceOwnerIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId,
+            int bindingIndex)
+        {
+            RequirePendingOpen(lease);
+            if (!sourceId.IsValid || sourceOwnerIndex < 0 ||
+                !capture.SourceId.Equals(sourceId) ||
+                capture.CompletionIdentity == 0 ||
+                !poseNodeId.IsValid || bindingIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Native Blend Space Player source preparation is invalid.");
+            }
+            if (m_BindingPage.CompletionIdentity == 0)
+                BeginBindingFrame(capture.CompletionIdentity);
+            if (m_BindingPage.CompletionIdentity != capture.CompletionIdentity)
+                throw new InvalidOperationException(
+                    "Native Blend Space Player source binding frame is stale.");
+            CharacterPoseSourceBinding binding =
+                PreparePlayerAndConnect(
+                    sourceId,
+                    sourceOwnerIndex,
+                    clips,
+                    m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
+                        ? default
+                        : m_Catalog.RequireBlendSpace(bindingIndex),
+                    in capture,
+                    poseNodeId);
+            m_BindingPage.BindBlendSpace(bindingIndex, in binding);
+            m_PreparedSourceCount++;
+            return binding;
+        }
+
+        internal CharacterPoseSourceBinding PrepareNativeSelectedPosePlayer(
+            CharacterPoseSourceFrameLease lease,
+            PresentationPoseSourceSample sample,
+            int sourceOwnerIndex,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId,
+            int bindingIndex)
+        {
+            RequirePendingOpen(lease);
+            if (sample == null || !sample.IsValid ||
+                sample.Availability != PresentationPoseSourceAvailability.Ready ||
+                sample.SourceKind != AnimationPoseSourceKind.MotionMatching ||
+                sourceOwnerIndex < 0 || !poseNodeId.IsValid || bindingIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Native Selected Pose Player source preparation is invalid.");
+            }
+            AnimationPoseSourceId sourceId = new AnimationPoseSourceId(
+                sample.SourceIndex,
+                sample.SourceKind,
+                new AnimationPoseSelectionGeneration(
+                    sample.SourceGeneration.Value));
+            if (!capture.SourceId.Equals(sourceId) ||
+                capture.CompletionIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Native Selected Pose Player source capture is invalid.",
+                    nameof(capture));
+            }
+            if (m_BindingPage.CompletionIdentity == 0)
+                BeginBindingFrame(capture.CompletionIdentity);
+            if (m_BindingPage.CompletionIdentity != capture.CompletionIdentity)
+                throw new InvalidOperationException(
+                    "Native Selected Pose Player source binding frame is stale.");
+            CharacterPoseSourceBinding binding =
+                PreparePlayerAndConnect(
+                    sourceId,
+                    sourceOwnerIndex,
+                    sample.Clips,
+                    m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
+                        ? default
+                        : m_Catalog.RequireMotionMatching(in sample),
+                    in capture,
+                    poseNodeId);
+            m_BindingPage.BindDirect(bindingIndex, in binding);
+            m_PreparedSourceCount++;
+            return binding;
+        }
+
+        internal void PrepareNativeActionSource(
+            CharacterPoseSourceFrameLease lease,
+            in AnimationPoseSampleRequest request,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            RequirePendingOpen(lease);
+            if (!request.IsValid ||
+                request.SourceId.SourceKind != AnimationPoseSourceKind.Timeline ||
+                !capture.SourceId.Equals(request.SourceId) ||
+                capture.CompletionIdentity == 0 ||
+                !poseNodeId.IsValid)
+            {
+                throw new ArgumentException(
+                    "Native Action source preparation is invalid.");
+            }
+            if (m_BindingPage.CompletionIdentity == 0)
+                BeginBindingFrame(capture.CompletionIdentity);
+            if (m_BindingPage.CompletionIdentity != capture.CompletionIdentity)
+                throw new InvalidOperationException(
+                    "Native Action source binding frame is stale.");
+            PrepareActionAndConnect(
+                request,
+                in capture,
+                poseNodeId);
+            m_PreparedSourceCount++;
+        }
+
+        internal void PrepareNativeProviderSource(
+            CharacterPoseSourceFrameLease lease,
+            PresentationPoseSourceSample sample,
+            int sourceOwnerIndex,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            RequirePendingOpen(lease);
+            if (sample == null || !sample.IsValid ||
+                sample.Availability != PresentationPoseSourceAvailability.Ready ||
+                sample.SourceKind != AnimationPoseSourceKind.MotionMatching ||
+                sourceOwnerIndex < 0 || !poseNodeId.IsValid ||
+                capture.CompletionIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Native Provider source preparation is invalid.");
+            }
+            AnimationResolvedPoseSourceSample resolved =
+                ResolveProviderSample(in sample, sourceOwnerIndex);
+            if (!capture.SourceId.Equals(resolved.Request.SourceId))
+                throw new ArgumentException(
+                    "Native Provider source capture is invalid.",
+                    nameof(capture));
+            if (m_BindingPage.CompletionIdentity == 0)
+                BeginBindingFrame(capture.CompletionIdentity);
+            if (m_BindingPage.CompletionIdentity != capture.CompletionIdentity)
+                throw new InvalidOperationException(
+                    "Native Provider source binding frame is stale.");
+            PrepareProviderAndConnect(
+                resolved.Request,
+                sample,
+                in capture,
+                poseNodeId);
+            m_PreparedSourceCount++;
+        }
+
         internal void BeginUsage(ulong completionIdentity) =>
             m_UsagePage.Begin(completionIdentity);
 

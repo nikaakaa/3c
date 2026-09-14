@@ -148,6 +148,7 @@ namespace BTSMTL.Timeline.Runtime
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
+            TimelineRuntimeEvaluationResult evaluation,
             bool completes)
         {
             Owner = owner;
@@ -161,6 +162,7 @@ namespace BTSMTL.Timeline.Runtime
             m_ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
             m_Boundaries = new ReadOnlyCollection<TimelineRuntimeClipBoundary>(
                 new List<TimelineRuntimeClipBoundary>(boundaries ?? Array.Empty<TimelineRuntimeClipBoundary>()));
+            Evaluation = evaluation ?? throw new ArgumentNullException(nameof(evaluation));
             Completes = completes;
         }
 
@@ -174,6 +176,7 @@ namespace BTSMTL.Timeline.Runtime
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIds;
         public IReadOnlyList<TimelineRuntimeClipBoundary> Boundaries => m_Boundaries;
+        public TimelineRuntimeEvaluationResult Evaluation { get; }
         public bool Completes { get; }
     }
 
@@ -197,6 +200,7 @@ namespace BTSMTL.Timeline.Runtime
             ExecutionIdentity = preparation.ExecutionIdentity;
             NumericTarget = preparation.NumericTarget;
             Content = preparation.Content;
+            SourceTimeline = preparation.SourceTimeline;
             PreparedDependencies = preparation.PreparedDependencies;
             PreparedBindings = preparation.PreparedBindings;
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
@@ -209,6 +213,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
+        public TimelineData SourceTimeline { get; }
         public string ContentRevision => Content.ContentHash;
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
@@ -274,6 +279,13 @@ namespace BTSMTL.Timeline.Runtime
                 nextCycle,
                 maxFrame,
                 Content.Loop);
+            TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
+                SourceTimeline,
+                m_CursorFrame,
+                m_Cycle,
+                nextFrame,
+                nextCycle,
+                Content.Loop);
             bool completes = !Content.Loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
@@ -286,6 +298,7 @@ namespace BTSMTL.Timeline.Runtime
                 sectionId,
                 activeClipIds,
                 boundaries,
+                evaluation,
                 completes);
             return m_PendingAdvance;
         }
@@ -502,6 +515,7 @@ namespace BTSMTL.Timeline.Runtime
             string requestId,
             TimelineExecutionIdentity executionIdentity,
             TimelineRuntimeNumericTarget numericTarget,
+            TimelineData sourceTimeline,
             TimelineContentUnit content,
             TimelineBindingPlan bindingPlan,
             TimelineCallInput callInput,
@@ -513,6 +527,7 @@ namespace BTSMTL.Timeline.Runtime
             RequestId = requestId ?? string.Empty;
             ExecutionIdentity = executionIdentity;
             NumericTarget = numericTarget;
+            SourceTimeline = sourceTimeline;
             Content = content;
             BindingPlan = bindingPlan;
             CallInput = callInput;
@@ -525,6 +540,7 @@ namespace BTSMTL.Timeline.Runtime
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
+        public TimelineData SourceTimeline { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content?.ContentHash ?? string.Empty;
         public TimelineBindingPlan BindingPlan { get; }
@@ -556,6 +572,7 @@ namespace BTSMTL.Timeline.Runtime
                 null,
                 null,
                 null,
+                null,
                 new List<string>(errors ?? Array.Empty<string>()).AsReadOnly());
         }
 
@@ -572,6 +589,7 @@ namespace BTSMTL.Timeline.Runtime
                 request.RequestId,
                 request.ExecutionIdentity,
                 request.NumericTarget,
+                request.Timeline,
                 content,
                 bindingPlan,
                 callInput,
@@ -669,5 +687,180 @@ namespace BTSMTL.Timeline.Runtime
                 generation,
                 preparation);
         }
+    }
+
+    public sealed class TimelineRuntimeEvaluationResult
+    {
+        internal TimelineRuntimeEvaluationResult(
+            IReadOnlyList<TimelineAnimationContribution> animations,
+            IReadOnlyList<TimelineMotionCurveContribution> motions,
+            IReadOnlyList<TimelineCameraStateSample> cameraStates,
+            IReadOnlyList<TimelineCameraCueSample> cameraCues,
+            IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
+            IReadOnlyList<TimelineActionCueSample> actionCues)
+        {
+            AnimationContributions = Copy(animations);
+            MotionContributions = Copy(motions);
+            CameraStates = Copy(cameraStates);
+            CameraCues = Copy(cameraCues);
+            CameraResponses = Copy(cameraResponses);
+            ActionCues = Copy(actionCues);
+        }
+
+        public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
+        public IReadOnlyList<TimelineMotionCurveContribution> MotionContributions { get; }
+        public IReadOnlyList<TimelineCameraStateSample> CameraStates { get; }
+        public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
+        public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
+        public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
+
+        static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
+        {
+            return new ReadOnlyCollection<T>(
+                new List<T>(values ?? Array.Empty<T>()));
+        }
+    }
+
+    internal static class TimelineRuntimeEvaluator
+    {
+        public static TimelineRuntimeEvaluationResult Evaluate(
+            TimelineData timeline,
+            int previousFrame,
+            int previousCycle,
+            int currentFrame,
+            int currentCycle,
+            bool loop)
+        {
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            int frameRate = Math.Max(1, TimelineUtility.FrameRate);
+            var animations = new List<TimelineAnimationContribution>();
+            var motions = new List<TimelineMotionCurveContribution>();
+            var cameraStates = new List<TimelineCameraStateSample>();
+            var cameraCues = new List<TimelineCameraCueSample>();
+            var cameraResponses = new List<TimelineCameraResponseSample>();
+            var actionCues = new List<TimelineActionCueSample>();
+            List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
+                previousFrame,
+                previousCycle,
+                currentFrame,
+                currentCycle,
+                Math.Max(0, timeline.MaxFrame),
+                loop,
+                frameRate);
+            for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+            {
+                TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
+                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                {
+                    Track track = timeline.Tracks[trackIndex];
+                    if (track is AnimationTrack animationTrack)
+                    {
+                        animationTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            trackIndex,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            animations,
+                            loop,
+                            segment.Cycle);
+                    }
+                    else if (track is MotionCurveTrack motionTrack)
+                    {
+                        motionTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            motions);
+                    }
+                    else if (track is CameraCueTrack cameraCueTrack)
+                    {
+                        cameraCueTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            cameraCues);
+                    }
+                    else if (track is ActionCueTrack actionCueTrack)
+                    {
+                        actionCueTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            actionCues);
+                    }
+                }
+            }
+            float currentTime = currentFrame / (float)frameRate;
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                if (track is CameraStateTrack cameraStateTrack)
+                    cameraStateTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraStates);
+                else if (track is CameraResponseTrack cameraResponseTrack)
+                    cameraResponseTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResponses);
+            }
+            return new TimelineRuntimeEvaluationResult(
+                animations,
+                motions,
+                cameraStates,
+                cameraCues,
+                cameraResponses,
+                actionCues);
+        }
+
+        static List<TimelineRuntimeEvaluationSegment> BuildSegments(
+            int previousFrame,
+            int previousCycle,
+            int currentFrame,
+            int currentCycle,
+            int maxFrame,
+            bool loop,
+            int frameRate)
+        {
+            var result = new List<TimelineRuntimeEvaluationSegment>();
+            if (!loop || currentCycle == previousCycle || maxFrame <= 0)
+            {
+                result.Add(new TimelineRuntimeEvaluationSegment(
+                    previousFrame / (float)frameRate,
+                    currentFrame / (float)frameRate,
+                    currentCycle));
+                return result;
+            }
+            if (currentCycle - previousCycle > 4096)
+                throw new InvalidOperationException("Timeline evaluation crossed more than 4096 cycles in one Advance.");
+            result.Add(new TimelineRuntimeEvaluationSegment(
+                previousFrame / (float)frameRate,
+                maxFrame / (float)frameRate,
+                previousCycle));
+            for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
+                result.Add(new TimelineRuntimeEvaluationSegment(
+                    0f,
+                    maxFrame / (float)frameRate,
+                    cycle));
+            result.Add(new TimelineRuntimeEvaluationSegment(
+                0f,
+                currentFrame / (float)frameRate,
+                currentCycle));
+            return result;
+        }
+    }
+
+    readonly struct TimelineRuntimeEvaluationSegment
+    {
+        public TimelineRuntimeEvaluationSegment(float previousTime, float currentTime, int cycle)
+        {
+            PreviousTime = previousTime;
+            CurrentTime = currentTime;
+            Cycle = cycle;
+        }
+
+        public float PreviousTime { get; }
+        public float CurrentTime { get; }
+        public int Cycle { get; }
     }
 }

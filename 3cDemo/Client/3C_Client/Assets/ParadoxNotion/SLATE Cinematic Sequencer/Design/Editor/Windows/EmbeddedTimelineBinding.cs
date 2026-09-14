@@ -31,6 +31,7 @@ namespace Slate
         void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame);
         void DeleteSection(IEmbeddedTimelineSectionBinding section);
         void AddSection(int frame);
+        bool CanPasteClip { get; }
         void CopyClip(IEmbeddedTimelineClipBinding clip);
         void PasteClip(IEmbeddedTimelineTrackBinding track, int frame);
         void OpenSource(IEmbeddedTimelineClipBinding clip);

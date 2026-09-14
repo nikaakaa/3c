@@ -267,6 +267,8 @@ namespace BTSMTL.Timeline.Editor
             ApplyImmediate(() => Timeline.AddSection("Section", Mathf.Max(0, frame)), "Add Timeline Section");
         }
 
+        public bool CanPasteClip => m_CopiedClip != null;
+
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {
             m_CopiedClip = clip as BtsmtlTimelineClipBinding;

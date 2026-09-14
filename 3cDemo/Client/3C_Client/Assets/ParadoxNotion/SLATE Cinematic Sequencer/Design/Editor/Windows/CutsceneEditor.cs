@@ -2546,6 +2546,8 @@ namespace Slate
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        if (embeddedTimeline.CanPasteClip)
+                            menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
                         menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
                         menu.ShowAsContext();
                         e.Use();
@@ -4349,10 +4351,10 @@ namespace Slate
                     menu.AddItem(new GUIContent("Cut Clip"), false, () => { CutsceneUtility.CutClip(action); });
                 }
                 else if ( formalClip != null && editor.embeddedTimeline != null ) {
-                    menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => { editor.embeddedTimeline.CopyClip(formalClip); });
+                    menu.AddItem(new GUIContent("Copy Clip"), false, () => { editor.embeddedTimeline.CopyClip(formalClip); });
                 }
                 else if ( editor.embeddedCopyClip != null && action != null ) {
-                    menu.AddItem(new GUIContent("Copy Formal Clip"), false, () => { editor.embeddedCopyClip(action); });
+                    menu.AddItem(new GUIContent("Copy Clip"), false, () => { editor.embeddedCopyClip(action); });
                 }
 
                 if ( allowScale ) {

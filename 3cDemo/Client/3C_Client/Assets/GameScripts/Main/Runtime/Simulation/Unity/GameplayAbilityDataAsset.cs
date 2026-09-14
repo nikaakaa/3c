@@ -15,9 +15,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         [SerializeField] string m_SemanticHash = string.Empty;
         [SerializeField] string m_NumericProfileId = string.Empty;
         [SerializeField] int m_TargetAbiVersion;
-        [SerializeField] string m_ProgramId = string.Empty;
-        [SerializeField] string m_AbilityDataHash = string.Empty;
-        [SerializeField] string m_AbilityLayoutHash = string.Empty;
+        [SerializeField] string m_ExecutionIdentity = string.Empty;
+        [SerializeField] string m_ExecutionDataHash = string.Empty;
+        [SerializeField] string m_StateSchemaHash = string.Empty;
         [SerializeField] string m_CanonicalBytesHash = string.Empty;
         [SerializeField] byte m_RootKind;
         [SerializeField] string m_RootIdentity = string.Empty;
@@ -32,9 +32,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public string SemanticHash => m_SemanticHash;
         public string NumericProfileId => m_NumericProfileId;
         public int TargetAbiVersion => m_TargetAbiVersion;
-        public string ProgramId => m_ProgramId;
-        public string AbilityDataHash => m_AbilityDataHash;
-        public string AbilityLayoutHash => m_AbilityLayoutHash;
+        public string ExecutionIdentity => m_ExecutionIdentity;
+        public string ExecutionDataHash => m_ExecutionDataHash;
+        public string StateSchemaHash => m_StateSchemaHash;
         public string CanonicalBytesHash => m_CanonicalBytesHash;
         public SimulationProgramRootKind RootKind => (SimulationProgramRootKind)m_RootKind;
         public string RootIdentity => m_RootIdentity;
@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 m_RootIdentity,
                 m_EntryIdentity,
                 m_ContentIdentity);
-            return Float32GameplayAbilityExecutionDataLoader.Load(
+            return Float32GameplayAbilityExecutionDataCodec.ReadArtifact(
                 m_CanonicalArtifact,
                 new Float32GameplayAbilityExecutionDataLoadExpectation(
                     m_AbilityGuid,
@@ -63,49 +63,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     m_SemanticHash,
                     m_NumericProfileId,
                     m_TargetAbiVersion,
-                    m_ProgramId,
-                    m_AbilityDataHash,
-                    m_AbilityLayoutHash,
+                    m_ExecutionIdentity,
+                    m_ExecutionDataHash,
+                    m_StateSchemaHash,
                     m_CanonicalBytesHash,
                     root),
                 providerBinding);
         }
 
 #if UNITY_EDITOR
-        public void SetCompiledArtifact(LoadedCharacterTargetProgramArtifact artifact)
+        public void SetCompiledExecutionData(Float32GameplayAbilityExecutionCompilationResult compilation)
         {
-            if (artifact == null)
-                throw new ArgumentNullException(nameof(artifact));
-            CharacterSimulationProgram program = artifact.Program;
-            if (!program.Manifest.Root.IsAbility)
+            if (compilation == null)
+                throw new ArgumentNullException(nameof(compilation));
+            Float32GameplayAbilityExecutionData data = compilation.Data;
+            if (!data.Root.IsAbility)
                 throw new InvalidOperationException("Gameplay Ability Data asset requires an Ability root.");
-            m_AbilityGuid = artifact.Descriptor.DefinitionGuid;
-            m_AbilityId = RequireAbilityId(program.Manifest.Root.EntryIdentity);
-            m_CanonicalArtifact = artifact.CopyCanonicalBytes();
-            m_CompilerVersion = program.Manifest.CompilerVersion;
-            m_OperationSetVersion = program.Manifest.OperationSetVersion.Value;
-            m_SourceRevision = program.Manifest.SourceRevision.Value;
-            m_SemanticHash = program.Manifest.SemanticHash.ToString();
-            m_NumericProfileId = program.Manifest.NumericProfile.Id.Value;
-            m_TargetAbiVersion = program.Manifest.NumericProfile.AbiVersion.Value;
-            m_ProgramId = program.Manifest.ProgramId.Value;
-            m_AbilityDataHash = program.ProgramHash.ToString();
-            m_AbilityLayoutHash = program.LayoutHash.ToString();
-            m_CanonicalBytesHash = artifact.Descriptor.CanonicalBytesHash.ToString();
-            m_RootKind = (byte)program.Manifest.Root.Kind;
-            m_RootIdentity = program.Manifest.Root.RootIdentity;
-            m_EntryIdentity = program.Manifest.Root.EntryIdentity;
-            m_ContentIdentity = program.Manifest.Root.ContentIdentity;
+            m_AbilityGuid = data.Root.RootIdentity;
+            m_AbilityId = data.AbilityId.Value;
+            m_CanonicalArtifact = Float32GameplayAbilityExecutionDataCodec.WriteArtifact(data);
+            m_CompilerVersion = data.CompilerVersion;
+            m_OperationSetVersion = data.OperationSetVersion.Value;
+            m_SourceRevision = data.SourceRevision.Value;
+            m_SemanticHash = data.SemanticHash.ToString();
+            m_NumericProfileId = data.NumericProfile.Id.Value;
+            m_TargetAbiVersion = data.NumericProfile.AbiVersion.Value;
+            m_ExecutionIdentity = data.ExecutionIdentity;
+            m_ExecutionDataHash = data.ContentHash.ToString();
+            m_StateSchemaHash = data.StateSchemaHash.ToString();
+            m_CanonicalBytesHash = Float32GameplayAbilityExecutionDataCodec
+                .ComputeCanonicalBytesHash(m_CanonicalArtifact)
+                .ToString();
+            m_RootKind = (byte)data.Root.Kind;
+            m_RootIdentity = data.Root.RootIdentity;
+            m_EntryIdentity = data.Root.EntryIdentity;
+            m_ContentIdentity = data.Root.ContentIdentity;
         }
 #endif
-
-        static string RequireAbilityId(string entryIdentity)
-        {
-            const string prefix = "ability:";
-            if (string.IsNullOrEmpty(entryIdentity) || !entryIdentity.StartsWith(prefix, StringComparison.Ordinal))
-                throw new InvalidOperationException("Gameplay Ability Data artifact entry identity is invalid.");
-            return new CharacterSkillId(entryIdentity.Substring(prefix.Length)).Value;
-        }
 
     }
 }

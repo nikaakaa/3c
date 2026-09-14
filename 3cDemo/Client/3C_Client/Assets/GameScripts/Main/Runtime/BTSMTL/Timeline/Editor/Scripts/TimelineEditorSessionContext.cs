@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -76,6 +77,11 @@ namespace BTSMTL.Timeline.Editor
     public readonly struct TimelineEditorSelection
     {
         public TimelineEditorSelection(Track track, Clip clip)
+            : this(track, clip, 0UL)
+        {
+        }
+
+        internal TimelineEditorSelection(Track track, Clip clip, ulong revision)
             : this(
                 clip is ITimelineOwnedAuthoringIdentity
                     ? TimelineEditorSelectionKind.TreeClip
@@ -90,11 +96,16 @@ namespace BTSMTL.Timeline.Editor
                 string.Empty,
                 string.Empty,
                 Array.Empty<int>(),
-                0)
+                revision)
         {
         }
 
         public TimelineEditorSelection(TimelineSection section)
+            : this(section, 0UL)
+        {
+        }
+
+        internal TimelineEditorSelection(TimelineSection section, ulong revision)
             : this(
                 section != null ? TimelineEditorSelectionKind.Section : TimelineEditorSelectionKind.None,
                 null,
@@ -102,7 +113,7 @@ namespace BTSMTL.Timeline.Editor
                 section?.AuthoringId ?? string.Empty,
                 string.Empty,
                 Array.Empty<int>(),
-                0)
+                revision)
         {
             Section = section;
         }
@@ -195,11 +206,12 @@ namespace BTSMTL.Timeline.Editor
 
         internal void SetSelection(object target)
         {
+            ulong revision = CurrentRevision();
             TimelineEditorSelection selection = target switch
             {
-                Clip clip => new TimelineEditorSelection(clip.Track, clip),
-                Track track => new TimelineEditorSelection(track, null),
-                TimelineSection section => new TimelineEditorSelection(section),
+                Clip clip => new TimelineEditorSelection(clip.Track, clip, revision),
+                Track track => new TimelineEditorSelection(track, null, revision),
+                TimelineSection section => new TimelineEditorSelection(section, revision),
                 _ => default
             };
             if (selection.Kind == m_Selection.Kind &&
@@ -227,6 +239,14 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_Selection = selection;
             SelectionChanged?.Invoke(m_Selection);
+        }
+
+        ulong CurrentRevision()
+        {
+            string fingerprint = TimelineAuthoringFingerprint.Compute(Timeline);
+            return ulong.TryParse(fingerprint, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong revision)
+                ? revision
+                : 0UL;
         }
 
         public void Apply(Action mutation, string undoName)

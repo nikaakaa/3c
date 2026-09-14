@@ -331,7 +331,8 @@ namespace BTSMTL.Timeline.Runtime
                 loop,
                 boundaries,
                 ExecutionIdentity,
-                Generation);
+                Generation,
+                m_InitialBoundaryPending);
             bool completes = !loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
@@ -1187,7 +1188,8 @@ namespace BTSMTL.Timeline.Runtime
             bool loop,
             IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
             TimelineExecutionIdentity executionIdentity,
-            ulong generation)
+            ulong generation,
+            bool includeStartBoundary)
         {
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
@@ -1245,7 +1247,8 @@ namespace BTSMTL.Timeline.Runtime
                             segment.CurrentTime,
                             timeline.AuthoringId,
                             timeline.Name,
-                            cameraCues);
+                            cameraCues,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f);
                     }
                     else if (track is ActionCueTrack actionCueTrack)
                     {
@@ -1254,7 +1257,8 @@ namespace BTSMTL.Timeline.Runtime
                             segment.CurrentTime,
                             timeline.AuthoringId,
                             timeline.Name,
-                            actionCues);
+                            actionCues,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f);
                     }
                     else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
                     {

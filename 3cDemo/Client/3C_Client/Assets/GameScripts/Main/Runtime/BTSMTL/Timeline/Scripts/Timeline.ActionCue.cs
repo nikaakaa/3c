@@ -27,7 +27,13 @@ namespace BTSMTL.Timeline
     {
         public override string ContractKind => TimelineContractKinds.ActionCueTrack;
 
-        public void Sample(float previousTime, float timelineTime, string sourceId, string sourceName, ICollection<TimelineActionCueSample> cues)
+        public void Sample(
+            float previousTime,
+            float timelineTime,
+            string sourceId,
+            string sourceName,
+            ICollection<TimelineActionCueSample> cues,
+            bool includeStartBoundary = false)
         {
             if (m_PersistentMuted || cues == null)
                 return;
@@ -37,7 +43,8 @@ namespace BTSMTL.Timeline
                 if (clip is not ActionCueClip actionCueClip)
                     continue;
 
-                if (previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
+                if ((includeStartBoundary && Mathf.Abs(actionCueClip.StartTime) <= 0.000001f) ||
+                    previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
                 {
                     cues.Add(new TimelineActionCueSample(
                         sourceId,

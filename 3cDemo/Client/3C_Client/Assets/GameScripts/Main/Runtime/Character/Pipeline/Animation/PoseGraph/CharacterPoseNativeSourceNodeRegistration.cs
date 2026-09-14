@@ -173,9 +173,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 AnimationBlendStackRuntime>
                 stackFactory,
-            Func<PoseNodeId, AnimationPoseSourceId,
+            Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> actionSampleProvider,
-            Func<PoseNodeId, AnimationPoseSourceId,
+            Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 PresentationPoseSourceSample> providerSampleProvider,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer>
@@ -208,9 +210,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 AnimationBlendStackRuntime>
                 stackFactory,
-            Func<PoseNodeId, AnimationPoseSourceId,
+            Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> actionSampleProvider,
-            Func<PoseNodeId, AnimationPoseSourceId,
+            Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 PresentationPoseSourceSample> providerSampleProvider,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer>
@@ -315,9 +319,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 AnimationBlendStackRuntime>
                 m_StackFactory;
-            readonly Func<PoseNodeId, AnimationPoseSourceId,
+            readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
-            readonly Func<PoseNodeId, AnimationPoseSourceId,
+            readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 PresentationPoseSourceSample> m_ProviderSampleProvider;
             readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
@@ -328,9 +334,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     AnimationBlendStackRuntime>
                     stackFactory,
-                Func<PoseNodeId, AnimationPoseSourceId,
+                Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                    AnimationPoseSourceId,
                     AnimationResolvedPoseSourceSample> actionSampleProvider,
-                Func<PoseNodeId, AnimationPoseSourceId,
+                Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                    AnimationPoseSourceId,
                     PresentationPoseSourceSample> providerSampleProvider,
                 Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     CharacterPoseNativeNodePoseBuffer> bufferFactory)
@@ -364,8 +372,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeBlendStackSourceModuleBinding(
                             m_Source,
                             m_SourceLeaseProvider,
-                            m_ActionSampleProvider,
-                            m_ProviderSampleProvider),
+                            (nodeId, sourceId) =>
+                                m_ActionSampleProvider(
+                                    context,
+                                    nodeId,
+                                    sourceId),
+                            (nodeId, sourceId) =>
+                                m_ProviderSampleProvider(
+                                    context,
+                                    nodeId,
+                                    sourceId)),
                         buffer);
                 }
                 catch
@@ -384,9 +400,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 AnimationBlendStackRuntime>
                 m_StackFactory;
-            readonly Func<PoseNodeId, AnimationPoseSourceId,
+            readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
-            readonly Func<PoseNodeId, AnimationPoseSourceId,
+            readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                AnimationPoseSourceId,
                 PresentationPoseSourceSample> m_ProviderSampleProvider;
             readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
@@ -397,9 +415,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     AnimationBlendStackRuntime>
                     stackFactory,
-                Func<PoseNodeId, AnimationPoseSourceId,
+                Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                    AnimationPoseSourceId,
                     AnimationResolvedPoseSourceSample> actionSampleProvider,
-                Func<PoseNodeId, AnimationPoseSourceId,
+                Func<CharacterPoseNativeInstanceContext, PoseNodeId,
+                    AnimationPoseSourceId,
                     PresentationPoseSourceSample> providerSampleProvider,
                 Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     CharacterPoseNativeNodePoseBuffer> bufferFactory)
@@ -435,8 +455,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeBlendStackSourceModuleBinding(
                             m_Source,
                             m_SourceLeaseProvider,
-                            m_ActionSampleProvider,
-                            m_ProviderSampleProvider),
+                            (nodeId, sourceId) =>
+                                m_ActionSampleProvider(
+                                    context,
+                                    nodeId,
+                                    sourceId),
+                            (nodeId, sourceId) =>
+                                m_ProviderSampleProvider(
+                                    context,
+                                    nodeId,
+                                    sourceId)),
                         innerBuffer);
                     outputBuffer = m_BufferFactory(node, context) ??
                         throw new InvalidOperationException(

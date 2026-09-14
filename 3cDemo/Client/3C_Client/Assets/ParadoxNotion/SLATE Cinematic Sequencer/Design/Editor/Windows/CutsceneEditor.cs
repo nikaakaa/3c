@@ -3208,6 +3208,70 @@ namespace Slate
                     getDefaultHeight(track));
         }
 
+        void DrawNativeTimelineTrackPreContent(CutsceneTrack track, Rect trackPosRect, Rect _)
+        {
+            if (track.showCurves)
+            {
+                Handles.DrawLine(
+                    new Vector2(trackPosRect.x, trackPosRect.y + track.defaultHeight),
+                    new Vector2(trackPosRect.xMax, trackPosRect.y + track.defaultHeight));
+            }
+            if (viewTimeMin < 0f)
+                GUI.Box(Rect.MinMaxRect(TimeToPos(viewTimeMin), trackPosRect.yMin, TimeToPos(0f), trackPosRect.yMax), string.Empty);
+            if (track.startTime <= track.parent.startTime && track.endTime >= track.parent.endTime)
+                return;
+            Handles.color = Color.white;
+            GUI.color = Color.black.WithAlpha(0.2f);
+            if (track.startTime > track.parent.startTime)
+            {
+                float start = TimeToPos(track.startTime);
+                var range = Rect.MinMaxRect(TimeToPos(0f), trackPosRect.y, start, trackPosRect.yMax);
+                GUI.DrawTexture(range, whiteTexture);
+                GUI.DrawTextureWithTexCoords(range, Styles.stripes, new Rect(0f, 0f, range.width / 7f, range.height / 7f));
+                Handles.DrawLine(new Vector2(start, trackPosRect.yMin), new Vector2(start, trackPosRect.yMax));
+            }
+            if (track.endTime < track.parent.endTime)
+            {
+                float end = TimeToPos(track.endTime);
+                var range = Rect.MinMaxRect(end, trackPosRect.y, TimeToPos(length), trackPosRect.yMax);
+                GUI.DrawTexture(range, whiteTexture);
+                GUI.DrawTextureWithTexCoords(range, Styles.stripes, new Rect(0f, 0f, range.width / 7f, range.height / 7f));
+                Handles.DrawLine(new Vector2(end, trackPosRect.yMin), new Vector2(end, trackPosRect.yMax));
+            }
+            GUI.color = Color.white;
+            Handles.color = Color.white;
+        }
+
+        void DrawNativeTimelineTrackOverlay(CutsceneTrack track, Rect trackPosRect)
+        {
+            if (!track.isActive)
+            {
+                GUI.color = Color.black.WithAlpha(0.2f);
+                GUI.DrawTexture(trackPosRect, whiteTexture);
+                GUI.DrawTextureWithTexCoords(trackPosRect, Styles.stripes, new Rect(0f, 0f, trackPosRect.width / 5f, trackPosRect.height / 5f));
+                GUI.color = Color.white;
+            }
+            if (track.isLocked)
+            {
+                GUI.color = Color.black.WithAlpha(0.15f);
+                GUI.DrawTextureWithTexCoords(trackPosRect, Styles.stripes, new Rect(0f, 0f, trackPosRect.width / 20f, trackPosRect.height / 20f));
+                GUI.color = Color.white;
+            }
+            if (!isProSkin)
+                return;
+            string overlayLabel = !track.isActive && track.isLocked
+                ? "DISABLED & LOCKED"
+                : !track.isActive
+                    ? "DISABLED"
+                    : track.isLocked
+                        ? "LOCKED"
+                        : null;
+            if (string.IsNullOrEmpty(overlayLabel))
+                return;
+            GUI.Label(trackPosRect, string.Format("<b>{0}</b>", overlayLabel), Styles.centerLabel);
+            GUI.color = Color.white;
+        }
+
         string FormalInspectionKey(IEmbeddedTimelineTrackBinding track)
         {
             return string.Concat(
@@ -3283,126 +3347,33 @@ namespace Slate
 
 
                 //TRACKS
-                for ( int t = 0; t < group.tracks.Count; t++ ) {
-                    var track = group.tracks[t];
-                    var yPos = nextYPos;
-                    var trackPosRect = Rect.MinMaxRect(Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(track.startTime)), yPos, TimeToPos(viewTimeMax), yPos + track.finalHeight);
-                    var trackTimeRect = Rect.MinMaxRect(Mathf.Max(viewTimeMin, track.startTime), 0, viewTimeMax, 0);
-                    nextYPos += track.finalHeight + TRACK_MARGINS;
-
-                    //GRAPHICS
-                    GUI.color = Color.black.WithAlpha(isProSkin ? 0.06f : 0.1f);
-                    GUI.DrawTexture(trackPosRect, whiteTexture);
-                    Handles.color = ColorUtility.Grey(isProSkin ? 0.15f : 0.4f);
-                    Handles.DrawLine(new Vector2(TimeToPos(viewTimeMin), trackPosRect.y + 1), new Vector2(trackPosRect.xMax, trackPosRect.y + 1));
-                    Handles.DrawLine(new Vector2(TimeToPos(viewTimeMin), trackPosRect.yMax), new Vector2(trackPosRect.xMax, trackPosRect.yMax));
-                    if ( track.showCurves ) {
-                        Handles.DrawLine(new Vector2(trackPosRect.x, trackPosRect.y + track.defaultHeight), new Vector2(trackPosRect.xMax, trackPosRect.y + track.defaultHeight));
-                    }
-                    Handles.color = Color.white;
-                    if ( viewTimeMin < 0 ) { //just visual clarity
-                        GUI.Box(Rect.MinMaxRect(TimeToPos(viewTimeMin), trackPosRect.yMin, TimeToPos(0), trackPosRect.yMax), string.Empty);
-                    }
-                    if ( track.startTime > track.parent.startTime || track.endTime < track.parent.endTime ) {
-                        Handles.color = Color.white;
-                        GUI.color = Color.black.WithAlpha(0.2f);
-                        if ( track.startTime > track.parent.startTime ) {
-                            var tStart = TimeToPos(track.startTime);
-                            var r = Rect.MinMaxRect(TimeToPos(0), yPos, tStart, yPos + track.finalHeight);
-                            GUI.DrawTexture(r, whiteTexture);
-                            GUI.DrawTextureWithTexCoords(r, Styles.stripes, new Rect(0, 0, r.width / 7, r.height / 7));
-                            var a = new Vector2(tStart, trackPosRect.yMin);
-                            var b = new Vector2(a.x, trackPosRect.yMax);
-                            Handles.DrawLine(a, b);
-                        }
-                        if ( track.endTime < track.parent.endTime ) {
-                            var tEnd = TimeToPos(track.endTime);
-                            var r = Rect.MinMaxRect(tEnd, yPos, TimeToPos(length), yPos + track.finalHeight);
-                            GUI.DrawTexture(r, whiteTexture);
-                            GUI.DrawTextureWithTexCoords(r, Styles.stripes, new Rect(0, 0, r.width / 7, r.height / 7));
-                            var a = new Vector2(tEnd, trackPosRect.yMin);
-                            var b = new Vector2(a.x, trackPosRect.yMax);
-                            Handles.DrawLine(a, b);
-                        }
-                        GUI.color = Color.white;
-                        Handles.color = Color.white;
-                    }
-                    GUI.backgroundColor = Color.white;
-
-                    //highlight selected track
-                    if ( ReferenceEquals(CutsceneUtility.selectedObject, track) ) {
-                        GUI.color = Color.grey;
-                        GUI.Box(trackPosRect.ExpandBy(0, 2), string.Empty, Styles.hollowFrameHorizontalStyle);
-                        GUI.color = Color.white;
-                    }
-                    //
-
-                    if (track.isLocked &&
-                        (e.type == EventType.MouseDown ||
-                         e.type == EventType.MouseDrag ||
-                         e.type == EventType.MouseUp ||
-                         e.type == EventType.ContextClick) &&
-                        trackPosRect.Contains(e.mousePosition))
-                        e.Use();
-
-                    //...
-                    var cursorTime = SnapTime(PosToTime(mousePosition.x));
-                    track.OnTrackTimelineGUI(trackPosRect, trackTimeRect, cursorTime, TimeToPos);
-                    //...
-
-                    if ( !track.isActive || track.isLocked ) {
-
-                        postWindowsGUI += () =>
+                for (int trackIndex = 0; trackIndex < group.tracks.Count; trackIndex++)
+                {
+                    CutsceneTrack track = group.tracks[trackIndex];
+                    float y = nextYPos;
+                    DrawTimelineTrack(
+                        e,
+                        centerRect,
+                        g,
+                        trackIndex,
+                        y,
+                        track,
+                        value => value.startTime,
+                        value => value.endTime,
+                        value => value.finalHeight,
+                        value => value.defaultHeight,
+                        value => value.isActive,
+                        value => value.isLocked,
+                        value => ReferenceEquals(CutsceneUtility.selectedObject, value),
+                        value => value.clips.Select(clip => (IClipEditorBinding)new NativeClipEditorBinding(clip)).ToArray(),
+                        (value, trackPosRect, trackTimeRect) => DrawNativeTimelineTrackPreContent(value, trackPosRect, trackTimeRect),
+                        (value, trackPosRect, trackTimeRect) =>
                         {
-                            //overlay dark stripes for disabled tracks
-                            if ( !track.isActive ) {
-                                GUI.color = Color.black.WithAlpha(0.2f);
-                                GUI.DrawTexture(trackPosRect, whiteTexture);
-                                GUI.DrawTextureWithTexCoords(trackPosRect, Styles.stripes, new Rect(0, 0, ( trackPosRect.width / 5 ), ( trackPosRect.height / 5 )));
-                                GUI.color = Color.white;
-                            }
-
-                            //overlay light stripes for locked tracks
-                            if ( track.isLocked ) {
-                                GUI.color = Color.black.WithAlpha(0.15f);
-                                GUI.DrawTextureWithTexCoords(trackPosRect, Styles.stripes, new Rect(0, 0, trackPosRect.width / 20, trackPosRect.height / 20));
-                                GUI.color = Color.white;
-                            }
-
-                            if ( isProSkin ) {
-                                string overlayLabel = null;
-                                if ( !track.isActive && track.isLocked ) {
-                                    overlayLabel = "DISABLED & LOCKED";
-                                } else {
-                                    if ( !track.isActive ) { overlayLabel = "DISABLED"; }
-                                    if ( track.isLocked ) { overlayLabel = "LOCKED"; }
-                                }
-                                var size = Styles.centerLabel.CalcSize(new GUIContent(overlayLabel));
-                                var bgLabelRect = new Rect(0, 0, size.x, size.y);
-                                bgLabelRect.center = trackPosRect.center;
-                                GUI.Label(trackPosRect, string.Format("<b>{0}</b>", overlayLabel), Styles.centerLabel);
-                                GUI.color = Color.white;
-                            }
-                        };
-                    }
-
-
-                    var nativeClipBindings = new IClipEditorBinding[track.clips.Count];
-                    for (int clipIndex = 0; clipIndex < track.clips.Count; clipIndex++)
-                        nativeClipBindings[clipIndex] = new NativeClipEditorBinding(track.clips[clipIndex]);
-                    for (int clipIndex = 0; clipIndex < nativeClipBindings.Length; clipIndex++)
-                        DrawTimelineClip(
-                            centerRect,
-                            yPos,
-                            g,
-                            t,
-                            clipIndex,
-                            nativeClipBindings[clipIndex],
-                            clipIndex > 0 ? nativeClipBindings[clipIndex - 1] : null,
-                            clipIndex + 1 < nativeClipBindings.Length ? nativeClipBindings[clipIndex + 1] : null,
-                            nativeClipBindings,
-                            track.isActive,
-                            track.defaultHeight);
+                            float cursorTime = SnapTime(PosToTime(mousePosition.x));
+                            value.OnTrackTimelineGUI(trackPosRect, trackTimeRect, cursorTime, TimeToPos);
+                        },
+                        (value, trackPosRect) => DrawNativeTimelineTrackOverlay(value, trackPosRect));
+                    nextYPos += track.finalHeight + TRACK_MARGINS;
                 }
 
                 //highligh selected group

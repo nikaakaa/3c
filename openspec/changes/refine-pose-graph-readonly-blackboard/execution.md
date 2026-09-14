@@ -146,6 +146,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 校验失败保留 `FailureCode` 与图/节点/端口路径，不能读旧 Image 或默认姿态继续运行。
 - Runtime 工程未发现本步新增错误；完整 Editor 依赖链仍被共享 Ability 文件 `GameplayAbilityDataAsset.cs:81` 的 `Float32GameplayAbilityExecutionData.FromProgram` 缺失成员阻断，编译后已执行 `dotnet build-server shutdown`。
 
+## 2026-09-14 r3 角色边界解析收口
+
+- 原生校验不再把序列化的 `m_Role` 当作唯一边界真相；当前资产的目录图角色值仍可能全部为 `AnimGraph`，但根图、状态图和 Body/Linked/Subgraph 边界由图引用关系确定。
+- 根图与状态图要求唯一 `Output Pose`；被 StateMachine/子图/Entry 引用的边界图要求唯一 `Graph Output`。这样可以识别角色边界，同时不修改现有 Pose 资产和作者显示命名。
+- 本步静态编译通过，0 errors；编译结束已执行 `dotnet build-server shutdown`。尚未运行 Unity、Build、Play 或资源刷新。
+
 ## 2026-09-14 r3 原生图实例与阶段驱动外壳
 
 - `CharacterPoseNativeGraphRuntime.cs` 建立按准备绑定创建的独立 Graph 实例，使用 FlowCanvas `Manual` 更新模式挂载原生 Runtime，并提供 `BeginFrame -> Prepare -> Evaluate -> Commit/Discard -> Stop/Dispose` 阶段门禁。

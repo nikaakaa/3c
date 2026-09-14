@@ -22,6 +22,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal static class CharacterPoseNativeGraphValidator
     {
+        enum BoundaryKind : byte
+        {
+            Root = 1,
+            State = 2,
+            Boundary = 3
+        }
+
         internal static void RequireValid(
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterPoseCanvasGraph root)
@@ -30,12 +37,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Fail(CharacterPoseNativeFailureCode.GraphMissing, "Pose", "Pose graph asset or root graph is missing.");
             var visiting = new HashSet<PoseGraphId>();
             var visited = new HashSet<PoseGraphId>();
-            ValidateGraph(graphAsset, root, visiting, visited);
+            ValidateGraph(graphAsset, root, BoundaryKind.Root, visiting, visited);
         }
 
         static void ValidateGraph(
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterPoseCanvasGraph graph,
+            BoundaryKind boundary,
             ISet<PoseGraphId> visiting,
             ISet<PoseGraphId> visited)
         {
@@ -136,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
 
                 EnsureAcyclic(graph, nodes, indegree, outgoing);
-                ValidateBoundary(graph, nodes);
+                ValidateBoundary(graph, nodes, boundary);
                 ValidateReferencedGraphs(graphAsset, graph, nodes, visiting, visited);
             }
             catch (CharacterPoseNativeGraphValidationException)
@@ -205,16 +213,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateBoundary(
             CharacterPoseCanvasGraph graph,
-            IReadOnlyList<CharacterPoseCanvasNode> nodes)
+            IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            BoundaryKind boundary)
         {
             int outputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int graphOutputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            bool graphBoundary = graph.Role == CharacterPoseAuthoringGraphRole.Subgraph ||
-                graph.Role == CharacterPoseAuthoringGraphRole.LinkedPoseEntry ||
-                graph.Role == CharacterPoseAuthoringGraphRole.AnimationLayer ||
-                graph.Role == CharacterPoseAuthoringGraphRole.ControlRig;
-            if ((!graphBoundary && (outputCount != 1 || graphOutputCount != 0)) ||
-                (graphBoundary && (graphOutputCount != 1 || outputCount != 0)))
+            bool graphBoundary = boundary == BoundaryKind.Boundary;
+            bool rootOrState = boundary == BoundaryKind.Root || boundary == BoundaryKind.State;
+            if ((!rootOrState || outputCount != 1 || graphOutputCount != 0) &&
+                (!graphBoundary || graphOutputCount != 1 || outputCount != 0))
             {
                 Fail(
                     CharacterPoseNativeFailureCode.GraphInvalid,
@@ -243,6 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ValidateGraph(
                             graphAsset,
                             graphAsset.RequireGraph(state.PoseGraphId),
+                            BoundaryKind.State,
                             visiting,
                             visited);
                 }
@@ -251,6 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ValidateGraph(
                         graphAsset,
                         graphAsset.RequireGraph(subgraph.Subgraph.PoseGraphId),
+                        BoundaryKind.Boundary,
                         visiting,
                         visited);
                 }
@@ -259,6 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ValidateGraph(
                         graphAsset,
                         graphAsset.RequireGraph(motionMatching.EntryGraph.PoseGraphId),
+                        BoundaryKind.Boundary,
                         visiting,
                         visited);
                 }

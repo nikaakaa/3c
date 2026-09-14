@@ -265,9 +265,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 new[] { Schedule },
                 new[]
                 {
-                    StandardFixedPipelinePassContracts.ProgramEvaluate,
+                    StandardFixedPipelinePassContracts.AbilityEvaluate,
                     StandardFixedPipelinePassContracts.WorldResolveBatch,
-                    StandardFixedPipelinePassContracts.ProgramFinalize,
+                    StandardFixedPipelinePassContracts.AbilityFinalize,
                     History
                 },
                 new[] { HashEgress, OutputDisposition });

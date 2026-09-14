@@ -60,6 +60,7 @@ namespace Slate
     {
         bool IsActive { get; set; }
         bool ShowCurves { get; set; }
+        float CustomHeight { get; set; }
         Color Color { get; }
         float StartTime { get; }
         float EndTime { get; }

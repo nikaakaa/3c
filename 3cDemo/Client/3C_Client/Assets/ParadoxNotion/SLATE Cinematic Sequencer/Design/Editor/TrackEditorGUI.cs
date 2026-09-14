@@ -393,6 +393,32 @@ namespace Slate
             if (!track.ShowCurves)
                 return;
 
+            CutsceneEditorSurface surface = CutsceneEditorSurface.current;
+            if (surface != null)
+            {
+                Rect resizeRect = Rect.MinMaxRect(0f, trackRect.height - 4f, trackRect.width, trackRect.height);
+                UnityEditor.EditorGUIUtility.AddCursorRect(resizeRect, UnityEditor.MouseCursor.ResizeVertical);
+                if (e.type == EventType.MouseDown && e.button == 0 && resizeRect.Contains(e.mousePosition) &&
+                    surface.EmbeddedTimeline != null && !surface.EmbeddedTimeline.IsReadOnly)
+                {
+                    surface.BeginEmbeddedTrackResize(track);
+                    e.Use();
+                }
+                if (surface.IsEmbeddedTrackResizing(track))
+                {
+                    if (e.type == EventType.MouseDrag)
+                    {
+                        track.CustomHeight = track.FinalHeight + e.delta.y;
+                        e.Use();
+                    }
+                    if (e.rawType == EventType.MouseUp)
+                    {
+                        surface.EndEmbeddedTrackResize();
+                        e.Use();
+                    }
+                }
+            }
+
             var expansionRect = Rect.MinMaxRect(5, track.DefaultHeight, trackRect.width - 3, track.FinalHeight - 3);
             GUI.color = UnityEditor.EditorGUIUtility.isProSkin ? new Color(0.22f, 0.22f, 0.22f) : new Color(0.7f, 0.7f, 0.7f);
             GUI.DrawTexture(expansionRect, Styles.whiteTexture);

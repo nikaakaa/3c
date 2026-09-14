@@ -496,6 +496,10 @@ namespace BTSMTL.Timeline.Editor
                     .Where(clip => clip.IsLocked)
                     .Select(clip => clip.AuthoringId),
                 StringComparer.Ordinal);
+            var customHeights = m_Tracks.Values.ToDictionary(
+                track => track.AuthoringId,
+                track => track.CustomHeight,
+                StringComparer.Ordinal);
             m_Groups.Clear();
             m_Sections.Clear();
             m_Tracks.Clear();
@@ -511,6 +515,8 @@ namespace BTSMTL.Timeline.Editor
                 var track = new BtsmtlTimelineTrackBinding(this, group, source);
                 track.ShowCurves = expandedTracks.Contains(source.AuthoringId);
                 track.IsLocked = lockedTracks.Contains(source.AuthoringId);
+                if (customHeights.TryGetValue(source.AuthoringId, out float customHeight))
+                    track.CustomHeight = customHeight;
                 group.AddTrack(track);
                 m_Tracks[source.AuthoringId] = track;
                 for (int clipIndex = 0; clipIndex < source.Clips.Count; clipIndex++)
@@ -752,6 +758,7 @@ namespace BTSMTL.Timeline.Editor
         sealed class BtsmtlTimelineTrackBinding : IEmbeddedTimelineTrackBinding
         {
             readonly List<IEmbeddedTimelineClipBinding> m_Clips = new List<IEmbeddedTimelineClipBinding>();
+            float m_CustomHeight;
             public BtsmtlTimelineTrackBinding(BtsmtlSlateTimelineBinding owner, BtsmtlTimelineGroupBinding group, Track source)
             {
                 Owner = owner;
@@ -766,6 +773,11 @@ namespace BTSMTL.Timeline.Editor
             public bool IsActive { get => !Source.PersistentMuted; set => Source.PersistentMuted = !value; }
             public bool IsLocked { get; set; }
             public bool ShowCurves { get; set; }
+            public float CustomHeight
+            {
+                get => m_CustomHeight;
+                set => m_CustomHeight = Mathf.Clamp(value, DefaultHeight + 32f, 600f);
+            }
             public Color Color => Source.Color();
             public float StartTime => 0f;
             public float EndTime => Owner.Length;
@@ -779,7 +791,7 @@ namespace BTSMTL.Timeline.Editor
                     IEmbeddedTimelineClipBinding clip = SelectedClip;
                     if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
                         return DefaultHeight + 32f;
-                    return DefaultHeight + 4f + clip.Parameters.Count * 20f + 120f;
+                    return Mathf.Max(DefaultHeight + 4f + clip.Parameters.Count * 20f + 120f, m_CustomHeight);
                 }
             }
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;

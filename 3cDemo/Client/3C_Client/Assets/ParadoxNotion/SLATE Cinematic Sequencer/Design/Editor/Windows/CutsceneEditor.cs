@@ -375,6 +375,7 @@ namespace Slate
         [System.NonSerialized] private System.Action postWindowsGUI;
         [System.NonSerialized] private Dictionary<string, string> formalInspectedParameters;
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalPickedTrack;
+        [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalResizingTrack;
         [System.NonSerialized] private IEmbeddedTimelineSectionBinding formalDraggedSection;
         [System.NonSerialized] private bool formalSelectionHandled;
 
@@ -548,6 +549,27 @@ namespace Slate
             CommitEditTransaction();
         }
 
+        internal void BeginEmbeddedTrackResize(IEmbeddedTimelineTrackBinding track)
+        {
+            if (embeddedTimeline == null || embeddedTimeline.IsReadOnly || track == null)
+                return;
+            formalResizingTrack = track;
+            BeginEmbeddedEdit("Resize Timeline Track");
+        }
+
+        internal bool IsEmbeddedTrackResizing(IEmbeddedTimelineTrackBinding track)
+        {
+            return ReferenceEquals(formalResizingTrack, track);
+        }
+
+        internal void EndEmbeddedTrackResize()
+        {
+            if (formalResizingTrack == null)
+                return;
+            formalResizingTrack = null;
+            CommitEmbeddedEdit();
+        }
+
         public static float CurrentSnapInterval {
             get
             {
@@ -619,6 +641,7 @@ namespace Slate
 
         void CancelEditTransaction() {
             if ( !editTransactionActive ) { return; }
+            formalResizingTrack = null;
             editTransactionActive = false;
             editTransactionButton = -1;
             if (embeddedTimeline != null)
@@ -786,6 +809,7 @@ namespace Slate
             multiSelection = null;
             formalInspectedParameters = new Dictionary<string, string>(System.StringComparer.Ordinal);
             formalPickedTrack = null;
+            formalResizingTrack = null;
             formalDraggedSection = null;
             cutscene = null;
         }
@@ -944,6 +968,7 @@ namespace Slate
             embeddedTimeline = null;
             formalInspectedParameters = null;
             formalPickedTrack = null;
+            formalResizingTrack = null;
             formalDraggedSection = null;
             embeddedSurface = false;
             if (ReferenceEquals(current, this))

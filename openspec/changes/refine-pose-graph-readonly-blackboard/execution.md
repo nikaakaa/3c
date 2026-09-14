@@ -172,3 +172,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativeSourceDemand` 拒绝同一图调用内同一节点的重复 Source request，保证一个播放器/资源准备只对应一个节点 demand，不恢复旧全图 Operation index 消重。
 - `CharacterPoseNativeGraphRuntime.PrepareChild` 为 State/ControlRig/Linked Pose 子图生成同一资源、Rig 和 EventGraph 输入合同下的独立准备请求；子图后续通过独立 `InstanceId/ResetGeneration` 采用，不复制父图执行计划。
 - `CharacterPoseNativeFrameInput` 在合同入口冻结动作命令数组，保证 Prepare 到 Evaluate 期间使用同一帧动作输入；Body/Facts/EventGraph/Pose 数据仍由各自只读合同持有，不复制整份姿态缓冲。
+
+## 2026-09-14 r3 激进裁剪同步
+
+- 并行提交 `a31c27b79` 已删除约 10,974 行 Pose/Timeline 旧编译链，包含 `CharacterPoseCompilerModule`、Pose Closure/Topology/Typed Lowering、ValueLifetime、Stage Schedule、Worker Batch、ProgramImage Seal 及旧 Timeline Semantic Compiler/Emitter；本记录只登记已发生的结构变化，不重复删除这些文件。
+- 旧 Runtime 载体仍有残留：`CharacterPoseProgramImage`、`CharacterPoseProgramExecutionView`、`CharacterPoseProgramExecutor`、`CharacterPoseProgramRuntime`、`AnimationPoseNativeWorkspace` 和 Worker Scheduler 仍被 `CharacterPresentationRuntime`/Pose Runtime 引用。它们尚未具备删除证据，下一刀是切换这些消费者到原生 Graph/Source/Constraint/Publication 接口。
+- 因此当前状态是“旧编译入口已激进裁掉、旧运行载体正在断链迁移”，不能宣称 Pose Runtime 已完成或旧链已全部删除。

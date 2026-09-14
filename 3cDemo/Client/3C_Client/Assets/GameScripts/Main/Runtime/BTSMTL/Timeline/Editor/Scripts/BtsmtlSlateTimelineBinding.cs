@@ -28,6 +28,7 @@ namespace BTSMTL.Timeline.Editor
         int m_CurrentFrame;
         float m_ViewTimeMin;
         float m_ViewTimeMax;
+        Vector2 m_PopupPosition;
 
         public BtsmtlSlateTimelineBinding(
             TimelineEditorOpenRequest request,
@@ -178,6 +179,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly)
                 return;
+            CapturePopupPosition();
             var menu = new GenericMenu();
             foreach (TimelineTrackContract contract in ContractCatalog.Tracks)
             {
@@ -193,6 +195,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
+            CapturePopupPosition();
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
         }
 
@@ -523,7 +526,7 @@ namespace BTSMTL.Timeline.Editor
 
         void ShowTrackCreationPopup(string kind, bool requiresFields)
         {
-            PopupWindow.Show(new Rect(0, 0, 1, 1), new TimelineTrackCreationPopup(
+            PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineTrackCreationPopup(
                 kind,
                 DisplayKind(kind),
                 requiresFields,
@@ -590,11 +593,18 @@ namespace BTSMTL.Timeline.Editor
                 EndFrame = frame + Mathf.Max(1, FrameRate / 20),
                 DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20)
             };
-            PopupWindow.Show(new Rect(0, 0, 1, 1), new TimelineClipCreationPopup(
+            PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineClipCreationPopup(
                 request,
                 motionClipIds,
                 Timeline.ExternalBindings,
                 CreateClip));
+        }
+
+        void CapturePopupPosition()
+        {
+            Event currentEvent = Event.current;
+            if (currentEvent != null)
+                m_PopupPosition = GUIUtility.GUIToScreenPoint(currentEvent.mousePosition);
         }
 
         bool CreateClip(TimelineClipCreationRequest request)

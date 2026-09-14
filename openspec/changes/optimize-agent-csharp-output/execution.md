@@ -2,34 +2,42 @@
 
 ## 范围
 
-本次只改 Agent C# authoring 的输出上下文、源码组织、写盘、响应和薄适配；正式 Graph、FSM、Timeline、Pose、Motion、Camera 模型与运行规则不变。
+本次只改 Agent C# authoring 的输出上下文、源码组织、写盘、响应和薄适配；正式 Graph、FSM、Timeline、Pose、Motion、Camera 模型与运行规则不由本变更接管。
 
 ## 代码链
 
-- BtsmtlAuthoringCodeExportContext 记录正式对象变量、局部文件边界、类型化外部引用和阶段语句。
-- BtsmtlAuthoringCodeSourceBuilder 输出一个入口、同目录 partial 局部文件和必要的资源加载方法；入口按原阶段顺序调用局部方法，跨文件对象只通过一次性执行状态传递。
-- BtsmtlAuthoringCodeFileWriter 逐文件比较 UTF-8 内容；不变文件不写盘，修改文件不触碰已有 .meta，只在入口所属专属目录清理退役 .cs 与 .meta。
-- btsmtl.export_code 返回入口、文件集、分区、字节数和创建/修改/未变/删除清单；诊断附带输出文件路径。
-- generate_assets 仍只执行一个精确已编译入口，辅助 partial 文件由当前 Unity 编译关联接续，不新增 manifest 或第二入口。
+- BtsmtlAuthoringCodeExportContext 记录正式对象、类型化外部引用、局部文件边界和阶段语句。
+- Skill 与 Timeline 的成员、默认/覆盖语义、连接配置、owner/placement 和创建分派由正式作者合同提供，适配器只负责把当前实例值编码成 C# 调用。
+- BtsmtlAuthoringCodeSourceBuilder 生成短入口、根局部实现和按正式维护边界划分的阶段局部文件；私有对象留在局部变量中，跨局部连接才进入最小 *Parts 结果。
+- 写盘器逐文件比较 UTF-8 内容；不变文件不写，正常修改不触碰已有 .meta，明确生成目录内的退役源码、文件 .meta、空目录和目录 .meta 会被清理。
+- btsmtl.export_code 与 btsmtl.generate_assets 仍是唯一两个显式作者入口；局部文件只是同一入口的编译依赖，不产生第二入口或中转模型。
 
-## 已采用输出迁移
+## 已完成源码
 
-已通过正式 btsmtl.export_code 重导并迁移到 Generated/<Root>/<Root>.cs：
+- 6dc126b0a 补齐作者核心描述合同：新增 Skill 字段/连接合同、图闭包 placement owner、Timeline 属性/引用合同及必要程序集依赖。
+- b78b5309f 压缩作者局部生成输出：删除按 emission 阶段和连续块展开的包装，改为根构建、阶段构建和收尾连接；移除无用外部资源分区接口。
+- bf0c3a36d 更新作者技能使用规范：同步核心合同驱动、短入口、阶段文件和局部结果的使用规则。
+- 已修复通用 C# 值编码器对可为空无运行时类型值的空值处理，并修复 Timeline 属性值正式类型包装和临时 catalog 变量命名。
 
-- Corin Attack Ability：入口加 5 个 Stage、10 个 Condition、5 个 Timeline 局部文件，共 21 个文件。
-- Corin Dodge Back / Dodge Forward Ability：各 4 个文件。
-- Corin Attack / Dodge Admission Profile：各 1 个入口文件。
-- Locomotion Pose Graph：入口、局部 Slot 文件和 Graph 局部文件，共 3 个文件。
-- Corin Animation EventGraph：1 个入口文件。
+## 输出迁移状态
 
-旧平铺入口及其 .meta 已删除；各专属目录的源码和 .meta 成对保留。MotionCurve 仍只使用正式 RootMotionCurveAsset 引用，没有恢复逐帧曲线或 CurveEndFrame。
+此前多文件版本的 Attack 基线为 21 个文件、254719 字节、入口 819 行。该布局不是本轮最终结果。
 
-## 编译边界
+本轮已经清理 Attack 专属目录中的旧入口、Conditions/Stages/Timelines 源码和空布局目录，等待同一 Unity Editor 会话恢复后由正式 btsmtl.export_code 从当前资产完整重建。当前未把上一次旧编译入口产生的中间输出当作最终源码统计，也未勾选第 4～5 节任务。
 
-使用：
+正式重导完成后需要记录同一导出范围的总字节数、入口字节数、阶段局部文件数及一次局部修改涉及的文件，不能只报文件数量。
 
-dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false /p:BuildProjectReferences=false -clp:ErrorsOnly
+## 当前编译与连接边界
 
-结果：0 个错误、32 个警告；随后执行 dotnet build-server shutdown。当前 Unity Console 的剩余错误来自并行模拟模块的编译索引/类型变更，不属于本次 authoring 输出代码。
+已确认：
 
-本次未新增测试代码、回放任务或自动端到端验收。
+- BTSMTL.Timeline.Tree.csproj：0 个错误、0 个警告。
+- ThirdPersonClient.Runtime.csproj：最近一次成功编译为 0 个错误、1 个警告。
+- Editor 侧 CodeGeneration 源在排除已知旧生成文件后曾通过静态编译；完整项目当前受并行 Simulation 状态迁移的外部编译/引用错误影响，未宣称全项目通过。
+- Unity Editor 进程仍在运行，但当前 MCP 服务会话没有注册实例。官方 CLI 已确认服务可达、实例为空；CLI 当前没有 connect 或 start-session 子命令。未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
+
+因此当前缺少的是正式 Editor 会话恢复和随后由两个显式 MCP 完成的全量生成源码迁移，不是另建一个生成路径来绕过该边界。
+
+## 验收边界
+
+本次不新增测试、回放或手动验证任务。静态编译、Unity Console、正式 export_code/generate_assets、Play/E2E 分别表示不同证据；在 Unity 会话恢复并完成全量重导前，不报告本变更完成。

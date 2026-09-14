@@ -116,6 +116,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             IReadOnlyDictionary<BtsmtlSkillNativeStateMachine, FlowGraph> machineOwners = closure.MachineOwners;
             IReadOnlyList<TimelineAsset> timelines = closure.Timelines;
             IReadOnlyDictionary<TimelineAsset, FlowGraph> timelineOwners = closure.TimelineOwners;
+            IReadOnlyList<TimelineAsset> privateTimelines = timelines
+                .Where(value => BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(value, root))
+                .ToList();
             RegisterGraphs(context, graphs, root, graphOwners, closure.GraphPlacementOwners);
             RegisterMachines(context, machines, machineOwners, root, graphOwners, closure.GraphPlacementOwners);
             RegisterTimelines(context, timelines, timelineOwners, root, graphOwners, closure.GraphPlacementOwners);
@@ -132,13 +135,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             EmitMachineCreation(context, machines, machineOwners);
             EmitTimelineCreation(context, timelines, timelineOwners, root);
             EmitMachineNodeCreation(context, machines);
-            EmitTimelineContentCreation(context, timelines);
+            EmitTimelineContentCreation(context, privateTimelines);
             EmitGraphConfiguration(context, graphs);
             EmitMachineConfiguration(context, machines);
-            EmitTimelineConfiguration(context, timelines);
+            EmitTimelineConfiguration(context, privateTimelines);
             EmitGraphConnections(context, graphs);
             EmitMachineConnections(context, machines);
-            EmitPrune(context, graphs, machines, timelines);
+            EmitPrune(context, graphs, machines, privateTimelines);
             context.AddStatement(
                 BtsmtlAuthoringCodeEmissionPhase.RootBinding,
                 $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.BindAbilityRoot(context, {Variable(context, root, root.AuthoringId)});");

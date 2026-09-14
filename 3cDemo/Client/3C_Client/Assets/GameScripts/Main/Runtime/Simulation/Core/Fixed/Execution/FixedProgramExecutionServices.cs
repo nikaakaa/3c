@@ -100,7 +100,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.TimelinePlayback,
                 ProgramStateSemantic.TimelineLoop,
                 ProgramStateSemantic.TimelineTreeClipCycle,
-                ProgramStateSemantic.TimelineRetentionIdentity,
                 ProgramStateSemantic.TimelineLogicTime);
             MotionModifierPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.MotionWarpActive,

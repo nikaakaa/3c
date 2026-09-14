@@ -484,7 +484,7 @@ namespace ThirdPersonSimulation
 			var locomotion = new Float32LocomotionRuntime(access, m_Values, m_Motion, m_Frame, controlRuntimeBinding);
 			var camera = new Float32CameraOperationRuntime(access, m_Frame.Presentation);
             Float32StatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
-            var timelineControlState = new Float32TimelineControlStatePort(access, timelineState);
+            var timelineControlState = new Float32TimelineControlStatePort(access, timelineState, m_Frame.Transaction);
             var timelineTarget = new Float32TimelineTargetLeaf(
                 access,
                 timelineState,

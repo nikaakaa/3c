@@ -246,6 +246,7 @@ namespace ThirdPersonSimulation.Fixed
 		readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
 		readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
 		readonly List<FixedActionInstanceState> m_ActionInstances;
+		readonly Dictionary<int, FixedActionInstanceReference> m_TimelineRetainedActionContexts;
 		readonly CharacterControlRuntimeState m_ControlState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
@@ -262,6 +263,7 @@ namespace ThirdPersonSimulation.Fixed
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<FixedActionInstanceState> actionInstances,
+			IReadOnlyDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -278,6 +280,7 @@ namespace ThirdPersonSimulation.Fixed
 			m_InputRequests = CopyInputRequests(layout.InputRequestIds, inputRequests);
 			m_ActionActivationRequests = CopyActionActivationRequests(layout, actionActivationRequests);
 			m_ActionInstances = CopyActionInstances(layout, actionInstances);
+			m_TimelineRetainedActionContexts = CopyTimelineRetainedActionContexts(layout, timelineRetainedActionContexts);
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
 			if (gameplayEffectEnabled)
@@ -328,6 +331,7 @@ namespace ThirdPersonSimulation.Fixed
 		internal IReadOnlyDictionary<string, SimulationInputRequestState> InputRequests => m_InputRequests;
 		internal IReadOnlyList<SimulationActionActivationRequestState> ActionActivationRequests => m_ActionActivationRequests;
 		internal IReadOnlyList<FixedActionInstanceState> ActionInstances => m_ActionInstances;
+		internal IReadOnlyDictionary<int, FixedActionInstanceReference> TimelineRetainedActionContexts => m_TimelineRetainedActionContexts;
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
@@ -391,7 +395,7 @@ namespace ThirdPersonSimulation.Fixed
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), Array.Empty<SimulationActionActivationRequestState>(), Array.Empty<FixedActionInstanceState>(), controlState, gameplayEffectState, equipmentState);
+			return Create(program, layout, 0, values, 0, 0, 0, new GameplayAbilityExecutionAggregate<CharacterStateValue>(), CreateEmptyInputRequests(layout.InputRequestIds), Array.Empty<SimulationActionActivationRequestState>(), Array.Empty<FixedActionInstanceState>(), new Dictionary<int, FixedActionInstanceReference>(), controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -406,6 +410,7 @@ namespace ThirdPersonSimulation.Fixed
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<FixedActionInstanceState> actionInstances,
+			IReadOnlyDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
@@ -433,7 +438,7 @@ namespace ThirdPersonSimulation.Fixed
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -466,6 +471,7 @@ namespace ThirdPersonSimulation.Fixed
 			IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
 			IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests,
 			IReadOnlyList<FixedActionInstanceState> actionInstances,
+			IReadOnlyDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -484,7 +490,7 @@ namespace ThirdPersonSimulation.Fixed
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -511,6 +517,7 @@ namespace ThirdPersonSimulation.Fixed
 				InputRequests,
 				ActionActivationRequests,
 				ActionInstances,
+				TimelineRetainedActionContexts,
 				ControlState,
 				m_GameplayEffectState,
 				m_EquipmentState);
@@ -565,6 +572,23 @@ namespace ThirdPersonSimulation.Fixed
 					throw new InvalidDataException($"Character Action instance state exceeds Action '{action.ActionId}' capacity.");
 				counts[action.ActionId] = count + 1;
 				result.Add(action);
+			}
+			return result;
+		}
+
+		static Dictionary<int, FixedActionInstanceReference> CopyTimelineRetainedActionContexts(
+			ProgramExecutionLayout layout,
+			IReadOnlyDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts)
+		{
+			if (timelineRetainedActionContexts == null)
+				throw new ArgumentNullException(nameof(timelineRetainedActionContexts));
+			var result = new Dictionary<int, FixedActionInstanceReference>();
+			foreach (KeyValuePair<int, FixedActionInstanceReference> pair in timelineRetainedActionContexts)
+			{
+				if (!layout.HasTimelineRetention(new OperationHandle(pair.Key)) || !pair.Value.IsValid)
+					throw new InvalidDataException("Character Timeline retained Action context is invalid.");
+				if (!result.TryAdd(pair.Key, pair.Value))
+					throw new InvalidDataException("Character Timeline retained Action context is duplicated.");
 			}
 			return result;
 		}

@@ -253,6 +253,8 @@ namespace ThirdPersonSimulation
             List<SimulationActionActivationRequestState> actionActivationRequestsSnapshot,
             bool hadActionInstancesWorking,
             List<Float32ActionInstanceState> actionInstancesSnapshot,
+            bool hadTimelineRetainedActionContextsWorking,
+            Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContextsSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -274,6 +276,8 @@ namespace ThirdPersonSimulation
             ActionActivationRequestsSnapshot = actionActivationRequestsSnapshot;
             HadActionInstancesWorking = hadActionInstancesWorking;
             ActionInstancesSnapshot = actionInstancesSnapshot;
+            HadTimelineRetainedActionContextsWorking = hadTimelineRetainedActionContextsWorking;
+            TimelineRetainedActionContextsSnapshot = timelineRetainedActionContextsSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -296,6 +300,8 @@ namespace ThirdPersonSimulation
         internal List<SimulationActionActivationRequestState> ActionActivationRequestsSnapshot { get; }
         internal bool HadActionInstancesWorking { get; }
         internal List<Float32ActionInstanceState> ActionInstancesSnapshot { get; }
+        internal bool HadTimelineRetainedActionContextsWorking { get; }
+        internal Dictionary<int, Float32ActionInstanceReference> TimelineRetainedActionContextsSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -327,6 +333,7 @@ namespace ThirdPersonSimulation
         Dictionary<string, SimulationInputRequestState> m_InputRequestsWorking;
         List<SimulationActionActivationRequestState> m_ActionActivationRequestsWorking;
         List<Float32ActionInstanceState> m_ActionInstancesWorking;
+        Dictionary<int, Float32ActionInstanceReference> m_TimelineRetainedActionContextsWorking;
         Float32CharacterStateTransactionStatus m_Status;
 
         Float32CharacterStateTransaction(
@@ -496,6 +503,31 @@ namespace ThirdPersonSimulation
             m_ActionInstancesWorking = new List<Float32ActionInstanceState>(actions);
         }
 
+        public Float32ActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation)
+        {
+            RequireActive();
+            if (!m_Layout.HasTimelineRetention(operation))
+                throw new InvalidOperationException($"Character has no Timeline retained Action context for '{operation}'.");
+            if (m_TimelineRetainedActionContextsWorking != null &&
+                m_TimelineRetainedActionContextsWorking.TryGetValue(operation.Value, out Float32ActionInstanceReference working))
+                return working;
+            return m_BaseState.TimelineRetainedActionContexts.TryGetValue(operation.Value, out Float32ActionInstanceReference value)
+                ? value
+                : default;
+        }
+
+        public void SetTimelineRetainedActionContext(OperationHandle operation, Float32ActionInstanceReference value)
+        {
+            RequireActive();
+            if (!m_Layout.HasTimelineRetention(operation))
+                throw new InvalidOperationException($"Character has no Timeline retained Action context for '{operation}'.");
+            m_TimelineRetainedActionContextsWorking ??= CloneTimelineRetainedActionContexts(m_BaseState.TimelineRetainedActionContexts);
+            if (value.IsValid)
+                m_TimelineRetainedActionContextsWorking[operation.Value] = value;
+            else
+                m_TimelineRetainedActionContextsWorking.Remove(operation.Value);
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -587,6 +619,8 @@ namespace ThirdPersonSimulation
                 m_ActionActivationRequestsWorking == null ? null : new List<SimulationActionActivationRequestState>(m_ActionActivationRequestsWorking),
                 m_ActionInstancesWorking != null,
                 m_ActionInstancesWorking == null ? null : new List<Float32ActionInstanceState>(m_ActionInstancesWorking),
+                m_TimelineRetainedActionContextsWorking != null,
+                m_TimelineRetainedActionContextsWorking == null ? null : CloneTimelineRetainedActionContexts(m_TimelineRetainedActionContextsWorking),
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -634,6 +668,9 @@ namespace ThirdPersonSimulation
             m_ActionInstancesWorking = savepoint.HadActionInstancesWorking
                 ? new List<Float32ActionInstanceState>(savepoint.ActionInstancesSnapshot)
                 : null;
+            m_TimelineRetainedActionContextsWorking = savepoint.HadTimelineRetainedActionContextsWorking
+                ? CloneTimelineRetainedActionContexts(savepoint.TimelineRetainedActionContextsSnapshot)
+                : null;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -680,6 +717,7 @@ namespace ThirdPersonSimulation
             IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests = m_InputRequestsWorking ?? m_BaseState.InputRequests;
             IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests = m_ActionActivationRequestsWorking ?? m_BaseState.ActionActivationRequests;
             IReadOnlyList<Float32ActionInstanceState> actionInstances = m_ActionInstancesWorking ?? m_BaseState.ActionInstances;
+            IReadOnlyDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = m_TimelineRetainedActionContextsWorking ?? m_BaseState.TimelineRetainedActionContexts;
 
             try
             {
@@ -694,6 +732,7 @@ namespace ThirdPersonSimulation
                     inputRequests,
                     actionActivationRequests,
                     actionInstances,
+                    timelineRetainedActionContexts,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -784,6 +823,7 @@ namespace ThirdPersonSimulation
             m_InputRequestsWorking = null;
             m_ActionActivationRequestsWorking = null;
             m_ActionInstancesWorking = null;
+            m_TimelineRetainedActionContextsWorking = null;
         }
 
         static Dictionary<string, SimulationInputRequestState> CloneInputRequests(
@@ -791,6 +831,15 @@ namespace ThirdPersonSimulation
         {
             var result = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
             foreach (KeyValuePair<string, SimulationInputRequestState> pair in source)
+                result.Add(pair.Key, pair.Value);
+            return result;
+        }
+
+        static Dictionary<int, Float32ActionInstanceReference> CloneTimelineRetainedActionContexts(
+            IReadOnlyDictionary<int, Float32ActionInstanceReference> source)
+        {
+            var result = new Dictionary<int, Float32ActionInstanceReference>();
+            foreach (KeyValuePair<int, Float32ActionInstanceReference> pair in source)
                 result.Add(pair.Key, pair.Value);
             return result;
         }

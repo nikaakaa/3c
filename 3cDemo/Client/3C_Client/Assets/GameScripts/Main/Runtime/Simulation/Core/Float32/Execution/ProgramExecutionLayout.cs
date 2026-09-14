@@ -90,7 +90,8 @@ namespace ThirdPersonSimulation
         readonly HashSet<string> m_InputRequests;
         readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
-        readonly IReadOnlyDictionary<int, TypedStateAddress> m_TimelineRetention;
+        readonly HashSet<int> m_TimelineRetentionOperations;
+        readonly int[] m_TimelineRetentionOperationIds;
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
@@ -145,9 +146,10 @@ namespace ThirdPersonSimulation
                 m_TypedAddresses,
                 out m_InputRequests,
                 out m_ActionCapacities,
-                out m_TimelineRetention,
+                out m_TimelineRetentionOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             m_InputRequestIds = m_InputRequests.OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            m_TimelineRetentionOperationIds = m_TimelineRetentionOperations.OrderBy(value => value).ToArray();
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -405,12 +407,10 @@ namespace ThirdPersonSimulation
                 ? capacity
                 : throw new InvalidOperationException($"Program has no Action '{actionId}' capacity.");
 
-        public TypedStateAddress RequireTimelineRetention(OperationHandle timeline)
-        {
-            if (!timeline.IsValid || !m_TimelineRetention.TryGetValue(timeline.Value, out TypedStateAddress address))
-                throw new InvalidOperationException($"Timeline '{timeline}' has no retained Action reference.");
-            return address;
-        }
+        internal IReadOnlyList<int> TimelineRetentionOperationIds => m_TimelineRetentionOperationIds;
+
+        internal bool HasTimelineRetention(OperationHandle timeline) =>
+            timeline.IsValid && m_TimelineRetentionOperations.Contains(timeline.Value);
 
         public bool TryGetActionTargetSnapshot(OperationHandle operation, out TypedStateAddress address)
         {
@@ -589,12 +589,12 @@ namespace ThirdPersonSimulation
             TypedStateAddress[] addresses,
             out HashSet<string> inputRequests,
             out IReadOnlyDictionary<string, int> actionCapacities,
-            out IReadOnlyDictionary<int, TypedStateAddress> timelineRetention,
+            out HashSet<int> timelineRetentionOperations,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new HashSet<string>(StringComparer.Ordinal);
             var capacities = new Dictionary<string, int>(StringComparer.Ordinal);
-            var timeline = new Dictionary<int, TypedStateAddress>();
+            var timeline = new HashSet<int>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             for (int i = 0; i < program.CatalogEntries.Count; i++)
             {
@@ -619,16 +619,16 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"Action '{actionId}' is duplicated.");
             }
 
+            for (int i = 0; i < program.Operations.Count; i++)
+                if (program.Operations[i].Code == SimulationOperationCode.Timeline)
+                    timeline.Add(i);
+
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
                 ProgramStateSlot slot = program.StateSlots[i];
                 TypedStateAddress address = addresses[i];
                 switch (slot.Semantic)
                 {
-                    case ProgramStateSemantic.TimelineRetentionIdentity:
-                        int operation = ParseOperationOwner(slot.OwnerIdentity);
-                        AddUnique(timeline, operation, address, "Timeline retention");
-                        break;
                     case ProgramStateSemantic.BlackboardValue when slot.ValueKind == ProgramStateValueKind.ActionTargetSnapshot:
                         AddUnique(targets, slot.OwnerIdentity, address, "Action target snapshot");
                         break;
@@ -637,7 +637,7 @@ namespace ThirdPersonSimulation
 
             inputRequests = inputs;
             actionCapacities = capacities;
-            timelineRetention = timeline;
+            timelineRetentionOperations = timeline;
             actionTargetSnapshots = targets;
         }
 
@@ -655,17 +655,6 @@ namespace ThirdPersonSimulation
                 return constant.Text;
             }
             return string.Empty;
-        }
-
-        static int ParseOperationOwner(string ownerIdentity)
-        {
-            const string prefix = "operation:";
-            if (ownerIdentity == null || !ownerIdentity.StartsWith(prefix, StringComparison.Ordinal) ||
-                !int.TryParse(ownerIdentity.Substring(prefix.Length), out int value) || value < 0)
-            {
-                throw new InvalidDataException($"State owner '{ownerIdentity}' is not an operation identity.");
-            }
-            return value;
         }
 
         static string TrimPrefix(string value, string prefix)

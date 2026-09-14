@@ -8,11 +8,16 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedProgramAccess m_Access;
         readonly FixedStatePort m_State;
+        readonly FixedCharacterStateTransaction m_Transaction;
 
-        public FixedTimelineControlStatePort(FixedProgramAccess access, FixedStatePort state)
+        public FixedTimelineControlStatePort(
+            FixedProgramAccess access,
+            FixedStatePort state,
+            FixedCharacterStateTransaction transaction)
         {
             m_Access = access ?? throw new ArgumentNullException(nameof(access));
             m_State = state ?? throw new ArgumentNullException(nameof(state));
+            m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         }
 
         public TimelinePlaybackStatus ReadPlayback(OperationHandle operation) =>
@@ -66,9 +71,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public TimelineActionContextIdentity ReadRetainedActionContext(OperationHandle operation)
         {
-            FixedActionInstanceReference value = m_State
-                .Get(Require(operation, ProgramStateSemantic.TimelineRetentionIdentity))
-                .ActionInstanceReference;
+            FixedActionInstanceReference value = m_Transaction.GetTimelineRetainedActionContext(operation);
             return value.IsValid
                 ? new TimelineActionContextIdentity(
                     value.ActionId,
@@ -93,9 +96,7 @@ namespace ThirdPersonSimulation.Fixed
                     identity.SkillEntryOperation,
                     identity.SkillExecutionGeneration)
                 : default;
-            m_State.Set(
-                Require(operation, ProgramStateSemantic.TimelineRetentionIdentity),
-                CharacterStateValue.FromActionInstanceReference(value));
+            m_Transaction.SetTimelineRetainedActionContext(operation, value);
         }
 
         int Find(OperationHandle operation, ProgramStateSemantic semantic) =>

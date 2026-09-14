@@ -99,7 +99,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.TimelinePlayback,
                 ProgramStateSemantic.TimelineLoop,
                 ProgramStateSemantic.TimelineTreeClipCycle,
-                ProgramStateSemantic.TimelineRetentionIdentity,
                 ProgramStateSemantic.TimelineLogicTime);
             MotionModifierPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.MotionWarpActive,

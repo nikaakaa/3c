@@ -7,11 +7,16 @@ namespace ThirdPersonSimulation
     {
         readonly Float32ProgramAccess m_Access;
         readonly Float32StatePort m_State;
+        readonly Float32CharacterStateTransaction m_Transaction;
 
-        public Float32TimelineControlStatePort(Float32ProgramAccess access, Float32StatePort state)
+        public Float32TimelineControlStatePort(
+            Float32ProgramAccess access,
+            Float32StatePort state,
+            Float32CharacterStateTransaction transaction)
         {
             m_Access = access ?? throw new ArgumentNullException(nameof(access));
             m_State = state ?? throw new ArgumentNullException(nameof(state));
+            m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         }
 
         public TimelinePlaybackStatus ReadPlayback(OperationHandle operation) =>
@@ -65,9 +70,7 @@ namespace ThirdPersonSimulation
 
         public TimelineActionContextIdentity ReadRetainedActionContext(OperationHandle operation)
         {
-            Float32ActionInstanceReference value = m_State
-                .Get(Require(operation, ProgramStateSemantic.TimelineRetentionIdentity))
-                .ActionInstanceReference;
+            Float32ActionInstanceReference value = m_Transaction.GetTimelineRetainedActionContext(operation);
             return value.IsValid
                 ? new TimelineActionContextIdentity(
                     value.ActionId,
@@ -92,9 +95,7 @@ namespace ThirdPersonSimulation
                     identity.SkillEntryOperation,
                     identity.SkillExecutionGeneration)
                 : default;
-            m_State.Set(
-                Require(operation, ProgramStateSemantic.TimelineRetentionIdentity),
-                CharacterStateValue.FromActionInstanceReference(value));
+            m_Transaction.SetTimelineRetainedActionContext(operation, value);
         }
 
         int Find(OperationHandle operation, ProgramStateSemantic semantic) =>

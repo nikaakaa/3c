@@ -10,9 +10,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-        const int Version = 27;
-        public const string CodecIdentity = "character-state/fixed-q32.32/v26";
-        const string HashIdentity = "character-state-hash/fixed-q32.32/v24";
+        const int Version = 28;
+        public const string CodecIdentity = "character-state/fixed-q32.32/v27";
+        const string HashIdentity = "character-state-hash/fixed-q32.32/v25";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -42,6 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             WriteInputRequests(writer, state.InputRequests, layout.InputRequestIds);
             WriteActionActivationRequests(writer, state.ActionActivationRequests, layout);
             WriteActionInstances(writer, state.ActionInstances, layout);
+            WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts, layout);
             writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
@@ -81,6 +82,7 @@ namespace ThirdPersonSimulation.Fixed
             Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, layout.InputRequestIds);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, layout);
             List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, layout);
+            Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, layout);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -115,7 +117,7 @@ namespace ThirdPersonSimulation.Fixed
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -356,6 +358,69 @@ namespace ThirdPersonSimulation.Fixed
         {
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             List<FixedActionInstanceState> values = ReadActionInstances(reader, layout);
+            reader.RequireComplete();
+            return values;
+        }
+
+        static void WriteTimelineRetentions(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<int, FixedActionInstanceReference> values,
+            ProgramExecutionLayout layout)
+        {
+            IReadOnlyList<int> operationIds = layout.TimelineRetentionOperationIds;
+            writer.WriteInt32(operationIds.Count);
+            for (int i = 0; i < operationIds.Count; i++)
+            {
+                int operation = operationIds[i];
+                writer.WriteInt32(operation);
+                if (values.TryGetValue(operation, out FixedActionInstanceReference value))
+                {
+                    writer.WriteBoolean(true);
+                    WriteActionReference(writer, value);
+                }
+                else
+                    writer.WriteBoolean(false);
+            }
+        }
+
+        static Dictionary<int, FixedActionInstanceReference> ReadTimelineRetentions(
+            CanonicalReader reader,
+            ProgramExecutionLayout layout)
+        {
+            IReadOnlyList<int> operationIds = layout.TimelineRetentionOperationIds;
+            int count = reader.ReadInt32();
+            if (count != operationIds.Count)
+                throw new InvalidDataException("Character Timeline retained Action context count does not match its runtime binding.");
+            var values = new Dictionary<int, FixedActionInstanceReference>();
+            for (int i = 0; i < count; i++)
+            {
+                int operation = reader.ReadInt32();
+                if (operation != operationIds[i])
+                    throw new InvalidDataException("Character Timeline retained Action context order does not match its runtime binding.");
+                if (!reader.ReadBoolean())
+                    continue;
+                FixedActionInstanceReference value = ReadActionReference(reader);
+                if (!values.TryAdd(operation, value))
+                    throw new InvalidDataException("Character Timeline retained Action context is duplicated.");
+            }
+            return values;
+        }
+
+        internal static byte[] WriteTimelineRetentions(
+            IReadOnlyDictionary<int, FixedActionInstanceReference> values,
+            ProgramExecutionLayout layout)
+        {
+            using var writer = new CanonicalWriter();
+            WriteTimelineRetentions(writer, values, layout);
+            return writer.ToArray();
+        }
+
+        internal static Dictionary<int, FixedActionInstanceReference> ReadTimelineRetentions(
+            byte[] bytes,
+            ProgramExecutionLayout layout)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            Dictionary<int, FixedActionInstanceReference> values = ReadTimelineRetentions(reader, layout);
             reader.RequireComplete();
             return values;
         }

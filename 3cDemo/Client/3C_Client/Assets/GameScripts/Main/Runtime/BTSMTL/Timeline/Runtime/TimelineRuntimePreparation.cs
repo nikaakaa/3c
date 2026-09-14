@@ -675,6 +675,7 @@ namespace BTSMTL.Timeline.Runtime
 
         internal static TimelineRuntimePreparationResult Ready(
             TimelineRuntimePrepareRequest request,
+            TimelineData sourceTimeline,
             TimelineContentUnit content,
             TimelineBindingPlan bindingPlan,
             TimelineCallInput callInput,
@@ -686,7 +687,7 @@ namespace BTSMTL.Timeline.Runtime
                 request.RequestId,
                 request.ExecutionIdentity,
                 request.NumericTarget,
-                request.Timeline,
+                sourceTimeline,
                 content,
                 bindingPlan,
                 callInput,
@@ -751,8 +752,11 @@ namespace BTSMTL.Timeline.Runtime
                         request.ExecutionIdentity,
                         request.NumericTarget,
                         errors);
+                TimelineData sourceTimeline = request.Timeline.Clone();
+                sourceTimeline.Init();
                 return TimelineRuntimePreparationResult.Ready(
                     request,
+                    sourceTimeline,
                     discovery.Content,
                     bindingPlan,
                     callInput,

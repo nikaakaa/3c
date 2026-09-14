@@ -315,6 +315,8 @@ namespace BTSMTL.Timeline.Runtime
         ulong m_NextGeneration = 1;
         bool m_Disposed;
 
+        public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged;
+
         public TimelineRuntimeService(
             ITimelineRuntimePlaybackRequestFactory requestFactory,
             ITimelineRuntimeStepConsumer stepConsumer,
@@ -363,6 +365,7 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             m_Playbacks.Add(runtimeHandle.Value, playback);
             handle = new TimelinePlaybackHandle(runtimeHandle.Value);
+            Publish(playback);
             return true;
         }
 
@@ -410,6 +413,7 @@ namespace BTSMTL.Timeline.Runtime
                     committedStopConsumer.CommitStop(request);
                 if (!playback.CompleteStop())
                     throw new InvalidOperationException($"Timeline playback '{handle.Value}' Stop could not complete.");
+                Publish(playback);
             }
             catch
             {
@@ -437,6 +441,7 @@ namespace BTSMTL.Timeline.Runtime
                 handle,
                 generation);
             m_Playbacks.Add(handle.Value, playback);
+            Publish(playback);
             return handle;
         }
 
@@ -457,10 +462,12 @@ namespace BTSMTL.Timeline.Runtime
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            return TimelineRuntimeStepCoordinator.Step(
+            TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
                 playback,
                 new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames),
                 m_StepConsumer);
+            Publish(playback);
+            return result;
         }
 
         public TimelineRuntimeAdvanceResult Step(
@@ -469,10 +476,12 @@ namespace BTSMTL.Timeline.Runtime
             int deltaFrames)
         {
             EnsureAvailable();
-            return TimelineRuntimeStepCoordinator.Step(
+            TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
                 Require(handle),
                 new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames),
                 m_StepConsumer);
+            Publish(Require(handle));
+            return result;
         }
 
         public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
@@ -518,6 +527,7 @@ namespace BTSMTL.Timeline.Runtime
                     snapshot.StopContext))
                 throw new InvalidOperationException("Timeline playback Restore state is not a committed state.");
             m_Playbacks.Add(snapshot.Handle.Value, playback);
+            Publish(playback);
             return playback;
         }
 
@@ -635,6 +645,11 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(TimelineRuntimeService));
+        }
+
+        void Publish(TimelineRuntimePlayback playback)
+        {
+            PlaybackChanged?.Invoke(new TimelineRuntimePlaybackDescriptor(playback));
         }
     }
 }

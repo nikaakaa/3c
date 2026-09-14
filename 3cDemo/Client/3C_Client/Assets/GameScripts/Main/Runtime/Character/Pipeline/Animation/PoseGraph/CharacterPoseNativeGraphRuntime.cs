@@ -83,6 +83,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
+        readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
+            new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
             new HashSet<CharacterPoseNativePortKey>();
         CharacterPoseCanvasGraph m_Graph;
@@ -93,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeSourceDemand m_SourceDemand;
         CharacterPoseNativeEvaluationResult m_Evaluation;
         CharacterPoseNativePortValue m_LastCommittedOutput;
+        CharacterPoseNativeFrameLineage m_LastCommittedLineage;
         CharacterPoseNativeExecutionStage m_Stage;
         ulong m_NextCompletionIdentity = 1;
         bool m_Initialized;
@@ -237,6 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceDemand = default;
             m_Evaluation = default;
             m_OutputCache.Clear();
+            m_Observations.Clear();
             m_Evaluating.Clear();
             m_Stage = CharacterPoseNativeExecutionStage.Frame;
             m_Evaluator.BeginFrame(this, in input, in m_CompletedLineage);
@@ -339,6 +343,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Stage = CharacterPoseNativeExecutionStage.Commit;
                 m_Evaluator.CommitFrame(this, in m_CompletedLineage, evaluation.Output);
                 m_LastCommittedOutput = evaluation.Output;
+                m_CommittedObservations.Clear();
+                foreach (KeyValuePair<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> observation in m_Observations)
+                    m_CommittedObservations.Add(observation.Key, observation.Value);
+                m_LastCommittedLineage = m_CompletedLineage;
                 CharacterPoseNativePublicationResult result = new CharacterPoseNativePublicationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Committed,
@@ -355,6 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     this,
                     in m_CompletedLineage,
                     CharacterPoseNativeFailureCode.PublicationFailed);
+                m_Observations.Clear();
                 CloseFrame();
                 return new CharacterPoseNativePublicationResult(
                     in m_CompletedLineage,
@@ -374,6 +383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (reason == CharacterPoseNativeFailureCode.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
             m_Evaluator.DiscardFrame(this, in m_CompletedLineage, reason);
+            m_Observations.Clear();
             CloseFrame();
         }
 
@@ -466,23 +476,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             observation = default;
             if (m_Disposed || !nodeId.IsValid || !portId.IsValid ||
-                !m_CompletedLineage.IsValid)
+                !m_LastCommittedLineage.IsValid)
                 return false;
             CharacterPoseNativePortKey key = new CharacterPoseNativePortKey(
                 nodeId,
                 portId,
                 CharacterPoseNativeExecutionStage.Evaluate);
-            if (!m_Observations.TryGetValue(key, out observation) ||
+            if (!m_CommittedObservations.TryGetValue(key, out observation) ||
                 observation.InstanceId != InstanceId ||
-                observation.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+                observation.CompletionIdentity != m_LastCommittedLineage.CompletionIdentity)
             {
                 key = new CharacterPoseNativePortKey(
                     nodeId,
                     portId,
                     CharacterPoseNativeExecutionStage.Prepare);
-                if (!m_Observations.TryGetValue(key, out observation) ||
+                if (!m_CommittedObservations.TryGetValue(key, out observation) ||
                     observation.InstanceId != InstanceId ||
-                    observation.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+                    observation.CompletionIdentity != m_LastCommittedLineage.CompletionIdentity)
                 {
                     observation = default;
                     return false;
@@ -584,9 +594,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_OutputCache.Clear();
             m_Observations.Clear();
+            m_CommittedObservations.Clear();
             m_Evaluating.Clear();
             m_Started = false;
             m_Initialized = false;
+            m_LastCommittedLineage = default;
         }
     }
 

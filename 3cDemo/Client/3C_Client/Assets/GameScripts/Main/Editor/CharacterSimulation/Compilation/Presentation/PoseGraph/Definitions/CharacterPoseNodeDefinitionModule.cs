@@ -76,8 +76,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public virtual CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
                 CharacterPoseNodeRuntimeRequirement.None;
-        public CharacterPoseOperationFamily OperationFamily =>
-            ResolveFamily(Kind);
         public CharacterPoseCanvasCreationKind CanvasCreation =>
             Kind == CharacterPoseNodeKind.LinkedPoseCall
                 ? CharacterPoseCanvasCreationKind.DedicatedSurface
@@ -351,61 +349,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 $"Pose field '{fieldId}' requires '{expectedType.Name}'.");
         }
 
-        static CharacterPoseOperationFamily ResolveFamily(
-            CharacterPoseNodeKind kind) =>
-            kind switch
-            {
-                CharacterPoseNodeKind.ProgramParameterInput =>
-                    CharacterPoseOperationFamily.ParameterInput,
-                CharacterPoseNodeKind.PoseParameterResolve =>
-                    CharacterPoseOperationFamily.ParameterResolve,
-                CharacterPoseNodeKind.SelectedPosePlayer or
-                CharacterPoseNodeKind.ClipPlayer or
-                CharacterPoseNodeKind.BlendSpacePlayer =>
-                    CharacterPoseOperationFamily.Player,
-                CharacterPoseNodeKind.PoseStateMachine =>
-                    CharacterPoseOperationFamily.StateMachine,
-                CharacterPoseNodeKind.ActionPlaybackInput =>
-                    CharacterPoseOperationFamily.ActionInput,
-                CharacterPoseNodeKind.AnimationSlot =>
-                    CharacterPoseOperationFamily.AnimationSlot,
-                CharacterPoseNodeKind.BlendStack or
-                CharacterPoseNodeKind.BlendPose =>
-                    CharacterPoseOperationFamily.Blend,
-                CharacterPoseNodeKind.Inertialization =>
-                    CharacterPoseOperationFamily.Inertialization,
-                CharacterPoseNodeKind.LayeredBoneBlend or
-                CharacterPoseNodeKind.AdditivePose =>
-                    CharacterPoseOperationFamily.Composition,
-                CharacterPoseNodeKind.LocalToComponentPose or
-                CharacterPoseNodeKind.ComponentToLocalPose =>
-                    CharacterPoseOperationFamily.SpaceConversion,
-                CharacterPoseNodeKind.ModifyBone or
-                CharacterPoseNodeKind.RootOrientationWarp =>
-                    CharacterPoseOperationFamily.ComponentControl,
-                CharacterPoseNodeKind.MotionMatchingPose =>
-                    CharacterPoseOperationFamily.MotionMatching,
-                CharacterPoseNodeKind.PoseHistoryCollector =>
-                    CharacterPoseOperationFamily.PoseHistory,
-                CharacterPoseNodeKind.FootPlacement or
-                CharacterPoseNodeKind.PoseBoneIKGoals =>
-                    CharacterPoseOperationFamily.GoalContribution,
-                CharacterPoseNodeKind.FullBodyIkGoalAssembler =>
-                    CharacterPoseOperationFamily.GoalAssembler,
-                CharacterPoseNodeKind.FullBodyIK =>
-                    CharacterPoseOperationFamily.FullBodyIk,
-                CharacterPoseNodeKind.LinkedPoseCall =>
-                    CharacterPoseOperationFamily.LinkedPose,
-                CharacterPoseNodeKind.OutputPose =>
-                    CharacterPoseOperationFamily.Output,
-                CharacterPoseNodeKind.PoseSubgraph or
-                CharacterPoseNodeKind.GraphInput or
-                CharacterPoseNodeKind.GraphOutput or
-                CharacterPoseNodeKind.EntryPoseInput =>
-                    CharacterPoseOperationFamily.None,
-                _ => throw new InvalidOperationException(
-                    $"Pose node kind '{kind}' has no Operation Family.")
-            };
     }
 
     internal sealed class CharacterPoseNodeDefinitionModule

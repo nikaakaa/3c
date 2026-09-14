@@ -219,7 +219,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string CapabilityIdentity => m_Definition.CapabilityIdentity;
         public IReadOnlyCollection<GraphAuthoringFieldDescriptor> Fields =>
             m_Definition.Capability.Fields;
-        public CharacterPoseOperationFamily OperationFamily => m_Definition.OperationFamily;
         public bool UsesPoseSourceSlot => m_Definition.UsesPoseSourceSlot;
 
         public CharacterPresentationPoseSourceSlot Source(

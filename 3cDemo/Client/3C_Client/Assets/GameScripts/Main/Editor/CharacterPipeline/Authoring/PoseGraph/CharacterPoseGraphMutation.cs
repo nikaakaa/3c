@@ -1269,9 +1269,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         int index = RequireNodeIndex(nodes, configure.NodeId);
                         CharacterPoseCanvasNode node = nodes[index];
-                        if (CharacterPoseNodeDefinitionModule.Shared
-                                .Require(node.Kind).OperationFamily !=
-                            CharacterPoseOperationFamily.LinkedPose)
+                        if (node.Kind != CharacterPoseNodeKind.LinkedPoseCall)
                             throw new InvalidOperationException(
                                 $"Pose node '{configure.NodeId}' is not a Linked Pose Call.");
                         var replacement = new CharacterPoseCanvasNode(

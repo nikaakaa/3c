@@ -778,8 +778,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         visited);
                     continue;
                 }
-                if (definition.OperationFamily !=
-                        CharacterPoseOperationFamily.StateMachine ||
+                if (definition.Kind != CharacterPoseNodeKind.PoseStateMachine ||
                     machine.PoseStateMachine == null)
                 {
                     continue;

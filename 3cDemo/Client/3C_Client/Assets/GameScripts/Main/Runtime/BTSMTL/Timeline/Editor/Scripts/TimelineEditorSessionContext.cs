@@ -144,18 +144,6 @@ namespace BTSMTL.Timeline.Editor
 
     }
 
-    public interface ITimelineEditorSelectionPort
-    {
-        TimelineEditorSelection Selection { get; }
-        event Action<TimelineEditorSelection> SelectionChanged;
-    }
-
-    public interface ITimelineEditorMutationPort
-    {
-        bool IsReadOnly { get; }
-        void Apply(Action mutation, string undoName);
-    }
-
     public sealed class TimelineEditorOpenRequest
     {
         public TimelineEditorOpenRequest(
@@ -184,9 +172,7 @@ namespace BTSMTL.Timeline.Editor
         public TimelineContractCatalog ContractCatalog { get; }
     }
 
-    public sealed class TimelineEditorSessionContext :
-        ITimelineEditorSelectionPort,
-        ITimelineEditorMutationPort
+    public sealed class TimelineEditorSessionContext
     {
         readonly TimelineEditorOpenRequest m_Request;
         Func<bool> m_IsReadOnly;

@@ -770,7 +770,18 @@ namespace BTSMTL.Timeline.Editor
             public float StartTime => 0f;
             public float EndTime => Owner.Length;
             public float DefaultHeight => 32f;
-            public float FinalHeight => ShowCurves ? 250f : DefaultHeight;
+            public float FinalHeight
+            {
+                get
+                {
+                    if (!ShowCurves)
+                        return DefaultHeight;
+                    IEmbeddedTimelineClipBinding clip = SelectedClip;
+                    if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+                        return DefaultHeight + 32f;
+                    return DefaultHeight + 4f + clip.Parameters.Count * 20f + 120f;
+                }
+            }
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;
             public IEmbeddedTimelineClipBinding SelectedClip =>
                 Owner.Selected is BtsmtlTimelineClipBinding selected &&

@@ -89,6 +89,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void Select(IEmbeddedTimelineElementBinding element)
         {
+            bool changed = !ReferenceEquals(m_Selected, element);
             m_Selected = element;
             Selection.activeObject = m_Request.SerializedOwner;
             object source = element is BtsmtlTimelineClipBinding clipSource
@@ -109,7 +110,9 @@ namespace BTSMTL.Timeline.Editor
                         ? selectedTrack.Source
                         : element is BtsmtlTimelineSectionBinding selectedSection
                             ? selectedSection.Source
-                            : null);
+                        : null);
+            if (changed)
+                RequestRepaint();
         }
 
         public void BeginEdit(string undoName)

@@ -286,6 +286,7 @@ namespace BTSMTL.Timeline.Runtime
                 new List<string>(playback.ActiveClipIds));
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
+            InitialBoundaryPending = playback.InitialBoundaryPending;
         }
 
         public string Schema { get; }
@@ -302,6 +303,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<string> ActiveClipIds { get; }
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
+        public bool InitialBoundaryPending { get; }
     }
 
     public sealed class TimelineRuntimeService : ITimelinePlaybackService, ITimelinePlaybackActionContextSource, IDisposable
@@ -524,7 +526,8 @@ namespace BTSMTL.Timeline.Runtime
                     snapshot.SectionId,
                     snapshot.ActiveClipIds,
                     snapshot.HasStopContext,
-                    snapshot.StopContext))
+                    snapshot.StopContext,
+                    snapshot.InitialBoundaryPending))
                 throw new InvalidOperationException("Timeline playback Restore state is not a committed state.");
             m_Playbacks.Add(snapshot.Handle.Value, playback);
             Publish(playback);

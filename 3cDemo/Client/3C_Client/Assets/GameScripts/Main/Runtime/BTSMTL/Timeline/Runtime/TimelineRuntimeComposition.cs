@@ -197,6 +197,10 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimeComposition : ITimelinePlaybackService, IDisposable
     {
+        readonly TimelineContractCatalog m_ContractCatalog;
+        readonly TimelineRuntimeNumericTarget m_NumericTarget;
+        readonly ITimelineDomainBindingResolver m_DomainResolver;
+        readonly ITimelineRuntimeDependencyResolver m_DependencyResolver;
         readonly TimelineRuntimeService m_Service;
 
         public TimelineRuntimeComposition(
@@ -220,6 +224,10 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(evaluationSink));
             if (treeClipService == null)
                 throw new ArgumentNullException(nameof(treeClipService));
+            m_ContractCatalog = contractCatalog;
+            m_NumericTarget = numericTarget;
+            m_DomainResolver = domainResolver;
+            m_DependencyResolver = dependencyResolver;
             var requestFactory = new TimelineRuntimePlaybackRequestFactory(
                 contractCatalog,
                 numericTarget,
@@ -233,6 +241,62 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         public TimelineRuntimeService Service => m_Service;
+
+        public TimelineRuntimePreparationResult Prepare(
+            string requestId,
+            TimelineData timeline,
+            TimelineExecutionIdentity executionIdentity,
+            IEnumerable<TimelineCallBinding> callBindings)
+        {
+            var request = new TimelineRuntimePrepareRequest(
+                requestId,
+                timeline,
+                m_ContractCatalog,
+                executionIdentity,
+                m_NumericTarget,
+                callBindings,
+                m_DomainResolver,
+                m_DependencyResolver);
+            return m_Service.Prepare(request);
+        }
+
+        public TimelineRuntimePlaybackHandle CreateStartedPlayback(
+            TimelineRuntimePreparationResult preparation)
+        {
+            TimelineRuntimePlaybackHandle handle = m_Service.CreatePlayback(preparation);
+            if (!m_Service.Start(handle))
+                throw new InvalidOperationException($"Timeline playback '{handle.Value}' could not start.");
+            return handle;
+        }
+
+        public TimelineRuntimeAdvanceResult Step(
+            TimelineRuntimePlaybackHandle handle,
+            ulong logicTick,
+            int deltaFrames)
+        {
+            return m_Service.Step(handle, logicTick, deltaFrames);
+        }
+
+        public void Stop(
+            TimelineRuntimePlaybackHandle handle,
+            TimelinePlaybackStopContext stopContext)
+        {
+            m_Service.CancelTimelinePlayback(
+                new TimelinePlaybackHandle(handle.Value),
+                stopContext);
+        }
+
+        public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
+        {
+            return m_Service.Capture(handle);
+        }
+
+        public TimelineRuntimePlayback Restore(
+            TimelineRuntimePlaybackSnapshot snapshot,
+            TimelineRuntimePreparationResult preparation)
+        {
+            return m_Service.Restore(snapshot, preparation);
+        }
 
         public bool RequestTimelinePlayback(
             TimelineData timeline,

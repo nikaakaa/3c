@@ -192,6 +192,7 @@ namespace BTSMTL.Timeline.Runtime
         int m_CursorFrame;
         int m_Cycle;
         string m_SectionId = string.Empty;
+        bool m_InitialBoundaryPending;
 
         internal TimelineRuntimePlayback(
             TimelineRuntimePlaybackHandle handle,
@@ -267,6 +268,7 @@ namespace BTSMTL.Timeline.Runtime
             if (State != TimelineRuntimePlaybackState.Prepared)
                 return false;
             State = TimelineRuntimePlaybackState.Running;
+            m_InitialBoundaryPending = true;
             RefreshActiveState();
             return true;
         }
@@ -315,7 +317,8 @@ namespace BTSMTL.Timeline.Runtime
                 nextFrame,
                 nextCycle,
                 maxFrame,
-                Content.Loop);
+                Content.Loop,
+                m_InitialBoundaryPending);
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
                 SourceTimeline,
                 m_CursorFrame,
@@ -349,6 +352,7 @@ namespace BTSMTL.Timeline.Runtime
             m_CursorFrame = advance.Frame;
             m_Cycle = advance.Cycle;
             m_SectionId = advance.SectionId;
+            m_InitialBoundaryPending = false;
             m_ActiveClipIds.Clear();
             for (int index = 0; index < advance.ActiveClipIds.Count; index++)
                 m_ActiveClipIds.Add(advance.ActiveClipIds[index]);
@@ -421,6 +425,7 @@ namespace BTSMTL.Timeline.Runtime
 
         internal bool HasPendingStop => m_StopPending;
         internal bool HasPendingAdvance => m_PendingAdvance != null;
+        internal bool InitialBoundaryPending => m_InitialBoundaryPending;
 
         internal bool RestoreCommittedState(
             TimelineRuntimePlaybackState state,
@@ -429,7 +434,8 @@ namespace BTSMTL.Timeline.Runtime
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             bool hasStopContext,
-            TimelinePlaybackStopContext stopContext)
+            TimelinePlaybackStopContext stopContext,
+            bool initialBoundaryPending)
         {
             if (m_PendingAdvance != null || m_StopPending)
                 return false;
@@ -444,6 +450,7 @@ namespace BTSMTL.Timeline.Runtime
             m_CursorFrame = cursorFrame;
             m_Cycle = cycle;
             m_SectionId = sectionId ?? string.Empty;
+            m_InitialBoundaryPending = initialBoundaryPending;
             m_ActiveClipIds.Clear();
             for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
                 m_ActiveClipIds.Add(activeClipIds[index]);
@@ -484,7 +491,8 @@ namespace BTSMTL.Timeline.Runtime
             int nextFrame,
             int nextCycle,
             int maxFrame,
-            bool loop)
+            bool loop,
+            bool initialBoundaryPending)
         {
             var result = new List<TimelineRuntimeClipBoundary>();
             if (maxFrame <= 0)
@@ -513,7 +521,8 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeClipBoundaryKind.Enter,
                         previousAbsolute,
                         nextAbsolute,
-                        maxFrame);
+                        maxFrame,
+                        initialBoundaryPending);
                     AddBoundary(
                         result,
                         clip,
@@ -547,10 +556,14 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeClipBoundaryKind kind,
             long previousAbsolute,
             long nextAbsolute,
-            int maxFrame)
+            int maxFrame,
+            bool initialBoundaryPending)
         {
             long absolute = (long)cycle * maxFrame + frame;
-            if (absolute <= previousAbsolute || absolute > nextAbsolute)
+            bool initialEnter = initialBoundaryPending &&
+                                kind == TimelineRuntimeClipBoundaryKind.Enter &&
+                                absolute == previousAbsolute;
+            if ((!initialEnter && absolute <= previousAbsolute) || absolute > nextAbsolute)
                 return;
             result.Add(new TimelineRuntimeClipBoundary(
                 clip.AuthoringId,

@@ -265,6 +265,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ? "Pose boundary graph must contain exactly one Graph Input, one Graph Output and no Output Pose."
                         : "Pose root or state graph must contain exactly one Output Pose and no Graph Input or Graph Output.");
             }
+            if (graphBoundary)
+            {
+                CharacterPoseCanvasNode graphOutput = nodes.Single(value =>
+                    value.Kind == CharacterPoseNodeKind.GraphOutput);
+                int outputPortCount = CharacterPoseCanvasNativePorts
+                    .GetRuntimeShape(graphOutput)
+                    .Count(value =>
+                        value.Direction == CharacterPosePortDirection.Input);
+                if (outputPortCount == 0)
+                {
+                    Fail(
+                        CharacterPoseNativeFailureCode.PortInvalid,
+                        graph.GraphId.Value,
+                        "Pose boundary graph Graph Output must declare at least one input port.");
+                }
+            }
         }
 
         static void ValidateReferencedGraphs(

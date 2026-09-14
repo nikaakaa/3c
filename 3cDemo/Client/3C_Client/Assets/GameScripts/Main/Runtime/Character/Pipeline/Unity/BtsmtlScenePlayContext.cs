@@ -24,8 +24,6 @@ namespace ThirdPersonCharacter.Pipeline
         SessionHostMismatch = 9,
         DefinitionMissing = 10,
         ControlSourceMissing = 11,
-        ProgramMissing = 12,
-        ProjectionMissing = 13,
         DuplicateContext = 14,
         ActorSceneMismatch = 15,
         RuntimeOwnerMissing = 16,
@@ -62,39 +60,23 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterPipelineHost host,
             CharacterPipelineDefinition definition,
             CharacterControlSource controlSource,
-            CharacterSimulationProgramAsset program,
-            CharacterPresentationProjectionAsset projection,
             IReadOnlyList<ActionProfile> actionProfiles)
         {
             Host = host ?? throw new ArgumentNullException(nameof(host));
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
-            Program = program ?? throw new ArgumentNullException(nameof(program));
-            Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             ActorId = host.SimulationActorId;
             ControlModuleId = definition.ControlModuleId;
             ControlSourceIdentity = controlSource.SourceIdentity;
-            NumericTargetId = program.NumericProfileId;
-            ProgramId = program.ProgramId;
-            ProgramHash = program.ProgramHash;
-            LayoutHash = program.LayoutHash;
-            ProjectionRevision = projection.ProjectionRevision;
             ActionProfiles = actionProfiles ?? Array.Empty<ActionProfile>();
         }
 
         public CharacterPipelineHost Host { get; }
         public CharacterPipelineDefinition Definition { get; }
         public CharacterControlSource ControlSource { get; }
-        public CharacterSimulationProgramAsset Program { get; }
-        public CharacterPresentationProjectionAsset Projection { get; }
         public ActorId ActorId { get; }
         public string ControlModuleId { get; }
         public string ControlSourceIdentity { get; }
-        public string NumericTargetId { get; }
-        public string ProgramId { get; }
-        public string ProgramHash { get; }
-        public string LayoutHash { get; }
-        public string ProjectionRevision { get; }
         public IReadOnlyList<ActionProfile> ActionProfiles { get; }
     }
 
@@ -182,8 +164,6 @@ namespace ThirdPersonCharacter.Pipeline
                     host,
                     host.Definition,
                     host.ControlSource,
-                    host.Definition.SimulationProgram,
-                    host.Definition.PresentationProjection,
                     host.Definition.ActionProfiles));
             }
             descriptor = new BtsmtlScenePlayContextDescriptor(
@@ -331,10 +311,6 @@ namespace ThirdPersonCharacter.Pipeline
                     return Invalid(BtsmtlScenePlayContextDiagnosticCode.DefinitionMissing, $"Scene Play Actor '{host.SimulationActorId}' has no Character Definition.", host.SimulationActorId.Value);
                 if (!host.ControlSource)
                     return Invalid(BtsmtlScenePlayContextDiagnosticCode.ControlSourceMissing, $"Scene Play Actor '{host.SimulationActorId}' has no control source.", host.SimulationActorId.Value);
-                if (!host.Definition.SimulationProgram)
-                    return Invalid(BtsmtlScenePlayContextDiagnosticCode.ProgramMissing, $"Scene Play Actor '{host.SimulationActorId}' has no compiled Simulation Program.", host.SimulationActorId.Value);
-                if (!host.Definition.PresentationProjection)
-                    return Invalid(BtsmtlScenePlayContextDiagnosticCode.ProjectionMissing, $"Scene Play Actor '{host.SimulationActorId}' has no Presentation Projection.", host.SimulationActorId.Value);
 #if UNITY_EDITOR
                 BtsmtlScenePlayContextDiagnostic skillDiagnostic = ValidateSkillGraphs(host.Definition, host.SimulationActorId.Value);
                 if (!skillDiagnostic.IsValid)

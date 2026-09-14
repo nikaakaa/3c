@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FlowCanvas;
 using NodeCanvas.Framework;
 
@@ -82,6 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ICharacterPoseNativeNodeEvaluator m_Evaluator;
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue> m_OutputCache =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativePortValue>();
+        readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_Observations =
+            new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
             new HashSet<CharacterPoseNativePortKey>();
         CharacterPoseCanvasGraph m_Graph;
@@ -424,12 +425,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose native node '{node.NodeId}' output '{portId}' is missing.");
                 m_OutputCache.Add(key, value);
+                m_Observations[key] = new CharacterPoseNativeNodeObservation(
+                    m_PreparedBinding.GraphId,
+                    node.NodeId,
+                    portId,
+                    InstanceId,
+                    m_CompletedLineage.CompletionIdentity,
+                    m_Stage == CharacterPoseNativeExecutionStage.Prepare
+                        ? CharacterPoseNativeFrameStatus.Prepared
+                        : CharacterPoseNativeFrameStatus.Evaluated,
+                    CharacterPoseNativeFailureCode.None,
+                    "Pose native node output is available.");
                 return RequireTyped<T>(value, node, portId);
+            }
+            catch (Exception exception)
+            {
+                m_Observations[key] = new CharacterPoseNativeNodeObservation(
+                    m_PreparedBinding.GraphId,
+                    node.NodeId,
+                    portId,
+                    InstanceId,
+                    m_CompletedLineage.CompletionIdentity,
+                    CharacterPoseNativeFrameStatus.Faulted,
+                    exception is CharacterPoseNativeGraphValidationException validation
+                        ? validation.Code
+                        : CharacterPoseNativeFailureCode.FrameInvalid,
+                    exception.Message);
+                throw;
             }
             finally
             {
                 m_Evaluating.Remove(key);
             }
+        }
+
+        public bool TryObserve(
+            PoseNodeId nodeId,
+            PosePortId portId,
+            out CharacterPoseNativeNodeObservation observation)
+        {
+            observation = default;
+            if (m_Disposed || !nodeId.IsValid || !portId.IsValid ||
+                !m_CompletedLineage.IsValid)
+                return false;
+            CharacterPoseNativePortKey key = new CharacterPoseNativePortKey(
+                nodeId,
+                portId,
+                CharacterPoseNativeExecutionStage.Evaluate);
+            if (!m_Observations.TryGetValue(key, out observation) ||
+                observation.InstanceId != InstanceId ||
+                observation.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+            {
+                key = new CharacterPoseNativePortKey(
+                    nodeId,
+                    portId,
+                    CharacterPoseNativeExecutionStage.Prepare);
+                if (!m_Observations.TryGetValue(key, out observation) ||
+                    observation.InstanceId != InstanceId ||
+                    observation.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+                {
+                    observation = default;
+                    return false;
+                }
+            }
+            return true;
         }
 
         public void Initialize(CharacterPoseCanvasGraph graph)
@@ -524,113 +583,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Graph = null;
             }
             m_OutputCache.Clear();
+            m_Observations.Clear();
             m_Evaluating.Clear();
             m_Started = false;
             m_Initialized = false;
         }
     }
 
-    internal sealed class CharacterPoseNativeGraphEvaluator : ICharacterPoseNativeNodeEvaluator
-    {
-        public void Initialize(CharacterPoseNativeGraphRuntime runtime)
-        {
-            if (runtime == null || runtime.Graph == null)
-                throw new ArgumentNullException(nameof(runtime));
-        }
-
-        public void Start(CharacterPoseNativeGraphRuntime runtime) { }
-
-        public void BeginFrame(
-            CharacterPoseNativeGraphRuntime runtime,
-            in CharacterPoseNativeFrameInput input,
-            in CharacterPoseNativeFrameLineage lineage) { }
-
-        public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
-            CharacterPoseNativeGraphRuntime runtime,
-            in CharacterPoseNativeFrameInput input,
-            in CharacterPoseNativeFrameLineage lineage)
-        {
-            var result = new List<CharacterPoseNativeSourceRequest>();
-            foreach (CharacterPoseCanvasNode node in runtime.Graph.Nodes)
-            {
-                CharacterPresentationPoseSourceSlot source = node.PresentationPoseSourceSlot;
-                if (source)
-                    result.Add(new CharacterPoseNativeSourceRequest(node.NodeId, source, true));
-            }
-            return result;
-        }
-
-        public CharacterPoseNativePortValue EvaluateOutput(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseCanvasNode node,
-            PosePortId portId,
-            CharacterPoseNativeExecutionStage stage)
-        {
-            if (node.Payload is CharacterProgramParameterInputPosePayload parameter)
-            {
-                if (!runtime.CurrentLineage.IsValid ||
-                    !runtime.CurrentLineage.IsValid ||
-                    !runtime.CurrentInput.ParameterFrame.TryRead(
-                        parameter.ParameterId,
-                        out BTSMTL.EventGraphs.EventGraphValue value))
-                {
-                    throw new CharacterPoseNativeGraphValidationException(
-                        CharacterPoseNativeFailureCode.FrameInvalid,
-                        $"{runtime.Graph.GraphId}/{node.NodeId}/{portId}",
-                        $"Pose parameter '{parameter.ParameterId}' is unavailable in the current frame.");
-                }
-                return new CharacterPoseNativeParameterValue(
-                    node.NodeId,
-                    runtime.CurrentLineage.CompletionIdentity,
-                    parameter.ParameterId,
-                    value);
-            }
-            if (node.Payload is CharacterPoseHistoryCollectorPayload &&
-                portId.Value == "pose.local")
-            {
-                return runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    node,
-                    "pose.local.input");
-            }
-            throw new CharacterPoseNativeGraphValidationException(
-                CharacterPoseNativeFailureCode.UnsupportedNode,
-                $"{runtime.Graph.GraphId}/{node.NodeId}/{portId}",
-                $"Pose native evaluator has no implementation for node '{node.Kind}'.");
-        }
-
-        public CharacterPoseNativePortValue EvaluateGraphOutput(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseNativeExecutionStage stage)
-        {
-            CharacterPoseCanvasNode output = runtime.Graph.Nodes.SingleOrDefault(
-                node => node.Kind == CharacterPoseNodeKind.OutputPose);
-            if (output == null)
-                throw new CharacterPoseNativeGraphValidationException(
-                    CharacterPoseNativeFailureCode.GraphInvalid,
-                    runtime.Graph.GraphId.Value,
-                    "Pose native graph has no Output Pose node.");
-            return runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(output, "pose");
-        }
-
-        public void EvaluateFrame(
-            CharacterPoseNativeGraphRuntime runtime,
-            in CharacterPoseNativeFrameInput input,
-            in CharacterPoseNativeFrameLineage lineage,
-            in CharacterPoseNativeSourceDemand demand,
-            ulong barrierIdentity) { }
-
-        public void CommitFrame(
-            CharacterPoseNativeGraphRuntime runtime,
-            in CharacterPoseNativeFrameLineage lineage,
-            CharacterPoseNativePortValue output) { }
-
-        public void DiscardFrame(
-            CharacterPoseNativeGraphRuntime runtime,
-            in CharacterPoseNativeFrameLineage lineage,
-            CharacterPoseNativeFailureCode reason) { }
-
-        public void Stop(CharacterPoseNativeGraphRuntime runtime) { }
-
-        public void Dispose() { }
-    }
 }

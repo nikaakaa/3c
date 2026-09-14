@@ -724,5 +724,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void Stop(CharacterPoseCanvasGraph graph);
         T Read<T>(CharacterPoseCanvasNode node, PosePortId portId)
             where T : CharacterPoseNativePortValue;
+        bool TryObserve(
+            PoseNodeId nodeId,
+            PosePortId portId,
+            out CharacterPoseNativeNodeObservation observation);
     }
 }

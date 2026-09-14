@@ -160,3 +160,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Runtime 工程已通过：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore`，0 errors；完成后已执行 `dotnet build-server shutdown`。结果只证明 C# 静态编译，不证明 Unity 资源刷新、Build、Play 或端到端行为。
 
 本步仍未删除旧 Pose IR/Image/Compiler/Worker 链；待全部正式消费者改由原生 Graph Runtime 读取后，再按消费者证据垂直删除，并记录删除后的残留扫描与构建边界。
+
+## 2026-09-14 r3 原生观察与执行边界
+
+- `CharacterPoseNativeGraphRuntime` 增加按 `(NodeId, PortId, Stage)` 保存的节点观察；观察只读取已经产生的输出缓存和完成身份，不重新求值、不创建 Image。
+- 删除未接入 Source/Constraint/Publication 的占位 `CharacterPoseNativeGraphEvaluator`，原生 Runtime 现在只接受主装配提供的正式 typed evaluator，不再存在会伪装成完整运行时的空实现路径。
+- `ThirdPersonClient.Runtime.csproj` 独立编译通过，0 errors；完整依赖编译仍被共享 Float32 `CharacterSimulationProgramCodec.cs` 的参数类型顺序错误阻断。两次编译结束均已执行 `dotnet build-server shutdown`。

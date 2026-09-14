@@ -80,18 +80,25 @@
 - `c101cdb54`：撤回上述以角色 Program 生成 Ability catalog 的接线；角色根不能伪造 Ability 根，等待角色配置直接提供独立技能数据。
 - `59cad96bd`：按 D17 先删除整角色 Program wrapper、目标 artifact、Fixed 旧 codec、全局 Program catalog／ExecutionLayout、整角色 BuildService、全角色 artifact store 和旧 Ability loader；Float32 codec 因并行占用暂缓，保留技能编译与动画算法待引用拆接。
 - `2bde1c946`：按 D17 删除旧 Projection wrapper、发布后读取器、Projection 编译上下文、修订计算器和旧验证器；保留仍有业务用途的表现资源与算法。
+- `17656634f`：将 Float32／Fixed Ability artifact 改为独立 `.ability` 格式，DataAsset 直接读取 `GameplayAbilityExecutionData` 并校验 typed provider；新增独立 execution-data artifact store，删除旧 Ability Program artifact store。
+- `d8bb0d932`、`256428d93`：把 Float32／Fixed Ability Target 编译器及 Unity meta 统一改为领域命名，移除已经失真的 CharacterSimulationProgram 编译器文件名。
+- `6254f5008`：删除 Float32／Fixed ProgramRuntime 聚合运行时、Unity ProgramRuntime 定义基类／派生定义和对应运行时配置资产，拔掉角色注册表到全角色 Kernel 的旧入口载体。
+- `2b549a9bd`：删除没有消费者的 Float32／Fixed 旧 Program ValueResolver。
+- `fe9347cc0`：删除 Float32／Fixed Timeline Program reader 和对应生成资产；Timeline 不再通过旧 Target artifact 读回整套 CharacterSimulationProgram。
+- `163931b99`：删除 Float32／Fixed 旧 Timeline 播放器及只加载它们的场景 Host，去掉第二套 Timeline 播放状态实现。
+- `18a534fd0`：删除旧 Character／Timeline Target Adapter、Program product、artifact stage 和 wrapper 发布集合；后续各领域使用自己的发布入口。
 
 ## 当前实现边界
 
 - Ability 前端不读取 CharacterPipelineDefinition，不生成 Character 控制、Body Motion、Equipment 或 Pose 目录。
 - Ability 图通过现有 BTSMTL Skill 图编译器复用图算法；外部 Input、Gameplay Effect、Character State 通过 provider owner、依赖成员、值类型、成员版本和运行句柄接入，配置身份与实际消费成员分开校验。
 - Ability 根入口直接指向私有图的 Root operation；Float32／Fixed 的 Ability 生命周期、Action／Effect catalog、状态槽和 artifact metadata 已接通。
-- Ability 目录现在为 Input／Gameplay Effect／Equipment／Character State 外部依赖发布成员级 typed provider requirement；缺少 owner、成员、运行句柄、同一依赖绑定多个 owner、成员版本或值类型不符时，Target 发布直接失败。当前 1.9 已补齐资产配置到成员合同的解析，独立 Ability execution data 接入仍由 1.10 完成。
-- Ability 独立前端不再声明 Gameplay Effect aggregate、随机数、句柄分配器或事实序号等角色级服务状态；这些服务由角色运行时 owner 提供，Ability 只保留自己的 action／execution state 和必要 provider requirement。1.8 已完成，但 1.9 的真实成员解析与 1.10 的独立 execution data 仍未完成。
-- `Float32GameplayAbilityExecutionData` 与 `FixedGameplayAbilityExecutionData` 已保留独立数据对象及 Provider 合同字段；旧 Program→Ability catalog 接线已撤回。按 D17 首批删除，Float32／Fixed 旧 Ability loader 和角色 Program codec 已被删除（Float32 codec因并行占用暂缓），因此 Unity DataAsset 的 Load 消费暂时断开，下一步必须接入独立技能格式 reader，不能恢复 CharacterSimulationProgram 转换、整包复制或兼容 reader。旧 evaluator／binding／拓扑仍有残余引用，属于待接线错误，不是角色正式入口。
+- Ability 目录现在为 Input／Gameplay Effect／Equipment／Character State 外部依赖发布成员级 typed provider requirement；缺少 owner、成员、运行句柄、同一依赖绑定多个 owner、成员版本或值类型不符时，Target 发布直接失败。1.9 的真实成员解析已落地，1.10 的独立数据格式和发布入口已落地；运行时执行消费者仍待切换。
+- Ability 独立前端不再声明 Gameplay Effect aggregate、随机数、句柄分配器或事实序号等角色级服务状态；这些服务由角色运行时 owner 提供，Ability 只保留自己的 action／execution state 和必要 provider requirement。1.8 与 1.9 已完成，1.10 仍剩独立数据进入运行时 evaluator／binding 的接线。
+- `Float32GameplayAbilityExecutionData` 与 `FixedGameplayAbilityExecutionData` 是当前独立 artifact 数据对象；独立 codec 读写 `.ability`，`GameplayAbilityDataAsset.Load` 和 `FixedGameplayAbilityDataAsset.Load` 直接返回技能域数据，`GameplayAbilityExecutionDataArtifactStore` 直接发布它们。旧 Program→Ability catalog 转换、旧 Ability loader、旧整角色 Program artifact store 和旧 Program reader 已删除，不能恢复 CharacterSimulationProgram 转换、整包复制或兼容 reader。现有 evaluator／binding／拓扑仍有 CharacterSimulationProgram 残余引用，属于激进删除后的待接线错误，不是角色正式入口。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 或缺失／类型／版本／句柄不符的成员在资源绑定阶段失败，任务 1.4 的身份入口和 1.9 的成员合同分别保留其边界。
-- 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；Character Program 仍承载 Runnable、StateMachine、Timeline 播放和 Blackboard，旧 Program 数据清理仍未完成。Timeline 播放内部由 Timeline owner 提供，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
+- 当前 Character Host、Session、Network 和部分 Evaluate／State 链仍引用旧整角色 Program；这些是本轮删除后暴露出来的待拆接线，不是继续服务角色的正式入口。Ability 资源集合尚未装配进新的领域运行实例，后续由角色领域工厂直接组装。
+- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；剩余 Evaluate／State／Network 消费者仍依赖旧 Program，需要继续删除或改接领域数据。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
 - Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。
@@ -144,6 +151,7 @@
 - 2026-09-14 Ability execution catalog 接线后，`ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；未运行 Unity、测试或资产生成。每次编译结束后均已执行 `dotnet build-server shutdown`。
 - 2026-09-14 撤回旧 Program→Ability catalog 接线后，`ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；未运行 Unity、测试或资产生成。每次编译结束后均已执行 `dotnet build-server shutdown`。
 - 2026-09-14 D17 首批整角色 Program 载体删除后，`ThirdPersonSimulation.Float32.csproj` 出现 94 个预期旧 `ProgramExecutionLayout`／`SimulationProgramCatalog` 消费者错误；未新增恢复类型或兼容路径，构建结束后已执行 `dotnet build-server shutdown`。这是删除批次的接线清单，不代表保留业务已接通；未运行 Unity、测试或资产生成。
+- 2026-09-14 D17 激进删除继续完成 ProgramRuntime、Timeline reader／播放器和旧 Target 集合清理；本轮未重新编译或运行 Unity，故不宣称构建恢复。剩余旧 Program 消费者错误保持为后续领域接线清单。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

@@ -1,0 +1,741 @@
+using System;
+using System.Collections.Generic;
+using BTSMTL.EventGraphs;
+using FlowCanvas;
+using Unity.Collections;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Animation
+{
+    internal sealed class CharacterPoseNativeInertializationHandler :
+        ICharacterPoseNativeNodeHandler
+    {
+        struct State
+        {
+            internal ulong LastEventIdentity;
+            internal float ElapsedSeconds;
+            internal float DurationSeconds;
+            internal bool HasHistory;
+            internal bool Active;
+        }
+
+        readonly PoseNodeId m_NodeId;
+        readonly CharacterAnimationRigPayload m_Rig;
+        readonly CharacterPoseInertializationPolicy m_Policy;
+        readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
+        readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
+        readonly AnimationBlendCurvePayload m_Curve;
+        readonly float[] m_DenseProfiles;
+        readonly PoseParameterInertializationMode[] m_ParameterModes;
+        readonly int m_LeftFootBoneIndex;
+        readonly int m_RightFootBoneIndex;
+        AnimationLocalBonePose[] m_CommittedHistory;
+        AnimationLocalBonePose[] m_PendingHistory;
+        AnimationBlendBoneVelocity[] m_CommittedHistoryVelocities;
+        AnimationBlendBoneVelocity[] m_PendingHistoryVelocities;
+        float[] m_CommittedHistoryParameters;
+        float[] m_PendingHistoryParameters;
+        byte[] m_CommittedHistoryParameterAvailability;
+        byte[] m_PendingHistoryParameterAvailability;
+        AnimationFootFeatureSample m_CommittedLeftFoot;
+        AnimationFootFeatureSample m_PendingLeftFoot;
+        AnimationFootFeatureSample m_CommittedRightFoot;
+        AnimationFootFeatureSample m_PendingRightFoot;
+        bool m_CommittedHasFootFeatures;
+        bool m_PendingHasFootFeatures;
+        Vector3[] m_PendingPositionResiduals;
+        Vector3[] m_PendingRotationResiduals;
+        Vector3[] m_PendingScaleResiduals;
+        Vector3[] m_PendingLinearVelocityResiduals;
+        Vector3[] m_PendingAngularVelocityResiduals;
+        Vector3[] m_PendingScaleVelocityResiduals;
+        float[] m_PendingParameterResiduals;
+        Vector3[] m_CommittedPositionResiduals;
+        Vector3[] m_CommittedRotationResiduals;
+        Vector3[] m_CommittedScaleResiduals;
+        Vector3[] m_CommittedLinearVelocityResiduals;
+        Vector3[] m_CommittedAngularVelocityResiduals;
+        Vector3[] m_CommittedScaleVelocityResiduals;
+        float[] m_CommittedParameterResiduals;
+        State m_CommittedState;
+        State m_PendingState;
+        CharacterPoseNativeLocalPoseValue m_Output;
+        AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
+        int m_PageIndex = -1;
+        int m_CommittedPageIndex = -1;
+        bool m_FrameOpen;
+        bool m_Disposed;
+
+        internal CharacterPoseNativeInertializationHandler(
+            PoseNodeId nodeId,
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            CharacterPoseInertializationPolicy policy,
+            CharacterPoseNativeNodePoseBuffer outputBuffer)
+        {
+            if (!nodeId.IsValid)
+                throw new ArgumentException(
+                    "Pose native Inertialization handler identity is invalid.",
+                    nameof(nodeId));
+            if (!preparedBinding.IsValid)
+                throw new ArgumentException(
+                    "Pose native Inertialization prepared binding is invalid.",
+                    nameof(preparedBinding));
+            m_Rig = preparedBinding.Rig;
+            m_Rig.RequireValid();
+            if (policy == null)
+                throw new ArgumentNullException(nameof(policy));
+            if (preparedBinding.Profile.RigDefinition == null)
+                throw new ArgumentException(
+                    "Pose native Inertialization Rig definition is missing.",
+                    nameof(preparedBinding));
+            policy.RequireValid(preparedBinding.Profile.RigDefinition);
+            CharacterPoseDirectInertializationRule directRule =
+                policy.DirectPlayerRule ??
+                throw new ArgumentException(
+                    "Pose native Inertialization policy has no direct rule.",
+                    nameof(policy));
+            m_Curve = directRule.Mode == PoseInertializationMode.Inertialize
+                ? directRule.CompileCurve()
+                : null;
+            m_DenseProfiles = directRule.Mode == PoseInertializationMode.Inertialize
+                ? directRule.BlendProfile.BuildDense(
+                    preparedBinding.Profile.RigDefinition)
+                : CreateUnitProfiles(m_Rig.PoseBoneCount);
+            m_ParameterModes = BuildParameterModes(
+                policy.Response,
+                preparedBinding.InputContract);
+            m_NodeId = nodeId;
+            m_Policy = policy;
+            m_OutputBuffer = outputBuffer ??
+                throw new ArgumentNullException(nameof(outputBuffer));
+            if (m_OutputBuffer.BoneCount != m_Rig.PoseBoneCount ||
+                m_OutputBuffer.ParameterCount != m_ParameterModes.Length)
+            {
+                throw new ArgumentException(
+                    "Pose native Inertialization buffer layout does not match the binding.",
+                    nameof(outputBuffer));
+            }
+            m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
+            m_LeftFootBoneIndex = m_Rig.LeftLeg.AnklePhysicalBoneIndex;
+            m_RightFootBoneIndex = m_Rig.RightLeg.AnklePhysicalBoneIndex;
+            m_CommittedHistory = new AnimationLocalBonePose[m_Rig.PoseBoneCount];
+            m_PendingHistory = new AnimationLocalBonePose[m_Rig.PoseBoneCount];
+            m_CommittedHistoryVelocities =
+                new AnimationBlendBoneVelocity[m_Rig.PoseBoneCount];
+            m_PendingHistoryVelocities =
+                new AnimationBlendBoneVelocity[m_Rig.PoseBoneCount];
+            m_CommittedHistoryParameters = new float[m_ParameterModes.Length];
+            m_PendingHistoryParameters = new float[m_ParameterModes.Length];
+            m_CommittedHistoryParameterAvailability =
+                new byte[m_ParameterModes.Length];
+            m_PendingHistoryParameterAvailability =
+                new byte[m_ParameterModes.Length];
+            m_PendingPositionResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingRotationResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingScaleResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingLinearVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingAngularVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingScaleVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_PendingParameterResiduals = new float[m_ParameterModes.Length];
+            m_CommittedPositionResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedRotationResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedScaleResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedLinearVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedAngularVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedScaleVelocityResiduals = new Vector3[m_Rig.PoseBoneCount];
+            m_CommittedParameterResiduals = new float[m_ParameterModes.Length];
+        }
+
+        public PoseNodeId NodeId => m_NodeId;
+        public CharacterPoseNodeKind Kind => CharacterPoseNodeKind.Inertialization;
+
+        public void Initialize(CharacterPoseNativeGraphRuntime runtime)
+        {
+            RequireAlive();
+            CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
+            if (node.Kind != Kind || node.InertializationPolicySlot == null ||
+                m_Policy == null)
+            {
+                throw new InvalidOperationException(
+                    $"Inertialization handler '{NodeId}' does not match its graph node.");
+            }
+        }
+
+        public void Start(CharacterPoseNativeGraphRuntime runtime) => RequireAlive();
+
+        public void Reset(
+            CharacterPoseNativeGraphRuntime runtime,
+            ulong resetGeneration)
+        {
+            RequireAlive();
+            m_CommittedState = default;
+            m_PendingState = default;
+            m_CommittedHasFootFeatures = false;
+            m_PendingHasFootFeatures = false;
+            m_CommittedPageIndex = -1;
+            ClearFrame();
+        }
+
+        public void BeginFrame(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameInput input,
+            in CharacterPoseNativeFrameLineage lineage)
+        {
+            RequireAlive();
+            if (m_FrameOpen)
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' frame is already open.");
+            m_FrameOpen = true;
+            m_PageIndex = m_CommittedPageIndex < 0
+                ? 0
+                : 1 - m_CommittedPageIndex;
+            m_PendingState = m_CommittedState;
+            Array.Copy(
+                m_CommittedPositionResiduals,
+                m_PendingPositionResiduals,
+                m_CommittedPositionResiduals.Length);
+            Array.Copy(
+                m_CommittedRotationResiduals,
+                m_PendingRotationResiduals,
+                m_CommittedRotationResiduals.Length);
+            Array.Copy(
+                m_CommittedScaleResiduals,
+                m_PendingScaleResiduals,
+                m_CommittedScaleResiduals.Length);
+            Array.Copy(
+                m_CommittedLinearVelocityResiduals,
+                m_PendingLinearVelocityResiduals,
+                m_CommittedLinearVelocityResiduals.Length);
+            Array.Copy(
+                m_CommittedAngularVelocityResiduals,
+                m_PendingAngularVelocityResiduals,
+                m_CommittedAngularVelocityResiduals.Length);
+            Array.Copy(
+                m_CommittedScaleVelocityResiduals,
+                m_PendingScaleVelocityResiduals,
+                m_CommittedScaleVelocityResiduals.Length);
+            Array.Copy(
+                m_CommittedParameterResiduals,
+                m_PendingParameterResiduals,
+                m_CommittedParameterResiduals.Length);
+            m_PendingLeftFoot = m_CommittedLeftFoot;
+            m_PendingRightFoot = m_CommittedRightFoot;
+            m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
+            m_Output = null;
+            m_WriteBinding = default;
+        }
+
+        public IReadOnlyList<CharacterPoseNativeSourceRequest> PrepareFrame(
+            CharacterPoseNativeGraphRuntime runtime,
+            CharacterPoseCanvasNode node,
+            in CharacterPoseNativeFrameInput input,
+            in CharacterPoseNativeFrameLineage lineage) => null;
+
+        public CharacterPoseNativePortValue EvaluateOutput(
+            CharacterPoseNativeGraphRuntime runtime,
+            CharacterPoseCanvasNode node,
+            PosePortId portId,
+            CharacterPoseNativeExecutionStage stage)
+        {
+            RequireAlive();
+            if (portId.Value != "result")
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' has no output '{portId}'.");
+            if (m_Output != null)
+                return m_Output;
+            RequireFrame();
+            CharacterPoseNativeLocalPoseValue inputValue =
+                runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(node, "pose");
+            CharacterPoseNativePoseReadBinding input = inputValue.Native;
+            if (!input.IsValid || input.Space != CharacterPoseSpace.Local)
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' input Pose is not a native Local Pose.");
+            m_WriteBinding = (m_PageIndex == 0
+                    ? m_OutputBuffer
+                    : m_SecondaryOutputBuffer).RequireWriteBinding(
+                runtime.CurrentLineage.CompletionIdentity);
+            CharacterPoseNativePoseBufferCopy.CopyMetadata(
+                in input,
+                in m_WriteBinding);
+            NativeSlice<AnimationLocalBonePose> outputPoses =
+                m_WriteBinding.DenseLocalPoses;
+            for (int bone = 0; bone < outputPoses.Length; bone++)
+                outputPoses[bone] = input.DenseLocalPoses[bone];
+            if (input.Availability[0] == AnimationPoseAvailability.Pose)
+                EvaluatePose(in input, in m_WriteBinding, runtime.CurrentInput.DeltaSeconds);
+            else
+            {
+                m_PendingState = default;
+                m_PendingHasFootFeatures = false;
+            }
+            CharacterPoseNativePoseReadBinding output =
+                new CharacterPoseNativePoseReadBinding(
+                    in m_WriteBinding,
+                    CharacterPoseSpace.Local);
+            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            return m_Output;
+        }
+
+        public void PrepareEvaluation(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage,
+            in CharacterPoseNativeSourceDemand demand,
+            ulong barrierIdentity)
+        {
+            RequireAlive();
+            RequireFrame();
+        }
+
+        public void EvaluateFrame(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameInput input,
+            in CharacterPoseNativeFrameLineage lineage,
+            in CharacterPoseNativeSourceDemand demand,
+            ulong barrierIdentity)
+        {
+            RequireAlive();
+            RequireFrame();
+        }
+
+        public void ValidatePending(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage)
+        {
+            RequireAlive();
+            RequireFrame();
+            if (m_Output == null || !m_Output.Native.IsValid ||
+                m_Output.Native.CompletionIdentity != lineage.CompletionIdentity ||
+                m_Output.Native.Availability[0] == AnimationPoseAvailability.Invalid ||
+                m_Output.Native.InvalidReason[0] != AnimationPoseNativeInvalidReason.None)
+            {
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' pending output is invalid.");
+            }
+        }
+
+        public void CommitFrame(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage,
+            CharacterPoseNativePortValue output)
+        {
+            RequireAlive();
+            RequireFrame();
+            State state = m_CommittedState;
+            m_CommittedState = m_PendingState;
+            m_PendingState = state;
+            Swap(ref m_CommittedHistory, ref m_PendingHistory);
+            Swap(ref m_CommittedHistoryVelocities, ref m_PendingHistoryVelocities);
+            Swap(ref m_CommittedHistoryParameters, ref m_PendingHistoryParameters);
+            Swap(
+                ref m_CommittedHistoryParameterAvailability,
+                ref m_PendingHistoryParameterAvailability);
+            Swap(ref m_CommittedPositionResiduals, ref m_PendingPositionResiduals);
+            Swap(ref m_CommittedRotationResiduals, ref m_PendingRotationResiduals);
+            Swap(ref m_CommittedScaleResiduals, ref m_PendingScaleResiduals);
+            Swap(
+                ref m_CommittedLinearVelocityResiduals,
+                ref m_PendingLinearVelocityResiduals);
+            Swap(
+                ref m_CommittedAngularVelocityResiduals,
+                ref m_PendingAngularVelocityResiduals);
+            Swap(ref m_CommittedScaleVelocityResiduals, ref m_PendingScaleVelocityResiduals);
+            Swap(ref m_CommittedParameterResiduals, ref m_PendingParameterResiduals);
+            AnimationFootFeatureSample left = m_CommittedLeftFoot;
+            m_CommittedLeftFoot = m_PendingLeftFoot;
+            m_PendingLeftFoot = left;
+            AnimationFootFeatureSample right = m_CommittedRightFoot;
+            m_CommittedRightFoot = m_PendingRightFoot;
+            m_PendingRightFoot = right;
+            bool hasFeet = m_CommittedHasFootFeatures;
+            m_CommittedHasFootFeatures = m_PendingHasFootFeatures;
+            m_PendingHasFootFeatures = hasFeet;
+            m_CommittedPageIndex = m_PageIndex;
+            ClearFrame();
+        }
+
+        public void DiscardFrame(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage,
+            CharacterPoseNativeFailureCode reason)
+        {
+            RequireAlive();
+            m_PendingState = m_CommittedState;
+            m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
+            ClearFrame();
+        }
+
+        public void Stop(CharacterPoseNativeGraphRuntime runtime)
+        {
+            if (m_Disposed)
+                return;
+            if (m_FrameOpen)
+            {
+                CharacterPoseNativeFrameLineage lineage = runtime.CurrentLineage;
+                DiscardFrame(
+                    runtime,
+                    in lineage,
+                    CharacterPoseNativeFailureCode.Disposed);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            m_Disposed = true;
+            m_OutputBuffer.Dispose();
+            m_SecondaryOutputBuffer.Dispose();
+            m_FrameOpen = false;
+        }
+
+        void EvaluatePose(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output,
+            float deltaSeconds)
+        {
+            if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
+            PoseDiscontinuityNative discontinuity = input.Discontinuity[0];
+            if (!discontinuity.IsValid)
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' input Discontinuity is invalid.");
+            if (discontinuity.IsReset)
+            {
+                m_PendingState = new State
+                {
+                    LastEventIdentity = discontinuity.EventIdentity
+                };
+            }
+            else if (discontinuity.EventIdentity < m_PendingState.LastEventIdentity)
+            {
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' received an older Discontinuity event.");
+            }
+            else if (discontinuity.EventIdentity > m_PendingState.LastEventIdentity)
+            {
+                BeginTransition(
+                    input,
+                    discontinuity.EventIdentity);
+            }
+            if (m_PendingState.Active)
+                ApplyResiduals(in input, in output, deltaSeconds);
+            CommitHistory(in output);
+        }
+
+        void BeginTransition(
+            in CharacterPoseNativePoseReadBinding input,
+            ulong eventIdentity)
+        {
+            CharacterPoseDirectInertializationRule rule =
+                m_Policy.DirectPlayerRule;
+            m_PendingState.LastEventIdentity = eventIdentity;
+            m_PendingState.ElapsedSeconds = 0f;
+            m_PendingState.DurationSeconds = rule.DurationSeconds;
+            m_PendingState.Active = false;
+            if (rule.Mode != PoseInertializationMode.Inertialize ||
+                !m_CommittedState.HasHistory)
+            {
+                return;
+            }
+            for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
+            {
+                AnimationLocalBonePose previous = m_CommittedHistory[bone];
+                AnimationLocalBonePose target = input.DenseLocalPoses[bone];
+                if (!previous.IsValid || !target.IsValid)
+                    throw new InvalidOperationException(
+                        $"Inertialization '{NodeId}' history Bone #{bone} is invalid.");
+                m_PendingPositionResiduals[bone] = previous.Position - target.Position;
+                m_PendingRotationResiduals[bone] =
+                    AnimationPoseMath.QuaternionLog(
+                        previous.Rotation * Quaternion.Inverse(target.Rotation));
+                m_PendingScaleResiduals[bone] = previous.Scale - target.Scale;
+                AnimationBlendBoneVelocity previousVelocity =
+                    m_CommittedHistoryVelocities[bone];
+                AnimationBlendBoneVelocity targetVelocity =
+                    input.DenseVelocities[bone];
+                if (!previousVelocity.IsValid || !targetVelocity.IsValid)
+                    throw new InvalidOperationException(
+                        $"Inertialization '{NodeId}' history velocity Bone #{bone} is invalid.");
+                m_PendingLinearVelocityResiduals[bone] =
+                    previousVelocity.Linear - targetVelocity.Linear;
+                m_PendingAngularVelocityResiduals[bone] =
+                    previousVelocity.Angular - targetVelocity.Angular;
+                m_PendingScaleVelocityResiduals[bone] =
+                    previousVelocity.Scale - targetVelocity.Scale;
+            }
+            for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
+            {
+                m_PendingParameterResiduals[parameter] =
+                    m_ParameterModes[parameter] ==
+                    PoseParameterInertializationMode.Inertialize &&
+                    m_CommittedHistoryParameterAvailability[parameter] != 0 &&
+                    input.PoseParameterAvailability[parameter] != 0
+                        ? m_CommittedHistoryParameters[parameter] -
+                          input.PoseParameters[parameter]
+                        : 0f;
+            }
+            m_PendingLeftFoot = m_CommittedLeftFoot;
+            m_PendingRightFoot = m_CommittedRightFoot;
+            m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
+            m_PendingState.Active = true;
+        }
+
+        void ApplyResiduals(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output,
+            float deltaSeconds)
+        {
+            CharacterPoseDirectInertializationRule rule =
+                m_Policy.DirectPlayerRule;
+            bool anyActive = false;
+            NativeSlice<AnimationLocalBonePose> poses = output.DenseLocalPoses;
+            NativeSlice<AnimationBlendBoneVelocity> velocities = output.DenseVelocities;
+            for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
+            {
+                float duration = m_PendingState.DurationSeconds * m_DenseProfiles[bone];
+                EvaluateEnvelope(
+                    duration,
+                    m_PendingState.ElapsedSeconds,
+                    out float envelope,
+                    out float residualWeight,
+                    out float residualDerivative);
+                anyActive |= m_PendingState.ElapsedSeconds < duration;
+                AnimationLocalBonePose target = input.DenseLocalPoses[bone];
+                AnimationBlendBoneVelocity targetVelocity = input.DenseVelocities[bone];
+                Vector3 positionBase = m_PendingPositionResiduals[bone] +
+                    m_PendingState.ElapsedSeconds * m_PendingLinearVelocityResiduals[bone];
+                Vector3 rotationBase = m_PendingRotationResiduals[bone] +
+                    m_PendingState.ElapsedSeconds * m_PendingAngularVelocityResiduals[bone];
+                Vector3 scaleBase = m_PendingScaleResiduals[bone] +
+                    m_PendingState.ElapsedSeconds * m_PendingScaleVelocityResiduals[bone];
+                Vector3 linear = targetVelocity.Linear +
+                    residualDerivative * positionBase +
+                    residualWeight * m_PendingLinearVelocityResiduals[bone];
+                Vector3 angular = targetVelocity.Angular +
+                    residualDerivative * rotationBase +
+                    residualWeight * m_PendingAngularVelocityResiduals[bone];
+                Vector3 scaleVelocity = targetVelocity.Scale +
+                    residualDerivative * scaleBase +
+                    residualWeight * m_PendingScaleVelocityResiduals[bone];
+                if (!AnimationPoseMath.IsFinite(linear) ||
+                    !AnimationPoseMath.IsFinite(angular) ||
+                    !AnimationPoseMath.IsFinite(scaleVelocity))
+                {
+                    throw new InvalidOperationException(
+                        $"Inertialization '{NodeId}' Bone #{bone} velocity is invalid.");
+                }
+                poses[bone] = new AnimationLocalBonePose(
+                    target.Position + residualWeight * positionBase,
+                    AnimationPoseMath.QuaternionExp(residualWeight * rotationBase) *
+                    target.Rotation,
+                    target.Scale + residualWeight * scaleBase);
+                velocities[bone] = new AnimationBlendBoneVelocity(
+                    linear,
+                    angular,
+                    scaleVelocity);
+            }
+            ApplyParameters(in input, in output, m_PendingState.ElapsedSeconds);
+            ApplyFootFeatures(in input, in output, m_PendingState.ElapsedSeconds);
+            m_PendingState.ElapsedSeconds += deltaSeconds;
+            if (!anyActive)
+                m_PendingState.Active = false;
+        }
+
+        void ApplyParameters(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output,
+            float elapsedSeconds)
+        {
+            EvaluateEnvelope(
+                m_PendingState.DurationSeconds,
+                elapsedSeconds,
+                out _,
+                out float residualWeight,
+                out _);
+            NativeSlice<float> parameters = output.PoseParameters;
+            for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
+            {
+                if (m_ParameterModes[parameter] ==
+                        PoseParameterInertializationMode.Inertialize &&
+                    input.PoseParameterAvailability[parameter] != 0)
+                {
+                    parameters[parameter] = input.PoseParameters[parameter] +
+                        residualWeight * m_PendingParameterResiduals[parameter];
+                }
+            }
+        }
+
+        void ApplyFootFeatures(
+            in CharacterPoseNativePoseReadBinding input,
+            in AnimationPlayerPoseNativeWriteBinding output,
+            float elapsedSeconds)
+        {
+            if (!m_PendingHasFootFeatures || input.HasFootFeatures[0] == 0)
+                return;
+            float leftDuration = m_PendingState.DurationSeconds *
+                m_DenseProfiles[m_LeftFootBoneIndex];
+            float rightDuration = m_PendingState.DurationSeconds *
+                m_DenseProfiles[m_RightFootBoneIndex];
+            EvaluateEnvelope(leftDuration, elapsedSeconds, out float leftEnvelope, out _, out _);
+            EvaluateEnvelope(rightDuration, elapsedSeconds, out float rightEnvelope, out _, out _);
+            AnimationFootFeatureBlendAccumulator left = default;
+            if (leftEnvelope < 1f)
+                left.Add(m_PendingLeftFoot, 1f - leftEnvelope);
+            if (leftEnvelope > 0f)
+                left.Add(input.LeftFootFeatures[0], leftEnvelope);
+            AnimationFootFeatureBlendAccumulator right = default;
+            if (rightEnvelope < 1f)
+                right.Add(m_PendingRightFoot, 1f - rightEnvelope);
+            if (rightEnvelope > 0f)
+                right.Add(input.RightFootFeatures[0], rightEnvelope);
+            m_PendingLeftFoot = left.Resolve();
+            m_PendingRightFoot = right.Resolve();
+            m_PendingHasFootFeatures = true;
+            NativeSlice<AnimationPrimitivePoseContribution> contributions =
+                output.Contributions;
+            int count = output.ContributionCount[0];
+            for (int contribution = 0; contribution < count; contribution++)
+            {
+                AnimationPrimitivePoseContribution source = contributions[contribution];
+                contributions[contribution] = new AnimationPrimitivePoseContribution(
+                    source.PhysicalPlayerIndex,
+                    source.PhysicalSourceIndex,
+                    source.PhysicalSourceGeneration,
+                    source.Kind,
+                    source.SourceOwnerIndex,
+                    source.ContributionContinuityIdentity,
+                    source.Weight,
+                    source.LeftFootWeight * leftEnvelope,
+                    source.RightFootWeight * rightEnvelope);
+            }
+        }
+
+        void CommitHistory(in AnimationPlayerPoseNativeWriteBinding output)
+        {
+            for (int bone = 0; bone < m_Rig.PoseBoneCount; bone++)
+            {
+                m_PendingHistory[bone] = output.DenseLocalPoses[bone];
+                m_PendingHistoryVelocities[bone] = output.DenseVelocities[bone];
+            }
+            for (int parameter = 0; parameter < m_ParameterModes.Length; parameter++)
+            {
+                m_PendingHistoryParameters[parameter] = output.PoseParameters[parameter];
+                m_PendingHistoryParameterAvailability[parameter] =
+                    output.PoseParameterAvailability[parameter];
+            }
+            m_PendingLeftFoot = output.LeftFootFeatures[0];
+            m_PendingRightFoot = output.RightFootFeatures[0];
+            m_PendingHasFootFeatures = output.HasFootFeatures[0] != 0;
+            m_PendingState.HasHistory = true;
+        }
+
+        void EvaluateEnvelope(
+            float duration,
+            float elapsedSeconds,
+            out float envelope,
+            out float residualWeight,
+            out float residualDerivative)
+        {
+            if (duration <= 0f || elapsedSeconds >= duration || m_Curve == null)
+            {
+                envelope = 1f;
+                residualWeight = 0f;
+                residualDerivative = 0f;
+                return;
+            }
+            float normalized = Mathf.Clamp01(elapsedSeconds / duration);
+            float curve = AnimationBlendCurveEvaluator.Evaluate(m_Curve, normalized);
+            float derivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
+                m_Curve,
+                normalized);
+            float startDerivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
+                m_Curve,
+                0f);
+            float endDerivative = AnimationBlendCurveEvaluator.EvaluateDerivative(
+                m_Curve,
+                1f);
+            float square = normalized * normalized;
+            float cube = square * normalized;
+            float h10 = cube - 2f * square + normalized;
+            float h11 = cube - square;
+            float h10Derivative = 3f * square - 4f * normalized + 1f;
+            float h11Derivative = 3f * square - 2f * normalized;
+            envelope = Mathf.Clamp01(
+                curve - startDerivative * h10 - endDerivative * h11);
+            float envelopeDerivative = derivative -
+                startDerivative * h10Derivative -
+                endDerivative * h11Derivative;
+            residualWeight = 1f - envelope;
+            residualDerivative = -envelopeDerivative / duration;
+        }
+
+        static PoseParameterInertializationMode[] BuildParameterModes(
+            CharacterPoseInertializationResponse response,
+            CharacterAnimationInputContract contract)
+        {
+            if (response == null || contract == null || contract.Parameters.Count <= 0)
+                throw new ArgumentException(
+                    "Pose native Inertialization parameter contract is invalid.");
+            var modes = new PoseParameterInertializationMode[
+                contract.Parameters.Count];
+            for (int i = 0; i < modes.Length; i++)
+                modes[i] = PoseParameterInertializationMode.Snap;
+            for (int i = 0; i < response.ParameterFilters.Count; i++)
+            {
+                CharacterPoseParameterInertializationFilter filter =
+                    response.ParameterFilters[i];
+                int index = -1;
+                for (int parameter = 0; parameter < contract.Parameters.Count; parameter++)
+                {
+                    if (contract.Parameters[parameter].ParameterId.Equals(filter.ParameterId))
+                    {
+                        index = parameter;
+                        break;
+                    }
+                }
+                if (index < 0 || index >= modes.Length)
+                    throw new InvalidOperationException(
+                        $"Inertialization parameter '{filter.ParameterId}' is not in the input contract.");
+                modes[index] = filter.Mode;
+            }
+            return modes;
+        }
+
+        static float[] CreateUnitProfiles(int count)
+        {
+            var values = new float[count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = 1f;
+            return values;
+        }
+
+        static void Swap<T>(ref T[] left, ref T[] right)
+        {
+            T[] value = left;
+            left = right;
+            right = value;
+        }
+
+        void RequireFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException(
+                    $"Inertialization '{NodeId}' frame is not open.");
+        }
+
+        void ClearFrame()
+        {
+            m_FrameOpen = false;
+            m_PageIndex = -1;
+            m_Output = null;
+            m_WriteBinding = default;
+        }
+
+        void RequireAlive()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(
+                    nameof(CharacterPoseNativeInertializationHandler));
+        }
+    }
+}

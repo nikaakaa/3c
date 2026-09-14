@@ -74,6 +74,15 @@ namespace ThirdPersonSimulation.Fixed
             MotionModifiers = Copy(motionModifiers);
             SourceMap = Copy(sourceMap);
             Producers = Copy(producers);
+            CatalogIndex = new ProgramCatalogRuntimeIndex(Operations.Count, References, CatalogEntries);
+            Topology = new OperationExecutionTopology(
+                BuildOperationDescriptors(Operations),
+                ControlFlow,
+                References,
+                StateSlots,
+                SourceMap,
+                ResolveRootOperation(References),
+                GraphCallFrames);
         }
 
         public CharacterSkillId AbilityId { get; }
@@ -105,6 +114,9 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers { get; }
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap { get; }
         public IReadOnlyList<ProgramProducer> Producers { get; }
+        public ProgramCatalogRuntimeIndex CatalogIndex { get; }
+        public OperationExecutionTopology Topology { get; }
+        public OperationHandle RootOperation => Topology.RootOperation;
 
         internal static FixedGameplayAbilityExecutionData Create(
             CharacterSkillId abilityId,
@@ -167,6 +179,39 @@ namespace ThirdPersonSimulation.Fixed
                 motionModifiers,
                 sourceMap,
                 producers);
+        }
+
+        static IReadOnlyList<OperationExecutionDescriptor> BuildOperationDescriptors(
+            IReadOnlyList<SimulationOperation> operations)
+        {
+            var result = new OperationExecutionDescriptor[operations.Count];
+            for (int i = 0; i < operations.Count; i++)
+            {
+                SimulationOperation operation = operations[i];
+                result[i] = new OperationExecutionDescriptor(
+                    operation.Handle,
+                    operation.Code,
+                    operation.Integer0,
+                    operation.Integer1,
+                    operation.Unsigned0,
+                    operation.Text0,
+                    operation.Flags,
+                    operation.StateSlots);
+            }
+            return result;
+        }
+
+        static OperationHandle ResolveRootOperation(IReadOnlyList<ProgramReference> references)
+        {
+            for (int i = 0; i < references.Count; i++)
+            {
+                ProgramReference reference = references[i];
+                if (!reference.HasSourceOperation &&
+                    reference.Kind == ProgramReferenceKind.Operation &&
+                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                    return new OperationHandle(reference.TargetIndex);
+            }
+            throw new InvalidOperationException("Ability root operation reference is missing.");
         }
 
         static ReadOnlyCollection<T> Copy<T>(IEnumerable<T> values) =>

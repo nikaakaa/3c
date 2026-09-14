@@ -5,7 +5,7 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
 {
-    public interface IDeterministicRollbackSimulationActorRegistration : IFixedSimulationActorRegistration
+    public interface IDeterministicRollbackSimulationActorRegistration : IFixedCharacterRuntimeRegistration
     {
         IFixedCharacterControlSourceRuntime RollbackInput { get; }
         void BindRuntimeDiagnostics(

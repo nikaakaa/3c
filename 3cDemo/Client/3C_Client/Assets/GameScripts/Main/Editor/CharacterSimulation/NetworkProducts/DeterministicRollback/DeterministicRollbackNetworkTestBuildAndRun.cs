@@ -215,9 +215,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (actors[i].SessionHost != session)
                     throw new InvalidOperationException($"Rollback Actor '{actors[i].ActorId}' targets another Session Host.");
                 RequireObjectReference(actors[i], "m_Endpoint", closure.Endpoint);
-                RequireObjectReference(actors[i], "m_Program", closure.ProgramAsset);
-                RequireObjectReference(actors[i], "m_PresentationProjection", closure.Projection);
-                RequireObjectReference(actors[i], "m_InputProfile", closure.Definition.InputProfile);
+                RequireObjectReference(actors[i], "m_CharacterDefinition", closure.Definition);
             }
             DeterministicRollbackDemoStatusOverlay overlay =
                 root.GetComponentsInChildren<DeterministicRollbackDemoStatusOverlay>(true).SingleOrDefault() ??

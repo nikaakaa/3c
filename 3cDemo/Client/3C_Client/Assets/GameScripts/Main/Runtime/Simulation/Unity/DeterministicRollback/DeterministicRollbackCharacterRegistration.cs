@@ -11,7 +11,6 @@ using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
-using FixedCharacterSimulationProgram = ThirdPersonSimulation.Fixed.CharacterSimulationProgram;
 using FixedCharacterBodySample = ThirdPersonSimulation.Fixed.CharacterBodySample;
 using FixedSimulationActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
 using FixedSimulationActorTickResult = ThirdPersonSimulation.Fixed.SimulationActorTickResult;
@@ -24,17 +23,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         ISimulationPresentationCheckpointRuntime
     {
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
+        readonly FixedCharacterRuntime m_CharacterRuntime;
+        readonly FixedSimulationActorBinding m_CharacterBinding;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
-        readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly CharacterPresentationFrameTarget m_PresentationTarget;
-        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
-        readonly CharacterBodyMotionBinding m_BodyMotionBinding;
-        readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectRuntimeBinding;
-        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
@@ -58,8 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             int ownerInstanceId,
             string ownerName,
             ActorId actorId,
-            FixedCharacterSimulationProgram program,
-            CharacterPresentationSemanticContract presentationContract,
+            FixedCharacterRuntime characterRuntime,
+            FixedSimulationActorBinding characterBinding,
             AnimationPresentationProgramIdentity presentationProgramIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
@@ -69,11 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
-            int maximumActivePresentationRecords,
-            CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterBodyMotionBinding bodyMotionBinding,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
+            int maximumActivePresentationRecords)
         {
             if (ownerInstanceId == 0 || string.IsNullOrWhiteSpace(ownerName) || !actorId.IsValid)
                 throw new ArgumentException("Rollback Actor registration owner identity is incomplete.");
@@ -90,12 +82,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             OwnerInstanceId = ownerInstanceId;
             OwnerName = ownerName.Trim();
             ActorId = actorId;
-            Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
-            m_BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
-            m_GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
-            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
+            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            m_CharacterBinding = characterBinding ?? throw new ArgumentNullException(nameof(characterBinding));
+            if (!ReferenceEquals(
+                    m_CharacterRuntime.Roster[m_CharacterRuntime.GetActorIndex(actorId)],
+                    m_CharacterBinding))
+            {
+                throw new ArgumentException("Rollback Actor registration binding does not belong to the Character Runtime.", nameof(characterBinding));
+            }
+            if (m_CharacterBinding.ActorId != actorId ||
+                !string.Equals(m_CharacterBinding.WorldBodyBindingId, worldBodyBindingId.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Rollback Actor registration Character Runtime binding does not match the Actor identity.", nameof(characterBinding));
+            }
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
             m_LocalInput = localInput;
@@ -104,7 +103,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
-            m_DiagnosticsAdapter = new FixedCharacterSimulationDiagnosticsAdapter(DiagnosticsContext, Program);
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
             var animationSnapshotProvider = presentationRuntime as IAnimationPresentationRuntimeSnapshotProvider ??
                 throw new ArgumentException("Rollback Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
@@ -117,7 +115,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
-            ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId, m_ControlRuntimeBinding, m_BodyMotionBinding, m_GameplayEffectRuntimeBinding, m_EquipmentRuntimeBinding);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
                 "deterministic-rollback-fixed-output",
@@ -125,10 +122,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 actorId,
                 StableHash.Compute(
                     actorId.Value,
-                    program.Manifest.ProgramId.Value,
-                    program.Manifest.SourceRevision.Value,
-                    program.ProgramHash.ToString(),
-                    program.LayoutHash.ToString(),
+                    m_CharacterRuntime.GameplayContentHash.ToString(),
+                    m_CharacterBinding.GameplayContentHash.ToString(),
                     WorldBodyBindingId,
                     maximumActivePresentationRecords.ToString()));
         }
@@ -137,17 +132,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public string OwnerName { get; }
         public string OwnerIdentity => $"unity-deterministic-rollback-character/{OwnerInstanceId}";
         public ActorId ActorId { get; }
-        public FixedCharacterSimulationProgram Program { get; }
-        public FixedSimulationActorBinding ProgramIdentity { get; }
-        public CharacterBodyMotionBinding BodyMotionBinding => m_BodyMotionBinding;
-        public CharacterPresentationSemanticContract PresentationContract { get; }
+        public FixedCharacterRuntime CharacterRuntime => m_CharacterRuntime;
+        public FixedSimulationActorBinding CharacterBinding => m_CharacterBinding;
+        public CharacterBodyMotionBinding BodyMotionBinding => m_CharacterBinding.BodyMotionBinding;
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }
         public RuntimeDiagnosticsContext DiagnosticsContext { get; }
         public SimulationOutputRouteDescriptor OutputRoute { get; }
         public IFixedCharacterControlSourceRuntime RollbackInput => m_LocalInput;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
-        public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics =>
+            ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
         public bool SupportsPresentationCheckpointCapture =>
             m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
             checkpoint.SupportsCheckpointCapture;
@@ -174,10 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             return false;
         }
         StableHash ISimulationActorRegistration.DiagnosticsConfigurationHash => StableHash.Compute(
-            Program.Manifest.ProgramId.Value,
-            Program.Manifest.SourceRevision.Value,
-            Program.ProgramHash.ToString(),
-            Program.LayoutHash.ToString(),
+            m_CharacterRuntime.GameplayContentHash.ToString(),
+            m_CharacterBinding.GameplayContentHash.ToString(),
             DiagnosticsContext.Revision.ToString());
 
         public bool TryGetRuntimeDiagnostics(out RollbackRuntimeDiagnosticsSnapshot snapshot)
@@ -212,8 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_NetworkDiagnostics = networkDiagnostics ?? throw new ArgumentNullException(nameof(networkDiagnostics));
         }
 
-        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
-            m_DiagnosticsAdapter.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
+        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash)
+        {
+        }
 
         public void BindExecutionBranch(Guid executionBranchId) =>
             DiagnosticsContext.SetExecutionBranch(executionBranchId);
@@ -317,7 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 {
                     finalSample = sample;
                     float yawVelocityDegreesPerSecond =
-                        sample.AppliedYawDegrees.ToSingle() * Program.Manifest.TickRate;
+                        sample.AppliedYawDegrees.ToSingle() * m_CharacterRuntime.TickRate;
                     intervals.Add(new CharacterPresentationBodyInterval(
                         sample.Tick.Value - 1,
                         FixedUnityPresentationBoundary.Convert(sample.BeforeBody),

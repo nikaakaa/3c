@@ -16,7 +16,6 @@ using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using FixedCharacterSimulationProgram = ThirdPersonSimulation.Fixed.CharacterSimulationProgram;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 using FixedWorldCollisionSummary = ThirdPersonSimulation.Fixed.WorldCollisionSummary;
 
@@ -28,9 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] SimulationSessionHost m_SessionHost;
         [SerializeField] RollbackEndpointAuthoringDefinition m_Endpoint;
         [SerializeField] CharacterPipelineDefinition m_CharacterDefinition;
-        [SerializeField] FixedCharacterSimulationProgramAsset m_Program;
-        [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
-        [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] string m_ActorId = string.Empty;
         [SerializeField] string m_WorldBodyBindingId = string.Empty;
         [SerializeField] CharacterRootHierarchyBinding m_RootHierarchy;
@@ -69,21 +65,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         }
 
 #if UNITY_EDITOR
-        public void SetPresentationProjectionAuthoring(
-            CharacterPresentationProjectionAsset projection)
-        {
-            m_PresentationProjection = projection
-                ? projection
-                : throw new ArgumentNullException(nameof(projection));
-        }
-
         public void SetAuthoring(
             SimulationSessionHost sessionHost,
             RollbackEndpointAuthoringDefinition endpoint,
             CharacterPipelineDefinition characterDefinition,
-            FixedCharacterSimulationProgramAsset program,
-            CharacterPresentationProjectionAsset projection,
-            CharacterInputProfile inputProfile,
             string actorId,
             string worldBodyBindingId,
             CharacterRootHierarchyBinding rootHierarchy,
@@ -93,9 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
             m_Endpoint = endpoint ? endpoint : throw new ArgumentNullException(nameof(endpoint));
             m_CharacterDefinition = characterDefinition ? characterDefinition : throw new ArgumentNullException(nameof(characterDefinition));
-            m_Program = program ? program : throw new ArgumentNullException(nameof(program));
-            m_PresentationProjection = projection ? projection : throw new ArgumentNullException(nameof(projection));
-            m_InputProfile = inputProfile ? inputProfile : throw new ArgumentNullException(nameof(inputProfile));
             m_ActorId = Require(actorId, nameof(actorId));
             m_WorldBodyBindingId = Require(worldBodyBindingId, nameof(worldBodyBindingId));
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
@@ -136,10 +118,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a SimulationSessionHost.");
             RollbackEndpointAuthoringDefinition endpoint = m_Endpoint ? m_Endpoint :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires an Endpoint Definition.");
-            FixedCharacterSimulationProgramAsset programAsset = m_Program ? m_Program :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Fixed Program asset.");
-            CharacterPresentationProjectionAsset projectionAsset = m_PresentationProjection ? m_PresentationProjection :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Presentation Projection asset.");
+            CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Character Pipeline Definition.");
+            CharacterPresentationProjectionAsset projectionAsset = characterDefinition.PresentationProjection ?
+                characterDefinition.PresentationProjection :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition requires a Presentation Projection asset.");
+            CharacterInputProfile inputProfile = characterDefinition.InputProfile ? characterDefinition.InputProfile :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition requires an Input Profile.");
             CharacterRootHierarchyBinding rootHierarchy = m_RootHierarchy ? m_RootHierarchy :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Root Hierarchy Binding.");
             rootHierarchy.RequireValid();
@@ -154,16 +139,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 : throw new InvalidOperationException($"Rollback Character Host '{name}' requires an Animation Rig Binding.");
             ActorId actorId = ActorId;
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
-            FixedCharacterSimulationProgram program = programAsset.Load();
-            CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Character Pipeline Definition.");
-            if (characterDefinition.SimulationTickRate != program.Manifest.TickRate)
-                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition and Program TickRate must match.");
-            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
-                CharacterControlRuntimeModuleCatalog.Create());
+            int tickRate = sessionHost.Composition
+                ? sessionHost.Composition.TickRate
+                : throw new InvalidOperationException($"Rollback Character Host '{name}' requires an explicit Composition Definition.");
+            if (characterDefinition.SimulationTickRate != tickRate)
+                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition and Session Composition TickRate must match.");
+            CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
+            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(controlModules);
+            CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
             CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
+                characterDefinition.LoadFixedCharacterAbilities();
+            FixedSimulationActorBinding characterBinding = new FixedSimulationActorBinding(
+                actorId,
+                Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
+                controlRuntimeBinding,
+                bodyMotionBinding,
+                gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding,
+                abilityData);
+            FixedCharacterRuntime characterRuntime = FixedCharacterRuntime.Create(
+                new[] { characterBinding },
+                tickRate,
+                controlModules);
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
             ICharacterPresentationRuntime presentation = null;
@@ -180,27 +180,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 }
                 FixedWorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
-                CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(
-                    program.Manifest.ProgramId.Value,
-                    program.Manifest.SourceRevision.Value,
-                    program.ProgramHash.ToString(),
-                    program.SourceMap);
+                RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+                    $"fixed-character-runtime/{actorId.Value}",
+                    characterRuntime.Abilities[0].SourceRevision.Value,
+                    characterRuntime.GameplayContentHash.ToString());
+                var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 CharacterPipelineTraceCommandLine.Enable(diagnosticsStore);
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
-                    debugProgram.Revision,
-                    debugProgram.SourceMap,
+                    diagnosticsRevision,
+                    debugSourceMap,
                     diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-                CharacterPresentationSemanticContract presentationContract =
-                    FixedCharacterPresentationContractAdapter.Create(program);
                 CharacterPresentationRuntimeBinding presentationBinding;
                 if (local)
                 {
-                    CharacterInputProfile inputProfile = m_InputProfile ? m_InputProfile :
-                        throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires an Input Profile.");
                     CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires a Camera Rig.");
                     if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
@@ -212,10 +208,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     {
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' camera anchors must belong to VisualRoot.");
                     }
-                    input = new UnityFixedCharacterInputAdapter(inputProfile, program, cameraRig);
+                    input = new UnityFixedCharacterInputAdapter(inputProfile, controlModule, cameraRig);
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
                         projectionAsset,
-                        program.Manifest.TickRate,
+                        tickRate,
                         actorId,
                         animancer,
                         animationRigBinding,
@@ -237,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 {
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
                         projectionAsset,
-                        program.Manifest.TickRate,
+                        tickRate,
                         actorId,
                         animancer,
                         animationRigBinding,
@@ -261,8 +257,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     GetInstanceID(),
                     name,
                     actorId,
-                    program,
-                    presentationContract,
+                    characterRuntime,
+                    characterBinding,
                     new AnimationPresentationProgramIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
@@ -272,11 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
-                    m_MaximumActivePresentationRecords,
-                    controlRuntimeBinding,
-                    bodyMotionBinding,
-                    gameplayEffectRuntimeBinding,
-                    equipmentRuntimeBinding);
+                    m_MaximumActivePresentationRecords);
                 input = null;
                 presentation = null;
                 diagnosticsTarget = null;

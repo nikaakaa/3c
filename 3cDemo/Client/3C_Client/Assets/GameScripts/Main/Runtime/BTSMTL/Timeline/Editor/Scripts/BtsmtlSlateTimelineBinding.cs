@@ -998,7 +998,7 @@ namespace BTSMTL.Timeline.Editor
                 get => m_StartTime;
                 set
                 {
-                    float nextStart = Mathf.Max(0f, value);
+                    float nextStart = SnapTime(value);
                     float delta = nextStart - m_StartTime;
                     m_StartTime = nextStart;
                     m_EndTime = Mathf.Max(m_StartTime + 1f / m_Owner.FrameRate, m_EndTime + delta);
@@ -1010,13 +1010,21 @@ namespace BTSMTL.Timeline.Editor
                 get => m_EndTime;
                 set
                 {
-                    m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, value);
+                    m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, SnapTime(value));
                     RefreshReferenceCurves();
                 }
             }
             public float Length => Mathf.Max(0f, EndTime - StartTime);
-            public float BlendIn { get => Mathf.Clamp(m_BlendIn, 0f, Length); set => m_BlendIn = Mathf.Clamp(value, 0f, Length); }
-            public float BlendOut { get => Mathf.Clamp(m_BlendOut, 0f, Length); set => m_BlendOut = Mathf.Clamp(value, 0f, Length); }
+            public float BlendIn
+            {
+                get => Mathf.Clamp(m_BlendIn, 0f, Length);
+                set => m_BlendIn = Mathf.Clamp(SnapTime(value), 0f, Length);
+            }
+            public float BlendOut
+            {
+                get => Mathf.Clamp(m_BlendOut, 0f, Length);
+                set => m_BlendOut = Mathf.Clamp(SnapTime(value), 0f, Length);
+            }
             public bool CanScale => Source.IsResizable();
             public bool CanClipIn => Source.IsClipInable();
             public int ClipInFrame
@@ -1147,6 +1155,12 @@ namespace BTSMTL.Timeline.Editor
                     if (((BtsmtlTimelineCurveBinding)m_Curves[index]).HasChanges())
                         return true;
                 return false;
+            }
+
+            float SnapTime(float value)
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
+                return frame / (float)m_Owner.FrameRate;
             }
         }
 

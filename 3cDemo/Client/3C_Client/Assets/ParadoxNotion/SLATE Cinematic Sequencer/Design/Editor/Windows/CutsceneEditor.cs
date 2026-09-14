@@ -2982,6 +2982,23 @@ namespace Slate
 
 
         //middle - the actual timeline tracks
+        void DrawTimelineBackground(Rect centerRect, int frameRate)
+        {
+            var bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
+            GUI.color = Color.black.WithAlpha(0.1f);
+            GUI.DrawTexture(bgRect, whiteTexture);
+            GUI.color = Color.black.WithAlpha(0.03f);
+            GUI.DrawTextureWithTexCoords(bgRect, Styles.stripes, new Rect(0, 0, bgRect.width / -7, bgRect.height / -7));
+            GUI.color = Color.white;
+            for (float time = timeInfoStart; time <= timeInfoEnd; time += timeInfoInterval)
+            {
+                float guideTime = frameRate > 0
+                    ? Mathf.Round(time * frameRate) / frameRate
+                    : Mathf.Round(time * 10f) / 10f;
+                DrawGuideLine(guideTime, Color.black.WithAlpha(0.05f));
+            }
+        }
+
         string FormalInspectionKey(IEmbeddedTimelineTrackBinding track)
         {
             return string.Concat(
@@ -3000,22 +3017,7 @@ namespace Slate
 
             var e = Event.current;
 
-            //bg graphic
-            var bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
-            GUI.color = Color.black.WithAlpha(0.1f);
-            GUI.DrawTexture(bgRect, whiteTexture);
-            GUI.color = Color.black.WithAlpha(0.03f);
-            GUI.DrawTextureWithTexCoords(bgRect, Styles.stripes, new Rect(0, 0, bgRect.width / -7, bgRect.height / -7));
-            GUI.color = Color.white;
-
-            // draw guides based on time info stored
-            for ( var _i = timeInfoStart; _i <= timeInfoEnd; _i += timeInfoInterval ) {
-                var i = Mathf.Round(_i * 10) / 10;
-                DrawGuideLine(i, Color.black.WithAlpha(0.05f));
-                if ( i % timeInfoHighMod == 0 ) {
-                    DrawGuideLine(i, Color.black.WithAlpha(0.05f));
-                }
-            }
+            DrawTimelineBackground(centerRect, 0);
 
 
             //Begin Group
@@ -3210,7 +3212,10 @@ namespace Slate
 
             //border shadows
             GUI.color = Color.white.WithAlpha(0.2f);
-            GUI.Box(bgRect, string.Empty, Styles.shadowBorderStyle);
+            GUI.Box(
+                Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y),
+                string.Empty,
+                Styles.shadowBorderStyle);
             GUI.color = Color.white;
 
             //darken the time after cutscene length
@@ -3425,14 +3430,7 @@ namespace Slate
         void ShowTimeLines(Rect centerRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
-            Rect bgRect = Rect.MinMaxRect(centerRect.xMin, centerRect.yMin, centerRect.xMax, screenHeight + scrollPos.y);
-            GUI.color = Color.black.WithAlpha(0.1f);
-            GUI.DrawTexture(bgRect, whiteTexture);
-            GUI.color = Color.black.WithAlpha(0.03f);
-            GUI.DrawTextureWithTexCoords(bgRect, Styles.stripes, new Rect(0, 0, bgRect.width / -7, bgRect.height / -7));
-            GUI.color = Color.white;
-            for (float time = timeInfoStart; time <= timeInfoEnd; time += timeInfoInterval)
-                DrawGuideLine(Mathf.Round(time * embeddedTimeline.FrameRate) / embeddedTimeline.FrameRate, Color.black.WithAlpha(0.05f));
+            DrawTimelineBackground(centerRect, embeddedTimeline.FrameRate);
 
             GUI.BeginGroup(centerRect);
             float nextY = FIRST_GROUP_TOP_MARGIN;

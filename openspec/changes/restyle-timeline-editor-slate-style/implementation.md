@@ -72,6 +72,7 @@ TimelineEditorWindow
 - 原 Slate 的参数区、曲线区和锁定轨道只在明确的 MouseDown/MouseDrag/MouseUp/ContextClick 输入上调用 `Event.Use`；参数区和曲线区限定左键，避免右键菜单、鼠标移动或非输入事件被提前消费。
 - `BtsmtlTimelineDirectorBinding` 已删除；Projection 自身只实现 Slate `IDirector` 所要求的 root 合同，所有播放、采样和受影响 Actor 接口保持空实现，不再分配第二个 Director 对象或第二套时钟。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
+- native 与 formal 时间线共用 `DrawTimelineBackground` 的网格和帧线绘制；两条入口只提供各自 frame rate 和数据，不复制一套视觉绘制。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
 - formal 参数展开区复用 Slate 的前后关键帧、加/删 key 和当前值显示入口；关键帧命令通过正式参数 binding 和 Session 提交，前后关键帧只移动作者游标。
 - 原生 CurveEditor 的 formal cache key 使用当前 Surface、Clip AuthoringId 和参数 Id；同一组曲线不会因每帧重绘重置选择，正式 binding 刷新后也不会遗留旧 renderer 的 Undo 订阅，关闭 Surface 时统一释放。

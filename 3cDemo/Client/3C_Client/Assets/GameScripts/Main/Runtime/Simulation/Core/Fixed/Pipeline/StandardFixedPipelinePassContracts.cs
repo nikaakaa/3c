@@ -7,7 +7,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class StandardFixedPipelinePassContracts
     {
         public const string ImplementationVersion = "1";
+        public const string AbilityEvaluatePassId = "thirdperson.simulation.fixed-ability-evaluate";
         public const string WorldResolveBatchPassId = "thirdperson.simulation.fixed-world-resolve-batch";
+        public const string AbilityFinalizePassId = "thirdperson.simulation.fixed-ability-finalize";
 
         static readonly SimulationPipelineExecutionSupport s_AllExecution =
             SimulationPipelineExecutionSupport.Forward |
@@ -28,7 +30,38 @@ namespace ThirdPersonSimulation.Fixed
                 Diagnostics()
             });
 
+        static readonly SimulationPipelinePassDescriptor s_AbilityEvaluate = Create(
+            AbilityEvaluatePassId,
+            new[]
+            {
+                Produce(SimulationPipelineProducts.PendingActorEvaluations),
+                Produce(SimulationPipelineProducts.WorldSolveBatchRequest)
+            },
+            new[]
+            {
+                Target(FixedPipelineRuntimePortIds.CharacterRuntime, FixedPipelineRuntimePortIds.CharacterRuntimeSchema),
+                Target(FixedPipelineRuntimePortIds.WorkingState, FixedPipelineRuntimePortIds.WorkingStateSchema),
+                Diagnostics()
+            });
+
+        static readonly SimulationPipelinePassDescriptor s_AbilityFinalize = Create(
+            AbilityFinalizePassId,
+            new[]
+            {
+                Consume(SimulationPipelineProducts.PendingActorEvaluations),
+                Consume(SimulationPipelineProducts.WorldSolveBatchResult),
+                Append(SimulationPipelineProducts.FinalizedStepResult)
+            },
+            new[]
+            {
+                Target(FixedPipelineRuntimePortIds.CharacterRuntime, FixedPipelineRuntimePortIds.CharacterRuntimeSchema),
+                Target(FixedPipelineRuntimePortIds.WorkingState, FixedPipelineRuntimePortIds.WorkingStateSchema),
+                Diagnostics()
+            });
+
+        public static SimulationPipelinePassDescriptor AbilityEvaluate => s_AbilityEvaluate;
         public static SimulationPipelinePassDescriptor WorldResolveBatch => s_WorldResolveBatch;
+        public static SimulationPipelinePassDescriptor AbilityFinalize => s_AbilityFinalize;
 
         public static SimulationPipelinePassFactoryDescriptor CreateFactoryDescriptor(
             SimulationPipelinePassDescriptor descriptor)
@@ -79,6 +112,17 @@ namespace ThirdPersonSimulation.Fixed
 
         static SimulationPipelineProductAccess Consume(SimulationPipelineProductContract product) =>
             new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.ReadOnlyConsumer);
+
+        static SimulationPipelineProductAccess Append(SimulationPipelineProductContract product) =>
+            new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.AppendOnlyProducer);
+
+        static SimulationPipelinePortRequirement Target(string portId, string schemaId) =>
+            new SimulationPipelinePortRequirement(
+                SimulationPipelineBindingPortRole.Target,
+                portId,
+                schemaId,
+                1,
+                SimulationPortDirection.Input);
 
         static SimulationPipelinePortRequirement Solver() =>
             new SimulationPipelinePortRequirement(

@@ -7,6 +7,7 @@ namespace ThirdPersonSimulation
     internal static class SimulationProgramSemanticsCodec
     {
         const int MaximumTableCount = 1000000;
+        internal const int SourceMapStringTableVersion = 1;
 
         internal static void WriteControlFlow(CanonicalWriter writer, ProgramControlFlowEdge value)
         {

@@ -10,7 +10,9 @@ namespace ThirdPersonSimulation
         public const int LocalControlInputStateSchemaVersion = 1;
         public const string LocalInputIngressPassId = "thirdperson.simulation.local-input-ingress";
         public const string LocalSingleStepSchedulePassId = "thirdperson.simulation.local-single-step-schedule";
+        public const string AbilityEvaluatePassId = "thirdperson.simulation.float32-ability-evaluate";
         public const string WorldResolveBatchPassId = "thirdperson.simulation.float32-world-resolve-batch";
+        public const string AbilityFinalizePassId = "thirdperson.simulation.float32-ability-finalize";
         public const string LocalImmediateOutputPassId = "thirdperson.simulation.local-immediate-output";
 
         static readonly SimulationPipelineExecutionSupport s_AllExecution =
@@ -50,6 +52,24 @@ namespace ThirdPersonSimulation
             },
             Array.Empty<SimulationPipelinePortRequirement>());
 
+        static readonly SimulationPipelinePassDescriptor s_AbilityEvaluate = Create(
+            AbilityEvaluatePassId,
+            SimulationPipelinePhase.Step,
+            s_AllExecution,
+            SimulationPipelinePassStateClass.Stateless,
+            string.Empty,
+            new[]
+            {
+                Produce(SimulationPipelineProducts.PendingActorEvaluations),
+                Produce(SimulationPipelineProducts.WorldSolveBatchRequest)
+            },
+            new[]
+            {
+                Target(Float32PipelineRuntimePortIds.CharacterRuntime, Float32PipelineRuntimePortIds.CharacterRuntimeSchema),
+                Target(Float32PipelineRuntimePortIds.WorkingState, Float32PipelineRuntimePortIds.WorkingStateSchema),
+                Diagnostics()
+            });
+
         static readonly SimulationPipelinePassDescriptor s_WorldResolveBatch = Create(
             WorldResolveBatchPassId,
             SimulationPipelinePhase.Step,
@@ -64,6 +84,25 @@ namespace ThirdPersonSimulation
             new[]
             {
                 Solver(),
+                Diagnostics()
+            });
+
+        static readonly SimulationPipelinePassDescriptor s_AbilityFinalize = Create(
+            AbilityFinalizePassId,
+            SimulationPipelinePhase.Step,
+            s_AllExecution,
+            SimulationPipelinePassStateClass.Stateless,
+            string.Empty,
+            new[]
+            {
+                Consume(SimulationPipelineProducts.PendingActorEvaluations),
+                Consume(SimulationPipelineProducts.WorldSolveBatchResult),
+                Append(SimulationPipelineProducts.FinalizedStepResult)
+            },
+            new[]
+            {
+                Target(Float32PipelineRuntimePortIds.CharacterRuntime, Float32PipelineRuntimePortIds.CharacterRuntimeSchema),
+                Target(Float32PipelineRuntimePortIds.WorkingState, Float32PipelineRuntimePortIds.WorkingStateSchema),
                 Diagnostics()
             });
 
@@ -82,7 +121,9 @@ namespace ThirdPersonSimulation
 
         public static SimulationPipelinePassDescriptor LocalInputIngress => s_LocalInputIngress;
         public static SimulationPipelinePassDescriptor LocalSingleStepSchedule => s_LocalSingleStepSchedule;
+        public static SimulationPipelinePassDescriptor AbilityEvaluate => s_AbilityEvaluate;
         public static SimulationPipelinePassDescriptor WorldResolveBatch => s_WorldResolveBatch;
+        public static SimulationPipelinePassDescriptor AbilityFinalize => s_AbilityFinalize;
         public static SimulationPipelinePassDescriptor LocalImmediateOutput => s_LocalImmediateOutput;
 
         public static SimulationPipelinePassFactoryDescriptor CreateFactoryDescriptor(
@@ -141,6 +182,9 @@ namespace ThirdPersonSimulation
 
         static SimulationPipelineProductAccess Consume(SimulationPipelineProductContract product) =>
             new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.ReadOnlyConsumer);
+
+        static SimulationPipelineProductAccess Append(SimulationPipelineProductContract product) =>
+            new SimulationPipelineProductAccess(product, SimulationPipelineProductAccessKind.AppendOnlyProducer);
 
         static SimulationPipelinePortRequirement Target(string portId, string schemaId) =>
             new SimulationPipelinePortRequirement(

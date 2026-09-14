@@ -70,8 +70,8 @@ namespace ThirdPersonSimulation
         public static ProgramConstant FromVector2(int index, string identity, Float32Vector2 value) => new ProgramConstant(index, identity, ProgramConstantKind.Vector2, default, default, default, default, value, default, default, null, null);
         public static ProgramConstant FromVector3(int index, string identity, Float32Vector3 value) => new ProgramConstant(index, identity, ProgramConstantKind.Vector3, default, default, default, default, default, value, default, null, null);
         public static ProgramConstant FromYaw(int index, string identity, Float32Yaw value) => new ProgramConstant(index, identity, ProgramConstantKind.Yaw, default, default, default, default, default, default, value, null, null);
-        public static ProgramConstant FromString(int index, string identity, string value) => new ProgramConstant(index, identity, ProgramConstantKind.String, default, default, default, default, default, default, value, null);
-        public static ProgramConstant FromBytes(int index, string identity, byte[] value) => new ProgramConstant(index, identity, ProgramConstantKind.Bytes, default, default, default, default, default, default, null, value);
+        public static ProgramConstant FromString(int index, string identity, string value) => new ProgramConstant(index, identity, ProgramConstantKind.String, default, default, default, default, default, default, default, value, null);
+        public static ProgramConstant FromBytes(int index, string identity, byte[] value) => new ProgramConstant(index, identity, ProgramConstantKind.Bytes, default, default, default, default, default, default, default, null, value);
     }
 
     public sealed class SimulationOperationDefinition

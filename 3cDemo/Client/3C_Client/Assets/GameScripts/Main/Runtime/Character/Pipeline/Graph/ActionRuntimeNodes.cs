@@ -77,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -158,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 

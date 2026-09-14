@@ -3,7 +3,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal readonly struct FixedGameplayAbilityExecutionDataLoadExpectation
+    public readonly struct FixedGameplayAbilityExecutionDataLoadExpectation
     {
         public FixedGameplayAbilityExecutionDataLoadExpectation(
             string definitionGuid,
@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationProgramRootDescriptor Root { get; }
     }
 
-    internal static class FixedGameplayAbilityExecutionDataLoader
+    public static class FixedGameplayAbilityExecutionDataLoader
     {
         public static FixedGameplayAbilityExecutionData Load(
             byte[] canonicalArtifact,

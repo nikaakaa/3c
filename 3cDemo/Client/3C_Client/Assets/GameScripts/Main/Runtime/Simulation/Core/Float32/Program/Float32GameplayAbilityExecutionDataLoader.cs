@@ -2,7 +2,7 @@ using System;
 
 namespace ThirdPersonSimulation
 {
-    internal readonly struct Float32GameplayAbilityExecutionDataLoadExpectation
+    public readonly struct Float32GameplayAbilityExecutionDataLoadExpectation
     {
         public Float32GameplayAbilityExecutionDataLoadExpectation(
             string definitionGuid,
@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation
         public SimulationProgramRootDescriptor Root { get; }
     }
 
-    internal static class Float32GameplayAbilityExecutionDataLoader
+    public static class Float32GameplayAbilityExecutionDataLoader
     {
         public static Float32GameplayAbilityExecutionData Load(
             byte[] canonicalArtifact,

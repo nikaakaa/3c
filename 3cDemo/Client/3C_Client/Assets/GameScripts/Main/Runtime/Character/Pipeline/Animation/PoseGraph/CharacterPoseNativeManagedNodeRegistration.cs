@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -124,6 +125,86 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 creator.Create);
         }
 
+        internal static void RegisterSubgraph(
+            this CharacterPoseNativeNodeHandlerRegistry registry,
+            Func<CharacterPoseCanvasNode, ulong> requestIdFactory,
+            Func<CharacterPoseCanvasNode, ulong> instanceIdFactory,
+            Func<CharacterPoseCanvasNode, ulong> resetGenerationFactory,
+            Func<CharacterPoseCanvasNode, string> reasonFactory)
+        {
+            if (registry == null)
+                throw new ArgumentNullException(nameof(registry));
+            if (requestIdFactory == null)
+                throw new ArgumentNullException(nameof(requestIdFactory));
+            if (instanceIdFactory == null)
+                throw new ArgumentNullException(nameof(instanceIdFactory));
+            if (resetGenerationFactory == null)
+                throw new ArgumentNullException(nameof(resetGenerationFactory));
+            if (reasonFactory == null)
+                throw new ArgumentNullException(nameof(reasonFactory));
+            var creator = new Creator(node =>
+                new CharacterPoseNativeSubgraphHandler(
+                    node.NodeId,
+                    requestIdFactory(node),
+                    instanceIdFactory(node),
+                    resetGenerationFactory(node),
+                    reasonFactory(node),
+                    registry));
+            registry.Register(
+                CharacterPoseNodeKind.PoseSubgraph,
+                creator.Create);
+        }
+
+        internal static void RegisterRootOrientationWarp(
+            this CharacterPoseNativeNodeHandlerRegistry registry,
+            Func<CharacterPoseCanvasNode, RootMotionCurveAsset> curveFactory,
+            Func<CharacterPoseCanvasNode,
+                ICharacterPoseNativeRootOrientationSource> sourceFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+                bufferFactory)
+        {
+            if (registry == null)
+                throw new ArgumentNullException(nameof(registry));
+            if (curveFactory == null)
+                throw new ArgumentNullException(nameof(curveFactory));
+            if (sourceFactory == null)
+                throw new ArgumentNullException(nameof(sourceFactory));
+            if (bufferFactory == null)
+                throw new ArgumentNullException(nameof(bufferFactory));
+            var creator = new PreparedCreator((node, preparedBinding) =>
+            {
+                ICharacterPoseNativeRootOrientationSource source = null;
+                CharacterPoseNativeNodePoseBuffer buffer = null;
+                try
+                {
+                    RootMotionCurveAsset curve = curveFactory(node) ??
+                        throw new InvalidOperationException(
+                            $"Pose native Root Orientation curve factory returned no curve for '{node.NodeId}'.");
+                    source = sourceFactory(node) ??
+                        throw new InvalidOperationException(
+                            $"Pose native Root Orientation source factory returned no source for '{node.NodeId}'.");
+                    buffer = bufferFactory(node) ??
+                        throw new InvalidOperationException(
+                            $"Pose native Root Orientation buffer factory returned no buffer for '{node.NodeId}'.");
+                    return new CharacterPoseNativeRootOrientationWarpHandler(
+                        node.NodeId,
+                        in preparedBinding,
+                        curve,
+                        source,
+                        buffer);
+                }
+                catch
+                {
+                    buffer?.Dispose();
+                    source?.Dispose();
+                    throw;
+                }
+            });
+            registry.Register(
+                CharacterPoseNodeKind.RootOrientationWarp,
+                creator.Create);
+        }
+
         static ICharacterPoseNativeNodeHandler CreateSourceHandler<TSource>(
             CharacterPoseCanvasNode node,
             Func<CharacterPoseCanvasNode, TSource> sourceFactory,
@@ -186,6 +267,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
                 m_Create(node);
+        }
+
+        sealed class PreparedCreator
+        {
+            readonly Func<CharacterPoseCanvasNode,
+                CharacterPoseNativePreparedBinding,
+                ICharacterPoseNativeNodeHandler> m_Create;
+
+            internal PreparedCreator(
+                Func<CharacterPoseCanvasNode,
+                    CharacterPoseNativePreparedBinding,
+                    ICharacterPoseNativeNodeHandler> create)
+            {
+                m_Create = create ?? throw new ArgumentNullException(nameof(create));
+            }
+
+            internal ICharacterPoseNativeNodeHandler Create(
+                CharacterPoseCanvasNode node,
+                in CharacterPoseNativePreparedBinding preparedBinding,
+                in CharacterPoseNativeInstanceContext context) =>
+                m_Create(node, preparedBinding);
         }
     }
 }

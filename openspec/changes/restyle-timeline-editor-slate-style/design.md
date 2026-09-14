@@ -1,6 +1,8 @@
 ## Context
 
-2026-09-14 作者UI集中审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。以该文档的当前调用点和状态为准，旧快照仅作追溯：无组件打开、局部坐标、统一SelectedClip派生和正式失败回滚已有代码，原绘制合并/完整手势/局部提交/曲线/Inspector仍未齐。本轮只排查和补文档，不修改实现代码或声称实际窗口已通过。
+2026-09-14 文档收口：本 change 同时包含两条有边界的工作线。作者线继续把 Slate 原有时间轴、Clip、DopeSheet、CurveEditor 和 Inspector 接到正式 `TimelineData`；Runtime 线承接新增的直接 Timeline 内容运行合同。两条线共享 TimelineData、identity、资源 binding 和正式 owner，但不共享 UI 播放器、Slate 组件树或第二份可编辑数据。当前源码已经有 Runtime 合同和旧 operation-backed 接线的部分基础，但直接内容 Runtime 尚未完成；第12节必须按当前代码对账推进，不能只写成抽象“以后再做”。
+
+2026-09-14 作者UI集中审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。以该文档的当前调用点和状态为准，旧快照仅作追溯：无组件打开、局部坐标、统一SelectedClip派生和正式失败回滚已有代码，原绘制合并/完整手势/局部提交/曲线/Inspector仍未齐。该审阅批次只记录审计，不把文档或窄编译当成实际窗口通过；后续实现状态以本文件、implementation.md 和 tasks.md 的当前对账为准。
 
 2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../../specs/character-root-motion-curves/spec.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
 
@@ -20,7 +22,7 @@
 
 ## Goals / Non-Goals
 
-2026-09-14 范围拆分：下方原目标主要描述Slate UI；新增Timeline直接运行设计见[timeline-direct-runtime.md](timeline-direct-runtime.md)，对应tasks第12节，接受D9—D13的内容/portable/播放/私有状态职责。本轮仅PLAN，不启动实现。原UI“不改执行语义”不再被误解为本任务不能登记Runtime线；也不能把新增Runtime理解为Slate UI开始执行角色。
+2026-09-14 范围拆分：下方原目标主要描述Slate UI；新增Timeline直接运行设计见[timeline-direct-runtime.md](timeline-direct-runtime.md)，对应tasks第12节，承接D9—D13的内容/portable/播放/私有状态职责。Runtime线已经纳入当前 goal，但文档中的合同、任务和代码现状必须分开记录；不能把已有合同类型或旧运行入口当成直接 Runtime 已完成，也不能把新增 Runtime 理解为 Slate UI 开始执行角色。
 
 **Goals:**
 
@@ -32,9 +34,16 @@
 **Non-Goals:**
 
 - 不创建另一套持久化 Timeline、mutation service 或 UI Toolkit 时间轴。
-- 不改模拟频率、技能执行、Pose Graph、相机算法和 Scene Play 执行语义。
+- 作者 UI 线不改模拟频率、角色技能执行、Pose Graph、相机算法和 Scene Play 执行语义；Runtime 线只迁移 Timeline 自己的调度/播放职责，不接管角色 Step、World 提交或各领域算法。
 - 不新增测试代码，不自动 Build 角色产物、启动 Play 或迁移资产。
 - 不把旧 worktree 的代码状态当成主线已交付。
+
+**Runtime 线的完成边界：**
+
+- 运行时直接读取正式 Timeline 内容的只读闭包或 portable 表示；不从 Slate 投影、Unity `Object`、旧 `ProgramPlan` 或隐藏组件生成第二份作者数据。
+- `Prepare → CreatePlayback → Advance → Commit/Discard → Stop` 是正式调用链；Timeline 只能提交自己的候选状态和表现请求，角色/World 的总 Step、快照和最终发布仍由原 owner 决定。
+- Skill 与非 Skill 调用方共用同一 Timeline Runtime；差异只来自调用身份、目标和正式能力 binding。不能通过空 Actor、空技能或 Slate 播放器凑出成功结果。
+- 作者游标、Runtime playback 时间、History 时间保持三个独立状态；Graph Shell/SkillGraph 仍拥有运行控制和实例选择。:codex-annotation{index="1"}
 
 ## Decisions
 

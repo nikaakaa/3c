@@ -2,7 +2,7 @@
 
 2026-09-14 完整作者接线审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。此次新增明确要求：Timeline内必须可只读查看当前MotionCurveClip的源XYZ/Yaw及使用区间，不以源资产导航替代查看。曲线数据仍归源owner，不注册为局部可写channel；局部Weight/Ease照常编辑。审阅同时明确原交互合并、局部提交、Inspector、锁定/禁用和状态恢复缺口，不把之前勾选当全部完成。
 
-2026-09-14 PARALLEL-20260914-DOMAIN-01新增规划接收范围：除原Slate UI线外，本任务登记独立的Timeline直接内容Runtime，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)。本次只更新规划，不启动该Runtime实现；复用现有timeline任务，原UI授权/正确进展不变。历史段落不作为当前实现状态。
+2026-09-14 PARALLEL-20260914-DOMAIN-01新增规划接收范围：除原Slate UI线外，本任务登记独立的Timeline直接内容Runtime，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)。这条记录描述当时的规划变更，不把“当时只更新规划”继续当成当前 goal 的范围限制；当前实现状态以 implementation.md、timeline-direct-runtime.md 和 tasks.md 的对账为准。复用现有timeline任务，原UI授权/正确进展不变。
 
 用户要求直接使用 Slate 已有的完整 Timeline UI。此前规划把数据适配扩大为纯内存 Editor Model、新 Surface API、交互与 Curve/DopeSheet 输入全面改造，实际成为重做编辑器，用户已明确否决；实现窗口已通过 0aa52f209 按用户要求回退。
 

@@ -1,10 +1,23 @@
 # Timeline直接内容运行：职责与公共合同
 
+## 0. 当前代码对账
+
+本文现在同时承担“最终合同”和“实现状态对账”，避免把已有的旧运行接线误写成新直接 Runtime 已完成。
+
+| 当前代码 | 已有事实 | 不能据此宣称的完成项 |
+|---|---|---|
+| `Timeline.ExecutionContracts.cs` | 已有 `TimelineBindingPlan`、`TimelineCallInput`、`TimelineBindingPreparation`、分型 `TimelineTickContext`/`ITimelineTickExecutionView`、执行 identity、观察和 Scene Presentation sink 合同 | 这只是 binding/输入准备和输出合同；没有直接内容 playback 实例、Advance 候选、Commit/Discard 或分型 Capture/Restore |
+| `TimelineData.Runtime.cs`、`TimelinePlaybackTreeContracts.cs`、`TimelineNode.cs` | Skill Timeline 已通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，查询状态并传播 Stop/Cancel | 这是现有 Skill/Node 播放入口，不是非 Skill 可用的直接内容 Runtime，也不替代第12节的独立 Prepare/CreatePlayback |
+| `Simulation/Core/Execution/TimelineControlContracts.cs`、`TimelineControlRuntime.cs` | 已有基于 `OperationHandle`、`ITimelineTargetLeaf<TTime>`、`OperationControlCursor` 的循环、Section、TreeClip、Motion/Camera/Cue、Weight/Ease 和 trace 调度 | 该实现仍从 operation/Program 读取并在控制状态口写入，不能原样作为“删除 ProgramPlan/operation 前提”的最终实现；第12.3、12.4、12.8仍未完成 |
+| `RuntimeDiagnostics` 的 Timeline playback provenance/summary | 已有按 playback identity 的只读诊断与编辑器观察入口 | 诊断只观察运行事实，不是 Timeline Runtime owner，不得反向驱动播放 |
+
+当前 Timeline Runtime 目录没有 `Float32TimelinePlayback.cs` 或 `FixedTimelinePlayback.cs` 这两个最终直接内容实现文件；tasks 第12节中的迁移目标不能按文件名存在来勾选。本文后续合同以当前正式 `TimelineData`、`TimelineContentClosure`、typed domain binding 和主实现提供的 Step/TreeClip/快照边界为准。
+
 ## 1. 接收范围与授权状态
 
 2026-09-14依据[协调审阅PARALLEL-20260914-DOMAIN-01](../../../docs/coordination-progress.md)（2801861c1）与[主方案D9—D13](../replace-character-program-with-domain-runtimes/design.md)，在既有Timeline规划中登记新增Runtime职责。既有规划任务为01a095ac-88a4-7bd3-abbf-197b9058c1ca，实现任务仍为timeline（01a089db-81e3-7a73-ae52-82ef95b744d4），不新建任务。
 
-本次只授权更新规划、任务归属与规范增量，不启动Runtime实现，不向实现任务发送执行消息。此前Slate UI已授权工作及正确提交保留，不因新增范围重新回退或重做。Runtime唯一执行清单放本change的tasks第12节；本文只有合同与分工，主方案1.5—1.7、3.8、8.2中的Timeline域内部分由该节承接，不复制第二套勾选清单。
+当前 goal 已把 Runtime 线纳入实现范围；本文件不向其它窗口派工，也不把规划文字当成实现证据。Runtime唯一执行清单放本 change 的 tasks 第12节；本文只定义合同、现有接线对账和文件分工，主方案1.5—1.7、3.8、8.2中的 Timeline 域内部分由该节承接，不复制第二套勾选清单。此前 Slate UI 的正确代码和提交保留，不因新增 Runtime 线回退或重做。
 
 | 工作线 | 接收内容 | 不接管内容 |
 |---|---|---|
@@ -99,4 +112,4 @@ TimelineSemanticEmitterRegistry等文件若混合Camera/Motion或共享编译职
 
 依赖未完成时准确记录缺哪个typed接口或共享入口，不补旧Program适配器/空执行服务。D11曾交付的独立Ability前端和两个目标store保留事实，但它们仍返回旧容器的部分不能当作最终新技能服务。D12审查属于主实现整改，Timeline不复制Q1—Q4待办。
 
-主方案只保留职责指针与公共集成项，本任务tasks第12节是Runtime域内唯一勾选入口。后续是否启动由用户另行授权；此次不派工、不运行Unity/Build、不新增测试或验证任务。编译/刷新若后续实施需要，按协调指定主实现组织，编译期间暂停源码写入，不新建锁或验证服务。
+主方案只保留职责指针与公共集成项，本任务 tasks 第12节是 Runtime 域内唯一勾选入口。实现时不向其它窗口派工，不创建第二个 Timeline Runtime 清单；共享 Host、Step、TreeClip、快照和编译入口由各自 owner 接入。编译/刷新若后续实施需要，按协调指定主实现组织，编译期间暂停源码写入，不新建锁或验证服务。

@@ -6,6 +6,16 @@ Timeline 的持久化真相仍是 `BTSMTL.Timeline.TimelineData`。BTSMTL 路径
 
 Scene Play、Skill 请求、Build、采用、历史恢复和输入回放仍由 Graph Shell 与正式预览 coordinator 拥有。Timeline 只显示作者帧、编辑曲线，并接收精确运行观察标记。
 
+## Runtime 接线现状
+
+Timeline Runtime 不是 Timeline 窗口里的播放按钮，也不是 Slate 的 `Cutscene`/`Director` 代理。当前代码已经形成三层不同的接线，必须继续收敛而不能混用：
+
+1. `Timeline.ExecutionContracts.cs` 提供直接内容 Runtime 需要的 binding plan、调用输入、领域 binding 准备、执行 identity、Tick view、观察和表现输出合同。这些类型只定义边界，尚未形成可创建、推进和提交的直接播放实例。
+2. `TimelineNode` 通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，这是 Skill Graph 的调用入口；它负责调用身份、状态查询和停止传播，不应被改成 Timeline 窗口的本地播放器，也不能作为非 Skill 调用方的唯一入口。
+3. `TimelineControlRuntime<TTarget,TTime>` 目前仍以 `OperationHandle`、`ITimelineTargetLeaf<TTime>` 和 `OperationControlCursor` 读取 operation/Program，完成 Section、循环、TreeClip、Motion/Camera/Cue、权重和 trace 调度。这是现行 operation-backed 运行基线，不是第12节要求的直接内容最终实现；迁移必须把同一算法的内容读取和候选提交接到正式 Runtime owner，而不是复制一份求值器。
+
+因此当前“有 Runtime 接线”只表示基础合同、Skill 请求和 operation-backed 调度存在；不表示直接 Timeline Runtime、非 Skill playback、Commit/Discard 候选状态或 Capture/Restore 已闭环。实现时应先以这些现有入口划定 owner，再替换其共同 Timeline 读取/发射点；不得新建第二套播放器或在 Slate 中添加运行按钮。
+
 ## 已完成代码链
 
 ```text

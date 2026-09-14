@@ -253,19 +253,21 @@ namespace BTSMTL.Timeline
         public AnimationCurve ProgramPositionX => ProgramCurve(SourcePositionX);
         public AnimationCurve ProgramPositionY => ProgramCurve(SourcePositionY);
         public AnimationCurve ProgramPositionZ => ProgramCurve(SourcePositionZ);
-        public AnimationCurve ProgramYaw => ProgramCurve(RequireSource().LocalYaw);
+        public AnimationCurve ProgramYaw => ProgramCurve(SourceYaw);
 
-        AnimationCurve SourcePositionX => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+        public AnimationCurve SourcePositionX => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
             ? ZeroCurve()
             : RequireSource().LocalPositionX;
 
-        AnimationCurve SourcePositionY => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+        public AnimationCurve SourcePositionY => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
             ? ZeroCurve()
             : RequireSource().LocalPositionY;
 
-        AnimationCurve SourcePositionZ => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
+        public AnimationCurve SourcePositionZ => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
             ? RequireSource().ForwardDistance
             : RequireSource().LocalPositionZ;
+
+        public AnimationCurve SourceYaw => RequireSource().LocalYaw;
 
         RootMotionCurveAsset RequireSource()
         {

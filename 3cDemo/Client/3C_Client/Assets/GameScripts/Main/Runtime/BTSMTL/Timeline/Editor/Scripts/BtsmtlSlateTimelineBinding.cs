@@ -741,7 +741,7 @@ namespace BTSMTL.Timeline.Editor
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
         }
 
-        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding
+        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding, IEmbeddedTimelineMotionSourceBinding
         {
             readonly List<IEmbeddedTimelineCurveBinding> m_Curves = new List<IEmbeddedTimelineCurveBinding>();
             readonly List<IEmbeddedTimelineParameterBinding> m_Parameters = new List<IEmbeddedTimelineParameterBinding>();
@@ -797,9 +797,55 @@ namespace BTSMTL.Timeline.Editor
             public IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters => m_Parameters;
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => m_Curves;
 
+            public string SourceName => SourceMotion?.SourceCurve?.name ?? string.Empty;
+            public UnityEngine.Object SourceAsset => SourceMotion?.SourceCurve;
+            public string SourceVersion
+            {
+                get
+                {
+                    UnityEngine.Object asset = SourceAsset;
+                    string path = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
+                    return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
+                }
+            }
+            public float SourceStartTime => SourceMotion?.SourceStartTime ?? 0f;
+            public float SourceEndTime => SourceMotion?.SourceEndTime ?? 0f;
+            public IReadOnlyList<string> SourceCurveNames => new[] { "Position X", "Position Y", "Position Z", "Yaw" };
+            public IReadOnlyList<AnimationCurve> SourceCurves
+            {
+                get
+                {
+                    MotionCurveClip motion = SourceMotion;
+                    if (motion == null)
+                        return Array.Empty<AnimationCurve>();
+                    return new[]
+                    {
+                        CopyCurve(motion.SourcePositionX),
+                        CopyCurve(motion.SourcePositionY),
+                        CopyCurve(motion.SourcePositionZ),
+                        CopyCurve(motion.SourceYaw)
+                    };
+                }
+            }
+
+            MotionCurveClip SourceMotion => Source as MotionCurveClip;
+
+            public void OpenSource() => m_Owner.OpenSource(this);
+
             public bool CanCrossBlend(IEmbeddedTimelineClipBinding other)
             {
                 return other is BtsmtlTimelineClipBinding formal && formal.Source.GetType() == Source.GetType() && Source.IsMixable();
+            }
+
+            static AnimationCurve CopyCurve(AnimationCurve source)
+            {
+                return source == null
+                    ? new AnimationCurve()
+                    : new AnimationCurve(source.keys)
+                    {
+                        preWrapMode = source.preWrapMode,
+                        postWrapMode = source.postWrapMode
+                    };
             }
 
             public void AddIdentityKey(float time)

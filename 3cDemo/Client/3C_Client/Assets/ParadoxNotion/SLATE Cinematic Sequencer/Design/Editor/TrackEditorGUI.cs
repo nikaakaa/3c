@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 namespace Slate
@@ -573,6 +575,16 @@ namespace Slate
             if (finalPosRect.width <= 5f)
                 return;
 
+            if (clip is IEmbeddedTimelineMotionSourceBinding source)
+            {
+                const float sourceHeight = 84f;
+                Rect sourceRect = Rect.MinMaxRect(finalPosRect.xMin, finalPosRect.yMin, finalPosRect.xMax, finalPosRect.yMin + sourceHeight);
+                DrawMotionSource(sourceRect, source);
+                finalPosRect.yMin = sourceRect.yMax + 2f;
+                if (finalPosRect.height <= 5f)
+                    return;
+            }
+
             if (inspectedParameterIndex >= clip.Parameters.Count)
                 inspectedParameterIndex = -1;
             if (inspectedParameterIndex < 0)
@@ -636,6 +648,34 @@ namespace Slate
                 curveRect,
                 finalTimeRect,
                 () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));
+        }
+
+        static void DrawMotionSource(Rect rect, IEmbeddedTimelineMotionSourceBinding source)
+        {
+            GUI.color = Color.black.WithAlpha(0.22f);
+            GUI.Box(rect, string.Empty, Styles.clipBoxFooterStyle);
+            GUI.color = Color.white;
+            Rect titleRect = new Rect(rect.xMin + 4f, rect.yMin + 2f, rect.width - 92f, 16f);
+            string range = string.Format("{0:0.###}-{1:0.###}s", source.SourceStartTime, source.SourceEndTime);
+            string version = string.IsNullOrEmpty(source.SourceVersion) ? "unsaved" : source.SourceVersion;
+            GUI.Label(titleRect, string.Format("Source XYZ/Yaw  {0}  [{1}]  {2}", source.SourceName, range, version), Styles.leftLabel);
+            if (GUI.Button(new Rect(rect.xMax - 84f, rect.yMin + 1f, 80f, 18f), "Open Source"))
+                source.OpenSource();
+
+            IReadOnlyList<string> names = source.SourceCurveNames;
+            IReadOnlyList<AnimationCurve> curves = source.SourceCurves;
+            if (names == null || curves == null)
+                return;
+            bool wasEnabled = GUI.enabled;
+            GUI.enabled = false;
+            float rowWidth = Mathf.Max(1f, (rect.width - 8f) / Mathf.Max(1, curves.Count));
+            for (int index = 0; index < curves.Count; index++)
+            {
+                Rect curveRect = new Rect(rect.xMin + 4f + rowWidth * index, rect.yMin + 23f, rowWidth - 4f, 56f);
+                string label = index < names.Count ? names[index] : string.Empty;
+                EditorGUI.CurveField(curveRect, new GUIContent(label), curves[index]);
+            }
+            GUI.enabled = wasEnabled;
         }
 
         static DopeSheetEditor.EditorContext CreateDopeSheetContext(

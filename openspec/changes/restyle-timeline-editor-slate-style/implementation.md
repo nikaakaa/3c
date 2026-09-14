@@ -47,6 +47,8 @@ TimelineEditorWindow
 - `BtsmtlTimelineDirectorBinding` 已删除；Projection 自身只实现 Slate `IDirector` 所要求的 root 合同，所有播放、采样和受影响 Actor 接口保持空实现，不再分配第二个 Director 对象或第二套时钟。
 - `SurfaceLayout` 统一计算 Slate Surface 的工具栏、搜索、标尺、轨道区域、时间区域和命中几何。
 - DopeSheet 只按像素密度减少显示 key，正式 key、切线、权重和 wrap 不被删除或量化。
+- formal 参数展开区复用 Slate 的前后关键帧、加/删 key 和当前值显示入口；关键帧命令通过正式参数 binding 和 Session 提交，前后关键帧只移动作者游标。
+- 原生 CurveEditor 的 formal cache key 使用当前 Surface、Clip AuthoringId 和参数 Id；同一组曲线不会因每帧重绘重置选择，正式 binding 刷新后也不会遗留旧 renderer 的 Undo 订阅，关闭 Surface 时统一释放。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：
@@ -92,7 +94,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj --no-restore 
 - C# authoring r2 的 typed Clip 合同和 Projection 接线已完成；公共 binding 旧 JSON 方法删除、公共输出根挂接和剩余 Agent 消费清理仍由 C# authoring owner 负责。
 - 旧 JSON/Agent 文件协议消费者已从当前 Client 源码树清除；Timeline 公共 content/owner 读取沿用现有正式 API，编辑器局部选择和滚动不属于生成输出。
 - 纯 Timeline 预览目前缺少正式的非 Skill Runtime Owner 内容选项/播放 identity 合同；现有 `IBtsmtlScenePlayRuntimeOwner` 只提供 Ready/Failure/Release，不提供可请求的 Timeline 内容列表，因此不按资源扫描或显示名猜测目标。
-- 现有正式 Slate binding 已替代 BTSMTL 隐藏组件树，但右侧真实 owner Inspector、Section 的无 Director 编辑接线，以及曲线展开状态跨刷新恢复仍未完整收口。
+- 现有正式 Slate binding 已替代 BTSMTL 隐藏组件树，但右侧真实 owner Inspector 和 Section 的无 Director 编辑接线仍未完整收口；曲线展开/选择状态的稳定恢复已接通，仍需主 Unity Editor 现场验收。
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。
 - 当前无 Slate 对象入口需要在连接到正确的 `D:/Unity_Project_1/3C` Editor 后做一次真实打开、刷新、创建和曲线编辑验收；已连接的 Editor 是 `D:/Unity_Project_1/3C-parallel-test`，且本轮检查时尚未 ready，因此不能把该次连接当作主工作区证据。

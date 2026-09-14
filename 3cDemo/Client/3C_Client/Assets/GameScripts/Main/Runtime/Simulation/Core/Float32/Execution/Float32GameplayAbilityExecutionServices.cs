@@ -55,6 +55,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Ability execution services SourceMap index is incomplete.", nameof(operationSourcePaths));
             if (!ReferenceEquals(layout.Topology, data.Topology))
                 throw new InvalidOperationException("Ability execution layout topology does not match its data.");
+            if ((gameplayEffectCatalog != null) != data.Capabilities.HasGameplayCapability("GameplayEffect"))
+                throw new InvalidOperationException("Ability execution Gameplay Effect catalog does not match its declared capability.");
 
             m_Layout = layout;
             m_OperationSourcePaths = operationSourcePaths;
@@ -68,9 +70,10 @@ namespace ThirdPersonSimulation
             m_ExecutionCurves = BuildExecutionCurves(data);
             m_TagQueries = BuildTagQueries(data);
             m_SetByCallerValues = BuildSetByCallerValues(data);
-            GameplayEffectCatalog = gameplayEffectCatalog ??
-                throw new ArgumentNullException(nameof(gameplayEffectCatalog));
-            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectCatalog);
+            GameplayEffectCatalog = gameplayEffectCatalog;
+            m_GameplayCueProducers = gameplayEffectCatalog == null
+                ? new Dictionary<GameplayCueProducerKey, ProgramProducer>()
+                : BuildGameplayCueProducers(data, gameplayEffectCatalog);
             BuildAdmissionProfiles(data, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(
                 data,

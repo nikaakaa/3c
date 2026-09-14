@@ -28,7 +28,11 @@
 - [x] 2.7 在显式生成范围中恢复Profile/Definition的明确根挂接，按已有依赖失效与独立显式Build处理新对象；不依赖旧生成子资产GUID，不自动Build或新增源码同步。
 - [x] 2.8 清理正式Pose层的Agent命名空间、Mapper/DTO和协议校验调用，把仅存在旧协议中的必要Pose规则归回原领域修改或编译入口，不新增中央Validator或整包同步事务。
 
-## 3. 原生FlowCanvas Pose Runtime接收范围（待实施）
+## 3. 原生FlowCanvas Pose Runtime接收范围（实施中）
+
+2026-09-14当前接线口径（主方案D19）：除Clip／BlendSpace／Selected Player外，Blend／Layered／Additive等值节点已有算法，Constraint适配和CharacterFinalPoseNativePublication已有真实入口；Source准备也有新增，不能继续把这些全部列为“尚无代码”。但角色Host未接入，ICharacterPoseNativeStateMachineSource本次检索只有声明／引用、未见具体实现，StateMachine handler存在不能视为状态转换行为已接通。接续按3.8—3.14核对每类节点的真实服务、构造注入和下游消费者，完整事项仍未勾选；不增加空服务或通用外壳冒充业务完成。
+
+主方案D17已明确删除优先；a31c27b79删除了Pose编译Pass和Timeline发射主链。3.18不再等待共享Host或全部消费者切换后才删旧Image专属代码，混合文件保留有效算法和作者定义。共享Host／Barrier外壳由核心tasks 4.7接入，本任务提供真实服务和结果，不复制公共装配。
 
 - [ ] 3.1 提供Pose领域分型Prepare、Create/Replace、PrepareFrame、Evaluate、Commit、Discard、Stop/Dispose接口及真实准备/采用结果，明确请求、图/资源版本、实例、Reset代际和帧身份。
 - [ ] 3.2 将CharacterPoseCanvasGraph接入FlowCanvas原生初始化与Manual运行，移除Pose作者图的原生执行禁令，沿现有表现时钟驱动而不安装第二自动Update。
@@ -38,13 +42,13 @@
 - [ ] 3.6 将空间、必要输入、递归子图、悬空引用、唯一Output/Goal Set/FBBIK、目标槽和写冲突规则接到正式原生图校验/绑定入口，保留准确节点和引用链诊断，不生成IR。
 - [ ] 3.7 让原生运行、UI、Clipboard、Mutation和C# authoring共享同一Pose节点字段/端口/资源定义，移出仍有业务意义的规则后删除Image专属第二映射。
 - [ ] 3.8 实现同一原生图的源需求准备和姿态求值阶段，准备结果只表达活跃分支与source demand，求值仅在唯一Animancer Barrier完成后读取同次源结果。
-- [ ] 3.9 将Player、PoseState、Slot、BlendStack和Inertialization的既有逻辑接入原生节点，保留准入、时间、权重、relevance、capture/release及Pending/Committed历史。
+- [ ] 3.9 将Player、PoseState、Slot、BlendStack和Inertialization的既有逻辑接入原生节点，保留准入、时间、权重、relevance、capture/release及Pending/Committed历史。保留已有Player和混合算法；补齐ICharacterPoseNativeStateMachineSource等具体服务实现、构造注入和实际输出消费者，不能以handler或接口声明数量判定完成。
 - [ ] 3.10 接入Phase同步、state-local source与Linked Pose正式绑定，保留实际资源身份、continuation、readiness和调用共享规则，不用插件通用FSM替换动画状态语义。
-- [ ] 3.11 将原生节点采样需求与结果交接接回唯一Source模块，保留ACL/Playable和现有资源准备/释放能力，不新增direct Play、资源副本或旧Image回退。
+- [ ] 3.11 将原生节点采样需求与结果交接接回唯一Source模块，保留ACL/Playable和现有资源准备/释放能力，不新增direct Play、资源副本或旧Image回退。已有Player Source binding必须由正式实例装配注入，并让同次Barrier后的采样进入实际姿态链，不能只完成binding类声明。
 - [ ] 3.12 让Foot、Goal聚合和FBBIK原生节点调用IK任务当前正式Constraint接口，保持输入与求解次序、单数Goal/输出，不复制Foot/IK状态或修改算法。
 - [ ] 3.13 实现按实例复用的节点输出缓冲、只读分支输入和明确租约释放，移除全图Value Lifetime/Workspace计划依赖；节点内部已有Native/Job算法由原owner管理。
-- [ ] 3.14 将原生Output接入唯一Final Publication，保留整Rig预检查、完整骨骼写入、提交/丢弃和Barrier前后故障边界，不从节点直接写Transform。
+- [ ] 3.14 将原生Output接入唯一Final Publication，复用已新增CharacterFinalPoseNativePublication及物理／属性Writer入口，完成正式实例注入和最终消费者切换；保留整Rig预检查、完整骨骼写入、提交／丢弃及Barrier前后故障边界，不从节点另写Transform。共享Host由核心4.7接线，Final服务存在不等同角色已调用。
 - [ ] 3.15 完成原生实例Reset、Replacement与Stop/Dispose，先阻止旧调用、完成在途工作、失效旧generation并释放资源，实际安装成功后由Pose发布采用版本与重置结果。
 - [ ] 3.16 将已完成Get/条件/BlendSpace的唯一EventGraph变量帧消费适配到原生端口与调用实例，保留只读范围、精确类型、曲线来源和Source Pending不回退事件状态的行为。
 - [ ] 3.17 从原生图、Node、Port、调用实例和已完成阶段结果发布节点观察与Pose Watch，保持订阅/租约释放，不为旧SourceMap生成隐藏Image或重新求值。
-- [ ] 3.18 在正式消费者切换后删除Pose IR、ProgramImage、Execution View、全图操作表/Worker编排和专属Compiler/产物入口，将共享壳与旧总Projection的剩余引用清单交由主实现接线，不保留加载期编译、兼容reader或双运行模式。
+- [ ] 3.18 按主方案D17先删除Pose IR、ProgramImage、Execution View、全图操作表/Worker编排和专属Compiler/产物入口，再处理保留消费者接线；混合文件只提取有效算法／作者规则，不等待Host全链完成才删。a31c27b79已完成编译Pass主链删除，剩余类型与消费者仍需收口；共享壳及总Projection引用交核心，不恢复加载期编译、兼容reader或双运行模式。

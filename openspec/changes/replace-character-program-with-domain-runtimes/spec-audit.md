@@ -2,6 +2,37 @@
 
 本文件属于本 change 的规划附件。它记录本轮读取的现行要求与增量操作，不能代替正式 spec，也不证明实现已完成。主规范和其它窗口文件本轮不改。
 
+## 2026-09-14职责复审与窗口交接（检查至dd0708d46）
+
+用户明确要求更新文档，并通知核心实现及各领域规划。当前执行以design D19、核心tasks、Timeline第12组和Pose第3组为准；D16／D18及下方旧审查保留历史快照。代码仍处于并行迁移，本轮静态证据不能替代运行复现，也不按Program命名本身要求重做技能执行数据。
+
+| 编号 | 当前代码证据 | 业务影响与明确归属 |
+| --- | --- | --- |
+| Q11 | Float32CharacterRuntimeState.cs:9／70—71与FixedCharacterRuntimeState.cs:10／71—72以一个Ability installation／identity定义角色状态和GameplayContentHash；对应codec也从该installation解析多个角色分区 | 多技能角色的共享控制／效果／装备和角色内容身份不能归某个技能所有。核心2.6／2.7改为角色级聚合和完整角色身份，技能状态按技能／实例分区，不复制角色aggregate |
+| Q12 | Float32GameplayAbilityExecutionInstallationSet.cs:22给每个技能传同一效果binding；Float32GameplayAbilityExecutionInstallation.cs:32—39拒绝未声明Effect能力但收到binding的技能 | 角色有效果服务时，不使用效果的合法技能也会被拒绝。核心1.9分开角色服务可用性与技能需求解析；只解析需要的成员，缺失必需服务仍失败，两个数值目标按同一合同收口 |
+| Q13 | TimelineRuntimePreparation.cs的Advance按nextFrame筛活动Clip，已有cursor／cycle候选和Commit／Discard；RequestStop／CompleteStop已改播放状态，但实际窗口／TreeClip尚未接通 | Timeline12.3必须处理完整区间边界，10→30不能漏20—21短Clip；12.4／12.5的停止和业务结果都需调用方Step接受，12.6补私有恢复。核心1.5／3.8只消费合同，不代写轨道逻辑 |
+| Q14 | CharacterPoseNativeStateMachineHandler.cs依赖ICharacterPoseNativeStateMachineSource，当前源码检索仅发现声明和引用；Clip／Blend等已含算法，Constraint／Final已建入口 | Pose3.9需真正服务实现与注入，3.11／3.14接Source／Final消费者。核心4.7接Host；不得继续把全部节点描述为无实现，也不得把handler存在当成已执行 |
+| Q15 | CharacterPipelineHost.cs:505仍Load旧CharacterSimulationProgram；新PassBackendCompositionRequest已使用CharacterRuntime，领域状态codec在80cb6af73／7b722870a重建 | Host是实际入口缺口。核心保留网络顺序、能力校验、原子提交、预测／恢复行为，修复领域装配；新旧类名相同不直接证明职责复活，必须按输入输出判断 |
+
+代码路径均相对客户端Main的对应Runtime目录，具体文件可由上述唯一类型定位。新增场景落到已有规范：核心character-domain-runtime明确两个技能共享角色状态、完整角色身份及未使用效果服务的技能可以安装；Timeline direct-runtime补短Clip跨越和停止候选被丢弃的场景。不新增测试或手动验收任务，全部历史完成checkbox保留。
+
+本轮保留有并行修改的核心implementation.md、Timeline design／timeline-direct-runtime.md和Pose execution／R1—R7审查文件；只更新本次明确的清单、核心设计／审查与规范增量。Timeline／Pose规划收到各自文档指针后维护领域细化；通知不增加第三份任务清单或日常回执。Camera／Motion没有新增算法要求，不额外派工。
+
+## 2026-09-14当前执行文档纠正（检查至dd38dde00）
+
+用户要求更新正在执行的文档。本轮更新核心tasks／design D18／proposal及Pose接收tasks／design，保留全部已完成历史。核心implementation.md、Pose execution.md、Timeline任务与执行文档存在并行未提交修改，本轮不覆盖、不代提交。Timeline第12组及direct-runtime规范已明确当前Prepare／CreatePlayback的部分进展和未完成合同，本轮读取并对齐公共消费要求，没有复制第二份Timeline任务。
+
+| 旧描述／风险 | 当前事实 | 执行口径 |
+| --- | --- | --- |
+| Q6根类型冲突仍作为待修错误 | c101cdb54已撤回Program→Ability目录接线 | Q6保留为历史缺陷；2.1当前解决Host仍要求Program／Projection，不重复修已撤回调用 |
+| 独立Ability仍只描述为目录包装 | 466ab44e7建立数据自有拓扑，dd38dde00建立GameplayAbilityExecutionLayout及两个数值Target工厂 | 保留实质进展；1.10接完整加载／Tick／取消／恢复消费者，布局存在不等同运行完成 |
+| Pose只有参数外壳 | 当前Clip／BlendSpace／Selected Player handler已调用Source／AnimationSelectedPosePlayerJob，新增子图与阶段接点 | 3.8—3.14接剩余StateMachine／Slot／Blend／惯性化／Constraint／Final，核心4.7接Host，不能继续沿用旧评价 |
+| Timeline直接运行尚无任何入口 | 664aea92c／da1f8634e建立Prepare和带generation的准备实例，Playback尚未形成完整Advance／Commit／恢复 | 准备／创建不冒充运行；数值、资源／成员、TreeClip服务检查须补齐，核心1.5／3.8消费真实结果 |
+| 删除PassBackend／Session载体等于取消网络 | 240adee9d移除旧CompositionRequest并提取初始状态源；13c28dd4a移除旧Preparation编排；PipelineCompiler及Pass／Backend等实现仍在 | 3.1—3.6保留五项装配、四阶段、Product／能力校验、原子提交、预测／恢复业务，只换领域输入与状态，不扩大为网络重写 |
+| Pose接收清单仍要求消费者切换后删Image | 与用户D17删除优先冲突 | 修正Pose 3.18及design 11.7，已有28文件删除记录仍以compiler-deletion.md为准，不能复活旧编译链 |
+
+本轮没有新增功能决策或测试／手动验证任务。Timeline现行direct-runtime增量的完整Prepare／实际采用边界与核心D14一致；网络增量继续保留Pass计划和能力校验；Pose删除顺序现与主方案D17一致。current specs的旧Program／Image方向仍由既有delta及8.6收口，不据本轮文档更新宣称已发布新运行体系。未编译或运行Unity。
+
 ## 2026-09-14用户改定为删除优先
 
 用户明确要求“更新吧文档，那就先大删除再做”。design D17、Migration Plan、proposal和tasks据此撤销ee2d02c2f中“消费者全部切换后删除／8.2和8.4仅公共残留收口”的顺序：先删除已取消职责，再修复保留业务接线，允许中间提交无法编译或运行，不建立桥接与占位类型来保持旧体系可用。
@@ -14,7 +45,7 @@
 
 ## 2026-09-14实现质量与删除范围复审
 
-本节补充D12历史审查，当前代码快照32f75a37c、实施记录401b52e15；D12中的旧事实只代表当时版本。此次只更新规划，不修改implementation.md、实现代码或其它领域任务。
+本节是32f75a37c／401b52e15历史审查，Q6已由c101cdb54撤回，Q7／Q9／Q10后续状态以上方当前执行纠正为准。保留当时证据，不把旧问题继续列为当前仍发生的故障；当时只更新规划，未修改implementation.md或实现代码。
 
 下表代码路径均相对`3cDemo/Client/3C_Client/Assets/GameScripts/Main/`。
 

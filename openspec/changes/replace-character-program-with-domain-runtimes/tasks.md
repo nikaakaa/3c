@@ -1,6 +1,8 @@
-本清单自 `parallel-20260914-domain-01-planning-update` 起只记录核心实现和公共集成。Timeline唯一实施清单在 `../restyle-timeline-editor-slate-style/tasks.md` 的Runtime接收章节；Pose唯一实施清单在 `../refine-pose-graph-readonly-blackboard/tasks.md` 的Runtime接收章节。原领域事项移出不表示已完成，迁移编号和接收边界见design D13—D15及spec-audit。接收规划负责续写自己的清单，本窗口不复制或改写它们。当前只更新规划，不启动／通知实现。
+本清单自 `parallel-20260914-domain-01-planning-update` 起只记录核心实现和公共集成。Timeline唯一实施清单在 `../restyle-timeline-editor-slate-style/tasks.md` 第12组；Pose唯一实施清单在 `../refine-pose-graph-readonly-blackboard/tasks.md` 第3组。各实现已获授权推进，本轮按用户要求更新文档并一次通知核心实现与两个领域规划，不建立日常回执或重复派工。原领域事项移出不表示已完成，不复制第二份领域清单。
 
-2026-09-14审查更新（代码快照32f75a37c，实施记录401b52e15）：保留全部已完成小步。Provider已增加成员／类型／版本检查，Ability Load已返回独立数据类型，Float32／Fixed已接入Ability目录；但Loader仍解码旧Program，目录仍从Program构造，角色Factory／Host仍依赖整角色产物，1.9、1.10、2.1继续未完成。Character根经FromProgram目录进入仅接受Ability根的数据构造器会抛异常，按2.1与1.10收口，不能放宽根检查或伪造Ability身份。状态分区有实质进展，2.6仍需完整Step／恢复接通。依据见design D16及spec-audit；implementation.md由实现窗口维护。
+2026-09-14执行更新（检查至dd0708d46及工作区）：旧根类型错误已撤回，28个编译文件删除及后续清理保留。核心已有独立技能安装／服务、角色绑定、新CharacterRuntime port和两个数值目标状态codec；但CharacterRuntimeState仍以单个Ability安装／Hash为根，效果绑定还会拒绝不使用该能力的技能，按D19纠正。Timeline已有数值／资源准备、游标Advance候选与Commit／Discard，仍缺跨边界Clip业务和完整停止／恢复。Pose已有多种值节点、Constraint适配和原生Final入口，StateMachine仍缺具体Source实现，角色Host仍走旧Program／Projection。原已完成小步只代表当时交付，不能用作最新运行完成事实。
+
+当前接线重点：核心1.10／2.1／2.6／6.4负责独立技能到角色入口；1.5／3.8消费Timeline真正可Advance／Commit／Discard／Restore的结果；4.7／6.1接Pose实际采样至最终姿态；3.1—3.6保留网络Pass职责并迁移领域状态。新增目录、布局、准备实例或节点注册均只记局部进展，未接完整不勾选。
 
 执行顺序以用户2026-09-14“先大删除再做”为准：先执行下列首批删除，再完成独立技能、角色装配及其它保留业务的接线。旧消费者仍引用取消的类型不是延迟删除的条件；允许中间提交编译失败或功能明确不可用，记录错误所属消费者并接到正式接口，不加兼容层、占位类型、假结果或新旧开关。已完成小步保留，整个迁移必须等保留业务接通才算完成。Timeline／Pose在各自唯一清单执行同样顺序，不在这里复制领域任务。
 
@@ -19,42 +21,42 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 1.2 已交付Ability根的技能操作、调用帧、黑板、常量、来源与能力前端，当前仍落入旧Program容器；最终独立执行数据和角色级状态迁出由1.8、1.10接续。
 - [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
 - [x] 1.4 已交付Input／Effect／Equipment／CharacterState的typed Provider种类、owner identity声明及Load身份检查入口；真实成员／类型／版本绑定由1.9接续。
-- [ ] 1.5 将Timeline owner的独立PrepareContent／CreatePlayback结果接入技能调用与非Skill调用装配，绑定精确内容、资源、数值目标和调用上下文；直接内容Runtime与播放实现由Timeline任务交付。
+- [ ] 1.5 将Timeline owner的独立Prepare／CreatePlayback结果接入技能调用与非Skill调用装配；消费前确认数值目标、资源／成员和必要TreeClip服务已经实际匹配。现有准备实例不等同可推进播放，不能仅因IsReady或generation存在就报告完整可用；Advance／取消／Commit／Discard／Restore仍由Timeline交付并通过正式调用方接通。
 - [ ] 1.6 由主实现唯一修改BtsmtlSkillTimelineCompiler和共享技能调用入口，先删除其中Timeline轨道／Clip发射调用与专属适配，再接直接内容引用；保留TreeClip技能图编译与Step-scoped调用服务，不与Timeline任务共写该文件。
 
 - [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
-- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄，拒绝同GUID下已删除或类型不符的依赖；保留现有成员校验，补齐解析结果到实际执行服务的消费，不以非空RuntimeHandle字符串代替运行绑定。
-- [ ] 1.10 将AbilityDataAsset／FixedAbilityDataAsset的Load、codec与执行消费者迁为真正独立技能数据，删除对CharacterSimulationProgram／角色全局布局的解码和复制依赖；Float32／Fixed不再通过FromProgram拆目录或逐技能复制整包操作／常量／布局，移除对应转换Factory，保留必要技能编译与唯一技能格式。
+- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；角色持有可用服务，技能只绑定自己声明需要的成员。修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；角色有服务不要求全部技能使用，技能必需服务缺失仍明确失败，不用空实现或全局启用能力绕过。
+- [ ] 1.10 将独立Ability数据的加载、格式、执行拓扑／布局接到Float32／Fixed实际执行与实例状态；复用已交付的自有拓扑和GameplayAbilityExecutionLayout，不能把创建布局视作执行完成。补齐读入到Tick／取消／恢复消费者，继续清除整角色Program解码／复制依赖，不恢复已撤回的FromProgram转换，保留必要技能编译与唯一技能格式。
 
 ## 2. 角色领域运行与状态
 
-- [ ] 2.1 按明确角色配置、已绑定独立技能集合和领域状态创建角色运行实例，接入正式Host及现有Pass的Evaluate／Finalize；消除Character根进入Ability构造器的接线冲突，不修改根校验掩盖错误。同步移除旧Program／全角色ExecutionLayout驱动的工厂入口，不能把旧Evaluator包装作为终点。
+- [ ] 2.1 按明确角色配置、已绑定独立技能集合和领域状态创建角色运行实例，接入正式Host及保留Pass的Evaluate／Finalize；关闭Host对旧Program／Projection的必要条件和Load调用。根类型错误接线已撤回，不恢复旧工厂或修改根校验；输入必须是真实领域绑定，输出必须是可推进的角色实例。
 - [x] 2.2 将 ControlModule 参数、静态 Motion 描述和控制状态迁出 Program catalog／slots，保留 C# UnityHFSM 及全部已有走跑转身规则。
 - [x] 2.3 消费曲线任务提供的RootMotionCurveAsset及Timeline唯一时间映射，将C# Control／Motion接到正式portable绑定，删除CharacterControlMotionCatalogEmitter依赖并保留MovingTurn和CameraRelative行为。
 - [x] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。
 - [x] 2.5 将 Effect／Equipment 的目录和运行状态交回对应模块，技能只保留请求接口，不复制全角色配置。
-- [ ] 2.6 交付领域分区的 Capture／Restore 和统一角色 Step 事务，完整覆盖控制机器内部状态、请求、技能调用、目标、效果、装备与跨 Tick MotionWarp。
-- [ ] 2.7 将 Actor roster、内容 identity 与状态 schema 接到完整领域状态，清除快照对整个 Character Program Layout 的依赖。
+- [ ] 2.6 将Float32／Fixed CharacterRuntimeState与codec改为角色级领域聚合；控制／请求／效果／装备／序号归角色，多个技能按技能及调用实例分区，Timeline私有播放状态由Timeline提供，不挂在某一个Ability安装对象之下。以同一Step完整Capture／Restore控制机器、技能调用、目标及跨Tick运动状态，保留已有codec和算法的有效部分。
+- [ ] 2.7 将Actor roster、角色内容identity与状态schema接到完整领域状态，使用真实角色配置／技能集合／模块合同身份；删除CharacterRuntimeState.GameplayContentHash直接取单个Ability ContentHash的映射，快照不能挑一个技能身份代表整角色，保留角色、技能分区、World／Pipeline各自身份与完整恢复。
 
 - [ ] 2.8 由角色工厂装配Ability／Timeline／Pose／Camera／Motion的分型准备结果，汇集各领域owner确认的实际采用事实与失败原因；核心只发布自己拥有的Ability安装事实，不替其它领域决定版本或状态。
 
 ## 3. 网络Pipeline与产品接线
 
-- [ ] 3.1 将原 Program Runtime 安装项迁为 Gameplay Runtime 的数值与模块服务，保留五个显式组合维度和唯一 Composer；SimulationPipelineCompiler保留Pass顺序、产品依赖、能力校验与不可变计划，只解除对整角色Program描述的依赖，不能按Compiler命名整删。
-- [ ] 3.2 迁移 Evaluate／Finalize Pass 的输入输出类型与调用，保留 WorldResolveBatch、四阶段顺序、Product owner、能力校验及原子 Commit。
+- [ ] 3.1 将原Program Runtime安装项迁为Gameplay Runtime的数值与模块服务，保留五个显式组合维度和唯一会话装配职责；旧CompositionRequest／Preparation删除后按领域输入接回既有Pipeline／Backend，不要求复活旧类。SimulationPipelineCompiler的顺序、产品、能力校验和不可变计划继续保留，删除旧载体不能扩展为重写或取消网络体系。
+- [ ] 3.2 将保留Pass的旧ProgramRuntime port改接领域执行服务，恢复Evaluate／Finalize和WorldResolveBatch调用；保留Ingress／Schedule／Step／Egress顺序、Product owner、能力校验及Backend原子Commit，不为修引用错误删除这些职责或另起旁路时钟。
 - [ ] 3.3 将 Authority baseline、Prediction History、Reconciler 和恢复事务迁到完整领域状态，保留 state/body 误差裁决、remote observed body 和 EventId journal。
 - [ ] 3.4 将 Fixed Rollback 的角色快照与内容 identity 接到新状态格式，保留输入排序、History、Hash、恢复／重放、确认输出和 Relay-only 职责。
 - [ ] 3.5 更新握手与兼容 Pair，分别锁定控制／技能／配置内容、状态格式、NumericProfile、World／Solver 与 Pipeline／Backend 身份。
 - [ ] 3.6 迁移 Unity Authority、普通 .NET Authority、Local／Fixed／Rollback 的显式 launch 和 manifest 读取；保留产品分工及原不支持能力的拒绝行为。
 - [ ] 3.7 升级实际改变的网络／状态／产品格式并删除旧 reader，使旧角色 Program 产物不能被新会话隐式接受。
 
-- [ ] 3.8 将Timeline owner提供的typed Capture／PrepareRestore／ApplyRestore接入完整角色／网络快照，并把其Pending结果纳入角色Step的统一Commit／Discard；不在核心重复定义cursor／loop／活动Clip私有状态。
+- [ ] 3.8 将Timeline owner提供的typed Capture／PrepareRestore／ApplyRestore接入完整角色／网络快照，并把Advance及停止候选纳入角色Step的统一Commit／Discard；移出技能Services／Layout中残留的TimelinePlayback／Loop／LogicTime私有状态前提，不在核心再定义cursor／loop／活动Clip状态。TreeClip图执行帧仍归技能，不能随Timeline状态一起双存。
 
 ## 4. Pose公共接入
 
 Pose内部实现唯一清单由 `../refine-pose-graph-readonly-blackboard/tasks.md` 的Runtime接收章节维护。原4.1—4.6、5.1—5.8、7.3、8.3迁出本清单；已完成只读输入与现有正确算法不重开。主实现只做以下公共外壳接线：
 
-- [ ] 4.7 调用Pose owner的Prepare／Create／PrepareDemand／Evaluate／Commit／Discard／Stop接口，接入角色表现工厂、唯一Animancer Barrier与原帧提交边界；以实际节点求值和最终姿态消费完成接线，原生实例外壳或空Evaluate／Commit不能算完成，同步退出公共外壳的Image执行依赖，不修改Pose内部Graph／Node／Buffer实现。
+- [ ] 4.7 将Pose owner已开始实现的Clip／BlendSpace／Selected Player及后续正式节点接入角色表现工厂与真实资源服务，沿Prepare／唯一Animancer Barrier／Evaluate／ValidatePending／Commit或Discard到唯一Final Publication；以实际Host调用和最终姿态消费完成公共接线，不能只调用Create或注册handler。Pose内部算法和缓冲仍归Pose任务，公共外壳退出Image依赖。
 - [ ] 4.8 将Pose owner确认的实际GraphRevision／InstanceId／ResetGeneration及完成结果汇入角色观察接口；不在核心重建其状态或制造采用版本。
 
 ## 6. 输入、动作与资源装配

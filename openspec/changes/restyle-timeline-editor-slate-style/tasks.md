@@ -134,13 +134,15 @@
 
 ## 12. Timeline直接内容Runtime（新增规划范围）
 
+2026-09-14职责复审（主方案D19）：当前工作区已有显式NumericTarget／资源依赖解析、游标Advance候选、Commit／Discard及停止状态入口，不能再报告为只有Prepare；但nextFrame活动Clip列表不等同区间调度。12.3必须覆盖跨过的短Clip与完整循环，12.4／12.5必须把实际业务输出和停止也纳入调用方Step接受边界。现有UI成果保持，以下完整事项仍未勾选，主方案只负责共享技能／角色接口集成。
+
 2026-09-14依据PARALLEL-20260914-DOMAIN-01登记；具体合同、当前代码对账和文件 owner 见[timeline-direct-runtime.md](timeline-direct-runtime.md)。用户已把这条 Runtime 线纳入当前 goal；不新建窗口，也不向其它窗口派工。当前源码已有 direct-runtime 合同、Skill `ITimelinePlaybackService` 接线和 operation-backed `TimelineControlRuntime`，但最终直接内容 Runtime 尚未闭环，因此以下任务保持未完成，不能用现有类名或窄编译替代完成证据。第1–11节原UI进度保持；此处是主方案1.5–1.7、3.8与8.2中Timeline域内部分的唯一执行清单，主方案保留公共集成和责任指针，不复制勾选项。
 
 - [ ] 12.1 以正式 `TimelineData`/`TimelineContentClosure` 为来源建立只读内容闭包或 portable 表示，保留轨道、Clip、Section、曲线 descriptor、资源引用和稳定 identity；清除 direct-runtime 对 operation/IR/state slot 的前置，不新增第二份可编辑资产、不改公共 C# 生成器。当前 `TimelineBindingPlan` 只覆盖 binding 声明和调用输入，尚不足以勾选完成。
 - [ ] 12.2 在 binding 准备之上提供独立分型 `Prepare/CreatePlayback`，明确 RequestId、内容 revision、NumericTarget、真实调用身份、资源/成员/TreeClip 服务依赖、Ready/失败结果，并在创建后报告实际 Playback 版本和 generation。`TimelineRuntimePreparation.Prepare` 与 `CreatePlayback` 已接通内容发现、call input、正式 domain binding preparation、显式 `Float32/Fixed` NumericTarget、资源依赖 resolver 和带 generation 的准备实例；实际 TreeClip 服务执行及后续运行提交仍未完成，`ITimelinePlaybackService.RequestTimelinePlayback` 不能替代非 Skill 合同。
-- [ ] 12.3 将 `TimelineControlRuntime<TTarget,TTime>` 的时间、边界、循环和 Section 规则迁到直接内容调度；Float32/Fixed 只在数值与资源 binding 分型，普通.NET 与 Unity 共享语义。现有实现仍通过 `OperationHandle`/`ITimelineTargetLeaf` 读取 Program，尚未完成迁移。
-- [ ] 12.4 把 Advance 的 cursor、循环/Section、活动 Clip、窗口、Motion/Camera/Cue、TreeClip 和 trace 结果拆成待提交输出，提供 `Commit/Discard` 由调用方统一 Step 决定；禁止在 Timeline 内提前发布角色 Gameplay 或伪造第二个角色事务。现有 `ITimelineControlStatePort`/`TimelineControlRuntime` 会直接写运行状态，仍需改为候选安装边界。
-- [ ] 12.5 接主实现提供的独立 TreeClip 服务，保留 Decision/Commit、调用实例和取消传播；Stop/ForceStop/ActionContextEnded 只关闭精确 playback generation 的窗口和调用，视觉尾部交原 Slot，技能私有状态只由技能服务拥有。`TimelineRuntimePlayback` 已有自身 RequestStop/CompleteStop 状态门，实际 TreeClip 服务、窗口关闭和候选传播仍未接入；现有 `TimelineNode` 仍主要完成 Skill 请求/状态/取消入口。
+- [ ] 12.3 将 `TimelineControlRuntime<TTarget,TTime>` 的时间、边界、循环和Section规则迁到直接内容调度；保留当前游标Advance候选代码，补齐整个推进区间的Enter／采样阶段／Exit及尾段、完整循环、头段。10帧推进到30帧时，20—21帧的短Clip也必须处理，不能只筛nextFrame活动Clip。Float32／Fixed共享调度语义，旧OperationHandle／ITimelineTargetLeaf前提退出。
+- [ ] 12.4 在已有cursor／cycle／section／活动Clip候选及Commit／Discard基础上，接入实际窗口、Motion／Camera／Cue、TreeClip和trace待提交结果，由调用方统一Step接受；候选列表不等同已经调度业务。旧ITimelineControlStatePort／TimelineControlRuntime直接写状态的路径必须退出，不提前发布Gameplay，不另建角色事务。
+- [ ] 12.5 接主实现提供的独立TreeClip服务，保留Decision／Commit、调用实例和取消传播；Stop／ForceStop／ActionContextEnded只关闭精确generation的窗口和调用。已有RequestStop／CompleteStop状态门继续接入停止候选和调用方Commit／Discard；外层Step失败必须保留此前committed播放与活动窗口，不能先清活动Clip或安装终态。视觉尾部交原Slot，技能帧只归技能服务。
 - [ ] 12.6 提供 Float32/Fixed 分型 Capture/Restore 候选，保存已提交 Timeline 私有状态、调用关联、内容/资源 revision 和 schema；由主实现组合总快照并原子安装，不捕获 Pending、Unity对象、缓存索引或重发副作用。当前代码没有 direct playback 私有状态 codec。
 - [ ] 12.7 消费现行 `RootMotionCurveAsset` 唯一源区间/时间映射及 Camera/Motion/Warp typed 领域服务；不重开曲线迁移、不修改共享算法或字段，保证 UI Reference 显示和 Runtime 求值共用同一源定义。
 - [ ] 12.8 迁出 Timeline 专属轨道/Clip 发射和 ProgramPlan 消费者，把共享 `Evaluator/Host/codec` 的改动交由唯一主实现 owner；不得整文件删除混合的 Camera/Motion 资源处理。当前 `TimelineControlRuntime` 仍是 operation-backed 共同入口，必须先按符号划分 owner 再迁移。

@@ -207,7 +207,7 @@ IK任务继续推进自己的正式算法和状态，本迁移只适配其当前
 | 7.3 | 3.17 | 节点结果与观察；预览会话和共享UI壳由原owner接入 |
 | 8.3 | 3.18 | Image专属IR/Compiler/ExecutionView/Worker/产物链删除 |
 
-先形成真实原生实例与阶段接口，再迁入现有业务节点/算法服务，并提供共享壳需要的调用与旧引用清单。主实现完成一次Host/表现壳和旧总Projection挂接后，Pose删除无消费者的Image专属代码与数据；混合文件内仍有效的Source、资源解析、曲线或IK算法先按原owner迁出，不复制另一份。
+执行顺序已由用户2026-09-14决定及主方案D17改为先删除已取消的Image／编译执行职责，再接通保留业务；不再等待Host／表现壳完成后才删。a31c27b79已删除编译Pass主链，其余专属类型和旧引用继续按此规则退出。混合文件只提取仍有效的Source、资源解析、曲线或IK算法／作者规则，不复制另一份。共享Host／表现壳及总Projection接线仍归主实现，允许删除后的明确中间错误，不为消错恢复旧Image类型。
 
 Image专属删除包括CharacterPoseCompilerModule及只服务其IR/Pass的入口、ProgramImage/ExecutionView/Operation镜像、全图Workspace/ValueLifetime规划和Worker调度。实际仍使用的标量资源、曲线、Rig绑定和Native算子不得因名称中含Compiler/Program被盲删。共享Character Build、角色Program/Projection容器、Host、快照和网络代码只由主实现删除/接线，Pose不给它们加兼容层。
 
@@ -229,6 +229,8 @@ Image专属删除包括CharacterPoseCompilerModule及只服务其IR/Pass的入�
 本次没有修改current specs；它们仍描述切换前合同。主方案负责广义运行替代，本change只补Pose领域接口及输入要求，正式归并必须保留双方不重复的内容，不能用整块覆盖抹掉已完成输入能力。
 
 ### 11.9 业务取舍、完成定义与本轮限制
+
+2026-09-14接线更新（主方案D19）：原生Player及Blend／Layered／Additive等已有实际算法代码，Constraint适配、Source准备与CharacterFinalPoseNativePublication也已有入口。接续要按具体服务和构造注入判断：当前ICharacterPoseNativeStateMachineSource仅检索到声明／引用，StateMachine handler不能代替实际状态转换服务。Pose补齐各节点的服务和最终输出调用，主实现让Host沿唯一Barrier接入；未得到完整运行证据。既有实现审查R1—R7由本owner继续跟进，不重新派发已修问题；本轮不覆盖execution.md或独立审查文件。
 
 直接原生执行减少IR/Image和自建全图执行器，代价是端口调用、每实例节点状态和缓冲峰值可能增加，不承诺性能等价。保留预编译Image能保留全图优化，却继续维护第二执行表示；加载期生成Image也保留Compiler，均不是本轮路线。保留原帧事务和领域资源服务有必要的接入成本，但不形成新图表示。
 

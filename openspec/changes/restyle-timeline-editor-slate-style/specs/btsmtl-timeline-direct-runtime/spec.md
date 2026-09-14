@@ -56,11 +56,23 @@ Timeline唯一时间owner MUST负责帧/秒/Tick、ClipIn、速率、源映射�
 - **THEN** Runtime MUST按原稳定顺序处理尾段、完整循环、头段及Decision/Commit生命周期，不重复或遗漏Enter/Exit
 - **AND** 同一源被多次使用 MUST保持不同Clip/Warp调用身份，源区间末端保持累计终值且后续delta为零，片段占用仍按自身边界
 
+#### Scenario: 推进落点不在被跨过的短Clip中
+
+- **WHEN** 播放从第10帧推进到第30帧，中间存在第20帧进入、第21帧退出的Clip
+- **THEN** Runtime MUST按同一次Step的稳定边界顺序处理该Clip的进入、适用阶段及退出，并形成对应候选结果
+- **AND** MUST NOT仅按第30帧的活动Clip集合决定本次业务，遗漏短窗口或一次性事件
+
 #### Scenario: 停止指定播放
 
 - **WHEN** 自然结束、停止、强停或Action context失效
 - **THEN** Stop MUST关闭该实例窗口和TreeClip并通过调用方提交/丢弃协议接受终态，旧generation不得再产生Gameplay结果
 - **AND** 有限动画尾部 MUST归原Slot/ActionPlayback，不因等待淡出延长Gameplay窗口，不绕过角色事务
+
+#### Scenario: 停止候选未被调用方接受
+
+- **WHEN** 指定播放产生停止、关闭窗口及结束TreeClip的候选后，同一步调用方失败或丢弃
+- **THEN** Timeline MUST保留此前已提交的播放状态与活动调用，丢弃本次停止候选及输出
+- **AND** MUST NOT在RequestStop或CompleteStop内绕过正式接受边界提前清空committed活动Clip或安装终态
 
 ### Requirement: Timeline快照必须仅拥有分型播放私有状态
 

@@ -234,9 +234,9 @@ Barrier前失败按原合同丢弃Pending；Barrier内或之后失败按原Fault
 
 ### D16. 以实际入口切换和旧链删除完成迁移
 
-本轮审查代码快照为32f75a37c，实施记录更新至401b52e15。角色状态分区、Provider成员检查、独立Ability数据类型和两个数值目标的执行目录已有进展；当前仍是中间接线，不能描述成角色已脱离Program或编译体系已删除。
+本节保留32f75a37c／401b52e15时的历史审查。后续c101cdb54已撤回错误目录接线，a31c27b79及其它删除提交已退役部分旧链；当前进展以D18和tasks顶部更新为准，不再把本节的旧代码状态当作仍在发生的错误。下面删除范围和最终业务约束继续有效。
 
-#### 当前接线缺陷与完成边界
+#### 历史接线缺陷与最终完成边界
 
 Float32／Fixed OperationEvaluator仍调用GameplayAbilityExecutionCatalogFactory.FromProgram。该目录把原program.Manifest.Root传给独立Ability数据构造器，后者只接受IsAbility；角色Frontend和Corin现有产物仍为Character根。含技能的Character Program沿此路径会抛异常。这是静态调用链证据，未运行Unity复现。解决归1.10与2.1：正式Host／Factory直接装配独立技能集合，删除FromProgram转换；不能取消根校验、把Character根改标Ability或增加兼容分支。
 
@@ -273,6 +273,37 @@ Pose原生实例、阶段门禁、端口缓存和校验不是完整动画运行�
 5. 删除进展与业务恢复分别记录。0.1／0.2完成只表示对应旧职责确实退出；1.x／2.x／3.x／4.7等仍待实际接通，不能宣称整体完成。先删除不意味着删完停工，实施继续按保留职责补齐，且仍遵守Unity编译／Play期间的写入和构建约束。
 
 业务取舍：用户接受迁移期间暂时失去可运行状态，换取减少废弃体系内的搬运和重复转换。保留范围是实际玩法、动画、网络和资源能力，不是旧类结构。这里的“大删除”表示按取消职责成批移除，仍由D13既有owner小步中文提交，不做全仓目录清空或覆盖并行改动。
+
+### D18. 删除后按真实业务接线更新执行状态
+
+本节保留2026-09-14检查至dd38dde00时的接线状态；之后Timeline Advance、Pose多类节点／Final与领域状态codec已有新增，最新状态和职责纠正见D19。本次不撤回D17删除优先，不重新勾选已完成历史，也不把暂时编译失败本身判为错误。
+
+| 领域 | 已有代码事实 | 本轮明确的接续结果 |
+| --- | --- | --- |
+| 核心技能／角色 | 错误Program→Ability目录接线已撤回；Ability数据自持拓扑，独立GameplayAbilityExecutionLayout及两个Target工厂已建立；Host仍要求旧Program／Projection | 直接加载独立技能、建立实例状态、进入角色Tick／取消／恢复，并让Host从领域绑定启动；新增布局不是执行完成 |
+| Timeline | 664aea92c／da1f8634e接通正式内容／binding准备和带generation的准备实例；当前Playback主要持有准备结果 | 先补全数值目标、资源／成员、TreeClip实际服务检查，再落实直接Advance、活动Clip、取消、Commit／Discard与私有恢复；Ready／Created不能冒充Running／Committed |
+| Pose | 原生Clip／BlendSpace／Selected Player handler调用现有Source与AnimationSelectedPosePlayerJob，子图及阶段接口已有代码 | 保留这些成果，接通StateMachine／Slot／BlendStack／Inertialization、Constraint及Final Publication；核心接入Host和唯一Barrier，不能继续按“只有参数外壳”报告 |
+| 网络 | 旧PassBackendCompositionRequest／SessionCompositionPreparation等Program装配载体已删；Pipeline编译器、Pass／Backend及回滚相关实现仍存在 | 保留原顺序、Product／能力校验、原子提交、预测／恢复算法，替换领域输入和状态接口；不以旧类被删推断网络全部误删，也不能把装配缺口扩展为另一套网络系统 |
+
+Timeline完整Ready必须来自当前内容实际需要的全部准备合同；绑定声明检查通过只是其中一步。未完成的数值／资源／技能服务解析须保持准确状态，不通过空服务或默认值掩盖。一个只处于Prepared且可Dispose的对象不能表示时间、窗口和副作用已经可推进。
+
+Pose后续每类节点说明真实输入、复用的已有算法、输出及其下一消费者。Source采样和Player Job接入是实质进展，但必须沿活跃分支、同一帧身份和唯一Barrier连接到Constraint／Final。接口完善只有在解决这条链的具体缺口时才算对应事项的进展，不新增通用注册、缓存或状态层来代替业务接入。
+
+核心Host、会话装配、Pass与网络状态由核心维护；Pose／Timeline的内部实现仍使用唯一领域清单。记录分别标明已删除、已有代码、已接正式消费者及运行证据；旧缺陷已经撤回则标历史，不要求实现窗口再次修同一问题。本轮未运行编译或Unity，不宣称端到端可用。
+
+### D19. 角色状态、技能服务与直接播放的职责收口
+
+检查至dd0708d46及当前工作区。代码已有独立技能安装／服务、CharacterRuntime port、Float32／Fixed状态codec、Timeline游标候选和多类原生Pose节点；下面明确尚未正确落实的领域边界。只按实际职责整改，不因Program命名再重做合理的技能执行数据、拓扑或布局。
+
+**角色与技能状态。** 当前两个CharacterRuntimeState及事务以单个GameplayAbilityExecutionInstallation创建，角色GameplayContentHash直接取其ContentHash，codec也依赖这一个安装来解析多个角色分区。最终角色必须聚合控制、请求、效果、装备、运动及多个技能的同次已提交状态；技能局部值和调用帧按技能／调用实例隔离，角色身份使用实际角色绑定、全部授予内容与模块合同，不能挑一个技能代表角色或复制多份全角色aggregate。沿现有角色绑定、安装集合和分区codec收口，不恢复总Program或另一套统一操作表。核心2.6／2.7负责。
+
+**角色服务与技能需求。** 当前Float32 InstallationSet给每个技能传同一GameplayEffect binding，但Installation对未声明Effect能力且收到非空binding的技能抛异常。角色具有某服务与技能声明使用某服务是两个事实：角色唯一持有可用服务／状态，技能安装只解析自身需要的能力和成员。角色可同时安装使用效果的攻击与不使用效果的其它技能；真正缺少所需成员／版本时仍失败。不能给所有技能强开效果能力或创建假服务。核心1.9及两个数值目标的安装／执行消费负责，保留既有Provider成员校验。
+
+**Timeline的完整区间调度。** 当前Prepare已显式处理数值目标和资源解析，Playback已有Start、Advance候选、Commit／Discard与停止状态；Advance目前主要按nextFrame选活动Clip。完整调度必须遍历上次提交位置到候选位置之间的全部边界，包括尾段／完整循环／头段；例如10帧推进到30帧必须处理20—21帧Clip的进入、相应阶段和退出，不能因最终落点不在Clip内而漏掉。Stop必须沿同一候选／接受边界关闭窗口与TreeClip，不能提前改committed状态。Timeline 12.3—12.6负责内部规则和codec，核心只通过1.5／3.8消费实际领域结果，不代写轨道调度。
+
+**Pose服务与装配。** Clip／BlendSpace／Selected Player、Blend／Layered／Additive等已有算法代码，Constraint适配和CharacterFinalPoseNativePublication已有真实服务入口；不能继续报告它们全未实现。但当前ICharacterPoseNativeStateMachineSource只发现接口／引用，未发现具体实现，handler类存在不等于状态转换行为已经提供。Pose规划按每类节点的具体服务、构造注入与下游消费者判断进展；Source／Constraint／Final接口由Pose接续，核心4.7把它们接入Host、唯一Barrier和最终发布。既有Pose审查R1—R7已由该owner跟进，本轮不重复派发旧问题或覆盖其修正。
+
+网络继续保留Pipeline计划、Pass／Backend、能力校验和恢复算法；新的PassBackendCompositionRequest已以CharacterRuntime及领域初始状态为输入，同名类不等于旧Program职责复活。修正的是角色快照／服务身份和正式消费者。Host仍加载旧Program／Projection是公共剩余接线，不能靠准备实例、handler注册或新codec存在宣称完成。
 
 ## Risks / Trade-offs
 

@@ -55,6 +55,6 @@
 - 核心Runtime：Character Host／Registration／Factory、Float32／Fixed角色Step和状态codec、Control／Ability最终数据／provider、网络与表现外壳。Timeline和Pose内部Runtime及专属旧链由各自既有任务清单交付，核心不串行代做。
 - Network／Server：Session Composer、Pass 产品及快照接口、握手与 Authority manifest；协议身份正式升级，网络行为和部署产品分工不改变。
 - Authoring：复用已安装的 FlowCanvas／NodeCanvas、正式 Capability／Mutation 与显式 `export_code`／`generate_assets`，不新增插件或作者同步机制。
-- 接口现状（2026-09-14，32f75a37c）：已交付Ability前端／目标／store、角色级状态迁出及Provider成员检查，Load返回独立数据类型，两个数值目标已增加执行目录；目录和Loader仍从旧Program构造或解码，Host仍加载整角色产物。Character根进入仅允许Ability根的构造器存在静态可确认的异常路径，1.9／1.10／2.1仍未完成。Pose已有原生实例和阶段外壳，节点算法与正式消费者尚未全部切换；Timeline仍走旧ProgramPlan。详见design D16，不以局部编译代替运行完成。
+- 接口现状（2026-09-14，检查至dd0708d46及工作区）：旧错误目录接线已撤回，28个旧编译源码已删除；独立技能安装／服务、领域状态codec和新CharacterRuntime port已有代码。Timeline已有数值／资源准备及游标Advance候选／Commit／Discard，Pose已有多种值节点和Constraint／Final入口。当前主要纠正角色状态错误依附单个Ability、效果服务安装拒绝不使用该能力的技能、Timeline只按落点识别Clip，以及Pose具体Source实现与Host缺失；完整业务接线仍未完成。旧快照见D16／D18，最新执行依据D19和任务清单，命名本身不构成重做技能数据的理由。
 - 分工：唯一领域清单分别是`restyle-timeline-editor-slate-style/tasks.md`与`refine-pose-graph-readonly-blackboard/tasks.md`的Runtime接收章节，本任务只保留指针和公共集成项。领域owner发布实际采用事实，核心装配并汇集，不自行制造版本；详见design D13—D15。
 - 文档：本提案替代旧评估中“继续保留角色总 Program”的方向。现行 spec、`openspec/project.md` 和并行 Pose／EventGraph／技能 FSM 提案的矛盾与准确分工见 `design.md`；本轮不改写其它任务，不把旧完成项重新判为未完成。

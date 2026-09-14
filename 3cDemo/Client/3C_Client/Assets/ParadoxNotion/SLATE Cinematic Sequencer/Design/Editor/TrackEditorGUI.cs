@@ -401,9 +401,23 @@ namespace Slate
             GUI.color = Color.white;
 
             var clip = track.SelectedClip;
-            if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+            if (clip == null)
             {
                 GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
+                inspectedParameterIndex = -1;
+                return;
+            }
+
+            if (clip.Parameters == null)
+            {
+                GUI.Label(expansionRect, "Selected Clip Parameter Binding Unavailable", Styles.centerLabel);
+                inspectedParameterIndex = -1;
+                return;
+            }
+
+            if (clip.Parameters.Count == 0)
+            {
+                GUI.Label(expansionRect, "Selected Clip Has No Timeline-local Curves", Styles.centerLabel);
                 inspectedParameterIndex = -1;
                 return;
             }
@@ -494,10 +508,26 @@ namespace Slate
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.Box(posRect, string.Empty, Styles.timeBoxStyle);
             GUI.color = Color.white;
-            if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+            if (clip == null)
             {
                 GUI.color = Color.white.WithAlpha(0.3f);
                 GUI.Label(posRect, "Select a Clip of this Track to view its Curves here", Styles.centerLabel);
+                GUI.color = Color.white;
+                return;
+            }
+
+            if (clip.Parameters == null)
+            {
+                GUI.color = Color.white.WithAlpha(0.3f);
+                GUI.Label(posRect, "Selected Clip Parameter Binding Unavailable", Styles.centerLabel);
+                GUI.color = Color.white;
+                return;
+            }
+
+            if (clip.Parameters.Count == 0)
+            {
+                GUI.color = Color.white.WithAlpha(0.3f);
+                GUI.Label(posRect, "Selected Clip Has No Timeline-local Curves", Styles.centerLabel);
                 GUI.color = Color.white;
                 return;
             }

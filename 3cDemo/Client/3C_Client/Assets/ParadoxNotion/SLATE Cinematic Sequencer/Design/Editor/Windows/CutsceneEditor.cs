@@ -3060,7 +3060,7 @@ namespace Slate
                         var xTime = clipWrapper.editorBinding.StartTime;
                         var xPos = clipRect.x;
 
-                        if ( interactingClip != null && ReferenceEquals(interactingClip, clipWrapper) && interactingClip.isDragging ) {
+                        if ( interactingClip != null && ReferenceEquals(interactingClip, clipWrapper) && interactingClip.isDragging && e.type == EventType.MouseDrag ) {
 
                             var lastTime = xTime;
                             xTime = PosToTime(xPos + leftRect.width);
@@ -3362,7 +3362,7 @@ namespace Slate
                         clipRect.width = Mathf.Max(wrapper.editorBinding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f);
                         clipRect.height = track.DefaultHeight;
 
-                        if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging)
+                        if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging && e.type == EventType.MouseDrag)
                         {
                             float start = wrapper.editorBinding.StartTime;
                             float length = wrapper.editorBinding.Length;

@@ -269,6 +269,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             else
                 m_Child.StopInstance();
             m_ChildFrameOpen = false;
+            m_ChildLease = default;
+            m_ChildPreparation = default;
+            m_ChildEvaluation = default;
         }
 
         public void Dispose()

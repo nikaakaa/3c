@@ -119,7 +119,7 @@
 
 2026-09-14 后续截图修正见源码决策第14节；保留已正确修复，以下仅为新增实现项，不是验证任务。
 
-- [x] 11.15 修正Clip选择、Track.SelectedClip、Inspector路径与Session之间的实际失配，刷新/Undo后按同一owner及AuthoringId恢复对象/通道，真实删除时同步清空，不新增选择真相或自动改选首项。提交 `6fad5d20a` 收口Formal通道选择身份，`a25a05d10` 接通同一正式选中对象，`a0842565f` 让嵌入 Surface 每帧重置 `formalSelectionHandled`，避免一次选中污染后续空白选择清理；真实窗口验收仍未完成。
+- [x] 11.15 修正Clip选择、Track.SelectedClip、Inspector路径与Session之间的实际失配，刷新/Undo后按同一owner及AuthoringId恢复对象/通道，真实删除时同步清空，不新增选择真相或自动改选首项。提交 `6fad5d20a` 收口Formal通道选择身份，`a25a05d10` 接通同一正式选中对象，`a0842565f` 让嵌入 Surface 每帧重置 `formalSelectionHandled`，避免一次选中污染后续空白选择清理；`3006f5c89` 让选择变化主动请求原Slate Surface重绘，避免选中框停留在旧对象；真实窗口验收仍未完成。
 - [x] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet。提交 `081ba862b` 增加源Reference项并保留Weight/Ease原曲线链；真实窗口验收仍未完成。
 - [x] 11.17 按实际调用栈修正Event.Use对Layout/Repaint的错误消费，只处理明确输入事件，保留现有鼠标交互，不屏蔽警告或将其未经证明归为曲线缺失唯一原因。原参数区、曲线区和锁定轨道现在只消费左键MouseDown/Drag/Up或ContextClick，不再用Event.isMouse吞掉鼠标移动。
 

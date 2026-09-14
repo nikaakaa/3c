@@ -66,6 +66,7 @@ namespace Slate
         float EndTime { get; }
         float DefaultHeight { get; }
         float FinalHeight { get; }
+        float GetFinalHeight(string inspectedParameterId);
         IReadOnlyList<IEmbeddedTimelineClipBinding> Clips { get; }
         IEmbeddedTimelineClipBinding SelectedClip { get; }
     }

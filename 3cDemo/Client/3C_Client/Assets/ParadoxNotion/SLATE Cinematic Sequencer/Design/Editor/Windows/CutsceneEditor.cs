@@ -2675,8 +2675,9 @@ namespace Slate
                 for (int trackIndex = 0; trackIndex < tracks.Count; trackIndex++)
                 {
                     IEmbeddedTimelineTrackBinding track = tracks[trackIndex];
-                    Rect trackRect = new Rect(10, nextY, leftRect.width - TRACK_RIGHT_MARGIN - 10, track.FinalHeight);
-                    nextY += track.FinalHeight + TRACK_MARGINS;
+                    float trackHeight = EmbeddedTrackFinalHeight(track);
+                    Rect trackRect = new Rect(10, nextY, leftRect.width - TRACK_RIGHT_MARGIN - 10, trackHeight);
+                    nextY += trackHeight + TRACK_MARGINS;
                     bool runtimeActive = embeddedRuntimeTrackActive == null || embeddedRuntimeTrackActive(track.AuthoringId);
                     string inspectionKey = FormalInspectionKey(track);
                     string inspected = string.Empty;
@@ -3005,6 +3006,14 @@ namespace Slate
                 track?.AuthoringId ?? string.Empty,
                 ":",
                 track?.SelectedClip?.AuthoringId ?? string.Empty);
+        }
+
+        float EmbeddedTrackFinalHeight(IEmbeddedTimelineTrackBinding track)
+        {
+            string inspected = string.Empty;
+            if (formalInspectedParameters != null)
+                formalInspectedParameters.TryGetValue(FormalInspectionKey(track), out inspected);
+            return track.GetFinalHeight(inspected);
         }
 
         void ShowTimeLines(Rect centerRect) {
@@ -3472,13 +3481,14 @@ namespace Slate
                 {
                     IEmbeddedTimelineTrackBinding track = group.Tracks[trackIndex];
                     float y = nextY;
+                    float trackHeight = EmbeddedTrackFinalHeight(track);
                     Rect trackPosRect = Rect.MinMaxRect(
                         Mathf.Max(TimeToPos(viewTimeMin), TimeToPos(track.StartTime)),
                         y,
                         TimeToPos(viewTimeMax),
-                        y + track.FinalHeight);
+                        y + trackHeight);
                     Rect trackTimeRect = Rect.MinMaxRect(Mathf.Max(viewTimeMin, track.StartTime), 0, viewTimeMax, 0);
-                    nextY += track.FinalHeight + TRACK_MARGINS;
+                    nextY += trackHeight + TRACK_MARGINS;
 
                     GUI.color = Color.black.WithAlpha(isProSkin ? 0.06f : 0.1f);
                     GUI.DrawTexture(trackPosRect, whiteTexture);

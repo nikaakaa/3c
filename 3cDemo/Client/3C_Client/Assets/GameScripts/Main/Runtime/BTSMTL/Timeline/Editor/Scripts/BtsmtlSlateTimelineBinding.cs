@@ -881,17 +881,27 @@ namespace BTSMTL.Timeline.Editor
             public float StartTime => 0f;
             public float EndTime => Owner.Length;
             public float DefaultHeight => 32f;
-            public float FinalHeight
+            public float FinalHeight => GetFinalHeight(string.Empty);
+            public float GetFinalHeight(string inspectedParameterId)
             {
-                get
+                if (!ShowCurves)
+                    return DefaultHeight;
+                IEmbeddedTimelineClipBinding clip = SelectedClip;
+                if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
+                    return DefaultHeight + 50f;
+                bool hasInspectedParameter = false;
+                for (int index = 0; index < clip.Parameters.Count; index++)
                 {
-                    if (!ShowCurves)
-                        return DefaultHeight;
-                    IEmbeddedTimelineClipBinding clip = SelectedClip;
-                    if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
-                        return DefaultHeight + 50f;
-                    return Mathf.Max(DefaultHeight + 4f + clip.Parameters.Count * 20f + 120f, m_CustomHeight);
+                    if (string.Equals(clip.Parameters[index].ParameterId, inspectedParameterId, StringComparison.Ordinal))
+                    {
+                        hasInspectedParameter = true;
+                        break;
+                    }
                 }
+                float parameterHeight = DefaultHeight + 4f + clip.Parameters.Count * 20f;
+                if (!hasInspectedParameter)
+                    return Mathf.Max(parameterHeight, DefaultHeight + 50f);
+                return Mathf.Max(parameterHeight + 120f, m_CustomHeight);
             }
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;
             public IEmbeddedTimelineClipBinding SelectedClip =>

@@ -1185,8 +1185,8 @@ namespace BTSMTL.Timeline.Editor
             public string DisplayName => m_Descriptor.DisplayName;
             public TimelineCurveValueDomain ValueDomain => m_Descriptor.ValueDomain;
             public AnimationCurve Curve => m_Curve;
-            public int StartFrame => m_Clip.Source.StartFrame;
-            public int EndFrame => m_Clip.Source.EndFrame;
+            public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
+            public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
             public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
             public void Replace(AnimationCurve curve) => m_Curve = SnapCurve(curve);
             public void Trim(float min, float max)
@@ -1327,7 +1327,7 @@ namespace BTSMTL.Timeline.Editor
             public string ValueDomainSummary => m_Curve.ValueDomain.Summary;
             public bool Enabled { get; set; } = true;
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
-                (m_Clip.Owner.CurrentFrame - m_Clip.Source.StartFrame) / (float)m_Clip.Owner.FrameRate,
+                m_Clip.Owner.CurrentFrame / (float)m_Clip.Owner.FrameRate - m_Clip.StartTime,
                 0f,
                 m_Curve.Duration));
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
@@ -1351,7 +1351,8 @@ namespace BTSMTL.Timeline.Editor
                     if (keys[index].time < localTime - 0.0001f && (!previous.HasValue || keys[index].time > previous.Value))
                         previous = keys[index].time;
                 if (previous.HasValue)
-                    m_Clip.Owner.CurrentFrame = m_Clip.Source.StartFrame + Mathf.RoundToInt(previous.Value * m_Clip.Owner.FrameRate);
+                    m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
+                        (m_Clip.StartTime + previous.Value) * m_Clip.Owner.FrameRate);
             }
 
             public void SelectNextKey(float localTime)
@@ -1362,7 +1363,8 @@ namespace BTSMTL.Timeline.Editor
                     if (keys[index].time > localTime + 0.0001f && (!next.HasValue || keys[index].time < next.Value))
                         next = keys[index].time;
                 if (next.HasValue)
-                    m_Clip.Owner.CurrentFrame = m_Clip.Source.StartFrame + Mathf.RoundToInt(next.Value * m_Clip.Owner.FrameRate);
+                    m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
+                        (m_Clip.StartTime + next.Value) * m_Clip.Owner.FrameRate);
             }
         }
 
@@ -1389,7 +1391,7 @@ namespace BTSMTL.Timeline.Editor
             public string ReferenceLabel { get; }
             public bool Enabled { get => true; set { } }
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
-                (m_Clip.Owner.CurrentFrame - m_Clip.Source.StartFrame) / (float)m_Clip.Owner.FrameRate,
+                m_Clip.Owner.CurrentFrame / (float)m_Clip.Owner.FrameRate - m_Clip.StartTime,
                 0f,
                 m_Curve.Duration));
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
@@ -1422,8 +1424,8 @@ namespace BTSMTL.Timeline.Editor
             public string ChannelId { get; }
             public string DisplayName { get; }
             public AnimationCurve Curve => m_Curve;
-            public int StartFrame => m_Clip.Source.StartFrame;
-            public int EndFrame => m_Clip.Source.EndFrame;
+            public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
+            public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
             public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
             public void Replace(AnimationCurve curve) { }
             public void Refresh() => m_Curve = m_CreateCurve();

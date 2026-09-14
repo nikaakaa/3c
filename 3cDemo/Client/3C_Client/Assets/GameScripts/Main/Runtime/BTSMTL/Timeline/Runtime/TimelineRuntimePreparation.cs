@@ -946,6 +946,62 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
     }
 
+    public readonly struct TimelineRuntimeMotionWarpRequest
+    {
+        public TimelineRuntimeMotionWarpRequest(
+            string clipAuthoringId,
+            string sourceMotionClipId,
+            int frame,
+            int cycle,
+            float previousNormalizedTime,
+            float normalizedTime,
+            MotionWarpTranslationMode translationMode,
+            MotionWarpTargetOffsetSpace targetOffsetSpace,
+            MotionWarpRotationMode rotationMode,
+            MotionWarpRotationMethod rotationMethod,
+            Vector2 targetPlanarOffset,
+            float targetYawOffsetDegrees,
+            float maxTotalPositionCorrection,
+            float maxTotalYawCorrectionDegrees,
+            float maximumYawRateDegreesPerSecond,
+            MotionWarpLimitPolicy limitPolicy)
+        {
+            ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            SourceMotionClipId = sourceMotionClipId ?? string.Empty;
+            Frame = frame;
+            Cycle = cycle;
+            PreviousNormalizedTime = Mathf.Clamp01(previousNormalizedTime);
+            NormalizedTime = Mathf.Clamp01(normalizedTime);
+            TranslationMode = translationMode;
+            TargetOffsetSpace = targetOffsetSpace;
+            RotationMode = rotationMode;
+            RotationMethod = rotationMethod;
+            TargetPlanarOffset = targetPlanarOffset;
+            TargetYawOffsetDegrees = targetYawOffsetDegrees;
+            MaxTotalPositionCorrection = Mathf.Max(0f, maxTotalPositionCorrection);
+            MaxTotalYawCorrectionDegrees = Mathf.Max(0f, maxTotalYawCorrectionDegrees);
+            MaximumYawRateDegreesPerSecond = Mathf.Max(0f, maximumYawRateDegreesPerSecond);
+            LimitPolicy = limitPolicy;
+        }
+
+        public string ClipAuthoringId { get; }
+        public string SourceMotionClipId { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public float PreviousNormalizedTime { get; }
+        public float NormalizedTime { get; }
+        public MotionWarpTranslationMode TranslationMode { get; }
+        public MotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
+        public MotionWarpRotationMode RotationMode { get; }
+        public MotionWarpRotationMethod RotationMethod { get; }
+        public Vector2 TargetPlanarOffset { get; }
+        public float TargetYawOffsetDegrees { get; }
+        public float MaxTotalPositionCorrection { get; }
+        public float MaxTotalYawCorrectionDegrees { get; }
+        public float MaximumYawRateDegreesPerSecond { get; }
+        public MotionWarpLimitPolicy LimitPolicy { get; }
+    }
+
     public sealed class TimelineRuntimeEvaluationResult
     {
         internal TimelineRuntimeEvaluationResult(
@@ -957,6 +1013,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineActionCueSample> actionCues,
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
             IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
+            IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
             IReadOnlyList<TimelineRuntimeClipSample> clipSamples)
         {
             AnimationContributions = Copy(animations);
@@ -967,6 +1024,7 @@ namespace BTSMTL.Timeline.Runtime
             ActionCues = Copy(actionCues);
             TreeClips = Copy(treeClips);
             ScenePresentation = Copy(scenePresentation);
+            MotionWarps = Copy(motionWarps);
             ClipSamples = Copy(clipSamples);
         }
 
@@ -978,6 +1036,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
         public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
         public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
+        public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
         public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
 
         static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
@@ -1085,6 +1144,7 @@ namespace BTSMTL.Timeline.Runtime
             var actionCues = new List<TimelineActionCueSample>();
             var treeClips = new List<TimelineRuntimeTreeClipRequest>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
+            var motionWarps = new List<TimelineRuntimeMotionWarpRequest>();
             var clipSamples = new List<TimelineRuntimeClipSample>();
             List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
                 previousFrame,
@@ -1138,6 +1198,38 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             actionCues);
+                    }
+                    else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
+                    {
+                        for (int clipIndex = 0; clipIndex < motionWarpTrack.Clips.Count; clipIndex++)
+                        {
+                            if (motionWarpTrack.Clips[clipIndex] is not MotionWarpClip motionWarpClip ||
+                                segment.CurrentTime <= motionWarpClip.StartTime ||
+                                segment.PreviousTime >= motionWarpClip.EndTime)
+                                continue;
+                            float duration = Mathf.Max(0.0001f, motionWarpClip.DurationTime);
+                            float previousNormalized = Mathf.Clamp01(
+                                (segment.PreviousTime - motionWarpClip.StartTime) / duration);
+                            float normalized = Mathf.Clamp01(
+                                (segment.CurrentTime - motionWarpClip.StartTime) / duration);
+                            motionWarps.Add(new TimelineRuntimeMotionWarpRequest(
+                                motionWarpClip.AuthoringId,
+                                motionWarpClip.SourceMotionClipId,
+                                Mathf.RoundToInt(segment.CurrentTime * frameRate),
+                                segment.Cycle,
+                                previousNormalized,
+                                normalized,
+                                motionWarpClip.TranslationMode,
+                                motionWarpClip.TargetOffsetSpace,
+                                motionWarpClip.RotationMode,
+                                motionWarpClip.RotationMethod,
+                                motionWarpClip.TargetPlanarOffset,
+                                motionWarpClip.TargetYawOffsetDegrees,
+                                motionWarpClip.MaxTotalPositionCorrection,
+                                motionWarpClip.MaxTotalYawCorrectionDegrees,
+                                motionWarpClip.MaximumYawRateDegreesPerSecond,
+                                motionWarpClip.LimitPolicy));
+                        }
                     }
                 }
             }
@@ -1254,6 +1346,7 @@ namespace BTSMTL.Timeline.Runtime
                 actionCues,
                 treeClips,
                 scenePresentation,
+                motionWarps,
                 clipSamples);
         }
 

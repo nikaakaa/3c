@@ -201,8 +201,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 new[] { Produce(RollbackPipelineProducts.Ingress) },
                 new[]
                 {
-                    RollbackSourcePortContracts.InputRequirement,
-                    Target(FixedPipelineRuntimePortIds.ProgramRuntime, FixedPipelineRuntimePortIds.ProgramRuntimeSchema)
+                    RollbackSourcePortContracts.InputRequirement
                 });
             Schedule = Create(
                 RollbackPipelinePassIds.Schedule,
@@ -216,7 +215,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     Consume(RollbackPipelineProducts.Ingress),
                     Produce(SimulationPipelineProducts.ExecutionPlan)
                 },
-                new[] { Target(FixedPipelineRuntimePortIds.ProgramRuntime, FixedPipelineRuntimePortIds.ProgramRuntimeSchema) });
+                Array.Empty<SimulationPipelinePortRequirement>());
             History = Create(
                 RollbackPipelinePassIds.History,
                 SimulationPipelinePhase.Step,

@@ -90,7 +90,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new[]
             {
                 Float32LocalInputSourcePortContract.Requirement,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
                 Target(Float32PipelineRuntimePortIds.CommittedObservation, Float32PipelineRuntimePortIds.CommittedObservationSchema)
             });
 
@@ -131,7 +130,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 ServerAuthoritativeSourcePortContracts.PredictionState,
                 ServerAuthoritativeSourcePortContracts.PredictionRestore,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
                 Target(Float32PipelineRuntimePortIds.WorldSolver, Float32PipelineRuntimePortIds.WorldSolverSchema),
                 Diagnostics()
             });
@@ -229,7 +227,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new[]
             {
                 ServerAuthoritativeSourcePortContracts.AuthorityClock,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
                 Diagnostics()
             });
 
@@ -255,7 +252,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ServerAuthoritativeSourcePortContracts.AuthoritySend,
                 ServerAuthoritativeSourcePortContracts.FullBaselineRequest,
                 Target(Float32PipelineRuntimePortIds.CompletedSteps, Float32PipelineRuntimePortIds.CompletedStepsSchema),
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
                 Solver(),
                 Diagnostics()
             },

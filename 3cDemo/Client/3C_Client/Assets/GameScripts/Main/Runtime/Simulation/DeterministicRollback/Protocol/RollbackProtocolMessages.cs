@@ -28,25 +28,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public RollbackHandshake(
             string peerId,
             SimulationComponentIdentity model,
-            SemanticHash semanticHash,
-            ProgramHash fixedProgramHash,
-            LayoutHash fixedLayoutHash,
+            GameplayContentHash gameplayContentHash,
             int tickRate,
             StableHash collisionWorldHash,
             StableHash kccIdentityHash,
             SimulationProtocolIdentity protocol)
         {
             PeerId = SimulationIdentity.Require(peerId, nameof(peerId));
-            if (!model.IsValid || model.Role != SimulationComponentRole.Model || !semanticHash.IsValid ||
-                !fixedProgramHash.IsValid || !fixedLayoutHash.IsValid || tickRate <= 0 ||
+            if (!model.IsValid || model.Role != SimulationComponentRole.Model || !gameplayContentHash.IsValid ||
+                tickRate <= 0 ||
                 !collisionWorldHash.IsValid || !kccIdentityHash.IsValid || !protocol.IsValid)
             {
                 throw new ArgumentException("Rollback handshake identity is incomplete.");
             }
             Model = model;
-            SemanticHash = semanticHash;
-            FixedProgramHash = fixedProgramHash;
-            FixedLayoutHash = fixedLayoutHash;
+            GameplayContentHash = gameplayContentHash;
             TickRate = tickRate;
             CollisionWorldHash = collisionWorldHash;
             KccIdentityHash = kccIdentityHash;
@@ -56,9 +52,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.Handshake;
         public string PeerId { get; }
         public SimulationComponentIdentity Model { get; }
-        public SemanticHash SemanticHash { get; }
-        public ProgramHash FixedProgramHash { get; }
-        public LayoutHash FixedLayoutHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public int TickRate { get; }
         public StableHash CollisionWorldHash { get; }
         public StableHash KccIdentityHash { get; }
@@ -66,12 +60,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public void RequireCompatible(RollbackHandshake other)
         {
-            if (other == null || !Model.Equals(other.Model) || !SemanticHash.Equals(other.SemanticHash) ||
-                !FixedProgramHash.Equals(other.FixedProgramHash) || !FixedLayoutHash.Equals(other.FixedLayoutHash) ||
+            if (other == null || !Model.Equals(other.Model) || !GameplayContentHash.Equals(other.GameplayContentHash) ||
                 TickRate != other.TickRate || !CollisionWorldHash.Equals(other.CollisionWorldHash) ||
                 !KccIdentityHash.Equals(other.KccIdentityHash) || !Protocol.Equals(other.Protocol))
             {
-                throw new InvalidOperationException("Rollback handshake Program, world, KCC, TickRate, Model, or protocol is incompatible.");
+                throw new InvalidOperationException("Rollback handshake Character Runtime content, world, KCC, TickRate, Model, or protocol is incompatible.");
             }
         }
     }

@@ -40,7 +40,14 @@ namespace ThirdPersonSimulation
             return value;
         }
 
-        public bool TryGet(CharacterSkillId abilityId, out TData value) =>
-            abilityId.IsValid && m_ByAbility.TryGetValue(abilityId, out value);
+        public bool TryGet(CharacterSkillId abilityId, out TData value)
+        {
+            if (!abilityId.IsValid)
+            {
+                value = null;
+                return false;
+            }
+            return m_ByAbility.TryGetValue(abilityId, out value);
+        }
     }
 }

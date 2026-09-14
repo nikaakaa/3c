@@ -209,3 +209,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 删除 `PoseGraph/Worker/CharacterPoseWorkerScheduler.cs` 及其 `.meta`；该文件定义旧 Worker Actor 注册、阶段 Lease、Program Batch 和 Scheduler，服务的是旧 Program 的批量执行调度。
 - 原生 Graph Runtime 使用实例级 `Manual` 阶段和自己的 frame lease，不恢复旧 Worker 类型或兼容调度层；`CharacterPresentationRuntime`、Tick Targets、Preview 和旧 Program 消费者中的引用作为下一步断链清单保留。
 - 本步未运行 Unity/Build；当前消费者引用残留是激进删除的中间状态，不能作为完成证据。
+
+## 2026-09-14 r3 删除旧 Program 状态与资源生命周期模块
+
+- 删除 `CharacterPoseActorState`、`CharacterPoseLinkedFragmentState`、`CharacterPoseProgramActionRuntime`、`CharacterPoseProgramMotionMatchingRuntime`、`CharacterPoseProgramSourcePreparationRuntime`、`CharacterPoseProgramSourceRetirementRuntime`、`CharacterPoseProgramSourceRetirementState`、`CharacterPoseProgramTuningRuntime` 和 `CharacterPoseProgramTuningState` 及其 `.meta`。
+- 这些类型把动作播放、Motion Matching、Source Playable 准备/退休、Linked Fragment 和操作权重都绑在旧 Program Image/Frame Pages/Worker 生命周期上；新的 Pose 图应由原生节点实例、Source 服务和唯一 EventGraph 输入分别持有，不恢复旧 Program 状态总线。
+- 现有脏的 Program Executor/Runtime/Evaluation/Actor 文件及 Presentation 消费者不在本步改动；它们对已删除类型的引用作为下一步断链清单保留。
+- 本步未运行 Unity/Build；当前断链仍是激进删除的中间状态，不能作为完成证据。

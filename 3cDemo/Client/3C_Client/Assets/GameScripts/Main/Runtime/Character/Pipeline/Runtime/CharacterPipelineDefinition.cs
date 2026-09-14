@@ -55,7 +55,6 @@ namespace ThirdPersonCharacter.Pipeline
 #endif
         [SerializeField] TimelineData[] m_ControlMotionTimelines = Array.Empty<TimelineData>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
-        [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
@@ -81,7 +80,6 @@ namespace ThirdPersonCharacter.Pipeline
         public IReadOnlyList<TimelineData> ControlMotionTimelines =>
             m_ControlMotionTimelines ?? Array.Empty<TimelineData>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
-        public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
         public CharacterInputProfile InputProfile => m_InputProfile;
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
@@ -395,11 +393,6 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new ArgumentException(string.Join(" ", errors), nameof(parameters));
             m_ControlModuleId = moduleId;
             m_ControlParameters = configurations.ToArray();
-        }
-
-        public void SetSimulationProgram(CharacterSimulationProgramAsset simulationProgram)
-        {
-            m_SimulationProgram = simulationProgram;
         }
 
         public void SetPresentationProjection(CharacterPresentationProjectionAsset presentationProjection)

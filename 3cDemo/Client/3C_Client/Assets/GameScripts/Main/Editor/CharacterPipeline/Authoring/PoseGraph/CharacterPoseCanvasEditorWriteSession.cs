@@ -61,6 +61,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public Node CreateParameterGet(PoseParameterId parameterId, string displayName, Vector2 position)
         {
+            if (!CharacterPoseParameterAccess.IsBlackboardInput(
+                    parameterId,
+                    CharacterPoseParameterUsage.Control))
+            {
+                throw new InvalidOperationException(
+                    $"Pose parameter '{parameterId}' is not an EventGraph Blackboard input.");
+            }
             CharacterPoseNodeDefinition definition =
                 CharacterPoseNodeDefinitionModule.Shared.Require(CharacterPoseNodeKind.ProgramParameterInput);
             CharacterPoseGraphCapabilityProjector.Catalog.Require(

@@ -19,7 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public void Emit()
         {
             CharacterSimulationSourceLocation source = DefinitionSource;
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Random, ProgramStateSemantic.RandomState, "runtime:rng");
             m_Builder.RequireGameplayCapability("RunnableTree");
             m_Builder.RequireGameplayCapability("StateMachine");
             m_Builder.RequireGameplayCapability("Timeline");

@@ -927,7 +927,6 @@ namespace ThirdPersonSimulation
 
     public enum ProgramStateOwnerKind : byte
     {
-        Runtime = 1,
         Runnable = 2,
         StateMachine = 3,
         Timeline = 4,
@@ -935,7 +934,6 @@ namespace ThirdPersonSimulation
         Action = 6,
         GameplayEffect = 7,
         MotionModifier = 8,
-        Random = 9,
         Input = 10,
     }
 
@@ -980,7 +978,6 @@ namespace ThirdPersonSimulation
         ActionInstance = 80,
         ActionRequestBuffer = 81,
         AbilityExecutionState = 82,
-        RandomState = 122,
         AIWaitElapsedTicks = 130
     }
 
@@ -1098,7 +1095,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.AbilityExecutionState => kind == ProgramStateValueKind.AbilityExecutionState && owner == ProgramStateOwnerKind.Action,
-                ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
                 _ => false
             };
             if (!valid)

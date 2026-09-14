@@ -50,18 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     4,
                     Fields(fields),
                     source);
-                for (int instanceIndex = 0; instanceIndex < profile.MaxConcurrentInstances; instanceIndex++)
-                {
-                    string ownerIdentity = instanceIndex == 0
-                        ? $"action:{profile.ActionId}"
-                        : $"action:{profile.ActionId}:slot:{instanceIndex:D4}";
-                    m_Builder.DeclareStandaloneStateSlot(
-                        source,
-                        ProgramStateValueKind.ActionInstance,
-                        ProgramStateOwnerKind.Action,
-                        ProgramStateSemantic.ActionInstance,
-                        ownerIdentity);
-                }
             }
 
             foreach (GameplayBehaviorProfile profile in m_Model.BehaviorProfiles)

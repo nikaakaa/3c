@@ -703,8 +703,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         int GetDefaultConstant(ProgramStateValueKind kind)
         {
-            if (kind == ProgramStateValueKind.ActionInstance ||
-                kind == ProgramStateValueKind.ActionInstanceReference ||
+            if (kind == ProgramStateValueKind.ActionInstanceReference ||
                 kind == ProgramStateValueKind.BlackboardOwnerToken ||
                 kind == ProgramStateValueKind.BlackboardWriteStamp)
             {

@@ -252,6 +252,8 @@ namespace ThirdPersonSimulation.Fixed
             Dictionary<string, SimulationInputRequestState> inputRequestsSnapshot,
             bool hadActionActivationRequestsWorking,
             List<SimulationActionActivationRequestState> actionActivationRequestsSnapshot,
+            bool hadActionInstancesWorking,
+            List<FixedActionInstanceState> actionInstancesSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -271,6 +273,8 @@ namespace ThirdPersonSimulation.Fixed
             InputRequestsSnapshot = inputRequestsSnapshot;
             HadActionActivationRequestsWorking = hadActionActivationRequestsWorking;
             ActionActivationRequestsSnapshot = actionActivationRequestsSnapshot;
+            HadActionInstancesWorking = hadActionInstancesWorking;
+            ActionInstancesSnapshot = actionInstancesSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -291,6 +295,8 @@ namespace ThirdPersonSimulation.Fixed
         internal Dictionary<string, SimulationInputRequestState> InputRequestsSnapshot { get; }
         internal bool HadActionActivationRequestsWorking { get; }
         internal List<SimulationActionActivationRequestState> ActionActivationRequestsSnapshot { get; }
+        internal bool HadActionInstancesWorking { get; }
+        internal List<FixedActionInstanceState> ActionInstancesSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -321,6 +327,7 @@ namespace ThirdPersonSimulation.Fixed
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionWorking;
         Dictionary<string, SimulationInputRequestState> m_InputRequestsWorking;
         List<SimulationActionActivationRequestState> m_ActionActivationRequestsWorking;
+        List<FixedActionInstanceState> m_ActionInstancesWorking;
         FixedCharacterStateTransactionStatus m_Status;
 
         FixedCharacterStateTransaction(
@@ -476,6 +483,20 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionActivationRequestsWorking = new List<SimulationActionActivationRequestState>(requests);
         }
 
+        public IReadOnlyList<FixedActionInstanceState> GetActionInstances()
+        {
+            RequireActive();
+            return m_ActionInstancesWorking ?? m_BaseState.ActionInstances;
+        }
+
+        public void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions)
+        {
+            RequireActive();
+            if (actions == null)
+                throw new ArgumentNullException(nameof(actions));
+            m_ActionInstancesWorking = new List<FixedActionInstanceState>(actions);
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -565,6 +586,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_InputRequestsWorking == null ? null : new Dictionary<string, SimulationInputRequestState>(m_InputRequestsWorking, StringComparer.Ordinal),
                 m_ActionActivationRequestsWorking != null,
                 m_ActionActivationRequestsWorking == null ? null : new List<SimulationActionActivationRequestState>(m_ActionActivationRequestsWorking),
+                m_ActionInstancesWorking != null,
+                m_ActionInstancesWorking == null ? null : new List<FixedActionInstanceState>(m_ActionInstancesWorking),
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -608,6 +631,9 @@ namespace ThirdPersonSimulation.Fixed
                 : null;
             m_ActionActivationRequestsWorking = savepoint.HadActionActivationRequestsWorking
                 ? new List<SimulationActionActivationRequestState>(savepoint.ActionActivationRequestsSnapshot)
+                : null;
+            m_ActionInstancesWorking = savepoint.HadActionInstancesWorking
+                ? new List<FixedActionInstanceState>(savepoint.ActionInstancesSnapshot)
                 : null;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
@@ -654,6 +680,7 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = m_AbilityExecutionWorking ?? m_BaseState.AbilityExecutionState;
             IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests = m_InputRequestsWorking ?? m_BaseState.InputRequests;
             IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests = m_ActionActivationRequestsWorking ?? m_BaseState.ActionActivationRequests;
+            IReadOnlyList<FixedActionInstanceState> actionInstances = m_ActionInstancesWorking ?? m_BaseState.ActionInstances;
 
             try
             {
@@ -667,6 +694,7 @@ namespace ThirdPersonSimulation.Fixed
                     abilityExecutionState,
                     inputRequests,
                     actionActivationRequests,
+                    actionInstances,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -756,6 +784,7 @@ namespace ThirdPersonSimulation.Fixed
             m_AbilityExecutionWorking = null;
             m_InputRequestsWorking = null;
             m_ActionActivationRequestsWorking = null;
+            m_ActionInstancesWorking = null;
         }
 
         static Dictionary<string, SimulationInputRequestState> CloneInputRequests(

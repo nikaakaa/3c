@@ -61,20 +61,6 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<int> SlotIndexes => m_SlotIndexes;
     }
 
-    public readonly struct TypedActionStateAddresses
-    {
-        public TypedActionStateAddresses(string actionId, TypedStateAddress instance)
-        {
-            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
-            if (!instance.IsValid)
-                throw new ArgumentException("Action typed state address is invalid.");
-            Instance = instance;
-        }
-
-        public string ActionId { get; }
-        public TypedStateAddress Instance { get; }
-    }
-
     public readonly struct BlackboardInputStateBinding
     {
         public BlackboardInputStateBinding(string inputId, ProgramInputValueKind inputKind, TypedStateAddress stateAddress)
@@ -104,10 +90,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
         readonly HashSet<string> m_InputRequests;
         readonly string[] m_InputRequestIds;
-        readonly IReadOnlyDictionary<string, TypedActionStateAddresses> m_Actions;
-        readonly IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> m_ActionSlots;
-        readonly IReadOnlyList<TypedActionStateAddresses> m_AllActionSlots;
-        readonly IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> m_ActionContexts;
+        readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
         readonly IReadOnlyDictionary<int, TypedStateAddress> m_TimelineRetention;
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
@@ -162,10 +145,7 @@ namespace ThirdPersonSimulation.Fixed
                 program,
                 m_TypedAddresses,
                 out m_InputRequests,
-                out m_Actions,
-                out m_ActionSlots,
-                out m_AllActionSlots,
-                out m_ActionContexts,
+                out m_ActionCapacities,
                 out m_TimelineRetention,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             m_InputRequestIds = m_InputRequests.OrderBy(value => value, StringComparer.Ordinal).ToArray();
@@ -420,31 +400,11 @@ namespace ThirdPersonSimulation.Fixed
         public bool HasInputRequest(string requestId) =>
             m_InputRequests.Contains(requestId ?? string.Empty);
 
-        public TypedActionStateAddresses RequireAction(string actionId)
-        {
-            string identity = SimulationIdentity.Require(actionId, nameof(actionId));
-            if (!m_Actions.TryGetValue(identity, out TypedActionStateAddresses addresses))
-                throw new InvalidOperationException($"Program has no Action '{identity}' typed state.");
-            return addresses;
-        }
-
-        public IReadOnlyList<TypedStateAddress> ActionInstances(string contextId)
-        {
-            return m_ActionContexts.TryGetValue(contextId ?? string.Empty, out IReadOnlyList<TypedStateAddress> values)
-                ? values
-                : Array.Empty<TypedStateAddress>();
-        }
-
         internal IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
-        internal IReadOnlyDictionary<string, TypedActionStateAddresses> ActionStateIndex => m_Actions;
-        internal IReadOnlyList<TypedActionStateAddresses> AllActionStateAddresses => m_AllActionSlots;
-
-        internal IReadOnlyList<TypedActionStateAddresses> ActionStateSlots(string actionId)
-        {
-            return m_ActionSlots.TryGetValue(actionId ?? string.Empty, out IReadOnlyList<TypedActionStateAddresses> values)
-                ? values
-                : Array.Empty<TypedActionStateAddresses>();
-        }
+        internal int ActionCapacity(string actionId) =>
+            m_ActionCapacities.TryGetValue(actionId ?? string.Empty, out int capacity)
+                ? capacity
+                : throw new InvalidOperationException($"Program has no Action '{actionId}' capacity.");
 
         public TypedStateAddress RequireTimelineRetention(OperationHandle timeline)
         {
@@ -629,25 +589,32 @@ namespace ThirdPersonSimulation.Fixed
             CharacterSimulationProgram program,
             TypedStateAddress[] addresses,
             out HashSet<string> inputRequests,
-            out IReadOnlyDictionary<string, TypedActionStateAddresses> actions,
-            out IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> actionSlots,
-            out IReadOnlyList<TypedActionStateAddresses> allActionSlots,
-            out IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> actionContexts,
+            out IReadOnlyDictionary<string, int> actionCapacities,
             out IReadOnlyDictionary<int, TypedStateAddress> timelineRetention,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new HashSet<string>(StringComparer.Ordinal);
-            var actionBuilders = new Dictionary<string, Dictionary<int, ActionAddressBuilder>>(StringComparer.Ordinal);
+            var capacities = new Dictionary<string, int>(StringComparer.Ordinal);
             var timeline = new Dictionary<int, TypedStateAddress>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             for (int i = 0; i < program.CatalogEntries.Count; i++)
             {
                 ProgramCatalogEntry entry = program.CatalogEntries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.InputRequest)
+                if (entry.Kind == ProgramCatalogEntryKind.InputRequest)
+                {
+                    string requestId = TrimPrefix(entry.Identity, "input:request:");
+                    if (!inputs.Add(requestId))
+                        throw new InvalidDataException($"Input request '{requestId}' is duplicated.");
                     continue;
-                string requestId = TrimPrefix(entry.Identity, "input:request:");
-                if (!inputs.Add(requestId))
-                    throw new InvalidDataException($"Input request '{requestId}' is duplicated.");
+                }
+                if (entry.Kind != ProgramCatalogEntryKind.Action)
+                    continue;
+                string actionId = TrimPrefix(entry.Identity, "action:");
+                ActionAdmissionProfile profile = ActionAdmissionProfileCompiler.Compile(
+                    entry,
+                    constantIndex => program.Constants[constantIndex].Int32);
+                if (!capacities.TryAdd(actionId, profile.MaxConcurrentInstances))
+                    throw new InvalidDataException($"Action '{actionId}' is duplicated.");
             }
 
             for (int i = 0; i < program.StateSlots.Count; i++)
@@ -656,9 +623,6 @@ namespace ThirdPersonSimulation.Fixed
                 TypedStateAddress address = addresses[i];
                 switch (slot.Semantic)
                 {
-                    case ProgramStateSemantic.ActionInstance:
-                        RequireActionBuilder(actionBuilders, slot.OwnerIdentity).Instance = address;
-                        break;
                     case ProgramStateSemantic.TimelineRetentionIdentity:
                         int operation = ParseOperationOwner(slot.OwnerIdentity);
                         AddUnique(timeline, operation, address, "Timeline retention");
@@ -669,125 +633,10 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
 
-            var actionValues = new Dictionary<string, TypedActionStateAddresses>(StringComparer.Ordinal);
-            var actionSlotValues = new Dictionary<string, IReadOnlyList<TypedActionStateAddresses>>(StringComparer.Ordinal);
-            var allActionValues = new List<TypedActionStateAddresses>();
-            foreach (KeyValuePair<string, Dictionary<int, ActionAddressBuilder>> pair in actionBuilders.OrderBy(value => value.Key, StringComparer.Ordinal))
-            {
-                var values = new List<TypedActionStateAddresses>(pair.Value.Count);
-                int expectedSlotIndex = 0;
-                foreach (KeyValuePair<int, ActionAddressBuilder> slot in pair.Value.OrderBy(value => value.Key))
-                {
-                    if (slot.Key != expectedSlotIndex++)
-                        throw new InvalidDataException($"Action '{pair.Key}' has a non-contiguous instance slot layout.");
-                    if (!slot.Value.Instance.IsValid)
-                        throw new InvalidDataException($"Action '{pair.Key}' slot '{slot.Key}' typed state is incomplete.");
-                    TypedActionStateAddresses typedAction = new TypedActionStateAddresses(
-                        pair.Key,
-                        slot.Value.Instance);
-                    values.Add(typedAction);
-                    allActionValues.Add(typedAction);
-                }
-                if (values.Count == 0)
-                    throw new InvalidDataException($"Action '{pair.Key}' has no typed state slot.");
-                actionValues.Add(pair.Key, values[0]);
-                actionSlotValues.Add(pair.Key, values.AsReadOnly());
-            }
-
-            var contexts = new Dictionary<string, List<TypedStateAddress>>(StringComparer.Ordinal);
-            for (int i = 0; i < program.Operations.Count; i++)
-            {
-                SimulationOperation operation = program.Operations[i];
-                if (operation.Code != SimulationOperationCode.ActivateActionInstance)
-                    continue;
-                string contextId = FindStringConstant(program, operation, "ActionContext");
-                string actionId = FindActionId(program, operation);
-                if (string.IsNullOrEmpty(contextId) || !actionSlotValues.TryGetValue(actionId, out IReadOnlyList<TypedActionStateAddresses> actionValuesForContext))
-                    throw new InvalidDataException($"Action activation operation '{operation.Handle}' has incomplete typed state binding.");
-                if (!contexts.TryGetValue(contextId, out List<TypedStateAddress> values))
-                {
-                    values = new List<TypedStateAddress>();
-                    contexts.Add(contextId, values);
-                }
-                for (int actionIndex = 0; actionIndex < actionValuesForContext.Count; actionIndex++)
-                {
-                    TypedStateAddress actionInstance = actionValuesForContext[actionIndex].Instance;
-                    if (!values.Contains(actionInstance))
-                        values.Add(actionInstance);
-                }
-            }
-
-            var frozenContexts = new Dictionary<string, IReadOnlyList<TypedStateAddress>>(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, List<TypedStateAddress>> pair in contexts)
-            {
-                pair.Value.Sort((left, right) => left.SlotIndex.CompareTo(right.SlotIndex));
-                frozenContexts.Add(pair.Key, Array.AsReadOnly(pair.Value.ToArray()));
-            }
-
             inputRequests = inputs;
-            actions = actionValues;
-            actionSlots = actionSlotValues;
-            allActionSlots = allActionValues.AsReadOnly();
-            actionContexts = frozenContexts;
+            actionCapacities = capacities;
             timelineRetention = timeline;
             actionTargetSnapshots = targets;
-        }
-
-        static ActionAddressBuilder RequireActionBuilder(
-            IDictionary<string, Dictionary<int, ActionAddressBuilder>> builders,
-            string ownerIdentity)
-        {
-            ParseActionOwnerIdentity(ownerIdentity, out string actionId, out int slotIndex);
-            if (!builders.TryGetValue(actionId, out Dictionary<int, ActionAddressBuilder> slots))
-            {
-                slots = new Dictionary<int, ActionAddressBuilder>();
-                builders.Add(actionId, slots);
-            }
-            if (!slots.TryGetValue(slotIndex, out ActionAddressBuilder builder))
-            {
-                builder = new ActionAddressBuilder(slotIndex);
-                slots.Add(slotIndex, builder);
-            }
-            return builder;
-        }
-
-        static void ParseActionOwnerIdentity(string ownerIdentity, out string actionId, out int slotIndex)
-        {
-            string value = TrimPrefix(ownerIdentity, "action:");
-            const string slotMarker = ":slot:";
-            int marker = value.LastIndexOf(slotMarker, StringComparison.Ordinal);
-            if (marker < 0)
-            {
-                actionId = value;
-                slotIndex = 0;
-                return;
-            }
-            if (marker == 0 ||
-                !int.TryParse(value.Substring(marker + slotMarker.Length), out slotIndex) ||
-                slotIndex <= 0)
-            {
-                throw new InvalidDataException($"Action state owner '{ownerIdentity}' has an invalid slot identity.");
-            }
-            actionId = value.Substring(0, marker);
-            SimulationIdentity.Require(actionId, nameof(ownerIdentity));
-        }
-
-        static string FindActionId(CharacterSimulationProgram program, SimulationOperation operation)
-        {
-            string result = string.Empty;
-            for (int i = 0; i < program.References.Count; i++)
-            {
-                ProgramReference reference = program.References[i];
-                if (!reference.HasSourceOperation || !reference.SourceOperation.Equals(operation.Handle) || reference.Kind != ProgramReferenceKind.CatalogEntry)
-                    continue;
-                ProgramCatalogEntry entry = program.CatalogEntries[reference.TargetIndex];
-                if (entry.Kind != ProgramCatalogEntryKind.Action)
-                    continue;
-                if (result.Length != 0)
-                    throw new InvalidDataException($"Action activation operation '{operation.Handle}' references multiple Action entries.");
-                result = TrimPrefix(entry.Identity, "action:");
-            }
-            return result;
         }
 
         static string FindStringConstant(CharacterSimulationProgram program, SimulationOperation operation, string field)
@@ -829,17 +678,6 @@ namespace ThirdPersonSimulation.Fixed
             if (values.ContainsKey(key))
                 throw new InvalidDataException($"{label} '{key}' is duplicated.");
             values.Add(key, address);
-        }
-
-        sealed class ActionAddressBuilder
-        {
-            public ActionAddressBuilder(int slotIndex)
-            {
-                SlotIndex = slotIndex;
-            }
-
-            public int SlotIndex;
-            public TypedStateAddress Instance;
         }
 
         static void BuildValueInputs(

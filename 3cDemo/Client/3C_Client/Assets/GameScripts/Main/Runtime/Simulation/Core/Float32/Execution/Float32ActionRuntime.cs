@@ -540,7 +540,7 @@ namespace ThirdPersonSimulation
 		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
 
 		IEnumerable<Float32ActionInstanceState> IAbilityLifecyclePort<Float32ActionInstanceState>.ActionStates =>
-			EnumerateActionStates();
+			m_Frame.Transaction.GetActionInstances();
 
 		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TryFindActive(
 			string contextId,
@@ -645,18 +645,11 @@ namespace ThirdPersonSimulation
 			reason,
 			SourceGeneration(source));
 
-		IEnumerable<Float32ActionInstanceState> EnumerateActionStates()
-		{
-			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
-				yield return m_Actions.ReadSlot(addresses.Instance.SlotIndex);
-		}
-
 		IEnumerable<ActionAdmissionActiveAction> EnumerateActiveActions()
 		{
-			foreach (Float32ActionInstanceState action in EnumerateActionStates())
+			foreach (Float32ActionInstanceState action in m_Actions.EnumerateActiveActions())
 			{
-				if (action.IsActive)
-					yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
+				yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
 			}
 		}
 

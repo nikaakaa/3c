@@ -541,7 +541,7 @@ namespace ThirdPersonSimulation.Fixed
         ulong IAbilityLifecyclePort<FixedActionInstanceState>.Tick => m_Frame.Tick.Value;
 
         IEnumerable<FixedActionInstanceState> IAbilityLifecyclePort<FixedActionInstanceState>.ActionStates =>
-            EnumerateActionStates();
+            m_Frame.Transaction.GetActionInstances();
 
         bool IAbilityLifecyclePort<FixedActionInstanceState>.TryFindActive(
             string contextId,
@@ -646,18 +646,11 @@ namespace ThirdPersonSimulation.Fixed
                 reason,
                 SourceGeneration(source));
 
-        IEnumerable<FixedActionInstanceState> EnumerateActionStates()
-        {
-            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
-                yield return m_Actions.ReadSlot(addresses.Instance.SlotIndex);
-        }
-
         IEnumerable<ActionAdmissionActiveAction> EnumerateActiveActions()
         {
-            foreach (FixedActionInstanceState action in EnumerateActionStates())
+            foreach (FixedActionInstanceState action in m_Actions.EnumerateActiveActions())
             {
-                if (action.IsActive)
-                    yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
+                yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
             }
         }
 

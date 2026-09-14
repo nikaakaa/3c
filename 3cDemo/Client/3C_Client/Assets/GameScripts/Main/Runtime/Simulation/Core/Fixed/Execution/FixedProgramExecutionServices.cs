@@ -91,8 +91,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.StateMachineExiting,
                 ProgramStateSemantic.StateMachineTransition,
                 ProgramStateSemantic.StateMachineExecutionPath);
-            ActionPolicy = new FixedStateAccessPolicy(
-                ProgramStateSemantic.ActionInstance);
             BlackboardPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,
                 ProgramStateSemantic.BlackboardOwnerToken,
@@ -129,7 +127,6 @@ namespace ThirdPersonSimulation.Fixed
         public OperationExecutionTopology Topology { get; }
         public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
         public FixedStateAccessPolicy ControlPolicy { get; }
-        public FixedStateAccessPolicy ActionPolicy { get; }
         public FixedStateAccessPolicy BlackboardPolicy { get; }
         public FixedStateAccessPolicy TimelinePolicy { get; }
         public FixedStateAccessPolicy MotionModifierPolicy { get; }
@@ -285,8 +282,8 @@ namespace ThirdPersonSimulation.Fixed
                     constantIndex => ReadActionTargetRequirement(program, constantIndex));
                 if (!profiles.TryAdd(profile.ActionId, profile))
                     throw new InvalidDataException($"Action profile '{profile.ActionId}' is duplicated.");
-                if (layout.ActionStateSlots(profile.ActionId).Count != profile.MaxConcurrentInstances)
-                    throw new InvalidDataException($"Action profile '{profile.ActionId}' declares capacity '{profile.MaxConcurrentInstances}', but Program layout provides '{layout.ActionStateSlots(profile.ActionId).Count}' slots.");
+                if (layout.ActionCapacity(profile.ActionId) != profile.MaxConcurrentInstances)
+                    throw new InvalidDataException($"Action profile '{profile.ActionId}' declares capacity '{profile.MaxConcurrentInstances}', but Program layout provides '{layout.ActionCapacity(profile.ActionId)}' capacity.");
             }
             byOperation = new ActionAdmissionProfile[program.Operations.Count];
             for (int operationIndex = 0; operationIndex < byOperation.Length; operationIndex++)

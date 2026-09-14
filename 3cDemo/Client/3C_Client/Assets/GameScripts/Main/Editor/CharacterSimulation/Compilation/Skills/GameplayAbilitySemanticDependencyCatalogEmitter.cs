@@ -151,8 +151,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationCatalogIndex m_Index;
-        readonly HashSet<string> m_ActionStateProfiles = new HashSet<string>(StringComparer.Ordinal);
-
         public GameplayAbilitySemanticDependencyCatalogEmitter(
             CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
@@ -308,26 +306,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 4,
                 fields.Where(value => value != null),
                 source);
-            if (profile is GameplayAbilityAdmissionProfile actionProfile)
-                DeclareActionStateSlots(actionId, actionProfile.MaxConcurrentInstances, source);
-        }
-
-        void DeclareActionStateSlots(string actionId, int capacity, CharacterSimulationSourceLocation source)
-        {
-            if (!m_ActionStateProfiles.Add(actionId))
-                return;
-            for (int i = 0; i < capacity; i++)
-            {
-                string ownerIdentity = i == 0
-                    ? $"action:{actionId}"
-                    : $"action:{actionId}:slot:{i:D4}";
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
-                    ProgramStateValueKind.ActionInstance,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.ActionInstance,
-                    ownerIdentity);
-            }
         }
 
         void AddQueryFields(

@@ -421,7 +421,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.CreateStatePort("Control", services.ControlPolicy));
             var actionStore = new FixedActionStateStore(
                 access,
-                m_Frame.CreateStatePort("Action", services.ActionPolicy),
                 m_Frame);
             m_ActionStore = actionStore;
             m_Input = new FixedInputRuntime(

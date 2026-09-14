@@ -917,7 +917,6 @@ namespace ThirdPersonSimulation
         Identity = 8,
         BlackboardOwnerToken = 9,
         BlackboardWriteStamp = 10,
-        ActionInstance = 22,
         ActionInstanceReference = 23,
         ActionTargetSnapshot = 24
     }
@@ -970,7 +969,6 @@ namespace ThirdPersonSimulation
         BlackboardOwnerToken = 61,
         BlackboardLifetime = 63,
         BlackboardWriteStamp = 64,
-        ActionInstance = 80,
         AIWaitElapsedTicks = 130
     }
 
@@ -1031,7 +1029,6 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.Identity => "state.identity/v1",
                 ProgramStateValueKind.BlackboardOwnerToken => "state.blackboard-owner-token/v1",
                 ProgramStateValueKind.BlackboardWriteStamp => "state.blackboard-write-stamp/v1",
-                ProgramStateValueKind.ActionInstance => "state.action-instance/v1",
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
@@ -1081,7 +1078,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.BlackboardOwnerToken => kind == ProgramStateValueKind.BlackboardOwnerToken && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardLifetime => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardWriteStamp => kind == ProgramStateValueKind.BlackboardWriteStamp && owner == ProgramStateOwnerKind.Blackboard,
-                ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 _ => false
             };
             if (!valid)

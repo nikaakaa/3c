@@ -75,6 +75,7 @@ namespace BTSMTL.Timeline.Editor
             m_Session = new TimelineEditorSessionContext(request);
             m_Binding = new BtsmtlSlateTimelineBinding(request, m_Session, openSourceClip);
             m_Binding.AuthoringIssue += OnBindingIssue;
+            m_Binding.RepaintRequested += OnBindingRepaint;
             UnityEditor.Selection.activeObject = request.SerializedOwner;
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
             m_EmbeddedEditor.InitializeEmbedded(m_Binding, null);
@@ -318,6 +319,12 @@ namespace BTSMTL.Timeline.Editor
             ReportIssue(message);
         }
 
+        void OnBindingRepaint()
+        {
+            if (!m_Disposed)
+                m_EmbeddedEditor.RequestEmbeddedRepaint();
+        }
+
         void OnSourceTimelineChanged()
         {
             QueueRebuildBinding();
@@ -362,6 +369,7 @@ namespace BTSMTL.Timeline.Editor
             m_RebuildQueued = false;
             m_Session.SelectionChanged -= OnSelectionChanged;
             m_Binding.AuthoringIssue -= OnBindingIssue;
+            m_Binding.RepaintRequested -= OnBindingRepaint;
             m_Request.Timeline.OnValueChanged -= OnSourceTimelineChanged;
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             m_EmbeddedEditor.ClearEmbedded();

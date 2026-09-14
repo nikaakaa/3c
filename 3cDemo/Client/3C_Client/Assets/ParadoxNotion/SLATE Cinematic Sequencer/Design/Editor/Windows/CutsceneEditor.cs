@@ -303,6 +303,7 @@ namespace Slate
         [System.NonSerialized] private System.Action embeddedAddTrack;
         [System.NonSerialized] private System.Action<ActionClip> embeddedCopyClip;
         [System.NonSerialized] private IEmbeddedTimelineBinding embeddedTimeline;
+        internal IEmbeddedTimelineBinding EmbeddedTimeline => embeddedTimeline;
 #if UNITY_6000_5_OR_NEWER
         private EntityId _cutsceneEntityID;
 #else
@@ -4338,6 +4339,7 @@ namespace Slate
                 GUI.color = Color.white;
                 if (editorBinding.FormalClip != null)
                 {
+                    TrackEditorGUI.DrawClipDopeSheet(editorBinding.FormalClip, dopeRect);
                     return;
                 }
                 DopeSheetEditor.DrawDopeSheet(action.animationData, action, dopeRect, 0, action.length, false);

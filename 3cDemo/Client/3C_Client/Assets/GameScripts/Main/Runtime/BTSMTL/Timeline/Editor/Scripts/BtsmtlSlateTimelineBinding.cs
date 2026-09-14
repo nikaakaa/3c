@@ -21,7 +21,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, BtsmtlTimelineSectionBinding> m_SectionsById = new Dictionary<string, BtsmtlTimelineSectionBinding>(StringComparer.Ordinal);
         string m_SourceRevision;
         IEmbeddedTimelineElementBinding m_Selected;
-        BtsmtlTimelineClipBinding m_CopiedClip;
+        Clip m_CopiedClip;
         bool m_EditActive;
         bool m_ReadOnly;
         string m_EditUndoName;
@@ -129,14 +129,23 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
             }
+            if (!m_Clips.Values.Any(clip => clip.HasChanges()) &&
+                !m_SectionsById.Values.Any(section => section.HasChanges()))
+            {
+                Rebuild();
+                return;
+            }
             try
             {
                 m_Session.Apply(() =>
                 {
+                    bool changed = false;
                     foreach (BtsmtlTimelineClipBinding clip in m_Clips.Values)
-                        clip.CommitSource();
+                        changed |= clip.CommitSource();
                     foreach (BtsmtlTimelineSectionBinding section in m_SectionsById.Values)
-                        section.CommitSource();
+                        changed |= section.CommitSource();
+                    if (!changed)
+                        return;
                     Timeline.Init();
                     ValidateTimeline();
                 }, m_EditUndoName);
@@ -158,7 +167,12 @@ namespace BTSMTL.Timeline.Editor
             Rebuild();
         }
 
-        public void RequestRepaint() { }
+        public event Action RepaintRequested;
+
+        public void RequestRepaint()
+        {
+            RepaintRequested?.Invoke();
+        }
 
         public void AddTrack()
         {
@@ -180,6 +194,13 @@ namespace BTSMTL.Timeline.Editor
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
+        }
+
+        public void SetTrackActive(IEmbeddedTimelineTrackBinding track, bool active)
+        {
+            if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
+                return;
+            ApplyImmediate(() => formalTrack.Source.PersistentMuted = !active, "Track Active");
         }
 
         public void AddClipAt(string trackAuthoringId, int frame)
@@ -280,13 +301,15 @@ namespace BTSMTL.Timeline.Editor
 
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {
-            m_CopiedClip = clip as BtsmtlTimelineClipBinding;
+            m_CopiedClip = clip is BtsmtlTimelineClipBinding formalClip
+                ? ManagedReferenceCloneUtility.Clone(formalClip.Source)
+                : null;
         }
 
         public void CopySourceClip(Clip clip)
         {
             m_CopiedClip = clip != null && m_Clips.TryGetValue(clip.AuthoringId, out BtsmtlTimelineClipBinding value)
-                ? value
+                ? ManagedReferenceCloneUtility.Clone(value.Source)
                 : null;
         }
 
@@ -296,12 +319,12 @@ namespace BTSMTL.Timeline.Editor
                 return;
             ApplyImmediate(() =>
             {
-                Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip.Source);
+                Clip clone = ManagedReferenceCloneUtility.Clone(m_CopiedClip);
                 clone.RegenerateAuthoringIdentity();
                 if (clone is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
                 clone.StartFrame = Mathf.Max(0, frame);
-                clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Source.Duration);
+                clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Duration);
                 ContractCatalog.RequireClipPlacement(formalTrack.Source, clone);
                 formalTrack.Source.Clips.Add(clone);
                 formalTrack.Source.UpdateMix();
@@ -738,8 +761,8 @@ namespace BTSMTL.Timeline.Editor
                 Source = source;
                 m_StartTime = source.StartFrame / (float)owner.FrameRate;
                 m_EndTime = source.EndFrame / (float)owner.FrameRate;
-                m_BlendIn = source.EaseInFrame / (float)owner.FrameRate;
-                m_BlendOut = source.EaseOutFrame / (float)owner.FrameRate;
+                m_BlendIn = source.SelfEaseInFrame / (float)owner.FrameRate;
+                m_BlendOut = source.SelfEaseOutFrame / (float)owner.FrameRate;
                 var descriptors = owner.CollectCurveChannels(source.Track);
                 for (int index = 0; index < descriptors.Count; index++)
                 {
@@ -762,7 +785,7 @@ namespace BTSMTL.Timeline.Editor
             public bool IsActive => m_Track.IsActive;
             public bool IsValid => !Source.Invalid;
             public bool IsCollapsed { get => m_IsCollapsed; set => m_IsCollapsed = value; }
-            public bool IsLocked { get => m_IsLocked; set => m_IsLocked = value; }
+            public bool IsLocked { get => m_IsLocked || m_Track.IsLocked; set => m_IsLocked = value; }
             public float StartTime { get => m_StartTime; set => m_StartTime = Mathf.Max(0f, value); }
             public float EndTime { get => m_EndTime; set => m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, value); }
             public float Length => Mathf.Max(0f, EndTime - StartTime);
@@ -808,15 +831,41 @@ namespace BTSMTL.Timeline.Editor
                     ((BtsmtlTimelineCurveBinding)m_Curves[index]).Replace(new AnimationCurve());
             }
 
-            public void CommitSource()
+            public bool CommitSource()
             {
-                Source.StartFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
-                Source.EndFrame = Mathf.Max(Source.StartFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
-                Source.SelfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, Source.Duration - 1);
-                Source.SelfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, Source.Duration - Source.SelfEaseInFrame - 1);
+                int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
+                int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
+                int selfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, endFrame - startFrame - 1);
+                int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
+                bool changed = Source.StartFrame != startFrame ||
+                               Source.EndFrame != endFrame ||
+                               Source.SelfEaseInFrame != selfEaseInFrame ||
+                               Source.SelfEaseOutFrame != selfEaseOutFrame;
                 for (int index = 0; index < m_Curves.Count; index++)
-                    ((BtsmtlTimelineCurveBinding)m_Curves[index]).CommitSource();
+                    changed |= ((BtsmtlTimelineCurveBinding)m_Curves[index]).CommitSource();
+                if (!changed)
+                    return false;
+                Source.StartFrame = startFrame;
+                Source.EndFrame = endFrame;
+                Source.SelfEaseInFrame = selfEaseInFrame;
+                Source.SelfEaseOutFrame = selfEaseOutFrame;
                 Source.Track.UpdateMix();
+                return true;
+            }
+
+            public bool HasChanges()
+            {
+                int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
+                int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
+                int selfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, endFrame - startFrame - 1);
+                int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
+                if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
+                    Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame)
+                    return true;
+                for (int index = 0; index < m_Curves.Count; index++)
+                    if (((BtsmtlTimelineCurveBinding)m_Curves[index]).HasChanges())
+                        return true;
+                return false;
             }
         }
 
@@ -847,7 +896,22 @@ namespace BTSMTL.Timeline.Editor
                     if (m_Curve[index].time < min || m_Curve[index].time > max)
                         m_Curve.RemoveKey(index);
             }
-            public void CommitSource() => m_Descriptor.Replace(m_Clip.Source, ConvertCurveTime(m_Curve, m_Duration, true));
+            public bool CommitSource()
+            {
+                AnimationCurve source = m_Descriptor.Read(m_Clip.Source);
+                AnimationCurve converted = ConvertCurveTime(m_Curve, m_Duration, true);
+                if (TimelineCurveAuthoring.AreEquivalent(source, converted))
+                    return false;
+                m_Descriptor.Replace(m_Clip.Source, converted);
+                return true;
+            }
+
+            public bool HasChanges()
+            {
+                AnimationCurve source = m_Descriptor.Read(m_Clip.Source);
+                AnimationCurve converted = ConvertCurveTime(m_Curve, m_Duration, true);
+                return !TimelineCurveAuthoring.AreEquivalent(source, converted);
+            }
 
             static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate) =>
                 Mathf.Max(1f / frameRate, clip.Duration / (float)frameRate);
@@ -943,7 +1007,20 @@ namespace BTSMTL.Timeline.Editor
             public string Name { get; set; }
             public float Time { get; set; }
             public Color Color => Color.white;
-            public void CommitSource() => Source.Configure(Name, Mathf.RoundToInt(Time * m_Owner.FrameRate));
+            public bool CommitSource()
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate));
+                if (string.Equals(Source.Name, Name, StringComparison.Ordinal) && Source.Frame == frame)
+                    return false;
+                Source.Configure(Name, frame);
+                return true;
+            }
+
+            public bool HasChanges()
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate));
+                return !string.Equals(Source.Name, Name, StringComparison.Ordinal) || Source.Frame != frame;
+            }
         }
     }
 }

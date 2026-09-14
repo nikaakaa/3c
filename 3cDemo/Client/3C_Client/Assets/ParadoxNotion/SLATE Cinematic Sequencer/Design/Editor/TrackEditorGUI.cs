@@ -388,7 +388,7 @@ namespace Slate
                 track.IsActive,
                 track.IsLocked,
                 track.ShowCurves,
-                value => CutsceneEditorSurface.current?.ApplyEmbeddedCommand(() => track.IsActive = value, "Track Active"),
+                 value => CutsceneEditorSurface.current?.EmbeddedTimeline?.SetTrackActive(track, value),
                 value => track.IsLocked = value,
                 value => track.ShowCurves = value);
 
@@ -495,6 +495,29 @@ namespace Slate
                 return;
             var curvesRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin + track.DefaultHeight, posRect.xMax, posRect.yMax);
             DrawClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterIndex);
+        }
+
+        public static void DrawClipDopeSheet(IEmbeddedTimelineClipBinding clip, Rect rect)
+        {
+            if (clip?.Parameters == null || clip.Parameters.Count == 0 || clip.Length <= 0f)
+                return;
+            var editor = CutsceneEditorSurface.current;
+            var curves = clip.Parameters
+                .Where(parameter => parameter?.Curves != null)
+                .SelectMany(parameter => parameter.Curves)
+                .Where(curve => curve?.Curve != null)
+                .Select(curve => curve.Curve)
+                .ToArray();
+            if (curves.Length == 0)
+                return;
+            DopeSheetEditor.DrawDopeSheet(
+                curves,
+                CurveEditor.CreateEmbeddedOwner(editor, string.Concat(clip.AuthoringId, ":clip-dope")),
+                CreateClipDopeSheetContext(clip, curves, editor),
+                rect,
+                0f,
+                clip.Length,
+                false);
         }
 
         static void DrawClipCurves(
@@ -637,6 +660,25 @@ namespace Slate
                     return curve == null ? string.Empty : curve.Evaluate(time).ToString("0.###");
                 },
                 AddIdentityKey = parameter.AddKey,
+                RecordUndo = () => editor?.BeginEmbeddedEdit("Edit Timeline Keys"),
+                NotifyChanged = () => editor?.CommitEmbeddedEdit()
+            };
+        }
+
+        static DopeSheetEditor.EditorContext CreateClipDopeSheetContext(
+            IEmbeddedTimelineClipBinding clip,
+            AnimationCurve[] curves,
+            CutsceneEditorSurface editor)
+        {
+            return new DopeSheetEditor.EditorContext
+            {
+                Curves = curves,
+                GetCurrentTime = () => (editor?.EmbeddedCurrentTime() ?? clip.StartTime) - clip.StartTime,
+                SetCurrentTime = value => editor?.SetEmbeddedCurrentTime(clip.StartTime + value),
+                LocalStart = 0f,
+                IsCollection = true,
+                GetKeyLabel = time => curves.Length == 0 ? string.Empty : curves[0].Evaluate(time).ToString("0.###"),
+                AddIdentityKey = clip.AddIdentityKey,
                 RecordUndo = () => editor?.BeginEmbeddedEdit("Edit Timeline Keys"),
                 NotifyChanged = () => editor?.CommitEmbeddedEdit()
             };

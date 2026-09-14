@@ -7,18 +7,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class CharacterPoseCanvasNativePorts
     {
-        internal sealed class CharacterPoseLocalPortValue { }
-        internal sealed class CharacterPoseComponentPortValue { }
-        internal sealed class CharacterPoseParameterPortValue { }
-        internal sealed class CharacterPoseDiscontinuityPortValue { }
-        internal sealed class CharacterPoseActionPlaybackPortValue { }
-        internal sealed class CharacterPoseFullBodyIkGoalsPortValue { }
-        internal sealed class CharacterPoseGoalContributionPortValue { }
-        internal sealed class CharacterPoseHistoryPortValue { }
-        internal sealed class CharacterPoseTrajectoryPortValue { }
-        internal sealed class CharacterPoseFactsPortValue { }
-        internal sealed class CharacterPoseMotionMatchingBindingPortValue { }
-
         sealed class PortRegistration
         {
             internal readonly Type Type;
@@ -36,17 +24,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static readonly IReadOnlyDictionary<CharacterPosePortKind, PortRegistration> s_Types =
             new Dictionary<CharacterPosePortKind, PortRegistration>
             {
-                [CharacterPosePortKind.LocalPose] = Registration<CharacterPoseLocalPortValue>(),
-                [CharacterPosePortKind.ComponentPose] = Registration<CharacterPoseComponentPortValue>(),
-                [CharacterPosePortKind.Parameter] = Registration<CharacterPoseParameterPortValue>(),
-                [CharacterPosePortKind.PoseDiscontinuity] = Registration<CharacterPoseDiscontinuityPortValue>(),
-                [CharacterPosePortKind.ActionPlayback] = Registration<CharacterPoseActionPlaybackPortValue>(),
-                [CharacterPosePortKind.FullBodyIkGoals] = Registration<CharacterPoseFullBodyIkGoalsPortValue>(),
-                [CharacterPosePortKind.FullBodyIkGoalContribution] = Registration<CharacterPoseGoalContributionPortValue>(),
-                [CharacterPosePortKind.PoseHistory] = Registration<CharacterPoseHistoryPortValue>(),
-                [CharacterPosePortKind.Trajectory] = Registration<CharacterPoseTrajectoryPortValue>(),
-                [CharacterPosePortKind.PresentationFacts] = Registration<CharacterPoseFactsPortValue>(),
-                [CharacterPosePortKind.MotionMatchingBinding] = Registration<CharacterPoseMotionMatchingBindingPortValue>()
+                [CharacterPosePortKind.LocalPose] = Registration<CharacterPoseNativeLocalPoseValue>(),
+                [CharacterPosePortKind.ComponentPose] = Registration<CharacterPoseNativeComponentPoseValue>(),
+                [CharacterPosePortKind.Parameter] = Registration<CharacterPoseNativeParameterValue>(),
+                [CharacterPosePortKind.PoseDiscontinuity] = Registration<CharacterPoseNativeDiscontinuityValue>(),
+                [CharacterPosePortKind.ActionPlayback] = Registration<CharacterPoseNativeActionPlaybackValue>(),
+                [CharacterPosePortKind.FullBodyIkGoals] = Registration<CharacterPoseNativeFullBodyIkGoalsValue>(),
+                [CharacterPosePortKind.FullBodyIkGoalContribution] = Registration<CharacterPoseNativeGoalContributionValue>(),
+                [CharacterPosePortKind.PoseHistory] = Registration<CharacterPoseNativeHistoryValue>(),
+                [CharacterPosePortKind.Trajectory] = Registration<CharacterPoseNativeTrajectoryValue>(),
+                [CharacterPosePortKind.PresentationFacts] = Registration<CharacterPoseNativeFactsValue>(),
+                [CharacterPosePortKind.MotionMatchingBinding] = Registration<CharacterPoseNativeMotionMatchingBindingValue>()
             };
 
         static PortRegistration Registration<T>() =>

@@ -116,7 +116,7 @@ Skill Document exporter、Timeline authoring applier 和 validator 继续消费 
 
 ## 编译证据
 
-2026-09-14 通过显式 Unity 实例刷新脚本后，Console 未出现 Timeline/Slate 类型错误；当前剩余错误来自其它窗口正在迁移的 Simulation Control 合同（`CharacterControlRuntimeState`、`CharacterControlRuntimeStateTransaction`、`CharacterControlStateSchema` 的构造/参数不匹配），因此 Unity 尚未加载本轮 Timeline 程序集，不能把当前结果当作曲线端到端通过。
+2026-09-15 通过显式 Unity 实例刷新全部资产并清空后重读 Console，Timeline 路径错误为 0；当前剩余错误来自其它窗口正在迁移的 Simulation 合同（`GameplayAbilityExecutionLayout`、`BlackboardInputStateBinding`、`TypedStateAddress` 等类型缺失），因此 Unity 已加载本轮 Timeline 程序集，但主工程仍不能进行完整窗口端到端验收。
 
 本轮没有把主 Editor 的联合编译错误归因于 Timeline，也没有修改 Simulation 文件。真实打开、选 Clip、展开曲线、拖动 key、保存和重开仍待主工作区编译恢复后验证。
 
@@ -128,7 +128,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj --no-restore 
 
 结果为 0 errors；该次修正后 `BTSMTL.Timeline.Editor.csproj` 重新编译为 0 warnings、0 errors，并已执行 `dotnet build-server shutdown`。该结果只证明 Timeline 编辑程序集源码闭合，不替代 Unity 主工程和真实 UI 验收。
 
-当前 Unity 主工程仍受并行 Simulation 迁移影响，尚未在主 Editor 内加载新程序集；窄编译已证明 Timeline/Slate 源码本身闭合，不能把它扩大解释为 Unity 窗口端到端通过。
+当前 Unity 主工程仍受并行 Simulation 迁移影响，完整 Play/Scene/Graph 验收仍不可进行；Timeline 路径已通过 Unity Console 错误过滤，窄编译和 Unity 程序集加载证据均不能替代真实 Timeline 窗口操作验收。
 
 ## 尚未完成
 
